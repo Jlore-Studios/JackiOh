@@ -920,3 +920,24 @@ export function seriesBannerYourDeckId(slot: number): string {
 export function seriesBannerOpponentDeckId(slot: number): string {
   return `series-banner-opponent-deck-${String(slot)}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// A19: the v0.1.1 patch's presentation (SPEC §10.10, R370–R372). Documentation, like A11: each
+// mirrors a name `apps/web` renders — `testid.unrevealed` in `apps/web/src/game/contract.ts`, the
+// `INSPECT_FACE_DOWN*` and `INSPECT_NOTE` overlays in `apps/web/src/cards/inspect/testids.ts`.
+// A back in the backrow carries `data-face-down="true"`, its label "Face-down trap[, Cost (N)]",
+// and, where the view gives it a cost, `data-facedown-cost` and a `.facedown-cost` gem (R370). Your
+// own face-down trap carries `data-unrevealed="true"` (R371). A grade badge is
+// `[data-counter="grade"]` with `data-grade` and `data-grade-letter` (R372).
+// ---------------------------------------------------------------------------------------------
+
+/** R371: the "Face down" tag on your own face-down trap. */
+export function unrevealedId(instanceId: string): string {
+  return `unrevealed-${instanceId}`;
+}
+
+/** R370: a face-down backrow card's overlay (hover or sheet, `data-mode`), and the cost it states. */
+export const INSPECT_FACE_DOWN = "inspect-face-down";
+export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
+/** R371: the line over your own face-down trap's face in its preview and its sheet. */
+export const INSPECT_NOTE = "inspect-note";

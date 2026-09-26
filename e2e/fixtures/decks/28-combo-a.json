@@ -1,0 +1,27 @@
+{
+  "id": "28-combo-a",
+  "spec": "28-patch-011-ui.cy.ts",
+  "description": "Player 1's deck for spec 28's Combo-Index case (R372): spec 03's player-1 deck with #28 Knockoff Temu Glowy Jelly Bean swapped for #93 Combo-Index, so the other nineteen are spec 03's choice-free filler that never opens a picker and has no Trap, Cast-on-draw or Quickdraw card. Seed 28-combo-16 deals Combo-Index into player 1's opening hand, so player 1 can play it on its second turn with two mana. Its own play is the one card played that turn, which meets grade E's threshold of one, so the end of that turn raises it to D: the badge reads E, then D.",
+  "cards": [
+    "core-003",
+    "core-005",
+    "core-008",
+    "core-010",
+    "core-011",
+    "core-015",
+    "core-019",
+    "core-020",
+    "core-025",
+    "core-093",
+    "core-032",
+    "core-045",
+    "core-053",
+    "core-056",
+    "core-062",
+    "core-073",
+    "core-077",
+    "core-081",
+    "core-091",
+    "core-092"
+  ]
+}

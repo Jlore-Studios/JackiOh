@@ -4,7 +4,7 @@
 // What it proves, against `pnpm build:e2e` + `vite preview` and no server:
 //
 //   * on `/dev/hotseat`, the seat whose view is shown can look through its own library: a resting
-//     mouse on `library-you` opens a preview that says "Your library", how many cards and "Order
+//     mouse on `library-you` opens a preview that says "Your deck" (R373), how many cards and "Order
 //     hidden"; a click opens every card in a dialog, one face per card and face with its count
 //     ("×2" when above one), which Escape closes back onto the pile; Enter on the focused pile opens
 //     it too. What the dialog lists is exactly what is in that seat's library, card for card (the
@@ -135,7 +135,7 @@ function expectOwnLibraryBrowsable(shot?: string): void {
         cy.get(pile).invoke("attr", "aria-label").should("match", ORDER_HIDDEN);
         cy.get(pile).trigger("pointerover", { pointerType: "mouse" });
         cy.get(ts(INSPECT_LIST_HOVER)).should("be.visible").and("have.css", "pointer-events", "none");
-        cy.get(ts(INSPECT_LIST_HOVER)).should("contain.text", "Your library").invoke("text").should("match", ORDER_HIDDEN);
+        cy.get(ts(INSPECT_LIST_HOVER)).should("contain.text", "Your deck").invoke("text").should("match", ORDER_HIDDEN);
         cy.get(`${ts(INSPECT_LIST_HOVER)} ${ts(INSPECT_LIST_COUNT)}`).should("have.attr", "data-count", String(count));
         if (shot !== undefined) cy.screenshot(`${shot}-preview`, { capture: "viewport" });
         cy.get(pile).trigger("pointerout", { pointerType: "mouse" });
@@ -253,7 +253,7 @@ describe("24 — the tutorial (R313, R314)", () => {
         // The coach's bubble may sit over the pile, and what is under test is the list: open it from
         // the keyboard, which the pile takes wherever the bubble is.
         cy.get(`${ts(libraryId("you"))}${BROWSABLE}`).trigger("keydown", { key: "Enter", force: true });
-        cy.get(ts(INSPECT_LIST_SHEET)).should("be.visible").and("contain.text", "Your library");
+        cy.get(ts(INSPECT_LIST_SHEET)).should("be.visible").and("contain.text", "Your deck");
         cy.get(ts(INSPECT_LIST_SHEET)).invoke("text").should("match", ORDER_HIDDEN);
         cy.get(`${ts(INSPECT_LIST_SHEET)} ${ts(INSPECT_LIST_COUNT)}`).should("have.attr", "data-count", String(count));
         cy.get(ts(INSPECT_CLOSE)).click();
