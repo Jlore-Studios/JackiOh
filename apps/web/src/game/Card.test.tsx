@@ -661,7 +661,7 @@ describe("B18: Card picks its form from its props", () => {
     const root = cardRoot(flood.instanceId);
     expect(screen.getByTestId("resolving-you").contains(root)).toBe(true);
     expect(root.getAttribute("data-face")).toBe("full");
-    expect(inside(root, ".card-text").textContent).toContain("Bounce all units on both sides");
+    expect(inside(root, ".card-text").textContent).toContain("Bounce all Units.");
   });
 });
 
@@ -817,8 +817,8 @@ describe("B19: what a face-up root adds", () => {
     };
     // Gary the Gambler prints 1/1; the view has 2 attack and 1 of 3 health.
     expect(tones(yourUnit(view, 1))).toEqual(["buffed", "damaged"]);
-    // Mr. Vanilla prints 3/3; the view has 4/4.
-    expect(tones(enemyUnit(view, 1))).toEqual(["buffed", "buffed"]);
+    // Mr. Vanilla prints 4/4 (patch v0.1.1); the view has 4/4.
+    expect(tones(enemyUnit(view, 1))).toEqual(["base", "base"]);
     // Radiant Carnivorous Cube prints 8/12 radiant; the view has 6 attack and 2 of 2.
     expect(tones(enemyUnit(view, 3))).toEqual(["reduced", "reduced"]);
     // Ceaseless Void prints 10/10; the view has 10/10.

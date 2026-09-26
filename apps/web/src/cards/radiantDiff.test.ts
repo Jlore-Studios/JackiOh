@@ -69,12 +69,14 @@ describe("R277 the word diff", () => {
     expect(marks(base, radiant)).toEqual(["Charge", "all", "units"]);
   });
 
-  it("R277 a pure deletion marks nothing, so no Core Radiant text is written as one", () => {
+  it("R277 a pure deletion marks nothing, so only the one Core Radiant text written as one marks nothing", () => {
     expect(marks("Cry: choose a Human unit", "Cry: choose a unit")).toEqual([]);
     const silent = DEFS.filter(
       (card) => card.radiant.text !== card.base.text && radiantMarks(card.base.text, card.radiant.text).length === 0,
     ).map((card) => card.id);
-    expect(silent).toEqual([]);
+    // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback, so it
+    // is a pure deletion by design; its doubled stats carry its marks (R277).
+    expect(silent).toEqual(["core-055"]);
   });
 });
 

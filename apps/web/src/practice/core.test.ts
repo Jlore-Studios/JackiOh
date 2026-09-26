@@ -601,7 +601,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
     it(`R265 seated ${human}: the human answers first and waits with its answer sealed, and the AI's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
       const d = driver();
-      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-human-first-${human}-c`, humanSeat: human }) }));
+      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human }) }));
       const hand = handOf(started);
       const kept = hand.slice(1);
       const sealed = snapshotOf(d.send({ type: "act", action: { type: "mulligan", keep: kept } }));

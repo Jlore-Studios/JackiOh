@@ -24,10 +24,10 @@ const DEFS: readonly CardDef[] = [
     rarity: "Rare",
     token: false,
     cost: 3,
-    base: { keywords: [], text: "Bounce all units on both sides" },
+    base: { keywords: [], text: "Bounce all Units." },
     radiant: {
       keywords: [],
-      text: "Choose one: bounce all units on both sides, bounce all enemy units, or destroy all enemy units; then draw 1",
+      text: "Choose one: Bounce all Units, bounce all enemy Units, or destroy all enemy Units. Then draw 1.",
     },
   },
   {
@@ -43,11 +43,11 @@ const DEFS: readonly CardDef[] = [
     refs: ["core-t-sheep", "core-055"],
     base: {
       keywords: [],
-      text: "When the opponent plays a Unit: Transform it into a Sheep Token",
+      text: "When your opponent plays a Unit: Transform it into a Sheep Token.",
     },
     radiant: {
       keywords: [],
-      text: "When the opponent plays a Unit: Transform it into a Sheep Token. Also add a Lava Golem costing 0 to your hand",
+      text: "When your opponent plays a Unit: Transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0).",
     },
   },
   {
@@ -87,13 +87,13 @@ const DEFS: readonly CardDef[] = [
       attack: 5,
       health: 7,
       keywords: [{ kind: "Stack" }],
-      text: "Stack. Stats = printed plus the combined stats of all your Felinors, including ones under a Stack",
+      text: "Stack. Has the stats of all your Felinors, including those under Stack.",
     },
     radiant: {
       attack: 10,
       health: 14,
-      keywords: [{ kind: "Stack" }, { kind: "Charge" }],
-      text: "Stack, Charge. Stats = printed plus the combined stats of all your Felinors, including ones under a Stack",
+      keywords: [{ kind: "Stack" }],
+      text: "Stack. Has twice the stats of all your Felinors, including those under Stack.",
     },
   },
 ];

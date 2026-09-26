@@ -270,6 +270,12 @@ const WEB_TUTORIAL_PATH_TEST = "../../../apps/web/src/tutorial/TutorialPath.test
 const WEB_PKCE_TEST = "../../../apps/web/src/auth/pkce.test.ts";
 /** R315 to R319's proofs: the overflow events, what each seat reads of them, and how the board and the speakers play them. */
 const OVERFLOW_EVENTS_TEST = "overflow-events.test.ts";
+/** Patch v0.1.1's card proofs, R360–R366 (issue #27). */
+const CARDS_LAVA_GOLEM_TEST = "../../cards/test/055-lava-golem.test.ts";
+const CARDS_MROW_TEST = "../../cards/test/086-miss-mrow.test.ts";
+const CARDS_FIENDER_TEST = "../../cards/test/092-felinor-fiender.test.ts";
+const CARDS_TRANSMOGULATE_TEST = "../../cards/test/083-transmogulate.test.ts";
+const CARDS_CARD_TEXT_TEST = "../../cards/test/card-text.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -2521,6 +2527,47 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // apps/web test/ux/settings.test.tsx "R345 …": the switch goes out as setAutoEndTurn, once.
   it("R345 lets each player turn R82's automatic turn end off for themselves", () => {
     provenIn(345, "auto-end-turn.test.ts", SERVER_ACTOR_TEST, WEB_SETTINGS_TEST);
+  });
+
+  // Proved by tribute.test.ts "R360 …" (the engine's placement: the lane named, else the leftmost
+  // open zone, the player's own side when there is none, the Radiant face never), 055-lava-golem.test.ts
+  // "R360 …" on the real card, and 097-zephyrs.test.ts "R360 …": the scorer's dry run sees it too.
+  it("R360 summons #55's base face for the opponent when its Tribute takes an opposing unit", () => {
+    provenIn(360, "tribute.test.ts", CARDS_LAVA_GOLEM_TEST, CARDS_ZEPHYRS_TEST);
+  });
+
+  // Proved by query.test.ts "R361 …" (`killerOf`: R42's killer while it acts on the field, else
+  // nobody) and 086-miss-mrow.test.ts "R361 …" (combat, a Cry's damage, a mutual death, a Spell, a
+  // full row).
+  it("R361 has Miss Mrow take the unit that destroyed her, and nothing when no unit did", () => {
+    provenIn(361, "query.test.ts", CARDS_MROW_TEST);
+  });
+
+  // Proved by 092-felinor-fiender.test.ts "R362 …": printed plus twice the sum, dormant Felinors included.
+  it("R362 gives the Radiant Felinor Fiender its printed stats plus twice its Felinors'", () => {
+    provenIn(362, CARDS_FIENDER_TEST);
+  });
+
+  // Proved by 077-professor-curvature.test.ts "R363 …" (a 6 costs 5, radiant 4) and modifiers.test.ts
+  // "R48 R363 …" (the cost as it currently stands).
+  it("R363 reaches every card whose cost is then 4 or more with Professor Curvature", () => {
+    provenIn(363, CARDS_CURVATURE_TEST);
+  });
+
+  // Proved by effects-core.test.ts "R364 …" (up to max and never past it) and 078-fullsend.test.ts
+  // "R364 …" (4 of 4 leaves 3, 4 of 6 leaves 4).
+  it("R364 makes a Refresh give back spent mana up to max mana and no further", () => {
+    provenIn(364, "effects-core.test.ts", CARDS_FULLSEND_TEST);
+  });
+
+  // Proved by 083-transmogulate.test.ts "R365 …": the hand is replaced one for one, hidden from the opponent.
+  it("R365 has Transmogulate replace the hand as one of R35's other zones", () => {
+    provenIn(365, CARDS_TRANSMOGULATE_TEST);
+  });
+
+  // Proved by card-text.test.ts "R366 …": every card's text uses the patch's words and shape.
+  it("R366 writes every card's text in patch v0.1.1's words", () => {
+    provenIn(366, CARDS_CARD_TEXT_TEST);
   });
 });
 
