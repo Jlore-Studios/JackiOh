@@ -867,13 +867,14 @@
 
 /* ---- A face-down card (R370) and your own face-down trap (R371) --------------------------- */
 
-/* R371: the note over your own face-down trap's face in its preview and sheet. */
+/* R371: the note over your own face-down trap's face in its preview and sheet: a stamp across the
+   art, below the cost gem and above the name, so it hides nothing the player reads off the face. */
 .inspect-note {
   position: absolute;
   z-index: 5;
-  top: 6px;
-  right: 6px;
-  left: 6px;
+  top: 24%;
+  right: 7%;
+  left: 7%;
   display: flex;
   align-items: center;
   gap: 6px;

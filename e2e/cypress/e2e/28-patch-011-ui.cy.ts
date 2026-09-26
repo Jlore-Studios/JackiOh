@@ -13,8 +13,10 @@
 //      as "Cost (1)", Sheepish's; this branch's view may not carry it yet, and then none is drawn.
 //   B. Combo-Index by its letter (R372), with `28-combo-a` (spec 03's player-1 deck with #93 in it)
 //      and seed 28-combo-16, which deals #93 into player 1's opening hand: played on player 1's
-//      second turn, its grade badge reads E and its face "Grade {E}"; its own play meets E's
-//      threshold of one, so after that turn the badge reads D, on the other seat's board too.
+//      third turn (three mana, so a one-mana card is still playable and R82 does not end the turn
+//      under the assertions), its grade badge reads E and its face "Grade {E}" and "{1}" after N;
+//      its own play meets E's threshold of one, so after that turn the badge reads D, on the other
+//      seat's board too.
 //   C. The homescreen fan (R374): four real faces and a back; two visits with two different sources
 //      of randomness deal two different hands, each of four rarities.
 //
@@ -26,7 +28,7 @@
 //     --spec cypress/e2e/28-patch-011-ui.cy.ts --expose shots=1
 
 import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/testids.ts";
-import { seedFor } from "../../support/config.ts";
+import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
 import {
   INSPECT_FACE,
   INSPECT_FACE_DOWN,
@@ -34,6 +36,7 @@ import {
   INSPECT_HOVER,
   INSPECT_LIST_HOVER,
   INSPECT_NOTE,
+  SHOWCASE,
   cardId,
   libraryId,
   ts,
@@ -48,6 +51,8 @@ const SHEEPISH = "Sheepish";
 /** SPEC §8 #41's cost, which a back that carries one must state. */
 const SHEEPISH_COST = 1;
 const COMBO_INDEX = "Combo-Index";
+/** R372: the words of #93's text the plays it asks for follow. */
+const THRESHOLD_LABEL = "N = the grades from E to the current one";
 
 const UNREVEALED_NOTE = "Face down — your opponent can't see this card";
 
@@ -58,8 +63,17 @@ const VIEWPORTS = [
 ] as const;
 type Viewport = (typeof VIEWPORTS)[number];
 
+/** The screenshot pass turns the effects layer off (R200), so no banner or burst covers the board. */
+const QUIET_FX = { speed: 1, intensity: "off", motion: "system" } as const;
+
+function quiet(viewport: Viewport | null): { onBeforeLoad?: (win: Cypress.AUTWindow) => void } {
+  return viewport === null ? {} : { onBeforeLoad: (win) => win.localStorage.setItem(FX_SETTINGS_KEY, JSON.stringify(QUIET_FX)) };
+}
+
 function shoot(viewport: Viewport | null, name: string): void {
   if (viewport === null) return;
+  // The opponent's play held up by the showcase stands over the board for a moment; let it pass.
+  cy.get(ts(SHOWCASE)).should("not.exist");
   cy.screenshot(`28-patch-011-ui/${viewport.label}/${name}`, { capture: "viewport", overwrite: true });
 }
 
@@ -74,7 +88,7 @@ function unhover(selector: string): void {
 /** A: the face-down treatment on both seats, and the deck pile's words. */
 function faceDownTrap(viewport: Viewport | null): void {
   if (viewport !== null) cy.viewport(viewport.width, viewport.height);
-  cy.seedGame({ seed: TRAP_SEED, a: "03-plays-a", b: "03-sheepish-b" });
+  cy.seedGame({ seed: TRAP_SEED, a: "03-plays-a", b: "03-sheepish-b", ...quiet(viewport) });
   cy.advanceToTurn(2);
 
   // Player 2 sets Sheepish face-down in backrow lane 3; its own device reads it (R33).
@@ -105,6 +119,8 @@ function faceDownTrap(viewport: Viewport | null): void {
 
     // Player 1's turn: the same zone is a back, and nothing on it names the card.
     cy.advanceToTurn(3);
+    // The showcase holds the set card up over the board for a moment (R227); let it pass first.
+    cy.get(ts(SHOWCASE)).should("not.exist");
     const back = `${ts(zoneId("opponent", "backrow", 3))} .card-back`;
     cy.get(ts(zoneId("opponent", "backrow", 3))).find(own).should("not.exist");
     cy.get(back).should("have.attr", "data-face-down", "true").and("not.have.attr", "data-def-id");
@@ -135,8 +151,8 @@ function faceDownTrap(viewport: Viewport | null): void {
 /** B: Combo-Index's grade badge and face by letter, E then D. */
 function comboIndex(viewport: Viewport | null): void {
   if (viewport !== null) cy.viewport(viewport.width, viewport.height);
-  cy.seedGame({ seed: COMBO_SEED, a: "28-combo-a", b: "03-sheepish-b" });
-  cy.advanceToTurn(3);
+  cy.seedGame({ seed: COMBO_SEED, a: "28-combo-a", b: "03-sheepish-b", ...quiet(viewport) });
+  cy.advanceToTurn(5);
 
   cy.playByName(COMBO_INDEX, { zone: { side: "you", row: "backrow", lane: 1 } });
   cy.instanceAt("p1", "backrow", 1).then((combo) => {
@@ -147,13 +163,17 @@ function comboIndex(viewport: Viewport | null): void {
     hover(card);
     cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).should("contain.text", "Grade {E} (starts at E).");
     cy.get(ts(INSPECT_HOVER)).find('.cf-value[data-label="Grade"]').should("have.text", "{E}");
+    cy.get(ts(INSPECT_HOVER)).find(`.cf-value[data-label="${THRESHOLD_LABEL}"]`).should("have.text", "{1}");
     shoot(viewport, "combo-index-grade-e-hover");
     unhover(card);
     shoot(viewport, "combo-index-grade-e");
 
-    // Its own play meets grade E's threshold of one, so the end of the turn raises it to D.
+    // Its own play meets grade E's threshold of one, so the end of the turn raises it to D, which
+    // the other seat reads on its board after the hand-over.
     cy.endTurn();
-    cy.get(`${ts(zoneId("opponent", "backrow", 1))} ${card} [data-counter="grade"]`)
+    cy.jackioh().its("seat").should("eq", "p2");
+    cy.get(ts(zoneId("opponent", "backrow", 1)))
+      .find(`${card} [data-counter="grade"]`)
       .should("have.text", "D")
       .and("have.attr", "data-grade-letter", "D");
     hover(card);
