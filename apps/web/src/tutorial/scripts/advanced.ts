@@ -152,8 +152,8 @@ const playRock: CoachStep = {
   title: "Pay the Tribute",
   text: (ctx) =>
     myTokens(ctx.view).length > 0
-      ? "Play The Rock: pick a Felinor Token as its Tribute, then an empty zone. The token is sacrificed to pay for it."
-      : "Play The Rock: pick your weakest unit as its Tribute, then an empty zone. That unit is sacrificed to pay for it.",
+      ? "Play The Rock: pick a Felinor Token as its Tribute, then an empty zone. The token is tributed to pay for it."
+      : "Play The Rock: pick your weakest unit as its Tribute, then an empty zone. That unit is tributed to pay for it.",
   kind: "act",
   anchor: { kind: "handCard", defId: THE_ROCK },
   when: (ctx) => myMain(ctx) && rockPlays(ctx).length > 0,
@@ -279,7 +279,7 @@ export const script: LessonScript = {
     info({
       id: "tribute",
       title: "Tribute",
-      text: "The Rock has Tribute 1: besides its mana, playing it costs one of your own units, which is sacrificed. A token is perfect for that.",
+      text: "The Rock has Tribute 1: besides its mana, playing it costs one of your own units, which is tributed. A token is perfect for that.",
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => myMain(ctx) && rockPlays(ctx).length > 0,
       moot: (ctx) => outOfReach(ctx, (now) => rockPlays(now).length > 0),

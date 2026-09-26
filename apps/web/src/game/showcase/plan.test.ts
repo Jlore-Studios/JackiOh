@@ -46,6 +46,19 @@ describe("which plays are held up", () => {
     expect(JSON.stringify(plays)).not.toMatch(/core-\d+/);
   });
 
+  it("R370 a card set face down carries the cost its back shows where it landed, while it stands there", () => {
+    const events = [played("p2", "hidden", "hidden"), summoned("p2", "hidden", "hidden", "backrow", 3)];
+    const withCost = baseView({
+      opponent: { ...baseView().opponent, backrow: [null, null, { faceDown: true, cost: 2 }, null, null] },
+    });
+    expect(opponentPlays(events, withCost)).toEqual([{ player: "p2", defId: null, radiant: false, set: true, cost: 2 }]);
+    // The zone is empty again (the trap fired), or its back gives no cost: no cost is claimed.
+    for (const entry of [null, { faceDown: true as const }]) {
+      const gone = baseView({ opponent: { ...baseView().opponent, backrow: [null, null, entry, null, null] } });
+      expect(opponentPlays(events, gone)).toEqual([{ player: "p2", defId: null, radiant: false, set: true }]);
+    }
+  });
+
   it("R97 a hidden play that set nothing is a back that says a card was played", () => {
     expect(opponentPlays([played("p2", "hidden", "hidden")], view)).toEqual([
       { player: "p2", defId: null, radiant: false, set: false },

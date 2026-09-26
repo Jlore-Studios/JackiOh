@@ -38,8 +38,13 @@ export type CardView = {
   preview?: PreviewValue[];
 };
 
-/** R280: one number a card's formula comes to now, and the formula it is ("+1 per card in your exile"). */
-export type PreviewValue = { label: string; value: number };
+/**
+ * R280: one number a card's formula comes to now, and the formula it is ("+1 per card in your exile").
+ * `display` is how the value prints when the text names it by a word rather than a numeral: #93
+ * Combo-Index's grade 3 prints as its letter, "C" (R372). A client prints `display` when present and
+ * the number otherwise, and never works one out from the other.
+ */
+export type PreviewValue = { label: string; value: number; display?: string };
 
 export type UnitView = CardView & {
   owner: PlayerId;
@@ -73,11 +78,28 @@ export type BackrowView =
   | (CardView & {
       faceDown: false;
       type: CardType;
-      counters: { grade?: number };
+      /**
+       * `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the letter that number is,
+       * E..S, which the engine names so a client prints it rather than working it out (R372).
+       */
+      counters: { grade?: number; gradeLetter?: string };
       owner: PlayerId;
       controller: PlayerId;
+      /**
+       * R371: present, and `true`, on the controller's own view of a Trap or Field Trap that is
+       * still face-down: the controller reads the card (R33), and the other player sees only its
+       * back. Absent on every public card and on a Field Trap that has fired.
+       */
+      unrevealed?: true;
     })
-  | { faceDown: true }
+  | {
+      faceDown: true;
+      /**
+       * v0.1.1: a face-down Trap shows its cost on its back, to both players. Optional here so a
+       * client draws the back with or without it (R370).
+       */
+      cost?: number;
+    }
   | null;
 
 /** A Heroic Power on the field (§8 #98, R43), as the client needs it to act. */

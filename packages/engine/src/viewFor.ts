@@ -75,10 +75,11 @@ import {
   type PlayerState,
   type PromptOption,
 } from "./state";
+import { gradeName } from "./subsystems/comboIndex";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { ownLibraryView } from "./ownLibrary";
-import { backrowIsPublic, previewOf } from "./preview";
+import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
 import { standingDrawOffer } from "./turn";
 import { isReserved, slotsOf } from "./zones";
@@ -306,9 +307,12 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     ),
     faceDown: false,
     type: defOf(state, card.defId).type,
-    counters: grade === undefined ? {} : { grade },
+    // R372: the engine names the grade's letter, so no client works out which letter 3 is.
+    counters: grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) },
     owner: card.owner,
     controller: card.controller,
+    // R371: the controller reads a face-down trap, and the view says the other player cannot.
+    ...(isFaceDown(state, card) ? { unrevealed: true as const } : {}),
   };
 }
 

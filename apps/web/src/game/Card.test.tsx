@@ -163,18 +163,22 @@ describe("B16: a face-down card is a back and nothing else", () => {
     }
   });
 
-  it("B16 a back has no title even while hover previews are off", () => {
+  it("B16 R370 a hand back has no title while hover previews are off; a backrow back says only that it is a face-down trap", () => {
     writeCardSettings({ hoverPreviews: false });
     const container = renderBoard(fullBoardView());
-    for (const back of backs(container)) expect(back.hasAttribute("title")).toBe(false);
+    for (const back of backs(container)) {
+      if (back.closest(".zone") === null) expect(back.hasAttribute("title")).toBe(false);
+      else expect(back.getAttribute("title")).toBe("Face-down trap");
+    }
   });
 
-  it("B16 hovering or long-pressing a back opens nothing, while the same gestures on a face-up card do", () => {
+  it("B16 R370 hovering or long-pressing a hand back opens nothing, while the same gestures on a face-up card do", () => {
     vi.useFakeTimers();
     const view = fullBoardView();
     const container = renderBoard(view);
 
-    for (const back of backs(container)) {
+    // A backrow back opens what the view says of it (R370, below); a hand back opens nothing.
+    for (const back of backs(container).filter((element) => element.closest(".zone") === null)) {
       fireEvent.pointerEnter(back, { pointerType: "mouse" });
       act(() => {
         vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);

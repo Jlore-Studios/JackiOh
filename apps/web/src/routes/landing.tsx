@@ -29,7 +29,7 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
-import { LANDING_FAN } from "./landingFan.ts";
+import { dealLandingFan, type FanFace, type RandomSource } from "./landingFan.ts";
 import { followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -88,15 +88,15 @@ function accountState(account: Account): LandingAccountState {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Five cards, left to right: the four real faces of `landingFan.ts` drawn by the cards module's
- * CardFace, the middle one on its Radiant face, and a card back last. The deal, the float and the
- * spread are landing.css's; the faces are the game's own, so the first screen shows cards as the
- * board, the deck builder and the inspect sheet draw them.
+ * Five cards, left to right: four real faces dealt by `landingFan.ts` at random for this visit
+ * (R374) and drawn by the cards module's CardFace, the middle one on its Radiant face, and a card
+ * back last. The deal, the float and the spread are landing.css's; the faces are the game's own, so
+ * the first screen shows cards as the board, the deck builder and the inspect sheet draw them.
  */
-function CardFan(): ReactElement {
+function CardFan({ hand }: { hand: readonly FanFace[] }): ReactElement {
   return (
     <div className="landing-fan" data-testid={landingTestid.fan} aria-hidden="true">
-      {LANDING_FAN.map(({ def, radiant }, index) => (
+      {hand.map(({ def, radiant }, index) => (
         <div key={def.id} className="landing-fan-slot">
           <div
             className="landing-fan-card"
@@ -112,7 +112,7 @@ function CardFan(): ReactElement {
       <div className="landing-fan-slot">
         <div
           className="landing-fan-card landing-fan-card--back"
-          data-testid={landingFanCardTestid(LANDING_FAN.length)}
+          data-testid={landingFanCardTestid(hand.length)}
           data-face="down"
         >
           <CardBack />
@@ -400,9 +400,16 @@ function HowItPlays(): ReactElement {
 // The page
 // ---------------------------------------------------------------------------------------------
 
-export default function LandingRoute(): ReactElement {
+export type LandingRouteProps = {
+  /** R374: where the fan's deal draws its randomness; `Math.random` on the page, a seeded source in tests. */
+  random?: RandomSource;
+};
+
+export default function LandingRoute({ random = Math.random }: LandingRouteProps = {}): ReactElement {
   const account = useAccount();
   const motion = useMotion();
+  // R374: one deal per visit — per mount of the page — so the hand holds still while it is shown.
+  const [hand] = useState(() => dealLandingFan(random));
 
   return (
     <div
@@ -435,7 +442,7 @@ export default function LandingRoute(): ReactElement {
             </p>
           </div>
 
-          <CardFan />
+          <CardFan hand={hand} />
 
           <Actions />
         </div>

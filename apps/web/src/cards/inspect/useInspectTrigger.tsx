@@ -36,8 +36,11 @@ import "./inspect.css";
 /** What a custom overlay is drawn from: the open mode, the trigger's box and a way to close it. */
 export type InspectOverlayState = { mode: "hover" | "sheet"; anchor: Rect; close: () => void };
 
-/** A card: the preview and the sheet draw its face. */
-export type InspectSubject = { key: string; face: FaceModel };
+/**
+ * A card: the preview and the sheet draw its face. `note` is a line they print above it, in words
+ * the view gave the caller (R371: "Face down — your opponent can't see this card").
+ */
+export type InspectSubject = { key: string; face: FaceModel; note?: string };
 
 /** Anything else (a pile): the caller draws the overlay for each mode. */
 export type InspectRenderSubject = { key: string; render: (state: InspectOverlayState) => ReactElement | null };
@@ -332,9 +335,9 @@ export function useInspectTrigger(
     } else {
       overlay =
         active.mode === "hover" ? (
-          <HoverPreview face={subject.face} anchor={active.anchor} prefer={options?.prefer} />
+          <HoverPreview face={subject.face} anchor={active.anchor} prefer={options?.prefer} note={subject.note} />
         ) : (
-          <InspectSheet face={subject.face} onClose={close} />
+          <InspectSheet face={subject.face} onClose={close} note={subject.note} />
         );
     }
   }

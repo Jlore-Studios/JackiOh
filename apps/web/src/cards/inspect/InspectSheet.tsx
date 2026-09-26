@@ -11,15 +11,16 @@ import { CardFace } from "../CardFace.tsx";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { Glossary } from "./Glossary.tsx";
+import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
 import "./inspect.css";
 
-type InspectSheetProps = { face: FaceModel; onClose: () => void };
+type InspectSheetProps = { face: FaceModel; onClose: () => void; note?: string };
 
-export function InspectSheet({ face, onClose }: InspectSheetProps): ReactElement {
+export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
 
@@ -38,6 +39,7 @@ export function InspectSheet({ face, onClose }: InspectSheetProps): ReactElement
           <RefsInteractive>
             <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
               <CardFace face={face} layout="full" />
+              <InspectNote note={note} />
             </div>
             <Printed face={face} />
           </RefsInteractive>

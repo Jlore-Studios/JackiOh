@@ -159,7 +159,10 @@ function NoticeCardFace({
   );
 }
 
-/** Inside the library pile: "Fatigue N", or "Library full" with the card it turned away. */
+/**
+ * Inside the deck pile (the rules' library, shown to players as the Deck, R373): "Fatigue N", or
+ * "Deck full" with the card it turned away.
+ */
 export function PileNotice({
   notice,
   side,
@@ -187,7 +190,7 @@ export function PileNotice({
       data-outcome={notice.outcome}
       data-playing={playing}
     >
-      <span className="pile-notice-tag">Library full</span>
+      <span className="pile-notice-tag">Deck full</span>
       <NoticeCardFace
         card={notice.card}
         view={view}

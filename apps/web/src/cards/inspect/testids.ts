@@ -24,3 +24,9 @@ export const INSPECT_LIST_CARD = "inspect-list-card";
 export const INSPECT_LIST_MORE = "inspect-list-more";
 export const INSPECT_LIST_DETAIL = "inspect-list-detail";
 export const INSPECT_LIST_BACK = "inspect-list-back";
+
+// R370, R371: a face-down backrow card's overlay (FaceDown.tsx), the cost it states, and the note a
+// preview or a sheet of your own face-down trap carries.
+export const INSPECT_FACE_DOWN = "inspect-face-down";
+export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
+export const INSPECT_NOTE = "inspect-note";

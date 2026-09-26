@@ -35,6 +35,8 @@ export const showcaseTestid = {
   face: "showcase-face",
   /** The back drawn for a card the view hides (R97, R227). */
   back: "showcase-back",
+  /** R370: on that back, the cost the view gives a card set face down. */
+  cost: "showcase-cost",
   /** The polite live region that says what was played; always mounted, empty between plays. */
   live: "showcase-live",
 } as const;

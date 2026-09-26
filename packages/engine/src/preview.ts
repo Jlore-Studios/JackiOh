@@ -35,9 +35,19 @@ import { isBuried } from "./zones";
  * may be asked about) read, so the two cannot drift apart.
  */
 export function backrowIsPublic(state: GameState, card: CardInstance, viewer: PlayerId): boolean {
+  return !isFaceDown(state, card) || card.controller === viewer;
+}
+
+/**
+ * R33, R371: a backrow Trap or Field Trap that has not flipped face-up, so only its controller may
+ * read it. `backrowIsPublic` above is this plus the controller's exception, and `viewFor` marks the
+ * controller's own view of such a card `unrevealed` from the same answer, so the mark a client draws
+ * and the back the other player sees cannot disagree.
+ */
+export function isFaceDown(state: GameState, card: CardInstance): boolean {
   const type = defOf(state, card.defId).type;
-  if (type !== "Trap" && type !== "Field Trap") return true;
-  return card.faceUp === true || card.controller === viewer;
+  if (type !== "Trap" && type !== "Field Trap") return false;
+  return card.faceUp !== true;
 }
 
 /** R280, §10.8: whether `viewer` may read `card` where the question places it. */
@@ -70,8 +80,13 @@ export function previewOf(
     zone,
     yourTurn: state.active === card.controller,
   });
+  // R372: a value the text names by a word (#93's grade letter) carries it as `display`.
   const copied = values
     .filter((entry) => typeof entry.label === "string" && entry.label.length > 0 && Number.isFinite(entry.value))
-    .map((entry) => ({ label: entry.label, value: entry.value }));
+    .map((entry) =>
+      typeof entry.display === "string" && entry.display.length > 0
+        ? { label: entry.label, value: entry.value, display: entry.display }
+        : { label: entry.label, value: entry.value },
+    );
   return copied.length === 0 ? null : copied;
 }

@@ -1,5 +1,6 @@
 // The face's glyphs: the attack sword, the health drop, the rarity gem's facets and the Legendary
-// crest (docs/polish/6-cards.md, Surface B).
+// crest (docs/polish/6-cards.md, Surface B), and the struck-through eye a face-down card you
+// control wears (R371).
 //
 // Each glyph is an original SVG with no <text> and no <title>, so it names nothing and reads as
 // nothing to a screen reader. It is drawn as an `<img>` of a `data:` URI rather than inline <svg>,
@@ -9,7 +10,7 @@
 
 import type { ReactElement } from "react";
 
-type IconName = "sword" | "drop" | "gem" | "crest";
+export type IconName = "sword" | "drop" | "gem" | "crest" | "eyeOff";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -54,6 +55,16 @@ const CREST = `<svg xmlns='${SVG_NS}' viewBox='0 0 120 40'>
 <path d='M60 3 L64 12 L60 16 L56 12 Z' fill='url(#g)' stroke='#4a2e00' stroke-width='1.5'/>
 </svg>`;
 
+// R371: an eye struck through, the mark of a face-down card the other player cannot see. A pale
+// outline on a dark disc, so it reads by shape on any frame and to a colour-blind player alike.
+const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M10 32 C18 20 26 16 32 16 C38 16 46 20 54 32 C46 44 38 48 32 48 C26 48 18 44 10 32 Z' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linejoin='round'/>
+<circle cx='32' cy='32' r='7' fill='#e8ecf8'/>
+<path d='M14 50 L50 14' stroke='#101522' stroke-width='10' stroke-linecap='round'/>
+<path d='M14 50 L50 14' stroke='#e8ecf8' stroke-width='4.5' stroke-linecap='round'/>
+</svg>`;
+
 function dataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\n/g, ""))}`;
 }
@@ -63,6 +74,7 @@ const ICON_URI: Readonly<Record<IconName, string>> = {
   drop: dataUri(DROP),
   gem: dataUri(GEM),
   crest: dataUri(CREST),
+  eyeOff: dataUri(EYE_OFF),
 };
 
 export function Icon({ name }: { name: IconName }): ReactElement {

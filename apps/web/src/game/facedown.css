@@ -1,0 +1,116 @@
+/* Face-down backrow cards (SPEC §10.10, R370, R371). Card.tsx draws the elements; this file is
+   their look. None of it is a rule: the view says what is face-down and what it costs.
+
+   R370: a back in the backrow wears its cost as a gem in the top-left corner, where a face wears
+   its cost, on both seats' boards.
+
+   R371: your own face-down trap is drawn as its face (you read it, R33) under a veil: a dashed
+   frame, a diagonal hatch over the art and a "Face down" tag with a struck-through eye. Each of the
+   three reads by shape — dashes, stripes, an icon and a word — so none rests on colour, and a
+   colour-blind player sees the same. The hatch drifts slowly to catch the eye; under reduced
+   motion (the media query or the settings switch, index.css) it holds still. */
+
+/* ---- R370: the cost on a back ------------------------------------------------------------ */
+
+/* The gem itself is the cards module's (`.facedown-cost`, cards.css), since the inspect overlay
+   draws it too; on the board the back is its container, so the gem scales with the card. */
+.card.card-facedown {
+  container-type: size;
+}
+
+/* ---- R371: your own face-down trap -------------------------------------------------------- */
+
+.card[data-unrevealed="true"] {
+  outline: 2px dashed rgb(232 236 248 / 0.85);
+  outline-offset: -3px;
+}
+
+/* The veil: a diagonal hatch over the face, under the badges. It dims the art a little and leaves
+   the name and the cost readable, since you are the one reading them. */
+.card[data-unrevealed="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(135deg, rgb(12 16 28 / 0.42) 0 5px, rgb(12 16 28 / 0.1) 5px 10px),
+    linear-gradient(180deg, rgb(12 16 28 / 0.1), rgb(12 16 28 / 0.35));
+  background-size: 28px 28px, 100% 100%;
+  pointer-events: none;
+  animation: jk-veil-drift calc(9s * var(--anim-scale, 1)) linear infinite;
+}
+
+@keyframes jk-veil-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 28px 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-unrevealed="true"]::after {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .card[data-unrevealed="true"]::after {
+  animation: none;
+}
+
+/* The tag: an eye struck through and the words, on a dark plate across the bottom of the card,
+   above the veil. On a small card the words give way to the icon; the tooltip and the hidden text
+   still say it in full. */
+.unrevealed-tag {
+  position: absolute;
+  z-index: 4;
+  right: 3%;
+  bottom: 3%;
+  left: 3%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 1px 3px;
+  border: 1px solid rgb(232 236 248 / 0.85);
+  border-radius: 999px;
+  background: rgb(10 13 22 / 0.9);
+  color: #f1f4fb;
+  font-size: clamp(8px, 0.7em, 12px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.unrevealed-tag > .cf-icon {
+  flex: none;
+  width: 1.35em;
+  height: 1.35em;
+}
+
+.unrevealed-tag-text {
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* The rest of the sentence, for a screen reader only. */
+.unrevealed-tag-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (max-width: 52px) {
+  .unrevealed-tag-text {
+    display: none;
+  }
+}
+

@@ -13,6 +13,11 @@
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
 // are the other spellings the catalog uses for the same term.
+//
+// Players read two of SPEC's words differently (v0.1.1, R373): the rules' "library" is the Deck and
+// its "sacrifice" is a Tribute. The rules below are still SPEC's text, copied verbatim, and every one
+// is put into players' words by `inPlayerWords` as the table is built, so a SPEC edit still lands
+// here unchanged and nothing a player reads says "library" or "sacrifice".
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -52,16 +57,34 @@ export type GlossaryEntry = {
 
 const NONE: readonly string[] = [];
 
+/**
+ * R373: SPEC's rules vocabulary in the words a player reads — the rules' library is the Deck, and
+ * to sacrifice is to tribute. Whole words only, keeping a leading capital.
+ */
+const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
+  [/\blibraries\b/g, "decks"],
+  [/\bLibraries\b/g, "Decks"],
+  [/\blibrary\b/g, "deck"],
+  [/\bLibrary\b/g, "Deck"],
+  [/\bsacrific(e|es|ed|ing)\b/g, "tribut$1"],
+  [/\bSacrific(e|es|ed|ing)\b/g, "Tribut$1"],
+];
+
+/** R373: a rule as SPEC writes it, in the words a player reads. */
+export function inPlayerWords(rule: string): string {
+  return PLAYER_WORDS.reduce((text, [pattern, word]) => text.replace(pattern, word), rule);
+}
+
 function keyword(id: KeywordKind, rule: string): GlossaryEntry {
-  return { id, label: id, rule, section: "§6.1", aliases: NONE };
+  return { id, label: id, rule: inPlayerWords(rule), section: "§6.1", aliases: NONE };
 }
 
 function trigger(id: TriggerTermId, rule: string, aliases: readonly string[] = NONE): GlossaryEntry {
-  return { id, label: id, rule, section: "§6.2", aliases };
+  return { id, label: id, rule: inPlayerWords(rule), section: "§6.2", aliases };
 }
 
 function verb(id: VerbTermId, rule: string): GlossaryEntry {
-  return { id, label: id, rule, section: "§6.3", aliases: NONE };
+  return { id, label: id, rule: inPlayerWords(rule), section: "§6.3", aliases: NONE };
 }
 
 export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
@@ -118,7 +141,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Radiant: {
     id: "Radiant",
     label: "Radiant",
-    rule: "Upgrade a card. In hand or library: cost unchanged, stats and text swap to the radiant form.",
+    rule: inPlayerWords("Upgrade a card. In hand or library: cost unchanged, stats and text swap to the radiant form."),
     section: "§5.2",
     aliases: NONE,
   },

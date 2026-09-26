@@ -225,7 +225,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   it("R277 an added clause is marked as one phrase (core-003, core-016, core-093)", () => {
     expect(marksOf("core-003")).toEqual(["Death: summon a base Right-house defender"]);
     expect(marksOf("core-016")).toEqual(["and the units adjacent to it on its side"]);
-    expect(marksOf("core-093")).toEqual(["Start of turn: add a Combo-Fodder to your hand"]);
+    expect(marksOf("core-093")).toEqual(["Start of turn: Add a Combo-Fodder to your hand"]);
   });
 
   it("R277 a word the radiant face drops is simply absent, and case alone marks nothing (core-067, core-017)", () => {

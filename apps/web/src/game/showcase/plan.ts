@@ -36,6 +36,11 @@ export type ShowcasePlay = {
   radiant: boolean;
   /** A hidden play that put a card face down into a backrow: "set a card" rather than "played a card". */
   set: boolean;
+  /**
+   * R370: for a card set face down, the cost its back shows, read off the view's backrow where it
+   * landed while it still stands there face-down. Absent when the view gives none.
+   */
+  cost?: number;
 };
 
 /** The fields a redacted event keeps as they are (R97): who, and where. Everything else may be the sentinel's. */
@@ -94,17 +99,28 @@ function radiantOf(play: Played, fresh: readonly GameEvent[], view: PlayerView):
   return cardInView(view, play.instanceId)?.radiant ?? false;
 }
 
-/** A hidden play whose own `summoned` put it into a backrow: the view says a card was set there, no more. */
-function wasSet(play: Played, at: number, fresh: readonly GameEvent[]): boolean {
+/**
+ * A hidden play whose own `summoned` put it into a backrow: the view says a card was set there, and
+ * in which lane, no more. Null when the play set nothing.
+ */
+function setLane(play: Played, at: number, fresh: readonly GameEvent[]): number | null {
   for (let i = at + 1; i < fresh.length; i += 1) {
     const event = fresh[i];
     if (event === undefined) continue;
-    if (event.type === "cardPlayed") return false;
+    if (event.type === "cardPlayed") return null;
     if (event.type === "summoned" && event.player === play.player && event.instanceId === HIDDEN_CARD) {
-      return event.row === "backrow";
+      return event.row === "backrow" ? event.lane : null;
     }
   }
-  return false;
+  return null;
+}
+
+/** R370: the cost the view gives the face-down card in that backrow lane, if one still stands there. */
+function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number | undefined {
+  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
+  const entry = seat.backrow[lane - 1];
+  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
+  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
 /** The opponent's plays among `fresh`, in order, each as the view lets the viewer see it. */
@@ -113,9 +129,11 @@ export function opponentPlays(fresh: readonly GameEvent[], view: PlayerView): Sh
   fresh.forEach((event, at) => {
     if (event.type !== "cardPlayed" || sideOf(view, event.player) !== "opponent") return;
     const hidden = event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD;
+    const lane = hidden ? setLane(event, at, fresh) : null;
+    const cost = lane === null ? undefined : faceDownCost(view, event.player, lane);
     plays.push(
       hidden
-        ? { player: event.player, defId: null, radiant: false, set: wasSet(event, at, fresh) }
+        ? { player: event.player, defId: null, radiant: false, set: lane !== null, ...(cost === undefined ? {} : { cost }) }
         : {
             player: event.player,
             defId: event.defId,

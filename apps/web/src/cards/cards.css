@@ -1508,3 +1508,48 @@
   border: 1px solid rgb(255 214 120 / 0.75);
   border-radius: 50%;
 }
+
+/* ------------------------------------------------------------ a face-down card's cost --- */
+
+/* R370: a face-down trap's back wears its cost as a gem in the top-left corner, where a face wears
+   its cost: on the board (game/Card.tsx, whose back is a size container) and, large, in its inspect
+   overlay (inspect/FaceDown.tsx). The gem is the face's own hexagon. */
+
+.facedown-cost {
+  position: absolute;
+  z-index: 3;
+  top: 3%;
+  left: 4%;
+  display: grid;
+  place-items: center;
+  width: clamp(14px, 34cqw, 30px);
+  aspect-ratio: 1;
+  color: #fff;
+  font-size: clamp(9px, 20cqw, 17px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: 0 0 2px #000, 0 1px 2px #000;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.facedown-cost::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+  background:
+    radial-gradient(circle at 36% 28%, #d8ecff 0 10%, transparent 34%),
+    radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana, #3d7bd4) 50%, #173a80 85%);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7));
+}
+
+/* In the inspect overlay the back is large, and so is its gem. */
+.facedown-cost--large {
+  top: 3%;
+  left: 5%;
+  width: 22%;
+  font-size: 2.1em;
+}
