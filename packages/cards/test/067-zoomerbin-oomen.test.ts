@@ -183,7 +183,7 @@ describe("#67 Zoomerbin Oomen", () => {
 
     // The opponent is told the zone is occupied and nothing more (§10.8).
     const theirs = s.view("p2");
-    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true });
+    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true, cost: 1 });
     // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
     const serialized = JSON.stringify(theirs);
     expect(serialized).not.toContain(`"${trap.id}"`);

@@ -1258,10 +1258,10 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
 
     // A face-down trap is readable by its controller only, so control is what a swap moves (R33).
     const trap = put(state, emptyTrap.id, slot("p1", "backrow", 1));
-    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 0 });
     trap.controller = "p2";
     expect(viewFor(state, "p2").opponent.backrow[0]).toMatchObject({ faceDown: false, defId: emptyTrap.id });
-    expect(viewFor(state, "p1").you.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").you.backrow[0]).toEqual({ faceDown: true, cost: 0 });
 
     // The library swap is R12's one exception: a card follows its owner off the field.
     const card = only(state.players.p1.library);
@@ -1560,7 +1560,8 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
 
     const plays = legalActions(state, "p1").filter((action) => action.type === "play");
     expect(plays.filter((a) => a.type === "play" && a.instanceId === unit.id)).toHaveLength(UNIT_ZONES);
-    expect(plays.flatMap((a) => (a.type === "play" && a.instanceId === x.id ? [a.x] : []))).toEqual([0, 1]);
+    // R348: X from 1 up to current mana (1 here).
+    expect(plays.flatMap((a) => (a.type === "play" && a.instanceId === x.id ? [a.x] : []))).toEqual([1]);
 
     // A declared target travels in `targets` and a declared direction in `modes`: nothing pauses.
     const enemy = put(state, bigBody.id, slot("p2", "units", 1));

@@ -136,7 +136,7 @@ describe("R177: a prompt option that offers a face-down card", () => {
 
     // The Echo repeat asks again (§10.5 step 6, R81) and offers p2's two face-down traps.
     const view = s.view("p1");
-    expect(view.opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(view.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     const pending = must(view.pending, "p1's Echo prompt");
     if (!pending.forYou) throw new Error("the Echo prompt should be p1's");
     const trapOptions = pending.options.filter((option) => option.instanceId === pawn.id || option.instanceId === sheep.id);
@@ -260,7 +260,7 @@ describe("R177: a card that ceased to exist in a hidden zone stays hidden in ear
 
     s.play(sheep, { zone: 1 });
     // Before the transform p2 reads nothing of it: a bare face-down zone and a redacted play.
-    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(s.view("p2"))).not.toContain(SHEEPISH);
 
     s.play(TRANSMOGULATE);
@@ -492,7 +492,7 @@ describe("R177: Make Radiant on a hidden card that is already Radiant", () => {
     const radiant = game(true);
     expect(base.backrow("p1", 2)?.radiant).toBe(true);
     expect(radiant.backrow("p1", 2)?.radiant).toBe(true);
-    expect(base.view("p2").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(base.view("p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
     indistinguishable("p2", base, radiant);
   });
 });
@@ -573,7 +573,7 @@ describe("R177: a number taken by a face-down trap owed an event", () => {
     for (const s of [twoPawns, pawnAndSheep, pawnAndHoneypot]) {
       expect(s.state.turn).toBe(10);
       expect(s.state.active).toBe("p2");
-      expect(s.view("p1").opponent.backrow[1]).toEqual({ faceDown: true });
+      expect(s.view("p1").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
       expect(s.view("p1").opponent.modifiers).toHaveLength(1);
     }
 
@@ -613,8 +613,8 @@ describe("R222: #97 Zephyrs' dry run and hidden information", () => {
     const pawn = zephyrsAgainst(MY_PAWN);
 
     // p1 reads a bare face-down zone in both games, and both have the Discover open.
-    expect(sheep.view("p1").opponent.backrow[0]).toEqual({ faceDown: true });
-    expect(pawn.view("p1").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(sheep.view("p1").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
+    expect(pawn.view("p1").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(offeredTo(sheep, "p1")).toHaveLength(3);
 
     // The scorer ranks for p1 (§10.7, R29), and what p1 may read is the same in both games, so the
@@ -979,7 +979,7 @@ describe("R177: where a random Make Radiant over hidden zones landed", () => {
     const radiant = trapGame(true);
 
     for (const s of [plain, radiant]) {
-      expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true });
+      expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
       expect(s.view("p2").events.filter((event) => event.type === "radiantSet")).toHaveLength(2);
       expect(must(s.backrow("p1", 2), "p1's trap").radiant).toBe(true);
     }
@@ -1323,7 +1323,7 @@ describe("R242: #28's pick over public and hidden cards", () => {
       expect(must(s.unit("p1", 1), "Timmy").radiant).toBe(true);
       expect(must(s.backrow("p1", 2), "Sheepish").radiant).toBe(true);
       expect(must(s.hand("p1")[0], "Hit Job").radiant).toBe(true);
-      expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true });
+      expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
     }
     // Both worlds end with every card Radiant; which hidden card was base-face is the face R33 and
     // §9.1 keep from p2. In the zones' own order the backrow comes after the unit row, so a hidden

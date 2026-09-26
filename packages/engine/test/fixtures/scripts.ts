@@ -147,8 +147,8 @@ const goingLongScripts: CardScripts = {
   radiant: { staticFlags: { quickdraw: true } },
 };
 
-/** #98 Heroic Power: rolls one of seven powers at start of game, and its cost is that power's X. */
-export const HERO_POWERS = ["recruit", "drain", "ping", "bolt", "rush-token", "felinor-token", "discover"] as const;
+/** #98 Heroic Power: rolls one of eight powers at start of game, and its cost is that power's X. */
+export const HERO_POWERS = ["recruit", "drain", "ping", "bolt", "rush-token", "felinor-token", "discover", "stitching"] as const;
 export const heroicPower = def({
   id: "fx-heroic-power",
   index: "98",

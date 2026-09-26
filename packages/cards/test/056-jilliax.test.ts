@@ -125,7 +125,8 @@ describe("#56 Jilliax — radiant", () => {
   it("§8 Conventions: the radiant cell replaces the list, so Rush and Divine Shield are gone", () => {
     const g = scenario({ p1: { field: [{ def: "core-056", radiant: true, lane: 1 }] } });
 
-    expect(keywordKinds(g, "p1", 1)).toEqual(["Charge", "Indestructible", "Lifesteal", "Taunt"]);
+    // R347: the printed Taunt gives way to Indestructible, so the unit has the other three.
+    expect(keywordKinds(g, "p1", 1)).toEqual(["Charge", "Indestructible", "Lifesteal"]);
     g.expectStats("core-056", { attack: 6, maxHealth: 4, health: 4 });
   });
 
@@ -165,7 +166,7 @@ describe("#56 Jilliax — radiant", () => {
     expect(g.events.some((event) => event.type === "divineShieldLost")).toBe(false);
   });
 
-  it("§4.2 step 3 Taunt is still on the radiant face", () => {
+  it("R347 the radiant face's printed Taunt gives way to its Indestructible, so it forces no attack (§4.2 step 3)", () => {
     const g = scenario({
       p1: { field: [{ def: "core-025", lane: 1 }] },
       p2: {
@@ -176,6 +177,6 @@ describe("#56 Jilliax — radiant", () => {
       },
     });
 
-    expect(() => g.attack("core-025", "core-008")).toThrow(/Taunt unit must be attacked first/);
+    expect(() => g.attack("core-025", "core-008")).not.toThrow();
   });
 });

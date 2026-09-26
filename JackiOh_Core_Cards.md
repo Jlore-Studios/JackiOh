@@ -578,11 +578,15 @@ Exile 8 random cards in your library, the remaining cards in your library have a
 
 **(1) True Strike Spell, Core, Rare, \#44**
 
-Deal 4 damage (ignores armor); exile this
+**Pierce**
+
+Deal 4 damage. Exile this.
 
 \~\~\~
 
-Deal 9 damage (ignores armor); exile this
+**Pierce**
+
+Deal 9 damage. Exile this.
 
 &nbsp;
 
@@ -1022,11 +1026,11 @@ You cannot take more than 3 damage in a single instance
 
 **(X) Adaptive UI Spell, Core, Epic, \#74**
 
-Deal X damage, heal X life, draw X cards, summon a X/X rush token
+Deal X damage, heal X life, draw X cards, summon a X/X **Ghoul Token**
 
 \~\~\~
 
-Deal 2\*X damage, heal 3\*X life, draw 2\*X cards, summon a 3\*X/3\*X rush token
+Deal 2\*X damage, heal 3\*X life, draw 2\*X cards, summon a 3\*X/3\*X **Ghoul Token**
 
 &nbsp;
 
@@ -1098,17 +1102,17 @@ The next spell your play gains **Echo \+2**
 
 &nbsp;
 
-**(2) Zao Gao Spell, Core, Epic, \#80**
+**(2) Zao Gao Spell, Core, CN, Epic, \#80**
 
-**Discard 2**
+Discard 2 random cards.
 
 Summon 2 **Rush Tokens**. Give each of them 2 random **Keywords**.
 
 \~\~\~
 
-**Discard 2**
+Discard 2 random cards.
 
-Summon 2 **Radiant Rush Tokens**. Give each of them 2 random **Keywords**.
+Summon 2 **Radiant Rush Tokens**. Give each of them 3 random **Keywords**.
 
 &nbsp;
 
@@ -1236,7 +1240,7 @@ While this in your hand, when a unit enters the GY gain twice its stats
 
 &nbsp;
 
-**(1) CN-Viral Injection Spell, Core, CN, Legendary, \#90**
+**(2) CN-Viral Injection Spell, Core, CN, Legendary, \#90**
 
 Shuffle a **CN-Virus** into your opponent’s deck
 
@@ -1248,11 +1252,11 @@ Shuffle a **Radiant** **CN-Virus** into your opponent’s deck
 
 **(1) CN-Viral Injection Spell, Core, Token, CN, Legendary, \#90.1**
 
-**Cast on Draw:** Take 1 damage, shuffle two copies of this into your deck
+**Cast on Draw:** Take 1 damage. At end of turn, shuffle two copies of this into your deck
 
 \~\~\~
 
-**Cast on Draw:** Take 2 damage, shuffle three copies of this into your deck
+**Cast on Draw:** Take 2 damage. At end of turn, shuffle three copies of this into your deck
 
 &nbsp;
 
@@ -1439,7 +1443,8 @@ Discover the perfect **Radiant** card *(only from the core set)*
 - X \= 1\. Deal 2 damage to each opposing Hero.  
 - X \= 2\. Summon a **Rush Token**.  
 - X \= 1\. Summon a **Felinor Token**.  
-- X \= 2\. Discover a **Unit**.
+- X \= 2\. Discover a **Unit**.  
+- X \= 2\. **Stitching**: **Discover** 2 **Units** that cost (2) or less. **Fuse** them and add the result to your hand.
 
 &nbsp;
 
@@ -1457,7 +1462,8 @@ Also activates immediately when played.
 - X \= 1\. Deal 4 damage to each opposing Hero.  
 - X \= 2\. Summon two **Rush Token**.  
 - X \= 1\. Summon two **Felinor Token**.  
-- X \= 2\. Discover a **Radiant Unit**.
+- X \= 2\. Discover a **Radiant Unit**.  
+- X \= 2\. **Stitching**: **Discover** 2 **Radiant Units** that cost (2) or less. **Fuse** them and add the result to your hand.
 
 &nbsp;
 

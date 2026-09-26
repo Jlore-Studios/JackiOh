@@ -435,10 +435,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the eleven-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the twelve-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the eleven-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -451,8 +451,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Divine Shield",
       "Trample",
       "Cleave",
+      "Pierce",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(11);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(12);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -1069,7 +1070,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power; R43's own clauses are heroPower.test.ts.
-  // Proved by rulings-c.test.ts "R103 stores the seven power names and costs 0 for a power that has
+  // Proved by rulings-c.test.ts "R103 stores the eight power names and costs 0 for a power that has
   // not rolled", "R103 checks once-per-turn before mana, turn and phase", "R103 marks the use before
   // the effects run, and fizzles a token power in silence when the token is absent".
   it("R103 fixes the Heroic Power surface: seven names, cost 0 unrolled, once-per-turn checked first", () => {

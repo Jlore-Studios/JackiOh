@@ -108,6 +108,7 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Divine Shield" },
   { kind: "Trample" },
   { kind: "Cleave" },
+  { kind: "Pierce" },
   { kind: "Indestructible" },
   { kind: "Immutable" },
   { kind: "Stack" },

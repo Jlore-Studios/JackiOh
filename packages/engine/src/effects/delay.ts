@@ -16,6 +16,7 @@
 // must be able to outlive its card, which is why a card carries what it needs in `data` rather
 // than reaching back through `ctx.self`.
 
+import type { PlayerId } from "@jackioh/shared";
 import { scheduleDelayed } from "../modifiers";
 import { SELF_KEY, resumeSelf } from "../prompts";
 import { RUN_MARKS_KEY } from "../work";
@@ -33,8 +34,21 @@ import { playerOf, standsSinceScriptBegan, type PlayerSpec } from "./targets";
  */
 export const DELAYED_HOOK = "delayed";
 
-/** When a delayed effect comes due, in the vocabulary a card file writes: §2.2's two points. */
-export type DelayAt = { phase: DelayedEffect["at"]["phase"]; player: PlayerSpec };
+/**
+ * When a delayed effect comes due, in the vocabulary a card file writes: §2.2's two points. The
+ * player is relative to the controller like every other `PlayerSpec`, or `"turn"`: the player whose
+ * turn is running as the effect is made — R350's "at the end of this turn", whoever's turn that is
+ * (#90.1 CN-Virus, cast on a draw that may come on either player's turn).
+ */
+export type DelayAt = { phase: DelayedEffect["at"]["phase"]; player: PlayerSpec | typeof THIS_TURN };
+
+/** R350: `DelayAt.player` for the turn that is running, whoever's it is. */
+export const THIS_TURN = "turn";
+
+/** The player a `DelayAt` waits for. During setup, which is no player's turn, "turn" is p1's first (§2.1). */
+function delayPlayer(ctx: EffectContext, at: DelayAt): PlayerId {
+  return at.player === THIS_TURN ? ctx.state.active : playerOf(ctx, at.player);
+}
 
 /**
  * §6.2's "at the start of your next turn" and "end of turn" as one verb (#39 Recycling Initiative,
@@ -83,13 +97,7 @@ export function delay(args: {
       // point as a run of its own, and a card it watches is watched through `watch` (R174).
       const { [SELF_KEY]: _snapshot, [RUN_MARKS_KEY]: _run, ...data } = built.data;
       const resume = { ...built, data, hook: args.hook ?? DELAYED_HOOK };
-      scheduleDelayed(
-        ctx,
-        ctx.controller,
-        { phase: args.at.phase, player: playerOf(ctx, args.at.player) },
-        resume,
-        args.watch,
-      );
+      scheduleDelayed(ctx, ctx.controller, { phase: args.at.phase, player: delayPlayer(ctx, args.at) }, resume, args.watch);
     },
   };
 }
@@ -99,5 +107,7 @@ export function delay(args: {
  * the other player's, or setup's, which is no player's turn though `active` names p1 there (§2.1).
  */
 function endsOtherPlayersTurn(ctx: EffectContext, at: DelayAt): boolean {
+  // R350: "this turn" is the turn running, whoever's it is, so there is no other player's turn to miss.
+  if (at.player === THIS_TURN) return false;
   return at.phase === "end" && playerOf(ctx, at.player) === ctx.controller && !isTurnOf(ctx.state, ctx.controller);
 }

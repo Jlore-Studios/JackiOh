@@ -13,8 +13,9 @@
 //                         form keeps those stats; an empty cell means the card has no stats).
 //                         In "Type, tags" the first comma-separated segment is the card type
 //                         (no type name contains a comma) and the rest are tags.
-//   the five named tokens (`T-rush`, `T-sheep`, `T-felinor`, `T-bread`, and `T-coin`, the one
-//                         §2.1's setup deals rather than a card, R244)
+//   the six named tokens (`T-rush`, `T-sheep`, `T-felinor`, `T-bread`, `T-coin`, the one
+//                         §2.1's setup deals rather than a card, R244, and `T-ghoul`, a card of
+//                         its own in patch v0.1.1, R353)
 //                       — SPEC §7, columns "Token", "Index", "Cost", "Type",
 //                         "Stats and text" (its leading `A/B`; Bread Token's printed 0/0) and
 //                         "Radiant form". §7 has no rarity column and its "Type" column omits
@@ -23,7 +24,8 @@
 //                         Token for every filter") with BUILD M4-T2 ("`catalog.query` never
 //                         returns a token unless `tags` includes `Token`").
 //   radiant faces       — no §8 or §7 cell reads "No radiant form" or "none" any more: every
-//                         entry has a Radiant face of its own (§5.2, R276).
+//                         entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
+//                         being R349's fallback (its printed 0/0 doubled, its X/X doubled in play).
 //   rarity distribution — SPEC §8's rarity paragraph (35/37/16/7/5, superseding the source
 //                         list's #1–20 Common … grouping) and BUILD M4-T1.
 //   tag vocabulary      — SPEC §5/§6 tags as BUILD M4-T1 lists them, and R278's Jlockeed.
@@ -136,7 +138,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "77", name: "Professor Curvature", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
   { index: "78", name: "/fullsend", cost: 4, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "79", name: "Twinspell", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "80", name: "Zao Gao", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "80", name: "Zao Gao", cost: 2, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "81", name: "Radiant Saintess", cost: 1, type: "Unit", tags: ["Human"], rarity: "Epic", base: [2, 2], radiant: [4, 4] },
   { index: "82", name: "KY's Trial", cost: 1, type: "Spell", tags: ["KY"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "83", name: "Transmogulate", cost: 2, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
@@ -146,7 +148,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "87", name: "Pocket Chaos", cost: 2, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "88", name: "Twisting Nether", cost: 3, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Corpse Eater", cost: 4, type: "Unit", tags: [], rarity: "Epic", base: [2, 2], radiant: [6, 6] },
-  { index: "90", name: "CN-Viral Injection", cost: 1, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "90", name: "CN-Viral Injection", cost: 2, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "90.1", name: "CN-Virus", cost: 1, type: "Spell", tags: ["CN", "Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
   { index: "91", name: "Fed Fauci", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [1, 6], radiant: [2, 12] },
   { index: "92", name: "Felinor Fiender", cost: 2, type: "Unit", tags: ["Human"], rarity: "Legendary", base: [5, 7], radiant: [10, 14] },
@@ -165,6 +167,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "T-felinor", name: "Felinor Token", cost: 1, type: "Unit", tags: ["Felinor", "Token"], rarity: "Token", base: [1, 1], radiant: [2, 2] },
   { index: "T-bread", name: "Bread Token", cost: 0, type: "Unit", tags: ["Token"], rarity: "Token", base: [0, 0], radiant: [0, 0] },
   { index: "T-coin", name: "The Coin", cost: 0, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
+  { index: "T-ghoul", name: "Ghoul Token", cost: 0, type: "Unit", tags: ["Token"], rarity: "Token", base: [0, 0], radiant: [0, 0] },
 ];
 
 /** BUILD M4-T1: the only tags any entry may carry. */
@@ -221,12 +224,12 @@ const label = (entry: CardDef, field: string, expected: unknown, actual: unknown
   `${entry.id} (#${entry.index}) ${field}: expected ${show(expected)}, got ${show(actual)}`;
 
 describe("catalog membership (BUILD M4-T1)", () => {
-  it("holds exactly 100 cards and 10 tokens", () => {
+  it("holds exactly 100 cards and 11 tokens", () => {
     const cards = ENTRIES.filter((entry) => entry.token === false);
     const tokens = ENTRIES.filter((entry) => entry.token === true);
     expect(cards.length, "entries with token: false").toBe(100);
-    expect(tokens.length, "entries with token: true").toBe(10);
-    expect(ENTRIES.length, "catalog entries").toBe(110);
+    expect(tokens.length, "entries with token: true").toBe(11);
+    expect(ENTRIES.length, "catalog entries").toBe(111);
   });
 
   it("has indices 1-100 each present exactly once", () => {
@@ -244,8 +247,8 @@ describe("catalog membership (BUILD M4-T1)", () => {
     expect(ENTRIES.filter((entry) => /^\d+$/.test(entry.index)).length, "plain numeric indices").toBe(100);
   });
 
-  it("has the five card-defined tokens, the four shared tokens and The Coin", () => {
-    const expected = ["51.1", "65.1", "90.1", "93.1", "95.1", "T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin"];
+  it("has the five card-defined tokens, the four shared tokens, The Coin and the Ghoul Token", () => {
+    const expected = ["51.1", "65.1", "90.1", "93.1", "95.1", "T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"];
     for (const index of expected) {
       const entry = BY_INDEX.get(index);
       expect(entry?.index, `token index ${index}`).toBe(index);
@@ -263,7 +266,7 @@ describe("catalog membership (BUILD M4-T1)", () => {
       (entry) => `${entry.id} (#${entry.index})`,
     );
     expect(extra, "catalog entries with no SPEC row").toEqual([]);
-    expect(SPEC_8.length, "SPEC §8 + §7 fixture rows").toBe(110);
+    expect(SPEC_8.length, "SPEC §8 + §7 fixture rows").toBe(111);
   });
 });
 
@@ -353,9 +356,13 @@ describe("the Jlockeed tag (SPEC §5, §8, R278)", () => {
 
 describe("every entry has a radiant face of its own (SPEC §5.2, R276)", () => {
   it("gives no entry a radiant face identical to its base face — the five that had none included", () => {
-    const same = ENTRIES.filter((entry) => JSON.stringify(entry.radiant) === JSON.stringify(entry.base)).map(
-      (entry) => `${entry.id} (#${entry.index}) radiant is a copy of base`,
-    );
+    // R349: a card that prints no Radiant form has the fallback as its Radiant face, which doubles
+    // its stats — for an X/X token, the X it is summoned with (`layers.wornStatsOverride`) — so it
+    // is the one entry whose printed faces may read alike. It is marked as such, and only a Unit.
+    const same = ENTRIES.filter(
+      (entry) => entry.radiantFallback !== true && JSON.stringify(entry.radiant) === JSON.stringify(entry.base),
+    ).map((entry) => `${entry.id} (#${entry.index}) radiant is a copy of base`);
     expect(same, "entries whose radiant face is identical to base").toEqual([]);
+    expect(ENTRIES.filter((entry) => entry.radiantFallback === true).map((entry) => entry.id)).toEqual(["core-t-ghoul"]);
   });
 });

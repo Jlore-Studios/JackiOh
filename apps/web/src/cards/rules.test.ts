@@ -88,7 +88,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Choose one",
 ];
 
-/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK. */
+/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, and R346's PI. */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -100,6 +100,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Divine Shield": "DS",
   Trample: "TR",
   Cleave: "CL",
+  Pierce: "PI",
   Indestructible: "ND",
   Immutable: "IM",
   Stack: "ST",
@@ -279,7 +280,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 16 kinds", () => {
+  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 17 kinds", () => {
     expect(KEYWORD_MARK).toEqual(MARKS);
   });
 

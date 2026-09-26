@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-JackiOh is a 1v1 collectible card game: a Hearthstone-style mana curve, combat math and keyword vocabulary, played on Yu-Gi-Oh-style lanes with a hidden backrow of traps. This document is the complete specification: the rules, all 100 Core cards and 10 tokens described by what they do to game state, and the architecture and engine they run on.
+JackiOh is a 1v1 collectible card game: a Hearthstone-style mana curve, combat math and keyword vocabulary, played on Yu-Gi-Oh-style lanes with a hidden backrow of traps. This document is the complete specification: the rules, all 100 Core cards and 11 tokens described by what they do to game state, and the architecture and engine they run on.
 
 Design pillars:
 
@@ -48,14 +48,14 @@ flowchart LR
   H -- yes --> J[Game is a draw]
 ```
 
-This is the only turn sequence; §6.2 and §10.3 follow it (R62). Start-of-turn delayed effects (Kpop Fanatic's steal) resolve first, then start-of-turn triggers in queue order (R68), then the draw, so start-of-turn triggers fire before the draw. At the end of the turn, end-of-turn triggers resolve first (Combo-Index and the "add this back to your hand" spells included); then the end-of-turn trap window, where the Field Traps that watch turn ends (Bread and Butter, Intern Stimmy) fire on both sides; then end-of-turn delayed effects (Recycling Initiative, /fullsend's exile); then cleanup. Main-phase actions are: play a card (pay cost, pick modes and targets), attack with a unit, switch a unit's position, activate Heroic Power, offer or answer a draw, concede, end turn. Actions resolve one at a time; the engine never has two in flight. Cleanup expires every "this turn" effect (the Lunar Eclipse discount, /fullsend's modifiers, Professor Curvature's discount on its turn); Twinspell's pending Echo is not turn-scoped and survives cleanup.
+This is the only turn sequence; §6.2 and §10.3 follow it (R62). Start-of-turn delayed effects (Kpop Fanatic's steal) resolve first, then start-of-turn triggers in queue order (R68), then the draw, so start-of-turn triggers fire before the draw. At the end of the turn, end-of-turn triggers resolve first (Combo-Index and the "add this back to your hand" spells included); then the end-of-turn trap window, where the Field Traps that watch turn ends (Bread and Butter, Intern Stimmy) fire on both sides; then end-of-turn delayed effects (Recycling Initiative, /fullsend's exile, CN-Virus's copies, R350); then cleanup. Main-phase actions are: play a card (pay cost, pick modes and targets), attack with a unit, switch a unit's position, activate Heroic Power, offer or answer a draw, concede, end turn. Actions resolve one at a time; the engine never has two in flight. Cleanup expires every "this turn" effect (the Lunar Eclipse discount, /fullsend's modifiers, Professor Curvature's discount on its turn); Twinspell's pending Echo is not turn-scoped and survives cleanup.
 
 ### 2.3 Mana
 
 - Max mana = min(number of turns you have started, 4), plus persistent modifiers. It refreshes to max at the start of your turn. Turn 1: 1 mana; turn 4 onward: 4.
 - Temporary mana (Mana Well, Fed Fauci, Efficiency Dividend, /fullsend, Genn's Greed, Call to Chaos, The Coin) adds to current mana and can exceed 4. GIGA Glowy Jelly Bean costs 6 and is castable only after such gains.
 - Hinder subtracts from the opponent's next refresh. Mana never goes below 0.
-- X-cost cards: X is chosen at play time, 0 ≤ X ≤ current mana, and is stored on the played instance. Heroic Power is the exception: its X is fixed by its power (R43). Cost modifiers never apply to an X-cost card (R65). Embiggen cards offer two prices; the choice is stored the same way and drives the card's effect.
+- X-cost cards: X is chosen at play time, 1 ≤ X ≤ current mana (`MIN_CHOSEN_X`, R348), and is stored on the played instance, so a card whose X the player chooses cannot be cast for X = 0, and with no mana it cannot be played at all. Heroic Power is the exception: its X is fixed by its power (R43). Cost modifiers never apply to an X-cost card (R65). Embiggen cards offer two prices; the choice is stored the same way and drives the card's effect.
 - Cost modifiers stack additively and floor at 0, in the order given by Cost in §6.3 (R65); a temporary modifier ("this turn", "next turn") is stored with an expiry turn number.
 
 ### 2.4 Drawing, fatigue, hand size
@@ -63,7 +63,7 @@ This is the only turn sequence; §6.2 and §10.3 follow it (R62). Start-of-turn 
 - One draw at the start of every turn. Cast-on-draw cards resolve immediately and the draw repeats, which can chain (CN-Virus into CN-Virus). A cast-on-draw card is cast even when the hand is full, since it never enters the hand. **Ruling (R58):** one draw casts at most `CAST_ON_DRAW_CHAIN_CAP` (20) cast-on-draw cards; the next cast-on-draw card drawn in that chain goes to the hand uncast (burned if the hand is full), which ends the chain. "Draw N" is N separate draws, each with its own chain, and "draw your whole library" draws the library size as it was when the effect started.
 - Fatigue: the source names it but not its effect. **Ruling:** the Nth draw from an empty library deals N damage to your hero (Hearthstone). Infinite Reserves replaces each such draw with a Rush Token card. Each fatigue draw is reported by a `fatigue` event ahead of its hit, which both players see (R315).
 - Hand size: unspecified. **Ruling:** 10. A card drawn or added to a full hand is sent to the graveyard ("burned"), and Call to Chaos's "draw your deck" respects this. Both players see which card burned (R317).
-- Decks may exceed 20 during play (Unstable Clone Machine, CN-Virus); 20 is a deckbuilding limit only. **Ruling (R80):** a library holds at most `LIBRARY_CAP` (60) cards; a card that would be shuffled into a full library is not created, and an existing card goes to its owner's graveyard instead. Either way a `libraryOverflow` event reports the card the library turned away (R316).
+- Decks may exceed 20 during play (Unstable Clone Machine, CN-Virus, whose copies go in at the end of the turn it is cast on, R350); 20 is a deckbuilding limit only. **Ruling (R80):** a library holds at most `LIBRARY_CAP` (60) cards; a card that would be shuffled into a full library is not created, and an existing card goes to its owner's graveyard instead. Either way a `libraryOverflow` event reports the card the library turned away (R316).
 
 ### 2.5 Ending the game
 
@@ -121,7 +121,7 @@ A unit has Attack, Max Health and Damage; current health = max health minus dama
 
 ### 4.1 Positions and exertion
 
-- Units enter in Attack Position. Defense Position grants Taunt and Armor +1, stacking with printed Armor and Big D-fender's aura.
+- Units enter in Attack Position. Defense Position grants Taunt and Armor +1, stacking with printed Armor and Big D-fender's aura. An Indestructible unit never has Taunt, so in Defense Position it gets only the Armor (R347).
 - Each unit has one exertion per turn: one attack or one position switch. Deft Duelist may do both.
 - **Ruling:** only Attack-Position units may attack. A unit that switched to Attack this turn has spent its exertion and cannot attack (except Deft Duelist).
 - Summoning sickness: a unit cannot attack the turn it entered the field. Rush lifts this for unit targets only; Charge lifts it for units and the hero. A sick unit may still switch to Defense. A unit that enters the field again, a Reborn body included, entered it on that turn like any other (R83). A unit whose controller changes (stolen, swapped with the board, or rotated across the centre line) has entered its new controller's side on that turn: it is summoning sick in exactly the same way, and its exertion is fresh for its new controller. A unit that only moves between lanes on its own side has not entered anything (R171).
@@ -131,7 +131,7 @@ A unit has Attack, Max Health and Damage; current health = max health minus dama
 
 1. Choose an attacker that can attack (exertion unspent, Attack Position, not sick or has Rush/Charge, attack above 0, no "can't attack").
 2. Choose a target: an enemy unit, or the enemy hero (not with Rush on the summon turn).
-3. Taunt check: if any enemy unit has Taunt (printed, granted, or from Defense Position), the target must be one of them.
+3. Taunt check: if any enemy unit has Taunt (printed, granted, or from Defense Position; never an Indestructible unit, R347), the target must be one of them.
 4. Declaring the attack has now spent the attacker's exertion, before any damage. Trap window: My Pawn checks whether the hit would be lethal and, if so, cancels the attack; the exertion is not given back, so the attack is gone either way (R44).
 5. Resolve combat, then run the state check.
 
@@ -160,7 +160,7 @@ First Strike moves **that unit's** strike into step 1, on whichever side of the 
 Every point of damage in the game (combat, Cry, spell, end-of-turn, fatigue) goes through this pipeline, in this order. A hit whose amount is 0 before step 1, such as a 0-attack unit striking back, is not a damage instance: nothing happens and Divine Shield stays (R63).
 
 1. Divine Shield: if the target has it, negate the whole hit and remove the shield. Stop.
-2. Armor: subtract the target's total Armor (printed + Defense +1 + auras; hero uses Going Long's value). "Ignores armor" (True Strike) skips this. Floor at 0.
+2. Armor: subtract the target's total Armor (printed + Defense +1 + auras; hero uses Going Long's value). A source with Pierce skips this, on a unit and on a hero alike: a unit's Pierce through the layers, a spell's printed on its face (True Strike, R346). Floor at 0.
 3. Hero cap: if the target is a hero with Anti-oneshot Armor, clamp to 5 (radiant 3).
 4. Indestructible: takes no damage; stop.
 5. Apply damage; emit `damage` with source, target and amount dealt. The amount dealt is not capped at the target's health, except that a Trample source's damage to a unit counts only up to that unit's health, the rest being the step 9 instance (R63).
@@ -197,7 +197,7 @@ Every card carries the fields below; the catalog stores the base and Radiant for
 | Tribes and tags | Human, Felinor, KY, CN, Fruit, Call to Chaos, Quickdraw, Jlockeed, Token (Jlockeed: R278) | `tags: string[]` |
 | Rarity | Common, Rare, Epic, Legendary, Mythic; Token for every token | `rarity` |
 | Set | Core (Classic, Boss, Boss-X reserved) | `set` |
-| Index | 1 to 100; tokens N.1 when card N defines them, T-name when shared (Rush, Sheep, Felinor, Bread) or dealt by a rule (Coin) | `index: string` |
+| Index | 1 to 100; tokens N.1 when card N defines them, T-name when shared (Rush, Sheep, Felinor, Bread), dealt by a rule (Coin) or a card of its own (Ghoul, R353) | `index: string` |
 | Stats | Attack/Health, base and radiant | `base.stats`, `radiant.stats` |
 | Text | keywords + scripted effects, base and radiant | `base.script`, `radiant.script` |
 
@@ -221,7 +221,8 @@ The source defines Radiant only as "upgraded versions of normal cards". Rulings 
 - In hand or library: cost unchanged, stats and text swap to the radiant form.
 - On the field (Radiant Saintess, Knockoff Temu Glowy Jelly Bean, radiant GIGA Glowy Jelly Bean, Snom Bunny Mind Control, radiant Kpop Fanatic's steal): the base-stat layer swaps immediately, damage taken and buffs are kept, newly gained keywords apply at once, ongoing triggers use the radiant text from then on, and Cry does not re-fire.
 - A copy of a Radiant card is Radiant. A card an effect generates "Radiant" is Radiant. Tokens can be Radiant (Radiant CN-Virus, Radiant Reminisce).
-- Every card has a Radiant face, so making any card Radiant changes it (R276). The five the source left without one (Quickstriker, Zao Gao, Combo-Fodder, Chaos Golem and My Pawn) were given one by the Radiant pass of 2026-09-24, and the four unit tokens have theirs in §7.
+- Every card has a Radiant face, so making any card Radiant changes it (R276). The five the source left without one (Quickstriker, Zao Gao, Combo-Fodder, Chaos Golem and My Pawn) were given one by the Radiant pass of 2026-09-24, and the unit tokens have theirs in §7.
+- A Unit that prints no Radiant form of its own (the Ghoul Token, §7) is, made Radiant, its base face with its attack and health doubled: the same keywords and text, and a summon's X/X doubled with it (R349). The catalog marks such a card `radiantFallback` and prints that fallback as its Radiant face. A fused or crafted card is not one of these: R77 builds its Radiant form from its ingredients' Radiant forms, an ingredient without one lending its fallback.
 - A Radiant face is about twice its base face (R275): a Unit's attack and health are each at least double its base face's, and its effect is 100–150% stronger — 2 to 2.5 times the amount, a broader scope (one target to all, one side to a choice), or an added rider or keyword; a Spell, Field Spell, Trap or Field Trap scales its effect the same way and may add a draw or a tangential rider instead. `docs/radiant-audit.md` records every card against it.
 - A Radiant face prints its whole text, §8's Radiant cell read by §8's Conventions and written out (the catalog's `radiant.text`), and a client marks the words that differ from the base face's text (§10.10, R277).
 
@@ -248,7 +249,7 @@ Every keyword below maps to one engine primitive; a card script only ever compos
 
 | Keyword | Rule | Engine semantics | Core cards |
 | --- | --- | --- | --- |
-| Taunt | Enemies must attack Taunt units first | Attack-target validator; Defense Position adds it | #19, #55, #56, #86r, all units in Defense |
+| Taunt | Enemies must attack Taunt units first | Attack-target validator; Defense Position adds it; an Indestructible unit never has it, whatever grants it (R347) | #19, #55, #56, #86r, all units in Defense |
 | Armor X | Reduce each damage instance by X | Pipeline step 2; stacks (printed + Defense 1 + auras); "Armor 1" when unnumbered | #1 aura, #9r, #25, #45r, #55, #84 (hero) |
 | Rush | May attack units, not heroes, on summon turn | Sickness exemption for unit targets | #11, #14, #32, #56, #89, #91, Rush Token, Felinor Token r, Chaos Golem |
 | Charge | May attack units and heroes on summon turn | Full sickness exemption | #11r, #45, #56r, #92r, #95.1r, #100r |
@@ -259,13 +260,14 @@ Every keyword below maps to one engine primitive; a card script only ever compos
 | Divine Shield | Negate the first damage instance, then lose it | Pipeline step 1 | #3, #8r, #20r, #50r, #56, #89r, Chaos Golem |
 | Trample | Excess damage hits the hero | Pipeline step 9; any damage the unit deals (R63) | Random-keyword pool only |
 | Cleave | Also damages units adjacent to the target | Pipeline step 10, combat only, belongs to the attack (R63) | #32r, Rush Token r |
-| Indestructible | Can't be destroyed or damaged; can be exiled or sacrificed | Pipeline step 4; state check skips it unless its max health is 0 or less (R69); on would-destroy: Attack Position, lose Taunt this turn | #25r, #55r, #56r, #66, #98 |
+| Pierce | Its damage ignores Armor | Pipeline step 2 skipped for each of its hits, on a unit or a hero; a unit's keyword read through the layers, or a spell's printed on its face (R346) | #44, Ghoul Token, random-keyword pool |
+| Indestructible | Can't be destroyed or damaged; can be exiled or sacrificed | Pipeline step 4; state check skips it unless its max health is 0 or less (R69); on would-destroy: Attack Position, lose Taunt this turn (R46); while Indestructible it has no Taunt to lose (R347) | #25r, #55r, #56r, #66, #98 |
 | Immutable | Text can't be changed or transformed | Blocks Transform, Vanilla, Fuse-onto, Silence-like effects; Radiant still allowed (it is the card's own text) | #8, #19r, #66r |
 | Stack | May be played onto an occupied zone | Zone becomes a pile; only the top is active (section 3.2) | #92 |
 | Lucky X | Repeat a luck-based roll X extra times, keep the best | RNG helper `lucky(x, roll, better)` with a per-effect comparator | #23r, #42r |
 | Can't attack | Cannot declare attacks | Attack validator flag | #86 |
 
-**Ruling (random keyword pool):** Plastic Surgery and Zao Gao draw from Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave. Indestructible, Immutable, Stack and Lucky are excluded as too swingy or meaningless on a token. A unit never gets a keyword it already has.
+**Ruling (random keyword pool):** Plastic Surgery and Zao Gao draw from Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce (added by patch v0.1.1, R346). Indestructible, Immutable, Stack and Lucky are excluded as too swingy or meaningless on a token. A unit never gets a keyword it already has.
 
 ### 6.2 Triggers and timing words
 
@@ -296,7 +298,7 @@ Every keyword below maps to one engine primitive; a card script only ever compos
 | Sacrifice | Your own card (or an enemy unit a Tribute allows, #55), field to GY, bypasses Indestructible | `sacrifice(instance)`; counts as a death |
 | Exile | To the exile pile from anywhere | Increments the game exile counter; no Death trigger |
 | Bounce | Return to owner's hand | Tokens vanish; hand cap applies; the instance resets per R78 (buffs and damage included) |
-| Discard | Hand to GY, except a unit-token card, which ceases to exist instead (§3.2, R11) | **Ruling:** the player chooses unless "random" is stated (Zao Gao is chosen) |
+| Discard | Hand to GY, except a unit-token card, which ceases to exist instead (§3.2, R11) | **Ruling:** the player chooses unless "random" is stated (Zao Gao's is random, R354) |
 | Counter | Cancel a summoned card entirely | Card goes to GY, no Cry, no Death, and is treated as never played (the source's reading; no Core card counters) |
 | Steal | Take control | Moves the card to the stealer's side, same lane if free else first free zone (ruling); excess stay put |
 | Transform | Replace a card with another in place | New instance in the same zone, no Cry; blocked by Immutable |

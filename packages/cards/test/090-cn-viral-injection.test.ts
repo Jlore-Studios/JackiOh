@@ -1,11 +1,12 @@
 // #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
-// R11, R12, R57, R58, R63, R70, R80).
+// R11, R12, R57, R58, R63, R70, R80, R316, R350).
 //
 // BUILD M4-T4 row 90:   "Virus shuffled into the opponent's library at a random position; radiant
-//                        virus is radiant".
-// BUILD M4-T4 row 90.1: "On draw: 1 damage through the pipeline (Going Long reduces it), 2 copies
-//                        shuffled, draw again; a chain stops at 20 casts (R58); radiant 3 copies".
-//                        R275 scales the radiant face's damage too: "take 2 damage; 3 copies".
+//                        virus is radiant". Patch v0.1.1 (issue #27) made it cost 2.
+// BUILD M4-T4 row 90.1: "On draw: 1 damage through the pipeline (Going Long reduces it), draw
+//                        again; 2 copies shuffled in at the end of the turn (R350); a chain stops at
+//                        20 casts (R58); radiant 3 copies". R275 scales the radiant face's damage
+//                        too: "take 2 damage; 3 copies".
 //
 // The two cards are tested in one file because #90's whole effect is to hand #90.1 to the OTHER
 // player: ownership (R12) is what makes the token's cast-on-draw chain run on the opponent's draws
@@ -18,8 +19,10 @@
 //
 // Two routes reach the virus's script and both are tested: playing it from hand (its `cry` alone,
 // with no draw around it) and drawing it (`staticFlags.castOnDraw`, which is where R58's chain cap
-// lives). CAST_ON_DRAW_CHAIN_CAP is 20 and HERO_HEALTH is 30, so a library of nothing but viruses
-// costs its owner exactly 20 health and leaves the 21st virus in hand uncast.
+// lives). R350 holds a cast's copies back to the end of the turn it was cast on, so a chain casts
+// only the viruses the library already held: CAST_ON_DRAW_CHAIN_CAP is 20, so a library of 21
+// viruses costs its owner exactly 20 health and leaves the 21st in hand uncast, and the 40 copies
+// go in as the turn ends.
 
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
@@ -119,7 +122,13 @@ describe("#90 CN-Viral Injection — base", () => {
 
     s.expectInZone(INJECTION, "graveyard");
     expect(s.state.players.p1.turnLog.cardsPlayed).toBe(1);
-    s.expectMana("p1", 3);
+    // Patch v0.1.1: it costs 2.
+    s.expectMana("p1", 2);
+  });
+
+  it("costs 2 (patch v0.1.1)", () => {
+    const s = scenario({ seed: "core-090-cost", p1: { hand: [INJECTION] } });
+    expect(s.view("p1").you.hand[0]?.cost).toBe(2);
   });
 
   it("§9.2 the random position is inside the whole pile and replays identically from the seed", () => {
@@ -181,7 +190,7 @@ describe("#90 CN-Viral Injection — radiant", () => {
     expect(s.state.players.p2.library).toHaveLength(5);
   });
 
-  it("the Radiant virus runs its radiant face when drawn: 2 damage and 3 copies instead of 1 and 2", () => {
+  it("the Radiant virus runs its radiant face when drawn: 2 damage, then 3 Radiant copies as the turn ends", () => {
     // The virus sits on top of its owner's library, so the very next draw casts it.
     const s = scenario({
       seed: "core-090-radiant-face",
@@ -191,14 +200,18 @@ describe("#90 CN-Viral Injection — radiant", () => {
 
     s.startTurn();
 
-    // One cast of the radiant face: 3 copies, all Radiant (R57), then the chain draws on.
+    // One cast of the radiant face, then the draw repeats and finds the Stockpile.
+    expect(damageTo(s, "hero-p1")).toEqual([2]);
+    expect(defIds(s.hand("p1"))).toEqual(["core-005"]);
+    expect(shuffledIn(s, "p1")).toEqual([]);
+
+    s.endTurn();
+
+    // R350, R57: three copies at the end of the turn, all Radiant.
     const copies = shuffledIn(s, "p1").filter((event) => event.defId === VIRUS);
-    expect(copies.length).toBeGreaterThanOrEqual(3);
-    expect(s.state.players.p1.library.filter((card) => card.defId === VIRUS).every((c) => c.radiant)).toBe(true);
-    // Every cast in the chain is a radiant face, so every hit is 2.
-    const hits = damageTo(s, "hero-p1");
-    expect(hits.length).toBeGreaterThanOrEqual(1);
-    expect(hits.every((amount) => amount === 2)).toBe(true);
+    expect(copies).toHaveLength(3);
+    expect(s.state.players.p1.library.filter((card) => card.defId === VIRUS)).toHaveLength(3);
+    expect(s.state.players.p1.library.every((card) => card.radiant)).toBe(true);
   });
 });
 
@@ -237,7 +250,7 @@ describe("#90 and #90.1 — R311 the owner's library list", () => {
       p2: { hand: ["core-005"] },
     });
 
-    s.play(VIRUS);
+    s.play(VIRUS).endTurn();
 
     const list = s.view("p1").you.ownLibrary;
     expect(list?.unknown).toBe(0);
@@ -250,8 +263,13 @@ describe("#90 and #90.1 — R311 the owner's library list", () => {
 // #90.1 CN-Virus — base, played from hand (the `cry` with no draw around it)
 // =============================================================================================
 
+/** The delayed effects a CN-Virus has armed and not yet run (R350). */
+function armedCopies(s: Scenario): number {
+  return s.state.delayed.filter((entry) => entry.resume.defId === VIRUS).length;
+}
+
 describe("#90.1 CN-Virus — base", () => {
-  it("1 damage to its OWN hero and 2 copies into its own library", () => {
+  it("R350 1 damage to its OWN hero at once, and the 2 copies wait for the end of the turn", () => {
     const s = scenario({
       seed: "core-090-1-cry",
       p1: { hand: [VIRUS, "core-005"], library: filler(3) },
@@ -263,8 +281,46 @@ describe("#90.1 CN-Virus — base", () => {
     s.expectHealth("p1", 29);
     expect(damageTo(s, "hero-p1")).toEqual([1]);
     s.expectHealth("p2", 30);
+    // Nothing is shuffled yet: the copies are an end-of-turn delayed effect of the caster's.
+    expect(shuffledIn(s, "p1")).toEqual([]);
+    expect(s.state.players.p1.library).toHaveLength(3);
+    expect(armedCopies(s)).toBe(1);
+
+    s.endTurn();
+
     expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(2);
+    expect(armedCopies(s)).toBe(0);
+    // p2 has started its turn and drawn nothing from p1's library: 3 + 2.
     expect(s.state.players.p1.library).toHaveLength(5);
+  });
+
+  it("R350 the copies go in at §2.2's end-of-turn delayed-effect point: after the turn ends, before the next begins", () => {
+    const s = scenario({
+      seed: "core-090-1-order",
+      p1: { hand: [VIRUS, "core-005"], library: filler(3) },
+      p2: { hand: ["core-005"] },
+    });
+
+    s.play(VIRUS).endTurn();
+
+    s.expectEvents("turnEnded", "shuffledIn", "shuffledIn", "turnStarted");
+  });
+
+  it("R350 each cast arms its own shuffle: two viruses played in one turn shuffle in 4 at its end", () => {
+    const s = scenario({
+      seed: "core-090-1-two",
+      p1: { hand: [VIRUS, VIRUS, "core-005"], library: filler(3) },
+      p2: { hand: ["core-005"] },
+    });
+    const [first, second] = s.hand("p1");
+
+    s.play(first!).play(second!);
+    s.expectHealth("p1", 28);
+    expect(armedCopies(s)).toBe(2);
+
+    s.endTurn();
+
+    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(4);
   });
 
   it("R11 a SPELL token reaches the graveyard — it never ceases to exist", () => {
@@ -290,7 +346,7 @@ describe("#90.1 CN-Virus — base", () => {
       p2: { hand: ["core-005"] },
     });
 
-    s.play(VIRUS);
+    s.play(VIRUS).endTurn();
 
     const copies = s.state.players.p1.library.filter((card) => card.defId === VIRUS);
     expect(copies).toHaveLength(2);
@@ -309,10 +365,13 @@ describe("#90.1 CN-Virus — base", () => {
 
     s.expectHealth("p1", 30);
     expect(damageTo(s, "hero-p1")).toEqual([]);
+
+    s.endTurn();
+
     expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(2);
   });
 
-  it("R80 the copies stop at the library cap: the second is never created", () => {
+  it("R80 R316 the copies stop at the library cap: the second is never created, and the refusal is reported", () => {
     const s = scenario({
       seed: "core-090-1-library-cap",
       p1: { hand: [VIRUS, "core-005"], library: filler(LIBRARY_CAP - 1) },
@@ -320,11 +379,46 @@ describe("#90.1 CN-Virus — base", () => {
     });
 
     s.play(VIRUS);
-
-    expect(s.state.players.p1.library).toHaveLength(LIBRARY_CAP);
-    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(1);
     // The damage clause is unaffected by the library being full.
     s.expectHealth("p1", 29);
+
+    s.endTurn();
+
+    // p2's turn has begun and p1 has drawn nothing since, so p1's library is exactly at the cap.
+    expect(s.state.players.p1.library).toHaveLength(LIBRARY_CAP);
+    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(1);
+    const refused = s.events.filter((event) => event.type === "libraryOverflow");
+    expect(refused).toEqual([expect.objectContaining({ player: "p1", defId: VIRUS, outcome: "notCreated" })]);
+  });
+
+  it("R350 a virus cast on the opponent's turn shuffles its copies at the end of THAT turn", () => {
+    // p1's #32 Prem Panther (5/4) defends against p2's #4 Gary the Gambler (1/1) and destroys it,
+    // so p1 draws 2 on p2's turn: the CN-Virus on top of p1's library is cast there, and "the end of
+    // the turn" is p2's.
+    const s = scenario({
+      seed: "core-090-1-their-turn",
+      active: "p2",
+      p1: { field: ["core-032"], library: [VIRUS, "core-005", "core-005"], hand: ["core-005"] },
+      p2: { field: ["core-004"], hand: ["core-005"] },
+    });
+
+    s.attack(s.unit("p2", 1)!, s.unit("p1", 1)!);
+
+    expect(damageTo(s, "hero-p1")).toEqual([1]);
+    expect(defIds(s.pile("p1", "graveyard"))).toContain(VIRUS);
+    expect(armedCopies(s)).toBe(1);
+    expect(s.state.delayed.find((entry) => entry.resume.defId === VIRUS)?.at).toEqual({ phase: "end", player: "p2" });
+
+    s.endTurn();
+
+    // At the end of p2's turn, into p1's own library (its owner's) — before p1's turn begins, whose
+    // draw then casts them in turn.
+    const types = s.lastEvents.map((event) => event.type);
+    const ended = types.indexOf("turnEnded");
+    expect(s.lastEvents[ended]).toMatchObject({ type: "turnEnded", player: "p2" });
+    expect(types.slice(ended + 1, ended + 3)).toEqual(["shuffledIn", "shuffledIn"]);
+    expect(s.lastEvents.slice(ended + 1, ended + 3).every((event) => event.type === "shuffledIn" && event.player === "p1")).toBe(true);
+    expect(types[ended + 3]).toBe("turnStarted");
   });
 });
 
@@ -333,12 +427,44 @@ describe("#90.1 CN-Virus — base", () => {
 // =============================================================================================
 
 describe("#90.1 CN-Virus — cast on draw (R58, R70)", () => {
-  it("a drawn virus casts at once, shuffles 2 copies and repeats the draw", () => {
-    // The library holds nothing but the one virus, so every draw of the chain finds a virus and
-    // the chain runs to R58's cap: 20 casts, 1 damage each, 2 copies each.
+  it("R350 a drawn virus casts at once and the draw repeats through the library, never its own copies", () => {
     const s = scenario({
       seed: "core-090-1-chain",
+      p1: { library: [VIRUS, VIRUS, "core-005"], hand: [] },
+      p2: { hand: ["core-005"] },
+    });
+
+    s.startTurn();
+
+    // Two casts, then the Stockpile to hand; not one copy went in to be drawn.
+    expect(damageTo(s, "hero-p1")).toEqual([1, 1]);
+    expect(defIds(s.hand("p1"))).toEqual(["core-005"]);
+    expect(shuffledIn(s, "p1")).toEqual([]);
+    expect(s.state.players.p1.library).toHaveLength(0);
+
+    s.endTurn();
+
+    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(4);
+  });
+
+  it("R350 a lone virus no longer feeds its own chain: the repeated draw finds the library empty", () => {
+    const s = scenario({
+      seed: "core-090-1-lone",
       p1: { library: [VIRUS], hand: [] },
+      p2: { hand: ["core-005"] },
+    });
+
+    s.startTurn();
+
+    // 1 from the virus, then §2.4's first fatigue draw for 1.
+    s.expectEvents("drawn", "damage", "fatigue", "damage");
+    s.expectHealth("p1", 28);
+  });
+
+  it("R58 the chain stops at the cap and the next virus sits in hand UNCAST", () => {
+    const s = scenario({
+      seed: "core-090-1-chain-cap",
+      p1: { library: Array.from({ length: CHAIN_CAP + 2 }, () => VIRUS), hand: [] },
       p2: { hand: ["core-005"] },
     });
 
@@ -346,29 +472,16 @@ describe("#90.1 CN-Virus — cast on draw (R58, R70)", () => {
 
     expect(damageTo(s, "hero-p1")).toHaveLength(CHAIN_CAP);
     s.expectHealth("p1", 30 - CHAIN_CAP);
-    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(CHAIN_CAP * 2);
-  });
-
-  it("R58 the chain stops at the cap and the next virus sits in hand UNCAST", () => {
-    const s = scenario({
-      seed: "core-090-1-chain-cap",
-      p1: { library: [VIRUS], hand: [] },
-      p2: { hand: ["core-005"] },
-    });
-
-    s.startTurn();
-
-    // 1 in the library, net +1 per cast, minus the one drawn uncast at the end.
-    expect(s.state.players.p1.library).toHaveLength(CHAIN_CAP);
+    // 22 in the library: 20 cast, the 21st drawn uncast, one left.
     expect(defIds(s.hand("p1"))).toEqual([VIRUS]);
-    // Uncast means its own damage never happened: 20 casts, not 21.
-    expect(damageTo(s, "hero-p1")).toHaveLength(CHAIN_CAP);
+    expect(s.state.players.p1.library).toHaveLength(1);
+    expect(armedCopies(s)).toBe(CHAIN_CAP);
   });
 
   it("R70 every cast counts as a card played, so the turn log sees the whole chain", () => {
     const s = scenario({
       seed: "core-090-1-chain-played",
-      p1: { library: [VIRUS], hand: [] },
+      p1: { library: Array.from({ length: CHAIN_CAP + 1 }, () => VIRUS), hand: [] },
       p2: { hand: ["core-005"] },
     });
 
@@ -380,10 +493,10 @@ describe("#90.1 CN-Virus — cast on draw (R58, R70)", () => {
     s.expectMana("p1", 4);
   });
 
-  it("every cast virus ends in the graveyard (R11), none of them `gone`", () => {
+  it("every cast virus ends in the graveyard (R11), none of them `gone`, and each one's copies go in at the end", () => {
     const s = scenario({
       seed: "core-090-1-chain-graveyard",
-      p1: { library: [VIRUS], hand: [] },
+      p1: { library: Array.from({ length: CHAIN_CAP + 1 }, () => VIRUS), hand: [] },
       p2: { hand: ["core-005"] },
     });
 
@@ -391,6 +504,12 @@ describe("#90.1 CN-Virus — cast on draw (R58, R70)", () => {
 
     expect(s.pile("p1", "graveyard").filter((card) => card.defId === VIRUS)).toHaveLength(CHAIN_CAP);
     expect(s.pile("p1", "exile")).toHaveLength(0);
+
+    s.endTurn();
+
+    // 20 casts × 2 copies, into a library that held nothing after the 21st draw.
+    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(CHAIN_CAP * 2);
+    expect(s.state.players.p1.library).toHaveLength(CHAIN_CAP * 2);
   });
 });
 
@@ -404,10 +523,13 @@ describe("#90.1 CN-Virus — radiant", () => {
 
     s.play(VIRUS);
 
-    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(3);
     s.expectHealth("p1", 28);
     expect(damageTo(s, "hero-p1")).toEqual([2]);
     s.expectHealth("p2", 30);
+
+    s.endTurn();
+
+    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(3);
   });
 
   it("§4.4 the radiant 2 is one damage instance: 1 Armor leaves 1, and the copies still land", () => {
@@ -421,35 +543,37 @@ describe("#90.1 CN-Virus — radiant", () => {
 
     s.expectHealth("p1", 29);
     expect(damageTo(s, "hero-p1")).toEqual([1]);
+
+    s.endTurn();
+
     expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(3);
   });
 
-  it("R57 a Radiant virus breeds Radiant viruses, so the whole chain stays radiant", () => {
-    // 20 casts of 2 is 40, more than a 30-health hero has, so the hero starts higher to let R58's
-    // cap be what stops the chain here (the lethal chain is the next test).
-    const HEALTH = 50;
+  it("R57 a Radiant virus breeds Radiant viruses, and they cast the radiant face when drawn", () => {
     const s = scenario({
       seed: "core-090-1-radiant-chain",
-      p1: { library: [{ def: VIRUS, radiant: true }], hand: [], health: HEALTH },
-      p2: { hand: ["core-005"] },
+      p1: { hand: [{ def: VIRUS, radiant: true }, "core-005"], library: [], health: 50 },
+      p2: { hand: ["core-005"], library: filler(4) },
     });
 
-    s.startTurn();
+    s.play(VIRUS).endTurn();
 
-    // 3 copies per cast for all 20 casts: every drawn copy ran the radiant face, not the base one.
-    expect(shuffledIn(s, "p1").filter((e) => e.defId === VIRUS)).toHaveLength(CHAIN_CAP * 3);
-    expect(damageTo(s, "hero-p1")).toEqual(Array.from({ length: CHAIN_CAP }, () => 2));
-    s.expectHealth("p1", HEALTH - CHAIN_CAP * 2);
-    // 1 + 3·20 created, 21 drawn.
-    expect(s.state.players.p1.library).toHaveLength(1 + CHAIN_CAP * 3 - (CHAIN_CAP + 1));
+    // Three Radiant copies went in; p2's turn is running.
+    expect(s.state.players.p1.library).toHaveLength(3);
     expect(s.state.players.p1.library.every((card) => card.radiant)).toBe(true);
-    expect(s.hand("p1")[0]?.radiant).toBe(true);
+
+    // Back to p1: the draw casts all three, 2 each, arming 3 × 3 Radiant copies, and the repeat
+    // after the third finds the library empty (§2.4's first fatigue, 1).
+    s.endTurn();
+    expect(damageTo(s, "hero-p1")).toEqual([2, 2, 2, 2, 1]);
+    expect(armedCopies(s)).toBe(3);
+    expect(s.state.delayed.every((entry) => entry.resume.radiant)).toBe(true);
   });
 
   it("§2.5, R59 a radiant chain on a 30-health hero is lethal before R58's cap: 15 casts of 2", () => {
     const s = scenario({
       seed: "core-090-1-radiant-lethal",
-      p1: { library: [{ def: VIRUS, radiant: true }], hand: [] },
+      p1: { library: Array.from({ length: 16 }, () => ({ def: VIRUS, radiant: true })), hand: [] },
       p2: { hand: ["core-005"] },
     });
 

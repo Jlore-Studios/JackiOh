@@ -137,14 +137,15 @@ describe("R215: a hand card that reaches a graveyard is the printed card again",
   it("R215 a Corpse Eater that fed in hand, was discarded by Zao Gao and came back by Reminisce is a fresh 2/2 (§8 #89, R78)", () => {
     const g = scenario({
       p1: {
-        hand: [CORPSE_EATER, ZAO_GAO, REMINISCE, STOCKPILE],
+        // Zao Gao's discard is random (R354), so the hand it discards from is the Eater and one
+        // other card, and both go; Reminisce comes from the library afterwards.
+        hand: [CORPSE_EATER, ZAO_GAO, STOCKPILE],
         field: [{ def: POINTMASTER, lane: 1 }],
-        library: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+        library: [REMINISCE, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
       },
       p2: { hand: [STOCKPILE], field: [{ def: VANILLA, lane: 1 }], library: [VANILLA, VANILLA, VANILLA] },
     });
     const eater = g.card(CORPSE_EATER);
-    const filler = g.card(STOCKPILE);
     const prey = g.unit("p2", 1);
     if (prey === null) throw new Error("setup: p2's lane-1 unit");
 
@@ -153,9 +154,10 @@ describe("R215: a hand card that reaches a graveyard is the printed card again",
     g.expectInZone(prey, "graveyard");
     expect(g.stats(eater).attack).toBe(5);
 
-    // Zao Gao discards it; Reminisce brings it back from the graveyard.
-    g.play(ZAO_GAO).answer([eater.id, filler.id]);
+    // Zao Gao discards it; back on p1's next turn, Reminisce brings it back from the graveyard.
+    g.play(ZAO_GAO);
     g.expectInZone(eater, "graveyard");
+    g.endTurn().endTurn();
     g.play(REMINISCE).answer(eater.id);
     g.expectInZone(eater, "hand");
 

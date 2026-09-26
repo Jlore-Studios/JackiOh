@@ -13,7 +13,7 @@
 // come to export — or one that a module renames away — fails `pnpm typecheck` instead of silently
 // vanishing from the barrel (an ESM ambiguous star export resolves to `undefined` at runtime).
 //
-// Collisions: as of this writing there are none. All 63 names below are distinct, so no module
+// Collisions: as of this writing there are none. All 64 names below are distinct, so no module
 // "wins" over another and nothing had to be dropped. Three names do shadow same-named helpers
 // elsewhere in the engine, which is deliberate and not a conflict here, because the root
 // `@jackioh/engine` index exposes this directory as a namespace (`export * as effects`):
@@ -152,7 +152,7 @@ export { aiPlaysOutTurn, cancelAttack, forcedAttacks, forcedAttacksOn } from "./
 export type { ForcedAttackerFilter, ForcedSide, ForcedTarget } from "./combat";
 
 // A delayed effect, resolved at its R62 point in creation order (§2.2, §10.6, R62, R68).
-export { DELAYED_HOOK, delay } from "./delay";
+export { DELAYED_HOOK, THIS_TURN, delay } from "./delay";
 export type { DelayAt } from "./delay";
 
 // Player-scoped modifiers with their expiry (§2.2, §2.3, §6.3 Cost, R30, R48, R65).

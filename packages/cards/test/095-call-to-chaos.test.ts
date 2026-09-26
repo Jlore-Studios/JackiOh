@@ -361,7 +361,7 @@ describe("#95 Call to Chaos — base, the ten effects", () => {
       if (cardDef(card.defId).type === "Field Spell") {
         expect(seen).toMatchObject({ faceDown: false, defId: card.defId });
       } else {
-        expect(seen).toEqual({ faceDown: true });
+        expect(seen).toEqual({ faceDown: true, cost: 1 });
       }
     });
   });

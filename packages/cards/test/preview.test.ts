@@ -196,7 +196,7 @@ describe("#18 Bread and Butter previews the Bread Token's X (R280)", () => {
 
     expect(valueOf(s.view("p1").you.backrow[0])).toBe(3);
     const theirs = s.view("p2");
-    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(theirs)).not.toContain("unspent mana");
   });
 

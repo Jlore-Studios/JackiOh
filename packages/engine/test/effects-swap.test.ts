@@ -203,7 +203,7 @@ describe("swap (§6.3, R73, M3-T1)", () => {
     expect(hidden.faceUp).toBeUndefined();
     // Before the swap only p1 may read it: p2 sees a face-down marker (§3, R33).
     expect(viewFor(state, "p1").you.backrow[1]).toMatchObject({ defId: trap.id, faceDown: false });
-    expect(viewFor(state, "p2").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
 
     const events = run(state, swapBoard());
 
@@ -213,7 +213,7 @@ describe("swap (§6.3, R73, M3-T1)", () => {
     // The swap never flips the card: `controller` is what decides who may read it (R33).
     expect(hidden.faceUp).toBeUndefined();
     expect(viewFor(state, "p2").you.backrow[1]).toMatchObject({ defId: trap.id, faceDown: false });
-    expect(viewFor(state, "p1").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(viewFor(state, "p1"))).not.toContain(trap.id);
     expect(eventsOfType(events, "controlChanged")).toEqual([
       { type: "controlChanged", instanceId: hidden.id, controller: "p2", row: "backrow", lane: 2 },

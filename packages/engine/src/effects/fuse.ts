@@ -20,7 +20,7 @@
 // The `fused` event, `state.transientDefs` and the script registration are all the subsystem's and
 // are deliberately untouched here.
 
-import { fuse } from "../subsystems/fuse";
+import { fuse, type HandPrice } from "../subsystems/fuse";
 import type { Effect, EffectContext } from "../script";
 import { findInstance, newInstance, type CardInstance } from "../state";
 import { playerOf, type PlayerSpec } from "./targets";
@@ -84,6 +84,10 @@ export function fuseCards(args: {
   pick?: "random" | "all";
   /** R77's Craft a Card path: whose hand the fresh `costOverride` 0 result goes to. */
   toHand?: PlayerSpec;
+  /** R352: the hand card's price, `"free"` (#99, the default) or R77's `"fused"` cost (#98's Stitching). */
+  handPrice?: HandPrice;
+  /** R352: the hand card is made Radiant (#98's radiant Stitching). */
+  radiant?: boolean;
 }): Effect {
   return {
     kind: "fuseCards",
@@ -108,7 +112,14 @@ export function fuseCards(args: {
         if (found !== undefined) targets.push(found);
       }
 
-      const toHand = args.toHand === undefined ? {} : { toHand: playerOf(ctx, args.toHand) };
+      const toHand =
+        args.toHand === undefined
+          ? {}
+          : {
+              toHand: playerOf(ctx, args.toHand),
+              ...(args.handPrice === undefined ? {} : { handPrice: args.handPrice }),
+              ...(args.radiant === true ? { radiant: true } : {}),
+            };
 
       // #99's path: no kept instance at all, so one fusion into a hand.
       if (targetIds.length === 0) {

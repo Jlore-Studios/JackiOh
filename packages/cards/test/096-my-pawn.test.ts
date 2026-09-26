@@ -209,8 +209,8 @@ describe("#96 My Pawn — whose attack it answers", () => {
 const SORCERER = "core-068";
 /** #81 Radiant Saintess, 2/2 Reborn: lethal at 2 health, and back at 1 health when destroyed. */
 const SAINTESS = "core-081";
-/** #56 Jilliax: its radiant face is a 6/4 with Charge, Taunt, Lifesteal and Indestructible. */
-const JILLIAX = "core-056";
+/** #66 The Rock: a 10/10 Indestructible (Tribute 1, which a unit set on the field never paid). */
+const ROCK = "core-066";
 /** Cards for the AI's turn, as the other My Pawn tests give it (my-pawn.test.ts). */
 const STOCKPILE = "core-005";
 const TIMMY = "core-011";
@@ -297,19 +297,18 @@ describe("#96 My Pawn — radiant (R283)", () => {
   });
 
   it("R283, R46 an Indestructible attacker is knocked down instead, and the attack is cancelled either way", () => {
-    const { s, attacker } = pawnGame({ def: JILLIAX, radiant: true }, 6);
+    // #66 The Rock: a 10/10 Indestructible, in Attack Position, with no Taunt (R347 takes any).
+    const { s, attacker } = pawnGame(ROCK, 10);
 
-    // Cancelled: the 6 never landed, so its Lifesteal had nothing to heal off.
-    s.expectHealth("p2", 6);
+    // Cancelled: the 10 never landed.
+    s.expectHealth("p2", 10);
     expect(s.events.some((event) => event.type === "damage" && event.sourceId === attacker.id)).toBe(false);
 
-    // R46: the mark does not kill it. It is in Attack Position already, so the knock-down reports
-    // only the Taunt it loses, and it does so before the AI takes the turn.
-    expect(fromCancel(s, 2)).toEqual(["attackCancelled", "keywordGranted"]);
-    const lost = s.events.find(
-      (event) => event.type === "keywordGranted" && event.instanceId === attacker.id,
-    );
-    expect(lost?.type === "keywordGranted" && lost.keyword.kind === "Taunt" && lost.lost === true).toBe(true);
+    // R46: the mark does not kill it. It is in Attack Position already and has no Taunt to lose, so
+    // the knock-down changes nothing a view shows and reports nothing (R91).
+    expect(fromCancel(s, 1)).toEqual(["attackCancelled"]);
+    expect(eventsOn(s, attacker.id, "positionSwitched")).toBe(0);
+    expect(eventsOn(s, attacker.id, "keywordGranted")).toBe(0);
     expect(eventsOn(s, attacker.id, "destroyed")).toBe(0);
     s.expectInZone(attacker, "field");
     turnWentOn(s, "p1");

@@ -49,20 +49,21 @@ const NUMBERED_KEYWORDS: ReadonlySet<string> = new Set(["Armor", "Lucky"]);
 /* ------------------------------------------------------------- expectations */
 
 /**
- * §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 5 named ones — the 4 tokens
- * several cards share and The Coin, which §2.1's setup deals (R244).
+ * §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 6 named ones — the 4 tokens
+ * several cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token, a card of its
+ * own in patch v0.1.1 (R353).
  */
 const CARD_DEFINED_TOKEN_INDICES = ["51.1", "65.1", "90.1", "93.1", "95.1"] as const;
-const SHARED_TOKEN_INDICES = ["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin"] as const;
+const SHARED_TOKEN_INDICES = ["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"] as const;
 const EXPECTED_INDICES: readonly string[] = [
   ...Array.from({ length: 100 }, (_, i) => String(i + 1)),
   ...CARD_DEFINED_TOKEN_INDICES,
   ...SHARED_TOKEN_INDICES,
 ];
 
-const EXPECTED_TOTAL = 110;
+const EXPECTED_TOTAL = 111;
 const EXPECTED_NON_TOKEN = 100;
-const EXPECTED_TOKEN = 10;
+const EXPECTED_TOKEN = 11;
 
 /** §8: "Distribution: 35 Common, 37 Rare, 16 Epic, 7 Legendary, 5 Mythic." */
 const EXPECTED_RARITY_COUNTS: Readonly<Record<string, number>> = {
@@ -81,12 +82,12 @@ const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
   Human: 18,
   Felinor: 4,
   KY: 5,
-  CN: 2,
+  CN: 3,
   Fruit: 1,
   "Call to Chaos": 1,
   Quickdraw: 3,
   Jlockeed: 2,
-  Token: 10,
+  Token: 11,
 };
 
 /* ------------------------------------------------------------------ helpers */
@@ -168,6 +169,25 @@ function validateFace(where: string, faceName: "base" | "radiant", face: unknown
   });
 }
 
+/** R349's fallback face, as `validateFallback` holds a `radiantFallback` entry's `radiant` to it. */
+const RADIANT_FALLBACK_FACTOR = 2;
+
+function validateFallback(where: string, value: Record<string, unknown>): void {
+  if (value["radiantFallback"] !== true) {
+    fail(where, `\`radiantFallback\` is \`true\` when present (got ${describe(value["radiantFallback"])})`);
+    return;
+  }
+  if (value["type"] !== "Unit") fail(where, "`radiantFallback` is a Unit's (R349)");
+  const base = value["base"];
+  const radiant = value["radiant"];
+  if (!isPlainObject(base) || !isPlainObject(radiant)) return;
+  const doubled = (stat: unknown): unknown => (typeof stat === "number" ? RADIANT_FALLBACK_FACTOR * stat : stat);
+  const expected = { ...base, attack: doubled(base["attack"]), health: doubled(base["health"]) };
+  if (describe(radiant) !== describe(expected)) {
+    fail(where, `a \`radiantFallback\` card's radiant face is its base face doubled (R349): expected ${describe(expected)}`);
+  }
+}
+
 /* --------------------------------------------------------------------- main */
 
 const catalogPath = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -180,7 +200,7 @@ if (!isPlainObject(raw)) {
 const catalog = raw;
 const entries = Object.entries(catalog);
 
-// 1. 110 entries.
+// 1. 111 entries.
 if (entries.length !== EXPECTED_TOTAL) {
   fail("catalog", `expected ${EXPECTED_TOTAL} entries, found ${entries.length}`);
 }
@@ -299,13 +319,21 @@ for (const [key, value] of entries) {
 
   if ("refs" in value) refsByCard.set(key, value["refs"]);
 
+  // R349: a card that prints no Radiant form carries `radiantFallback: true`, and its `radiant` face
+  // is exactly the fallback the rule gives it: the base face with its attack and health doubled,
+  // the same keywords and the same text.
+  if ("radiantFallback" in value) validateFallback(where, value);
+
   const unknownFields = Object.keys(value).filter(
-    (k) => !["id", "index", "name", "set", "type", "tags", "rarity", "token", "cost", "refs", "base", "radiant"].includes(k),
+    (k) =>
+      !["id", "index", "name", "set", "type", "tags", "rarity", "token", "cost", "refs", "radiantFallback", "base", "radiant"].includes(
+        k,
+      ),
   );
   if (unknownFields.length > 0) fail(where, `unknown field(s) ${unknownFields.join(", ")}`);
 }
 
-// 2. 100 non-token and 10 token.
+// 2. 100 non-token and 11 token.
 if (nonTokenCount !== EXPECTED_NON_TOKEN) {
   fail("catalog", `expected ${EXPECTED_NON_TOKEN} non-token cards, found ${nonTokenCount}`);
 }
@@ -313,7 +341,7 @@ if (tokenCount !== EXPECTED_TOKEN) {
   fail("catalog", `expected ${EXPECTED_TOKEN} tokens, found ${tokenCount}`);
 }
 
-// 3. Indices 1–100 each exactly once, plus the 10 token indices.
+// 3. Indices 1–100 each exactly once, plus the 11 token indices.
 for (const index of EXPECTED_INDICES) {
   const keys = seenIndices.get(index);
   if (keys === undefined) fail("catalog", `index "${index}" is missing`);

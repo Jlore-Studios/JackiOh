@@ -883,7 +883,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(whyCannotAttack(state, unit, { kind: "hero", player: "p2" })).toBeNull();
   });
 
-  it("R21 draws random keywords from the eleven-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
     expect([...RANDOM_KEYWORD_POOL]).toEqual([
       "Taunt",
       "Armor 1",
@@ -896,6 +896,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
       "Divine Shield",
       "Trample",
       "Cleave",
+      "Pierce",
     ]);
 
     const state = game("r21");
@@ -1122,14 +1123,15 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     const hidden = put(state, trap.id, slot("p2", "backrow", 1));
 
     expect(at(viewFor(state, "p2").you.backrow, 0)).toMatchObject({ faceDown: false, defId: trap.id });
-    expect(at(viewFor(state, "p1").opponent.backrow, 0)).toEqual({ faceDown: true });
+    // R351: the marker carries the trap's cost and nothing else.
+    expect(at(viewFor(state, "p1").opponent.backrow, 0)).toEqual({ faceDown: true, cost: 0 });
 
     run(state, steal({ instanceId: hidden.id }), { controller: "p1" });
     expect(hidden.controller).toBe("p1");
     expect(hidden.owner).toBe("p2");
     expect(at(viewFor(state, "p1").you.backrow, 0)).toMatchObject({ faceDown: false, defId: trap.id });
     // Its owner stops seeing it, even though ownership never moved.
-    expect(at(viewFor(state, "p2").opponent.backrow, 0)).toEqual({ faceDown: true });
+    expect(at(viewFor(state, "p2").opponent.backrow, 0)).toEqual({ faceDown: true, cost: 0 });
 
     const fired = put(state, fieldTrap.id, slot("p2", "backrow", 2));
     consumeTrap(sinkFor(state), fired);

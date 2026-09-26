@@ -106,6 +106,19 @@ function creditKiller(unit: CardInstance, source: CardInstance | null, killedBef
 }
 
 /**
+ * R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
+ * the layers like its Lifesteal and Trample (§10.4), or a spell's printed on its face (#44 True
+ * Strike), which the same reading finds on the card while it resolves — or the effect's own
+ * `ignoreArmor`, which states that its damage pierces without the source having the keyword, as
+ * R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine Shield, the hero
+ * cap and Indestructible all still apply.
+ */
+export function pierces(state: GameState, source: CardInstance | null, flags?: DamageArgs["flags"]): boolean {
+  if (flags?.ignoreArmor === true) return true;
+  return source !== null && hasKeyword(unitView(state, source).keywords, "Pierce");
+}
+
+/**
  * Deal one damage instance. Returns the amount actually dealt. A hit of 0 before step 1 is not a
  * damage instance at all: Divine Shield stays and nothing triggers (R63).
  */
@@ -130,12 +143,12 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
     }
   }
 
-  // Step 2: Armor, unless the source ignores it (True Strike). A hero's total is `heroArmorOf`:
-  // what is written on the hero plus every backrow grant (#84), summed per R124. Fatigue is an
-  // ordinary instance on its own hero and pays this step like any other hit (R125); only "lose
-  // health" bypasses the pipeline (R18), and that never comes through here.
+  // Step 2: Armor, unless the hit pierces it (R346). A hero's total is `heroArmorOf`: what is
+  // written on the hero plus every backrow grant (#84), summed per R124. Fatigue is an ordinary
+  // instance on its own hero and pays this step like any other hit (R125); only "lose health"
+  // bypasses the pipeline (R18), and that never comes through here.
   let amount = amountIn;
-  if (args.flags?.ignoreArmor !== true) {
+  if (!pierces(state, source, args.flags)) {
     const armor =
       target.kind === "unit"
         ? armorOf(unitView(state, target.instance).keywords)

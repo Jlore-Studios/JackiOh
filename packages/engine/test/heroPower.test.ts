@@ -177,25 +177,25 @@ function act(state: GameState, body: ActionInput): ReturnType<typeof reduce> {
 }
 
 // ---------------------------------------------------------------------------
-// The seven powers and their X.
+// The eight powers and their X.
 // ---------------------------------------------------------------------------
 
-describe("Heroic Power: the seven powers and their X (R43, §8 #98)", () => {
-  it("R43 knows the seven powers of §8 #98, each with the X it spends", () => {
-    expect(HERO_POWERS).toHaveLength(7);
-    expect(HERO_POWER_NAMES).toHaveLength(7);
-    expect(new Set(HERO_POWER_NAMES).size).toBe(7);
+describe("Heroic Power: the eight powers and their X (R43, R352, §8 #98)", () => {
+  it("R43 knows the eight powers of §8 #98, each with the X it spends (R352 added Stitching)", () => {
+    expect(HERO_POWERS).toHaveLength(8);
+    expect(HERO_POWER_NAMES).toHaveLength(8);
+    expect(new Set(HERO_POWER_NAMES).size).toBe(8);
 
-    // §8 #98 lists the seven with their X in this order.
-    expect(HERO_POWERS.map((power) => power.x)).toEqual([3, 1, 1, 1, 2, 1, 2]);
+    // §8 #98 lists the eight with their X in this order.
+    expect(HERO_POWERS.map((power) => power.x)).toEqual([3, 1, 1, 1, 2, 1, 2, 2]);
     for (const power of HERO_POWERS) {
       expect(powerByName(power.name)).toBe(power);
       expect(power.label.length).toBeGreaterThan(0);
       expect(power.radiantLabel.length).toBeGreaterThan(0);
     }
 
-    // The fixture's roll list is the same length, so a stand-in card rolls one of seven too.
-    expect(FIXTURE_POWER_NAMES).toHaveLength(7);
+    // The fixture's roll list is the same length, so a stand-in card rolls one of eight too.
+    expect(FIXTURE_POWER_NAMES).toHaveLength(8);
   });
 
   it("R43 stores the power in memory.power and its cost is that power's X, never a chosen X", () => {
