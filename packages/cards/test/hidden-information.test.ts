@@ -79,6 +79,7 @@ const MR_VANILLA = "core-008";
 const BIGOT = "core-002";
 const TRANSMOGULATE = "core-083";
 const UNLICENSED = "core-085";
+const COLLATERAL = "core-034";
 const CORPSE_EATER = "core-089";
 const COMBO_INDEX = "core-093";
 const CALL_TO_CHAOS = "core-095";
@@ -162,8 +163,9 @@ describe("R177: a card replaced where the viewer cannot see it", () => {
 
     s.play(TRANSMOGULATE);
 
-    // p1's view: the three library replacements are hidden. p2's view: those three plus the trap.
-    const expectHidden: Record<PlayerId, number> = { p1: 3, p2: 4 };
+    // p1's view: the three library replacements are hidden. p2's view: those three, the trap, and
+    // the Stockpile in p1's hand, which Transmogulate replaces too (R365).
+    const expectHidden: Record<PlayerId, number> = { p1: 3, p2: 5 };
     for (const viewer of ["p1", "p2"] as const) {
       const intoHidden = eventsOf(s.view(viewer), "transformed").filter((event) => event.newInstanceId === HIDDEN);
       expect(intoHidden).toHaveLength(expectHidden[viewer]);
@@ -317,17 +319,17 @@ describe("R177: a hidden hand card's buff", () => {
     const base = eaterGame(false);
     const radiant = eaterGame(true);
 
-    // Both Eaters fed: +3/+3 on the base face, double on the radiant one (§8 #89).
+    // Both Eaters fed on a 4/4: +4/+4 on the base face, double on the radiant one (§8 #89).
     const eaterOf = (s: Scenario) => must(s.hand("p2").find((card) => card.defId === CORPSE_EATER), "p2's Eater");
-    expect(eaterOf(base).buffs).toEqual({ attack: 3, health: 3 });
-    expect(eaterOf(radiant).buffs).toEqual({ attack: 6, health: 6 });
+    expect(eaterOf(base).buffs).toEqual({ attack: 4, health: 4 });
+    expect(eaterOf(radiant).buffs).toEqual({ attack: 8, health: 8 });
 
     // p2's hand is a count to p1 (§10.8), and the size of a hidden card's buff is the card's: the
     // event still plays its cue, and p1 cannot tell the two games apart.
     expect(eventsOf(base.view("p1"), "buffed")).toEqual([{ type: "buffed", instanceId: HIDDEN, attack: 0, health: 0 }]);
     expect(radiant.view("p1")).toEqual(base.view("p1"));
     // p2 reads its own card's buff in full.
-    expect(eventsOf(radiant.view("p2"), "buffed").map((event) => event.attack)).toEqual([6]);
+    expect(eventsOf(radiant.view("p2"), "buffed").map((event) => event.attack)).toEqual([8]);
   });
 });
 
@@ -336,12 +338,12 @@ describe("R177: a card that ceased to exist where the viewer could not read it s
     const s = scenario({
       seed: "hunt-r3-transmog-trap",
       p1: {
-        hand: [TRANSMOGULATE, MAGIC_JAMMED, STOCKPILE],
+        hand: [TRANSMOGULATE],
         backrow: [{ def: SHEEPISH, lane: 1 }],
         mana: 10,
         library: [HIT_JOB],
       },
-      p2: { hand: [STOCKPILE], library: [HIT_JOB] },
+      p2: { hand: [MAGIC_JAMMED, STOCKPILE], library: [HIT_JOB] },
     });
     const sheep = must(s.backrow("p1", 1), "p1's Sheepish");
 
@@ -350,7 +352,9 @@ describe("R177: a card that ceased to exist where the viewer could not read it s
     const replacement = must(s.backrow("p1", 1), "the replacement trap");
     expect(replacement.defId).toBe(UNLICENSED);
 
-    // p1 destroys its own face-down replacement, which reaches p1's public graveyard.
+    // p2 destroys p1's face-down replacement on its own turn (a Magic Jammed in p1's hand would have
+    // been replaced too, R365), and it reaches p1's public graveyard.
+    if (s.state.active === "p1") s.endTurn();
     s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: replacement.id }] });
     s.expectInZone(replacement, "graveyard");
 
@@ -367,15 +371,20 @@ describe("R177: a card that ceased to exist where the viewer could not read it s
     expect(JSON.stringify(s.view("p1").events)).not.toContain("hiddenFrom");
   });
 
-  /** p1's one library card is replaced, then Eugenics exiles the replacement into public view. */
+  /**
+   * p1's one library card is replaced, then p2's Collateral Damage exiles the replacement into public
+   * view (a card in p1's own hand would have been replaced too, R365).
+   */
   function libraryGame(card: string): Scenario {
     const s = scenario({
       seed: "hunt-r3-transmog-library",
-      p1: { hand: [TRANSMOGULATE, EUGENICS, STOCKPILE], mana: 10, library: [card] },
-      p2: { hand: [STOCKPILE], library: [HIT_JOB] },
+      p1: { hand: [TRANSMOGULATE], mana: 10, library: [card] },
+      p2: { hand: [COLLATERAL, STOCKPILE], field: [{ def: GARY, lane: 1 }], library: [HIT_JOB] },
     });
     s.play(TRANSMOGULATE);
-    s.play(EUGENICS);
+    if (s.state.active === "p1") s.endTurn();
+    const gary = must(s.unit("p2", 1), "p2's Gary");
+    s.play(COLLATERAL, { targets: [{ pick: "instance", instanceId: gary.id }] });
     return s;
   }
 
@@ -394,7 +403,7 @@ describe("R177: a card that ceased to exist where the viewer could not read it s
   });
 
   /** p1's two-card library, replaced by Transmogulate; p2 watches. */
-  function immutableLibraryGame(first: string): Scenario {
+  function immutableLibraryGame(first: string | { def: string; radiant: boolean }): Scenario {
     const s = scenario({
       seed: "hunt-r3-transmog-immutable",
       p1: { hand: [TRANSMOGULATE, STOCKPILE], mana: 10, library: [first, HIT_JOB] },
@@ -405,13 +414,13 @@ describe("R177: a card that ceased to exist where the viewer could not read it s
   }
 
   it("R35 Transmogulate replaces an Immutable library card too, so the opponent cannot count the library's Immutable cards (§9.1, R23)", () => {
-    const withVanilla = immutableLibraryGame(MR_VANILLA);
+    const withImmutable = immutableLibraryGame({ def: MENACE, radiant: true });
     const without = immutableLibraryGame(STOCKPILE);
 
     // "Other zones: any card from the pool, same counts": Immutable stays only on the board, where
     // the Replace is a Transform (R23, §8 #83), so the library is replaced whole.
-    expect(withVanilla.pile("p1", "library").map((card) => card.defId)).not.toContain(MR_VANILLA);
-    expect(withVanilla.view("p2")).toEqual(without.view("p2"));
+    expect(withImmutable.pile("p1", "library").map((card) => card.defId)).not.toContain(MENACE);
+    expect(withImmutable.view("p2")).toEqual(without.view("p2"));
   });
 });
 
@@ -499,15 +508,15 @@ describe("R177: Make Radiant on a hidden card that is already Radiant", () => {
 
 describe("R177: Eugenics' Radiant roll over a hidden library", () => {
   /**
-   * p1's library is nine 4-mana 7/7s. Eugenics exiles 8 at random, and with this seed the card left
+   * p1's library is eight 4-mana 7/7s. Eugenics exiles 7 at random, and with this seed the card left
    * is library[5]; each remaining library card then has a 30% chance to become Radiant (§8 #42),
    * and with this seed that card's roll comes up. The two games differ only in whether that one
    * library card, which neither player can read (§9.1), was Radiant already.
    */
   function eugenicsGame(leftCardRadiant: boolean): Scenario {
-    const library = Array.from({ length: 9 }, (_, at) => ({ def: SEVEN_SEVEN, radiant: leftCardRadiant && at === 5 }));
+    const library = Array.from({ length: 8 }, (_, at) => ({ def: SEVEN_SEVEN, radiant: leftCardRadiant && at === 5 }));
     const s = scenario({
-      seed: "r5-eugenics-0",
+      seed: "r5-eugenics-7",
       p1: { hand: [EUGENICS, STOCKPILE], mana: 10, library },
       p2: { hand: [STOCKPILE], library: [STOCKPILE] },
     });
@@ -519,7 +528,7 @@ describe("R177: Eugenics' Radiant roll over a hidden library", () => {
     const base = eugenicsGame(false);
     const radiant = eugenicsGame(true);
 
-    // The same eight cards went to the (public) exile pile in both games, all of them base-face.
+    // The same seven cards went to the (public) exile pile in both games, all of them base-face.
     expect(base.pile("p1", "exile").map((card) => card.id)).toEqual(radiant.pile("p1", "exile").map((card) => card.id));
     expect(base.pile("p1", "exile").every((card) => !card.radiant)).toBe(true);
     // One card is left, and it ends Radiant in both games: rolled into it, or already there.
@@ -847,7 +856,9 @@ describe("R223: instance ids Transmogulate gives a library", () => {
     const s = scenario({
       seed: "hunt-r7-transmog-ids",
       p1: {
-        hand: [TRANSMOGULATE, TUTOR, RAPID],
+        hand: [TRANSMOGULATE, RAPID],
+        // A unit (replaced by a Legendary one) that can still switch keeps §2.5's auto-end away.
+        field: [SEVEN_SEVEN],
         library: Array.from({ length: 16 }, () => HIT_JOB),
         graveyard: [HIT_JOB],
       },
@@ -855,10 +866,14 @@ describe("R223: instance ids Transmogulate gives a library", () => {
     });
 
     s.play(TRANSMOGULATE);
+    // The Tutor comes to hand only now: one held while Transmogulate resolved would have been
+    // replaced with the rest of the hand (R365).
+    const tutor = newInstance(s.state, TUTOR, "p1", { z: "hand", player: "p1" });
+    s.state.players.p1.hand.push(tutor);
 
     // What p1 reads after the Replace: the graveyard card's replacement is public, and the library is
-    // a count. R35 walks the library top down and then the graveyard, so if the replacements were
-    // numbered in that walk the library's ids are the block just below the graveyard one's.
+    // a count. R35 walks the hand, the library and then the graveyard (R365), so if the replacements
+    // were numbered in that walk the library's ids are the block just below the graveyard one's.
     const afterReplace = s.view("p1");
     const gyReplacement = must(
       eventsOf(afterReplace, "transformed").find((event) => event.newInstanceId !== HIDDEN),

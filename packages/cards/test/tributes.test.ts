@@ -24,7 +24,7 @@ const RENO = "core-053";
 const LAVA_GOLEM = "core-055";
 const TWISTED_SORCERER = "core-068";
 const RADIANT_SAINTESS = "core-081";
-const MISS_MROW = "core-086";
+const RIGHT_HOUSE = "core-003";
 const CRAFT_A_CARD = "core-099";
 const POSTDOC = "core-061"; // radiant: "choose any unit on the field; summon a Vanilla copy"
 const SHEEP = "core-t-sheep"; // "Worth 2 Tributes while on the field."
@@ -35,14 +35,19 @@ function must<T>(value: T | null | undefined, what: string): T {
 }
 
 describe("R68: a Tribute's Deaths resolve in lane order, whatever order the play lists them in", () => {
-  /** Radiant Saintess in lane 1 and "Miss" Mrow in lane 2 pay Lava Golem's Tribute with a Gary. */
-  function tributeGame(order: (ids: { saintess: string; mrow: string; gary: string }) => string[]): Scenario {
+  /**
+   * Radiant Saintess in lane 1 and a Radiant Right-house defender in lane 2 pay Lava Golem's Tribute
+   * with a Gary. The defender's Death summons a base Right-house defender; the Saintess's Death makes
+   * her controller's other Units Radiant — so whether that summoned defender is Radiant says which
+   * Death ran first.
+   */
+  function tributeGame(order: (ids: { saintess: string; defender: string; gary: string }) => string[]): Scenario {
     const g = scenario({
       p1: {
         hand: [LAVA_GOLEM, STOCKPILE],
         field: [
-          { def: RADIANT_SAINTESS, lane: 1 }, // Death: all your other units become Radiant
-          { def: MISS_MROW, lane: 2 }, // Death: steal all enemy units
+          { def: RADIANT_SAINTESS, lane: 1 }, // Death: Make your other Units Radiant
+          { def: RIGHT_HOUSE, radiant: true, lane: 2 }, // Reborn; Death: summon a base Right-house defender
           { def: GARY, lane: 3 },
           { def: GARY, lane: 4 },
         ],
@@ -51,26 +56,25 @@ describe("R68: a Tribute's Deaths resolve in lane order, whatever order the play
     });
     const ids = {
       saintess: must(g.unit("p1", 1), "Saintess").id,
-      mrow: must(g.unit("p1", 2), "Mrow").id,
+      defender: must(g.unit("p1", 2), "Right-house defender").id,
       gary: must(g.unit("p1", 3), "Gary").id,
     };
     g.play(LAVA_GOLEM, { zone: 5, tributes: order(ids) });
     return g;
   }
 
-  it("R68 Radiant Saintess (lane 1) dies before \"Miss\" Mrow (lane 2) whether the play lists them in lane order or not, so the Reno Mrow steals is not made Radiant (R101)", () => {
-    const inLaneOrder = tributeGame(({ saintess, mrow, gary }) => [saintess, mrow, gary]);
-    const mrowFirst = tributeGame(({ saintess, mrow, gary }) => [mrow, saintess, gary]);
+  it("R68 Radiant Saintess (lane 1) dies before the Right-house defender (lane 2) whether the play lists them in lane order or not, so the defender its Death summons is not made Radiant (R101)", () => {
+    const inLaneOrder = tributeGame(({ saintess, defender, gary }) => [saintess, defender, gary]);
+    const defenderFirst = tributeGame(({ saintess, defender, gary }) => [defender, saintess, gary]);
 
-    for (const g of [inLaneOrder, mrowFirst]) {
-      const stolen = g.unit("p1", 2);
-      expect({ stolen: stolen?.defId, controller: stolen?.controller, radiant: stolen?.radiant }).toEqual({
-        stolen: RENO,
-        controller: "p1",
-        radiant: false,
-      });
+    for (const g of [inLaneOrder, defenderFirst]) {
+      // The summoned base defender takes the leftmost free zone, the Saintess's lane 1 (R64); the
+      // Reborn body keeps lane 2.
+      const summoned = g.unit("p1", 1);
+      expect({ defId: summoned?.defId, radiant: summoned?.radiant }).toEqual({ defId: RIGHT_HOUSE, radiant: false });
+      expect(g.unit("p1", 2)?.radiant).toBe(true);
     }
-    expect(mrowFirst.lastEvents).toEqual(inLaneOrder.lastEvents);
+    expect(defenderFirst.lastEvents).toEqual(inLaneOrder.lastEvents);
   });
 });
 
@@ -258,7 +262,8 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
     const s = scenario({
       active: "p2",
       p1: {
-        hand: [LAVA_GOLEM, STOCKPILE],
+        // Radiant, so the Golem stays on p1's side though its Tribute takes p2's Cube (R360).
+        hand: [{ def: LAVA_GOLEM, radiant: true }, STOCKPILE],
         field: [
           { def: MR_VANILLA, lane: 1 },
           { def: MR_VANILLA, lane: 2 },
@@ -281,7 +286,7 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
     expect(s.state.active).toBe("p1");
     expect(backrowDefs(s, "p2")).toEqual([null, null, null, null, null]);
 
-    // §8 #55: Lava Golem "may tribute enemy units", so the Cube is one of its three.
+    // §8 #55: Lava Golem "can use opposing Units as Tributes", so the Cube is one of its three.
     const golem = must(s.hand("p1").find((card) => card.defId === LAVA_GOLEM), "p1's Lava Golem");
     const first = must(s.unit("p1", 1), "p1's lane-1 Mr. Vanilla");
     const second = must(s.unit("p1", 2), "p1's lane-2 Mr. Vanilla");

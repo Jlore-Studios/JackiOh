@@ -142,7 +142,8 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
     // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno); then the cast-on-draw
     // draw repeats (§2.4) and brings a second Reno.
     const g = scenario({
-      p1: { hand: [FULLSEND, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
+      // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+      p1: { hand: [{ def: FULLSEND, radiant: true }, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
       p2: { field: [{ def: VANILLA, lane: 1 }], library: [RENO, RENO] },
     });
 
@@ -262,7 +263,7 @@ describe("R217: a draw a cast makes continues its chain", () => {
     // ends it: counted as chains of their own, the nested draws recursed until the call stack ran out.
     const g = scenario({
       p1: {
-        hand: [FULLSEND, VANILLA],
+        hand: [{ def: FULLSEND, radiant: true }, VANILLA],
         backrow: [GOING_LONG, INFINITE_RESERVES],
         library: [CN_VIRUS],
         mana: 4,

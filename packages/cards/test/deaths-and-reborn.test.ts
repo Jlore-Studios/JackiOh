@@ -96,9 +96,9 @@ describe("R89: §4.5 step 1 collects at once, so every unit dies as it stood", (
     });
     const vanilla = unitAt(g, "p2", 2);
     expect(vanilla.defId).toBe(VANILLA);
-    // Before: the Pillow's aura drains p2's Mr. Vanilla to 1 attack (§10.4 layer 5).
-    expect(g.stats(vanilla).attack).toBe(1);
-    expect(g.stats(vanilla).maxHealth).toBe(3);
+    // Before: the Pillow's aura drains p2's Mr. Vanilla to 2 attack (§10.4 layer 5).
+    expect(g.stats(vanilla).attack).toBe(2);
+    expect(g.stats(vanilla).maxHealth).toBe(4);
 
     // Radiant Hit Job on the Vanilla also destroys the Pillow beside it: both are collected in one
     // pass and moved "all … at once" (§4.5 step 1).
@@ -107,11 +107,11 @@ describe("R89: §4.5 step 1 collects at once, so every unit dies as it stood", (
 
     // R89: the event carries what the unit was as it died — with the Pillow still beside it.
     const died = destroyedOf(g, vanilla);
-    expect(died.attack).toBe(1);
-    expect(died.maxHealth).toBe(3);
+    expect(died.attack).toBe(2);
+    expect(died.maxHealth).toBe(4);
     // R38: Corpse Eater gains the dying unit's current attack and max health (the Pillow is a
     // token and never feeds it, R11).
-    expect(g.card(CORPSE_EATER).buffs).toEqual({ attack: 1, health: 3 });
+    expect(g.card(CORPSE_EATER).buffs).toEqual({ attack: 2, health: 4 });
   });
 
   it("R89 Felinor Fiender dying with a Felinor beside it dies with that Felinor's stats in its own (§10.4 layer 2, R38)", () => {
@@ -139,8 +139,8 @@ describe("R89: §4.5 step 1 collects at once, so every unit dies as it stood", (
 
 describe("R42: the killer is the hit that took the unit to 0", () => {
   it("R42 a unit Prem Panther hit earlier that an aura later kills was not destroyed by the Panther (R89)", () => {
-    // 5 damage on a 0/8 Big D-fender leaves it at 3. Radiant Suppressive Aura paid 2 then gives
-    // enemy units -4/-4: max health 4 under 5 damage, so it dies — to the aura, which is no damage
+    // 5 damage on a 0/7 Big D-fender leaves it at 2. Radiant Suppressive Aura paid 2 then gives
+    // enemy units -2/-2: max health 5 under 5 damage, so it dies — to the aura, which is no damage
     // instance, not to a hit that left it standing.
     const s = scenario({
       seed: "hunt-cw2-panther-aura",
@@ -150,7 +150,7 @@ describe("R42: the killer is the hit that took the unit to 0", () => {
     const dfender = s.card(BIG_D);
 
     s.attack(PANTHER, dfender);
-    s.expectStats(dfender, { health: 3 });
+    s.expectStats(dfender, { health: 2 });
     const handBefore = s.hand("p1").length;
 
     s.play(SUPPRESSIVE, { embiggen: false });

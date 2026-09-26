@@ -165,10 +165,12 @@ describe("R46 and R91: the knock-down reports a switch only when there is one", 
   it("R46 an Indestructible Taunt unit in Attack Position that shrugs off a destroy loses its Taunt with an event naming it (§10.3, R91)", () => {
     const g = scenario({
       p1: { hand: [HIT_JOB, "core-010"], mana: 4 },
-      // #56 radiant Jilliax: Charge, Taunt, Lifesteal, Indestructible (§8.3 row 56), in Attack Position.
-      p2: { field: [{ def: "core-056", radiant: true, position: "ATK" }], hand: ["core-010"] },
+      // #66 The Rock (Indestructible) in Attack Position, granted Taunt: no Core card prints both
+      // any more (patch v0.1.1 took Indestructible off radiant #56 Jilliax), so the grant stands in.
+      p2: { field: [{ def: ROCK, position: "ATK" }], hand: ["core-010"] },
     });
-    const jilliax = g.card("core-056");
+    const jilliax = g.card(ROCK);
+    jilliax.grantedKeywords = [{ kind: "Taunt" }];
     expect(g.stats(jilliax).keywords.map((k) => k.kind)).toContain("Taunt");
     expect(g.view("p1").opponent.units[0]?.keywords.map((k) => k.kind)).toContain("Taunt");
 

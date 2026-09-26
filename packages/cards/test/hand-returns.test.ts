@@ -148,10 +148,10 @@ describe("R215: a hand card that reaches a graveyard is the printed card again",
     const prey = g.unit("p2", 1);
     if (prey === null) throw new Error("setup: p2's lane-1 unit");
 
-    // A 3/3 dies while the Eater is in hand: it gains +3/+3 (§8 #89).
+    // A 4/4 dies while the Eater is in hand: it gains +4/+4 (§8 #89).
     g.attack(POINTMASTER, prey);
     g.expectInZone(prey, "graveyard");
-    expect(g.stats(eater).attack).toBe(5);
+    expect(g.stats(eater).attack).toBe(6);
 
     // Zao Gao discards it; Reminisce brings it back from the graveyard.
     g.play(ZAO_GAO).answer([eater.id, filler.id]);

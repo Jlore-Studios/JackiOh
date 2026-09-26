@@ -280,7 +280,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     expect(effectiveCost(state, handCard(state, four.id))).toBe(4);
   });
 
-  it("R48 Professor Curvature reads the cost as it currently stands, not the printed one", () => {
+  it("R48 R363 Professor Curvature reads the cost as it currently stands, not the printed one", () => {
     const state = playing("curvature-current");
     const sink = sinkFor(state);
     // `fromTurn` one turn back, so the modifier is already live (R48 is the test above).
@@ -299,8 +299,8 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     fiveModded.costMod = -1;
     expect(effectiveCost(state, four)).toBe(3);
     expect(effectiveCost(state, fiveModded)).toBe(3);
-    // Neither a printed 5 nor a printed 3 currently stands at 4.
-    expect(effectiveCost(state, fivePlain)).toBe(5);
+    // R363: a printed 5 standing at 5 is 4 or more, so it is discounted too; a printed 3 is not.
+    expect(effectiveCost(state, fivePlain)).toBe(4);
     expect(effectiveCost(state, three)).toBe(3);
 
     // R65's order: other discounts first, then Curvature against the result. A second −1 moves
@@ -312,7 +312,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     });
     // 4 − 1 = 3, no longer 4: Curvature stops applying, and the card still pays 3.
     expect(effectiveCost(state, four)).toBe(3);
-    // 5 − 1 = 4: Curvature now applies to the card it did not touch a moment ago.
+    // 5 − 1 = 4: Curvature still applies, now to a 4.
     expect(effectiveCost(state, fivePlain)).toBe(3);
     // 5 − 1 (costMod) − 1 = 3: past 4 in the other direction, so Curvature is out again.
     expect(effectiveCost(state, fiveModded)).toBe(3);

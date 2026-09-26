@@ -60,7 +60,7 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
   it("R213 a Gifted Program stolen after it fired for its owner this turn still makes the thief's first cheap card Radiant (§8 Conventions, R171)", () => {
     // p1's turn. p2 holds Gifted Program, a Prem Panther, and a Hinder on top of the library.
     const g = scenario({
-      p1: { hand: [MIND_CONTROL, STOCKPILE], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
+      p1: { hand: [MIND_CONTROL, STOCKPILE], field: [{ def: "core-011", lane: 1 }], library: [...LIBRARY] },
       p2: {
         hand: [VANILLA],
         field: [{ def: PANTHER, lane: 1 }],
@@ -70,7 +70,7 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
     });
     const gifted = backrowAt(g, "p2", 1);
 
-    // p1's Mr. Vanilla dies attacking the Panther, which draws 2 for p2 — on p1's turn. The first
+    // p1's Tempo Timmy dies attacking the Panther, which draws 2 for p2 — on p1's turn. The first
     // draw is Hinder, cast as it is drawn: p2's play costing 0 (R70), made Radiant by p2's Gifted.
     g.attack(unitAt(g, "p1", 1), unitAt(g, "p2", 1));
     const hinder = g.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER);
@@ -137,7 +137,6 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
 describe("R214: a play's choices are the choices of the face it resolves with", () => {
   it("R214 a Pocket Chaos that radiant Gifted Program will make Radiant is offered, and may carry, the choice to skip the gift (§8 #87 radiant, R81)", () => {
     const g = scenario({
-      // A library card for the radiant face's "draw 1" (R275), so the draw takes no fatigue.
       p1: { hand: [POCKET_CHAOS, STOCKPILE], library: [STOCKPILE], backrow: [{ def: GIFTED, radiant: true }], health: 20 },
       p2: { hand: [STOCKPILE] },
     });
@@ -153,8 +152,9 @@ describe("R214: a play's choices are the choices of the face it resolves with", 
     expect(resolvedFace(g, chaos)).toBe(true);
     g.expectHealth("p1", 30);
     expect(g.hand("p2").filter((card) => card.defId === POCKET_CHAOS)).toHaveLength(0);
-    // The radiant face's draw: the library's Stockpile joined the one in hand.
-    expect(g.hand("p1").filter((card) => card.defId === STOCKPILE)).toHaveLength(2);
+    // The radiant face draws nothing since patch v0.1.1: the library's Stockpile stays there.
+    expect(g.hand("p1").filter((card) => card.defId === STOCKPILE)).toHaveLength(1);
+    expect(g.pile("p1", "library").map((card) => card.defId)).toEqual([STOCKPILE]);
   });
 
   it("R214 a 5pek Controller that Gifted Program will make Radiant switches the enemy units only when the play says so (§8 #48 radiant)", () => {

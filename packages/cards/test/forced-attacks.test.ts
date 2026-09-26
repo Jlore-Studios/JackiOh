@@ -22,7 +22,7 @@ const TIMMY = "core-011";
 const HIT_JOB = "core-016";
 const SILAS = "core-052";
 const HONEYPOT = "core-060";
-const SAINTESS = "core-081";
+const RIGHT_HOUSE = "core-003";
 const MROW = "core-086";
 const BIG_FELINOR = "core-043";
 const SURGERY = "core-063";
@@ -51,7 +51,7 @@ describe("R173: a forced attack is made on an enemy", () => {
     const vanilla = unitAt(g, "p2", 2);
 
     // p1's start of turn: "every enemy unit attacks this". Mrow goes first and dies to the strike
-    // back; its Death steals every p1 unit, Moths included, for p2.
+    // back; its Death takes control of the unit that destroyed it — Moths — for p2 (R361).
     g.startTurn();
     g.expectInZone(mrow, "graveyard");
     expect(g.card(moths).controller).toBe("p2");
@@ -84,23 +84,24 @@ describe("R173: a forced attack is made on an enemy", () => {
 
 describe("R174: a forced run and a target that left the field", () => {
   it("R174 a forced run stops once its target has left the field, even though Reborn brings it back (R53, R83)", () => {
-    // p1's base Bear Honeypot answers p2's 1-cost Radiant Saintess (2/2, Reborn): two Rush Tokens
-    // attack it. The first kills it; Reborn returns it at 1 health, and the second token does not
-    // attack the body that came back.
+    // p1's Radiant Bear Honeypot answers p2's 1-cost Right-house defender (1/1, Taunt, Divine
+    // Shield, Reborn): five Rush Tokens attack it. The first spends its shield, the second kills
+    // it; Reborn returns it at 1 health, and the other three tokens do not attack the body that
+    // came back.
     const g = scenario({
       seed: "hunt-cw-reborn-run",
       active: "p2",
-      p1: { backrow: [{ def: HONEYPOT, faceUp: false, lane: 3 }] },
-      p2: { hand: [SAINTESS, STOCKPILE], library: [TIMMY, HIT_JOB] },
+      p1: { backrow: [{ def: HONEYPOT, radiant: true, faceUp: false, lane: 3 }] },
+      p2: { hand: [RIGHT_HOUSE, STOCKPILE], library: [TIMMY, HIT_JOB] },
     });
 
-    g.play(SAINTESS, { zone: 1 });
+    g.play(RIGHT_HOUSE, { zone: 1 });
 
-    expect(declared(g.events).filter((event) => event.forced)).toHaveLength(1);
+    expect(declared(g.events).filter((event) => event.forced)).toHaveLength(2);
     expect(g.events.filter((event) => event.type === "destroyed")).toHaveLength(1);
-    const saintess = unitAt(g, "p2", 1);
-    expect(saintess.defId).toBe(SAINTESS);
-    g.expectStats(saintess, { health: 1 });
+    const defender = unitAt(g, "p2", 1);
+    expect(defender.defId).toBe(RIGHT_HOUSE);
+    g.expectStats(defender, { health: 1 });
   });
   it("R174 a Felinor Fiender that dies mid-run to Moths to the Flame and comes back through Reborn does not attack in that run (R96, R83)", () => {
     // On this seed Plastic Surgery's random keyword for the Fiender is Reborn (§6.1's pool, R21).

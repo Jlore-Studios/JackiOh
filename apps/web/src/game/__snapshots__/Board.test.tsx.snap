@@ -2633,9 +2633,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         <span
           class="modifier-badge"
           data-modifier-id="m1"
-          title="Cost-4 cards cost 1 less (next turn)"
+          title="Cost (4)+ cards cost (1) less (next turn)"
         >
-          Cost-4 cards cost 1 less (next turn)
+          Cost (4)+ cards cost (1) less (next turn)
         </span>
         <span
           class="modifier-badge"

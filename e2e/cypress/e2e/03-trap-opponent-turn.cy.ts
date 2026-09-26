@@ -90,7 +90,7 @@ const CURVATURE = "Professor Curvature";
  * appends the suffix while the discount is dormant. Asserted with `have.text` rather than
  * `contain.text` precisely so that a caption which quietly dropped the suffix fails here.
  */
-const CURVATURE_DISCOUNT = "Cost-4 cards cost 1 less";
+const CURVATURE_DISCOUNT = "Cost (4)+ cards cost (1) less";
 const CURVATURE_DORMANT = `${CURVATURE_DISCOUNT} (next turn)`;
 
 /** BUILD M5-T1's two viewports; the first is `cypress.config.ts`'s default. */

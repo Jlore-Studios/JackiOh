@@ -142,11 +142,12 @@ describe("setCostOverride (§6.3 Cost, R65, M3-T1)", () => {
     run(sink, setCostOverride({ target: { of: "chosen" }, cost: 6 }), { targets: onInstance(card) });
     run(sink, setCostMod({ target: { of: "chosen" }, amount: -1 }), { targets: onInstance(card) });
 
-    // 6 (override) − 1 (costMod) − 1 (discount) = 4, which Curvature then takes to 3.
+    // 6 (override) − 1 (costMod) − 1 (discount) = 4, which Curvature then takes to 3. The override
+    // alone was 6 − 1 = 5, which Curvature already reached (R363: 4 or more), so 4.
     expect(effectiveCost(state, card)).toBe(3);
-    expect(eventsOfType(sink.events, "costChanged").map((e) => e.cost)).toEqual([5, 3]);
+    expect(eventsOfType(sink.events, "costChanged").map((e) => e.cost)).toEqual([4, 3]);
 
-    // Take the override away from 4 and Curvature no longer bites: 3 − 1 − 1 = 1.
+    // Take the override below 4 and Curvature no longer bites: 3 − 1 − 1 = 1.
     run(sink, setCostOverride({ target: { of: "chosen" }, cost: 3 }), { targets: onInstance(card) });
     expect(effectiveCost(state, card)).toBe(1);
   });
