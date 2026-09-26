@@ -2011,8 +2011,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(220, CARDS_COMBAT_WINDOWS_TEST);
   });
 
-  // Proved by turn-clock-and-legality.test.ts "R221 …": #80 Zao Gao's two discards listed the other
-  // way round leave the graveyard an offered answer leaves.
+  // Proved by turn-clock-and-legality.test.ts "R221 …": a radiant #26's two Echo picks listed the
+  // other way round leave the state an offered answer leaves (#80's discard, until R354).
   it("R221 takes an answer's picks in the order the prompt offered them", () => {
     provenIn(221, CARDS_TURN_CLOCK_TEST);
   });

@@ -11,7 +11,7 @@
 //        text (base plus radiant clause) runs past 260 characters may carry `data-clamped`, and a
 //        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
-//        per ingredient, each of #98's seven rolled powers on both faces, Call to Chaos's ???, a
+//        per ingredient, each of #98's eight rolled powers on both faces, Call to Chaos's ???, a
 //        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
 //        #82's Discover of numbers (R247) drawn inside its options at both viewports.
 //   B21  `Game` rendering `fullBoardView()` inside `.app-shell.app-shell--wide`, WITH the real

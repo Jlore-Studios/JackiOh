@@ -94,7 +94,7 @@ Each player owns a hand, a library, a graveyard, an exile pile, a hero, 5 unit z
 | Graveyard (GY) | Cards that were destroyed, discarded or resolved, except unit tokens (R11) | Both | Chronological | Unit tokens never enter it; spell tokens do |
 | Exile | Exiled cards | Both | Chronological | Count feeds Echoes of the Forgotten and Spiteful Stab |
 | Unit zone x5 | Units, or a Stack pile | Both | Lane 1 to 5, left to right from the owner's seat | Lock flag per zone |
-| Backrow zone x5 | Field Spells, Traps, Field Traps | Field Spells: both; Traps: the controller only, and the other player sees a face-down card even if they own it (R33) | Lane 1 to 5 | Lock flag per zone; traps hidden until they fire |
+| Backrow zone x5 | Field Spells, Traps, Field Traps | Field Spells: both; Traps: the controller only, and the other player sees a face-down card and its cost even if they own it (R33, R351) | Lane 1 to 5 | Lock flag per zone; traps hidden until they fire |
 | Hero | Health, hero armor, Heroic Power | Both |  | Health has no upper cap |
 
 ### 3.1 Lanes and adjacency
@@ -206,7 +206,7 @@ Every card carries the fields below; the catalog stores the base and Radiant for
 - Unit: a permanent in a unit zone with stats; does combat.
 - Spell: one-shot. Resolves, then goes to the graveyard, or to exile when it says "exile this". Spells with "End of turn: add this back to your hand" are flagged `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn, as graveyard triggers (R68).
 - Field Spell: a permanent in the backrow with a lasting effect. May have a Cry (Anti-oneshot Armor), start/end-of-turn triggers, or an activated ability (Heroic Power).
-- Trap: paid for and placed face-down in the backrow. Fires automatically the moment its condition is met, on either player's turn, then goes to the graveyard. Only its controller sees its identity before it fires; the other player sees a face-down card, even if they own it (R33).
+- Trap: paid for and placed face-down in the backrow. Fires automatically the moment its condition is met, on either player's turn, then goes to the graveyard. Only its controller sees its identity before it fires; the other player sees a face-down card and its cost, even if they own it (R33, R351).
 - Field Trap: a Trap that stays after firing and can fire again.
 - Permanent = anything occupying a unit or backrow zone.
 - Token: generated only when a card names it, or a rule does (The Coin, §2.1). Random pools ("a random card", "Discover a (2) cost card") never include Token-tagged cards, and never include the generating card's own definition, unless the card names the pool itself (Call to Chaos's "cast a random Call to Chaos" draws from the Call to Chaos tag, which includes #95).
@@ -861,7 +861,7 @@ Every place this spec decided something the source left open is listed here; eac
 
 **R345 is the automatic-turn-end setting of 2026-09-25**, from the block R345–R349, which the user asked for: a setting that turns R82's automatic turn end off. It edits R82's row, §10.2's action list and §10.8.
 
-**R346 on are patch v0.1.1 (issue #27)**, from the block R346–R359, which the game's designer asked for on 2026-09-26: where the issue and this spec disagreed, the issue won, and this spec was changed to match. They are the engine and mechanics half of the patch: Pierce (R346), Indestructible without Taunt (R347), X of at least 1 (R348), the Radiant fallback (R349), CN-Virus's copies at the end of the turn (R350), face-down Traps' cost (R351), Heroic Power's Stitching (R352), the Ghoul Token (R353) and Zao Gao (R354). They edit §1, §2.2, §2.3, §2.4, §4.1, §4.2, §4.4, §5, §5.2, §6.1, §6.3, §7, §8 (#44, #74, #80, #90, #90.1 and #98), §9.7, §10.4, §10.6, §10.8, §10.9, R16, R21, R46, R103, R221 and R275.
+**R346 on are patch v0.1.1 (issue #27)**, from the block R346–R359, which the game's designer asked for on 2026-09-26: where the issue and this spec disagreed, the issue won, and this spec was changed to match. They are the engine and mechanics half of the patch: Pierce (R346), Indestructible without Taunt (R347), X of at least 1 (R348), the Radiant fallback (R349), CN-Virus's copies at the end of the turn (R350), face-down Traps' cost (R351), Heroic Power's Stitching (R352), the Ghoul Token (R353) and Zao Gao (R354). They edit §1, §2.2, §2.3, §2.4, §3, §4.1, §4.2, §4.4, §5, §5.1, §5.2, §6.1, §6.3, §7, §8 (#44, #74, #80, #90, #90.1 and #98), §9.7, §10.4, §10.6, §10.8, §10.9, R16, R21, R46, R103, R221 and R275.
 
 | # | Topic | Recommended ruling | Cards affected |
 | --- | --- | --- | --- |

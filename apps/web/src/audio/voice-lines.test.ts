@@ -277,7 +277,7 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 uses no BANNED_RULES_WORDS entry as a whole word, in any case", () => {
     expect([...BANNED_RULES_WORDS], "the rules vocabulary the Surface bans").toEqual([
-      "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave",
+      "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave", "Pierce",
       "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
       "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
       "damage", "summon", "exile", "fatigue", "backrow", "graveyard",

@@ -123,7 +123,9 @@ function resolveIndestructibleMarks(sink: EngineSink): void {
         sink.events.push({ type: "positionSwitched", instanceId: unit.id, position: "ATK" });
       }
       // The Taunt it has in Attack Position, which the suppression takes (a second knock-down the
-      // same turn finds none left to take).
+      // same turn finds none left to take). R347 keeps Taunt off a unit while it is Indestructible,
+      // so there is none here to report; the stamp still matters if it stops being Indestructible
+      // before the turn ends (a Vanilla).
       const hadTaunt = hasKeyword(unitView(sink.state, unit).keywords, "Taunt");
       unit.tauntSuppressedTurn = sink.state.turn;
       if (hadTaunt) {

@@ -32,8 +32,9 @@ import { scenario, type Scenario } from "./_harness";
 const SEED = "t-rush";
 
 /**
- * §7's "Stat overrides" bullet, driven the way #74 Adaptive UI and #95 Call to Chaos drive it: the
- * shipped token definition plus a `statsOverride` on the summon. Their scripts own that call, so
+ * §7's "Stat overrides" bullet, driven the way an X/X summon drives it (#74 Adaptive UI's Rush Token
+ * was one until patch v0.1.1 gave it a Ghoul Token, R353): the shipped token definition plus a
+ * `statsOverride` on the summon. The summoning card's script owns that call, so
  * this reaches for the `summon` verb directly rather than for a card that is not this one; the
  * harness has no `statsOverride` in `FieldSetup`, which is reported as a harness request.
  */
