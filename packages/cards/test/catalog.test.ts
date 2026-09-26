@@ -366,3 +366,23 @@ describe("every entry has a radiant face of its own (SPEC §5.2, R276)", () => {
     expect(ENTRIES.filter((entry) => entry.radiantFallback === true).map((entry) => entry.id)).toEqual(["core-t-ghoul"]);
   });
 });
+
+describe("no face prints Taunt beside Indestructible (SPEC §6.1, R347)", () => {
+  /**
+   * R347 keeps Taunt off an Indestructible unit whatever prints it, so a face printing both prints a
+   * Taunt it never has. Patch v0.1.1's card half drops Indestructible from the two faces that did
+   * (#55 and #56 radiant, issue #27), which is a separate branch of the same patch: until it is
+   * merged those two may still print both, and once it is this list only shrinks to nothing.
+   */
+  const PRINTED_BOTH_BEFORE_THE_CARD_PATCH: readonly string[] = ["core-055 radiant", "core-056 radiant"];
+
+  it("R347 no Unit face prints both, beyond the two the card half of the patch rewrites", () => {
+    const both = ENTRIES.filter((entry) => entry.type === "Unit").flatMap((entry) =>
+      (["base", "radiant"] as const).flatMap((face) => {
+        const kinds = entry[face].keywords.map((keyword) => keyword.kind);
+        return kinds.includes("Taunt") && kinds.includes("Indestructible") ? [`${entry.id} ${face}`] : [];
+      }),
+    );
+    for (const face of both) expect(PRINTED_BOTH_BEFORE_THE_CARD_PATCH, face).toContain(face);
+  });
+});

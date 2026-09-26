@@ -145,6 +145,15 @@ const CARDS_COMBAT_WINDOWS_TEST = "../../cards/test/combat-windows.test.ts";
 const CARDS_HIDDEN_INFORMATION_TEST = "../../cards/test/hidden-information.test.ts";
 const CARDS_ECHO_AND_EXILE_TEST = "../../cards/test/echo-and-exile.test.ts";
 const CARDS_FUSE_REGISTRY_TEST = "../../cards/test/fuse-registry.test.ts";
+/** R346 to R354's card-side proofs: patch v0.1.1 (issue #27). */
+const CARDS_TRUE_STRIKE_TEST = "../../cards/test/044-true-strike.test.ts";
+const CARDS_GHOUL_TEST = "../../cards/test/t-ghoul.test.ts";
+const CARDS_VANILLA_POSITIONS_TEST = "../../cards/test/vanilla-and-positions.test.ts";
+const CARDS_ADAPTIVE_UI_TEST = "../../cards/test/074-adaptive-ui.test.ts";
+const CARDS_DIVIDEND_TEST = "../../cards/test/024-efficiency-dividend.test.ts";
+const CARDS_CN_TEST = "../../cards/test/090-cn-viral-injection.test.ts";
+const CARDS_HEROIC_POWER_TEST = "../../cards/test/098-heroic-power.test.ts";
+const CARDS_ZAO_GAO_TEST = "../../cards/test/080-zao-gao.test.ts";
 /** R209 to R211's proofs: the hunt's second round (docs/polish/4-edge-cases.md). */
 const CARDS_LASTING_EFFECTS_TEST = "../../cards/test/lasting-effects.test.ts";
 const CARDS_PLAYS_AND_CASTS_TEST = "../../cards/test/plays-and-casts.test.ts";
@@ -2522,6 +2531,63 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // apps/web test/ux/settings.test.tsx "R345 …": the switch goes out as setAutoEndTurn, once.
   it("R345 lets each player turn R82's automatic turn end off for themselves", () => {
     provenIn(345, "auto-end-turn.test.ts", SERVER_ACTOR_TEST, WEB_SETTINGS_TEST);
+  });
+
+  // Proved by damage.test.ts "R346 step 2: …" (a Pierce source skips Armor on a unit and a hero, and
+  // nothing else), lethal.test.ts "R346 R44 …" (My Pawn's projection), 044-true-strike.test.ts's
+  // "R346 …" (a spell's printed Pierce), and t-ghoul.test.ts's "R346 …" (the Ghoul Token's hits).
+  it("R346 makes a Pierce source's damage skip Armor, and adds Pierce to the random-keyword pool", () => {
+    expect(config.RANDOM_KEYWORD_POOL).toContain("Pierce");
+    provenIn(346, "damage.test.ts", "lethal.test.ts", CARDS_TRUE_STRIKE_TEST, CARDS_GHOUL_TEST);
+  });
+
+  // Proved by layers.test.ts "R347 …" (printed, granted and Defense Position's Taunt all give way)
+  // and vanilla-and-positions.test.ts "R46 R347 …" (a knock-down with no Taunt to take reports none).
+  it("R347 gives an Indestructible unit no Taunt, whatever grants it", () => {
+    provenIn(347, "layers.test.ts", CARDS_VANILLA_POSITIONS_TEST);
+  });
+
+  // Proved by turn.test.ts "R348 …" (the refusal and legalActions share one check), and the cards'
+  // 074-adaptive-ui.test.ts and 024-efficiency-dividend.test.ts "R348 …".
+  it("R348 holds a chosen X to at least 1", () => {
+    expect(config.MIN_CHOSEN_X).toBe(1);
+    provenIn(348, "turn.test.ts", CARDS_ADAPTIVE_UI_TEST, CARDS_DIVIDEND_TEST);
+  });
+
+  // Proved by layers.test.ts "R349 …" (layer 1 doubles a fallback unit's stats and its X) and
+  // t-ghoul.test.ts "R349 …" (the Ghoul Token summoned Radiant, made Radiant, and fused).
+  it("R349 doubles the stats of a unit that becomes Radiant with no Radiant form", () => {
+    expect(config.RADIANT_FALLBACK_FACTOR).toBe(2);
+    provenIn(349, "layers.test.ts", CARDS_GHOUL_TEST);
+  });
+
+  // Proved by effects-delay.test.ts "R350 …" (THIS_TURN) and 090-cn-viral-injection.test.ts "R350 …"
+  // (the copies at the turn's end, on either player's turn, and a chain that never draws its own).
+  it("R350 holds CN-Virus's copies to the end of the turn it is cast on", () => {
+    provenIn(350, "effects-delay.test.ts", CARDS_CN_TEST);
+  });
+
+  // Proved by viewFor.test.ts "R351 …": the cost on the opponent's marker, the same number in the
+  // controller's view, and the controller's `unrevealed` mark.
+  it("R351 shows a face-down Trap's cost to both players", () => {
+    provenIn(351, "viewFor.test.ts");
+  });
+
+  // Proved by 098-heroic-power.test.ts "R352 …": the two Discovers, the fusion at R77's cost, the
+  // radiant face, and the use spent once.
+  it("R352 gives Heroic Power its eighth power, Stitching", () => {
+    provenIn(352, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by t-ghoul.test.ts "R353 …": the card, its X/X and its Pierce.
+  it("R353 adds the Ghoul Token, an X/X with Pierce", () => {
+    provenIn(353, CARDS_GHOUL_TEST);
+  });
+
+  // Proved by 080-zao-gao.test.ts "R354 …": the random discard, the CN tag and the Radiant face's
+  // third keyword.
+  it("R354 makes Zao Gao's discard random and its Radiant tokens roll three keywords", () => {
+    provenIn(354, CARDS_ZAO_GAO_TEST);
   });
 });
 

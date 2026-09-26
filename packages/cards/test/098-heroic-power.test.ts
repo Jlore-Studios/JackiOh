@@ -666,7 +666,9 @@ describe("#98 Heroic Power — the eight powers, radiant (§8.5's radiant cell)"
     const fusedDef = must(s.state.transientDefs[result.defId], "a fused definition");
     // R77: the fused Radiant face sums the ingredients' Radiant faces, and that is the face it wears.
     expect(fusedDef.radiant.attack).toBe((cardDef(first).radiant.attack ?? 0) + (cardDef(second).radiant.attack ?? 0));
-    expect(s.view("p1").you.hand.find((card) => card.instanceId === result.id)?.attack).toBe(fusedDef.radiant.attack);
+    const hand = s.view("p1").you.hand;
+    const shown = Array.isArray(hand) ? hand.find((card) => card.instanceId === result.id) : undefined;
+    expect(shown?.attack).toBe(fusedDef.radiant.attack);
     expect(result.costOverride).toBeUndefined();
   });
 

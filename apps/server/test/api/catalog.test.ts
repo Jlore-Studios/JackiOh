@@ -27,8 +27,8 @@ describe("catalog", () => {
   it("loads packages/cards/catalog.json through the workspace link", async () => {
     expect(catalogUrl().pathname).toContain("packages/cards/catalog.json");
     const catalog = await loadCatalog();
-    // §8: 100 cards plus 9 tokens.
-    expect(catalog.cardIds.length).toBe(110);
+    // §8 and §7: 100 cards plus 11 tokens.
+    expect(catalog.cardIds.length).toBe(111);
     expect(catalog.defs["core-001"]?.name.length).toBeGreaterThan(0);
   });
 
@@ -46,7 +46,7 @@ describe("catalog", () => {
   it("marks tokens as tokens (§9.4 L3: no Token-tagged cards in a deck)", async () => {
     const catalog = await loadCatalog();
     const tokens = catalog.cardIds.filter((id) => catalog.isToken(id));
-    expect(tokens.length).toBe(10);
+    expect(tokens.length).toBe(11);
   });
 
   it("refuses to invent a catalog when the file is missing or malformed", async () => {
@@ -215,8 +215,8 @@ describe("R163 — the catalog endpoint (§9.1, §9.4, R105)", () => {
     expect(body.version).toBe(catalog.version);
     expect(body.version).toMatch(/^c1-[0-9a-f]{12}$/);
 
-    // Whole: §8's 100 cards plus 9 tokens, every one of them.
-    expect(Object.keys(body.defs)).toHaveLength(110);
+    // Whole: §8's 100 cards plus §7's 11 tokens, every one of them.
+    expect(Object.keys(body.defs)).toHaveLength(111);
     expect(body.defs).toEqual(catalog.defs);
 
     // Unprojected: not one field is trimmed off a card on the way out. A trimmed card would be a
@@ -324,7 +324,7 @@ describe("R164 — where L6's ban list lives (§9.4, R105)", () => {
 
   it("R164 bans nothing in §8 at launch, and holds the hook open for when something is", async () => {
     const catalog = await loadCatalog();
-    // "Nothing in §8 is banned at launch" — every one of the 110, not just a sample.
+    // "Nothing in §8 is banned at launch" — every one of the 111, not just a sample.
     expect(catalog.cardIds.filter((cardId) => catalog.isBanned(cardId))).toEqual([]);
     // The single hook, which reads the db agent's `cards` table once there is something to ban.
     expect(catalogFrom({}, "v0").isBanned("core-001")).toBe(false);

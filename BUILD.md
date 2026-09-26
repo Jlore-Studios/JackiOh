@@ -59,7 +59,7 @@ jackioh/
       src/replay.ts            fold(seed, log) -> state; state hash
       test/                    unit + property tests
     cards/
-      catalog.json             100 cards + 10 tokens (schema in M4-T1)
+      catalog.json             100 cards + 11 tokens (schema in M4-T1)
       src/index.ts             registry: defId -> {def, base, radiant}
       src/scripts/NNN-slug.ts  one file per card, NNN = zero-padded index, tokens as NNN-1-slug.ts
       test/NNN-slug.test.ts    one test file per card
@@ -290,7 +290,7 @@ Schema per card:
   "radiant": { "attack": 6, "health": 20, "keywords": [], "text": "…" }
 }
 ```
-Tokens use `index` `"51.1"`, `"65.1"`, `"90.1"`, `"93.1"`, `"95.1"`, `"T-rush"`, `"T-sheep"`, `"T-felinor"`, `"T-bread"`, `"T-coin"` and `"token": true`. `rarity` is the value in SPEC §8 (assigned by complexity), not the source list's grouping (§8, rarity paragraph). Apply every row of §5.3.
+Tokens use `index` `"51.1"`, `"65.1"`, `"90.1"`, `"93.1"`, `"95.1"`, `"T-rush"`, `"T-sheep"`, `"T-felinor"`, `"T-bread"`, `"T-coin"`, `"T-ghoul"` and `"token": true`. `rarity` is the value in SPEC §8 (assigned by complexity), not the source list's grouping (§8, rarity paragraph). Apply every row of §5.3.
 Acceptance (`catalog.test.ts`):
 - Exactly 100 entries with `token: false` and 10 with `token: true`; indices 1–100 each present once.
 - For every entry, `cost`, `type`, `tags`, `rarity`, `base.attack/health`, `radiant.attack/health` equal the values in SPEC §8 (encode §8 as a fixture table in the test; the test is the diff).
@@ -304,7 +304,7 @@ Acceptance: a registry test asserts every catalog id has a script and every scri
 
 **M4-T3 Test template.** Files: `cards/test/_harness.ts`, `cards/test/NNN-slug.test.ts`.
 `_harness.ts` gives `scenario({ seed, p1: { hand, field, library, health, mana }, p2: {…} })` builders that place real instances, `playFrom(hand)`, `attack`, `answer`, `endTurn`, `view` and assertion helpers (`expectInZone`, `expectStats`, `expectEvents`). Every card test file covers, for base and radiant separately, each behaviour named in its §8 row plus the "must-pass" cases in the table below.
-Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
+Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
 
 **M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool.
 
@@ -353,7 +353,7 @@ Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists 
 | 41 | Sheepish | 2 | Opponent's unit becomes a Sheep before its Cry (R17); trap consumed; Immutable target → consumed with no effect; radiant adds 0-cost Lava Golem |
 | 42 | Eugenics | 1 | 8 random exiled (all if fewer); 30% per remaining card; radiant two rolls at 40% |
 | 43 | Big Felinor | 1 | Non-Felinors on both sides destroyed, Felinors and itself survive; radiant enemy side only |
-| 44 | True Strike | 1 | 4 damage through Armor 7; Divine Shield still blocks; exiled; radiant 9 |
+| 44 | True Strike | 1 | Pierce (R346): 4 damage through Armor 7 and hero Armor; Divine Shield still blocks; exiled; radiant 9 |
 | 45 | Deft Duelist | 2 | Charge; attack then switch and switch then attack in one turn (R49); radiant Armor 1 |
 | 46 | Suppressive Aura | 2 | Embiggen price chosen with the play (R81); −2/−2 to all, 2-health units die, restored on leaving; radiant enemy only −4/−4, paid 4 → −10/−10, which kills an enemy The Rock despite Indestructible (R69) |
 | 47 | Fig of Life | 1 | Heals a unit up to max or the hero without cap (R19); radiant 50 |
@@ -385,13 +385,13 @@ Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists 
 | 71 | Intern Stimmy | 2 | Trap window at the end of any turn with library > opponent's → recruit ≤1 (R62); fires again next qualifying turn; radiant ≤2 |
 | 72 | Reminisce | 1 | Discover from the GY including spell tokens (R50); chosen card −1 (radiant 0); exiled; empty GY → nothing |
 | 73 | Anti-oneshot Armor | 2 | A 12 hit becomes 5 (radiant 3), per instance, hero only; Cry draws 1 (radiant 2) |
-| 74 | Adaptive UI | 1 | X=2: 2 damage, heal 2, draw 2, a 2/2 Rush Token; radiant 4 / 6 / 4 / 6-6; X=0 nothing but counts as played |
+| 74 | Adaptive UI | 1 | X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token (R353); radiant 4 / 6 / 4 / 6-6; X=0 refused, and no X offered with no mana (R348) |
 | 75 | Infinite Reserves | 2 | Empty-library draw yields a Rush Token card and no fatigue damage; radiant Cry draws 3 |
 | 76 | Field of Dreams | 2 | Hand of N → N Reminisce, old cards in GY (R31); exiled; radiant gives radiant Reminisce |
 | 77 | Professor Curvature | 2 | Next turn only: current-cost-4 cards −1 (radiant −2); not this turn; expires (R48) |
 | 78 | /fullsend | 2 | +4 mana; −1 cost this turn; each play draws 1; hand exiled at end of turn; radiant −2 |
 | 79 | Twinspell | 2 | Next spell echoes once (radiant twice); consumed to GY on use (R30); survives cleanup |
-| 80 | Zao Gao | 2 | Discard prompt for 2 or fewer; two Rush Tokens each with two distinct pool keywords; radiant the tokens are Radiant 6/6 Rush, Cleave, and roll no keyword they have |
+| 80 | Zao Gao | 2 | Discards 2 random cards, no prompt (R354); two Rush Tokens each with two distinct pool keywords; radiant the tokens are Radiant 6/6 Rush, Cleave, and roll three keywords they do not have; tagged CN |
 | 81 | Radiant Saintess | 2 | Death makes every other unit you control Radiant; Reborn body fires Death on its second death; radiant also every card in your hand, hidden from the opponent (R177) |
 | 82 | KY's Trial | 2 | Three distinct numbers 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0 |
 | 83 | Transmogulate | 3 | Zone counts preserved; board cards replaced by same-type Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes Unlicensed Experimentation (R35); radiant gives radiant cards |
@@ -401,8 +401,8 @@ Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists 
 | 87 | Pocket Chaos | 3 | Health swap, lane-preserving board swap including face-down traps with locks staying put, library swap that transfers ownership of the swapped cards (R73); opponent gains a Pocket Chaos; exiled; radiant may skip the gift and draws 1 |
 | 88 | Twisting Nether | 1 | Every permanent on both rows destroyed, Indestructibles survive; radiant enemy-only mode |
 | 89 | Corpse Eater | 2 | In hand it gains the dying unit's current attack and max health from either side, tokens excluded (R11); stats per R38; stops once on the field; radiant double |
-| 90 | CN-Viral Injection | 1 | Virus shuffled into the opponent's library at a random position; radiant virus is radiant |
-| 90.1 | CN-Virus | 2 | On draw: 1 damage through the pipeline (Going Long reduces it), 2 copies shuffled, draw again; a chain stops at 20 casts (R58); radiant 2 damage and 3 copies |
+| 90 | CN-Viral Injection | 1 | Costs 2; virus shuffled into the opponent's library at a random position; radiant virus is radiant |
+| 90.1 | CN-Virus | 2 | On draw: 1 damage through the pipeline (Going Long reduces it), draw again; 2 copies shuffled in at the end of the turn it was cast on, either player's (R350); a chain stops at 20 casts (R58) and never draws its own copies; radiant 2 damage and 3 copies |
 | 91 | Fed Fauci | 2 | One Plague Token per damage instance; +1 mana per token at start of turn (radiant +2); counters reset on leaving; its preview is the mana (R280) |
 | 92 | Felinor Fiender | 3 | Plays onto an occupied zone; card beneath is dormant; stats = printed + all your Felinors including dormant ones (R13, R39); radiant Charge |
 | 93 | Combo-Index | 3 | Grade 1 needs 1 play, grade 2 needs 2; cascade E→new grade in order; E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each start of turn |
@@ -412,10 +412,11 @@ Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists 
 | 95.1 | Chaos Golem | 1 | 10/10 with all four keywords; radiant 20/20 with Charge for Rush |
 | 96 | My Pawn | 3 | Lethal detection accounts for armor and the cap (R44); attack cancelled; AI finishes the turn deterministically from the seed; opponent's actions rejected until end of turn; radiant destroys the attacker with the cancel, before the AI turn, an Indestructible one knocked down, and the AI turn starts from a settled board (R283) |
 | 97 | Zephyrs | 3 | Scorer deterministic; a lethal-enabling card ranks first when lethal exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant |
-| 98 | Heroic Power | 3 | In opening hand; power chosen at start of game from the seed; playing costs the power's X and activates once; a copy created mid-game, mulliganed back into the library, or bounced to hand still has a power (R43); once per turn afterwards; Indestructible; each radiant power variant |
+| 98 | Heroic Power | 3 | In opening hand; power chosen at start of game from the seed; playing costs the power's X and activates once; a copy created mid-game, mulliganed back into the library, or bounced to hand still has a power (R43); once per turn afterwards; Indestructible; each radiant power variant; Stitching's two Discovers fused into a hand card at the fused cost, Radiant on the radiant face (R352) |
 | 99 | Craft a Card | 3 | Two Discovers, fused def in `transientDefs` with both forms fused, no on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later switches to the fused radiant form; radiant three, then draw 1 |
 | 100 | Ceaseless Void | 2 | Cost = 100 − (drawn + played + destroyed + exiled by both players), floor 0 (R55); Cry exiles every other permanent; radiant 20/20 with Charge |
 | T | Rush, Sheep, Felinor, Bread Tokens | 1 | Vanish on leaving the field; Sheep counts 2 toward Tribute; Bread is X/X with no text; none in random pools; radiant Rush Token 6/6 Rush, Cleave, Felinor Token 2/2 Rush |
+| T | Ghoul Token | 1 | X/X with Pierce (R346, R353): its hits ignore unit and hero Armor; vanishes on leaving the field; in no random pool; radiant doubles its X (R349) |
 | T-coin | The Coin | 1 | Dealt to the seat going second after the mulligan, a handicapped one too, never a draw (R244); gain 1 mana this turn, above the cap, gone at the next refresh; radiant 2; a play that goes to the graveyard; never in a deck or a random pool (R245) |
 
 **M4 gate.** `cards/test/fuzz.test.ts`: 1,000 games per wave (seeds 1–1000) with decks drawn randomly from all implemented cards, played by `aiPolicy`, never throw, always terminate (hero death or cap), and replay to the same hash. Any card that appears in a failing seed is listed in the failure message. A fuzz game is bounded at `TURN_CAP_PLAYER_TURNS` × `AI_PLAYOUT_STEP_CAP` actions. The bound is a failure condition, not a pass condition: a game that reaches it is reported as non-terminating rather than left to hang CI, and a policy that returns no action while the game is live is reported as a stall, since R82 should have ended the turn.
@@ -566,7 +567,7 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 ## 5. Definition of done
 
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` all green in CI.
-- `catalog.test.ts` passes: 100 cards, 10 tokens, rarity counts 35/37/16/7/5.
+- `catalog.test.ts` passes: 100 cards, 11 tokens, rarity counts 35/37/16/7/5.
 - `missing-tests.ts` prints nothing.
 - `rulings.test.ts` covers every SPEC §11 row, R1–R168 (script `rulings-coverage.ts` lists any missing id).
 - Fuzz gate: `pnpm fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, throws, non-terminations, replay mismatches, endings). `pnpm test` sweeps the same file at a reduced seed count as a smoke wave; the card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` with a reason, printed on every run so a narrowing cannot be hidden.

@@ -1,6 +1,6 @@
 // inPlay.ts: the words a face in play prints where play and print part ways (SPEC §10.10).
 //
-// `POWER_WORDS` is the client's copy of §8 #98's seven clauses, keyed by the name the view gives a
+// `POWER_WORDS` is the client's copy of §8 #98's eight clauses, keyed by the name the view gives a
 // rolled power (R243). The engine holds the same clauses beside each power's effects, and the
 // client cannot load the engine online, so this test is what keeps the two tables one table.
 

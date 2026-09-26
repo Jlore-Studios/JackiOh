@@ -128,7 +128,8 @@ describe("#90 CN-Viral Injection — base", () => {
 
   it("costs 2 (patch v0.1.1)", () => {
     const s = scenario({ seed: "core-090-cost", p1: { hand: [INJECTION] } });
-    expect(s.view("p1").you.hand[0]?.cost).toBe(2);
+    const hand = s.view("p1").you.hand;
+    expect(Array.isArray(hand) ? hand[0]?.cost : undefined).toBe(2);
   });
 
   it("§9.2 the random position is inside the whole pile and replays identically from the seed", () => {

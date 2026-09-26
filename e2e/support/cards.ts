@@ -133,7 +133,7 @@ export function idOf(name: string): string {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The 10 Token cards, read off `packages/cards/catalog.json` (`"token": true`), keyed by the
+ * The 11 Token cards, read off `packages/cards/catalog.json` (`"token": true`), keyed by the
  * catalog's own `index` string. They are deliberately NOT in `CARD_NAMES`: L3 bans Tokens from
  * decks, and `asDeck` in support/commands.ts checks a fixture against `CARD_NAMES` being exactly
  * the deckable set, so a Token added there would let an illegal fixture through.
@@ -153,6 +153,7 @@ export const TOKEN_NAMES: Record<string, string> = {
   "T-felinor": "Felinor Token",
   "T-bread": "Bread Token",
   "T-coin": "The Coin",
+  "T-ghoul": "Ghoul Token",
 };
 
 /**
