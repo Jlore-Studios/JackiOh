@@ -1,7 +1,7 @@
-// #78 /fullsend — SPEC §8.3, R62, R65, §2.3, §10.5 step 5.
+// #78 /fullsend — SPEC §8.3, R62, R65, R364, §2.3, §10.5 step 5.
 //
-// BUILD M4-T4: "+4 mana; −1 cost this turn; each play draws 1; hand exiled at end of turn;
-// radiant −2".
+// BUILD M4-T4: "Refresh 3 mana (R364); −1 cost this turn; hand exiled at end of turn; radiant also
+// draws 1 for each card played this turn" (patch v0.1.1).
 //
 // The discount is read off the hand's own cost, which `viewFor` computes with `mana.effectiveCost`
 // (§10.8), and confirmed by paying. R65's X-cost clause is proved by playing an X card for exactly
@@ -53,15 +53,26 @@ function board(radiant: boolean): Scenario {
 }
 
 describe("#78 /fullsend — base", () => {
-  it("§2.3 gains 4 mana, which may take current above MAX_MANA", () => {
+  it("R364 refreshes 3 mana: paying 4 of 4 leaves 0, and 3 come back", () => {
     const s = board(false);
 
-    // 4 mana, /fullsend costs 4, so paying empties the pool and the gain refills it.
     s.expectMana("p1", 4);
     s.play(FULLSEND);
 
-    s.expectMana("p1", 4);
+    s.expectMana("p1", 3);
     s.expectEvents("cardPlayed", "manaChanged");
+  });
+
+  it("R364 a Refresh never goes past max: temporary mana above it is not topped up", () => {
+    const s = scenario({
+      p1: { hand: [FULLSEND, COST_0], library: [...LIBRARY], mana: 6 },
+      p2: { hand: ["core-005"], field: ["core-019"], library: [...LIBRARY] },
+    });
+
+    // 6 of max 4, pay 4: 2 left, and the Refresh stops at max 4 — a gain of 3 would have made 5.
+    s.play(FULLSEND);
+
+    s.expectMana("p1", 4);
   });
 
   it("this turn your cards cost 1 less, flooring at 0 (R65)", () => {
@@ -83,49 +94,33 @@ describe("#78 /fullsend — base", () => {
   it("the discount is really charged: a cost-4 card is paid at 3", () => {
     const s = board(false);
     s.play(FULLSEND);
-    s.expectMana("p1", 4);
+    s.expectMana("p1", 3);
 
     s.play(COST_4);
 
-    s.expectMana("p1", 1);
+    s.expectMana("p1", 0);
   });
 
   it("R65 an X-cost card costs exactly X: the discount does not cheapen it", () => {
     const s = board(false);
     s.play(FULLSEND);
-    s.expectMana("p1", 4);
+    s.expectMana("p1", 3);
 
     s.play(X_CARD, { x: 2, targets: AT_ENEMY_HERO });
 
     // Exactly 2, not 1: "costMod and discounts don't change it" (R65).
-    s.expectMana("p1", 2);
+    s.expectMana("p1", 1);
   });
 
-  it('installs the "Combo: draw 1" rider as a turn-scoped player modifier (§10.5 step 5)', () => {
-    const s = board(false);
-
-    s.play(FULLSEND);
-
-    expect(modsOf(s, "comboDraw")).toHaveLength(1);
-    expect(s.state.players.p1.mods.find((mod) => mod.kind === "comboDraw")).toMatchObject({
-      kind: "comboDraw",
-      amount: 1,
-      expiry: { until: "thisTurn", turn: 9 },
-    });
-  });
-
-  it("each card played this turn draws 1 (§10.5 step 5)", () => {
+  it('patch v0.1.1: the base face installs no "Combo: Draw 1", so a play afterwards draws nothing', () => {
     const s = board(false);
     s.play(FULLSEND);
+    expect(modsOf(s, "comboDraw")).toHaveLength(0);
     const libraryBefore = s.pile("p1", "library").length;
-    const handBefore = s.pile("p1", "hand").length;
 
     s.play(COST_0);
 
-    // One draw for the play: the library is one shorter, and the hand is the played card plus the
-    // drawn one. Nothing in the engine reads `comboDraw` yet, so this is the open half of §8.3.
-    expect(s.pile("p1", "library")).toHaveLength(libraryBefore - 1);
-    expect(s.pile("p1", "hand")).toHaveLength(handBefore - 1 + 1);
+    expect(s.pile("p1", "library")).toHaveLength(libraryBefore);
   });
 
   it("R62 the hand is exiled at end of turn, before cleanup", () => {
@@ -141,11 +136,9 @@ describe("#78 /fullsend — base", () => {
 
     // R62 places the exile between the trap window and cleanup, and the log says so — but not by
     // straddling `turnEnded`. `turn.ts` emits that event at the TOP of the window rather than at
-    // cleanup, because the window's traps read it: #18 Bread and Butter answers
-    // `event.unspentMana`, the mana the player still holds before cleanup closes the turn log, and
-    // R100 keeps `turnEnded` out of the immediate trap check so the window is the only place it
-    // fires. So the exile comes after `turnEnded`, and cleanup comes after the exile — cleanup
-    // being visible as the `modifierChanged` that retires /fullsend's own "this turn" modifiers.
+    // cleanup, because the window's traps read it (#18 Bread and Butter answers
+    // `event.unspentMana`). So the exile comes after `turnEnded`, and cleanup comes after the exile —
+    // cleanup being visible as the `modifierChanged` that retires /fullsend's own "this turn" discount.
     const types = s.events.map((event) => event.type);
     const windowOpened = types.indexOf("turnEnded");
     const lastExile = types.lastIndexOf("exiled");
@@ -159,39 +152,34 @@ describe("#78 /fullsend — base", () => {
     s.expectEvents("cardPlayed", "turnEnded", "exiled", "turnStarted");
   });
 
-  it('§2.2 the "this turn" modifiers are gone after cleanup', () => {
+  it('§2.2 the "this turn" discount is gone after cleanup', () => {
     const s = board(false);
     s.play(FULLSEND);
 
     s.endTurn();
 
     expect(modsOf(s, "costDiscount")).toHaveLength(0);
-    expect(modsOf(s, "comboDraw")).toHaveLength(0);
   });
 });
 
 /**
- * R169, BUILD M5-T4 ("badge list equals the view's modifiers"). /fullsend's two riders lived only
- * in `state.players[p].mods`: the discount showed up indirectly as a smaller number on a hand card,
- * with nothing to say why, and the Combo draw had no trace in any view at all. Both are badges now.
+ * R169, BUILD M5-T4 ("badge list equals the view's modifiers"): /fullsend's riders are badges, on
+ * both seats, from the moment the spell resolves until the cleanup that retires them.
  */
 describe("#78 /fullsend — visible to the player while active (R169, §10.8)", () => {
-  it("shows both riders as badges the moment the spell resolves", () => {
+  it("shows the discount as a badge the moment the spell resolves", () => {
     const s = board(false);
 
     s.play(FULLSEND);
 
     const badges = s.view("p1").you.modifiers;
-    expect(badges.map((modifier) => modifier.label)).toEqual([
-      "Your cards cost 1 less",
-      'Your cards gain "Combo: draw 1"',
-    ]);
+    expect(badges.map((modifier) => modifier.label)).toEqual(["Your cards cost 1 less"]);
     // The ids are the engine's, so a `modifierChanged` animation lands on the badge it names.
     expect(badges.map((modifier) => modifier.id)).toEqual(s.state.players.p1.mods.map((mod) => mod.id));
   });
 
   it("the badges go at cleanup, with the modifiers they stand for (§2.2)", () => {
-    const s = board(false);
+    const s = board(true);
     s.play(FULLSEND);
     expect(s.view("p1").you.modifiers).toHaveLength(2);
 
@@ -205,37 +193,50 @@ describe("#78 /fullsend — visible to the player while active (R169, §10.8)", 
 
     s.play(FULLSEND);
 
-    // "Cost 2 less" restates only the number; the Combo rider is unchanged by the radiant cell.
     expect(s.view("p2").opponent.modifiers.map((modifier) => modifier.label)).toEqual([
-      "Your cards cost 2 less",
+      "Your cards cost 1 less",
       'Your cards gain "Combo: draw 1"',
     ]);
   });
 });
 
 describe("#78 /fullsend — radiant", () => {
-  it("costs 2 less this turn and keeps every other clause (§8 Conventions)", () => {
+  it("R364 radiant refreshes 3 mana and its cards still cost only 1 less (patch v0.1.1)", () => {
     const s = board(true);
 
     s.play(FULLSEND);
 
-    // "Cost 2 less" restates only the number.
-    expect(handCost(s, COST_4)).toBe(2);
-    expect(handCost(s, COST_3)).toBe(1);
+    s.expectMana("p1", 3);
+    expect(handCost(s, COST_4)).toBe(3);
+    expect(handCost(s, COST_3)).toBe(2);
     expect(handCost(s, COST_0)).toBe(0);
-    // The mana gain is kept.
-    s.expectMana("p1", 4);
-    // And so is the Combo rider.
-    expect(modsOf(s, "comboDraw")).toHaveLength(1);
   });
 
-  it("radiant charges 2 less: a cost-4 card is paid at 2", () => {
+  it('installs the "Combo: Draw 1" rider as a turn-scoped player modifier (§10.5 step 5)', () => {
     const s = board(true);
+
     s.play(FULLSEND);
 
-    s.play(COST_4);
+    expect(modsOf(s, "comboDraw")).toHaveLength(1);
+    expect(s.state.players.p1.mods.find((mod) => mod.kind === "comboDraw")).toMatchObject({
+      kind: "comboDraw",
+      amount: 1,
+      expiry: { until: "thisTurn", turn: 9 },
+    });
+  });
 
-    s.expectMana("p1", 2);
+  it("each card played this turn draws 1 (§10.5 step 5)", () => {
+    const s = board(true);
+    s.play(FULLSEND);
+    const libraryBefore = s.pile("p1", "library").length;
+    const handBefore = s.pile("p1", "hand").length;
+
+    s.play(COST_0);
+
+    // One draw for the play: the library is one shorter, and the hand is the played card plus the
+    // drawn one.
+    expect(s.pile("p1", "library")).toHaveLength(libraryBefore - 1);
+    expect(s.pile("p1", "hand")).toHaveLength(handBefore - 1 + 1);
   });
 
   it("R65 radiant does not cheapen an X-cost card either", () => {
@@ -244,10 +245,10 @@ describe("#78 /fullsend — radiant", () => {
 
     s.play(X_CARD, { x: 2, targets: AT_ENEMY_HERO });
 
-    s.expectMana("p1", 2);
+    s.expectMana("p1", 1);
   });
 
-  it("R62 radiant still exiles the hand at end of turn", () => {
+  it("R62 radiant still exiles the hand at end of turn, and both riders are gone after cleanup", () => {
     const s = board(true);
     s.play(FULLSEND);
     const left = s.pile("p1", "hand").map((card) => card.defId);
@@ -256,5 +257,7 @@ describe("#78 /fullsend — radiant", () => {
 
     expect(s.pile("p1", "hand")).toHaveLength(0);
     expect(s.pile("p1", "exile").map((card) => card.defId).sort()).toEqual([...left].sort());
+    expect(modsOf(s, "costDiscount")).toHaveLength(0);
+    expect(modsOf(s, "comboDraw")).toHaveLength(0);
   });
 });

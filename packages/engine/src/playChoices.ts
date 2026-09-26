@@ -663,7 +663,7 @@ function subsetsFor(options: readonly Selection[], decl: TargetDecl, isLast: boo
  * combinations and never a pick: the combinations kept first offer every item of every list — one
  * per place in the longest list, each list taking its items in turn — and the rest follow in order
  * up to the bound. Cut in order alone, the first list's later items were in no combination at all:
- * a crafted Twisted Sorcerer + Kpop Fanatic crossed over eleven and eight picks never offered the
+ * a crafted Twisted Sorcerer + K-Pop Fanatic crossed over eleven and eight picks never offered the
  * Sorcerer's 4 damage at the enemy hero (R81, R102), and the client, which builds a play only out of
  * the plays `legalActions` lists (CLAUDE.md rule 7), could not make it.
  */

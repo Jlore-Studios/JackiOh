@@ -142,7 +142,7 @@ describe("R62, §10.3: a stage of the turn loop settles its events before the ne
   });
 
   it("R62 a trigger answering a start-of-turn delayed effect resolves before the start-of-turn triggers (R68, §6.2)", () => {
-    // p1's Kpop Fanatic steals p2's Tempo Timmy at the start of p1's next turn. p1's fixture unit
+    // p1's K-Pop Fanatic steals p2's Tempo Timmy at the start of p1's next turn. p1's fixture unit
     // answers the change of control with 1 damage to p2's hero, which is at 1. p1's Masochism Mask
     // (backrow) asks p1 something at the start of the turn.
     const s = scenario({
@@ -263,7 +263,7 @@ describe("R44, R152: a locked-out player is never handed back the turn My Pawn g
 
 describe("§10.3, R68: a trap answers a delayed effect before the next delayed effect runs", () => {
   it("R68 a trap answering the first of two start-of-turn delayed steals fires before the second steal (§10.3, R59, R76)", () => {
-    // p1 plays two Kpop Fanatics: one on p2's Mr. Vanilla, one on p2's Tempo Timmy. Both steals are
+    // p1 plays two K-Pop Fanatics: one on p2's Mr. Vanilla, one on p2's Tempo Timmy. Both steals are
     // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
     // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
     const s = scenario({
@@ -346,7 +346,7 @@ describe("R62, §10.3: cleanup's events are answered before the turn-cap check a
 
 describe("R68, §4.5: a delayed effect's check is answered before the next delayed effect", () => {
   it("R68 a trap answering a death the first start-of-turn delayed effect caused fires before the second delayed effect (§10.3, §4.5)", () => {
-    // p2's radiant Suppressive Aura shrinks p2's enemies by -4/-4. p1's two Kpop Fanatics take p2's
+    // p2's radiant Suppressive Aura shrinks p2's enemies by -4/-4. p1's two K-Pop Fanatics take p2's
     // Tempo Timmy and then p2's Mr. Vanilla at the start of p1's next turn, in that order (R68).
     // Timmy (3/3) stolen onto p1's side is -1 health there and dies in the check after the first
     // steal. p2's fixture trap answers one of p2's own units dying by returning p2's units to hand.

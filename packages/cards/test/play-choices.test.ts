@@ -291,7 +291,7 @@ describe("R81, R90, R101: every Tribute a play may pay is one legalActions offer
 });
 
 describe("R81, R90, R102: every pick a crafted card's declaration may make is one legalActions offers", () => {
-  it("§8 #99 a crafted Twisted Sorcerer + Kpop Fanatic is offered with the Sorcerer's 4 damage aimed at the enemy hero (R81, R90, R102)", () => {
+  it("§8 #99 a crafted Twisted Sorcerer + K-Pop Fanatic is offered with the Sorcerer's 4 damage aimed at the enemy hero (R81, R90, R102)", () => {
     // p1: four units and a free lane; p2: five units and three public Field Spells. The Sorcerer's
     // declaration reaches eleven picks (p1's four units and hero, p2's five units and hero), Kpop's
     // eight (p2's five units and three backrow cards).
@@ -304,7 +304,7 @@ describe("R81, R90, R102: every pick a crafted card's declaration may make is on
       },
     });
     const sorcerer = must(s.state.players.p1.hand.find((card) => card.defId === TWISTED_SORCERER), "the Sorcerer");
-    const kpop = must(s.state.players.p1.hand.find((card) => card.defId === KPOP_FANATIC), "the Kpop Fanatic");
+    const kpop = must(s.state.players.p1.hand.find((card) => card.defId === KPOP_FANATIC), "the K-Pop Fanatic");
     // §8 #99: "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to your
     // hand" — the fusion #99's last step makes, called where the rule lives (R77, R102).
     const sink: EngineSink = { state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) };

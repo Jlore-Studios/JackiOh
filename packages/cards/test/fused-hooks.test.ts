@@ -266,7 +266,7 @@ describe("§5.2, R77: a keyword a Fuse newly prints applies at once", () => {
     expect(fused.defId).not.toBe(KPOP);
     expect(g.unit("p2", 1)).toBeNull();
     expect(defOf(g.state, fused.defId).base.keywords.map((keyword) => keyword.kind)).toContain("Divine Shield");
-    // The fused definition prints Jilliax's Divine Shield, which Kpop Fanatic's base face never
+    // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
     // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
     // printed shield does after a granted one was spent (`radiant.gainPrintedShield`).
     expect(kinds(g, kpop)).toContain("Divine Shield");

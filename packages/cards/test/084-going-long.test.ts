@@ -1,13 +1,14 @@
-// #84 Going Long — SPEC §8.4 row 84 ("Your hero has Armor 2 (paid 4: 5)" / radiant "Armor 4
-// (paid 4: 10)", Engine cell "Hero armor in pipeline step 2"), BUILD M4-T4 row 84: "In opening
-// hand; embiggen 2 → Armor 2, 4 → Armor 5 on the hero; radiant 4 / 10".
+// #84 Going Long — SPEC §8.4 row 84 ("Your hero has Armor 2. Paid (4): Armor 4 instead." / radiant
+// "Armor 4. Paid (4): Armor 8", Engine cell "Hero armor in pipeline step 2"), BUILD M4-T4 row 84:
+// "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4 on the hero; radiant 4 / 8" (patch v0.1.1:
+// the paid-4 numbers were 5 and 10).
 //
 // The Armor is asserted where §4.4 reads it — through a real damage instance on the protected hero
 // — and not off any number this card declares. Two axes multiply, so there are four numbers:
 //
 //        paid 2      paid 4 (embiggen)
-//   base   2              5
-//   radiant 4            10
+//   base   2              4
+//   radiant 4             8
 //
 // A card sitting in the backrow from the setup was never embiggened, which is the "paid 2" column;
 // the "paid 4" column has to be PLAYED with `embiggen: true`, which is also where the price itself
@@ -128,7 +129,7 @@ describe("#84 Going Long — base", () => {
     s.expectHealth("p2", 24);
   });
 
-  it("embiggen 4 costs 4 mana and gives Armor 5, so the same 6-attack hit lands for 1", () => {
+  it("embiggen 4 costs 4 mana and gives Armor 4, so the same 6-attack hit lands for 2", () => {
     const s = scenario({
       p1: { hand: [GOING_LONG, STOCKPILE], field: [SCARAB], library: [MENACE, TIMMY] },
       p2: { field: [BIGOT], ...SPARE },
@@ -140,11 +141,11 @@ describe("#84 Going Long — base", () => {
     s.endTurn(); // p2's turn
     s.attack(BIGOT, "hero");
 
-    expect(damageTo(s, "hero-p1")).toEqual([1]);
-    s.expectHealth("p1", 29);
+    expect(damageTo(s, "hero-p1")).toEqual([2]);
+    s.expectHealth("p1", 28);
   });
 
-  it("the base price is still 2, and paying it gives Armor 2 rather than 5", () => {
+  it("the base price is still 2, and paying it gives Armor 2 rather than 4", () => {
     const s = scenario({
       p1: { hand: [GOING_LONG, STOCKPILE], field: [SCARAB], library: [MENACE, TIMMY] },
       p2: { field: [BIGOT], ...SPARE },
@@ -212,7 +213,7 @@ describe("#84 Going Long — radiant", () => {
     s.expectHealth("p1", 28);
   });
 
-  it("'(paid 4: 10)': the radiant embiggen price gives Armor 10, so a 6-attack hit is nothing (R63)", () => {
+  it("'Paid (4): Armor 8': the radiant embiggen price gives Armor 8, so a 6-attack hit is nothing (R63)", () => {
     const s = scenario({
       p1: { hand: [{ def: GOING_LONG, radiant: true }, STOCKPILE], field: [SCARAB], library: [MENACE, TIMMY] },
       p2: { field: [BIGOT], ...SPARE },
@@ -220,7 +221,7 @@ describe("#84 Going Long — radiant", () => {
 
     s.play(GOING_LONG, { zone: 1, embiggen: true });
     s.expectMana("p1", 0);
-    expect(shownArmor(s, "p1")).toBe(10);
+    expect(shownArmor(s, "p1")).toBe(8);
 
     s.endTurn();
     s.attack(BIGOT, "hero");
@@ -230,18 +231,18 @@ describe("#84 Going Long — radiant", () => {
     expect(healedCount(s)).toBe(0);
   });
 
-  it("the radiant face still reduces rather than blocks: a 14-attack hit lands for 4 at Armor 10", () => {
+  it("the radiant face still reduces rather than blocks: a 14-attack hit lands for 6 at Armor 8", () => {
     const s = scenario({
       p1: { hand: [{ def: GOING_LONG, radiant: true }, STOCKPILE], field: [SCARAB], library: [MENACE, TIMMY] },
-      p2: { field: [{ def: POINTMASTER, radiant: true }], ...SPARE }, // radiant #20 is a 14/4
+      p2: { field: [{ def: POINTMASTER, radiant: true }], ...SPARE }, // radiant #20 is a 14/2
     });
 
     s.play(GOING_LONG, { zone: 1, embiggen: true });
     s.endTurn();
     s.attack(POINTMASTER, "hero");
 
-    expect(damageTo(s, "hero-p1")).toEqual([4]); // 14 − 10
-    s.expectHealth("p1", 26);
+    expect(damageTo(s, "hero-p1")).toEqual([6]); // 14 − 8
+    s.expectHealth("p1", 24);
   });
 
   it("§6.2 the radiant face is still Quickdraw and still a Field Spell in the backrow", () => {

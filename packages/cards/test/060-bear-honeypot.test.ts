@@ -293,8 +293,8 @@ describe("#60 Bear Honeypot — radiant", () => {
     const g = scenario({
       active: "p2",
       p1: { backrow: [armed(true)] },
-      // Pointmaster is a 2-cost 7/2 with First Strike: 7 into a 3-health token, and "if D is
-      // destroyed here it deals nothing", so all five tokens die and Pointmaster stands at 2.
+      // Pointmaster is a 2-cost 7/1 with First Strike: 7 into a 3-health token, and "if D is
+      // destroyed here it deals nothing", so all five tokens die and Pointmaster stands at 1.
       p2: { ...SPARE, hand: ["core-020", "core-005"] },
     });
 
@@ -302,7 +302,7 @@ describe("#60 Bear Honeypot — radiant", () => {
 
     expect(countOf(g, "attackDeclared")).toBe(5);
     expect(unitsOf(g, "p1")).toEqual([]);
-    g.expectInZone("core-020", "field").expectStats("core-020", { health: 2, maxHealth: 2 });
+    g.expectInZone("core-020", "field").expectStats("core-020", { health: 1, maxHealth: 1 });
   });
 
   it("R56 the radiant face keeps no threshold, but still only answers the opponent", () => {

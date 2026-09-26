@@ -683,7 +683,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     const curvature = install(state, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: 1 },
     });
     // #78 /fullsend's two turn-scoped riders, in the order the Cry installs them.
@@ -735,7 +735,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     install(state, "p1", {
       kind: "costDiscount",
       amount: 2,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 

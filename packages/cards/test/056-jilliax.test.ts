@@ -1,10 +1,9 @@
-// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant Charge and
-// Indestructible"). A keywords-only card, so every test asserts either the computed keyword set
-// (§10.4's keyword layer, read through `viewFor`) or the rule each keyword names in §6.1.
+// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
+// A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword
+// layer, read through `viewFor`) or the rule each keyword names in §6.1.
 //
-// §8 Conventions: the radiant cell lists keywords with no "Plus", so it is the radiant form's
-// COMPLETE list — Rush and Divine Shield are gone on the radiant face and Charge and Indestructible
-// replace them. The first two tests of each face are that swap.
+// Patch v0.1.1: the radiant face is "Rush, Taunt, Lifesteal, Divine Shield, Reborn" — the base list
+// plus Reborn, where it used to trade Rush and Divine Shield for Charge and Indestructible.
 
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
@@ -37,7 +36,7 @@ describe("#56 Jilliax — base", () => {
   it("§4.1 Rush lets it attack a unit on its summon turn but not the hero", () => {
     const g = scenario({
       p1: { hand: ["core-056", "core-005"] },
-      p2: { field: [{ def: "core-008", lane: 1 }] },
+      p2: { field: [{ def: "core-008", lane: 1, damage: 1 }] },
     });
 
     g.play("core-056", { zone: 1 });
@@ -46,17 +45,17 @@ describe("#56 Jilliax — base", () => {
     expect(() => g.attack("core-056", "hero")).toThrow(/Rush cannot hit the hero/);
     g.expectHealth("p2", 30);
 
-    // The same sick unit may attack a unit: 3 into Mr. Vanilla's 3/3, which kills it.
+    // The same sick unit may attack a unit: 3 into a Mr. Vanilla at 3 health, which kills it.
     //
     // The kill cannot be read as `health: 0` on the card. R78 resets an instance's damage as it
-    // leaves the field, so the graveyard copy reads its printed 3/3 undamaged — an assertion on
+    // leaves the field, so the graveyard copy reads its printed 4/4 undamaged — an assertion on
     // its computed health could never hold. R89 is where the stats as they were survive: "the
     // `destroyed` event carries what the card was … its attack and max health as the layers
     // computed them at the moment it died".
     g.attack("core-056", "core-008").expectInZone("core-008", "graveyard");
 
     const killed = g.lastEvents.find((event) => event.type === "destroyed");
-    expect(killed).toMatchObject({ defId: "core-008", attack: 3, maxHealth: 3 });
+    expect(killed).toMatchObject({ defId: "core-008", attack: 4, maxHealth: 4 });
   });
 
   it("§4.2 step 3 Taunt forces the attacker onto it while any other enemy unit stands", () => {
@@ -122,47 +121,43 @@ describe("#56 Jilliax — base", () => {
 });
 
 describe("#56 Jilliax — radiant", () => {
-  it("§8 Conventions: the radiant cell replaces the list, so Rush and Divine Shield are gone", () => {
+  it("§8 patch v0.1.1: the radiant face keeps all four keywords and adds Reborn", () => {
     const g = scenario({ p1: { field: [{ def: "core-056", radiant: true, lane: 1 }] } });
 
-    expect(keywordKinds(g, "p1", 1)).toEqual(["Charge", "Indestructible", "Lifesteal", "Taunt"]);
+    expect(keywordKinds(g, "p1", 1)).toEqual(["Divine Shield", "Lifesteal", "Reborn", "Rush", "Taunt"]);
     g.expectStats("core-056", { attack: 6, maxHealth: 4, health: 4 });
   });
 
-  it("§4.1 Charge lifts sickness for the hero too", () => {
-    const g = scenario({ p1: { hand: ["core-056", "core-005"] } });
-
-    // The setup builder takes `radiant` on the field and the backrow only, so a radiant card that
-    // has to be PLAYED is flagged on the hand instance (reported as a harness gap).
-    g.card("core-056").radiant = true;
-    g.play("core-056", { zone: 1 }).attack("core-056", "hero");
-
-    g.expectHealth("p2", 24);
-  });
-
-  it("§4.4 step 4 and R46: Indestructible takes no damage from a lethal strike-back and stays", () => {
+  it("§4.1 Rush, not Charge: a played radiant Jilliax may attack a unit but not the hero", () => {
     const g = scenario({
-      p1: { field: [{ def: "core-056", radiant: true, lane: 1 }], health: 20 },
-      p2: { field: [{ def: "core-019", lane: 1 }] },
+      p1: { hand: [{ def: "core-056", radiant: true }, "core-005"] },
+      p2: { field: [{ def: "core-008", lane: 1 }] },
     });
 
-    g.attack("core-056", "core-019");
-
-    // 9 into a 4-health unit, and none of it lands: no damage event for it, no death.
-    g.expectInZone("core-056", "field").expectStats("core-056", { health: 4, maxHealth: 4 });
-    // Its own 6 still landed, so Lifesteal still healed 6 (R85's "the amount actually dealt").
-    g.expectHealth("p1", 26).expectStats("core-019", { health: 3, maxHealth: 9 });
+    g.play("core-056", { zone: 1 });
+    expect(() => g.attack("core-056", "hero")).toThrow(/Rush cannot hit the hero/);
+    g.attack("core-056", "core-008").expectInZone("core-008", "graveyard");
   });
 
-  it("§4.4 step 1 is gone with Divine Shield: the radiant face keeps no shield to spend", () => {
+  it("§4.4 step 1 its Divine Shield eats the first strike-back, and §4.5 step 4 Reborn catches the second death", () => {
     const g = scenario({
-      p1: { field: [{ def: "core-056", radiant: true, lane: 1 }] },
-      p2: { field: [{ def: "core-019", lane: 1 }] },
+      p1: { field: [{ def: "core-056", radiant: true, lane: 1 }], hand: [ANCHOR], health: 20 },
+      p2: { field: [{ def: "core-019", lane: 1 }], hand: [ANCHOR] },
     });
 
+    // Midrange Menace's 9 back is negated whole by the shield; Jilliax's 6 still heals 6.
     g.attack("core-056", "core-019");
+    g.expectEvents("divineShieldLost").expectInZone("core-056", "field");
+    g.expectStats("core-056", { health: 4, maxHealth: 4 });
+    g.expectHealth("p1", 26);
 
-    expect(g.events.some((event) => event.type === "divineShieldLost")).toBe(false);
+    // p2's turn: the 9/9 kills the unshielded Jilliax, and Reborn brings it back at 1 health
+    // without Reborn — a reset instance (R78), so its printed Divine Shield is whole again.
+    g.endTurn();
+    g.attack("core-019", "core-056");
+    g.expectInZone("core-056", "field");
+    g.expectStats("core-056", { health: 1, maxHealth: 4 });
+    expect(keywordKinds(g, "p1", 1)).toEqual(["Divine Shield", "Lifesteal", "Rush", "Taunt"]);
   });
 
   it("§4.2 step 3 Taunt is still on the radiant face", () => {

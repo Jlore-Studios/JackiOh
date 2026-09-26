@@ -72,12 +72,13 @@ export const CAST_ON_DRAW_CHAIN_CAP = 20;
 export const ANTI_ONESHOT_CAP = { base: 5, radiant: 3 } as const;
 /**
  * §8 #84 Going Long: the Armor it gives its controller's hero (§4.4 step 2), by face and by which
- * price was paid — "Armor 2 (paid 4: 5)", radiant "Armor 4 (paid 4: 10)". `paid` is the printed
- * cost 2, `embiggen` the embiggen price 4 (R81 records which on the instance).
+ * price was paid — "Armor 2. Paid (4): Armor 4", radiant "Armor 4. Paid (4): Armor 8" (patch
+ * v0.1.1). `paid` is the printed cost 2, `embiggen` the embiggen price 4 (R81 records which on the
+ * instance).
  */
 export const HERO_ARMOR = {
-  base: { paid: 2, embiggen: 5 },
-  radiant: { paid: 4, embiggen: 10 },
+  base: { paid: 2, embiggen: 4 },
+  radiant: { paid: 4, embiggen: 8 },
 } as const;
 /**
  * §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the

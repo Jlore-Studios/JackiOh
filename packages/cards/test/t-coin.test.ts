@@ -91,8 +91,8 @@ describe("T-coin The Coin — card data (§7)", () => {
     expect(def.token).toBe(true);
     expect(def.tags).toEqual(["Token"]);
     expect(def.rarity).toBe("Token");
-    expect(def.base.text).toBe("Gain 1 mana this turn");
-    expect(def.radiant.text).toBe("Gain 2 mana this turn");
+    expect(def.base.text).toBe("Gain 1 mana this turn.");
+    expect(def.radiant.text).toBe("Gain 2 mana this turn.");
     expect(base).not.toBe(radiant);
   });
 

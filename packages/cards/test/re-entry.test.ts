@@ -2,7 +2,7 @@
 // R13, R47, R57, R64, R76, R78, R83, R174, R175). Found by the polish-4 edge-case hunt
 // (docs/polish/4-edge-cases.md, lenses L1, L2 and L8); every case here failed before its fix.
 //
-//  - R174: #50 Kpop Fanatic's delayed steal fizzles on a target that has left the field since it was
+//  - R174: #50 K-Pop Fanatic's delayed steal fizzles on a target that has left the field since it was
 //    chosen, even when the same card is back — bounced and replayed, or returned by Reborn — and on
 //    a target dormant under a Stack pile when it fires (R13, R76).
 //  - R175: Reborn brings back a unit token, and a Reborn unit that died on top of a Stack pile
@@ -101,7 +101,7 @@ function pileOf(g: Scenario, player: "p1" | "p2", lane: number): string[] {
   return (g.state.players[player].units[lane - 1] ?? []).map((card) => card.id);
 }
 
-describe("R174: #50 Kpop Fanatic's delayed steal and a target that left the field", () => {
+describe("R174: #50 K-Pop Fanatic's delayed steal and a target that left the field", () => {
   it("R174 the steal fizzles on a target now dormant under a Stack pile, and the pile stays whole (R13, R76)", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },

@@ -3,7 +3,7 @@
 // Two halves. The modifiers half proves each of the three expiries `ModifierExpiry` offers —
 // `thisTurn`, `nextTurnOf(player)` and `used` — at its boundary, with R48's timing (a next-turn
 // modifier does nothing on the turn it was made) in a test of its own. The delayed half proves
-// they resolve at their R62 point in creation order, that Kpop Fanatic's steal fires after its
+// they resolve at their R62 point in creation order, that K-Pop Fanatic's steal fires after its
 // unit has died (§8 #50, R76), that a continuation whose instance has ceased to exist still
 // resolves with `ctx.self === null` (R127), and that Efficiency Dividend's mana is a
 // `mana.nextTurnMod` rather than a delayed effect at all (§8 #24).
@@ -69,10 +69,10 @@ const delayedBolt = def({
   radiant: { attack: 2, health: 18, keywords: [], text: "same" },
 });
 
-/** §8 #50 Kpop Fanatic, 1/1 → 2/2 Divine Shield: the delayed steal is its `activate` hook. */
+/** §8 #50 K-Pop Fanatic, 1/1 → 2/2 Divine Shield: the delayed steal is its `activate` hook. */
 const kpopFanatic = def({
   id: "md-kpop-fanatic",
-  name: "Kpop Fanatic (modifiers fixture)",
+  name: "K-Pop Fanatic (modifiers fixture)",
   rarity: "Epic",
   cost: 1,
   base: {
@@ -237,7 +237,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     const mod = addModifier(sinkFor(state), "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 
@@ -260,7 +260,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     const mod = addModifier(sinkFor(state), "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 
@@ -287,7 +287,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn - 1 },
     });
 
@@ -325,7 +325,7 @@ describe("player modifiers and their three expiries (§2.2, §10.1)", () => {
     const mod = addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 
@@ -490,7 +490,7 @@ describe("delayed effects (§10.1, R62, R68)", () => {
     expect(ended.state.delayed).toEqual([]);
   });
 
-  it("§8 #50 Kpop Fanatic's steal fires at the next start of turn after the unit has died (R76)", () => {
+  it("§8 #50 K-Pop Fanatic's steal fires at the next start of turn after the unit has died (R76)", () => {
     let state = playing("kpop-fanatic");
     const kpop = put(state, kpopFanatic.id, slot("p1", "units", 1));
     const prize = put(state, plain.id, slot("p2", "units", 1));
@@ -504,7 +504,7 @@ describe("delayed effects (§10.1, R62, R68)", () => {
       resume(kpopFanatic.id, kpop.id, { target: prize.id }),
     );
 
-    // Kpop Fanatic dies well before its own effect is due.
+    // K-Pop Fanatic dies well before its own effect is due.
     kpop.damage = 5;
     stateCheck(sink);
     expect(state.players.p1.units[0]).toBeNull();

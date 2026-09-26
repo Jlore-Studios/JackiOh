@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
 
 /** Big Felinor waits in p1's hand; #21 Hinder rides along so the turn does not auto-end (R82). */
-function board(radiantEnemy = false): ReturnType<typeof scenario> {
+function board(indestructibleEnemy = false): ReturnType<typeof scenario> {
   return scenario({
     seed: "big-felinor",
     p1: {
@@ -33,7 +33,8 @@ function board(radiantEnemy = false): ReturnType<typeof scenario> {
     p2: {
       field: [
         { def: "core-012", lane: 1 },
-        { def: "core-025", radiant: radiantEnemy, lane: 2 },
+        // #66 The Rock is Indestructible; #25 4-mana 7/7 is not.
+        { def: indestructibleEnemy ? "core-066" : "core-025", lane: 2 },
       ],
     },
   });
@@ -69,10 +70,10 @@ describe("#43 Big Felinor — base", () => {
   });
 
   it("R46 an Indestructible non-Felinor ignores the destroy mark and switches to Attack Position", () => {
-    // Radiant #25 4-mana 7/7 is Indestructible, so §4.5 step 1 leaves it on the field.
+    // #66 The Rock is Indestructible, so §4.5 step 1 leaves it on the field.
     const s = board(true).play("core-043", { zone: 3 });
 
-    s.expectInZone("core-025", "field");
+    s.expectInZone("core-066", "field");
     expect(s.unit("p2", 2)?.position).toBe("ATK");
     // The other non-Felinor is not Indestructible and still dies in the same check.
     s.expectInZone("core-020", "graveyard");
@@ -127,7 +128,7 @@ describe("#43 Big Felinor — radiant", () => {
     s.card("core-043").radiant = true;
     s.play("core-043", { zone: 3 });
 
-    s.expectInZone("core-025", "field");
+    s.expectInZone("core-066", "field");
     expect(s.events.some((event) => event.type === "destroyed")).toBe(false);
   });
 });

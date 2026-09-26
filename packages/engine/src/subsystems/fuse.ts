@@ -726,7 +726,7 @@ function keepInstance(
 
 /**
  * §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's
- * own face did not — Jilliax's Divine Shield fused onto a Kpop Fanatic, a Radiant Saintess's Reborn
+ * own face did not — Jilliax's Divine Shield fused onto a K-Pop Fanatic, a Radiant Saintess's Reborn
  * onto a unit that came back through a granted one — and the card gains it with the new text, so a
  * shield or a Reborn the card had spent is up again, as radiant #50's printed shield is after a
  * granted one was spent (`effects/radiant.ts`). A keyword the kept face already printed is not newly

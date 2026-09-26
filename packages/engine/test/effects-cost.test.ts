@@ -135,7 +135,7 @@ describe("setCostOverride (§6.3 Cost, R65, M3-T1)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: 0 },
     });
 

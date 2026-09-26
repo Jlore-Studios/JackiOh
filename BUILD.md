@@ -257,8 +257,8 @@ Acceptance: a state with an open prompt survives `JSON.parse(JSON.stringify(stat
 Acceptance: Suppressive Aura −2/−2 on a 2-health unit makes health 0 and the next state check kills it; removing the aura restores a surviving unit's max health; Jlockeed's Weapons grants Rush to a unit summoned after it; Vanilla strips printed keywords but not `grantedKeywords`; Felinor Fiender = printed + sum of Felinors including dormant stacked ones (R39, R13); Spikey Pillow floors attack at 0.
 
 **M3-T5 Modifiers and delayed effects.** Files: `engine/src/modifiers.ts`.
-Player-scoped modifiers with expiry (`thisTurn`, `nextTurnOf(player)`, `untilUsed`), delayed effects keyed to a turn boundary (Kpop Fanatic, Recycling Initiative, /fullsend exile), resolved at their R62 point in creation order. Efficiency Dividend's mana is a `mana.nextTurnMod`, not a delayed effect.
-Acceptance: Lunar Eclipse's discount applies to the next spell only and expires at cleanup; Professor Curvature's discount applies only on the next turn to cards whose current cost is 4 (R48); Kpop Fanatic's steal fires at the next start of turn after the unit has died (§8 #50).
+Player-scoped modifiers with expiry (`thisTurn`, `nextTurnOf(player)`, `untilUsed`), delayed effects keyed to a turn boundary (K-Pop Fanatic, Recycling Initiative, /fullsend exile), resolved at their R62 point in creation order. Efficiency Dividend's mana is a `mana.nextTurnMod`, not a delayed effect.
+Acceptance: Lunar Eclipse's discount applies to the next spell only and expires at cleanup; Professor Curvature's discount applies only on the next turn to cards whose current cost is 4 (R48); K-Pop Fanatic's steal fires at the next start of turn after the unit has died (§8 #50).
 
 **M3-T6 viewFor.** Files: `engine/src/viewFor.ts`.
 Per §10.8: own hand in full; opponent hand as a count; both libraries as counts; face-down traps as `{ faceDown: true }` for the opponent; Field Spells public; graveyards and exile in full; the viewer's own prompt options only; last N events.
@@ -359,7 +359,7 @@ Acceptance: `pnpm test --filter cards` runs 110 test files; a script that lists 
 | 47 | Fig of Life | 1 | Heals a unit up to max or the hero without cap (R19); radiant 50 |
 | 48 | 5pek Controller | 1 | Every unit switches, exertion untouched (R20), Spikey Pillow stays ATK; radiant enemy-only mode |
 | 49 | Snom Bunny Mind Control | 1 | Steal placement per R15; radiant sets the flag on the stolen card |
-| 50 | Kpop Fanatic | 2 | Steal fires at your next start of turn even if it died (R76); fizzles if the target left; radiant Divine Shield, and the stolen card becomes Radiant only when the steal lands (R282) |
+| 50 | K-Pop Fanatic | 2 | Steal fires at your next start of turn even if it died (R76); fizzles if the target left; radiant Divine Shield, and the stolen card becomes Radiant only when the steal lands (R282) |
 | 51 | KY's Private Tutor | 2 | Only types and brackets with a match offered; 3 random matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice |
 | 51.1 | KY's Empty Notebook | 1 | Draw 1; radiant 2; absent from every random pool |
 | 52 | Silly Silas | 3 | Rotate both rings either direction, control changes on crossing, damage travels, Silas moves too; Locked destination bounces; radiant bounces the cards that would cross to the opponent to their owner's hand at cost 0, while the opponent's crossing cards still change control (R14) |

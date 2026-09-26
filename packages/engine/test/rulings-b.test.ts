@@ -341,7 +341,7 @@ const SCRIPTS: Record<string, CardScripts> = {
   }),
   // R61: a trap with no legal target still fires, is consumed and does nothing.
   [emptyTrap.id]: both({ triggers: [{ id: "no-target", on: ["cardPlayed"], run: () => [] }] }),
-  // #50 Kpop Fanatic's engine half (R76): a delayed steal naming its target as data.
+  // #50 K-Pop Fanatic's engine half (R76): a delayed steal naming its target as data.
   [kpop.id]: both({
     delayed: (ctx) => {
       const target = ctx.data.target;
@@ -573,7 +573,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "never" },
     });
 
@@ -1061,7 +1061,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     card.costOverride = 5;
     expect(effectiveCost(state, card)).toBe(4);
 
-    addModifier(sink, "p1", { kind: "costDiscount", amount: 1, onlyCurrentCost: 4, expiry: { until: "never" } });
+    addModifier(sink, "p1", { kind: "costDiscount", amount: 1, minCurrentCost: 4, expiry: { until: "never" } });
     expect(effectiveCost(state, card)).toBe(3);
     addModifier(sink, "p1", { kind: "costDiscount", amount: 9, expiry: { until: "never" } });
     expect(effectiveCost(state, card)).toBe(0);

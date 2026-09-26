@@ -197,7 +197,7 @@ describe("R171 with the cards that change control", () => {
     expect(() => g.attack(switcher, "hero")).toThrow(ALREADY_ACTED);
   });
 
-  it("R171 #50: Kpop Fanatic's delayed steal leaves the unit sick for that whole turn, and it attacks on the next", () => {
+  it("R171 #50: K-Pop Fanatic's delayed steal leaves the unit sick for that whole turn, and it attacks on the next", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], library: [...LIBRARY] },
       p2: {

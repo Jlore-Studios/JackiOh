@@ -1,4 +1,4 @@
-// #50 Kpop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
+// #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
 // died (R76); fizzles if the target left; radiant Divine Shield". The polish-4 edge-case hunt, round 5
 // (lens "card by card"): a base #50 made Radiant on the field gains its radiant face's Divine Shield
 // at once, even after a granted one was spent (§5.2).
@@ -25,7 +25,7 @@
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
 import { scenario, type Scenario } from "./_harness";
-import { base, def, radiant } from "../src/scripts/050-kpop-fanatic";
+import { base, def, radiant } from "../src/scripts/050-k-pop-fanatic";
 
 const KPOP = "core-050";
 const SEVEN_SEVEN = "core-025";
@@ -35,7 +35,7 @@ const FILLER = "core-016";
 const MENACE = "core-019";
 const LIBRARY = [SEVEN_SEVEN, "core-008", "core-020"];
 
-describe("#50 Kpop Fanatic", () => {
+describe("#50 K-Pop Fanatic", () => {
   it("R81, §8.2 Engine base: the Cry schedules a delayed effect keyed to the chosen permanent", () => {
     const g = scenario({
       p1: { hand: [KPOP, FILLER], library: [...LIBRARY] },
@@ -58,7 +58,7 @@ describe("#50 Kpop Fanatic", () => {
     expect(entry?.at).toEqual({ phase: "start", player: "p1" });
     expect(entry?.resume.defId).toBe(KPOP);
     expect(entry?.resume.step).toBe("steal");
-    // Keyed to the TARGET, which is what lets it outlive Kpop Fanatic (R76).
+    // Keyed to the TARGET, which is what lets it outlive K-Pop Fanatic (R76).
     expect(entry?.resume.data).toMatchObject({ targetId: prey.id });
   });
 
@@ -100,7 +100,7 @@ describe("#50 Kpop Fanatic", () => {
     });
     const prey = g.unit("p2", 2);
     if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
-    // Kpop Fanatic takes the leftmost free zone, lane 1 (R64).
+    // K-Pop Fanatic takes the leftmost free zone, lane 1 (R64).
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     expect(g.unit("p1", 1)?.defId).toBe(KPOP);
 
@@ -111,7 +111,7 @@ describe("#50 Kpop Fanatic", () => {
     expect(g.unit("p1", 3)?.id).toBe(prey.id);
   });
 
-  it("R76 base: the steal fires even though Kpop Fanatic died in between", () => {
+  it("R76 base: the steal fires even though K-Pop Fanatic died in between", () => {
     const g = scenario({
       p1: { hand: [KPOP, FILLER], library: [...LIBRARY] },
       // The 7/7 carries 2 damage into the case. It cannot pick damage up in combat here: §8 row 25
@@ -128,7 +128,7 @@ describe("#50 Kpop Fanatic", () => {
     if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     const fanatic = g.unit("p1", 1);
-    if (fanatic === null) throw new Error("Kpop Fanatic should be in p1's lane 1");
+    if (fanatic === null) throw new Error("K-Pop Fanatic should be in p1's lane 1");
 
     g.endTurn();
     // The 7/7 eats the 1/1 on the opponent's turn; it takes 1 back and stays on the field.
@@ -201,7 +201,7 @@ describe("#50 Kpop Fanatic", () => {
 
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     const fanatic = g.unit("p1", 1);
-    if (fanatic === null) throw new Error("Kpop Fanatic should be in p1's lane 1");
+    if (fanatic === null) throw new Error("K-Pop Fanatic should be in p1's lane 1");
     g.expectStats(fanatic, { attack: 2, maxHealth: 2, health: 2 });
     expect(g.stats(fanatic).keywords.some((keyword) => keyword.kind === "Divine Shield")).toBe(true);
 
@@ -225,7 +225,7 @@ describe("#50 Kpop Fanatic", () => {
     g.expectStats(prey, { attack: 8, maxHealth: 6, health: 4 });
   });
 
-  it("radiant: the steal still fires after a radiant Kpop Fanatic dies (R76)", () => {
+  it("radiant: the steal still fires after a radiant K-Pop Fanatic dies (R76)", () => {
     // The radiant face is a 2/2 with Divine Shield, so killing it takes TWO hits — and R76 gives
     // the opponent exactly one turn in which to land them, because the steal resolves at p1's very
     // next start of turn. One attacker cannot do it (a unit has one attack exertion per turn,
@@ -247,7 +247,7 @@ describe("#50 Kpop Fanatic", () => {
     if (opener === null) throw new Error("setup: p2 should hold Deft Duelist in lane 3");
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     const fanatic = g.unit("p1", 1);
-    if (fanatic === null) throw new Error("Kpop Fanatic should be in p1's lane 1");
+    if (fanatic === null) throw new Error("K-Pop Fanatic should be in p1's lane 1");
 
     g.endTurn();
     // §6.1: the shield absorbs the whole first hit, so the 4/3 cannot kill the 2/2.
@@ -317,7 +317,7 @@ const MIND_CONTROL = "core-049";
 const FIENDER = "core-092";
 const VANILLA = "core-008";
 
-describe("#50 Kpop Fanatic radiant — R282 the rider lands only on a card the steal took", () => {
+describe("#50 K-Pop Fanatic radiant — R282 the rider lands only on a card the steal took", () => {
   it("R282 the steal lands and the stolen unit becomes Radiant in place, its damage kept (R22)", () => {
     const g = scenario({
       p1: { hand: [RADIANT_KPOP, FILLER], library: [...LIBRARY] },
@@ -336,9 +336,9 @@ describe("#50 Kpop Fanatic radiant — R282 the rider lands only on a card the s
     expect(g.unit("p1", 2)?.id).toBe(prey.id);
     expect(g.card(prey).controller).toBe("p1");
     expect(g.card(prey).radiant).toBe(true);
-    // #25's Radiant face: a 14/14 with Indestructible for Armor 7, the 2 damage still on it.
+    // #25's Radiant face: a 14/14 with Armor 7 and Reborn, the 2 damage still on it.
     g.expectStats(prey, { attack: 14, maxHealth: 14, health: 12 });
-    expect(g.stats(prey).keywords.map((keyword) => keyword.kind)).toEqual(["Indestructible"]);
+    expect(g.stats(prey).keywords.map((keyword) => keyword.kind)).toEqual(["Armor", "Reborn"]);
     g.expectEvents("turnStarted", "controlChanged", "radiantSet");
   });
 
@@ -480,7 +480,7 @@ describe("#50 Kpop Fanatic radiant — R282 the rider lands only on a card the s
     });
     const prey = g.unit("p2", 2);
     if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
-    // Kpop Fanatic takes p1's last free zone, lane 5.
+    // K-Pop Fanatic takes p1's last free zone, lane 5.
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     expect(g.unit("p1", 5)?.defId).toBe(KPOP);
 
@@ -496,8 +496,8 @@ describe("#50 Kpop Fanatic radiant — R282 the rider lands only on a card the s
   });
 });
 
-describe("#50 Kpop Fanatic — R282 the rider is the face its Cry ran", () => {
-  it("R282 a base Kpop Fanatic made Radiant after its Cry steals without the rider", () => {
+describe("#50 K-Pop Fanatic — R282 the rider is the face its Cry ran", () => {
+  it("R282 a base K-Pop Fanatic made Radiant after its Cry steals without the rider", () => {
     // The delayed steal carries the face the Cry resolved with (§10.6, R126): the base face's steal
     // has no rider, whatever the Fanatic is by the time it fires. (A Radiant one that has died since
     // still applies its rider: "radiant: Divine Shield eats the first hit …" above.)
@@ -524,7 +524,7 @@ describe("#50 Kpop Fanatic — R282 the rider is the face its Cry ran", () => {
 const SAINTESS = "core-081";
 const SURGERY = "core-063";
 
-describe("#50 Kpop Fanatic — a Radiant flip on the field adds Divine Shield (§5.2)", () => {
+describe("#50 K-Pop Fanatic — a Radiant flip on the field adds Divine Shield (§5.2)", () => {
   it("§5.2 a base #50 whose granted Divine Shield was spent gets its radiant face's Divine Shield when #81 radiates it", () => {
     // #63 Plastic Surgery grants one random keyword (R21); pick the cursor whose roll is Divine
     // Shield, the only way a base #50 (no keywords) ever has one.

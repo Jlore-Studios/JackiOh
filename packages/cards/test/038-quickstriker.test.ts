@@ -34,8 +34,8 @@ describe("#38 Quickstriker", () => {
     expect(def.index).toBe("38");
     expect(def.type).toBe("Field Spell");
     expect(def.cost).toBe(3);
-    expect(def.base.text).toContain('"Combo X: deal X damage to the enemy hero"');
-    expect(def.radiant.text).toContain('"Combo X: deal 2X damage to the enemy hero"');
+    expect(def.base.text).toContain('"Combo X: Deal X damage to the enemy hero."');
+    expect(def.radiant.text).toContain('"Combo X: Deal 2X damage to the enemy hero."');
   });
 
   it("R281 both faces carry the one grant; the multiple of X is the granting face's, read by the engine", () => {

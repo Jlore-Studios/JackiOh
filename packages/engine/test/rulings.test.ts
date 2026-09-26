@@ -183,7 +183,7 @@ const CARDS_CATALOG_TEST = "../../cards/test/catalog.test.ts";
 const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 const CARDS_PREVIEW_TEST = "../../cards/test/preview.test.ts";
 const CARDS_QUICKSTRIKER_TEST = "../../cards/test/038-quickstriker.test.ts";
-const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-kpop-fanatic.test.ts";
+const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-k-pop-fanatic.test.ts";
 const CARDS_MY_PAWN_TEST = "../../cards/test/096-my-pawn.test.ts";
 const WEB_RADIANT_DIFF_TEST = "../../../apps/web/src/cards/radiantDiff.test.ts";
 const WEB_FILTERS_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
@@ -867,7 +867,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(75, "rulings-b.test.ts");
   });
 
-  // M4 owns #50 Kpop Fanatic: its card test proves the delay on the real script.
+  // M4 owns #50 K-Pop Fanatic: its card test proves the delay on the real script.
   // Proved by rulings-b.test.ts "R76 fires the delayed steal at your next start of turn even though the unit
   // died, and fizzles on a card already yours".
   it("R76 fires the delayed steal at your next start of turn even after the unit died", () => {
@@ -2294,8 +2294,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(281, CARDS_QUICKSTRIKER_TEST);
   });
 
-  // Proved by 050-kpop-fanatic.test.ts "R282 …": the rider lands only on a card the steal took.
-  it("R282 makes Radiant only a permanent Radiant Kpop Fanatic's steal took", () => {
+  // Proved by 050-k-pop-fanatic.test.ts "R282 …": the rider lands only on a card the steal took.
+  it("R282 makes Radiant only a permanent Radiant K-Pop Fanatic's steal took", () => {
     provenIn(282, CARDS_KPOP_FANATIC_TEST);
   });
 

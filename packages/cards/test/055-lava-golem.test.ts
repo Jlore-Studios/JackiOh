@@ -1,7 +1,8 @@
-// #55 Lava Golem (SPEC §8.3, §6.3 Tribute/Sacrifice, §3.2, §6.1, §4.2, §4.4; R11, R12, R46, R65,
-// R69, R81, R90, R101).
-// BUILD M4-T4 row 55: "Tribute 3 counts enemy units and Sheep as 2, enemies sacrificed; Taunt and
-// Armor 3; radiant Indestructible; Sheepish's free copy still needs tributes".
+// #55 Lava Golem (SPEC §8.3, §6.3 Tribute/Sacrifice, §3.2, §6.1, §4.2; R11, R12, R65, R81, R90,
+// R101, R360).
+// BUILD M4-T4 row 55: "Tribute 3 counts enemy units and Sheep as 2, enemies sacrificed; Taunt; an
+// opposing unit in the Tribute summons the base face for the opponent (R360); radiant keeps it;
+// Sheepish's free copy still needs tributes".
 
 import { describe, expect, it } from "vitest";
 import type { CardInstance } from "@jackioh/engine";
@@ -112,7 +113,7 @@ describe("#55 Lava Golem — the Sheep Token counts 2 (§3.2, §6.3)", () => {
   });
 });
 
-describe("#55 Lava Golem — may tribute enemy units (R101)", () => {
+describe("#55 Lava Golem — can use opposing Units as Tributes (R101)", () => {
   it("R101 an enemy unit is legal fodder, and it is SACRIFICED, not destroyed", () => {
     // #66 The Rock is Indestructible, so a destroy would be ignored (§4.5 step 1, R46) — a
     // Sacrifice bypasses it (§6.3), which is what makes this the sharp test of the verb used.
@@ -157,20 +158,71 @@ describe("#55 Lava Golem — may tribute enemy units (R101)", () => {
   });
 });
 
+describe("#55 Lava Golem — R360 opposing Units used: summoned for your opponent", () => {
+  it("R360 base: one opposing unit in the Tribute puts the Golem on the opponent's side, in the lane the play named", () => {
+    const s = scenario({
+      p1: { hand: ["core-055"], field: [{ def: "core-053", lane: 1 }, { def: "core-053", lane: 2 }] },
+      p2: { field: [{ def: "core-053", lane: 1 }] },
+    });
+
+    const turn = s.state.turn;
+    s.play("core-055", { zone: 3, tributes: [...idsAt(s, "p1", [1, 2]), unitAt(s, "p2", 1).id] });
+
+    const golem = s.card("core-055");
+    expect(s.unit("p2", 3)?.id).toBe(golem.id);
+    expect(s.unit("p1", 3)).toBeNull();
+    expect(golem.controller).toBe("p2");
+    // Control, not ownership (§3.2): it is still p1's card, and it was p1's play.
+    expect(golem.owner).toBe("p1");
+    expect(s.events.find((event) => event.type === "cardPlayed")).toMatchObject({ player: "p1", instanceId: golem.id });
+    // It entered p2's side this turn, sick and with its exertion fresh like any arrival (R171).
+    expect(golem.summonedTurn).toBe(turn);
+  });
+
+  it("R360 base: the opponent's leftmost open zone when the lane the play named is taken there (R15)", () => {
+    const s = scenario({
+      p1: { hand: ["core-055"] },
+      p2: { field: [{ def: "core-053", lane: 2 }, { def: "core-053", lane: 3 }, { def: "core-053", lane: 4 }, { def: "core-053", lane: 5 }] },
+    });
+
+    s.play("core-055", { zone: 5, tributes: idsAt(s, "p2", [2, 3, 4]) });
+
+    // p2's lane 5 is taken, so the Golem takes p2's leftmost open zone, lane 1.
+    expect(s.unit("p2", 1)?.defId).toBe("core-055");
+    expect(s.card("core-055").controller).toBe("p2");
+  });
+
+  it("R360 base: a Tribute of the player's own units only keeps the Golem on their side", () => {
+    const s = scenario({ p1: { hand: ["core-055"], field: FODDER }, p2: { field: [{ def: "core-053", lane: 1 }] } });
+
+    s.play("core-055", { zone: 4, tributes: idsAt(s, "p1", [1, 2, 3]) });
+
+    expect(s.unit("p1", 4)?.defId).toBe("core-055");
+    expect(s.card("core-055").controller).toBe("p1");
+  });
+
+  it("R360 radiant: opposing Units may pay and the Golem stays with the player", () => {
+    const s = scenario({ p1: { hand: [{ def: "core-055", radiant: true }] }, p2: { field: FODDER } });
+
+    s.play("core-055", { zone: 2, tributes: idsAt(s, "p2", [1, 2, 3]) });
+
+    expect(s.unit("p1", 2)?.defId).toBe("core-055");
+    expect(s.card("core-055").controller).toBe("p1");
+    expect(s.pile("p2", "graveyard")).toHaveLength(3);
+  });
+});
+
 describe("#55 Lava Golem — printed keywords (§6.1, §10.4 layer 1)", () => {
-  it("§4.4 step 2 Armor 3 takes 3 off every damage instance", () => {
+  it("patch v0.1.1: no Armor on either face, so every point of a hit lands", () => {
     const s = scenario({
       p1: { field: [{ def: "core-055", lane: 1 }] },
-      // 3 attack, then 4 attack: the first is absorbed whole, the second leaves exactly 1.
-      p2: { field: [{ def: "core-t-rush", lane: 1 }, { def: "core-053", lane: 2 }], hand: ["core-010"] },
+      p2: { field: [{ def: "core-t-rush", lane: 1 }], hand: ["core-010"] },
     });
 
     s.endTurn();
     s.attack("core-t-rush", "core-055");
-    s.expectStats("core-055", { health: 5 });
-
-    s.attack("core-053", "core-055");
-    s.expectStats("core-055", { health: 4, attack: 10, maxHealth: 5 });
+    s.expectStats("core-055", { health: 2, attack: 10, maxHealth: 5 });
+    expect(s.stats("core-055").keywords.map((k) => k.kind)).toEqual(["Taunt"]);
   });
 
   it("§4.2 step 3 Taunt: the enemy cannot go past it to the hero", () => {
@@ -188,32 +240,30 @@ describe("#55 Lava Golem — printed keywords (§6.1, §10.4 layer 1)", () => {
 });
 
 describe("#55 Lava Golem — radiant", () => {
-  it("§8 'Plus Indestructible': §4.4 step 4 means it takes no damage at all", () => {
+  it("patch v0.1.1: a 20/10 Taunt with no Indestructible, so it takes damage and can die", () => {
     const s = scenario({
       p1: { field: [{ def: "core-055", radiant: true, lane: 1 }] },
-      // 8 attack: a base Golem would take 8 − 3 = 5, so 0 damage is Indestructible, not Armor.
       p2: { field: [{ def: "core-054", lane: 1 }], hand: ["core-010"] },
     });
 
+    expect(s.stats("core-055").keywords.map((k) => k.kind)).toEqual(["Taunt"]);
     s.endTurn();
     s.attack("core-054", "core-055");
 
-    s.expectStats("core-055", { health: 10, attack: 20, maxHealth: 10 });
+    s.expectStats("core-055", { health: 2, attack: 20, maxHealth: 10 });
     // The 20-attack retaliation still kills the 8/8 attacker.
     s.expectInZone("core-054", "graveyard");
   });
 
-  it("§8 Conventions keep every unrestated clause: Taunt, Armor 3 and Tribute 3 all survive", () => {
+  it("§8 the Radiant face keeps Tribute 3", () => {
     const s = scenario({
-      p1: { hand: ["core-055"], field: [{ def: "core-053", lane: 1 }] },
+      p1: { hand: [{ def: "core-055", radiant: true }], field: [{ def: "core-053", lane: 1 }] },
     });
-    // HARNESS GAP (reported): `SideSetup.hand` takes no `{ def, radiant }` form.
-    s.card("core-055").radiant = true;
 
     expect(() => s.play("core-055", { tributes: idsAt(s, "p1", [1]) })).toThrow(/Tribute 3/);
   });
 
-  it("§6.1 Sacrifice still removes an Indestructible unit, so a radiant Golem is legal fodder", () => {
+  it("§6.3 a radiant Golem on the field is legal fodder like any unit", () => {
     const s = scenario({
       p1: {
         hand: ["core-055"],

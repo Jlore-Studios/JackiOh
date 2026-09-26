@@ -86,6 +86,7 @@ import {
   cardAt,
   firstFreeZone,
   freshFaceDownId,
+  isOpen,
   landsFaceDown,
   placeOnField,
   releaseZone,
@@ -236,6 +237,12 @@ export type PlayRun = {
    * repeat of the same play (§10.5 step 6) — does not.
    */
   modsBefore?: string[];
+  /**
+   * R360: the Tribute step 2 paid took at least one of the opponent's units (#55's "if opposing
+   * Units are used"), read as it was paid, before those units died. Step 4 reads it against the
+   * face the card is placed with, since only #55's base face summons itself for the opponent.
+   */
+  enemyTributed?: boolean;
   /**
    * R226, §10.5 step 4, §10.1: the card left its owner's hand before step 4 could move it — a
    * Tribute's Death at step 2, or an `onPlayHook` at step 3, had it discarded — or, for a cast, left
@@ -405,6 +412,29 @@ function payTributes(sink: EngineSink, run: PlayRun): void {
   sacrificeTogether(sink, units);
 }
 
+/** R360: whether the Tribute this play pays takes a unit the opponent controls, read before it dies. */
+function tributesAnEnemy(state: GameState, run: PlayRun): boolean {
+  return run.tributes.some((id) => {
+    const unit = findInstance(state, id);
+    return unit !== undefined && unit.zone.z === "field" && unit.controller !== run.player;
+  });
+}
+
+/**
+ * R360: where #55's base face lands when its Tribute took an opposing unit — "summon for your
+ * opponent". The opponent's zone in the lane the player named when it is open, else the leftmost
+ * open zone of their unit row, which is R15's placement for a card changing sides. With no open zone
+ * there it is placed where the player named, on their own side, as a steal that finds no zone leaves
+ * the card where it is (R15).
+ */
+function handedOverZone(state: GameState, run: PlayRun, card: CardInstance): ZoneSlot | null {
+  if (run.enemyTributed !== true || run.zone === null || run.zone.row !== "units") return null;
+  if (flagsOf(card).enemyTributeHandsOver !== true) return null;
+  const opponent = opponentOf(run.player);
+  const sameLane: ZoneSlot = { player: opponent, row: "units", lane: run.zone.lane };
+  return isOpen(state, sameLane) ? sameLane : firstFreeZone(state, opponent, "units");
+}
+
 /**
  * §10.5 step 2: "consume the next-spell discount if used". A one-shot discount (Lunar Eclipse) is
  * `{ until: "used" }`, so the play it applied to spends it; an X-cost card ignores discounts and so
@@ -441,6 +471,7 @@ function payStep(sink: EngineSink, run: PlayRun): void {
   // named zone is closed to them, so they take the next one and the played card is never left with
   // no zone at all.
   if (run.zone !== null && run.tributes.length > 0) reserveZone(sink.state, run.zone);
+  if (tributesAnEnemy(sink.state, run)) run.enemyTributed = true;
   payTributes(sink, run);
   consumeUsedDiscounts(sink, run, card);
 }
@@ -547,7 +578,8 @@ function playedEvents(sink: EngineSink, run: PlayRun, card: CardInstance, former
   if (run.zone !== null) {
     sink.events.push({
       type: "summoned",
-      player: run.player,
+      // The side it lands on, which is the player's own unless R360 summoned it for the opponent.
+      player: run.zone.player,
       instanceId: card.id,
       defId: card.defId,
       row: run.zone.row,
@@ -675,6 +707,11 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
     const at = side.hand.findIndex((held) => held.id === card.id);
     if (at < 0) return false;
     side.hand.splice(at, 1);
+    // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent. It is
+    // still this player's play (`cardPlayed`), and its owner does not change (§3.2); the zone, and
+    // so its controller, is the opponent's (`placeOnField`).
+    const theirs = handedOverZone(state, run, card);
+    if (theirs !== null) run.zone = theirs;
   }
 
   // R227: a Trap or Field Trap set face-down takes a fresh id before anything names it on the field,

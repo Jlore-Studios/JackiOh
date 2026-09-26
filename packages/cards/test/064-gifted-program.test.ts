@@ -17,7 +17,7 @@ import { scenario, type Scenario } from "./_harness";
 const GIFTED = "core-064"; // Field Spell, 2
 const FRIEND = "core-062"; // Spell, 1 — radiant adds +2/+2, so the face it ran is visible
 const SURGERY = "core-063"; // Spell, 1 — +3/+3 base, +6/+6 radiant
-const POINTMASTER = "core-020"; // Unit, 2 — 7/2 base, 14/4 radiant: the threshold probe
+const POINTMASTER = "core-020"; // Unit, 2 — 7/1 base, 14/2 radiant: the threshold probe
 const TIMMY = "core-011"; // Unit, 3/3
 const MENACE = "core-019"; // Unit, 9/9 — filler so a turn never auto-ends (§2.5, R82)
 const FELINOR = "core-t-felinor";
@@ -106,7 +106,7 @@ describe("#64 Gifted Program", () => {
     s.play(POINTMASTER);
 
     // Pointmaster costs 2, over the base threshold of 1, so it enters on its base face.
-    s.expectStats(POINTMASTER, { attack: 7, maxHealth: 2 });
+    s.expectStats(POINTMASTER, { attack: 7, maxHealth: 1 });
     expect(s.card(POINTMASTER).radiant).toBe(false);
   });
 
@@ -119,7 +119,7 @@ describe("#64 Gifted Program", () => {
     s.play(POINTMASTER);
 
     expect(s.card(POINTMASTER).radiant).toBe(true);
-    s.expectStats(POINTMASTER, { attack: 14, maxHealth: 4 });
+    s.expectStats(POINTMASTER, { attack: 14, maxHealth: 2 });
   });
 
   it("R56 the count starts again each turn, so the next turn's first cheap card is Radiant too", () => {

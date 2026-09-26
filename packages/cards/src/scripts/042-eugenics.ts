@@ -1,11 +1,11 @@
 // #42 Eugenics (SPEC §8.2). Spell, cost 2, Common.
-//   Base:    "Exile 8 random cards from your library; each remaining library card has a 30% chance
-//             to become Radiant"
+//   Base:    "Exile 7 random cards from your deck. Each card left in your deck has a 30% chance to
+//             become Radiant." (patch v0.1.1: 8 became 7 on both faces)
 //   Radiant: "Lucky 1 at 40%" — §8 Conventions: a cell that changes only a number changes only that
 //            number, and every clause it does not restate is kept. So the radiant face still exiles
-//            8, and only the chance (30% → 40%) changes, with Lucky 1 added (§6.1: one extra roll,
+//            7, and only the chance (30% → 40%) changes, with Lucky 1 added (§6.1: one extra roll,
 //            keep the best, i.e. keep the success).
-//   Engine:  "Fewer than 8 → exile all" — R60's "a random pick of N existing cards picks N
+//   Engine:  "Fewer than 7 → exile all" — R60's "a random pick of N existing cards picks N
 //            different cards, or all of them if fewer exist".
 //
 // NO DICE IN A CARD FILE. Rolling advances `rngCursor`, which is state (CLAUDE.md rules 4 and 5,
@@ -36,8 +36,8 @@ import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-042");
 
-/** §8.2: "Exile 8 random cards from your library", on both faces. */
-const EXILE_COUNT = 8;
+/** §8.2: "Exile 7 random cards from your deck", on both faces (patch v0.1.1: 8 became 7). */
+const EXILE_COUNT = 7;
 
 /** The faces differ only in the chance and in how many extra rolls Lucky keeps (§6.1). */
 function eugenics(chance: number, lucky?: number): Script {

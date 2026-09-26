@@ -25,7 +25,7 @@ import { instanceOnItsStay, resolveTarget, type TargetSpec } from "./targets";
 
 /**
  * Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
- * captured earlier — Kpop Fanatic's delayed steal names its target that way (R76). Both are plain
+ * captured earlier — K-Pop Fanatic's delayed steal names its target that way (R76). Both are plain
  * data, so a card file never holds a closure over state (CLAUDE.md rule 5).
  */
 export type StealTarget = { target?: TargetSpec; instanceId?: string };

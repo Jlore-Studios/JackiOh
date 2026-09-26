@@ -63,7 +63,7 @@ describe("R65 cost calculation (M1-T6)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: 0 },
     });
     expect(effectiveCost(state, card)).toBe(3);
@@ -82,7 +82,7 @@ describe("R65 cost calculation (M1-T6)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "thisTurn", turn: 1 },
     });
     expect(effectiveCost(state, card)).toBe(3);
@@ -113,7 +113,7 @@ describe("R65 cost calculation (M1-T6)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 

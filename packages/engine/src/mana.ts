@@ -40,6 +40,16 @@ export function refreshMana(side: PlayerState): void {
   side.mana.nextTurnMod = 0;
 }
 
+/**
+ * §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh
+ * Mana Crystals" (#78 /fullsend). Unlike temporary mana (`gainMana`) it cannot take current above
+ * max, and a player already at or above max gains nothing.
+ */
+export function refreshSomeMana(side: PlayerState, amount: number): void {
+  if (amount <= 0 || side.mana.current >= side.mana.max) return;
+  side.mana.current = Math.min(side.mana.max, side.mana.current + amount);
+}
+
 /** Temporary mana may take current above max (§2.3). */
 export function gainMana(side: PlayerState, amount: number): void {
   side.mana.current = Math.max(0, side.mana.current + amount);
@@ -84,7 +94,7 @@ export function modifierIsLive(state: GameState, mod: PlayerModifier): boolean {
 
 /**
  * R65: start from costOverride or the printed cost, add the instance's costMod, add the player's
- * discounts, then Professor Curvature if the result is 4, and floor at 0. An X-cost card costs
+ * discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost card costs
  * exactly X and ignores modifiers, unless an override makes it free.
  *
  * The player's discounts and Curvature are prices for a play — §6.3's Cost is "what a card costs to
@@ -113,19 +123,19 @@ export function effectiveCost(state: GameState, instance: CardInstance): number 
     if (mod.kind !== "costDiscount") continue;
     if (!modifierIsLive(state, mod)) continue;
     if (mod.onlyType !== undefined && mod.onlyType !== type) continue;
-    if (mod.onlyCurrentCost !== undefined) continue; // Curvature is applied below.
+    if (mod.minCurrentCost !== undefined) continue; // Curvature is applied below.
     cost -= mod.amount;
   }
 
-  // R65: "apply Professor Curvature if the result is then 4" — the result of the steps above, which
-  // every live Curvature reads. Two of them (#39's copy, #33's) each test that one number, so both
-  // apply to a card the discounts leave at 4, and the order they were played in changes nothing: a
-  // Curvature never reads the cost another Curvature has already lowered (R48).
+  // R65, R363: "apply Professor Curvature if the result is then 4 or more" — the result of the steps
+  // above, which every live Curvature reads. Two of them (#39's copy, #33's) each test that one
+  // number, so both apply to a card the discounts leave at 4 or more, and the order they were played
+  // in changes nothing: a Curvature never reads the cost another Curvature has already lowered (R48).
   const beforeCurvature = cost;
   for (const mod of side.mods) {
-    if (mod.kind !== "costDiscount" || mod.onlyCurrentCost === undefined) continue;
+    if (mod.kind !== "costDiscount" || mod.minCurrentCost === undefined) continue;
     if (!modifierIsLive(state, mod)) continue;
-    if (beforeCurvature === mod.onlyCurrentCost) cost -= mod.amount;
+    if (beforeCurvature >= mod.minCurrentCost) cost -= mod.amount;
   }
 
   return Math.max(0, cost);

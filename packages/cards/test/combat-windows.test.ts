@@ -77,9 +77,9 @@ describe("R42 and R89: the unit whose damage instance was lethal", () => {
     });
     const dfender = s.card(BIG_D);
 
-    // 5 damage on a 0/8: it survives, and it deals nothing back.
+    // 5 damage on a 0/7: it survives, and it deals nothing back.
     s.attack(PANTHER, dfender);
-    s.expectStats(dfender, { health: 3 });
+    s.expectStats(dfender, { health: 2 });
     const handBefore = s.hand("p1").length;
 
     // Hit Job destroys it: no damage instance at all, so no killer and no draw.
@@ -94,7 +94,7 @@ describe("R42 and R89: the unit whose damage instance was lethal", () => {
 
 describe("R176: My Pawn's projection follows the combat", () => {
   it("R176 an attacker a First Strike defender kills first never lands its Trample hit, so it is not lethal (§4.3, R93)", () => {
-    // p1's Twisted Sorcerer (5/5) with Trample swings at p2's Pointmaster (7/2, First Strike) with
+    // p1's Twisted Sorcerer (5/5) with Trample swings at p2's Pointmaster (7/1, First Strike) with
     // p2 at 3. Pointmaster strikes first for 7 and the Sorcerer deals nothing.
     const s = scenario({
       seed: "hunt-cw-pawn-first-strike",
@@ -109,7 +109,7 @@ describe("R176: My Pawn's projection follows the combat", () => {
 
     expect(s.events.filter((event) => event.type === "attackCancelled")).toHaveLength(0);
     s.expectInZone(sorcerer, "graveyard");
-    s.expectStats(pointmaster, { health: 2 });
+    s.expectStats(pointmaster, { health: 1 });
     s.expectHealth("p2", 3);
     s.expectInZone(MY_PAWN, "field");
   });

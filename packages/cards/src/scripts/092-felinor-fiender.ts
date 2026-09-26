@@ -1,10 +1,10 @@
-// #92 Felinor Fiender (SPEC §8.4, §3.2, §10.4 layer 2, R13, R39, BUILD M4-T4 row 92).
+// #92 Felinor Fiender (SPEC §8.4, §3.2, §10.4 layer 2, R13, R39, R362, BUILD M4-T4 row 92).
 //
-// Base: "Stack. Stats = printed plus the combined stats of all your Felinors, including ones under
-// a Stack". Radiant: "Stack, Charge; same". The radiant cell lists its complete keyword list
-// (§8 Conventions) and both faces are printed in the catalog, so §10.4 layer 1 already grants Stack
-// and Charge and this file grants nothing. "same" makes the stat rule identical on both faces, so
-// both scripts carry the same `setStat`.
+// Base: "Stack. Has the stats of all your Felinors, including those under Stack." Radiant: "Stack.
+// Has twice the stats of all your Felinors, including those under Stack." (patch v0.1.1: the Radiant
+// face traded Charge for twice the count). Both faces print Stack alone (§8 Conventions), so §10.4
+// layer 1 already grants it and this file grants nothing. The printed 5/7 → 10/14 stays: "has the
+// stats of" is R39's printed-plus-the-sum, and R362 doubles only the sum on the Radiant face.
 //
 // The whole card is §10.4 LAYER 2, the set-stat layer that exists for this card alone, expressed
 // through `Script.setStat` ("a card that sets its own stats from the board (#92 Felinor Fiender,
@@ -60,23 +60,28 @@ function felinorsOf(state: GameState, self: CardInstance): CardInstance[] {
  * never printed plus the sum (R116). Each Felinor contributes its layer-4 stats (`statsWithBuffs`):
  * printed plus permanent buffs, before auras, which is also what stops the layers recursing.
  */
-const setStat: NonNullable<Script["setStat"]> = ({ state, self }) => {
-  let attack = 0;
-  let maxHealth = 0;
-  for (const felinor of felinorsOf(state, self)) {
-    const stats = statsWithBuffs(state, felinor);
-    attack += stats.attack;
-    maxHealth += stats.maxHealth;
-  }
+function setStatTimes(multiple: number): NonNullable<Script["setStat"]> {
+  return ({ state, self }) => {
+    let attack = 0;
+    let maxHealth = 0;
+    for (const felinor of felinorsOf(state, self)) {
+      const stats = statsWithBuffs(state, felinor);
+      attack += stats.attack;
+      maxHealth += stats.maxHealth;
+    }
 
-  // R116: the hook returns the DELTA layer 2 adds to the printed face, not an absolute total, so
-  // the printed stats must not be added here — layer 2 does that. R39's "never below printed" is
-  // the floor at 0: a Felinor carrying a negative buff can pull the sum toward 0 but not past it.
-  return { attack: Math.max(0, attack), maxHealth: Math.max(0, maxHealth) };
-};
+    // R116: the hook returns the DELTA layer 2 adds to the printed face, not an absolute total, so
+    // the printed stats must not be added here — layer 2 does that. R39's "never below printed" is
+    // the floor at 0: a Felinor carrying a negative buff can pull the sum toward 0 but not past it.
+    return { attack: Math.max(0, attack) * multiple, maxHealth: Math.max(0, maxHealth) * multiple };
+  };
+}
 
-export const base: Script = { setStat };
+/** "Has the stats of all your Felinors": the sum once (R39). */
+const BASE_MULTIPLE = 1;
+/** "Has twice the stats of all your Felinors": the sum twice (R362). */
+const RADIANT_MULTIPLE = 2;
 
-// "same": the radiant face changes only its printed stats and its keyword list, both of which are
-// catalog data (§8 Conventions).
-export const radiant: Script = { setStat };
+export const base: Script = { setStat: setStatTimes(BASE_MULTIPLE) };
+
+export const radiant: Script = { setStat: setStatTimes(RADIANT_MULTIPLE) };

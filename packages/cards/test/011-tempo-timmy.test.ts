@@ -34,7 +34,7 @@ describe("#11 Tempo Timmy", () => {
     it("attacks a unit on its summon turn (Rush, §4.1)", () => {
       const s = scenario({
         p1: { hand: ["core-011", "core-005"], library: ["core-005"] },
-        p2: { field: ["core-008"], library: ["core-005"] },
+        p2: { field: [{ def: "core-008", damage: 1 }], library: ["core-005"] },
       });
       s.play("core-011");
       const vanilla = s.card("core-008");
@@ -47,9 +47,9 @@ describe("#11 Tempo Timmy", () => {
     it("kills a 3-health unit unharmed (First Strike, §4.3 step 1)", () => {
       const s = scenario({
         p1: { hand: ["core-011", "core-005"], library: ["core-005"] },
-        // Mr. Vanilla is 3/3 with no First Strike of its own, so §4.3's step 1 decides the exchange:
+        // Mr. Vanilla is a 4/4 at 3 health with no First Strike of its own, so §4.3's step 1 decides the exchange:
         // Timmy's 3 lands first, the defender has fallen and "deals nothing" back.
-        p2: { field: ["core-008"], library: ["core-005"] },
+        p2: { field: [{ def: "core-008", damage: 1 }], library: ["core-005"] },
       });
       s.play("core-011");
       const vanilla = s.card("core-008");
@@ -63,7 +63,7 @@ describe("#11 Tempo Timmy", () => {
     it("cannot hit the hero on its summon turn (Rush, not Charge, §4.2 step 2)", () => {
       const s = scenario({
         p1: { hand: ["core-011", "core-005"], library: ["core-005"] },
-        p2: { field: ["core-008"], library: ["core-005"] },
+        p2: { field: [{ def: "core-008", damage: 1 }], library: ["core-005"] },
       });
       s.play("core-011");
 
@@ -76,7 +76,7 @@ describe("#11 Tempo Timmy", () => {
     it("may hit the hero on its summon turn (Charge, §4.1)", () => {
       const s = scenario({
         p1: { hand: ["core-011", "core-005"], library: ["core-005"] },
-        p2: { field: ["core-008"], library: ["core-005"] },
+        p2: { field: [{ def: "core-008", damage: 1 }], library: ["core-005"] },
       });
       playRadiant(s, "core-011");
 
@@ -89,7 +89,7 @@ describe("#11 Tempo Timmy", () => {
     it("still kills a 3-health unit unharmed (First Strike is kept, §8 Conventions)", () => {
       const s = scenario({
         p1: { hand: ["core-011", "core-005"], library: ["core-005"] },
-        p2: { field: ["core-008"], library: ["core-005"] },
+        p2: { field: [{ def: "core-008", damage: 1 }], library: ["core-005"] },
       });
       playRadiant(s, "core-011");
       const vanilla = s.card("core-008");

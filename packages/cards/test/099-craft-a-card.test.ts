@@ -131,14 +131,14 @@ function sinkFor(s: Scenario): EngineSink {
 // ---------------------------------------------------------------------------
 
 describe("#99 Craft a Card — the Discover chain", () => {
-  it("§8.5 is a 3-cost Mythic Spell, uncastable on 2 mana", () => {
+  it("§8.5 is a 4-cost Mythic Spell (patch v0.1.1: it cost 3), uncastable on 3 mana", () => {
     const def = cardDef(CRAFT);
     expect(def.type).toBe("Spell");
-    expect(def.cost).toBe(3);
+    expect(def.cost).toBe(4);
     expect(def.rarity).toBe("Mythic");
 
-    const s = scenario({ p1: { hand: [CRAFT], mana: 2 } });
-    expect(() => s.play(CRAFT)).toThrow(/costs 3, more than your mana/);
+    const s = scenario({ p1: { hand: [CRAFT], mana: 3 } });
+    expect(() => s.play(CRAFT)).toThrow(/costs 4, more than your mana/);
   });
 
   it("§10.9 both faces are a Cry plus a resume table, and the radiant face has one more step", () => {
@@ -236,7 +236,7 @@ describe("#99 Craft a Card — the Discover chain", () => {
     s.play(CRAFT);
     expect(s.state.counters.played).toBe(1);
     expect(s.state.players.p1.turnLog.cardsPlayed).toBe(1);
-    s.expectMana("p1", 5); // 8 − 3
+    s.expectMana("p1", 4); // 8 − 4
   });
 });
 
@@ -323,8 +323,8 @@ describe("#99 Craft a Card — the fused result (R77, R102)", () => {
     s.play(card);
     const landed = must(s.unit("p1", 1), "the crafted Unit on the field");
     expect(landed.defId).toBe(fused.id);
-    // It cost 0, so the 5 left after #99 is untouched.
-    s.expectMana("p1", 5);
+    // It cost 0, so the 4 left after #99 is untouched.
+    s.expectMana("p1", 4);
   });
 
   it("R102 and R86 the ingredients cease to exist: no graveyard, no Death trigger, no destroyed", () => {

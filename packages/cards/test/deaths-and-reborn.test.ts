@@ -215,7 +215,7 @@ describe("R174: what was queued for a card's old stay does not act on its Reborn
   });
 
   it("R174 a delayed steal whose target died and came back through Reborn during an earlier delayed effect fizzles (R76)", () => {
-    // p1 plays two Kpop Fanatics on turn 9: A on p2's Big Felinor, then B on p2's Felinor Fiender,
+    // p1 plays two K-Pop Fanatics on turn 9: A on p2's Big Felinor, then B on p2's Felinor Fiender,
     // which has Reborn and 10 damage and stands at 8/17 only because Big Felinor feeds its stats
     // (§8 #92, R116). At p1's next start of turn A steals Big Felinor first (R68's creation order),
     // the Fiender drops to 5/7 and dies, and Reborn brings it straight back at 1 health. B's target
@@ -237,7 +237,7 @@ describe("R174: what was queued for a card's old stay does not act on its Reborn
     expect(g.stats(fiender).health).toBe(7);
 
     const [kpopA, kpopB] = g.hand("p1").filter((card) => card.defId === KPOP);
-    if (kpopA === undefined || kpopB === undefined) throw new Error("setup: two Kpop Fanatics in hand");
+    if (kpopA === undefined || kpopB === undefined) throw new Error("setup: two K-Pop Fanatics in hand");
     g.play(kpopA, { targets: [{ pick: "instance", instanceId: felinor.id }] });
     g.play(kpopB, { targets: [{ pick: "instance", instanceId: fiender.id }] });
     g.endTurn();

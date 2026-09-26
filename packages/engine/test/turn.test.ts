@@ -152,7 +152,7 @@ describe("turn loop and mana (M1-T6)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 

@@ -120,7 +120,7 @@ describe("the KY pool (#57 Conjure KY) is exactly #31, #51, #82 (BUILD M4-T4 row
   });
 });
 
-describe("the trap pool (#67 Zoomerbin Oomen) is exactly #18, #41, #60, #71, #85, #96", () => {
+describe("the trap pool (#67 Zoomerbin Oomen's Radiant face) is exactly #18, #41, #60, #71, #85, #96", () => {
   // THE ARGUMENTS A CARD SCRIPT PASSES:
   //     catalog.query({ type: catalog.trapTypes })      // TRAP_TYPES = ["Trap", "Field Trap"]
   //   or catalog.pool("67", { type: TRAP_TYPES })       // #67 is not itself a trap, but §5.1 anyway
@@ -133,8 +133,8 @@ describe("the trap pool (#67 Zoomerbin Oomen) is exactly #18, #41, #60, #71, #85
     expect(indices(catalog.pool("67", { type: TRAP_TYPES }))).toEqual(TRAP_POOL);
   });
 
-  it("§8 #67 base asks for a 1-cost Trap, and all six Core traps cost 1, so both forms share the pool", () => {
-    expect(indices(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(TRAP_POOL);
+  it("§8 #67 base asks for a Cost (1) Trap, which since patch v0.1.1 is every Core trap but #85 (Cost (2))", () => {
+    expect(indices(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(["18", "41", "60", "71", "96"]);
   });
 
   it("§5.1 the pool mixes both types: #18 and #71 are Field Traps, the other four are Traps", () => {
