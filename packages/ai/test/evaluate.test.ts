@@ -149,12 +149,12 @@ describe("evaluate: the strength pass's terms", () => {
   });
 
   it("scored where the seat moves first, the enemy's threat counts only its answerable share", () => {
-    // Mr. Vanilla threatens 3 into an empty board at 30 health: no lethal either way, and p1 has no
+    // Mr. Vanilla threatens 4 into an empty board at 30 health: no lethal either way, and p1 has no
     // attacker, so the frames differ only in the threat term.
     const state = board({ p1: {}, p2: { field: ["core-008"] } });
-    expect(faceThreat(state, "p2")).toBe(3);
+    expect(faceThreat(state, "p2")).toBe(4);
     expect(faceThreat(state, AI)).toBe(0);
-    const threat = AI_EVAL.threatPerDamage * 3;
+    const threat = AI_EVAL.threatPerDamage * 4;
     expect(evaluate(state, AI, "seat") - evaluate(state, AI, "enemy")).toBeCloseTo(
       (1 - AI_EVAL.answerableThreat) * threat,
       10,
@@ -168,8 +168,8 @@ describe("evaluate: the strength pass's terms", () => {
     const atk = unitIn(attack);
     const def = unitIn(defense);
     if (atk === undefined || def === undefined) throw new Error("Mr. Vanilla is not on p1's field");
-    // Mr. Vanilla is 3/3 with no printed Taunt or Armor.
-    const lost = (1 - AI_EVAL.defenseAttackShare) * AI_EVAL.attack * 3;
+    // Mr. Vanilla is 4/4 with no printed Taunt or Armor.
+    const lost = (1 - AI_EVAL.defenseAttackShare) * AI_EVAL.attack * 4;
     const kept = AI_EVAL.positionGrants * (AI_EVAL.keyword.Taunt + AI_EVAL.armorPoint);
     expect(unitWorth(attack, atk) - unitWorth(defense, def)).toBeCloseTo(lost - kept, 10);
   });
