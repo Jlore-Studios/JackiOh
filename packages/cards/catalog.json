@@ -94,7 +94,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn. Death: Summon a base Right-house defender."
+      "text": "Taunt, Divine Shield, Reborn\nDeath: Summon a base Right-house defender."
     }
   },
   "core-004": {
@@ -233,7 +233,7 @@
           "n": 1
         }
       ],
-      "text": "Armor 1. Start of turn: Every enemy Unit attacks this."
+      "text": "Armor 1\nStart of turn: Every enemy Unit attacks this."
     }
   },
   "core-010": {
@@ -471,7 +471,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt. End of turn: Heal this to full."
+      "text": "Taunt\nEnd of turn: Heal this to full."
     },
     "radiant": {
       "attack": 18,
@@ -484,7 +484,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Taunt, Immutable. End of turn: Heal this to full."
+      "text": "Taunt, Immutable\nEnd of turn: Heal this to full."
     }
   },
   "core-020": {
@@ -556,13 +556,13 @@
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Tribute one of your other permanents and remember it. Death: Summon 2 copies of it."
+      "text": "Cry: Tribute one of your other permanents and remember it.\nDeath: Summon 2 copies of it."
     },
     "radiant": {
       "attack": 8,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Tribute one of your other permanents and remember it. Death: Fill your board with copies of it."
+      "text": "Cry: Tribute one of your other permanents and remember it.\nDeath: Fill your board with copies of it."
     }
   },
   "core-023": {
@@ -577,7 +577,7 @@
     "cost": 1,
     "base": {
       "keywords": [],
-      "text": "30% chance a random card in your hand becomes Radiant. End of turn: Return this to your hand."
+      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to your hand."
     },
     "radiant": {
       "keywords": [
@@ -586,7 +586,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1. 40% chance a random card in your hand becomes Radiant. End of turn: Return this to your hand."
+      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to your hand."
     }
   },
   "core-024": {
@@ -759,11 +759,11 @@
     "cost": 1,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(cost+1) damage to a target. End of turn: Return this to your hand. It costs (1) more."
+      "text": "Deal Fib(cost+1) damage to a target.\nEnd of turn: Return this to your hand. It costs (1) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(cost+3) damage to a target. End of turn: Return this to your hand. It costs (1) more."
+      "text": "Deal Fib(cost+3) damage to a target.\nEnd of turn: Return this to your hand. It costs (1) more."
     }
   },
   "core-032": {
@@ -784,7 +784,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush. Whenever this destroys a Unit, draw 2."
+      "text": "Rush\nWhenever this destroys a Unit, draw 2."
     },
     "radiant": {
       "attack": 10,
@@ -797,7 +797,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Rush, Cleave. Whenever this destroys a Unit, draw 2."
+      "text": "Rush, Cleave\nWhenever this destroys a Unit, draw 2."
     }
   },
   "core-033": {
@@ -930,11 +930,11 @@
     "cost": 0,
     "base": {
       "keywords": [],
-      "text": "Exile this. End of turn: Add a copy of each other card you played this turn to your hand."
+      "text": "Exile this.\nEnd of turn: Add a copy of each other card you played this turn to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile this. End of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost (1) less."
+      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost (1) less."
     }
   },
   "core-040": {
@@ -1000,7 +1000,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1. Exile 7 random cards from your deck. Each card left in your deck has a 40% chance to become Radiant."
+      "text": "Lucky 1\nExile 7 random cards from your deck. Each card left in your deck has a 40% chance to become Radiant."
     }
   },
   "core-043": {
@@ -1067,7 +1067,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge. Can attack and switch position in the same turn."
+      "text": "Charge\nCan attack and switch position in the same turn."
     },
     "radiant": {
       "attack": 8,
@@ -1081,7 +1081,7 @@
           "n": 1
         }
       ],
-      "text": "Charge, Armor 1. Can attack and switch position in the same turn."
+      "text": "Charge, Armor 1\nCan attack and switch position in the same turn."
     }
   },
   "core-046": {
@@ -1099,11 +1099,11 @@
     },
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have \u22121/\u22121. Paid (4): \u22122/\u22122 instead."
+      "text": "Aura: All Units have \u22121/\u22121.\nPaid (4): \u22122/\u22122 instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have \u22122/\u22122. Paid (4): \u22124/\u22124 instead."
+      "text": "Aura: Enemy Units have \u22122/\u22122.\nPaid (4): \u22124/\u22124 instead."
     }
   },
   "core-047": {
@@ -1191,7 +1191,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield. Cry: Choose an enemy permanent. At the start of your next turn, steal it. It becomes Radiant."
+      "text": "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it. It becomes Radiant."
     }
   },
   "core-051": {
@@ -1215,7 +1215,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1. Choose a type, then a cost: (0\u20131), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
+      "text": "Echo 1\nChoose a type, then a cost: (0\u20131), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
     }
   },
   "core-051-1": {
@@ -1331,7 +1331,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3. Can use opposing Units as Tributes. If opposing Units are used, summon for your opponent."
+      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes. If opposing Units are used, summon for your opponent."
     },
     "radiant": {
       "attack": 20,
@@ -1341,7 +1341,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3. Can use opposing Units as Tributes."
+      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes."
     }
   },
   "core-056": {
@@ -1436,7 +1436,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon a Rush Token. Aura: Your Rush Tokens have +3/+3."
+      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +3/+3."
     }
   },
   "core-059": {
@@ -1454,11 +1454,11 @@
     },
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand. Paid (4): It costs (0)."
+      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand. Paid (4): It costs (0)."
+      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs (0)."
     }
   },
   "core-060": {
@@ -1613,13 +1613,13 @@
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position. Aura: Your Units have \u22122 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have \u22122 attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position. Aura: Your Units other than Spikey Pillows have \u22122 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have \u22122 attack."
     }
   },
   "core-066": {
@@ -1794,11 +1794,11 @@
     "cost": 2,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than 5 damage at once. Cry: Draw 1."
+      "text": "Your hero can't take more than 5 damage at once.\nCry: Draw 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than 3 damage at once. Cry: Draw 2."
+      "text": "Your hero can't take more than 3 damage at once.\nCry: Draw 2."
     }
   },
   "core-074": {
@@ -1842,7 +1842,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue. Cry: Draw 3."
+      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw 3."
     }
   },
   "core-076": {
@@ -1904,11 +1904,11 @@
     "cost": 4,
     "base": {
       "keywords": [],
-      "text": "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand."
+      "text": "Refresh 3 mana. Your cards cost (1) less this turn.\nEnd of turn: Exile your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Refresh 3 mana. Your cards cost (1) less and gain \"Combo: Draw 1\" this turn. End of turn: Exile your hand."
+      "text": "Refresh 3 mana. Your cards cost (1) less and gain \"Combo: Draw 1\" this turn.\nEnd of turn: Exile your hand."
     }
   },
   "core-079": {
@@ -2034,11 +2034,11 @@
     },
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor 2. Paid (4): Armor 4 instead."
+      "text": "Your hero has Armor 2.\nPaid (4): Armor 4 instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor 4. Paid (4): Armor 8 instead."
+      "text": "Your hero has Armor 4.\nPaid (4): Armor 8 instead."
     }
   },
   "core-085": {
@@ -2080,7 +2080,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack. Death: Take control of the Unit that destroyed this."
+      "text": "Can't attack\nDeath: Take control of the Unit that destroyed this."
     },
     "radiant": {
       "attack": 2,
@@ -2090,7 +2090,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush. Death: Take control of the Unit that destroyed this."
+      "text": "Rush\nDeath: Take control of the Unit that destroyed this."
     }
   },
   "core-087": {
@@ -2152,7 +2152,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush. While this is in your hand, it gains the attack and health of each Unit that dies."
+      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
     },
     "radiant": {
       "attack": 6,
@@ -2165,7 +2165,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Divine Shield. While this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
     }
   },
   "core-090": {
@@ -2234,7 +2234,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush. Whenever this takes damage, it gets a Plague Token. Start of turn: +1 mana per Plague Token."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +1 mana per Plague Token."
     },
     "radiant": {
       "attack": 2,
@@ -2244,7 +2244,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush. Whenever this takes damage, it gets a Plague Token. Start of turn: +2 mana per Plague Token."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +2 mana per Plague Token."
     }
   },
   "core-092": {
@@ -2267,7 +2267,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack. Has the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nHas the stats of all your Felinors, including those under Stack."
     },
     "radiant": {
       "attack": 10,
@@ -2277,7 +2277,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack. Has twice the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nHas twice the stats of all your Felinors, including those under Stack."
     }
   },
   "core-093": {
@@ -2531,7 +2531,7 @@
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Exile all other permanents. Costs (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Cry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
     },
     "radiant": {
       "attack": 20,
@@ -2541,7 +2541,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge. Cry: Exile all other permanents. Costs (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Charge\nCry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
     }
   },
   "core-t-rush": {

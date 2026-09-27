@@ -133,11 +133,8 @@ function biggestOpen(ctx: CoachCtx): Selection | null {
 }
 
 /** The enemy unit most worth destroying: the biggest on the board. */
-/** Hit Job's aim: the biggest enemy Taunt, as it stands in the way, else the biggest enemy unit. */
 function biggestEnemy(ctx: CoachCtx): Selection | null {
-  const enemies = unitsOf(ctx.view, "opponent");
-  const taunts = enemies.filter((unit) => hasKeyword(unit, "Taunt"));
-  const target = [...(taunts.length > 0 ? taunts : enemies)].sort(byValue)[0];
+  const target = [...unitsOf(ctx.view, "opponent")].sort(byValue)[0];
   return target === undefined ? null : { pick: "instance", instanceId: target.instanceId };
 }
 

@@ -3,8 +3,9 @@
 //
 // The checks are the ruling's, one by one: the library is the deck and a tribute a Tribute; a
 // specific cost is "Cost (N)" and a price "(N)"; an embiggen card's bigger price is "Paid (N): …";
-// the printed keywords lead the text as one comma-separated list; and everything else is sentences
-// that end with a full stop. Text is presentation (CLAUDE.md rule 7): no rule reads it, which is
+// the printed keywords lead the text as one comma-separated list on a line of their own; each
+// labelled ability starts a line of its own; and every other line is sentences that end with a full
+// stop. Text is presentation (CLAUDE.md rule 7): no rule reads it, which is
 // why the proof is a scan of the catalog rather than a game.
 
 import { describe, expect, it } from "vitest";
@@ -56,17 +57,28 @@ function failures(face: Face): string[] {
   if (/sacrific/i.test(text)) out.push("says sacrifice, not Tribute");
   if (/\b\d+-cost\b/i.test(text) || /\bcost(s|ing)? \d/i.test(text)) out.push("writes a cost without (N)");
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
-  // The leading list: the text up to its first sentence break.
-  const lead = (text.split(/\. /)[0] ?? "").replace(/\.$/, "").split(", ");
-  for (const keyword of keywords) {
-    if (!lead.includes(keywordLabel(keyword))) out.push(`does not lead with its keyword ${keywordLabel(keyword)}`);
-  }
-  // A text that is the list alone ("Rush, First Strike", "Tribute 1, Indestructible") takes no stop:
-  // each item is a printed keyword or a Tribute cost, which the list also carries (#55, #66).
+  const lines = text === "" ? [] : text.split("\n");
+  // The keyword list: the first line, when every item on it is a printed keyword or a Tribute cost,
+  // which the list carries too (#55, #66). A face with keywords must lead with them.
   const labels = keywords.map(keywordLabel);
-  const listItem = (item: string): boolean => labels.includes(item) || /^Tribute \d+$/.test(item);
-  const keywordsOnly = text !== "" && lead.join(", ") === text && lead.every(listItem);
-  if (text !== "" && !keywordsOnly && !/\.["”]?$/.test(text)) out.push("does not end with a full stop");
+  const listItem = (item: string): boolean => labels.includes(item) || /^(Tribute|Echo) \d+$/.test(item);
+  const lead = (lines[0] ?? "").split(", ");
+  const hasList = lines.length > 0 && lead.every(listItem);
+  for (const label of labels) {
+    if (!hasList || !lead.includes(label)) out.push(`does not lead with its keyword ${label}`);
+  }
+  // Every other line is sentences, each ending with a full stop, and a labelled ability ("Death:",
+  // "Aura:", "Paid (4):") starts a line of its own.
+  for (const [at, line] of lines.entries()) {
+    if (at === 0 && hasList) {
+      if (/\.$/.test(line)) out.push("ends its keyword line with a full stop");
+      continue;
+    }
+    if (!/\.["”]?$/.test(line)) out.push(`does not end the line "${line}" with a full stop`);
+    for (const label of ["Cry:", "Death:", "Start of turn:", "End of turn:", "Aura:", "Paid (4):"]) {
+      if (line.indexOf(label) > 0) out.push(`does not start "${label}" on a line of its own`);
+    }
+  }
   return out;
 }
 
@@ -83,7 +95,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });
 
-  it("R366 leads with the face's printed keywords, and ends every other text with a full stop", () => {
+  it("R366 leads with the face's printed keywords on a line of their own, starts each labelled ability on its own line, and ends every other line with a full stop", () => {
     const wrong = swept.flatMap((face) => failures(face).map((why) => `${face.card.id} ${face.face} ${why}: ${face.text}`));
     expect(wrong).toEqual([]);
   });
