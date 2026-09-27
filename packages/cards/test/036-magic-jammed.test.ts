@@ -119,7 +119,7 @@ describe("#36 Magic Jammed", () => {
 
     // Before: p2 controls it and reads it; p1 sees a face-down marker and nothing else (§10.8).
     expect(s.view("p2").you.backrow[1]).toMatchObject({ faceDown: false, defId: SHEEPISH });
-    expect(s.view("p1").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(s.view("p1").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
 
     s.play(MAGIC_JAMMED, { targets: pick(target.id) });
 
@@ -130,6 +130,6 @@ describe("#36 Magic Jammed", () => {
       owner: "p2",
       controller: "p1",
     });
-    expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
   });
 });

@@ -14,6 +14,7 @@ import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
   SETUP_WORK,
   cloneState,
+  effectiveCost,
   findDef,
   handicapOf,
   mulliganPromptFor,
@@ -105,7 +106,10 @@ export function hiddenInstanceIds(state: GameState, seat: PlayerId): Set<string>
   return hidden;
 }
 
-/** Step 3: the card keeps its id, owner, controller, zone and backrow lane, and nothing else. */
+/**
+ * Step 3: the card keeps its id, owner, controller, zone and backrow lane, and nothing else (a
+ * face-down backrow card's shown cost is put back by `redact`, R351).
+ */
 function toPlaceholder(card: CardInstance): void {
   card.defId = HIDDEN_DEF_ID;
   card.radiant = false;
@@ -203,9 +207,14 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   next.rngCursor = 0;
   next.applied = [];
 
-  // Step 3: every hidden card becomes a placeholder.
+  // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
+  // to both players, so its placeholder keeps that number as its price, and whatever trap
+  // `determinize` puts there shows the seat the same cost the true board does.
   for (const card of everyInstance(next)) {
-    if (hidden.has(card.id)) toPlaceholder(card);
+    if (!hidden.has(card.id)) continue;
+    const shownCost = card.zone.z === "field" && card.zone.row === "backrow" ? effectiveCost(next, card) : undefined;
+    toPlaceholder(card);
+    if (shownCost !== undefined) card.costOverride = shownCost;
   }
 
   // Step 4: erase the true order of the piles the seat cannot see into.

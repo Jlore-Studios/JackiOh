@@ -3,9 +3,9 @@
 // A card in the collection is its catalog definition, both faces printed in full. A card in a game
 // is the card as the view says it stands (R243), and three cards print something else there:
 //
-// - #98 Heroic Power rolled one of seven powers as it arrived (R43, R151). In play its text is that
+// - #98 Heroic Power rolled one of eight powers as it arrived (R43, R151, R352). In play its text is that
 //   power alone, read off the view's `power` (a hand card's `CardView.power`, a backrow card's
-//   `HeroPowerView`), with its X; the collection keeps the list of seven.
+//   `HeroPowerView`), with its X; the collection keeps the list of eight.
 // - A card with the Call to Chaos tag (#95) reads "???" in play. What it does is rolled when it
 //   resolves (§8 #95), and the game keeps it a mystery; the collection prints the real text, so a
 //   player building a deck can still read it.
@@ -37,7 +37,7 @@ export type RolledPower = { name: string; x: number };
 
 type PowerWords = { base: string; radiant: string };
 
-/** §8 #98's seven clauses, base and radiant, by the power's name in the view (R243). */
+/** §8 #98's eight clauses, base and radiant, by the power's name in the view (R243, R352). */
 export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   recruit: { base: "Recruit a permanent", radiant: "Recruit a permanent and make it Radiant" },
   draw: { base: "Lose 2 health, draw 1", radiant: "Lose 2 health, draw 2" },
@@ -46,6 +46,10 @@ export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   rush: { base: "Summon a Rush Token", radiant: "Summon two Rush Tokens" },
   felinor: { base: "Summon a Felinor Token", radiant: "Summon two Felinor Tokens" },
   discover: { base: "Discover a Unit", radiant: "Discover a Radiant Unit" },
+  stitching: {
+    base: "Stitching — Discover 2 Units that cost (2) or less. Fuse them and add the result to your hand",
+    radiant: "Stitching — Discover 2 Radiant Units that cost (2) or less. Fuse them and add the result to your hand",
+  },
 };
 
 /**

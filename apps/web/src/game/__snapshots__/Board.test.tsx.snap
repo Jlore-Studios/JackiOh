@@ -1304,6 +1304,14 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 <span
                   class="keyword keyword-icon"
                   data-chip="hidden"
+                  data-keyword="Pierce"
+                  title="Pierce"
+                >
+                  PI
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
                   data-keyword="Indestructible"
                   title="Indestructible"
                 >
@@ -1355,10 +1363,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 </span>
                 <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Indestructible, Immutable, Stack, Can't attack, Lucky 3"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3"
                 >
                   +
-                  11
+                  12
                 </span>
               </span>
               <span

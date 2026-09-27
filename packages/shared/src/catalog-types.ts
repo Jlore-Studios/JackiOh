@@ -46,6 +46,8 @@ export type Keyword =
   | { kind: "Divine Shield" }
   | { kind: "Trample" }
   | { kind: "Cleave" }
+  /** R346: its damage ignores Armor (§4.4 step 2), on a unit or on a spell. */
+  | { kind: "Pierce" }
   | { kind: "Indestructible" }
   | { kind: "Immutable" }
   | { kind: "Stack" }
@@ -67,6 +69,7 @@ export const KEYWORD_KINDS = [
   "Divine Shield",
   "Trample",
   "Cleave",
+  "Pierce",
   "Indestructible",
   "Immutable",
   "Stack",
@@ -119,6 +122,14 @@ export type CardDef = {
    * union of its ingredients' (R102).
    */
   refs?: string[];
+  /**
+   * R349: this card prints no Radiant form of its own (the Ghoul Token, §7). Its `radiant` face is
+   * the fallback the rule gives it — the base face with its attack and health doubled, the same
+   * keywords and text — and a summon's X/X (`statsOverride`) doubles with it at runtime. Absent on
+   * every card that prints a Radiant form, a fused definition included (R77 sums the ingredients'
+   * Radiant forms).
+   */
+  radiantFallback?: true;
   base: CardFace;
   radiant: CardFace;
 };

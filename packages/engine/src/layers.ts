@@ -3,6 +3,7 @@
 import type { Keyword, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, armorOf, hasKeyword } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { RADIANT_FALLBACK_FACTOR } from "./config";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import type { StatMod } from "./script";
@@ -17,13 +18,30 @@ export type UnitView = {
   position: "ATK" | "DEF";
 };
 
+/**
+ * R349: what a summon's X/X (`statsOverride`) comes to on the face the instance wears. A card that
+ * prints no Radiant form of its own (`radiantFallback`, the Ghoul Token) is, made Radiant, its base
+ * face with its attack and health doubled, and its X/X is that base face — so a Radiant Ghoul
+ * summoned 3/3 is a 6/6. A card that prints a Radiant form keeps its X on both faces, as the Bread
+ * Token's "X/X, Armor X" and an X/X Rush Token do (§7).
+ */
+export function wornStatsOverride(
+  def: { radiantFallback?: true },
+  instance: Pick<CardInstance, "radiant" | "statsOverride">,
+): { attack: number; health: number } | undefined {
+  const stats = instance.statsOverride;
+  if (stats === undefined || !instance.radiant || def.radiantFallback !== true) return stats;
+  return { attack: RADIANT_FALLBACK_FACTOR * stats.attack, health: RADIANT_FALLBACK_FACTOR * stats.health };
+}
+
 /** The card's printed face, radiant when the instance is (§5.2). */
 export function faceOf(state: GameState, instance: CardInstance): { attack: number; health: number; keywords: Keyword[] } {
   const def = defOf(state, instance.defId);
   const face = instance.radiant ? def.radiant : def.base;
+  const stats = wornStatsOverride(def, instance);
   return {
-    attack: instance.statsOverride?.attack ?? face.attack ?? 0,
-    health: instance.statsOverride?.health ?? face.health ?? 0,
+    attack: stats?.attack ?? face.attack ?? 0,
+    health: stats?.health ?? face.health ?? 0,
     // §7: the Bread Token's radiant "Armor X" is the same X as its X/X, so the printed `n` is a
     // placeholder the summon fills in, exactly as `statsOverride` fills in the printed 0/0.
     keywords:
@@ -139,9 +157,12 @@ export function unitView(state: GameState, instance: CardInstance): UnitView {
   // Position grants: Defense adds Taunt and Armor +1 (§4.1).
   if (position === "DEF") keywords.push({ kind: "Taunt" }, { kind: "Armor", n: 1 });
 
-  // R46: an Indestructible unit that would have been destroyed loses Taunt for the turn.
+  // R46: an Indestructible unit that would have been destroyed loses Taunt for the turn. R347: an
+  // Indestructible unit never has Taunt at all — printed, granted, from an aura or from Defense
+  // Position — so Indestructible, from whichever source, takes Taunt out of the set.
   // A spent Divine Shield and a used Reborn are gone until granted again (§6.1, §4.5 step 4).
-  const tauntSuppressed = instance.tauntSuppressedTurn === state.turn;
+  const tauntSuppressed =
+    instance.tauntSuppressedTurn === state.turn || keywords.some((k) => k.kind === "Indestructible");
   const finalKeywords = asSet(
     keywords.filter(
       (k) =>

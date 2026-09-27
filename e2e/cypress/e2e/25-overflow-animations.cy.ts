@@ -34,7 +34,8 @@
 //      Unstable Clone Machine, #4 Gary the Gambler (library 56 → 59) and #8 Mr. Vanilla, whose first
 //      copy fills the library to LIBRARY_CAP and whose other two are never created (R80):
 //      `pile-notice-you` reads "Library full" and `overflow-card-you` is Mr. Vanilla's face with
-//      `data-outcome="notCreated"`. Then seat 2 plays #90 CN-Viral Injection into that full library:
+//      `data-outcome="notCreated"`. Then seat 2 plays The Coin and #90 CN-Viral Injection (cost 2
+//      since patch v0.1.1) into that full library:
 //      `pile-notice-opponent` reads "Library full" and `overflow-card-opponent` is the CN-Virus's
 //      face (a copy of nothing reads openly to both, R316), `notCreated`.
 //
@@ -115,6 +116,7 @@ const GARY = nameOf(4);
 const VANILLA = nameOf(8);
 const INJECTION = nameOf(90);
 const CN_VIRUS = TOKEN_NAMES["90.1"] ?? "CN-Virus";
+const THE_COIN = TOKEN_NAMES["T-coin"] ?? "The Coin";
 
 // ---------------------------------------------------------------------------------------------
 // the screenshot pass
@@ -463,10 +465,13 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
   expectPlayed(pileNoticeId("you"));
   expectCount(libraryCountId("you"), constants.LIBRARY_CAP);
 
-  // Seat 2 shuffles a CN-Virus into that full library, which refuses it on seat 2's device.
+  // Seat 2 shuffles a CN-Virus into that full library, which refuses it on seat 2's device. The
+  // Injection costs 2 since patch v0.1.1, and seat 2's first turn has 1 mana, so The Coin it was
+  // dealt going second (R244) pays the second.
   cy.endTurn();
   holdDevice("p2");
   cy.handCardByName(INJECTION);
+  cy.playByName(THE_COIN, handClick(viewport));
   clearNotices();
   cy.playByName(INJECTION, {
     ...handClick(viewport),

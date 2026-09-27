@@ -1,43 +1,26 @@
-// #80 Zao Gao (SPEC §8.3, §5.2, §7, §10.5, §10.6; R11, R16, R21, R64, R81, R215, R221, R275,
-// R276). Spell, cost 2.
-//   Base:    "Discard 2 cards of your choice; summon 2 Rush Tokens, each with 2 random keywords"
-//   Radiant: "Discard 2 cards of your choice; summon 2 Radiant Rush Tokens, each with 2 random
-//            keywords" — §8's cell "The Rush Tokens are Radiant". R276 gave the card this face,
-//            and a Radiant Rush Token (§7: 6/6, Rush, Cleave) is R275's raise.
+// #80 Zao Gao (SPEC §8.3, §5.2, §7; R11, R16, R21, R64, R215, R275, R276, R354). Spell, CN, cost 2.
+//   Base:    "Discard 2 random cards; summon 2 Rush Tokens, each with 2 random keywords"
+//   Radiant: "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords"
 //
-// The two faces differ in one flag: the radiant face summons each token on its Radiant face.
-// Everything else — the prompt, the discard, the rolls — is one shared body.
+// Patch v0.1.1 (issue #27) changed three things, and R354 records how they are read: the discard is
+// random ("not of your choice", so R16's random case, never a prompt), the Radiant face's tokens
+// gain a third keyword on top of being Radiant ("Modify": the change is added to the face the
+// Radiant pass gave it, R276), and the card is tagged CN.
 //
-// The discard is a PROMPT, not a play-time declaration. R16: "Player's choice unless 'random'" and
-// §10.6 names this card as the reason the `hand` kind is reachable at all: "`hand` is reachable:
-// Zao Gao's chosen discard is a prompt, and an Echo repeat of Glowy Jelly Bean reopens its hand
-// pick." That matters — a prompt reopens on every Echo repeat, where a declared target (#26) would
-// not. `chooseFromHand` clamps `min = max = min(2, hand.length)`, which is §8's "Fewer than 2 in
-// hand → discard what you have"; the resume step's second `discard` then finds no second selection
-// and fizzles.
+// The discard is `discardRandom`: each of the two cards is one uniform pick from the match rng over
+// the hand as it then stands, so the two are different cards, and fewer than 2 in hand discards what
+// there is (§8's Engine cell). A discarded card is the printed card again, keeping only its
+// `costMod`, `costOverride` and radiant flag (R215), and a unit-token card among the discards ceases
+// to exist instead of reaching the graveyard (R11) — `discard`'s rules. Nothing asks the player
+// anything, so an Echo repeat discards at random again, and an empty hand simply summons.
 //
-// The effect list deliberately spans the prompt. `prompts.applyResumable` parks the tail of a list
-// as a `WorkItem` the moment a prompt opens and `answerPrompt` drains it after the resume step, so:
-//   * with cards in hand, the two summons are parked, the discard step runs on the answer, and the
-//     summons follow;
-//   * with an EMPTY hand, `chooseFromHand` opens no prompt at all, nothing is parked, and the two
-//     summons run straight through in the same list — Zao Gao still makes its tokens.
-// Both paths are one list, which is why there is no empty-hand branch in the hook.
-//
-// The picks arrive in the resume step's `ctx.targets`, which is what `{ of: "chosen", index }` reads
-// (R81), and `effects/move.discard` defaults to exactly that spec for this card's sake. R221 fixes
-// their order — the order the prompt offered them, whatever order the answer listed them in — so
-// the discards reach the (public) graveyard in that order. A discarded card is the printed card
-// again, keeping only its `costMod`, `costOverride` and radiant flag (R215), and a unit-token card
-// among the discards ceases to exist instead of reaching the graveyard (R11) — `discard`'s rules.
-//
-// R21: each token rolls 2 DISTINCT keywords from the eleven-entry pool, and the two tokens roll
-// independently. `grantRandomKeywords` is that rule already — it recomputes the pool per draw off
-// the unit's §10.4 keywords, so it never repeats inside one grant and never offers a keyword the
-// unit already has: a Rush Token (printed Rush, §7) draws its two from the other ten, and a Radiant
-// one (printed Rush and Cleave) from the other nine. §8's Engine cell puts the order in words:
-// "each token is summoned Radiant and then rolls its 2 keywords" — `summon` sets the flag as it
-// creates the card and rolls only once it has landed, so the roll reads the Radiant face.
+// R21: each token rolls DISTINCT keywords from the pool (twelve with R346's Pierce), and the two
+// tokens roll independently. `grantRandomKeywords` is that rule already — it recomputes the pool per
+// draw off the unit's §10.4 keywords, so it never repeats inside one grant and never offers a keyword
+// the unit already has: a Rush Token (printed Rush, §7) draws its two from the other eleven, and a
+// Radiant one (printed Rush and Cleave) its three from the other ten. §8's Engine cell puts the order
+// in words: "each token is summoned Radiant and then rolls its keywords" — `summon` sets the flag as
+// it creates the card and rolls only once it has landed, so the roll reads the Radiant face.
 //
 // R64: a summon with no named zone takes the leftmost empty, unlocked, unreserved unit zone and
 // fizzles silently when the row has none, so a board with one free zone gets one token.
@@ -45,10 +28,10 @@
 // The keywords are rolled by `summon` itself (`randomKeywords`), since `summon` returns nothing a
 // script can reference and `TargetSpec` has no "last summoned" case: rolling inside the summon keeps
 // the rng draws adjacent to the summon they belong to (replay parity, §9.3) and has no fizzle
-// hazard.
+// hazard. The discards come first, so their draws precede the tokens' in the rng stream.
 
 import type { Effect, Script } from "@jackioh/engine";
-import { chooseFromHand, discard, summon } from "@jackioh/engine/effects";
+import { discardRandom, summon } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-080");
@@ -58,41 +41,31 @@ const RUSH_TOKEN = cardDef("core-t-rush").id;
 
 const DISCARD_COUNT = 2;
 const TOKEN_COUNT = 2;
-/** R21: two distinct keywords per token, rolled independently for each. */
-const KEYWORDS_PER_TOKEN = 2;
 
-/** The `resume` step the `hand` prompt's answer re-enters (§10.6). */
-const DISCARD_STEP = "discard";
+/** What a face summons: whether the tokens are Radiant, and how many keywords each rolls (R21). */
+type Tokens = { radiant: boolean; keywords: number };
 
-/** One Rush Token with its two rolled keywords (R21, R64), on its Radiant face for the radiant card. */
-function rushToken(radiantTokens: boolean): Effect {
-  return summon({ defId: RUSH_TOKEN, radiant: radiantTokens, randomKeywords: KEYWORDS_PER_TOKEN });
+/** Base: plain Rush Tokens, two keywords each. */
+const BASE_TOKENS: Tokens = { radiant: false, keywords: 2 };
+/** Radiant (R276, R354): Radiant Rush Tokens, three keywords each. */
+const RADIANT_TOKENS: Tokens = { radiant: true, keywords: 3 };
+
+/** One Rush Token with its rolled keywords (R21, R64). */
+function rushToken(tokens: Tokens): Effect {
+  return summon({ defId: RUSH_TOKEN, radiant: tokens.radiant, randomKeywords: tokens.keywords });
 }
 
-/** `radiantTokens` is the whole of the radiant difference: the tokens are summoned Radiant. */
-function zaoGao(radiantTokens: boolean): Script {
+/** The faces differ only in the tokens they summon. */
+function zaoGao(tokens: Tokens): Script {
   return {
     cry: () => [
-      // R16, §10.6: the player chooses, so this is a `hand` prompt clamped to the hand size.
-      chooseFromHand({
-        count: DISCARD_COUNT,
-        step: DISCARD_STEP,
-        prompt: "Discard 2 cards of your choice",
-      }),
-      // Parked by `applyResumable` while the prompt is open; run straight through on an empty hand.
-      ...Array.from({ length: TOKEN_COUNT }, () => rushToken(radiantTokens)),
+      // R16, R354: "random" is stated, so the match rng picks and nobody is asked.
+      discardRandom({ count: DISCARD_COUNT }),
+      ...Array.from({ length: TOKEN_COUNT }, () => rushToken(tokens)),
     ],
-    resume: {
-      // The answer's selections are in `ctx.targets`; a missing second pick fizzles (§8 Conventions).
-      [DISCARD_STEP]: () =>
-        Array.from({ length: DISCARD_COUNT }, (_unused, index) =>
-          discard({ target: { of: "chosen", index } }),
-        ),
-    },
   };
 }
 
-export const base: Script = zaoGao(false);
+export const base: Script = zaoGao(BASE_TOKENS);
 
-/** R276: "summon 2 Radiant Rush Tokens" — the same card with the tokens on their Radiant face. */
-export const radiant: Script = zaoGao(true);
+export const radiant: Script = zaoGao(RADIANT_TOKENS);

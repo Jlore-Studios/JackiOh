@@ -368,8 +368,8 @@ describe("R280 preview on the field", () => {
 
     clearHooks();
     const other = viewFor(state, "p2");
-    expect(other.opponent.backrow[0]).toEqual({ faceDown: true });
-    expect(other.opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(other.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
+    expect(other.opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(other)).not.toContain(`n(${trap.id})`);
     expect(askedAbout(trap.id)).toEqual([]);
     expect(askedAbout(fieldTrap.id)).toEqual([]);
@@ -382,7 +382,7 @@ describe("R280 preview on the field", () => {
 
     expect(shown(viewFor(state, "p2").you.backrow[2])).toEqual([{ label: `n(${trap.id})`, value: 12 }]);
     clearHooks();
-    expect(viewFor(state, "p1").opponent.backrow[2]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").opponent.backrow[2]).toEqual({ faceDown: true, cost: 1 });
     expect(askedAbout(trap.id)).toEqual([]);
   });
 

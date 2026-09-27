@@ -1,13 +1,13 @@
 // #98 Heroic Power — SPEC §8.5, §6.2 ("Start of Game", "Once per Turn", Quickdraw), §10.2, §10.6,
-// §10.8, R18, R43, R45, R46, R65, R81, R103.
+// §10.8, R18, R43, R45, R46, R65, R81, R103, R352.
 //
 // BUILD M4-T4 row 98: "In opening hand; power chosen at start of game from the seed; playing costs
 // the power's X and activates once; a copy created mid-game, mulliganed back into the library, or
 // bounced to hand still has a power (R43); once per turn afterwards; Indestructible; each radiant
 // power variant".
 //
-// HOW A POWER IS PINNED. R103 makes the seven power names state (`recruit`, `draw`, `ping`, `burn`,
-// `rush`, `felinor`, `discover`), so a test that wants a named one writes that name into
+// HOW A POWER IS PINNED. R103 makes the power names state (`recruit`, `draw`, `ping`, `burn`,
+// `rush`, `felinor`, `discover`, and R352's `stitching`), so a test that wants a named one writes that name into
 // `memory.power` — which is exactly and only what `subsystems.ensurePower` writes, so the state is
 // one the engine produces. `HERO_POWERS` supplies the X and the pair of §8.5 clauses, and every
 // assertion below is then about what the card DID, never about the table it read.
@@ -170,9 +170,10 @@ describe("#98 Heroic Power — the card", () => {
 // ---------------------------------------------------------------------------
 
 describe("#98 Heroic Power — the cost is the power's X (R43, R65, R103)", () => {
-  it("R43 the cost the validator reads is the power's X, for every one of the seven", () => {
-    // R103: "The seven stored power names are `recruit`, `draw`, `ping`, `burn`, `rush`, `felinor`
-    // and `discover`", in §8.5's order, each with the X that row prints in brackets.
+  it("R43 the cost the validator reads is the power's X, for every one of the eight", () => {
+    // R103: "The stored power names are `recruit`, `draw`, `ping`, `burn`, `rush`, `felinor`,
+    // `discover` and `stitching`" (R352 added the eighth), in §8.5's order, each with the X that
+    // row prints in brackets.
     expect(subsystems.HERO_POWER_NAMES).toEqual([
       "recruit",
       "draw",
@@ -181,8 +182,9 @@ describe("#98 Heroic Power — the cost is the power's X (R43, R65, R103)", () =
       "rush",
       "felinor",
       "discover",
+      "stitching",
     ]);
-    expect(subsystems.HERO_POWERS.map((entry) => entry.x)).toEqual([3, 1, 1, 1, 2, 1, 2]);
+    expect(subsystems.HERO_POWERS.map((entry) => entry.x)).toEqual([3, 1, 1, 1, 2, 1, 2, 2]);
 
     const { s, power } = inHand("burn");
     for (const entry of subsystems.HERO_POWERS) {
@@ -375,10 +377,10 @@ describe("#98 Heroic Power — playing it and once per turn (R43, R103)", () => 
 });
 
 // ---------------------------------------------------------------------------
-// The seven powers, base clause and radiant clause (§8.5, R43).
+// The eight powers, base clause and radiant clause (§8.5, R43, R352).
 // ---------------------------------------------------------------------------
 
-describe("#98 Heroic Power — the seven powers, base", () => {
+describe("#98 Heroic Power — the eight powers, base", () => {
   it("R43 (3) Recruit a permanent: the library's first permanent, top down, not Radiant", () => {
     const { s, power } = onField("recruit", {
       p1: { library: [JAMMED, MENACE], hand: [SPARE], mana: 8 },
@@ -494,7 +496,90 @@ describe("#98 Heroic Power — the seven powers, base", () => {
   });
 });
 
-describe("#98 Heroic Power — the seven powers, radiant (§8.5's radiant cell)", () => {
+/** The def ids a Discover prompt offers (§6.3), in the order offered. */
+function offeredIds(s: Scenario): string[] {
+  return must(s.state.pending, "a discover prompt").options.flatMap((option) =>
+    option.selection.pick === "mode" ? [option.selection.option] : [],
+  );
+}
+
+/** Activate Stitching and answer both Discovers with their first option; returns the two picks. */
+function stitch(s: Scenario, power: CardInstance): [string, string] {
+  s.activate(power);
+  const first = must(offeredIds(s)[0], "a first Unit");
+  s.answer(first);
+  const second = must(offeredIds(s)[0], "a second Unit");
+  s.answer(second);
+  return [first, second];
+}
+
+describe("#98 Heroic Power — Stitching (R352)", () => {
+  it("R352 (2) Stitching: each of its two Discovers offers three Units that cost (2) or less", () => {
+    const { s, power } = onField("stitching");
+    s.activate(power);
+
+    for (const step of [1, 2]) {
+      const pending = must(s.state.pending, `Discover ${step}`);
+      expect(pending.kind).toBe("discover");
+      expect(pending.playerId).toBe("p1");
+      const offered = offeredIds(s);
+      expect(offered).toHaveLength(3);
+      expect(new Set(offered).size).toBe(3);
+      for (const id of offered) {
+        const offeredDef = cardDef(id);
+        expect(offeredDef.type).toBe("Unit");
+        expect(offeredDef.token).toBe(false);
+        expect(typeof offeredDef.cost === "number" && offeredDef.cost <= subsystems.STITCHING_MAX_COST).toBe(true);
+      }
+      s.answer(must(offered[0], "an offered Unit"));
+    }
+    expect(s.state.pending).toBeNull();
+    s.expectMana("p1", 6); // 8 − 2
+  });
+
+  it("R352 R77 the two picks are fused into one hand card at R77's fused cost, not free, and not Radiant", () => {
+    const { s, power } = onField("stitching");
+    const handBefore = s.hand("p1").length;
+    const [first, second] = stitch(s, power);
+
+    const hand = s.hand("p1");
+    expect(hand).toHaveLength(handBefore + 1);
+    const result = must(hand[hand.length - 1], "the fused card");
+    const fusedDef = must(s.state.transientDefs[result.defId], "a fused definition");
+    expect(result.defId).toBe(`t-1:${first}+${second}`);
+    expect(fusedDef.type).toBe("Unit");
+    const a = cardDef(first);
+    const b = cardDef(second);
+    expect(fusedDef.base.attack).toBe((a.base.attack ?? 0) + (b.base.attack ?? 0));
+    expect(fusedDef.base.health).toBe((a.base.health ?? 0) + (b.base.health ?? 0));
+    // "Fuse them and add the result to your hand": no price is stated, so R77's min(sum, 4) stands.
+    const sum = (a.cost as number) + (b.cost as number);
+    expect(result.costOverride).toBeUndefined();
+    expect(effectiveCost(s.state, result)).toBe(Math.min(sum, 4));
+    expect(result.radiant).toBe(false);
+    expect(eventsOf(s, "fused")).toHaveLength(1);
+    // The ingredients were only ever definitions: nothing else reached a pile.
+    expect(s.hand("p1").filter((card) => card.defId === first || card.defId === second)).toEqual([]);
+  });
+
+  it("R352 R103 the use is spent with the activation, so the answers cannot buy a second one", () => {
+    const { s, power } = onField("stitching");
+    stitch(s, power);
+    expect(() => s.activate(power)).toThrow(/already been used this turn/);
+  });
+
+  it("R352 played from hand, Stitching activates once like any power (R43)", () => {
+    const { s, power } = inHand("stitching");
+    s.play(power, { zone: 1 });
+    expect(must(s.state.pending, "the first Discover").kind).toBe("discover");
+    s.answer(must(offeredIds(s)[0], "a first Unit"));
+    s.answer(must(offeredIds(s)[0], "a second Unit"));
+    expect(Object.keys(s.state.transientDefs)).toHaveLength(1);
+    s.expectMana("p1", 6);
+  });
+});
+
+describe("#98 Heroic Power — the eight powers, radiant (§8.5's radiant cell)", () => {
   it("§8.5 Recruit and make it Radiant", () => {
     const { s, power } = onField("recruit", {
       radiantFace: true,
@@ -567,6 +652,26 @@ describe("#98 Heroic Power — the seven powers, radiant (§8.5's radiant cell)"
     expect(added.radiant).toBe(true);
   });
 
+  it("R352 radiant Stitching: Discover 2 Radiant Units that cost (2) or less, and the fused card is Radiant", () => {
+    const { s, power } = onField("stitching", { radiantFace: true });
+    s.activate(power);
+    expect(must(s.state.pending, "the first Discover").prompt).toBe("Discover a Radiant Unit that costs (2) or less");
+    const first = must(offeredIds(s)[0], "a first Unit");
+    s.answer(first);
+    const second = must(offeredIds(s)[0], "a second Unit");
+    s.answer(second);
+
+    const result = must(s.hand("p1").find((card) => card.defId.startsWith("t-")), "the fused card");
+    expect(result.radiant).toBe(true);
+    const fusedDef = must(s.state.transientDefs[result.defId], "a fused definition");
+    // R77: the fused Radiant face sums the ingredients' Radiant faces, and that is the face it wears.
+    expect(fusedDef.radiant.attack).toBe((cardDef(first).radiant.attack ?? 0) + (cardDef(second).radiant.attack ?? 0));
+    const hand = s.view("p1").you.hand;
+    const shown = Array.isArray(hand) ? hand.find((card) => card.instanceId === result.id) : undefined;
+    expect(shown?.attack).toBe(fusedDef.radiant.attack);
+    expect(result.costOverride).toBeUndefined();
+  });
+
   it("§8 Conventions the radiant cell restates only the powers: X, once per turn and the play's own activation are kept", () => {
     const { s, power } = inHand("burn", { radiantFace: true });
     // The X is still the power's, not doubled with the clause.
@@ -583,7 +688,7 @@ describe("#98 Heroic Power — the seven powers, radiant (§8.5's radiant cell)"
 // ---------------------------------------------------------------------------
 
 describe("#98 Heroic Power — the roll (R43)", () => {
-  it("R43 the roll comes from the match rng: one of the seven, the same for the same seed", () => {
+  it("R43 the roll comes from the match rng: one of the eight, the same for the same seed", () => {
     const rolled = (seed: string): unknown => {
       const s = scenario({ seed, p1: { hand: [HEROIC, SPARE], mana: 8 } });
       const card = must(s.hand("p1")[0], "the Heroic Power");
@@ -595,7 +700,7 @@ describe("#98 Heroic Power — the roll (R43)", () => {
     expect(subsystems.HERO_POWER_NAMES).toContain(first);
     expect(rolled("hp-roll-a")).toBe(first);
 
-    // …and it is a real seven-way roll rather than a constant.
+    // …and it is a real eight-way roll rather than a constant.
     const seen = new Set<unknown>();
     for (let n = 0; n < 24; n += 1) seen.add(rolled(`hp-roll-${n}`));
     expect(seen.size).toBeGreaterThan(1);

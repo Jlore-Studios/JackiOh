@@ -871,6 +871,12 @@
       "kind": "spell",
       "persona": "hustler",
       "cast": "Heads I win, tails you lose."
+    },
+    "core-t-ghoul": {
+      "kind": "unit",
+      "persona": "whisper",
+      "play": "Up from the cold ground. Hungry.",
+      "death": "Back to the dirt."
     }
   }
 }

@@ -21,7 +21,7 @@ import type { CardDef, CardFace, CardType, PlayerId } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
 import { defOf, query, queryCost } from "../catalog";
 import { canAttack } from "../combat";
-import { heroArmorOf, heroDamageCap } from "../damage";
+import { heroArmorOf, heroDamageCap, pierces } from "../damage";
 import { unitView } from "../layers";
 import { playActionsFor } from "../playChoices";
 import { runPlaySteps, type PlayAction } from "../playSteps";
@@ -91,8 +91,9 @@ function faceFor(def: CardDef, radiant: boolean): CardFace {
  * is `heroArmorOf`, the pipeline's own reader — the stored Armor plus every backrow grant (#84),
  * summed per R124 — so the score and the hit never disagree.
  */
-function heroHit(state: GameState, player: PlayerId, amount: number): number {
-  const after = Math.max(0, amount - heroArmorOf(state, player));
+function heroHit(state: GameState, player: PlayerId, amount: number, pierce = false): number {
+  // R346: a Pierce unit's hit skips step 2.
+  const after = pierce ? amount : Math.max(0, amount - heroArmorOf(state, player));
   const cap = heroDamageCap(state, player);
   return cap === null ? after : Math.min(after, cap);
 }
@@ -106,7 +107,7 @@ export function projectedBoardDamage(state: GameState, viewer: PlayerId): number
   const enemy = opponentOf(viewer);
   return activeUnitsOf(state, viewer)
     .filter((unit) => canAttack(state, unit, { kind: "hero", player: enemy }))
-    .reduce((sum, unit) => sum + heroHit(state, enemy, unitView(state, unit).attack), 0);
+    .reduce((sum, unit) => sum + heroHit(state, enemy, unitView(state, unit).attack, pierces(state, unit)), 0);
 }
 
 /**
@@ -130,7 +131,7 @@ function lethalContribution(state: GameState, viewer: PlayerId, def: CardDef, fa
   // is the same check `projectedBoardDamage` makes through `canAttack` for the units already there.
   const enemy = opponentOf(viewer);
   if (activeUnitsOf(state, enemy).some((unit) => hasKeyword(unitView(state, unit).keywords, "Taunt"))) return 0;
-  return heroHit(state, enemy, face.attack ?? 0);
+  return heroHit(state, enemy, face.attack ?? 0, hasKeyword(face.keywords, "Pierce"));
 }
 
 /** §3.2: whether a Unit with this face could be played into the viewer's unit row now. */

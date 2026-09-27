@@ -346,7 +346,7 @@ describe("#71 Intern Stimmy lights up while its controller's library is larger (
     });
 
     expect(glows(s.view("p1").you.backrow[0])).toBe(true);
-    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
 
     s.endTurn();
 
@@ -392,7 +392,7 @@ describe("#71 Intern Stimmy lights up while its controller's library is larger (
     });
 
     expect(glows(s.view("p1").you.backrow[0])).toBe(true);
-    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
 
     s.endTurn();
 
@@ -431,7 +431,7 @@ describe("#71 Intern Stimmy lights up while its controller's library is larger (
     // R227: set face-down, the card took a fresh id; it is the same Intern Stimmy.
     expect(s.backrow("p1", 1)?.defId).toBe("core-071");
     expect(glows(s.view("p1").you.backrow[0])).toBe(true);
-    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
   });
 
   it("R195 B8: in hand with equal libraries it does not glow", () => {

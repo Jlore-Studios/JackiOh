@@ -1044,12 +1044,20 @@
     "token": false,
     "cost": 1,
     "base": {
-      "keywords": [],
-      "text": "Deal 4 damage to a target, ignoring Armor; exile this"
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal 4 damage. Exile this."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Deal 9 damage to a target, ignoring Armor; exile this"
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal 9 damage. Exile this."
     }
   },
   "core-045": {
@@ -1821,15 +1829,15 @@
     "token": false,
     "cost": "X",
     "refs": [
-      "core-t-rush"
+      "core-t-ghoul"
     ],
     "base": {
       "keywords": [],
-      "text": "Deal X damage to a target, heal your hero X, draw X, summon an X/X Rush Token"
+      "text": "Deal X damage to a target, heal your hero X, draw X, summon an X/X Ghoul Token"
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 2X damage to a target, heal your hero 3X, draw 2X, summon a 3X/3X Rush Token"
+      "text": "Deal 2X damage to a target, heal your hero 3X, draw 2X, summon a 3X/3X Ghoul Token"
     }
   },
   "core-075": {
@@ -1945,7 +1953,9 @@
     "name": "Zao Gao",
     "set": "Core",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "CN"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -1954,11 +1964,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Discard 2 cards of your choice; summon 2 Rush Tokens, each with 2 random keywords"
+      "text": "Discard 2 random cards; summon 2 Rush Tokens, each with 2 random keywords"
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard 2 cards of your choice; summon 2 Radiant Rush Tokens, each with 2 random keywords"
+      "text": "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords"
     }
   },
   "core-081": {
@@ -2196,17 +2206,17 @@
     ],
     "rarity": "Rare",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "refs": [
       "core-090-1"
     ],
     "base": {
       "keywords": [],
-      "text": "Shuffle a CN-Virus into the opponent's library"
+      "text": "Shuffle a CN-Virus into the opponent's deck"
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a Radiant CN-Virus into the opponent's library"
+      "text": "Shuffle a Radiant CN-Virus into the opponent's deck"
     }
   },
   "core-090-1": {
@@ -2224,11 +2234,11 @@
     "cost": 1,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: take 1 damage; shuffle 2 copies of this into your library"
+      "text": "Cast on draw: take 1 damage; at end of turn, shuffle 2 copies of this into your deck"
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: take 2 damage; shuffle 3 copies of this into your library"
+      "text": "Cast on draw: take 2 damage; at end of turn, shuffle 3 copies of this into your deck"
     }
   },
   "core-091": {
@@ -2507,7 +2517,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible. Start of game: gain one of 7 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit. Playing it costs the power's X and activates it once"
+      "text": "Indestructible. Start of game: gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching \u2014 Discover 2 Units that cost (2) or less, Fuse them and add the result to your hand. Playing it costs the power's X and activates it once"
     },
     "radiant": {
       "keywords": [
@@ -2515,7 +2525,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible. Start of game: gain one of 7 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit. Playing it costs the power's X and activates it once"
+      "text": "Indestructible. Start of game: gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching \u2014 Discover 2 Radiant Units that cost (2) or less, Fuse them and add the result to your hand. Playing it costs the power's X and activates it once"
     }
   },
   "core-099": {
@@ -2704,6 +2714,40 @@
     "radiant": {
       "keywords": [],
       "text": "Gain 2 mana this turn"
+    }
+  },
+  "core-t-ghoul": {
+    "id": "core-t-ghoul",
+    "index": "T-ghoul",
+    "name": "Ghoul Token",
+    "set": "Core",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "token": true,
+    "cost": 0,
+    "radiantFallback": true,
+    "base": {
+      "attack": 0,
+      "health": 0,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 0,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce."
     }
   }
 }

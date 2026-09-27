@@ -5,18 +5,19 @@
 //
 // The echo count is read through #78 /fullsend, whose "gain 4 mana" makes each resolution a number:
 // one extra resolution is +8 instead of +4, two extra is +12. The "fresh prompts per repeat" half of
-// §10.5 step 6 is read through #80 Zao Gao, the one Core card whose resolution opens a prompt
-// (§10.6), which a declared play-time pick (#26) would not reopen.
+// §10.5 step 6 is read through #82 KY's Trial, whose every resolution opens a Discover (§10.6).
+// It was read through #80 Zao Gao's chosen discard until patch v0.1.1 made that discard random
+// (R354), leaving it no prompt to reopen.
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
 
 const TWINSPELL = "core-079";
 const FULLSEND = "core-078";
-const ZAO_GAO = "core-080";
+/** #82 KY's Trial, cost 1: "Discover among 3 distinct random numbers 1–100" (R247). */
+const TRIAL = "core-082";
 
 const LIBRARY = ["core-008", "core-008", "core-008", "core-008"] as const;
-const DISCARDABLE = ["core-001", "core-002", "core-003", "core-004"] as const;
 
 /** Harness gap (reported): no `mods()` accessor, so the test reads `state` — B1.7 covers `src` only. */
 function echoRiders(s: Scenario): unknown[] {
@@ -31,12 +32,20 @@ function withFullsend(radiant: boolean): Scenario {
   });
 }
 
-/** Mana 4: Twinspell (2) and Zao Gao (2), with four cards left over to discard. */
-function withZaoGao(radiant: boolean): Scenario {
+/** Mana 4: Twinspell (2) and KY's Trial (1), with a spare card so nothing auto-ends. */
+function withTrial(radiant: boolean): Scenario {
   return scenario({
-    p1: { hand: [{ def: TWINSPELL, radiant }, ZAO_GAO, ...DISCARDABLE], library: [...LIBRARY] },
+    p1: { hand: [{ def: TWINSPELL, radiant }, TRIAL, "core-005"], library: [...LIBRARY] },
     p2: { hand: ["core-005"], field: ["core-019"], library: [...LIBRARY] },
   });
+}
+
+/** Answer the open Discover with its first option, and return the index it named. */
+function discoverFirst(s: Scenario): string {
+  const option = s.state.pending?.options[0];
+  if (option === undefined) throw new Error("no Discover is open");
+  s.answer([option.selection]);
+  return option.label;
 }
 
 describe("#79 Twinspell — base", () => {
@@ -116,22 +125,22 @@ describe("#79 Twinspell — base", () => {
   });
 
   it("§10.5 step 6 an echoed prompting spell reopens its prompt on the repeat", () => {
-    const s = withZaoGao(false);
+    const s = withTrial(false);
     s.play(TWINSPELL);
+    const before = s.hand("p1").length;
 
-    s.play(ZAO_GAO);
+    s.play(TRIAL);
 
-    // First resolution's hand prompt (§10.6: Zao Gao's chosen discard).
-    expect(s.state.pending?.kind).toBe("hand");
-    s.answer([DISCARDABLE[0], DISCARDABLE[1]]);
-    // The repeat asks again, with fresh options: a prompt, not a play-time declaration.
-    expect(s.state.pending?.kind).toBe("hand");
-    s.answer([DISCARDABLE[2], DISCARDABLE[3]]);
+    // First resolution's Discover (§10.6).
+    expect(s.state.pending?.kind).toBe("discover");
+    discoverFirst(s);
+    // The repeat asks again: a prompt of its own, not the first one's answer carried over.
+    expect(s.state.pending?.kind).toBe("discover");
+    discoverFirst(s);
 
     expect(s.state.pending).toBeNull();
-    // Two resolutions × two Rush Tokens.
-    expect(s.state.players.p1.units.filter((pile) => pile !== null)).toHaveLength(4);
-    expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain(DISCARDABLE[3]);
+    // Two resolutions × one card each, for the Trial that left the hand.
+    expect(s.hand("p1")).toHaveLength(before - 1 + 2);
   });
 });
 
@@ -177,32 +186,18 @@ describe("#79 Twinspell — radiant", () => {
   });
 
   it("§10.5 step 6 radiant reopens a prompting spell's prompt on both repeats", () => {
-    const s = scenario({
-      p1: {
-        hand: [
-          { def: TWINSPELL, radiant: true },
-          ZAO_GAO,
-          ...DISCARDABLE,
-          "core-005",
-          "core-006",
-        ],
-        library: [...LIBRARY],
-      },
-      p2: { hand: ["core-007"], field: ["core-019"], library: [...LIBRARY] },
-    });
+    const s = withTrial(true);
     s.play(TWINSPELL);
+    const before = s.hand("p1").length;
 
-    s.play(ZAO_GAO);
+    s.play(TRIAL);
 
-    expect(s.state.pending?.kind).toBe("hand");
-    s.answer([DISCARDABLE[0], DISCARDABLE[1]]);
-    expect(s.state.pending?.kind).toBe("hand");
-    s.answer([DISCARDABLE[2], DISCARDABLE[3]]);
-    expect(s.state.pending?.kind).toBe("hand");
-    s.answer(["core-005", "core-006"]);
+    for (let resolution = 0; resolution < 3; resolution += 1) {
+      expect(s.state.pending?.kind).toBe("discover");
+      discoverFirst(s);
+    }
 
     expect(s.state.pending).toBeNull();
-    // R64: three resolutions want six tokens and the unit row holds five.
-    expect(s.state.players.p1.units.filter((pile) => pile !== null)).toHaveLength(5);
+    expect(s.hand("p1")).toHaveLength(before - 1 + 3);
   });
 });

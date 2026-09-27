@@ -9,7 +9,7 @@
 import type { PlayerId } from "@jackioh/shared";
 import { armorOf, hasKeyword } from "@jackioh/shared";
 import type { AttackTarget } from "../combat";
-import { heroArmorOf, heroDamageCap } from "../damage";
+import { heroArmorOf, heroDamageCap, pierces } from "../damage";
 import { unitView } from "../layers";
 import type { CardInstance, GameState } from "../state";
 import { adjacent, cardAt, slotOf } from "../zones";
@@ -24,18 +24,24 @@ export function defendingHero(target: AttackTarget): PlayerId {
 
 /**
  * §4.4 on a hero: step 2 subtracts the hero's Armor, step 3 clamps to the Anti-oneshot cap, and
- * the zero rule stops anything left at 0 (R63). Combat never sets "ignores armor" — that flag
- * belongs to True Strike's own effect — so a declared attack always pays step 2.
+ * the zero rule stops anything left at 0 (R63). A hit from a source with Pierce skips step 2
+ * (R346), so `pierce` is the striking unit's keyword, which `piercing` below reads; every other
+ * hit a declared attack makes pays step 2.
  *
  * The Armor is `heroArmorOf`, the pipeline's own reader: the hero's stored Armor plus every backrow
  * grant (#84), summed per R124. Reading the bare field instead would make My Pawn (R44) call an
  * attack lethal that Going Long is about to blunt.
  */
-export function projectedHeroDamage(state: GameState, player: PlayerId, amount: number): number {
+export function projectedHeroDamage(state: GameState, player: PlayerId, amount: number, pierce = false): number {
   if (amount <= 0) return 0;
-  const afterArmor = Math.max(0, amount - heroArmorOf(state, player));
+  const afterArmor = pierce ? amount : Math.max(0, amount - heroArmorOf(state, player));
   const cap = heroDamageCap(state, player);
   return cap === null ? afterArmor : Math.min(afterArmor, cap);
+}
+
+/** R346: a striking unit with Pierce skips §4.4 step 2 on every hit it makes, the pipeline's own reading. */
+function piercing(state: GameState, unit: CardInstance): boolean {
+  return pierces(state, unit);
 }
 
 /**
@@ -60,8 +66,8 @@ function trampleExcess(
   // Step 4: an Indestructible unit takes nothing at all.
   if (hasKeyword(view.keywords, "Indestructible")) return 0;
 
-  // Step 2, then the zero rule.
-  const afterArmor = Math.max(0, amount - armorOf(view.keywords));
+  // Step 2, then the zero rule. A Pierce source skips step 2 (R346).
+  const afterArmor = piercing(state, source) ? amount : Math.max(0, amount - armorOf(view.keywords));
   if (afterArmor <= 0) return 0;
 
   if (!hasKeyword(unitView(state, source).keywords, "Trample")) return 0;
@@ -78,13 +84,14 @@ function trampleExcess(
 export function projectedDamage(state: GameState, attacker: CardInstance, target: AttackTarget): number {
   const attack = unitView(state, attacker).attack;
   const hero = defendingHero(target);
-  if (target.kind === "hero") return projectedHeroDamage(state, hero, attack);
+  const pierce = piercing(state, attacker);
+  if (target.kind === "hero") return projectedHeroDamage(state, hero, attack, pierce);
   // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing at all —
   // no hit on the defender and so no Cleave either — so nothing of it can reach the hero.
   if (fallsToFirstStrike(state, attacker, target.instance)) return 0;
   // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4).
   return struckBy(state, attacker, target.instance).reduce(
-    (total, unit) => total + projectedHeroDamage(state, hero, trampleExcess(state, attacker, unit, attack)),
+    (total, unit) => total + projectedHeroDamage(state, hero, trampleExcess(state, attacker, unit, attack), pierce),
     0,
   );
 }
@@ -119,7 +126,7 @@ function fallsToFirstStrike(state: GameState, attacker: CardInstance, defender: 
 
   if (hasKeyword(mine.keywords, "Divine Shield") && attacker.divineShieldSpent !== true) return false;
   if (hasKeyword(mine.keywords, "Indestructible")) return false;
-  const dealt = Math.max(0, theirs.attack - armorOf(mine.keywords));
+  const dealt = piercing(state, defender) ? theirs.attack : Math.max(0, theirs.attack - armorOf(mine.keywords));
   if (dealt <= 0) return false;
   if (hasKeyword(theirs.keywords, "Poisonous")) return true;
   return dealt >= mine.health;
@@ -147,10 +154,11 @@ function strikeBackHeal(state: GameState, attacker: CardInstance, target: Attack
   const mine = unitView(state, attacker);
   if (hasKeyword(mine.keywords, "Divine Shield") && attacker.divineShieldSpent !== true) return 0;
   if (hasKeyword(mine.keywords, "Indestructible")) return 0;
-  const strike = Math.max(0, theirs.attack - armorOf(mine.keywords));
+  const pierce = piercing(state, defender);
+  const strike = pierce ? theirs.attack : Math.max(0, theirs.attack - armorOf(mine.keywords));
   if (strike <= 0 || !hasKeyword(theirs.keywords, "Trample") || strike <= mine.health) return strike;
   const onUnit = Math.max(0, mine.health);
-  return onUnit + projectedHeroDamage(state, attacker.controller, strike - onUnit);
+  return onUnit + projectedHeroDamage(state, attacker.controller, strike - onUnit, pierce);
 }
 
 /**

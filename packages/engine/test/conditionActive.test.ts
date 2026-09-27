@@ -626,7 +626,7 @@ describe("conditionActive is the viewer's alone (R195, B4)", () => {
 
     expect(theirs.opponent.hand).toEqual({ count: 1 });
     expect(glows(theirs.opponent.units[0])).toBe(false);
-    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(theirs.opponent.backrow[1]).toMatchObject({ faceDown: false, instanceId: fieldSpell.id });
     expect(glows(theirs.opponent.backrow[1])).toBe(false);
     expect(theirs.opponent.backrow[2]).toMatchObject({ faceDown: false, instanceId: firedFieldTrap.id });

@@ -437,8 +437,11 @@ describe("R69 and R46: the exception invariant 2 carves out", () => {
       { type: "positionSwitched", instanceId: unit.id, position: "ATK" },
     ]);
 
-    // Only for that turn: next turn the granted Taunt is back (R46, §10.4).
+    // R347: next turn it is still Indestructible, so the granted Taunt stays off; stripped of its
+    // Indestructible (a Vanilla), the stamp no longer names this turn and the grant is back (§10.4).
     state.turn += 1;
+    expect(unitView(state, unit).keywords.some((keyword) => keyword.kind === "Taunt")).toBe(false);
+    unit.vanilla = true;
     expect(unitView(state, unit).keywords.some((keyword) => keyword.kind === "Taunt")).toBe(true);
   });
 

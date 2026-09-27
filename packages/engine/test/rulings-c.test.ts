@@ -1198,9 +1198,10 @@ describe("SPEC §11 R102–R103: Fuse and the Heroic Power surface (M3 gate)", (
   // R103: the Heroic Power surface (§8 #98, R43).
   // ---------------------------------------------------------------------------
 
-  it("R103 stores the seven power names and costs 0 for a power that has not rolled", () => {
-    // §11 R103 writes the seven out, and they are state, so they stay stable across versions.
-    expect([...HERO_POWER_NAMES]).toEqual(["recruit", "draw", "ping", "burn", "rush", "felinor", "discover"]);
+  it("R103 stores the eight power names and costs 0 for a power that has not rolled", () => {
+    // §11 R103 writes them out, and they are state, so they stay stable across versions: R352
+    // added `stitching` at the end and moved none of the seven before it.
+    expect([...HERO_POWER_NAMES]).toEqual(["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching"]);
     expect(HERO_POWERS.map((power) => power.name)).toEqual([...HERO_POWER_NAMES]);
     // A ping reaches any unit or hero on either side.
     const ping = must(HERO_POWERS.find((power) => power.name === "ping"), "the ping power");

@@ -39,8 +39,8 @@ import {
   sortKey,
 } from "../scripts/naming";
 
-/** SPEC §8 + §7, M4-T1's census: 100 cards + 10 tokens. `catalog.test.ts` proves the values. */
-const CATALOG_SIZE = 110;
+/** SPEC §8 + §7, M4-T1's census: 100 cards + 11 tokens. `catalog.test.ts` proves the values. */
+const CATALOG_SIZE = 111;
 
 /**
  * BUILD M4-T2's gate is "every catalog id has a script and every script has a catalog entry".
@@ -99,7 +99,7 @@ describe("registry (BUILD M4-T2)", () => {
     expect(() => buildRegistry([{ def, base: {}, radiant: {} }])).toThrow(/not in/);
   });
 
-  it("registerAll registers all 110 defs and the catalog version", () => {
+  it("registerAll registers all 111 defs and the catalog version", () => {
     registerAll();
     const registered = registeredCatalog();
     expect(Object.keys(registered)).toHaveLength(CATALOG_SIZE);
@@ -253,8 +253,8 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
 
     expect(ordered[0]).toBe("001-big-d-fender");
     expect(ordered.indexOf("051-1-kys-empty-notebook")).toBe(ordered.indexOf("051-kys-private-tutor") + 1);
-    expect(ordered.indexOf("100-ceaseless-void")).toBe(ordered.length - 6);
-    expect(ordered.slice(-5)).toEqual(["t-bread", "t-coin", "t-felinor", "t-rush", "t-sheep"]);
+    expect(ordered.indexOf("100-ceaseless-void")).toBe(ordered.length - 7);
+    expect(ordered.slice(-6)).toEqual(["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"]);
     // Unrecognised filenames sort after everything, so the barrel stays deterministic.
     expect(compareSortKeys(sortKey("t-rush", "core-t-rush"), sortKey("mystery", undefined))).toBeLessThan(0);
   });

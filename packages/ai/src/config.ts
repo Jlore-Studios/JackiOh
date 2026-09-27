@@ -83,6 +83,8 @@ export const AI_EVAL = {
     "First Strike": 1,
     Trample: 0.5,
     Cleave: 1,
+    /** R346: its hits ignore Armor, worth about what Trample is. */
+    Pierce: 0.5,
     Indestructible: 4,
     Immutable: 0.3,
     Stack: 0,
@@ -153,6 +155,8 @@ export const GREEDY_EVAL: EvalWeights = {
     "First Strike": 1,
     Trample: 0.5,
     Cleave: 1,
+    // R346 came after the gates were fixed, so the frozen baseline gives Pierce nothing, as it did.
+    Pierce: 0,
     Indestructible: 4,
     Immutable: 0.3,
     Stack: 0,

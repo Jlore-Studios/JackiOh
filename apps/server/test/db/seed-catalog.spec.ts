@@ -52,16 +52,16 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed tags included",
     await admin.end();
   });
 
-  it("R278 seeds all 110 entries, with #13 and #14 tagged Jlockeed and no other row", async () => {
+  it("R278 seeds all 111 entries, with #13 and #14 tagged Jlockeed and no other row", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const written = await seedCatalog(databaseUrl(), CATALOG_VERSION, entries);
-    expect(written).toBe(110);
+    expect(written).toBe(111);
 
     const { rows } = await admin.query<{ id: string; tags: string[]; catalog_version: string }>(
       `select id, tags, catalog_version from public.cards where id = any($1::text[]) order by id`,
       [entries.map((entry) => entry.id)],
     );
-    expect(rows).toHaveLength(110);
+    expect(rows).toHaveLength(111);
     expect(rows.every((row) => row.catalog_version === CATALOG_VERSION)).toBe(true);
     expect(rows.filter((row) => row.tags.includes("Jlockeed")).map((row) => row.id)).toEqual([
       "core-013",
@@ -74,7 +74,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed tags included",
 
   it("R278 a second seed of the same catalog updates in place, and the tag check still refuses an unknown tag", async () => {
     const entries = await readCatalog(REAL_CATALOG);
-    await expect(seedCatalog(databaseUrl(), CATALOG_VERSION, entries)).resolves.toBe(110);
+    await expect(seedCatalog(databaseUrl(), CATALOG_VERSION, entries)).resolves.toBe(111);
 
     const [first] = entries;
     if (first === undefined) throw new Error("the catalog is empty");

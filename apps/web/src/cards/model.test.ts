@@ -206,7 +206,7 @@ function marksOf(id: string): string[] {
 
 describe("R277: a Radiant face prints its whole text and marks what differs from the base", () => {
   it("R277 a changed number is the only mark (core-044, core-053, core-013, core-047)", () => {
-    expect(face("core-044", true).text.full).toBe("Deal 9 damage to a target, ignoring Armor; exile this");
+    expect(face("core-044", true).text.full).toBe("Pierce\nDeal 9 damage. Exile this.");
     expect(marksOf("core-044")).toEqual(["9"]);
     expect(marksOf("core-053")).toEqual(["60", "60"]);
     expect(marksOf("core-013")).toEqual(["5"]);
@@ -445,10 +445,10 @@ describe("a face in play is the card as the view says it stands; the collection'
       marks: [],
     });
     expect(f.cost).toEqual({ text: "3", value: "3", tone: "base", alt: null });
-    for (const other of ["7 random powers", "Felinor Token", "Discover a Unit", "lose 2 health"]) {
+    for (const other of ["8 random powers", "Felinor Token", "Discover a Unit", "lose 2 health"]) {
       expect(f.text.full).not.toContain(other);
     }
-    // The printed list of seven is held beside it for the inspect overlays.
+    // The printed list of eight is held beside it for the inspect overlays.
     expect(f.printed).toEqual({ full: def("core-098").base.text, marks: [] });
   });
 
@@ -460,12 +460,12 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.printed?.full).toBe(def("core-098").radiant.text);
   });
 
-  it("a Heroic Power in the collection keeps the list of seven and the X on its gem", () => {
+  it("a Heroic Power in the collection keeps the list of eight and the X on its gem", () => {
     const f = face("core-098", false);
-    expect(f.text.full).toContain("gain one of 7 random powers");
+    expect(f.text.full).toContain("gain one of 8 random powers");
     expect(f.cost.text).toBe("X");
     // In play with no power named (one that has not rolled, R43), it prints the card as printed.
-    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("gain one of 7 random powers");
+    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("gain one of 8 random powers");
   });
 
   it("Call to Chaos reads ??? in play on both faces, and keeps no printed text beside it", () => {

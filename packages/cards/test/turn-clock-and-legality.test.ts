@@ -44,7 +44,8 @@ const FIENDER = "core-092";
 const HEROIC = "core-098";
 const CRAFT = "core-099"; // two chained Discovers
 const FELINORS = "core-012";
-const ZAO_GAO = "core-080";
+const JELLY_BEAN = "core-026"; // Choose a card in your hand; it becomes Radiant (radiant: choose 2)
+const TWINSPELL = "core-079"; // the next Spell you play gains Echo +1
 const CHAOS_GOLEM = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
@@ -327,14 +328,23 @@ describe("§3.2, §9.3: a play's zone is one of the row's lanes", () => {
 });
 
 describe("R221, §10.2, §10.6: every answer reduce accepts is one legalActions offers", () => {
-  it("R221 #80 Zao Gao's two discards listed the other way round mean the same as the answer legalActions offers (R16, R60)", () => {
+  it("R221 radiant #26 Glowy Jelly Bean's two Echo picks listed the other way round mean the same as the answer legalActions offers (R16, R60)", () => {
+    // #80 Zao Gao's chosen discard was this test's two-pick prompt until patch v0.1.1 made that
+    // discard random (R354). A radiant Glowy Jelly Bean under #79 Twinspell asks the same shape:
+    // its Echo repeat reopens its hand pick as a prompt for two cards (§10.6).
     const s = scenario({
-      p1: { hand: [ZAO_GAO, RENO, VANILLA, BIG_FELINOR], library: [RENO, RENO] },
+      p1: {
+        hand: [TWINSPELL, { def: JELLY_BEAN, radiant: true }, RENO, VANILLA, BIG_FELINOR, GARY],
+        library: [RENO, RENO],
+        mana: 5,
+      },
       p2: { hand: [RENO], library: [RENO] },
     });
-    s.play(ZAO_GAO);
+    s.play(TWINSPELL, { zone: 1 });
+    s.play(JELLY_BEAN, { targets: [RENO, VANILLA].map((id) => ({ pick: "instance" as const, instanceId: s.card(id).id })) });
     const state = s.state;
     expect(state.pending?.kind).toBe("hand");
+    expect(state.pending?.max).toBe(2);
 
     const offered = legalActions(state, "p1").flatMap((action) => (action.type === "answer" ? [action] : []));
     const meanings = new Map<string, string>();

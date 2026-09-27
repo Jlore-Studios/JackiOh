@@ -292,12 +292,14 @@ function canAct(state: GameState, card: CardInstance): boolean {
 /**
  * A public backrow card names its owner and its controller, since R33's readability and #87's board
  * swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
- * face-down zone is a bare `{ faceDown: true }`: §10.8 grants the non-controller that a zone is
- * occupied and nothing more, so not even the controller's name travels with it.
+ * face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
+ * occupied and what the card in it costs (R351, a deliberate reveal), and nothing more, so not even
+ * the controller's name travels with it. The cost is the one the controller's own view shows, so
+ * both players read the same number.
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true };
+  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
   const grade = card.counters.grade;
   return {
     ...withPreview(
@@ -309,6 +311,9 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     counters: grade === undefined ? {} : { grade },
     owner: card.owner,
     controller: card.controller,
+    // R351: a Trap the viewer reads only because they control it — the other player sees it face
+    // down — says so, so a client can mark it as not yet revealed.
+    ...(backrowIsPublic(state, card, opponentOf(viewer)) ? {} : { unrevealed: true as const }),
   };
 }
 

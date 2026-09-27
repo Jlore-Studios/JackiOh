@@ -204,7 +204,37 @@ function both(script: Script): CardScripts {
   return { base: script, radiant: script };
 }
 
+/**
+ * R349: a token that prints no Radiant form (the Ghoul Token's shape): printed 0/0 for an X/X, so
+ * its catalog Radiant face is the fallback written out — the same face, the 0/0 doubled — and the
+ * X doubles at runtime. And an X/X token that prints a Radiant form of its own (the Bread Token's
+ * shape), whose X stays put.
+ */
+const fallbackToken = def({
+  id: "ly-fallback-token",
+  name: "Fallback Token (layers fixture)",
+  token: true,
+  tags: ["Token"],
+  rarity: "Token",
+  cost: 0,
+  radiantFallback: true,
+  base: { attack: 0, health: 0, keywords: [{ kind: "Pierce" }], text: "Pierce." },
+  radiant: { attack: 0, health: 0, keywords: [{ kind: "Pierce" }], text: "Pierce." },
+});
+const printedRadiantToken = def({
+  id: "ly-printed-radiant-token",
+  name: "Printed Radiant Token (layers fixture)",
+  token: true,
+  tags: ["Token"],
+  rarity: "Token",
+  cost: 0,
+  base: { attack: 0, health: 0, keywords: [], text: "" },
+  radiant: { attack: 0, health: 0, keywords: [{ kind: "Rush" }], text: "Rush." },
+});
+
 const LAYER_DEFS: CardDef[] = [
+  fallbackToken,
+  printedRadiantToken,
   smallBody,
   suppressiveAura,
   jlockeedsWeapons,
@@ -523,13 +553,54 @@ describe("§10.4 keyword set", () => {
     expect(armorOf(view.keywords)).toBe(12);
   });
 
-  it("R46 a marked Indestructible unit loses Taunt for that turn only", () => {
+  it("R347 an Indestructible unit never has Taunt: printed, granted or from Defense Position", () => {
+    const state = board("indestructible-no-taunt");
+    const unit = put(state, indestructible.id, slot("p1", "units", 1));
+    unit.grantedKeywords = [{ kind: "Taunt" }];
+    unit.position = "DEF";
+    // Granted Taunt and Defense Position's Taunt both give way to Indestructible; the Armor stays.
+    expect(unitHas(state, unit, "Taunt")).toBe(false);
+    expect(unitHas(state, unit, "Indestructible")).toBe(true);
+    expect(unitView(state, unit).armor).toBe(1);
+    // A read-time subtraction, not a removal (§10.4): the grant is still on the instance.
+    expect(unit.grantedKeywords).toEqual([{ kind: "Taunt" }]);
+
+    // Take the Indestructible away (a Vanilla clears the printed keyword) and the Taunt is back.
+    unit.vanilla = true;
+    expect(unitHas(state, unit, "Indestructible")).toBe(false);
+    expect(unitHas(state, unit, "Taunt")).toBe(true);
+  });
+
+  it("R349 a unit with no Radiant form of its own doubles its base-stat layer when Radiant, a summon's X/X included", () => {
+    const state = board("radiant-fallback");
+    const ghoul = put(state, fallbackToken.id, slot("p1", "units", 1));
+    ghoul.statsOverride = { attack: 3, health: 3 };
+    ghoul.buffs = { attack: 1, health: 1 };
+    ghoul.damage = 2;
+    expect(unitView(state, ghoul)).toMatchObject({ attack: 4, maxHealth: 4, health: 2 });
+
+    // §5.2: the base-stat layer swaps, buffs and damage are kept — here the swap is R349's doubling.
+    ghoul.radiant = true;
+    expect(faceOf(state, ghoul)).toEqual({ attack: 6, health: 6, keywords: [{ kind: "Pierce" }] });
+    expect(unitView(state, ghoul)).toMatchObject({ attack: 7, maxHealth: 7, health: 5 });
+    // The X on the instance is the base face's, never rewritten.
+    expect(ghoul.statsOverride).toEqual({ attack: 3, health: 3 });
+
+    // A token that prints a Radiant form keeps its X on both faces, as §7's Bread Token does.
+    const bread = put(state, printedRadiantToken.id, slot("p1", "units", 2));
+    bread.statsOverride = { attack: 3, health: 3 };
+    bread.radiant = true;
+    expect(faceOf(state, bread)).toEqual({ attack: 3, health: 3, keywords: [{ kind: "Rush" }] });
+  });
+
+  it("R46 R347 a marked Indestructible unit stamps the turn, which holds its Taunt off that turn only once it is no longer Indestructible", () => {
     const state = board("taunt-suppression");
     state.turn = 4;
     const unit = put(state, indestructible.id, slot("p1", "units", 1));
     unit.grantedKeywords = [{ kind: "Taunt" }];
     unit.position = "DEF";
-    expect(unitHas(state, unit, "Taunt")).toBe(true);
+    // R347: while Indestructible it has no Taunt at all.
+    expect(unitHas(state, unit, "Taunt")).toBe(false);
 
     // R46: a would-destroy on an Indestructible unit switches it to Attack and stamps the turn.
     unit.markedDestroyed = true;
@@ -537,10 +608,11 @@ describe("§10.4 keyword set", () => {
     expect(unit.tauntSuppressedTurn).toBe(4);
     expect(unitView(state, unit).position).toBe("ATK");
     expect(unitHas(state, unit, "Taunt")).toBe(false);
-    // Still granted: the suppression is a read-time subtraction, not a removal (§10.4).
-    expect(unit.grantedKeywords).toEqual([{ kind: "Taunt" }]);
 
-    // "This turn" and no longer: the next turn hands it straight back.
+    // A Vanilla the same turn takes its printed Indestructible: R347 no longer holds the granted
+    // Taunt off, and R46's stamp still does, for "this turn" and no longer.
+    unit.vanilla = true;
+    expect(unitHas(state, unit, "Taunt")).toBe(false);
     state.turn = 5;
     expect(unitHas(state, unit, "Taunt")).toBe(true);
     // And a stamp from an earlier turn suppresses nothing.

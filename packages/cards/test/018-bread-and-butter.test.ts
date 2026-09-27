@@ -93,7 +93,7 @@ describe("#18 Bread and Butter (base)", () => {
     s.expectInZone(trap, "field");
     // Nothing fired, so §5.1's reveal never happened and the opponent still sees a bare marker.
     expect(s.card(trap).faceUp).not.toBe(true);
-    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
   });
 
   it("§5.1 a Field Trap is not consumed: it stays on the field and pays out again", () => {

@@ -1,7 +1,8 @@
 // #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
 // mana (R81); three modes; next-turn mana +floor(X/2); returns to hand". Radiant (R275: an X-cost
 // card's X is scaled) uses 2X: "deal 2X damage to a target; heal a target 4X; gain X mana next
-// turn", still for X paid. Each radiant mode is checked at X = 0 and at an odd and an even X.
+// turn", still for X paid. Each radiant mode is checked at an odd and an even X, and X = 0 is
+// refused on both faces (R348: X is at least 1).
 //
 // R81: X, the mode and the target all travel in the `play` action, so no fixture answers a prompt —
 // there is none, and `state.pending` is asserted to stay null.
@@ -143,14 +144,15 @@ describe("#24 Efficiency Dividend", () => {
       s.expectMana("p1", 1);
     });
 
-    it("R275 the damage mode at X = 0 deals nothing, for nothing", () => {
+    it("R348 the damage mode at X = 0 is refused, and nothing happens", () => {
       const s = dividendIn("dividend-radiant-damage-zero", true);
-      s.play(DIVIDEND, { x: 0, modes: ["damage"], targets: [{ pick: "hero", player: "p2" }] });
+      expect(() => s.play(DIVIDEND, { x: 0, modes: ["damage"], targets: [{ pick: "hero", player: "p2" }] })).toThrow(
+        /X must be at least 1/,
+      );
 
-      // 2 × 0 is 0, and R63 makes a 0 hit a non-event.
       s.expectHealth("p2", 30);
       s.expectMana("p1", 4);
-      expect(s.lastEvents.some((event) => event.type === "damage")).toBe(false);
+      s.expectInZone(DIVIDEND, "hand");
     });
 
     it("R275 the damage mode can pick a unit: X = 1 deals 2 to it", () => {
@@ -175,9 +177,11 @@ describe("#24 Efficiency Dividend", () => {
       s.expectHealth("p1", 22);
     });
 
-    it("R275 the heal mode at X = 0 heals nothing", () => {
+    it("R348 the heal mode at X = 0 is refused", () => {
       const s = dividendIn("dividend-radiant-heal-zero", true, 20);
-      s.play(DIVIDEND, { x: 0, modes: ["heal"], targets: [{ pick: "hero", player: "p1" }] });
+      expect(() => s.play(DIVIDEND, { x: 0, modes: ["heal"], targets: [{ pick: "hero", player: "p1" }] })).toThrow(
+        /X must be at least 1/,
+      );
 
       s.expectHealth("p1", 20);
     });
@@ -207,9 +211,9 @@ describe("#24 Efficiency Dividend", () => {
       expect(nextRefresh(s)).toBe(MAX_MANA + 4);
     });
 
-    it("R275 the mana mode at X = 0 gains nothing", () => {
+    it("R348 the mana mode at X = 0 is refused, so the next refresh is untouched", () => {
       const s = dividendIn("dividend-radiant-mana-zero", true);
-      s.play(DIVIDEND, { x: 0, modes: ["mana"] });
+      expect(() => s.play(DIVIDEND, { x: 0, modes: ["mana"] })).toThrow(/X must be at least 1/);
 
       expect(s.state.players.p1.mana.nextTurnMod).toBe(0);
       expect(nextRefresh(s)).toBe(MAX_MANA);

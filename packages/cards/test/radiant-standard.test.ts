@@ -61,8 +61,12 @@ describe("R275 the Radiant power standard (SPEC §5.2)", () => {
 
 describe("R276 every card has a Radiant face (SPEC §5.2)", () => {
   it("R276 changes every card by making it Radiant: text, stats or keywords differ", () => {
+    // R349: a card that prints no Radiant form (`radiantFallback`, the Ghoul Token) changes by
+    // doubling its stats, the X/X it is summoned with included, so its printed 0/0 reads alike on
+    // both faces; `t-ghoul.test.ts` proves the doubling in play. Every other card differs in print.
     const unchanged = ENTRIES.filter(
       (card) =>
+        card.radiantFallback !== true &&
         card.radiant.text === card.base.text &&
         card.radiant.attack === card.base.attack &&
         card.radiant.health === card.base.health &&
