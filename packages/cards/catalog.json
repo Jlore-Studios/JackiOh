@@ -450,7 +450,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 \u00d7 that player's unspent mana."
+      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 × that player's unspent mana."
     }
   },
   "core-019": {
@@ -601,11 +601,11 @@
     "cost": "X",
     "base": {
       "keywords": [],
-      "text": "Choose one: deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn. End of turn: returns to hand"
+      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: deal 2X damage to a target; heal a target 4X; gain X mana next turn. End of turn: returns to hand"
+      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to your hand."
     }
   },
   "core-025": {
@@ -1107,11 +1107,11 @@
     },
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have \u22121/\u22121.\nPaid (4): \u22122/\u22122 instead."
+      "text": "Aura: All Units have −1/−1.\nPaid (4): −2/−2 instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have \u22122/\u22122.\nPaid (4): \u22124/\u22124 instead."
+      "text": "Aura: Enemy Units have −2/−2.\nPaid (4): −4/−4 instead."
     }
   },
   "core-047": {
@@ -1219,11 +1219,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Choose a type, then a cost: (0\u20131), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
+      "text": "Choose a type, then a cost: (0–1), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nChoose a type, then a cost: (0\u20131), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
+      "text": "Echo 1\nChoose a type, then a cost: (0–1), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
     }
   },
   "core-051-1": {
@@ -1621,13 +1621,13 @@
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have \u22122 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have −2 attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have \u22122 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −2 attack."
     }
   },
   "core-066": {
@@ -1824,11 +1824,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Deal X damage to a target, heal your hero X, draw X, summon an X/X Ghoul Token"
+      "text": "Deal X damage to a target. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 2X damage to a target, heal your hero 3X, draw 2X, summon a 3X/3X Ghoul Token"
+      "text": "Deal 2X damage to a target. Heal your hero 3X. Draw 2X. Summon a 3X/3X Ghoul Token."
     }
   },
   "core-075": {
@@ -1955,11 +1955,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Discard 2 random cards; summon 2 Rush Tokens, each with 2 random keywords"
+      "text": "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords"
+      "text": "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
     }
   },
   "core-081": {
@@ -2001,11 +2001,11 @@
     "cost": 1,
     "base": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1\u2013100. Add the Radiant Core card with that number to your hand."
+      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1\u2013100. Add the Radiant Core card with that number to your hand. It costs (0)."
+      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs (0)."
     }
   },
   "core-083": {
@@ -2195,11 +2195,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Shuffle a CN-Virus into the opponent's deck"
+      "text": "Shuffle a CN-Virus into your opponent's deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a Radiant CN-Virus into the opponent's deck"
+      "text": "Shuffle a Radiant CN-Virus into your opponent's deck."
     }
   },
   "core-090-1": {
@@ -2217,11 +2217,11 @@
     "cost": 1,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: take 1 damage; at end of turn, shuffle 2 copies of this into your deck"
+      "text": "Cast on draw: Take 1 damage. At the end of this turn, shuffle 2 copies of this into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: take 2 damage; at end of turn, shuffle 3 copies of this into your deck"
+      "text": "Cast on draw: Take 2 damage. At the end of this turn, shuffle 3 copies of this into your deck."
     }
   },
   "core-091": {
@@ -2305,11 +2305,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Grade (starts at E).\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E\u2013A again."
+      "text": "Grade (starts at E).\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E–A again."
     },
     "radiant": {
       "keywords": [],
-      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E\u2013A again."
+      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E–A again."
     }
   },
   "core-093-1": {
@@ -2497,7 +2497,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible. Start of game: gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching \u2014 Discover 2 Units that cost (2) or less, Fuse them and add the result to your hand. Playing it costs the power's X and activates it once"
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 Cost (2) or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     },
     "radiant": {
       "keywords": [
@@ -2505,7 +2505,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible. Start of game: gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching \u2014 Discover 2 Radiant Units that cost (2) or less, Fuse them and add the result to your hand. Playing it costs the power's X and activates it once"
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant Cost (2) or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     }
   },
   "core-099": {
@@ -2717,7 +2717,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce."
+      "text": "Pierce"
     },
     "radiant": {
       "attack": 0,
@@ -2727,7 +2727,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce."
+      "text": "Pierce"
     }
   }
 }

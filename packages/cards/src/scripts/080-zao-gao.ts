@@ -1,6 +1,6 @@
 // #80 Zao Gao (SPEC §8.3, §5.2, §7; R11, R16, R21, R64, R215, R275, R276, R354). Spell, CN, cost 2.
-//   Base:    "Discard 2 random cards; summon 2 Rush Tokens, each with 2 random keywords"
-//   Radiant: "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords"
+//   Base:    "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
+//   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
 //
 // Patch v0.1.1 (issue #27) changed three things, and R354 records how they are read: the discard is
 // random ("not of your choice", so R16's random case, never a prompt), the Radiant face's tokens

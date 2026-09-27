@@ -444,7 +444,7 @@ describe("a face in play is the card as the view says it stands; the collection'
   it("R43 a Heroic Power in play prints only the power it rolled, with its X on the gem", () => {
     const f = face("core-098", false, { liveCost: 3, inPlay: { power: { name: "recruit", x: 3 } } });
     expect(f.text).toEqual({
-      full: "Indestructible. Once per turn, spend 3: Recruit a permanent. Playing it activates it once",
+      full: "Indestructible\nOnce per turn, spend 3: Recruit a permanent. Playing it activates it once.",
       marks: [],
     });
     expect(f.cost).toEqual({ text: "3", value: "3", tone: "base", alt: null });
@@ -457,7 +457,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R43 a radiant Heroic Power prints its rolled power's radiant clause", () => {
     const f = face("core-098", true, { liveCost: 1, inPlay: { power: { name: "felinor", x: 1 } } });
-    expect(f.text.full).toBe("Indestructible. Once per turn, spend 1: Summon two Felinor Tokens. Playing it activates it once");
+    expect(f.text.full).toBe("Indestructible\nOnce per turn, spend 1: Summon two Felinor Tokens. Playing it activates it once.");
     // R277: the rolled power is marked against the same power's base words.
     expect(markedText(f.text.full, f.text.marks)).toEqual(["two", "Tokens"]);
     expect(f.printed?.full).toBe(def("core-098").radiant.text);
@@ -465,10 +465,10 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("a Heroic Power in the collection keeps the list of eight and the X on its gem", () => {
     const f = face("core-098", false);
-    expect(f.text.full).toContain("gain one of 8 random powers");
+    expect(f.text.full).toContain("Gain one of 8 random powers");
     expect(f.cost.text).toBe("X");
     // In play with no power named (one that has not rolled, R43), it prints the card as printed.
-    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("gain one of 8 random powers");
+    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Gain one of 8 random powers");
   });
 
   it("Call to Chaos reads ??? in play on both faces, and keeps no printed text beside it", () => {

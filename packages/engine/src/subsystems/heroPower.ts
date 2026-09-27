@@ -248,9 +248,9 @@ export const HERO_POWERS: readonly HeroPower[] = [
   {
     name: "stitching",
     x: 2,
-    label: "Stitching — Discover 2 Units that cost (2) or less. Fuse them and add the result to your hand",
+    label: "Stitching — Discover 2 Cost (2) or less Units. Fuse them and add the result to your hand",
     radiantLabel:
-      "Stitching — Discover 2 Radiant Units that cost (2) or less. Fuse them and add the result to your hand",
+      "Stitching — Discover 2 Radiant Cost (2) or less Units. Fuse them and add the result to your hand",
     build: stitchingEffects,
   },
 ];

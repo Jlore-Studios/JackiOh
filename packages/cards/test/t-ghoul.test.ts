@@ -55,7 +55,7 @@ describe("T-ghoul Ghoul Token (SPEC §7, R353)", () => {
       expect(def.type).toBe("Unit");
       expect(def.token).toBe(true);
       expect(def.tags).toEqual(["Token"]);
-      expect(def.base).toEqual({ attack: 0, health: 0, keywords: [PIERCE], text: "Pierce." });
+      expect(def.base).toEqual({ attack: 0, health: 0, keywords: [PIERCE], text: "Pierce" });
     });
 
     it("R349 prints no Radiant form, so its Radiant face is the fallback: the base face doubled", () => {

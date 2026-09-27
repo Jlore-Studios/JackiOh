@@ -47,21 +47,21 @@ export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   felinor: { base: "Summon a Felinor Token", radiant: "Summon two Felinor Tokens" },
   discover: { base: "Discover a Unit", radiant: "Discover a Radiant Unit" },
   stitching: {
-    base: "Stitching — Discover 2 Units that cost (2) or less. Fuse them and add the result to your hand",
-    radiant: "Stitching — Discover 2 Radiant Units that cost (2) or less. Fuse them and add the result to your hand",
+    base: "Stitching — Discover 2 Cost (2) or less Units. Fuse them and add the result to your hand",
+    radiant: "Stitching — Discover 2 Radiant Cost (2) or less Units. Fuse them and add the result to your hand",
   },
 };
 
 /**
- * A Heroic Power's text in play: its keyword line, then the one power it rolled with its X, as
- * §8 #98 words each power ("Once per turn, spend X"). Null for a name this table does not know,
+ * A Heroic Power's text in play: its keyword line, then on a line of its own the one power it
+ * rolled with its X, as §8 #98 words each power ("Once per turn, spend X") and R366 lays text out. Null for a name this table does not know,
  * which leaves the printed text in place rather than inventing one.
  */
 export function powerText(power: RolledPower, radiant: boolean, keywordLine: string): string | null {
   const words = POWER_WORDS[power.name];
   if (words === undefined) return null;
-  const clause = `Once per turn, spend ${String(power.x)}: ${radiant ? words.radiant : words.base}. Playing it activates it once`;
-  return keywordLine === "" ? clause : `${keywordLine}. ${clause}`;
+  const clause = `Once per turn, spend ${String(power.x)}: ${radiant ? words.radiant : words.base}. Playing it activates it once.`;
+  return keywordLine === "" ? clause : `${keywordLine}\n${clause}`;
 }
 
 /** Whether a card with these tags reads {@link CONCEALED_TEXT} in play. */

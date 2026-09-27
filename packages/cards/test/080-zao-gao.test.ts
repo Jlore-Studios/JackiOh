@@ -6,7 +6,7 @@
 //
 // Patch v0.1.1 (issue #27, R354): the discard is random, not the player's choice, so no prompt opens;
 // the Radiant face's Radiant Rush Tokens each roll a third keyword; and the card is tagged CN.
-// Radiant: "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords". Each
+// Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords." Each
 // token is summoned on its Radiant face (§7: 6/6, Rush, Cleave) and then rolls its three keywords,
 // which never repeat one it has (R21) — so neither Rush nor Cleave is ever one of them.
 
@@ -83,9 +83,9 @@ function graveyard(s: Scenario): string[] {
 describe("#80 Zao Gao — card data (R354)", () => {
   it("R354 is tagged CN and prints the patch's random discard on both faces", () => {
     expect(def.tags).toEqual(["CN"]);
-    expect(def.base.text).toBe("Discard 2 random cards; summon 2 Rush Tokens, each with 2 random keywords");
+    expect(def.base.text).toBe("Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords.");
     expect(def.radiant.text).toBe(
-      "Discard 2 random cards; summon 2 Radiant Rush Tokens, each with 3 random keywords",
+      "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords.",
     );
   });
 });

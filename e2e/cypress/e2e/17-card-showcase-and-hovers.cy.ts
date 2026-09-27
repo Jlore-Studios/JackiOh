@@ -616,7 +616,7 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "gain one of 8 random powers");
+      .and("contain.text", "Gain one of 8 random powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 

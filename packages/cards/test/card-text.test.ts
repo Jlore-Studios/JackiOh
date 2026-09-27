@@ -14,24 +14,6 @@ import { CATALOG } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
-/**
- * The cards patch v0.1.1 gave to its other two branches — the engine's (#24, #44, #74, #80, #90,
- * #90.1, #98) and the client's (#93, #93.1) — whose texts those branches rewrite. The last test
- * below holds this list to the cards that still fail a check, so it can only shrink: once a card's
- * new text is merged and passes, the list must drop it.
- */
-const NOT_YET_SWEPT: ReadonlySet<string> = new Set([
-  "core-024",
-  "core-044",
-  "core-074",
-  "core-080",
-  "core-090",
-  "core-090-1",
-  "core-093",
-  "core-093-1",
-  "core-098",
-]);
-
 type Face = { card: CardDef; face: "base" | "radiant"; text: string; keywords: readonly Keyword[] };
 
 function facesOf(cards: readonly CardDef[]): Face[] {
@@ -83,7 +65,7 @@ function failures(face: Face): string[] {
 }
 
 describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
-  const swept = facesOf(ENTRIES.filter((card) => !NOT_YET_SWEPT.has(card.id)));
+  const swept = facesOf(ENTRIES);
 
   it("R366 calls the library the deck and a tribute a Tribute on every face", () => {
     const wrong = swept.filter((face) => /librar(y|ies)|sacrific/i.test(face.text));
@@ -98,13 +80,5 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
   it("R366 leads with the face's printed keywords on a line of their own, starts each labelled ability on its own line, and ends every other line with a full stop", () => {
     const wrong = swept.flatMap((face) => failures(face).map((why) => `${face.card.id} ${face.face} ${why}: ${face.text}`));
     expect(wrong).toEqual([]);
-  });
-
-  it("R366 lets the not-yet-swept list name only cards that still fail, so it can only shrink", () => {
-    const passing = [...NOT_YET_SWEPT].filter((id) => {
-      const card = CATALOG[id];
-      return card !== undefined && facesOf([card]).every((face) => failures(face).length === 0);
-    });
-    expect(passing, "these now pass R366: take them off NOT_YET_SWEPT").toEqual([]);
   });
 });

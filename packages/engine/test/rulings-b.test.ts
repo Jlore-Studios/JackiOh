@@ -1386,7 +1386,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     const back = actResult(own, { type: "endTurn", playerId: "p2" });
     expect(back.error).toBeUndefined();
     expect(eventsOfType(back.events, "controlChanged")).toHaveLength(0);
-    // M4: cards/test/50-kpop-fanatic.test.ts proves the card half.
+    // M4: cards/test/050-k-pop-fanatic.test.ts proves the card half.
   });
 
   it("R77 fuses the base forms, keeps the target's instance, sums buffs, and crafts a free non-Radiant hand card", () => {
