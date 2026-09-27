@@ -63,5 +63,9 @@ export const lesson: TutorialLesson = {
     "core-037", // Gravedigger, Rare
     "core-009", // Moths to the Flame, Rare
   ],
+  aiShadowBanned: {
+    "core-077":
+      "Professor Curvature is a plain 2-cost 3/3 here, and its Cry helps only Cost (4)+ cards, which the AI's mana cap never reaches; the lesson's tests show the AI holding it from its opening hand to the end, as the ban's sweep saw a Hard AI hold it, and the deal above was tuned with it in place",
+  },
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",
 };

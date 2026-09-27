@@ -19,7 +19,9 @@
 // Patch v0.1.1 made Mr. Vanilla a 4/4 and changed what the AI does with it, so the AI's list was
 // reordered, no card changed: Jilliax comes up before Mr. Vanilla, so the AI's second Taunt stands
 // beside Big D-fender on turn 4, when the coach asks the player to clear the way, and Gravedigger
-// opens in its hand in Stockpile's place.
+// opens in its hand in Stockpile's place. The patch's sweep then put GIGA Glowy Jelly Bean, Lunar
+// Eclipse and Professor Curvature on the AI's shadow ban and took Right-house defender off it; the
+// list keeps all of them, and `aiShadowBanned` says why for each banned one.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -68,8 +70,12 @@ export const lesson: TutorialLesson = {
     "core-056", // Jilliax
   ],
   aiShadowBanned: {
-    "core-003":
-      "Right-house defender teaches Taunt, Divine Shield and Reborn in one 1-cost card; the lesson's tests show the AI playing it on its first turn, where the ban's sweep saw a Hard AI hold it",
+    "core-029":
+      "GIGA Glowy Jelly Bean is the dead weight above the AI's mana cap, on purpose; the lesson's tests show it held and never cast, which is what the ban's sweep saw a Hard AI do",
+    "core-035":
+      "Lunar Eclipse is banned for a Hard-tier decision over the sweep's time limit; the lesson's tests show the tutorial AI casting it the turn it draws it",
+    "core-077":
+      "Professor Curvature is a plain 2-cost 3/3 here, and its Cry helps only Cost (4)+ cards, which the AI's mana cap never reaches; the lesson's tests show the AI holding it most of the game, as the ban's sweep saw a Hard AI hold it, and the deal was tuned with it in place",
   },
   retryTip: "Break a Divine Shield with a small hit before a big one, and clear Taunts with spells, so your units can reach the hero.",
 };
