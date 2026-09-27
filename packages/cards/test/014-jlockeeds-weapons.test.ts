@@ -5,7 +5,7 @@
 // row is really about:
 //   Rush         — §4.1: a unit summoned this turn attacking a unit at all.
 //   First Strike — §4.3 step 1: the ally kills Bigot (6/1) and takes nothing back, where without
-//                  the keyword the simultaneous step would kill a 3-health ally outright.
+//                  the keyword the simultaneous step would kill a 4-health ally outright.
 // Bigot is seeded on the field, so its own Cry never fires (R1: only when played).
 //
 // The aura is §10.4 layer 5, recomputed on every read from the permanents in play, so "gone when it
@@ -33,13 +33,13 @@ describe("#14 Jlockeed's Weapons", () => {
         p2: { field: ["core-002"], hand: ["core-005"], library: ["core-005"] },
       });
 
-      // Mr. Vanilla is printed 3/3.
-      s.expectStats("core-008", { attack: 7, health: 3, maxHealth: 3 });
+      // Mr. Vanilla is printed 4/4.
+      s.expectStats("core-008", { attack: 8, health: 4, maxHealth: 4 });
       // "Your units": the enemy's Bigot (6/1) is untouched.
       s.expectStats("core-002", { attack: 6, health: 1, maxHealth: 1 });
     });
 
-    it("grants First Strike, so a 3-health ally kills Bigot and takes nothing back (§4.3)", () => {
+    it("grants First Strike, so a 4-health ally kills Bigot and takes nothing back (§4.3)", () => {
       const s = scenario({
         p1: { backrow: ["core-014"], field: ["core-008"], hand: ["core-005"], library: ["core-005"] },
         p2: { field: ["core-002"], hand: ["core-005"], library: ["core-005"] },
@@ -50,7 +50,7 @@ describe("#14 Jlockeed's Weapons", () => {
 
       s.expectInZone(bigot, "graveyard");
       // Without the granted First Strike the exchange is simultaneous and Bigot's 6 kills the ally.
-      s.expectStats("core-008", { health: 3 });
+      s.expectStats("core-008", { health: 4 });
     });
 
     it("covers a unit summoned after it, Rush included (§10.4 layer 5, R83)", () => {
@@ -84,13 +84,13 @@ describe("#14 Jlockeed's Weapons", () => {
         p2: { field: ["core-002"], hand: ["core-005"], library: ["core-005"] },
       });
       const weapons = s.card("core-014");
-      s.expectStats("core-008", { attack: 7 });
+      s.expectStats("core-008", { attack: 8 });
 
       // #36 Magic Jammed, aimed at the ally Field Spell (see the header).
       s.play("core-036", { targets: [{ pick: "instance", instanceId: weapons.id }] });
 
       s.expectInZone(weapons, "graveyard");
-      s.expectStats("core-008", { attack: 3, health: 3, maxHealth: 3 });
+      s.expectStats("core-008", { attack: 4, health: 4, maxHealth: 4 });
       // The keywords went with it: the ally is summoning-sick-free but has no First Strike, so
       // Bigot's 6 now kills it in the simultaneous step.
       const ally = s.card("core-008");
@@ -111,13 +111,13 @@ describe("#14 Jlockeed's Weapons", () => {
         p2: { field: ["core-002"], hand: ["core-005"], library: ["core-005"] },
       });
 
-      s.expectStats("core-008", { attack: 13, health: 3, maxHealth: 3 });
+      s.expectStats("core-008", { attack: 14, health: 4, maxHealth: 4 });
 
       const bigot = s.card("core-002");
       s.attack("core-008", "core-002");
 
       s.expectInZone(bigot, "graveyard");
-      s.expectStats("core-008", { health: 3 }); // First Strike still granted
+      s.expectStats("core-008", { health: 4 }); // First Strike still granted
     });
 
     it("covers a unit summoned after it at +10, Rush included", () => {

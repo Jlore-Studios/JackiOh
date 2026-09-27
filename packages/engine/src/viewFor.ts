@@ -358,7 +358,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
  */
 function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): string {
   const less = `cost${mod.oncePerTurn === true ? "s" : ""} ${mod.amount} less`;
-  if (mod.onlyCurrentCost !== undefined) return `Cost-${mod.onlyCurrentCost} cards ${less}`;
+  // R363: #77's own words, "Cost (4)+ cards cost (1) less".
+  if (mod.minCurrentCost !== undefined) return `Cost (${mod.minCurrentCost})+ cards cost (${mod.amount}) less`;
   if (mod.onlyType !== undefined) {
     return mod.oncePerTurn === true ? `Next ${mod.onlyType} ${less}` : `${mod.onlyType}s ${less}`;
   }

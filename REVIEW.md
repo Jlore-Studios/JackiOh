@@ -49,7 +49,7 @@ Inputs: `SPEC.md`, `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `ARCHITECTUR
 | A3.2 Prompts | Every choice a card makes maps to a prompt kind listed in §10.6 (`discover, target, mode, mulligan, hand, zone, tribute, direction, x, embiggen`). List any card needing a kind not listed: MAJOR. |
 | A3.3 Randomness | Every random effect in §8 states its pool and exclusions (tokens, self) or points to §5.1's `catalog.query`; every chance-based effect states the probability and whether Lucky applies. |
 | A3.4 Timing | Every trigger in §8 names its moment (start of turn, end of turn, on play, after play, on death, on damage, on draw, on summon) and whose turn it fires on when it can fire on the opponent's turn (traps, Bread and Butter, Intern Stimmy, Corpse Eater, Moths to the Flame). |
-| A3.5 State | Every card that remembers something (Carnivorous Cube, Combo-Index, Heroic Power, Fed Fauci, KY's Math Equation, Kpop Fanatic, Recycling Initiative, Twinspell, Professor Curvature, Ceaseless Void) names where in §10.1 it is stored. |
+| A3.5 State | Every card that remembers something (Carnivorous Cube, Combo-Index, Heroic Power, Fed Fauci, KY's Math Equation, K-Pop Fanatic, Recycling Initiative, Twinspell, Professor Curvature, Ceaseless Void) names where in §10.1 it is stored. |
 | A3.6 Unbounded loops | Every self-recursive or self-copying effect has a terminator stated (Call to Chaos cap, CN-Virus via cap and fatigue, Duplicating Felinors via R1 and board size, Right-house defender via non-radiant copy). |
 
 ### A4 Procedure

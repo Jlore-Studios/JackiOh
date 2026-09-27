@@ -1,10 +1,10 @@
 // #83 Transmogulate (SPEC §8.4 row 83): Spell, cost 2, Legendary.
-//   Base:    "Replace every card in your library, board, GY and exile with a random Legendary"
-//   Radiant: "Random Radiant Legendaries" — the cell restates only what the replacements are, so it
-//            is the same four zones with `radiant: true` on every replacement (§8 Conventions).
+//   Base:    "Replace every card in your hand, deck, board, GY and exile with a random Legendary."
+//   Radiant: "... with a random Radiant Legendary." — the same five zones with `radiant: true` on
+//            every replacement (§8 Conventions).
 //
-// FOUR ZONES, AND YOUR HAND IS NOT ONE OF THEM. §8 and R35 both name "library, board, GY and exile"
-// (the source note: "Replace your deck, board, GY, and exile"), so a card in hand is untouched.
+// FIVE ZONES. Patch v0.1.1 added the hand to the library, board, GY and exile that R35 named; the
+// hand is an "other zone" of R35's like the rest (any card from the pool, same count), R365.
 //
 // R35 IS THE WHOLE CARD:
 //   "Board cards: same-type replacement in place, Field Trap counts as Trap, Immutable cards stay
@@ -64,8 +64,8 @@ export const def = cardDef("core-083");
 /** §5.1: the pool excludes the generating card, which R35 spells out for this one. */
 const OWN_INDEX = "83";
 
-/** R35's "other zones", in the order this card walks them; the hand is deliberately absent. */
-const OFF_FIELD_ZONES = ["library", "graveyard", "exile"] as const;
+/** R35's "other zones", in the order this card walks them; the hand is one of them (R365). */
+const OFF_FIELD_ZONES = ["hand", "library", "graveyard", "exile"] as const;
 
 /** R35's pool: #52, #85, #87, #92, #93, #95 — proved by `test/query.test.ts`, not listed here. */
 function legendaries(type?: CardType | CardType[]): CardDef[] {
@@ -130,8 +130,8 @@ function transmogulate(radiantResult: boolean): Script {
       ...boardCards(ctx).flatMap((card) =>
         replace(ctx, card, sameTypeLegendaries(defOf(ctx.state, card.defId).type), radiantResult),
       ),
-      // Then library (in `pileCards` order, R223), graveyard and exile: "any card from the pool, same
-      // counts".
+      // Then hand (R365), library (in `pileCards` order, R223), graveyard and exile: "any card from
+      // the pool, same counts".
       ...OFF_FIELD_ZONES.flatMap((zone) =>
         pileCards(ctx, zone).flatMap((card) => replace(ctx, card, legendaries(), radiantResult)),
       ),
@@ -141,5 +141,5 @@ function transmogulate(radiantResult: boolean): Script {
 
 export const base: Script = transmogulate(false);
 
-/** "Random Radiant Legendaries": the same four zones, every replacement Radiant. */
+/** "Random Radiant Legendaries": the same five zones, every replacement Radiant. */
 export const radiant: Script = transmogulate(true);

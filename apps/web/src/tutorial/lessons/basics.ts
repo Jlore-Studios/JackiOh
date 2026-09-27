@@ -8,11 +8,14 @@
 //    Jlockeed Shredder-10, 4-mana 7/7, Professor Curvature, Midrange Menace and Reno — a unit for
 //    every mana on turns 1 to 4, and only units with a line of text or less in the nine cards the
 //    coach line sees. The cards with prompts, Rush, Charge or more sit below them.
-//  - The AI: Mr. Vanilla, Gary the Gambler, Carnivorous Cube and Prejudiced Postdoc in hand (and
-//    The Coin), then Duplicating Felinors, Gravedigger, Archivist and Professor Curvature. Lesson 1
-//    allows it plain units only (R291), which leaves few; the four the lesson would rather not
-//    show are at the bottom: Straaza and 4-mana 7/7, which a 3-mana AI can cast only with The
-//    Coin or Curvature's discount, the Big D-fender wall and Moths to the Flame.
+//  - The AI: Gravedigger, Archivist, Professor Curvature and Moths to the Flame in hand (and The
+//    Coin), then Mr. Vanilla, Gary the Gambler, Carnivorous Cube, Prejudiced Postdoc and Duplicating
+//    Felinors; Straaza, 4-mana 7/7 and the Big D-fender wall are at the bottom. Lesson 1 allows it
+//    plain units only (R291), which leaves few. Patch v0.1.1 made Mr. Vanilla a 4/4 on both sides of
+//    the table, and the old deal's AI then walled the player's Mr. Vanilla on its first turn (a
+//    Postdoc copy in Defense Position), so the coach's turn-2 hero hit never came; this deal opens
+//    the AI with 2-drops, so its first turn is The Coin and Archivist, its second Moths to the Flame
+//    and an attack, and its Postdoc comes on its fourth.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -47,18 +50,22 @@ export const lesson: TutorialLesson = {
     "core-032", // Prem Panther, Rare
   ],
   aiDeck: [
-    "core-009", // Moths to the Flame, Rare
     "core-001", // Big D-fender, Common
-    "core-022", // Carnivorous Cube, Epic
     "core-025", // 4-mana 7/7, Common
-    "core-012", // Duplicating Felinors, Rare
-    "core-037", // Gravedigger, Rare
-    "core-030", // Archivist, Rare
-    "core-054", // Straaza, Common
     "core-077", // Professor Curvature, Rare
-    "core-004", // Gary the Gambler, Common
+    "core-054", // Straaza, Common
     "core-008", // Mr. Vanilla, Common
+    "core-004", // Gary the Gambler, Common
+    "core-022", // Carnivorous Cube, Epic
+    "core-012", // Duplicating Felinors, Rare
     "core-061", // Prejudiced Postdoc, Rare
+    "core-030", // Archivist, Rare
+    "core-037", // Gravedigger, Rare
+    "core-009", // Moths to the Flame, Rare
   ],
+  aiShadowBanned: {
+    "core-077":
+      "Professor Curvature is a plain 2-cost 3/3 here, and its Cry helps only Cost (4)+ cards, which the AI's mana cap never reaches; the lesson's tests show the AI holding it from its opening hand to the end, as the ban's sweep saw a Hard AI hold it, and the deal above was tuned with it in place",
+  },
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",
 };

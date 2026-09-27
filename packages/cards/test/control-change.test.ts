@@ -19,8 +19,7 @@
 // sides, so R82's automatic turn end never skips a turn (see the harness header).
 //
 // Props: #25 4-mana 7/7 (no Rush or Charge; Armor 7, so a small attacker bounces off it), #8 Mr.
-// Vanilla (a plain 3/3), #20 Pointmaster (a 7/2 that never matters), #56 Jilliax (Rush, Charge
-// radiant), #45 Deft Duelist (Charge), #11 Tempo Timmy (Charge radiant), #14 Jlockeed's Weapons
+// Vanilla (a plain 4/4), #20 Pointmaster (a 7/1 that never matters), #56 Jilliax (Rush), #45 Deft Duelist (Charge), #11 Tempo Timmy (Charge radiant), #14 Jlockeed's Weapons
 // (an aura granting Rush), #68 Twisted Sorcerer (4 damage to a target), #41 Sheepish (a Trap).
 
 import type { Selection } from "@jackioh/shared";
@@ -137,7 +136,7 @@ describe("R171 with the cards that change control", () => {
   it("R171 #56 base: a stolen Rush unit may attack an enemy unit that turn but not the hero", () => {
     const g = scenario({
       p1: { hand: [MIND_CONTROL, VANILLA] },
-      p2: { field: [{ def: JILLIAX, lane: 2 }, { def: VANILLA, lane: 4 }] },
+      p2: { field: [{ def: JILLIAX, lane: 2 }, { def: VANILLA, lane: 4, damage: 1 }] },
     });
     const jilliax = unitAt(g, "p2", 2);
     const vanilla = unitAt(g, "p2", 4);
@@ -197,7 +196,7 @@ describe("R171 with the cards that change control", () => {
     expect(() => g.attack(switcher, "hero")).toThrow(ALREADY_ACTED);
   });
 
-  it("R171 #50: Kpop Fanatic's delayed steal leaves the unit sick for that whole turn, and it attacks on the next", () => {
+  it("R171 #50: K-Pop Fanatic's delayed steal leaves the unit sick for that whole turn, and it attacks on the next", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], library: [...LIBRARY] },
       p2: {
@@ -226,7 +225,7 @@ describe("R171 with the cards that change control", () => {
     g.expectHealth("p2", before - 7);
   });
 
-  it("R171 #86: Mrow dying on its controller's own turn steals units that are sick that turn", () => {
+  it("R171 #86: Mrow dying on its controller's own turn takes a killer that is sick that turn (R361)", () => {
     const g = scenario({
       p1: { hand: [VANILLA], field: [{ def: MROW, radiant: true, lane: 1 }] },
       p2: { hand: [VANILLA], field: [{ def: SEVEN_SEVEN, lane: 3 }, { def: VANILLA, lane: 4 }] },
@@ -235,19 +234,19 @@ describe("R171 with the cards that change control", () => {
     const sevenSeven = unitAt(g, "p2", 3);
     const vanilla = unitAt(g, "p2", 4);
 
-    // Radiant Mrow "can attack": 2 into Armor 7 is nothing, and 7 back kills it.
+    // Radiant Mrow has Rush: 2 into Armor 7 is nothing, and 7 back kills it, so the 7/7 destroyed it.
     g.attack(mrow, sevenSeven);
 
     g.expectInZone(mrow, "graveyard");
-    for (const stolen of [sevenSeven, vanilla]) {
-      expect(g.card(stolen).controller).toBe("p1");
-      expectEnteredNow(g, stolen);
-      expect(() => g.attack(stolen, "hero")).toThrow(SICK);
-      expect(offeredAttacks(g, stolen)).toEqual([]);
-    }
+    expect(g.card(sevenSeven).controller).toBe("p1");
+    expectEnteredNow(g, sevenSeven);
+    expect(() => g.attack(sevenSeven, "hero")).toThrow(SICK);
+    expect(offeredAttacks(g, sevenSeven)).toEqual([]);
+    // The unit that had no part in it stays with p2.
+    expect(g.card(vanilla).controller).toBe("p2");
   });
 
-  it("R171 #86: Mrow dying on the opponent's turn steals units that attack freely on the thief's next turn", () => {
+  it("R171 #86: Mrow dying on the opponent's turn takes a killer that attacks freely on the thief's next turn (R361)", () => {
     const g = scenario({
       active: "p2",
       turn: 8,
@@ -266,16 +265,16 @@ describe("R171 with the cards that change control", () => {
 
     g.expectInZone(mrow, "graveyard");
     expect(g.card(sevenSeven).controller).toBe("p1");
-    expect(g.card(vanilla).controller).toBe("p1");
+    expect(g.card(vanilla).controller).toBe("p2");
     // The attacker's spent exertion stayed with p2: for p1 it is fresh (R171).
     expectEnteredNow(g, sevenSeven);
 
     g.endTurn();
     expect(g.state.active).toBe("p1");
     const before = heroHealth(g, "p2");
+    // p2's Mr. Vanilla walls nothing (no Taunt), so the 7/7 goes to the hero.
     g.attack(sevenSeven, "hero");
-    g.attack(vanilla, "hero");
-    g.expectHealth("p2", before - 10);
+    g.expectHealth("p2", before - 7);
   });
 
   it("R171 #87: every card the board swap moves enters its new side; the caster's are sick, the opponent's are not", () => {
@@ -310,7 +309,7 @@ describe("R171 with the cards that change control", () => {
     expect(g.card(mine).controller).toBe("p2");
     const mineBefore = heroHealth(g, "p1");
     g.attack(mine, "hero");
-    g.expectHealth("p1", mineBefore - 3);
+    g.expectHealth("p1", mineBefore - 4);
   });
 
   it("R171 #52: cards that cross the centre line enter their new side; cards moving along their own side keep their readiness", () => {
@@ -426,20 +425,20 @@ describe("R171 with the cards that change control", () => {
     }
   });
 
-  it("R171 #49 radiant: making a stolen #56 Radiant gives it Charge, so it may attack the hero at once", () => {
+  it("R171 #49 radiant: making a stolen #11 Radiant gives it Charge, so it may attack the hero at once", () => {
     const g = scenario({
       p1: { hand: [{ def: MIND_CONTROL, radiant: true }, VANILLA] },
-      p2: { field: [{ def: JILLIAX, lane: 2 }, { def: VANILLA, lane: 4 }] },
+      p2: { field: [{ def: TIMMY, lane: 2 }, { def: VANILLA, lane: 4 }] },
     });
-    const jilliax = unitAt(g, "p2", 2);
+    const timmy = unitAt(g, "p2", 2);
 
-    g.play(MIND_CONTROL, { targets: at(jilliax) });
+    g.play(MIND_CONTROL, { targets: at(timmy) });
 
-    expect(g.card(jilliax).radiant).toBe(true);
-    expectEnteredNow(g, jilliax);
-    expect(offeredAttacks(g, jilliax)).toContain("hero-p2");
+    expect(g.card(timmy).radiant).toBe(true);
+    expectEnteredNow(g, timmy);
+    expect(offeredAttacks(g, timmy)).toContain("hero-p2");
     const before = heroHealth(g, "p2");
-    g.attack(jilliax, "hero");
+    g.attack(timmy, "hero");
     g.expectHealth("p2", before - 6);
   });
 
@@ -479,7 +478,7 @@ describe("R171 with the cards that change control", () => {
 });
 
 describe("R172 a stolen unit dies as its controller's", () => {
-  it("R172 #81: a stolen Saintess dies for the thief, radiating the thief's units, and is reborn on the thief's side, sick", () => {
+  it("R172 #81: a stolen Saintess dies for the thief, radiating the thief's units, and goes to her owner's graveyard", () => {
     const g = scenario({
       p1: { hand: [MIND_CONTROL, SORCERER], mana: 10, field: [{ def: POINTMASTER, lane: 5 }] },
       p2: { hand: [VANILLA], field: [{ def: SAINTESS, lane: 2 }, { def: POINTMASTER, lane: 4 }] },
@@ -494,15 +493,12 @@ describe("R172 a stolen unit dies as its controller's", () => {
     const died = g.events.filter((event) => event.type === "destroyed" && event.instanceId === saintess.id);
     expect(died).toHaveLength(1);
     expect(died[0]).toMatchObject({ owner: "p2" });
-    // Death: "all your other units become Radiant" — "your" is the thief.
+    // Death: "Make your other Units Radiant" — "your" is the thief.
     expect(g.card(mine).radiant).toBe(true);
     expect(g.card(theirs).radiant).toBe(false);
-    // Reborn: back in the zone it reserved, on the side it died on, still owned by p2.
-    expect(g.unit("p1", 2)?.id).toBe(saintess.id);
-    expect(g.card(saintess).controller).toBe("p1");
-    expect(g.card(saintess).owner).toBe("p2");
-    expect(g.card(saintess).summonedTurn).toBe(g.state.turn);
-    expect(() => g.attack(saintess, "hero")).toThrow(SICK);
+    // No Reborn since patch v0.1.1: off the field she is her owner's again (R12).
+    expect(g.unit("p1", 2)).toBeNull();
+    expect(g.pile("p2", "graveyard").map((card) => card.id)).toContain(saintess.id);
   });
 
   it("R172 radiant #3: a stolen Right-house defender's Death summons its base copy on the thief's side", () => {

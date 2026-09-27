@@ -328,7 +328,7 @@ describe("delay: coming due (§2.2, R62, R76, R86, R126)", () => {
       controller: "p1",
     });
 
-    // "Fires even if Kpop Fanatic died" (§8.2 #50, R76).
+    // "Fires even if K-Pop Fanatic died" (§8.2 #50, R76).
     moveToZone(state, scribe, "graveyard");
     expect(state.players.p1.graveyard.map((card) => card.id)).toContain(scribe.id);
 
@@ -432,7 +432,7 @@ function fiveRealShapes(turn: number): Parameters<typeof applyEffects>[0] {
       mod: {
         kind: "costDiscount",
         amount: 1,
-        onlyCurrentCost: 4,
+        minCurrentCost: 4,
         expiry: { until: "nextTurnOf", player: "p1", fromTurn: turn },
       },
     }),

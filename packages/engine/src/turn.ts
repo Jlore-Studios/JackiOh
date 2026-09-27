@@ -78,7 +78,7 @@ export function triggerOrder(sink: EngineSink, hook: HookName, only?: PlayerId):
  *
  * R127: an entry whose instance is gone still resolves, named by its stored def id. `runResume`
  * finds the instance itself and re-enters with `ctx.self === null`, the step reading what it needs
- * out of `resume.data` (§10.6, R76: #50 Kpop Fanatic's steal fires after Kpop Fanatic has died,
+ * out of `resume.data` (§10.6, R76: #50 K-Pop Fanatic's steal fires after K-Pop Fanatic has died,
  * #39's exile after the card has exiled itself). The old `instanceId === undefined` skip dropped
  * that shape with no error at all, which is the silent loss of a sequence R113 forbids.
  *
@@ -255,7 +255,7 @@ function startOfTurnDelayed(sink: EngineSink, player: PlayerId, dueBefore: numbe
 /**
  * §10.3 between R62's first two stages: the events the delayed effects emitted reach the traps and
  * the trigger queue, and what they wake resolves, before the start-of-turn triggers are queued —
- * §6.2's "Delayed effects first (Kpop Fanatic's steal), then the trigger queue in R68 order". Left to
+ * §6.2's "Delayed effects first (K-Pop Fanatic's steal), then the trigger queue in R68 order". Left to
  * the triggers' own loop, a trigger answering #50's steal was queued behind every start-of-turn hook,
  * a backrow one included.
  */

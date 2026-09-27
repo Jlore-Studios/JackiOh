@@ -27,10 +27,11 @@
 // names below say which is which, and neither exports a bare `query`.
 
 import type { PlayerId } from "@jackioh/shared";
+import { defOf } from "./catalog";
 import type { EffectContext } from "./script";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { partMemoryKey } from "./work";
-import type { OffFieldZone } from "./zones";
+import { cardAt, slotOf, type OffFieldZone } from "./zones";
 
 /**
  * A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
@@ -159,4 +160,25 @@ export function wasPlayedThisTurn(
  */
 export function recalled(ctx: Pick<EffectContext, "self" | "data">, key: string): unknown {
   return ctx.self?.memory[partMemoryKey(ctx.data, key)];
+}
+
+/**
+ * R42, R361: the Unit that destroyed a card, asked by the card's own Death hook (#86 "Miss" Mrow's
+ * "take control of the Unit that destroyed this"). `card` is the dying card as the hook reads it —
+ * its last-known state (R78), which still carries R42's credit for the hit that doomed it. The
+ * answer is the card that dealt that hit only while it is a Unit acting on the field: the top of its
+ * pile, never a card dormant under a Stack (R13). So a card no hit doomed — destroyed by an effect,
+ * tributed, starved by an aura — names nobody (R42), and so does one a Spell's damage killed, or
+ * whose killer has since died or left the field (a mutual combat death, R78). The card is handed
+ * back for its id; a card file reads it and never writes it (CLAUDE.md rule 5).
+ */
+export function killerOf(state: GameState, card: CardInstance | null): CardInstance | null {
+  const id = card?.lastDamagedBy;
+  if (id === undefined) return null;
+  const killer = findInstance(state, id);
+  if (killer === undefined || killer.zone.z !== "field" || killer.zone.row !== "units") return null;
+  if (defOf(state, killer.defId).type !== "Unit") return null;
+  const at = slotOf(state, killer);
+  if (at === null || cardAt(state, at)?.id !== killer.id) return null;
+  return killer;
 }

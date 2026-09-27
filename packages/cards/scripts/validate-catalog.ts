@@ -79,8 +79,8 @@ const EXPECTED_RARITY_COUNTS: Readonly<Record<string, number>> = {
  * drifts onto or off a card fails here (R278: Jlockeed is #13 and #14's and no other card's).
  */
 const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
-  Human: 18,
-  Felinor: 4,
+  Human: 20,
+  Felinor: 5,
   KY: 5,
   CN: 3,
   Fruit: 1,

@@ -633,6 +633,7 @@ describe("#95's printed text (round 10 of the polish-4 edge-case hunt)", () => {
     // printed text — what apps/web's Card and Prompt render for the card — says so too.
     const text = cardDef(CHAOS).base.text;
     expect(text).not.toMatch(/5\/5/);
-    expect(text).toMatch(/five Radiant Rush Tokens/);
+    // Patch v0.1.1's wording pass writes the count as a number: "summon 5 Radiant Rush Tokens".
+    expect(text).toMatch(/summon 5 Radiant Rush Tokens/);
   });
 });

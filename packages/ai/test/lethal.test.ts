@@ -26,14 +26,15 @@ import {
 import { AI, HUMAN, everyCard, randomPolicyStates, runPuzzle, scenario, trace } from "./_support";
 
 /**
- * p1 (the AI) on turn 9 with 4 crystals: Pointmaster 7/2, Mr. Vanilla 3/3 and Tempo Timmy 3/3
- * ready on the field, Lava Golem, Lunar Eclipse and KY's Math Equation in hand. p2 stands behind two
- * Taunts, Midrange Menace 9/9 and a Lava Golem 10/5 with Armor 3, at 10 health. The one lethal:
- * Lava Golem tributes both enemy Taunts and one of the 3-attack units, then Pointmaster and the
- * other 3/3 hit the face for 10.
+ * p1 (the AI) on turn 9 with 4 crystals: Pointmaster 7/1, Mr. Vanilla 4/4 and Tempo Timmy 3/3
+ * ready on the field, a Radiant Lava Golem, Lunar Eclipse and KY's Math Equation in hand. p2 stands
+ * behind two Taunts, Midrange Menace 9/9 and a Lava Golem 10/5, at 10 health. The lethal: the Golem
+ * tributes both enemy Taunts and one of p1's two smaller units, then Pointmaster and the other hit
+ * the face for 10 or more. The Golem is Radiant because the base face paid with opposing units is summoned for the
+ * opponent (R360), where its Taunt would wall the face again.
  */
 const WIDE = {
-  p1: { hand: ["core-055", "core-035", "core-031"], mana: 4, field: ["core-020", "core-008", "core-011"] },
+  p1: { hand: [{ def: "core-055", radiant: true }, "core-035", "core-031"], mana: 4, field: ["core-020", "core-008", "core-011"] },
   p2: { field: ["core-019", "core-055"], health: 10 },
 };
 
@@ -91,7 +92,7 @@ function playOut(state: GameState, line: readonly ActionBody[]): GameState {
 describe("the lethal solver's walks", () => {
   it("readyGap is the enemy hero's health less what the attacks left deal it past its Taunts", () => {
     const state = wideBoard();
-    // Menace soaks 9: the three attackers (3, 3, 7) all go into it and nothing reaches the hero.
+    // The two Taunts soak the three attackers (7, 4, 3) and nothing reaches the hero.
     expect(readyGap(state, AI)).toBe(10);
 
     const golem = mine(state, AI, "core-055");

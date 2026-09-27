@@ -12,7 +12,7 @@
 // of the running context — this script's def id, the face that is running (§5.2) and the instance
 // when it still exists — plus the data this step captures, so the continuation survives a JSON
 // round-trip and a replay re-enters the same step with the same data. `instanceId` is deliberately
-// optional: R76 has #50 Kpop Fanatic's steal fire "even if Kpop Fanatic died", so the continuation
+// optional: R76 has #50 K-Pop Fanatic's steal fire "even if K-Pop Fanatic died", so the continuation
 // must be able to outlive its card, which is why a card carries what it needs in `data` rather
 // than reaching back through `ctx.self`.
 
@@ -52,7 +52,7 @@ function delayPlayer(ctx: EffectContext, at: DelayAt): PlayerId {
 
 /**
  * §6.2's "at the start of your next turn" and "end of turn" as one verb (#39 Recycling Initiative,
- * #50 Kpop Fanatic, #78 /fullsend). `at.player` says whose turn boundary it waits for, relative to
+ * #50 K-Pop Fanatic, #78 /fullsend). `at.player` says whose turn boundary it waits for, relative to
  * the controller like every other `PlayerSpec`; `owner` is the controller, which is both who the
  * continuation runs as and, through R68's creation `seq`, where it sits among several due at once.
  *

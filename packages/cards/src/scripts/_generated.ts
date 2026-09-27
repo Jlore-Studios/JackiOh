@@ -62,7 +62,7 @@ import * as m046_suppressive_aura from "./046-suppressive-aura";
 import * as m047_fig_of_life from "./047-fig-of-life";
 import * as m048_5pek_controller from "./048-5pek-controller";
 import * as m049_snom_bunny_mind_control from "./049-snom-bunny-mind-control";
-import * as m050_kpop_fanatic from "./050-kpop-fanatic";
+import * as m050_k_pop_fanatic from "./050-k-pop-fanatic";
 import * as m051_kys_private_tutor from "./051-kys-private-tutor";
 import * as m051_1_kys_empty_notebook from "./051-1-kys-empty-notebook";
 import * as m052_silly_silas from "./052-silly-silas";
@@ -175,7 +175,7 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   m047_fig_of_life,
   m048_5pek_controller,
   m049_snom_bunny_mind_control,
-  m050_kpop_fanatic,
+  m050_k_pop_fanatic,
   m051_kys_private_tutor,
   m051_1_kys_empty_notebook,
   m052_silly_silas,

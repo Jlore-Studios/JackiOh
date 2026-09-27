@@ -143,11 +143,12 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `findInstance` | an instance id, wherever the card has since landed (R98) |
 | `instanceOf(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at — a chosen card on the stay its prompt or the play offered it on (R174) — or `null` for a hero, for nothing, or for a card buried under a Stack pile (§3.2, R13) (#22's meal) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write) — on a fused card, its own ingredient's (R102, #22) |
+| `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.
-Every one of these but `findInstance` and `instanceOf` returns a number, a boolean or a fresh
-`readonly` array, so a card cannot write the game through a value it read; those two hand back the
-card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
+Every one of these but `findInstance`, `instanceOf` and `killerOf` returns a number, a boolean or a
+fresh `readonly` array, so a card cannot write the game through a value it read; those three hand
+back the card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
 `packages/engine/src/query.ts` (the read half of the surface, next to `src/effects/index.ts`, the
 write half); if the fact you need is not there, it is missing from the engine — extend that module
 and test it, do not reach into `state.players`.
@@ -225,7 +226,7 @@ The pools the spec pins down, as the argument object to write:
 | --- | --- | --- |
 | any random card | `catalog.query({})` | the 100 non-token cards |
 | KY (#57 Conjure KY) | `catalog.pool("57", { tags: ["KY"] })` | #31, #51, #82 |
-| a Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | #18, #41, #60, #71, #85, #96 |
+| a Cost (1) Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | #18, #41, #60, #71, #96 (#85 costs 2 since patch v0.1.1; radiant #67 drops the cost and reaches it) |
 | Transmogulate (#83, R35) | `catalog.pool("83", { rarity: "Legendary" })` | #52, #85, #87, #92, #93, #95 |
 | Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeIndex` | includes #95, the §5.1 exception |
 
@@ -247,7 +248,7 @@ Guarantees a card file may rely on, all proved in `test/query.test.ts`:
   afterwards: that is how two card files end up disagreeing about what "a random unit" means.
 
 `test/query.test.ts` names the four pools the spec pins down — the KY pool (#31/#51/#82), the trap
-pool (#18/#41/#60/#71/#85/#96, Field Trap counting as Trap), the Transmogulate Legendary pool
+pool (#18/#41/#60/#71/#85/#96, Field Trap counting as Trap; the Cost (1) five without #85), the Transmogulate Legendary pool
 (#52/#85/#87/#92/#93/#95, R35) and the cost brackets — with the exact argument object each one
 needs. Copy from there rather than inventing a filter.
 

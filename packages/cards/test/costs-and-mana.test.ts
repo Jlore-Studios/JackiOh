@@ -198,7 +198,8 @@ describe("A play-time discount is not a library or graveyard card's cost (§6.3 
   it("R65 Genn's Greed played under /fullsend exiles no even-cost card from the library or the graveyard, /fullsend itself included (§8 #78, #94, R66)", () => {
     const g = scenario({
       p1: {
-        hand: [FULLSEND, GREED],
+        // The Radiant /fullsend, the face that still grants "Combo: Draw 1" (patch v0.1.1).
+        hand: [{ def: FULLSEND, radiant: true }, GREED],
         // A unit that can still switch keeps §2.5's auto-end from passing the turn mid-test.
         field: [VANILLA],
         // /fullsend's granted "Combo: draw 1" takes the 0-cost Spell on top before Genn's text runs;

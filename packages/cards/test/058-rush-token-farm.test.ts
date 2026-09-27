@@ -116,8 +116,8 @@ describe("#58 Rush Token Farm — radiant", () => {
         backrow: [{ def: "core-058", radiant: true, lane: 1 }],
         field: [
           { def: "core-t-rush", lane: 1 },
-          // Mr. Vanilla is also a 3/3 — a stats match is not a def match.
-          { def: "core-008", lane: 2 },
+          // Tempo Timmy is also a 3/3 with Rush — a stats and keyword match is not a def match.
+          { def: "core-011", lane: 2 },
         ],
       },
       p2: { field: [{ def: "core-t-rush", lane: 1 }] },
@@ -130,7 +130,7 @@ describe("#58 Rush Token Farm — radiant", () => {
     if (mine === null || theirs === null) return;
 
     g.expectStats(mine, { attack: 6, maxHealth: 6 });
-    g.expectStats("core-008", { attack: 3, maxHealth: 3 });
+    g.expectStats("core-011", { attack: 3, maxHealth: 3 });
     // "your Rush Tokens": control, not ownership of the def (R12).
     g.expectStats(theirs, { attack: 3, maxHealth: 3 });
   });

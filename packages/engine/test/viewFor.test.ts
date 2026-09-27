@@ -710,7 +710,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     const curvature = install(state, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: 1 },
     });
     // #78 /fullsend's two turn-scoped riders, in the order the Cry installs them.
@@ -731,7 +731,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
 
     expect(view.you.modifiers.map((modifier) => modifier.id)).toEqual([curvature.id, discount.id, combo.id]);
     expect(view.you.modifiers).toEqual([
-      { id: curvature.id, label: "Cost-4 cards cost 1 less" },
+      { id: curvature.id, label: "Cost (4)+ cards cost (1) less" },
       { id: discount.id, label: "Your cards cost 1 less" },
       { id: combo.id, label: 'Your cards gain "Combo: draw 1"' },
     ]);
@@ -762,16 +762,16 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     install(state, "p1", {
       kind: "costDiscount",
       amount: 2,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 
     // The radiant face of #77, so the number is 2.
-    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost-4 cards cost 2 less (next turn)");
+    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost (4)+ cards cost (2) less (next turn)");
 
     // p1's next turn: the discount bites, and the badge stops hedging.
     state.turn += 2;
-    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost-4 cards cost 2 less");
+    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost (4)+ cards cost (2) less");
   });
 
   it("R169 labels every PlayerModifier kind from the modifier alone", () => {

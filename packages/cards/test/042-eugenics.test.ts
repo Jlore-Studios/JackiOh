@@ -1,14 +1,14 @@
 // #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R80).
 //
-// The must-pass row (BUILD M4-T4 #42): "8 random exiled (all if fewer); 30% per remaining card;
-// radiant two rolls at 40%."
+// The must-pass row (BUILD M4-T4 #42): "7 random exiled (all if fewer); 30% per remaining card;
+// radiant two rolls at 40%." (patch v0.1.1: 8 became 7.)
 //
 // Exact per-seed outcomes are not asserted here, and deliberately so: the two verbs this card needs
 // (`exileRandomFromLibrary`, `radiantChance`) are not in the effects library yet, so there is no
 // implementation whose draw order an expected number could be read off — a hard-coded count would
 // be a guess that locks the engine into whatever the guess was. What IS pinned down instead:
-//   * the counts the §8 row states (8, or the whole library when smaller);
-//   * that the roll is PER CARD and independent, proved with a 58-card library where "one roll for
+//   * the counts the §8 row states (7, or the whole library when smaller);
+//   * that the roll is PER CARD and independent, proved with a 57-card library where "one roll for
 //     the zone" or "all or nothing" would land on 0 or 50 and an independent 30% cannot;
 //   * that the exiled cards are never rolled;
 //   * determinism: the same seed and the same steps give the same pattern of flags (§9.3);
@@ -58,14 +58,14 @@ function radiantFlags(s: ReturnType<typeof scenario>): boolean[] {
 }
 
 describe("#42 Eugenics — base", () => {
-  it("exiles 8 random cards from your library", () => {
+  it("exiles 7 random cards from your deck", () => {
     const s = cast(12);
 
-    expect(s.pile("p1", "exile")).toHaveLength(8);
-    expect(s.pile("p1", "library")).toHaveLength(4);
+    expect(s.pile("p1", "exile")).toHaveLength(7);
+    expect(s.pile("p1", "library")).toHaveLength(5);
   });
 
-  it("R60 exiles the whole library when it holds fewer than 8 (§8.2 Engine: 'fewer than 8 → exile all')", () => {
+  it("R60 exiles the whole library when it holds fewer than 7 (§8.2 Engine: 'fewer than 7 → exile all')", () => {
     const s = cast(5);
 
     expect(s.pile("p1", "exile")).toHaveLength(5);
@@ -81,7 +81,7 @@ describe("#42 Eugenics — base", () => {
   });
 
   it("rolls 'each remaining library card' independently at 30%, so neither 0 nor all 50 come up", () => {
-    const s = cast(58);
+    const s = cast(57);
     const remaining = s.pile("p1", "library");
 
     expect(remaining).toHaveLength(50);
@@ -92,15 +92,15 @@ describe("#42 Eugenics — base", () => {
   });
 
   it("R60 the exiled cards are never rolled: the exile happens first, the chance rolls over what is left", () => {
-    const s = cast(58);
+    const s = cast(57);
 
-    expect(s.pile("p1", "exile")).toHaveLength(8);
+    expect(s.pile("p1", "exile")).toHaveLength(7);
     expect(s.pile("p1", "exile").every((card) => !card.radiant)).toBe(true);
   });
 
   it("§9.3 is deterministic: the same seed and steps give the same flags", () => {
-    expect(radiantFlags(cast(58, "eugenics-determinism"))).toEqual(
-      radiantFlags(cast(58, "eugenics-determinism")),
+    expect(radiantFlags(cast(57, "eugenics-determinism"))).toEqual(
+      radiantFlags(cast(57, "eugenics-determinism")),
     );
   });
 
@@ -110,22 +110,22 @@ describe("#42 Eugenics — base", () => {
 });
 
 describe("#42 Eugenics — radiant", () => {
-  it("§8 Conventions: the unrestated clause is kept, so it still exiles 8", () => {
+  it("§8 Conventions: the unrestated clause is kept, so it still exiles 7", () => {
     const s = castRadiant(12);
 
-    expect(s.pile("p1", "exile")).toHaveLength(8);
-    expect(s.pile("p1", "library")).toHaveLength(4);
+    expect(s.pile("p1", "exile")).toHaveLength(7);
+    expect(s.pile("p1", "library")).toHaveLength(5);
   });
 
   it("R60 the exiled cards are still never rolled", () => {
-    const s = castRadiant(58);
+    const s = castRadiant(57);
 
-    expect(s.pile("p1", "exile")).toHaveLength(8);
+    expect(s.pile("p1", "exile")).toHaveLength(7);
     expect(s.pile("p1", "exile").every((card) => !card.radiant)).toBe(true);
   });
 
   it("rolls per remaining card at 40% with Lucky 1, so neither 0 nor all 50 come up", () => {
-    const s = castRadiant(58);
+    const s = castRadiant(57);
     const remaining = s.pile("p1", "library");
 
     expect(remaining).toHaveLength(50);
@@ -137,15 +137,15 @@ describe("#42 Eugenics — radiant", () => {
   it("§6.1 Lucky 1 is exactly one extra roll per remaining card: 50 more draws than the base face", () => {
     // Same seed and same library, so the exile step consumes the same draws in both runs and the
     // whole difference in `rngCursor` is the second roll Lucky 1 takes for each remaining card.
-    const plain = cast(58, "eugenics-lucky");
-    const lucky = castRadiant(58, "eugenics-lucky");
+    const plain = cast(57, "eugenics-lucky");
+    const lucky = castRadiant(57, "eugenics-lucky");
 
     expect(lucky.state.rngCursor - plain.state.rngCursor).toBe(50);
   });
 
   it("§9.3 is deterministic: the same seed and steps give the same flags", () => {
-    expect(radiantFlags(castRadiant(58, "eugenics-r-determinism"))).toEqual(
-      radiantFlags(castRadiant(58, "eugenics-r-determinism")),
+    expect(radiantFlags(castRadiant(57, "eugenics-r-determinism"))).toEqual(
+      radiantFlags(castRadiant(57, "eugenics-r-determinism")),
     );
   });
 
@@ -156,7 +156,7 @@ describe("#42 Eugenics — radiant", () => {
 
 describe("#42 Eugenics — R311 the owner's library list", () => {
   it("R311 a card rolled Radiant inside the library is still listed with the face it went in with", () => {
-    const s = cast(58);
+    const s = cast(57);
     const remaining = s.pile("p1", "library");
     expect(remaining.some((card) => card.radiant)).toBe(true);
 

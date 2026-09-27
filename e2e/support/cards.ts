@@ -54,7 +54,7 @@ export const CARD_NAMES: Record<number, string> = {
   47: "Fig of Life",
   48: "5pek Controller",
   49: "Snom Bunny Mind Control",
-  50: "Kpop Fanatic",
+  50: "K-Pop Fanatic",
   51: "KY's Private Tutor",
   52: "Silly Silas",
   53: "Reno",

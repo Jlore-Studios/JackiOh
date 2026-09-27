@@ -1852,7 +1852,7 @@ describe("SPEC §11 R126–R127: delayed continuations (M3 gate)", () => {
   });
 
   it("R127 resolves a delayed continuation whose instance is gone, with ctx.self null and its data", () => {
-    // #50 Kpop Fanatic's ordinary case (R76): the card that scheduled the delay has left play. The
+    // #50 K-Pop Fanatic's ordinary case (R76): the card that scheduled the delay has left play. The
     // continuation names its script by stored def id, so it still re-enters — dropping it would
     // silently lose a sequence, which R113 forbids.
     const resume: Resume = {

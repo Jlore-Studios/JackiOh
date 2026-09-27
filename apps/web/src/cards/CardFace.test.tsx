@@ -198,9 +198,9 @@ describe("B12: the full face's DOM", () => {
     expect(atk.getAttribute("data-face-attack")).toBe("7");
     expect(atk.getAttribute("data-tone")).toBe("base");
     expect(atk.textContent?.trim()).toBe("7");
-    expect(hp.getAttribute("data-face-health")).toBe("2");
+    expect(hp.getAttribute("data-face-health")).toBe("1");
     expect(hp.getAttribute("data-tone")).toBe("base");
-    expect(hp.textContent?.trim()).toBe("2");
+    expect(hp.textContent?.trim()).toBe("1");
   });
 
   it("B12 a radiant unit's stats come from its radiant face, and live stats carry their tones", () => {
@@ -318,18 +318,17 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: destroy target enemy non-Human unit");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy target enemy non-Human Unit.");
     cleanup();
 
-    const alias = catalogFace("core-040");
-    const start = one(alias, '.card-text strong.cf-term[data-term="Start of turn"]');
-    expect(start.textContent).toBe("Start of your turn:");
+    const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
+    expect(start.textContent).toBe("Start of turn:");
     cleanup();
 
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Tribute 3", "Armor 3", "Taunt"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Tribute", "Armor", "Taunt"]);
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute"]);
   });
 
   it("B10 lower-case or glued words are not bolded", () => {
@@ -439,30 +438,31 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: flip 7 coins; +2 attack per heads, +2 max health per tails");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
     expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["7", "+2", "+2"]);
   });
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    expect(jilliax.textContent).toBe("Charge, Taunt, Lifesteal, Indestructible");
+    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
-      "Charge",
+      "Rush",
       "Taunt",
       "Lifesteal",
-      "Indestructible",
+      "Divine Shield",
+      "Reborn",
     ]);
     cleanup();
-    expect(one(catalogFace("core-025", true), ".card-text").textContent).toBe("Indestructible");
+    expect(one(catalogFace("core-025", true), ".card-text").textContent).toBe("Armor 7, Reborn");
   });
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const bigot = one(catalogFace("core-002", true), ".card-text");
-    expect(bigot.textContent).toBe("Cry: destroy all enemy non-Human units");
+    expect(bigot.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
     expect(bigot.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
-    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: enemy units −4/−4 (paid 4: −10/−10)");
+    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nPaid (4): −4/−4 instead.");
   });
 
   it("R277 R276 the five cards that had no radiant form print a radiant face that differs, marked (core-038, core-080, core-093-1, core-095-1, core-096)", () => {
@@ -569,7 +569,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-t-felinor", true, "s"],
       ["core-052", false, "l"],
       ["core-052", true, "xl"],
-      ["core-051", false, "xl"],
+      ["core-051", false, "l"],
       ["core-051", true, "xl"],
       ["core-093", false, "xxl"],
       ["core-095", true, "xxl"],

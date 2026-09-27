@@ -26,7 +26,7 @@ const PRINTED = 100;
  *  on a play. A radiant #25 is an Indestructible 7/7, and #98 an Indestructible Field Spell. */
 const TIMMY = "core-011";
 const FARM = "core-058";
-const ROCKY = "core-025";
+const ROCKY = "core-066"; // #66 The Rock: Indestructible on both faces
 const HEROIC = "core-098";
 const RUSH_TOKEN = "core-t-rush";
 /** #53 Reno, a 3-cost Unit: the spare card that keeps §2.5's auto-end off the assertions. */
@@ -306,7 +306,7 @@ describe("#100 Ceaseless Void — the Cry exiles every other permanent", () => {
 
   it("§6.1 Indestructible does not stop an exile, a unit or a Field Spell", () => {
     const s = boardScenario();
-    const rocky = must(s.unit("p2", 1), "the radiant #25");
+    const rocky = must(s.unit("p2", 1), "the radiant #66");
     const heroic = must(s.backrow("p2", 1), "the #98 Heroic Power");
     expect(s.stats(rocky).keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
     expect(s.stats(heroic).keywords.map((keyword) => keyword.kind)).toContain("Indestructible");

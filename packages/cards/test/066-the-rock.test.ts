@@ -139,8 +139,13 @@ describe("#66 The Rock", () => {
     expect(s.card(ROCK).tauntSuppressedTurn).toBe(s.state.turn);
   });
 
-  it("R69 an Indestructible unit whose max health falls to 0 dies anyway (#46 paid 4 → −10/−10)", () => {
-    const s = board({ p1: { hand: [{ def: AURA, radiant: true }] }, p2: { field: [ROCK] } });
+  it("R69 an Indestructible unit whose max health falls to 0 dies anyway (#46 radiant: 3 × −2/−2, then paid 4 → −4/−4)", () => {
+    const radiantAura = { def: AURA, radiant: true };
+    const s = board({
+      p1: { hand: [radiantAura], backrow: [radiantAura, radiantAura, radiantAura] },
+      p2: { field: [ROCK] },
+    });
+    s.expectStats(ROCK, { maxHealth: 4 });
     s.play(AURA, { embiggen: true });
     // No destroy effect is involved, so Indestructible has nothing to ignore: it is collected like
     // any other unit and fires Death (R69, Hearthstone).

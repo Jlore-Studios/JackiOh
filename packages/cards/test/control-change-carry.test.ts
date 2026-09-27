@@ -47,7 +47,7 @@ describe("R30: a stolen Twinspell's grant is its new controller's", () => {
     const twinspell = backrowAt(g, "p1", 3);
     g.endTurn();
 
-    // p2 takes it with Kpop Fanatic, so no Spell of p2's is in flight when control changes.
+    // p2 takes it with K-Pop Fanatic, so no Spell of p2's is in flight when control changes.
     g.play(KPOP, { targets: at(twinspell) });
     g.endTurn();
     expect(g.state.active).toBe("p1");
@@ -73,7 +73,7 @@ describe("R30: a stolen Twinspell's grant is its new controller's", () => {
 });
 
 describe("§6.2: a start-of-turn hook belongs to its controller's turn", () => {
-  it("§6.2 a Gravedigger stolen part-way through its controller's start-of-turn queue does not fire for the thief (R62, R153)", () => {
+  it("§6.2 a start-of-turn queue belongs to its controller: the Moths Mrow's Death takes mid-queue changes sides, and the Gravedigger behind it still fires for p1 (R62, R153)", () => {
     const g = scenario({
       p1: {
         hand: [VANILLA],
@@ -83,17 +83,21 @@ describe("§6.2: a start-of-turn hook belongs to its controller's turn", () => {
       },
       p2: { hand: [VANILLA], field: [{ def: MROW, lane: 1 }], graveyard: [SEVEN_SEVEN], library: [...LIBRARY] },
     });
+    const moths = unitAt(g, "p1", 1);
     const digger = unitAt(g, "p1", 2);
     const mrow = unitAt(g, "p2", 1);
     const p2Hand = g.hand("p2").length;
 
     // p1's start of turn queues Moths (lane 1), then Gravedigger (lane 2). Moths compels Mrow, which
-    // dies to the strike back; its Death steals every p1 unit for p2, Gravedigger included.
+    // dies to the strike back; its Death takes control of the unit that destroyed it (R361): Moths.
     g.startTurn();
     g.expectInZone(mrow, "graveyard");
-    expect(g.card(digger).controller).toBe("p2");
+    expect(g.card(moths).controller).toBe("p2");
+    expect(g.card(digger).controller).toBe("p1");
 
-    // Gravedigger is p2's now and this is p1's turn start: its queued hook fizzles.
+    // Gravedigger is still p1's, and this is p1's turn start: its queued hook fires for p1, and
+    // nothing of it reaches the player who took the Moths ahead of it.
+    expect(g.hand("p1").map((card) => card.defId)).toContain(POINTMASTER);
     expect(g.hand("p2").length).toBe(p2Hand);
     expect(g.pile("p2", "graveyard").map((card) => card.defId)).toContain(SEVEN_SEVEN);
   });

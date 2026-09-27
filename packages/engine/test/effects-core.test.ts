@@ -33,6 +33,7 @@ import {
   loseHealth,
   nextTurnMana,
   playerOf,
+  refreshMana as refreshEffect,
   remember,
   rememberRandom,
   shuffleCopiesOfSelf,
@@ -566,6 +567,32 @@ describe("§6.3 mana and next-turn mana (§2.3, M3-T1)", () => {
     expect(state.players.p1.mana.current).toBe(0);
   });
 
+  it("R364 Refresh gives back spent mana up to max and never past it (§6.3 Refresh)", () => {
+    const state = game("refresh-mana");
+    state.players.p1.mana = { current: 0, max: 4, nextTurnMod: 0, permMod: 0 };
+
+    // 0 of 4: three come back.
+    const events = run(state, refreshEffect({ amount: 3 }), { controller: "p1" });
+    expect(state.players.p1.mana.current).toBe(3);
+    expect(eventsOfType(events, "manaChanged")).toEqual([
+      { type: "manaChanged", player: "p1", current: 3, max: 4 },
+    ]);
+
+    // 3 of 4: only one is spent, so only one comes back — a Refresh never goes past max.
+    run(state, refreshEffect({ amount: 3 }), { controller: "p1" });
+    expect(state.players.p1.mana.current).toBe(4);
+
+    // Temporary mana above max is kept, and a Refresh there gives nothing and announces nothing.
+    state.players.p1.mana.current = 6;
+    expect(eventsOfType(run(state, refreshEffect({ amount: 3 }), { controller: "p1" }), "manaChanged")).toEqual([]);
+    expect(state.players.p1.mana.current).toBe(6);
+
+    // The enemy's pool when the effect names it.
+    state.players.p2.mana = { current: 1, max: 2, nextTurnMod: 0, permMod: 0 };
+    run(state, refreshEffect({ amount: 3, player: "enemy" }), { controller: "p1" });
+    expect(state.players.p2.mana.current).toBe(2);
+  });
+
   it("#21 next-turn mana changes the next refresh only, and the refresh floors at 0 (§2.3)", () => {
     const state = game("next-turn-mana");
     const side = state.players.p2;
@@ -721,6 +748,7 @@ describe("§6.3 the effects barrel (M3-T1)", () => {
       loseHealth({ player: "self", amount: 1 }),
       gainMana({ amount: 1 }),
       nextTurnMana({ amount: 1 }),
+      refreshEffect({ amount: 1 }),
       remember({ key: "k", value: 1 }),
       rememberRandom({ key: "k", options: [1] }),
       switchPositionOf({ target: { of: "self" } }),

@@ -17,13 +17,16 @@ import { base as sheepishBase, radiant as sheepishRadiant } from "../src/scripts
  * #21 Hinder rides along in p1's hand purely so the turn has something meaningful left after the
  * play and does not auto-end into p2's turn (R82; see the harness header).
  */
-function trapSet(card: string, radiantTrap = false) {
+function trapSet(card: string | { def: string; radiant: boolean }, radiantTrap = false) {
   return scenario({
     seed: "sheepish",
     p1: { hand: [card, "core-021"], health: 10, mana: 10 },
     p2: { backrow: [{ def: "core-041", radiant: radiantTrap, lane: 1 }], health: 30 },
   });
 }
+
+/** A Radiant #19 Midrange Menace: "Taunt, Immutable" (§8.1 row 19), the Immutable Unit to play. */
+const IMMUTABLE = { def: "core-019", radiant: true };
 
 function firedTrap(events: readonly { type: string }[]): boolean {
   return events.some((event) => event.type === "trapFired");
@@ -59,12 +62,13 @@ describe("#41 Sheepish — base", () => {
   });
 
   it("R17 an Immutable target still fires the trap, which is consumed with no effect (R23)", () => {
-    // #8 Mr. Vanilla is Immutable, and R23 makes Immutable refuse Transform on the card itself.
-    const s = trapSet("core-008").play("core-008", { zone: 1 });
+    // A Radiant #19 Midrange Menace is Immutable, and R23 makes Immutable refuse Transform on the
+    // card itself.
+    const s = trapSet(IMMUTABLE).play("core-019", { zone: 1 });
 
     expect(firedTrap(s.events)).toBe(true);
     expect(transformed(s.events)).toBe(false);
-    expect(s.unit("p1", 1)?.defId).toBe("core-008");
+    expect(s.unit("p1", 1)?.defId).toBe("core-019");
     s.expectInZone("core-041", "graveyard");
   });
 
@@ -131,11 +135,11 @@ describe("#41 Sheepish — radiant", () => {
 
   it("R120 an Also clause stands on its own: an Immutable target refuses the Transform and the rest of the text still resolves", () => {
     // §8 Conventions: "Also" adds a clause of its own, so it does not depend on the Transform.
-    const s = trapSet("core-008", true).play("core-008", { zone: 1 });
+    const s = trapSet(IMMUTABLE, true).play("core-019", { zone: 1 });
 
     expect(firedTrap(s.events)).toBe(true);
     expect(transformed(s.events)).toBe(false);
-    expect(s.unit("p1", 1)?.defId).toBe("core-008");
+    expect(s.unit("p1", 1)?.defId).toBe("core-019");
     expect(s.hand("p2").some((card) => card.defId === "core-055" && card.costOverride === 0)).toBe(true);
     s.expectInZone("core-041", "graveyard");
   });

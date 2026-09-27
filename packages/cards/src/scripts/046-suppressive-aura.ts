@@ -1,5 +1,6 @@
-// #46 Suppressive Aura (SPEC §8.2): "Aura: all units −2/−2 (paid 4: −5/−5)", radiant "Aura: enemy
-// units −4/−4 (paid 4: −10/−10)".
+// #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Paid (4): −2/−2 instead.", radiant
+// "Aura: Enemy Units have −2/−2. Paid (4): −4/−4 instead." (patch v0.1.1 halved the paid-2 numbers
+// and cut the paid-4 ones from −5/−5 and −10/−10).
 //
 // Reading the radiant cell (§8 Conventions): it restates the whole clause, so it replaces the base
 // one — the radiant face touches enemy units only and carries its own two numbers. Neither face
@@ -15,8 +16,8 @@
 // Attack floors at 0 but max health does not: §10.4 layer 5 lets it fall to 0 or less, and §4.5
 // step 1 collects such a unit at the next state check — R69 spells out that this reaches an
 // Indestructible unit too, because no destroy effect is involved: it dies, fires Death, may Reborn
-// and counts toward Ceaseless Void's destroyed counter. So radiant paid 4 (−10/−10) kills The Rock
-// (#66, 10/10 Indestructible) while no `destroy` verb appears anywhere below.
+// and counts toward Ceaseless Void's destroyed counter. So radiant paid 4 (−4/−4) kills an
+// Indestructible unit with 4 health or less while no `destroy` verb appears anywhere below.
 //
 // The price is not a choice this card asks for. R81 lists #46: zone, X, embiggen, Tribute and the
 // declared targets and modes all travel in the `play` action, and §10.6 adds that no Core card ever
@@ -25,7 +26,7 @@
 // and no `modes` declaration belongs here.
 //
 // R78: `embiggened` is one of the fields leaving the field resets, so a Suppressive Aura that is
-// bounced and replayed for 2 is a −2/−2 aura again, which is what "the chosen embiggen price" means.
+// bounced and replayed for 2 is a −1/−1 aura again, which is what "the chosen embiggen price" means.
 
 import type { AuraHook, Script } from "@jackioh/engine";
 import { cardDef } from "../catalog-data";
@@ -33,8 +34,8 @@ import { cardDef } from "../catalog-data";
 export const def = cardDef("core-046");
 
 /** The two prices of §8.2's cell: the base price, then the embiggen price (R65). */
-const BASE_PENALTIES = { paid2: 2, paid4: 5 };
-const RADIANT_PENALTIES = { paid2: 4, paid4: 10 };
+const BASE_PENALTIES = { paid2: 1, paid4: 2 };
+const RADIANT_PENALTIES = { paid2: 2, paid4: 4 };
 
 /**
  * "All units": every unit on either side, the controller's own included, at one of the two prices.

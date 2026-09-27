@@ -1,9 +1,10 @@
-// #25 4-mana 7/7 — SPEC §8.2, BUILD M4-T4 row 25: "Armor 7 zeroes a 7 hit; radiant Indestructible:
-// no damage, sacrifice and exile still remove it". The Radiant body is a 14/14 (R275).
+// #25 4-mana 7/7 — SPEC §8.2, BUILD M4-T4 row 25: "Armor 7 zeroes a 7 hit; radiant 14/14 Armor 7,
+// Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good"
+// (patch v0.1.1: the Radiant face used to be Indestructible).
 //
 // The §8.2 Engine cell is "Keywords only", so both scripts are empty and these fixtures prove the
 // keywords printed on the catalog faces do the work through §4.4 and §4.5. The removals need a
-// source: the sacrifice is #22 Carnivorous Cube, whose Cry sacrifices one of your other permanents
+// source: the Tribute is #22 Carnivorous Cube, whose Cry tributes one of your other permanents
 // (§6.3 Tribute), and the exile is #34 Collateral Damage, the Core card that exiles a target
 // permanent — so those two fixtures depend on those cards' scripts as well as on these keywords.
 
@@ -25,7 +26,7 @@ describe("#25 4-mana 7/7", () => {
   it("the keywords are printed on the catalog faces, so neither script grants anything", () => {
     // §10.4: Armor sums across sources, so a script that re-granted Armor 7 would show 14.
     expect(def.base.keywords).toEqual([{ kind: "Armor", n: 7 }]);
-    expect(def.radiant.keywords).toEqual([{ kind: "Indestructible" }]);
+    expect(def.radiant.keywords).toEqual([{ kind: "Armor", n: 7 }, { kind: "Reborn" }]);
     expect(base).toEqual({});
     expect(radiant).toEqual({});
   });
@@ -57,7 +58,7 @@ describe("#25 4-mana 7/7", () => {
   });
 
   describe("radiant", () => {
-    it("R275 the Radiant face is a 14/14 with Indestructible and no Armor", () => {
+    it("R275 the Radiant face is a 14/14 with Armor 7 and Reborn", () => {
       const s = scenario({
         seed: "big-radiant-face",
         p1: { hand: [FILLER], field: [{ def: BIG, radiant: true }] },
@@ -65,13 +66,13 @@ describe("#25 4-mana 7/7", () => {
       });
 
       s.expectStats(BIG, { attack: 14, health: 14, maxHealth: 14 });
-      expect(unitViewOf(s, "p1", 1)?.keywords).toEqual([{ kind: "Indestructible" }]);
-      expect(unitViewOf(s, "p1", 1)?.armor).toBe(0);
+      expect(unitViewOf(s, "p1", 1)?.keywords).toEqual([{ kind: "Armor", n: 7 }, { kind: "Reborn" }]);
+      expect(unitViewOf(s, "p1", 1)?.armor).toBe(7);
     });
 
-    it("§4.4 step 4: Indestructible takes no damage at all", () => {
+    it("§4.4 step 2: its Armor 7 zeroes a 7 hit, and its 14 back kills a base 7/7 through that one's Armor", () => {
       const s = scenario({
-        seed: "big-indestructible",
+        seed: "big-radiant-armor",
         p1: { hand: [FILLER], field: [{ def: BIG, radiant: true }] },
         p2: { hand: [FILLER], field: [BIG] },
       });
@@ -83,16 +84,28 @@ describe("#25 4-mana 7/7", () => {
       s.attack(theirs, mine);
 
       s.expectStats(mine, { health: 14, maxHealth: 14 });
-      s.expectInZone(mine, "field");
-      // It has no Armor of its own, so it is step 4 and not step 2 that stopped the hit.
-      expect(unitViewOf(s, "p1", 1)?.armor).toBe(0);
-      expect(unitViewOf(s, "p1", 1)?.keywords).toEqual([{ kind: "Indestructible" }]);
-      // The radiant 14/14 struck back for 14: the attacker's Armor 7 took 7 of it (§4.4 step 2) and
-      // the other 7 killed the base 7/7.
       s.expectInZone(theirs, "graveyard");
     });
 
-    it("§6.1, §6.3 a sacrifice still removes it", () => {
+    it("§4.5 step 4: Reborn brings it back once, at 1 health and without Reborn, when it dies in combat", () => {
+      const s = scenario({
+        seed: "big-radiant-reborn",
+        active: "p2",
+        p1: { hand: [FILLER], field: [{ def: BIG, radiant: true, damage: 10 }], library: [FILLER] },
+        // A radiant 18/18 Midrange Menace hits for 18: 11 through the Armor, which kills the 4 left.
+        p2: { hand: [FILLER], field: [{ def: "core-019", radiant: true }], library: [FILLER] },
+      });
+      const big = s.card(BIG);
+
+      s.attack("core-019", big);
+
+      s.expectInZone(big, "field");
+      s.expectStats(big, { health: 1, maxHealth: 14 });
+      expect(unitViewOf(s, "p1", 1)?.keywords).toEqual([{ kind: "Armor", n: 7 }]);
+      s.expectEvents("destroyed", "summoned");
+    });
+
+    it("§6.3 a Tribute is a death too, so Reborn brings it back from that as well", () => {
       const s = scenario({
         seed: "big-sacrifice",
         p1: { hand: [CUBE, FILLER], field: [{ def: BIG, radiant: true }] },
@@ -101,12 +114,13 @@ describe("#25 4-mana 7/7", () => {
       const big = s.card(BIG);
       s.play(CUBE, { targets: [{ pick: "instance", instanceId: big.id }] });
 
-      // §6.3 Sacrifice "bypasses Indestructible" and counts as a death.
-      s.expectInZone(big, "graveyard");
-      s.expectEvents("destroyed", "enteredGraveyard");
+      // §6.3 Sacrifice counts as a death, and §6.1 Reborn answers it (R64).
+      s.expectEvents("destroyed", "summoned");
+      s.expectInZone(big, "field");
+      s.expectStats(big, { health: 1 });
     });
 
-    it("§6.1, §6.3 an exile still removes it", () => {
+    it("§6.1, §6.3 an exile removes it for good: no death, so no Reborn", () => {
       const s = scenario({
         seed: "big-exile",
         p1: { hand: [EXILER, FILLER], field: ["core-008"] },

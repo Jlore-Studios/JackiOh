@@ -1,8 +1,8 @@
-// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35).
+// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365).
 //
 // BUILD M4-T4's must-pass row: "Zone counts preserved; board cards replaced by same-type
 // Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes
-// Unlicensed Experimentation (R35); radiant gives radiant cards".
+// Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards".
 //
 // The board fixture covers every permanent type at once: a Unit, an Immutable Unit (R23), a Field
 // Spell, a Trap and a Field Trap. The pool is asserted as the six ids R35 names, so if `query`, the
@@ -27,14 +27,15 @@ const LEGENDARY_FIELD_SPELL = "core-093";
 /** The only Legendary Trap: #85 Unlicensed Experimentation — and "Field Trap counts as Trap". */
 const LEGENDARY_TRAP = "core-085";
 
-/** Board fixtures: #11 Tempo Timmy (Unit), #8 Mr. Vanilla (Immutable Unit), #73 (Field Spell),
- *  #41 Sheepish (Trap), #18 Bread and Butter (Field Trap). */
+/** Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
+ *  (Field Spell), #41 Sheepish (Trap), #18 Bread and Butter (Field Trap). */
+const IMMUTABLE = "core-019";
 function board(radiantFace = false) {
   const s = scenario({
     seed: "transmogulate",
     p1: {
       hand: [TRANSMOGULATE, "core-056"],
-      field: ["core-011", "core-008"],
+      field: ["core-011", { def: IMMUTABLE, radiant: true }],
       backrow: [
         { def: "core-073", lane: 1 },
         { def: "core-041", lane: 2 },
@@ -71,22 +72,24 @@ describe("#83 Transmogulate — base", () => {
 
   it("R23 an Immutable board card stays, since this is a Transform", () => {
     const s = board();
-    const immutable = s.card("core-008").id;
+    const immutable = s.card(IMMUTABLE).id;
     s.play(TRANSMOGULATE);
 
     expect(s.unit("p1", 2)?.id).toBe(immutable);
-    expect(s.unit("p1", 2)?.defId).toBe("core-008");
+    expect(s.unit("p1", 2)?.defId).toBe(IMMUTABLE);
   });
 
-  it("R35 same counts per zone, in library, graveyard and exile", () => {
+  it("R35 R365 same counts per zone, in hand, library, graveyard and exile", () => {
     const s = board();
     const before = {
+      hand: s.hand("p1").length - 1,
       library: s.pile("p1", "library").length,
       graveyard: s.pile("p1", "graveyard").length,
       exile: s.pile("p1", "exile").length,
     };
     s.play(TRANSMOGULATE);
 
+    expect(s.hand("p1")).toHaveLength(before.hand);
     expect(s.pile("p1", "library")).toHaveLength(before.library);
     expect(s.pile("p1", "exile")).toHaveLength(before.exile);
     // Plus Transmogulate itself, which was resolving while the replacements happened.
@@ -100,6 +103,7 @@ describe("#83 Transmogulate — base", () => {
     s.play(TRANSMOGULATE);
 
     const replaced = [
+      ...s.hand("p1"),
       ...s.pile("p1", "library"),
       ...s.pile("p1", "exile"),
       ...s.pile("p1", "graveyard").filter((card) => card.id !== spell),
@@ -111,8 +115,8 @@ describe("#83 Transmogulate — base", () => {
     ];
 
     for (const card of replaced) {
-      // Mr. Vanilla is the one card R23 left alone.
-      if (card.defId === "core-008") continue;
+      // The Immutable Menace is the one card R23 left alone.
+      if (card.defId === IMMUTABLE) continue;
       expect(POOL, `${card.defId} is not in R35's pool`).toContain(card.defId);
     }
   });
@@ -128,13 +132,24 @@ describe("#83 Transmogulate — base", () => {
     for (const id of [...oldLibrary, ...oldGraveyard]) s.expectInZone(id, "gone");
   });
 
-  it("§8 the four zones are library, board, GY and exile: your hand is untouched", () => {
+  it("R365 your hand is replaced too: the card in it ceases to exist and a pool card takes its place", () => {
     const s = board();
     const spare = s.hand("p1").find((card) => card.defId === "core-056")?.id ?? "";
     s.play(TRANSMOGULATE);
 
-    s.expectInZone(spare, "hand");
-    expect(s.hand("p1").map((card) => card.defId)).toEqual(["core-056"]);
+    s.expectInZone(spare, "gone");
+    expect(s.hand("p1")).toHaveLength(1);
+    expect(POOL).toContain(s.hand("p1")[0]?.defId);
+    expect(s.hand("p1")[0]?.radiant).toBe(false);
+  });
+
+  it("R365 the opponent never learns what the hand became (R177)", () => {
+    const s = board();
+    s.play(TRANSMOGULATE);
+
+    expect(s.view("p2").opponent.hand).toEqual({ count: 1 });
+    const seen = JSON.stringify(s.view("p2"));
+    expect(seen).not.toContain(s.hand("p1")[0]?.id ?? "no-card");
   });
 
   it("§8 'your' library and board: the opponent keeps everything", () => {
@@ -170,6 +185,7 @@ describe("#83 Transmogulate — radiant", () => {
     expect(s.backrow("p1", 3)?.radiant).toBe(true);
     expect(s.pile("p1", "library").map((card) => card.radiant)).toEqual([true, true]);
     expect(s.pile("p1", "exile").map((card) => card.radiant)).toEqual([true]);
+    expect(s.hand("p1").map((card) => card.radiant)).toEqual([true]);
     expect(
       s.pile("p1", "graveyard").filter((card) => card.id !== spell).map((card) => card.radiant),
     ).toEqual([true]);
@@ -187,9 +203,10 @@ describe("#83 Transmogulate — radiant", () => {
   it("R23 an Immutable board card still stays on the radiant face", () => {
     const s = board(true).play(TRANSMOGULATE);
 
-    expect(s.unit("p1", 2)?.defId).toBe("core-008");
-    // Not made Radiant either: a refused Transform changes nothing about the card.
-    expect(s.unit("p1", 2)?.radiant).toBe(false);
+    const immutable = s.unit("p1", 2);
+    expect(immutable?.defId).toBe(IMMUTABLE);
+    // A refused Transform changes nothing about the card: it is the Menace it was.
+    expect(immutable?.radiant).toBe(true);
   });
 });
 

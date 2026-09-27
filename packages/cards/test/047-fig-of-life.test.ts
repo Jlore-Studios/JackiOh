@@ -21,7 +21,7 @@ const FIG = "core-047";
 /** The radiant face in hand, so the radiant text is the one that resolves (§5.2). */
 const RADIANT_FIG = { def: FIG, radiant: true } as const;
 const SEVEN_SEVEN = "core-025";
-const POINTMASTER = "core-020";
+const DUELIST = "core-045"; // #45 Deft Duelist, 4/3
 /** A unit that does nothing, kept on the board so a turn never runs out of legal actions (R82). */
 const BYSTANDER = SEVEN_SEVEN;
 
@@ -46,15 +46,15 @@ describe("#47 Fig of Life", () => {
   it("R19 base: heals an ENEMY unit — the target set is either side", () => {
     const g = scenario({
       p1: { hand: [FIG] },
-      p2: { field: [{ def: POINTMASTER, lane: 3, damage: 1 }] },
+      p2: { field: [{ def: DUELIST, lane: 3, damage: 1 }] },
     });
     const theirs = g.unit("p2", 3);
-    if (theirs === null) throw new Error("setup: p2 should hold Pointmaster");
-    g.expectStats(theirs, { health: 1, maxHealth: 2 });
+    if (theirs === null) throw new Error("setup: p2 should hold Deft Duelist");
+    g.expectStats(theirs, { health: 2, maxHealth: 3 });
 
     g.play(FIG, { targets: [{ pick: "instance", instanceId: theirs.id }] });
 
-    g.expectStats(theirs, { health: 2, maxHealth: 2 });
+    g.expectStats(theirs, { health: 3, maxHealth: 3 });
   });
 
   it("R19 base: heals your own hero with no cap — 30 becomes 50 (§3, §6.3)", () => {

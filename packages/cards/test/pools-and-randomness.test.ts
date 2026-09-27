@@ -91,13 +91,14 @@ describe("R129: an effect that finds nothing to do draws no random numbers", () 
   });
 
   it("R129 Transmogulate draws no randomness for an Immutable board card it leaves standing (R35, R23)", () => {
-    const s = scenario({ p1: { hand: [TRANSMOGULATE], field: [VANILLA], mana: 4 } });
-    const vanilla = s.unit("p1", 1);
+    // A Radiant #19 Midrange Menace is Immutable (R23, R35).
+    const s = scenario({ p1: { hand: [TRANSMOGULATE], field: [{ def: "core-019", radiant: true }], mana: 4 } });
+    const menace = s.unit("p1", 1);
     const before = s.state.rngCursor;
     s.play(TRANSMOGULATE);
-    // Mr. Vanilla is Immutable (R23, R35) and the library, graveyard and exile are empty: nothing is
+    // The Menace is Immutable and the hand, library, graveyard and exile are empty: nothing is
     // replaced, so the effect found nothing to do.
-    expect(s.unit("p1", 1)?.id).toBe(vanilla?.id);
+    expect(s.unit("p1", 1)?.id).toBe(menace?.id);
     expect(s.state.rngCursor).toBe(before);
   });
 

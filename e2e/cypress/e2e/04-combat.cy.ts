@@ -8,12 +8,12 @@
 // damage pipeline) before the spec is run, never read back off the UI — that is the point of the
 // third assertion. The arithmetic, once, for the three combats this spec drives:
 //
-//  A. #8 Mr. Vanilla (3/3, ATK) attacks #8 Mr. Vanilla (3/3, DEF).
+//  A. #8 Mr. Vanilla (4/4, ATK) attacks #8 Mr. Vanilla (4/4, DEF).
 //     Neither has First Strike, so §4.3 step 2 is simultaneous.
 //     Attacker → defender: step 1 no Divine Shield; step 2 Armor = Defense Position's +1 (§4.1),
-//       3 − 1 = 2; step 3 not a hero; step 5 apply 2. Pop "2", defender at 3 − 2 = 1 health.
+//       4 − 1 = 3; step 3 not a hero; step 5 apply 3. Pop "3", defender at 4 − 3 = 1 health.
 //     Defender → attacker: "a defender in Defense Position still strikes back with its full
-//       attack" (§4.3), and the attacker has no Armor: 3. Pop "3", attacker at 0 → destroyed at
+//       attack" (§4.3), and the attacker has no Armor: 4. Pop "4", attacker at 0 → destroyed at
 //       the state check (§4.5).
 //
 //  B. #11 Tempo Timmy (3/3, First Strike) attacks #56 Jilliax (3/2, Divine Shield, Taunt,
@@ -26,10 +26,10 @@
 //     Step 8, Lifesteal on the source: heal Jilliax's controller's hero by the 3 actually dealt.
 //       Heal pop "3", and that hero goes 30 → 33 (§3: "Health has no upper cap").
 //
-//  C. #20 Pointmaster (7/2, First Strike) attacks the same Jilliax, now shieldless.
+//  C. #20 Pointmaster (7/1, First Strike) attacks the same Jilliax, now shieldless.
 //     Step 1: no shield, no Armor → 7 applied. Pop "7", Jilliax at 2 − 7 → destroyed in step 1,
 //       and §4.3 says "If D is destroyed here it deals nothing" — so Pointmaster ends the combat
-//       at 2/2, untouched, and Jilliax's Lifesteal heals nothing.
+//       at 7/1, untouched, and Jilliax's Lifesteal heals nothing.
 //
 // The pops are asserted while the animation runs, which is the only time they exist (BUILD M5-T4:
 // the number comes from the event the runner is animating on that element), so these two combats
@@ -109,7 +109,7 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     ensureSeat("p1");
     cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 1 } });
 
-    // Player 2 puts up a plain 3/3 first and the Taunt unit after it, so the board holds one legal
+    // Player 2 puts up a plain 4/4 first and the Taunt unit after it, so the board holds one legal
     // and one illegal target when the attack is declared.
     advanceToTurn(2);
     cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
@@ -167,16 +167,16 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
           expectHighlight(cardId(timmy), false, "player 1's other unit is not a legal target");
           expectHighlight(heroId("opponent"), false, "player 1's hero is not a legal target while Taunt is up");
 
-          // Combat A of the header: 3 − 1 Armor = 2 out, 3 back with no Armor in the way.
+          // Combat A of the header: 4 − 1 Armor = 3 out, 4 back with no Armor in the way.
           cy.get(ts(cardId(defender))).click();
-          cy.get(ts(cardId(defender))).find(DAMAGE_POP).should("have.text", "2");
-          cy.get(ts(cardId(attacker))).find(DAMAGE_POP).should("have.text", "3");
+          cy.get(ts(cardId(defender))).find(DAMAGE_POP).should("have.text", "3");
+          cy.get(ts(cardId(attacker))).find(DAMAGE_POP).should("have.text", "4");
           cy.settled();
 
           cy.get(ts(cardId(defender))).find(healthIs(1)).should("exist");
-          cy.get(ts(cardId(defender))).find(maxHealthIs(3)).should("exist");
+          cy.get(ts(cardId(defender))).find(maxHealthIs(4)).should("exist");
           cy.get(ts(cardId(defender))).should("have.attr", "data-position", "DEF");
-          // The attacker took its own 3 and died at the state check (§4.5 step 1).
+          // The attacker took its own 4 and died at the state check (§4.5 step 1).
           cy.get(ts(cardId(attacker))).should("not.exist");
           cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
         });
@@ -228,9 +228,9 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
 
           cy.get(ts(cardId(jilliax))).should("not.exist");
           cy.get(ts(graveyardCountId("opponent"))).should("have.text", "1");
-          // "If D is destroyed here it deals nothing" (§4.3): Pointmaster is a 7/2 at full health.
+          // "If D is destroyed here it deals nothing" (§4.3): Pointmaster is a 7/1 at full health.
           cy.get(ts(cardId(pointmaster))).find(attackIs(7)).should("exist");
-          cy.get(ts(cardId(pointmaster))).find(healthIs(2)).should("exist");
+          cy.get(ts(cardId(pointmaster))).find(healthIs(1)).should("exist");
           cy.get(ts(cardId(pointmaster))).find(DAMAGE_POP).should("not.exist");
           // The heal did not run twice: Jilliax dealt nothing in this combat.
           cy.get(ts(heroId("opponent"))).find(healthIs(33)).should("exist");

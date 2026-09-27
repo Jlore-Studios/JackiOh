@@ -99,7 +99,8 @@ export type PlayerModifier = {
   id: string;
   expiry: ModifierExpiry;
 } & (
-  | { kind: "costDiscount"; amount: number; onlyType?: "Spell"; onlyCurrentCost?: number; oncePerTurn?: boolean }
+  /** `minCurrentCost`: R48, R363 — only a card whose cost is then this or more (#77, "Cost (4)+"). */
+  | { kind: "costDiscount"; amount: number; onlyType?: "Spell"; minCurrentCost?: number; oncePerTurn?: boolean }
   | { kind: "echoNextSpell"; amount: number; sourceId?: string }
   | { kind: "radiantFirstCheapCard"; maxCost: number; usedTurn?: number }
   | { kind: "comboDraw"; amount: number }

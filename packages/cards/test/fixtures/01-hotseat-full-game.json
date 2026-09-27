@@ -303,7 +303,7 @@
       "instanceId": "c20",
       "zone": {
         "row": "units",
-        "lane": 4
+        "lane": 1
       },
       "playerId": "p1",
       "nonce": "n33"
@@ -313,31 +313,24 @@
       "instanceId": "c10",
       "zone": {
         "row": "units",
-        "lane": 5
+        "lane": 4
       },
       "playerId": "p1",
       "nonce": "n34"
     },
     {
       "type": "attack",
-      "attackerId": "c8",
+      "attackerId": "c16",
       "targetId": "c35",
       "playerId": "p1",
       "nonce": "n35"
     },
     {
       "type": "attack",
-      "attackerId": "c16",
-      "targetId": "c35",
-      "playerId": "p1",
-      "nonce": "n36"
-    },
-    {
-      "type": "attack",
       "attackerId": "c1",
       "targetId": "hero-p2",
       "playerId": "p1",
-      "nonce": "n37"
+      "nonce": "n36"
     }
   ]
 }

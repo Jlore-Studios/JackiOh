@@ -134,10 +134,14 @@ describe("R280 what a formula comes to now", () => {
     });
     const { container } = render(<CardFace face={face} layout="full" />);
     expect(values(container)).toEqual(["{2}", "{3}", "{9}"]);
-    const lines = (container.querySelector(".card-text")?.textContent ?? "").split("\n");
-    expect(lines[0]).toContain("+1 mana per Plague Token {2}");
-    expect(lines[1]).toContain("+1 mana per Plague Token {3}");
-    expect(lines[1]?.endsWith("{9}")).toBe(true);
+    // Each ingredient's text is its own lines (R102, R366), so the lines that print the formula are
+    // one per ingredient, in order, and the value the text does not print comes at the very end.
+    const text = container.querySelector(".card-text")?.textContent ?? "";
+    const formulaLines = text.split("\n").filter((line) => line.includes("+1 mana per Plague Token"));
+    expect(formulaLines).toHaveLength(2);
+    expect(formulaLines[0]).toContain("+1 mana per Plague Token {2}");
+    expect(formulaLines[1]).toContain("+1 mana per Plague Token {3}");
+    expect(text.endsWith("{9}")).toBe(true);
   });
 
   it("R280 the collection prints no value, and a face in play with no preview prints none", () => {

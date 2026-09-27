@@ -235,7 +235,7 @@ describe("#89 Corpse Eater — R219", () => {
     const eater = g.hand("p1").find((card) => card.defId === EATER);
     if (eater === undefined) throw new Error("Corpse Eater in hand");
 
-    g.play(SUPPRESSIVE_AURA); // −2/−2: Gary is −1/−1 and dies at the state check (§4.5)
+    g.play(SUPPRESSIVE_AURA, { embiggen: true }); // paid 4, −2/−2: Gary is −1/−1 and dies at the state check (§4.5)
     g.expectInZone(GARY, "graveyard");
     const died = g.events.find((event) => event.type === "destroyed");
     expect(died).toMatchObject({ attack: 0, maxHealth: -1 });

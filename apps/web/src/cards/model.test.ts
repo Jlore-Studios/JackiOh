@@ -52,7 +52,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
       set: "Core",
       radiant: false,
     });
-    expect(f.stats).toEqual({ attack: 7, health: 2, maxHealth: 2, attackTone: "base", healthTone: "base" });
+    expect(f.stats).toEqual({ attack: 7, health: 1, maxHealth: 1, attackTone: "base", healthTone: "base" });
     expect(f.keywords).toEqual([{ kind: "First Strike" }]);
     expect(f.text).toEqual({ full: "First Strike", marks: [] });
   });
@@ -77,16 +77,16 @@ describe("B7: faceModel copies the def and picks the face", () => {
   it("B7 a base face prints its base text and marks nothing, even when the radiant text differs", () => {
     const f = face("core-002", false);
     expect(def("core-002").radiant.text).not.toBe(def("core-002").base.text);
-    expect(f.text).toEqual({ full: "Cry: destroy target enemy non-Human unit", marks: [] });
+    expect(f.text).toEqual({ full: "Cry: Destroy target enemy non-Human Unit.", marks: [] });
   });
 
-  it("R277 a radiant face that adds a keyword marks just the keyword (core-008)", () => {
-    const f = face("core-008", true);
-    expect(f.text.full).toBe("Immutable, Divine Shield");
+  it("R277 a radiant face that adds a keyword marks just the keyword (core-020)", () => {
+    const f = face("core-020", true);
+    expect(f.text.full).toBe("First Strike, Divine Shield");
     expect(markedText(f.text.full, f.text.marks)).toEqual(["Divine Shield"]);
     // Stats still come from the radiant face.
-    expect(f.stats?.attack).toBe(7);
-    expect(f.stats?.maxHealth).toBe(7);
+    expect(f.stats?.attack).toBe(14);
+    expect(f.stats?.maxHealth).toBe(2);
   });
 
   it("R277 a face whose base text is empty marks the whole radiant text (core-t-felinor, core-t-bread)", () => {
@@ -208,38 +208,41 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   it("R277 a changed number is the only mark (core-044, core-053, core-013, core-047)", () => {
     expect(face("core-044", true).text.full).toBe("Pierce\nDeal 9 damage. Exile this.");
     expect(marksOf("core-044")).toEqual(["9"]);
-    expect(marksOf("core-053")).toEqual(["60", "60"]);
+    expect(marksOf("core-053")).toEqual(["60"]);
     expect(marksOf("core-013")).toEqual(["5"]);
     expect(marksOf("core-047")).toEqual(["50"]);
   });
 
-  it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-055, core-019)", () => {
+  it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
     const jilliax = face("core-056", true);
-    expect(jilliax.text.full).toBe("Charge, Taunt, Lifesteal, Indestructible");
-    expect(jilliax.text.full).not.toMatch(/Rush|Divine Shield/);
-    expect(marksOf("core-056")).toEqual(["Charge", "Indestructible"]);
-    expect(marksOf("core-055")).toEqual(["Indestructible"]);
+    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn");
+    expect(marksOf("core-056")).toEqual(["Reborn"]);
+    expect(marksOf("core-025")).toEqual(["Reborn"]);
     expect(marksOf("core-019")).toEqual(["Immutable"]);
   });
 
   it("R277 an added clause is marked as one phrase (core-003, core-016, core-093)", () => {
-    expect(marksOf("core-003")).toEqual(["Death: summon a base Right-house defender"]);
-    expect(marksOf("core-016")).toEqual(["and the units adjacent to it on its side"]);
+    expect(marksOf("core-003")).toEqual(["Death: Summon a base Right-house defender"]);
+    expect(marksOf("core-016")).toEqual(["and the Units adjacent to it"]);
     expect(marksOf("core-093")).toEqual(["Start of turn: Add a Combo-Fodder to your hand"]);
   });
 
   it("R277 a word the radiant face drops is simply absent, and case alone marks nothing (core-067, core-017)", () => {
-    expect(face("core-067", true).text.full).not.toContain("1-cost");
+    expect(face("core-067", true).text.full).not.toContain("Cost (1)");
     expect(marksOf("core-067")).toEqual(["Radiant"]);
-    // "Bounce all units on both sides" reappears lower-case inside the radiant Choose one.
-    expect(marksOf("core-017").join(" | ")).not.toContain("bounce all units on both sides");
+    // "Bounce all Units" reappears lower-case inside the radiant Choose one.
+    expect(marksOf("core-017").join(" | ")).not.toContain("Bounce all Units");
   });
 
   it("R277 every catalog radiant face prints its catalog text and marks at least one stretch the base text lacks", () => {
+    // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
+    // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
+    // doubled stats are what R277 marks on it.
+    const pureDeletions = new Set(["core-055"]);
     for (const card of DEFS) {
       const f = face(card.id, true);
       expect(f.text.full, card.id).toBe(card.radiant.text);
-      if (card.radiant.text === card.base.text) {
+      if (card.radiant.text === card.base.text || pureDeletions.has(card.id)) {
         expect(f.text.marks, card.id).toEqual([]);
         continue;
       }
@@ -480,7 +483,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("Call to Chaos in the collection prints its real text, both faces", () => {
     expect(face("core-095", false).text.full).toBe(def("core-095").base.text);
-    expect(face("core-095", true).text.full).toContain("cast a random Call to Chaos");
+    expect(face("core-095", true).text.full).toContain("Cast a random Call to Chaos");
   });
 
   it("R243 a Vanilla unit says its text is gone, and prints the keywords it still has as gained", () => {
@@ -524,8 +527,8 @@ describe("a face in play is the card as the view says it stands; the collection'
     const fused = fusedDef([def("core-011"), def("core-002")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: true, inPlay: {} });
     expect(f.text.full.split("\n")).toEqual([def("core-011").radiant.text, def("core-002").radiant.text]);
-    // Tempo Timmy's Charge, and Bigot's "all … units", each against its own base line.
-    expect(markedText(f.text.full, f.text.marks)).toEqual(["Charge", "all", "units"]);
+    // Tempo Timmy's Charge, and Bigot's "all … Units", each against its own base line.
+    expect(markedText(f.text.full, f.text.marks)).toEqual(["Charge", "all", "Units"]);
   });
 
   it("R280 a face in play carries the values its view names; the collection's carries none", () => {
