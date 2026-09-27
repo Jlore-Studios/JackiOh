@@ -94,8 +94,8 @@ export function modifierIsLive(state: GameState, mod: PlayerModifier): boolean {
 
 /**
  * R65: start from costOverride or the printed cost, add the instance's costMod, add the player's
- * discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost card costs
- * exactly X and ignores modifiers, unless an override makes it free.
+ * discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost
+ * card costs exactly X and ignores modifiers, unless an override makes it free.
  *
  * The player's discounts and Curvature are prices for a play — §6.3's Cost is "what a card costs to
  * play now", #35's is "the next Spell you play", #78's "this turn your cards cost 1 less", and R48
