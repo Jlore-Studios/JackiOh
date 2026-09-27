@@ -30,12 +30,8 @@ export const AI_DECK = {
   /** Share of each bucket at manaCap 4; each crystal above 4 moves `curveShiftPerMana` from "0-1" to "4+". */
   curve: { "0-1": 0.3, "2": 0.33, "3": 0.22, "4+": 0.15 },
   curveShiftPerMana: 0.025,
-  /**
-   * Allowed gap between a bucket's mean share over many seeds and its target. 0.09 since patch
-   * v0.1.1's sweep (R186) banned GIGA Glowy Jelly Bean: the unbanned "4+" supply is thin enough that
-   * 25- and 30-card decks at manaCap 7 fall 0.081 and 0.084 short of that bucket's target.
-   */
-  curveTolerance: 0.09,
+  /** Allowed gap between a bucket's mean share over many seeds and its target. */
+  curveTolerance: 0.08,
   minUnitShare: 0.45,
   /** Chance of rolling a theme when `theme` is undefined. */
   themeChance: 0.35,

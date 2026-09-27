@@ -38,8 +38,8 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-045", // Deft Duelist
       "core-061", // Prejudiced Postdoc
       "core-069", // Call to Arms
+      "core-077", // Professor Curvature
       "core-030", // Archivist
-      "core-091", // Fed Fauci
       "core-013", // Jlockeed Shredder-10
       "core-019", // Midrange Menace
       "core-053", // Reno
@@ -57,7 +57,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-008", // Mr. Vanilla
       "core-011", // Tempo Timmy
       "core-015", // Me and Mr Token
-      "core-031", // KY's Math Equation
+      "core-035", // Lunar Eclipse
       "core-044", // True Strike
       "core-063", // Plastic Surgery
       "core-074", // Adaptive UI
@@ -81,7 +81,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
     identity: "Removal, Taunts and card draw: weather the storm, then win with giants.",
     cards: [
       "core-005", // Stockpile
-      "core-031", // KY's Math Equation
+      "core-035", // Lunar Eclipse
       "core-036", // Magic Jammed
       "core-041", // Sheepish
       "core-044", // True Strike

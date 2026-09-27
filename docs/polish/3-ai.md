@@ -694,7 +694,7 @@ export const AI_DECK = {
   curve: { "0-1": 0.3, "2": 0.33, "3": 0.22, "4+": 0.15 },
   curveShiftPerMana: 0.025,
   /** Allowed gap between a bucket's mean share over many seeds and its target. */
-  curveTolerance: 0.09,
+  curveTolerance: 0.08,
   minUnitShare: 0.45,
   /** Chance of rolling a theme when `theme` is undefined. */
   themeChance: 0.35,

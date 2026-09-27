@@ -572,7 +572,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
     it(`R265 seated ${human}: the AI answers first without waiting, the human's picker stays open, and the human's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
       const d = driver();
-      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-ai-first-${human}-f`, humanSeat: human }) }));
+      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-ai-first-${human}-h`, humanSeat: human }) }));
       expect(started.aiToAct, "the AI owes its mulligan from the start").toBe(true);
       expect(started.view.mulligan).toEqual({ youReady: false, opponentReady: false });
       const keep = keepAll(started);

@@ -54,9 +54,5 @@ export const lesson: TutorialLesson = {
   // one setting the trap beside a 2-cost card (on its third turn, on the coach's line and on the
   // autopilot's), rather than on a cheap unit or spell. No Gravedigger, which could hand the AI its
   // fired trap back turn after turn.
-  aiShadowBanned: {
-    "core-077":
-      "Professor Curvature is a plain 2-cost 3/3 here, and its Cry helps only Cost (4)+ cards, which the AI's mana cap never reaches; the lesson's tests show the AI holding it once drawn, as the ban's sweep saw a Hard AI hold it, and the deal was tuned with it in place",
-  },
   retryTip: "A face-down card could be a trap. Test it with a cheap unit before you play your best one.",
 };

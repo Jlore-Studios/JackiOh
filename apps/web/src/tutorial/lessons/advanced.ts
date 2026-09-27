@@ -60,9 +60,5 @@ export const lesson: TutorialLesson = {
     "core-029", // GIGA Glowy Jelly Bean: costs 6, never cast
     "core-014", // Jlockeed's Weapons: costs 4, never cast
   ],
-  aiShadowBanned: {
-    "core-029":
-      "GIGA Glowy Jelly Bean is one of the four cards above the AI's mana cap, dead weight on purpose; the lesson's tests show it held and never cast, which is what the ban's sweep saw a Hard AI do",
-  },
   retryTip: "Send expensive cards back in the mulligan, play The Coin on your first turn, and let big units like The Rock do the fighting.",
 };
