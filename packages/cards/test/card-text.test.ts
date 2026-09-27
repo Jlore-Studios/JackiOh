@@ -45,7 +45,7 @@ function facesOf(cards: readonly CardDef[]): Face[] {
 
 /** How a printed keyword reads in the text: "Armor 7", "Lucky 1", the Bread Token's "Armor X". */
 function keywordLabel(keyword: Keyword): string {
-  if (keyword.n === undefined) return keyword.kind;
+  if (!("n" in keyword)) return keyword.kind;
   return keyword.kind === "Armor" && keyword.n === 0 ? "Armor X" : `${keyword.kind} ${String(keyword.n)}`;
 }
 
