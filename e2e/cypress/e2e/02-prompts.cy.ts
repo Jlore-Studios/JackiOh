@@ -81,7 +81,6 @@ const SEEDS = {
 const attackIs = (n: number): string => `[data-attack="${n}"]`;
 const healthIs = (n: number): string => `[data-health="${n}"]`;
 const maxHealthIs = (n: number): string => `[data-max-health="${n}"]`;
-const armorIs = (n: number): string => `[data-armor="${n}"]`;
 
 /**
  * One seat's hand, read off `window.__jackioh.state` with the same cast `support/commands.ts` uses
@@ -431,11 +430,11 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
           cy.instanceAt("p1", "units", 2).then((token) => {
             cy.get(ts(cardId(token))).should("exist");
           });
-          // #55 is a 10/5 with Armor 3 and Taunt. Lane 5 is the only zone that was open when the
-          // play was built, so that is where the golem the Tribute paid for stands.
+          // #55 is a 10/5 with Taunt. Lane 5 is the only zone that was open when the play was built,
+          // and every unit that paid was p1's own, so that is where the golem stands (R360).
           cy.instanceAt("p1", "units", 5).then((golem) => {
             cy.get(ts(cardId(golem))).find(attackIs(10)).should("exist");
-            cy.get(ts(cardId(golem))).find(armorIs(3)).should("exist");
+            cy.get(ts(cardId(golem))).find(healthIs(5)).should("exist");
           });
         });
       });
@@ -518,12 +517,12 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
       cy.answerPrompt("zone", { zones: [{ side: "you", row: "backrow", lane: 1 }] });
 
-      // §8.2: "Aura: all units −2/−2 (paid 4: −5/−5)". The price that was picked is the only thing
-      // that decides which, so a 7/7 standing at 2/2 is the answer having reached `reduce`
+      // §8.2: "Aura: all units −1/−1 (paid 4: −2/−2)". The price that was picked is the only thing
+      // that decides which, so a 7/7 standing at 5/5 is the answer having reached `reduce`
       // (§10.4 layer 5 lowers max health; current health = max − damage).
-      cy.get(ts(cardId(sevens))).find(attackIs(2)).should("exist");
-      cy.get(ts(cardId(sevens))).find(healthIs(2)).should("exist");
-      cy.get(ts(cardId(sevens))).find(maxHealthIs(2)).should("exist");
+      cy.get(ts(cardId(sevens))).find(attackIs(5)).should("exist");
+      cy.get(ts(cardId(sevens))).find(healthIs(5)).should("exist");
+      cy.get(ts(cardId(sevens))).find(maxHealthIs(5)).should("exist");
     });
   });
 });

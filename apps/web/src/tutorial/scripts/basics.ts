@@ -11,9 +11,9 @@
 // and the attack steps pick attacker and target from the board as it is.
 //
 // The coach never asks for more than two "Got it"s in a row (the lesson's test holds it to that):
-// the AI's second turn brings a Prejudiced Postdoc, an attack that costs the player a unit and a
-// switch to Defense Position, so the attack and the loss are one tip, and the Postdoc's copy is
-// explained on the player's own turn, once they have made a move.
+// the AI's second turn brings an attack that costs the player a unit and a switch to Defense
+// Position, so the attack and the loss are one tip, and a Prejudiced Postdoc's copy, when one comes,
+// is explained on the player's own turn, once they have made a move.
 
 import type { PlayerView, UnitView } from "@jackioh/shared";
 import { MAX_MANA } from "@jackioh/engine/config";
