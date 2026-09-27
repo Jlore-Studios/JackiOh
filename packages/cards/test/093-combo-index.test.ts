@@ -5,7 +5,8 @@
 //                        E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each
 //                        start of turn".
 // BUILD M4-T4 row 93.1: "2 damage with Lifesteal; no radiant change". R276 has since given it a
-//                        Radiant face: "Deal 4 damage to a target, Lifesteal" (R275).
+//                        Radiant face, 4 damage (R275). Since v0.1.1 the faces print
+//                        "Lifesteal / Deal 2 damage." and "Lifesteal / Deal 4 damage." (R372).
 //
 // The two are one file because #93.1 is the radiant text's companion: radiant #93 is "Start of
 // turn: add a Combo-Fodder to your hand; same", so the token only ever exists because of #93.
@@ -39,6 +40,7 @@ import { describe, expect, it } from "vitest";
 import type { GameEvent } from "@jackioh/shared";
 import { scenario, type Scenario } from "./_harness";
 import { query } from "../src/query";
+import { cardDef } from "../src/index";
 
 const COMBO_INDEX = "core-093";
 const COMBO_FODDER = "core-093-1";
@@ -165,6 +167,109 @@ describe("#93 Combo-Index — the grade counter", () => {
     });
 
     expect(s.stats(COMBO_INDEX).keywords.map((keyword) => keyword.kind)).not.toContain("Lifesteal");
+  });
+});
+
+// =============================================================================================
+// #93 — R372 the grade in play: its letter, and the N it asks for now
+// =============================================================================================
+
+describe("#93 Combo-Index — R372 the grade in play", () => {
+  const LETTERS = ["E", "D", "C", "B", "A", "S"] as const;
+  const GRADE_LABEL = "Grade";
+  const THRESHOLD_LABEL = "N = the grades from E to the current one";
+
+  type Shown = { label: string; value: number; display?: string };
+  type PublicBackrow = { faceDown: false; counters: { grade?: number; gradeLetter?: string }; preview?: Shown[] };
+
+  /** Lane 1 of p1's backrow as `viewer` sees it, failing unless it is the public Combo-Index. */
+  function comboIn(s: Scenario, viewer: "p1" | "p2"): PublicBackrow {
+    const view = s.view(viewer);
+    const zone = (viewer === "p1" ? view.you : view.opponent).backrow[0];
+    if (zone === null || zone === undefined || zone.faceDown) throw new Error("#93 must be public in lane 1 (§10.8)");
+    expect(zone.defId).toBe(COMBO_INDEX);
+    return zone as unknown as PublicBackrow;
+  }
+
+  function onField(seed: string, radiant = false): Scenario {
+    return scenario({
+      seed,
+      p1: { backrow: [{ def: COMBO_INDEX, radiant }], hand: [...FODDER.slice(0, 3), ...HELD], library: ["core-016"] },
+      p2: { hand: ["core-005", "core-010"], library: ["core-016"] },
+    });
+  }
+
+  it("R372 the view names each grade's letter, E to S, on both seats", () => {
+    LETTERS.forEach((letter, at) => {
+      const s = setGrade(onField(`core-093-r372-letter-${letter}`), at + 1);
+      for (const viewer of ["p1", "p2"] as const) {
+        expect(comboIn(s, viewer).counters).toEqual({ grade: at + 1, gradeLetter: letter });
+      }
+    });
+  });
+
+  it("R372 on the field the preview is 'Grade {letter}' and N, labelled with words both faces print", () => {
+    for (const radiant of [false, true]) {
+      const s = setGrade(onField(`core-093-r372-labels-${String(radiant)}`, radiant), C);
+      const text = cardDef(COMBO_INDEX)[radiant ? "radiant" : "base"].text;
+      for (const viewer of ["p1", "p2"] as const) {
+        const preview = comboIn(s, viewer).preview;
+        expect(preview, `${viewer} reads the same public values`).toEqual([
+          { label: GRADE_LABEL, value: C, display: "C" },
+          { label: THRESHOLD_LABEL, value: C },
+        ]);
+        for (const entry of preview ?? []) expect(text, entry.label).toContain(entry.label);
+      }
+    }
+  });
+
+  it("R372 N is the threshold the end of turn checks: N plays raise the grade, one fewer does not", () => {
+    for (const plays of [2, 3]) {
+      const s = setGrade(onField(`core-093-r372-n-${String(plays)}`), C);
+      const n = comboIn(s, "p1").preview?.find((entry) => entry.label === THRESHOLD_LABEL)?.value;
+      expect(n).toBe(C);
+      for (const id of FODDER.slice(0, plays)) s.play(id);
+      s.endTurn();
+      expect(gradeOf(s), `${String(plays)} plays against N = ${String(n)}`).toBe(plays >= (n ?? Infinity) ? B : C);
+    }
+  });
+
+  it("R372 the letter follows a rise: after E to D the view reads D and N = 2", () => {
+    const s = onField("core-093-r372-rise");
+    expect(comboIn(s, "p1").preview).toEqual([
+      { label: GRADE_LABEL, value: E, display: "E" },
+      { label: THRESHOLD_LABEL, value: E },
+    ]);
+    s.play(FODDER[0]).endTurn();
+    expect(comboIn(s, "p1").counters.gradeLetter).toBe("D");
+    expect(comboIn(s, "p2").preview).toEqual([
+      { label: GRADE_LABEL, value: D, display: "D" },
+      { label: THRESHOLD_LABEL, value: D },
+    ]);
+  });
+
+  it("R372 at S only the letter shows: nothing rises past it (R27), so there is no N", () => {
+    const s = setGrade(onField("core-093-r372-s"), S);
+    expect(comboIn(s, "p1").preview).toEqual([{ label: GRADE_LABEL, value: S, display: "S" }]);
+  });
+
+  it("R372 in hand the card has no grade yet, so it carries no preview", () => {
+    const s = scenario({ seed: "core-093-r372-hand", p1: { hand: [COMBO_INDEX, "core-005"] }, p2: { hand: ["core-005"] } });
+    const hand = s.view("p1").you.hand;
+    if (!Array.isArray(hand)) throw new Error("the viewer's own hand travels in full (§10.8)");
+    const card = hand.find((entry) => entry.defId === COMBO_INDEX);
+    expect(card).toBeDefined();
+    expect(card !== undefined && "preview" in card).toBe(false);
+  });
+
+  it("R372 the printed text is short lines: the grade, the rule, then one line per step E to S", () => {
+    const base = cardDef(COMBO_INDEX).base.text.split("\n");
+    expect(base[0]).toBe("Grade (starts at E).");
+    expect(base.slice(2).map((line) => line.slice(0, 2))).toEqual(LETTERS.map((letter) => `${letter}:`));
+    const radiant = cardDef(COMBO_INDEX).radiant.text.split("\n");
+    expect(radiant).toEqual([base[0], "Start of turn: Add a Combo-Fodder to your hand.", ...base.slice(1)]);
+    expect(cardDef(COMBO_FODDER).base.text).toBe("Lifesteal\nDeal 2 damage.");
+    expect(cardDef(COMBO_FODDER).radiant.text).toBe("Lifesteal\nDeal 4 damage.");
   });
 });
 

@@ -24,8 +24,8 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // #30 Archivist: "draw the highest-cost card in your library, or the lowest".
   "core-030": {
-    highest: { label: "Highest cost", detail: "Draw the highest-cost card in your library." },
-    lowest: { label: "Lowest cost", detail: "Draw the lowest-cost card in your library." },
+    highest: { label: "Highest cost", detail: "Draw the highest-cost card in your deck." },
+    lowest: { label: "Lowest cost", detail: "Draw the lowest-cost card in your deck." },
   },
   // #48 5pek Controller (radiant): "Choose: all enemy units, or all units".
   "core-048": {
@@ -37,7 +37,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   "core-087": {
     health: { label: "Swap hero Health", detail: "You and your opponent trade hero Health." },
     board: { label: "Swap boards", detail: "Every zone changes sides, each card keeping its lane." },
-    library: { label: "Swap libraries", detail: "You and your opponent trade libraries." },
+    library: { label: "Swap decks", detail: "You and your opponent trade decks." },
     gift: { label: "Give a copy", detail: "Add a Pocket Chaos to your opponent's hand." },
     skip: { label: "Keep it to yourself", detail: "Your opponent gets no Pocket Chaos." },
   },

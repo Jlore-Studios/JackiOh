@@ -48,8 +48,15 @@ src/
                         holds cards (public on both seats, §10.8) opens its cards on hover and in a dialog on a
                         click (cards/inspect/CardList.tsx), and so does your own library, from the list without
                         order the view carries for it (`SideView.ownLibrary`, R310–R313): grouped with counts,
-                        "Order hidden", unknown cards as backs; the opponent's library is a count. A log line
-                        that names a card opens that card
+                        "Order hidden", unknown cards as backs; the opponent's library is a count. Players read
+                        the rules' library as the Deck ("Deck", "Your deck") and Sacrifice as Tribute (R373;
+                        src/wording.test.ts refuses the old words in any string a player can read). A log line
+                        that names a card opens that card. A face-down backrow card is a back wearing the cost
+                        the view gives it, whose hover and sheet say "Face-down trap" and its "Cost (N)"
+                        (R370, cards/inspect/FaceDown.tsx); your own face-down trap, `unrevealed` in the view,
+                        is its face under a dashed frame, a veil and a "Face down" tag with a struck-through
+                        eye (R371, facedown.css, cards/faceDown.ts for the words); a grade badge prints the
+                        letter the view names (R372)
     actions.ts Prompt.tsx                                               M5-T2
     hotseat.ts decks.ts                                                 M5-T3
     animations.ts                                                       M5-T4
@@ -62,7 +69,7 @@ src/
                         per viewer, and a card the view hides (R97, R227) is a back with "Opponent set a card".
                         Click-through, never on `data-animating`; `data-showcase` holds practice's AI while it is up
     OverflowNotices.tsx overflow.css   §2.4's overflows on the board's own elements (R318): "Fatigue N" and
-                        "Library full" (with the refused card) inside a library pile, "Hand full" (with the burned
+                        "Deck full" (with the refused card) inside the deck pile, "Hand full" (with the burned
                         card) over a hand, a face or a back by R97. Read off the runner's entries like the damage
                         pops, up from their entry's start until the board catches up; animations.css moves them
     faces.ts            the face in play of a card the view lists or names (the board, a prompt, the showcase,

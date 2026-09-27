@@ -38,8 +38,13 @@ export type CardView = {
   preview?: PreviewValue[];
 };
 
-/** R280: one number a card's formula comes to now, and the formula it is ("+1 per card in your exile"). */
-export type PreviewValue = { label: string; value: number };
+/**
+ * R280: one number a card's formula comes to now, and the formula it is ("+1 per card in your exile").
+ * `display` is how the value prints when the text names it by a word rather than a numeral: #93
+ * Combo-Index's grade 3 prints as its letter, "C" (R372). A client prints `display` when present and
+ * the number otherwise, and never works one out from the other.
+ */
+export type PreviewValue = { label: string; value: number; display?: string };
 
 export type UnitView = CardView & {
   owner: PlayerId;
@@ -73,22 +78,26 @@ export type BackrowView =
   | (CardView & {
       faceDown: false;
       type: CardType;
-      counters: { grade?: number };
+      /**
+       * `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the letter that number is,
+       * E..S, which the engine names so a client prints it rather than working it out (R372).
+       */
+      counters: { grade?: number; gradeLetter?: string };
       owner: PlayerId;
       controller: PlayerId;
       /**
-       * R351: set, and `true`, on a Trap or Field Trap the viewer reads only because they control
-       * it: the other player sees it face down, since it has not fired (or, a Field Trap, not yet).
-       * Absent on every card the other player reads too.
+       * R351, R371: present, and `true`, on the controller's own view of a Trap or Field Trap that
+       * is still face-down: the controller reads the card (R33), and the other player sees only its
+       * back. Absent on every public card and on a Field Trap that has fired.
        */
       unrevealed?: true;
     })
   | {
       faceDown: true;
       /**
-       * R351: a face-down Trap shows its cost to both players, the number its controller's own view
-       * shows (§6.3 Cost, R65). Always set by `viewFor`; optional so a view built before the patch
-       * still reads.
+       * R351, R370: a face-down Trap shows its cost to both players, the number its controller's own
+       * view shows (§6.3 Cost, R65). Always set by `viewFor`; optional so a client draws a back with
+       * or without it (a view built before the patch, a test fixture).
        */
       cost?: number;
     }

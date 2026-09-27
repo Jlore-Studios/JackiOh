@@ -215,7 +215,7 @@ describe("R313 your own library, without its order", () => {
     expect(mine).toHaveAttribute("data-browsable", "true");
     expect(mine).toHaveAttribute("role", "button");
     expect(mine).toHaveAttribute("tabindex", "0");
-    expect(mine).toHaveAttribute("aria-label", `Your library: ${String(TOTAL)} cards, order hidden. Show them`);
+    expect(mine).toHaveAttribute("aria-label", `Your deck: ${String(TOTAL)} cards, order hidden. Show them`);
     const theirs = screen.getByTestId("library-opponent");
     expect(theirs).not.toHaveAttribute("data-browsable");
     expect(theirs).not.toHaveAttribute("role");
@@ -226,7 +226,7 @@ describe("R313 your own library, without its order", () => {
     renderBoard(withLibrary());
     hover(screen.getByTestId("library-you"));
     const preview = screen.getByTestId(INSPECT_LIST_HOVER);
-    expect(preview).toHaveTextContent("Your library");
+    expect(preview).toHaveTextContent("Your deck");
     expect(preview).toHaveTextContent("Order hidden");
     expect(within(preview).getByTestId(INSPECT_LIST_COUNT)).toHaveAttribute("data-count", String(TOTAL));
     expect(within(preview).getByTestId(INSPECT_LIST_COUNT)).toHaveTextContent(`${String(TOTAL)} cards`);
@@ -250,7 +250,7 @@ describe("R313 your own library, without its order", () => {
     pile.focus();
     fireEvent.click(pile);
     const sheet = screen.getByTestId(INSPECT_LIST_SHEET);
-    expect(sheet).toHaveAttribute("aria-label", "Your library");
+    expect(sheet).toHaveAttribute("aria-label", "Your deck");
     expect(within(sheet).getByTestId(INSPECT_LIST_COUNT)).toHaveTextContent(`${String(TOTAL)} cards`);
     expect(sheet).toHaveTextContent("Order hidden");
     expect(sheet).not.toHaveTextContent("Newest first");
@@ -273,7 +273,7 @@ describe("R313 your own library, without its order", () => {
     renderBoard(withLibrary());
     const pile = screen.getByTestId("library-you");
     fireEvent.keyDown(pile, { key: "Enter" });
-    expect(screen.getByTestId(INSPECT_LIST_SHEET)).toHaveAttribute("aria-label", "Your library");
+    expect(screen.getByTestId(INSPECT_LIST_SHEET)).toHaveAttribute("aria-label", "Your deck");
     fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
     fireEvent.pointerDown(pile, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     act(() => {

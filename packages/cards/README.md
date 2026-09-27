@@ -107,8 +107,10 @@ export const radiant: Script = {
   the other seat's public cards included, so a hook reads only public facts and the card's own face
   and counters — a hero's health, a pile's size, the plays this turn, the active player's mana —
   never a library's contents or order or a hand's cards, and never `state.active`. An empty list is
-  no preview. The Core cards with one are #18, #31, #38, #40, #70 and #91; a fixed number already on
-  the face (#92's stats, #100's cost, #89's hand stats) and an X chosen at play (#24, #74) have none.
+  no preview. A value the text names by a word carries it as `display` beside the number (#93's
+  grade letter, R372). The Core cards with one are #18, #31, #38, #40, #70, #91 and #93 (#93 on the
+  field only); a fixed number already on the face (#92's stats, #100's cost, #89's hand stats) and
+  an X chosen at play (#24, #74) have none.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook is `(ctx: EffectContext) => Effect[]`. It reads
 `ctx` and returns effects; it never assigns to `ctx.state`, never calls an engine mutator, never
@@ -364,8 +366,9 @@ fails `pnpm test` until its proof and the ruling's list are updated.
 A card whose script declares `preview` (R280) proves, on both faces, that each value its view
 carries is what its own resolution then deals or gains, that each label sits in its face's text,
 and what the hook may read. Those proofs live together in `test/preview.test.ts`, which also pins
-the set of cards that declare the hook to R280's six and fences every library and hand off from the
-hooks; the card's own test file names that file in its header.
+the set of cards that declare the hook to R280's six and R372's #93 and fences every library and
+hand off from the hooks; the card's own test file names that file in its header (#93's values are
+proved in its own test file, since its hook answers on the field only).
 
 A card is done when its tests are green, `pnpm lint` and `pnpm typecheck` are clean, and the fuzz
 gate still passes with the card in the pool.

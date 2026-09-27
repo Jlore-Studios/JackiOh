@@ -2325,11 +2325,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Grade counter, starts at E (E,D,C,B,A,S = 1\u20136). End of turn: if cards played this turn \u2265 grade, grade +1 and run every step from E up to the new grade. E: add a copy of a random card played this turn to your hand. D: 2 different random hand cards cost 1 less. C: opponent exiles a random hand card. B: a random hand card becomes Radiant. A: 8 damage to the enemy hero with Lifesteal. S: run E\u2013A again"
+      "text": "Grade (starts at E).\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E\u2013A again."
     },
     "radiant": {
       "keywords": [],
-      "text": "Grade counter, starts at E (E,D,C,B,A,S = 1\u20136). End of turn: if cards played this turn \u2265 grade, grade +1 and run every step from E up to the new grade. E: add a copy of a random card played this turn to your hand. D: 2 different random hand cards cost 1 less. C: opponent exiles a random hand card. B: a random hand card becomes Radiant. A: 8 damage to the enemy hero with Lifesteal. S: run E\u2013A again. Start of turn: add a Combo-Fodder to your hand"
+      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Exile a random card from your opponent's hand.\nB: Make a random card in hand Radiant.\nA: Deal 8 damage to the enemy hero with Lifesteal.\nS: Trigger E\u2013A again."
     }
   },
   "core-093-1": {
@@ -2350,7 +2350,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Deal 2 damage to a target, Lifesteal"
+      "text": "Lifesteal\nDeal 2 damage."
     },
     "radiant": {
       "keywords": [
@@ -2358,7 +2358,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Deal 4 damage to a target, Lifesteal"
+      "text": "Lifesteal\nDeal 4 damage."
     }
   },
   "core-094": {

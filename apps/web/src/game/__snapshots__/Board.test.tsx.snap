@@ -88,12 +88,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         class="pile"
         data-fatigue="0"
         data-testid="library-opponent"
-        title="Library"
+        title="Deck"
       >
         <span
           class="pile-label"
         >
-          Library
+          Deck
         </span>
         <span
           class="pile-n"
@@ -585,9 +585,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-1"
       >
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -961,9 +962,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-2"
       >
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -1391,6 +1393,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           <span
             class="counter counter-grade"
             data-counter="grade"
+            data-grade="3"
             title="Grade counters"
           >
             3
@@ -1477,6 +1480,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           <span
             class="counter counter-grade"
             data-counter="grade"
+            data-grade="2"
             title="Grade counters"
           >
             2
@@ -1784,9 +1788,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           title="Locked zone"
         />
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -1861,9 +1866,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-4"
       >
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -2159,9 +2165,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-you-backrow-4"
       >
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -2236,9 +2243,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="zone-opponent-backrow-5"
       >
         <div
-          aria-label="Face-down card"
-          class="card card-back card-backrow"
+          aria-label="Face-down trap"
+          class="card card-back card-facedown card-backrow"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -2696,12 +2704,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         class="pile"
         data-fatigue="0"
         data-testid="library-you"
-        title="Library"
+        title="Deck"
       >
         <span
           class="pile-label"
         >
-          Library
+          Deck
         </span>
         <span
           class="pile-n"

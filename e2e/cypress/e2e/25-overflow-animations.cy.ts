@@ -9,9 +9,9 @@
 //    "Fatigue N" (R315).
 //   "`burned`: the card rises over its owner's hand under a "Hand full" tag … showing its face when
 //    the viewer reads the event" — the hand's notice reads "Hand full" and names the card (R317).
-//   "`libraryOverflow`: a "Library full" tag flashes on the owner's library pile and the refused
+//   "`libraryOverflow`: a "Deck full" tag (R373) flashes on the owner's library pile and the refused
 //    card, face or back by the same test, bounces off it" — the library pile gains
-//    `data-animating="libraryOverflow"`, its notice reads "Library full" and shows the card (R316).
+//    `data-animating="libraryOverflow"`, its notice reads "Deck full" and shows the card (R316).
 //   "The notices … stay up until the board shows the next view, as a damage number does."
 //
 // Three games, each its own seed, because each overflow needs resources SPEC's own game does not
@@ -33,10 +33,10 @@
 //   C. Library full (25-library-full-a, a 60-card library and 4 mana on turn 1). Seat 1 plays #33
 //      Unstable Clone Machine, #4 Gary the Gambler (library 56 → 59) and #8 Mr. Vanilla, whose first
 //      copy fills the library to LIBRARY_CAP and whose other two are never created (R80):
-//      `pile-notice-you` reads "Library full" and `overflow-card-you` is Mr. Vanilla's face with
+//      `pile-notice-you` reads "Deck full" and `overflow-card-you` is Mr. Vanilla's face with
 //      `data-outcome="notCreated"`. Then seat 2 plays The Coin and #90 CN-Viral Injection (cost 2
 //      since patch v0.1.1) into that full library:
-//      `pile-notice-opponent` reads "Library full" and `overflow-card-opponent` is the CN-Virus's
+//      `pile-notice-opponent` reads "Deck full" and `overflow-card-opponent` is the CN-Virus's
 //      face (a copy of nothing reads openly to both, R316), `notCreated`.
 //
 // Every notice is also asserted to be gone once `cy.settled()` has seen the board catch up, and every
@@ -292,7 +292,7 @@ function expectPileNotice(side: Side, kind: PileNoticeKind, text: string): void 
     .and("contain.text", text);
 }
 
-/** The card a "Library full" notice shows: its face, naming `name`, and what became of it. */
+/** The card a "Deck full" notice shows: its face, naming `name`, and what became of it. */
 function expectOverflowCard(side: Side, name: string, outcome: "notCreated" | "graveyard" | "ceased"): void {
   cy.get(ts(pileNoticeId(side)))
     .find(ts(overflowCardId(side)), { timeout: timeouts.animation })
@@ -457,7 +457,7 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
     expectAnimating: "libraryOverflow",
     during: () => {
       shoot("library-full-you", pileNoticeId("you"));
-      expectPileNotice("you", "libraryFull", "Library full");
+      expectPileNotice("you", "libraryFull", "Deck full");
       expectOverflowCard("you", VANILLA, "notCreated");
     },
   });
@@ -478,7 +478,7 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
     expectAnimating: "libraryOverflow",
     during: () => {
       shoot("library-full-opponent", pileNoticeId("opponent"));
-      expectPileNotice("opponent", "libraryFull", "Library full");
+      expectPileNotice("opponent", "libraryFull", "Deck full");
       expectOverflowCard("opponent", CN_VIRUS, "notCreated");
     },
   });
@@ -500,7 +500,7 @@ describe("Spec 25 — fatigue, a full hand and a full library on the board (R315
     handFull(null, NO_SHOTS);
   });
 
-  it("R316 library full: the refused copy under 'Library full', the owner's own play and then the other seat's CN-Virus", () => {
+  it("R316 library full: the refused copy under 'Deck full', the owner's own play and then the other seat's CN-Virus", () => {
     libraryFull(null, NO_SHOTS);
   });
 });

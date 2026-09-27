@@ -22,6 +22,7 @@ import {
 } from "./constants.ts";
 import { Glossary } from "./Glossary.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
+import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { namedCards, References } from "./References.tsx";
 import { useDefResolver } from "../refContext.tsx";
@@ -29,7 +30,7 @@ import { OVERLAY_ROOT_PROPS } from "./store.ts";
 import { INSPECT_FACE, INSPECT_HOVER } from "./testids.ts";
 import "./inspect.css";
 
-type HoverPreviewProps = { face: FaceModel; anchor: Rect; prefer?: PreviewPrefer };
+type HoverPreviewProps = { face: FaceModel; anchor: Rect; prefer?: PreviewPrefer; note?: string };
 
 function viewportSize(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
@@ -44,7 +45,7 @@ function estimatedSize(withGlossary: boolean, withRefs: boolean): { width: numbe
   return { width: cardWidth + glossary + refs, height };
 }
 
-export function HoverPreview({ face, anchor, prefer = "beside" }: HoverPreviewProps): ReactElement {
+export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPreviewProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
@@ -76,6 +77,7 @@ export function HoverPreview({ face, anchor, prefer = "beside" }: HoverPreviewPr
     >
       <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
         <CardFace face={face} layout="full" />
+        <InspectNote note={note} />
       </div>
       {face.printed === null ? (
         <Glossary entries={entries} />

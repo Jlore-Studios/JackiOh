@@ -242,7 +242,8 @@ const revealStep: Hook = (ctx) => {
       count: REVEAL_COUNT,
       player: "self",
       filter: { type: typesFor(type), costRange: rangeFor(bracket) },
-      prompt: "Reveal 3 cards from your library; choose one to add to your hand",
+      // R373: the prompt is a player's to read, and players read the rules' library as the Deck.
+      prompt: "Reveal 3 cards from your deck; choose one to add to your hand",
     }),
   ];
 };

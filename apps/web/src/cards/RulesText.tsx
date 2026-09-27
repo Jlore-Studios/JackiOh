@@ -10,9 +10,10 @@
 //   and a control where the surface allows one (refContext.tsx); a term inside a name is not bolded,
 //   since the name is the card, not the keyword ("Rush Token");
 // - in play, what the card's formula comes to now (`values`, R280), in braces after its label,
-//   "{7}" (`.cf-value`): the nth entry with a label after the label's nth occurrence (a fused card
-//   prints its ingredients' texts one after the other, R102, and each one's value follows its own
-//   line), and one the text does not print that often at the end.
+//   "{7}", or the word the view names it by, "{C}" (`.cf-value`, R372): the nth entry with a label
+//   after the label's nth occurrence (a fused card prints its ingredients' texts one after the
+//   other, R102, and each one's value follows its own line), and one the text does not print that
+//   often at the end.
 //
 // A mark and a reference nest: a mark that holds a whole name holds its reference ("Also add a
 // Lava Golem …"), a mark inside a name sits inside the reference ("Rush Tokens"' marked "Tokens"),
@@ -47,6 +48,14 @@ type Term = { start: number; end: number; term: string };
 type Wrap = { start: number; end: number } & ({ kind: "mark" } | { kind: "ref"; match: RefMatch; def: CardDef });
 
 const NONE: readonly never[] = [];
+
+/**
+ * R280, R372: what a value prints as: the word the view names it by (#93's grade letter, "C"), else
+ * its number. The client never turns one into the other.
+ */
+export function printedValue(entry: PreviewValue): string {
+  return entry.display !== undefined && entry.display !== "" ? entry.display : String(entry.value);
+}
 /** R280: each value after its label's nth occurrence for the nth entry with that label, else at the end. */
 function insertsOf(text: string, values: readonly PreviewValue[]): Insert[] {
   const seen = new Map<string, number>();
@@ -60,7 +69,7 @@ function insertsOf(text: string, values: readonly PreviewValue[]): Insert[] {
         if (found < 0) break;
       }
     }
-    return { at: found < 0 ? text.length : found + entry.label.length, text: String(entry.value), label: entry.label };
+    return { at: found < 0 ? text.length : found + entry.label.length, text: printedValue(entry), label: entry.label };
   });
 }
 

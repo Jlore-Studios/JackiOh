@@ -1,10 +1,14 @@
 // One backrow occupant (BUILD M5-T1): a public card, a face-down card, or nothing.
 //
 // `BackrowView` is the union that decides it, and the narrowing on `faceDown` is the whole
-// privacy story: a `{ faceDown: true }` entry carries no `instanceId`, no `defId`, no cost and no
-// type (SPEC §10.8, R33), so the back cannot render a name even by accident and cannot carry a
+// privacy story: a `{ faceDown: true }` entry carries no `instanceId`, no `defId` and no type
+// (SPEC §10.8, R33), so the back cannot render a name even by accident and cannot carry a
 // `card-<instanceId>` testid. Such a zone is reportable only as a `zone` click, which is correct:
-// there is nothing else the viewer is allowed to know about it.
+// there is nothing else the viewer is allowed to know about it. Since v0.1.1 the view gives it a
+// cost, which the back shows as a gem, and its hover and sheet say what it is (R370).
+//
+// The viewer's own face-down trap is a public card to them (R33), and the view marks it
+// `unrevealed` so the face can say the other player sees only a back (R371).
 
 import type { ReactElement } from "react";
 
@@ -29,7 +33,15 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   if (entry === null) return null;
 
   if (entry.faceDown) {
-    return <Card card={null} className="card-backrow" />;
+    // R370: read defensively, so a view without the cost draws the back as it always did.
+    const cost = "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
+    return (
+      <Card
+        card={null}
+        className="card-backrow"
+        faceDown={{ at: `${props.side}-${String(props.lane)}`, ...(cost === undefined ? {} : { cost }) }}
+      />
+    );
   }
 
   const testId = testid.card(entry.instanceId);
@@ -41,6 +53,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
       owner={entry.owner}
       controller={entry.controller}
       counters={entry.counters}
+      unrevealed={entry.unrevealed === true}
       className="card-backrow"
       target={{ on: "backrow", instanceId: entry.instanceId, side: props.side, lane: props.lane }}
       highlight={props.highlight}

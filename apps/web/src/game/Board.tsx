@@ -336,8 +336,9 @@ function Seat({
       />
       <ManaTray side={side} mana={seat.mana} animating={animating} />
       <span className="piles">
+        {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
-          label="Library"
+          label="Deck"
           regionId={animTestid.library(side)}
           testId={countId("library", side)}
           count={seat.libraryCount}
@@ -345,7 +346,7 @@ function Seat({
           animating={animating}
           // R310, R313: only the viewer's own side carries the list; the opponent's is a count.
           {...(side === "you" && seat.ownLibrary !== undefined
-            ? { browse: { kind: "library" as const, title: "Your library", library: seat.ownLibrary, view } }
+            ? { browse: { kind: "library" as const, title: "Your deck", library: seat.ownLibrary, view } }
             : {})}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />

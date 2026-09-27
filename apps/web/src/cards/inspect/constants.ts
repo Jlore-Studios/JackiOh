@@ -39,3 +39,6 @@ export const LIST_PREVIEW_GAP_PX = 8;
 export const LIST_PREVIEW_PADDING_PX = 10;
 /** The header row (title and count) and the "more" line of a pile's hover preview. */
 export const LIST_PREVIEW_HEADER_PX = 26;
+
+/** R370: the height of the back a face-down backrow card's hover preview draws (FaceDown.tsx). */
+export const FACE_DOWN_PREVIEW_HEIGHT_PX = 220;

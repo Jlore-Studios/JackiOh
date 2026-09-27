@@ -2589,6 +2589,56 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R354 makes Zao Gao's discard random and its Radiant tokens roll three keywords", () => {
     provenIn(354, CARDS_ZAO_GAO_TEST);
   });
+
+  // v0.1.1's presentation and wording (issue #27). The proofs are named inline rather than as
+  // constants above, so this block merges beside the patch's other blocks without touching theirs.
+
+  // Proved by apps/web facedown.test.tsx "R370 …" (the gem and the label on both seats, the hover
+  // and the sheet, a back with no cost as before), showcase/plan.test.ts and CardShowcase.test.tsx
+  // "R370 …" (the cost of a card the opponent set), Log.test.tsx "R370 …" and Card.test.tsx's B16
+  // "R370 …" rows (a hand back still shows and opens nothing).
+  it("R370 draws a face-down trap's cost on its back, in its overlay, the showcase and the log", () => {
+    provenIn(
+      370,
+      "../../../apps/web/src/game/facedown.test.tsx",
+      "../../../apps/web/src/game/showcase/plan.test.ts",
+      "../../../apps/web/src/game/showcase/CardShowcase.test.tsx",
+      "../../../apps/web/src/game/Log.test.tsx",
+    );
+  });
+
+  // Proved by view-marks.test.ts "R371 …" (the mark exactly where the other seat sees a back, never
+  // on a public card, following control) and apps/web facedown.test.tsx "R371 …" (the tag, the veil
+  // attribute, the note in the hover preview and the sheet).
+  it("R371 marks your own face-down trap as one the other player cannot see", () => {
+    provenIn(371, "view-marks.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // Proved by packages/cards 093-combo-index.test.ts "R372 …" (the letters, the preview on both
+  // faces and seats, N against the real rise, S, the hand, the short text), view-marks.test.ts
+  // "R372 …" (`gradeLetter` and a preview's `display` through the view) and apps/web
+  // facedown.test.tsx "R372 …" (the badge's letter and "Grade {C}" on the face).
+  it("R372 shows Combo-Index's grade by its letter, and the plays it asks for", () => {
+    provenIn(
+      372,
+      "../../cards/test/093-combo-index.test.ts",
+      "view-marks.test.ts",
+      "../../../apps/web/src/game/facedown.test.tsx",
+    );
+  });
+
+  // Proved by apps/web wording.test.ts "R373 …" (no player-readable string in the client says
+  // library or sacrifice) and cards/rules.test.ts "R373 …" (the glossary in players' words).
+  it("R373 shows players Deck for the rules' library and Tribute for Sacrifice", () => {
+    provenIn(373, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web routes/landingFan.test.ts "R374 …" (the pool, the hand's shape, a seeded deal,
+  // variety, the edges) and routes/landing.test.tsx "R374 …" (one deal per visit, drawn from the
+  // injected source).
+  it("R374 deals the landing page's hand at random on each visit", () => {
+    provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

@@ -36,7 +36,7 @@ import { createPortal } from "react-dom";
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
-import { CardBack, CardFace } from "../../cards/index.ts";
+import { CardBack, CardFace, costPhrase } from "../../cards/index.ts";
 import { getFxSettings } from "../../fx/settings.ts";
 import { reducedMotionNow } from "../animations.ts";
 import { CatalogContext } from "../catalog.ts";
@@ -185,6 +185,17 @@ export default function CardShowcase({ view }: CardShowcaseProps): ReactElement 
               ) : (
                 <span className="showcase-card showcase-card--back" data-testid={showcaseTestid.back}>
                   <CardBack />
+                  {/* R370: a card set face down shows the cost its back shows on the board. */}
+                  {showing.play.cost === undefined ? null : (
+                    <span
+                      className="facedown-cost facedown-cost--large"
+                      data-testid={showcaseTestid.cost}
+                      data-cost={showing.play.cost}
+                      title={costPhrase(showing.play.cost)}
+                    >
+                      {showing.play.cost}
+                    </span>
+                  )}
                 </span>
               )}
             </div>,

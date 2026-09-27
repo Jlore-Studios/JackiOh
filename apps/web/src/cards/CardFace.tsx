@@ -28,7 +28,7 @@ import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { foilFor, type FaceModel } from "./model.ts";
-import { RulesText } from "./RulesText.tsx";
+import { RulesText, printedValue } from "./RulesText.tsx";
 import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
@@ -55,7 +55,7 @@ export function gainedLine(face: FaceModel): string {
 
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
 function printedText(face: FaceModel): string {
-  const values = face.values.map((entry) => ` {${String(entry.value)}}`).join("");
+  const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
   const text = `${face.text.full}${values}`;
   const gained = gainedLine(face);
   return gained === "" ? text : `${text} ${gained}`;
