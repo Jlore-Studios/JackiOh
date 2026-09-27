@@ -13,13 +13,15 @@
 // come to export — or one that a module renames away — fails `pnpm typecheck` instead of silently
 // vanishing from the barrel (an ESM ambiguous star export resolves to `undefined` at runtime).
 //
-// Collisions: as of this writing there are none. All 63 names below are distinct, so no module
-// "wins" over another and nothing had to be dropped. Three names do shadow same-named helpers
+// Collisions: as of this writing there are none. All 65 names below are distinct, so no module
+// "wins" over another and nothing had to be dropped. Four names do shadow same-named helpers
 // elsewhere in the engine, which is deliberate and not a conflict here, because the root
 // `@jackioh/engine` index exposes this directory as a namespace (`export * as effects`):
 //   - `addToHand`, `draw`   — the effect factories; `../draw` has the pipeline functions of the
 //                             same names that these call into.
 //   - `loseHealth`          — the effect factory; `../damage` has the hero-health helper it calls.
+//   - `refreshMana`         — §6.3 Refresh's effect factory (R364); `../mana` has the start-of-turn
+//                             refresh of the same name, which is a different rule.
 //   - `counter`             — the §6.3 Counter verb, from `move.ts`. It is unrelated to
 //                             `counters.ts`, whose verbs are `plague`, `clearPlague` and `lock`.
 // Verbs that §6.3 lists but this directory does not implement live outside it and are not part of
@@ -105,8 +107,8 @@ export type { DiscoverOffer, LibraryFilter, TargetScope } from "./choose";
 export { clearPlague, lock, plague } from "./counters";
 export type { ZoneSpec } from "./counters";
 
-// Mana, next-turn mana (§6.3, §2.3).
-export { gainMana, nextTurnMana } from "./mana";
+// Mana, Refresh, next-turn mana (§6.3, §2.3, R364).
+export { gainMana, nextTurnMana, refreshMana } from "./mana";
 
 // Damage, for one target or a whole scope (§6.3, §4.4).
 export { damage, damageAll } from "./damage";
@@ -152,7 +154,7 @@ export { aiPlaysOutTurn, cancelAttack, forcedAttacks, forcedAttacksOn } from "./
 export type { ForcedAttackerFilter, ForcedSide, ForcedTarget } from "./combat";
 
 // A delayed effect, resolved at its R62 point in creation order (§2.2, §10.6, R62, R68).
-export { DELAYED_HOOK, delay } from "./delay";
+export { DELAYED_HOOK, THIS_TURN, delay } from "./delay";
 export type { DelayAt } from "./delay";
 
 // Player-scoped modifiers with their expiry (§2.2, §2.3, §6.3 Cost, R30, R48, R65).

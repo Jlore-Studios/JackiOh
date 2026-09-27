@@ -1,5 +1,5 @@
 // R318: the board shows §2.4's three overflows on both seats — a fatigue draw on the library pile
-// ("Fatigue N"), a full library turning a card away ("Library full" and the card), and a full hand
+// ("Fatigue N"), a full library turning a card away ("Deck full" and the card), and a full hand
 // burning one ("Hand full" and the card) — from the redacted event alone.
 //
 // The notices are the board's own elements (OverflowNotices.tsx), so they are proved here through
@@ -208,7 +208,7 @@ describe("R318 fatigue on the library pile", () => {
 describe("R318 a full library on the library pile", () => {
   for (const viewer of ["p1", "p2"] as const) {
     const side = viewer === "p1" ? "you" : "opponent";
-    it(`R318 a copy p1's full library never created, seen by ${viewer}: "Library full" and the card's face`, () => {
+    it(`R318 a copy p1's full library never created, seen by ${viewer}: "Deck full" and the card's face`, () => {
       play(viewer, [{ type: "libraryOverflow", player: "p1", instanceId: "c80", defId: PANTHER, outcome: "notCreated" }]);
 
       const pile = screen.getByTestId(animTestid.library(side));
@@ -216,7 +216,7 @@ describe("R318 a full library on the library pile", () => {
       const notice = within(pile).getByTestId(noticeTestid.pile(side));
       expect(notice).toHaveAttribute("data-kind", "libraryFull");
       expect(notice).toHaveAttribute("data-playing", "true");
-      expect(notice).toHaveTextContent("Library full");
+      expect(notice).toHaveTextContent("Deck full");
       expect(notice).not.toHaveAttribute("data-animating");
       const refused = within(notice).getByTestId(noticeTestid.overflowCard(side));
       expect(refused).toHaveClass("overflow-card");
@@ -242,7 +242,7 @@ describe("R318 a full library on the library pile", () => {
     advance(ANIMATIONS.libraryOverflow.durationMs);
     expect(inFlight()).toBe("enteredGraveyard");
     expect(screen.getByTestId(noticeTestid.pile("you"))).not.toHaveAttribute("data-playing");
-    expect(screen.getByTestId(noticeTestid.pile("you"))).toHaveTextContent("Library full");
+    expect(screen.getByTestId(noticeTestid.pile("you"))).toHaveTextContent("Deck full");
   });
 
   it("R318 a card the viewer may not read (R97's sentinel) is a back, and the notice names nothing", () => {
@@ -252,7 +252,7 @@ describe("R318 a full library on the library pile", () => {
     expect(refused).toHaveAttribute("data-face", "back");
     expect(refused.textContent, "a back draws no text at all").toBe("");
     expect(refused.querySelector(".cf-back")).not.toBeNull();
-    expect(notice.textContent).toBe("Library full");
+    expect(notice.textContent).toBe("Deck full");
     expect(attributeValues(notice)).not.toContain(HIDDEN_ID);
   });
 
@@ -460,12 +460,12 @@ describe("R318 the log says each overflow in words", () => {
         ]),
       ),
     ).toEqual([
-      "Your library is empty: fatigue 3",
-      "The opponent's library is empty: fatigue 1",
-      `Your library is full: ${nameOf(VIRUS)} was not created`,
-      `The opponent's library is full: ${nameOf(PANTHER)} went to the graveyard`,
-      `Your library is full: ${nameOf("core-t-sheep")} ceased to exist`,
-      "The opponent's library is full: a card was not created",
+      "Your deck is empty: fatigue 3",
+      "The opponent's deck is empty: fatigue 1",
+      `Your deck is full: ${nameOf(VIRUS)} was not created`,
+      `The opponent's deck is full: ${nameOf(PANTHER)} went to the graveyard`,
+      `Your deck is full: ${nameOf("core-t-sheep")} ceased to exist`,
+      "The opponent's deck is full: a card was not created",
       `Your hand is full: ${nameOf(SHEEPISH)} burned`,
       "The opponent's hand is full: a card burned",
     ]);

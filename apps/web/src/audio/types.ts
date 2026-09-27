@@ -57,7 +57,7 @@ export type VoiceLineEntry =
 export type VoiceLineTable = {
   version: 1;
   personas: Record<string, Persona>;
-  /** Keyed by catalog id: exactly the 110 ids of packages/cards/catalog.json. */
+  /** Keyed by catalog id: exactly the 111 ids of packages/cards/catalog.json. */
   cards: Record<string, VoiceLineEntry>;
 };
 

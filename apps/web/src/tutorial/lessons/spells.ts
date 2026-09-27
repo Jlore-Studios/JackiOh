@@ -15,6 +15,12 @@
 // (lesson 3) or beyond the lesson. One card of its twelve is dead weight on purpose: GIGA Glowy
 // Jelly Bean costs 6 and the tutorial AI never has more than 4 mana (its cap of 3 and The Coin), so
 // it is never cast and the player never sees it.
+//
+// Patch v0.1.1 made Mr. Vanilla a 4/4 and changed what the AI does with it, so the AI's list was
+// reordered, no card changed: Jilliax comes up before Mr. Vanilla, so the AI's second Taunt stands
+// beside Big D-fender on turn 4, when the coach asks the player to clear the way, and Gravedigger
+// opens in its hand in Stockpile's place. Patch v0.1.1's sweep took Right-house defender off the AI's
+// shadow ban and put none of this list on it, so the lesson names no banned card (R291).
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -50,21 +56,17 @@ export const lesson: TutorialLesson = {
   ],
   aiDeck: [
     "core-003", // Right-house defender
-    "core-005", // Stockpile
+    "core-037", // Gravedigger
     "core-029", // GIGA Glowy Jelly Bean: costs 6, above the AI's 3 (+ The Coin), so it is never cast
     "core-015", // Me and Mr Token
-    "core-056", // Jilliax
+    "core-008", // Mr. Vanilla
     "core-035", // Lunar Eclipse
     "core-030", // Archivist
     "core-077", // Professor Curvature
     "core-045", // Deft Duelist
-    "core-037", // Gravedigger
+    "core-005", // Stockpile
     "core-001", // Big D-fender
-    "core-008", // Mr. Vanilla
+    "core-056", // Jilliax
   ],
-  aiShadowBanned: {
-    "core-003":
-      "Right-house defender teaches Taunt, Divine Shield and Reborn in one 1-cost card; the lesson's tests show the AI playing it on its first turn, where the ban's sweep saw a Hard AI hold it",
-  },
   retryTip: "Break a Divine Shield with a small hit before a big one, and clear Taunts with spells, so your units can reach the hero.",
 };

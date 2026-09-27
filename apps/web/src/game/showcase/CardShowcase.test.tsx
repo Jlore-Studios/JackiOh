@@ -126,6 +126,27 @@ describe("the opponent's play is held up", () => {
     expect(document.body.textContent).not.toContain(CATALOG[SHEEPISH]?.name ?? "Sheepish");
   });
 
+  it("R370 a card set face down shows the cost its back shows on the board, and still names nothing", () => {
+    const events: GameEvent[] = [
+      TURN,
+      played("p2", "hidden", "hidden"),
+      { type: "summoned", player: "p2", instanceId: "hidden", defId: "hidden", row: "backrow", lane: 3 },
+    ];
+    const before = withEvents(baseView(), [TURN]);
+    const { rerender } = render(withCatalog(<CardShowcase view={before} />));
+    const after = withEvents(
+      baseView({ opponent: { ...baseView().opponent, backrow: [null, null, { faceDown: true, cost: 3 }, null, null] } }),
+      events,
+    );
+    rerender(withCatalog(<CardShowcase view={after} />));
+    const cost = screen.getByTestId(T.cost);
+    expect(cost).toHaveTextContent("3");
+    expect(cost).toHaveAttribute("title", "Cost (3)");
+    expect(screen.getByTestId(T.back)).toContainElement(cost);
+    expect(screen.getByTestId(T.caption)).toHaveTextContent("Opponent set a card");
+    expect(document.body.innerHTML).not.toMatch(/core-\d+/);
+  });
+
   it("plays one after another, newest SHOWCASE_QUEUE_MAX at most", () => {
     const many = ["core-001", "core-003", "core-005", "core-008", "core-011"].map((defId, at) => played("p2", `c${String(at + 10)}`, defId));
     mountThen(many);

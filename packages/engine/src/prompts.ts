@@ -391,7 +391,8 @@ export function answerPrompt(sink: EngineSink, answer: AnswerInput): string | nu
  * R221: an answer's picks are a set (R60's "N different cards"), taken in the order the prompt offered
  * them. `legalActions` offers each set once, in that order, and `reduce` accepts any listing of it —
  * so the listing must not change what the answer does, or a listing no offered answer makes would
- * mean something else: #80 Zao Gao discards its picks in turn, and the graveyard's order is public.
+ * mean something else: a radiant #26's Echo repeat makes its two picks Radiant in turn, as #80 Zao
+ * Gao discarded its picks in turn before R354 made its discard random.
  */
 export function inOfferedOrder(pending: PendingChoice, selection: readonly Selection[]): Selection[] {
   const used = new Set<number>();

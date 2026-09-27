@@ -1,6 +1,7 @@
 // #20 Pointmaster — SPEC §8.1 row 20, BUILD M4-T4 row 20.
 //
-// Must-pass (M4-T4): "First Strike; radiant Divine Shield". Engine cell: "Keywords only".
+// Must-pass (M4-T4): "First Strike; radiant Divine Shield". Engine cell: "Keywords only". Patch
+// v0.1.1 cut its health: 7/1 → 14/2.
 //
 // Both keyword lists are printed in the catalog and applied by §10.4's layers, so the script is
 // empty and these tests prove the PRINTED keywords actually reach combat — the only thing a
@@ -21,22 +22,22 @@ function keywordsOf(s: Scenario, player: PlayerId, lane: number): string[] {
 }
 
 describe("#20 Pointmaster (base)", () => {
-  it("is a printed 7/2 Human with First Strike and no Divine Shield", () => {
+  it("is a printed 7/1 Human with First Strike and no Divine Shield", () => {
     const s = scenario({ p1: { field: ["core-020"] }, p2: { field: ["core-012"] } });
 
-    s.expectStats("core-020", { attack: 7, health: 2, maxHealth: 2 });
+    s.expectStats("core-020", { attack: 7, health: 1, maxHealth: 1 });
     expect(keywordsOf(s, "p1", 1)).toEqual(["First Strike"]);
   });
 
   it("§4.3 step 1 First Strike kills the defender before it can strike back", () => {
-    // A 3/4 would kill a 7/2 on the exchange; First Strike is the whole reason it does not.
+    // A 3/4 would kill a 7/1 on the exchange; First Strike is the whole reason it does not.
     const s = scenario({ p1: { field: ["core-020"] }, p2: { field: ["core-012"] } });
 
     s.attack("core-020", "core-012");
 
     s.expectInZone("core-012", "graveyard");
     s.expectInZone("core-020", "field");
-    s.expectStats("core-020", { health: 2 });
+    s.expectStats("core-020", { health: 1 });
   });
 
   it("§4.3 step 2 a defender that survives the First Strike still answers", () => {
@@ -44,7 +45,7 @@ describe("#20 Pointmaster (base)", () => {
 
     s.attack("core-020", "core-019");
 
-    // 7 into a 9/9 leaves it standing, and its 9 back kills a 7/2: base has no Divine Shield.
+    // 7 into a 9/9 leaves it standing, and its 9 back kills a 7/1: base has no Divine Shield.
     s.expectStats("core-019", { health: 2 });
     s.expectInZone("core-020", "graveyard");
   });
@@ -61,13 +62,13 @@ describe("#20 Pointmaster (base)", () => {
 });
 
 describe("#20 Pointmaster (radiant)", () => {
-  it("is a printed 14/4 with First Strike and Divine Shield", () => {
+  it("is a printed 14/2 with First Strike and Divine Shield", () => {
     const s = scenario({
       p1: { field: [{ def: "core-020", radiant: true }] },
       p2: { field: ["core-012"] },
     });
 
-    s.expectStats("core-020", { attack: 14, health: 4, maxHealth: 4 });
+    s.expectStats("core-020", { attack: 14, health: 2, maxHealth: 2 });
     expect(keywordsOf(s, "p1", 1)).toEqual(expect.arrayContaining(["First Strike", "Divine Shield"]));
   });
 
@@ -83,7 +84,7 @@ describe("#20 Pointmaster (radiant)", () => {
 
     s.expectStats("core-019", { health: 4, maxHealth: 18 });
     s.expectInZone(pointmaster, "field");
-    s.expectStats(pointmaster, { health: 4, maxHealth: 4 });
+    s.expectStats(pointmaster, { health: 2, maxHealth: 2 });
     // The shield is spent, so the next hit lands: a shield that never spends is R63's bug.
     expect(s.card(pointmaster).divineShieldSpent).toBe(true);
   });
@@ -98,7 +99,7 @@ describe("#20 Pointmaster (radiant)", () => {
     s.attack("core-020", "core-019");
 
     s.expectInZone("core-019", "graveyard");
-    s.expectStats("core-020", { health: 4 });
+    s.expectStats("core-020", { health: 2 });
     expect(s.card("core-020").divineShieldSpent).not.toBe(true);
   });
 });

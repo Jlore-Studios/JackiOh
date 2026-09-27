@@ -18,7 +18,7 @@
 //     second and the AI takes no step while it is up (routes/practice.tsx holds it on
 //     `data-showcase`, as it does on `data-speaking`);
 //   * cards in play show what they are now (SPEC §10.10): a #98 Heroic Power in hand prints only the
-//     power it rolled, its X on the gem, with the printed list of seven beside its hover preview; a
+//     power it rolled, its X on the gem, with the printed list of eight beside its hover preview; a
 //     #95 Call to Chaos reads ???; and #82 KY's Trial's Discover offers three numbers on card backs,
 //     no faces, the pick arriving as the Radiant card with that index (R247).
 //
@@ -603,20 +603,20 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
       if (handle.seat !== "p1") cy.handOver();
     });
 
-    // #98: one power, the one it rolled, with its X on the gem and in the text; not the seven.
+    // #98: one power, the one it rolled, with its X on the gem and in the text; not the eight.
     cy.get(`${inHand("core-098")} .cost-gem`)
       .invoke("text")
       .then((gem) => {
         expect(gem, "the gem shows the rolled power's X, not X").to.match(/^\d+$/);
         cy.get(`${inHand("core-098")} .card-text`)
           .should("contain.text", `Once per turn, spend ${gem}:`)
-          .and("not.contain.text", "7 random powers");
+          .and("not.contain.text", "8 random powers");
       });
     // Its hover preview holds the printed card beside it, in a real layout: visible, on screen.
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "gain one of 7 random powers");
+      .and("contain.text", "Gain one of 8 random powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 

@@ -100,7 +100,15 @@ const cube = unit("cube", 4, 6, { cost: 3 });
 /** A backrow permanent for the Cube to eat, which a Tribute X may never take (§6.3, R41). */
 const fieldCard = def("field-card", "Field Spell");
 
-const DEFS = [sheep, tributeOne, tributeTwo, lavaGolem, deathPinger, cube, fieldCard];
+/** #55's patch v0.1.1 base face: paid for with an opposing unit, it is summoned for the opponent (R360). */
+const handOverGolem = unit("hand-over-golem", 10, 5, { cost: 3 });
+/** A body with Reborn, whose tributed body comes back into the zone it reserved (§4.5 step 4, R64). */
+const rebornBody = unit("reborn-body", 1, 1, {
+  base: { attack: 1, health: 1, keywords: [{ kind: "Reborn" }], text: "Reborn" },
+  radiant: { attack: 2, health: 2, keywords: [{ kind: "Reborn" }], text: "Reborn" },
+});
+
+const DEFS = [sheep, tributeOne, tributeTwo, lavaGolem, deathPinger, cube, fieldCard, handOverGolem, rebornBody];
 
 function both(script: Script): CardScripts {
   return { base: script, radiant: script };
@@ -119,6 +127,11 @@ const SCRIPTS: Record<string, CardScripts> = {
   [tributeOne.id]: both({ staticFlags: { tribute: 1 } }),
   [tributeTwo.id]: both({ staticFlags: { tribute: 2 } }),
   [lavaGolem.id]: both({ staticFlags: lavaGolemFlags }),
+  // R360: only the base face hands itself over; the Radiant face keeps the permission alone.
+  [handOverGolem.id]: {
+    base: { staticFlags: { tribute: 3, tributeEnemies: true, enemyTributeHandsOver: true } },
+    radiant: { staticFlags: { tribute: 3, tributeEnemies: true } },
+  },
   [deathPinger.id]: both({ death: () => [damage({ to: { of: "enemyHero" }, amount: 3 })] }),
   // #22: the Cube's own text names what it sacrifices, so the choice is a target, not a Tribute.
   [cube.id]: both({
@@ -426,3 +439,107 @@ describe("Tribute as an additional cost of a play (§6.3, §3.2, R81)", () => {
     expect(legalTributeUnits(state, "p1", ordinary).map((u) => u.id)).toEqual([mine.id]);
   });
 });
+
+describe("R360 a Tribute that takes an opposing unit summons #55's base face for the opponent", () => {
+  it("R360 lands it in the opponent's zone in the lane the play named, under their control, still the player's play and card", () => {
+    const state = playing("hand-over-same-lane");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
+    const mine2 = put(state, plain.id, slot("p1", "units", 2));
+    const theirs = put(state, plain.id, slot("p2", "units", 1));
+    const card = handCard(state, handOverGolem.id);
+
+    const result = actResult(state, {
+      type: "play",
+      instanceId: card.id,
+      zone: { row: "units", lane: 3 },
+      tributes: [mine.id, mine2.id, theirs.id],
+      playerId: "p1",
+    });
+    expect(result.error).toBeUndefined();
+    const after = result.state;
+    const golem = after.players.p2.units[2]?.[0];
+    expect(golem?.id).toBe(card.id);
+    expect(golem?.controller).toBe("p2");
+    expect(golem?.owner).toBe("p1");
+    expect(after.players.p1.units[2]).toBeNull();
+    // It is p1's play (a Sheepish of p2's answers it), and it lands on p2's side.
+    expect(eventsOfType(result.events, "cardPlayed")).toMatchObject([{ player: "p1", instanceId: card.id }]);
+    expect(eventsOfType(result.events, "summoned")).toMatchObject([{ player: "p2", instanceId: card.id, lane: 3 }]);
+  });
+
+  it("R360 takes the opponent's leftmost open zone when that lane is taken there (R15)", () => {
+    const state = playing("hand-over-leftmost");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
+    const theirs = put(state, plain.id, slot("p2", "units", 1));
+    const theirs2 = put(state, plain.id, slot("p2", "units", 2));
+    put(state, plain.id, slot("p2", "units", 4));
+    const card = handCard(state, handOverGolem.id);
+
+    const after = act(state, {
+      type: "play",
+      instanceId: card.id,
+      zone: { row: "units", lane: 4 },
+      tributes: [mine.id, theirs.id, theirs2.id],
+      playerId: "p1",
+    });
+    // p2's lane 4 is taken, so it takes p2's leftmost open zone, lane 1 (freed by the Tribute).
+    expect(after.players.p2.units[0]?.[0]?.id).toBe(card.id);
+    expect(after.players.p2.units[0]?.[0]?.controller).toBe("p2");
+  });
+
+  it("R360 stays with the player when every tributed unit was their own", () => {
+    const state = playing("hand-over-own");
+    const own = [1, 2, 4].map((lane) => put(state, plain.id, slot("p1", "units", lane)));
+    put(state, plain.id, slot("p2", "units", 3));
+    const card = handCard(state, handOverGolem.id);
+
+    const after = act(state, {
+      type: "play",
+      instanceId: card.id,
+      zone: { row: "units", lane: 3 },
+      tributes: own.map((u) => u.id),
+      playerId: "p1",
+    });
+    expect(after.players.p1.units[2]?.[0]?.id).toBe(card.id);
+    expect(after.players.p1.units[2]?.[0]?.controller).toBe("p1");
+  });
+
+  it("R360 the Radiant face keeps the permission and stays with the player", () => {
+    const state = playing("hand-over-radiant");
+    const theirs = [1, 2, 3].map((lane) => put(state, plain.id, slot("p2", "units", lane)));
+    const card = handCard(state, handOverGolem.id);
+    card.radiant = true;
+
+    const after = act(state, {
+      type: "play",
+      instanceId: card.id,
+      zone: { row: "units", lane: 3 },
+      tributes: theirs.map((u) => u.id),
+      playerId: "p1",
+    });
+    expect(after.players.p1.units[2]?.[0]?.id).toBe(card.id);
+    expect(after.players.p2.units.every((pile) => pile === null)).toBe(true);
+  });
+
+  it("R360 stays with the player when the opponent's row has no open zone once the Tribute is paid", () => {
+    const state = playing("hand-over-full");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
+    const mine2 = put(state, plain.id, slot("p1", "units", 2));
+    // p2's row is full, and the one unit of theirs tributed comes back through Reborn into its zone.
+    const phoenix = put(state, rebornBody.id, slot("p2", "units", 1));
+    for (const lane of [2, 3, 4, 5]) put(state, plain.id, slot("p2", "units", lane));
+    const card = handCard(state, handOverGolem.id);
+
+    const after = act(state, {
+      type: "play",
+      instanceId: card.id,
+      zone: { row: "units", lane: 3 },
+      tributes: [mine.id, mine2.id, phoenix.id],
+      playerId: "p1",
+    });
+    expect(after.players.p2.units[0]?.[0]?.defId).toBe(rebornBody.id);
+    expect(after.players.p1.units[2]?.[0]?.id).toBe(card.id);
+    expect(after.players.p1.units[2]?.[0]?.controller).toBe("p1");
+  });
+});
+

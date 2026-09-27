@@ -187,7 +187,7 @@ function expectMechanics(run: LessonRun, steps: Step[]): void {
   expect(aiSet.action.playerId, "on its own turn").toBe(ai);
   // Rule 7: a bare face-down marker, with nothing that could name the card.
   const seen = viewFor(aiSet.after, human).opponent.backrow.filter((card) => card !== null);
-  expect(seen, "the human sees only a face-down card").toContainEqual({ faceDown: true });
+  expect(seen, "the human sees only a face-down card").toContainEqual({ faceDown: true, cost: 1 });
 
   // The AI's trap springs on the human's next turn, on the cheap unit the coach named as bait.
   const theirs = steps.find((step) => step.events.some((event) => event.type === "trapFired" && event.controller === ai && event.defId === SHEEPISH));

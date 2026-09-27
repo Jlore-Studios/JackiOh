@@ -28,6 +28,7 @@ import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE,
+  INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
   INSPECT_SCRIM,
@@ -401,7 +402,7 @@ describe("hover preview (B22)", () => {
     expect(screen.getByTestId("a-open")).toHaveTextContent("none");
   });
 
-  it("B22 resting on or long-pressing a face-down card on the board opens nothing", () => {
+  it("B22 R370 resting on or long-pressing a face-down card opens no face: a hand back nothing, a backrow back only what the view says", () => {
     const view = fullBoardView();
     expect(view.you.backrow[2], "the fixture's third backrow slot is face-down").toEqual({ faceDown: true });
     renderBoard(view);
@@ -409,12 +410,19 @@ describe("hover preview (B22)", () => {
     const back = must(zone.querySelector(".card-back"), "a card back in the face-down zone");
     const opponentBack = must(screen.getByTestId("hand-opponent").querySelector(".card-back"), "a back in the opponent's hand");
 
-    for (const target of [back, opponentBack]) {
-      hover(target);
-      leave(target);
-      longPress(target);
-    }
+    hover(opponentBack);
+    leave(opponentBack);
+    longPress(opponentBack);
     advance(LONG_PRESS_MS);
+    expect(openOverlays()).toEqual([]);
+    expect(screen.queryByTestId(INSPECT_FACE_DOWN)).toBeNull();
+
+    // R370: the backrow back's overlay is the face-down one, which draws no face and names no card.
+    hover(back);
+    const preview = screen.getByTestId(INSPECT_FACE_DOWN);
+    expect(preview.querySelector(".cf")).toBeNull();
+    expect(preview.textContent).toContain("Face-down trap");
+    leave(back);
     expect(openOverlays()).toEqual([]);
   });
 
@@ -1185,10 +1193,10 @@ describe("the glossary (B26)", () => {
   // so a keyword only the base form has is neither printed on the radiant face nor explained by it.
   it("B26 a radiant face's glossary follows what it prints, never a base keyword its cell replaced (core-056, core-025)", () => {
     const jilliax = glossaryFor(faceOf("core-056", true)).map((entry) => entry.id);
-    expect(jilliax).toEqual(["Charge", "Taunt", "Lifesteal", "Indestructible"]);
-    expect(jilliax).not.toContain("Rush");
-    expect(jilliax).not.toContain("Divine Shield");
-    expect(glossaryFor(faceOf("core-025", true)).map((entry) => entry.id)).toEqual(["Indestructible"]);
+    expect(jilliax).toEqual(["Rush", "Taunt", "Lifesteal", "Divine Shield", "Reborn"]);
+    expect(jilliax).not.toContain("Charge");
+    expect(jilliax).not.toContain("Indestructible");
+    expect(glossaryFor(faceOf("core-025", true)).map((entry) => entry.id)).toEqual(["Armor", "Reborn"]);
 
     render(<Trigger id="a" subject={{ key: "b26-radiant", face: faceOf("core-056", true) }} />);
     hover(screen.getByTestId("a"));

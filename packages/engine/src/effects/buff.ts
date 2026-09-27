@@ -27,6 +27,7 @@ const POOL_KEYWORDS: Record<(typeof RANDOM_KEYWORD_POOL)[number], Keyword> = {
   "Divine Shield": { kind: "Divine Shield" },
   Trample: { kind: "Trample" },
   Cleave: { kind: "Cleave" },
+  Pierce: { kind: "Pierce" },
 };
 
 function applyBuff(ctx: EffectContext, unit: CardInstance, amount: BuffAmount): void {

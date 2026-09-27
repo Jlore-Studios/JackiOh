@@ -34,6 +34,14 @@
 // so the glow and the rise cannot disagree; `yourTurn` stands for "the end of turn that fires
 // `endOfTurn` is this one" without the card reading `state.active`. In hand it never glows: the
 // grade is a counter on a card in play.
+//
+// R372, the grade in play: the printed text starts "Grade (starts at E)" and names the threshold as
+// "N = the grades from E to the current one", so a player reading the card in play needs the letter
+// it has reached and the N it asks for now. `preview` returns both, on the field only (in hand the
+// card has no grade yet, and the text already says it starts at E): "Grade {C}", the letter carried
+// as the value's `display` because the text names a grade by its letter, and "N … {3}", which is
+// the same number `gradeRises` compares the plays with. At S nothing rises (R27), so there is no N to
+// show. Both read the counter through the subsystem, so the view, the glow and the rise agree.
 
 import type { Script } from "@jackioh/engine";
 import { subsystems } from "@jackioh/engine";
@@ -60,12 +68,28 @@ const endOfTurn: Script["endOfTurn"] = (ctx) =>
 const conditionMet: Script["conditionMet"] = (ctx) =>
   ctx.zone === "field" && ctx.yourTurn && subsystems.gradeRises(ctx.state, ctx.self);
 
-export const base: Script = { cry, endOfTurn, conditionMet };
+/** R372: the words of the printed text the two values follow, on both faces. */
+const GRADE_LABEL = "Grade";
+const THRESHOLD_LABEL = "N = the grades from E to the current one";
+
+/**
+ * R372: "Grade {C}" and "N = … {3}" on the field; nothing in hand, where the card has no grade yet.
+ * The counter is public on the Field Spell (§10.8), so the values say nothing the board does not.
+ */
+const preview: Script["preview"] = (ctx) => {
+  if (ctx.zone !== "field") return [];
+  const grade = subsystems.gradeOf(ctx.self);
+  const letter = { label: GRADE_LABEL, value: grade, display: subsystems.gradeName(grade) };
+  return subsystems.isTerminalGrade(grade) ? [letter] : [letter, { label: THRESHOLD_LABEL, value: grade }];
+};
+
+export const base: Script = { cry, endOfTurn, conditionMet, preview };
 
 export const radiant: Script = {
   cry,
   endOfTurn,
   conditionMet,
+  preview,
   // "Start of turn: add a Combo-Fodder to your hand". A full hand burns it (§2.4, R4), which
   // `addToHand` already does.
   startOfTurn: () => [addToHand({ defId: COMBO_FODDER })],

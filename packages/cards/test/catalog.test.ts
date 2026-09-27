@@ -13,8 +13,9 @@
 //                         form keeps those stats; an empty cell means the card has no stats).
 //                         In "Type, tags" the first comma-separated segment is the card type
 //                         (no type name contains a comma) and the rest are tags.
-//   the five named tokens (`T-rush`, `T-sheep`, `T-felinor`, `T-bread`, and `T-coin`, the one
-//                         §2.1's setup deals rather than a card, R244)
+//   the six named tokens (`T-rush`, `T-sheep`, `T-felinor`, `T-bread`, `T-coin`, the one
+//                         §2.1's setup deals rather than a card, R244, and `T-ghoul`, a card of
+//                         its own in patch v0.1.1, R353)
 //                       — SPEC §7, columns "Token", "Index", "Cost", "Type",
 //                         "Stats and text" (its leading `A/B`; Bread Token's printed 0/0) and
 //                         "Radiant form". §7 has no rarity column and its "Type" column omits
@@ -23,7 +24,8 @@
 //                         Token for every filter") with BUILD M4-T2 ("`catalog.query` never
 //                         returns a token unless `tags` includes `Token`").
 //   radiant faces       — no §8 or §7 cell reads "No radiant form" or "none" any more: every
-//                         entry has a Radiant face of its own (§5.2, R276).
+//                         entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
+//                         being R349's fallback (its printed 0/0 doubled, its X/X doubled in play).
 //   rarity distribution — SPEC §8's rarity paragraph (35/37/16/7/5, superseding the source
 //                         list's #1–20 Common … grouping) and BUILD M4-T1.
 //   tag vocabulary      — SPEC §5/§6 tags as BUILD M4-T1 lists them, and R278's Jlockeed.
@@ -55,14 +57,14 @@ type SpecRow = {
 };
 
 const SPEC_8: readonly SpecRow[] = [
-  { index: "1", name: "Big D-fender", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [0, 8], radiant: [0, 16] },
+  { index: "1", name: "Big D-fender", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [0, 7], radiant: [0, 14] },
   { index: "2", name: "Bigot", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [6, 1], radiant: [12, 2] },
   { index: "3", name: "Right-house defender", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [1, 1], radiant: [2, 2] },
   { index: "4", name: "Gary the Gambler", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [1, 1], radiant: [2, 2] },
   { index: "5", name: "Stockpile", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "6", name: "Mana Well", cost: 3, type: "Field Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "7", name: "Jewelosco Scarab", cost: 1, type: "Unit", tags: [], rarity: "Rare", base: [1, 1], radiant: [2, 2] },
-  { index: "8", name: "Mr. Vanilla", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [3, 3], radiant: [7, 7] },
+  { index: "8", name: "Mr. Vanilla", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [4, 4], radiant: [12, 12] },
   { index: "9", name: "Moths to the Flame", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [1, 14], radiant: [2, 28] },
   { index: "10", name: "Rapid Replenish", cost: 0, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "11", name: "Tempo Timmy", cost: 1, type: "Unit", tags: ["Human"], rarity: "Common", base: [3, 3], radiant: [6, 6] },
@@ -74,7 +76,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "17", name: "Flood", cost: 3, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "18", name: "Bread and Butter", cost: 1, type: "Field Trap", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "19", name: "Midrange Menace", cost: 3, type: "Unit", tags: [], rarity: "Common", base: [9, 9], radiant: [18, 18] },
-  { index: "20", name: "Pointmaster", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [7, 2], radiant: [14, 4] },
+  { index: "20", name: "Pointmaster", cost: 2, type: "Unit", tags: ["Human"], rarity: "Common", base: [7, 1], radiant: [14, 2] },
   { index: "21", name: "Hinder", cost: 0, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "22", name: "Carnivorous Cube", cost: 3, type: "Unit", tags: [], rarity: "Epic", base: [4, 6], radiant: [8, 12] },
   { index: "23", name: "Reoccurring Dream", cost: 1, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -84,7 +86,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "27", name: "Blood Ridden Glowy Jelly Bean", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "28", name: "Knockoff Temu Glowy Jelly Bean", cost: 2, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "29", name: "GIGA Glowy Jelly Bean", cost: 6, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "30", name: "Archivist", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
+  { index: "30", name: "Archivist", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
   { index: "31", name: "KY's Math Equation", cost: 1, type: "Spell", tags: ["KY"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "32", name: "Prem Panther", cost: 2, type: "Unit", tags: [], rarity: "Rare", base: [5, 4], radiant: [10, 8] },
   { index: "33", name: "Unstable Clone Machine", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
@@ -104,7 +106,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "47", name: "Fig of Life", cost: 3, type: "Spell", tags: ["Fruit"], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "48", name: "5pek Controller", cost: 0, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "49", name: "Snom Bunny Mind Control", cost: 3, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "50", name: "Kpop Fanatic", cost: 1, type: "Unit", tags: [], rarity: "Epic", base: [1, 1], radiant: [2, 2] },
+  { index: "50", name: "K-Pop Fanatic", cost: 1, type: "Unit", tags: ["Human"], rarity: "Epic", base: [1, 1], radiant: [2, 2] },
   { index: "51", name: "KY's Private Tutor", cost: 1, type: "Spell", tags: ["KY"], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "51.1", name: "KY's Empty Notebook", cost: 1, type: "Spell", tags: ["KY", "Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
   { index: "52", name: "Silly Silas", cost: 3, type: "Unit", tags: ["Human"], rarity: "Legendary", base: [4, 4], radiant: [8, 8] },
@@ -117,7 +119,7 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "59", name: "Unbiased Immigration", cost: { base: 2, embiggen: 4 }, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "60", name: "Bear Honeypot", cost: 1, type: "Trap", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "61", name: "Prejudiced Postdoc", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [2, 4], radiant: [4, 8] },
-  { index: "62", name: "Friend of Felinors", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
+  { index: "62", name: "Friend of Felinors", cost: 1, type: "Spell", tags: ["Felinor"], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "63", name: "Plastic Surgery", cost: 1, type: "Spell", tags: [], rarity: "Common", base: [null, null], radiant: [null, null] },
   { index: "64", name: "Gifted Program", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "65", name: "Masochism Mask", cost: 2, type: "Field Spell", tags: ["Quickdraw"], rarity: "Epic", base: [null, null], radiant: [null, null] },
@@ -133,20 +135,20 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "74", name: "Adaptive UI", cost: "X", type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "75", name: "Infinite Reserves", cost: 0, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "76", name: "Field of Dreams", cost: 3, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "77", name: "Professor Curvature", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [4, 5], radiant: [8, 10] },
+  { index: "77", name: "Professor Curvature", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [3, 3], radiant: [6, 6] },
   { index: "78", name: "/fullsend", cost: 4, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "79", name: "Twinspell", cost: 2, type: "Field Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "80", name: "Zao Gao", cost: 2, type: "Spell", tags: [], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "80", name: "Zao Gao", cost: 2, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "81", name: "Radiant Saintess", cost: 1, type: "Unit", tags: ["Human"], rarity: "Epic", base: [2, 2], radiant: [4, 4] },
   { index: "82", name: "KY's Trial", cost: 1, type: "Spell", tags: ["KY"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "83", name: "Transmogulate", cost: 2, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "84", name: "Going Long", cost: { base: 2, embiggen: 4 }, type: "Field Spell", tags: ["Quickdraw"], rarity: "Rare", base: [null, null], radiant: [null, null] },
-  { index: "85", name: "Unlicensed Experimentation", cost: 1, type: "Trap", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
+  { index: "85", name: "Unlicensed Experimentation", cost: 2, type: "Trap", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "86", name: "\"Miss\" Mrow", cost: 1, type: "Unit", tags: ["Felinor"], rarity: "Epic", base: [1, 1], radiant: [2, 2] },
   { index: "87", name: "Pocket Chaos", cost: 2, type: "Spell", tags: [], rarity: "Legendary", base: [null, null], radiant: [null, null] },
   { index: "88", name: "Twisting Nether", cost: 3, type: "Spell", tags: [], rarity: "Epic", base: [null, null], radiant: [null, null] },
   { index: "89", name: "Corpse Eater", cost: 4, type: "Unit", tags: [], rarity: "Epic", base: [2, 2], radiant: [6, 6] },
-  { index: "90", name: "CN-Viral Injection", cost: 1, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
+  { index: "90", name: "CN-Viral Injection", cost: 2, type: "Spell", tags: ["CN"], rarity: "Rare", base: [null, null], radiant: [null, null] },
   { index: "90.1", name: "CN-Virus", cost: 1, type: "Spell", tags: ["CN", "Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
   { index: "91", name: "Fed Fauci", cost: 2, type: "Unit", tags: ["Human"], rarity: "Rare", base: [1, 6], radiant: [2, 12] },
   { index: "92", name: "Felinor Fiender", cost: 2, type: "Unit", tags: ["Human"], rarity: "Legendary", base: [5, 7], radiant: [10, 14] },
@@ -158,13 +160,14 @@ const SPEC_8: readonly SpecRow[] = [
   { index: "96", name: "My Pawn", cost: 1, type: "Trap", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "97", name: "Zephyrs", cost: 0, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "98", name: "Heroic Power", cost: "X", type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
-  { index: "99", name: "Craft a Card", cost: 3, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
+  { index: "99", name: "Craft a Card", cost: 4, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "100", name: "Ceaseless Void", cost: 100, type: "Unit", tags: [], rarity: "Mythic", base: [10, 10], radiant: [20, 20] },
   { index: "T-rush", name: "Rush Token", cost: 1, type: "Unit", tags: ["Token"], rarity: "Token", base: [3, 3], radiant: [6, 6] },
   { index: "T-sheep", name: "Sheep Token", cost: 1, type: "Unit", tags: ["Token"], rarity: "Token", base: [1, 1], radiant: [2, 2] },
   { index: "T-felinor", name: "Felinor Token", cost: 1, type: "Unit", tags: ["Felinor", "Token"], rarity: "Token", base: [1, 1], radiant: [2, 2] },
   { index: "T-bread", name: "Bread Token", cost: 0, type: "Unit", tags: ["Token"], rarity: "Token", base: [0, 0], radiant: [0, 0] },
   { index: "T-coin", name: "The Coin", cost: 0, type: "Spell", tags: ["Token"], rarity: "Token", base: [null, null], radiant: [null, null] },
+  { index: "T-ghoul", name: "Ghoul Token", cost: 0, type: "Unit", tags: ["Token"], rarity: "Token", base: [0, 0], radiant: [0, 0] },
 ];
 
 /** BUILD M4-T1: the only tags any entry may carry. */
@@ -221,12 +224,12 @@ const label = (entry: CardDef, field: string, expected: unknown, actual: unknown
   `${entry.id} (#${entry.index}) ${field}: expected ${show(expected)}, got ${show(actual)}`;
 
 describe("catalog membership (BUILD M4-T1)", () => {
-  it("holds exactly 100 cards and 10 tokens", () => {
+  it("holds exactly 100 cards and 11 tokens", () => {
     const cards = ENTRIES.filter((entry) => entry.token === false);
     const tokens = ENTRIES.filter((entry) => entry.token === true);
     expect(cards.length, "entries with token: false").toBe(100);
-    expect(tokens.length, "entries with token: true").toBe(10);
-    expect(ENTRIES.length, "catalog entries").toBe(110);
+    expect(tokens.length, "entries with token: true").toBe(11);
+    expect(ENTRIES.length, "catalog entries").toBe(111);
   });
 
   it("has indices 1-100 each present exactly once", () => {
@@ -244,8 +247,8 @@ describe("catalog membership (BUILD M4-T1)", () => {
     expect(ENTRIES.filter((entry) => /^\d+$/.test(entry.index)).length, "plain numeric indices").toBe(100);
   });
 
-  it("has the five card-defined tokens, the four shared tokens and The Coin", () => {
-    const expected = ["51.1", "65.1", "90.1", "93.1", "95.1", "T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin"];
+  it("has the five card-defined tokens, the four shared tokens, The Coin and the Ghoul Token", () => {
+    const expected = ["51.1", "65.1", "90.1", "93.1", "95.1", "T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"];
     for (const index of expected) {
       const entry = BY_INDEX.get(index);
       expect(entry?.index, `token index ${index}`).toBe(index);
@@ -263,7 +266,7 @@ describe("catalog membership (BUILD M4-T1)", () => {
       (entry) => `${entry.id} (#${entry.index})`,
     );
     expect(extra, "catalog entries with no SPEC row").toEqual([]);
-    expect(SPEC_8.length, "SPEC §8 + §7 fixture rows").toBe(110);
+    expect(SPEC_8.length, "SPEC §8 + §7 fixture rows").toBe(111);
   });
 });
 
@@ -353,9 +356,28 @@ describe("the Jlockeed tag (SPEC §5, §8, R278)", () => {
 
 describe("every entry has a radiant face of its own (SPEC §5.2, R276)", () => {
   it("gives no entry a radiant face identical to its base face — the five that had none included", () => {
-    const same = ENTRIES.filter((entry) => JSON.stringify(entry.radiant) === JSON.stringify(entry.base)).map(
-      (entry) => `${entry.id} (#${entry.index}) radiant is a copy of base`,
-    );
+    // R349: a card that prints no Radiant form has the fallback as its Radiant face, which doubles
+    // its stats — for an X/X token, the X it is summoned with (`layers.wornStatsOverride`) — so it
+    // is the one entry whose printed faces may read alike. It is marked as such, and only a Unit.
+    const same = ENTRIES.filter(
+      (entry) => entry.radiantFallback !== true && JSON.stringify(entry.radiant) === JSON.stringify(entry.base),
+    ).map((entry) => `${entry.id} (#${entry.index}) radiant is a copy of base`);
     expect(same, "entries whose radiant face is identical to base").toEqual([]);
+    expect(ENTRIES.filter((entry) => entry.radiantFallback === true).map((entry) => entry.id)).toEqual(["core-t-ghoul"]);
+  });
+});
+
+describe("no face prints Taunt beside Indestructible (SPEC §6.1, R347)", () => {
+  // R347 keeps Taunt off an Indestructible unit whatever prints it, so a face printing both would
+  // print a Taunt it never has. Patch v0.1.1 dropped Indestructible from the two faces that did, #55
+  // and #56 radiant (issue #27), and none may print both again.
+  it("R347 no Unit face prints both", () => {
+    const both = ENTRIES.filter((entry) => entry.type === "Unit").flatMap((entry) =>
+      (["base", "radiant"] as const).flatMap((face) => {
+        const kinds = entry[face].keywords.map((keyword) => keyword.kind);
+        return kinds.includes("Taunt") && kinds.includes("Indestructible") ? [`${entry.id} ${face}`] : [];
+      }),
+    );
+    expect(both).toEqual([]);
   });
 });

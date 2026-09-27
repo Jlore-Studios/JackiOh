@@ -7,8 +7,8 @@
 // of one effect", so a unit the first hit kills is still standing while the later hits land and dies
 // only when the whole end-of-turn hook has finished.
 //
-// The board: p2 lane 1 is Pointmaster (7/2), which 2 damage kills, and lane 2 is Mr. Vanilla (3/3),
-// which survives at 1. A lane-1 death is what makes R59 observable — the lane-2 hit and the hero
+// The board: p2 lane 1 is Pointmaster (7/1), which 2 damage kills, and lane 2 is Mr. Vanilla (4/4),
+// which survives at 2. A lane-1 death is what makes R59 observable — the lane-2 hit and the hero
 // hit still have to land after it.
 //
 // Every scenario gives both sides a library, so nobody takes §2.4 fatigue damage when `endTurn`
@@ -49,7 +49,7 @@ describe("#13 Jlockeed Shredder-10", () => {
       s.endTurn();
 
       s.expectInZone(pointmaster, "graveyard"); // 7/2 took 2
-      s.expectStats("core-008", { health: 1, maxHealth: 3 }); // 3/3 took 2
+      s.expectStats("core-008", { health: 2, maxHealth: 4 }); // 4/4 took 2
       s.expectHealth("p2", 28);
       s.expectHealth("p1", 30); // "each ENEMY unit and the enemy hero": nothing of its own
     });
@@ -86,7 +86,7 @@ describe("#13 Jlockeed Shredder-10", () => {
       s.endTurn();
 
       s.expectHealth("p1", 30);
-      s.expectStats("core-008", { health: 3, maxHealth: 3 });
+      s.expectStats("core-008", { health: 4, maxHealth: 4 });
       expect(s.events.flatMap((event) => (event.type === "damage" ? [event] : []))).toEqual([]);
     });
   });
@@ -100,7 +100,7 @@ describe("#13 Jlockeed Shredder-10", () => {
       s.endTurn();
 
       s.expectInZone(pointmaster, "graveyard"); // 7/2
-      s.expectInZone(vanilla, "graveyard"); // 3/3, which 2 would have survived
+      s.expectInZone(vanilla, "graveyard"); // 4/4, which 2 would have survived
       s.expectHealth("p2", 25);
       expect(hits(s).map((hit) => hit.amount)).toEqual([5, 5, 5]);
     });

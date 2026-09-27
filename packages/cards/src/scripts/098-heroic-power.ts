@@ -1,17 +1,19 @@
 // #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game"/"Once per Turn"/Quickdraw, R43, R45, R46, R18,
 // R65). Field Spell, tags Quickdraw, cost X, Mythic.
-//   Base:    "Indestructible. Start of game: gain one of 7 random powers, each 'Once per turn,
+//   Base:    "Indestructible. Start of game: gain one of 8 random powers, each 'Once per turn,
 //             spend X': (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a
 //             target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token;
-//             (1) summon a Felinor Token; (2) Discover a Unit. Playing it costs the power's X and
-//             activates it once"
+//             (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 Units
+//             that cost (2) or less, Fuse them and add the result to your hand. Playing it costs the
+//             power's X and activates it once"
 //   Radiant: "Powers become: Recruit and make it Radiant; lose 2, draw 2; deal 2; 4 to each
-//             opposing hero; two Rush Tokens; two Felinor Tokens; Discover a Radiant Unit" — the
-//             cell restates the seven powers and nothing else, so Indestructible, the start-of-game
-//             roll, the once-per-turn limit and "playing it costs X and activates it once" are all
-//             kept (§8 Conventions).
+//             opposing hero; two Rush Tokens; two Felinor Tokens; Discover a Radiant Unit; Stitching
+//             Discovers 2 Radiant Units and the result is Radiant" — the cell restates the eight
+//             powers and nothing else, so Indestructible, the start-of-game roll, the once-per-turn
+//             limit and "playing it costs X and activates it once" are all kept (§8 Conventions).
+//             Patch v0.1.1 added Stitching, the eighth (R352).
 //
-// THE SEVEN POWERS LIVE IN `subsystems/heroPower.ts`, NOT HERE. R43 makes this card a subsystem:
+// THE EIGHT POWERS LIVE IN `subsystems/heroPower.ts`, NOT HERE. R43 makes this card a subsystem:
 // `HERO_POWERS` is the table with each power's X, its base clause and its radiant clause;
 // `rollPower` is the roll, `usePower` one activation plus this turn's use, `powerCostOf` the cost,
 // `heroPower` the continuation a prompted power (the ping's target, the Discover) comes back to, and

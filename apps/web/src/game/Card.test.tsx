@@ -163,18 +163,22 @@ describe("B16: a face-down card is a back and nothing else", () => {
     }
   });
 
-  it("B16 a back has no title even while hover previews are off", () => {
+  it("B16 R370 a hand back has no title while hover previews are off; a backrow back says only that it is a face-down trap", () => {
     writeCardSettings({ hoverPreviews: false });
     const container = renderBoard(fullBoardView());
-    for (const back of backs(container)) expect(back.hasAttribute("title")).toBe(false);
+    for (const back of backs(container)) {
+      if (back.closest(".zone") === null) expect(back.hasAttribute("title")).toBe(false);
+      else expect(back.getAttribute("title")).toBe("Face-down trap");
+    }
   });
 
-  it("B16 hovering or long-pressing a back opens nothing, while the same gestures on a face-up card do", () => {
+  it("B16 R370 hovering or long-pressing a hand back opens nothing, while the same gestures on a face-up card do", () => {
     vi.useFakeTimers();
     const view = fullBoardView();
     const container = renderBoard(view);
 
-    for (const back of backs(container)) {
+    // A backrow back opens what the view says of it (R370, below); a hand back opens nothing.
+    for (const back of backs(container).filter((element) => element.closest(".zone") === null)) {
       fireEvent.pointerEnter(back, { pointerType: "mouse" });
       act(() => {
         vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
@@ -661,7 +665,7 @@ describe("B18: Card picks its form from its props", () => {
     const root = cardRoot(flood.instanceId);
     expect(screen.getByTestId("resolving-you").contains(root)).toBe(true);
     expect(root.getAttribute("data-face")).toBe("full");
-    expect(inside(root, ".card-text").textContent).toContain("Bounce all units on both sides");
+    expect(inside(root, ".card-text").textContent).toContain("Bounce all Units.");
   });
 });
 
@@ -817,8 +821,8 @@ describe("B19: what a face-up root adds", () => {
     };
     // Gary the Gambler prints 1/1; the view has 2 attack and 1 of 3 health.
     expect(tones(yourUnit(view, 1))).toEqual(["buffed", "damaged"]);
-    // Mr. Vanilla prints 3/3; the view has 4/4.
-    expect(tones(enemyUnit(view, 1))).toEqual(["buffed", "buffed"]);
+    // Mr. Vanilla prints 4/4 (patch v0.1.1); the view has 4/4.
+    expect(tones(enemyUnit(view, 1))).toEqual(["base", "base"]);
     // Radiant Carnivorous Cube prints 8/12 radiant; the view has 6 attack and 2 of 2.
     expect(tones(enemyUnit(view, 3))).toEqual(["reduced", "reduced"]);
     // Ceaseless Void prints 10/10; the view has 10/10.

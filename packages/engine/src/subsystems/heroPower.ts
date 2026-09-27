@@ -1,4 +1,4 @@
-// Heroic Power (SPEC §8 #98, R43): the seven powers, the roll that picks one, the cost that is
+// Heroic Power (SPEC §8 #98, R43, R352): the eight powers, the roll that picks one, the cost that is
 // always the power's X, and the once-a-turn activation.
 //
 // R43 puts everything about the card on its instance: `memory.power` is the power it rolled and
@@ -11,10 +11,10 @@
 // reads ahead of the printed "X", so the play validator, `legalActions` and the client all see the
 // same number without a special case for this card.
 //
-// Two powers pause. "Deal 1 damage to a target" takes a target, which R81 lets the `activatePower`
-// action carry, and "Discover a Unit" is a prompt by definition (§6.3). Both are written as one
-// builder that reads `ctx.targets`: with a selection it does the work, without one it opens the
-// prompt and names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower`
+// Three powers pause. "Deal 1 damage to a target" takes a target, which R81 lets the `activatePower`
+// action carry, and "Discover a Unit" and Stitching's two Discovers are prompts by definition
+// (§6.3). Each is written as one builder that reads `ctx.targets`: with a selection it does the
+// work, without one it opens the prompt and names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower`
 // below with the selection in `ctx.targets`, which runs the same builder down its other branch —
 // so a paused activation is a `PendingChoice` in state and never a callback (§9.3, §10.6).
 
@@ -27,6 +27,7 @@ import {
   damage,
   discoverFromCatalog,
   draw,
+  fuseCards,
   loseHealth,
   recruit,
   summon,
@@ -68,7 +69,7 @@ export const FELINOR_TOKEN_INDEX = "T-felinor";
 /** "Deal 1 damage to a target": any unit or hero, either side. */
 const PING_SCOPE: TargetScope = { side: "any", of: ["unit", "hero"] };
 
-export type HeroPowerName = "recruit" | "draw" | "ping" | "burn" | "rush" | "felinor" | "discover";
+export type HeroPowerName = "recruit" | "draw" | "ping" | "burn" | "rush" | "felinor" | "discover" | "stitching";
 
 export type HeroPower = {
   name: HeroPowerName;
@@ -155,7 +156,45 @@ function discoverEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   ];
 }
 
-/** The seven powers of §8 #98, in the order the card lists them. */
+/** R352: Stitching's "Discover 2 Units that cost (2) or less". */
+export const STITCHING_INGREDIENTS = 2;
+export const STITCHING_MAX_COST = 2;
+/** The data key a paused Stitching carries its Discover picks in (§10.6). */
+const STITCHING_PICKS_KEY = "picks";
+
+/** The picks a paused Stitching has made so far, read back out of the captured data. */
+function stitchedSoFar(ctx: EffectContext): string[] {
+  const stored: unknown = ctx.data[STITCHING_PICKS_KEY];
+  if (!Array.isArray(stored)) return [];
+  return stored.filter((entry): entry is string => typeof entry === "string");
+}
+
+/**
+ * R352, §8 #98: "Stitching — Discover 2 Units that cost (2) or less. Fuse them and add the result to
+ * your hand." Two chained Discovers, as #99 Craft a Card chains its own, each answer re-entering
+ * `heroPower` with the picks so far in the prompt's data; the second answer fuses the two per R77
+ * with no target on the field. Unlike #99's, the result keeps R77's fused cost, min(sum, 4) — the
+ * power says nothing of a price — and on the radiant face ("Discover 2 Radiant Units") the result
+ * is Radiant. A Discover with no pool left fizzles (§8 Conventions), and fewer than two picks fuse
+ * nothing: the activation is still spent.
+ */
+function stitchingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
+  const answered = chosenOptions(ctx)[0];
+  const picks = answered === undefined ? stitchedSoFar(ctx) : [...stitchedSoFar(ctx), answered];
+  if (picks.length >= STITCHING_INGREDIENTS) {
+    return [fuseCards({ defIds: picks, toHand: "self", handPrice: "fused", radiant })];
+  }
+  return [
+    discoverFromCatalog({
+      step: POWER_RESUME,
+      query: { type: "Unit", costRange: { max: STITCHING_MAX_COST } },
+      prompt: radiant ? "Discover a Radiant Unit that costs (2) or less" : "Discover a Unit that costs (2) or less",
+      data: { [POWER_DATA_KEY]: "stitching", [STITCHING_PICKS_KEY]: picks },
+    }),
+  ];
+}
+
+/** The eight powers of §8 #98, in the order the card lists them. */
 export const HERO_POWERS: readonly HeroPower[] = [
   {
     name: "recruit",
@@ -205,6 +244,14 @@ export const HERO_POWERS: readonly HeroPower[] = [
     label: "Discover a Unit",
     radiantLabel: "Discover a Radiant Unit",
     build: discoverEffects,
+  },
+  {
+    name: "stitching",
+    x: 2,
+    label: "Stitching — Discover 2 Cost (2) or less Units. Fuse them and add the result to your hand",
+    radiantLabel:
+      "Stitching — Discover 2 Radiant Cost (2) or less Units. Fuse them and add the result to your hand",
+    build: stitchingEffects,
   },
 ];
 

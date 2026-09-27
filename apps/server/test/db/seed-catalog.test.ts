@@ -60,10 +60,10 @@ async function fileHolding(contents: unknown): Promise<string> {
 }
 
 describe("readCatalog", () => {
-  it("reads the real packages/cards/catalog.json: 110 entries (100 cards + 10 tokens)", async () => {
+  it("reads the real packages/cards/catalog.json: 111 entries (100 cards + 11 tokens)", async () => {
     const entries = await readCatalog(REAL_CATALOG);
-    expect(entries).toHaveLength(110);
-    expect(entries.filter((entry) => entry.token)).toHaveLength(10);
+    expect(entries).toHaveLength(111);
+    expect(entries.filter((entry) => entry.token)).toHaveLength(11);
     expect(entries.map((entry) => entry.id)).toContain("core-001");
   });
 

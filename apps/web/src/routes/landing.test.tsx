@@ -16,8 +16,9 @@ import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
+import { seeded } from "../test/random.ts";
 import LandingRoute from "./landing.tsx";
-import { LANDING_FAN } from "./landingFan.ts";
+import { dealLandingFan } from "./landingFan.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -280,13 +281,15 @@ describe("B38 the hero", () => {
     expect(screen.queryByTestId(landingFanCardTestid(FAN_CARDS))).toBeNull();
   });
 
-  it("B38 the fan's cards are the game's own faces, named and costed, with a card back last (integration QA)", () => {
-    render(<LandingRoute />);
+  it("B38 R374 the fan's cards are the game's own faces, named and costed, with a card back last (integration QA)", () => {
+    render(<LandingRoute random={seeded(38)} />);
     const fan = within(landing()).getByTestId(landingTestid.fan);
     const faces = [0, 1, 2, 3].map((index) => within(fan).getByTestId(landingFanCardTestid(index)));
+    // The page deals from the source it is given (R374), so the same seed names the same hand.
+    const hand = dealLandingFan(seeded(38));
 
     for (const [index, face] of faces.entries()) {
-      const { def, radiant } = LANDING_FAN[index] ?? { def: undefined, radiant: false };
+      const { def, radiant } = hand[index] ?? { def: undefined, radiant: false };
       expect(face.querySelector(".cf"), `fan card ${String(index)} is a CardFace`).not.toBeNull();
       expect(face).toHaveAttribute("data-def-id", def?.id);
       expect(face.querySelector(".card-name")?.textContent).toBe(def?.name);
@@ -297,6 +300,22 @@ describe("B38 the hero", () => {
     expect(back).toHaveAttribute("data-face", "down");
     expect(back.querySelector(".cf-back")).not.toBeNull();
     expect(back.textContent).toBe("");
+  });
+
+  it("R374 each visit deals its own hand, and a hand holds still while the page is up", () => {
+    const shown = (): string[] =>
+      [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
+    const first = render(<LandingRoute random={seeded(1)} />);
+    const hand = shown();
+    expect(hand).toEqual(dealLandingFan(seeded(1)).map(({ def }) => def.id));
+    // A re-render is the same visit: the deal is not drawn again.
+    first.rerender(<LandingRoute random={seeded(2)} />);
+    expect(shown()).toEqual(hand);
+    first.unmount();
+    // The next visit is a new deal.
+    render(<LandingRoute random={seeded(2)} />);
+    expect(shown()).toEqual(dealLandingFan(seeded(2)).map(({ def }) => def.id));
+    expect(shown()).not.toEqual(hand);
   });
 
   it("B38 the corner holds the settings gear beside Sign in, as every other screen's top bar does", () => {

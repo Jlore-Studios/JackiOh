@@ -51,19 +51,19 @@ describe("simulateReply", () => {
     expect(reply.turn).toBe(TURN + 2);
     expect(reply.phase).toBe("main");
     expect(reply.pending).toBeNull();
-    // Mr. Vanilla's 3 to the face; the attack and the endTurn are one node each.
-    expect(reply.players[AI].hero.health).toBe(27);
+    // Mr. Vanilla's 4 to the face; the attack and the endTurn are one node each.
+    expect(reply.players[AI].hero.health).toBe(26);
     expect(counter.used).toBe(2);
   });
 
   it("B41 takes lethal when the face is in reach", () => {
-    const state = handedOver({ p1: { health: 3 }, p2: { field: ["core-008"] } });
+    const state = handedOver({ p1: { health: 4 }, p2: { field: ["core-008"] } });
     const reply = simulateReply(state, AI, createNodeCounter(20)) as GameState;
     expect(reply.result?.winner).toBe(HUMAN);
   });
 
   it("B41 does not throw a unit into a Defense-Position wall it cannot hurt, and ends its turn instead", () => {
-    // The 7/7 in Defense Position has Taunt and 8 Armor: Mr. Vanilla's 3 does nothing and it dies.
+    // The 7/7 in Defense Position has Taunt and 8 Armor: Mr. Vanilla's 4 does nothing and it dies.
     const state = handedOver({
       p1: { field: [{ def: "core-025", position: "DEF" }] },
       p2: { field: ["core-008"] },
@@ -149,8 +149,8 @@ describe("replyScore", () => {
     const score = replyScore(ended, AI, TURN, counter);
     expect(score).toBe(evaluate(after, AI, "seat") - AI_EVAL.unspentMana * 2);
     expect(counter.used).toBe(2);
-    // The state it was scored at carries the reply's 3 damage.
-    expect(after.players[AI].hero.health).toBe(27);
+    // The state it was scored at carries the reply's 4 damage.
+    expect(after.players[AI].hero.health).toBe(26);
   });
 
   it("keeps the static score of a line that ended the game, with no node spent", () => {

@@ -356,15 +356,26 @@ describe("#97 Zephyrs — §10.7: 'lethal available' and 'can clear the enemy bo
     expect(scoredOn(g, "core-034").priority).toBe("clear");
   });
 
-  it("§10.7 the dry run sees #55 Lava Golem clear the enemy board by tributing the enemy's units (§8 #55, R101)", () => {
-    // Lava Golem "may tribute enemy units": paid with p2's three 7/7s it leaves p2 no board. The
-    // dry run tries one Tribute set only, p1's own three units, so the clear is never played.
+  it("§10.7 the dry run sees a Radiant #55 Lava Golem clear the enemy board by tributing the enemy's units (§8 #55, R101)", () => {
+    // Lava Golem "can use opposing Units as Tributes": paid with p2's three 7/7s the Radiant face
+    // leaves p2 no board.
     const g = scenario({
       seed: "zephyrs-golem",
       p1: { hand: [ZEPHYRS, VANILLA], field: [D_FENDER, D_FENDER, D_FENDER], library: [...LIBRARY] },
       p2: { hand: [VANILLA], field: [SEVEN_SEVEN, SEVEN_SEVEN, SEVEN_SEVEN], library: [...LIBRARY] },
     });
 
-    expect(scoredOn(g, "core-055").priority).toBe("clear");
+    const radiantGolem = subsystems.rank(g.state, "p1", { radiant: true }).find((entry) => entry.def.id === "core-055");
+    expect(radiantGolem?.priority).toBe("clear");
+  });
+
+  it("R360 the dry run sees the base Lava Golem clear nothing: paid with the enemy's units, it is summoned for them", () => {
+    const g = scenario({
+      seed: "zephyrs-golem",
+      p1: { hand: [ZEPHYRS, VANILLA], field: [D_FENDER, D_FENDER, D_FENDER], library: [...LIBRARY] },
+      p2: { hand: [VANILLA], field: [SEVEN_SEVEN, SEVEN_SEVEN, SEVEN_SEVEN], library: [...LIBRARY] },
+    });
+
+    expect(scoredOn(g, "core-055").priority).not.toBe("clear");
   });
 });

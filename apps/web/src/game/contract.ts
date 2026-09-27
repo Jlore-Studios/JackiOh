@@ -34,6 +34,8 @@ export const testid = {
   hero: (side: Side): string => `hero-${side}`,
   handCard: (instanceId: string): string => `hand-card-${instanceId}`,
   switchPosition: (instanceId: string): string => `switch-${instanceId}`,
+  /** R371: the "Face down" tag on the viewer's own face-down trap. */
+  unrevealed: (instanceId: string): string => `unrevealed-${instanceId}`,
   endTurn: "end-turn",
   offerDraw: "offer-draw",
   power: "power",

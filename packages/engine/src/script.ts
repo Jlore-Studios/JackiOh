@@ -178,6 +178,11 @@ export type StaticFlags = {
   tributeWorth?: number;
   /** R101: only a card that says so may pay its Tribute with the opponent's units (§8 #55). */
   tributeEnemies?: boolean;
+  /**
+   * R360: a play whose Tribute took any of the opponent's units summons this card for the opponent
+   * (§8 #55's base face: "If opposing Units are used, summon for your opponent").
+   */
+  enemyTributeHandsOver?: boolean;
   /** Anti-oneshot Armor: caps each hit on this player's hero at ANTI_ONESHOT_CAP (§4.4 step 3). */
   antiOneshot?: boolean;
   /**

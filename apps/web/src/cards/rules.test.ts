@@ -17,7 +17,15 @@ import { describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { KEYWORD_KINDS, type KeywordKind } from "@jackioh/shared";
 
-import { GLOSSARY, KEYWORD_MARK, RULED_TERMS, type GlossaryTermId, type TriggerTermId, type VerbTermId } from "./glossary.ts";
+import {
+  GLOSSARY,
+  KEYWORD_MARK,
+  RULED_TERMS,
+  inPlayerWords,
+  type GlossaryTermId,
+  type TriggerTermId,
+  type VerbTermId,
+} from "./glossary.ts";
 import { termsIn, tokenizeRules, type RulesToken } from "./rules.ts";
 
 /* -------------------------------------------------------------------------------------- helpers */
@@ -88,7 +96,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Choose one",
 ];
 
-/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK. */
+/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, and R346's PI. */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -100,6 +108,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Divine Shield": "DS",
   Trample: "TR",
   Cleave: "CL",
+  Pierce: "PI",
   Indestructible: "ND",
   Immutable: "IM",
   Stack: "ST",
@@ -269,17 +278,17 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(ruleColumn("6.3").size).toBeGreaterThanOrEqual(VERBS_6_3.length);
   });
 
-  it("B11 one entry per KEYWORD_KINDS kind, carrying SPEC §6.1's rule text verbatim", () => {
+  it("B11 R373 one entry per KEYWORD_KINDS kind, carrying SPEC §6.1's rule text verbatim, in players' words", () => {
     for (const kind of KEYWORD_KINDS) {
       const entry = GLOSSARY[kind];
       expect(entry, kind).toBeDefined();
       expect(entry.id, kind).toBe(kind);
       expect(entry.section, kind).toBe("§6.1");
-      expect(entry.rule, kind).toBe(specRule("6.1", kind));
+      expect(entry.rule, kind).toBe(inPlayerWords(specRule("6.1", kind)));
     }
   });
 
-  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 16 kinds", () => {
+  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 17 kinds", () => {
     expect(KEYWORD_MARK).toEqual(MARKS);
   });
 
@@ -289,8 +298,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.2");
-      if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(specRule("6.2", id));
-      else expect(entry.rule, id).toBe(specRule("6.2", id));
+      if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
+      else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.2", id)));
     }
   });
 
@@ -315,12 +324,29 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.3");
-      expect(entry.rule, id).toBe(specRule("6.3", id));
+      expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
     }
     const radiant = GLOSSARY.Radiant;
     expect(radiant.id).toBe("Radiant");
     expect(radiant.section).toBe("§5.2");
     expect(radiant.rule.trim()).not.toBe("");
+  });
+
+  it("R373 the glossary says deck for the rules' library and tribute for sacrifice, and never the old words", () => {
+    expect(inPlayerWords("Summon from library, scanning top down")).toBe("Summon from deck, scanning top down");
+    expect(inPlayerWords("Library order; swap libraries")).toBe("Deck order; swap decks");
+    expect(inPlayerWords("can be exiled or sacrificed; Sacrifice X; it sacrifices; sacrificing")).toBe(
+      "can be exiled or tributed; Tribute X; it tributes; tributing",
+    );
+    // Whole words only: nothing inside another word moves.
+    expect(inPlayerWords("librarian, sacrificial")).toBe("librarian, sacrificial");
+    expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
+    expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
+    expect(GLOSSARY.Indestructible.rule).toContain("tributed");
+    expect(GLOSSARY.Tribute.rule).toMatch(/^As an additional cost of playing a card, tribute X of your units/);
+    for (const entry of Object.values(GLOSSARY)) {
+      expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific/i);
+    }
   });
 
   it("B11 the glossary is exactly those 37 terms, each with a label, a rule and an alias list", () => {

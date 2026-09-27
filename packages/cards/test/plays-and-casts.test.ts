@@ -142,7 +142,8 @@ describe("R70: a cast-on-draw card is cast through §10.5's steps, and is whole 
     // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno); then the cast-on-draw
     // draw repeats (§2.4) and brings a second Reno.
     const g = scenario({
-      p1: { hand: [FULLSEND, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
+      // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+      p1: { hand: [{ def: FULLSEND, radiant: true }, VANILLA], library: [HINDER, RENO, RENO, RENO, RENO] },
       p2: { field: [{ def: VANILLA, lane: 1 }], library: [RENO, RENO] },
     });
 
@@ -262,7 +263,7 @@ describe("R217: a draw a cast makes continues its chain", () => {
     // ends it: counted as chains of their own, the nested draws recursed until the call stack ran out.
     const g = scenario({
       p1: {
-        hand: [FULLSEND, VANILLA],
+        hand: [{ def: FULLSEND, radiant: true }, VANILLA],
         backrow: [GOING_LONG, INFINITE_RESERVES],
         library: [CN_VIRUS],
         mana: 4,
@@ -308,14 +309,13 @@ describe("R58, §10.3: the resolution loop runs until the rules say it is done",
   // and the #95 in p2's hand threw out of `reduce` when played.
   //
   // "Draw your whole library" is one draw per card the library held when the effect started (R58),
-  // and each of those draws casts at most 20 CN-Viruses (R58, R217), so the play is finite: 55
-  // draws, at most 1,100 casts. Every cast is a play that #33 answers (R70), and Going Long's Armor
-  // 2 takes each CN-Virus hit to 0 (§4.4 step 2), so the hero never dies and the whole chain runs.
-  // `triggers.settle` pops one queued trigger per pass and throws once it has gone round
-  // SETTLE_PASS_CAP (1,000) times, so a legal play the rules bound at about 1,100 triggers crashes
-  // the action instead of resolving. p2's #33 on the other side does the same at about 50 draws:
-  // it does nothing for p1's casts, but its trigger is queued and popped for each one.
-  it("R58 a Call to Chaos that draws a library of 55 CN-Viruses beside Unstable Clone Machine resolves instead of throwing (§10.3, R217, R70)", () => {
+  // and each of those draws casts at most 20 CN-Viruses (R58, R217). Each virus used to shuffle its
+  // two copies in at once, so the chain fed itself and the play ran to about 1,100 casts, every one
+  // a play #33 answers (R70): past a flat 1,000-pass `settle`, which is why SETTLE_PASS_CAP is now
+  // derived from the rules (`triggers.ts`). R350 (patch v0.1.1) holds a virus's copies to the end
+  // of the turn, and #33's copies wait for its queued trigger, so the same play now casts only what
+  // the library held and fatigues for the rest: it still resolves whole, and the fatigue kills.
+  it("R58 R350 a Call to Chaos that draws a library of 55 CN-Viruses beside Unstable Clone Machine resolves instead of throwing (§10.3, R217, R70)", () => {
     const s = scenario({
       seed: CHAOS_SEED,
       p1: {
@@ -328,11 +328,14 @@ describe("R58, §10.3: the resolution loop runs until the rules say it is done",
     s.state.rngCursor = chaosCursorFor("draw");
 
     expect(() => s.play(CHAOS)).not.toThrow();
-    expect(s.state.result).toBeNull();
     expect(s.state.pending).toBeNull();
-    // R58: 55 draws, each chain casting at most 20.
+    // R58: 55 draws; the chains cast only viruses the library held, so at most 55, and never a copy.
     const casts = s.events.filter((event) => event.type === "cardPlayed" && event.defId === CN_VIRUS);
-    expect(casts.length).toBeGreaterThan(1000);
-    expect(casts.length).toBeLessThanOrEqual(55 * 20);
+    expect(casts.length).toBeGreaterThan(0);
+    expect(casts.length).toBeLessThanOrEqual(55);
+    expect(s.events.some((event) => event.type === "shuffledIn")).toBe(false);
+    // The draws past the empty library are §2.4's fatigue, which Going Long's Armor 2 cannot hold.
+    expect(s.events.filter((event) => event.type === "fatigue").length).toBeGreaterThan(0);
+    expect(s.state.result).toEqual({ winner: "p2", reason: "hero-death" });
   }, LONG_PLAY_TIMEOUT_MS);
 });

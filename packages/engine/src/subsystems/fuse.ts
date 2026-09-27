@@ -32,7 +32,7 @@ import { keywordKey } from "@jackioh/shared";
 import { defOf } from "../catalog";
 import { FUSE_COST_CAP } from "../config";
 import { addToHand } from "../draw";
-import { unitHas } from "../layers";
+import { unitHas, wornStatsOverride } from "../layers";
 import { printedCost } from "../mana";
 import type { EngineSink } from "../resolve";
 import { activeTargetDecls, selectionsPerDeclaration, storedDeclarationSlices } from "../playChoices";
@@ -89,7 +89,18 @@ export type FuseArgs = {
   target?: CardInstance;
   /** Craft a Card: no target on the field, so the result is a fresh card in this player's hand. */
   toHand?: PlayerId;
+  /**
+   * R352: what the hand card costs. `"free"` is Craft a Card's "the result costs 0" (§8 #99), a
+   * `costOverride` of `CRAFTED_CARD_COST`; `"fused"` leaves R77's fused cost, min(sum, 4), as
+   * Heroic Power's Stitching does. Absent is `"free"`.
+   */
+  handPrice?: HandPrice;
+  /** R352: the hand card is Radiant (radiant Stitching). Absent is R77's non-Radiant hand card. */
+  radiant?: boolean;
 };
+
+/** R352: the two prices a fused hand card can have. */
+export type HandPrice = "free" | "fused";
 
 // ---------------------------------------------------------------------------
 // The fused definition (R77).
@@ -157,7 +168,9 @@ function sumDefined(values: readonly (number | undefined)[]): number | null {
  */
 function wornFace(def: CardDef, card: CardInstance | undefined, radiant: boolean): CardFace {
   const face = radiant ? def.radiant : def.base;
-  const stats = card?.statsOverride;
+  // R349: a token with no Radiant form of its own (the Ghoul Token) doubles its X/X on the Radiant
+  // face, so the fused Radiant face sums the doubled X.
+  const stats = card === undefined ? undefined : wornStatsOverride(def, { ...card, radiant });
   const armor = card?.armorOverride;
   return {
     ...face,
@@ -726,7 +739,7 @@ function keepInstance(
 
 /**
  * §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's
- * own face did not — Jilliax's Divine Shield fused onto a Kpop Fanatic, a Radiant Saintess's Reborn
+ * own face did not — Jilliax's Divine Shield fused onto a K-Pop Fanatic, a Radiant Saintess's Reborn
  * onto a unit that came back through a granted one — and the card gains it with the new text, so a
  * shield or a Reborn the card had spent is up again, as radiant #50's printed shield is after a
  * granted one was spent (`effects/radiant.ts`). A keyword the kept face already printed is not newly
@@ -749,10 +762,18 @@ function gainPrintedKeywords(kept: CardInstance, before: CardDef, after: CardDef
  * the reading `addToHand`'s cost riders have (R4), so a burned result is an ordinary graveyard card
  * that R78 would otherwise carry the price for into every later zone (a Reminisce, a Gravedigger).
  */
-function craftInHand(sink: EngineSink, def: CardDef, player: PlayerId, ingredients: readonly CardInstance[]): CardInstance {
+function craftInHand(
+  sink: EngineSink,
+  def: CardDef,
+  player: PlayerId,
+  ingredients: readonly CardInstance[],
+  terms: { handPrice: HandPrice; radiant: boolean },
+): CardInstance {
   const card = newInstance(sink.state, def.id, player, { z: "hand", player });
+  // R352: radiant Stitching's result is Radiant as it is made, so it reaches the hand on that face.
+  if (terms.radiant) card.radiant = true;
   for (const ingredient of ingredients) ceaseToExist(sink.state, ingredient);
-  if (addToHand(sink, card) === "hand") card.costOverride = CRAFTED_CARD_COST;
+  if (addToHand(sink, card) === "hand" && terms.handPrice === "free") card.costOverride = CRAFTED_CARD_COST;
   return card;
 }
 
@@ -807,7 +828,10 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
     // has its power keeps it (`heroPower.ensurePower`). A crafted card rolls as it reaches the hand.
     runStartOfGame(sink, result, result.controller);
   } else if (toHand !== undefined) {
-    result = craftInHand(sink, def, toHand, ingredients);
+    result = craftInHand(sink, def, toHand, ingredients, {
+      handPrice: args.handPrice ?? "free",
+      radiant: args.radiant === true,
+    });
   } else {
     return null;
   }

@@ -93,12 +93,16 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * R311 moved the hash and not the game: every library card now records what its owner was shown of
  * it going in (`knownAs`). The same fold with that field stripped from every instance hashes to
  * "cc583237", the value before it.
+ *
+ * Patch v0.1.1 (R360–R366) re-recorded it by the procedure above: its decks hold #1, #8, #20, #25,
+ * #56, #77, #81 and #92, whose stats, keywords or rules the patch changed, so the same seed plays a
+ * different game. 37 actions, still won by p1 by hero death.
  */
-const EXPECTED_HASH = "37b1c8ba";
+const EXPECTED_HASH = "2d546ddf";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;
-const EXPECTED_ACTIONS = 38;
+const EXPECTED_ACTIONS = 37;
 
 function read(path: string): Recording {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));

@@ -53,6 +53,29 @@ describe("lethal projection (M3-T7, R44)", () => {
     expect(isLethal(state, attacker, onHero)).toBe(true);
   });
 
+  it("R346 R44 an attacker with Pierce projects its whole attack through hero and unit Armor", () => {
+    const state = board("pierce");
+    const attacker = put(state, bigBody.id, slot("p1", "units", 1)); // 5/10
+    attacker.grantedKeywords.push({ kind: "Pierce" }, { kind: "Trample" });
+    state.players.p2.hero.armor = 3;
+    expect(projectedDamage(state, attacker, onHero)).toBe(5);
+    state.players.p2.hero.health = 5;
+    expect(isLethal(state, attacker, onHero)).toBe(true);
+
+    // Through a unit's Armor too: at 12 attack against a 7/7 with Armor 7, all 12 land on the unit,
+    // 5 of them past its health trample on, and the hero's Armor 3 takes none of that either.
+    attacker.buffs.attack = 7;
+    const wall = put(state, armoured.id, slot("p2", "units", 1));
+    expect(unitView(state, wall).armor).toBe(7);
+    const onWall = onUnit(wall);
+    expect(projectedDamage(state, attacker, onWall)).toBe(5);
+    // Without Pierce the wall's Armor leaves 5 of the 12, which its 7 health holds, and the hero's
+    // Armor 3 takes 3 off a direct swing.
+    attacker.grantedKeywords = [{ kind: "Trample" }];
+    expect(projectedDamage(state, attacker, onWall)).toBe(0);
+    expect(projectedDamage(state, attacker, onHero)).toBe(9);
+  });
+
   it("R44 subtracts the defending hero's Armor before the comparison (§4.4 step 2)", () => {
     const state = board("hero-armor");
     const attacker = put(state, bigBody.id, slot("p1", "units", 1)); // 5/10

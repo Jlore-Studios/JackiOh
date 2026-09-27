@@ -75,7 +75,7 @@ describe("R279 the names a text links", () => {
   it("R279 with no catalog to read, a name is plain text", () => {
     const { container } = render(<CardFace face={face("core-090", false)} layout="full" />);
     expect(container.querySelector(".cf-ref")).toBeNull();
-    expect(container.querySelector(".card-text")).toHaveTextContent("Shuffle a CN-Virus into the opponent's library");
+    expect(container.querySelector(".card-text")).toHaveTextContent("Shuffle a CN-Virus into your opponent's deck.");
   });
 });
 

@@ -108,6 +108,7 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Divine Shield" },
   { kind: "Trample" },
   { kind: "Cleave" },
+  { kind: "Pierce" },
   { kind: "Indestructible" },
   { kind: "Immutable" },
   { kind: "Stack" },
@@ -138,7 +139,7 @@ export function baseView(over: Partial<PlayerView> = {}): PlayerView {
  * drift in `viewFor.modifierLabel` shows up as a fixture that no longer matches the engine's test.
  */
 export const yourModifiers: ModifierView[] = [
-  { id: "m1", label: "Cost-4 cards cost 1 less (next turn)" },
+  { id: "m1", label: "Cost (4)+ cards cost (1) less (next turn)" },
   { id: "m2", label: 'Your cards gain "Combo: draw 1"' },
 ];
 

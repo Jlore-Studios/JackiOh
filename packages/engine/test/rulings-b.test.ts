@@ -341,7 +341,7 @@ const SCRIPTS: Record<string, CardScripts> = {
   }),
   // R61: a trap with no legal target still fires, is consumed and does nothing.
   [emptyTrap.id]: both({ triggers: [{ id: "no-target", on: ["cardPlayed"], run: () => [] }] }),
-  // #50 Kpop Fanatic's engine half (R76): a delayed steal naming its target as data.
+  // #50 K-Pop Fanatic's engine half (R76): a delayed steal naming its target as data.
   [kpop.id]: both({
     delayed: (ctx) => {
       const target = ctx.data.target;
@@ -573,7 +573,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "never" },
     });
 
@@ -1061,7 +1061,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     card.costOverride = 5;
     expect(effectiveCost(state, card)).toBe(4);
 
-    addModifier(sink, "p1", { kind: "costDiscount", amount: 1, onlyCurrentCost: 4, expiry: { until: "never" } });
+    addModifier(sink, "p1", { kind: "costDiscount", amount: 1, minCurrentCost: 4, expiry: { until: "never" } });
     expect(effectiveCost(state, card)).toBe(3);
     addModifier(sink, "p1", { kind: "costDiscount", amount: 9, expiry: { until: "never" } });
     expect(effectiveCost(state, card)).toBe(0);
@@ -1258,10 +1258,10 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
 
     // A face-down trap is readable by its controller only, so control is what a swap moves (R33).
     const trap = put(state, emptyTrap.id, slot("p1", "backrow", 1));
-    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 0 });
     trap.controller = "p2";
     expect(viewFor(state, "p2").opponent.backrow[0]).toMatchObject({ faceDown: false, defId: emptyTrap.id });
-    expect(viewFor(state, "p1").you.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").you.backrow[0]).toEqual({ faceDown: true, cost: 0 });
 
     // The library swap is R12's one exception: a card follows its owner off the field.
     const card = only(state.players.p1.library);
@@ -1386,7 +1386,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     const back = actResult(own, { type: "endTurn", playerId: "p2" });
     expect(back.error).toBeUndefined();
     expect(eventsOfType(back.events, "controlChanged")).toHaveLength(0);
-    // M4: cards/test/50-kpop-fanatic.test.ts proves the card half.
+    // M4: cards/test/050-k-pop-fanatic.test.ts proves the card half.
   });
 
   it("R77 fuses the base forms, keeps the target's instance, sums buffs, and crafts a free non-Radiant hand card", () => {
@@ -1560,7 +1560,8 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
 
     const plays = legalActions(state, "p1").filter((action) => action.type === "play");
     expect(plays.filter((a) => a.type === "play" && a.instanceId === unit.id)).toHaveLength(UNIT_ZONES);
-    expect(plays.flatMap((a) => (a.type === "play" && a.instanceId === x.id ? [a.x] : []))).toEqual([0, 1]);
+    // R348: X from 1 up to current mana (1 here).
+    expect(plays.flatMap((a) => (a.type === "play" && a.instanceId === x.id ? [a.x] : []))).toEqual([1]);
 
     // A declared target travels in `targets` and a declared direction in `modes`: nothing pauses.
     const enemy = put(state, bigBody.id, slot("p2", "units", 1));

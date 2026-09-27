@@ -16,6 +16,7 @@ import { drawOne } from "../src/draw";
 import {
   cardsPlayedThisTurn,
   heroOf,
+  killerOf,
   playedEarlier,
   playedIdsThisTurn,
   wasPlayedThisTurn,
@@ -25,8 +26,13 @@ import {
 import { beginGame, reduce } from "../src/reduce";
 import type { CardInstance, GameState } from "../src/state";
 import { startTurn } from "../src/turn";
-import { moveToZone } from "../src/zones";
+import { dealDamage } from "../src/damage";
+import { newInstance } from "../src/state";
+import { stateCheck } from "../src/stateCheck";
+import { moveToZone, placeOnField } from "../src/zones";
+import { plain } from "./fixtures/combat";
 import { inHand, newGame, put, setLibrary, sinkFor, slot } from "./fixtures/harness";
+import { stockpile } from "./fixtures/scripts";
 
 /** A state in the main phase with nothing dealt, so every pile below is exactly what a test built. */
 function board(seed: string): GameState {
@@ -301,3 +307,55 @@ describe("the card-facing read surface (BUILD M3-T1, SPEC §10.9)", () => {
     expect(cardsPlayedThisTurn(state, "p1")).toBe(1);
   });
 });
+
+describe("R361 killerOf: the Unit that destroyed a card, as its Death hook reads it (R42)", () => {
+  /** The victim as its Death hook would read it: the snapshot §4.5 takes before R78 resets it. */
+  function snapshotOf(card: CardInstance): CardInstance {
+    return JSON.parse(JSON.stringify(card)) as CardInstance;
+  }
+
+  it("R361 names the unit whose hit was lethal, while that unit stands on the field", () => {
+    const state = board("killer-unit");
+    const killer = put(state, plain.id, slot("p2", "units", 2));
+    const victim = put(state, plain.id, slot("p1", "units", 1));
+    dealDamage(sinkFor(state), { source: killer, target: { kind: "unit", instance: victim }, amount: 3 });
+    const dying = snapshotOf(victim);
+    stateCheck(sinkFor(state));
+    expect(victim.zone.z).toBe("graveyard");
+    expect(killerOf(state, dying)?.id).toBe(killer.id);
+  });
+
+  it("R361 names nobody for a hit that was not lethal, a Spell's hit, or no card at all", () => {
+    const state = board("killer-none");
+    const striker = put(state, plain.id, slot("p2", "units", 2));
+    const survivor = put(state, plain.id, slot("p1", "units", 1));
+    dealDamage(sinkFor(state), { source: striker, target: { kind: "unit", instance: survivor }, amount: 1 });
+    expect(killerOf(state, snapshotOf(survivor))).toBeNull();
+
+    const spell = newInstance(state, stockpile.id, "p2", { z: "resolving", player: "p2" });
+    state.players.p2.resolving.push(spell);
+    const burnt = put(state, plain.id, slot("p1", "units", 3));
+    dealDamage(sinkFor(state), { source: spell, target: { kind: "unit", instance: burnt }, amount: 3 });
+    expect(killerOf(state, snapshotOf(burnt))).toBeNull();
+
+    expect(killerOf(state, null)).toBeNull();
+  });
+
+  it("R361 names nobody once the killer has left the field, or lies dormant under a Stack (R13, R78)", () => {
+    const state = board("killer-gone");
+    const killer = put(state, plain.id, slot("p2", "units", 2));
+    const victim = put(state, plain.id, slot("p1", "units", 1));
+    dealDamage(sinkFor(state), { source: killer, target: { kind: "unit", instance: victim }, amount: 3 });
+    const dying = snapshotOf(victim);
+
+    // Buried under a Stack pile, it is no longer acting on the field.
+    const top = newInstance(state, plain.id, "p2", { z: "hand", player: "p2" });
+    expect(placeOnField(state, top, slot("p2", "units", 2), { stack: true })).toBe(true);
+    expect(killerOf(state, dying)).toBeNull();
+
+    // And in a graveyard it is gone for good.
+    moveToZone(state, killer, "graveyard");
+    expect(killerOf(state, dying)).toBeNull();
+  });
+});
+

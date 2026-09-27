@@ -14,6 +14,7 @@ export type {
 export { closeInspect } from "./store.ts";
 export { CardDetail } from "./CardDetail.tsx";
 export { CardListPreview, CardListSheet } from "./CardList.tsx";
+export { FaceDownPreview, FaceDownSheet } from "./FaceDown.tsx";
 export { References, namedCards } from "./References.tsx";
 export type { CardListEntry, CardListProps } from "./CardList.tsx";
 export type { CardDetailProps } from "./CardDetail.tsx";
@@ -34,6 +35,8 @@ export {
   INSPECT_DETAIL,
   INSPECT_FACE,
   INSPECT_FACE_BASE,
+  INSPECT_FACE_DOWN,
+  INSPECT_FACE_DOWN_COST,
   INSPECT_FACE_RADIANT,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
@@ -46,6 +49,7 @@ export {
   INSPECT_LIST_HOVER,
   INSPECT_LIST_MORE,
   INSPECT_LIST_SHEET,
+  INSPECT_NOTE,
   INSPECT_SCRIM,
   INSPECT_SHEET,
 } from "./testids.ts";

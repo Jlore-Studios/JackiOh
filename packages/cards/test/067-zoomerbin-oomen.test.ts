@@ -1,10 +1,10 @@
 // #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
-// backrow; occupied or Locked → nothing (R47); pool = six traps".
+// backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
 //
-// §8.3's row: "Cry: summon a random 1-cost Trap face-down into your backrow zone in this lane" →
-// "A random Radiant Trap" (R275), Engine cell "All six Core traps cost 1, so the base pool is #18,
-// #41, #60, #71, #85, #96 and the radiant face's is the same six, summoned Radiant; zone occupied or
-// Locked → fizzles". A Radiant face-down trap is still hidden from the opponent, face and all (R33,
+// §8.3's row: "Cry: summon a random Cost (1) Trap face-down into your backrow zone in this lane" →
+// "A random Radiant Trap" (R275). Patch v0.1.1 made #85 Unlicensed Experimentation cost 2, so the
+// base pool is #18, #41, #60, #71, #96 and the radiant face's is every Core trap, #85 included,
+// summoned Radiant; zone occupied or Locked → fizzles. A Radiant face-down trap is still hidden from the opponent, face and all (R33,
 // R97, R177).
 //
 // §3.1 fixes what "this lane" means: "the backrow zone in the same column as the unit". §8's
@@ -19,8 +19,10 @@ import { TRAP_TYPES, catalog } from "../src/query";
 const OOMEN = "core-067"; // Unit 1/2 → 2/4, cost 1, Human.
 const MANA_WELL = "core-006"; // A Field Spell: something to occupy a backrow zone with.
 
-/** The Engine cell's pool, by catalog id: #18, #41, #60, #71, #85, #96. */
-const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-085", "core-096"];
+/** The base face's pool, by catalog id: the Cost (1) traps #18, #41, #60, #71, #96. */
+const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-096"];
+/** The radiant face's pool: every Core trap, #85 (Cost (2)) included. */
+const RADIANT_TRAP_POOL = [...TRAP_POOL, "core-085"];
 
 type Board = ReturnType<typeof scenario>;
 
@@ -52,11 +54,11 @@ describe("#67 Zoomerbin Oomen", () => {
   // The pool (§5.1, R60)
   // -------------------------------------------------------------------------------------------
 
-  it("BUILD row 67 the pool is exactly the six Core traps, and both faces draw from it", () => {
+  it("BUILD row 67 the base pool is the five Cost (1) traps, and the radiant pool every trap", () => {
     const indices = (defs: { index: string }[]): string[] => defs.map((entry) => entry.index);
-    // The base face asks for 1-cost traps, the radiant face for any trap; every Core trap costs 1,
-    // so the two queries are the same six defs. Field Trap counts as Trap (§8 #51, R35, R61).
-    expect(indices(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(["18", "41", "60", "71", "85", "96"]);
+    // The base face asks for Cost (1) traps, the radiant face for any trap. Field Trap counts as
+    // Trap (§8 #51, R35, R61), and #85 costs 2, so only the radiant query reaches it.
+    expect(indices(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(["18", "41", "60", "71", "96"]);
     expect(indices(catalog.query({ type: TRAP_TYPES }))).toEqual(["18", "41", "60", "71", "85", "96"]);
   });
 
@@ -183,7 +185,7 @@ describe("#67 Zoomerbin Oomen", () => {
 
     // The opponent is told the zone is occupied and nothing more (§10.8).
     const theirs = s.view("p2");
-    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true });
+    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true, cost: 1 });
     // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
     const serialized = JSON.stringify(theirs);
     expect(serialized).not.toContain(`"${trap.id}"`);
@@ -203,7 +205,7 @@ describe("#67 Zoomerbin Oomen", () => {
       expect(trap?.radiant).toBe(true);
       if (trap !== null) seen.add(trap.defId);
     }
-    expect([...seen].sort()).toEqual([...TRAP_POOL].sort());
+    expect([...seen].sort()).toEqual([...RADIANT_TRAP_POOL].sort());
   });
 
   it("R47 the radiant face fizzles on an occupied zone, and the unit still enters", () => {

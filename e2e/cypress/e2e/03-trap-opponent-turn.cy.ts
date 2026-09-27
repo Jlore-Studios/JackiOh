@@ -16,7 +16,7 @@
 //     the Cry resolves" (R17), and the Transform takes the card off the field, so the Rush Token
 //     its Cry would have summoned never arrives — the exception R118 points at. It also has to be
 //     a unit that is not Immutable: R17 and R23 let an Immutable target refuse the Transform and
-//     the trap is merely spent, which would be a different test (#8 Mr. Vanilla is that card).
+//     the trap is merely spent, which would be a different test (a Radiant #19 is that card).
 //   * #81 Radiant Saintess is played straight afterwards, on the same turn. That is "P1 can
 //     continue": the turn is still player 1's, the client is not locked, and the next play
 //     resolves normally.
@@ -90,7 +90,7 @@ const CURVATURE = "Professor Curvature";
  * appends the suffix while the discount is dormant. Asserted with `have.text` rather than
  * `contain.text` precisely so that a caption which quietly dropped the suffix fails here.
  */
-const CURVATURE_DISCOUNT = "Cost-4 cards cost 1 less";
+const CURVATURE_DISCOUNT = "Cost (4)+ cards cost (1) less";
 const CURVATURE_DORMANT = `${CURVATURE_DISCOUNT} (next turn)`;
 
 /** BUILD M5-T1's two viewports; the first is `cypress.config.ts`'s default. */

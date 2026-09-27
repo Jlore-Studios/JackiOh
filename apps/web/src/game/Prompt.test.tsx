@@ -290,7 +290,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(board).toHaveTextContent("Swap boards");
     expect(board).toHaveTextContent("Every zone changes sides");
     expect(screen.getByTestId("prompt-option-health")).toHaveTextContent("Swap hero Health");
-    expect(screen.getByTestId("prompt-option-library")).toHaveTextContent("Swap libraries");
+    expect(screen.getByTestId("prompt-option-library")).toHaveTextContent("Swap decks");
     for (const raw of ["health", "board", "library"]) {
       expect(screen.getByTestId(`prompt-option-${raw}`).textContent).not.toBe(raw);
     }

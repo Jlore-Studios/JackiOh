@@ -101,7 +101,7 @@ describe("turn loop and mana (M1-T6)", () => {
     expect(state.players.p1.graveyard.some((c) => c.id === buried.id)).toBe(false);
   });
 
-  it("refuses an X above current mana and allows X = 0", () => {
+  it("R348 refuses an X above current mana and an X of 0", () => {
     const deck = [xBolt.id, ...vanillaDeck(DECK_SIZE - 1, 1)];
     let state = playing("x-cost", [deck, vanillaDeck(DECK_SIZE, 21)]);
     const bolt = newInstance(state, xBolt.id, "p1", { z: "hand", player: "p1" });
@@ -110,10 +110,17 @@ describe("turn loop and mana (M1-T6)", () => {
     const tooBig = reduce(state, { type: "play", instanceId: bolt.id, x: 5, playerId: "p1", nonce: "x-big" });
     expect(tooBig.error).toMatch(/X is above your current mana/);
 
+    // R348: X is at least 1 (`MIN_CHOSEN_X`), named or left out.
     const zero = reduce(state, { type: "play", instanceId: bolt.id, x: 0, playerId: "p1", nonce: "x-zero" });
-    expect(zero.error).toBeUndefined();
-    expect(zero.state.players.p2.hero.health).toBe(30);
-    expect(eventsOfType(zero.events, "cardPlayed")[0]?.costPaid).toBe(0);
+    expect(zero.error).toMatch(/X must be at least 1/);
+    expect(zero.state).toBe(state);
+    const none = reduce(state, { type: "play", instanceId: bolt.id, playerId: "p1", nonce: "x-none" });
+    expect(none.error).toMatch(/X must be at least 1/);
+    expect(
+      legalActions(state, "p1").flatMap((action) =>
+        action.type === "play" && action.instanceId === bolt.id ? [action.x] : [],
+      ),
+    ).toEqual([1]);
 
     state = playing("x-cost-2", [deck, vanillaDeck(DECK_SIZE, 21)]);
     const bolt2 = newInstance(state, xBolt.id, "p1", { z: "hand", player: "p1" });
@@ -152,7 +159,7 @@ describe("turn loop and mana (M1-T6)", () => {
     addModifier(sink, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 

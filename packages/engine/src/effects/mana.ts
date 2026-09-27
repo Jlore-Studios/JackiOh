@@ -1,6 +1,6 @@
 // Mana effects: temporary mana now, and a change to a player's next refresh (§2.3).
 
-import { NEXT_REFRESH_MODIFIER_ID, gainMana as addMana, manaEvent } from "../mana";
+import { NEXT_REFRESH_MODIFIER_ID, gainMana as addMana, manaEvent, refreshSomeMana } from "../mana";
 import type { Effect } from "../script";
 import { playerOf, type PlayerSpec } from "./targets";
 
@@ -13,6 +13,23 @@ export function gainMana(args: { amount: number; player?: PlayerSpec }): Effect 
       const side = ctx.state.players[player];
       addMana(side, args.amount);
       ctx.events.push(manaEvent(player, side));
+    },
+  };
+}
+
+/**
+ * §6.3 Refresh, R364: give back up to `amount` spent mana, never past max (#78 /fullsend's "Refresh 3
+ * mana"). A refresh that gives nothing — current already at or above max — announces nothing.
+ */
+export function refreshMana(args: { amount: number; player?: PlayerSpec }): Effect {
+  return {
+    kind: "refreshMana",
+    apply(ctx): void {
+      const player = playerOf(ctx, args.player ?? "self");
+      const side = ctx.state.players[player];
+      const before = side.mana.current;
+      refreshSomeMana(side, args.amount);
+      if (side.mana.current !== before) ctx.events.push(manaEvent(player, side));
     },
   };
 }

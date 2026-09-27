@@ -43,7 +43,7 @@ export const VOICE_MAX_WORDS = { play: 8, death: 6, cast: 8 } as const;
 export const HIDDEN_DEF_ID = "hidden";
 /** Rules vocabulary a line may not use (whole word, case-insensitive): lines are flavour, not text. */
 export const BANNED_RULES_WORDS: readonly string[] = [
-  "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave",
+  "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave", "Pierce",
   "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
   "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",

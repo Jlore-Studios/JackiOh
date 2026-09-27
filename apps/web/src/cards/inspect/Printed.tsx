@@ -1,5 +1,5 @@
 // The card as printed, beside a face in play that prints something else (SPEC §10.10): a #98
-// Heroic Power's seven powers beside the one it rolled, a Vanilla unit's lost text. The collection
+// Heroic Power's eight powers beside the one it rolled, a Vanilla unit's lost text. The collection
 // prints every card this way; in play the hover preview and the sheet show it only where the face
 // and the print differ (FaceModel.printed), and never for a card play keeps a mystery ("???"). A
 // Radiant card's printed text is marked as its face is (R277), and names its references (R279).

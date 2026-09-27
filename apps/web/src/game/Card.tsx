@@ -28,17 +28,27 @@ import type { CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
 import {
   CardBack,
   CardFace,
+  FACE_DOWN_TAG,
+  FaceDownPreview,
+  FaceDownSheet,
+  Icon,
   MinionFace,
+  UNREVEALED_NOTE,
+  faceDownLabel,
   faceModel,
   useCardSettings,
   useInspectTrigger,
   type FaceModel,
+  type InspectRenderSubject,
+  type InspectSubject,
 } from "../cards/index.ts";
 import { useCardInfo, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { conditionAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
+
+import "./facedown.css";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
@@ -147,7 +157,19 @@ export type CardProps = {
   /** R33: a public card names its owner and its controller; they differ after a steal or a swap. */
   owner?: PlayerId;
   controller?: PlayerId;
-  counters?: { plague?: number; grade?: number };
+  /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
+  counters?: { plague?: number; grade?: number; gradeLetter?: string };
+  /**
+   * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
+   * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
+   * back has no instance id. Absent for every other back (the opponent's hand).
+   */
+  faceDown?: { cost?: number; at: string };
+  /**
+   * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
+   * "Face down" tag, because the other player sees only its back.
+   */
+  unrevealed?: boolean;
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
   /** Units carry the switch-position button (BUILD M5-T2). */
@@ -193,12 +215,27 @@ export default function Card(props: CardProps): ReactElement {
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
   const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
 
-  // Hooks run on every render, backs included; a back has no subject, so it opens nothing. A full
-  // face sits in a row (the hand, the resolving strip), so its preview rises over it rather than
-  // covering the neighbour the pointer is heading for.
-  const inspect = useInspectTrigger(card === null ? null : { key: testId ?? card.instanceId, face }, {
-    prefer: form === "full" ? "above" : "beside",
-  });
+  // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
+  // says of it, a face-down trap and its cost; any other back has no subject and opens nothing. A
+  // full face sits in a row (the hand, the resolving strip), so its preview rises over it rather
+  // than covering the neighbour the pointer is heading for. Your own face-down trap's overlays say
+  // the other player cannot see it (R371).
+  const faceDown = props.faceDown;
+  const subject: InspectSubject | InspectRenderSubject | null =
+    card !== null
+      ? { key: testId ?? card.instanceId, face, ...(props.unrevealed === true ? { note: UNREVEALED_NOTE } : {}) }
+      : faceDown !== undefined
+        ? {
+            key: `facedown-${faceDown.at}`,
+            render: ({ mode, anchor, close }) =>
+              mode === "hover" ? (
+                <FaceDownPreview cost={faceDown.cost} anchor={anchor} />
+              ) : (
+                <FaceDownSheet cost={faceDown.cost} onClose={close} />
+              ),
+          }
+        : null;
+  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside" });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
@@ -234,16 +271,44 @@ export default function Card(props: CardProps): ReactElement {
   };
 
   if (card === null) {
-    // A back. No name, no def id, no instance id: the view does not have them.
+    // A back. No name, no def id, no instance id: the view does not have them. A face-down trap in
+    // the backrow shows the cost the view gives it (R370), and opens what the view says of it.
+    if (faceDown === undefined) {
+      return (
+        <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label="Face-down card">
+          <CardBack />
+        </div>
+      );
+    }
+    // As for any card on the board, a click is the zone's (a target, say) and a resting mouse or a
+    // long-press opens the overlay; the label says the same words for a screen reader.
+    const label = faceDownLabel(faceDown.cost);
     return (
-      <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label="Face-down card">
-        <CardBack />
-      </div>
+      <>
+        <div
+          {...shared}
+          {...inspect.handlers}
+          className={cx("card", "card-back", "card-facedown", props.className)}
+          data-face-down="true"
+          data-facedown-cost={faceDown.cost}
+          role="img"
+          aria-label={label}
+          title={settings.hoverPreviews && panelHover ? undefined : label}
+        >
+          <CardBack />
+          {faceDown.cost === undefined ? null : (
+            <span className="facedown-cost" data-cost={faceDown.cost} aria-hidden="true">
+              {faceDown.cost}
+            </span>
+          )}
+        </div>
+        {inspect.overlay}
+      </>
     );
   }
 
   const position = unit?.position;
-  const counters = props.counters ?? unit?.counters;
+  const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
 
@@ -270,6 +335,8 @@ export default function Card(props: CardProps): ReactElement {
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}
+      // R371: your own face-down trap, which the other player sees only as a back.
+      data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
@@ -296,8 +363,25 @@ export default function Card(props: CardProps): ReactElement {
         </span>
       )}
       {counters?.grade !== undefined && (
-        <span className="counter counter-grade" data-counter="grade" title="Grade counters">
-          {counters.grade}
+        // R372: the grade by the letter the view names it with (E to S); the number is a fallback
+        // for a view that names none.
+        <span
+          className="counter counter-grade"
+          data-counter="grade"
+          data-grade={counters.grade}
+          data-grade-letter={counters.gradeLetter}
+          title={counters.gradeLetter === undefined ? "Grade counters" : `Grade ${counters.gradeLetter}`}
+        >
+          {counters.gradeLetter ?? counters.grade}
+        </span>
+      )}
+
+      {props.unrevealed === true && (
+        // R371: the tag says it in words and with the struck-through eye, never by colour alone.
+        <span className="unrevealed-tag" data-testid={testid.unrevealed(card.instanceId)} title={UNREVEALED_NOTE}>
+          <Icon name="eyeOff" />
+          <span className="unrevealed-tag-text">{FACE_DOWN_TAG}</span>
+          <span className="unrevealed-tag-sr">: your opponent can't see this card</span>
         </span>
       )}
 

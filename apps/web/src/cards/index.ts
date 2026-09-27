@@ -48,6 +48,11 @@ export type { CardFaceProps } from "./CardFace.tsx";
 export { MinionFace } from "./MinionFace.tsx";
 export type { MinionFaceProps } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";
+export { Icon } from "./icons.tsx";
+export type { IconName } from "./icons.tsx";
+
+// R370, R371: the words a face-down backrow card is drawn with.
+export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
 // Slice A: art.
 export { ART_MANIFEST, CardArt, artUrl } from "./art/index.ts";
@@ -59,10 +64,14 @@ export {
   CardListPreview,
   CardListSheet,
   closeInspect,
+  FaceDownPreview,
+  FaceDownSheet,
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE,
   INSPECT_FACE_BASE,
+  INSPECT_FACE_DOWN,
+  INSPECT_FACE_DOWN_COST,
   INSPECT_FACE_RADIANT,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
@@ -75,6 +84,7 @@ export {
   INSPECT_LIST_HOVER,
   INSPECT_LIST_MORE,
   INSPECT_LIST_SHEET,
+  INSPECT_NOTE,
   INSPECT_SCRIM,
   INSPECT_SHEET,
   useInspectTrigger,

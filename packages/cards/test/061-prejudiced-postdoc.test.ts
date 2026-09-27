@@ -11,7 +11,7 @@ import { scenario, type Scenario } from "./_harness";
 
 const POSTDOC = "core-061"; // Unit, Human, 2 — 2/4 → 4/8
 const TIMMY = "core-011"; // Unit, Human, 3/3, Rush + First Strike
-const MR_VANILLA = "core-008"; // Unit, Human, 3/3, Immutable
+const ROCK = "core-066"; // Unit, Human, 10/10 Indestructible → 20/20 plus Immutable
 const SHREDDER = "core-013"; // Unit, no tags, 8/10 — the radiant face's "any unit"
 const PILLOW = "core-065-1"; // #65.1, the aura source for "auras apply afresh"
 const SURGERY = "core-063"; // #63, the only buff this wave can put on an enemy unit
@@ -93,15 +93,18 @@ describe("#61 Prejudiced Postdoc", () => {
   it("R23 an Immutable target is legal and the copy is the one that is made Vanilla", () => {
     const s = scenario({
       p1: { hand: [POSTDOC], mana: 4 },
-      p2: { field: [MR_VANILLA] },
+      // A Radiant The Rock is an Immutable Human (§8.3 row 66).
+      p2: { field: [{ def: ROCK, radiant: true }] },
     });
-    const immutable = s.card(MR_VANILLA);
+    const immutable = s.card(ROCK);
 
     s.play(POSTDOC, { targets: [sel(immutable)] });
 
     const copy = unitAt(s, "p1", COPY_LANE);
-    expect(copy.defId).toBe(MR_VANILLA);
-    s.expectStats(copy, { attack: 3, maxHealth: 3 });
+    expect(copy.defId).toBe(ROCK);
+    s.expectStats(copy, { attack: 20, maxHealth: 20 });
+    // The copy is Vanilla, so neither Indestructible nor Immutable reaches it.
+    expect(s.stats(copy).keywords).toEqual([]);
     expect(copy.vanilla).toBe(true);
     // R23 blocks Vanilla on the Immutable card itself, and nothing here touched it.
     expect(s.card(immutable).vanilla).toBe(false);
@@ -124,7 +127,7 @@ describe("#61 Prejudiced Postdoc", () => {
 
   it("R64 no free zone means no copy, and the Postdoc still enters", () => {
     const s = scenario({
-      p1: { hand: [POSTDOC], field: [MR_VANILLA, "core-t-felinor", "core-t-rush", "core-t-sheep"], mana: 4 },
+      p1: { hand: [POSTDOC], field: ["core-008", "core-t-felinor", "core-t-rush", "core-t-sheep"], mana: 4 },
       p2: { field: [TIMMY] },
     });
     const timmy = s.card(TIMMY);

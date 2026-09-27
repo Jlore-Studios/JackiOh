@@ -75,10 +75,11 @@ import {
   type PlayerState,
   type PromptOption,
 } from "./state";
+import { gradeName } from "./subsystems/comboIndex";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { ownLibraryView } from "./ownLibrary";
-import { backrowIsPublic, previewOf } from "./preview";
+import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
 import { standingDrawOffer } from "./turn";
 import { isReserved, slotsOf } from "./zones";
@@ -292,12 +293,14 @@ function canAct(state: GameState, card: CardInstance): boolean {
 /**
  * A public backrow card names its owner and its controller, since R33's readability and #87's board
  * swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
- * face-down zone is a bare `{ faceDown: true }`: §10.8 grants the non-controller that a zone is
- * occupied and nothing more, so not even the controller's name travels with it.
+ * face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
+ * occupied and what the card in it costs (R351, a deliberate reveal), and nothing more, so not even
+ * the controller's name travels with it. The cost is the one the controller's own view shows, so
+ * both players read the same number.
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true };
+  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
   const grade = card.counters.grade;
   return {
     ...withPreview(
@@ -306,9 +309,12 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     ),
     faceDown: false,
     type: defOf(state, card.defId).type,
-    counters: grade === undefined ? {} : { grade },
+    // R372: the engine names the grade's letter, so no client works out which letter 3 is.
+    counters: grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) },
     owner: card.owner,
     controller: card.controller,
+    // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
+    ...(isFaceDown(state, card) ? { unrevealed: true as const } : {}),
   };
 }
 
@@ -352,7 +358,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
  */
 function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): string {
   const less = `cost${mod.oncePerTurn === true ? "s" : ""} ${mod.amount} less`;
-  if (mod.onlyCurrentCost !== undefined) return `Cost-${mod.onlyCurrentCost} cards ${less}`;
+  // R363: #77's own words, "Cost (4)+ cards cost (1) less".
+  if (mod.minCurrentCost !== undefined) return `Cost (${mod.minCurrentCost})+ cards cost (${mod.amount}) less`;
   if (mod.onlyType !== undefined) {
     return mod.oncePerTurn === true ? `Next ${mod.onlyType} ${less}` : `${mod.onlyType}s ${less}`;
   }

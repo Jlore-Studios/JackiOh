@@ -1,7 +1,7 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34: `voice-lines.json` against the
 // catalog it voices.
 //
-//   B33  exactly the 110 catalog ids, each `kind` from the catalog type, units carry `play` and
+//   B33  exactly the 111 catalog ids, each `kind` from the catalog type, units carry `play` and
 //        `death` and nothing else carries either, non-units carry `cast`, and every referenced
 //        persona exists with a usable `say` voice and in-range rate, pbas, pmod, web values and
 //        (where set) loudness trim `gain`, 0-2.
@@ -121,10 +121,10 @@ function bannedMatcher(word: string): RegExp {
 }
 
 describe("voice-lines.json covers the catalog (B33)", () => {
-  it("B33 declares version 1 and one cards entry per catalog card, 110 in all", () => {
+  it("B33 declares version 1 and one cards entry per catalog card, 111 in all", () => {
     expect(TABLE.version, "voice-lines.json version").toBe(1);
-    expect(CATALOG_IDS, "packages/cards/catalog.json holds the 100 Core cards and 10 tokens").toHaveLength(110);
-    expect(Object.keys(CARDS), "one cards entry per catalog id").toHaveLength(110);
+    expect(CATALOG_IDS, "packages/cards/catalog.json holds the 100 Core cards and 11 tokens").toHaveLength(111);
+    expect(Object.keys(CARDS), "one cards entry per catalog id").toHaveLength(111);
   });
 
   it("B33 leaves no catalog id, tokens included, without an entry", () => {
@@ -240,11 +240,11 @@ describe("voice-lines.json covers the catalog (B33)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("B33 comes to 43 units and 67 spells and traps (The Coin included, R245), which is 153 lines", () => {
+  it("B33 comes to 44 units (the Ghoul Token included, R353) and 67 spells and traps (The Coin included, R245), which is 155 lines", () => {
     const kinds = Object.values(CARDS).map((entry) => entry.kind);
-    expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(43);
+    expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(44);
     expect(kinds.filter((kind) => kind === "spell" || kind === "trap"), "spell and trap entries").toHaveLength(67);
-    expect(allLines(), "lines in the table").toHaveLength(153);
+    expect(allLines(), "lines in the table").toHaveLength(155);
   });
 });
 
@@ -277,7 +277,7 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 uses no BANNED_RULES_WORDS entry as a whole word, in any case", () => {
     expect([...BANNED_RULES_WORDS], "the rules vocabulary the Surface bans").toEqual([
-      "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave",
+      "Taunt", "Divine Shield", "Reborn", "Lifesteal", "Poisonous", "First Strike", "Trample", "Cleave", "Pierce",
       "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
       "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
       "damage", "summon", "exile", "fatigue", "backrow", "graveyard",

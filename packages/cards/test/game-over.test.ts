@@ -67,16 +67,24 @@ describe("R216: nothing happens after the game is over", () => {
   });
 
   it("R216 /fullsend's Combo draws stop once a cast-on-draw draw inside them has ended the game (§2.5, §2.4, §10.5 step 5)", () => {
-    // Two /fullsends make two "Combo: draw 1" riders. The Vanilla played after them owes two draws;
+    // Two Radiant /fullsends (the face with the Combo rider since patch v0.1.1) make two "Combo:
+    // draw 1" riders. The Vanilla played after them owes two draws;
     // the first draws Hinder, which is cast (R70) and owes the same two draws of its own, both from an
     // empty library (fatigue 1, then 2), and the check after that cast finds p1 at 0 or less: the
     // game is over. The Vanilla's second Combo draw must not happen.
     const g = scenario({
-      p1: { hand: [FULLSEND, FULLSEND, VANILLA], mana: 10, health: 2, library: [VANILLA, HINDER] },
+      p1: {
+        hand: [{ def: FULLSEND, radiant: true }, { def: FULLSEND, radiant: true }, VANILLA],
+        mana: 10,
+        health: 2,
+        library: [VANILLA, HINDER],
+      },
       p2: { field: [{ def: VANILLA, lane: 1 }] },
     });
-    g.play(FULLSEND);
-    g.play(FULLSEND);
+    const [first, second] = g.hand("p1").filter((card) => card.defId === FULLSEND);
+    if (first === undefined || second === undefined) throw new Error("setup: two /fullsends in hand");
+    g.play(first);
+    g.play(second);
     g.play(VANILLA);
 
     const types = g.lastEvents.map((event) => event.type);

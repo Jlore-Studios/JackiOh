@@ -1,6 +1,6 @@
 # `@jackioh/cards` — the card layer
 
-110 card definitions (100 cards + 10 tokens), one script file and one test file per card, and the
+111 card definitions (100 cards + 11 tokens), one script file and one test file per card, and the
 catalog query every random pool in the game goes through.
 
 `SPEC.md` is the only source of rules and card text. `BUILD.md` M4-T1…M4-T4 is the work order, and
@@ -43,10 +43,11 @@ three digits, plus a slug:
 | #43 Big Felinor (`core-043`) | `src/scripts/043-big-felinor.ts` | `test/043-big-felinor.test.ts` |
 | #51.1 KY's Empty Notebook (`core-051-1`) | `src/scripts/051-1-kys-empty-notebook.ts` | `test/051-1-kys-empty-notebook.test.ts` |
 | Rush Token (`core-t-rush`) | `src/scripts/t-rush.ts` | `test/t-rush.test.ts` |
+| Ghoul Token (`core-t-ghoul`) | `src/scripts/t-ghoul.ts` | `test/t-ghoul.test.ts` |
 
 `scripts/missing-tests.ts` is the authority on the pairing: for every catalog id whose test file it
 cannot find it prints the id, the card name and the exact path it expected, and it prints nothing
-when all 110 are covered. Run it to learn what to call your files:
+when all 111 are covered. Run it to learn what to call your files:
 
 ```
 pnpm --filter @jackioh/cards run missing-tests | grep core-043
@@ -106,8 +107,10 @@ export const radiant: Script = {
   the other seat's public cards included, so a hook reads only public facts and the card's own face
   and counters — a hero's health, a pile's size, the plays this turn, the active player's mana —
   never a library's contents or order or a hand's cards, and never `state.active`. An empty list is
-  no preview. The Core cards with one are #18, #31, #38, #40, #70 and #91; a fixed number already on
-  the face (#92's stats, #100's cost, #89's hand stats) and an X chosen at play (#24, #74) have none.
+  no preview. A value the text names by a word carries it as `display` beside the number (#93's
+  grade letter, R372). The Core cards with one are #18, #31, #38, #40, #70, #91 and #93 (#93 on the
+  field only); a fixed number already on the face (#92's stats, #100's cost, #89's hand stats) and
+  an X chosen at play (#24, #74) have none.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook is `(ctx: EffectContext) => Effect[]`. It reads
 `ctx` and returns effects; it never assigns to `ctx.state`, never calls an engine mutator, never
@@ -140,11 +143,12 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `findInstance` | an instance id, wherever the card has since landed (R98) |
 | `instanceOf(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at — a chosen card on the stay its prompt or the play offered it on (R174) — or `null` for a hero, for nothing, or for a card buried under a Stack pile (§3.2, R13) (#22's meal) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write) — on a fused card, its own ingredient's (R102, #22) |
+| `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.
-Every one of these but `findInstance` and `instanceOf` returns a number, a boolean or a fresh
-`readonly` array, so a card cannot write the game through a value it read; those two hand back the
-card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
+Every one of these but `findInstance`, `instanceOf` and `killerOf` returns a number, a boolean or a
+fresh `readonly` array, so a card cannot write the game through a value it read; those three hand
+back the card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
 `packages/engine/src/query.ts` (the read half of the surface, next to `src/effects/index.ts`, the
 write half); if the fact you need is not there, it is missing from the engine — extend that module
 and test it, do not reach into `state.players`.
@@ -192,7 +196,7 @@ What the registry exports, for the server, the client and the tests:
 
 | export | meaning |
 | --- | --- |
-| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 110 defs from `catalog.json`, script or no script |
+| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 111 defs from `catalog.json`, script or no script |
 | `cardDef(id)`, `cardDefByIndex(index)` | one def, throwing rather than returning `undefined` |
 | `CARDS` | `Record<catalogId, { def, base, radiant }>` — one entry per script file present |
 | `registerAll()` | `registerCatalog(CATALOG, CATALOG_VERSION)` then `registerScripts(...)`; idempotent |
@@ -222,7 +226,7 @@ The pools the spec pins down, as the argument object to write:
 | --- | --- | --- |
 | any random card | `catalog.query({})` | the 100 non-token cards |
 | KY (#57 Conjure KY) | `catalog.pool("57", { tags: ["KY"] })` | #31, #51, #82 |
-| a Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | #18, #41, #60, #71, #85, #96 |
+| a Cost (1) Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | #18, #41, #60, #71, #96 (#85 costs 2 since patch v0.1.1; radiant #67 drops the cost and reaches it) |
 | Transmogulate (#83, R35) | `catalog.pool("83", { rarity: "Legendary" })` | #52, #85, #87, #92, #93, #95 |
 | Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeIndex` | includes #95, the §5.1 exception |
 
@@ -244,7 +248,7 @@ Guarantees a card file may rely on, all proved in `test/query.test.ts`:
   afterwards: that is how two card files end up disagreeing about what "a random unit" means.
 
 `test/query.test.ts` names the four pools the spec pins down — the KY pool (#31/#51/#82), the trap
-pool (#18/#41/#60/#71/#85/#96, Field Trap counting as Trap), the Transmogulate Legendary pool
+pool (#18/#41/#60/#71/#85/#96, Field Trap counting as Trap; the Cost (1) five without #85), the Transmogulate Legendary pool
 (#52/#85/#87/#92/#93/#95, R35) and the cost brackets — with the exact argument object each one
 needs. Copy from there rather than inventing a filter.
 
@@ -363,8 +367,9 @@ fails `pnpm test` until its proof and the ruling's list are updated.
 A card whose script declares `preview` (R280) proves, on both faces, that each value its view
 carries is what its own resolution then deals or gains, that each label sits in its face's text,
 and what the hook may read. Those proofs live together in `test/preview.test.ts`, which also pins
-the set of cards that declare the hook to R280's six and fences every library and hand off from the
-hooks; the card's own test file names that file in its header.
+the set of cards that declare the hook to R280's six and R372's #93 and fences every library and
+hand off from the hooks; the card's own test file names that file in its header (#93's values are
+proved in its own test file, since its hook answers on the field only).
 
 A card is done when its tests are green, `pnpm lint` and `pnpm typecheck` are clean, and the fuzz
 gate still passes with the card in the pool.
@@ -377,8 +382,9 @@ M4 fuzz gate still passes with those cards in the fuzz deck pool; do not start t
 **Wave 1 — keywords and single primitives (45):** #1, #2, #5, #6, #7, #8, #10, #11, #13, #14, #15,
 #16, #17, #19, #20, #25, #26, #28, #29, #34, #37, #40, #42, #43, #44, #47, #48, #49, #51.1, #53,
 #54, #56, #57, #58, #62, #63, #68, #69, #70, #72, #74, #88, #90, #93.1, #95.1 — plus the four
-shared tokens (`t-rush`, `t-sheep`, `t-felinor`, `t-bread`) and The Coin (`t-coin`, which §2.1's
-setup deals to the seat going second, R244), which have no §8 row of their own.
+shared tokens (`t-rush`, `t-sheep`, `t-felinor`, `t-bread`), The Coin (`t-coin`, which §2.1's
+setup deals to the seat going second, R244) and the Ghoul Token (`t-ghoul`, patch v0.1.1, R353),
+which have no §8 row of their own.
 
 **Wave 2 — stored state, prompts, delayed and cross-turn effects, traps (49):** #3, #4, #9, #12,
 #18, #21, #22, #23, #24, #27, #30, #31, #32, #33, #35, #36, #38, #39, #41, #45, #46, #50, #51, #55,

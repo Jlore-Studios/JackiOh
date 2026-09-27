@@ -153,7 +153,8 @@ describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answe
   it("R119 /fullsend echoed by Twinspell draws nothing from the Combo rider its own first resolution installed (§10.5 step 6)", () => {
     const s = scenario({
       // A unit that can still switch keeps §2.5's auto-end from passing the turn once the hand is empty.
-      p1: { hand: [TWINSPELL, FULLSEND], field: [MR_VANILLA], mana: 8, library: [...R119_LIBRARY] },
+      // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+      p1: { hand: [TWINSPELL, { def: FULLSEND, radiant: true }], field: [MR_VANILLA], mana: 8, library: [...R119_LIBRARY] },
       p2: { hand: [STOCKPILE], field: [MIDRANGE_MENACE], library: [...R119_LIBRARY] },
     });
     // Twinspell is a card played earlier this turn, so every later card meets "Combo" (§6.2).
@@ -162,9 +163,10 @@ describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answe
 
     s.play(FULLSEND);
 
-    // Twinspell's grant was taken, so /fullsend resolved twice (§10.5 step 6): two "gain 4 mana",
-    // two "Combo: draw 1" riders, and 8 − 2 − 4 + 4 + 4 = 10 mana.
-    s.expectMana("p1", 10);
+    // Twinspell's grant was taken, so /fullsend resolved twice (§10.5 step 6): two "Refresh 3 mana"
+    // (8 − 2 − 4 = 2, refreshed to max 4, and the second has nothing to give back, R364) and two
+    // "Combo: Draw 1" riders.
+    s.expectMana("p1", 4);
     expect(s.state.players.p1.mods.filter((mod) => mod.kind === "comboDraw")).toHaveLength(2);
     // R119: the rider /fullsend installs does not answer /fullsend's own play. Its first resolution
     // is counted before the rider exists (step 5's granted parts precede its script), and the repeat

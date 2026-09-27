@@ -41,7 +41,7 @@ import type {
 } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
-import { MAX_CHOICE_COMBINATIONS } from "./config";
+import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
 import { faceOf } from "./layers";
 import { effectiveCost, isXCost } from "./mana";
 import type { StaticFlags } from "./script";
@@ -234,11 +234,27 @@ export function choosesX(state: GameState, instance: CardInstance): boolean {
   return isXCost(state, instance) && scriptOf(instance).cost === undefined;
 }
 
-/** §2.3: "X is chosen at play time, 0 ≤ X ≤ current mana". Not an X-cost card, no X values. */
+/**
+ * §2.3, R348: why this X is not one the player may choose for this card, or null when it is —
+ * "X is chosen at play time, 1 ≤ X ≤ current mana" (`MIN_CHOSEN_X`). `legalXValues` offers exactly
+ * the values this passes and `refuseX` refuses exactly the ones it names, so the picker and the
+ * reducer's refusal cannot disagree.
+ */
+export function whyXRefused(state: GameState, player: PlayerId, value: number): string | null {
+  if (!Number.isInteger(value)) return "X must be a whole number";
+  if (value < 0) return "X cannot be negative";
+  if (value < MIN_CHOSEN_X) return `X must be at least ${MIN_CHOSEN_X}`;
+  if (value > state.players[player].mana.current) return "X is above your current mana";
+  return null;
+}
+
+/** §2.3, R348: every X `whyXRefused` passes, lowest first. Not an X-cost card, no X values. */
 export function legalXValues(state: GameState, player: PlayerId, card: CardInstance): number[] {
   if (!choosesX(state, card)) return [];
   const mana = state.players[player].mana.current;
-  return Array.from({ length: Math.max(0, mana) + 1 }, (_, i) => i);
+  return Array.from({ length: Math.max(0, mana) + 1 }, (_, i) => i).filter(
+    (x) => whyXRefused(state, player, x) === null,
+  );
 }
 
 /** §2.3: an "A embiggen B" card offers two prices; every other card offers none. */
@@ -663,7 +679,7 @@ function subsetsFor(options: readonly Selection[], decl: TargetDecl, isLast: boo
  * combinations and never a pick: the combinations kept first offer every item of every list — one
  * per place in the longest list, each list taking its items in turn — and the rest follow in order
  * up to the bound. Cut in order alone, the first list's later items were in no combination at all:
- * a crafted Twisted Sorcerer + Kpop Fanatic crossed over eleven and eight picks never offered the
+ * a crafted Twisted Sorcerer + K-Pop Fanatic crossed over eleven and eight picks never offered the
  * Sorcerer's 4 damage at the enemy hero (R81, R102), and the client, which builds a play only out of
  * the plays `legalActions` lists (CLAUDE.md rule 7), could not make it.
  */
@@ -858,11 +874,8 @@ function refuseX(state: GameState, player: PlayerId, card: CardInstance, x?: num
   // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
   // action names is ignored — never recorded on the card, never read by the cost (`playSteps`).
   if (!choosesX(state, card)) return null;
-  const value = x ?? 0;
-  if (!Number.isInteger(value)) return "X must be a whole number";
-  if (value < 0) return "X cannot be negative";
-  if (value > state.players[player].mana.current) return "X is above your current mana";
-  return null;
+  // R348: an X the play leaves out is the old default 0, which is no longer one to choose.
+  return whyXRefused(state, player, x ?? 0);
 }
 
 function refuseEmbiggen(state: GameState, card: CardInstance, embiggen?: boolean): string | null {

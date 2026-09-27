@@ -3,7 +3,9 @@
 //
 // Base: "Deal 2 damage to a target, Lifesteal". Radiant: "Deal 4 damage to a target, Lifesteal"
 // (§8's cell "4 damage"; R276 gave the token a Radiant face, R275 doubles its number). The damage is
-// the only difference: the target, the Lifesteal and everything below hold on both faces.
+// the only difference: the target, the Lifesteal and everything below hold on both faces. Since
+// v0.1.1 the faces print it as a keyword line and an effect line, "Lifesteal / Deal 2 damage."
+// (R372); the target is still §8's unnarrowed one.
 //
 // §7's spell-token paragraph: "Spell tokens (Notebook, CN-Virus, Combo-Fodder) live in hand and
 // library like real cards and go to the graveyard after resolving; they are still excluded from

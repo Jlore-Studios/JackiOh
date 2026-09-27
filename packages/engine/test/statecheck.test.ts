@@ -322,7 +322,8 @@ describe("the state check (M2-T5)", () => {
     state.active = "p1";
     const warded = put(state, wardedTaunter.id, slot("p1", "units", 1));
     warded.position = "DEF";
-    expect(unitHas(state, warded, "Taunt")).toBe(true);
+    // R347: its printed Taunt, and Defense Position's, give way to its Indestructible.
+    expect(unitHas(state, warded, "Taunt")).toBe(false);
 
     warded.markedDestroyed = true;
     const events: GameEvent[] = [];
@@ -340,9 +341,11 @@ describe("the state check (M2-T5)", () => {
     expect(state.counters.destroyed).toBe(0);
     expect(state.players.p1.graveyard).toHaveLength(0);
 
-    // "Until end of turn": on the next turn the printed Taunt is back.
+    // R347 before and after: an Indestructible unit has no Taunt on any turn, so nothing is lost
+    // and no `keywordGranted … lost` is reported (R46).
+    expect(eventsOfType(events, "keywordGranted")).toEqual([]);
     state.turn = 4;
-    expect(unitHas(state, warded, "Taunt")).toBe(true);
+    expect(unitHas(state, warded, "Taunt")).toBe(false);
   });
 
   it("R69: an Indestructible unit at 0 max health dies and counts as destroyed, one at 0 health with max health above 0 stays", () => {

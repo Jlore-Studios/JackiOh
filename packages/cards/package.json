@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./catalog.json": "./catalog.json"
   },
   "scripts": {
     "gen": "pnpm exec tsx scripts/gen-registry.ts",

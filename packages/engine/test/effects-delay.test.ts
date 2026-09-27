@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { HERO_HEALTH } from "../src/config";
 import { damage } from "../src/effects/damage";
-import { delay, DELAYED_HOOK } from "../src/effects/delay";
+import { delay, DELAYED_HOOK, THIS_TURN } from "../src/effects/delay";
 import { addPlayerModifier } from "../src/effects/playerMods";
 import { effectiveCost, modifierIsLive } from "../src/mana";
 import { dueDelayed, expireModifiers } from "../src/modifiers";
@@ -183,6 +183,35 @@ describe("delay: scheduling (§10.1, §10.6, R62, R68)", () => {
     expect(dueDelayed(state, "start", "p2")).toHaveLength(1);
   });
 
+  it("R350 THIS_TURN waits for the end of the turn that is running, whoever's it is, and R241 does not drop it", () => {
+    const state = playing("delay-this-turn");
+    const scribe = put(state, bolt.id, slot("p1", "units", 1));
+    expect(state.active).toBe("p1");
+
+    // Made by p1 on p2's turn: an end-of-turn clause of p1's own would be dropped (R241), but "the
+    // end of this turn" is p2's turn end.
+    state.active = "p2";
+    run(state, [delay({ at: { phase: "end", player: THIS_TURN }, step: BOLT_STEP, data: { amount: 2 } })], {
+      self: scribe,
+      controller: "p1",
+    });
+    expect(only(state.delayed)).toMatchObject({ owner: "p1", at: { phase: "end", player: "p2" } });
+
+    // Made by p1 on its own turn, it is p1's turn end.
+    state.delayed = [];
+    state.active = "p1";
+    run(state, [delay({ at: { phase: "end", player: THIS_TURN }, step: BOLT_STEP, data: { amount: 2 } })], {
+      self: scribe,
+      controller: "p1",
+    });
+    expect(only(state.delayed)).toMatchObject({ owner: "p1", at: { phase: "end", player: "p1" } });
+
+    // And it comes due at that turn's end: 2 to p2's hero, as the turn ends.
+    const after = endTurns(state, 1);
+    expect(after.players.p2.hero.health).toBe(HERO_HEALTH - 2);
+    expect(after.delayed).toEqual([]);
+  });
+
   it("§5.2 records the face that is running, so a Radiant scheduler resumes its radiant text", () => {
     const state = playing("delay-radiant");
     const scribe = put(state, bolt.id, slot("p1", "units", 2), { radiant: true });
@@ -299,7 +328,7 @@ describe("delay: coming due (§2.2, R62, R76, R86, R126)", () => {
       controller: "p1",
     });
 
-    // "Fires even if Kpop Fanatic died" (§8.2 #50, R76).
+    // "Fires even if K-Pop Fanatic died" (§8.2 #50, R76).
     moveToZone(state, scribe, "graveyard");
     expect(state.players.p1.graveyard.map((card) => card.id)).toContain(scribe.id);
 
@@ -403,7 +432,7 @@ function fiveRealShapes(turn: number): Parameters<typeof applyEffects>[0] {
       mod: {
         kind: "costDiscount",
         amount: 1,
-        onlyCurrentCost: 4,
+        minCurrentCost: 4,
         expiry: { until: "nextTurnOf", player: "p1", fromTurn: turn },
       },
     }),

@@ -1,15 +1,17 @@
-// #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90).
+// #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
 //
 // The must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks;
 // exiled; radiant 9."
 //
-// "Ignoring Armor" skips §4.4 step 2 and only step 2, so the two halves of the row are one test
-// each: #25 4-mana 7/7 (Armor 7) takes the full hit, and #56 Jilliax (Divine Shield) takes none
-// because step 1 comes first and negates the whole instance.
+// Patch v0.1.1 (issue #27) prints Pierce on both faces in place of "ignoring Armor": R346's Pierce
+// on a spell is its damage ignoring Armor. It skips §4.4 step 2 and only step 2, so the two halves
+// of the row are one test each: #25 4-mana 7/7 (Armor 7) takes the full hit, and #56 Jilliax
+// (Divine Shield) takes none because step 1 comes first and negates the whole instance.
 
 import { describe, expect, it } from "vitest";
+import { dealDamage, unitView } from "@jackioh/engine";
 import { scenario } from "./_harness";
-import { base as trueStrikeBase, radiant as trueStrikeRadiant } from "../src/scripts/044-true-strike";
+import { base as trueStrikeBase, def, radiant as trueStrikeRadiant } from "../src/scripts/044-true-strike";
 
 /** The declared play-time pick (R81): a `Selection` naming the enemy unit in lane 1. */
 function atUnit(s: ReturnType<typeof scenario>, lane: number) {
@@ -29,6 +31,27 @@ function spell(enemy: { def: string; radiant?: boolean }, radiantSpell = false):
   if (radiantSpell) s.card("core-044").radiant = true;
   return s;
 }
+
+describe("#44 True Strike — card data (R346)", () => {
+  it("R346 prints Pierce on both faces, with the patch's text", () => {
+    expect(def.base.keywords).toEqual([{ kind: "Pierce" }]);
+    expect(def.radiant.keywords).toEqual([{ kind: "Pierce" }]);
+    expect(def.base.text).toBe("Pierce\nDeal 4 damage. Exile this.");
+    expect(def.radiant.text).toBe("Pierce\nDeal 9 damage. Exile this.");
+  });
+
+  it("R346 the printed keyword is a Pierce of its own: the card as a source skips step 2 without the flag", () => {
+    // The pipeline reads Pierce off the source (§10.4's reading of any card), so a True Strike
+    // that is the source of a hit carrying no `ignoreArmor` still puts its whole amount through.
+    const s = scenario({ seed: "true-strike", p1: { hand: ["core-044"] }, p2: { field: ["core-025"] } });
+    const strike = s.card("core-044");
+    expect(unitView(s.state, strike).keywords).toContainEqual({ kind: "Pierce" });
+    const wall = s.unit("p2", 1);
+    if (wall === null) throw new Error("no wall");
+    const dealt = dealDamage({ state: s.state, events: [] }, { source: strike, target: { kind: "unit", instance: wall }, amount: 4 });
+    expect(dealt).toBe(4);
+  });
+});
 
 describe("#44 True Strike — base", () => {
   it("deals 4 damage through Armor 7, skipping §4.4 step 2 and only step 2", () => {
@@ -67,7 +90,7 @@ describe("#44 True Strike — base", () => {
     s.expectHealth("p2", 26);
   });
 
-  it("ignores a hero's Armor too (§4.4 step 2 reads the hero's own armor value)", () => {
+  it("R346 ignores a hero's Armor too (§4.4 step 2 reads the hero's own armor value)", () => {
     const s = scenario({
       seed: "true-strike",
       p1: { hand: ["core-044", "core-021"] },
@@ -88,7 +111,7 @@ describe("#44 True Strike — base", () => {
 });
 
 describe("#44 True Strike — radiant", () => {
-  it("deals 9 damage, ignoring Armor: only the number changed (§8 Conventions)", () => {
+  it("R346 deals 9 damage with Pierce: only the number changed (§8 Conventions)", () => {
     // Radiant #43 Big Felinor is a 6/20 with no Armor, so the damage dealt is visible exactly.
     const s = spell({ def: "core-043", radiant: true }, true);
     s.play("core-044", atUnit(s, 1));

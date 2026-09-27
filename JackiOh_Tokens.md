@@ -51,3 +51,9 @@ Gain 1 mana this turn
 ~~~
 
 Gain 2 mana this turn
+
+**(0) Ghoul Token Unit, Token, Core, Common**
+
+X/X
+
+**Pierce**

@@ -54,15 +54,15 @@ describe("#16 Hit Job (base)", () => {
   it("R46 an Indestructible unit ignores the destroy mark and survives", () => {
     const s = scenario({
       p1: { hand: ["core-016", "core-010"], mana: 4 },
-      // #25 radiant "4-mana 7/7" is Indestructible (§8.2 row 25).
-      p2: { field: [{ def: "core-025", radiant: true }] },
+      // #66 The Rock is Indestructible (§8.3 row 66).
+      p2: { field: ["core-066"] },
     });
     const survivor = unitAt(s, "p2", 1);
 
     s.play("core-016", { targets: aim(survivor) });
 
     s.expectInZone(survivor, "field");
-    s.expectStats(survivor, { attack: 14, health: 14, maxHealth: 14 });
+    s.expectStats(survivor, { attack: 10, health: 10, maxHealth: 10 });
   });
 
   it("destroys an ally as readily as an enemy: \"target unit\" is narrowed to neither side", () => {

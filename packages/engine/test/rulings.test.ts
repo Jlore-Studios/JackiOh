@@ -145,6 +145,15 @@ const CARDS_COMBAT_WINDOWS_TEST = "../../cards/test/combat-windows.test.ts";
 const CARDS_HIDDEN_INFORMATION_TEST = "../../cards/test/hidden-information.test.ts";
 const CARDS_ECHO_AND_EXILE_TEST = "../../cards/test/echo-and-exile.test.ts";
 const CARDS_FUSE_REGISTRY_TEST = "../../cards/test/fuse-registry.test.ts";
+/** R346 to R354's card-side proofs: patch v0.1.1 (issue #27). */
+const CARDS_TRUE_STRIKE_TEST = "../../cards/test/044-true-strike.test.ts";
+const CARDS_GHOUL_TEST = "../../cards/test/t-ghoul.test.ts";
+const CARDS_VANILLA_POSITIONS_TEST = "../../cards/test/vanilla-and-positions.test.ts";
+const CARDS_ADAPTIVE_UI_TEST = "../../cards/test/074-adaptive-ui.test.ts";
+const CARDS_DIVIDEND_TEST = "../../cards/test/024-efficiency-dividend.test.ts";
+const CARDS_CN_TEST = "../../cards/test/090-cn-viral-injection.test.ts";
+const CARDS_HEROIC_POWER_TEST = "../../cards/test/098-heroic-power.test.ts";
+const CARDS_ZAO_GAO_TEST = "../../cards/test/080-zao-gao.test.ts";
 /** R209 to R211's proofs: the hunt's second round (docs/polish/4-edge-cases.md). */
 const CARDS_LASTING_EFFECTS_TEST = "../../cards/test/lasting-effects.test.ts";
 const CARDS_PLAYS_AND_CASTS_TEST = "../../cards/test/plays-and-casts.test.ts";
@@ -183,7 +192,7 @@ const CARDS_CATALOG_TEST = "../../cards/test/catalog.test.ts";
 const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 const CARDS_PREVIEW_TEST = "../../cards/test/preview.test.ts";
 const CARDS_QUICKSTRIKER_TEST = "../../cards/test/038-quickstriker.test.ts";
-const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-kpop-fanatic.test.ts";
+const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-k-pop-fanatic.test.ts";
 const CARDS_MY_PAWN_TEST = "../../cards/test/096-my-pawn.test.ts";
 const WEB_RADIANT_DIFF_TEST = "../../../apps/web/src/cards/radiantDiff.test.ts";
 const WEB_FILTERS_TEST = "../../../apps/web/src/game/deckbuilder/filters.test.ts";
@@ -270,6 +279,12 @@ const WEB_TUTORIAL_PATH_TEST = "../../../apps/web/src/tutorial/TutorialPath.test
 const WEB_PKCE_TEST = "../../../apps/web/src/auth/pkce.test.ts";
 /** R315 to R319's proofs: the overflow events, what each seat reads of them, and how the board and the speakers play them. */
 const OVERFLOW_EVENTS_TEST = "overflow-events.test.ts";
+/** Patch v0.1.1's card proofs, R360–R366 (issue #27). */
+const CARDS_LAVA_GOLEM_TEST = "../../cards/test/055-lava-golem.test.ts";
+const CARDS_MROW_TEST = "../../cards/test/086-miss-mrow.test.ts";
+const CARDS_FIENDER_TEST = "../../cards/test/092-felinor-fiender.test.ts";
+const CARDS_TRANSMOGULATE_TEST = "../../cards/test/083-transmogulate.test.ts";
+const CARDS_CARD_TEXT_TEST = "../../cards/test/card-text.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -435,10 +450,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the eleven-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the twelve-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the eleven-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -451,8 +466,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Divine Shield",
       "Trample",
       "Cleave",
+      "Pierce",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(11);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(12);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -867,7 +883,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(75, "rulings-b.test.ts");
   });
 
-  // M4 owns #50 Kpop Fanatic: its card test proves the delay on the real script.
+  // M4 owns #50 K-Pop Fanatic: its card test proves the delay on the real script.
   // Proved by rulings-b.test.ts "R76 fires the delayed steal at your next start of turn even though the unit
   // died, and fizzles on a card already yours".
   it("R76 fires the delayed steal at your next start of turn even after the unit died", () => {
@@ -1069,7 +1085,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power; R43's own clauses are heroPower.test.ts.
-  // Proved by rulings-c.test.ts "R103 stores the seven power names and costs 0 for a power that has
+  // Proved by rulings-c.test.ts "R103 stores the eight power names and costs 0 for a power that has
   // not rolled", "R103 checks once-per-turn before mana, turn and phase", "R103 marks the use before
   // the effects run, and fizzles a token power in silence when the token is absent".
   it("R103 fixes the Heroic Power surface: seven names, cost 0 unrolled, once-per-turn checked first", () => {
@@ -2001,8 +2017,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(220, CARDS_COMBAT_WINDOWS_TEST);
   });
 
-  // Proved by turn-clock-and-legality.test.ts "R221 …": #80 Zao Gao's two discards listed the other
-  // way round leave the graveyard an offered answer leaves.
+  // Proved by turn-clock-and-legality.test.ts "R221 …": a radiant #26's two Echo picks listed the
+  // other way round leave the state an offered answer leaves (#80's discard, until R354).
   it("R221 takes an answer's picks in the order the prompt offered them", () => {
     provenIn(221, CARDS_TURN_CLOCK_TEST);
   });
@@ -2294,8 +2310,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(281, CARDS_QUICKSTRIKER_TEST);
   });
 
-  // Proved by 050-kpop-fanatic.test.ts "R282 …": the rider lands only on a card the steal took.
-  it("R282 makes Radiant only a permanent Radiant Kpop Fanatic's steal took", () => {
+  // Proved by 050-k-pop-fanatic.test.ts "R282 …": the rider lands only on a card the steal took.
+  it("R282 makes Radiant only a permanent Radiant K-Pop Fanatic's steal took", () => {
     provenIn(282, CARDS_KPOP_FANATIC_TEST);
   });
 
@@ -2521,6 +2537,154 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // apps/web test/ux/settings.test.tsx "R345 …": the switch goes out as setAutoEndTurn, once.
   it("R345 lets each player turn R82's automatic turn end off for themselves", () => {
     provenIn(345, "auto-end-turn.test.ts", SERVER_ACTOR_TEST, WEB_SETTINGS_TEST);
+  });
+
+  // Proved by damage.test.ts "R346 step 2: …" (a Pierce source skips Armor on a unit and a hero, and
+  // nothing else), lethal.test.ts "R346 R44 …" (My Pawn's projection), 044-true-strike.test.ts's
+  // "R346 …" (a spell's printed Pierce), and t-ghoul.test.ts's "R346 …" (the Ghoul Token's hits).
+  it("R346 makes a Pierce source's damage skip Armor, and adds Pierce to the random-keyword pool", () => {
+    expect(config.RANDOM_KEYWORD_POOL).toContain("Pierce");
+    provenIn(346, "damage.test.ts", "lethal.test.ts", CARDS_TRUE_STRIKE_TEST, CARDS_GHOUL_TEST);
+  });
+
+  // Proved by layers.test.ts "R347 …" (printed, granted and Defense Position's Taunt all give way)
+  // and vanilla-and-positions.test.ts "R46 R347 …" (a knock-down with no Taunt to take reports none).
+  it("R347 gives an Indestructible unit no Taunt, whatever grants it", () => {
+    provenIn(347, "layers.test.ts", CARDS_VANILLA_POSITIONS_TEST);
+  });
+
+  // Proved by turn.test.ts "R348 …" (the refusal and legalActions share one check), and the cards'
+  // 074-adaptive-ui.test.ts and 024-efficiency-dividend.test.ts "R348 …".
+  it("R348 holds a chosen X to at least 1", () => {
+    expect(config.MIN_CHOSEN_X).toBe(1);
+    provenIn(348, "turn.test.ts", CARDS_ADAPTIVE_UI_TEST, CARDS_DIVIDEND_TEST);
+  });
+
+  // Proved by layers.test.ts "R349 …" (layer 1 doubles a fallback unit's stats and its X) and
+  // t-ghoul.test.ts "R349 …" (the Ghoul Token summoned Radiant, made Radiant, and fused).
+  it("R349 doubles the stats of a unit that becomes Radiant with no Radiant form", () => {
+    expect(config.RADIANT_FALLBACK_FACTOR).toBe(2);
+    provenIn(349, "layers.test.ts", CARDS_GHOUL_TEST);
+  });
+
+  // Proved by effects-delay.test.ts "R350 …" (THIS_TURN) and 090-cn-viral-injection.test.ts "R350 …"
+  // (the copies at the turn's end, on either player's turn, and a chain that never draws its own).
+  it("R350 holds CN-Virus's copies to the end of the turn it is cast on", () => {
+    provenIn(350, "effects-delay.test.ts", CARDS_CN_TEST);
+  });
+
+  // Proved by viewFor.test.ts "R351 …": the cost on the opponent's marker, the same number in the
+  // controller's view, and the controller's `unrevealed` mark.
+  it("R351 shows a face-down Trap's cost to both players", () => {
+    provenIn(351, "viewFor.test.ts");
+  });
+
+  // Proved by 098-heroic-power.test.ts "R352 …": the two Discovers, the fusion at R77's cost, the
+  // radiant face, and the use spent once.
+  it("R352 gives Heroic Power its eighth power, Stitching", () => {
+    provenIn(352, CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by t-ghoul.test.ts "R353 …": the card, its X/X and its Pierce.
+  it("R353 adds the Ghoul Token, an X/X with Pierce", () => {
+    provenIn(353, CARDS_GHOUL_TEST);
+  });
+
+  // Proved by 080-zao-gao.test.ts "R354 …": the random discard, the CN tag and the Radiant face's
+  // third keyword.
+  it("R354 makes Zao Gao's discard random and its Radiant tokens roll three keywords", () => {
+    provenIn(354, CARDS_ZAO_GAO_TEST);
+  });
+
+  // Proved by tribute.test.ts "R360 …" (the engine's placement: the lane named, else the leftmost
+  // open zone, the player's own side when there is none, the Radiant face never), 055-lava-golem.test.ts
+  // "R360 …" on the real card, and 097-zephyrs.test.ts "R360 …": the scorer's dry run sees it too.
+  it("R360 summons #55's base face for the opponent when its Tribute takes an opposing unit", () => {
+    provenIn(360, "tribute.test.ts", CARDS_LAVA_GOLEM_TEST, CARDS_ZEPHYRS_TEST);
+  });
+
+  // Proved by query.test.ts "R361 …" (`killerOf`: R42's killer while it acts on the field, else
+  // nobody) and 086-miss-mrow.test.ts "R361 …" (combat, a Cry's damage, a mutual death, a Spell, a
+  // full row).
+  it("R361 has Miss Mrow take the unit that destroyed her, and nothing when no unit did", () => {
+    provenIn(361, "query.test.ts", CARDS_MROW_TEST);
+  });
+
+  // Proved by 092-felinor-fiender.test.ts "R362 …": printed plus twice the sum, dormant Felinors included.
+  it("R362 gives the Radiant Felinor Fiender its printed stats plus twice its Felinors'", () => {
+    provenIn(362, CARDS_FIENDER_TEST);
+  });
+
+  // Proved by 077-professor-curvature.test.ts "R363 …" (a 6 costs 5, radiant 4) and modifiers.test.ts
+  // "R48 R363 …" (the cost as it currently stands).
+  it("R363 reaches every card whose cost is then 4 or more with Professor Curvature", () => {
+    provenIn(363, CARDS_CURVATURE_TEST);
+  });
+
+  // Proved by effects-core.test.ts "R364 …" (up to max and never past it) and 078-fullsend.test.ts
+  // "R364 …" (4 of 4 leaves 3, 4 of 6 leaves 4).
+  it("R364 makes a Refresh give back spent mana up to max mana and no further", () => {
+    provenIn(364, "effects-core.test.ts", CARDS_FULLSEND_TEST);
+  });
+
+  // Proved by 083-transmogulate.test.ts "R365 …": the hand is replaced one for one, hidden from the opponent.
+  it("R365 has Transmogulate replace the hand as one of R35's other zones", () => {
+    provenIn(365, CARDS_TRANSMOGULATE_TEST);
+  });
+
+  // Proved by card-text.test.ts "R366 …": every card's text uses the patch's words and shape.
+  it("R366 writes every card's text in patch v0.1.1's words", () => {
+    provenIn(366, CARDS_CARD_TEXT_TEST);
+  });
+
+  // v0.1.1's presentation and wording (issue #27). The proofs are named inline rather than as
+  // constants above, so this block merges beside the patch's other blocks without touching theirs.
+
+  // Proved by apps/web facedown.test.tsx "R370 …" (the gem and the label on both seats, the hover
+  // and the sheet, a back with no cost as before), showcase/plan.test.ts and CardShowcase.test.tsx
+  // "R370 …" (the cost of a card the opponent set), Log.test.tsx "R370 …" and Card.test.tsx's B16
+  // "R370 …" rows (a hand back still shows and opens nothing).
+  it("R370 draws a face-down trap's cost on its back, in its overlay, the showcase and the log", () => {
+    provenIn(
+      370,
+      "../../../apps/web/src/game/facedown.test.tsx",
+      "../../../apps/web/src/game/showcase/plan.test.ts",
+      "../../../apps/web/src/game/showcase/CardShowcase.test.tsx",
+      "../../../apps/web/src/game/Log.test.tsx",
+    );
+  });
+
+  // Proved by view-marks.test.ts "R371 …" (the mark exactly where the other seat sees a back, never
+  // on a public card, following control) and apps/web facedown.test.tsx "R371 …" (the tag, the veil
+  // attribute, the note in the hover preview and the sheet).
+  it("R371 marks your own face-down trap as one the other player cannot see", () => {
+    provenIn(371, "view-marks.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // Proved by packages/cards 093-combo-index.test.ts "R372 …" (the letters, the preview on both
+  // faces and seats, N against the real rise, S, the hand, the short text), view-marks.test.ts
+  // "R372 …" (`gradeLetter` and a preview's `display` through the view) and apps/web
+  // facedown.test.tsx "R372 …" (the badge's letter and "Grade {C}" on the face).
+  it("R372 shows Combo-Index's grade by its letter, and the plays it asks for", () => {
+    provenIn(
+      372,
+      "../../cards/test/093-combo-index.test.ts",
+      "view-marks.test.ts",
+      "../../../apps/web/src/game/facedown.test.tsx",
+    );
+  });
+
+  // Proved by apps/web wording.test.ts "R373 …" (no player-readable string in the client says
+  // library or sacrifice) and cards/rules.test.ts "R373 …" (the glossary in players' words).
+  it("R373 shows players Deck for the rules' library and Tribute for Sacrifice", () => {
+    provenIn(373, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web routes/landingFan.test.ts "R374 …" (the pool, the hand's shape, a seeded deal,
+  // variety, the edges) and routes/landing.test.tsx "R374 …" (one deal per visit, drawn from the
+  // injected source).
+  it("R374 deals the landing page's hand at random on each visit", () => {
+    provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
   });
 });
 

@@ -207,10 +207,10 @@ describe("#96 My Pawn — whose attack it answers", () => {
 
 /** #68, a 5/5 with nothing that fires in combat: the plain lethal swing at a 5-health hero. */
 const SORCERER = "core-068";
-/** #81 Radiant Saintess, 2/2 Reborn: lethal at 2 health, and back at 1 health when destroyed. */
-const SAINTESS = "core-081";
-/** #56 Jilliax: its radiant face is a 6/4 with Charge, Taunt, Lifesteal and Indestructible. */
+/** #56 Jilliax: its radiant face is a 6/4 with Rush, Taunt, Lifesteal, Divine Shield and Reborn. */
 const JILLIAX = "core-056";
+/** #66 The Rock, 10/10 Indestructible: the one Indestructible unit in Core since patch v0.1.1. */
+const ROCK = "core-066";
 /** Cards for the AI's turn, as the other My Pawn tests give it (my-pawn.test.ts). */
 const STOCKPILE = "core-005";
 const TIMMY = "core-011";
@@ -285,9 +285,10 @@ describe("#96 My Pawn — radiant (R283)", () => {
   });
 
   it("R283 the destroy is ordinary: a Reborn attacker comes back, before the AI takes the turn", () => {
-    const { s, attacker } = pawnGame(SAINTESS, 2);
+    // A radiant Jilliax's Divine Shield does not stop a destroy (§6.3), and its Reborn answers it.
+    const { s, attacker } = pawnGame({ def: JILLIAX, radiant: true }, 6);
 
-    s.expectHealth("p2", 2);
+    s.expectHealth("p2", 6);
     // §4.5 step 4: Reborn returns it to the zone it reserved (R64), at 1 health, straight after the
     // collection and ahead of the AI turn.
     expect(fromCancel(s, 3)).toEqual(["attackCancelled", "destroyed", "summoned"]);
@@ -297,19 +298,18 @@ describe("#96 My Pawn — radiant (R283)", () => {
   });
 
   it("R283, R46 an Indestructible attacker is knocked down instead, and the attack is cancelled either way", () => {
-    const { s, attacker } = pawnGame({ def: JILLIAX, radiant: true }, 6);
+    // #66 The Rock: a 10/10 Indestructible, in Attack Position, with no Taunt (R347 takes any).
+    const { s, attacker } = pawnGame(ROCK, 10);
 
-    // Cancelled: the 6 never landed, so its Lifesteal had nothing to heal off.
-    s.expectHealth("p2", 6);
+    // Cancelled: the 10 never landed.
+    s.expectHealth("p2", 10);
     expect(s.events.some((event) => event.type === "damage" && event.sourceId === attacker.id)).toBe(false);
 
-    // R46: the mark does not kill it. It is in Attack Position already, so the knock-down reports
-    // only the Taunt it loses, and it does so before the AI takes the turn.
-    expect(fromCancel(s, 2)).toEqual(["attackCancelled", "keywordGranted"]);
-    const lost = s.events.find(
-      (event) => event.type === "keywordGranted" && event.instanceId === attacker.id,
-    );
-    expect(lost?.type === "keywordGranted" && lost.keyword.kind === "Taunt" && lost.lost === true).toBe(true);
+    // R46: the mark does not kill it. It is in Attack Position already and has no Taunt to lose, so
+    // the knock-down changes nothing a view shows and reports nothing (R91).
+    expect(fromCancel(s, 1)).toEqual(["attackCancelled"]);
+    expect(eventsOn(s, attacker.id, "positionSwitched")).toBe(0);
+    expect(eventsOn(s, attacker.id, "keywordGranted")).toBe(0);
     expect(eventsOn(s, attacker.id, "destroyed")).toBe(0);
     s.expectInZone(attacker, "field");
     turnWentOn(s, "p1");

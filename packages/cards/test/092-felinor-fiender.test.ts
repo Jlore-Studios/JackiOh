@@ -1,12 +1,12 @@
-// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92).
+// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362).
 //
 // BUILD M4-T4 row 92: "Plays onto an occupied zone; card beneath is dormant; stats = printed + all
-// your Felinors including dormant ones (R13, R39); radiant Charge".
+// your Felinors including dormant ones (R13, R39); radiant printed + twice that sum (R362)".
 //
-// §8: printed 5/7 → 10/14, keywords Stack → Stack + Charge, text "Stack. Stats = printed plus the
-// combined stats of all your Felinors, including ones under a Stack" and radiant "Stack, Charge;
-// same". So the stat rule is identical on both faces and only the printed numbers and the keyword
-// list move — which is what the two `describe` blocks below check separately (CLAUDE.md rule 6).
+// §8: printed 5/7 → 10/14, keywords Stack on both faces, text "Stack. Has the stats of all your
+// Felinors, including those under Stack." and radiant "Stack. Has twice the stats of all your
+// Felinors, including those under Stack." (patch v0.1.1 traded the radiant Charge for the doubled
+// sum) — which is what the two `describe` blocks below check separately (CLAUDE.md rule 6).
 //
 // R39 is the decided reading: "printed plus the combined Felinor stats, NEVER BELOW PRINTED". The
 // floor is per sum, so "no Felinors at all" is the reachable boundary of the never clause and the
@@ -261,45 +261,29 @@ describe("#92 Felinor Fiender — radiant", () => {
     s.expectStats(FIENDER, { attack: 10, maxHealth: 14, health: 14 });
   });
 
-  it('"same": the radiant face runs the identical stat rule, so 10/14 + 3/10 is 13/24', () => {
+  it("R362 the radiant face adds twice the sum: 10/14 + 2 × (3/10 + 1/1) is 18/36", () => {
     const s = scenario({
       seed: "core-092-radiant-sum",
       p1: { field: [{ def: FIENDER, radiant: true }, BIG_FELINOR, FELINOR_TOKEN], hand: ["core-005"] },
       p2: { hand: ["core-005"] },
     });
 
-    // 10 + 3 + 1 / 14 + 10 + 1.
-    s.expectStats(FIENDER, { attack: 14, maxHealth: 25 });
+    // 10 + 2 × (3 + 1) / 14 + 2 × (10 + 1).
+    s.expectStats(FIENDER, { attack: 18, maxHealth: 36 });
   });
 
-  it("§8 radiant keyword list is Stack AND Charge", () => {
+  it("patch v0.1.1: the radiant keyword list is Stack alone, so a played radiant Fiender cannot attack that turn", () => {
     const s = scenario({
       seed: "core-092-radiant-keywords",
-      p1: { field: [{ def: FIENDER, radiant: true }], hand: ["core-005"] },
-      p2: { hand: ["core-005"] },
-    });
-
-    expect(keywordKinds(s, FIENDER)).toContain("Stack");
-    expect(keywordKinds(s, FIENDER)).toContain("Charge");
-  });
-
-  it("radiant Charge lets it attack the turn it is played, and it hits for its computed attack", () => {
-    const s = scenario({
-      seed: "core-092-radiant-charge",
       p1: { field: [BIG_FELINOR], hand: [{ def: FIENDER, radiant: true }, "core-005"] },
       p2: { hand: ["core-005"] },
     });
 
-    // Lane 2 is free, so this is an ordinary summon — the Stack play is exercised above.
     s.play(FIENDER, { zone: 2 });
-    const fiender = s.unit("p1", 2);
-    expect(fiender?.defId).toBe(FIENDER);
-    // 10 + 3 attack while the Big Felinor stands beside it.
-    s.expectStats(FIENDER, { attack: 13, maxHealth: 24 });
-
-    s.attack(FIENDER, "hero");
-
-    s.expectHealth("p2", 30 - 13);
+    expect(keywordKinds(s, FIENDER)).toEqual(["Stack"]);
+    // 10 + 2 × 3 attack while the Big Felinor stands beside it.
+    s.expectStats(FIENDER, { attack: 16, maxHealth: 34 });
+    expect(() => s.attack(FIENDER, "hero")).toThrow();
   });
 
   it("radiant keeps the enemy-Felinor exclusion too", () => {
@@ -312,7 +296,7 @@ describe("#92 Felinor Fiender — radiant", () => {
     s.expectStats(FIENDER, { attack: 10, maxHealth: 14 });
   });
 
-  it("R13 radiant counts dormant Felinors as well (the rule is unchanged by the face)", () => {
+  it("R13 R362 radiant counts dormant Felinors, twice, as well", () => {
     const s = scenario({
       seed: "core-092-radiant-stack",
       p1: { field: [BIG_FELINOR], hand: [{ def: FIENDER, radiant: true }, "core-005"] },
@@ -321,6 +305,6 @@ describe("#92 Felinor Fiender — radiant", () => {
 
     s.play(FIENDER, { zone: 1 });
 
-    s.expectStats(FIENDER, { attack: 13, maxHealth: 24 });
+    s.expectStats(FIENDER, { attack: 16, maxHealth: 34 });
   });
 });

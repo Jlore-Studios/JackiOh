@@ -98,6 +98,33 @@ describe("the damage pipeline (§4.4, M2-T3)", () => {
     expect(eventsOfType(sink.events, "damage").map((e) => e.amount)).toEqual([1, 2, 12]);
   });
 
+  it("R346 step 2: a source with Pierce skips Armor on a unit and a hero, and nothing else", () => {
+    const state = newGame();
+    const target = put(state, armoured.id, slot("p2", "units", 1)); // Armor 7
+    const shieldedTarget = put(state, shielded.id, slot("p2", "units", 2));
+    const wall = put(state, indestructible.id, slot("p2", "units", 3));
+    const source = put(state, plain.id, slot("p1", "units", 1));
+    source.grantedKeywords.push({ kind: "Pierce" });
+    state.players.p2.hero.armor = 5;
+    put(state, antiOneshot.id, slot("p2", "backrow", 1));
+    const sink = sinkFor(state);
+
+    // Printed, Defense and aura Armor all: the whole 7 lands.
+    target.position = "DEF";
+    expect(unitView(state, target).armor).toBe(8);
+    expect(hit(sink, source, onUnit(target), 7)).toBe(7);
+    // The hero's Armor 5 is skipped too, and step 3's cap still clamps the 9 to 5.
+    expect(hit(sink, source, onHero("p2"), 9)).toBe(ANTI_ONESHOT_CAP.base);
+    // Step 1 still negates the whole hit, and step 4 still takes all of it.
+    expect(hit(sink, source, onUnit(shieldedTarget), 7)).toBe(0);
+    expect(shieldedTarget.divineShieldSpent).toBe(true);
+    expect(hit(sink, source, onUnit(wall), 7)).toBe(0);
+
+    // The same source without the keyword pays step 2 in full.
+    source.grantedKeywords = [];
+    expect(hit(sink, source, onUnit(target), 7)).toBe(0);
+  });
+
   it("step 3: the hero cap clamps 12 to 5, 3 when radiant, and applies to a hero only", () => {
     const state = newGame();
     put(state, antiOneshot.id, slot("p1", "backrow", 1));

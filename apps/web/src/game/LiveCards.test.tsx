@@ -209,12 +209,12 @@ describe("R43 a Heroic Power in play prints the one power it rolled", () => {
       baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-098", cost: 3, power: "recruit" })] }) }),
     );
     const root = screen.getByTestId(testid.handCard("h1"));
-    expect(text(root, ".card-text")).toBe("Indestructible. Once per turn, spend 3: Recruit a permanent. Playing it activates it once");
-    expect(text(root, ".card-text")).not.toContain("7 random powers");
+    expect(text(root, ".card-text")).toBe("Indestructible\nOnce per turn, spend 3: Recruit a permanent. Playing it activates it once.");
+    expect(text(root, ".card-text")).not.toContain("8 random powers");
     expect(text(root, ".cost-gem")).toBe("3");
   });
 
-  it("on the field: the power the hero's list names for it, with the printed list of seven beside the face", () => {
+  it("on the field: the power the hero's list names for it, with the printed list of eight beside the face", () => {
     vi.useFakeTimers();
     const power: HeroPowerView = { instanceId: "b1", defId: "core-098", name: "ping", x: 1, usedThisTurn: false };
     const heroic: BackrowView = faceUpBackrow("p1", { instanceId: "b1", defId: "core-098", cost: 1 });
@@ -227,13 +227,13 @@ describe("R43 a Heroic Power in play prints the one power it rolled", () => {
       }),
     );
     const preview = hover(screen.getByTestId(testid.card("b1")));
-    expect(text(preview, ".card-text")).toBe("Indestructible. Once per turn, spend 1: Deal 1 damage to a target. Playing it activates it once");
-    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("gain one of 7 random powers");
+    expect(text(preview, ".card-text")).toBe("Indestructible\nOnce per turn, spend 1: Deal 1 damage to a target. Playing it activates it once.");
+    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 8 random powers");
   });
 
-  it("in the collection: the whole list of seven, base and radiant", () => {
+  it("in the collection: the whole list of eight, base and radiant", () => {
     render(<CardDetail def={def("core-098")} onClose={() => {}} />);
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("gain one of 7 random powers");
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Gain one of 8 random powers");
     expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Recruit a permanent and make it Radiant");
   });
 });
@@ -250,13 +250,13 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
     const preview = hover(root);
     expect(text(preview, ".card-text")).toBe(CONCEALED_TEXT);
     expect(preview.querySelector(`[data-testid="${INSPECT_PRINTED}"]`)).toBeNull();
-    expect(preview.textContent).not.toContain("summon 3 random 3-cost Units");
+    expect(preview.textContent).not.toContain("Summon 3 random Cost (3) Units");
   });
 
   it("the collection's detail view prints both faces' real text", () => {
     render(<CardDetail def={def("core-095")} onClose={() => {}} />);
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("summon 3 random 3-cost Units");
-    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("cast a random Call to Chaos");
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Summon 3 random Cost (3) Units");
+    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Cast a random Call to Chaos");
   });
 });
 

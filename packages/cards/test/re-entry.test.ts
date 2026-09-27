@@ -2,7 +2,7 @@
 // R13, R47, R57, R64, R76, R78, R83, R174, R175). Found by the polish-4 edge-case hunt
 // (docs/polish/4-edge-cases.md, lenses L1, L2 and L8); every case here failed before its fix.
 //
-//  - R174: #50 Kpop Fanatic's delayed steal fizzles on a target that has left the field since it was
+//  - R174: #50 K-Pop Fanatic's delayed steal fizzles on a target that has left the field since it was
 //    chosen, even when the same card is back — bounced and replayed, or returned by Reborn — and on
 //    a target dormant under a Stack pile when it fires (R13, R76).
 //  - R175: Reborn brings back a unit token, and a Reborn unit that died on top of a Stack pile
@@ -101,7 +101,7 @@ function pileOf(g: Scenario, player: "p1" | "p2", lane: number): string[] {
   return (g.state.players[player].units[lane - 1] ?? []).map((card) => card.id);
 }
 
-describe("R174: #50 Kpop Fanatic's delayed steal and a target that left the field", () => {
+describe("R174: #50 K-Pop Fanatic's delayed steal and a target that left the field", () => {
   it("R174 the steal fizzles on a target now dormant under a Stack pile, and the pile stays whole (R13, R76)", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
@@ -182,7 +182,7 @@ describe("R175: Reborn's return for a unit token and onto a Stack pile", () => {
   it("R175 a Rush Token given Reborn comes back through Reborn, reset and sick (§6.1's pool, R21, R83)", () => {
     // On this seed Plastic Surgery's random keyword is Reborn: §6.1's pool keeps Reborn for tokens.
     const g = scenario({
-      seed: "re-entry-reborn-token-4",
+      seed: "re-entry-reborn-token-10", // R346's Pierce moved the roll off "-4"
       p1: { hand: [SURGERY, HIT_JOB], field: [{ def: RUSH_TOKEN, lane: 1 }], library: [...LIBRARY] },
       p2: { hand: [HIT_JOB], library: [...LIBRARY] },
     });
@@ -249,13 +249,13 @@ describe("§3.2 and R13: a card dormant under a Stack pile", () => {
     const fiender = g.card(FIENDER);
     expect(pileOf(g, "p1", 1)).toEqual([fiender.id, dormant.id]);
 
-    // Paid 4: "all units −5/−5". Mr. Vanilla is 3/3 and dormant; Felinor Fiender 5/7 is on top.
+    // Paid 4: "all Units −2/−2". Mr. Vanilla is 4/4 and dormant; Felinor Fiender 5/7 is on top.
     g.play(AURA, { embiggen: true });
 
     g.expectInZone(dormant, "field");
     expect(pileOf(g, "p1", 1)).toEqual([fiender.id, dormant.id]);
     // The dormant card keeps its own stats; the top of the pile takes the aura.
-    g.expectStats(dormant, { attack: 3, health: 3 });
+    g.expectStats(dormant, { attack: 4, health: 4 });
   });
 });
 
@@ -425,7 +425,7 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
     const g = scenario({
       p1: { hand: [CUBE, VANILLA], library: [...LIBRARY] },
       p2: {
-        hand: [{ def: SILAS, radiant: true }, SAINTESS, VANILLA],
+        hand: [{ def: SILAS, radiant: true }, TIMMY, VANILLA],
         field: [{ def: SORCERER, lane: 5 }],
         backrow: [{ def: EXPERIMENTATION, lane: 3 }],
         library: [...LIBRARY],
@@ -441,10 +441,13 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
     // p2's hand costing 0 (§8 #52 radiant, R14).
     g.play(g.hand("p2").find((card) => card.defId === SILAS) as CardInstance, { zone: 3, modes: ["right"] });
     g.expectInZone(fused, "hand");
-    g.play(SAINTESS, { zone: 1 });
+    g.play(TIMMY, { zone: 1 });
     const saintess = unitAt(g, "p2", 1);
-    // Replayed: the fused Cry runs the Cube's part (eat the Saintess) and then the Sorcerer's
-    // (4 damage), both aimed at the Saintess.
+    // A Timmy that has been granted Reborn (Plastic Surgery's pool, R21), with no shield or Armor to
+    // hide whether a hit lands on its body.
+    g.card(saintess).grantedKeywords = [{ kind: "Reborn" }];
+    // Replayed: the fused Cry runs the Cube's part (eat the Timmy) and then the Sorcerer's
+    // (4 damage), both aimed at the Timmy.
     g.play(fused, { zone: 5, targets: [...at(saintess), ...at(saintess)] });
     // The meal died and came back through Reborn (§4.5 step 4), a new arrival (R83): the damage aimed
     // at the stay that died fizzles (R174), so the body stands at 1 health.
@@ -540,25 +543,27 @@ function must<T>(value: T | null | undefined, what: string): T {
 }
 
 describe("R174: a later part of one effect list meets the stay the play chose, across a prompt too", () => {
-  it("R174 a crafted Cube + Scarab + Sorcerer that eats a Radiant Saintess does not hit her Reborn body after the Discover (R113, R83, R102)", () => {
+  it("R174 a crafted Cube + Scarab + Sorcerer that eats a Reborn unit does not hit its Reborn body after the Discover (R113, R83, R102)", () => {
     const g = scenario({
       seed: "r6craft-1057", // radiant Craft a Card's Discovers offer Cube, then Scarab, then Sorcerer
       p1: {
         hand: [{ def: CRAFT_A_CARD, radiant: true }, STOCKPILE],
         mana: 4,
-        field: [{ def: SAINTESS, lane: 1 }],
+        field: [{ def: TIMMY, lane: 1 }],
       },
       p2: { hand: [STOCKPILE], field: [{ def: RENO, lane: 1 }] },
     });
+    // Granted Reborn (Plastic Surgery's pool, R21): no shield or Armor hides whether a hit lands.
+    must(g.unit("p1", 1), "Tempo Timmy").grantedKeywords = [{ kind: "Reborn" }];
     g.play(CRAFT_A_CARD);
     g.answer(CUBE);
     g.answer(SCARAB);
     g.answer(SORCERER);
     const card = must(g.hand("p1").find((held) => held.defId.startsWith("t-")), "the crafted card");
-    const saintess = must(g.unit("p1", 1), "Radiant Saintess");
+    const saintess = must(g.unit("p1", 1), "the Reborn Timmy");
     const at = { pick: "instance" as const, instanceId: saintess.id };
 
-    // The Cube's part eats the Saintess and she is straight back through Reborn, a new arrival
+    // The Cube's part eats the Timmy and it is straight back through Reborn, a new arrival
     // (R78, R83); the Scarab's part then asks, which ends the action with the Sorcerer's part owed.
     g.play(card, { zone: 2, targets: [at, at] });
     expect(g.state.pending?.kind).toBe("discover");
@@ -729,8 +734,8 @@ describe("R174, R41: a Cube's meal is read on the stay the play chose", () => {
 
 describe("§4.5 step 4, R89: the Reborn bodies of one check return together", () => {
   /**
-   * p1 plays a Felinor Fiender crafted with a Radiant Saintess (7/9, Stack, Reborn, and the Fiender's
-   * layer 2) and a "Miss" Mrow crafted with a Saintess (3/3 Felinor, Reborn) into the two lanes
+   * p1 plays a Felinor Fiender crafted with a Right-house defender (6/8, Stack, Taunt, Divine Shield,
+   * Reborn, and the Fiender's layer 2) and a "Miss" Mrow crafted with one (2/2 Felinor, Reborn) into the two lanes
    * given, then destroys both with Twisting Nether. Both die in one state check and both come back
    * through Reborn. Returns the Fiender body's health afterwards.
    */
@@ -739,38 +744,38 @@ describe("§4.5 step 4, R89: the Reborn bodies of one check return together", ()
       seed: "r9-reborn-order",
       p1: {
         mana: 10,
-        hand: [SAINTESS, FIENDER, SAINTESS, MROW, NETHER, RENO],
+        hand: [RIGHT_HOUSE, FIENDER, RIGHT_HOUSE, MROW, NETHER, RENO],
         library: [...LIBRARY],
       },
       p2: { hand: [STOCKPILE], library: [...LIBRARY] },
     });
     const hand = s.hand("p1");
-    const saints = hand.filter((card) => card.defId === SAINTESS);
+    const saints = hand.filter((card) => card.defId === RIGHT_HOUSE);
     const fienderIn = must(hand.find((card) => card.defId === FIENDER), "Felinor Fiender in hand");
     const mrowIn = must(hand.find((card) => card.defId === MROW), "Mrow in hand");
     const rebornFiender = must(
-      subsystems.fuse(sinkFor(s), { ingredients: [fienderIn, must(saints[0], "a Saintess")], toHand: "p1" }),
-      "Fiender + Saintess",
+      subsystems.fuse(sinkFor(s), { ingredients: [fienderIn, must(saints[0], "a Right-house defender")], toHand: "p1" }),
+      "Fiender + Right-house defender",
     );
     const rebornMrow = must(
-      subsystems.fuse(sinkFor(s), { ingredients: [mrowIn, must(saints[1], "a Saintess")], toHand: "p1" }),
-      "Mrow + Saintess",
+      subsystems.fuse(sinkFor(s), { ingredients: [mrowIn, must(saints[1], "a Right-house defender")], toHand: "p1" }),
+      "Mrow + Right-house defender",
     );
     s.play(rebornFiender, { zone: fienderLane });
     s.play(rebornMrow, { zone: mrowLane });
-    // Layer 2: printed 7/9 plus the crafted Mrow's 3/3 (R116).
-    expect(s.stats(rebornFiender).maxHealth).toBe(9 + 3);
+    // Layer 2: printed 6/8 plus the crafted Mrow's 2/2 (R116).
+    expect(s.stats(rebornFiender).maxHealth).toBe(8 + 2);
 
     s.play(NETHER);
     s.expectInZone(rebornFiender, "field").expectInZone(rebornMrow, "field");
-    expect(s.stats(rebornFiender).maxHealth).toBe(9 + 3);
+    expect(s.stats(rebornFiender).maxHealth).toBe(8 + 2);
     return s.stats(rebornFiender).health;
   }
 
   it("§4.5 a Felinor Fiender and the Felinor feeding it that come back through Reborn in one check leave the Fiender at the same health whichever lane is first (R89, R116)", () => {
-    // Mrow first: the Fiender's body is read with Mrow back, 12 max health and 1 left. Fiender first:
-    // it is read with Mrow still in the graveyard, 9 max and 1 left, and Mrow's return then lifts it
-    // to 4. §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
+    // Mrow first: the Fiender's body is read with Mrow back, 10 max health and 1 left. Fiender first:
+    // it is read with Mrow still in the graveyard, 8 max and 1 left, and Mrow's return then lifts it
+    // to 3. §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
     expect(fienderAfterReborn(1, 2)).toBe(fienderAfterReborn(2, 1));
   });
 });

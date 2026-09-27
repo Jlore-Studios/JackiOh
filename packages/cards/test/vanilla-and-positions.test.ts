@@ -159,43 +159,30 @@ describe("R46 and R91: the knock-down reports a switch only when there is one", 
   });
 
   // Found by the probe's silent-change check (a top unit's view changed in an action whose events
-  // name neither it nor anything on the board around it), on every seed range and deck mode it ran:
-  // #55 radiant Lava Golem and #56 radiant Jilliax, both Indestructible Taunt units, lost Taunt to
-  // R46 with nothing in the action's stream saying so.
-  it("R46 an Indestructible Taunt unit in Attack Position that shrugs off a destroy loses its Taunt with an event naming it (§10.3, R91)", () => {
+  // name neither it nor anything on the board around it): #55 radiant Lava Golem and #56 radiant
+  // Jilliax, both printing Taunt beside Indestructible, lost Taunt to R46 with nothing in the
+  // action's stream saying so, and R46 was given its `keywordGranted … lost` report. R347 (patch
+  // v0.1.1) has since taken Taunt off every Indestructible unit, so such a unit never has a Taunt
+  // for a knock-down to take: it shows none before the destroy and none after, and so reports none.
+  it("R46 R347 an Indestructible unit given Taunt shows none, so shrugging off a destroy changes nothing a view shows (§10.3, R91)", () => {
     const g = scenario({
-      p1: { hand: [HIT_JOB, "core-010"], mana: 4 },
-      // #56 radiant Jilliax: Charge, Taunt, Lifesteal, Indestructible (§8.3 row 56), in Attack Position.
-      p2: { field: [{ def: "core-056", radiant: true, position: "ATK" }], hand: ["core-010"] },
+      p1: { hand: [HIT_JOB, HINDER], library: LIBRARY },
+      p2: { field: [{ def: ROCK, lane: 1, position: "ATK" }], library: LIBRARY },
     });
-    const jilliax = g.card("core-056");
-    expect(g.stats(jilliax).keywords.map((k) => k.kind)).toContain("Taunt");
-    expect(g.view("p1").opponent.units[0]?.keywords.map((k) => k.kind)).toContain("Taunt");
+    const rock = g.card(ROCK);
+    // A granted Taunt, as #63 Plastic Surgery's roll can give it: R347 holds it off.
+    rock.grantedKeywords.push({ kind: "Taunt" });
+    expect(g.stats(rock).keywords.map((k) => k.kind)).not.toContain("Taunt");
+    expect(g.view("p1").opponent.units[0]?.keywords.map((k) => k.kind)).not.toContain("Taunt");
 
     // #16 Hit Job: "Destroy target unit". R46: an Indestructible unit that would be destroyed
-    // switches to Attack Position (it already is in it) and loses Taunt this turn.
-    g.play(HIT_JOB, { targets: at(jilliax) });
+    // switches to Attack Position (it already is in it).
+    g.play(HIT_JOB, { targets: at(rock) });
 
-    // Still standing, and without Taunt for the rest of this turn: a change both seats' views show
-    // (`UnitView.keywords`, §10.8), and one that changes which of p2's units p1 may attack (§4.2 step 3).
-    g.expectInZone(jilliax, "field");
-    expect(g.stats(jilliax).keywords.map((k) => k.kind)).not.toContain("Taunt");
-    expect(g.view("p1").opponent.units[0]?.keywords.map((k) => k.kind)).not.toContain("Taunt");
-    // §10.3: "every visible state change emits an event". There is no switch to report (R91), so the
-    // report is the Taunt it lost — the grant event with `lost` set, no new event type.
+    g.expectInZone(rock, "field");
+    expect(g.stats(rock).keywords.map((k) => k.kind)).not.toContain("Taunt");
     expect(g.lastEvents.filter((e) => e.type === "positionSwitched")).toEqual([]);
-    expect(g.lastEvents).toContainEqual({
-      type: "keywordGranted",
-      instanceId: jilliax.id,
-      keyword: { kind: "Taunt" },
-      lost: true,
-    });
-    expect(g.view("p2").events).toContainEqual({
-      type: "keywordGranted",
-      instanceId: jilliax.id,
-      keyword: { kind: "Taunt" },
-      lost: true,
-    });
+    expect(g.lastEvents.filter((e) => e.type === "keywordGranted")).toEqual([]);
   });
 
   it("R46 a unit with no Taunt to lose reports none: The Rock in Attack Position is knocked down in silence (R91)", () => {

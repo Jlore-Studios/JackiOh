@@ -1,4 +1,4 @@
-// #50 Kpop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282).
+// #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282).
 // Unit, cost 1, 1/1 → 2/2.
 //   Base:    "Cry: choose an enemy permanent; at the start of your next turn, steal it"
 //   Radiant: "Divine Shield; Cry: choose an enemy permanent; at the start of your next turn, steal
@@ -18,7 +18,7 @@
 //
 // The delay is the §8.2 Engine cell: a `state.delayed` entry keyed to the TARGET's instance id.
 // Keyed to the target and not to this unit is the point of R76 — "fires at your next start of turn
-// even if Kpop Fanatic has died" — so the continuation carries the id in its own `data` and does not
+// even if K-Pop Fanatic has died" — so the continuation carries the id in its own `data` and does not
 // reach back through `ctx.self`, which may be null by then. `prompts.runResume` re-enters the step
 // this card names in its `resume` table (§10.6: a continuation is "script id + step + captured
 // data", never a closure), which is why the id is read back out of `ctx.data` defensively: `data`
@@ -51,9 +51,9 @@
 // one in a hand the controller may not read above all — and `setRadiant` by id is aimed at the stay
 // the run began on besides (R174).
 //
-// The rider is the face the Cry ran, not the face Kpop Fanatic shows when the steal comes due
+// The rider is the face the Cry ran, not the face K-Pop Fanatic shows when the steal comes due
 // (R282): `delay` records the running face in its `Resume` (effects/delay.ts) and
-// `turn.runDelayed` re-enters that face's `resume` table (work.ts, R126), so a base Kpop Fanatic
+// `turn.runDelayed` re-enters that face's `resume` table (work.ts, R126), so a base K-Pop Fanatic
 // made Radiant after its Cry steals without the rider, and a Radiant one that has died since still
 // applies it.
 //
@@ -63,7 +63,7 @@
 // script or a step table. So the step is registered ONCE, in the `resume` table, and `delay` is
 // told so with `hook: RESUME_HOOK` (its default is the `delayed` hook). R126: "A card must never
 // have to register one continuation under two keys." R127 is the other half and the reason this
-// card carries the target id in `data`: the entry re-enters with `ctx.self === null` when Kpop
+// card carries the target id in `data`: the entry re-enters with `ctx.self === null` when K-Pop
 // Fanatic has died in between, which is exactly R76's case.
 
 import type { CardInstance, Effect, EffectContext, GameState, Hook, Script } from "@jackioh/engine";

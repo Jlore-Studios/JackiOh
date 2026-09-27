@@ -1,46 +1,39 @@
-// #86 "Miss" Mrow (SPEC §8.5, R11, R12, R13, R15, R59, R78, R275).
+// #86 "Miss" Mrow (SPEC §8.4, R12, R13, R15, R42, R78, R171, R361).
 //
-// Base: "Can't attack. Death: steal all enemy units". Radiant: "Taunt. Death: steal all enemy units"
-// (§8's cell "Taunt; same", R275: the radiant face trades the base face's restriction for a keyword).
+// Base: "Can't attack. Death: Take control of the Unit that destroyed this." Radiant: "Rush. Death:
+// Take control of the Unit that destroyed this." (patch v0.1.1: the Death used to steal every enemy
+// unit, and the Radiant face used to print Taunt).
 //
-// The Death clause is "same" on both faces (§8 Conventions), so both faces run one Death hook and
-// differ only in the printed face. That difference is entirely the catalog's:
+// The Death clause is the same on both faces, so both faces run one Death hook and differ only in
+// the printed face, which is the catalog's: the base face prints the keyword `Can't attack`, which
+// `combat.ts`'s `whyAttackRefused` reads off `unitView(...).keywords`, and the radiant face prints
+// `Rush` (§8 Conventions: a keyword list gives the face's complete list), so it may attack units the
+// turn it lands. Neither needs a line of script.
 //
-//   - the base face prints the keyword `Can't attack`, which `combat.ts`'s `whyAttackRefused`
-//     reads off `unitView(...).keywords` ("that unit cannot attack"), and
-//   - the radiant face prints `Taunt` and nothing else — a radiant cell that lists keywords without
-//     "Plus" gives the radiant form's COMPLETE keyword list (§8 Conventions) — so it may attack, and
-//     §4.2 step 3's Taunt wall (`combat.ts tauntWall`) makes an enemy attack target it first.
+// "The Unit that destroyed this" is R42's killer, which R361 makes a card-facing fact: the unit
+// whose hit took Mrow to 0 health (or whose Poisonous hit marked it), read off Mrow's last-known
+// state (R78) — the Death hook runs at §4.5 step 3 on that snapshot. `killerOf` answers it only while
+// the killer is a Unit acting on the field, so a destroy effect, a Tribute, a Spell's damage, a
+// killer that died in the same combat or one dormant under a Stack (R13) gives nothing to take.
 //
-// So neither face needs a line of script for either keyword, and a script that tried would be
-// wrong: a printed keyword is a §10.4 layer-1 value the attack validator already reads. The test
-// proves both halves off the catalog and off `keywordsOf`, so a catalog edit that dropped a keyword
-// would fail there rather than silently changing what the card may do.
-//
-// The Death clause is one effect. `stealAll` (engine/src/effects/steal.ts) walks
-// `slotsOf(opponent, "units")`, which is lane order (§3.2), and places each card with R15's rule —
-// the same lane on the thief's side when it is free, else that row's first free zone — so a card
-// that finds no free zone simply stays with its owner ("excess stay put", §8's Engine cell). Only
-// the top of a Stack pile is on the field, so a dormant card under one is not taken (R13).
-//
-// Control, not ownership: a stolen unit keeps its owner and still goes to that owner's graveyard,
-// hand, library or exile when it later leaves the field (R12), and because it never leaves the
-// field it keeps its damage, buffs, counters and position (R78). A stolen face-down trap would
-// stay face-down (R33) — but this card names the unit row only, so the enemy backrow is untouched.
-//
-// Mrow's own death is what runs this, so its lane is already empty when the steal looks for a free
-// zone: the Death hook runs at §4.5 step 3, after step 1 moved the dying units, and it reads the
-// pre-death snapshot (R78, R89), so `ctx.controller` is the side Mrow was on when it died — a
-// stolen Mrow steals for whoever controlled it.
+// The take is one `steal`, which is §6.3's Steal: R15 places it (the same lane on Mrow's
+// controller's side when free, else the first free zone; with none, it stays), it keeps its damage
+// and buffs (R78), it has entered its new controller's side this turn (R171), and a killer its
+// controller already controls — a unit of Mrow's own side — is left where it is. `ctx.controller`
+// is the side Mrow was on as it died, so a stolen Mrow takes the killer for whoever controlled it.
 
 import type { Effect, Hook, Script } from "@jackioh/engine";
-import { stealAll } from "@jackioh/engine/effects";
+import { killerOf } from "@jackioh/engine";
+import { steal } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-086");
 
-/** "Death: steal all enemy units" — identical on both faces ("same", §8 Conventions). */
-const death: Hook = (): Effect[] => [stealAll({ row: "units" })];
+/** "Death: Take control of the Unit that destroyed this" — identical on both faces. */
+const death: Hook = (ctx): Effect[] => {
+  const killer = killerOf(ctx.state, ctx.self);
+  return killer === null ? [] : [steal({ instanceId: killer.id })];
+};
 
 export const base: Script = { death };
 

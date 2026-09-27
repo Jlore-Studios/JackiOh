@@ -39,7 +39,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-061", // Prejudiced Postdoc
       "core-069", // Call to Arms
       "core-077", // Professor Curvature
-      "core-091", // Fed Fauci
+      "core-030", // Archivist
       "core-013", // Jlockeed Shredder-10
       "core-019", // Midrange Menace
       "core-053", // Reno

@@ -110,7 +110,6 @@ const HEROIC_POWER = "core-098";
 const CALL_TO_CHAOS = "core-095";
 const RIGHT_HOUSE_DEFENDER = "core-003";
 const UNLICENSED_EXPERIMENTATION = "core-085";
-const RADIANT_SAINTESS = "core-081";
 const HIT_JOB = "core-016";
 
 function must<T>(value: T | null | undefined, what: string): T {
@@ -163,7 +162,7 @@ function delayArmed(s: Scenario, card: CardInstance): void {
 const ANY_UNIT = { side: "any" as const, of: ["unit" as const] };
 
 describe("R174, R59: a delayed effect that asks is still followed by the check before the next one", () => {
-  it("R174 Kpop Fanatic's steal fizzles on a target the delayed effect before it killed once its prompt was answered (R59, R68)", () => {
+  it("R174 K-Pop Fanatic's steal fizzles on a target the delayed effect before it killed once its prompt was answered (R59, R68)", () => {
     const s = scenario({
       p1: { hand: [KPOP_FANATIC, RENO], library: [RENO, RENO] },
       p2: { field: [TEMPO_TIMMY], hand: [RENO], library: [RENO, RENO] },
@@ -270,7 +269,7 @@ describe("R127: a continuation with no instance keeps its script across its own 
     const orphan = placeFixture(s, "edge-r5-orphan", "p1", "backrow", 5);
     delayArmed(s, orphan);
     // The card that scheduled it is fused away onto p1's Mana Well and ceases to exist (R86, R102),
-    // as a Kpop Fanatic #85 fuses does; its delayed effect still fires, named by its def (R127).
+    // as a K-Pop Fanatic #85 fuses does; its delayed effect still fires, named by its def (R127).
     const well = must(s.backrow("p1", 1), "p1's Mana Well");
     must(subsystems.fuse(sinkFor(s), { ingredients: [orphan], target: well }), "the fusion");
     s.expectInZone(orphan.id, "gone");
@@ -599,10 +598,10 @@ describe("R174: a trap owed an event behind another trap's question meets the ev
 describe("R174, R113: a list's tail after a prompt still meets the stay the play chose", () => {
   it("R174 a unit the list sacrificed before its prompt is gone for the damage after it, even back through Reborn (R83, R113)", () => {
     const s = scenario({
-      p1: { field: [RADIANT_SAINTESS], hand: [RENO], mana: 4 },
+      p1: { field: [RIGHT_HOUSE_DEFENDER], hand: [RENO], mana: 4 },
       p2: { hand: [RENO] },
     });
-    const saintess = must(s.unit("p1", 1), "p1's Radiant Saintess");
+    const saintess = must(s.unit("p1", 1), "p1's Right-house defender");
     // A 0-cost Spell: sacrifice your chosen unit, ask something, then deal the chosen unit 5.
     fixture(s, "edge-r6-l7-sac-ask-hit", "Spell", {
       targets: [{ kind: "target", min: 1, max: 1, filter: { side: "ally", of: ["unit"] } }],
@@ -1116,7 +1115,7 @@ describe("R174, R113: the step a prompt's answer re-enters reads the stays the r
     const victim = placeFixture(s, "edge-r7-l7-enemy-reborn", "p2", "units", 1);
 
     // A 0-cost Spell: sacrifice the chosen enemy unit, ask something, and on the answer schedule
-    // "at the start of your next turn, steal it", watching it (#50 Kpop Fanatic's steal, R76).
+    // "at the start of your next turn, steal it", watching it (#50 K-Pop Fanatic's steal, R76).
     const spell: Script = {
       targets: [{ kind: "target", min: 1, max: 1, filter: { side: "enemy", of: ["unit"] } }],
       cry: (ctx) => {
@@ -1190,7 +1189,8 @@ describe("R174, §10.5 step 6: an Echo repeat's fresh target is aimed at the sta
   /** p2's 5/5 Reborn unit in lane 1, a p1 Spell "deal 1 damage to target enemy unit", and /fullsend. */
   function board(echo: number): { s: Scenario; victim: CardInstance; spell: CardInstance } {
     const s = scenario({
-      p1: { hand: [FULLSEND], library: [RENO, RENO, RENO], mana: 4 },
+      // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+      p1: { hand: [{ def: FULLSEND, radiant: true }], library: [RENO, RENO, RENO], mana: 4 },
       p2: { hand: [RENO] },
     });
     fixtureFaces(s.state, "edge-r8-reborn-5-5", "Unit", same({}), {

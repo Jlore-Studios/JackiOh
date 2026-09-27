@@ -36,7 +36,9 @@ const TRAP = "core-085"; // Trap, 1, Legendary
 const TIMMY = "core-011"; // Unit, 1 — 3/3 Rush, First Strike
 const BIG_UNIT = "core-025"; // Unit, 4 — 7/7 Armor 7
 const MR_TOKEN = "core-015"; // Unit, 1 — 1/1, Cry: summon a Rush Token
-const MR_VANILLA = "core-008"; // Unit, 1 — 3/3 Immutable
+const MR_VANILLA = "core-008"; // Unit, 1 — 4/4, no text
+/** A Radiant #19 Midrange Menace: an 18/18 with Taunt and Immutable (§8.1 row 19). */
+const IMMUTABLE = { def: "core-019", radiant: true } as const;
 const RUSH_TOKEN = "core-t-rush"; // the unit-token CARD, playable from a hand (§5, #75)
 const STOCKPILE = "core-005"; // Spell, 1
 const CALL_TO_ARMS = "core-069"; // Spell, 2 — "Recruit 3 Units costing 1 or less"
@@ -248,7 +250,7 @@ describe("#85 Unlicensed Experimentation — base, when it fires", () => {
   it("R23/R61 an Immutable permanent of yours fires the trap and receives nothing, and the played card stays", () => {
     const s = scenario({
       active: "p2",
-      p1: { backrow: [armed()], field: [MR_VANILLA] },
+      p1: { backrow: [armed()], field: [IMMUTABLE] },
       p2: { hand: [BIG_UNIT, STOCKPILE] },
     });
     const trap = s.backrow("p1", 3)!;
@@ -263,7 +265,7 @@ describe("#85 Unlicensed Experimentation — base, when it fires", () => {
     s.expectInZone(trap, "graveyard");
     // …and did nothing: no fusion, the Immutable body untouched, the played permanent still there.
     expect(countOf(s, "fused")).toBe(0);
-    s.expectStats(vanilla, { attack: 3, maxHealth: 3 });
+    s.expectStats(vanilla, { attack: 18, maxHealth: 18 });
     s.expectInZone(played, "field");
   });
 
@@ -335,7 +337,7 @@ describe("#85 Unlicensed Experimentation — radiant", () => {
   it("R23 the radiant face skips an Immutable permanent and fuses onto the rest", () => {
     const s = scenario({
       active: "p2",
-      p1: { backrow: [armed(true)], field: [MR_VANILLA, TIMMY] },
+      p1: { backrow: [armed(true)], field: [IMMUTABLE, TIMMY] },
       p2: { hand: [BIG_UNIT, STOCKPILE] },
     });
     const vanilla = s.unit("p1", 1)!;
@@ -344,7 +346,7 @@ describe("#85 Unlicensed Experimentation — radiant", () => {
     s.play(BIG_UNIT, { zone: 1 });
 
     expect(countOf(s, "fused")).toBe(1);
-    s.expectStats(vanilla, { attack: 3, maxHealth: 3 });
+    s.expectStats(vanilla, { attack: 18, maxHealth: 18 });
     s.expectStats(timmy, { attack: 10, maxHealth: 10 });
   });
 });

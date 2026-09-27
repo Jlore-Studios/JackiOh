@@ -7,9 +7,9 @@
 // The second half is the whole point. §10.4 layer 1 is "printed stats of the base or radiant form
 // (per `radiant`)" and damage is layer 6's subtrahend, not part of the printed face, so §5.2's
 // on-field rule — "the base-stat layer swaps immediately, damage taken and buffs are kept" — must
-// hold through the flip: a 3/3 Mr. Vanilla carrying 1 damage reads 2/3, and the same instance as a
-// 7/7 must read 6/7 and not 7/7. A client (or an engine) that rebuilt the instance on the flip
-// would show 7/7 and pass every other assertion in this file.
+// hold through the flip: a 4/4 Mr. Vanilla carrying 1 damage reads 3/4, and the same instance as a
+// 12/12 must read 11/12 and not 12/12. A client (or an engine) that rebuilt the instance on the flip
+// would show 12/12 and pass every other assertion in this file.
 //
 // Why the deck is built the way it is (11-radiant-a's description has the full version): #28
 // Knockoff Temu Glowy Jelly Bean picks "2 random cards among your library, hand and field",
@@ -73,9 +73,9 @@ const UNIT_LANE: Lane = 1;
 const GENNS_GREED = catalogId(94);
 const MATH_EQUATION = catalogId(31);
 
-/** SPEC §8 #8 Mr. Vanilla: "1 | Unit, Human | 3/3 → 7/7 | Immutable". */
-const VANILLA = { attack: 3, health: 3 } as const;
-const VANILLA_RADIANT = { attack: 7, health: 7 } as const;
+/** SPEC §8 #8 Mr. Vanilla: "1 | Unit, Human | 4/4 → 12/12 | No text" (patch v0.1.1). */
+const VANILLA = { attack: 4, health: 4 } as const;
+const VANILLA_RADIANT = { attack: 12, health: 12 } as const;
 /** SPEC §8 #31 at its printed cost of 1: Fib(cost + 1) = Fib(2) = 1 (R25's table). */
 const MATH_DAMAGE = 1;
 
@@ -177,7 +177,7 @@ function waitToPlay(player: PlayerId, defId: string): void {
 /**
  * The shown stats of a field card. `contain.text` on the card element because the support map has
  * no stat selector (see the header): the client renders `{health}/{maxHealth}` inside the card, so
- * "6/7" on a 7/7 body is "one point of damage is still there".
+ * "11/12" on a 12/12 body is "one point of damage is still there".
  */
 function expectShownHealth(instanceId: string, health: number, maxHealth: number): void {
   cy.get(ts(cardId(instanceId))).should("contain.text", `${health}/${maxHealth}`);
@@ -227,7 +227,7 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
       waitToPlay("p1", CARDS.glowyJellyBean);
       cy.gameState().then((state) => {
         // Any hand card but the four this spec is steering. Radiant #94 gains 6 mana instead of 2
-        // and radiant #28 picks 5 cards instead of 2, and a Radiant Mr. Vanilla would be 7/7
+        // and radiant #28 picks 5 cards instead of 2, and a Radiant Mr. Vanilla would be 12/12
         // before it was ever damaged — none of which is what is under test here.
         const steered = [CARDS.mrVanilla, CARDS.glowyJellyBean, CARDS.knockoffTemu, GENNS_GREED];
         const target = handOf(state, "p1").find((card) => !steered.includes(card.defId));

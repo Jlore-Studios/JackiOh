@@ -40,6 +40,7 @@ import {
   type PromptOption,
   type Resume,
 } from "../src/state";
+import { effectiveCost } from "../src/mana";
 import { addModifier } from "../src/modifiers";
 import { HIDDEN_ID, VIEW_EVENT_LIMIT, viewFor } from "../src/viewFor";
 import { lockZone, placeOnField } from "../src/zones";
@@ -225,8 +226,8 @@ describe("viewFor (§10.8, M3-T6)", () => {
     expect(view.opponent.libraryCount).toBe(theirLibrary.length);
     // Units are public on both sides; the two traps are markers and the Field Spell is not.
     expect(view.opponent.units[0]).toMatchObject({ defId: theirUnit.defId, attack: 3, health: 3, buried: 0 });
-    expect(view.opponent.backrow[0]).toEqual({ faceDown: true });
-    expect(view.opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(view.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
+    expect(view.opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
     expect(view.opponent.backrow[2]).toMatchObject({
       faceDown: false,
       defId: publicField.id,
@@ -313,6 +314,32 @@ describe("viewFor (§10.8, M3-T6)", () => {
     }
   });
 
+  it("R351 a face-down Trap shows its cost to both players, and its controller's view marks it unrevealed", () => {
+    const state = game("face-down-cost");
+    const trap = put(state, secretTrap.id, slot("p2", "backrow", 1));
+    const fieldTrap = put(state, secretFieldTrap.id, slot("p2", "backrow", 2));
+    const field = put(state, publicField.id, slot("p2", "backrow", 3));
+
+    const mine = viewFor(state, "p1");
+    const theirs = viewFor(state, "p2");
+    // The opponent reads the cost and nothing else; the controller reads the same number.
+    expect(mine.opponent.backrow[0]).toEqual({ faceDown: true, cost: effectiveCost(state, trap) });
+    expect(theirs.you.backrow[0]).toMatchObject({ faceDown: false, cost: effectiveCost(state, trap), unrevealed: true });
+    // The number is the card's own, as it stands: a costMod moves it for both (R65).
+    trap.costMod = 2;
+    expect(viewFor(state, "p1").opponent.backrow[0]).toEqual({ faceDown: true, cost: effectiveCost(state, trap) });
+    expect(viewFor(state, "p2").you.backrow[0]).toMatchObject({ cost: effectiveCost(state, trap) });
+
+    // A Field Trap that has fired is public: no longer unrevealed, and read in full by both (R33).
+    expect(theirs.you.backrow[1]).toMatchObject({ unrevealed: true });
+    fieldTrap.faceUp = true;
+    expect(viewFor(state, "p2").you.backrow[1]).not.toHaveProperty("unrevealed");
+    expect(viewFor(state, "p1").opponent.backrow[1]).toMatchObject({ faceDown: false, defId: secretFieldTrap.id });
+    // A Field Spell is public to both from the start, so it is never unrevealed.
+    expect(viewFor(state, "p2").you.backrow[2]).not.toHaveProperty("unrevealed");
+    expect(field.id).toBeDefined();
+  });
+
   it("§10.8 makes a backrow Field Spell public and a backrow Trap unknown to the opponent", () => {
     const state = game("backrow-types");
     const field = put(state, publicField.id, slot("p2", "backrow", 1));
@@ -328,11 +355,11 @@ describe("viewFor (§10.8, M3-T6)", () => {
       type: "Field Spell",
     });
     // Both trap types are "unknown", and the marker carries no identity at all: §10.8 grants the
-    // non-controller that the zone is occupied and nothing more.
-    expect(mine.opponent.backrow[1]).toEqual({ faceDown: true });
-    expect(mine.opponent.backrow[2]).toEqual({ faceDown: true });
+    // non-controller that the zone is occupied and what it costs (R351), and nothing more.
+    expect(mine.opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
+    expect(mine.opponent.backrow[2]).toEqual({ faceDown: true, cost: 1 });
     for (const marker of [mine.opponent.backrow[1], mine.opponent.backrow[2]]) {
-      for (const field of ["instanceId", "defId", "cost", "type", "counters", "radiant"]) {
+      for (const field of ["instanceId", "defId", "type", "counters", "radiant"]) {
         expect(Object.keys(marker ?? {})).not.toContain(field);
       }
     }
@@ -361,7 +388,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
 
     // Before the steal: p2 controls it and reads it; p1 sees a marker and the id never travels.
     expect(viewFor(state, "p2").you.backrow[0]).toMatchObject({ faceDown: false, defId: secretTrap.id });
-    expect(viewFor(state, "p1").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(viewFor(state, "p1"))).not.toContain(`"${secretTrap.id}"`);
 
     run(state, steal({ instanceId: hidden.id }), { controller: "p1" });
@@ -375,7 +402,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
       instanceId: hidden.id,
       defId: secretTrap.id,
     });
-    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     // The previous controller stops seeing it entirely, even though it still owns the card.
     expect(JSON.stringify(viewFor(state, "p2"))).not.toContain(`"${secretTrap.id}"`);
     expect(JSON.stringify(viewFor(state, "p2"))).not.toContain(`"${hidden.id}"`);
@@ -384,7 +411,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
   it("R33 a Field Trap that has fired is face-up to both players", () => {
     const state = game("r33-fired");
     const fired = put(state, secretFieldTrap.id, slot("p2", "backrow", 2));
-    expect(viewFor(state, "p1").opponent.backrow[1]).toEqual({ faceDown: true });
+    expect(viewFor(state, "p1").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });
 
     // §10.1 reserves `faceUp` for exactly this ("a Field Trap that has fired, R33"); `traps.ts`
     // sets it when the trap fires, and R33's half that lives here is what the view does with it.
@@ -683,7 +710,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     const curvature = install(state, "p1", {
       kind: "costDiscount",
       amount: 1,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: 1 },
     });
     // #78 /fullsend's two turn-scoped riders, in the order the Cry installs them.
@@ -704,7 +731,7 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
 
     expect(view.you.modifiers.map((modifier) => modifier.id)).toEqual([curvature.id, discount.id, combo.id]);
     expect(view.you.modifiers).toEqual([
-      { id: curvature.id, label: "Cost-4 cards cost 1 less" },
+      { id: curvature.id, label: "Cost (4)+ cards cost (1) less" },
       { id: discount.id, label: "Your cards cost 1 less" },
       { id: combo.id, label: 'Your cards gain "Combo: draw 1"' },
     ]);
@@ -735,16 +762,16 @@ describe("viewFor player modifiers (R169, §10.1, §10.3 modifierChanged)", () =
     install(state, "p1", {
       kind: "costDiscount",
       amount: 2,
-      onlyCurrentCost: 4,
+      minCurrentCost: 4,
       expiry: { until: "nextTurnOf", player: "p1", fromTurn: state.turn },
     });
 
     // The radiant face of #77, so the number is 2.
-    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost-4 cards cost 2 less (next turn)");
+    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost (4)+ cards cost (2) less (next turn)");
 
     // p1's next turn: the discount bites, and the badge stops hedging.
     state.turn += 2;
-    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost-4 cards cost 2 less");
+    expect(at(viewFor(state, "p1").you.modifiers, 0).label).toBe("Cost (4)+ cards cost (2) less");
   });
 
   it("R169 labels every PlayerModifier kind from the modifier alone", () => {

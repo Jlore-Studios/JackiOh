@@ -17,7 +17,7 @@
 //     clause is a delayed effect and not an `endOfTurn` hook: the card is in exile by then, and
 //     `turn.triggerOrder` only walks units and the backrow, so an `endOfTurn` hook would never be
 //     reached. A delayed continuation names its script by stored def id, so it comes back to this
-//     script even though the card is gone from play (R127, the same shape R76 gives #50 Kpop
+//     script even though the card is gone from play (R127, the same shape R76 gives #50 K-Pop
 //     Fanatic) — with `ctx.self` whatever `findInstance` makes of it, exile pile included.
 //   - R86 is the `findInstance` skip below: an id whose instance has ceased to exist (a unit token
 //     that left the field, R11) drops out of the pool instead of fizzling on it. An id whose card

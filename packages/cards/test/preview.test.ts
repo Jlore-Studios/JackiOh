@@ -33,6 +33,7 @@ const QUICKSTRIKER = "core-038";
 const ECHOES = "core-040";
 const SPITEFUL_STAB = "core-070";
 const FED_FAUCI = "core-091";
+const COMBO_INDEX = "core-093";
 
 /** R280's six, in index order. */
 const PREVIEWED = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEFUL_STAB, FED_FAUCI];
@@ -94,12 +95,15 @@ function must<T>(value: T | null | undefined, what: string): T {
 // =============================================================================================
 
 describe("R280 the Core cards that declare preview", () => {
-  it("R280 are exactly #18, #31, #38, #40, #70 and #91, on both faces", () => {
+  // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
+  // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
+  // proves its values.
+  it("R280 R372 are exactly #18, #31, #38, #40, #70, #91 and #93, on both faces", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual(PREVIEWED);
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX]);
     for (const id of hooked) {
       expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
       expect(CARDS[id]?.radiant.preview, `${id} radiant`).toBeTypeOf("function");
@@ -196,7 +200,7 @@ describe("#18 Bread and Butter previews the Bread Token's X (R280)", () => {
 
     expect(valueOf(s.view("p1").you.backrow[0])).toBe(3);
     const theirs = s.view("p2");
-    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true });
+    expect(theirs.opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
     expect(JSON.stringify(theirs)).not.toContain("unspent mana");
   });
 

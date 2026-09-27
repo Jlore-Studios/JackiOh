@@ -1,12 +1,12 @@
 **(2) Big D-fender Core, Unit, Human, Common, \#1**
 
-**0/8**
+**0/7**
 
 Aura: your units gain an additional **2 armor** in defense position
 
 \~\~\~
 
-**0/16**
+**0/14**
 
 Aura: your units gain an additional **4 armor** in defense position
 
@@ -100,17 +100,11 @@ Draw 5 cards and heal 5 life to your hero
 
 **(1) Mr. Vanilla Unit, Core, Human Common, \#8**
 
-3/3
-
-**Immutable**
+4/4
 
 \~\~\~
 
-7/7
-
-**Immutable**
-
-**Divine Shield**
+12/12
 
 &nbsp;
 
@@ -260,13 +254,13 @@ Activates when a player ends a turn with unspent mana. Summon a X/X Token where 
 
 **(2) Pointmaster Unit, Core, Human, Common, \#20**
 
-7/2
+7/1
 
 **First Strike**
 
 **\~\~\~**
 
-14/4
+14/2
 
 **First Strike**
 
@@ -354,7 +348,9 @@ Gain X mana next turn
 
 14/14
 
-**Indestructible**&nbsp;
+**Armor 7**
+
+**Reborn**
 
 &nbsp;
 
@@ -398,7 +394,7 @@ Make all cards in your hand & in play **Radiant**&nbsp;
 
 &nbsp;
 
-**(2) Archivist Unit, Core, Rare, \#30**
+**(2) Archivist Unit, Core, Human, Rare, \#30**
 
 4/5
 
@@ -554,11 +550,11 @@ Activates when your opponent plays a **Unit**. Transform it into a **Sheep** **T
 
 **(2) Eugenics Core, Spell, Rare, \#42**
 
-Exile 8 random cards in your library, the remaining cards in your library have a 30% chance of becoming **radiant**&nbsp;
+Exile 7 random cards in your deck, the remaining cards in your deck have a 30% chance of becoming **radiant**&nbsp;
 
 \~\~\~
 
-Exile 8 random cards in your library, the remaining cards in your library have a **Lucky 1** 40% chance of becoming **radiant**&nbsp;
+Exile 7 random cards in your deck, the remaining cards in your deck have a **Lucky 1** 40% chance of becoming **radiant**&nbsp;
 
 &nbsp;
 
@@ -578,11 +574,15 @@ Exile 8 random cards in your library, the remaining cards in your library have a
 
 **(1) True Strike Spell, Core, Rare, \#44**
 
-Deal 4 damage (ignores armor); exile this
+**Pierce**
+
+Deal 4 damage. Exile this.
 
 \~\~\~
 
-Deal 9 damage (ignores armor); exile this
+**Pierce**
+
+Deal 9 damage. Exile this.
 
 &nbsp;
 
@@ -608,11 +608,11 @@ Can attack and switch positions on the same turn.
 
 **(2 embiggened 4\) Suppressive Aura Core, Field Spell, Rare, \#46**
 
-All **units** gain \-2/-2 **embiggened** \-5/-5
+All **units** gain \-1/-1 **embiggened** \-2/-2
 
 \~\~\~
 
-All enemy **units** gain \-4/-4 **embiggened** \-10/-10
+All enemy **units** gain \-2/-2 **embiggened** \-4/-4
 
 &nbsp;
 
@@ -646,7 +646,7 @@ Choose an enemy **Permanent,** it comes under your control, it becomes radiant
 
 &nbsp;
 
-**(1) Kpop Fanatic Core, Unit, Rare, \#50**
+**(1) K-Pop Fanatic Core, Unit, Human, Rare, \#50**
 
 1/1
 
@@ -668,11 +668,11 @@ Choose a card type: Spell, Unit, Field Spell, or Trap.
 
 Choose a mana cost bracket: 0–1, 2, 3, or 4+.
 
-Reveal 3 cards from your library matching that type and cost — choose one.
+Reveal 3 cards from your deck matching that type and cost — choose one.
 
 Add the chosen card to your hand.
 
-(At each step, only offer choices that have a valid match in your library.)
+(At each step, only offer choices that have a valid match in your deck.)
 
 (If there are no valid options, gain a **(1) KY's Empty Notebook**)
 
@@ -682,11 +682,11 @@ Choose a card type: Spell, Unit, Field Spell, or Trap.
 
 Choose a mana cost bracket: 0–1, 2, 3, or 4+.
 
-Reveal 3 cards from your library matching that type and cost — choose one.
+Reveal 3 cards from your deck matching that type and cost — choose one.
 
 Add the chosen card to your hand.
 
-(At each step, only offer choices that have a valid match in your library.)
+(At each step, only offer choices that have a valid match in your deck.)
 
 (If there are no valid options, gain a **(1) KY's Empty Notebook**)
 
@@ -722,13 +722,13 @@ Draw 2 Cards
 
 4/6
 
-**Cry:** Heal your Hero up to 30 HP
+**Cry:** Heal your hero up to 30 health
 
 \~\~\~
 
 8/12
 
-**Cry:** Heal your Hero up to 60 HP
+**Cry:** Heal your hero up to 60 health
 
 &nbsp;
 
@@ -750,27 +750,21 @@ Draw 2 Cards
 
 10/5
 
-**Tribute 3**
-
-**Armor 3**
-
 **Taunt**
 
-Can use opposing units as **Tributes**.
+**Tribute 3**
+
+Can use opposing **Units** as **Tributes**. If opposing **Units** are used, summon for your opponent.
 
 \~\~\~
 
 20/10
 
-**Tribute 3**
-
-**Armor 3**
-
 **Taunt**
 
-**Indestructible**
+**Tribute 3**
 
-Can use opposing units as **Tributes**.
+Can use opposing **Units** as **Tributes**.
 
 &nbsp;
 
@@ -790,13 +784,15 @@ Can use opposing units as **Tributes**.
 
 6/4
 
-**Charge**
+**Rush**
 
 **Taunt**
 
 **Lifesteal**
 
-**Indestructible**
+**Divine Shield**
+
+**Reborn**
 
 &nbsp;
 
@@ -856,7 +852,7 @@ When your opponent plays a card, fill your board with **Rush Tokens**. If it’s
 
 &nbsp;
 
-**(1) Friend of Felinors Spell, Core, Epic, \#62**
+**(1) Friend of Felinors Spell, Core, Felinor, Epic, \#62**
 
 Fill your board with **Felinor Tokens.**
 
@@ -984,11 +980,11 @@ Deal 4 damage, increased by 1 for each missing 3 life and by 2 for each card in 
 
 **(1) Intern Stimmy Field Trap, Core, Epic, \#71**
 
-Activate or reactivate if your Library has more cards than any opponents’ at the end of any turn: **Recruit** a (1) or less cost **Unit**.
+Activate or reactivate if your Deck has more cards than any opponents’ at the end of any turn: **Recruit** a (1) or less cost **Unit**.
 
 \~\~\~
 
-Activate or reactivate if your Library has more cards than any opponents’ at the end of any turn: **Recruit** a (2) or less cost **Unit**.
+Activate or reactivate if your Deck has more cards than any opponents’ at the end of any turn: **Recruit** a (2) or less cost **Unit**.
 
 &nbsp;
 
@@ -1022,11 +1018,11 @@ You cannot take more than 3 damage in a single instance
 
 **(X) Adaptive UI Spell, Core, Epic, \#74**
 
-Deal X damage, heal X life, draw X cards, summon a X/X rush token
+Deal X damage, heal X life, draw X cards, summon a X/X **Ghoul Token**
 
 \~\~\~
 
-Deal 2\*X damage, heal 3\*X life, draw 2\*X cards, summon a 3\*X/3\*X rush token
+Deal 2\*X damage, heal 3\*X life, draw 2\*X cards, summon a 3\*X/3\*X **Ghoul Token**
 
 &nbsp;
 
@@ -1058,31 +1054,31 @@ Replace your hand with **Radiant** **Reminisce**
 
 **(2) Professor Curvature Core, Unit, Epic, Human, \#77**
 
-4/5
+3/3
 
-**Cry**: Your (4) cost cards next turn cost (1) less.
+**Cry**: Cost (4)+ cards cost (1) less on your next turn.
 
 \~\~\~
 
-8/10
+6/6
 
-**Cry**: Your (4) cost cards next turn cost (2) less.
+**Cry**: Cost (4)+ cards cost (2) less on your next turn.
 
 &nbsp;
 
 **(4) /fullsend Core, Spell, Epic, \#78**
 
-Gain 4 mana
+**Refresh** 3 mana
 
-Your cards gain **Combo Draw 1** and cost (1) less this turn
+Your cards cost (1) less this turn
 
 At the end of your turn **exile** your hand
 
 \~\~\~
 
-Gain 4 mana
+**Refresh** 3 mana
 
-Your cards gain **Combo Draw 1** and cost (2) less this turn
+Your cards gain **Combo Draw 1** and cost (1) less this turn
 
 At the end of your turn **exile** your hand
 
@@ -1098,17 +1094,17 @@ The next spell your play gains **Echo \+2**
 
 &nbsp;
 
-**(2) Zao Gao Spell, Core, Epic, \#80**
+**(2) Zao Gao Spell, Core, CN, Epic, \#80**
 
-**Discard 2**
+Discard 2 random cards.
 
 Summon 2 **Rush Tokens**. Give each of them 2 random **Keywords**.
 
 \~\~\~
 
-**Discard 2**
+Discard 2 random cards.
 
-Summon 2 **Radiant Rush Tokens**. Give each of them 2 random **Keywords**.
+Summon 2 **Radiant Rush Tokens**. Give each of them 3 random **Keywords**.
 
 &nbsp;
 
@@ -1121,8 +1117,6 @@ Summon 2 **Radiant Rush Tokens**. Give each of them 2 random **Keywords**.
 \~\~\~
 
 4/4
-
-**Reborn**
 
 **Death**: Make all your **Units** and every card in your hand **Radiant**
 
@@ -1140,25 +1134,25 @@ Summon 2 **Radiant Rush Tokens**. Give each of them 2 random **Keywords**.
 
 **(2) Transmogulate Core, Spell, Legendary, \#83**
 
-Replace your deck, board, GY, and exile with random **Legendary Cards**
+Replace your hand, deck, board, GY, and exile with random **Legendary Cards**
 
 \~\~\~
 
-Replace your deck, board, GY, and exile with random **Radiant Legendary Cards**
+Replace your hand, deck, board, GY, and exile with random **Radiant Legendary Cards**
 
 &nbsp;
 
 **(2 embiggen 4\) Going Long Field Spell, Quickdraw, Core, Legendary, \#84**
 
-Your hero gains **Armor 2 embiggen 5**
+Your hero gains **Armor 2 embiggen 4**
 
 \~\~\~
 
-Your hero gains **Armor 4 embiggen 10**
+Your hero gains **Armor 4 embiggen 8**
 
 &nbsp;
 
-**(1) Unlicensed Experimentation Trap, Core, Legendary, \#85**
+**(2) Unlicensed Experimentation Trap, Core, Legendary, \#85**
 
 Activate when your opponent summons a Permanent of the same type as one you control. **Fuse** it onto a random Permanent you control of the same type.
 
@@ -1174,15 +1168,15 @@ Activate when your opponent summons a Permanent of the same type as one you cont
 
 Can’t attack
 
-**Death:** Steal all opponent’s **Units**.
+**Death:** Take control of the **Unit** that destroyed this.
 
 \~\~\~
 
 2/2
 
-**Taunt**
+**Rush**
 
-**Death:** Steal all opponent’s **Units**.
+**Death:** Take control of the **Unit** that destroyed this.
 
 &nbsp;
 
@@ -1199,8 +1193,6 @@ Then, add a **Pocket Chaos** to your opponent’s hand
 Choose one: Swap your HP with your opponent, Swap your board with your opponent, Swap your deck with your opponent.
 
 Then, you may add a **Pocket Chaos** to your opponent’s hand
-
-**Draw** 1
 
 **Exile** this
 
@@ -1236,7 +1228,7 @@ While this in your hand, when a unit enters the GY gain twice its stats
 
 &nbsp;
 
-**(1) CN-Viral Injection Spell, Core, CN, Legendary, \#90**
+**(2) CN-Viral Injection Spell, Core, CN, Legendary, \#90**
 
 Shuffle a **CN-Virus** into your opponent’s deck
 
@@ -1248,11 +1240,11 @@ Shuffle a **Radiant** **CN-Virus** into your opponent’s deck
 
 **(1) CN-Viral Injection Spell, Core, Token, CN, Legendary, \#90.1**
 
-**Cast on Draw:** Take 1 damage, shuffle two copies of this into your deck
+**Cast on Draw:** Take 1 damage. At end of turn, shuffle two copies of this into your deck
 
 \~\~\~
 
-**Cast on Draw:** Take 2 damage, shuffle three copies of this into your deck
+**Cast on Draw:** Take 2 damage. At end of turn, shuffle three copies of this into your deck
 
 &nbsp;
 
@@ -1284,7 +1276,7 @@ Whenever this takes damage, put a **Plague Token** on it.
 
 **Stack**
 
-Has the stats of all your **Felinors** combined, including those under a **Stack**.
+Has the stats of all your **Felinors**, including those under **Stack**.
 
 \~\~\~
 
@@ -1292,9 +1284,7 @@ Has the stats of all your **Felinors** combined, including those under a **Stack
 
 **Stack**
 
-**Charge**
-
-Has the stats of all your **Felinors** combined, including those under a **Stack**.
+Has twice the stats of all your **Felinors**, including those under **Stack**.
 
 &nbsp;
 
@@ -1350,13 +1340,13 @@ Deal 4 damage, **Lifesteal**
 
 **(4) Genn’s Greed Spell, Core, Legendary, \#94**
 
-Draw all 2 cost cards from your deck, **exile** all cost cards from your library, hand, and GY (excludes X or adaptive card)
+Draw all 2 cost cards from your deck, **exile** all cost cards from your deck, hand, and GY (excludes X or adaptive card)
 
 Gain 2 mana
 
 \~\~\~
 
-Draw all 2 cost cards from your deck, **exile** all cost cards from your library, hand, and GY (excludes X or adaptive card)
+Draw all 2 cost cards from your deck, **exile** all cost cards from your deck, hand, and GY (excludes X or adaptive card)
 
 Gain 6 mana
 
@@ -1439,7 +1429,8 @@ Discover the perfect **Radiant** card *(only from the core set)*
 - X \= 1\. Deal 2 damage to each opposing Hero.  
 - X \= 2\. Summon a **Rush Token**.  
 - X \= 1\. Summon a **Felinor Token**.  
-- X \= 2\. Discover a **Unit**.
+- X \= 2\. Discover a **Unit**.  
+- X \= 2\. **Stitching**: **Discover** 2 **Units** that cost (2) or less. **Fuse** them and add the result to your hand.
 
 &nbsp;
 
@@ -1457,11 +1448,12 @@ Also activates immediately when played.
 - X \= 1\. Deal 4 damage to each opposing Hero.  
 - X \= 2\. Summon two **Rush Token**.  
 - X \= 1\. Summon two **Felinor Token**.  
-- X \= 2\. Discover a **Radiant Unit**.
+- X \= 2\. Discover a **Radiant Unit**.  
+- X \= 2\. **Stitching**: **Discover** 2 **Radiant Units** that cost (2) or less. **Fuse** them and add the result to your hand.
 
 &nbsp;
 
-**(3) Craft a Card Core, Mythic, \#99**
+**(4) Craft a Card Core, Mythic, \#99**
 
 **Discover** two units, **fuse** them together, the fused card cost (0)
 

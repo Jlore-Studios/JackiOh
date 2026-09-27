@@ -1,10 +1,11 @@
-// #81 Radiant Saintess (SPEC §8.4 row 81; R8, R13, R22, R23, R64, R78, R83, R177, R275).
+// #81 Radiant Saintess (SPEC §8.4 row 81; R13, R22, R78, R177, R275).
 //
-// BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; Reborn body fires
-// Death on its second death; radiant also every card in your hand, hidden from the opponent (R177)".
-//   Base:    "Reborn; Death: all your other units become Radiant"
-//   Radiant: "Reborn; Death: all your other units and every card in your hand become Radiant"
-// (R275's broader scope). Her old Cry, which radiated the board as she landed, is cut (§8's row).
+// BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn, so she
+// dies once; radiant also every card in your hand, hidden from the opponent (R177)".
+//   Base:    "Death: Make your other Units Radiant."
+//   Radiant: "Death: Make your other Units and every card in your hand Radiant."
+// (R275's broader scope). Her old Cry, which radiated the board as she landed, is cut (§8's row),
+// and patch v0.1.1 took Reborn off both faces.
 //
 // Two fixtures do all the work:
 //   - #11 Tempo Timmy (3/3 → 6/6, Rush + First Strike, cost 1) has an EMPTY script, so a stat
@@ -26,8 +27,6 @@ const TIMMY = "core-011";
 const SAINTESS = "core-081";
 /** #44 True Strike: 4 damage to any target, which is exactly a 4/4 Saintess. */
 const TRUE_STRIKE = "core-044";
-/** #8 Mr. Vanilla: Immutable 3/3 → 7/7 (R23 leaves Make Radiant legal on it). */
-const MR_VANILLA = "core-008";
 /** #5 Stockpile and #2 Bigot: two more hand cards to watch the radiant Death reach. */
 const STOCKPILE = "core-005";
 const BIGOT = "core-002";
@@ -91,16 +90,11 @@ describe("#81 Radiant Saintess — base", () => {
     s.expectEvents("cardPlayed", "summoned");
   });
 
-  /**
-   * Reborn is printed on BOTH faces. It used to be radiant-only, and her own Cry was what put her
-   * on that face — so cutting the Cry would have taken the Reborn with it and nerfed a second
-   * thing nobody asked to nerf. The Cry is gone; the body it used to buy is not.
-   */
-  it("§8 played base she still has Reborn, even though nothing makes her Radiant any more", () => {
+  it("patch v0.1.1: the base face prints no keywords, Reborn included", () => {
     const s = scenario({ seed: "saintess", p1: { hand: [SAINTESS] } }).play(SAINTESS, { zone: 1 });
 
     expect(s.card(SAINTESS).radiant).toBe(false);
-    expect(keywordsOf(s.state, s.card(SAINTESS))).toEqual([{ kind: "Reborn" }]);
+    expect(keywordsOf(s.state, s.card(SAINTESS))).toEqual([]);
   });
 
   it("§8 'your units' is yours: the opponent's units are untouched", () => {
@@ -136,16 +130,6 @@ describe("#81 Radiant Saintess — base", () => {
     s.expectStats(s.unit("p1", 2) ?? TIMMY, { attack: 6, health: 5, maxHealth: 6 });
   });
 
-  it("R23 Make Radiant is still allowed on an Immutable unit", () => {
-    const s = scenario({
-      seed: "saintess",
-      p1: { field: [{ def: SAINTESS, damage: 2 }, MR_VANILLA] },
-    });
-
-    expect(s.unit("p1", 2)?.radiant).toBe(true);
-    s.expectStats(MR_VANILLA, { attack: 7, health: 7, maxHealth: 7 });
-  });
-
   it("§6.3 a unit that is already Radiant is untouched and emits nothing for it", () => {
     const s = scenario({
       seed: "saintess",
@@ -157,7 +141,7 @@ describe("#81 Radiant Saintess — base", () => {
     expect(s.unit("p1", 2)?.radiant).toBe(true);
   });
 
-  it("Death does it again: a Saintess that dies radiates the units still standing", () => {
+  it("Death radiates the units still standing, and with no Reborn she stays in the graveyard", () => {
     // 2/2 with 2 damage dies in the setup's state check, which runs her Death hook (§4.5 step 3).
     const s = scenario({
       seed: "saintess",
@@ -166,45 +150,34 @@ describe("#81 Radiant Saintess — base", () => {
 
     expect(s.unit("p1", 2)?.radiant).toBe(true);
     s.expectStats(s.unit("p1", 2) ?? TIMMY, { attack: 6, health: 6, maxHealth: 6 });
-    // Reborn catches her, so the Death fired from the field rather than the graveyard (R8, R64).
-    s.expectInZone(SAINTESS, "field");
-    expect(s.card(SAINTESS).rebornSpent).toBe(true);
+    s.expectInZone(SAINTESS, "graveyard");
+    expect(s.unit("p1", 1)).toBeNull();
   });
 
-  it("R78 Death does not include herself: the base body reaches the graveyard non-Radiant", () => {
-    // R78 has her leave the field before the Death hook runs, so "your units" never includes her.
-    // Reborn returns her, and the body that comes back is still not Radiant.
+  it("R78 Death does not include herself: she reaches the graveyard non-Radiant", () => {
+    // R78 has her leave the field before the Death hook runs, so "your other Units" never includes
+    // her — the text says what the rule always did.
     const s = scenario({ seed: "saintess", p1: { field: [{ def: SAINTESS, damage: 2 }, TIMMY] } });
 
     expect(s.card(SAINTESS).radiant).toBe(false);
-    expect(s.pile("p1", "graveyard")).toHaveLength(0);
+    expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([SAINTESS]);
   });
 
-  it("R8/R83 played base she dies TWICE: Reborn catches the first, and Death fires on both", () => {
-    // Mana at turn 9 is 4: Saintess 1 + True Strike 1 + Timmy 1 + True Strike 1.
+  it("patch v0.1.1: played base she dies once — the first True Strike puts her in the graveyard for good", () => {
     const s = scenario({
       seed: "saintess",
-      p1: { hand: [SAINTESS, TRUE_STRIKE, TIMMY, TRUE_STRIKE] },
+      p1: { hand: [SAINTESS, TRUE_STRIKE, TIMMY, STOCKPILE] },
     }).play(SAINTESS, { zone: 1 });
 
-    // The 2/2 base face, because nothing radiated her on the way in.
     const saintess = s.card(SAINTESS);
     s.expectStats(saintess, { attack: 2, health: 2, maxHealth: 2 });
-
-    // A fresh unit to watch her Death land on.
     s.play(TIMMY, { zone: 2 });
-    expect(s.unit("p1", 2)?.radiant).toBe(false);
 
-    // Death #1 radiates the board, and Reborn returns her at 1 health (§4.5 step 4, R64).
     s.play(TRUE_STRIKE, { targets: [{ pick: "instance", instanceId: saintess.id }] });
-    s.expectInZone(saintess, "field");
-    expect(s.card(saintess).rebornSpent).toBe(true);
-    expect(s.unit("p1", 2)?.radiant, "her Death radiates the board").toBe(true);
-    s.expectStats(s.unit("p1", 2) ?? TIMMY, { attack: 6, health: 6, maxHealth: 6 });
 
-    // Death #2, off the Reborn body — R8: "Death fires on both deaths".
-    s.play(TRUE_STRIKE, { targets: [{ pick: "instance", instanceId: saintess.id }] });
     s.expectInZone(saintess, "graveyard");
+    expect(s.unit("p1", 1)).toBeNull();
+    expect(s.unit("p1", 2)?.radiant, "her Death radiates the board").toBe(true);
   });
 
   it("§8 the base Death reaches the board only: the hand keeps its faces", () => {
@@ -226,7 +199,7 @@ describe("#81 Radiant Saintess — base", () => {
 });
 
 describe("#81 Radiant Saintess — radiant", () => {
-  it("the radiant face is 4/4 with Reborn, and it radiates nothing on arrival either", () => {
+  it("the radiant face is a 4/4 with no Reborn, and it radiates nothing on arrival either", () => {
     const s = scenario({
       seed: "saintess",
       p1: { hand: [{ def: SAINTESS, radiant: true }, TIMMY], field: [TIMMY] },
@@ -234,7 +207,7 @@ describe("#81 Radiant Saintess — radiant", () => {
     s.play(SAINTESS, { zone: 2 });
 
     s.expectStats(SAINTESS, { attack: 4, health: 4, maxHealth: 4 });
-    expect(keywordsOf(s.state, s.card(SAINTESS))).toEqual([{ kind: "Reborn" }]);
+    expect(keywordsOf(s.state, s.card(SAINTESS))).toEqual([]);
     // Her script is Death alone, so neither the ally nor the hand moves until she dies.
     expect(s.unit("p1", 1)?.radiant).toBe(false);
     expect(s.hand("p1").map((card) => card.radiant)).toEqual([false]);
@@ -264,8 +237,9 @@ describe("#81 Radiant Saintess — radiant", () => {
     // "your": the opponent's board and hand are untouched.
     expect(s.unit("p2", 1)?.radiant).toBe(false);
     expect(s.hand("p2").some((card) => card.radiant)).toBe(false);
-    // R78: she is not one of "your other units"; Reborn brings the Radiant body back.
-    s.expectInZone(SAINTESS, "field");
+    // R78: she is not one of "your other Units"; with no Reborn she stays in the graveyard, still
+    // Radiant (the flag persists in every zone).
+    s.expectInZone(SAINTESS, "graveyard");
     expect(s.card(SAINTESS).radiant).toBe(true);
   });
 
@@ -317,45 +291,24 @@ describe("#81 Radiant Saintess — radiant", () => {
     expect(wasRadiant.view("p2")).toEqual(wasBase.view("p2"));
   });
 
-  it("R8/R83 the radiant Reborn body fires Death on its second death", () => {
-    // #15 Me and Mr Token is in hand at Death #1, so it turns Radiant there ("Cry: summon 3 Rush
-    // Tokens"); the tokens its Cry then makes are fresh, base-face units that were nowhere at Death
-    // #1, so only Death #2 can turn them up. Mana at turn 9 is 4: 1 + 1 + 1 + 1.
+  it("patch v0.1.1: radiant she dies once too, and a later arrival is never turned up", () => {
     const s = scenario({
       seed: "saintess",
-      p1: { hand: [{ def: SAINTESS, radiant: true }, TRUE_STRIKE, ME_AND_MR_TOKEN, TRUE_STRIKE] },
+      p1: { hand: [{ def: SAINTESS, radiant: true }, TRUE_STRIKE, ME_AND_MR_TOKEN, STOCKPILE] },
     });
     s.play(SAINTESS, { zone: 1 });
 
     const saintess = s.card(SAINTESS);
     s.play(TRUE_STRIKE, { targets: [{ pick: "instance", instanceId: saintess.id }] });
-    // Death #1 fired and Reborn returned her: R78 resets her, so she is back at 1 health.
-    s.expectInZone(saintess, "field");
-    s.expectStats(saintess, { attack: 4, health: 1, maxHealth: 4 });
-    // Death #1 reached the hand.
+    s.expectInZone(saintess, "graveyard");
+    // Her one Death reached the hand.
     expect(s.card(ME_AND_MR_TOKEN).radiant).toBe(true);
 
+    // The tokens its radiant Cry makes arrive after that Death, and no second one comes.
     s.play(ME_AND_MR_TOKEN, { zone: 2 });
-    const tokens = [3, 4, 5].map((lane) => s.unit("p1", lane));
+    // Her lane is free again, so the three tokens take lanes 1, 3 and 4 (R64).
+    const tokens = [1, 3, 4].map((lane) => s.unit("p1", lane));
     expect(tokens.map((token) => token?.defId)).toEqual([RUSH_TOKEN, RUSH_TOKEN, RUSH_TOKEN]);
     expect(tokens.map((token) => token?.radiant)).toEqual([false, false, false]);
-
-    s.play(TRUE_STRIKE, { targets: [{ pick: "instance", instanceId: saintess.id }] });
-    s.expectInZone(saintess, "graveyard");
-    // The second Death really ran: the tokens that entered after the first one are Radiant now.
-    expect([3, 4, 5].map((lane) => s.unit("p1", lane)?.radiant)).toEqual([true, true, true]);
-  });
-
-  it("R64 the Reborn body comes back to the zone it died in, which nothing else may take", () => {
-    const s = scenario({
-      seed: "saintess",
-      p1: { hand: [{ def: SAINTESS, radiant: true }, TRUE_STRIKE, TIMMY] },
-    });
-    s.play(SAINTESS, { zone: 3 });
-
-    const saintess = s.card(SAINTESS);
-    s.play(TRUE_STRIKE, { targets: [{ pick: "instance", instanceId: saintess.id }] });
-
-    expect(s.unit("p1", 3)?.id).toBe(saintess.id);
   });
 });

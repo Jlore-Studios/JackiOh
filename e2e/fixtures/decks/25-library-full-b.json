@@ -1,7 +1,7 @@
 {
   "id": "25-library-full-b",
   "spec": "25-overflow-animations.cy.ts",
-  "description": "Player 2's deck for the other seat's view of R316: 08-do-nothing-b with #100 Ceaseless Void swapped for #90 CN-Viral Injection (1 mana, \"Shuffle a CN-Virus into the opponent's library\"). After seat 1 has filled its library to LIBRARY_CAP (25-library-full-a), seat 2 plays it on turn 2 on its own 1 mana and the full library refuses the CN-Virus, which is never created: a `libraryOverflow` for seat 1's library on seat 2's device, naming the CN-Virus (a card that copies nothing reads openly to both players, R316). The spec's seed deals it to seat 2 by turn 2. Every other card costs 3 or more and none acts from a hand or a library by itself (08-do-nothing-b), and The Coin keeps seat 2's turn from ending by itself (R82).",
+  "description": "Player 2's deck for the other seat's view of R316: 08-do-nothing-b with #100 Ceaseless Void swapped for #90 CN-Viral Injection (2 mana since patch v0.1.1, \"Shuffle a CN-Virus into your opponent's deck.\"). After seat 1 has filled its library to LIBRARY_CAP (25-library-full-a), seat 2 plays it on turn 2 and the full library refuses the CN-Virus, which is never created: a `libraryOverflow` for seat 1's library on seat 2's device, naming the CN-Virus (a card that copies nothing reads openly to both players, R316). The spec's seed deals it to seat 2 by turn 2. The handicap's manaBonus 1 (R181) makes seat 2's first turn a 2-mana turn, enough for the Injection with The Coin still in hand: paying for it with The Coin would leave nothing to play, and R82 would end the turn, and seat 1 draw, before the spec reads seat 1's full library. Every other card costs 3 or more and none acts from a hand or a library by itself (08-do-nothing-b), and The Coin, unplayed, keeps seat 2's turn from ending by itself (R82).",
   "cards": [
     "core-090",
     "core-006",
@@ -23,5 +23,12 @@
     "core-094",
     "core-095",
     "core-099"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 1,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

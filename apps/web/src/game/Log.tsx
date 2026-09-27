@@ -24,7 +24,7 @@ import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement
 
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView } from "@jackioh/shared";
 
-import { useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
 import { sideOf, testid } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
@@ -130,7 +130,15 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
   return undefined;
 }
 
-/** What became of a card a full library turned away (R316), as a line ends. */
+/** R370: the cost the view gives the face-down card in a backrow lane, while one stands there. */
+function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): number | undefined {
+  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
+  const entry = seat.backrow[lane - 1];
+  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
+  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
+}
+
+/** What became of a card a full deck turned away (R316), as a line ends. */
 const OVERFLOW_OUTCOME: Readonly<Record<LibraryOverflowOutcome, string>> = {
   notCreated: "was not created",
   graveyard: "went to the graveyard",
@@ -144,6 +152,14 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "cardPlayed":
       return `${name.seat(event.player)} played ${name.def(event.defId)} for ${event.costPaid}`;
     case "summoned":
+      // R370: a card set face down is a trap the viewer may not read; the line says so, with the
+      // cost its back shows while it still stands there.
+      if (event.defId === HIDDEN_CARD && event.row === "backrow") {
+        const cost = faceDownCostAt(view, event.player, event.lane);
+        return capitalised(
+          `${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}: a face-down trap was set${cost === undefined ? "" : `, ${costPhrase(cost)}`}`,
+        );
+      }
       return `${name.def(event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`;
     case "damage":
       return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}`;
@@ -168,10 +184,11 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return capitalised(`${name.whose(event.owner)} hand is full: ${named(event.defId)} burned`);
     case "fatigue":
       // R315: public, and it names no card. The hit is the `damage` line after it.
-      return capitalised(`${name.whose(event.player)} library is empty: fatigue ${event.count}`);
+      // R373: the rules' library reads as the Deck.
+      return capitalised(`${name.whose(event.player)} deck is empty: fatigue ${event.count}`);
     case "libraryOverflow":
       // R316: the card a full library turned away, named only where the viewer reads it.
-      return capitalised(`${name.whose(event.player)} library is full: ${named(event.defId)} ${OVERFLOW_OUTCOME[event.outcome]}`);
+      return capitalised(`${name.whose(event.player)} deck is full: ${named(event.defId)} ${OVERFLOW_OUTCOME[event.outcome]}`);
     case "discarded":
       return `${name.seat(event.owner)} discarded ${name.def(event.defId)}`;
     case "drawn":
@@ -179,7 +196,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "addedToHand":
       return `${name.seat(event.player)} added a card to hand`;
     case "shuffledIn":
-      return `${name.seat(event.player)} shuffled a card into the library`;
+      return `${name.seat(event.player)} shuffled a card into the deck`;
     case "buffed":
       // R177: a buff on a card this seat may not read arrives as the sentinel with 0/0, which says
       // nothing of its size, so the line does not claim one.

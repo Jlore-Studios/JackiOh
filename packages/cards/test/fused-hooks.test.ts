@@ -171,7 +171,7 @@ const CEASELESS_VOID = "core-100";
 const CRAFT_A_CARD = "core-099";
 const KPOP = "core-050";
 const JILLIAX = "core-056";
-const SAINTESS = "core-081";
+const RIGHT_HOUSE = "core-003"; // Unit, 1 — 1/1 Taunt, Divine Shield, Reborn
 const EXPERIMENTATION = "core-085";
 const KEYWORD_LIBRARY = [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA];
 
@@ -266,7 +266,7 @@ describe("§5.2, R77: a keyword a Fuse newly prints applies at once", () => {
     expect(fused.defId).not.toBe(KPOP);
     expect(g.unit("p2", 1)).toBeNull();
     expect(defOf(g.state, fused.defId).base.keywords.map((keyword) => keyword.kind)).toContain("Divine Shield");
-    // The fused definition prints Jilliax's Divine Shield, which Kpop Fanatic's base face never
+    // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
     // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
     // printed shield does after a granted one was spent (`radiant.gainPrintedShield`).
     expect(kinds(g, kpop)).toContain("Divine Shield");
@@ -282,19 +282,19 @@ describe("§5.2, R77: a keyword a Fuse newly prints applies at once", () => {
         hand: [STOCKPILE],
         library: [...KEYWORD_LIBRARY],
       },
-      p2: { hand: [SAINTESS, STOCKPILE], library: [...KEYWORD_LIBRARY] },
+      p2: { hand: [RIGHT_HOUSE, STOCKPILE], library: [...KEYWORD_LIBRARY] },
     });
     const kpop = unitAt(g, "p1", 1);
     // A Kpop that came back through a granted Reborn: the body has used its Reborn (§4.5 step 4).
     g.card(kpop).rebornSpent = true;
 
-    // p2 plays Radiant Saintess (Reborn printed); #85 fuses it onto the Kpop's Reborn body.
-    g.play(SAINTESS, { zone: 1 });
+    // p2 plays Right-house defender (Reborn printed); #85 fuses it onto the Kpop's Reborn body.
+    g.play(RIGHT_HOUSE, { zone: 1 });
 
     const fused = g.card(kpop);
     expect(fused.defId).not.toBe(KPOP);
     expect(defOf(g.state, fused.defId).base.keywords.map((keyword) => keyword.kind)).toContain("Reborn");
-    // The Saintess's printed Reborn is the fused card's text, which the Kpop never printed.
+    // The defender's printed Reborn is the fused card's text, which the Kpop never printed.
     expect(kinds(g, kpop)).toContain("Reborn");
   });
 });
@@ -307,18 +307,19 @@ describe("§5.2, R77: a keyword a Fuse newly prints applies at once", () => {
 const MANA_WELL = "core-006";
 const POINTMASTER = "core-020";
 const SEVEN_SEVEN = "core-025"; // Unit, 4 — 7/7, Armor 7
-const LAVA_GOLEM = "core-055"; // Unit, 3 — 10/5, Armor 3, Taunt (on the field; its Tribute is paid)
+/** #45 Deft Duelist on its Radiant face: 8/6, Charge, Armor 1 — the other printed Armor in Core. */
+const RADIANT_DUELIST = { def: "core-045", radiant: true } as const;
 const TWINSPELL = "core-079";
 const HEROIC_POWER = "core-098";
 const RAPID = "core-010";
 
 /** p2 plays its own 4-mana 7/7 into p1's armed #85, which fuses it onto p1's only Unit. */
-function fuseSevenSevenOnto(target: string): { g: Scenario; kept: CardInstance } {
+function fuseSevenSevenOnto(target: string | { def: string; radiant: boolean }): { g: Scenario; kept: CardInstance } {
   const g = scenario({
     active: "p2",
     p1: {
       backrow: [{ def: EXPERIMENTATION, lane: 3 }],
-      field: [{ def: target, lane: 1 }],
+      field: [typeof target === "string" ? { def: target, lane: 1 } : { ...target, lane: 1 }],
       hand: [MR_VANILLA],
       library: [...KEYWORD_LIBRARY],
     },
@@ -333,11 +334,12 @@ function fuseSevenSevenOnto(target: string): { g: Scenario; kept: CardInstance }
 }
 
 describe("R102: what a fused card's ingredients leave behind is each their own", () => {
-  it("R102 a Fuse of two Armor 7 units prints Armor 14, as Armor 7 and Armor 3 print Armor 10 (§6.1 Armor stacks, R77)", () => {
-    // Two different Armors already add up on the fused face.
-    const golem = fuseSevenSevenOnto(LAVA_GOLEM);
-    expect(golem.g.stats(golem.kept).attack).toBe(17);
-    expect(golem.g.stats(golem.kept).armor).toBe(10);
+  it("R102 a Fuse of two Armor 7 units prints Armor 14, as Armor 7 and Armor 1 print Armor 8 (§6.1 Armor stacks, R77)", () => {
+    // Two different Armors already add up on the fused face: the kept Duelist is Radiant, so the
+    // fused card runs its Radiant face, the two Radiant faces summed (R77) — 8 + 14 attack.
+    const duelist = fuseSevenSevenOnto(RADIANT_DUELIST);
+    expect(duelist.g.stats(duelist.kept).attack).toBe(22);
+    expect(duelist.g.stats(duelist.kept).armor).toBe(8);
 
     // Two equal ones add up the same way: each ingredient prints "Armor 7", and Armor stacks from
     // every source (§6.1, §10.4), while the stats beside it sum to 14/14 (R77).
@@ -518,7 +520,7 @@ describe("R102: a fused card's layers are each ingredient's", () => {
     expect(heroArmorOf(g.state, "p1")).toBe(4);
   });
 
-  it("R102 a Going Long paid 4 fused onto a Going Long paid 2 gives Armor 5 and 2, each at its own card's price (§6.3 Embiggen, R124)", () => {
+  it("R102 a Going Long paid 4 fused onto a Going Long paid 2 gives Armor 4 and 2, each at its own card's price (§6.3 Embiggen, R124)", () => {
     const g = scenario({
       active: "p2",
       p1: {
@@ -530,14 +532,14 @@ describe("R102: a fused card's layers are each ingredient's", () => {
     });
     g.play(GOING_LONG, { zone: 1, embiggen: true });
     expect(backrowAt(g, "p1", 1).defId).toMatch(/^t-\d+:core-084\+core-084$/);
-    expect(heroArmorOf(g.state, "p1")).toBe(7);
+    expect(heroArmorOf(g.state, "p1")).toBe(6);
   });
 
-  it("R102 a Suppressive Aura paid 4 fused onto a Mana Well keeps its −5/−5 (§6.3 Embiggen, R65)", () => {
-    // p2 plays Suppressive Aura at its embiggen price, 4: "all units −5/−5". p1's Unlicensed
+  it("R102 a Suppressive Aura paid 4 fused onto a Mana Well keeps its −2/−2 (§6.3 Embiggen, R65)", () => {
+    // p2 plays Suppressive Aura at its embiggen price, 4: "all Units −2/−2". p1's Unlicensed
     // Experimentation fuses it onto p1's Mana Well. The fused cost already reads that ingredient at
     // the price it was played for (R77: the sum of the printed costs per R65), and its text is the
-    // same ingredient's, which §6.3 Embiggen has read the stored choice, so the aura stays −5/−5.
+    // same ingredient's, which §6.3 Embiggen has read the stored choice, so the aura stays −2/−2.
     const g = scenario({
       active: "p2",
       p1: {
@@ -554,8 +556,8 @@ describe("R102: a fused card's layers are each ingredient's", () => {
     expect(g.events.some((event) => event.type === "fused")).toBe(true);
     expect(backrowAt(g, "p1", 1).defId).toMatch(/^t-\d+:core-046\+core-006$/);
 
-    // Big Felinor is 3/10: under −5/−5 it is 0/5, under the base price's −2/−2 it would be 1/8.
-    g.expectStats(felinor, { attack: 0, maxHealth: 5 });
+    // Big Felinor is 3/10: under −2/−2 it is 1/8, under the base price's −1/−1 it would be 2/9.
+    g.expectStats(felinor, { attack: 1, maxHealth: 8 });
   });
 
   it("R102 a radiant Spikey Pillow fused with another card still spares every Spikey Pillow its aura names (§7, §8 #65.1)", () => {

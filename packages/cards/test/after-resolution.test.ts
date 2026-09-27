@@ -84,10 +84,11 @@ describe("§10.5 step 6: an Echo repeat is step 5 again, granted Combo parts inc
   });
 
   it("§10.5 /fullsend's granted \"Combo: draw 1\" draws once per resolution of an echoed Spell (§8 #78, R30)", () => {
-    // /fullsend and Twinspell were played earlier: each of Stockpile's two resolutions draws 1 for
-    // the granted Combo and then 2 for Stockpile — 6 cards in all.
+    // A Radiant /fullsend (the face that grants the Combo draw since patch v0.1.1) and Twinspell were
+    // played earlier: each of Stockpile's two resolutions draws 1 for the granted Combo and then 2
+    // for Stockpile — 6 cards in all.
     const g = scenario({
-      p1: { hand: [FULLSEND, TWINSPELL, STOCKPILE, RENO], mana: 8, library: [...LIBRARY] },
+      p1: { hand: [{ def: FULLSEND, radiant: true }, TWINSPELL, STOCKPILE, RENO], mana: 8, library: [...LIBRARY] },
       p2: { hand: [RENO], library: [...LIBRARY] },
     });
     g.play(FULLSEND);
@@ -148,7 +149,7 @@ describe("§4.5: the check after a card's whole Cry or spell, before step 7's tr
       p1: { hand: [LUNAR_ECLIPSE, STOCKPILE], library: [...LIBRARY] },
       p2: {
         hand: [STOCKPILE],
-        field: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+        field: [VANILLA, VANILLA, { def: VANILLA, damage: 1 }, VANILLA, VANILLA],
         backrow: [{ def: HONEYPOT, faceUp: false }],
         library: [...LIBRARY],
       },

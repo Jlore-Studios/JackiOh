@@ -72,12 +72,13 @@ export const CAST_ON_DRAW_CHAIN_CAP = 20;
 export const ANTI_ONESHOT_CAP = { base: 5, radiant: 3 } as const;
 /**
  * §8 #84 Going Long: the Armor it gives its controller's hero (§4.4 step 2), by face and by which
- * price was paid — "Armor 2 (paid 4: 5)", radiant "Armor 4 (paid 4: 10)". `paid` is the printed
- * cost 2, `embiggen` the embiggen price 4 (R81 records which on the instance).
+ * price was paid — "Armor 2. Paid (4): Armor 4", radiant "Armor 4. Paid (4): Armor 8" (patch
+ * v0.1.1). `paid` is the printed cost 2, `embiggen` the embiggen price 4 (R81 records which on the
+ * instance).
  */
 export const HERO_ARMOR = {
-  base: { paid: 2, embiggen: 5 },
-  radiant: { paid: 4, embiggen: 10 },
+  base: { paid: 2, embiggen: 4 },
+  radiant: { paid: 4, embiggen: 8 },
 } as const;
 /**
  * §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the
@@ -85,7 +86,10 @@ export const HERO_ARMOR = {
  */
 export const QUICKSTRIKER_COMBO_MULTIPLE = { base: 1, radiant: 2 } as const;
 
-/** R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. */
+/**
+ * R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
+ * patch v0.1.1 added Pierce, at the end.
+ */
 export const RANDOM_KEYWORD_POOL = [
   "Taunt",
   "Armor 1",
@@ -98,7 +102,20 @@ export const RANDOM_KEYWORD_POOL = [
   "Divine Shield",
   "Trample",
   "Cleave",
+  "Pierce",
 ] as const;
+
+/**
+ * R349: a Unit that prints no Radiant form (the Ghoul Token) is, made Radiant, its base face with
+ * its attack and health multiplied by this — a summon's X/X included (§7).
+ */
+export const RADIANT_FALLBACK_FACTOR = 2;
+
+/**
+ * R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
+ * Heroic Power's X is its power's and never chosen (R43), so this does not reach it.
+ */
+export const MIN_CHOSEN_X = 1;
 
 /** R25: KY's Math Equation; the index clamps at 11. */
 export const FIB = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89] as const;
