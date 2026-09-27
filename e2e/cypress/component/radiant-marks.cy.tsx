@@ -94,7 +94,7 @@ describe("R279 a reference opens the card it names", () => {
       .and("have.attr", "data-ref-face", "radiant")
       .within(() => {
         cy.get(".card-name").should("have.text", "CN-Virus");
-        cy.get(".card-text").should("contain.text", "take 2 damage");
+        cy.get(".card-text").should("contain.text", "Take 2 damage");
       });
     cy.get('[data-testid="card-ref-tooltip"]').should(($tip) => {
       const box = ($tip[0] as Element).getBoundingClientRect();
