@@ -98,9 +98,11 @@ export function steal(args: StealTarget = {}): Effect {
 }
 
 /**
- * "Miss" Mrow's Death: steal every enemy card of a row (#86). Lane order (§3.2), each placed per
- * R15, and the ones that find no free zone stay with their owner. Only the top of a Stack pile is
- * on the field, so only it is taken (R13).
+ * Steal every enemy card of a row: lane order (§3.2), each placed per R15, and the ones that find no
+ * free zone stay with their owner. Only the top of a Stack pile is on the field, so only it is taken
+ * (R13). It was #86 "Miss" Mrow's Death until patch v0.1.1 gave her the unit that destroyed her
+ * instead (R361, `steal` of `query.killerOf`); no Core card calls it now, and the verb stays for a
+ * card that may.
  */
 export function stealAll(args: { row?: Row } = {}): Effect {
   return {

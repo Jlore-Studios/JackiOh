@@ -140,11 +140,12 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `findInstance` | an instance id, wherever the card has since landed (R98) |
 | `instanceOf(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at — a chosen card on the stay its prompt or the play offered it on (R174) — or `null` for a hero, for nothing, or for a card buried under a Stack pile (§3.2, R13) (#22's meal) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write) — on a fused card, its own ingredient's (R102, #22) |
+| `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.
-Every one of these but `findInstance` and `instanceOf` returns a number, a boolean or a fresh
-`readonly` array, so a card cannot write the game through a value it read; those two hand back the
-card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
+Every one of these but `findInstance`, `instanceOf` and `killerOf` returns a number, a boolean or a
+fresh `readonly` array, so a card cannot write the game through a value it read; those three hand
+back the card itself, which a card file reads and never writes (CLAUDE.md rule 5). Board facts live in
 `packages/engine/src/query.ts` (the read half of the surface, next to `src/effects/index.ts`, the
 write half); if the fact you need is not there, it is missing from the engine — extend that module
 and test it, do not reach into `state.players`.
