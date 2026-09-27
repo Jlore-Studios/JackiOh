@@ -21,6 +21,13 @@
 // KY's Trial and CN-Viral Injection were played this time and come off; and Blood Ridden Glowy
 // Jelly Bean, which is cast on draw, was never affordable at either tier, so like Hinder it is
 // unswept and not listed (R186: no evidence either way). No card was flagged `error` or `selfHarm`.
+//
+// Patch v0.1.1 (issue #27), 2026-09-26 (UTC): `pnpm ai:sweep core-044 core-074 core-080 core-090
+// core-098`, the five cards whose power its engine half moved, same seeds and budget. True Strike,
+// Adaptive UI and Heroic Power came back clean. Zao Gao (its discard now random) and CN-Viral
+// Injection (now cost 2) were never played at hard, so both are listed. Zao Gao was also flagged
+// `timeout` at easy on a busy machine; swept again alone it was clean there, so that flag did not
+// hold. The patch's card half moves other cards, which its own sweep covers.
 
 /** R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ". */
 export const SHADOW_BAN: Readonly<Record<string, string>> = {
@@ -32,7 +39,9 @@ export const SHADOW_BAN: Readonly<Record<string, string>> = {
   "core-076": "neverPlayed: hard: affordable in hand on 16 turns, never played",
   "core-078": "neverPlayed: easy: affordable in hand on 9 turns, never played",
   "core-079": "neverPlayed: hard: affordable in hand on 6 turns, never played",
+  "core-080": "neverPlayed: hard: affordable in hand on 4 turns, never played",
   "core-083": "neverPlayed: hard: affordable in hand on 21 turns, never played",
+  "core-090": "neverPlayed: hard: affordable in hand on 13 turns, never played",
   "core-094": "neverPlayed: hard: affordable in hand on 16 turns, never played",
   "core-099":
     "neverPlayed: easy: affordable in hand on 17 turns, never played; hard: affordable in hand on 31 turns, never played",
