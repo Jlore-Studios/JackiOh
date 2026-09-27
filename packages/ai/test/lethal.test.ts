@@ -111,6 +111,9 @@ describe("the lethal solver's walks", () => {
       wideBoard(),
       ...randomPolicyStates("lethal-ready-gap", 3, 600),
       ...randomPolicyStates("lethal-ready-gap-2", 5, 600),
+      // Patch v0.1.1's rules moved these seeded games off the boards they used to reach, so a third
+      // series keeps the count of positions with attackers ready above the floor below.
+      ...randomPolicyStates("lethal-ready-gap-3", 3, 600),
     ];
     const config = gameConfig("ai-vs-greedy", 1);
     playMatch({ ...config, maxActions: 150 }, { afterAction: (before) => void states.push(before) });
