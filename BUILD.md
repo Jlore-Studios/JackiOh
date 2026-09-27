@@ -261,7 +261,7 @@ Player-scoped modifiers with expiry (`thisTurn`, `nextTurnOf(player)`, `untilUse
 Acceptance: Lunar Eclipse's discount applies to the next spell only and expires at cleanup; Professor Curvature's discount applies only on the next turn to cards whose current cost is 4 (R48); Kpop Fanatic's steal fires at the next start of turn after the unit has died (§8 #50).
 
 **M3-T6 viewFor.** Files: `engine/src/viewFor.ts`.
-Per §10.8: own hand in full; opponent hand as a count; both libraries as counts; face-down traps as `{ faceDown: true }` for the opponent; Field Spells public; graveyards and exile in full; the viewer's own prompt options only; last N events.
+Per §10.8: own hand in full; opponent hand as a count; both libraries as counts; face-down traps as `{ faceDown: true, cost }` for the opponent (R351) and marked `unrevealed` in the controller's own view (R371); Field Spells public; graveyards and exile in full; the viewer's own prompt options only; last N events.
 Acceptance: `JSON.stringify(viewFor(state, P1))` contains no `defId` from P2's hand, no P2 library entries, and no P2 face-down trap `defId`; a trap stolen by P1 becomes visible to P1 and hidden from P2 (R33).
 
 **M3-T7 Subsystems.** Files: `engine/src/subsystems/*.ts`.

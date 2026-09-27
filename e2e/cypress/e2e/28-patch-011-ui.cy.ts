@@ -8,9 +8,9 @@
 //      down" tag whose tooltip says "Face down — your opponent can't see this card"; its hover
 //      preview carries the same line over the face. The deck pile reads "Deck" and its preview
 //      "Your deck" (R373). After the hand-over, player 1 sees a back labelled "Face-down trap",
-//      whose hover shows the face-down overlay and names nothing (R370). Where the view gives the
-//      back a cost (the engine's half of v0.1.1), the gem, the label and the overlay all state it
-//      as "Cost (1)", Sheepish's; this branch's view may not carry it yet, and then none is drawn.
+//      whose hover shows the face-down overlay and names nothing (R370). The view gives the back
+//      its cost (R351, the engine's half of v0.1.1), and the gem, the label and the overlay all
+//      state it as "Cost (1)", Sheepish's.
 //   B. Combo-Index by its letter (R372), with `28-combo-a` (spec 03's player-1 deck with #93 in it)
 //      and seed 28-combo-16, which deals #93 into player 1's opening hand: played on player 1's
 //      third turn (three mana, so a one-mana card is still playable and R82 does not end the turn
@@ -48,7 +48,7 @@ const TRAP_SEED = seedFor("03-sheep-19");
 const COMBO_SEED = seedFor("28-combo-16");
 
 const SHEEPISH = "Sheepish";
-/** SPEC §8 #41's cost, which a back that carries one must state. */
+/** SPEC §8 #41's cost, which its back states (R351, R370). */
 const SHEEPISH_COST = 1;
 const COMBO_INDEX = "Combo-Index";
 /** R372: the words of #93's text the plays it asks for follow. */
@@ -129,19 +129,11 @@ function faceDownTrap(viewport: Viewport | null): void {
     cy.get(ts(INSPECT_FACE_DOWN)).should("be.visible").and("contain.text", "Face-down trap").and("not.contain.text", SHEEPISH);
     cy.get(ts(INSPECT_FACE_DOWN)).find(".cf").should("not.exist");
 
-    // R370: where the view gives the back a cost, the gem, the label and the overlay state it.
-    cy.get(back).then(($back) => {
-      const cost = $back.attr("data-facedown-cost");
-      if (cost === undefined) {
-        cy.get(back).find(".facedown-cost").should("not.exist");
-        cy.get(ts(INSPECT_FACE_DOWN)).find(ts(INSPECT_FACE_DOWN_COST)).should("not.exist");
-        return;
-      }
-      expect(Number(cost), "the back's cost is Sheepish's").to.eq(SHEEPISH_COST);
-      cy.get(back).find(".facedown-cost").should("have.text", String(SHEEPISH_COST));
-      cy.get(back).should("have.attr", "aria-label", `Face-down trap, Cost (${String(SHEEPISH_COST)})`);
-      cy.get(ts(INSPECT_FACE_DOWN)).find(ts(INSPECT_FACE_DOWN_COST)).should("have.text", `Cost (${String(SHEEPISH_COST)})`);
-    });
+    // R351, R370: the view gives the back its cost, and the gem, the label and the overlay state it.
+    cy.get(back).should("have.attr", "data-facedown-cost", String(SHEEPISH_COST));
+    cy.get(back).find(".facedown-cost").should("have.text", String(SHEEPISH_COST));
+    cy.get(back).should("have.attr", "aria-label", `Face-down trap, Cost (${String(SHEEPISH_COST)})`);
+    cy.get(ts(INSPECT_FACE_DOWN)).find(ts(INSPECT_FACE_DOWN_COST)).should("have.text", `Cost (${String(SHEEPISH_COST)})`);
     shoot(viewport, "opponent-face-down-trap-hover");
     unhover(back);
     cy.get(ts(INSPECT_FACE_DOWN)).should("not.exist");
