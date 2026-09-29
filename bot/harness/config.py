@@ -115,6 +115,8 @@ class Config:
     server_url: str = "https://github.com"
     now_override: str = ""
     claude_token_present: bool = False
+    #: True when the workflow said whether the Claude secret exists (the plan job never sees it).
+    claude_ready_known: bool = False
 
     @property
     def write_token(self) -> str:
@@ -237,7 +239,9 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
         run_id=env.get("GITHUB_RUN_ID", ""),
         server_url=env.get("GITHUB_SERVER_URL", "https://github.com") or "https://github.com",
         now_override=env.get("HARNESS_NOW", ""),
-        claude_token_present=bool(env.get("CLAUDE_CODE_OAUTH_TOKEN")),
+        claude_token_present=bool(env.get("CLAUDE_CODE_OAUTH_TOKEN"))
+        or env.get("HARNESS_CLAUDE_READY", "").lower() == "true",
+        claude_ready_known="HARNESS_CLAUDE_READY" in env,
     )
 
 

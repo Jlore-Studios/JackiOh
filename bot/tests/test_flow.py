@@ -67,6 +67,21 @@ class PlanTests(unittest.TestCase):
         self.assertIn("outside the night window", plan_mod.make(day)["reason"])
         self.assertEqual(plan_mod.make(day, force=True)["action"], "build")
 
+    def test_nothing_starts_without_the_claude_secret(self):
+        self.gh.add_issue(3, labels=(LABEL_BUILD,))
+        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_CLAUDE_READY": "false"}))
+        self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", plan_mod.make(ctx, force=True)["reason"])
+        self.assertEqual(self.gh.label_names(3), {LABEL_BUILD})
+        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_CLAUDE_READY": "true"}))
+        self.assertEqual(plan_mod.make(ctx)["action"], "build")
+
+    def test_an_infrastructure_failure_backs_off_unforced_runs(self):
+        self.gh.add_issue(3, labels=(LABEL_BUILD,))
+        at = "2026-09-30T02:40:00Z"  # twenty minutes before NIGHT
+        self.ctx.store.update(lambda s: s.update(last_infra={"at": at, "reason": "doctor failed"}))
+        self.assertIn("backing off", plan_mod.make(self.ctx)["reason"])
+        self.assertEqual(plan_mod.make(self.ctx, force=True)["action"], "build")
+
     def test_both_halts(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         self.ctx.store.update(lambda s: s.update(halted=True))
@@ -270,11 +285,11 @@ class FlowTests(unittest.TestCase):
         h = Harness(self)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         h.gh.add_issue(13, labels=(LABEL_BUILD,))
-        for attempt in (1, 2, 3):
-            planned = plan_mod.make(h.ctx)
-            out = h.root / f"empty-{attempt}"
-            out.mkdir()
-            Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        planned = plan_mod.make(h.ctx)
+        out = h.root / "empty"
+        out.mkdir()
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertIn("backing off", plan_mod.make(h.ctx)["reason"])
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertEqual(h.ctx.store.load()["items"]["12"].get("failures", 0), 0)
         self.assertEqual(h.gh.dispatches, [])  # no chaining into a broken environment
