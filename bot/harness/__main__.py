@@ -41,10 +41,10 @@ def _local_token() -> str:
 
 
 def _ctx(cfg: Config, *, write: bool = True) -> context_mod.Context:
+    if write and cfg.write_token:
+        return context_mod.build(cfg)
     token = cfg.write_token if write else (cfg.actions_token or cfg.bot_token)
-    if not token:
-        token = _local_token()
-    return context_mod.build(cfg, token=token)
+    return context_mod.build(cfg, token=token or _local_token())
 
 
 def _output(pairs: dict[str, Any]) -> None:

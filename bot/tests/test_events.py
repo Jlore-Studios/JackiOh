@@ -222,6 +222,14 @@ class ReviewAndCiTests(unittest.TestCase):
         record = self.ctx.store.load()["items"]["9"]
         self.assertEqual((record["source"], record["ci_run_id"], record["ci_fixes"]), ("ci", 99, 1))
 
+    def test_actions_calls_use_the_jobs_own_token(self):
+        actions = FakeGitHub()
+        self.ctx.actions_gh = actions
+        self.ci()
+        self.assertEqual((actions.reruns, self.gh.reruns), ([99], []))
+        self.ctx.dispatch(force=True)
+        self.assertEqual((len(actions.dispatches), self.gh.dispatches), (1, []))
+
     def test_ci_fixes_are_capped(self):
         self.ctx.store.update(lambda s: state_item(s, 9).update(ci_fixes=3,
                                                                 ci_reruns={"s1": 1}))

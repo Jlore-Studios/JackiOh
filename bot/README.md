@@ -190,12 +190,14 @@ days.
 1. **Secrets** (Settings → Secrets and variables → Actions):
    - `CLAUDE_CODE_OAUTH_TOKEN`: from `claude setup-token` on a machine logged in to the Claude
      subscription the bot should spend.
-   - `BOT_GITHUB_TOKEN`: a token for the `jgoetzmann-bot` account, which must be a collaborator
-     with write access. A fine-grained token limited to this repository needs Contents, Issues,
-     Pull requests, Actions and Workflows set to read and write, plus Metadata read. A classic
-     token needs `repo` and `workflow`. Without this token the bot falls back to the Actions
-     token: its comments come from `github-actions[bot]`, and its pull requests do not start CI,
-     so auto-merge never fires.
+   - `BOT_GITHUB_TOKEN`: a classic token for the `jgoetzmann-bot` account, which must be a
+     collaborator with write access. It needs the `public_repo` and `workflow` scopes, and
+     nothing else. It needs `workflow` because merging `main` into a branch can carry a
+     workflow change along. A fine-grained token will not do: it cannot reach a repository its
+     account only collaborates on. Starting runs and re-running CI jobs use the job's own
+     Actions token, so the bot's token needs no `repo` scope. Without this token the bot falls
+     back to the Actions token: its comments come from `github-actions[bot]`, and its pull
+     requests do not start CI, so auto-merge never fires.
 2. **Labels, the state branch and the repository settings**, once, with an admin token (a
    logged-in `gh` works):
 

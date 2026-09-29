@@ -260,7 +260,7 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
         sha = str(run.get("head_sha"))
         reruns = dict(record.get("ci_reruns") or {})
         if int(reruns.get(sha, 0)) < ctx.cfg.ci_reruns:
-            ctx.gh.rerun_failed_jobs(run["id"])
+            ctx.act.rerun_failed_jobs(run["id"])
             reruns[sha] = int(reruns.get(sha, 0)) + 1
             ctx.store.update(lambda s: state_item(s, number).update(ci_reruns=reruns),
                              f"ci rerun #{number}")
