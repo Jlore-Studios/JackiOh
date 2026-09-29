@@ -70,6 +70,8 @@ class Deliverer:
         elif action in ("build", "revise"):
             self._rederive()
             self._item()
+        else:
+            return {"status": "nothing", "log": ["nothing was planned"]}
         self._chain()
         return {"status": self.result.get("status"), "log": self.log}
 

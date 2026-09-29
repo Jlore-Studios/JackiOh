@@ -23,6 +23,8 @@ from harness.state import item as state_item
 from harness.state import usage_refusal
 
 MODES = ("auto", "build", "revise", "suggest")
+#: After a failure that was not an item's fault, unforced runs wait this long before trying again.
+INFRA_BACKOFF = timedelta(minutes=50)
 CI_LOG_JOBS = 4
 
 
@@ -45,6 +47,12 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     refusal = usage_refusal(state, dict(cfg.usage_stop), now)
     if refusal:
         return nothing(f"usage stop: {refusal}")
+    if cfg.claude_ready_known and not cfg.claude_token_present:
+        return nothing("the CLAUDE_CODE_OAUTH_TOKEN secret is not set, so no model can run")
+    last_infra = parse_iso((state.get("last_infra") or {}).get("at"))
+    if not force and last_infra is not None and now - last_infra < INFRA_BACKOFF:
+        return nothing(f"backing off after a failure outside any item at {iso(last_infra)}: "
+                       f"{(state.get('last_infra') or {}).get('reason', '')[:200]}")
     in_window = ctx.window.is_open(now)
     only_forced = not in_window and not force
     if only_forced and not any(c.forced for c in candidates(ctx, state)):

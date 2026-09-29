@@ -224,15 +224,15 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
             errors.append("CLAUDE_CODE_OAUTH_TOKEN is not set")
     try:
         info = ctx.gh.repo_info()
-        if not info.get("allow_auto_merge"):
+        # Only a token with push access sees this field; a read-only token cannot tell.
+        if "allow_auto_merge" in info and not info.get("allow_auto_merge"):
             warnings.append("the repository does not allow auto-merge (setup --repo-settings)")
-        protection = ctx.gh.get_protection(cfg.default_branch)
-        if protection is None:
+        required = ctx.gh.required_checks(cfg.default_branch)
+        if required is None:
             warnings.append(f"`{cfg.default_branch}` has no branch protection, so auto-merge "
                             "cannot wait for CI (setup --repo-settings)")
         else:
-            have = set((protection.get("required_status_checks") or {}).get("contexts") or [])
-            missing = [c for c in cfg.required_checks if c not in have]
+            missing = [c for c in cfg.required_checks if c not in required]
             if missing:
                 warnings.append(f"required checks missing on {cfg.default_branch}: {missing}")
             else:

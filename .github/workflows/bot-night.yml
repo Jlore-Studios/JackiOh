@@ -97,6 +97,8 @@ jobs:
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          # Whether the Claude secret exists, never its value: with none, nothing is claimed.
+          HARNESS_CLAUDE_READY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
           INPUT_ITEM: ${{ github.event.inputs.item }}
           INPUT_MODE: ${{ github.event.inputs.mode }}
           INPUT_FORCE: ${{ github.event.inputs.force }}

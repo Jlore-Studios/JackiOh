@@ -39,8 +39,11 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", work)
 
     def test_only_the_model_job_holds_the_claude_token(self):
-        for name in ("plan", "deliver"):
-            self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", job(self.text, name))
+        self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", job(self.text, "deliver"))
+        plan = job(self.text, "plan")
+        self.assertNotRegex(plan, r"CLAUDE_CODE_OAUTH_TOKEN\s*:")  # never set as a variable
+        mentions = re.findall(r"secrets\.CLAUDE_CODE_OAUTH_TOKEN[^}]*", plan)
+        self.assertEqual(mentions, ["secrets.CLAUDE_CODE_OAUTH_TOKEN != '' "])  # presence only
 
     def test_halt_is_the_first_step_of_the_plan(self):
         plan = job(self.text, "plan")
