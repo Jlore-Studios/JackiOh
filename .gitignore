@@ -31,3 +31,4 @@ __pycache__/
 # --frozen-lockfile. An npm lockfile arrived once via a PR; ignored so it cannot drift back in and
 # be mistaken for the real one.
 package-lock.json
+.polish-website/
