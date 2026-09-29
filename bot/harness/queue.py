@@ -64,11 +64,13 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
         return f"#{number} is closed, so there is nothing to build. Reopen it first."
     names = label_names(issue)
     if LABEL_WORKING in names:
-        return (f"I am working on #{number} right now. Your comment is part of the thread, and "
-                "the next pass reads it.")
+        _pending(ctx, number, by)
+        return (f"I am working on #{number} right now. When this run ends I go round once more "
+                "with your comment.")
     if LABEL_PR_OPEN in names:
         pull = open_pull_for_branch(ctx, branch_for_issue(number))
         if pull is not None:
+            set_state_label(ctx, number, names, None)
             return queue_revise(ctx, int(pull["number"]), by=by, force=force)
     set_state_label(ctx, number, names, LABEL_BUILD)
     state = ctx.store.update(lambda s: _queued(s, number, "build", by, force, ctx),
@@ -90,8 +92,9 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
         return f"#{number} comes from a fork; I can only push to branches in {ctx.cfg.repo}."
     names = label_names(pull)
     if LABEL_WORKING in names:
-        return (f"I am revising #{number} right now. Your comment is part of the thread, and the "
-                "next pass reads it.")
+        _pending(ctx, number, by)
+        return (f"I am revising #{number} right now. When this run ends I go round once more "
+                "with your comment.")
     set_state_label(ctx, number, names, LABEL_REVISE)
     if LABEL_PR in names and pull.get("auto_merge"):
         try:
@@ -112,9 +115,17 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
 
 
 def _queued(state: dict[str, Any], number: int, kind: str, by: str, force: bool, ctx: Context) -> None:
+    """A fresh request: it clears a stop, the failure and interruption counts and any pending
+    note, and keeps `ci_fixes`, which only a person's `forget` clears."""
     record = state_item(state, number)
     record.update(kind=kind, queued_at=iso(ctx.now()), requested_by=by, forced=bool(force),
-                  stop_requested=False, failures=0)
+                  stop_requested=False, failures=0, interruptions=0, pending_request=False)
+
+
+def _pending(ctx: Context, number: int, by: str) -> None:
+    """Remember a request that arrived while a run held the thread; deliver requeues it."""
+    ctx.store.update(lambda s: state_item(s, number).update(pending_request=True, pending_by=by),
+                     f"pending #{number}")
 
 
 def stop(ctx: Context, number: int, *, by: str) -> str:

@@ -65,7 +65,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          REF: ${{ github.event.repository.default_branch }}
+          REF: ${{ github.event.repository.default_branch || 'main' }}
         run: |
           code="$(curl -sS -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -81,7 +81,7 @@ jobs:
         if: steps.halt.outputs.halted != 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
       - name: Set up Python
@@ -127,7 +127,7 @@ jobs:
       - name: Checkout the default branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch || 'main' }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -194,7 +194,7 @@ jobs:
       - name: Checkout the default branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch || 'main' }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -215,11 +215,16 @@ jobs:
           name: work
           path: ${{ runner.temp }}/out
 
+      # The item comes from the plan job's outputs, which the model job cannot touch; the plan
+      # file carries only the context around it.
       - name: Deliver
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          PLAN_ACTION: ${{ needs.plan.outputs.action }}
+          PLAN_NUMBER: ${{ needs.plan.outputs.number }}
         run: |
           mkdir -p "$RUNNER_TEMP/out"
-          python -m harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out"
+          python -m harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out" \
+            --action "${PLAN_ACTION}" --number "${PLAN_NUMBER}"

@@ -1,9 +1,10 @@
 """The last job of a night run: check the model job's output and publish it.
 
 This job holds the bot's token and runs no model. It does not trust the model job's files: the
-bundle must hold the branch head the result names, descend from the commit the work started at,
-leave every forbidden path alone, and fast-forward the branch on GitHub. A pull request the
-reviewer approved gets auto-merge, which merges it once the required CI checks pass.
+item comes from the plan job's outputs and the branch is worked out again here, and the bundle
+must hold the head the result names, descend from the commit the work started at, change no
+forbidden path, and fast-forward the branch on GitHub. A pull request the reviewer approved gets
+auto-merge, which merges it once the required CI checks pass.
 """
 
 from __future__ import annotations
@@ -15,16 +16,19 @@ from typing import Any
 from harness import gates as gates_mod
 from harness.clock import iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_REVIEW, LABEL_PR,
-                            LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING)
+                            LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
-from harness.git import Git, is_forbidden, matches
+from harness.git import Git, matches
 from harness.plan import suggestions_due
-from harness.queue import candidates, label_names, open_pull_for_branch, set_state_label
+from harness.queue import (branch_for_issue, candidates, label_names, open_pull_for_branch,
+                           set_state_label)
 from harness.state import item as state_item
 from harness.state import record_usage, usage_refusal
 
 REPORT_CHARS = 30_000
+NO_RESULT = ("the model job left no result: it failed before the model started (the doctor "
+             "step, the install or the CLI setup), or it was cancelled")
 
 
 def load_result(out_dir: Path) -> dict[str, Any]:
@@ -35,20 +39,25 @@ def load_result(out_dir: Path) -> dict[str, Any]:
             return data
     except (OSError, ValueError):
         pass
-    return {"status": "failed", "reason": "the model job left no result (it was cancelled, "
-            "timed out or crashed before writing one)"}
+    return {"status": "infra", "reason": NO_RESULT}
 
 
 class Deliverer:
-    def __init__(self, ctx: Context, plan: dict[str, Any], out_dir: Path, repo_dir: Path) -> None:
+    def __init__(self, ctx: Context, plan: dict[str, Any], out_dir: Path, repo_dir: Path, *,
+                 action: str | None = None, number: int | None = None) -> None:
         self.ctx = ctx
         self.cfg = ctx.cfg
         self.gh = ctx.gh
-        self.plan = plan
+        self.plan = dict(plan)
+        if action:
+            self.plan["action"] = action
+        if number:
+            self.plan["number"] = int(number)
         self.out_dir = Path(out_dir)
         self.repo = Git(repo_dir)
         self.result = load_result(out_dir)
         self.log: list[str] = []
+        self.chain = True
 
     # ------------------------------------------------------------------ entry
 
@@ -59,13 +68,38 @@ class Deliverer:
         if action == "suggest":
             self._suggestions()
         elif action in ("build", "revise"):
+            self._rederive()
             self._item()
         self._chain()
         return {"status": self.result.get("status"), "log": self.log}
 
+    def _rederive(self) -> None:
+        """Work the branch out again from GitHub, whatever the plan file says."""
+        number = int(self.plan["number"])
+        if self.plan["action"] == "build":
+            self.plan["branch"] = branch_for_issue(number)
+            return
+        pull = self.gh.get_pull(number)
+        head = pull.get("head") or {}
+        if (head.get("repo") or {}).get("full_name") != self.cfg.repo:
+            raise GitHubError(f"#{number} is not a branch of {self.cfg.repo}", 0)
+        self.plan["branch"] = head.get("ref", "")
+        self.plan["bot_pr"] = LABEL_PR in label_names(pull)
+
     # ------------------------------------------------------------------ the branch
 
-    def _publish(self) -> tuple[bool, str]:
+    def _open_pull(self) -> dict[str, Any] | None:
+        branch = str(self.plan.get("branch") or "")
+        return open_pull_for_branch(self.ctx, branch) if branch else None
+
+    def _hold_auto_merge(self) -> None:
+        """Turn auto-merge off on the branch's open PR before unapproved work lands on it."""
+        pull = self._open_pull()
+        if pull is not None and pull.get("auto_merge") and pull.get("node_id"):
+            self._try(lambda: self.gh.disable_auto_merge(pull["node_id"]))
+            self.log.append(f"auto-merge off on #{pull.get('number')}")
+
+    def _publish(self, *, approved: bool) -> tuple[bool, str]:
         """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`."""
         name = self.result.get("bundle")
         branch = str(self.plan.get("branch") or "")
@@ -87,16 +121,18 @@ class Deliverer:
         if head != self.result.get("head"):
             return False, "the bundle's head is not the head the result names"
         start = str(self.result.get("start") or "")
-        if start and self.repo.run("merge-base", "--is-ancestor", start, head,
-                                   check=False).returncode != 0:
+        if not start or self.repo.run("merge-base", "--is-ancestor", start, head,
+                                      check=False).returncode != 0:
             return False, "the bundle does not descend from the commit the work started at"
         remote = self.repo.rev(f"origin/{branch}")
         if remote and remote != start:
-            return False, (f"`{branch}` moved on GitHub while I worked, so I did not overwrite it")
-        changed = self.repo.changed_paths(f"origin/{default}", local)
-        forbidden = [p for p in changed if is_forbidden(p, self.cfg.forbidden_paths)]
+            return False, f"`{branch}` moved on GitHub while I worked, so I did not overwrite it"
+        merged_main = self.repo.merge_base(f"origin/{default}", local)
+        forbidden = self.repo.unsanctioned(local, [start, merged_main], self.cfg.forbidden_paths)
         if forbidden:
             return False, f"the change touches paths the bot may not change: {', '.join(forbidden)}"
+        if not approved:
+            self._hold_auto_merge()
         if self.cfg.dry_run:
             self.log.append(f"dry run: would push {head} to {branch}")
             return True, ""
@@ -113,16 +149,71 @@ class Deliverer:
     def _item(self) -> None:
         number = int(self.plan["number"])
         status = str(self.result.get("status"))
-        if self.plan["action"] == "revise":
+        kind = "revise" if self.plan["action"] == "revise" else "build"
+        if status == "infra":
+            self._infra(number, kind)
+            return
+        if status == "interrupted":
+            self._interrupted(number, kind)
+            return
+        if kind == "revise":
             self._revise(number, status)
         else:
             self._build(number, status)
+        self._settle(number)
 
     def _labels(self, number: int) -> set[str]:
         return label_names(self.gh.get_issue(number))
 
+    def _record(self, number: int) -> dict[str, Any]:
+        return dict(self.ctx.store.load()["items"].get(str(number), {}))
+
     def _remember(self, number: int, **fields: Any) -> None:
         self.ctx.store.update(lambda s: state_item(s, number).update(fields), f"deliver #{number}")
+
+    def _link(self) -> str:
+        return f"[run]({self.cfg.run_url})" if self.cfg.run_url else "the run"
+
+    def _requeue_label(self, number: int, kind: str) -> None:
+        set_state_label(self.ctx, number, self._labels(number),
+                        LABEL_REVISE if kind == "revise" else LABEL_BUILD)
+
+    def _infra(self, number: int, kind: str) -> None:
+        """Not the item's fault: requeue it, charge nothing, and start no further run."""
+        self.chain = False
+        self._requeue_label(number, kind)
+        reason = self.result.get("reason") or NO_RESULT
+        self.ctx.store.update(lambda s: s.update(last_infra={"at": iso(self.ctx.now()),
+                                                             "reason": str(reason)[:500]}),
+                              "infra")
+        self.gh.create_comment(number, f"The run could not work on this ({self._link()}): "
+                               f"{reason}\n\nThat is not this item's fault; it stays queued for "
+                               "the next run.")
+
+    def _interrupted(self, number: int, kind: str) -> None:
+        interrupt = str(self.result.get("interrupt") or "budget")
+        reason = self.result.get("reason")
+        pushed, problem = (False, "")
+        if kind == "build":
+            pushed, problem = self._publish(approved=False)
+        if interrupt == "budget":
+            state = self.ctx.store.update(lambda s: state_item(s, number).update(
+                interruptions=int(state_item(s, number).get("interruptions", 0)) + 1),
+                f"interrupted #{number}")
+            count = int(state_item(state, number).get("interruptions", 0))
+            if count >= self.cfg.max_failures:
+                set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
+                self._remember(number, forced=False)
+                self.gh.create_comment(number, f"This ran out of time {count} runs in a row "
+                                       f"({self._link()}), so I stopped. It is probably too big "
+                                       "for one night; split it into smaller issues, or queue it "
+                                       "again to keep going.")
+                return
+        self._requeue_label(number, kind)
+        self._remember(number, last_findings=self.result.get("findings") or [])
+        kept = " The work so far is on the branch." if pushed else ""
+        self.gh.create_comment(number, f"Paused: {reason}.{kept} It stays queued and the next "
+                               "run picks it up." + (f"\n\n{problem}" if problem else ""))
 
     def _fail(self, number: int, kind: str) -> None:
         """A run that produced nothing usable: requeue it, or block it after too many."""
@@ -132,67 +223,83 @@ class Deliverer:
             f"failure #{number}")
         failures = int(state_item(state, number).get("failures", 0))
         reason = self.result.get("reason") or "unknown"
-        link = f" ([run]({self.cfg.run_url}))" if self.cfg.run_url else ""
         if failures >= self.cfg.max_failures:
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"This failed {failures} times in a row{link}, so I "
-                                   f"stopped trying. Last error: {reason}\n\nFix the cause, then "
-                                   "`/harness build` (or `revise`) queues it again.")
+            self._remember(number, forced=False)
+            self.gh.create_comment(number, f"This failed {failures} times in a row "
+                                   f"({self._link()}), so I stopped trying. Last error: {reason}"
+                                   "\n\nFix the cause, then `/harness build` (or `revise`) "
+                                   "queues it again.")
         else:
-            wanted = LABEL_REVISE if kind == "revise" else LABEL_BUILD
-            set_state_label(self.ctx, number, self._labels(number), wanted)
-            self.gh.create_comment(number, f"This run failed{link}: {reason}\n\nIt is back in the "
-                                   f"queue (attempt {failures} of {self.cfg.max_failures}).")
+            self._requeue_label(number, kind)
+            self.gh.create_comment(number, f"This run failed ({self._link()}): {reason}\n\nIt "
+                                   f"is back in the queue (attempt {failures} of "
+                                   f"{self.cfg.max_failures}).")
+
+    def _settle(self, number: int) -> None:
+        """After a finished run: clear the one-run flags, and go round again for a comment that
+        arrived while the run held the thread."""
+        record = self._record(number)
+        status = str(self.result.get("status"))
+        if status == "failed":
+            return
+        self._remember(number, forced=False, interruptions=0, pending_request=False)
+        if not record.get("pending_request") or status == "stopped":
+            return
+        target = number
+        pr = int(record.get("pr") or 0) if status == "approved" else 0
+        if self.plan["action"] == "build" and pr:
+            target = pr
+        is_pr = "pull_request" in self.gh.get_issue(target)
+        if is_pr:
+            pull = self.gh.get_pull(target)
+            if pull.get("auto_merge") and pull.get("node_id"):
+                self._try(lambda: self.gh.disable_auto_merge(pull["node_id"]))
+        set_state_label(self.ctx, target, self._labels(target),
+                        LABEL_REVISE if is_pr else LABEL_BUILD)
+        self._remember(target, kind="revise" if is_pr else "build", queued_at=iso(self.ctx.now()),
+                       stop_requested=False, source="request")
+        self.gh.create_comment(target, "A comment arrived while I was working on this, so it is "
+                               "queued again to answer it.")
 
     def _build(self, number: int, status: str) -> None:
-        link = f"[run]({self.cfg.run_url})" if self.cfg.run_url else "the run"
-        if status in ("failed", "nothing"):
-            if status == "nothing":
-                set_state_label(self.ctx, number, self._labels(number), None)
-                return
+        if status == "failed":
             self._fail(number, "build")
             return
-        if status == "stopped":
-            pushed, _ = self._publish()
-            kept = f" What I had is on `{self.plan['branch']}`." if pushed else ""
-            self.gh.create_comment(number, f"Stopped, as asked.{kept}")
-            return
-        if status == "interrupted":
-            pushed, problem = self._publish()
-            set_state_label(self.ctx, number, self._labels(number), LABEL_BUILD)
-            self._remember(number, last_findings=self.result.get("findings") or [])
-            kept = " The work so far is on the branch." if pushed else ""
-            self.gh.create_comment(number, f"Paused: {self.result.get('reason')}.{kept} It stays "
-                                   "queued and the next run picks it up where this one stopped."
-                                   + (f"\n\n{problem}" if problem else ""))
-            return
-        pushed, problem = self._publish()
-        if problem:
-            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"I could not publish this run's work ({link}): "
-                                   f"{problem}. It needs a person to look.")
+        if status == "nothing":
+            set_state_label(self.ctx, number, self._labels(number), None)
             return
         branch = str(self.plan["branch"])
+        if status == "stopped":
+            pushed, _ = self._publish(approved=False)
+            kept = f" What I had is on `{branch}`." if pushed else ""
+            self.gh.create_comment(number, f"Stopped, as asked.{kept}")
+            return
+        approved = status == "approved"
+        pushed, problem = self._publish(approved=approved)
+        if problem:
+            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
+            self.gh.create_comment(number, f"I could not publish this run's work ({self._link()}): "
+                                   f"{problem}. It needs a person to look.")
+            return
+        started = self._record(number).get("started_at")
         if status == "blocked":
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
-            question = self.result.get("question") or self.result.get("reason")
+            question = str(self.result.get("question") or self.result.get("reason") or "")
             kept = f" What I had is on `{branch}`." if pushed else ""
             self.gh.create_comment(number, f"I need a decision before I can build this.{kept}\n\n"
                                    f"{question}\n\nAnswer here, then `/harness build` (or "
                                    f"`@{self.cfg.bot_login} <your answer>`) queues it again.")
-            self._remember(number, last_findings=[])
+            self._remember(number, last_findings=[], question=question)
             return
-        approved = status == "approved"
-        remote = self.repo.rev(f"origin/{branch}") or pushed
-        if not remote:
+        if not (self.repo.rev(f"origin/{branch}") or pushed):
             self._fail(number, "build")
             return
         body = self._pull_body(number, approved)
         title = str(self.result.get("title") or self.plan.get("title") or f"Build #{number}")
-        pull = open_pull_for_branch(self.ctx, branch)
+        pull = self._open_pull()
         if pull is None:
-            pull = self.gh.create_pull(title=title, head=branch, base=self.cfg.default_branch,
-                                       body=body, draft=not approved)
+            pull = self._create_pull(title, branch, body, draft=not approved)
         else:
             self.gh.update_pull(int(pull["number"]), title=title, body=body)
             if approved and pull.get("draft"):
@@ -200,35 +307,48 @@ class Deliverer:
         pr = int(pull.get("number") or 0)
         if pr:
             self.gh.add_labels(pr, [LABEL_PR])
+            self._remember(pr, issue=number, feedback_since=started, failures=0, kind="revise")
         issue_labels = self._labels(number)
         if approved:
             set_state_label(self.ctx, number, issue_labels, None)
             if LABEL_PR_OPEN not in issue_labels:
                 self.gh.add_labels(number, [LABEL_PR_OPEN])
-            merge_note = self._auto_merge(pull)
             if pr:
-                set_state_label(self.ctx, pr, label_names(self.gh.get_issue(pr)), None)
+                set_state_label(self.ctx, pr, self._labels(pr), None)
+            merge_note = ""
+            if pr and self._record(number).get("pending_request"):
+                merge_note = ("A comment arrived during the run, so auto-merge waits for the "
+                              "revision that answers it.")
+            elif pr:
+                merge_note = self._auto_merge(self.gh.get_pull(pr))
             cycles = len(self.result.get("cycles") or [])
             self.gh.create_comment(number, f"Opened #{pr}. The adversarial reviewer approved it on "
                                    f"round {cycles} of {self.cfg.max_review_cycles}. {merge_note}")
-            self._remember(number, last_findings=[], failures=0, pr=pr, last_push_at=iso(self.ctx.now()))
-            if pr:
-                self._remember(pr, issue=number, last_push_at=iso(self.ctx.now()), failures=0)
+            self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
             if pr:
-                set_state_label(self.ctx, pr, label_names(self.gh.get_issue(pr)), LABEL_BLOCKED)
-            findings = self._findings_md()
+                set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
             self.gh.create_comment(number, f"After {self.cfg.max_review_cycles} rounds the "
                                    f"reviewer still had blocking findings, so #{pr} stays a "
-                                   f"draft and will not merge by itself ({link}).\n\n{findings}\n\n"
-                                   f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
-                                   "to have me try again with your notes.")
-            self._remember(number, last_findings=self.result.get("findings") or [], pr=pr,
-                           last_push_at=iso(self.ctx.now()))
+                                   f"draft and will not merge by itself ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\nComment `@{self.cfg.bot_login} "
+                                   f"<guidance>` here or on #{pr} to have me try again with your "
+                                   "notes.")
+            self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+
+    def _create_pull(self, title: str, branch: str, body: str, *, draft: bool) -> dict[str, Any]:
+        try:
+            return self.gh.create_pull(title=title, head=branch, base=self.cfg.default_branch,
+                                       body=body, draft=draft)
+        except GitHubError as exc:
+            existing = self._open_pull()
+            if exc.status == 422 and existing is not None:
+                self.gh.update_pull(int(existing["number"]), title=title, body=body)
+                return existing
+            raise
 
     def _revise(self, number: int, status: str) -> None:
-        link = f"[run]({self.cfg.run_url})" if self.cfg.run_url else "the run"
         bot_pr = bool(self.plan.get("bot_pr"))
         if status == "failed":
             self._fail(number, "revise")
@@ -236,46 +356,51 @@ class Deliverer:
         if status == "stopped":
             self.gh.create_comment(number, "Stopped, as asked. I pushed nothing.")
             return
-        if status == "interrupted":
-            set_state_label(self.ctx, number, self._labels(number), LABEL_REVISE)
-            self.gh.create_comment(number, f"Paused: {self.result.get('reason')}. The revision "
-                                   "stays queued; the next run starts it again.")
-            return
         if status == "blocked":
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
+            self._hold_auto_merge()
             question = self.result.get("question") or self.result.get("reason")
             self.gh.create_comment(number, f"I need a decision before I can revise this.\n\n"
                                    f"{question}")
+            self._remember(number, question=str(question or ""))
             return
+        started = self._record(number).get("started_at")
         if status != "approved":
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
+            self._hold_auto_merge()
             self.gh.create_comment(number, f"My revision did not pass review after "
                                    f"{self.cfg.max_review_cycles} rounds, so I pushed nothing "
-                                   f"({link}).\n\n{self._findings_md()}")
-            self._remember(number, last_findings=self.result.get("findings") or [])
+                                   f"({self._link()}).\n\n{self._findings_md()}")
+            self._remember(number, last_findings=self.result.get("findings") or [],
+                           feedback_since=started)
             return
-        pushed, problem = self._publish()
+        pushed, problem = self._publish(approved=True)
         if problem:
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"I could not push the revision ({link}): {problem}.")
+            self._hold_auto_merge()
+            self.gh.create_comment(number, f"I could not push the revision ({self._link()}): "
+                                   f"{problem}.")
             return
         set_state_label(self.ctx, number, self._labels(number), None)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
+        rerun = not pushed and bool(self._record(number).get("ci_run_id"))
+        self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
+                       question="")
         note = ""
-        if pushed:
-            self._remember(number, last_push_at=iso(self.ctx.now()), failures=0, source="",
-                           last_findings=[])
-        else:
+        if not pushed:
             note = "\n\nI changed nothing: the reviewer agreed no change was needed."
-            if self.plan.get("source") == "ci":
+            if rerun:
                 note += " I asked CI to run the failed jobs again."
                 self._rerun_ci(number)
-            self._remember(number, failures=0, source="")
         merge_note = ""
-        if bot_pr:
-            merge_note = "\n\n" + self._auto_merge(self.gh.get_pull(number))
-        self.gh.create_comment(number, f"Revision {'pushed' if pushed else 'done'} ({link}); the "
-                               f"adversarial reviewer approved it.{note}\n\n{report}{merge_note}")
+        if bot_pr and not self._record(number).get("pending_request"):
+            pull = self.gh.get_pull(number)
+            if pull.get("draft"):
+                self._try(lambda: self.gh.mark_ready(pull["node_id"]))
+            merge_note = "\n\n" + self._auto_merge(pull)
+        self.gh.create_comment(number, f"Revision {'pushed' if pushed else 'done'} "
+                               f"({self._link()}); the adversarial reviewer approved it.{note}\n\n"
+                               f"{report}{merge_note}")
 
     # ------------------------------------------------------------------ helpers
 
@@ -289,10 +414,15 @@ class Deliverer:
     def _changed(self, branch: str) -> list[str]:
         """What the branch changes against the default branch, as it now stands on GitHub."""
         default = self.cfg.default_branch
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{default}:refs/remotes/origin/{default}", check=False)
         local = f"deliver/{branch}"
         ref = local if self.repo.rev(local) else f"origin/{branch}"
         if not self.repo.rev(ref):
-            return []
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{branch}:refs/remotes/origin/{branch}", check=False)
+            if not self.repo.rev(ref):
+                return []
         return self.repo.changed_paths(f"origin/{default}", ref)
 
     def _hand_to_a_person(self, pull: dict[str, Any], why: str) -> str:
@@ -325,11 +455,15 @@ class Deliverer:
         error = self._try(lambda: self.gh.enable_auto_merge(pull["node_id"], self.cfg.merge_method))
         if not error:
             return "Auto-merge is on: it merges when every required check passes."
+        if "clean status" in error.lower():
+            # Every required check has already passed, so GitHub will not wait; merge it now.
+            merged = self._try(lambda: self.gh.merge_pull(int(pull["number"]), self.cfg.merge_method))
+            if not merged:
+                return "Every required check had already passed, so I merged it."
         return self._hand_to_a_person(pull, f"GitHub refused it ({error})")
 
     def _rerun_ci(self, number: int) -> None:
-        state = self.ctx.store.load()
-        run_id = state_item(state, number).get("ci_run_id")
+        run_id = self._record(number).get("ci_run_id")
         if run_id:
             self._try(lambda: self.gh.rerun_failed_jobs(run_id))
 
@@ -384,6 +518,8 @@ class Deliverer:
     # ------------------------------------------------------------------ suggestions
 
     def _suggestions(self) -> None:
+        if self.result.get("status") == "infra":
+            self.chain = False
         found = self.result.get("suggestions") or []
         open_now = [i for i in self.gh.list_issues(labels=LABEL_SUGGESTION) if "pull_request" not in i]
         room = max(0, self.cfg.suggestions_max_open - len(open_now))
@@ -406,7 +542,7 @@ class Deliverer:
         """Start the next run at once when there is more to do inside the window."""
         ctx = self.ctx
         now = ctx.now()
-        if not ctx.window.is_open(now) or ctx.repo_halted():
+        if not self.chain or not ctx.window.is_open(now) or ctx.repo_halted():
             return
         state = ctx.store.load()
         if state.get("halted") or usage_refusal(state, dict(self.cfg.usage_stop), now):

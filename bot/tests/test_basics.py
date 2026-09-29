@@ -242,6 +242,18 @@ class VerdictTests(unittest.TestCase):
         self.assertFalse(verdicts.review(text).approved)
         self.assertTrue(verdicts.review('<!-- review: {"verdict": "approve", "findings": []} -->').approved)
 
+    def test_literal_newlines_inside_json_strings(self):
+        text = ('<!-- review: {"verdict": "changes", "findings": [{"severity": "blocking", '
+                '"where": "a.ts", "claim": "x", "evidence": "line one\nline two"}]} -->')
+        self.assertTrue(verdicts.review(text).readable)
+        text = '<!-- suggestions: [{"title": "T", "body": "## Why\nBecause"}] -->'
+        self.assertEqual(len(verdicts.suggestions(text, 4)), 1)
+
+    def test_changes_with_nothing_blocking_is_approval(self):
+        text = ('<!-- review: {"verdict": "changes", "findings": [{"severity": "note", '
+                '"where": "a", "claim": "b"}]} -->')
+        self.assertTrue(verdicts.review(text).approved)
+
     def test_unreadable_review(self):
         self.assertFalse(verdicts.review("LGTM!").readable)
         self.assertFalse(verdicts.review('<!-- review: {"verdict": "maybe"} -->').readable)

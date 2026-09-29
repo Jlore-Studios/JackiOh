@@ -88,18 +88,18 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
 def make_probe(ctx: context_mod.Context, number: int | None):
     def probe(last_usage: dict | None):
         if ctx.repo_halted():
-            return ("halted by .harness/HALT on main", False)
+            return ("halted by .harness/HALT on main", "halt")
         state = ctx.store.load()
         if state.get("halted"):
-            return ("halted by /harness halt", False)
+            return ("halted by /harness halt", "halt")
         if number is not None:
             record = state["items"].get(str(number), {})
             if record.get("stop_requested"):
-                return (f"stopped by @{record.get('stopped_by', 'someone')}", True)
+                return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
         record_usage(state, last_usage, None, ctx.now())
         refusal = usage_refusal(state, dict(ctx.cfg.usage_stop), ctx.now())
         if refusal:
-            return (f"usage stop: {refusal}", False)
+            return (f"usage stop: {refusal}", "usage")
         return None
     return probe
 
@@ -120,11 +120,13 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
 
 def cmd_deliver(cfg: Config, args: argparse.Namespace) -> int:
     planned = json.loads(Path(args.plan).read_text(encoding="utf-8"))
-    if planned.get("action") in (None, "none"):
+    if (args.action or planned.get("action")) in (None, "", "none"):
         print("deliver: nothing was planned")
         return 0
     ctx = _ctx(cfg)
-    outcome = deliver_mod.Deliverer(ctx, planned, Path(args.out), cfg.root).run()
+    number = int(args.number) if str(args.number or "").isdigit() else None
+    outcome = deliver_mod.Deliverer(ctx, planned, Path(args.out), cfg.root,
+                                    action=args.action or None, number=number).run()
     _summary(f"### Deliver: {outcome.get('status')}\n\n" + "\n".join(f"- {l}" for l in outcome["log"]))
     print(f"deliver: {outcome.get('status')}; " + "; ".join(outcome["log"]))
     return 0
@@ -304,6 +306,8 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("deliver", help="check the model job's output and publish it")
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--action", default="", help="the plan job's action output, which wins")
+    p.add_argument("--number", default="", help="the plan job's number output, which wins")
     p = sub.add_parser("event", help="handle one GitHub event")
     p.add_argument("--name", default="")
     p.add_argument("--payload", default="")

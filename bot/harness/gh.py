@@ -107,7 +107,10 @@ class GitHub:
                 limited = exc.code in (403, 429) and (
                     retry_after or "secondary rate limit" in detail.lower()
                 )
-                if (exc.code >= 500 or limited) and attempt + 1 < RETRIES:
+                # A POST that failed with a 5xx may still have happened (a comment posted, a
+                # pull request opened), so only a rate-limit refusal is retried for it.
+                retryable = limited or (exc.code >= 500 and method != "POST")
+                if retryable and attempt + 1 < RETRIES:
                     self._sleep(float(retry_after or BACKOFF_SECONDS * (attempt + 1)))
                     last = exc
                     continue

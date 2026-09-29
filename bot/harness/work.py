@@ -1,9 +1,9 @@
 """The model job: one item through builder -> checks -> adversarial review, or a suggestion survey.
 
-This job holds no GitHub write credential. It writes `result.json`, a git bundle of the branch and
-the redacted transcripts to the output directory; the deliver job checks the bundle itself and
-pushes it. Prompts are read into memory when the job starts, so nothing the model writes to disk
-can change what a later call is asked.
+This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
+to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
+into memory when the job starts, so nothing the model writes to disk can change what a later
+call is asked.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from harness import gates as gates_mod
 from harness import prompts, verdicts
 from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
-from harness.git import Git, Identity, is_forbidden, worktree_add
+from harness.git import Git, Identity, worktree_add
 from harness.prompts import data
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
@@ -39,21 +39,30 @@ READER_DENY = BUILDER_DENY + ("Edit", "Write", "MultiEdit", "NotebookEdit", "Bas
 
 DIFF_IN_PROMPT = 60_000
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.json")
+MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
+
+#: How an interruption ends the item: `stop` and `infra` have statuses of their own; the rest
+#: (`budget`, `usage`, `halt`) are `interrupted` and requeue.
+KIND_STATUS = {"stop": "stopped", "infra": "infra"}
 
 
 class Interrupt(Exception):
     """Stop the item now and hand what exists to the deliver job."""
 
-    def __init__(self, reason: str, reset_at: str | None = None, stopped: bool = False) -> None:
+    def __init__(self, reason: str, kind: str = "budget", reset_at: str | None = None) -> None:
         super().__init__(reason)
         self.reason = reason
+        self.kind = kind
         self.reset_at = reset_at
-        self.stopped = stopped
 
 
-#: What a probe returns when the run must stop: the reason, and whether a person stopped this
-#: item (as opposed to a halt, a usage stop or the clock, after which the item is requeued).
-Probe = Callable[[dict | None], "tuple[str, bool] | None"]
+#: What a probe returns when the run must stop: the reason, and its kind (`halt`, `stop` for a
+#: person stopping this item, or `usage`).
+Probe = Callable[[dict | None], "tuple[str, str] | None"]
+
+
+def _is_manifest(path: str) -> bool:
+    return path.rsplit("/", 1)[-1] in MANIFESTS
 
 
 class Worker:
@@ -90,6 +99,8 @@ class Worker:
         self.base_ref = f"origin/{cfg.default_branch}"
         self.base_sha = ""
         self.start_sha = ""
+        self.installed_at: str | None = None
+        self.approved_sha: str | None = None
         self._base_wt: Git | None = None
         self._base_gate_cache: dict[str, bool] = {}
         self.result: dict[str, Any] = {
@@ -110,12 +121,12 @@ class Worker:
     def check(self) -> None:
         """Raise Interrupt when a halt, a stop, the usage stop or the clock says to stop."""
         if self.seconds_left() < self.cfg.min_minutes_for_a_call * 60:
-            raise Interrupt("the run's time budget is spent")
+            raise Interrupt("the run's time budget is spent", "budget")
         if self.probe is not None:
             found = self.probe(self.last_usage)
             if found:
-                reason, stopped = found
-                raise Interrupt(reason, stopped=stopped)
+                reason, kind = found
+                raise Interrupt(reason, kind)
 
     def render(self, name: str, **values: Any) -> str:
         return self.templates[name].substitute({k: str(v) for k, v in values.items()})
@@ -154,7 +165,9 @@ class Worker:
         if result.usage:
             self.last_usage = result.usage
         if result.rate_limited:
-            raise Interrupt("the subscription's usage limit was reached", result.reset_at)
+            raise Interrupt("the subscription's usage limit was reached", "usage", result.reset_at)
+        if result.infra:
+            raise Interrupt(f"the claude CLI could not run: {result.error}", "infra")
         return result
 
     def write_result(self) -> Path:
@@ -189,6 +202,13 @@ class Worker:
 
     # ------------------------------------------------------------------ an item
 
+    def _install(self) -> gates_mod.GateResult:
+        assert self.wt is not None
+        result = gates_mod.run_gate(self.cfg.install, self.wt.cwd, self.env, int(self.seconds_left()))
+        if result.ok:
+            self.installed_at = self.wt.head()
+        return result
+
     def _prepare(self) -> list[str]:
         number = int(self.plan["number"])
         branch = str(self.plan["branch"])
@@ -210,9 +230,12 @@ class Worker:
         conflicts: list[str] = []
         if has_remote:
             conflicts = self.wt.merge(self.base_ref, self.who)
-        install = gates_mod.run_gate(self.cfg.install, self.wt.cwd, self.env, int(self.seconds_left()))
-        if not install.ok:
-            raise RuntimeError(f"dependency install failed (exit {install.exit_code}):\n{install.tail[-3000:]}")
+        if any(_is_manifest(p) for p in conflicts):
+            return conflicts  # the builder resolves the manifests first; install runs after
+        install = self._install()
+        if not install.ok and not has_remote:
+            raise Interrupt(f"dependency install failed on untouched main (exit "
+                            f"{install.exit_code}): {install.tail[-1500:]}", "infra")
         return conflicts
 
     def _branch_state(self) -> str:
@@ -225,6 +248,7 @@ class Worker:
 
     def _gate_list(self) -> str:
         lines = ["The harness's checks, run in this order after you stop:"]
+        lines.append(f"- install: `{self.cfg.install.run}` (again whenever a manifest changed)")
         lines += [f"- {g.name}: `{g.run}`" for g in self.cfg.gates]
         lines.append("CI on the pull request also runs the fuzz gate, coverage, the AI gates, "
                      "the Postgres suites and the Cypress e2e specs before anything merges.")
@@ -246,11 +270,11 @@ class Worker:
             )
             prompt = self.render(
                 "revise",
-                number=number, title=plan.get("title", ""), repo=self.cfg.repo,
-                branch=plan["branch"], base=self.base_sha, source=plan.get("source", "request"),
-                pull=plan.get("pull", ""), issue=plan.get("issue", ""),
-                feedback=plan.get("feedback", ""), conflicts=conflict_text,
-                branch_state=self._branch_state(), gate_list=self._gate_list(),
+                number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
+                source=plan.get("source", "request"), pull=plan.get("pull", ""),
+                issue=plan.get("issue", ""), feedback=plan.get("feedback", ""),
+                conflicts=conflict_text, branch_state=self._branch_state(),
+                gate_list=self._gate_list(),
             )
             return "revise", prompt
         previous = ""
@@ -258,25 +282,30 @@ class Worker:
         if prior:
             previous = ("An earlier run left this branch unfinished. The last review's blocking "
                         "findings were:\n\n" + self._findings_text([_finding(f) for f in prior]))
+        question = str(plan.get("previous_question") or "").strip()
+        if question:
+            previous += ("\n\nAn earlier run stopped to ask the question below. The answer, if "
+                         "someone gave one, is in the comments of the task above.\n\n"
+                         + data(question, "The question asked"))
         if conflicts:
             previous += ("\n\n`main` moved since then; merging it left conflict markers in: "
                          + ", ".join(f"`{c}`" for c in conflicts)
                          + ". Resolve them, keeping both sides' meaning. Do not commit.")
         prompt = self.render(
             "build",
-            number=number, title=plan.get("title", ""), repo=self.cfg.repo,
-            branch=plan["branch"], base=self.base_sha, thread=plan.get("thread", ""),
-            branch_state=self._branch_state(), previous=previous, gate_list=self._gate_list(),
+            number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
+            thread=plan.get("thread", ""), branch_state=self._branch_state(), previous=previous,
+            gate_list=self._gate_list(),
         )
         return "build", prompt
 
     def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str) -> str:
         return self.render(
             "fix",
-            number=self.plan["number"], title=self.plan.get("title", ""), repo=self.cfg.repo,
-            branch=self.plan["branch"], base=self.base_sha, cycle=cycle,
-            max_cycles=self.cfg.max_review_cycles, thread=self.plan.get("thread", ""),
-            branch_state=self._branch_state(), findings=self._findings_text(findings),
+            number=self.plan["number"], repo=self.cfg.repo, branch=self.plan["branch"],
+            base=self.base_sha, cycle=cycle, max_cycles=self.cfg.max_review_cycles,
+            thread=self.plan.get("thread", ""), branch_state=self._branch_state(),
+            findings=self._findings_text(findings),
             gate_failures=(data(failures, "Checks this change turned red") if failures
                            else "Every check passed or was already red on main."),
             gate_list=self._gate_list(),
@@ -295,15 +324,18 @@ class Worker:
         proc = self.wt.run("grep", "-l", "-E", r"^(<<<<<<< |>>>>>>> )", "--", *changed, check=False)
         return [p for p in proc.stdout.splitlines() if p.strip()]
 
+    def _anchors(self) -> list[str]:
+        """Commits the branch may carry content from: where it started, and the main it merged."""
+        return [s for s in (self.start_sha, self.base_sha) if s]
+
     def _guard(self) -> list[Finding]:
-        """Put back forbidden paths and report them, plus conflict markers and an empty change."""
+        """Put back forbidden paths the work changed, and report them, conflict markers left
+        behind, and an empty change."""
         assert self.wt is not None
         found: list[Finding] = []
-        changed = self.wt.changed_paths(self.base_ref)
-        touched = [p for p in changed if is_forbidden(p, self.cfg.forbidden_paths)]
+        touched = self.wt.unsanctioned("HEAD", self._anchors(), self.cfg.forbidden_paths)
         if touched:
-            base = self.wt.merge_base(self.base_ref)
-            self.wt.restore_paths(base, touched)
+            self.wt.restore_from(self._anchors(), touched)
             self._commit("bot: put back paths the bot may not change")
             found.append(Finding(
                 "blocking", touched[0],
@@ -320,18 +352,36 @@ class Worker:
                                  "git diff main...HEAD is empty"))
         return found
 
+    def _checks(self) -> list[gates_mod.GateResult]:
+        """Install again when a manifest changed (or never succeeded), then every gate."""
+        assert self.wt is not None
+        results: list[gates_mod.GateResult] = []
+        stale = self.installed_at is None or any(
+            _is_manifest(p) for p in self.wt.names_between(self.installed_at, "HEAD"))
+        if stale:
+            install = self._install()
+            results.append(install)
+            if not install.ok:
+                results += [gates_mod.GateResult(g.name, g.run, False, -1, 0.0, "",
+                                                 skipped="the install failed")
+                            for g in self.cfg.gates]
+                return results
+        results += gates_mod.run_all(self.cfg.gates, self.wt.cwd, self.env, self.seconds_left)
+        self._mark_pre_existing(results)
+        return results
+
     def _mark_pre_existing(self, results: list[gates_mod.GateResult]) -> None:
         for result in results:
-            if result.ok or result.skipped:
+            if result.ok or result.skipped or result.name == self.cfg.install.name:
+                continue
+            gate = next((g for g in self.cfg.gates if g.name == result.name), None)
+            if gate is None:
                 continue
             if result.name not in self._base_gate_cache:
                 base = self._base_worktree()
                 if base is None:
                     return
-                again = gates_mod.run_gate(
-                    next(g for g in self.cfg.gates if g.name == result.name),
-                    base.cwd, self.env, int(self.seconds_left()),
-                )
+                again = gates_mod.run_gate(gate, base.cwd, self.env, int(self.seconds_left()))
                 self._base_gate_cache[result.name] = not again.ok
             result.pre_existing = self._base_gate_cache[result.name]
 
@@ -355,9 +405,9 @@ class Worker:
                 "The whole diff against the base is below.")
         prompt = self.render(
             "review",
-            number=self.plan["number"], title=self.plan.get("title", ""), repo=self.cfg.repo,
-            cycle=cycle, max_cycles=self.cfg.max_review_cycles, branch=self.plan["branch"],
-            base=self.base_sha, thread=self.plan.get("thread", ""),
+            number=self.plan["number"], repo=self.cfg.repo, cycle=cycle,
+            max_cycles=self.cfg.max_review_cycles, branch=self.plan["branch"], base=self.base_sha,
+            thread=self.plan.get("thread", ""),
             report=data(report.body or "(the builder wrote no report)", "Builder's report"),
             gates=gates_mod.table(results),
             previous_findings=(self._findings_text(previous) if previous
@@ -376,6 +426,7 @@ class Worker:
             if review.readable:
                 break
             self.check()
+        review.reviewed_sha = head
         return review
 
     def _item(self) -> None:
@@ -410,8 +461,7 @@ class Worker:
             self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
             guard = self._guard()
             self.check()
-            results = gates_mod.run_all(self.cfg.gates, self.wt.cwd, self.env, self.seconds_left)
-            self._mark_pre_existing(results)
+            results = self._checks()
             entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
             self.check()
             review = self._review(cycle, report, results, findings)
@@ -421,6 +471,7 @@ class Worker:
                                    "not be read twice in a row")
                 break
             if review.approved and gates_mod.green(results) and not guard:
+                self.approved_sha = review.reviewed_sha
                 self.result.update(status="approved", reason="the reviewer approved and every "
                                    "check passed")
                 break
@@ -456,15 +507,22 @@ class Worker:
 
     def _interrupted(self, stop: Interrupt) -> None:
         self._save_wip(stop.reason)
-        self.result.update(status="stopped" if stop.stopped else "interrupted",
-                           reason=stop.reason, reset_at=stop.reset_at)
+        self.result.update(status=KIND_STATUS.get(stop.kind, "interrupted"), reason=stop.reason,
+                           interrupt=stop.kind, reset_at=stop.reset_at)
         self._finish()
 
     def _finish(self) -> None:
-        """Record the branch's head and bundle what it has beyond where it started."""
+        """Record the branch's head and bundle what it has beyond where it started.
+
+        An approved change is bundled exactly as the reviewer saw it: a commit that appeared
+        after the review (a process the model left behind, say) is dropped."""
         if self.wt is None:
             return
         try:
+            if self.result.get("status") == "approved" and self.approved_sha:
+                if self.wt.head() != self.approved_sha:
+                    self.result["dropped_after_review"] = self.wt.log(self.approved_sha)
+                    self.wt.run("reset", "--quiet", "--hard", self.approved_sha)
             head = self.wt.head()
             self.result["head"] = head
             self.result["changed_paths"] = self.wt.changed_paths(self.base_ref)

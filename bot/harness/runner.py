@@ -25,7 +25,16 @@ from harness.redact import redact
 RATE_LIMIT_WORDS = re.compile(
     r"(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:\w+ )?limit)"
 )
+AUTH_WORDS = re.compile(
+    r"(?i)(invalid api key|authentication[_ ]error|oauth token|not logged in|please run /login"
+    r"|invalid bearer|401 unauthorized|credit balance is too low)"
+)
 USAGE_WINDOWS = ("five_hour", "seven_day")
+#: Set in every model call's environment, so the processes it leaves behind can be found.
+CALL_MARKER = "JACKIOH_BOT_CALL"
+#: The Actions file-command variables: a process holding one can set the environment, path or
+#: outputs of the job's later steps, so the model never sees them.
+ACTIONS_FILES = ("GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STATE", "GITHUB_STEP_SUMMARY")
 #: No telemetry, error reporting or update checks: the session talks to the API and nothing else.
 QUIET_ENV = {"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1", "DISABLE_AUTOUPDATER": "1"}
 EXIT_TIMEOUT = 124
@@ -59,6 +68,13 @@ class RunResult:
     reset_at: str | None = None
     timed_out: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def infra(self) -> bool:
+        """The CLI could not run at all: missing, or refused by authentication."""
+        if self.ok:
+            return False
+        return self.exit_code == EXIT_NOT_FOUND or bool(AUTH_WORDS.search(self.error or ""))
 
     @property
     def rate_limited(self) -> bool:
@@ -163,8 +179,14 @@ class ClaudeCli:
         system_file.write_text(request.system_append, encoding="utf-8")
         env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
         env.pop("ANTHROPIC_API_KEY", None)
+        for key in ACTIONS_FILES:
+            env.pop(key, None)
         env.update(QUIET_ENV)
+        marker = f"{request.role}-{os.getpid()}-{time.time_ns()}"
+        env[CALL_MARKER] = marker
         timed_out = False
+        before = _own_pids()
+        session: list[int] = []
         try:
             with open(raw, "w", encoding="utf-8") as out, open(
                 transcript.with_suffix(".stderr"), "w", encoding="utf-8"
@@ -179,6 +201,7 @@ class ClaudeCli:
                     text=True,
                     start_new_session=True,
                 )
+                session.append(proc.pid)
                 try:
                     proc.communicate(request.prompt, timeout=request.timeout_s)
                 except subprocess.TimeoutExpired:
@@ -187,6 +210,8 @@ class ClaudeCli:
                 code = proc.returncode if proc.returncode is not None else EXIT_TIMEOUT
         except FileNotFoundError:
             return RunResult(False, "", EXIT_NOT_FOUND, error=f"{self.claude_bin} not found")
+        finally:
+            _reap(before, marker, session[0] if session else None)
         stderr = transcript.with_suffix(".stderr").read_text(encoding="utf-8", errors="replace")
         with open(raw, encoding="utf-8", errors="replace") as handle:
             result, usage = parse_stream(handle)
@@ -225,6 +250,62 @@ def _exhausted_reset(usage: dict[str, Any] | None) -> str | None:
         if isinstance(w, dict) and float(w.get("utilization", 0)) >= 1.0 and w.get("resets_at")
     ]
     return min(resets) if resets else None
+
+
+def _own_pids() -> set[int] | None:
+    """Every process of this user, or None where /proc cannot say (then nothing is reaped)."""
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return None
+    uid = os.getuid()
+    found = set()
+    for entry in proc.iterdir():
+        if entry.name.isdigit():
+            try:
+                if entry.stat().st_uid == uid:
+                    found.add(int(entry.name))
+            except OSError:
+                continue
+    return found
+
+
+def _ancestors() -> set[int]:
+    found, pid = set(), os.getpid()
+    while pid > 1:
+        found.add(pid)
+        try:
+            stat = Path(f"/proc/{pid}/stat").read_text()
+            pid = int(stat.rsplit(")", 1)[1].split()[1])
+        except (OSError, ValueError, IndexError):
+            break
+    return found
+
+
+def _belongs(pid: int, marker: str, session: int | None) -> bool:
+    """True when `pid` came from the call: it carries the call's marker, or its session."""
+    try:
+        if f"{CALL_MARKER}={marker}".encode() in Path(f"/proc/{pid}/environ").read_bytes():
+            return True
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        return session is not None and int(fields[3]) == session
+    except (OSError, ValueError, IndexError):
+        return False
+
+
+def _reap(before: set[int] | None, marker: str, session: int | None) -> None:
+    """Kill what the call left behind (daemons, `nohup`, `setsid`), so nothing the model started
+    can touch the worktree after its session ends. Only processes that carry the call's marker or
+    share its session are touched, never another program of the same user."""
+    if before is None:
+        return
+    after = _own_pids() or set()
+    for pid in sorted(after - before - _ancestors()):
+        if not _belongs(pid, marker, session):
+            continue
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
 
 
 def _kill(proc: subprocess.Popen) -> None:

@@ -48,13 +48,19 @@ Any of these queues an issue for the next night window (21:00 to 07:00 America/C
 
 To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`** or
 **`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
-It also revises its own pull requests without being asked: when CI fails twice (it re-runs the
-failed jobs once first, in case the failure was flaky), and when `main` moves on and leaves the
-branch with conflicts. Asking for a revision turns auto-merge off until the revision lands. It can
-revise a pull request a person opened too, as long as the branch is in this repository. It never
-turns on auto-merge for someone else's pull request.
+It also revises its own pull requests without being asked: when CI fails twice on the same
+commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
+moves on and leaves the branch with conflicts. After three tries at fixing CI on one pull request
+it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
+revision lands. It can revise a pull request a person opened too, as long as the branch is in this
+repository. It never turns on auto-merge for someone else's pull request.
+
+A comment you leave while it is working on the thread is not lost: once the run ends, it queues
+another pass to answer it. Auto-merge waits for that pass.
 
 Add **`--force`** to `build`, `revise` or `suggest` to start now instead of waiting for the window.
+A forced item stays forced until it is done, so it runs even if a later scheduled run picks it up
+outside the window.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
@@ -122,7 +128,12 @@ needs level 3.
    The harness also puts back anything the builder changed under `.github/`, `.harness/` or
    `bot/`, and records that as a blocking finding. Between steps it checks for a halt, a `stop`,
    the usage stop and the clock. When any of those says stop, it commits what it has as work in
-   progress so the next run can pick it up.
+   progress so the next run can pick it up. An item that runs out of time three runs in a row is
+   blocked as too big for one night. A failure that is not the item's fault (an expired Claude
+   token, the CLI refusing to start, dependencies that will not install on untouched `main`)
+   leaves the item queued without counting against it, and starts no further run that night.
+   Anything the model's session leaves running is killed when it ends. An approved change is
+   delivered exactly as the reviewer saw it: a commit that appears after the review is dropped.
 3. **deliver** (seconds, no model). It trusts nothing the model job wrote. The bundle's branch
    must be the head the result names and descend from where the work started, the branch on
    GitHub must not have moved meanwhile, and no forbidden path may change. Only then does it push

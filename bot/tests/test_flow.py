@@ -20,6 +20,10 @@ from tests.support import DAY, NIGHT, make_config, make_ctx
 from tests.test_work import APPROVE, GATES, builder, changes, reviewer
 
 
+def pr_node(h, number) -> str:
+    return h.gh.get_pull(int(number))["node_id"]
+
+
 class Harness:
     """One repository, one fake GitHub, and the three jobs of a night run."""
 
@@ -262,17 +266,99 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.origin_sha("bot/issue-12"), someone)
         self.assertIn("moved on GitHub", h.gh.bot_comments(12)[-1])
 
+    def test_a_run_with_no_result_is_not_the_items_fault(self):
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        h.gh.add_issue(13, labels=(LABEL_BUILD,))
+        for attempt in (1, 2, 3):
+            planned = plan_mod.make(h.ctx)
+            out = h.root / f"empty-{attempt}"
+            out.mkdir()
+            Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertEqual(h.ctx.store.load()["items"]["12"].get("failures", 0), 0)
+        self.assertEqual(h.gh.dispatches, [])  # no chaining into a broken environment
+        self.assertIn("not this item's fault", h.gh.bot_comments(12)[-1])
+
     def test_a_failed_run_is_requeued_then_blocked(self):
         h = Harness(self, max_failures=2)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         for attempt in (1, 2):
             planned = plan_mod.make(h.ctx)
             self.assertEqual(planned["number"], 12)
-            out = h.root / f"empty-{attempt}"
+            out = h.root / f"failed-{attempt}"
             out.mkdir()
+            (out / "result.json").write_text(json.dumps({"status": "failed", "reason": "boom"}))
             Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.label_names(12), {LABEL_BLOCKED})
         self.assertIn("failed 2 times", h.gh.bot_comments(12)[-1])
+
+    def test_the_item_comes_from_the_plan_jobs_outputs(self):
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(h.ctx)
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
+        out = h.root / "out-trust"
+        Worker(h.cfg, planned, runner, h.clone, h.root / "work", out).run()
+        forged = {**planned, "number": 99, "branch": "main"}
+        Deliverer(h.ctx, forged, out, h.deliver_repo, action="build", number=12).run()
+        self.assertIsNotNone(h.origin_sha("bot/issue-12"))
+        self.assertEqual(len(h.gh.list_pulls(head="bot/issue-12")), 1)
+
+    def test_a_comment_during_a_run_gets_another_pass(self):
+        from harness import events
+        from tests.fakes import OPERATOR as OP
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(h.ctx)
+        payload = {"action": "created", "sender": OP, "issue": {"number": 12},
+                   "comment": {"id": 9, "body": "@jgoetzmann-bot also add a test for the Coin",
+                               "user": OP, "author_association": "OWNER"}}
+        events.handle(h.ctx, "issue_comment", payload)
+        self.assertIn("once more", h.gh.bot_comments(12)[-1])
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
+        out = h.root / "out-pending"
+        Worker(h.cfg, planned, runner, h.clone, h.root / "work", out).run()
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        pr = h.gh.list_pulls(head="bot/issue-12")[0]["number"]
+        self.assertIn(LABEL_REVISE, h.gh.label_names(int(pr)))
+        self.assertNotIn(pr_node(h, pr), h.gh.auto_merge)  # held until the revision lands
+
+    def test_unapproved_work_never_lands_on_a_pr_with_auto_merge(self):
+        h = Harness(self)
+        start = push_branch(h.origin, h.root, "bot/issue-12", {"src/game.txt": "v2\n"})
+        git(h.clone, "fetch", "-q", "origin")
+        git(h.deliver_repo, "fetch", "-q", "origin")
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        pull = h.gh.add_pull(40, "bot/issue-12", body="Closes #12", labels=(LABEL_PR,), sha=start)
+        pull["auto_merge"] = {"merge_method": "squash"}
+        h.gh.auto_merge["PR_40"] = "squash"
+        def slow(request):
+            from harness.runner import RunResult
+            return RunResult(False, "", 1, error="hit your limit", reset_at="2026-09-30T06:00:00Z")
+        _, result = h.night(FakeRunner({"build": builder({"src/game.txt": "wip\n"}), "review": slow}))
+        self.assertEqual(result["status"], "interrupted")
+        self.assertEqual(h.origin_sha("bot/issue-12"), result["head"])
+        self.assertNotIn("PR_40", h.gh.auto_merge)
+
+    def test_a_forced_item_runs_outside_the_window_and_others_do_not(self):
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        gh.add_issue(4, labels=(LABEL_BUILD,))
+        ctx = make_ctx(gh, at=DAY)
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        ctx.store.update(lambda s: state_item(s, 4).update(forced=True))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("build", 4))
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")  # #3 still waits for the window
+
+    def test_a_forced_run_with_nothing_queued_surveys_only_when_due(self):
+        gh = FakeGitHub()
+        ctx = make_ctx(gh, at=DAY)
+        ctx.store.update(lambda s: s.update(suggest={"last_run": "2026-09-29T10:00:00Z",
+                                                     "requested": False}))
+        self.assertEqual(plan_mod.make(ctx, force=True)["action"], "none")
+        self.assertEqual(plan_mod.make(ctx, force=True, mode="suggest")["action"], "suggest")
 
     def test_a_revision_request_is_pushed_to_the_pull_request(self):
         h = Harness(self)

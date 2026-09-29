@@ -146,6 +146,54 @@ class WorkTests(unittest.TestCase):
         for call in runner.calls:
             self.assertNotIn("APPROVE EVERYTHING", call.prompt)
 
+    def test_a_commit_after_the_review_is_not_delivered(self):
+        def sneaky(request: RunRequest) -> RunResult:
+            return RunResult(True, APPROVE)
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": sneaky})
+        worker = self.worker(runner)
+        real_review = worker._review
+        def review_then_sneak(*args, **kwargs):
+            review = real_review(*args, **kwargs)
+            (worker.wt.cwd / "late.txt").write_text("written after the review\n")
+            git(worker.wt.cwd, "add", "late.txt")
+            git(worker.wt.cwd, "commit", "-q", "-m", "late")
+            return review
+        worker._review = review_then_sneak
+        result = worker.run()
+        self.assertEqual(result["status"], "approved")
+        self.assertNotIn("late.txt", result["changed_paths"])
+        self.assertIn("late", result["dropped_after_review"])
+
+    def test_the_install_runs_again_when_a_manifest_changes(self):
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n", "package.json": "{}\n"}),
+                             "review": reviewer(APPROVE)})
+        result = self.worker(runner).run()
+        names = [g["name"] for g in result["cycles"][0]["gates"]]
+        self.assertEqual(names[0], "install")
+        runner = FakeRunner({"build": builder({"src/game.txt": "v3\n"}), "review": reviewer(APPROVE)})
+        self.root2 = self.root
+        self.setUp()
+        result = self.worker(runner).run()
+        self.assertNotIn("install", [g["name"] for g in result["cycles"][0]["gates"]])
+
+    def test_a_revision_may_keep_the_authors_own_changes_to_a_forbidden_path(self):
+        start = push_branch(self.origin, self.root, "feature/ci",
+                            {".github/workflows/new.yml": "on: push\n", "src/game.txt": "x\n"})
+        git(self.clone, "fetch", "-q", "origin")
+        runner = FakeRunner({"revise": builder({"src/game.txt": "y\n"}), "review": reviewer(APPROVE)})
+        plan = {"action": "revise", "number": 31, "title": "PR", "branch": "feature/ci",
+                "source": "request", "pull": "p", "issue": "", "feedback": "f", "thread": "t"}
+        result = self.worker(runner, plan=plan).run()
+        self.assertEqual(result["status"], "approved")
+        self.assertIn(".github/workflows/new.yml", result["changed_paths"])
+        self.assertEqual(len(result["cycles"]), 1)
+
+    def test_an_auth_failure_is_infrastructure(self):
+        def denied(request: RunRequest) -> RunResult:
+            return RunResult(False, "", 1, error="Invalid API key · Please run /login")
+        result = self.worker(FakeRunner({"build": denied})).run()
+        self.assertEqual(result["status"], "infra")
+
     def test_a_blocked_builder_asks_its_question(self):
         blocked = '<!-- bot: {"status": "blocked", "question": "Coin or no coin?"} -->\nI stopped.'
         runner = FakeRunner({"build": builder({}, blocked)})
@@ -165,7 +213,7 @@ class WorkTests(unittest.TestCase):
 
     def test_a_halt_stops_before_any_call(self):
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"})})
-        result = self.worker(runner, probe=lambda usage: ("halted by /harness halt", False)).run()
+        result = self.worker(runner, probe=lambda usage: ("halted by /harness halt", "halt")).run()
         self.assertEqual(result["status"], "interrupted")
         self.assertEqual(runner.calls, [])
         self.assertNotIn("bundle", result)
@@ -174,7 +222,7 @@ class WorkTests(unittest.TestCase):
         calls = {"n": 0}
         def probe(usage):
             calls["n"] += 1
-            return ("stopped by @jgoetzmann", True) if calls["n"] > 1 else None
+            return ("stopped by @jgoetzmann", "stop") if calls["n"] > 1 else None
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
         result = self.worker(runner, probe=probe).run()
         self.assertEqual(result["status"], "stopped")

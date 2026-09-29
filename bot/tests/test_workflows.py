@@ -62,6 +62,11 @@ class NightWorkflowTests(unittest.TestCase):
         crons = re.findall(r'cron: "([^"]+)"', self.text)
         self.assertEqual(crons, ["17 2-13 * * *"])
 
+    def test_deliver_takes_the_item_from_the_plan_jobs_outputs(self):
+        deliver = job(self.text, "deliver")
+        self.assertIn("needs.plan.outputs.action", deliver)
+        self.assertIn("needs.plan.outputs.number", deliver)
+
     def test_the_budget_fits_inside_the_job_timeout(self):
         work = job(self.text, "work")
         timeout = int(re.search(r"timeout-minutes: (\d+)", work).group(1))
@@ -77,7 +82,8 @@ class CommandsWorkflowTests(unittest.TestCase):
         self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", self.text)
         self.assertNotIn("claude-code", self.text)
         self.assertNotIn("github.event.pull_request.head", self.text)
-        self.assertIn("ref: ${{ github.event.repository.default_branch }}", self.text)
+        self.assertIn("ref: ${{ github.event.repository.default_branch || 'main' }}", self.text)
+        self.assertNotIn("concurrency:", self.text)
 
     def test_the_bot_does_not_wake_itself(self):
         cfg = config.load(env={})

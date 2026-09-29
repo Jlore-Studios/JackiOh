@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import copy
 import json
+import random
+import time
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
@@ -49,10 +51,12 @@ def normalise(data: Any) -> dict[str, Any]:
 class StateStore:
     """Reads and updates the state file on a branch through a `GitHub` client."""
 
-    def __init__(self, gh: Any, branch: str = STATE_BRANCH, path: str = STATE_FILE) -> None:
+    def __init__(self, gh: Any, branch: str = STATE_BRANCH, path: str = STATE_FILE,
+                 sleep: Callable[[float], None] = time.sleep) -> None:
         self.gh = gh
         self.branch = branch
         self.path = path
+        self._sleep = sleep
 
     def load(self) -> dict[str, Any]:
         text, _ = self.gh.get_file(self.path, self.branch)
@@ -92,6 +96,8 @@ class StateStore:
                 return after
             except GitHubError as exc:
                 if exc.status in (409, 422):
+                    # Two writers raced; back off a little, differently each time, and re-read.
+                    self._sleep(random.uniform(0.05, 0.3))
                     continue
                 raise
         raise StateConflict(f"{self.path} on {self.branch} kept changing; gave up after "

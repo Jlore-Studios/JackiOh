@@ -24,7 +24,7 @@ def header(text: str, tag: str) -> tuple[Any, str]:
         return None, source.strip()
     tail = source[match.end():]
     try:
-        value, used = json.JSONDecoder().raw_decode(tail)
+        value, used = json.JSONDecoder(strict=False).raw_decode(tail)
     except ValueError:
         end = tail.find("-->")
         return None, (tail[end + 3:] if end >= 0 else tail).strip()
@@ -76,6 +76,7 @@ class Review:
     verdict: str  # "approve" | "changes" | "unreadable"
     findings: list[Finding] = field(default_factory=list)
     body: str = ""
+    reviewed_sha: str = ""
 
     @property
     def blocking(self) -> list[Finding]:
@@ -87,7 +88,9 @@ class Review:
 
     @property
     def approved(self) -> bool:
-        return self.readable and self.verdict == "approve" and not self.blocking
+        """No blocking finding in a readable review. A `changes` verdict that names nothing
+        blocking has nothing for a builder to fix, so it counts as approval too."""
+        return self.readable and not self.blocking
 
     def to_dict(self) -> dict:
         return {"verdict": self.verdict, "readable": self.readable,

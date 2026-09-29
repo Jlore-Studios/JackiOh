@@ -71,6 +71,47 @@ class Git:
         text = self.out("diff", "--name-only", "--no-renames", f"{base}...{head}")
         return [line for line in text.splitlines() if line.strip()]
 
+    def names_between(self, a: str, b: str = "HEAD") -> list[str]:
+        """Paths that differ between two commits (a two-dot diff, renames split)."""
+        text = self.out("diff", "--name-only", "--no-renames", a, b)
+        return [line for line in text.splitlines() if line.strip()]
+
+    def blob(self, ref: str, path: str) -> str | None:
+        """The blob id of `path` at `ref`, or None when it is not there."""
+        proc = self.run("rev-parse", "--verify", "--quiet", f"{ref}:{path}", check=False)
+        return proc.stdout.strip() or None
+
+    def unsanctioned(self, head: str, anchors: list[str], patterns: Iterable[str]) -> list[str]:
+        """Paths matching `patterns` that `head` holds differently from every anchor.
+
+        The anchors are the commits the work may legitimately carry content from: where the
+        branch started and the default branch it merged. A path that equals one of them came
+        from there; a path that equals none was changed by the work itself."""
+        candidates: set[str] = set()
+        for anchor in anchors:
+            candidates.update(self.names_between(anchor, head))
+        found = []
+        for path in sorted(candidates):
+            if not matches(path, patterns):
+                continue
+            at_head = self.blob(head, path)
+            if any(self.blob(anchor, path) == at_head for anchor in anchors):
+                continue
+            found.append(path)
+        return found
+
+    def restore_from(self, anchors: list[str], paths: Iterable[str]) -> None:
+        """Put each path back as the first anchor that has it holds it, or delete it."""
+        for path in paths:
+            source = next((a for a in anchors if self.blob(a, path)), None)
+            if source is not None:
+                self.run("checkout", source, "--", path)
+            else:
+                self.run("rm", "-r", "--quiet", "--cached", "--ignore-unmatch", "--", path)
+                target = self.cwd / path
+                if target.is_file() or target.is_symlink():
+                    target.unlink()
+
     def diff(self, base: str, head: str = "HEAD", max_chars: int = 200_000) -> tuple[str, bool]:
         """The merge-base diff and whether it was cut to `max_chars`."""
         text = self.out("diff", "--stat", "--patch", "--no-color", f"{base}...{head}")

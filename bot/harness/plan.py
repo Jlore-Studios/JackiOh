@@ -31,6 +31,8 @@ def nothing(reason: str) -> dict[str, Any]:
 
 
 def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: str = "auto") -> dict:
+    """Decide what this run does. Outside the window only forced work runs: the `force` of this
+    dispatch, or an item an operator queued with `--force`, which outlives the run it started."""
     cfg = ctx.cfg
     now = ctx.now()
     if mode not in MODES:
@@ -40,13 +42,17 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     state = ctx.store.load()
     if state.get("halted"):
         return nothing("halted by /harness halt")
-    if not force and not ctx.window.is_open(now):
-        return nothing(f"outside the night window ({ctx.window.describe()})")
     refusal = usage_refusal(state, dict(cfg.usage_stop), now)
     if refusal:
         return nothing(f"usage stop: {refusal}")
+    in_window = ctx.window.is_open(now)
+    only_forced = not in_window and not force
+    if only_forced and not any(c.forced for c in candidates(ctx, state)):
+        return nothing(f"outside the night window ({ctx.window.describe()})")
     notes = housekeeping(ctx, state)
     queue = candidates(ctx, ctx.store.load())
+    if only_forced:
+        queue = [c for c in queue if c.forced]
     if item is not None:
         queue = [c for c in queue if c.number == int(item)]
     if mode in ("build", "revise"):
@@ -56,12 +62,12 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
             planned = claim(ctx, candidate.number, candidate.kind)
             if planned is not None:
                 planned["housekeeping"] = notes
-                planned["forced"] = bool(force)
+                planned["forced"] = bool(force or candidate.forced)
                 return planned
     if item is not None and mode != "suggest":
         return nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times)")
-    if mode in ("auto", "suggest"):
-        planned = suggestion_plan(ctx, force=force or mode == "suggest")
+    if mode in ("auto", "suggest") and not only_forced:
+        planned = suggestion_plan(ctx, force=mode == "suggest")
         if planned is not None:
             return planned
     return {**nothing("nothing is queued"), "housekeeping": notes}
@@ -96,7 +102,8 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
             continue
         pull = ctx.gh.get_pull(int(thread["number"]))
-        if pull.get("mergeable_state") == "dirty":
+        record = state["items"].get(str(pull["number"]), {})
+        if pull.get("mergeable_state") == "dirty" and not record.get("stop_requested"):
             number = int(pull["number"])
             set_state_label(ctx, number, names, LABEL_REVISE)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
@@ -129,6 +136,7 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
             "branch": branch_for_issue(number),
             "thread": threads.issue_thread(ctx.gh, ctx.trust, number, cfg.bot_login),
             "previous_findings": record.get("last_findings") or [],
+            "previous_question": record.get("question") or "",
         }
         message = (f"Starting work on this now ([run]({cfg.run_url})). I build it, run the "
                    f"repository's checks, and have an adversarial reviewer read the change, up to "
@@ -143,7 +151,7 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
             return None
         source = str(record.get("source") or "request")
         feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
-                                         record.get("last_push_at"))
+                                         record.get("feedback_since"))
         if source == "ci":
             feedback += "\n\n" + ci_logs(ctx, record.get("ci_run_id"))
         issue_number = threads.linked_issue(pull)

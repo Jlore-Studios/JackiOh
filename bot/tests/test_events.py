@@ -206,18 +206,43 @@ class ReviewAndCiTests(unittest.TestCase):
         events.handle(self.ctx, "pull_request_review", payload)
         self.assertIn(LABEL_REVISE, self.gh.label_names(9))
 
+    def ci(self, attempt=1, sha="s1"):
+        run = {"name": "CI", "conclusion": "failure", "head_branch": "bot/issue-5", "head_sha": sha,
+               "id": 99, "run_attempt": attempt, "html_url": "u", "pull_requests": [{"number": 9}]}
+        # The bot pushed the branch, so GitHub names it as the sender of the CI run.
+        return events.handle(self.ctx, "workflow_run",
+                             {"action": "completed", "sender": BOT, "workflow_run": run})
+
     def test_ci_failure_is_rerun_once_then_fixed(self):
-        run = {"name": "CI", "conclusion": "failure", "head_branch": "bot/issue-5", "head_sha": "s1",
-               "id": 99, "run_attempt": 1, "html_url": "u", "pull_requests": [{"number": 9}]}
-        payload = {"action": "completed", "sender": OPERATOR, "workflow_run": run}
-        events.handle(self.ctx, "workflow_run", payload)
+        self.ci()
         self.assertEqual(self.gh.reruns, [99])
         self.assertNotIn(LABEL_REVISE, self.gh.label_names(9))
-        run["run_attempt"] = 2
-        events.handle(self.ctx, "workflow_run", payload)
+        self.ci(attempt=2)
         self.assertIn(LABEL_REVISE, self.gh.label_names(9))
         record = self.ctx.store.load()["items"]["9"]
-        self.assertEqual((record["source"], record["ci_run_id"]), ("ci", 99))
+        self.assertEqual((record["source"], record["ci_run_id"], record["ci_fixes"]), ("ci", 99, 1))
+
+    def test_ci_fixes_are_capped(self):
+        self.ctx.store.update(lambda s: state_item(s, 9).update(ci_fixes=3,
+                                                                ci_reruns={"s1": 1}))
+        self.gh.threads[9]["auto_merge"] = {"merge_method": "squash"}
+        self.gh.auto_merge["PR_9"] = "squash"
+        self.ci(attempt=2)
+        self.assertEqual(self.gh.label_names(9), {LABEL_PR, LABEL_BLOCKED})
+        self.assertNotIn("PR_9", self.gh.auto_merge)
+        self.assertIn("It needs a person", self.gh.bot_comments(9)[-1])
+
+    def test_a_person_asking_again_does_not_reset_the_ci_cap(self):
+        self.ctx.store.update(lambda s: state_item(s, 9).update(ci_fixes=2))
+        events.handle(self.ctx, "issue_comment",
+                      comment_event(9, "/harness revise try again", pr=True))
+        self.assertEqual(self.ctx.store.load()["items"]["9"]["ci_fixes"], 2)
+
+    def test_ci_leaves_a_stopped_or_blocked_pr_alone(self):
+        self.ctx.store.update(lambda s: state_item(s, 9).update(stop_requested=True))
+        self.ci(attempt=3)
+        self.assertEqual(self.gh.reruns, [])
+        self.assertEqual(self.gh.label_names(9), {LABEL_PR})
 
     def test_ci_on_a_stale_commit_or_a_human_pr_is_ignored(self):
         run = {"name": "CI", "conclusion": "failure", "head_branch": "bot/issue-5", "head_sha": "old",
@@ -235,7 +260,8 @@ class ReviewAndCiTests(unittest.TestCase):
     def test_a_merged_bot_pr_clears_the_issue(self):
         pull = self.gh.get_pull(9)
         pull["merged"] = True
-        events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": OPERATOR,
+        # Auto-merge is credited to whoever turned it on: the bot.
+        events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": BOT,
                                                          "pull_request": pull})
         self.assertEqual(self.gh.label_names(5), set())
         self.assertTrue(self.ctx.store.load()["items"]["9"]["merged"])

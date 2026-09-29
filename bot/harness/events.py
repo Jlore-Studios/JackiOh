@@ -12,10 +12,11 @@ from typing import Any
 from harness import commands
 from harness.clock import iso
 from harness.commands import Command
-from harness.config import LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, MARKER
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_WORKING, MARKER)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import label_names, queue_build, queue_revise, stop
+from harness.queue import label_names, queue_build, queue_revise, set_state_label, stop
 from harness.state import item as state_item
 from harness import threads
 from harness.status import report
@@ -24,11 +25,18 @@ from harness.trust import LEVEL_NAMES
 ACTIONS_BOT = "github-actions[bot]"
 
 
+#: Events handled even when the bot sent them: CI runs its own pushes started, and pull requests
+#: auto-merge closed (GitHub credits the merge to whoever turned auto-merge on).
+FROM_THE_BOT_TOO = {("workflow_run", "completed"), ("pull_request_target", "closed"),
+                    ("pull_request", "closed")}
+
+
 def handle(ctx: Context, name: str, payload: dict[str, Any]) -> list[str]:
     sender = str((payload.get("sender") or {}).get("login", ""))
-    if sender.lower() in (ctx.cfg.bot_login.lower(), ACTIONS_BOT):
-        return ["ignored: the bot's own event"]
     action = payload.get("action")
+    if sender.lower() in (ctx.cfg.bot_login.lower(), ACTIONS_BOT) and (
+            (name, action) not in FROM_THE_BOT_TOO):
+        return ["ignored: the bot's own event"]
     if name == "issue_comment" and action == "created":
         return on_comment(ctx, payload)
     if name == "pull_request_review" and action == "submitted":
@@ -241,15 +249,38 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
         if pull.get("state") != "open" or (pull.get("head") or {}).get("sha") != run.get("head_sha"):
             out.append(f"#{number}: stale run")
             continue
-        if LABEL_PR not in label_names(pull):
+        names = label_names(pull)
+        if LABEL_PR not in names:
             out.append(f"#{number}: not a bot pull request")
             continue
-        if int(run.get("run_attempt") or 1) <= ctx.cfg.ci_reruns:
+        record = ctx.store.load()["items"].get(str(number), {})
+        if names & {LABEL_BLOCKED, LABEL_REVISE, LABEL_WORKING} or record.get("stop_requested"):
+            out.append(f"#{number}: blocked, stopped or already queued; left alone")
+            continue
+        sha = str(run.get("head_sha"))
+        reruns = dict(record.get("ci_reruns") or {})
+        if int(reruns.get(sha, 0)) < ctx.cfg.ci_reruns:
             ctx.gh.rerun_failed_jobs(run["id"])
-            out.append(f"#{number}: re-ran the failed jobs of run {run['id']} once")
+            reruns[sha] = int(reruns.get(sha, 0)) + 1
+            ctx.store.update(lambda s: state_item(s, number).update(ci_reruns=reruns),
+                             f"ci rerun #{number}")
+            out.append(f"#{number}: re-ran the failed jobs of run {run['id']}")
+            continue
+        fixes = int(record.get("ci_fixes", 0))
+        link = f"[run]({run.get('html_url')})"
+        if fixes >= ctx.cfg.max_failures:
+            set_state_label(ctx, number, names, LABEL_BLOCKED)
+            if pull.get("auto_merge"):
+                try:
+                    ctx.gh.disable_auto_merge(pull["node_id"])
+                except GitHubError:
+                    pass
+            ctx.gh.create_comment(number, f"CI failed again ({link}) after {fixes} tries at "
+                                  "fixing it, so I stopped. It needs a person.")
+            out.append(f"#{number}: blocked after {fixes} CI fixes")
             continue
         reply = queue_revise(ctx, number, by=ctx.cfg.bot_login, source="ci",
-                             extra={"ci_run_id": run["id"], "ci_sha": run.get("head_sha")})
-        ctx.gh.create_comment(number, f"CI failed again ([run]({run.get('html_url')})). {reply}")
+                             extra={"ci_run_id": run["id"], "ci_sha": sha, "ci_fixes": fixes + 1})
+        ctx.gh.create_comment(number, f"CI failed again ({link}). {reply}")
         out.append(f"#{number}: queued a CI fix")
     return out or ["no open pull request for this run"]

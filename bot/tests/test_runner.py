@@ -25,6 +25,10 @@ FAKE_CLAUDE = textwrap.dedent('''\
     emit({{"type": "system", "subtype": "init"}})
     if mode == "sleep":
         time.sleep(30)
+    if mode == "daemon":
+        import subprocess
+        child = subprocess.Popen(["setsid", "sleep", "300"], start_new_session=True)
+        open(os.environ["FAKE_ENV_DUMP"] + ".pid", "w").write(str(child.pid))
     status = "rejected" if mode == "limit" else "allowed"
     emit({{"type": "rate_limit_event", "rate_limit_info": {{"status": status,
           "resetsAt": 1790712000, "unifiedWindows": {{
@@ -98,6 +102,32 @@ class RunnerTests(unittest.TestCase):
         result = self.run_fake("sleep", timeout=2)
         self.assertTrue(result.timed_out)
         self.assertFalse(result.ok)
+
+    def test_what_the_call_leaves_running_is_killed_and_nothing_else(self):
+        import subprocess
+        bystander = subprocess.Popen(["sleep", "300"])  # another program of the same user
+        try:
+            result = self.run_fake("daemon")
+            self.assertTrue(result.ok, result.error)
+            pid = int(Path(str(self.dump) + ".pid").read_text())
+            for _ in range(50):
+                if not Path(f"/proc/{pid}").exists() or "Z" in Path(f"/proc/{pid}/stat").read_text().split()[2]:
+                    break
+                import time
+                time.sleep(0.05)
+            alive = Path(f"/proc/{pid}").exists() and "Z" not in Path(f"/proc/{pid}/stat").read_text().split()[2]
+            self.assertFalse(alive, "the daemon the call started is still running")
+            self.assertIsNone(bystander.poll(), "an unrelated process was killed")
+        finally:
+            bystander.kill()
+            bystander.wait()
+
+    def test_an_auth_failure_is_infrastructure_not_a_rate_limit(self):
+        from harness.runner import RunResult
+        result = RunResult(False, "", 1, error="Invalid API key · Please run /login")
+        self.assertTrue(result.infra)
+        self.assertFalse(result.rate_limited)
+        self.assertFalse(RunResult(False, "", 1, error="max turns reached").infra)
 
     def test_missing_binary(self):
         result = ClaudeCli(str(self.tmp / "nope")).run(self.request())
