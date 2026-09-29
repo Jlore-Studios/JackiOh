@@ -56,17 +56,8 @@ export const radiant: Script = {
     chosen: (ctx) => {
       const defId = picked(ctx);
       if (defId === undefined) return [];
-      // BLOCKED: `addToHand` (engine/src/effects/addToHand.ts:9) takes `radiant` and
-      // `costOverride` but no `costMod`, and the discount cannot be applied in a second effect
-      // either: the card the Discover names does not exist until `addToHand` creates it, and
-      // `setCostMod`'s only way to name a card is a `TargetSpec` — `{ of: "chosen" }` resolves
-      // `ctx.targets[0]`, which on this path is a `mode` selection (a def id), so
-      // `effects/targets.resolveTarget` returns null for it (targets.ts:36). §8.1 asks for a
-      // permanent `costMod`, not a `costOverride` (R65 starts from the override in place of the
-      // printed cost, which would also erase any other discount the card carries), so this waits
-      // for the one-line engine addition rather than printing a different rule:
-      //     addToHand(args: { defId; player?; radiant?; costOverride?; costMod?: number })
-      //       ... if (args.costMod !== undefined) card.costMod += args.costMod;
+      // §8.1 asks for a permanent `costMod`, not a `costOverride`: R65 starts from the override in
+      // place of the printed cost, which would also erase any other discount the card carries.
       return [addToHand({ defId, costMod: -RADIANT_DISCOUNT })];
     },
   },

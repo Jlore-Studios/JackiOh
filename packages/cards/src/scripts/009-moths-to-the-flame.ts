@@ -12,35 +12,14 @@
 //
 // Armor is not this card's business either: §4.4 step 2 subtracts the defender's armor from each
 // incoming hit, so the radiant face's printed Armor 1 reduces every forced attack by 1 on its own.
+//
+// A card file returns `Effect[]` and never touches state (CLAUDE.md rule 5), so it cannot call
+// `combat.forceAttacksOn`, which takes an `EngineSink`. It goes through `forcedAttacksOn`
+// (engine/src/effects/combat.ts, beside #60 Bear Honeypot's `forcedAttacks`), a thin wrapper:
+// `EffectContext` satisfies `EngineSink` structurally, so the wrapper names the enemy's units in
+// lane order and hands the rest to `forceAttacksOn`, and R53 stays in one place.
 
 import type { Script } from "@jackioh/engine";
-// BLOCKED: `forcedAttacksOn` does not exist in `packages/engine/src/effects/index.ts`.
-//
-// Forced attack is deliberately NOT on the card-script surface today: the effects barrel says so in
-// its header ("Verbs that §6.3 lists but this directory does not implement … Forced attack, Cancel
-// attack and Switch position as a player action (`../combat`)"), and the engine functions that do
-// the work — `forceAttack` and `forceAttacksOn` (engine/src/combat.ts:323, :345) — take an
-// `EngineSink`, not an `Effect`. A card file may not call them: it returns `Effect[]` and never
-// touches state (CLAUDE.md rule 5).
-//
-// So this card needs one new verb, and #60 Bear Honeypot needs the same one:
-//
-//     // effects/combat.ts, re-exported from effects/index.ts
-//     export function forcedAttacksOn(args: { target?: TargetSpec; attackers?: PlayerSpec }): Effect {
-//       return {
-//         kind: "forcedAttacksOn",
-//         apply(ctx): void {
-//           const target = resolveTarget(ctx, args.target ?? { of: "self" });
-//           if (target === null) return;
-//           // §4.2: "in lane order, as `activeUnitsOf` reports it" (R53).
-//           forceAttacksOn(ctx, activeUnitsOf(ctx.state, playerOf(ctx, args.attackers ?? "enemy")), target);
-//         },
-//       };
-//     }
-//
-// `EffectContext` already satisfies `EngineSink` structurally (state, events, rng), so the wrapper
-// is the whole of it: lane order, the per-attack state check and the "stop when the target is gone"
-// loop are all `forceAttacksOn`'s, and R53 stays in one place.
 import { forcedAttacksOn } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 

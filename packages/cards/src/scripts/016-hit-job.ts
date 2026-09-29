@@ -12,17 +12,12 @@
 // §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the centre
 // line, and the target is picked with the play rather than by a prompt (R81), so it arrives in
 // `ctx.targets` as `{ of: "chosen" }`.
+//
+// The neighbours are `destroyAdjacentTo` (engine/src/effects/destroy.ts), which marks lanes N-1 and
+// N+1 on the target's own side and row and only marks, exactly like `destroy`. It fizzles silently
+// when the target is off the field or has no neighbour.
 
 import type { Script } from "@jackioh/engine";
-// BLOCKED (engine, effects/destroy.ts): `destroyAdjacentTo` does not exist yet. The effects library
-// has no adjacency-aware verb and `TargetSpec` cannot name an arbitrary instance, so radiant Hit Job
-// cannot be written without it and this import is red until M3-T1 adds it. Proposed:
-//   export function destroyAdjacentTo(args: { target: TargetSpec }): Effect
-// It resolves `args.target` to a unit, reads its zone with `slotOf`, and marks every unit that
-// `zones.adjacent(ref)` reports — lane N-1 and N+1 on the TARGET's own side and row (§3.1), never
-// across sides. Marking only, exactly like `destroy`, so Indestructible neighbours survive (R46) and
-// everything this spell marks dies in the one state check that follows (R59). It must fizzle
-// silently when the target is not a unit, is off the field, or has no occupied neighbour.
 import { destroy, destroyAdjacentTo } from "@jackioh/engine/effects";
 import type { TargetDecl } from "@jackioh/shared";
 import { cardDef } from "../catalog-data";

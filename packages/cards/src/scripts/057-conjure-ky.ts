@@ -15,17 +15,10 @@
 // R74/§5.2: a card generated "Radiant" is Radiant — an instance flag on the created card, not a
 // separate def, which is why the radiant face is two calls rather than one with a ratio.
 //
-// BLOCKED (reported, not worked around): `addRandomFromCatalog` is not in the effects barrel
-// (engine/src/effects/index.ts). A hook may not roll dice itself — `ctx.rng.*` advances `rngCursor`,
-// which is state — so the pick has to happen inside an effect, and `addToHand` only takes a fixed
-// `defId`. The verb this file is written against:
-//
-//   addRandomFromCatalog({ query: CatalogQueryArgs, count: number, player?: "self" | "enemy",
-//                          radiant?: boolean, costOverride?: number }): Effect
-//
-// picking `count` defs from `query(...)` with `ctx.rng`, repeats allowed (R60), and creating each in
-// `player`'s hand through the same pipeline `addToHand` uses (§2.4, R4). Shared with #54 Straaza
-// and #59 Unbiased Immigration.
+// A hook may not roll dice itself — `ctx.rng.*` advances `rngCursor`, which is state — so the picks
+// happen inside `addRandomFromCatalog` (engine/src/effects/addToHand.ts), shared with #54 Straaza
+// and #59 Unbiased Immigration. It picks `count` defs from the pool with `ctx.rng`, repeats allowed
+// (R60), and creates each in the hand through the same pipeline `addToHand` uses (§2.4, R4).
 
 import type { CatalogQueryArgs, Script } from "@jackioh/engine";
 import { addRandomFromCatalog } from "@jackioh/engine/effects";
@@ -34,10 +27,9 @@ import { cardDef } from "../catalog-data";
 export const def = cardDef("core-057");
 
 /**
- * §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeIndex`). Passed
- * explicitly because the verb cannot be trusted to know the caller's index yet — see the report:
- * `addRandomFromCatalog` should exclude the generating card by default, as `discoverFromCatalog`
- * already does (engine/src/effects/choose.ts).
+ * §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeIndex`).
+ * `addRandomFromCatalog` already excludes the running card's own index, as `discoverFromCatalog`
+ * does (`catalog.excludingIndex`), so naming "57" here repeats it and the pool comes out the same.
  */
 const KY_POOL: CatalogQueryArgs = { tags: ["KY"], excludeIndex: "57" };
 
