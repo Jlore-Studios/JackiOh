@@ -15,6 +15,10 @@
       "stop_requested": false
     }
   },
+  "last_infra": {
+    "at": "2026-09-29T16:42:31Z",
+    "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+  },
   "last_run": {
     "at": "2026-09-29T16:41:46Z",
     "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36599564116",
