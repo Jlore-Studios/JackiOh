@@ -18,10 +18,12 @@
       "stop_requested": false
     },
     "33": {
+      "closed_at": "2026-09-29T19:12:16Z",
       "failures": 0,
       "feedback_since": "2026-09-29T17:45:52Z",
       "issue": 31,
-      "kind": "revise"
+      "kind": "revise",
+      "merged": true
     }
   },
   "last_infra": {
