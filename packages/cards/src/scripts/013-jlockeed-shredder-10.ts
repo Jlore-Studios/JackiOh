@@ -16,30 +16,11 @@
 // "endOfTurn", player)` narrows the scan to the player whose turn is ending, so the hook simply
 // never runs on the opponent's end of turn (the comment there cites this card).
 //
-// BLOCKED: the effects library has no set-wide damage verb. `damage` is single-target and its
-// `TargetSpec` can only name `self`, `selfHero`, `enemyHero` or a `chosen` selection — there is no
-// way for a card file to address "every enemy unit", and enumerating them would mean indexing the
-// players of the state inside a card file — CLAUDE.md rule 5, and the very thing BUILD M3-T1's
-// acceptance grep over `packages/cards` expects zero of. The engine's own fixtures prove the gap: both
-// `packages/engine/test/fixtures/scripts.ts` (line 21) and `packages/engine/test/rulings-b.test.ts`
-// (line 241) had to write a private `damageAllEnemies(amount)` to test this very card. So the verb
-// belongs in the library, in a new `packages/engine/src/effects/damageAll.ts` re-exported from
-// `packages/engine/src/effects/index.ts` (line 76, beside `damage`):
-//
-//   damageAll(args: {
-//     side: PlayerSpec | "both";
-//     amount: number;
-//     heroes?: boolean;        // include the hero(es) of the named side(s)
-//     ignoreArmor?: boolean;   // True Strike, §4.4 step 2
-//   }): Effect
-//
-// which deals `amount` as one `dealDamage` per unit in lane order (`activeUnitsOf`) and then, with
-// `heroes`, one to the hero — all inside ONE effect, so no state check runs between the hits (R59).
-// #86 and #88 want the same verb over other sides, which is why `side` is a `PlayerSpec | "both"`
-// rather than a fixed "enemy".
+// The hits are `damageAll` (engine/src/effects/damage.ts): one `dealDamage` per enemy unit in lane
+// order and then, with `heroes`, one to the enemy hero — all inside ONE effect, so no state check
+// runs between the hits (R59).
 
 import type { Effect, Script } from "@jackioh/engine";
-// BLOCKED: `damageAll` does not exist yet — see the note above.
 import { damageAll } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 

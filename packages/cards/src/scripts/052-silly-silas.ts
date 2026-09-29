@@ -48,16 +48,10 @@
 // `rotateRings` already honours through its own `radiant` argument — so the wrapper passes
 // `radiant: ctx.radiant` and there is exactly one rotation implementation in the game.
 //
-// BLOCKED (reported, not worked around): the effects barrel has no Rotate verb — the §6.3 Rotate
-// row is implemented in `subsystems/rotation.ts` and the barrel's own header lists Rotate among the
-// verbs "[that] live outside it and are not part of the card-script surface". The wrapper this file
-// is written against, to be added to engine/src/effects (and re-exported by the barrel):
-//
-//   rotate({ direction: "left" | "right" }): Effect
-//
-// whose `apply(ctx)` is one call, `rotateRings(ctx, { direction: args.direction, perspective:
-// ctx.controller, radiant: ctx.radiant })` — an `EffectContext` already satisfies `EngineSink`
-// (`state`, `events`, `rng`), so the wrapper is the whole of it and no rotation logic moves.
+// THE WRAPPER IS `rotate` (engine/src/effects/rotate.ts), the effects barrel's Rotate verb. Its
+// `apply(ctx)` is one call to `rotateRings` — an `EffectContext` already satisfies `EngineSink`
+// (`state`, `events`, `rng`) — and its defaults are the controller's perspective and the running
+// face's `radiant`, so `rotate({ direction })` is the whole call and no rotation logic moves.
 
 import type { EffectContext, Hook, Script } from "@jackioh/engine";
 import { chosenOptions, rotate } from "@jackioh/engine/effects";

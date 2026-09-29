@@ -13,22 +13,14 @@
 // Bean's hand card and Silly Silas's direction are chosen with the play and never pause resolution".
 // Flood's "choose one" is therefore a declared `modes` and NOT a `PendingChoice`: the pick arrives in
 // `ctx.modes`, which `chosenOptions` reads (after any prompt mode pick, so one helper covers both).
+//
+// The sweeps are `bounceAll` (effects/move.ts) and `destroyAll` (effects/destroy.ts), over a board
+// scope whose rows default to the units. `bounceAll` sends each card through the same body as
+// `bounce`, so R11 and R4 hold card by card; `destroyAll` marks every match and stops, exactly like
+// `destroy`, so Indestructible survives (R46) and everything dies in the one state check that
+// follows (R59).
 
 import type { EffectContext, Effect, Script } from "@jackioh/engine";
-// BLOCKED (engine, effects/move.ts and effects/destroy.ts): `bounceAll` and `destroyAll` do not
-// exist yet. The effects library has only single-target `bounce`/`destroy` and `TargetSpec` cannot
-// name an arbitrary instance, so no face of Flood can be written without them and this import is red
-// until M3-T1 adds them. Proposed, in the house style of `stealAll`/`switchAllPositions`/
-// `buffAllUnits` (`{ side: PlayerSpec | "both" }`):
-//   export function bounceAll(args: { side: PlayerSpec | "both"; of?: ("unit" | "backrow")[] }): Effect
-//     — `of` defaults to ["unit"]; bounces in side-then-lane order (the controller's side first,
-//       lanes 1-5, §3.2), each card through the existing `bounce` body so R11 and R4 are unchanged.
-//   export function destroyAll(args: {
-//     side: PlayerSpec | "both"; of?: ("unit" | "backrow")[]; type?: CardType | CardType[];
-//     tags?: Tag[]; notTags?: Tag[];
-//   }): Effect
-//     — marks every match and stops, exactly like `destroy`, so Indestructible survives (R46) and
-//       everything dies in the one state check that follows (R59).
 import { bounceAll, chosenOptions, destroyAll, draw } from "@jackioh/engine/effects";
 import type { ModeDecl } from "@jackioh/shared";
 import { cardDef } from "../catalog-data";

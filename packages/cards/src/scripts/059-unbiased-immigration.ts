@@ -21,12 +21,9 @@
 // offers a Token-tagged card nor the generating card, which `{ set: "Core" }` plus `excludeIndex`
 // spell out. R4: an eleventh card is burned to the graveyard by the add-to-hand pipeline.
 //
-// BLOCKED (reported, not worked around): `addRandomFromCatalog` is not in the effects barrel. A
-// hook may not roll dice — `ctx.rng.*` advances `rngCursor`, which is state — so the pick belongs
-// inside an effect. Written against the same verb #57 Conjure KY and #54 Straaza need:
-//
-//   addRandomFromCatalog({ query: CatalogQueryArgs, count: number, player?: "self" | "enemy",
-//                          radiant?: boolean, costOverride?: number }): Effect
+// A hook may not roll dice — `ctx.rng.*` advances `rngCursor`, which is state — so the pick happens
+// inside `addRandomFromCatalog` (engine/src/effects/addToHand.ts), the verb #54 Straaza and #57
+// Conjure KY use too.
 
 import type { CatalogQueryArgs, Effect, EffectContext, Hook, Script } from "@jackioh/engine";
 import { addRandomFromCatalog } from "@jackioh/engine/effects";
