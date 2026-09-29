@@ -1,0 +1,255 @@
+# The JackiOh night bot
+
+While you sleep, `@jgoetzmann-bot` works through the issues you hand it. It builds each one with
+Claude Opus at extra-high effort, runs the repository's checks, and has a second, independent
+Opus session review the change adversarially. It goes round that loop until the reviewer
+approves, then opens a pull request that merges itself into `main` once CI passes. When it has
+nothing to do, it proposes improvements to the game as issues, at most four open at a time.
+
+It runs entirely on GitHub Actions and is modelled on
+[bright-bots-harness](https://github.com/jgoetzmann/bright-bots-harness), cut down to one
+repository and reshaped around an adversarial review loop and auto-merge.
+
+```mermaid
+flowchart TD
+  subgraph you["You, any time of day"]
+    I["Issue: add the bot:build label, assign @jgoetzmann-bot,<br/>or comment /harness build or @jgoetzmann-bot &lt;request&gt;"]
+    P["Pull request: comment @jgoetzmann-bot &lt;change&gt;,<br/>request changes, or add bot:revise"]
+    K["/harness halt · start · status · stop · suggest · run<br/>(add --force to skip the wait)"]
+  end
+  I --> E
+  P --> E
+  K --> E
+  E["bot-commands.yml, within seconds<br/>trust check, queue label, reply"]
+  E -- "--force" --> PL
+  subgraph night["bot-night.yml, hourly from 21:00 to 07:00 Central"]
+    PL["plan (bot token, no model)<br/>HALT? halted? window? usage left?<br/>claim one item: bot:working"]
+    PL --> B["work (Claude token only)<br/>builder: Opus, xhigh effort,<br/>subagents and worktrees"]
+    B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
+    G --> R["adversarial reviewer<br/>a fresh Opus session, read-only"]
+    R -- "blocking findings or red checks<br/>(up to 4 rounds)" --> F["a fresh builder<br/>fixes the findings"]
+    F --> G
+    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push,<br/>open the PR, turn on auto-merge"]
+    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues"]
+  end
+  D --> CI["CI on the PR: lint, typecheck, unit, fuzz,<br/>coverage, AI gates, Postgres, e2e, bot selftest"]
+  CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
+  CI -- "red (after one re-run)" --> E
+```
+
+## Giving it work
+
+Any of these queues an issue for the next night window (21:00 to 07:00 America/Chicago):
+
+- add the **`bot:build`** label;
+- **assign** `@jgoetzmann-bot`;
+- comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
+  of the request.
+
+To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`** or
+**`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
+It also revises its own pull requests without being asked: when CI fails twice on the same
+commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
+moves on and leaves the branch with conflicts. After three tries at fixing CI on one pull request
+it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
+revision lands. It can revise a pull request a person opened too, as long as the branch is in this
+repository. It never turns on auto-merge for someone else's pull request.
+
+A comment you leave while it is working on the thread is not lost: once the run ends, it queues
+another pass to answer it. Auto-merge waits for that pass.
+
+Add **`--force`** to `build`, `revise` or `suggest` to start now instead of waiting for the window.
+A forced item stays forced until it is done, so it runs even if a later scheduled run picks it up
+outside the window.
+
+The issue is the spec, so write it the way you would for a careful contributor: what should
+happen, where, and how you would check it. The builder reads the issue body, every comment from
+people on the trust list, `CLAUDE.md` and `SPEC.md`. Comments from anyone else are left out.
+
+## Commands
+
+Put one command per line in any issue or PR comment, as `/harness <verb>`, `/harness-<verb>` or
+`@jgoetzmann-bot <verb>`. Quoted lines and fenced code blocks are ignored, so quoting the bot back
+at it runs nothing. It puts 👀 on your comment at once and 🚀 when it has answered.
+
+| Verb | What it does | Where | Level |
+|---|---|---|---|
+| `build [notes]` | queue this issue (on a PR, same as `revise`) | issue | 2 |
+| `revise <notes>` | queue a revision of this pull request | PR | 2 |
+| `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
+| `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
+| `status` | halt state, window, usage, what is running and queued | anywhere | 1 |
+| `halt [reason]` | stop all model work until `start` | anywhere | 3 |
+| `start` | lift a halt (`start --force` also starts a run) | anywhere | 3 |
+| `run [#n]` | start a night run now, outside the window if need be | anywhere | 3 |
+
+Aliases: `work` (build), `fix` and `update` (revise), `help` (status), `resume` and `unhalt`
+(start), `go` (run). Any other words after `@jgoetzmann-bot` are a request: a build on an issue,
+a revision on a PR.
+
+**Who may do what** comes from [`.harness/trust.txt`](../.harness/trust.txt): 3 operator,
+2 maintainer, 1 asker. A command from anyone else is ignored without a reply. A line with
+`id:<number>` counts only for that exact GitHub account; a line without one counts only when
+GitHub says the person is an owner, member or collaborator of the repository. `--force` always
+needs level 3.
+
+## Labels
+
+| Label | Meaning |
+|---|---|
+| `bot:build` | an issue waiting for the night window |
+| `bot:revise` | a pull request waiting for a revision |
+| `bot:working` | a run holds it right now |
+| `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
+| `bot:pr-open` | the issue has an open bot pull request |
+| `bot:pr` | a pull request the bot opened |
+| `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
+| `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
+
+## One night, step by step
+
+1. **plan** (seconds, no model). It stops at once if `.harness/HALT` is on `main`, if someone
+   said `/harness halt`, if the window is closed (unless forced), or if the last usage reading is
+   over a stop (`usage_stop`: 98% of the 5-hour session, 90% of the week). It requeues anything a
+   dead run left `bot:working` and queues a revision for any bot pull request that conflicts with
+   `main`. Then it claims one item in this order: forced requests, revisions, oldest builds. With
+   nothing queued, it runs a suggestion survey if one is due (at most one every 20 hours, and only
+   while fewer than four are open).
+2. **work** (up to about five and a half hours). A worktree on `bot/issue-<n>` (or the pull
+   request's own branch, with `main` merged in), then `pnpm install`. Then up to four rounds:
+   - a builder session (`claude --model opus --effort xhigh`) that can read, edit, run commands,
+     start subagents and make worktrees;
+   - the repository's checks from `.harness/config.json`, with any check that is also red on
+     untouched `main` marked as not this change's fault;
+   - a reviewer session with the same model, allowed to read and run things but not to edit, told
+     to find every reason the change should not ship;
+   - on blocking findings or red checks, a **fresh** builder gets both and fixes them.
+
+   The harness also puts back anything the builder changed under `.github/`, `.harness/` or
+   `bot/`, and records that as a blocking finding. Between steps it checks for a halt, a `stop`,
+   the usage stop and the clock. When any of those says stop, it commits what it has as work in
+   progress so the next run can pick it up. An item that runs out of time three runs in a row is
+   blocked as too big for one night. A failure that is not the item's fault (an expired Claude
+   token, the CLI refusing to start, dependencies that will not install on untouched `main`)
+   leaves the item queued without counting against it, and starts no further run that night.
+   Anything the model's session leaves running is killed when it ends. An approved change is
+   delivered exactly as the reviewer saw it: a commit that appears after the review is dropped.
+3. **deliver** (seconds, no model). It trusts nothing the model job wrote. The bundle's branch
+   must be the head the result names and descend from where the work started, the branch on
+   GitHub must not have moved meanwhile, and no forbidden path may change. Only then does it push
+   (never with force) and open or update the pull request. It turns on auto-merge only when no
+   review-only path changed and `main`'s protection requires every CI check. A change the
+   reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, and never
+   merges by itself. Then, if more work is queued and the window is still open, it starts the next
+   run at once.
+
+## Safety
+
+- **Two gates before `main`.** An independent reviewer approves the change inside the run. Then
+  every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
+  only after reading `main`'s branch protection and finding every check in `required_checks`
+  there. If protection is missing, it leaves the pull request for a person.
+- **Some changes always wait for a person.** A change that touches a review-only path
+  (`review_paths`) still becomes a pull request, but it is labelled `bot:needs-review`, you are
+  asked to review it, and auto-merge stays off. The review-only paths are the files that define
+  what the checks do or how the game deploys: every `package.json`, the lockfile, the vitest,
+  vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`, `render.yaml` and the
+  database migrations.
+- **It cannot change its own rules.** `.github/`, `.harness/`, `bot/`, `.claude/`, `.mcp.json`,
+  editor and devcontainer config, git hooks, `.gitattributes` and `.gitmodules` are forbidden
+  paths (`forbidden_paths`). They are enforced twice: in the work job, which puts such a change
+  back and tells the next builder, and in the deliver job, which refuses to push a bundle that
+  has one. Untracked Claude settings and `.mcp.json` are deleted before every model call, and the
+  calls run with `--strict-mcp-config`.
+- **The model never holds a GitHub write token.** The `work` job has the Claude token and a
+  read-only Actions token, and the model's own environment has neither GitHub token. Pushing,
+  commenting and labelling happen in `plan` and `deliver`, which run no model.
+- **Text from GitHub is data.** Issue text (the title included), comments, reviews and CI logs
+  reach the model fenced and labelled as data. Comments from people outside the trust list are
+  left out, and their commands never start a runner.
+- **Three off switches.** `/harness halt` (with `start` to undo it), `/harness stop` for one item,
+  and a committed `.harness/HALT` file, which only someone who can push to `main` can lift.
+- **Usage.** Every model call reports the subscription's 5-hour and 7-day usage. Past the stops
+  in `usage_stop`, no new call starts, and a refused call pauses the item until the limit resets.
+
+**What it cannot rule out.** The model has a shell and the Claude token, because it needs the
+token to run. Network tools such as `curl`, `wget` and `ssh` are denied, but that only slows a
+determined model down. And anything the model writes into a pull request is public once it is
+pushed. So a prompt injection that fools the model could, in principle, leak the Claude token.
+The defences are upstream of that: only people on the trust list can start work, text from
+anyone else is left out, and the token is a `claude setup-token` token that you can revoke and
+replace at any time. Read an issue from a stranger before you label it `bot:build`.
+
+Transcripts of the model's sessions stay on the runner unless `upload_transcripts` is on. The
+repository is public, so an uploaded artifact is readable by anyone. `result.json` (the builder's
+report, the review findings and the check output) and the git bundle are always uploaded, for 14
+days.
+
+## Setting it up
+
+1. **Secrets** (Settings → Secrets and variables → Actions):
+   - `CLAUDE_CODE_OAUTH_TOKEN`: from `claude setup-token` on a machine logged in to the Claude
+     subscription the bot should spend.
+   - `BOT_GITHUB_TOKEN`: a token for the `jgoetzmann-bot` account, which must be a collaborator
+     with write access. A fine-grained token limited to this repository needs Contents, Issues,
+     Pull requests, Actions and Workflows set to read and write, plus Metadata read. A classic
+     token needs `repo` and `workflow`. Without this token the bot falls back to the Actions
+     token: its comments come from `github-actions[bot]`, and its pull requests do not start CI,
+     so auto-merge never fires.
+2. **Labels, the state branch and the repository settings**, once, with an admin token (a
+   logged-in `gh` works):
+
+   ```sh
+   cd bot
+   python3 -m harness setup --repo-settings   # labels, bot-state branch, auto-merge, branch protection
+   python3 -m harness doctor                  # says what is still missing
+   ```
+
+   `--repo-settings` allows auto-merge, deletes merged branches, and protects `main` so that
+   every check in `required_checks` must pass before anything merges. Admins can still push to
+   `main` directly.
+3. **Try it**: open an issue, comment `/harness build --force`, and watch the `bot-night` run in
+   the Actions tab. `workflow_dispatch` on `bot-night` also takes `dry_run`, which records every
+   GitHub write instead of sending it.
+
+## Operating it
+
+| I want to | Do this |
+|---|---|
+| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/` |
+| stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
+| start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
+| run now, outside the window | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
+| stop one item | `/harness stop` on its issue or pull request |
+| retry something it gave up on | fix what it asked about, then `/harness build`; `python3 -m harness forget <n>` clears the failure count |
+| read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |
+| change the window, model, effort, rounds, stops or checks | edit `.harness/config.json` in a pull request |
+| let someone else command it | add a line to `.harness/trust.txt` |
+
+## Working on the bot
+
+The bot is Python 3.12+ with the standard library only. The tests use fakes for GitHub and the
+model, and real git.
+
+```sh
+cd bot
+python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
+python3 -m harness --help                     # every command
+```
+
+`bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
+workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `fix`, `revise`,
+`review` and `suggest`. The bot cannot edit anything in `bot/`, `.harness/` or
+`.github/workflows/`, so changes there come from people.
+
+| Module | Job |
+|---|---|
+| `config.py` | `.harness/config.json` and the environment; the only reader of `os.environ` |
+| `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
+| `trust.py`, `commands.py` | who may command it, and how a comment is read |
+| `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |
+| `plan.py`, `work.py`, `deliver.py` | the three jobs of a night run |
+| `runner.py` | `claude -p` with stream-json usage readings, plus the test fake |
+| `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
+| `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
+| `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, the window |
