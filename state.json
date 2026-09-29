@@ -13,6 +13,12 @@
       "run_id": "",
       "started_at": "2026-09-29T17:45:52Z",
       "stop_requested": false
+    },
+    "33": {
+      "failures": 0,
+      "feedback_since": "2026-09-29T17:45:52Z",
+      "issue": 31,
+      "kind": "revise"
     }
   },
   "last_infra": {
