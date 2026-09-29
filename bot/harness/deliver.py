@@ -467,7 +467,7 @@ class Deliverer:
     def _rerun_ci(self, number: int) -> None:
         run_id = self._record(number).get("ci_run_id")
         if run_id:
-            self._try(lambda: self.gh.rerun_failed_jobs(run_id))
+            self._try(lambda: self.ctx.act.rerun_failed_jobs(run_id))
 
     def _findings_md(self) -> str:
         findings = self.result.get("findings") or []
