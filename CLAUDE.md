@@ -77,6 +77,8 @@ CI (`.github/workflows/ci.yml`) runs five parallel jobs:
 - `db`: `test:db`.
 - `e2e`: the twenty-eight specs (`01`–`28`) on Chrome and on Electron, plus the component specs on Chrome.
 
+`bot-selftest.yml` adds a sixth required check, `bot selftest`: the night bot's own suite (`cd bot && python3 -m unittest discover -s tests -t .`) and actionlint over its workflows. Branch protection on `main` requires all of these checks, which is what lets the night bot's pull requests auto-merge safely.
+
 ## Architecture
 
 Workspace packages, from pure to impure:
@@ -101,6 +103,12 @@ Workspace packages, from pure to impure:
   - `src/settings/` — the store and panel. Tasks' own stores (`fx/settings.ts`, `audio/settings.ts`, `cards/settings.ts`) mount through `SETTINGS_SLOTS`; "Hover previews" and "Reduce motion" are the panel's own switches and gate the card preview and the effects too. Every store sits in `localStorage` inside try/catch and applies live.
 
 Deployment: `apps/web` is a static bundle on Vercel (`vercel.json`), and `apps/server` runs on Render (`render.yaml`). Render's free tier sleeps when idle, and a match survives the restart by folding `(seed, log)`. Postgres and Auth are on Supabase. `docs/architecture.md` has the bring-up checklist and the env-var contract.
+
+## The night bot
+
+`@jgoetzmann-bot` builds issues from 21:00 to 07:00 Central (`bot/README.md` covers it in full). It picks up an issue labelled `bot:build`, assigned to it, or named in a `/harness build` or `@jgoetzmann-bot …` comment, and builds it with Claude Opus. An independent adversarial reviewer then reads the change, the two go round until the reviewer approves, and the pull request merges itself once CI passes. The bot code is Python in `bot/`, its switches are in `.harness/` (`config.json`, `trust.txt`, an optional `HALT`), and its workflows are `bot-night.yml`, `bot-commands.yml` and `bot-selftest.yml`.
+
+When you are the bot's builder or reviewer, this file binds you like anyone else. You must not change `.github/`, `.harness/` or `bot/`: the harness puts such a change back, and the deliver job refuses to push one.
 
 ## Parallel work
 

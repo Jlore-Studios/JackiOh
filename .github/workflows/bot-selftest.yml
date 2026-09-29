@@ -1,0 +1,52 @@
+# CI for the night bot itself (bot/): its test suite on the lowest and newest supported Python,
+# and actionlint over the bot's workflows. Runs on every pull request, because "bot selftest" is
+# one of the checks the default branch requires before anything merges.
+name: bot selftest
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: bot-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: bot selftest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.12
+            3.13
+
+      - name: Tests on Python 3.12
+        working-directory: bot
+        run: python3.12 -m unittest discover -s tests -t . -v
+
+      - name: Tests on Python 3.13
+        working-directory: bot
+        run: python3.13 -m unittest discover -s tests -t .
+
+      - name: The CLI starts and the config loads
+        working-directory: bot
+        run: |
+          python3.13 -m harness --help > /dev/null
+          python3.13 -m harness window
+
+      - name: actionlint
+        run: |
+          docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color \
+            .github/workflows/bot-night.yml .github/workflows/bot-commands.yml \
+            .github/workflows/bot-selftest.yml

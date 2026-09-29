@@ -1,0 +1,9 @@
+[project]
+name = "jackioh-night-bot"
+version = "1.0.0"
+description = "The JackiOh night bot: issues in, reviewed pull requests out."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.setuptools]
+packages = ["harness"]

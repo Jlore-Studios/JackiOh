@@ -1,0 +1,12 @@
+# Who may command the night bot. One line each: <login> <level> [id:<numeric GitHub user id>]
+#
+#   3  operator    halt, start, run, and --force on any command
+#   2  maintainer  build, revise, stop, suggest (and the bot:build / bot:revise labels)
+#   1  asker       status
+#
+# A line with an id is honoured only for that exact account. A line without one is honoured only
+# when GitHub reports the commenter as OWNER, MEMBER or COLLABORATOR of the repository.
+# Get an id with: gh api users/<login> --jq .id
+# The bot never edits this file (.harness/ is outside what it may change).
+
+jgoetzmann 3 id:95732896

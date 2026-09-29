@@ -1,0 +1,225 @@
+# The night bot (bot/README.md): plan -> work -> deliver.
+#
+# plan and deliver hold the bot account's token and run no model. work runs the model and holds
+# no GitHub write token: its only secret is the Claude token, and its output is a result file and
+# a git bundle that deliver checks for itself before pushing anything.
+name: bot-night
+
+on:
+  schedule:
+    # Hourly at :17, 02:17-13:17 UTC. That covers 21:00-07:00 Central both in summer (CDT: 02-12
+    # UTC) and in winter (CST: 03-13 UTC); the planner checks the local window itself, so a firing
+    # outside it ends in seconds. Every hour fires, rather than once a night, because GitHub starts
+    # scheduled runs late and sometimes drops them, and because a run that finishes an item with
+    # more queued dispatches the next run itself.
+    - cron: "17 2-13 * * *"
+  workflow_dispatch:
+    inputs:
+      item:
+        description: "Issue or PR number (blank: the planner picks)"
+        required: false
+        default: ""
+      force:
+        description: "Run even outside the night window"
+        type: boolean
+        default: false
+      mode:
+        description: "What to do"
+        type: choice
+        options: [auto, build, revise, suggest]
+        default: auto
+      dry_run:
+        description: "Record GitHub writes instead of sending them"
+        type: boolean
+        default: false
+
+# One night run at a time; a new one waits for the current one rather than cancelling it.
+concurrency:
+  group: bot-night
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  HARNESS_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write        # the state file on the bot-state branch
+      issues: write
+      pull-requests: write
+      actions: read          # whether a run that holds an item is still alive
+    outputs:
+      action: ${{ steps.plan.outputs.action }}
+      number: ${{ steps.plan.outputs.number }}
+    steps:
+      # First, before anything else: a committed .harness/HALT stops the whole run.
+      - name: HALT check (.harness/HALT on the default branch)
+        id: halt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.event.repository.default_branch }}
+        run: |
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/contents/.harness/HALT?ref=${REF}" || echo 000)"
+          if [ "${code}" = "200" ]; then
+            echo "halted by .harness/HALT"
+            echo "halted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "halted=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout the default branch
+        if: steps.halt.outputs.halted != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Python
+        if: steps.halt.outputs.halted != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Plan
+        id: plan
+        if: steps.halt.outputs.halted != 'true'
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          INPUT_ITEM: ${{ github.event.inputs.item }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+        run: |
+          force=""
+          if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
+          python -m harness plan --out "$RUNNER_TEMP/plan/plan.json" \
+            --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
+
+      - name: Keep the plan for the next jobs
+        if: steps.plan.outputs.action != '' && steps.plan.outputs.action != 'none'
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan
+          path: ${{ runner.temp }}/plan/plan.json
+          retention-days: 14
+          overwrite: true
+
+  work:
+    name: work
+    needs: plan
+    if: contains(fromJSON('["build", "revise", "suggest"]'), needs.plan.outputs.action)
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: read         # the model job may read; it may not write anything to GitHub
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the claude CLI
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude --version
+
+      - name: Fetch the plan
+        uses: actions/download-artifact@v4
+        with:
+          name: plan
+          path: ${{ runner.temp }}/plan
+
+      - name: Doctor (stops here, before any model call, if something is missing)
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: python -m harness doctor --work
+
+      - name: Build, check and review
+        working-directory: bot
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
+        run: |
+          python -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
+            --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
+
+      - name: Keep the result, the bundle and the transcripts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work
+          path: ${{ runner.temp }}/out
+          if-no-files-found: ignore
+          retention-days: 14
+          overwrite: true
+
+  deliver:
+    name: deliver
+    needs: [plan, work]
+    if: always() && contains(fromJSON('["build", "revise", "suggest"]'), needs.plan.outputs.action)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write        # the push (with the Actions token only when no bot token is set)
+      issues: write
+      pull-requests: write
+      actions: write         # start the next run; re-run failed CI jobs
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch the plan
+        uses: actions/download-artifact@v4
+        with:
+          name: plan
+          path: ${{ runner.temp }}/plan
+
+      - name: Fetch the model job's output
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: work
+          path: ${{ runner.temp }}/out
+
+      - name: Deliver
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          python -m harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out"

@@ -1,0 +1,81 @@
+# The night bot's ears (bot/README.md): comment commands, labels, assignment, reviews, and the
+# results of CI on its pull requests. No model runs here; model work is queued for the night run,
+# or started at once when an operator adds --force.
+name: bot-commands
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [labeled, assigned]
+  # _target, so the job runs this repository's workflow with its secrets and never code from the
+  # pull request; it checks out the default branch and reads the event payload only.
+  pull_request_target:
+    types: [labeled, assigned, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+concurrency:
+  group: bot-commands-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  event:
+    name: event
+    # Wakes only for something the bot answers, so most comments cost nothing, and a comment or
+    # review wakes it only from someone GitHub calls an owner, member or collaborator (the trust
+    # list is checked again inside). The bot's own comments and labels are skipped by actor; a CI
+    # run is checked whoever started it, since the bot's own push starts the runs it answers.
+    if: >-
+      (github.event_name == 'workflow_run'
+        && contains(fromJSON('["failure", "timed_out"]'), github.event.workflow_run.conclusion)
+        && startsWith(github.event.workflow_run.head_branch, 'bot/'))
+      || (github.actor != 'jgoetzmann-bot' && github.actor != 'github-actions[bot]' && (
+        (github.event_name == 'issue_comment'
+          && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+          && (contains(github.event.comment.body, '/harness')
+              || contains(github.event.comment.body, '@jgoetzmann-bot')))
+        || (github.event_name == 'pull_request_review'
+          && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)
+          && (contains(github.event.review.body, '/harness')
+              || contains(github.event.review.body, '@jgoetzmann-bot')
+              || github.event.review.state == 'changes_requested'))
+        || ((github.event_name == 'issues' || github.event_name == 'pull_request_target')
+          && github.event.action == 'labeled' && startsWith(github.event.label.name, 'bot:'))
+        || ((github.event_name == 'issues' || github.event_name == 'pull_request_target')
+          && github.event.action == 'assigned' && github.event.assignee.login == 'jgoetzmann-bot')
+        || (github.event_name == 'pull_request_target' && github.event.action == 'closed'
+          && contains(github.event.pull_request.labels.*.name, 'bot:pr'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # the state file on the bot-state branch
+      issues: write
+      pull-requests: write
+      actions: write         # start a forced run; re-run failed CI jobs once
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Handle the event
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m harness event
