@@ -1,6 +1,10 @@
 {
-  "halt": {},
-  "halted": false,
+  "halt": {
+    "at": "2026-09-29T16:40:41Z",
+    "by": "jgoetzmann",
+    "reason": "testing the switches"
+  },
+  "halted": true,
   "items": {},
   "last_run": null,
   "rate_limited_until": null,
