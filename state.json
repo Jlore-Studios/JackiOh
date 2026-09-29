@@ -10,10 +10,16 @@
       "pending_request": false,
       "queued_at": "2026-09-29T16:40:45Z",
       "requested_by": "jgoetzmann",
+      "run_id": "36599564116",
+      "started_at": "2026-09-29T16:41:46Z",
       "stop_requested": false
     }
   },
-  "last_run": null,
+  "last_run": {
+    "at": "2026-09-29T16:41:46Z",
+    "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36599564116",
+    "what": "build #31"
+  },
   "rate_limited_until": null,
   "suggest": {
     "last_run": null,
