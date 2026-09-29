@@ -499,7 +499,11 @@ describe("R192 B27 resend", () => {
     await act(async () => {
       fireEvent.click(ready);
     });
-    await flushMicrotasks();
+    // Like the reset's, the resend's PKCE challenge is hashed on the thread pool (R323), so the
+    // page's answer is waited for rather than a fixed number of microtasks.
+    await waitFor(() => {
+      expect(bodyText()).toContain(AUTH_NOTICES.resendSent);
+    });
 
     const sent = callsTo(calls, "/auth/v1/resend");
     expect(sent).toHaveLength(1);
@@ -1863,7 +1867,12 @@ describe("R192 the mail interval, wherever it started", () => {
     setField(loginTestid.email, EMAIL);
     expect(screen.getByTestId(loginTestid.submit)).toBeEnabled();
     submitForm();
-    await flushMicrotasks();
+    // The request waits for its PKCE challenge (R323), which `crypto.subtle` hashes on the thread
+    // pool and so lands on a later turn of the event loop: the page's answer is waited for, as
+    // `requestReset` does, not assumed after a fixed number of microtasks.
+    await waitFor(() => {
+      expect(bodyText()).toContain(AUTH_NOTICES.resetSent);
+    });
     expect(callsTo(calls, "/auth/v1/recover")).toHaveLength(1);
     // The provider refused inside its interval; the page says the same as for any address.
     expect(screen.getByTestId(loginTestid.notice).textContent).toBe(AUTH_NOTICES.resetSent);
