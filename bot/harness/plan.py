@@ -28,6 +28,11 @@ INFRA_BACKOFF = timedelta(minutes=50)
 CI_LOG_JOBS = 4
 
 
+def run_link(cfg: Any) -> str:
+    """` ([run](url))` for a run in Actions, and nothing for one started by hand."""
+    return f" ([run]({cfg.run_url}))" if cfg.run_url else ""
+
+
 def nothing(reason: str) -> dict[str, Any]:
     return {"action": "none", "reason": reason}
 
@@ -146,7 +151,7 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
             "previous_findings": record.get("last_findings") or [],
             "previous_question": record.get("question") or "",
         }
-        message = (f"Starting work on this now ([run]({cfg.run_url})). I build it, run the "
+        message = (f"Starting work on this now{run_link(cfg)}. I build it, run the "
                    f"repository's checks, and have an adversarial reviewer read the change, up to "
                    f"{cfg.max_review_cycles} rounds. Only an approved change becomes a pull request.")
     else:
@@ -183,7 +188,7 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
             "bot_pr": LABEL_PR in names,
             "issue_number": issue_number,
         }
-        message = (f"Starting a revision now ([run]({cfg.run_url})), because of: {source}. It "
+        message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. It "
                    "goes through the same checks and adversarial review before I push it.")
     set_state_label(ctx, number, names, LABEL_WORKING)
     def change(state: dict[str, Any]) -> None:
