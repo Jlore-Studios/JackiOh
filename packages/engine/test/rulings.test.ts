@@ -190,6 +190,12 @@ const WEB_PROMPT_CARDS_TEST = "../../../apps/web/src/game/PromptCards.test.tsx";
 const CARDS_RADIANT_STANDARD_TEST = "../../cards/test/radiant-standard.test.ts";
 const CARDS_CATALOG_TEST = "../../cards/test/catalog.test.ts";
 const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
+/** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
+const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
+const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
+/** R481's SQL evidence: migration 0015's grant for a catalog that grows. */
+const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/08_catalog_growth.sql";
 const CARDS_PREVIEW_TEST = "../../cards/test/preview.test.ts";
 const CARDS_QUICKSTRIKER_TEST = "../../cards/test/038-quickstriker.test.ts";
 const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-k-pop-fanatic.test.ts";
@@ -1149,8 +1155,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R108 runs the sweeper every 3 seconds and the reaper every 30", () => {
     expect(serverConstant(SERVER_CONFIG, "MATCHMAKER_SWEEP_INTERVAL_SECONDS")).toBe("3");
     expect(serverConstant(SERVER_CONFIG, "MATCH_REAPER_INTERVAL_SECONDS")).toBe("30");
-    // The reaper is the coarser clock of the two, and both sit well inside the 60-minute ceiling.
-    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("60");
+    // The reaper is the coarser clock of the two, and both sit well inside the 120-minute ceiling (R389).
+    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
   });
 
   // A config value with no database behaviour; BUILD M7-T3 proves the limits at the server level.
@@ -2152,7 +2158,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by deckCode.test.ts "R255 …": the round trip, the caps, the version and checksum, and
   // what an import drops and marks.
   it("R255 shares a deck as a versioned, checksummed, length-capped code", () => {
-    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_VERSION")).toBe("1");
+    // Version 2 since patch v0.2.0 (B2.2): each number carries its set; version 1 still reads as Core.
+    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_VERSION")).toBe("2");
+    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_CORE_ONLY_VERSION")).toBe("1");
     expect(serverConstant(SERVER_CONFIG, "DECK_CODE_MAX_INPUT_LENGTH")).toBe("512");
     provenIn(255, WEB_DECK_CODE_TEST);
   });
@@ -2513,7 +2521,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by trioCode.test.ts "R339 …" (the round trip, totality, every refusal, each deck read as a
   // deck code's) and DeckWorkshop.test.tsx "R339 …" (Copy trio code, and a code that cannot be read).
   it("R339 shares a trio and its decks as a versioned, checksummed, length-capped code", () => {
-    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_VERSION")).toBe("1");
+    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_VERSION")).toBe("2");
+    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_CORE_ONLY_VERSION")).toBe("1");
     expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_MAX_INPUT_LENGTH")).toBe("2048");
     provenIn(339, WEB_TRIO_CODE_TEST, WEB_WORKSHOP_TEST);
   });
@@ -2685,6 +2694,134 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // injected source).
   it("R374 deals the landing page's hand at random on each visit", () => {
     provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
+  });
+
+  // Patch v0.2.0's catalog rows (docs/classic-sets.md B2, B4.2, B4.3; issue #40).
+
+  // Proved by cards query.test.ts "R380 …" (a pool that names no set reaches all three, one that
+  // names a set keeps to it).
+  it("R380 makes one format of every set: a pool that names no set draws from all of them", () => {
+    provenIn(380, CARDS_QUERY_TEST);
+  });
+
+  // Proved by cards references.test.ts "R381 …" (rules words name no card unless refs list it) and
+  // catalog.test.ts "R381 …" (no two cards share a name: Book of Wildfire, Grand Counterspell).
+  it("R381 keeps every name distinct and reads the rules-word names as rules words", () => {
+    provenIn(381, CARDS_REFERENCES_TEST, CARDS_CATALOG_TEST);
+  });
+
+  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool).
+  it("R382 puts the five Grapes in every Fruit pool and every token in Dropshipping's", () => {
+    provenIn(382, CARDS_QUERY_TEST);
+  });
+
+  // Proved by cards patches.test.ts "R388 …" (the history, the snapshots, the version everywhere),
+  // loc.test.ts's patch snapshot and the server's catalog.test.ts "R388 …" (GET /api/catalog/:version).
+  it("R388 makes card patches data and the catalog version the newest patch", () => {
+    provenIn(388, CARDS_PATCHES_TEST, SERVER_CATALOG_TEST);
+  });
+
+  // Proved by the server's clock.test.ts "R389 …" (the 120-minute ceiling); the turn cap's own
+  // proofs are the engine's.
+  it("R389 doubles the turn cap and the match ceiling with it", () => {
+    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
+    provenIn(389, SERVER_CLOCK_TEST);
+  });
+
+  // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
+  // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
+  it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
+    provenIn(432, CARDS_CARD_TEXT_TEST, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // R433's client half: apps/web game/dealtDeck.test.tsx "R433 …" (a mostly unknown deck is backs under
+  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck).
+  it("R433 lists a dealt deck with only the cards its owner has been shown", () => {
+    provenIn(433, "../../../apps/web/src/game/dealtDeck.test.tsx", WEB_PLAY_TEST);
+  });
+
+  // R434's client half: apps/web game/reveal.test.tsx and game/Hand.test.tsx "R434 …" (the opponent's
+  // hand turns face up at the end, and the result lists it).
+  it("R434 reveals both hands once the game is over", () => {
+    provenIn(434, "../../../apps/web/src/game/reveal.test.tsx", "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
+  // Proved by apps/web fx/constants.test.ts, fx/settings.test.ts, settings/wiring.test.tsx and
+  // game/animations.fx.test.ts "R435 …" (the range and step, the clamp, the slider and its readout, and
+  // the runner's durations and burst budget at 0.25x and 3x).
+  it("R435 runs the effects speed from 0.25x to 3x on a slider", () => {
+    provenIn(
+      435,
+      "../../../apps/web/src/fx/constants.test.ts",
+      "../../../apps/web/src/fx/settings.test.ts",
+      "../../../apps/web/src/settings/wiring.test.tsx",
+      WEB_ANIMATIONS_FX_TEST,
+    );
+  });
+
+  // Proved by apps/web game/Clock.test.tsx "R439 …" (the thresholds, whose clock, a paused clock, the
+  // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
+  it("R439 marks the last 30 seconds of a turn clock", () => {
+    provenIn(439, "../../../apps/web/src/game/Clock.test.tsx", "../../../apps/web/src/routes/match.test.tsx");
+  });
+
+  // Proved by cards references.test.ts "R480 …".
+  it("R480 names the Pancake tokens and the AI generated cards by the tag a card's text names", () => {
+    provenIn(480, CARDS_REFERENCES_TEST);
+  });
+
+  // Proved by apps/server test/sql/08_catalog_growth.sql "=== R481: … ===".
+  it("R481 grants a new catalog version's new cards to every active account, once", () => {
+    provenIn(481, SERVER_CATALOG_GROWTH_SQL);
+  });
+
+  // Proved by cards params.test.ts "R482 …".
+  it("R482 writes a card's tunable numbers as {key} in the faces that show them", () => {
+    provenIn(482, CARDS_PARAMS_TEST);
+  });
+
+  // R388's client half (the catalog workstream proves its data half): apps/web patches/diff.test.ts
+  // "R388 …" (every field compared, text filled and word-diffed, cost words, added and removed cards).
+  it("R388 keeps each card's patch history, and the client shows it", () => {
+    provenIn(388, "../../../apps/web/src/patches/diff.test.ts");
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
+  it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
+    provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web audio/voice-assets.test.ts "R501 …" (a SAPI persona's hash, --catalog, the
+  // persona's ranges, the 6 MiB budget), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …";
+  // gen-voice.test.ts's "R501 …" cases render through SAPI and ffmpeg where a machine has them.
+  it("R501 renders the voice set on macOS or Windows, within 6 MiB", () => {
+    provenIn(
+      501,
+      "../../../apps/web/src/audio/voice-assets.test.ts",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+      "../../../apps/web/src/audio/voiceData.test.ts",
+    );
+  });
+
+  // Proved by apps/web game/Hand.test.tsx "R504 …" (the outline, its size rule, either seat).
+  it("R504 keeps an empty hand's place on the board", () => {
+    provenIn(504, "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
+  // Proved by apps/web routes/play.test.tsx "R505 …".
+  it("R505 shows the queue counts on the mode tiles alone", () => {
+    provenIn(505, WEB_PLAY_TEST);
+  });
+
+  // Proved by apps/web patches/PatchNotes.test.tsx "R507 …" (the page's grouping, filter and marks),
+  // patches/history.test.ts and patches/CardHistory.test.tsx "R507 …" (the History section).
+  it("R507 marks a patch's changes in its own teal and lists the cards each patch touched", () => {
+    provenIn(
+      507,
+      "../../../apps/web/src/patches/PatchNotes.test.tsx",
+      "../../../apps/web/src/patches/history.test.ts",
+      "../../../apps/web/src/patches/CardHistory.test.tsx",
+    );
   });
 });
 

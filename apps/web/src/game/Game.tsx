@@ -50,7 +50,7 @@ import {
   type AnimationQueue,
 } from "./animations.ts";
 import { testid, type BoardControl, type ClickTarget } from "./contract.ts";
-import { GameResult, type ResultForm } from "./Result.tsx";
+import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
@@ -382,6 +382,7 @@ export default function Game({
           form={resultForm}
           actions={resultActions}
           animating={animating.get(testid.result)}
+          theirHand={theirHandOf(shown)}
         />
       ) : null}
 

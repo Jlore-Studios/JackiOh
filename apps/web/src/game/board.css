@@ -467,8 +467,87 @@
   max-height: 3.45em;
 }
 
-.hand-opponent .card-hand {
+.hand-opponent .card-hand,
+.hand-opponent .hand-empty {
   height: calc(var(--card-h) * 0.58);
+}
+
+/* R504: an empty hand keeps its place. Hand.tsx draws one card-sized outline where the cards were
+   (`hand-empty-<side>`), so the row keeps the height a card gives it in every layout below (each
+   one sizes `.hand-empty` with its `.card-hand`) and the board never jumps when the last card
+   leaves or the first arrives. It is positioned so that R439's heartbeat (clock.css) stays under it. */
+.hand-empty {
+  position: relative;
+  display: grid;
+  flex: 0 0 var(--slot-w);
+  place-items: center;
+  width: var(--slot-w);
+  border: 1px dashed color-mix(in srgb, var(--text-dim) 40%, transparent);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 2%);
+  color: var(--text-dim);
+  font-size: 0.72em;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.hand-you .hand-empty {
+  height: var(--hand-card-h);
+}
+
+/* The opponent's outline is a back's size, too narrow for the words: they stay for a reader. */
+.hand-opponent .hand-empty-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* R434: at the game's end the opponent's backs turn face up where they lay, one after another. Both
+   sides of each card are drawn (Hand.tsx `RevealedSlot`); the flip starts on the back and ends on the
+   face. Every duration is scaled by --anim-scale, so reduced motion lands on the face at once. */
+.hand-slot--revealed {
+  perspective: 600px;
+}
+
+.hand-flip {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: hand-reveal calc(560ms * var(--anim-scale)) cubic-bezier(0.3, 0.7, 0.4, 1)
+    calc(var(--i, 0) * 90ms * var(--anim-scale)) both;
+}
+
+.hand-flip-back,
+.hand-flip-face {
+  backface-visibility: hidden;
+}
+
+.hand-flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+@keyframes hand-reveal {
+  0% {
+    transform: rotateY(180deg);
+  }
+
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-flip {
+    animation: none;
+  }
 }
 
 /* Once the opponent's backs run out of room they overlap, and each back but the last shows only
@@ -1323,7 +1402,8 @@
     --slot-w: calc(var(--card-h) * 0.6);
   }
 
-  .hand-opponent .card-hand {
+  .hand-opponent .card-hand,
+  .hand-opponent .hand-empty {
     height: calc(var(--card-h) * 0.84);
   }
 
@@ -1440,7 +1520,8 @@
     padding: 4px;
   }
 
-  .hand-opponent .card-hand {
+  .hand-opponent .card-hand,
+  .hand-opponent .hand-empty {
     height: calc(var(--card-h) * 0.5);
   }
 
@@ -1919,7 +2000,8 @@
     --slot-w: calc(var(--card-h) * 0.6);
   }
 
-  .hand-opponent .card-hand {
+  .hand-opponent .card-hand,
+  .hand-opponent .hand-empty {
     height: calc(var(--card-h) * 0.84);
   }
 

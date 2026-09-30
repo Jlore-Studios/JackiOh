@@ -90,7 +90,7 @@ describe("R373 players read Deck and Tribute", () => {
 });
 
 /** R432: the old noun ("Cost (2)"), a bare number after the word cost ("costs 3"), and "2-cost". */
-const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i];
+const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
 
 function oldCostWords(text: string): boolean {
   return OLD_COST_WORDS.some((pattern) => pattern.test(text));
@@ -113,6 +113,8 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
     expect(oldCostWords("Jlockeed Shredder-10 costs 3.")).toBe(true);
     expect(oldCostWords("a 2-cost unit")).toBe(true);
     expect(oldCostWords("a card costing 1 or less")).toBe(true);
+    // A template that writes the number bare after "costs" ("costs ${n}") ends its text there.
+    expect(oldCostWords(", costs ")).toBe(true);
     expect(oldCostWords("Face-down trap, (2) Cost")).toBe(false);
     expect(oldCostWords("Discover 2 (2) Cost or less Units")).toBe(false);
     expect(oldCostWords("cards cost (1) less")).toBe(false);

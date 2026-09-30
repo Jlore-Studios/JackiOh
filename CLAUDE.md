@@ -10,7 +10,7 @@ JackiOh is a 1v1 card game: Hearthstone-style mana, combat and keywords on Yu-Gi
 - `BUILD.md` — the work order: repo layout, constants, milestones M1–M8 with tasks, files and acceptance criteria, the per-card must-pass table, animations, e2e specs, definition of done.
 - `REVIEW.md` — the audit procedure: Part A checks SPEC.md against the source design notes; Part B checks the code against SPEC.md and BUILD.md.
 
-Supporting docs: `docs/architecture.md` (server deployment: Supabase, match actor, R104–R112), the READMEs in `packages/cards`, `packages/ai`, `apps/server`, `apps/web` and `e2e`, which set the contracts inside each package, and `docs/polish/` (the polish pass's brief, `reference.md`, and one design note per task: animations, sound, AI, edge cases, sign-in, cards, mobile UX). `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md` and `ARCHITECTURE-CCG.md` (the generic trust model and match-actor design that SPEC §9 and `docs/architecture.md` build on) are the source design notes that REVIEW Part A checks SPEC against. `JackiOh_Tokens.md` holds the source text for the tokens (SPEC §7). Past audit reports are in `reviews/`. If a doc disagrees with SPEC.md, SPEC wins and the doc is the bug.
+Supporting docs: `docs/architecture.md` (server deployment: Supabase, match actor, R104–R112), the READMEs in `packages/cards`, `packages/ai`, `apps/server`, `apps/web` and `e2e`, which set the contracts inside each package, and `docs/polish/` (the polish pass's brief, `reference.md`, and one design note per task: animations, sound, AI, edge cases, sign-in, cards, mobile UX). `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `JackiOh_Classic_Cards.md` (the designer's Classic and Classic+ list, read card by card in the design brief `docs/classic-sets.md`) and `ARCHITECTURE-CCG.md` (the generic trust model and match-actor design that SPEC §9 and `docs/architecture.md` build on) are the source design notes that REVIEW Part A checks SPEC against. `JackiOh_Tokens.md` holds the source text for the tokens (SPEC §7). Past audit reports are in `reviews/`. If a doc disagrees with SPEC.md, SPEC wins and the doc is the bug.
 
 ## Rules of engagement
 
@@ -22,7 +22,7 @@ Supporting docs: `docs/architecture.md` (server deployment: Supabase, match acto
 6. Every card has one script file and one test file covering base and radiant behaviour per the BUILD M4-T4 table.
 7. The client sends intent and renders `viewFor`; it never enforces rules and never sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session and attach the report.
-9. Every number is a named constant: rules numbers in `packages/engine/src/config.ts` (BUILD §2; the "decide" rulings R1, R2, R4, R5, R14, R26, R39 included), server numbers such as clocks, Elo and rate limits in `apps/server/src/config.ts`. Nothing else states a number.
+9. Every number is a named constant: rules numbers in `packages/engine/src/config.ts` (BUILD §2; the "decide" rulings R1, R4, R5, R14, R26, R39 included, and R2's turn cap), server numbers such as clocks, Elo and rate limits in `apps/server/src/config.ts`. Nothing else states a number.
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
@@ -39,7 +39,7 @@ pnpm test:coverage     # 90% line floor, engine + cards
 pnpm fuzz              # the CI gate: seeds 1–1000 of random-policy games with replay hashing, one seat handicapped in fuzz-handicap, ~100 s
 pnpm ai:gate           # the AI's quality gates at full size (random 100, greedy 50, Hard vs Easy 50); minutes, CI's ai-gate job
 pnpm ai:sweep          # the shadow-ban sweep (R186); prints SHADOW_BAN rows to copy into packages/ai/src/shadowBan.ts by hand
-pnpm validate:catalog  # catalog.json data checks (100 cards, 11 tokens, rarity counts)
+pnpm validate:catalog  # catalog.json data checks (268 cards and 49 tokens across Core, Classic, Classic+; rarity counts per set)
 pnpm rulings:coverage  # SPEC §11 rows vs named tests vs R-ids cited in code (rule 3)
 pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, and the path each one expects
 pnpm test:sql          # schema, RLS and trigger invariants: Docker only, starts a throwaway postgres:16
@@ -75,7 +75,7 @@ CI (`.github/workflows/ci.yml`) runs five parallel jobs:
 - `ai-gate`: `pnpm ai:gate`.
 - `sql`: `test:sql`.
 - `db`: `test:db`.
-- `e2e`: the twenty-eight specs (`01`–`28`) on Chrome and on Electron, plus the component specs on Chrome.
+- `e2e`: the thirty-two specs (`01`–`32`) on Chrome and on Electron, plus the component specs on Chrome.
 
 `bot-selftest.yml` adds a sixth required check, `bot selftest`: the night bot's own suite (`cd bot && python3 -m unittest discover -s tests -t .`) and actionlint over its workflows. Branch protection on `main` requires all of these checks, which is what lets the night bot's pull requests auto-merge safely.
 

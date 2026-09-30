@@ -13,7 +13,7 @@ import { scenario, type Scenario } from "./_harness";
 const CURVATURE = "core-077";
 
 /** The probes, in hand and never played except where a test says so. */
-const COST_3 = "core-017"; // Flood
+const COST_3 = "core-070"; // Spiteful Stab (Flood costs (4) since patch v0.2.0)
 const COST_4 = "core-025"; // 4-mana 7/7 — a Unit, so it has a lane to enter
 const COST_6 = "core-029"; // GIGA Glowy Jelly Bean
 

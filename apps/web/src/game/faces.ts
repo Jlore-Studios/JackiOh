@@ -59,11 +59,15 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.vanilla === true) inPlay.vanilla = true;
   // R280: what the card's formula comes to now, where the view says (never in the collection).
   if (card.preview !== undefined && card.preview.length > 0) inPlay.preview = card.preview;
+  // B3.4, R386: the numbers the card has now fill its text's `{key}`s.
+  if (card.params !== undefined) inPlay.params = card.params;
+  // B2.7: the type the card has now, where it differs from its definition's (Blood Moon's Radiant face).
+  const type = card.type ?? facts.type;
   return faceModel({
     defId: card.defId,
     def: info.def,
     name: info.name,
-    ...(facts.type === undefined ? {} : { type: facts.type }),
+    ...(type === undefined ? {} : { type }),
     radiant: card.radiant,
     liveCost: card.cost,
     ...(unit === undefined
