@@ -77,14 +77,19 @@ describe("R507 a patch's cards", () => {
     expect(nameMatches("Snom Bunny Mind Control", "bunny cube")).toBe(false);
   });
 
-  it("R507 the real v0.2.0 shows 23 changed faces, 88 cards changed only in data, and 206 added cards by set", async () => {
+  it("R507 the real v0.2.0 shows as faces the changed cards whose recorded changes a face prints, the rest by name, and 206 added cards by set", async () => {
     const patches = await realPatchSource.patches();
     const [after, before] = await Promise.all([realPatchSource.snapshot("v0.2.0"), realPatchSource.snapshot("v0.1.1")]);
     if (after === null || before === null) throw new Error("expected the v0.2.0 and v0.1.1 snapshots");
-    const cards = patchCards(patch(patches, "v0.2.0"), after, before);
-    expect(cards.changed).toHaveLength(23);
-    expect(cards.changed.map((delta) => delta.id)).toContain("core-065");
-    expect(cards.dataOnly).toHaveLength(88);
+    const record = patch(patches, "v0.2.0");
+    const cards = patchCards(record, after, before);
+    const unprinted = new Set(["loc", "refs", "params"]);
+    const changed = record.changes.filter((change) => change.kind === "changed");
+    const printed = changed.filter((change) => (change.fields ?? []).some((name) => !unprinted.has(name))).map((change) => change.id);
+    expect(cards.changed.map((delta) => delta.id)).toEqual(printed);
+    expect(cards.changed.map((delta) => delta.id)).toEqual(expect.arrayContaining(["core-065", "core-021", "core-095"]));
+    expect(cards.dataOnly.map((delta) => delta.id)).toEqual(changed.map((change) => change.id).filter((id) => !printed.includes(id)));
+    expect(cards.dataOnly.length).toBeGreaterThan(0);
     expect(cards.added.map((group) => [group.label, group.cards.length])).toEqual([
       ["Classic", 90],
       ["Classic+", 78],

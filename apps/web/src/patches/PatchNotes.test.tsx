@@ -12,7 +12,7 @@ import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
-import { EMPTY_PATCH_SOURCE, type PatchSource } from "./source.ts";
+import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 /** The real history's first read runs the JSON chunks through the transform. */
@@ -201,8 +201,14 @@ describe("R388 the Patch notes page over the real history", () => {
     expect(mask.querySelector(".cost-gem")).toHaveAttribute("data-cost", "1");
     const hinder = byCard(patchTestid.changedCard, "core-021");
     expect(Array.from(hinder.querySelectorAll("ins.patch-mark")).map((element) => element.textContent)).toEqual(["Discard 1"]);
-    expect(screen.getAllByTestId(patchTestid.changedCard)).toHaveLength(23);
-    expect(screen.getAllByTestId(patchTestid.dataOnly)).toHaveLength(88);
+    // Every card v0.2.0 records as changed is on the page once: a face, or a name in the data-only list.
+    const record = (await realPatchSource.patches()).find((patch) => patch.version === "v0.2.0");
+    const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
+    const shown = [...screen.getAllByTestId(patchTestid.changedCard), ...screen.getAllByTestId(patchTestid.dataOnly)].map(
+      (element) => element.dataset.card,
+    );
+    expect(shown.sort()).toEqual([...changedIds].sort());
+    expect(screen.getAllByTestId(patchTestid.dataOnly).length).toBeGreaterThan(0);
     const groups = screen.getAllByTestId(patchTestid.addedGroup);
     expect(groups.map((group) => [group.dataset.group, within(group).getAllByTestId(patchTestid.openCard).length])).toEqual([
       ["Classic", 90],

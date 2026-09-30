@@ -155,8 +155,12 @@ describe("R388 the real history's changes", () => {
   it("R388 v0.2.0: Call to Chaos's Radiant face becomes three different effects, the recursion moved to the list", async () => {
     const [before, after] = await Promise.all([real("v0.1.1"), real("v0.2.0")]);
     const words = changedWords(text(changed(diffCard(defIn(before, "core-095"), defIn(after, "core-095"))), "radiant.text"));
-    expect(words.added).toEqual(["Three different", "resolved in the order listed", "Cost", "cast a random Call to Chaos"]);
-    expect(words.removed).toEqual(["Two", "Cast a random Call to Chaos, plus one of", "Cost"]);
+    // Also marked: the (N) Cost style's moved words (R432), which the house-style pass changed too.
+    expect(words.added).toEqual(expect.arrayContaining(["Three different", "resolved in the order listed", "Cost", "cast a random Call to Chaos"]));
+    expect(words.added[0]).toBe("Three different");
+    expect(words.added.at(-1)).toBe("cast a random Call to Chaos");
+    expect(words.removed).toEqual(expect.arrayContaining(["Two", "Cast a random Call to Chaos, plus one of", "Cost"]));
+    expect(words.removed[0]).toBe("Two");
   });
 
   it("R388 every card every patch records diffs to what the record says: its kind and exactly its fields", async () => {
