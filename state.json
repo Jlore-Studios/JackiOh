@@ -83,7 +83,7 @@
   "rate_limited_until": "2026-09-30T10:30:00Z",
   "run_requested": null,
   "suggest": {
-    "last_run": "2026-09-30T08:28:29Z",
+    "last_run": null,
     "requested": false
   },
   "usage": {
