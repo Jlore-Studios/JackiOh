@@ -622,6 +622,30 @@ describe("faces that change more than text (B2.7, E40)", () => {
 });
 
 
+describe("names (R381, B2.8)", () => {
+  it("R381 gives no two cards one name: Classic #55 is Book of Wildfire and #72 Grand Counterspell", () => {
+    const names = new Map<string, string[]>();
+    for (const entry of ENTRIES) names.set(entry.name, [...(names.get(entry.name) ?? []), entry.id]);
+    expect([...names].filter(([, ids]) => ids.length > 1)).toEqual([]);
+    expect(CATALOG["classic-016"]?.name).toBe("Book of Flame");
+    expect(CATALOG["classic-055"]?.name).toBe("Book of Wildfire");
+    expect(CATALOG["classic-017"]?.name).toBe("Counterspell");
+    expect(CATALOG["classic-072"]?.name).toBe("Grand Counterspell");
+    // Book of Wildfire is its own card: the designer's text, not a copy of Book of Flame's.
+    expect(CATALOG["classic-055"]?.rarity).toBe("Epic");
+    expect(CATALOG["classic-055"]?.tags).toEqual(["Book"]);
+  });
+
+  it("R381 keeps the names that are rules words — Exile, Burn, Echo, Recycle — as the designer named them", () => {
+    expect(["classic-010", "classic-036", "classic-057", "classic-030"].map((id) => CATALOG[id]?.name)).toEqual([
+      "Exile",
+      "Burn",
+      "Echo",
+      "Recycle",
+    ]);
+  });
+});
+
 describe("tag vocabulary (BUILD M4-T1, B2.4)", () => {
   it("uses only Human, Felinor, KY, CN, Fruit, Call to Chaos, Quickdraw, Jlockeed, Book, Pancake, AI and Token", () => {
     const wrong: string[] = [];

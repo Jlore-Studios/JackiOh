@@ -375,7 +375,7 @@ export function testConfig(overrides: Partial<ServerConfig> = {}): ServerConfig 
     promptClockSeconds: 30,
     mulliganClockSeconds: 45,
     disconnectGraceSeconds: 60,
-    matchCeilingMinutes: 60,
+    matchCeilingMinutes: 120,
     roomCodeLength: 6,
     eloK: 32,
     eloStart: 1000,

@@ -54,7 +54,7 @@ describe("the cards-layer surface (§5.1: one query function)", () => {
 });
 
 describe("§5.1 tokens are out of every pool unless the card names the token pool", () => {
-  it("§5.1, R380 a plain query({}) is the 268 non-token cards of every set: no def.token, no Token tag, no Token rarity", () => {
+  it("R380 a plain query({}) is the 268 non-token cards of every set: no def.token, no Token tag, no Token rarity", () => {
     const all = query({});
 
     expect(all).toHaveLength(268);
@@ -357,6 +357,38 @@ describe("§9.3, R60 pool order is deterministic, so a seeded pick replays", () 
       expect(ids(query({ tags: ["Token"] }))).toEqual(forward);
     } finally {
       registerCatalog(CATALOG, CATALOG_VERSION);
+    }
+  });
+});
+
+describe("R382 the Fruit pool holds the five Grapes; a pool that takes every token takes them all (B2.6)", () => {
+  const GRAPES = ["classicplus-065-1", "classicplus-065-2", "classicplus-065-3", "classicplus-065-4", "classicplus-065-5"];
+
+  it("R382 a Fruit pool is every non-token Fruit card and the five Grapes, the generating card excluded", () => {
+    // Core #47 Fig of Life, Classic+'s Fruit cards and the Grapes (each after the card that defines
+    // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool.
+    const expected = Object.values(CATALOG)
+      .filter((def) => def.tags.includes("Fruit") && (!def.token || GRAPES.includes(def.id)))
+      .map((def) => def.id)
+      .filter((id) => id !== "classicplus-058");
+    expect(ids(pool("classicplus-058", { tags: ["Fruit"] }))).toEqual(expected);
+    expect(expected.filter((id) => CATALOG[id]?.token)).toEqual(GRAPES);
+    expect(ids(query({ tags: ["Fruit"] }))).toContain("core-047");
+  });
+
+  it("R382 no other pool reaches a Grape: not a plain pool, not a Spell pool, not a rarity pool", () => {
+    for (const args of [{}, { type: "Spell" as const }, { rarity: "Common" as const }, { cost: 1 }, { tags: ["KY" as const] }]) {
+      const got = ids(query(args));
+      expect(GRAPES.filter((id) => got.includes(id)), JSON.stringify(args)).toEqual([]);
+    }
+  });
+
+  it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself", () => {
+    const every = ids(pool("classicplus-023", { withTokens: true }));
+    expect(every).toHaveLength(317 - 1);
+    expect(every).not.toContain("classicplus-023");
+    for (const id of [...GRAPES, "classicplus-019-3", "classicplus-t-ai-01", "core-t-coin", "core-051-1"]) {
+      expect(every).toContain(id);
     }
   });
 });
