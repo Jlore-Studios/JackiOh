@@ -254,20 +254,22 @@ describe("E39 return after resolving, and its floor (R455)", () => {
     expect(after.players.p1.hand.map((held) => held.id)).toContain(back.id);
   });
 
-  it("R455 a Spell with the return that is discarded, exiled as it lands, or burned by a full hand does not come back", () => {
+  it("R410 R455 a Spell with the return comes back from the exile it lands in, and not when discarded; a full hand burns it", () => {
     const state = pbPlaying("r455-no-return");
     const spell = handCard(state, graveSpell.id);
     spell.enchantments = [{ kind: "returnAfterResolve", floor: 1 }];
-    // Discarded: not played, so nothing resolves.
+    // Discarded: not played, so nothing resolves and nothing returns.
     const sink = sinkFor(state);
     applyEffects([discard({ target: { of: "instance", instanceId: spell.id } })], makeContext(sink, null, { controller: "p1" }));
     expect(state.players.p1.graveyard.map((card) => card.id)).toContain(spell.id);
 
-    // Cast with "then exile it": exile is final.
+    // Cast with "then exile it": it resolves, lands in exile, and comes back from there (R410).
     const other = inGraveyard(state, graveSpell.id);
     other.enchantments = [{ kind: "returnAfterResolve", floor: 1 }];
-    run(state, [cast({ target: { of: "instance", instanceId: other.id }, afterward: "exile" })]);
-    expect(state.players.p1.exile.map((card) => card.id)).toContain(other.id);
+    const back = run(state, [cast({ target: { of: "instance", instanceId: other.id }, afterward: "exile" })]);
+    expect(eventsOfType(back.events, "exiled").map((event) => event.instanceId)).toContain(other.id);
+    expect(state.players.p1.hand.map((card) => card.id)).toContain(other.id);
+    expect(state.players.p1.exile.map((card) => card.id)).not.toContain(other.id);
 
     // A full hand burns it on its way back (§2.4).
     const full = pbPlaying("r455-burn");

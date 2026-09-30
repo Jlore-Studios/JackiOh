@@ -3,6 +3,7 @@
 // Plague Token payment, a pause mid-play surviving JSON, and what the other seat sees.
 
 import { describe, expect, it } from "vitest";
+import { effectiveCost } from "../src/mana";
 import { addModifier } from "../src/modifiers";
 import { legalActions } from "../src/reduce";
 import { hashState } from "../src/replay";
@@ -125,6 +126,19 @@ describe("E11 play from the graveyard (R454)", () => {
     const again = inGraveyard(taxed, graveSpell.id);
     const paid = pbReduce(taxed, { type: "play", instanceId: again.id, playerId: "p1" });
     expect(only(eventsOfType(paid.events, "cardPlayed")).costPaid).toBe(2);
+  });
+
+  it("R454 R65 a graveyard card is priced as a play wherever it is read while a permission lets its player play it, and at its own cost otherwise", () => {
+    const state = pbPlaying("r454-read");
+    put(state, monkey.id, slot("p2", "units", 1)); // Spells cost (1) more
+    const spell = inGraveyard(state, graveSpell.id);
+    expect(effectiveCost(state, spell)).toBe(1);
+    const wind = put(state, secondWind.id, slot("p1", "backrow", 1));
+    expect(effectiveCost(state, spell)).toBe(2);
+    // The view prints that price.
+    expect(only(viewFor(state, "p1").you.graveyard.filter((card) => card.instanceId === spell.id)).cost).toBe(2);
+    wind.vanilla = true;
+    expect(effectiveCost(state, spell)).toBe(1);
   });
 
   it("R454 Second Wind's Radiant face needs a price of (1) or more, as it would be paid", () => {

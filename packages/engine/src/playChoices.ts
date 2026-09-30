@@ -43,6 +43,7 @@ import { hasKeyword, opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
 import { whyPlayBanned } from "./costRules";
+import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
 import { faceOf, unitHas } from "./layers";
 import { isXCost, playCost } from "./mana";
 import type { StaticFlags } from "./script";
@@ -842,8 +843,15 @@ export function playActionsFor(state: GameState, player: PlayerId, card: CardIns
   return pricedPlayActions(state, player, card, (cost) => (cost <= mana ? [{}] : []));
 }
 
-/** How one play pays its price besides mana: the Plague Tokens a graveyard play spends (E11, R454). */
-export type PlayPayment = Pick<PlayAction, "plague">;
+/**
+ * E11, R454: every `play` action `legalActions` lists for a card in the player's graveyard — R81's
+ * choices crossed exactly as for a hand card, each with the ways a permission lets it be paid
+ * (`graveyardPlay.graveyardPaymentsFor`). Nothing without a permission that admits it.
+ */
+export function graveyardPlayActionsFor(state: GameState, player: PlayerId, card: CardInstance): PlayAction[] {
+  if (!playableFromGraveyard(state, card) || card.zone.player !== player) return [];
+  return pricedPlayActions(state, player, card, (price) => graveyardPaymentsFor(state, player, card, price));
+}
 
 /**
  * R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen

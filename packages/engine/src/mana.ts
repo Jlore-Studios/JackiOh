@@ -4,6 +4,7 @@ import type { GameEvent } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { climbPriceRules, costFloorOf, priceRulesFor } from "./costRules";
 import { cardTypeOf } from "./faces";
+import { playableFromGraveyard } from "./graveyardPlay";
 import { scriptOf } from "./scripts";
 import { handicapOf, type CardInstance, type GameState, type PlayerModifier, type PlayerState } from "./state";
 
@@ -114,8 +115,8 @@ type Price = { cost: number; usedRules: string[] };
  * it from (§10.5 step 1), and no other. A card in a library or a graveyard is read at its own cost,
  * its `costOverride` or printed cost with its `costMod`: #30 Archivist's "highest" (R24), #94's
  * 2-cost draw and odd-cost exile (R66), a Recruit's filter — as Hearthstone's hand discounts never
- * reach the deck or the graveyard (R65). `options.asPlay` prices a card a play takes from somewhere
- * else — a graveyard, under a permission to play from it (E11, R454) — as a play too.
+ * reach the deck or the graveyard (R65) — except a graveyard a permission lets its player play from
+ * (E11, R454), where a play takes the card from. `options.asPlay` prices any card as a play of it now.
  *
  * R455 (E15) adds its rungs through `costRules.ts`: after R65's discounts, the flat price rules (the
  * `costRule` modifiers and the field's cost auras), then the threshold rules, which read the one
@@ -156,9 +157,13 @@ function priceOf(state: GameState, instance: CardInstance, options: CostOptions)
   }
 
   let cost = (override ?? printedCost(state, instance)) + instance.costMod;
-  // R65: a player's discounts price a play, and a play takes a card from its hand (or, under E11's
-  // permission, from its graveyard: `asPlay`).
-  if (instance.zone.z !== "hand" && options.asPlay !== true) return { cost: Math.max(0, cost, floor), usedRules: [] };
+  // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
+  // graveyard, while a permission lets its player play it from there (E11, R454).
+  const forPlay =
+    options.asPlay === true ||
+    instance.zone.z === "hand" ||
+    (instance.zone.z === "graveyard" && playableFromGraveyard(state, instance));
+  if (!forPlay) return { cost: Math.max(0, cost, floor), usedRules: [] };
   const type = cardTypeOf(state, instance);
 
   for (const mod of side.mods) {

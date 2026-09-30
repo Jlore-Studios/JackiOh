@@ -9,7 +9,7 @@
 //
 //   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
-//                      `graveyardPlay.graveyardPlayActionsFor` for a graveyard card a permission
+//                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
 //                      lets its player play (E11, R454). Step 1's validation is
 //                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
@@ -37,9 +37,8 @@ import { NON_ACTIVE_ACTION_TYPES, PROMPT_OPEN_ACTION_TYPES, opponentOf } from "@
 import { attackTargets, declareAttack, hasExertion, switchPosition, type AttackTarget } from "./combat";
 import { NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS } from "./config";
 import { endGame } from "./gameOver";
-import { graveyardPlayActionsFor } from "./graveyardPlay";
 import { runPlaySteps } from "./playSteps";
-import { playActionsFor } from "./playChoices";
+import { graveyardPlayActionsFor, playActionsFor } from "./playChoices";
 import { answerPrompt, promptAnswers } from "./prompts";
 import { createRng, type Rng } from "./rng";
 import type { EngineSink } from "./resolve";

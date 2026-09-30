@@ -14,10 +14,9 @@
 // fires (R1: "played", wherever from). A permission only decides whether the play may be made and how
 // it may be paid.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { ActionBody, PlayerId } from "@jackioh/shared";
 import { MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA } from "./config";
 import { cardTypeOf } from "./faces";
-import { pricedPlayActions, type PlayAction, type PlayPayment } from "./playChoices";
 import type { EngineSink } from "./resolve";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
@@ -44,7 +43,10 @@ export type GraveyardPlayPermission = {
 export type GraveyardGrant = { source: CardInstance; permission: GraveyardPlayPermission };
 
 /** The Plague Tokens a play from the graveyard spends: the play action's `plague`. */
-export type PlagueSpend = NonNullable<PlayAction["plague"]>;
+export type PlagueSpend = NonNullable<Extract<ActionBody, { type: "play" }>["plague"]>;
+
+/** How one play pays its price besides mana: the Plague Tokens a graveyard play spends (R454). */
+export type PlayPayment = { plague?: PlagueSpend };
 
 /**
  * E11: every permission the player has now — from each card acting on their side of the field (the
@@ -79,18 +81,32 @@ function admitting(state: GameState, player: PlayerId, card: CardInstance): Grav
   return graveyardGrantsOf(state, player).filter((grant) => grant.permission.units !== true || unit);
 }
 
+/**
+ * R454, R65: whether a play may take this card from its player's graveyard now — the card lies there
+ * and a permission admits its type. Such a card is priced as a play wherever it is read (R65: the
+ * player's prices reach a card where a play takes it from), whatever price a permission then asks.
+ */
+export function playableFromGraveyard(state: GameState, card: CardInstance): boolean {
+  const player = card.zone.player;
+  return inOwnGraveyard(state, player, card) && admitting(state, player, card).length > 0;
+}
+
 /** The Plague Tokens on a card now (§6.3 Plague Token). */
 function plagueOn(card: CardInstance): number {
   return card.counters.plague ?? 0;
 }
 
 /**
- * R454: every way a play of this card at this price may be paid under the permissions — `{}` in mana
- * alone when a permission without `plague` admits the price and the mana covers it; and, per Plague
- * permission that admits it, each number of tokens from MIN_PLAGUE_PAYMENT up to what the card holds
- * and the price allows, with the rest in mana.
+ * R454: every way a play of this graveyard card at this price may be paid under the permissions — `{}`
+ * in mana alone when a permission without `plague` admits the price and the mana covers it; and, per
+ * Plague permission that admits it, each number of tokens from MIN_PLAGUE_PAYMENT up to what the card
+ * holds and the price allows, with the rest in mana. None when no permission admits the card, or the
+ * card is not in its player's own graveyard. `playChoices.graveyardPlayActionsFor` crosses these with
+ * the play's choices.
  */
-function paymentsFor(state: GameState, player: PlayerId, grants: readonly GraveyardGrant[], price: number): PlayPayment[] {
+export function graveyardPaymentsFor(state: GameState, player: PlayerId, card: CardInstance, price: number): PlayPayment[] {
+  if (!inOwnGraveyard(state, player, card)) return [];
+  const grants = admitting(state, player, card);
   const mana = state.players[player].mana.current;
   const out: PlayPayment[] = [];
   const priced = grants.filter((grant) => price >= (grant.permission.minPrice ?? 0));
@@ -103,18 +119,6 @@ function paymentsFor(state: GameState, player: PlayerId, grants: readonly Gravey
     }
   }
   return out;
-}
-
-/**
- * E11, R454: every `play` action `legalActions` lists for a card in the player's graveyard — R81's
- * choices crossed exactly as for a hand card (`playChoices.pricedPlayActions`), each with the ways a
- * permission lets it be paid. Nothing without a permission that admits it.
- */
-export function graveyardPlayActionsFor(state: GameState, player: PlayerId, card: CardInstance): PlayAction[] {
-  if (!inOwnGraveyard(state, player, card)) return [];
-  const grants = admitting(state, player, card);
-  if (grants.length === 0) return [];
-  return pricedPlayActions(state, player, card, (price) => paymentsFor(state, player, grants, price));
 }
 
 /**

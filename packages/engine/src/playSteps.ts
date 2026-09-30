@@ -1354,8 +1354,8 @@ function resolveRepeat(sink: EngineSink, run: PlayRun): boolean {
  * no-op for everything else the step lands — a permanent, and a Spell that exiled itself (#39).
  */
 function finishStep(sink: EngineSink, run: PlayRun): void {
-  // E39, R455 (Classic+ #14 Forever&): a Spell that resolved goes back to its owner's hand instead.
-  returnAfterResolving(sink, run);
+  // E39, R410, R455 (Classic+ #14 Forever&): a Spell with the return comes back once it has landed.
+  const landing = findInstance(sink.state, run.instanceId)?.zone.z === "resolving";
   landAfterResolution(sink, {
     instanceId: run.instanceId,
     defId: run.defId,
@@ -1369,21 +1369,22 @@ function finishStep(sink: EngineSink, run: PlayRun): void {
     ...(run.placedFrom === undefined ? {} : { placedFrom: run.placedFrom }),
     arrivedDuring: arrivedDuring(sink.state, run),
   });
+  if (landing) returnAfterResolving(sink, run);
   flagReturnToHandAtEndOfTurn(sink.state, run.instanceId);
 }
 
 /**
- * E39, R455 (Classic+ #14 Forever&: "After this resolves, return it to your hand"): a Spell carrying a
- * `returnAfterResolve` enchantment that has resolved — played or cast, and still in the resolving zone
- * at step 7 — goes to its owner's hand instead of the graveyard, the hand cap burning it as always
- * (§2.4). A Spell step 7 exiles (its own "exile this", a cast's "then exile it", R178) is exiled: exile
- * is final (§6.3). A countered Spell never reaches step 7, and a fizzled cast resolved nothing.
+ * E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to your hand"): a Spell
+ * carrying a `returnAfterResolve` enchantment that has resolved — played or cast — and that step 7 has
+ * just landed goes back to its owner's hand from the graveyard or the exile pile it went to (its own
+ * "exile this", a cast's "then exile it", a "would go to a graveyard" replacement), the hand cap
+ * burning it as always (§2.4). A countered Spell never reaches step 7, a discarded one was never
+ * played, and a fizzled cast resolved nothing.
  */
 function returnAfterResolving(sink: EngineSink, run: PlayRun): void {
   if (run.fizzled === true) return;
   const card = findInstance(sink.state, run.instanceId);
-  if (card === undefined || card.zone.z !== "resolving") return;
-  if (card.memory[EXILE_ON_LANDING] === true) return;
+  if (card === undefined || (card.zone.z !== "graveyard" && card.zone.z !== "exile")) return;
   if (cardTypeOf(sink.state, card) !== "Spell" || !hasEnchantment(card, "returnAfterResolve")) return;
   addToHand(sink, card);
 }
