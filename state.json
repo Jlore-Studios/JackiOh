@@ -80,6 +80,13 @@
     "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36687799017",
     "what": "suggestions"
   },
+  "last_sweep": {
+    "at": "2026-09-30T11:21:05Z",
+    "notes": [
+      "the first sweep: from now on"
+    ],
+    "since": "2026-09-30T11:21:05Z"
+  },
   "rate_limited_until": "2026-09-30T10:30:00Z",
   "run_requested": null,
   "suggest": {
