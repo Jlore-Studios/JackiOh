@@ -1,9 +1,9 @@
 // The card-script contract (SPEC §10.9). A card file returns Effect[] from the effects library and
 // never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
 
-import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, TargetDecl } from "@jackioh/shared";
+import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag, TargetDecl } from "@jackioh/shared";
 import type { Rng } from "./rng";
-import type { CardInstance, GameState } from "./state";
+import type { CardInstance, GameState, PlayRecord } from "./state";
 import type { EventStay } from "./stays";
 
 export type EffectContext = {
@@ -196,6 +196,19 @@ export type StaticFlags = {
   // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
+  /**
+   * Classic #33 Joro, R450: "While this is in your hand: when your opponent targets one of your
+   * Units, summon this and make it the new target". Read off a card in its controller's hand at the
+   * targeting point (`targetingPoint.interceptTargeting`); the attack half (§4.2 step 2) calls the
+   * same function.
+   */
+  interceptsTargeting?: boolean;
+  /**
+   * Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of
+   * these tags becomes Radiant as it is played (§10.5 step 3) — R213's Gifted Program rule by tag, on
+   * every such play rather than the first cheap one (`playChoices.playMadeRadiant`).
+   */
+  radiantPlaysTagged?: Tag[];
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
   // ---- v0.2.0 static flags, by workstream: prompts and generation (E19, E26) ----
@@ -289,6 +302,20 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: instance data (B3.3, B3.4) ----
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
+  /**
+   * B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
+   * also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
+   * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. A declared
+   * target naming it carries the discards in the action; a prompt answer naming it asks for them next
+   * (`targeting.ts`, `targetingPoint.ts`).
+   */
+  targetingDiscards?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
+  /**
+   * B5 E4, R451: what this card's play records as the card played — the last Spell played (Classic
+   * #57) and its player's last face-up play. Absent records the card itself; Classic #57 Echo
+   * returns the Spell it copied, and null records nothing (an Echo with nothing to copy).
+   */
+  recordsPlayAs?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => PlayRecord | null;
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----

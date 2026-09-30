@@ -51,6 +51,8 @@ export type ActionBody =
       targets?: Selection[];
       modes?: string[];
       tributes?: string[];
+      /** B5 E5, R450: the cards a costly declared target (Classic #89) is paid with, as a play's `discards`. */
+      discards?: string[];
     }
   /** R43, R384: Heroic Power's activation, kept as an alias of `activate` so old logs replay. */
   | { type: "activatePower"; instanceId: string; targets?: Selection[] }

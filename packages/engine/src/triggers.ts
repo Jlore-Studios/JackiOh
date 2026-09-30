@@ -44,6 +44,7 @@ import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
+import { isAnnounceLive } from "./announce";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
@@ -573,6 +574,9 @@ export function runQueuedTrigger(sink: EngineSink, entry: QueuedTrigger): void {
 
   const def = queuedTriggerDef(holder, entry);
   if (def === undefined || !def.on.includes(event.type)) return;
+  // B5 E1, R448: a response to an announce whose play a Counter has already cancelled, or that step 4
+  // has already moved, finds no card and fizzles (`playSteps.runAnnounceWindow` pops these itself).
+  if (event.type === "cardAnnounced" && !isAnnounceLive(sink.state, event.instanceId)) return;
   // R212: an event trigger answers for the player who controlled its card when the event happened,
   // which is what its entry captured — a change of control since does not hand the answer over.
   const queuedFor: unknown = entry.resume.data.controller;

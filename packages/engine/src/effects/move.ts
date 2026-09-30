@@ -1,17 +1,21 @@
-// Exile, Bounce, Discard and Counter: the moves that take a card off the field or out of a hand
-// (SPEC §6.3, §3.2, §2.4, R11, R12, R16, R78). Every zone change goes through `zones.ts`.
+// Exile, Bounce, Discard and Counter: the moves that take a card off the field, out of a hand or off
+// the stack (SPEC §6.3, §3.2, §2.4, R11, R12, R16, R78, R448). Every zone change goes through `zones.ts`.
 //
 // Each verb comes in a single-card form and a sweep — `exile`/`exileAll`/`exileAdjacentTo`,
 // `bounce`/`bounceAll`, `discard`/`discardHand`, plus `exileHand` — and the sweeps are walks over
 // `cardsInScope` or `adjacentTo` (§3.1, §3.2) down the same private per-card helper the
 // single-card form uses. One implementation per move, so "bounce" can only ever mean one thing.
 
+import { innermostLiveAnnounce, isAnnounceLive, markCountered } from "../announce";
 import { addToHand } from "../draw";
 import { exileOnLanding } from "../echo";
+import { HAND_CAP } from "../config";
+import { takeIntoHand } from "../ownership";
+import type { EngineSink } from "../resolve";
 import { effectiveCost, isXCost } from "../mana";
 import { zoneCards } from "../query";
 import type { Effect, EffectContext } from "../script";
-import type { CardInstance } from "../state";
+import { findInstance, type CardInstance } from "../state";
 import { isUnitToken, moveToZone } from "../zones";
 import {
   adjacentTo,
@@ -211,8 +215,15 @@ export function bounceAll(args: BoardScope = {}): Effect {
   };
 }
 
-/** Hand to GY for one named card, with the events §10.3 gives a discard. */
-function discardCard(ctx: EffectContext, card: CardInstance): void {
+/**
+ * Hand to GY for one named card, with the events §10.3 gives a discard. Exported for the one engine
+ * path that discards as a cost rather than as an effect: a targeting cost (R450, `targetingPoint.ts`).
+ */
+export function discardFromHand(ctx: Pick<EngineSink, "state" | "events">, card: CardInstance): void {
+  discardCard(ctx, card);
+}
+
+function discardCard(ctx: Pick<EngineSink, "state" | "events">, card: CardInstance): void {
   if (card.zone.z !== "hand") return;
 
   const moved = moveToZone(ctx.state, card, "graveyard");
@@ -306,38 +317,83 @@ export function exileHand(args: { player?: PlayerSpec } = {}): Effect {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Counter (B5 E1, E2; R448)
+// ---------------------------------------------------------------------------
+
 /**
- * §6.3 Counter: cancel a card as it is played. It goes to the graveyard with no Cry and no Death,
- * and is treated as never played, so the play counters this card added are rolled back (R55).
+ * Where a countered card goes: its owner's graveyard, exile when the text says so (Classic #10), or
+ * the hand of the player whose effect countered it, as their own (E2's steal off the stack: Classic
+ * #4, #72 Radiant).
  */
-export function counter(args: { target?: TargetSpec } = {}): Effect {
+export type CounterDestination = "graveyard" | "exile" | "thief";
+
+/**
+ * B5 E1, R448: §6.3 Counter — cancel the play an announce window is answering. The card never
+ * resolves or enters the field: no Cry, no Death, no `cardPlayed` or `cardResolved`, no Echo repeat,
+ * and it counts for nothing that counts plays, because §10.5 step 4, where every count is made, never
+ * runs for it. Its mana and Tributes stay spent. `target` names the announced card (a response reads
+ * it off its `cardAnnounced`); with none it is the innermost announce still live. The first Counter to
+ * resolve cancels the play, and a later one finds no card and does nothing (a trap on a cancelled
+ * announce is not even offered it, and stays set).
+ *
+ * `to: "thief"` is E2: the card moves to the countering player's hand and its owner becomes that
+ * player (`ownership.takeIntoHand`); a full hand burns it into their graveyard (§2.4). A unit-token
+ * card ceases to exist wherever it was going (R11). `countered` goes out first, naming where the card
+ * went, then the move's own events.
+ */
+export function counterPlay(args: { to?: CounterDestination; target?: TargetSpec } = {}): Effect {
   return {
-    kind: "counter",
+    kind: "counterPlay",
     apply(ctx): void {
-      const card = instanceOf(ctx, args.target ?? { of: "chosen" });
-      if (card === null || card.zone.z === "graveyard") return;
+      const state = ctx.state;
+      const named = args.target === undefined ? null : instanceOf(ctx, args.target);
+      const record =
+        args.target === undefined
+          ? innermostLiveAnnounce(state)
+          : named === null || !isAnnounceLive(state, named.id)
+            ? undefined
+            : { instanceId: named.id };
+      if (record === undefined) return;
+      const card = findInstance(state, record.instanceId);
+      if (card === undefined || card.zone.z !== "resolving") return;
+      const player = card.zone.player;
+      if (!markCountered(state, card.id)) return;
 
-      const side = ctx.state.players[card.controller];
-      const at = side.turnLog.playedIds.lastIndexOf(card.id);
-      if (at >= 0) {
-        // R213: what each play paid is logged beside its id, in the same order, so the countered
-        // play's cost goes with it — a countered cheap card was never Gifted Program's first.
-        const paid = side.turnLog.costsPaid;
-        if (paid !== undefined && paid.length === side.turnLog.playedIds.length) paid.splice(at, 1);
-        side.turnLog.playedIds.splice(at, 1);
-        side.turnLog.cardsPlayed = Math.max(0, side.turnLog.cardsPlayed - 1);
-        ctx.state.counters.played = Math.max(0, ctx.state.counters.played - 1);
+      const to = args.to ?? "graveyard";
+      const thief = ctx.controller;
+      const token = isUnitToken(state, card);
+      const lands =
+        token ? "gone" : to === "thief" ? (state.players[thief].hand.length >= HAND_CAP ? "graveyard" : "hand") : to;
+      ctx.events.push({
+        type: "countered",
+        player,
+        instanceId: card.id,
+        defId: card.defId,
+        byInstanceId: ctx.self?.id ?? null,
+        to: lands,
+      });
+
+      if (to === "thief") {
+        takeIntoHand(ctx, card, thief);
+        return;
       }
-
-      const moved = moveToZone(ctx.state, card, "graveyard");
+      if (to === "exile") {
+        exileCard(ctx, card);
+        return;
+      }
+      const moved = moveToZone(state, card, "graveyard");
       if (moved === "moved") {
-        ctx.events.push({
-          type: "enteredGraveyard",
-          instanceId: card.id,
-          defId: card.defId,
-          owner: card.owner,
-        });
+        ctx.events.push({ type: "enteredGraveyard", instanceId: card.id, defId: card.defId, owner: card.owner });
       }
     },
   };
+}
+
+/**
+ * §6.3 Counter by its rules name: `counterPlay` to its owner's graveyard, aimed at `target` or at the
+ * innermost live announce. The one Counter there is (R448).
+ */
+export function counter(args: { target?: TargetSpec } = {}): Effect {
+  return counterPlay({ to: "graveyard", ...(args.target === undefined ? {} : { target: args.target }) });
 }

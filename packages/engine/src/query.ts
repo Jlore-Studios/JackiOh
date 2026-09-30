@@ -26,10 +26,11 @@
 // `packages/cards/src/query.ts`). This module queries the BOARD. Two different questions; the
 // names below say which is which, and neither exports a bare `query`.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { CardType, PlayerId, Tag } from "@jackioh/shared";
+import { isAnnounceLive } from "./announce";
 import { defOf } from "./catalog";
 import type { EffectContext } from "./script";
-import { findInstance, type CardInstance, type GameState } from "./state";
+import { findInstance, type CardInstance, type FaceUpRecord, type GameState, type PlayRecord } from "./state";
 import { partMemoryKey } from "./work";
 import { cardAt, slotOf, type OffFieldZone } from "./zones";
 
@@ -181,4 +182,60 @@ export function killerOf(state: GameState, card: CardInstance | null): CardInsta
   const at = slotOf(state, killer);
   if (at === null || cardAt(state, at)?.id !== killer.id) return null;
   return killer;
+}
+
+// ---------------------------------------------------------------------------
+// v0.2.0 readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E4: how many cards this player has played this turn of the given types — the type each was
+ * played as (B2.7) — casts included (R70), countered plays never (R448). Counted on both players'
+ * turns and cleared with the rest of "this turn" at every start of turn (Classic+ #37 Wardrum's
+ * Spells, Field Spells and Traps, a Field Trap being a Trap, §5.1).
+ */
+export function playedThisTurnOfType(
+  state: GameState,
+  player: PlayerId,
+  types: CardType | readonly CardType[],
+): number {
+  const counts = state.players[player].turnLog.playedTypes ?? {};
+  const wanted: readonly CardType[] = typeof types === "string" ? [types] : types;
+  return [...new Set(wanted)].reduce((sum, type) => sum + (counts[type] ?? 0), 0);
+}
+
+/**
+ * B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
+ * countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
+ */
+export function playedThisGameWithTag(state: GameState, player: PlayerId, tag: Tag): number {
+  return state.players[player].playedByTag?.[tag] ?? 0;
+}
+
+/**
+ * B5 E4, R451: the last Spell either player played (Classic #57 Echo) — as its play recorded it, so a
+ * played Echo is the Spell it copied — or null before any. A copy, so a script cannot write it.
+ */
+export function lastSpellPlayed(state: GameState): PlayRecord | null {
+  const last = state.lastSpell;
+  return last === undefined ? null : { ...last };
+}
+
+/**
+ * B5 E4, R451: the last face-up card this player played (AI Autocomplete), with the type it was played
+ * as, or null before any. Traps and Field Traps are set face-down and never count, and the AI
+ * generated cards are passed over (`LAST_FACE_UP_SKIPPED_TAGS`). A copy.
+ */
+export function lastFaceUpPlayed(state: GameState, player: PlayerId): FaceUpRecord | null {
+  const last = state.lastFaceUp?.[player];
+  return last === undefined ? null : { ...last };
+}
+
+/**
+ * B5 E1, R448: whether the play a `cardAnnounced` names can still be countered — its window is open
+ * and no Counter has cancelled it yet. A response that asks before it counters (Classic #4 Palantir)
+ * reads this; the engine already offers a cancelled announce to no trap and runs no trigger on it.
+ */
+export function playStillAnnounced(state: GameState, instanceId: string): boolean {
+  return isAnnounceLive(state, instanceId);
 }

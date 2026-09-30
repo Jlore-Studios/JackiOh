@@ -34,7 +34,7 @@ import type { ActionBody, PlayerId, PromptKind, Selection } from "@jackioh/share
 import { makeContext, type EngineSink } from "./resolve";
 import type { Effect, EffectContext, Hook, Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
-import { findInstance, type CardInstance, type PendingChoice, type PromptOption, type Resume } from "./state";
+import { findInstance, type CardInstance, type GameState, type PendingChoice, type PromptOption, type Resume } from "./state";
 import { exitMark } from "./stays";
 import {
   RUN_MARKS_KEY,
@@ -220,14 +220,17 @@ export function openPrompt(sink: EngineSink, args: OpenPromptArgs): PendingChoic
   const state = sink.state;
   if (state.pending !== null) return null;
   if (args.options.length === 0) return null;
+  // B5 E5, R450: a `target` prompt never offers a card its chooser may not target (the targeting point).
+  const options = targeting.options === undefined ? args.options : targeting.options(state, args);
+  if (options.length === 0) return null;
 
-  const max = clamp(args.max ?? 1, 0, args.options.length);
+  const max = clamp(args.max ?? 1, 0, options.length);
   const pending: PendingChoice = {
     id: `q${state.nextId}`,
     playerId: args.player,
     kind: args.kind,
     prompt: args.prompt,
-    options: args.options.map((option) => ({ ...option })),
+    options: options.map((option) => ({ ...option })),
     min: clamp(args.min ?? 1, 0, max),
     max,
     resume: args.resume,
@@ -370,21 +373,67 @@ export function answerPrompt(sink: EngineSink, answer: AnswerInput): string | nu
 
   const refused = whyAnswerRefused(pending, answer);
   if (refused !== null) return refused;
+  const picks = inOfferedOrder(pending, answer.selection);
+  // B5 E5, R450: the targeting point may refuse picks that cost more than their chooser can pay.
+  const unpaid = targeting.refuse?.(sink.state, pending, picks) ?? null;
+  if (unpaid !== null) return unpaid;
 
   closePrompt(sink);
+  // B5 E5, E9, R450: the targeting point — a cost it asks for first (then its own answer finishes
+  // this one, so there is nothing more to do here), and the pick an interception moves.
+  const targeted = targeting.answer === undefined ? picks : targeting.answer(sink, pending, picks);
+  if (targeted === null) return null;
+  continueAnswer(sink, pending, targeted);
+  return null;
+}
+
+/**
+ * The rest of an answer once its prompt is closed: re-enter the step the prompt paused with the picks,
+ * then drain what it interrupted (R113, R122). `answerPrompt` ends here; so does an answer the
+ * targeting point interrupted to ask for a cost (`targetingPoint.ts`, R450), and a caller that answers
+ * for a player without the targeting point (a random pick targets nothing).
+ */
+export function continueAnswer(
+  sink: EngineSink,
+  pending: Pick<PendingChoice, "playerId" | "resume">,
+  picks: readonly Selection[],
+): void {
   // R113, R122: answering re-enters the step the prompt paused, which is taking that step up again —
   // so the cursor resets, and a pause inside it parks its own tail ahead of everything still owed,
   // not behind it at whatever place the action before this one left the cursor.
   beginWorkCascade(sink);
   runResume(sink, resumeOf(pending), {
     controller: pending.playerId,
-    targets: inOfferedOrder(pending, answer.selection),
+    targets: picks,
     // R174, §10.6: the picks are cards as the prompt offered them, on the stays they stand on now —
     // whatever the list that asked did to the board before it asked.
     chosenFrom: exitMark(sink.state),
   });
   drainWork(sink);
-  return null;
+}
+
+// ---- v0.2.0: the targeting point (B5 E5, E9, E35; R450), registered by `targetingPoint.ts` ----
+
+/**
+ * What the targeting point does to a prompt: `options` drops what the chooser may not target from a
+ * prompt as it opens, `refuse` turns down an answer whose picks cost more than the chooser holds,
+ * and `answer` runs the point on a closed prompt's picks — returning the picks to go on with, or null
+ * when it asked for a cost first and its own answer finishes this one. `targetingPoint.ts` sits above
+ * this module, so it registers these at module scope, as `playSteps` registers its answerer.
+ */
+export type TargetingHooks = {
+  options?: (state: GameState, args: OpenPromptArgs) => readonly PromptOption[];
+  refuse?: (state: GameState, pending: PendingChoice, picks: readonly Selection[]) => string | null;
+  answer?: (sink: EngineSink, pending: PendingChoice, picks: readonly Selection[]) => Selection[] | null;
+};
+
+let targeting: TargetingHooks = {};
+
+/** Registered by `targetingPoint.ts` at module scope. Returns the hooks it replaced. */
+export function registerTargetingHooks(hooks: TargetingHooks): TargetingHooks {
+  const previous = targeting;
+  targeting = hooks;
+  return previous;
 }
 
 /**

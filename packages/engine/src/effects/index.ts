@@ -183,6 +183,11 @@ export { forEachCard } from "./each";
 
 // ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----
 
+// B5 E1, E2, R448: Counter the play an announce window answers — to its owner's graveyard, to exile,
+// or to the countering player's hand as theirs ("thief"). `counter` above is its §6.3 name.
+export { counterPlay } from "./move";
+export type { CounterDestination } from "./move";
+
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
 // ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----

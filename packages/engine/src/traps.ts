@@ -37,6 +37,7 @@
 // the rest of the window with no way back, which is worse than firing late.
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
+import { isAnnounceLive } from "./announce";
 import { defOf } from "./catalog";
 import { applyResumable } from "./prompts";
 import { makeContext, type EngineSink } from "./resolve";
@@ -486,6 +487,10 @@ function liveMatch(state: GameState, match: TrapMatch, event: GameEvent): TrapMa
  * the field between the event and its dispatch counts as well (R212).
  */
 export function standingEvent(sink: EngineSink, event: GameEvent, dispatchMark: number): GameEvent | null {
+  // B5 E1, R448: an announce is answered only while its play can still be countered. Once a Counter
+  // earlier in the window has cancelled it (or step 4 has moved the card), a later trap finds no card
+  // and is not offered it at all, so it stays set (R99) rather than firing at nothing (R61).
+  if (event.type === "cardAnnounced") return isAnnounceLive(sink.state, event.instanceId) ? event : null;
   // R212: the stay is the one the event happened on. A play's events carry the mark they were
   // emitted at (`stays.eventMark`), which a late dispatch — a cast's `cardResolved` after the rest of
   // the list that cast it, its sweep and the Reborn that put a body back — must not move forward.

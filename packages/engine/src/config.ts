@@ -224,6 +224,12 @@ export const AI_TUTORIAL: Handicap = {
 
 // ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----
 
+/**
+ * B5 E4, R451: the tags whose cards a player's "last face-up card played" record passes over — the
+ * AI generated cards (B8), so two Autocompletes can't copy each other for ever.
+ */
+export const LAST_FACE_UP_SKIPPED_TAGS: readonly Tag[] = ["AI"];
+
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
