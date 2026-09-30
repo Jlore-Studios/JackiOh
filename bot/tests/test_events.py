@@ -274,6 +274,23 @@ class ReviewAndCiTests(unittest.TestCase):
                                                          "pull_request": pull})
         self.assertEqual(self.gh.label_names(5), set())
         self.assertTrue(self.ctx.store.load()["items"]["9"]["merged"])
+        self.assertEqual(self.gh.get_issue(5)["state"], "closed")
+        self.assertEqual(self.gh.get_issue(5)["state_reason"], "completed")
+
+    def test_a_merged_bot_pr_leaves_an_issue_github_already_closed(self):
+        self.gh.update_issue(5, state="closed", state_reason="not_planned")
+        pull = self.gh.get_pull(9)
+        pull["merged"] = True
+        events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": OPERATOR,
+                                                         "pull_request": pull})
+        self.assertEqual(self.gh.get_issue(5)["state_reason"], "not_planned")
+
+    def test_a_bot_pr_merged_outside_the_default_branch_leaves_the_issue_open(self):
+        pull = self.gh.get_pull(9)
+        pull.update(merged=True, base={"ref": "release"})
+        events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": OPERATOR,
+                                                         "pull_request": pull})
+        self.assertEqual(self.gh.get_issue(5)["state"], "open")
 
     def test_a_bot_pr_closed_unmerged_says_how_to_retry(self):
         pull = self.gh.get_pull(9)

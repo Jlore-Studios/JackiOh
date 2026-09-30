@@ -338,6 +338,11 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
         ctx.gh.create_comment(issue, f"#{number} was closed without merging. Comment "
                               f"`/harness build` to have me try again.")
         return [f"#{number} closed unmerged"]
+    # "Closes #N" in the body should do this, but GitHub doesn't always: #43 merged and left #39 open.
+    if ((pull.get("base") or {}).get("ref") == ctx.cfg.default_branch
+            and ctx.gh.get_issue(issue).get("state") == "open"):
+        ctx.gh.update_issue(issue, state="closed", state_reason="completed")
+        return [f"#{number} merged; closed #{issue}"]
     return [f"#{number} merged; #{issue} closes with it"]
 
 
