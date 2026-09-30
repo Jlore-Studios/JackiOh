@@ -53,7 +53,16 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import { useAccount, type Account } from "./net/gate.ts";
-import { currentPath, loginPath, matchIdOf, navigate, paths, seriesIdOf, usePathname } from "./net/navigate.ts";
+import {
+  SITE_ORIGIN,
+  currentPath,
+  loginPath,
+  matchIdOf,
+  navigate,
+  paths,
+  seriesIdOf,
+  usePathname,
+} from "./net/navigate.ts";
 import { rememberReturnTo } from "./net/return-to.ts";
 import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
@@ -67,7 +76,11 @@ import { readSettings } from "./settings/store.ts";
 import "./index.css";
 import "./auth/tavern.css";
 
-const HotseatRoute = lazy(() => import("./routes/dev/hotseat.tsx"));
+const DEV_ONLY = import.meta.env.MODE !== "production";
+
+// Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
+// behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
+const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
 const LoginRoute = lazy(() => import("./routes/login.tsx"));
 const ResetPasswordRoute = lazy(() => import("./routes/reset-password.tsx"));
 const InviteRoute = lazy(() => import("./routes/invite.tsx"));
@@ -76,8 +89,7 @@ const PlayRoute = lazy(() => import("./routes/play.tsx"));
 const MatchRoute = lazy(() => import("./routes/match.tsx"));
 const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
-
-const DEV_ONLY = import.meta.env.MODE !== "production";
+const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -86,8 +98,11 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
  */
 export { shellTestid };
 
-/** The frame every panel this file draws sits in: the wordmark on the tavern board. */
-function ShellPanel({ testId, children }: { testId?: string; children: ReactNode }): ReactElement {
+/**
+ * The frame every panel this file draws sits in: the wordmark on the tavern board. Exported for
+ * the screens that wait the same way (the match screen before its first view).
+ */
+export function ShellPanel({ testId, children }: { testId?: string; children: ReactNode }): ReactElement {
   return (
     <div className="app-shell tavern shell-panel" data-testid={testId}>
       <section className="panel panel--auth">
@@ -147,12 +162,21 @@ function NotFound({ path }: { path: string }): ReactElement {
   );
 }
 
+export type LoadingProps = {
+  what: string;
+  slow?: boolean;
+  /** The panel's own testid, for a screen that waits in it (the match screen's `match-connecting`). */
+  testId?: string;
+  /** More to say under the sentence: the match screen's connection line. */
+  children?: ReactNode;
+};
+
 /**
  * A holding panel. With `slow`, a wait that runs past `GATE_SLOW_NOTICE_SECONDS` says why it may
  * be slow (Render's free tier sleeps and takes about a minute to wake) and offers the way out, so a
  * server or network that never answers is not a trap.
  */
-function Loading({ what, slow = false }: { what: string; slow?: boolean }): ReactElement {
+export function Loading({ what, slow = false, testId, children }: LoadingProps): ReactElement {
   const [late, setLate] = useState(false);
   useEffect(() => {
     if (!slow) return;
@@ -165,10 +189,11 @@ function Loading({ what, slow = false }: { what: string; slow?: boolean }): Reac
   }, [slow]);
 
   return (
-    <ShellPanel>
+    <ShellPanel {...(testId === undefined ? {} : { testId })}>
       <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
         {what}
       </p>
+      {children}
       {late ? (
         <>
           <p className="notice" data-testid={shellTestid.slow}>
@@ -345,6 +370,80 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
 }
 
 // ---------------------------------------------------------------------------------------------
+// The tab title and the canonical link
+// ---------------------------------------------------------------------------------------------
+
+/** The name every tab title ends with. */
+export const SITE_NAME = "JackiOh";
+
+/** The screen's name, for its tab title; null for a path the client serves nothing at. */
+function screenNameFor(path: string): string | null {
+  switch (path) {
+    case paths.landing:
+      return "";
+    case paths.login:
+      return "Sign in";
+    case paths.resetPassword:
+      return "Reset password";
+    case paths.invite:
+      return "Invite code";
+    case paths.decks:
+      return "Decks";
+    case paths.play:
+      return "Play online";
+    case paths.account:
+      return "Account";
+    case paths.practice:
+      return "Practice";
+    case paths.privacy:
+      return "Privacy";
+    case paths.hotseat:
+      return DEV_ONLY ? "Hotseat" : null;
+  }
+  if (matchIdOf(path) !== null) return "Match";
+  if (seriesIdOf(path) !== null) return "Conquest";
+  return null;
+}
+
+/**
+ * The tab title for a path: "Sign in · JackiOh", and plain "JackiOh" on the landing page. The
+ * match screen replaces it with "Your turn · JackiOh" while it is the player's turn (match.tsx).
+ */
+export function documentTitleFor(path: string): string {
+  const name = screenNameFor(path);
+  if (name === null) return `Page not found · ${SITE_NAME}`;
+  return name === "" ? SITE_NAME : `${name} · ${SITE_NAME}`;
+}
+
+/** The canonical address of a path the client serves, or null for one it does not (a 404). */
+export function canonicalUrlFor(path: string): string | null {
+  return screenNameFor(path) === null ? null : `${SITE_ORIGIN}${path}`;
+}
+
+/**
+ * Every route is served from one index.html, so a static canonical link would point every route at
+ * `/`. The one `<link rel="canonical">` is kept here instead, following the path, and removed on a
+ * page that does not exist.
+ */
+function useDocumentHead(path: string): void {
+  useEffect(() => {
+    document.title = documentTitleFor(path);
+    const href = canonicalUrlFor(path);
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (href === null) {
+      link?.remove();
+      return;
+    }
+    if (link === null) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.append(link);
+    }
+    link.href = href;
+  }, [path]);
+}
+
+// ---------------------------------------------------------------------------------------------
 // The route table
 // ---------------------------------------------------------------------------------------------
 
@@ -360,6 +459,7 @@ export function App(): ReactElement {
   // Before the first read of the path: an emailed link is scrubbed, and moved to `/login` (R193).
   useState(() => adoptAuthRedirect(paths.login));
   const path = usePathname();
+  useDocumentHead(path);
 
   const route = ((): ReactElement => {
     if (path === paths.landing) return <LandingRoute />;
@@ -384,6 +484,7 @@ export function App(): ReactElement {
     }
 
     if (path === paths.practice) return <PracticeRoute />;
+    if (path === paths.privacy) return <PrivacyRoute />;
 
     const matchId = matchIdOf(path);
     if (matchId !== null) {
@@ -403,7 +504,7 @@ export function App(): ReactElement {
     }
 
     if (path === paths.hotseat) {
-      if (!DEV_ONLY) return <NotFound path={path} />;
+      if (HotseatRoute === null) return <NotFound path={path} />;
       return <HotseatRoute />;
     }
     return <NotFound path={path} />;

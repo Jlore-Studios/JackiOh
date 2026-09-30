@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- The card back's emblem (src/cards/CardBack.tsx) on the back's navy, in a gold frame. -->
+  <rect x="3" y="3" width="94" height="94" rx="18" fill="#1b2036" stroke="#d4af37" stroke-width="5"/>
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#d4af37" stroke-opacity="0.8" stroke-width="4"/>
+  <path d="M50 10 L61 39 L90 50 L61 61 L50 90 L39 61 L10 50 L39 39 Z" fill="#7f6bd0" stroke="#e8d28a" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M50 30 L55 45 L70 50 L55 55 L50 70 L45 55 L30 50 L45 45 Z" fill="#241c44" fill-opacity="0.7"/>
+  <circle cx="50" cy="50" r="9" fill="#ffd24a"/>
+</svg>

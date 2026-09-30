@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /invite
+Disallow: /match/
+Disallow: /series/
+
+Sitemap: https://jackioh.vercel.app/sitemap.xml

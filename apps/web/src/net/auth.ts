@@ -89,9 +89,13 @@ export type AuthFailure =
 export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an account.";
 export const SIGN_UP_FAILED_MESSAGE = "Could not create that account.";
 
-export const AUTH_UNCONFIGURED_MESSAGE =
-  "This build has no auth provider configured: set VITE_SUPABASE_URL and " +
-  "VITE_SUPABASE_PUBLISHABLE_KEY in apps/web/.env (see apps/web/.env.example).";
+/** What a player reads when this build has no auth provider. The fix goes to the console instead. */
+export const AUTH_UNCONFIGURED_MESSAGE = "Sign-in isn't available on this site right now.";
+
+/** For whoever opens the console on a build with no auth provider; never shown on the page. */
+const AUTH_UNCONFIGURED_DETAIL =
+  "No auth provider configured: this build was made without VITE_SUPABASE_URL and " +
+  "VITE_SUPABASE_PUBLISHABLE_KEY. Set both in the web app's .env (see its .env.example) and rebuild.";
 
 /**
  * One sentence per failure. None of them depends on whether an account exists: a rate limit is
@@ -387,7 +391,10 @@ export function authConfig(): AuthConfig | null {
 
 function requireConfig(): AuthConfig {
   const config = authConfig();
-  if (config === null) throw new AuthError("unconfigured");
+  if (config === null) {
+    console.error(AUTH_UNCONFIGURED_DETAIL);
+    throw new AuthError("unconfigured");
+  }
   return config;
 }
 

@@ -36,22 +36,56 @@ import {
   remainingMs,
   useMatch,
   viewDerivedState,
+  type ConnectionState,
   type SocketFactory,
 } from "../game/net.ts";
+import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { getCatalog } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import { BackLink } from "./nav.tsx";
+import { BackLink, followInApp } from "./nav.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
+
+const DEV_ONLY = import.meta.env.MODE !== "production";
 
 /** Chrome this route invented. None of it is in `e2e/support/testids.ts`; see the hand-off report. */
 export const matchTestid = {
-  /** The connection line: `connecting`, `open`, `reconnecting`, `refused`, `closed`. */
+  /**
+   * The connection line, in a player's words (`connectionWords`). The raw state (`connecting`,
+   * `open`, `reconnecting`, `refused`, `closed`) rides on its `data-connection`.
+   */
   status: "match-status",
   /** The notice that stands in for the missing legal-action frame. */
   missingLegal: "missing-legal-frame",
   /** The panel shown before the first `view` frame lands. */
   connecting: "match-connecting",
+  /** The sentence that stands in for a refused socket. */
+  refused: "match-refused",
 } as const;
+
+/** A connection state in a player's words, for the match bar and the wait before the board. */
+export function connectionWords(state: ConnectionState): string {
+  switch (state) {
+    case "open":
+      return "Connected";
+    case "connecting":
+      return "Connecting…";
+    case "reconnecting":
+      return "Reconnecting…";
+    case "refused":
+      return "This match isn\u2019t available";
+    case "closed":
+      return "Disconnected";
+  }
+}
+
+/** The connection line: the words for a player, the raw state for tests. */
+function ConnectionLine({ state }: { state: ConnectionState }): ReactElement {
+  return (
+    <span data-testid={matchTestid.status} data-connection={state}>
+      {connectionWords(state)}
+    </span>
+  );
+}
 
 export type MatchRouteProps = {
   matchId: string;
@@ -150,22 +184,60 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   const view = match.view;
   const clock = match.clock;
 
+  // What the server said when it refused the socket is for a debugger, not the player (below).
+  const refusedWith = match.connection === "refused" ? (match.error ?? "no reason given") : null;
+  useEffect(() => {
+    if (refusedWith === null) return;
+    console.error(`The server refused the socket for match ${matchId}: ${refusedWith}`);
+  }, [refusedWith, matchId]);
+
+  // No frame has carried `legalActions` (see WHERE LEGALITY COMES FROM above): the player gets a
+  // sentence, and the console gets why.
+  const readOnly = view !== null && match.legalSource === "none";
+  useEffect(() => {
+    if (!readOnly) return;
+    // Worded without the build plan's task ids or repository paths, which ship in the bundle.
+    console.error(
+      "This board is read-only: nothing this socket has received carries the `legalActions` array, " +
+        "so only prompts can be answered. The match server sends it as a `legal` field on the " +
+        "`view` frame; a `legal` frame of its own would do as well.",
+    );
+  }, [readOnly]);
+
+  // The tab says when it is the player's turn, so a match in a background tab can be found.
+  const yourTurn = view !== null && view.result === null && view.active === view.viewer;
+  useEffect(() => {
+    document.title = yourTurn ? `Your turn · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
+  }, [yourTurn, matchId]);
+
   if (view === null) {
-    return (
-      <div className="app-shell">
-        <h1>JackiOh</h1>
-        <p className="notice" data-testid={matchTestid.connecting} role="status">
-          {match.connection === "refused"
-            ? (match.error ?? "the server refused this match socket")
-            : `Connecting to match ${matchId}…`}
-        </p>
-        {match.connection === "refused" ? null : (
-          <p className="notice">
-            <code data-testid={matchTestid.status}>{match.connection}</code> ·{" "}
-            <code>{withoutToken(match.url)}</code>
+    if (match.connection === "refused") {
+      return (
+        <ShellPanel testId={matchTestid.connecting}>
+          <p className="notice" data-testid={matchTestid.refused} role="alert">
+            This match isn&rsquo;t available. It may have ended, or it may not be yours to join.
           </p>
-        )}
-      </div>
+          <div className="row">
+            <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
+              Back to the lobby
+            </a>
+          </div>
+        </ShellPanel>
+      );
+    }
+    // Render's free tier can take most of a minute to wake, which `slow` says once it has.
+    return (
+      <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
+        <p className="auth-hint">
+          <ConnectionLine state={match.connection} />
+          {DEV_ONLY ? (
+            <>
+              {" "}
+              · match <code>{matchId}</code> · <code>{withoutToken(match.url)}</code>
+            </>
+          ) : null}
+        </p>
+      </Loading>
     );
   }
 
@@ -190,7 +262,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
-      error={match.error}
+      // A refused socket's reason is the console's (above); the board says it in a player's words.
+      error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={
         // A finished match's way on (Result.tsx): the series' next game first when there is one,
         // then the lobby, where the next one starts.
@@ -214,8 +287,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       <BackLink />
       <header className="match-bar">
         <span>
-          match <code>{matchId}</code> · seat <code>{view.viewer}</code> · turn {view.turn} ·{" "}
-          <code data-testid={matchTestid.status}>{match.connection}</code>
+          Online match · Turn {view.turn} · <ConnectionLine state={match.connection} />
+          {DEV_ONLY ? (
+            <>
+              {" "}
+              · match <code>{matchId}</code> · seat <code>{view.viewer}</code>
+            </>
+          ) : null}
         </span>
         <Clock
           youMs={inMulligan ? mulliganMs : activeIsYou ? turnMs : null}
@@ -230,14 +308,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       </header>
       <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
 
-      {match.legalSource === "none" ? (
+      {readOnly ? (
         <p className="notice" data-testid={matchTestid.missingLegal} role="alert">
-          This board is read-only. Nothing this socket has received carries the{" "}
-          <code>legalActions</code> array BUILD M5-T2 requires (&ldquo;the client never computes
-          legality itself; it asks <code>legalActions</code> and greys out the rest&rdquo;), so only
-          prompts can be answered. <code>apps/server/src/match/actor.ts</code> sends it as a{" "}
-          <code>legal</code> field on the <code>view</code> frame; a <code>legal</code> frame of its
-          own would do as well — this client accepts either.
+          Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
         </p>
       ) : null}
 

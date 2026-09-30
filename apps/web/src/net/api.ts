@@ -206,6 +206,15 @@ export function getMe(token: string): Promise<MeResponse> {
   return apiRequest<MeResponse>("/api/auth/me", { token });
 }
 
+/**
+ * `DELETE /api/account`: deletes the caller's account at the server, which answers 204 with no
+ * body. What it removes, and what it keeps for the other player's history, is the server's to
+ * decide. A refusal rejects with `ApiRequestError`, as every call here does.
+ */
+export async function deleteAccount(token: string): Promise<void> {
+  await apiRequest<null>("/api/account", { method: "DELETE", token });
+}
+
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider
 // separately from its arrow to these API functions, so they live in `net/auth.ts` and go straight
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account

@@ -1,0 +1,49 @@
+/* The site footer (routes/SiteFooter.tsx). Scoped under `.tavern`, whose palette it uses, so it
+   sits in the landing's room and the sign-in screen's alike and touches nothing on the board. */
+
+.tavern .site-footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--tavern-content);
+  margin: 0 auto;
+  padding: 16px var(--tavern-gutter) 24px;
+  color: var(--tavern-text-dim);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.tavern .site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* Rows far enough apart that the links' 44 px hit areas (below) never overlap. */
+  gap: 28px 28px;
+  padding: 12px 0;
+}
+
+/* The tavern's prose link (auth/tavern.css): gold, over a brass hairline. */
+.tavern .site-footer a {
+  position: relative;
+  color: var(--tavern-gold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(201, 149, 63, 0.55);
+}
+
+/* A 44 px target for a thumb, without moving the hairline away from the words. */
+.tavern .site-footer a::before {
+  content: "";
+  position: absolute;
+  inset: -14px -6px;
+}
+
+.tavern .site-footer a:hover {
+  color: var(--tavern-gold-pale);
+  border-bottom-color: var(--tavern-gold-pale);
+}
+
+.tavern .site-footer a:focus-visible {
+  outline: 2px solid var(--tavern-gold-pale);
+  outline-offset: 3px;
+  border-radius: 2px;
+}

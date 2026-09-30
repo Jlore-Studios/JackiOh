@@ -61,7 +61,20 @@ export function usePathname(): string {
   return useSyncExternalStore(subscribe, currentPath, currentPath);
 }
 
-/** Every route the client serves. One table, so no screen spells a path twice. */
+/**
+ * The deployed site's address. The runtime canonical link (main.tsx) is built from it; index.html,
+ * public/robots.txt, public/sitemap.xml and public/.well-known/security.txt spell it too, since
+ * static files cannot import it.
+ */
+export const SITE_ORIGIN = "https://jackioh.vercel.app";
+
+/**
+ * Every route the client serves. One table, so no screen spells a path twice.
+ *
+ * vercel.json (and its copy, apps/web/vercel.json) sends only these paths to index.html, so any
+ * other path is a real 404 (public/404.html). A route added here must be added there too;
+ * `net/deploy-routes.test.ts` fails until it is.
+ */
 export const paths = {
   landing: "/",
   login: "/login",
@@ -71,6 +84,8 @@ export const paths = {
   play: "/play",
   account: "/account",
   practice: "/practice",
+  /** The privacy policy (routes/privacy.tsx). Public, like the landing page. */
+  privacy: "/privacy",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

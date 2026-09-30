@@ -253,7 +253,10 @@ describe("B37 the corner slot", () => {
     render(<LandingRoute />);
     const note = within(landing()).getByTestId(landingTestid.inviteOnly);
     expect(note.textContent).toMatch(/invite code/);
-    expect(note.textContent).toMatch(/Play vs AI needs no account/);
+    // des-9: the note under "Play vs AI" says it, so the invite note no longer repeats it.
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    expect(within(ctas).getByText(/No account needed/)).toBeInTheDocument();
+    expect(note.textContent).not.toMatch(/needs no account/);
   });
 });
 

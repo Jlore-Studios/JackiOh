@@ -746,7 +746,7 @@ function InviteScreen({ account }: { account: Account }) {
             // The client's own sentence beside R145's, the same for every refused code: it says
             // nothing about which of the three kinds of failure this was.
             <p className="invite-screen__help" data-testid={inviteTestid.refused}>
-              Change the code to try again: the same code would be refused again, and each try counts.
+              Change the code to try again.
             </p>
           ) : null}
 

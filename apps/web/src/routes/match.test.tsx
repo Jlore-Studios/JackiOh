@@ -16,7 +16,7 @@ import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED } from "../../.
 
 import type { SocketLike } from "../game/net.ts";
 import { baseView } from "../test/fixtures.ts";
-import MatchRoute, { withoutToken } from "./match.tsx";
+import MatchRoute, { connectionWords, withoutToken } from "./match.tsx";
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -381,5 +381,97 @@ describe("R268 the mulligan clock on the match bar", () => {
     expect(screen.getByTestId("clock-you")).toHaveTextContent("—");
     expect(screen.getByTestId("clock-opponent")).toHaveTextContent("60s");
     expect(screen.getByTestId("clock-opponent")).not.toHaveAttribute("data-kind", "mulligan");
+  });
+});
+
+/** `WS_CLOSE.forbidden` in apps/server/src/match/wsServer.ts (R148): a refusal, never retried. */
+const FORBIDDEN_CLOSE = 4403;
+
+// des-4, des-10, str-1: what a player reads around the online board. The ids, the socket URL and
+// the protocol detail stay out of a production build; the console keeps the detail.
+describe("the match screen in a player's words", () => {
+  it("says each connection state in words", () => {
+    expect(connectionWords("open")).toBe("Connected");
+    expect(connectionWords("connecting")).toBe("Connecting…");
+    expect(connectionWords("reconnecting")).toBe("Reconnecting…");
+    expect(connectionWords("refused")).toBe("This match isn’t available");
+    expect(connectionWords("closed")).toBe("Disconnected");
+  });
+
+  it("waits in the tavern panel, which says the server may be waking up", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    const panel = screen.getByTestId("match-connecting");
+    expect(panel).toHaveClass("tavern");
+    expect(panel).toHaveTextContent("Joining the match…");
+    const status = screen.getByTestId("match-status");
+    expect(status).toHaveTextContent("Connecting…");
+    expect(status).toHaveAttribute("data-connection", "connecting");
+  });
+
+  it("says a refused match isn't available, and keeps the server's reason for the console", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      act(() => {
+        live().onclose?.({ code: FORBIDDEN_CLOSE, reason: "not a participant in this match", wasClean: true });
+      });
+      expect(screen.getByTestId("match-refused")).toHaveTextContent("This match isn’t available.");
+      expect(screen.getByTestId("match-connecting").textContent).not.toMatch(/not a participant|socket/);
+      expect(logged.mock.calls.flat().join(" ")).toMatch(/not a participant in this match/);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("names the connection on the board's bar in words", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    const status = screen.getByTestId("match-status");
+    expect(status).toHaveTextContent("Connected");
+    expect(status).toHaveAttribute("data-connection", "open");
+  });
+
+  it("says a read-only board in a player's words, with no build plan or repo path in it", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      attach();
+      const notice = screen.getByTestId("missing-legal-frame");
+      expect(notice.textContent).not.toMatch(/BUILD M|SPEC §|apps\/|legalActions/);
+      expect(notice).toHaveTextContent("Reload the page to rejoin the match.");
+      expect(logged.mock.calls.flat().join(" ")).toMatch(/legalActions/);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("puts Your turn in the tab while it is the player's turn", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(document.title).toBe("Your turn · JackiOh");
+    act(() => {
+      live().onmessage?.({
+        data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p2" }), legal: [] }),
+      });
+    });
+    expect(document.title).toBe("Match · JackiOh");
+  });
+});
+
+describe("a socket refused mid-game", () => {
+  it("tells the player in words, not with the server's reason", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      attach({ legal: [{ type: "endTurn" }] });
+      act(() => {
+        live().onclose?.({ code: FORBIDDEN_CLOSE, reason: "", wasClean: true });
+      });
+      expect(document.body.textContent).not.toMatch(/refused this match socket/);
+      expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "refused");
+      expect(document.body.textContent).toMatch(/This match isn’t available/);
+    } finally {
+      logged.mockRestore();
+    }
   });
 });

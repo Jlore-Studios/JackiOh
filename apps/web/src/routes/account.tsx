@@ -18,17 +18,23 @@
 // account it is the road to the code screen, so it wears the sign-in screens' frame
 // (`auth/tavern.css`): the board, the gold call to action, wood for the rest. A status is said in
 // a player's words; the raw value rides on `data-status` for tests.
+//
+// DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
+// `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
+// Only then does this device forget the session, the way signing out does, and load the landing
+// page. A refusal leaves everything as it was and says why.
 
-import { useEffect, useState, useSyncExternalStore, type ReactElement } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
 
 import { AUTH_SIGN_OUT_WAIT_SECONDS } from "../../../server/src/config.ts";
-import { getProfile, type MeResponse, type ProfileResponse } from "../net/api.ts";
+import { deleteAccount, getProfile, type MeResponse, type ProfileResponse } from "../net/api.ts";
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
+import "./account.css";
 
 export const accountTestid = {
   screen: "account-screen",
@@ -41,7 +47,15 @@ export const accountTestid = {
   error: "account-error",
   loading: "account-loading",
   redeem: "account-redeem",
+  deleteStart: "account-delete",
+  deleteInput: "account-delete-input",
+  deleteConfirm: "account-delete-confirm",
+  deleteCancel: "account-delete-cancel",
+  deleteError: "account-delete-error",
 } as const;
+
+/** What a player types before an account is deleted. Case and spaces around it don't matter. */
+export const DELETE_CONFIRM_WORD = "DELETE";
 
 /** An account's status in a player's words (§9.4's three). */
 export function statusWords(status: MeResponse["profile"]["status"]): string {
@@ -274,7 +288,114 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             </button>
           </div>
         </div>
+
+        <DeleteAccount token={token} />
       </section>
+    </div>
+  );
+}
+
+/**
+ * After the server deleted the account: this device forgets the session and any sign-up or reset
+ * it was waiting on, then loads the landing page, a document load for the reason `signOut` gives.
+ * Nothing is revoked at the provider, because the account it would be revoked for is gone.
+ */
+function leaveDeletedAccount(): void {
+  clearSession();
+  forgetPendingAddresses();
+  if (typeof window !== "undefined") window.location.assign(paths.landing);
+}
+
+/** "Delete my account", and the typed confirmation it opens. */
+function DeleteAccount({ token }: { token: string }): ReactElement {
+  const [asking, setAsking] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirmed = typed.trim().toUpperCase() === DELETE_CONFIRM_WORD;
+
+  const onConfirm = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!confirmed || busy) return;
+    setBusy(true);
+    setError(null);
+    deleteAccount(token)
+      .then(() => {
+        leaveDeletedAccount();
+      })
+      .catch((cause: unknown) => {
+        setBusy(false);
+        setError(cause instanceof Error ? cause.message : String(cause));
+      });
+  };
+
+  return (
+    <div className="account-delete">
+      {asking ? (
+        <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
+          <p>
+            This deletes your account for good and signs this device out. You can&rsquo;t undo it.
+          </p>
+          <label htmlFor="account-delete-input">Type {DELETE_CONFIRM_WORD} to confirm</label>
+          <input
+            id="account-delete-input"
+            data-testid={accountTestid.deleteInput}
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            autoFocus
+            value={typed}
+            disabled={busy}
+            onChange={(event) => {
+              setTyped(event.target.value);
+            }}
+          />
+          {error !== null ? (
+            <p className="notice" data-testid={accountTestid.deleteError} role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="account-actions">
+            <button
+              type="submit"
+              className="account-delete__confirm"
+              data-testid={accountTestid.deleteConfirm}
+              disabled={!confirmed || busy}
+              aria-busy={busy}
+            >
+              {busy ? "Deleting…" : "Delete my account for good"}
+            </button>
+            <button
+              type="button"
+              className="link-button"
+              data-testid={accountTestid.deleteCancel}
+              disabled={busy}
+              onClick={() => {
+                setAsking(false);
+                setTyped("");
+                setError(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="account-actions">
+          <button
+            type="button"
+            className="link-button account-delete__start"
+            data-testid={accountTestid.deleteStart}
+            onClick={() => {
+              setAsking(true);
+            }}
+          >
+            Delete my account
+          </button>
+        </div>
+      )}
     </div>
   );
 }

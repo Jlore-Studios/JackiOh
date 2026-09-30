@@ -1,0 +1,34 @@
+/* `/account`'s "Delete my account" (routes/account.tsx), set apart from signing out by the same
+   brass hairline, and drawn in the tavern's ember for a problem so it never reads as the way on. */
+
+.tavern.app-shell .account-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(201, 149, 63, 0.22);
+}
+
+.tavern.app-shell .account-delete .account-delete__start {
+  color: var(--tavern-danger-text);
+}
+
+.tavern.app-shell .account-delete__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tavern.app-shell .account-delete__form > p {
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .account-actions > button.account-delete__confirm {
+  border: 1px solid var(--tavern-danger);
+  background: linear-gradient(180deg, rgba(232, 102, 79, 0.32), rgba(232, 102, 79, 0.14));
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .account-actions > button.account-delete__confirm:disabled {
+  opacity: 0.55;
+}

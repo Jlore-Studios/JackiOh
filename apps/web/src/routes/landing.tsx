@@ -31,6 +31,7 @@ import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
 import { dealLandingFan, type FanFace, type RandomSource } from "./landingFan.ts";
 import { followInApp } from "./nav.tsx";
+import { SiteFooter } from "./SiteFooter.tsx";
 
 import "../auth/tavern.css";
 import "./landing.css";
@@ -224,8 +225,7 @@ function Actions(): ReactElement {
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>
-        Online play is invite-only for now: you&rsquo;ll need an invite code after signing up. Play
-        vs AI needs no account.
+        Online play is invite-only for now: you&rsquo;ll need an invite code after signing up.
       </p>
       {DEV_ONLY ? (
         // Dev-only, and really absent in production: main.tsx serves NotFound for /dev/hotseat
@@ -449,6 +449,8 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
       </section>
 
       <HowItPlays />
+
+      <SiteFooter />
     </div>
   );
 }

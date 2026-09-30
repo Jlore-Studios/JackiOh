@@ -154,3 +154,92 @@ describe("the account screen", () => {
     }
   });
 });
+
+// L08: "Delete my account" asks first, deletes at the server (`DELETE /api/account`, 204), and only
+// then forgets the session on this device.
+describe("deleting the account", () => {
+  function answer(status: number, body?: unknown) {
+    return vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve({
+        ok: status >= 200 && status < 300,
+        status,
+        text: () => Promise.resolve(body === undefined ? "" : JSON.stringify(body)),
+      } as unknown as Response),
+    );
+  }
+
+  it("asks for DELETE before it sends anything, then deletes at the server and signs this device out", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    const fetchMock = answer(204);
+    vi.stubGlobal("fetch", fetchMock);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
+    try {
+      render(<AccountRoute token={TOKEN} />);
+      await screen.findByTestId("account-email");
+      await userEvent.click(screen.getByTestId("account-delete"));
+
+      const confirm = screen.getByTestId("account-delete-confirm");
+      expect(confirm, "nothing typed yet").toBeDisabled();
+      await userEvent.type(screen.getByTestId("account-delete-input"), "delet");
+      expect(confirm).toBeDisabled();
+      await userEvent.type(screen.getByTestId("account-delete-input"), "e");
+      expect(confirm).toBeEnabled();
+      expect(fetchMock, "asking sends nothing").not.toHaveBeenCalled();
+
+      await userEvent.click(confirm);
+      await waitFor(() => {
+        expect(assign).toHaveBeenCalledWith("/");
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0] ?? [];
+      expect(String(url)).toMatch(/\/api\/account$/);
+      expect(init?.method).toBe("DELETE");
+      expect((init?.headers as Record<string, string>).authorization).toBe(`Bearer ${TOKEN}`);
+      expect(readSession(), "this device forgot the session").toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the session and says why when the server refuses", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.stubGlobal("fetch", answer(503, { error: { code: "unavailable", message: "Try again in a minute." } }));
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
+    try {
+      render(<AccountRoute token={TOKEN} />);
+      await screen.findByTestId("account-email");
+      await userEvent.click(screen.getByTestId("account-delete"));
+      await userEvent.type(screen.getByTestId("account-delete-input"), "DELETE");
+      await userEvent.click(screen.getByTestId("account-delete-confirm"));
+
+      expect(await screen.findByTestId("account-delete-error")).toHaveTextContent("Try again in a minute.");
+      expect(assign).not.toHaveBeenCalled();
+      expect(readSession()).not.toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("can be called off", async () => {
+    render(
+      <AccountRoute
+        token={TOKEN}
+        me={{
+          profile: { id: "p1", status: "pending", rating: 1000 },
+          needsInviteCode: true,
+          emailVerified: true,
+          currentMatchId: null,
+          email: "player1@example.com",
+        }}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("account-delete"));
+    await userEvent.click(screen.getByTestId("account-delete-cancel"));
+    expect(screen.queryByTestId("account-delete-input")).toBeNull();
+    expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+  });
+});

@@ -4,9 +4,60 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>JackiOh</title>
+    <meta name="description" content="JackiOh is a 1v1 card game of lanes, mana and hidden traps. Play the AI in your browser with no account, or play friends online with an invite code." />
+    <meta name="theme-color" content="#120b07" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="JackiOh" />
+    <meta property="og:description" content="JackiOh is a 1v1 card game of lanes, mana and hidden traps. Play the AI in your browser with no account, or play friends online with an invite code." />
+    <meta property="og:url" content="https://jackioh.vercel.app/" />
+    <meta property="og:image" content="https://jackioh.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The JackiOh wordmark beside a fanned hand of card backs in a tavern." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "JackiOh",
+        "url": "https://jackioh.vercel.app/",
+        "description": "JackiOh is a 1v1 card game of lanes, mana and hidden traps. Play the AI in your browser with no account, or play friends online with an invite code.",
+        "gamePlatform": "Web browser",
+        "playMode": ["SinglePlayer", "MultiPlayer"],
+        "applicationCategory": "Game"
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- The landing hero, as plain HTML, for link previews and crawlers that read the page before any
+         script runs. main.tsx's createRoot().render replaces everything inside #root. -->
+    <div id="root">
+      <div class="landing tavern" data-motion="reduced">
+        <section class="landing-hero" aria-labelledby="landing-title">
+          <div class="landing-backdrop" aria-hidden="true"></div>
+          <div class="landing-hero-inner">
+            <div class="landing-title-block">
+              <p class="landing-kicker">A duel of lanes, mana and hidden traps</p>
+              <h1 id="landing-title" class="landing-wordmark">JackiOh</h1>
+              <p class="landing-lede">
+                Summon units into lanes, set traps face down in your backrow, and break the other hero
+                before they break yours.
+              </p>
+            </div>
+            <div class="landing-fan" aria-hidden="true"></div>
+            <nav class="landing-ctas" aria-label="Play">
+              <a class="landing-cta landing-cta--primary" href="/practice">Play vs AI</a>
+              <p class="landing-cta-note">No account needed. Pick a difficulty and play.</p>
+              <noscript>
+                <p class="landing-cta-note">JackiOh runs in your browser and needs JavaScript turned on.</p>
+              </noscript>
+            </nav>
+          </div>
+        </section>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,0 +1,43 @@
+/* `/privacy` (routes/privacy.tsx): the sign-in screens' board (auth/tavern.css `.panel--auth`),
+   widened for reading, with the tavern palette. Scoped under `.privacy-screen`. */
+
+.tavern.app-shell.privacy-screen .panel--auth {
+  max-width: 720px;
+}
+
+.tavern.app-shell .privacy-policy__updated {
+  color: var(--tavern-text-dim);
+  font-size: 14px;
+  text-align: center;
+}
+
+.tavern.app-shell .privacy-policy section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tavern.app-shell .privacy-policy h3 {
+  margin: 8px 0 0;
+  font-family: var(--tavern-serif);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .privacy-policy p,
+.tavern.app-shell .privacy-policy li {
+  max-width: none;
+  color: var(--tavern-parchment);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.tavern.app-shell .privacy-policy ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}

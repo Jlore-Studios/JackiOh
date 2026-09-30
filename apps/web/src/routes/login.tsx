@@ -129,12 +129,16 @@ import {
 } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { SiteFooter } from "./SiteFooter.tsx";
 
 import "../auth/auth.css";
 import "../auth/tavern.css";
 
 /** Re-exported so every existing `import { loginTestid } from "./login.tsx"` keeps working. */
 export { loginTestid };
+
+/** The line under "Create account" that links the privacy policy. */
+export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /** `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address. */
 type Mode = "signIn" | "signUp" | "forgot" | "claimReset";
@@ -1040,6 +1044,15 @@ export default function LoginRoute(): ReactElement {
             >
               {submitLabel}
             </button>
+            {signingUp ? (
+              <p className="auth-hint" data-testid={signUpPrivacyTestid}>
+                By creating an account you agree to the{" "}
+                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            ) : null}
             {forgot && resetWait > 0 ? (
               // Only the wait: whether a mail went out is the neutral notice's to say (R192).
               <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
@@ -1085,6 +1098,8 @@ export default function LoginRoute(): ReactElement {
           {signingIn && resendOffered && !linkError && linkOutcome !== "unchecked" ? resendControls : null}
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   );
 }
