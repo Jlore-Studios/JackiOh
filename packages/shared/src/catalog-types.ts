@@ -11,7 +11,11 @@ export function opponentOf(player: PlayerId): PlayerId {
 /** §5.1 */
 export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
 
-/** §5: tribes and tags. "Jlockeed" is #13 and #14's (R278). */
+/**
+ * §5: tribes and tags. "Jlockeed" is Core #13 and #14's and the Classic+ Jlockheed cards' (R278);
+ * patch v0.2.0 adds Book (every "Book of …" card), Pancake (Classic+ #12, #13 and the eight Pancake
+ * tokens) and AI (the ten AI generated cards).
+ */
 export type Tag =
   | "Human"
   | "Felinor"
@@ -21,13 +25,22 @@ export type Tag =
   | "Call to Chaos"
   | "Quickdraw"
   | "Jlockeed"
+  | "Book"
+  | "Pancake"
+  | "AI"
   | "Token";
 
-/** §8: assigned by mechanical complexity; every token carries "Token". */
+/** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
 export type Rarity = "Common" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Token";
+
+/** A rarity a card prints: every rarity but Token. A token's printed one is display only (B2.5). */
+export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /** §5: Core, Classic and Classic+ ship (R380); Boss and Boss-X are reserved. */
 export type SetName = "Core" | "Classic" | "Classic+" | "Boss" | "Boss-X";
+
+/** The sets that ship, in catalog order. A pool that names no set draws from all of them (R380). */
+export const SHIPPED_SETS = ["Core", "Classic", "Classic+"] as const satisfies readonly SetName[];
 
 /** §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B". */
 export type CardCost = number | "X" | { base: number; embiggen: number };
@@ -106,17 +119,74 @@ export function armorOf(keywords: readonly Keyword[]): number {
   return keywords.reduce((sum, k) => (k.kind === "Armor" ? sum + k.n : sum), 0);
 }
 
-/** One side of a card: the base form or the radiant form (§5). Spells have no stats. */
+/**
+ * One side of a card: the base form or the radiant form (§5). Spells have no stats; an Animated
+ * backrow card (B3.1) prints the attack and health of the Unit it becomes.
+ */
 export type CardFace = {
+  /**
+   * B2.7: the face's own type, when it differs from the card's (Classic+ #22 Blood Moon's Radiant
+   * face is a Field Trap). The card's type is its running face's (§5.2). Absent: the card's `type`.
+   */
+  type?: CardType;
   attack?: number;
   health?: number;
+  /**
+   * B2.7: "[3X/3X]" stats (Classic+ #69 Buff Billy): the Unit is summoned with `statsOverride` of
+   * these multiples of the X it was played for. The printed `attack`/`health` are then 0/0, as the
+   * Ghoul Token's are.
+   */
+  xStats?: { attack: number; health: number };
   keywords: Keyword[];
   /**
    * The face's printed text: the base face's §8 cell, or the Radiant face's cell read by §8's
    * Conventions and written out in full (R277), so a client can print it whole and mark what differs.
+   * A tunable number (`CardDef.params`, B3.4) is written `{key}`, filled in by `fillParams`.
    */
   text: string;
 };
+
+/**
+ * B3.4 rule 5: a number on a card that Degrade, Upgrade and KY's Constant may move. The face texts
+ * write it as `{key}`; the view carries an instance's current values; scripts read `param(ctx, key)`.
+ */
+export type Param = {
+  /** The name the texts write as `{key}`, unique within the card. */
+  key: string;
+  /** Its printed value on the base face. */
+  base: number;
+  /** Its printed value on the Radiant face. */
+  radiant: number;
+  /** Which way is better for the card's controller: an Upgrade moves it this way, a Degrade the other. */
+  better: "up" | "down";
+  /** How far one Degrade or Upgrade moves it (B3.4: 1 up to 5, 2 for 6–12, a quarter above). */
+  step?: number;
+  /** It never goes below this (an amount never drops below 1). */
+  min?: number;
+  /** It never goes above this (100 for a percentage). */
+  max?: number;
+};
+
+/**
+ * A face's text with its `{key}` placeholders filled in: from `values` when given (an instance's
+ * current numbers), else from the face's printed values. Unknown keys are left as written. Pure, so
+ * the client, the tests and R277's diff all fill a text the same way.
+ */
+export function fillParams(
+  def: Pick<CardDef, "params" | "base" | "radiant">,
+  face: "base" | "radiant",
+  values?: Readonly<Record<string, number>>,
+): string {
+  const text = def[face].text;
+  const params = def.params;
+  if (params === undefined || params.length === 0) return text;
+  return text.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (whole, key: string) => {
+    const param = params.find((p) => p.key === key);
+    if (param === undefined) return whole;
+    const value = values?.[key] ?? param[face];
+    return String(value);
+  });
+}
 
 export type CardDef = {
   /** Catalog id, e.g. "core-043"; transient defs (Fuse, Craft a Card) use "t-<n>". */
@@ -128,6 +198,11 @@ export type CardDef = {
   type: CardType;
   tags: Tag[];
   rarity: Rarity;
+  /**
+   * B2.5: the rarity a token prints (the Classic+ tokens the designer rated), for the card frame and
+   * the summon sting only. A token's `rarity` stays "Token", so no pool ever finds one by rarity.
+   */
+  printedRarity?: PrintedRarity;
   token: boolean;
   cost: CardCost;
   /**
@@ -137,6 +212,14 @@ export type CardDef = {
    * union of its ingredients' (R102).
    */
   refs?: string[];
+  /** B3.4 rule 5: the numbers on this card Degrade, Upgrade and KY's Constant may move. */
+  params?: Param[];
+  /**
+   * E36: the non-blank, non-comment lines of this card's script file, imports excluded, written by
+   * `packages/cards/scripts/gen-loc.ts` and held current by a test. Public (the inspect overlay
+   * prints it) and part of the card's patch history (B4.2). Absent while the card has no script.
+   */
+  loc?: number;
   /**
    * R349: this card prints no Radiant form of its own (the Ghoul Token, §7). Its `radiant` face is
    * the fallback the rule gives it — the base face with its attack and health doubled, the same
