@@ -2716,9 +2716,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by cards patches.test.ts "R388 …" (the history, the snapshots, the version everywhere),
-  // loc.test.ts's patch snapshot and the server's catalog.test.ts "R388 …" (GET /api/catalog/:version).
+  // loc.test.ts's patch snapshot, the server's catalog.test.ts "R388 …" (GET /api/catalog/:version) and
+  // apps/web patches/diff.test.ts "R388 …" (the History section and Patch notes page diff every field).
   it("R388 makes card patches data and the catalog version the newest patch", () => {
-    provenIn(388, CARDS_PATCHES_TEST, SERVER_CATALOG_TEST);
+    provenIn(388, CARDS_PATCHES_TEST, SERVER_CATALOG_TEST, "../../../apps/web/src/patches/diff.test.ts");
   });
 
   // Proved by the server's clock.test.ts "R389 …" (the 120-minute ceiling); the turn cap's own
@@ -2759,6 +2760,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // R436's client half: apps/web fx/chaos.test.ts "R436 …" (each rolled effect named on both seats, the
+  // reels inside R200's bounds, the still banner and the live region).
+  it("R436 names the effects Call to Chaos rolled, to both players", () => {
+    provenIn(436, "../../../apps/web/src/fx/chaos.test.ts");
+  });
+
+  // R437's client half: apps/web cards/CardMarks.test.tsx "R437 …" (the aura and badge in the mark's
+  // colours on units, backrow cards and a back, the fallback, reduced motion).
+  it("R437 shows a mark on the card it is aimed at", () => {
+    provenIn(437, "../../../apps/web/src/cards/CardMarks.test.tsx");
+  });
+
   // Proved by apps/web game/Clock.test.tsx "R439 …" (the thresholds, whose clock, a paused clock, the
   // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
   it("R439 marks the last 30 seconds of a turn clock", () => {
@@ -2780,12 +2793,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(482, CARDS_PARAMS_TEST);
   });
 
-  // R388's client half (the catalog workstream proves its data half): apps/web patches/diff.test.ts
-  // "R388 …" (every field compared, text filled and word-diffed, cost words, added and removed cards).
-  it("R388 keeps each card's patch history, and the client shows it", () => {
-    provenIn(388, "../../../apps/web/src/patches/diff.test.ts");
-  });
-
   // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
   it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
     provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
@@ -2801,6 +2808,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/audio/voice-lines.test.ts",
       "../../../apps/web/src/audio/voiceData.test.ts",
     );
+  });
+
+  // Proved by apps/web fx/cardFx.test.ts "R502 …" (the signal in the redacted stream, both seats,
+  // Hinder's crystals and Blood Ridden's stream, never naming a hidden card, R200's bounds).
+  it("R502 shows a cast on draw on both seats", () => {
+    provenIn(502, "../../../apps/web/src/fx/cardFx.test.ts");
   });
 
   // Proved by apps/web game/Hand.test.tsx "R504 …" (the outline, its size rule, either seat).

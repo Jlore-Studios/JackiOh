@@ -797,7 +797,10 @@ export const DB_SIDEBAR = "db-sidebar";
 // `hand-card-`, so `cy.fieldCardByName` and `cy.handCardByName` never resolve to one of them.
 // ---------------------------------------------------------------------------------------------
 
-/** A15: the opponent's play, held up for about a second. `data-showcase="played|set|hidden"`; click-through. */
+/**
+ * A15: the opponent's play, held up for about a second, and a cast on draw on both seats (R502).
+ * `data-showcase="played|set|hidden|cast"`; click-through.
+ */
 export const SHOWCASE = "showcase";
 /** A15: its caption ("Opponent played", "Opponent set a card"). */
 export const SHOWCASE_CAPTION = "showcase-caption";
