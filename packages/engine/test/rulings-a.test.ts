@@ -79,6 +79,7 @@ import {
   ringOrder,
 } from "../src/zones";
 import { eventsOfType, inHand, newGame, put, setLibrary, sinkFor, slot } from "./fixtures/harness";
+import { infiniteReserves } from "./fixtures/scripts";
 
 // ---------------------------------------------------------------------------
 // Fixture definitions. Every id is prefixed `ra-`; the §8 card each one stands in for is named.
@@ -444,10 +445,15 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH - 2);
   });
 
-  it("R2 counts the cap in player-turns: 30 turns, 15 each, then the game is a draw", () => {
-    expect(TURN_CAP_PLAYER_TURNS).toBe(30);
+  it("R2 counts the cap in player-turns: 60 turns, 30 each (R389), then the game is a draw", () => {
+    expect(TURN_CAP_PLAYER_TURNS).toBe(60);
 
     let state = playing("r2");
+    // R389: two 20-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
+    // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
+    // ends the game.
+    put(state, infiniteReserves.id, slot("p1", "backrow", 1));
+    put(state, infiniteReserves.id, slot("p2", "backrow", 1));
     for (let step = 0; step < 100 && state.result === null; step += 1) {
       const result = reduce(state, { type: "endTurn", playerId: state.active, nonce: `r2-${step}` });
       expect(result.error).toBeUndefined();

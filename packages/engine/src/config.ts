@@ -18,8 +18,12 @@ export const HERO_HEALTH = 30;
  * belongs to a turn of its controller's (R155, R241).
  */
 export const SETUP_TURN = 0;
-/** §2.5, R2 (decide): the cap counts player-turns, so 30 means 15 each. */
-export const TURN_CAP_PLAYER_TURNS = 30;
+/**
+ * §2.5, R2, R389 (patch v0.2.0, docs/classic-sets.md B4.3): the cap counts player-turns, so 60 means
+ * 30 each. Two 20-card decks that do nothing fatigue out at player-turn 48 (§2.4, R3), so the cap is a
+ * backstop for games that heal, gain Armor or refill a deck, and fatigue is a long game's usual end.
+ */
+export const TURN_CAP_PLAYER_TURNS = 60;
 /** §2.4, R4 (decide): a card drawn or added to a full hand is burned. */
 export const HAND_CAP = 10;
 
@@ -225,6 +229,13 @@ export const AI_TUTORIAL: Handicap = {
 // ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----
 
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
+
+/**
+ * B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
+ * still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
+ * by a resource too (units to Tribute, Plague Tokens to consume).
+ */
+export const ACTIVATE_UNLIMITED_CAP = 100;
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
 

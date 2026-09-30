@@ -17,12 +17,15 @@
 // than reaching back through `ctx.self`.
 
 import type { PlayerId } from "@jackioh/shared";
-import { scheduleDelayed } from "../modifiers";
+import { addStartOfTurnEffect, scheduleDelayed } from "../modifiers";
 import { SELF_KEY, resumeSelf } from "../prompts";
+import { makeContext, type EngineSink } from "../resolve";
 import { RUN_MARKS_KEY } from "../work";
 import type { Effect, EffectContext } from "../script";
-import { isTurnOf, type DelayedEffect } from "../state";
-import { playerOf, standsSinceScriptBegan, type PlayerSpec } from "./targets";
+import { isTurnOf, type DelayedEffect, type Resume } from "../state";
+import { destroy, destroyAll } from "./destroy";
+import { discardHand } from "./move";
+import { instanceOf, playerOf, standsSinceScriptBegan, type BoardScope, type PlayerSpec, type TargetSpec } from "./targets";
 
 /**
  * The `Script` key a delayed continuation lands on unless the card names another. `script.ts`
@@ -73,6 +76,13 @@ export function delay(args: {
    * that card leaves the field, so it never lands on a card that left and came back (#50).
    */
   watch?: string;
+  /**
+   * B5 E27, R458: "at the start / end of your *next* turn" rather than the next such boundary — the
+   * boundary of the turn it is made on passes it by (`DelayedEffect.notBefore`), so an end-of-turn
+   * clause made on the controller's own turn waits for the end of their next one (Classic #37
+   * Radiant). R241 does not drop one made on the other player's turn: that player's next turn exists.
+   */
+  next?: boolean;
 }): Effect {
   return {
     kind: "delay",
@@ -87,19 +97,38 @@ export function delay(args: {
       // (R70) — has no end of its controller's turn to wait for, and waiting for the next one would
       // run it at the end of a turn the card was never played on, as R155 keeps a return Spell cast
       // then in the graveyard: it is not scheduled at all.
-      if (endsOtherPlayersTurn(ctx, args.at)) return;
+      if (args.next !== true && endsOtherPlayersTurn(ctx, args.at)) return;
       // `resumeSelf` is the one builder for the def id, the face and the instance id, so a delay
       // and a prompt store the same shape; only the hook differs, and only when a card says so.
-      const built = resumeSelf(ctx, args.step, args.data ?? {});
-      // R127: a delayed effect re-enters as whatever is left of its card then, so a Death hook's
-      // snapshot (R89) is not carried past the hook that read it.
-      // Nor does it carry the run it was made in (`work.RUN_MARKS_KEY`): it resolves at its own R62
-      // point as a run of its own, and a card it watches is watched through `watch` (R174).
-      const { [SELF_KEY]: _snapshot, [RUN_MARKS_KEY]: _run, ...data } = built.data;
-      const resume = { ...built, data, hook: args.hook ?? DELAYED_HOOK };
-      scheduleDelayed(ctx, ctx.controller, { phase: args.at.phase, player: delayPlayer(ctx, args.at) }, resume, args.watch);
+      const resume = delayedResume(ctx, args.step, args.data ?? {}, args.hook ?? DELAYED_HOOK);
+      scheduleDelayed(
+        ctx,
+        ctx.controller,
+        { phase: args.at.phase, player: delayPlayer(ctx, args.at) },
+        resume,
+        args.watch,
+        args.next === true ? nextTurnMark(ctx) : undefined,
+      );
     },
   };
+}
+
+/**
+ * The continuation a delayed effect stores: this script's step (`prompts.resumeSelf`) as a run of its
+ * own. R127: it re-enters as whatever is left of its card then, so a Death hook's snapshot (R89) is
+ * not carried past the hook that read it; nor does it carry the run it was made in
+ * (`work.RUN_MARKS_KEY`): it resolves at its own R62 point, and a card it watches is watched through
+ * `watch` (R174).
+ */
+function delayedResume(ctx: EffectContext, step: string, data: Record<string, unknown>, hook: string): Resume {
+  const built = resumeSelf(ctx, step, data);
+  const { [SELF_KEY]: _snapshot, [RUN_MARKS_KEY]: _run, ...kept } = built.data;
+  return { ...built, data: kept, hook };
+}
+
+/** R458: the first turn a "next turn" clause may run on — any turn after the one it is made on. */
+function nextTurnMark(ctx: EffectContext): number {
+  return ctx.state.turn + 1;
 }
 
 /**
@@ -110,4 +139,123 @@ function endsOtherPlayersTurn(ctx: EffectContext, at: DelayAt): boolean {
   // R350: "this turn" is the turn running, whoever's it is, so there is no other player's turn to miss.
   if (at.player === THIS_TURN) return false;
   return at.phase === "end" && playerOf(ctx, at.player) === ctx.controller && !isTurnOf(ctx.state, ctx.controller);
+}
+
+// ---------------------------------------------------------------------------
+// ---- v0.2.0 verbs: activate and turn (B5 E27 delayed kinds, E28 rest of the game) ----
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E27: the delayed effects the engine itself resolves, by the `Resume.hook` they are stored under —
+ * a verb, not a card's step, so any card can say "destroyed at the start of your next turn" without a
+ * `delayed` hook of its own. `turn.ts`'s delayed stage runs these (`runEngineDelayed`) and re-enters a
+ * card's step for every other entry (R126).
+ */
+export const DELAYED_DESTROY_HOOK = "@delayedDestroy";
+export const DELAYED_DISCARD_HAND_HOOK = "@delayedDiscardHand";
+
+/** A card's def id for the record an engine delayed effect keeps: the card that made it, if any. */
+function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
+  return { defId: ctx.self?.defId ?? ctx.defId ?? "", radiant: ctx.radiant };
+}
+
+/**
+ * B5 E27, R458, R174 (Classic #20 The Power to Punish): the unit `target` names is destroyed at the
+ * start of its controller's next turn — a destroy (§6.3), so Indestructible ignores it (R46) and the
+ * state check after the delayed effect collects it (R59). Aimed at that unit's stay on the field: it
+ * fizzles the moment the unit leaves the field, whatever comes back under its id (`watch`, R76, R83).
+ * With no unit on the field to aim at, nothing is scheduled.
+ *
+ * `scope` instead is "all enemy Units are destroyed at the start of your next turn" (the Radiant face):
+ * the Units the scope names *then*, read as the delayed effect resolves, not a list fixed now — sides
+ * relative to the controller who made it.
+ */
+export function destroyAtNextTurnStart(args: { target: TargetSpec } | { scope: BoardScope }): Effect {
+  return {
+    kind: "destroyAtNextTurnStart",
+    apply(ctx): void {
+      const maker = makerOf(ctx);
+      const at = { phase: "start" as const, player: ctx.controller };
+      if ("scope" in args) {
+        const resume: Resume = { ...maker, hook: DELAYED_DESTROY_HOOK, step: "scope", data: { scope: { ...args.scope } } };
+        scheduleDelayed(ctx, ctx.controller, at, resume);
+        return;
+      }
+      const unit = instanceOf(ctx, args.target);
+      if (unit === null || unit.zone.z !== "field") return;
+      const resume: Resume = { ...maker, hook: DELAYED_DESTROY_HOOK, step: "unit", data: { instanceId: unit.id } };
+      scheduleDelayed(ctx, ctx.controller, at, resume, unit.id);
+    },
+  };
+}
+
+/**
+ * B5 E27, R458 (Classic #37 Last Hurrah): the controller discards their whole hand at the end of
+ * `this` turn — whoever's turn is running, as R350 reads "this turn" — or at the end of their `next`
+ * turn (Radiant), which the end of the turn it is made on passes by. A discard (§6.3), so "whenever
+ * you discard" sees each card.
+ */
+export function discardHandAtTurnEnd(args: { turn: "this" | "next" }): Effect {
+  return {
+    kind: "discardHandAtTurnEnd",
+    apply(ctx): void {
+      const resume: Resume = { ...makerOf(ctx), hook: DELAYED_DISCARD_HAND_HOOK, step: args.turn, data: {} };
+      if (args.turn === "this") {
+        scheduleDelayed(ctx, ctx.controller, { phase: "end", player: ctx.state.active }, resume);
+        return;
+      }
+      scheduleDelayed(ctx, ctx.controller, { phase: "end", player: ctx.controller }, resume, undefined, nextTurnMark(ctx));
+    },
+  };
+}
+
+function scopeIn(data: Record<string, unknown>): BoardScope | null {
+  const raw: unknown = data.scope;
+  return raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as BoardScope) : null;
+}
+
+/**
+ * Run one of the engine's own delayed kinds, as its owner. Returns false for an entry that is a card's
+ * step, which the caller re-enters through the card's script instead (R126).
+ */
+export function runEngineDelayed(sink: EngineSink, effect: DelayedEffect): boolean {
+  const ctx = makeContext(sink, null, { controller: effect.owner });
+  const data = effect.resume.data;
+  switch (effect.resume.hook) {
+    case DELAYED_DESTROY_HOOK: {
+      const scope = scopeIn(data);
+      if (scope !== null) destroyAll(scope).apply(ctx);
+      else if (typeof data.instanceId === "string") destroy({ target: { of: "instance", instanceId: data.instanceId } }).apply(ctx);
+      return true;
+    }
+    case DELAYED_DISCARD_HAND_HOOK:
+      discardHand({ player: "self" }).apply(ctx);
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * B5 E28, R458 (Classic+ #52): "For the rest of the game: at the start of your turn, …". The card's
+ * `step` (under `hook`, `DELAYED_HOOK` unless the card names another) is re-entered at the start of
+ * each of `player`'s turns from the next one on, in R62's delayed stage with the delayed effects, in
+ * creation order; several stack, each running once per turn. It is the player's effect now, not the
+ * card's: it resolves with no `self` whatever became of the card (R127), under the face it was made
+ * with, carrying `data`. `label` is its badge (R169), in the card's own words.
+ */
+export function forRestOfGame(args: {
+  step: string;
+  label: string;
+  hook?: string;
+  data?: Record<string, unknown>;
+  player?: PlayerSpec;
+}): Effect {
+  return {
+    kind: "forRestOfGame",
+    apply(ctx): void {
+      const { instanceId: _card, ...resume } = delayedResume(ctx, args.step, args.data ?? {}, args.hook ?? DELAYED_HOOK);
+      addStartOfTurnEffect(ctx, playerOf(ctx, args.player ?? "self"), resume, args.label);
+    },
+  };
 }

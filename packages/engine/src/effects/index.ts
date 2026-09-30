@@ -185,6 +185,12 @@ export { forEachCard } from "./each";
 
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
+// B5 E10, R456: end the turn from an effect, now or after N more actions.
+export { endTurn, endTurnAfterActions } from "./turnEnd";
+// B5 E27, E28, R458: a destroy at the start of your next turn (a unit, or a scope read then), your hand
+// discarded at the end of this or your next turn, and a start-of-turn effect for the rest of the game.
+export { destroyAtNextTurnStart, discardHandAtTurnEnd, forRestOfGame } from "./delay";
+
 // ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----
 
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----

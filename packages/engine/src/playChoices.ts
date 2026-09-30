@@ -577,8 +577,9 @@ export function inDeclaredOrder(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  targetDecls: readonly TargetDecl[] = declaredTargets(card),
 ): Selection[] {
-  const decls = activeTargetDecls(declaredTargets(card), modes);
+  const decls = activeTargetDecls(targetDecls, modes);
   if (decls.length === 0) return [...selections];
   const offered = decls.map((decl) => legalSelectionsFor(state, player, card, decl));
   return splitSelections(decls, offered, selections).flatMap((slice, index) => {
@@ -747,9 +748,10 @@ export function playChoiceCombinations(
   state: GameState,
   player: PlayerId,
   card: CardInstance,
+  declared?: DeclaredChoices,
 ): PlayChoices[] {
-  const targetDecls = declaredTargets(card);
-  const modeDecls = declaredModes(card);
+  const targetDecls = declared?.targets ?? declaredTargets(card);
+  const modeDecls = declared?.modes ?? declaredModes(card);
   if (targetDecls.length === 0 && modeDecls.length === 0) return [{}];
 
   const targetCombosFor = (decls: readonly TargetDecl[]): Selection[][] => {
@@ -919,9 +921,9 @@ function refuseTargets(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
 ): string | null {
   const name = defOf(state, card.defId).name;
-  const declared = declaredTargets(card);
   // R90: a declaration that belongs to modes the play did not choose asks for nothing.
   const decls = activeTargetDecls(declared, modes);
   if (decls.length === 0 && declared.length > 0) {
@@ -957,9 +959,13 @@ function refuseTargets(
   return null;
 }
 
-function refuseModes(state: GameState, card: CardInstance, modes: readonly string[]): string | null {
+function refuseModes(
+  state: GameState,
+  card: CardInstance,
+  modes: readonly string[],
+  decls: readonly ModeDecl[] = declaredModes(card),
+): string | null {
   const name = defOf(state, card.defId).name;
-  const decls = declaredModes(card);
   if (decls.length === 0) return modes.length === 0 ? null : `${name} takes no mode choices`;
   if (modes.length > decls.length) {
     return `${name} takes ${plural(decls.length, "mode choice")}, not ${modes.length}`;
@@ -1008,4 +1014,34 @@ export function whyChoicesRefused(
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// ---- v0.2.0: activate and turn (B3.2 activation choices, R384) ----
+// ---------------------------------------------------------------------------
+
+/**
+ * The declarations a set of choices answers when they are not the card's own play-time ones: an
+ * Activate ability's `targets` and `modes` (B3.2 rule 5, R384), which travel in the `activate` action
+ * as a play's travel in `play` (R81) and are read by the same rules (R90).
+ */
+export type DeclaredChoices = { targets: readonly TargetDecl[]; modes: readonly ModeDecl[] };
+
+/**
+ * R384, R90: the targets and modes an `activate` action carried, checked against the ability's
+ * declarations and the board exactly as a play's are (`refuseTargets`, `refuseModes`), so the two
+ * refusals cannot drift apart. `card` is the card whose ability it is: `excludeSelf` reads it.
+ */
+export function whyDeclaredChoicesRefused(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  declared: DeclaredChoices,
+  targets: readonly Selection[],
+  modes: readonly string[],
+): string | null {
+  return (
+    refuseTargets(state, player, card, targets, modes, declared.targets) ??
+    refuseModes(state, card, modes, declared.modes)
+  );
 }

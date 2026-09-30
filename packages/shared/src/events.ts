@@ -145,7 +145,12 @@ export type GameEvent =
       copyOf?: string;
     }
   | { type: "discarded"; instanceId: string; defId: string; owner: PlayerId }
-  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string }
+  /**
+   * `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
+   * is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
+   * the fatigue count already say as much. Optional only so an event built before it existed reads.
+   */
+  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string; turnDraw?: number }
   | { type: "addedToHand"; player: PlayerId; instanceId: string; defId: string }
   | { type: "shuffledIn"; player: PlayerId; instanceId: string; defId: string; position: number }
   | { type: "buffed"; instanceId: string; attack: number; health: number }

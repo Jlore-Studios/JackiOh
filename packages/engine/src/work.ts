@@ -41,7 +41,7 @@
 
 import type { PlayerId, Selection } from "@jackioh/shared";
 import type { EngineSink } from "./resolve";
-import type { Hook, Script } from "./script";
+import { ACTIVATION_HOOK_PREFIX, activationDecls, type Hook, type Script } from "./script";
 import { scriptsFor } from "./scripts";
 import type { GameState, Resume, WorkItem } from "./state";
 import type { EventStay } from "./stays";
@@ -447,9 +447,21 @@ function triggerStepFor(script: Script, resume: Resume): Hook | undefined {
 }
 
 /**
+ * R384: an Activate ability's own list, re-entered by its id (`script.activationHook`). The ability
+ * lives in an array (`Script.activations`), like a trigger, so a tail its prompt parked comes back
+ * here by the id the hook carries.
+ */
+function activationStepFor(script: Script, resume: Resume): Hook | undefined {
+  if (!resume.hook.startsWith(ACTIVATION_HOOK_PREFIX)) return undefined;
+  const id = resume.hook.slice(ACTIVATION_HOOK_PREFIX.length);
+  return activationDecls(script).find((decl) => decl.id === id)?.run;
+}
+
+/**
  * The step a script registers for a continuation: a hook of its own (`cry`, `delayed`), an entry
- * in its step table (`resume: { picked: … }`), or an event trigger named by its id. `prompts.ts`
- * re-enters a continuation through this, and `canResume` asks it, so the two cannot disagree.
+ * in its step table (`resume: { picked: … }`), an event trigger named by its id, or an Activate
+ * ability named by its id (R384). `prompts.ts` re-enters a continuation through this, and
+ * `canResume` asks it, so the two cannot disagree.
  */
 export function scriptStepFor(script: Script, resume: Resume): Hook | undefined {
   const entry: unknown = (script as unknown as Record<string, unknown>)[resume.hook];
@@ -458,7 +470,7 @@ export function scriptStepFor(script: Script, resume: Resume): Hook | undefined 
     const step: unknown = (entry as Record<string, unknown>)[resume.step];
     if (typeof step === "function") return step as Hook;
   }
-  return triggerStepFor(script, resume);
+  return triggerStepFor(script, resume) ?? activationStepFor(script, resume);
 }
 
 /** The step a card's script registers for this continuation, on the face the pause recorded. */

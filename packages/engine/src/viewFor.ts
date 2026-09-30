@@ -77,6 +77,7 @@ import {
   type PromptOption,
 } from "./state";
 import { gradeName } from "./subsystems/comboIndex";
+import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { ownLibraryView } from "./ownLibrary";
@@ -249,6 +250,15 @@ function withPreview<T extends CardView>(view: T, values: PreviewValue[] | null)
 }
 
 /**
+ * B3.2, R384: a card's Activate abilities ride its controller's own view of it on the field
+ * (`activate.activationViewsFor` owns where), or not at all — never `[]`.
+ */
+function withActivations<T extends CardView>(view: T, state: GameState, card: CardInstance, viewer: PlayerId): T {
+  const activations = activationViewsFor(state, viewer, card);
+  return activations === null ? view : { ...view, activations };
+}
+
+/**
  * The card that acts in a unit zone: the top of the pile (§3.2). `buried` is how many dormant cards
  * sit under it (R13) — a count, so no buried identity reaches either player.
  */
@@ -257,9 +267,14 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
   if (top === undefined) return null;
   const layers = unitLayers(state, top);
   return {
-    ...withPreview(
-      withCondition(cardView(state, top), conditionActive(state, top, viewer, "field")),
-      previewOf(state, top, viewer, "field"),
+    ...withActivations(
+      withPreview(
+        withCondition(cardView(state, top), conditionActive(state, top, viewer, "field")),
+        previewOf(state, top, viewer, "field"),
+      ),
+      state,
+      top,
+      viewer,
     ),
     owner: top.owner,
     controller: top.controller,
@@ -304,9 +319,14 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
   if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
   const grade = card.counters.grade;
   return {
-    ...withPreview(
-      withCondition(cardView(state, card), conditionActive(state, card, viewer, "field")),
-      previewOf(state, card, viewer, "field"),
+    ...withActivations(
+      withPreview(
+        withCondition(cardView(state, card), conditionActive(state, card, viewer, "field")),
+        previewOf(state, card, viewer, "field"),
+      ),
+      state,
+      card,
+      viewer,
     ),
     faceDown: false,
     type: defOf(state, card.defId).type,
@@ -388,6 +408,14 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
       return `Your cards gain "Combo: draw ${mod.amount}"`;
     case "quickstrikerDamage":
       return `Your cards gain "Combo X: X damage to the enemy hero"`;
+    // B5 E10, R456: how much of the turn is left.
+    case "turnEnds":
+      return mod.actionsLeft === 0
+        ? "Your turn ends"
+        : `Your turn ends after ${mod.actionsLeft} more action${mod.actionsLeft === 1 ? "" : "s"}`;
+    // B5 E28, R458: the card's own words.
+    case "startOfTurnEffect":
+      return mod.label;
   }
 }
 
