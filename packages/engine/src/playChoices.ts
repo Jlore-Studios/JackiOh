@@ -174,7 +174,7 @@ export function resolvingFace(state: GameState, player: PlayerId, card: CardInst
 }
 
 /**
- * Classic+ #68 Organic Produce: whether a permanent on this player's side makes every card carrying
+ * Classic+ #68 Organic Produce, R449: whether a permanent on this player's side makes every card carrying
  * one of its tags Radiant as the player plays it (`radiantPlaysTagged`) — R213's rule by tag, on every
  * such play (a cast included, R70) rather than the first cheap one. The card's text is its
  * controller's (§8 Conventions), a Vanilla one has none (`flagsOf`), and it never catches its own

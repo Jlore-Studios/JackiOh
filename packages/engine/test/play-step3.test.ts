@@ -1,5 +1,6 @@
-// §10.5 step 3's two v0.2.0 rules: a play replaced by another card (Classic #23 Devil's Pact, R449)
-// and plays made Radiant by tag (Classic+ #68 Organic Produce, R213's rule by tag, R214).
+// §10.5 step 3's two v0.2.0 rules (R449): a play replaced by another card (Classic #23 Devil's Pact)
+// and plays made Radiant by tag (Classic+ #68 Organic Produce: R213's rule by tag, read at step 1 as
+// R214 reads Gifted Program).
 //
 // R449: a live `replacePlays` modifier replaces each card its player plays — a cast included (R70) —
 // by a new instance of the named definition (Radiant per the modifier). The old card ceases to exist,
@@ -196,8 +197,8 @@ describe("R449 a play replaced at step 3 (Classic #23 Devil's Pact)", () => {
   });
 });
 
-describe("R213 by tag: plays made Radiant (Classic+ #68 Organic Produce)", () => {
-  it("R213 every Fruit its controller plays becomes Radiant as it is played, and nothing else does", () => {
+describe("R449 by tag: plays made Radiant at step 3 (Classic+ #68 Organic Produce, R213's rule by tag)", () => {
+  it("R449 every Fruit its controller plays becomes Radiant as it is played, and nothing else does", () => {
     const state = game("r213-produce");
     put(state, PA.produce.id, slot("p1", "backrow", 1));
     const pear = one(state, "p1", PA.pear.id);
@@ -210,7 +211,7 @@ describe("R213 by tag: plays made Radiant (Classic+ #68 Organic Produce)", () =>
     expect(eventsOfType(second.events, "radiantSet")).toEqual([]);
   });
 
-  it("R214 step 1 reads the Radiant face, so the play carries that face's choices", () => {
+  it("R449 step 1 reads the Radiant face (R214), so the play carries that face's choices", () => {
     const state = game("r214-produce");
     put(state, PA.produce.id, slot("p1", "backrow", 1));
     const apple = one(state, "p1", PA.apple.id);
@@ -222,7 +223,7 @@ describe("R213 by tag: plays made Radiant (Classic+ #68 Organic Produce)", () =>
     expect(after.players.p2.hero.health).toBe(HERO_HEALTH - 3);
   });
 
-  it("R213 the opponent's Organic Produce does nothing for this player, and a cast Fruit is Radiant too (R70)", () => {
+  it("R449 the opponent's Organic Produce does nothing for this player, and a cast Fruit is Radiant too (R70)", () => {
     const state = game("r213-produce-theirs");
     put(state, PA.produce.id, slot("p2", "backrow", 1));
     const pear = one(state, "p1", PA.pear.id);
