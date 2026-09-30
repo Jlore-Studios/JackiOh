@@ -7,7 +7,7 @@ Work order for implementing JackiOh from `SPEC.md` (the master game specificatio
 - Read SPEC.md end to end before writing code. Re-read the relevant section before each task.
 - Tasks are `M<milestone>-T<n>`. Each lists **Files** and **Acceptance**. A task is done when every acceptance item is a green automated test (or a lint rule), not when the code exists.
 - Milestones are gates. Do not start M(n+1) until the M(n) gate passes.
-- Rulings: every SPEC §11 row (R1–R168 as of 2026-09-17) is implemented exactly as written. Rows marked "decide" (R1, R2, R4, R5, R14, R26, R39) live behind named constants in `packages/engine/src/config.ts` so a designer can flip them in one line. Every ruling has a test whose name starts with its id, e.g. `it("R8 Death fires on both deaths of a Reborn unit")`.
+- Rulings: every SPEC §11 row (R1–R168 as of 2026-09-17; R380–R439 are patch v0.2.0's) is implemented exactly as written. Rows marked "decide" (R1, R4, R5, R14, R26, R39) live behind named constants in `packages/engine/src/config.ts` so a designer can flip them in one line; R2's cap stays a constant there, though patch v0.2.0 decided it (R389). Every ruling has a test whose name starts with its id, e.g. `it("R8 Death fires on both deaths of a Reborn unit")`.
 - If SPEC.md is silent on something you hit, follow Hearthstone semantics, add a row to SPEC §11 (next R-number) in the same PR, and name the test after it.
 - M1–M3 acceptance items that name a card (Gravedigger, Hinder, CN-Virus, Twinspell, Mana Well, Jlockeed Shredder, Big D-fender, Moths to the Flame, Big Felinor, Hit Job, Right-house defender and others) are tested with a test-only fixture script under `packages/engine/test/fixtures/` that reproduces just that behaviour; the real card test in M4 covers the same case again.
 - Stack: TypeScript strict; pnpm workspaces; vitest; eslint with `no-restricted-properties` banning `Math.random`, `Date.now`, `new Date()` inside `packages/engine` and `packages/cards`; React + Vite for `apps/web`; Cypress for `e2e`; Postgres for `apps/server`; one stateful actor per match (Cloudflare Durable Objects or an equivalent single-threaded actor runtime).
@@ -59,10 +59,13 @@ jackioh/
       src/replay.ts            fold(seed, log) -> state; state hash
       test/                    unit + property tests
     cards/
-      catalog.json             100 cards + 11 tokens (schema in M4-T1)
+      catalog.json             268 cards + 49 tokens over Core, Classic and Classic+ (schema in M4-T1, M9-T1)
+      patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388)
       src/index.ts             registry: defId -> {def, base, radiant}
-      src/scripts/NNN-slug.ts  one file per card, NNN = zero-padded index, tokens as NNN-1-slug.ts
-      test/NNN-slug.test.ts    one test file per card
+      src/scripts/NNN-slug.ts  one file per Core card, NNN = zero-padded index, tokens as NNN-1-slug.ts
+      src/scripts/classic/NNN-slug.ts        Classic cards
+      src/scripts/classic-plus/NNN-slug.ts   Classic+ cards, tokens NNN-k-slug.ts, AI cards t-ai-NN-slug.ts
+      test/NNN-slug.test.ts    one test file per card; test/classic/ and test/classic-plus/ likewise
       test/catalog.test.ts     shape test (M4-T1 acceptance)
     validator/
       src/index.ts             loadout rules L1–L6 (§9.4), used by web and server
@@ -98,7 +101,7 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `MAX_COPIES` | 1 | §2.6, §9.4 |
 | `MAX_MANA` | 4 | §2.3 |
 | `HERO_HEALTH` | 30 | §2 |
-| `TURN_CAP_PLAYER_TURNS` | 30 | §2.5, R2 (decide) |
+| `TURN_CAP_PLAYER_TURNS` | 60 | §2.5, R2, R389 |
 | `HAND_CAP` | 10 | §2.4, R4 (decide) |
 | `OPENING_DRAW` | `[3, 4]` (index = seat, Nth seat = N+2) | §2.1 |
 | `OPENING_COINS` | `[0, 1]` (index = seat: The Coin for the seat going second) | §2.1, R244 |
@@ -126,8 +129,26 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `DRAWS_PER_TURN` | 1 | §2.4, R183 |
 | `HUMAN_HANDICAP` | `{ deckSize: DECK_SIZE, manaBonus: 0, manaCap: MAX_MANA, extraOpeningCards: 0, extraDrawsPerTurn: 0 }` | §9.9, R180 |
 | `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ 25, +1, cap 5, +1 opening, +0 draws }`; hard `{ 30, +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184 |
+| `ACTIVATE_UNLIMITED_CAP` | 100: uses of one card's "Activate ♾️" in one turn | §6.2, R384 |
+| `BRITTLE_FIRST_TICK_TURNS` | 2: a Brittle count started on turn t first ticks at its controller's first start of turn numbered t + 2 or later | §6.1, R385 |
+| `TUNE_STAT_TOTAL` | 4: the stats a Degrade takes or an Upgrade gives, split between attack and health | §6.3, R386 |
+| `TUNE_COST_CAP` | 4: a Degrade never raises a cost above it; an Upgrade never lowers one below 0 | §6.3, R386 |
+| `PARAM_DEFAULT_STEP` | 1 for a number up to 5, 2 for 6 to 12, a quarter (rounded) above 12, where a `params` entry names no `step` | §5, §6.3, R386 |
+| `PARAM_MIN_AMOUNT` | 1: a Degrade never takes an amount below it, where a `params` entry names no `min` | §5, §6.3, R386 |
+| `MID_LANE` | 3, the middle lane of `UNIT_ZONES` ("midlane") | §3.1, §8.6 C #22 |
+| `CALL_TO_CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos rolls, both editions | §8 #95, §8.7 C+ #73, R423 |
+| `KY_MATH_EQUATION_COST_CAP` | 4: #31's return never lifts its cost above it | §8 #31, R429 |
+| `GLITCH_NUMBERS` | 0 to 10: C #18's number prompt | §8.6 C #18 |
+| `BLADE_STORM_ROUNDS` | 30 | §8.7 C+ #32.3, R59 |
+| `BOARD_HISTORY_DEPTH` / `ROLLBACK_MAX_TURNS_AGO` | 4 / 3 | §8.7 C+ #35, R419 |
+| `GRAPE_ODDS` | Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1 (in that order, which is Lucky's comparator) | §8.7 C+ #65, C+ #66 |
+| `PAPAYA_MAX_CELLS` | 4 | §8.7 C+ #62, R422 |
+| `KY_TEST_MIN_PROBLEMS` / `KY_TEST_OPTIONS` | 30 per difficulty (a bank test in `packages/cards`) / 4 | §8.7 C+ #42, R420 |
+| `KY_TEST_EASY_ADDENDS` / `KY_TEST_EASY_MISSES` | 10 to 99 / ±1, ±2, ±10 | §8.7 C+ #42 |
 
-Server constants (`apps/server/src/config.ts`, added in M7) carry R79's values: `TURN_CLOCK_SECONDS` 75, `PROMPT_CLOCK_SECONDS` 30, `MULLIGAN_CLOCK_SECONDS` 45 (R268), `DISCONNECT_GRACE_SECONDS` 60, `MATCH_CEILING_MINUTES` 60, `ROOM_CODE_LENGTH` 6, `ELO_K` 32, `ELO_START` 1000.
+Server constants (`apps/server/src/config.ts`, added in M7) carry R79's values: `TURN_CLOCK_SECONDS` 75, `PROMPT_CLOCK_SECONDS` 30, `MULLIGAN_CLOCK_SECONDS` 45 (R268), `DISCONNECT_GRACE_SECONDS` 60, `MATCH_CEILING_MINUTES` 120 (R389), `ROOM_CODE_LENGTH` 6, `ELO_K` 32, `ELO_START` 1000; and since patch v0.2.0 `DECK_CODE_VERSION` 2 and `TRIO_CODE_VERSION` 2 with the per-set number offsets Core 0, Classic 1000, Classic+ 2000 (R255, R339).
+
+The AI's sweep constants (`packages/ai/src/config.ts`, R186, R390): `seedsPerCardAtRisk` 24, `atRiskBoost` 4, pass-2 `minAffordableTurns` 6 and `selfHarm` plays 8 (pass 1 keeps 3 and 4), at-risk at half of a flag's condition, and `SHADOW_WATCH` in `shadowBan.ts`. The client's (`apps/web`): `FX_SPEED_MIN` 0.25 and `FX_SPEED_MAX` 3 (R201, R435), and the last-30-seconds threshold of the turn-clock visual (R439).
 
 ## 3. Milestones
 
@@ -194,10 +215,10 @@ Acceptance:
 - Shuffling a copy into a 60-card library creates nothing (R80).
 
 **M1-T8 Game end.** Files: `engine/src/turn.ts`, `engine/src/reduce.ts`.
-Hero ≤ 0 at a state check → loss; both → draw; concede; draw offer/answer with `DRAW_OFFER_BLOCK_TURNS`; turn cap after the 30th player-turn ends → draw; a turn whose only legal actions are ending it, conceding and offering a draw auto-ends (R82, emitted as `turnAutoEnded`).
+Hero ≤ 0 at a state check → loss; both → draw; concede; draw offer/answer with `DRAW_OFFER_BLOCK_TURNS`; turn cap after the 60th player-turn ends → draw (R2, R389); a turn whose only legal actions are ending it, conceding and offering a draw auto-ends (R82, emitted as `turnAutoEnded`).
 Acceptance:
 - R59 simultaneous lethal: one effect (fixture script) that deals the enemy hero lethal damage and then fatigue-draws its own player to 0 yields `winner: "draw"`; the same two hits as two separate actions end the game at the first one.
-- After the 30th `endTurn`, `result.reason = "turn-cap"`; the 29th does not end the game.
+- After the 60th `endTurn`, `result.reason = "turn-cap"`; the 59th does not end the game.
 - A declined offer blocks the offering player for 3 of their turns; the opponent may still offer.
 - R82: a player whose only legal actions are ending the turn, conceding and offering a draw gets `turnAutoEnded` after their draw.
 
@@ -292,19 +313,19 @@ Schema per card:
 ```
 Tokens use `index` `"51.1"`, `"65.1"`, `"90.1"`, `"93.1"`, `"95.1"`, `"T-rush"`, `"T-sheep"`, `"T-felinor"`, `"T-bread"`, `"T-coin"`, `"T-ghoul"` and `"token": true`. `rarity` is the value in SPEC §8 (assigned by complexity), not the source list's grouping (§8, rarity paragraph). Apply every row of §5.3.
 Acceptance (`catalog.test.ts`):
-- Exactly 100 entries with `token: false` and 10 with `token: true`; indices 1–100 each present once.
+- Core: exactly 100 entries with `token: false` and 11 with `token: true`; indices 1–100 each present once. (M9-T1 adds Classic and Classic+: 268 and 49 in all.)
 - For every entry, `cost`, `type`, `tags`, `rarity`, `base.attack/health`, `radiant.attack/health` equal the values in SPEC §8 (encode §8 as a fixture table in the test; the test is the diff).
 - Rarity counts: 35 Common, 37 Rare, 16 Epic, 7 Legendary, 5 Mythic.
-- Every `tags` value is one of Human, Felinor, KY, CN, Fruit, "Call to Chaos", Quickdraw, Jlockeed (R278), Token.
+- Every `tags` value is one of Human, Felinor, KY, CN, Fruit, "Call to Chaos", Quickdraw, Jlockeed (R278), Book, Pancake, AI, Token.
 - Every entry's `radiant` face differs from its `base` face (R276), and every Radiant Unit's attack and health are at least twice its base's (R275, `radiant-standard.test.ts`). `radiant.text` is the §8 Radiant cell written out in full (R277), and `refs` lists the cards a text names (R279, `references.test.ts`).
 
 **M4-T2 Script contract and registry.** Files: `cards/src/index.ts`, `cards/src/scripts/NNN-slug.ts`.
-Each script file exports `{ def: CardDef, base: Script, radiant: Script }` with `Script = { cost?, cry?, death?, startOfGame?, resume?, delayed?, setStat?, startOfTurn?, endOfTurn?, aura?, triggers?, activate?, onPlayHook?, handTriggers?, staticFlags?, targets?, modes? }` (§10.9). `targets` and `modes` declare the prompts the play action needs so the client and `legalActions` can build them without running the script. Hooks return `Effect[]`. `catalog.query({ type, cost, costRange, tags, notTags, rarity, set, excludeIndex })` lives here and is the only random-pool source (§5.1).
-Acceptance: a registry test asserts every catalog id has a script and every script has a catalog entry; `catalog.query` never returns a token unless `tags` includes `Token`, and never the `excludeIndex`; the KY pool is exactly #31, #51, #82; the trap pool is exactly #18, #41, #60, #71, #85, #96; the Legendary pool for Transmogulate is exactly #52, #85, #87, #92, #93, #95 (the §8 Legendary set minus #83, R35).
+Each script file exports `{ def: CardDef, base: Script, radiant: Script }` with `Script = { cost?, cry?, death?, startOfGame?, resume?, delayed?, setStat?, startOfTurn?, endOfTurn?, aura?, triggers?, activate?, onPlayHook?, handTriggers?, staticFlags?, targets?, modes? }` (§10.9). `targets` and `modes` declare the prompts the play action needs so the client and `legalActions` can build them without running the script. Hooks return `Effect[]`. `catalog.query({ type, cost, costRange, tags, notTags, rarity, set, excludeDefId, withTokens })` lives here and is the only random-pool source (§5.1).
+Acceptance: a registry test asserts every catalog id has a script and every script has a catalog entry; `catalog.query` never returns a token unless `withTokens` is set, bar a Fruit pool's Grapes (R382), and never an `excludeDefId` (R387); with no `set` it reaches every set (R380); the KY pool is exactly #31, #51, #82, C+ #41, C+ #42, C+ #62; the Core trap pool is exactly #18, #41, #60, #71, #85, #96 and the (1) Cost trap pool of every set adds C+ #22; the Legendary pool for Transmogulate is every non-token Legendary of every set minus #83 (R35).
 
 **M4-T3 Test template.** Files: `cards/test/_harness.ts`, `cards/test/NNN-slug.test.ts`.
 `_harness.ts` gives `scenario({ seed, p1: { hand, field, library, health, mana }, p2: {…} })` builders that place real instances, `playFrom(hand)`, `attack`, `answer`, `endTurn`, `view` and assertion helpers (`expectInZone`, `expectStats`, `expectEvents`). Every card test file covers, for base and radiant separately, each behaviour named in its §8 row plus the "must-pass" cases in the table below.
-Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
+Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
 
 **M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool.
 
@@ -316,7 +337,7 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 4 | Gary the Gambler | 2 | Fixed seed → fixed stats; heads+tails = 5 (radiant 7 at +2 each); Lucky has no effect (R32) |
 | 5 | Stockpile | 1 | Draw 2, heal 2 (hero may exceed 30); hand cap burns; radiant 5/5 |
 | 6 | Mana Well | 1 | Turn-4 player has 5 mana; leaves → back to 4; radiant 6 |
-| 7 | Jewelosco Scarab | 1 | Discover offers 3 distinct 2-cost non-token cards, never #7; radiant 3-cost pick costs 2 |
+| 7 | Jewelosco Scarab | 1 | Discover offers 3 distinct (2) Cost non-token cards of any set, never #7 (R380, R387); radiant (3) Cost pick costs (2) |
 | 8 | Mr. Vanilla | 1 | A 4/4 with no text: Sheepish transforms it like any unit; radiant a 12/12 with no text, taking that face at once when made Radiant on the field (patch v0.1.1) |
 | 9 | Moths to the Flame | 2 | Each enemy unit attacks it in lane order at controller's start of turn, no exertion spent, sick units included, each attack is its own combat, stops when Moths dies (R53); radiant Armor 1 reduces each hit (R53) |
 | 10 | Rapid Replenish | 1 | 2 prior plays → no draw; 3 → draw 3; radiant 6; counts as played either way |
@@ -330,8 +351,8 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 18 | Bread and Butter | 2 | Fires in the trap window at either player's end with unspent mana (R62), token to trap controller (R52), X = unspent, 0 → nothing, stays; radiant 3X |
 | 19 | Midrange Menace | 1 | Taunt enforced; heals to full at own end of turn; radiant Immutable refuses Sheepish |
 | 20 | Pointmaster | 1 | First Strike; radiant Divine Shield |
-| 21 | Hinder | 2 | Auto-casts on draw and draws again; opponent's next refresh −1 floored at 0; counts as played (R40, R70); radiant −2 |
-| 22 | Carnivorous Cube | 2 | The Tribute choice travels in the play action (R81) and excludes itself, chosen permanent sacrificed and remembered; Death → 2 copies (radiant fills board), backrow permanents copy to backrow, copies keep `statsOverride` (R41); nothing eaten → Death does nothing (R41) |
+| 21 | Hinder | 2 | Auto-casts on draw and draws again; opponent's next refresh −1 floored at 0; counts as played (R40, R70); the caster then discards 1 of their choice, a hand prompt during the draw (R16, R158, R431), nothing with an empty hand; radiant −2 and no discard |
+| 22 | Carnivorous Cube | 2 | The Tribute choice travels in the play action (R81) and excludes itself, and offers only your other Units, never a backrow card (R428); chosen unit sacrificed and remembered; Death → 2 copies (radiant fills board), copies keep `statsOverride` (R41); nothing eaten → Death does nothing (R41) |
 | 23 | Reoccurring Dream | 2 | Seeded 30% roll on a non-Radiant hand card (R60); returns to hand at end of turn; hand full → burned; radiant two rolls at 40% keeping a success |
 | 24 | Efficiency Dividend | 2 | X chosen with the play, bounded by mana (R81); three modes; next-turn mana +floor(X/2); returns to hand; radiant 2X damage, 4X heal, X mana next turn |
 | 25 | 4-mana 7/7 | 1 | Armor 7 zeroes a 7 hit; radiant 14/14 Armor 7 and Reborn: it comes back once from combat or a Tribute, and an exile removes it for good |
@@ -340,8 +361,8 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 28 | Knockoff Temu Glowy Jelly Bean | 1 | 2 different non-Radiant cards across library+hand+field (R60); a field unit swaps base stats in place keeping damage (R22); radiant 5 |
 | 29 | GIGA Glowy Jelly Bean | 1 | Uncastable at 4 mana, castable at 6 after gains; whole hand radiant; radiant also permanents |
 | 30 | Archivist | 2 | Mode chosen with the play (R81); highest/lowest by current cost, ties nearest top, X counts 0 (R24); radiant draws both |
-| 31 | KY's Math Equation | 2 | Cost 1 → 1 damage, returns at cost 2 → 2, cost 3 → 3, cost 4 → 5; clamps at 89 (R25); player discounts don't change the damage (R67); radiant Fib(cost+3); its preview is the damage (R280) |
-| 32 | Prem Panther | 2 | Rush; draw 2 on a combat kill, none when it dies without killing; radiant Cleave kills draw per kill (R42) |
+| 31 | KY's Math Equation | 2 | 1st play 1 damage (Fib(2)), 2nd 2, 3rd 3, 4th 5, 5th 8, counting casts and the current play, the count kept through hand, graveyard and field (R429); returns at end of turn with +1 cost, never above (4) (R429); clamps at 89 (R25); player discounts don't change the damage (R67); radiant Fib(times played + 3); its preview is the damage (R280) |
+| 32 | Prem Panther | 2 | Rush; after it attacks (declared or forced) and survives the combat, draw 2 for the attacked Unit it destroyed; nothing when it dies in that combat, nothing while defending, nothing when it survives without killing (R426); radiant draws 2 per Cleave kill of that attack too (R42) |
 | 33 | Unstable Clone Machine | 2 | After each play, library +3 fresh copies with the radiant flag preserved; token spells copied (R34); nothing is added to a 60-card library (R80); radiant all three copies Radiant |
 | 34 | Collateral Damage | 1 | Exiles an Indestructible permanent and a random opponent library card; radiant same-row neighbours too |
 | 35 | Lunar Eclipse | 2 | 3 damage; next spell this turn −1; a unit play does not consume it; expires at cleanup; radiant 6 / −2 |
@@ -350,7 +371,7 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 38 | Quickstriker | 2 | First play deals 0, second 1, third 2 to the enemy hero; nothing when not on the field; radiant 2X as one hit (R281); its preview is the next play's X (R280) |
 | 39 | Recycling Initiative | 2 | Exiled on play; end of turn adds copies of every other card played this turn, including later ones (R71); radiant copies Radiant and 1 less |
 | 40 | Echoes of the Forgotten | 1 | Start of turn: damage = exile count, then bottom card exiled; empty library → no exile, no fatigue; radiant twice the exile count; its preview is the damage (R280) |
-| 41 | Sheepish | 2 | Opponent's unit becomes a Sheep before its Cry (R17); trap consumed; Immutable target → consumed with no effect; radiant adds 0-cost Lava Golem |
+| 41 | Sheepish | 2 | Opponent's unit resolves first, its Cry included, then becomes a Sheep (R17, R427); trap consumed; a countered unit never sets it off; Immutable target → consumed with no effect; radiant adds a Lava Golem that costs (0) |
 | 42 | Eugenics | 1 | 7 random exiled (all if fewer); 30% per remaining card; radiant two rolls at 40% |
 | 43 | Big Felinor | 1 | Non-Felinors on both sides destroyed, Felinors and itself survive; radiant enemy side only |
 | 44 | True Strike | 1 | Pierce (R346): 4 damage through Armor 7 and hero Armor; Divine Shield still blocks; exiled; radiant 9 |
@@ -364,13 +385,13 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 51.1 | KY's Empty Notebook | 1 | Draw 1; radiant 2; absent from every random pool |
 | 52 | Silly Silas | 3 | Rotate both rings either direction, control changes on crossing, damage travels, Silas moves too; Locked destination bounces; radiant bounces the cards that would cross to the opponent to their owner's hand at cost 0, while the opponent's crossing cards still change control (R14) |
 | 53 | Reno | 1 | 12 → 30; 35 stays 35; radiant 60 |
-| 54 | Straaza | 1 | 2 random units of cost 3 or 4, no tokens, not #54, cost override 1; radiant Radiant units at 0 |
+| 54 | Straaza | 1 | 2 random Units of (3) or (4) Cost from every set, no tokens, not #54 (R380, R387), cost override (1); radiant Radiant units at (0) |
 | 55 | Lava Golem | 2 | Tribute 3 counts enemy units and Sheep as 2, enemies tributed; Taunt; an opposing unit in the Tribute summons the base face for the opponent (R360); radiant keeps it; Sheepish's free copy still needs tributes |
 | 56 | Jilliax | 1 | All four keywords; radiant all four plus Reborn |
-| 57 | Conjure KY | 1 | Pool exactly #31, #51, #82 with repeats allowed; radiant 2 base + 2 radiant |
+| 57 | Conjure KY | 1 | Pool exactly #31, #51, #82, C+ #41, C+ #42, C+ #62 with repeats allowed (R380, R387); radiant 2 base + 2 radiant |
 | 58 | Rush Token Farm | 1 | Token each start of turn; radiant +3/+3 aura only on Rush Tokens |
-| 59 | Unbiased Immigration | 2 | Random non-token card each start of turn; paid 4 → cost 0; radiant gives a radiant card |
-| 60 | Bear Honeypot | 2 | Fires after the opponent's ≤1-cost play resolves (R17, R56); a unit is attacked by each token in order until dead, one combat each (R53); radiant any card and fills the board |
+| 59 | Unbiased Immigration | 2 | Random non-token card of any set each start of turn, never #59 (R380, R387); paid 4 → costs (0); radiant gives a radiant card |
+| 60 | Bear Honeypot | 2 | Fires after the opponent's (1) Cost or less play resolves (R17, R56); a unit is attacked by each token in order until dead, one combat each (R53); stays face-down, not fired and not consumed, while its controller's unit row has no open zone, and fires on the next qualifying play once one is open (R430); radiant any card and fills the board |
 | 61 | Prejudiced Postdoc | 2 | Vanilla copy of a Human keeps the target's form and buffs, no keywords or text, no damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit |
 | 62 | Friend of Felinors | 1 | Fills empty zones only; radiant then +2/+2 to every unit you control including the new tokens |
 | 63 | Plastic Surgery | 1 | +3/+3 and one pool keyword the unit lacks (R21); radiant +6/+6 and two distinct keywords |
@@ -378,7 +399,7 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 65 | Masochism Mask | 2 | In opening hand (Quickdraw); start-of-turn mode prompt; "lose 3" ignores armor; radiant two picks including "nothing" |
 | 65.1 | Spikey Pillow | 2 | Cannot switch to DEF; your units −2 attack floored at 0; radiant excludes other Pillows |
 | 66 | The Rock | 2 | Play refused without a tribute; Indestructible; radiant Immutable |
-| 67 | Zoomerbin Oomen | 2 | Random trap face-down and unpaid into own lane's backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps; radiant any of the six, Radiant, still hidden from the opponent |
+| 67 | Zoomerbin Oomen | 2 | Random trap face-down and unpaid into own lane's backrow; occupied or Locked → nothing (R47); pool = the non-token (1) Cost Traps and Field Traps of every set, #18, #41, #60, #71, #96 and C+ #22 (R380); radiant any non-token Trap or Field Trap of any set, Radiant, still hidden from the opponent |
 | 68 | Twisted Sorcerer | 1 | 4 damage, 8 when hero < 10 at resolution; radiant 8 / 16 |
 | 69 | Call to Arms | 1 | Three top-down recruits of cost ≤1, library order otherwise kept, stops when the board fills; radiant ≤2 |
 | 70 | Spiteful Stab | 1 | 2 + floor(missing/5) + exile count; radiant 4 + floor(missing/3) + 2 × exile; its preview is the damage (R280) |
@@ -394,7 +415,7 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 80 | Zao Gao | 2 | Discards 2 random cards, no prompt (R354); two Rush Tokens each with two distinct pool keywords; radiant the tokens are Radiant 6/6 Rush, Cleave, and roll three keywords they do not have; tagged CN |
 | 81 | Radiant Saintess | 2 | Death makes every other unit you control Radiant; no Reborn, so she dies once; radiant also every card in your hand, hidden from the opponent (R177) |
 | 82 | KY's Trial | 2 | Three distinct numbers 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0 |
-| 83 | Transmogulate | 3 | Zone counts preserved, the hand included (R365); board cards replaced by same-type Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes Unlicensed Experimentation (R35); radiant gives radiant cards |
+| 83 | Transmogulate | 3 | Zone counts preserved, the hand included (R365); board cards replaced by same-type Legendaries in place; pool is every non-token Legendary of every set but #83, and a Field Trap becomes a Legendary Trap or Field Trap (R35, R380); radiant gives radiant cards |
 | 84 | Going Long | 2 | In opening hand; embiggen 2 → Armor 2, 4 → Armor 4 on the hero; radiant 4 / 8 |
 | 85 | Unlicensed Experimentation | 3 | Fires after the Cry of a permanent the opponent played (R17); tokens, Recruit and copies don't set it off (R61); fuses onto a random same-type permanent per R77: stats summed, keywords unioned, cost capped at 4, the target instance kept with its damage and position; opponent's card gone with no Death trigger; Immutable permanents are never chosen and with no legal target the trap is consumed for nothing (R61); radiant fuses onto all |
 | 86 | "Miss" Mrow | 2 | Cannot attack; Death takes control of the unit that destroyed it (R42, R361), placed per R15, and nothing when no unit did; radiant Rush |
@@ -408,12 +429,12 @@ Acceptance: `pnpm test --filter cards` runs 111 test files; a script that lists 
 | 93 | Combo-Index | 3 | Grade 1 needs 1 play, grade 2 needs 2; cascade E→new grade in order; E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each start of turn; on the field its preview is the grade's letter and the plays it asks for, and the view names the letter (R372) |
 | 93.1 | Combo-Fodder | 1 | 2 damage with Lifesteal; radiant 4 |
 | 94 | Genn's Greed | 2 | Draws every 2-cost card; odd current-cost cards exiled from library, hand and GY, X-cost exempt (R26, R66); +2 mana (radiant +6) |
-| 95 | Call to Chaos (Core Edition) | 3 | Each of the 10 effects has a test; recursion stops at 20 (R28); radiant rolls the recursion plus one of the other 9 effects (R28) |
+| 95 | Call to Chaos (Core Edition) | 3 | Each of the 10 effects has a test; its random cards come from every set (R380); "cast a random Call to Chaos" may cast #95 or C+ #73, and the chain stops at 20 casts of either (R28); radiant rolls three different effects, resolved in the list's order (R423); both views name the rolled effects (R436) |
 | 95.1 | Chaos Golem | 1 | 10/10 with all four keywords; radiant 20/20 with Charge for Rush |
 | 96 | My Pawn | 3 | Lethal detection accounts for armor and the cap (R44); attack cancelled; AI finishes the turn deterministically from the seed; opponent's actions rejected until end of turn; radiant destroys the attacker with the cancel, before the AI turn, an Indestructible one knocked down, and the AI turn starts from a settled board (R283) |
 | 97 | Zephyrs | 3 | Scorer deterministic; a lethal-enabling card ranks first when lethal exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant |
-| 98 | Heroic Power | 3 | In opening hand; power chosen at start of game from the seed; playing costs the power's X and activates once; a copy created mid-game, mulliganed back into the library, or bounced to hand still has a power (R43); once per turn afterwards; Indestructible; each radiant power variant; Stitching's two Discovers fused into a hand card at the fused cost, Radiant on the radiant face (R352) |
-| 99 | Craft a Card | 3 | Two Discovers, fused def in `transientDefs` with both forms fused, no on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later switches to the fused radiant form; radiant three, then draw 1 |
+| 98 | Heroic Power | 3 | In opening hand; power chosen at start of game from the seed; playing costs the power's X and activates once; a copy created mid-game, mulliganed back into the library, or bounced to hand still has a power (R43); once per turn afterwards through `activate`, and an old log's `activatePower` replays the same (R384); Indestructible; each radiant power variant; Discover and Stitching reach every set (R380); Stitching's two Discovers fused into a hand card at the fused cost, Radiant on the radiant face (R352) |
+| 99 | Craft a Card | 3 | Two Discovers over Units of every set (R380), fused def in `transientDefs` with both forms fused, no on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later switches to the fused radiant form; radiant three, then draw 1 |
 | 100 | Ceaseless Void | 2 | Cost = 100 − (drawn + played + destroyed + exiled by both players), floor 0 (R55); Cry exiles every other permanent; radiant 20/20 with Charge |
 | T | Rush, Sheep, Felinor, Bread Tokens | 1 | Vanish on leaving the field; Sheep counts 2 toward Tribute; Bread is X/X with no text; none in random pools; radiant Rush Token 6/6 Rush, Cleave, Felinor Token 2/2 Rush |
 | T | Ghoul Token | 1 | X/X with Pierce (R346, R353): its hits ignore unit and hero Armor; vanishes on leaving the field; in no random pool; radiant doubles its X (R349) |
@@ -483,6 +504,21 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `drawAnswered` | Toast resolves to Accepted or Declined | 300 ms | toast text | — |
 | `costChanged` | Cost gem flashes and ticks to the new value | 200 ms | cost gem text equals the view's cost | `glint`: arcane glint |
 | `modifierChanged` | Player modifier badge appears or fades by the hero | 200 ms | badge list equals the view's modifiers | `glint`: arcane glint when added |
+| `cardAnnounced` | The played card rises from the hand and holds over the board before it lands; a face-down set shows a back with its zone and cost only (R97) | 300 ms | element gains `data-animating="cardAnnounced"` before the `cardPlayed` or `countered` for it | `cast`: a faint arcane ring at the held card |
+| `countered` | The held card cracks under a "Countered" tag and drops to its owner's graveyard, or fades to exile | 450 ms | tag "Countered" visible; the graveyard or exile counter increments; no `cardPlayed` follows for it (§6.3 Counter) | `fizzle`: smoke puff, then `void` wisps when exiled |
+| `stolen` | The card flies from where it was (a hand, a deck, the held Spell) to the thief's hand, a back for a seat that may not read it (R97) | 450 ms | the thief's hand length or count increments and the old pile's decrements | `mindControl`: arcane motes stream to the thief's hand |
+| `unlocked` | The chain over the zone snaps open | 250 ms | zone loses `data-locked` | `lock`: dust ring over the zone |
+| `activated` | The card pulses and its Activate control ticks its uses | 250 ms | element gains `data-animating="activated"`; the uses shown equal the view's (R384) | `glint`: arcane glint at the card |
+| `animated` | The backrow card rises, turns and lands in its unit zone as a Unit | 450 ms | the card's testid is now under a unit zone of its side (R383) | `summon`: dust slam and ring |
+| `deanimated` | The unit sinks back into its backrow zone | 350 ms | the card's testid is now under its backrow zone (R383) | `smoke`: smoke puff |
+| `crumbled` | The card cracks and crumbles to dust toward the graveyard; a back in a hand the viewer may not read (R97) | 400 ms | the graveyard counter increments; the Brittle badge is gone (R385) | `death`: crack, embers, smoke |
+| `degraded` | The changed cost, stats, keyword or number flashes red and ticks to its new value | 250 ms | shown values equal the view; the opponent's seat sees only that a card of that pile changed (R386) | `buff`: red arrows down |
+| `upgraded` | The changed cost, stats, keyword or number flashes green and ticks to its new value | 250 ms | shown values equal the view; hidden as `degraded` is (R386) | `buff`: green arrows up |
+| `redirected` | A bent line runs from the old target to the new one | 300 ms | the new target gains `data-animating="redirected"` | `glint`: arcane glint at the new target |
+| `healthSet` | The hero's health number spins to its new value | 400 ms | hero health equals the view | `drain` when it fell, `heal` when it rose |
+| `questProgressed` | The quest panel's progress ticks | 200 ms | progress text equals the view ("1/2", R404) | `counter`: sparkle |
+| `questCompleted` | The quest panel flashes "Quest complete" before its reward picker opens | 600 ms | banner text; the `reward` prompt follows (R404) | `banner`: rays |
+| `rolledBack` | The board rewinds: every card the rollback moved slides to its snapshot zone together | 600 ms | every card's zone testid equals the view (R419) | `smoke`: smoke and arcane motes |
 
 The FX column names the effect recipe that decorates each row (`ANIMATIONS[type].fx`), specified with its cues in `docs/polish/1-animations.md`. Effects run on the `apps/web/src/fx` layer, start with their row's entry and pace nothing: the durations and acceptance cells above are unchanged, no effect carries a `data-animating` of its own, whatever trails an entry is gone within `FX_MAX_TAIL_MS` of its end, and the stage effects (a stand-in for a moved card, a hidden card, an aimed lunge) last no longer than the view swap (R200). The viewer's effects speed scales the durations (R201), and effects read only the redacted stream (R202).
 
@@ -537,7 +573,7 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 | `05-reconnect.cy.ts` | Networked game, reload mid-prompt | same view and same open prompt after reload; clock kept running |
 | `06-room-code.cy.ts` | Create room, second player joins via `cy.task("wsPlayer")` | both see the board; actions round-trip; game ends and both are queue-eligible |
 | `07-my-pawn-ai.cy.ts` | P2 has My Pawn; P1 declares lethal | attack cancelled; P1's controls disabled; AI actions animate; turn ends |
-| `08-turn-cap-draw.cy.ts` | Two do-nothing decks, seed with no lethal | after the 30th player-turn the overlay says Draw |
+| `08-turn-cap-draw.cy.ts` | Two decks that never fatigue (both seats hold #75 Infinite Reserves) or a game seeded near the cap, no lethal | after the 60th player-turn, 30 each, the overlay says Draw (R2, R389) |
 | `09-deckbuilder.cy.ts` | The deck workshop and the queue's rules (§9.4, R250–R253) | each of L1–L6 shows its message in the builder's verdict; the queue refuses L1, L2 and L4 (with L5) in the same words; a deck breaking L3 or L6 is refused at save (D3, D4) and so never reaches the queue; a card a compared deck holds is refused; a legal deck and trio queue |
 | `10-invite-gate.cy.ts` | Pending account | code screen shown; bad code error identical for three failure kinds; good code activates |
 | `11-radiant.cy.ts` | Glowy Jelly Bean on a hand card, Knockoff Temu on a field unit | glow animation; stats swap on the field card keeping damage |
@@ -551,8 +587,12 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 | `19-queue-modes-and-series.cy.ts` | The three queue modes, and a Conquest series between the browser and `cy.task("wsPlayer")` (R257–R264, R330–R338) | Best of 1 plays the chosen deck; All Random needs no saved deck; a series pick is chosen, locked in and hidden until both have picked; each game starts on the picked decks; a deck that wins is locked and a deck that lost may be picked again; a player's last deck is picked for them; a conceded game loses the game, not the series; the series ends when one side has won with all three decks and moves the rating once; a room refuses a joiner in another mode |
 | `20-mulligan-concede-draw.cy.ts` | A room-code match, seat 1 in the browser and seat 2 driven via `cy.task("wsPlayer")`, with spec 06's decks (§2.1, §2.5, R36, R265–R269); one match per case | both seats mulligan at once, in either order: the first to answer shows as ready on the other seat while its picker stays open, the one who answered waits with its hand marked, and neither seat is sent the other's kept cards; the one mulligan clock shows on both seats; Concede opens a confirmation, where Keep playing, Escape and a click outside keep the game going and only Concede ends it as a loss; a draw offer shows as waiting on the offerer's side and as Accept and Decline on the other, with an urgent notify sound, a decline is shown to both and blocks another offer that turn, and an accept ends the game drawn by agreement |
 | `26-trio-codes.cy.ts` | Trio codes between two accounts in `/decks` (R339–R341) | Copy trio code shows the trio as a code; pasting it into another account's Import trio previews its three decks and imports them as three new decks and a trio naming them, which the server holds; with too little room the import is off and says exactly how many slots it needs, the server refuses the same import with the same numbers, and nothing is made |
+| `29-animated-trap.cy.ts` | Hotseat: P2 has C #5 Tesla set; P1 plays a Unit (R383) | the trap flips on P1's turn, hits the Unit for 4 after its Cry, and steps into a unit zone in Defense Position; a later arrival is hit again while Tesla is a Unit; with P2's unit row full it stays face-up in the backrow and still fires |
+| `30-activate.cy.ts` | Hotseat: C #81 The Power to Thrive and C #21 Turtinator on the field (R384) | the Activate control shows on each; a mode chosen on the control resolves; a second use of an "Activate" card that turn is refused and the control greys out; "Activate ♾️" pays its Tribute each time until no Unit is left to pay |
+| `31-counter-opponent-turn.cy.ts` | Networked or hotseat: P2 has C #17 Counterspell set; P1 plays a Spell (§10.5, R427) | the Spell is announced, then countered on P1's turn: it lands in P1's graveyard with no `cardPlayed`, its mana stays spent, Combo counts do not move, and a Sheepish set beside it never sees a countered Unit |
+| `32-tribute-full-board.cy.ts` | Hotseat: P1's five unit zones full, #66 The Rock or C #45 Nature Titan in hand (R391) | the zone a Tribute empties glows as legal; the card is played into it paying that Tribute; a zone whose tributed unit has Reborn or sits on a pile is never offered |
 
-**M8 gate.** All seventeen specs green in CI on Chrome and Electron.
+**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–32) green in CI on Chrome and Electron.
 
 ## 4. Test strategy summary
 
@@ -562,14 +602,14 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 - Rulings: `rulings.test.ts` has one named test per §11 row; the review greps for `R<n>` coverage.
 - Catalog: `catalog.test.ts` diffs `catalog.json` against a fixture transcribed from SPEC §8.
 - Coverage floor: 90% lines in `packages/engine` and `packages/cards`; 100% of card script files have a test file.
-- E2E: the seventeen specs above, run headless in CI, plus a nightly run of `01` over 20 seeds.
+- E2E: the specs above, run headless in CI, plus a nightly run of `01` over 20 seeds.
 
 ## 5. Definition of done
 
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` all green in CI.
-- `catalog.test.ts` passes: 100 cards, 11 tokens, rarity counts 35/37/16/7/5.
+- `catalog.test.ts` passes: 268 cards and 49 tokens; Core 100 and 11 with rarity counts 35/37/16/7/5, Classic 90 and 0 with 42/25/13/9/1, Classic+ 78 and 38 with 13/25/25/13/2 (§8).
 - `missing-tests.ts` prints nothing.
-- `rulings.test.ts` covers every SPEC §11 row, R1–R168 (script `rulings-coverage.ts` lists any missing id).
+- `rulings.test.ts` covers every SPEC §11 row, R1–R439 and the blocks the workstreams used (script `rulings-coverage.ts` lists any missing id).
 - Fuzz gate: `pnpm fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, throws, non-terminations, replay mismatches, endings). `pnpm test` sweeps the same file at a reduced seed count as a smoke wave; the card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` with a reason, printed on every run so a narrowing cannot be hidden.
 - `animations.test.ts` passes: every event type animated, reduced-motion path drains synchronously.
 - A networked room-code game between two browsers completes and records a result.
