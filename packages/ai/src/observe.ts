@@ -33,6 +33,9 @@ function everyInstance(state: GameState): CardInstance[] {
     out.push(...side.hand, ...side.library, ...side.graveyard, ...side.exile, ...side.resolving);
     for (const pile of side.units) if (pile !== null) out.push(...pile);
     for (const card of side.backrow) if (card !== null) out.push(card);
+    // B5 E21, R446: a backrow pile's dormant cards and a carrier's Unit are on the board too.
+    for (const pile of side.backrowPiles ?? []) out.push(...pile);
+    for (const card of side.carried ?? []) if (card !== null) out.push(card);
   }
   return out;
 }
@@ -79,7 +82,9 @@ export function hiddenInstanceIds(state: GameState, seat: PlayerId): Set<string>
   for (const card of state.players[opp].library) hidden.add(card.id);
 
   for (const player of PLAYER_IDS) {
-    for (const card of state.players[player].backrow) {
+    // B5 E21: a face-down card dormant under a backrow pile is as hidden as one on top (R33, R447).
+    const side = state.players[player];
+    for (const card of [...side.backrow, ...(side.backrowPiles ?? []).flat()]) {
       if (card !== null && backrowHiddenFrom(state, card, seat)) hidden.add(card.id);
     }
   }

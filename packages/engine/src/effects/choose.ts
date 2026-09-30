@@ -102,6 +102,8 @@ function findOnBoard(ctx: EffectContext, instanceId: string): CardInstance | nul
       ...side.graveyard,
       ...side.units.flatMap((pile) => pile ?? []),
       ...side.backrow.flatMap((card) => (card === null ? [] : [card])),
+      // R446: a Unit a carrier holds stands in the backrow row.
+      ...(side.carried ?? []).flatMap((card) => (card === null ? [] : [card])),
     ].find((card) => card.id === instanceId);
     if (found !== undefined) return found;
   }

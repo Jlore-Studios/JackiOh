@@ -5,7 +5,8 @@ import type { PlayerId, Row, Zone } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { BACKROW_ZONES, UNIT_ZONES } from "./config";
 import { defOf } from "./catalog";
-import type { CardInstance, GameState, Pile, PlayerState } from "./state";
+import { flagsOf } from "./scripts";
+import type { CardInstance, GameState, HomeZone, Pile, PlayerState } from "./state";
 import { noteFieldExit, noteMoved, noteUncovered } from "./stays";
 
 export type ZoneSlot = { player: PlayerId; row: Row; lane: number };
@@ -59,19 +60,139 @@ export function lockZone(state: GameState, ref: ZoneSlot): void {
   state.players[ref.player].locks[ref.row][ref.lane - 1] = true;
 }
 
+/** B5 E20: a Locked zone accepts summons again. Its occupant, if any, is unaffected. */
+export function unlockZone(state: GameState, ref: ZoneSlot): void {
+  state.players[ref.player].locks[ref.row][ref.lane - 1] = false;
+}
+
 export function pileAt(state: GameState, ref: ZoneSlot): Pile | null {
   if (ref.row !== "units") throw new Error("piles exist in the unit row only");
   return state.players[ref.player].units[ref.lane - 1] ?? null;
 }
 
-/** The card that acts in this zone: the top of a Stack pile, or the backrow card (§3.2). */
+/**
+ * The card that acts in this zone: the top of a Stack pile, or the backrow card (§3.2). In a backrow
+ * zone that is the top of its pile (B5 E21) — and a carrier stays that card beneath the Unit it
+ * carries, which stands in the zone as a Unit and never as its backrow card (R446, `carriedAt`).
+ */
 export function cardAt(state: GameState, ref: ZoneSlot): CardInstance | null {
   if (ref.row === "units") return pileAt(state, ref)?.[0] ?? null;
   return state.players[ref.player].backrow[ref.lane - 1] ?? null;
 }
 
 export function isEmpty(state: GameState, ref: ZoneSlot): boolean {
-  return cardAt(state, ref) === null;
+  return cardAt(state, ref) === null && (ref.row === "units" || carriedAt(state, ref) === null);
+}
+
+// ---------------------------------------------------------------------------
+// Backrow piles and carried Units (docs/classic-sets.md B5 E21, R446, R447)
+// ---------------------------------------------------------------------------
+
+/** B5 E21: the dormant cards beneath a backrow zone's top card, top first; empty when none. */
+export function beneathAt(state: GameState, ref: ZoneSlot): readonly CardInstance[] {
+  if (ref.row !== "backrow") return pileAt(state, ref)?.slice(1) ?? [];
+  return state.players[ref.player].backrowPiles?.[ref.lane - 1] ?? [];
+}
+
+/** R446: the Unit a carrier in this backrow zone holds, or null. */
+export function carriedAt(state: GameState, ref: ZoneSlot): CardInstance | null {
+  if (ref.row !== "backrow") return null;
+  return state.players[ref.player].carried?.[ref.lane - 1] ?? null;
+}
+
+/**
+ * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (Classic+ #33 Ivory
+ * Tower's `staticFlags.carrier`). The flag is the card's text, so a Vanilla carrier carries nothing
+ * more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
+ */
+export function isCarrier(card: CardInstance): boolean {
+  return flagsOf(card).carrier === true;
+}
+
+/** R446: whether this card is a Unit standing on a carrier in a backrow zone. */
+export function isCarried(state: GameState, card: CardInstance): boolean {
+  const zone = card.zone;
+  if (zone.z !== "field" || zone.row !== "backrow") return false;
+  return carriedAt(state, { player: zone.player, row: "backrow", lane: zone.lane })?.id === card.id;
+}
+
+/** R446: every Unit a carrier of this player's holds, in lane order. */
+export function carriedUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
+  return (state.players[player].carried ?? []).flatMap((card) => (card === null ? [] : [card]));
+}
+
+/**
+ * R446: the backrow zones of `player`'s side a Unit they play may name — each zone whose acting card
+ * is a carrier holding no Unit yet, and which takes a card at all: not Locked, not held for a card's
+ * return (R64, B3.1 rule 6). `playChoices` offers and checks exactly these (`legalZonesFor`,
+ * `refuseZone`), so the list and the refusal cannot disagree.
+ */
+export function carrierZonesFor(state: GameState, player: PlayerId): ZoneSlot[] {
+  return slotsOf(player, "backrow").filter((ref) => whyCannotCarry(state, ref) === null);
+}
+
+/** R446: why a Unit played now could not name this backrow zone, or null when it can. */
+export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
+  if (ref.row !== "backrow") return "only a backrow zone carries a Unit";
+  const top = cardAt(state, ref);
+  if (top === null || !isCarrier(top)) return "that zone holds no card a Unit may be played on top of";
+  if (carriedAt(state, ref) !== null) return "that card already carries a Unit";
+  if (isLocked(state, ref)) return "that zone is Locked";
+  if (isReserved(state, ref)) return "that zone is held for a card's return";
+  return null;
+}
+
+/**
+ * §3.2, B5 E21: a zone a Stack card may enter although it is occupied. Occupancy is exactly what
+ * Stack lifts, so what is left is what occupancy never covered — a Locked zone and a zone held for a
+ * card's return (R64, B3.1 rule 6) take no Stack card either — plus, in a backrow zone, a carrier's
+ * Unit: a zone carrying one takes nothing more (R446).
+ */
+export function acceptsStackCard(state: GameState, ref: ZoneSlot): boolean {
+  if (isLocked(state, ref) || isReserved(state, ref)) return false;
+  return ref.row === "units" || carriedAt(state, ref) === null;
+}
+
+/**
+ * Everything in a zone, top card first, so a move that lifts whole zones (#52's rotation, #87's board
+ * swap) sets each down whole (§3.2): a unit zone's pile, or a backrow zone's carried Unit, its top
+ * card and the dormant cards beneath (B5 E21, R446).
+ */
+export function zoneContents(state: GameState, ref: ZoneSlot): CardInstance[] {
+  if (ref.row === "units") return [...(pileAt(state, ref) ?? [])];
+  const carried = carriedAt(state, ref);
+  const top = cardAt(state, ref);
+  return [...(carried === null ? [] : [carried]), ...(top === null ? [] : [top]), ...beneathAt(state, ref)];
+}
+
+/** B5 E21: every dormant card beneath this player's backrow tops, lane by lane. */
+export function dormantBackrowOf(state: GameState, player: PlayerId): CardInstance[] {
+  return (state.players[player].backrowPiles ?? []).flat();
+}
+
+function setBeneath(side: PlayerState, lane: number, cards: CardInstance[]): void {
+  const piles = side.backrowPiles ?? Array.from({ length: BACKROW_ZONES }, (): CardInstance[] => []);
+  piles[lane - 1] = cards;
+  if (piles.every((pile) => pile.length === 0)) delete side.backrowPiles;
+  else side.backrowPiles = piles;
+}
+
+function setCarried(side: PlayerState, lane: number, card: CardInstance | null): void {
+  const row = side.carried ?? Array.from({ length: BACKROW_ZONES }, (): CardInstance | null => null);
+  row[lane - 1] = card;
+  if (row.every((held) => held === null)) delete side.carried;
+  else side.carried = row;
+}
+
+/**
+ * Whether a card's own face is a Unit's (§5.2, B2.7) — the one kind of card that stands on a carrier
+ * (R446). Its face, not where it stands: an animated card in a unit zone is a Unit there (R383) but
+ * never a Unit face, so it never lands on a carrier.
+ */
+function isUnitFace(state: GameState, instance: CardInstance): boolean {
+  const def = defOf(state, instance.defId);
+  const face = instance.radiant ? def.radiant : def.base;
+  return (face.type ?? def.type) === "Unit";
 }
 
 /** A zone that accepts a summon: empty and unlocked (§3.2). */
@@ -79,9 +200,35 @@ export function isOpen(state: GameState, ref: ZoneSlot): boolean {
   return isEmpty(state, ref) && !isLocked(state, ref) && !isReserved(state, ref);
 }
 
-/** R64: a dying Reborn unit holds its zone until it comes back. */
+/**
+ * R64: a dying Reborn unit holds its zone until it comes back. B3.1 rule 6: so does an animated
+ * "Animated on your turn" card its backrow zone, for its return at its controller's cleanup.
+ */
 export function isReserved(state: GameState, ref: ZoneSlot): boolean {
-  return state.reserved.some((r) => r.player === ref.player && r.row === ref.row && r.lane === ref.lane);
+  if (state.reserved.some((r) => r.player === ref.player && r.row === ref.row && r.lane === ref.lane)) return true;
+  return (state.homes ?? []).some(
+    (home) => home.zone.player === ref.player && home.zone.row === ref.row && home.zone.lane === ref.lane,
+  );
+}
+
+/** B3.1 rule 6: the home zone held for this animated card, if any. */
+export function homeOf(state: GameState, instanceId: string): HomeZone | undefined {
+  return (state.homes ?? []).find((home) => home.instanceId === instanceId);
+}
+
+/** B3.1 rule 6: hold a backrow zone for an animated card's return. One home per card. */
+export function reserveHome(state: GameState, zone: ZoneSlot, instanceId: string): void {
+  const homes = (state.homes ?? []).filter((home) => home.instanceId !== instanceId);
+  homes.push({ instanceId, zone: { player: zone.player, row: zone.row, lane: zone.lane } });
+  state.homes = homes;
+}
+
+/** B3.1 rule 6: the card's home is no longer held — it returned, or it left the field. */
+export function releaseHome(state: GameState, instanceId: string): void {
+  if (state.homes === undefined) return;
+  const homes = state.homes.filter((home) => home.instanceId !== instanceId);
+  if (homes.length === 0) delete state.homes;
+  else state.homes = homes;
 }
 
 export function reserveZone(state: GameState, ref: ZoneSlot): void {
@@ -132,14 +279,28 @@ export function placeOnField(
     const existing = side.units[ref.lane - 1] ?? null;
     if (existing !== null && options.stack !== true) return false;
     side.units[ref.lane - 1] = existing === null ? [instance] : [instance, ...existing];
+  } else if (isUnitFace(state, instance)) {
+    // R446: a Unit enters a backrow zone only on top of a carrier, which stays beneath it and keeps
+    // acting there. A move that sets a whole zone down (`zoneContents`: a rotation, a board swap)
+    // puts the carrier down first and its Unit back on it, whatever the carrier's text says by then.
+    const top = side.backrow[ref.lane - 1] ?? null;
+    if (top === null || carriedAt(state, ref) !== null) return false;
+    if (!isCarrier(top) && options.stack !== true) return false;
+    setCarried(side, ref.lane, instance);
   } else {
-    if (side.backrow[ref.lane - 1] != null) return false;
+    // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
+    // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).
+    const existing = side.backrow[ref.lane - 1] ?? null;
+    if (existing !== null) {
+      if (options.stack !== true || carriedAt(state, ref) !== null) return false;
+      setBeneath(side, ref.lane, [existing, ...beneathAt(state, ref)]);
+    }
     side.backrow[ref.lane - 1] = instance;
   }
 
   instance.controller = ref.player;
   instance.zone = zoneOf(ref);
-  if (ref.row === "units") instance.position ??= "ATK";
+  if (ref.row === "units" || isUnitFace(state, instance)) instance.position ??= "ATK";
   return true;
 }
 
@@ -184,13 +345,20 @@ export function replaceInZone(state: GameState, old: CardInstance, replacement: 
     const pile = side.units[zone.lane - 1] ?? null;
     if (pile === null || !pile.some((card) => card.id === old.id)) return false;
     side.units[zone.lane - 1] = pile.map((card) => (card.id === old.id ? replacement : card));
-  } else {
-    if (side.backrow[zone.lane - 1]?.id !== old.id) return false;
+  } else if (side.backrow[zone.lane - 1]?.id === old.id) {
     side.backrow[zone.lane - 1] = replacement;
+  } else if (side.carried?.[zone.lane - 1]?.id === old.id) {
+    // R446: the carried Unit's place on its carrier.
+    setCarried(side, zone.lane, replacement);
+  } else {
+    // B5 E21: a dormant card's place in a backrow pile.
+    const beneath = beneathAt(state, { player: zone.player, row: "backrow", lane: zone.lane });
+    if (!beneath.some((card) => card.id === old.id)) return false;
+    setBeneath(side, zone.lane, beneath.map((card) => (card.id === old.id ? replacement : card)));
   }
   replacement.controller = zone.player;
   replacement.zone = { ...zone };
-  if (zone.row === "units") replacement.position ??= "ATK";
+  if (zone.row === "units" || isUnitFace(state, replacement)) replacement.position ??= "ATK";
   return true;
 }
 
@@ -219,8 +387,25 @@ export function removeFromField(
       }
     }
     for (let i = 0; i < side.backrow.length; i += 1) {
+      const lane = i + 1;
       if (side.backrow[i]?.id === instance.id) {
-        side.backrow[i] = null;
+        // B5 E21: the card beneath a backrow pile's top resumes, as in a unit pile (§3.2, R212).
+        const beneath = [...beneathAt(state, { player, row: "backrow", lane })];
+        const resumed = beneath.shift();
+        side.backrow[i] = resumed ?? null;
+        setBeneath(side, lane, beneath);
+        noteUncovered(state, instance.id, options.withPile !== true ? resumed?.id : undefined);
+        return true;
+      }
+      if (side.carried?.[i]?.id === instance.id) {
+        setCarried(side, lane, null);
+        noteUncovered(state, instance.id, undefined);
+        return true;
+      }
+      const beneath = beneathAt(state, { player, row: "backrow", lane });
+      if (beneath.some((card) => card.id === instance.id)) {
+        setBeneath(side, lane, beneath.filter((card) => card.id !== instance.id));
+        noteUncovered(state, instance.id, undefined);
         return true;
       }
     }
@@ -335,12 +520,20 @@ function forgetQueuedTriggers(state: GameState, instanceId: string): void {
 export function ceaseToExist(state: GameState, instance: CardInstance): void {
   const wasOnField = instance.zone.z === "field";
   removeFromAnyZone(state, instance);
-  if (wasOnField) {
-    noteFieldExit(state, instance.id);
-    forgetWatchers(state, instance.id);
-    forgetQueuedTriggers(state, instance.id);
-  }
+  if (wasOnField) leftTheField(state, instance.id);
   instance.zone = { z: "gone", player: instance.owner };
+}
+
+/**
+ * R174: what a card leaving the field ends — the stay every effect aimed at it was aimed at, the
+ * delayed effects watching it, the triggers it queued there — and, B3.1 rule 6, the home zone an
+ * animated card held for its return: it will not return from a graveyard, a hand or exile.
+ */
+function leftTheField(state: GameState, instanceId: string): void {
+  noteFieldExit(state, instanceId);
+  forgetWatchers(state, instanceId);
+  forgetQueuedTriggers(state, instanceId);
+  releaseHome(state, instanceId);
 }
 
 /**
@@ -381,11 +574,7 @@ export function moveToZone(
   removeFromAnyZone(state, instance);
   // R174: leaving the field ends every delayed effect aimed at this card and every trigger it
   // queued there, whatever comes back, and ends the stay every effect aimed at it was aimed at.
-  if (wasOnField) {
-    noteFieldExit(state, instance.id);
-    forgetWatchers(state, instance.id);
-    forgetQueuedTriggers(state, instance.id);
-  }
+  if (wasOnField) leftTheField(state, instance.id);
   if (from === "resolving") endPlayChoices(instance);
 
   // R11: a unit token ceases to exist when it leaves the field, and a unit-token card ceases to
@@ -430,12 +619,16 @@ export function moveToZone(
   return "moved";
 }
 
-/** Every card that acts for this player, in lane order (§3.2). */
+/**
+ * Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
+ * Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
+ */
 export function activeUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
-  return slotsOf(player, "units").flatMap((ref) => {
+  const tops = slotsOf(player, "units").flatMap((ref) => {
     const card = cardAt(state, ref);
     return card === null ? [] : [card];
   });
+  return [...tops, ...carriedUnitsOf(state, player)];
 }
 
 export function dormantUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
@@ -448,8 +641,19 @@ export function dormantUnitsOf(state: GameState, player: PlayerId): CardInstance
  */
 export function isBuried(state: GameState, instance: CardInstance): boolean {
   const zone = instance.zone;
-  if (zone.z !== "field" || zone.row !== "units") return false;
-  return cardAt(state, { player: zone.player, row: zone.row, lane: zone.lane })?.id !== instance.id;
+  if (zone.z !== "field") return false;
+  const ref: ZoneSlot = { player: zone.player, row: zone.row, lane: zone.lane };
+  // B5 E21: a backrow pile's dormant cards are buried the same way; the top and a carrier's Unit act.
+  if (zone.row === "backrow") return beneathAt(state, ref).some((card) => card.id === instance.id);
+  return cardAt(state, ref)?.id !== instance.id;
+}
+
+/**
+ * §3.2, R446: whether a card acts on the field — the top of a unit pile, the top of a backrow zone, or
+ * a Unit a carrier holds. A dormant card under either kind of pile does not.
+ */
+export function actsOnField(state: GameState, instance: CardInstance): boolean {
+  return instance.zone.z === "field" && !isBuried(state, instance);
 }
 
 /**
@@ -464,4 +668,58 @@ export function slotOf(state: GameState, instance: CardInstance): ZoneSlot | nul
   const zone = instance.zone;
   if (zone.z !== "field") return null;
   return { player: zone.player, row: zone.row, lane: zone.lane };
+}
+
+// ---------------------------------------------------------------------------
+// Moves inside the field: Animated (B3.1, R383), a carrier's Unit (R446), Flicker (B5 E22, R444)
+// ---------------------------------------------------------------------------
+
+/**
+ * B3.1 rules 2 and 5, R446: move a card acting in one of its side's backrow zones — an Animated card,
+ * or a Unit a carrier held — into an open unit zone of that side, without leaving the field: no R78
+ * reset, no departure counted (R174), nothing that watches it or that it queued forgotten. A card
+ * dormant beneath it in its backrow pile resumes (§3.2). False, changing nothing, when the card is
+ * not acting in a backrow zone or `to` is not an open unit zone of its side.
+ */
+export function stepIntoUnitZone(state: GameState, card: CardInstance, to: ZoneSlot): boolean {
+  const from = slotOf(state, card);
+  if (from === null || from.row !== "backrow" || to.row !== "units") return false;
+  if (from.player !== to.player || !actsOnField(state, card) || !isOpen(state, to)) return false;
+  removeFromField(state, card, { withPile: true });
+  return placeOnField(state, card, to);
+}
+
+/**
+ * B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
+ * field. `to` must take it: not Locked, not held for another card, and empty — or, for a card that
+ * has Stack, a zone a Stack card may top (B5 E21). The caller releases the card's own home first. False,
+ * changing nothing, when it cannot go.
+ */
+export function stepIntoBackrow(state: GameState, card: CardInstance, to: ZoneSlot, options: { stack?: boolean } = {}): boolean {
+  const from = slotOf(state, card);
+  if (from === null || from.row !== "units" || to.row !== "backrow") return false;
+  if (from.player !== to.player || !actsOnField(state, card)) return false;
+  const takes = isEmpty(state, to) ? isOpen(state, to) : options.stack === true && acceptsStackCard(state, to);
+  if (!takes) return false;
+  removeFromField(state, card, { withPile: true });
+  return placeOnField(state, card, to, { stack: options.stack === true });
+}
+
+/**
+ * B5 E22: the card leaves the field and re-enters the same zone at once — the same place in its pile,
+ * on the same side. Leaving is leaving (R174: every effect aimed at it and every trigger it queued
+ * ends, and an animated card's home is released), and R78 resets it; re-entering is entering, so it is
+ * summoning sick (R83) and in Attack Position. It never passes through another pile, so a unit token
+ * comes back like any other card (R444, as R175 brings one back through Reborn). The caller emits
+ * the events. False, changing nothing, for a card that is not acting on the field.
+ */
+export function flickerInPlace(state: GameState, card: CardInstance): boolean {
+  const zone = card.zone;
+  if (zone.z !== "field" || !actsOnField(state, card)) return false;
+  leftTheField(state, card.id);
+  resetInstance(card);
+  card.controller = zone.player;
+  card.summonedTurn = state.turn;
+  if (zone.row === "units" || isUnitFace(state, card)) card.position = "ATK";
+  return true;
 }

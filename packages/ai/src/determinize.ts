@@ -19,6 +19,9 @@ function allCards(state: GameState): CardInstance[] {
     out.push(...side.hand, ...side.library, ...side.graveyard, ...side.exile, ...side.resolving);
     for (const pile of side.units) if (pile !== null) out.push(...pile);
     for (const card of side.backrow) if (card !== null) out.push(card);
+    // B5 E21, R446: a backrow pile's dormant cards and a carrier's Unit are on the board too.
+    for (const pile of side.backrowPiles ?? []) out.push(...pile);
+    for (const card of side.carried ?? []) if (card !== null) out.push(card);
   }
   return out;
 }
@@ -65,7 +68,9 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool.
   const trapPool = query({ set: "Core", type: ["Trap", "Field Trap"] }).map((def) => def.id);
   for (const side of [opp, seat] as const) {
-    for (const card of next.players[side].backrow) {
+    // B5 E21: then the face-down cards dormant under each backrow pile, lane by lane.
+    const backrow = [...next.players[side].backrow, ...(next.players[side].backrowPiles ?? []).flat()];
+    for (const card of backrow) {
       if (card !== null && isPlaceholder(card)) card.defId = sampleDef(trapPool, seen, sampled, rng);
     }
   }

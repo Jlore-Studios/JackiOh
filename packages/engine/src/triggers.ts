@@ -42,7 +42,6 @@
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
-import { defOf } from "./catalog";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
@@ -66,9 +65,10 @@ import {
   trapControllersOf,
   type ImmediateDispatch,
   type TrapControllers,
+  isTrapType,
 } from "./traps";
 import { RUN_MARKS_KEY, cardData, drainWork, runMarksOf, type RunMarks } from "./work";
-import { activeUnitsOf, cardAt, slotsOf } from "./zones";
+import { activeUnitsOf, cardAt, isBuried, isCarried, slotsOf } from "./zones";
 
 /** The zones a card can hold a trigger from (§10.3). */
 export type TriggerZone = "field" | "backrow" | "hand" | "graveyard";
@@ -119,9 +119,12 @@ const NO_TRIGGERS: readonly TriggerDef[] = [];
 // 1. The registry.
 // ---------------------------------------------------------------------------
 
+/**
+ * A Trap or Field Trap by its face (B2.7) — never by `faces.cardTypeOf`, which answers "Unit" for an
+ * animated one standing in a unit zone, where it still fires as a trap (R383, `traps.isTrapType`).
+ */
 function isTrapCard(state: GameState, card: CardInstance): boolean {
-  const type = defOf(state, card.defId).type;
-  return type === "Trap" || type === "Field Trap";
+  return isTrapType(state, card);
 }
 
 /** §10.3: which list a card's zone registers. A graveyard card answers hooks only (R68). */
@@ -183,7 +186,9 @@ function holderOf(
     card,
     controller,
     zone,
-    isTrap: zone === "backrow" && isTrapCard(state, card),
+    // R383: an animated Field Trap in a unit zone is a trap too — `traps.ts` fires it, and it is never
+    // also queued (§10.3).
+    isTrap: (zone === "backrow" || zone === "field") && isTrapCard(state, card),
     triggers: registeredTriggers(script, zone),
     script,
   };
@@ -221,7 +226,10 @@ export function triggerHolderFor(state: GameState, card: CardInstance): TriggerH
   if (zone.z === "hand") return holderOf(state, card, "hand", zone.player);
   if (zone.z === "graveyard") return holderOf(state, card, "graveyard", zone.player);
   if (zone.z !== "field") return null;
-  if (zone.row === "backrow") return holderOf(state, card, "backrow", zone.player);
+  // B5 E21: a card dormant under a backrow pile registers nothing, as one under a unit pile does
+  // (§3.2, R13, R447); a Unit a carrier holds is a unit on the field (R446).
+  if (zone.row === "backrow" && isCarried(state, card)) return holderOf(state, card, "field", zone.player);
+  if (zone.row === "backrow") return isBuried(state, card) ? null : holderOf(state, card, "backrow", zone.player);
   const top = cardAt(state, { player: zone.player, row: zone.row, lane: zone.lane });
   if (top === null || top.id !== card.id) return null;
   return holderOf(state, card, "field", zone.player);

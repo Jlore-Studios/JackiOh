@@ -180,6 +180,15 @@ export { forEachCard } from "./each";
 // ---- v0.2.0 verbs: instance data (Brittle, Degrade, Upgrade, KY's Constant's numbers, E38, E39) ----
 
 // ---- v0.2.0 verbs: field (Animate, Lock variants, Unlock, Flicker) ----
+// Animate (B3.1, R383, R445): an Animated Trap's firing ends with it.
+export { animate } from "./animate";
+export type { AnimateArgs } from "./animate";
+// Flicker (B5 E22, R444), for one card or a board scope; `flickerCard` for a sequence holding a sink.
+export { flicker, flickerCard } from "./flicker";
+// The Lock variants and Unlock (B5 E20; §3.2 Lock). The single-zone `unlock` sits with `lock`.
+export { unlock } from "./counters";
+export { lockLane, lockOwnZone, lockPlayedZone, lockRandomZone, unlockAll } from "./locks";
+export type { LaneSpec, ZoneScope } from "./locks";
 
 // ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----
 

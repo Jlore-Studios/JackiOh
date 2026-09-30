@@ -12,6 +12,7 @@ import type {
   Selection,
   Tuning,
   Zone,
+  ZoneRef,
 } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import type { GameEvent, GameOverReason } from "@jackioh/shared";
@@ -109,6 +110,9 @@ export type CardInstance = {
 
 /** A unit zone holds a Stack pile, top card first (§3.2). */
 export type Pile = CardInstance[];
+
+/** B3.1 rule 6: an animated "Animated on your turn" card's backrow zone, held for its return (SPEC §10.1). */
+export type HomeZone = { instanceId: string; zone: ZoneRef };
 
 export type ModifierExpiry =
   | { until: "thisTurn"; turn: number }
@@ -322,6 +326,20 @@ export type PlayerState = {
    */
   autoEndTurn?: false;
   // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
+  /**
+   * B5 E21: the dormant cards beneath each backrow zone's top card, top first, by lane (index lane −
+   * 1). The top stays in `backrow` and is the one card that acts there (§3.2, R13); these are face-down
+   * and not on the field for effects (`zones.isBuried`). Absent while no backrow zone holds a pile, so a
+   * game that never builds one hashes as it did before the field existed.
+   */
+  backrowPiles?: CardInstance[][];
+  /**
+   * B5 E21, R446: the Unit a carrier in each backrow zone holds, by lane — a Unit played on top of a
+   * backrow card whose static flag lets one (Classic+ #33 Ivory Tower). It stands in that backrow
+   * zone (its `zone.row` is "backrow"), is a Unit for every rule (`zones.activeUnitsOf`), and can
+   * neither attack nor be attacked (`zones.isCarried`). Absent while nothing is carried.
+   */
+  carried?: (CardInstance | null)[];
   // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
   // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
   /**
@@ -397,6 +415,12 @@ export type GameState = {
    */
   fieldExits?: FieldExits;
   // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
+  /**
+   * B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
+   * its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone
+   * (`zones.isReserved` reads both). Absent while no such card is animated.
+   */
+  homes?: HomeZone[];
   // ---- v0.2.0 game fields, by workstream: play pipeline (E1 announce, E4 last plays, E12) ----
   // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
@@ -684,7 +708,11 @@ export function activeUnits(side: PlayerState): CardInstance[] {
 }
 
 export function allZonesEmpty(side: PlayerState): boolean {
-  return side.units.every((pile) => pile === null) && side.backrow.every((card) => card === null);
+  return (
+    side.units.every((pile) => pile === null) &&
+    side.backrow.every((card) => card === null) &&
+    (side.carried ?? []).every((card) => card === null)
+  );
 }
 
 /**
@@ -708,6 +736,9 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
       ...side.exile,
       ...inPiles,
       ...side.backrow,
+      // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
+      ...(side.backrowPiles ?? []).flat(),
+      ...(side.carried ?? []),
       // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
       // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
       ...side.resolving,

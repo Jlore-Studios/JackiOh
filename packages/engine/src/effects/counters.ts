@@ -7,7 +7,7 @@ import type { Row } from "@jackioh/shared";
 import { placePlagueOn, plagueOn, removePlague } from "../plague";
 import type { Effect, EffectContext } from "../script";
 import type { CardInstance } from "../state";
-import { isLocked, lockZone, rowSize, slotOf, type ZoneSlot } from "../zones";
+import { isLocked, lockZone, rowSize, slotOf, unlockZone, type ZoneSlot } from "../zones";
 import { playerOf, type PlayerSpec, resolveTarget, type TargetSpec } from "./targets";
 
 function instanceOf(ctx: EffectContext, spec: TargetSpec): CardInstance | null {
@@ -66,8 +66,9 @@ function zoneFor(ctx: EffectContext, spec: ZoneSpec): ZoneSlot | null {
 }
 
 /**
- * §3.2 Lock: the zone accepts no summons for the rest of the game. The current occupant is
- * unaffected and the lock persists after it leaves; nothing in Core unlocks a zone.
+ * §3.2 Lock: the zone accepts no summons until something unlocks it. The current occupant is
+ * unaffected and the lock persists after it leaves. Nothing in Core unlocks a zone; B5 E20's Unlock
+ * (`unlock` below, `effects/locks.unlockAll`) does.
  */
 export function lock(args: { zone: ZoneSpec }): Effect {
   return {
@@ -77,6 +78,23 @@ export function lock(args: { zone: ZoneSpec }): Effect {
       if (ref === null || isLocked(ctx.state, ref)) return;
       lockZone(ctx.state, ref);
       ctx.events.push({ type: "locked", player: ref.player, row: ref.row, lane: ref.lane });
+    },
+  };
+}
+
+/**
+ * B5 E20: a Locked zone accepts summons again (event `unlocked`). A zone that is not Locked is left
+ * as it is, with no event. Its occupant is unaffected, and a card whose return a Lock stopped (an
+ * animated card's home, B3.1 rule 6) goes back at its next chance.
+ */
+export function unlock(args: { zone: ZoneSpec }): Effect {
+  return {
+    kind: "unlock",
+    apply(ctx): void {
+      const ref = zoneFor(ctx, args.zone);
+      if (ref === null || !isLocked(ctx.state, ref)) return;
+      unlockZone(ctx.state, ref);
+      ctx.events.push({ type: "unlocked", player: ref.player, row: ref.row, lane: ref.lane });
     },
   };
 }

@@ -55,7 +55,7 @@ import { findInstance, type CardInstance, type GameState, type Resume, type Work
 import { exitMark } from "../stays";
 import { tunedCount } from "../tuning";
 import { paused, pushWork, registerWorkHandler } from "../work";
-import { activeUnitsOf, cardAt, slotOf } from "../zones";
+import { actsOnField, activeUnitsOf, cardAt, slotOf } from "../zones";
 
 /** The `activate` member of the action union, without the `playerId` and `nonce` the caller adds. */
 export type ActivateAction = Extract<ActionBody, { type: "activate" }>;
@@ -73,9 +73,10 @@ export const ACTIVATE_TUNING_KEY = "Activate";
  * card is face-up: a face-down card has no text anyone can use.
  */
 export function isActingOnField(state: GameState, card: CardInstance): boolean {
+  // §3.2, R13, R446, R447: the top of a pile of either row, or a Unit a carrier holds — never a card
+  // dormant beneath (`zones.actsOnField`) — and a backrow card only while it is face-up.
   const at = slotOf(state, card);
-  if (at === null) return false;
-  if (cardAt(state, at)?.id !== card.id) return false;
+  if (at === null || !actsOnField(state, card)) return false;
   return !(at.row === "backrow" && isFaceDown(state, card));
 }
 

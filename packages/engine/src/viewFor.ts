@@ -85,7 +85,8 @@ import { plagueOn } from "./plague";
 import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
 import { standingDrawOffer } from "./turn";
-import { isReserved, slotsOf } from "./zones";
+import { beneathAt, carriedAt, carriedUnitsOf, homeOf, isReserved, slotOf, slotsOf } from "./zones";
+import { isAnimated } from "./animated";
 
 /** §10.8, §10.10: how many of the most recent events the view carries for animation. */
 export const VIEW_EVENT_LIMIT = 32;
@@ -267,6 +268,10 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
   const top = pile[0];
   if (top === undefined) return null;
   const layers = unitLayers(state, top);
+  // B3.1, R383: a Field Spell, Trap or Field Trap standing here as a Unit, and the backrow lane an
+  // "Animated on your turn" card will go back to (that zone is `reserved` meanwhile).
+  const home = isAnimated(state, top) ? homeOf(state, top.id) : undefined;
+  const animated = isAnimated(state, top) ? { animated: home === undefined ? {} : { home: home.zone.lane } } : {};
   return {
     ...withActivations(
       withPreview(
@@ -290,6 +295,7 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
     canAct: canAct(state, top),
     // R243, §6.3 Vanilla: the text is gone, which the definition the client reads does not say.
     ...(top.vanilla === true ? { vanilla: true as const } : {}),
+    ...animated,
   };
 }
 
@@ -317,10 +323,14 @@ function canAct(state: GameState, card: CardInstance): boolean {
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  // B5 E19, R471: Plague Tokens are public wherever they sit, a face-down card's included.
+  // B5 E19, R471: Plague Tokens are public wherever they sit, a face-down card's included; B5 E21: a
+  // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
   const plague = plagueOn(card);
+  const slot = slotOf(state, card);
+  const under = slot === null ? 0 : beneathAt(state, slot).length;
+  const buried = under === 0 ? {} : { buried: under };
   if (!backrowIsPublic(state, card, viewer)) {
-    return { faceDown: true, cost: effectiveCost(state, card), ...(plague === 0 ? {} : { plague }) };
+    return { faceDown: true, cost: effectiveCost(state, card), ...(plague === 0 ? {} : { plague }), ...buried };
   }
   const grade = card.counters.grade;
   return {
@@ -344,6 +354,18 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     controller: card.controller,
     // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
     ...(isFaceDown(state, card) ? { unrevealed: true as const } : {}),
+    ...buried,
+  };
+}
+
+/** R446: the Units this side's carriers hold, by backrow lane, or nothing when none holds one. */
+function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { carried?: (UnitView | null)[] } {
+  if (carriedUnitsOf(state, player).length === 0) return {};
+  return {
+    carried: slotsOf(player, "backrow").map((ref) => {
+      const unit = carriedAt(state, ref);
+      return unit === null ? null : unitViewOf(state, [unit], viewer);
+    }),
   };
 }
 
@@ -458,7 +480,10 @@ function modifierViews(state: GameState, player: PlayerId): ModifierView[] {
 // One side of the board
 // ---------------------------------------------------------------------------
 
-/** R64: the zones this player is holding for a dying Reborn unit, as a mask per row. */
+/**
+ * R64: the zones this player is holding for a dying Reborn unit, as a mask per row — and B3.1 rule 6's
+ * backrow zones held for an animated "Animated on your turn" card's return (`zones.isReserved`).
+ */
 function reservedMask(state: GameState, player: PlayerId): { units: boolean[]; backrow: boolean[] } {
   const mask = (row: Row): boolean[] => slotsOf(player, row).map((ref) => isReserved(state, ref));
   return { units: mask("units"), backrow: mask("backrow") };
@@ -503,6 +528,7 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     resolving: side.resolving.map((card) => cardView(state, card)),
     units: side.units.map((pile) => (pile === null ? null : unitViewOf(state, pile, viewer))),
     backrow: side.backrow.map((card) => backrowView(state, card, viewer)),
+    ...carriedView(state, player, viewer),
     locks: { units: [...side.locks.units], backrow: [...side.locks.backrow] },
     reserved: reservedMask(state, player),
     fatigueCount: side.fatigueCount,
