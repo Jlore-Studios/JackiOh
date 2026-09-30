@@ -1,23 +1,26 @@
-// Call to Chaos (SPEC §8 #95, R28): the ten effects, the roll that picks them, and the capped
-// recursion the tenth one drives.
+// Call to Chaos (SPEC §8 #95, R28, R87, R423, R436): the ten effects, the roll that picks them, and the
+// capped recursion the tenth one drives.
 //
-// The card is a Spell whose base text is "one random effect" and whose radiant text is "two random
-// effects": the recursion plus one of the other nine (§8, R28). Every effect here is built from the
-// effects library, so #95's own file (M4) is a one-line hook that returns `[callToChaos()]` and
-// stays a list of effects, like every other card (CLAUDE.md rule 5).
+// The card is a Spell whose base text is "one random effect" and whose Radiant text, since patch
+// v0.2.0, is "three different random effects, resolved in the order listed" (R423, the shape Classic+
+// #73 has: one rule serves both editions). The recursion is one entry of the list like any other: the
+// Radiant face rolls it only when it falls among its three, and it resolves where the list puts it,
+// last. Every effect here is built from the effects library, so #95's own file is a one-line hook that
+// returns `[callToChaos()]` and stays a list of effects, like every other card (CLAUDE.md rule 5).
 //
-// Two things need care. First, each effect reads the board when it *resolves*, not when the hook
-// builds it: the radiant roll resolves the recursion before its partner, and a nested cast can draw
-// cards, summon units and change costs in between, so "your hand becomes Radiant" and "draw your
-// whole library" must see the hand and library as they are at that moment (R58's "the library size
-// when the effect starts"). Every effect is therefore one lazy wrapper that builds its sub-effects
-// inside `apply`. Second, the chain length is game state, not a module variable: it lives on the
-// cast instance's `memory` (§10.1), so a paused, serialized game resumes with the same cap left and
-// two independent Calls in one turn never share a counter.
+// Three things need care. First, each effect reads the board when it *resolves*, not when the hook
+// builds it: a nested cast can draw cards, summon units and change costs in between, so "your hand
+// becomes Radiant" and "draw your whole library" must see the hand and library as they are at that
+// moment (R58's "the library size when the effect starts"). Every effect is therefore one lazy
+// wrapper that builds its sub-effects inside `apply`. Second, the chain length is game state, not a
+// module variable: it lives on the cast instance's `memory` (§10.1), so a paused, serialized game
+// resumes with the same cap left and two independent Calls in one turn never share a counter. Third,
+// what was rolled is told to both players before any of it resolves (`chaosRolled`, R436), once: a
+// roll a pause interrupted is rebuilt from the part's memo and is not announced a second time.
 
 import type { CatalogQuery, Tag } from "@jackioh/shared";
 import { defByIndex, query } from "../catalog";
-import { CALL_TO_CHAOS_CHAIN_CAP } from "../config";
+import { CALL_TO_CHAOS_CHAIN_CAP, CALL_TO_CHAOS_RADIANT_EFFECTS } from "../config";
 import {
   addRandomFromCatalog,
   draw,
@@ -223,11 +226,12 @@ export function summonRandomBackrow(): Effect {
 
 /**
  * 10. "Cast a random Call to Chaos": a Cast per R70 — free, counted as a play, running the card's
- * own script. Only Core exists, so the pool is #95 itself and the card cast is the *base* form even
- * when a Radiant #95 cast it (R28); the new card is Radiant only if something later makes it so.
+ * own script. The pool is every card tagged Call to Chaos in every set (R380: a pool that names no set
+ * reaches every set), so it holds both editions, and the card cast is the *base* form even when a
+ * Radiant Call cast it (R28); the new card is Radiant only if something later makes it so.
  *
- * R28 caps the chain at CALL_TO_CHAOS_CHAIN_CAP casts. The cap is a hard stop: at the cap this
- * effect resolves into nothing, and no re-roll replaces it (R87).
+ * R28 caps the chain at CALL_TO_CHAOS_CHAIN_CAP casts of either edition. The cap is a hard stop: at
+ * the cap this effect resolves into nothing, and no re-roll replaces it (R87, R423).
  *
  * The cast card is a real generated card, like the ones "add 3 random cards to hand" makes (R60), so
  * §10.5 step 7 sends it to the caster's graveyard when it has resolved (R87), which is what feeds
@@ -254,9 +258,10 @@ export function castRandomCallToChaos(): Effect {
 }
 
 // ---------------------------------------------------------------------------
-// The roll (§8 #95, R28).
+// The roll (§8 #95, R28, R423).
 // ---------------------------------------------------------------------------
 
+/** Core #95's ten entries by name. Another edition's list (Classic+ #73) names its own. */
 export type ChaosEffectName =
   | "units"
   | "heal"
@@ -270,26 +275,35 @@ export type ChaosEffectName =
   | "recast";
 
 export type ChaosEffectDef = {
-  name: ChaosEffectName;
-  /** The §8 clause this entry implements, for the client log and for test readability. */
+  /** Unique within its list: what a roll a pause interrupted is kept by (the part's memo). */
+  name: string;
+  /** The clause as the card prints it: what `chaosRolled` names to both players (R436). */
   label: string;
   build: () => Effect;
 };
 
-/** R28: the effect the radiant form always rolls, and the one that drives the chain. */
+/** R28: the effect that drives the chain, "cast a random Call to Chaos" (R423: rolled like any other). */
 export const CHAOS_RECURSION: ChaosEffectName = "recast";
 
-/** The ten effects of §8 #95, in the order the card lists them. */
+/**
+ * The ten effects of §8 #95, in the order the card lists them. Each `label` is the clause as the
+ * card prints it (R432's cost words, R373's "deck"), which is what `chaosRolled` names to both
+ * players (R436).
+ */
 export const CHAOS_EFFECTS: readonly ChaosEffectDef[] = [
-  { name: "units", label: "Summon 3 random 3-cost Units", build: summonRandomThreeCostUnits },
+  { name: "units", label: "Summon 3 random (3) Cost Units", build: summonRandomThreeCostUnits },
   { name: "heal", label: "Heal your hero 30", build: healHeroThirty },
-  { name: "draw", label: "Draw your whole library and gain 4 mana", build: drawLibraryAndGainMana },
-  { name: "add", label: "Add 3 random cards to hand costing 0", build: addRandomZeroCostCards },
-  { name: "radiant", label: "Your hand becomes Radiant", build: makeHandRadiant },
-  { name: "tokens", label: "Summon five Radiant Rush Tokens", build: summonRushTokens },
-  { name: "discount", label: "Every card in your hand and library costs 2 less", build: discountHandAndLibrary },
+  { name: "draw", label: "Draw your whole deck and gain 4 mana", build: drawLibraryAndGainMana },
+  { name: "add", label: "Add 3 random cards costing (0) to your hand", build: addRandomZeroCostCards },
+  { name: "radiant", label: "Make your hand Radiant", build: makeHandRadiant },
+  { name: "tokens", label: "Summon 5 Radiant Rush Tokens", build: summonRushTokens },
+  { name: "discount", label: "Cards in your hand and deck cost (2) less", build: discountHandAndLibrary },
   { name: "golem", label: "Summon a Chaos Golem", build: summonChaosGolem },
-  { name: "backrow", label: "Summon 5 random Field Spells or Traps into your backrow", build: summonRandomBackrow },
+  {
+    name: "backrow",
+    label: "Summon 5 random Field Spells or Traps into your backrow, Traps face-down",
+    build: summonRandomBackrow,
+  },
   { name: "recast", label: "Cast a random Call to Chaos", build: castRandomCallToChaos },
 ];
 
@@ -298,21 +312,48 @@ export function chaosEffectByName(name: string): ChaosEffectDef | null {
 }
 
 /**
- * R28: the base form rolls one of the ten; the radiant form rolls two — "cast a random Call to
- * Chaos" plus one drawn from the other nine, so the recursion is guaranteed and never doubled.
- *
- * Order: §8 writes the recursion first, so it resolves first and its whole chain is done before the
- * partner effect reads the board (R87).
+ * R28, R423: the base form rolls one entry of its list; the Radiant form rolls
+ * `CALL_TO_CHAOS_RADIANT_EFFECTS` *different* entries — drawn one at a time without replacement, so no
+ * effect comes up twice — and resolves them in the order the list writes them, whatever order they
+ * were drawn in. The recursion is an entry like any other: it is rolled only when it falls among the
+ * three, and resolves where the list puts it (R87's "the recursion where it falls"). `table` is the
+ * edition's list (Core #95's by default; Classic+ #73 brings its own), so one roll serves both.
  */
-export function rollChaosEffects(rng: Rng, radiant: boolean): ChaosEffectDef[] {
-  if (!radiant) {
-    const one = rng.pick(CHAOS_EFFECTS);
-    return one === undefined ? [] : [one];
+export function rollChaosEffects(
+  rng: Rng,
+  radiant: boolean,
+  table: readonly ChaosEffectDef[] = CHAOS_EFFECTS,
+): ChaosEffectDef[] {
+  const count = Math.min(radiant ? CALL_TO_CHAOS_RADIANT_EFFECTS : 1, table.length);
+  const left = [...table];
+  const drawn: ChaosEffectDef[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const at = rng.int(left.length);
+    const [one] = left.splice(at, 1);
+    if (one !== undefined) drawn.push(one);
   }
+  return table.filter((effect) => drawn.includes(effect));
+}
 
-  const recursion = chaosEffectByName(CHAOS_RECURSION);
-  const other = rng.pick(CHAOS_EFFECTS.filter((effect) => effect.name !== CHAOS_RECURSION));
-  return [...(recursion === null ? [] : [recursion]), ...(other === undefined ? [] : [other])];
+/**
+ * R436: tell both players what was rolled, before any of it resolves — the rolled clauses by their
+ * printed labels, in the order they resolve. The card itself follows R97 (`viewFor.redactEvent`): a
+ * #95 read by nobody is the sentinel, while what it rolled is public, as the resolution is.
+ */
+function announceRoll(rolled: readonly ChaosEffectDef[]): Effect {
+  return {
+    kind: "callToChaos:announce",
+    apply(ctx): void {
+      const defId = ctx.self?.defId ?? ctx.defId ?? "";
+      ctx.events.push({
+        type: "chaosRolled",
+        player: ctx.controller,
+        instanceId: ctx.self?.id ?? "",
+        defId,
+        effects: rolled.map((effect) => effect.label),
+      });
+    },
+  };
 }
 
 /**
@@ -320,21 +361,28 @@ export function rollChaosEffects(rng: Rng, radiant: boolean): ChaosEffectDef[] {
  *
  * The roll happens when the effect resolves, so the rng cursor moves with the resolution and a
  * replay that stops on a prompt in between still lines up (§10.7). `radiant` defaults to the
- * instance's own flag, which is what `makeContext` put in the context (§5.2).
+ * instance's own flag, which is what `makeContext` put in the context (§5.2). `table` is the
+ * edition's list (R423: Classic+ #73 rolls its own through the same rule).
  */
-export function callToChaos(args: { radiant?: boolean } = {}): Effect {
+export function callToChaos(args: { radiant?: boolean; table?: readonly ChaosEffectDef[] } = {}): Effect {
+  const table = args.table ?? CHAOS_EFFECTS;
   return lazyPart("callToChaos", (ctx, memo) => {
-    // R87: the pair resolves in order, the recursion's whole chain first, and a cast in that chain
-    // can ask — so the pair is a part of the Cry's list, and a pause inside it waits with the rest of
-    // it owed. What was rolled is the part's memo: resuming builds the same pair again, and rolls
-    // nothing a second time (§10.7).
-    const names = rolledNames(memo) ?? rollChaosEffects(ctx.rng, args.radiant ?? ctx.radiant).map((chosen) => chosen.name);
+    // R87, R423: the rolled effects resolve in list order, the recursion's whole chain where it falls,
+    // and a cast in that chain can ask — so the roll is a part of the Cry's list, and a pause inside
+    // it waits with the rest of it owed. What was rolled is the part's memo: resuming builds the same
+    // effects again, and rolls nothing a second time (§10.7). The announcement heads the part, so a
+    // resumed part, which goes on after what it had already run, never announces it again (R436).
+    const kept = rolledNames(memo);
+    const rolled =
+      kept === null
+        ? rollChaosEffects(ctx.rng, args.radiant ?? ctx.radiant, table)
+        : kept.flatMap((name) => {
+            const chosen = table.find((effect) => effect.name === name);
+            return chosen === undefined ? [] : [chosen];
+          });
     return {
-      effects: names.flatMap((name) => {
-        const chosen = chaosEffectByName(name);
-        return chosen === null ? [] : [chosen.build()];
-      }),
-      memo: names,
+      effects: [announceRoll(rolled), ...rolled.map((chosen) => chosen.build())],
+      memo: rolled.map((chosen) => chosen.name),
     };
   });
 }

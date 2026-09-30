@@ -231,3 +231,9 @@ export const AI_TUTORIAL: Handicap = {
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----
+/**
+ * R423: how many different effects a Radiant Call to Chaos rolls from its list — "Three different
+ * random effects, resolved in the order listed" (Core #95's Radiant face since patch v0.2.0, and
+ * Classic+ #73's). The base face rolls one.
+ */
+export const CALL_TO_CHAOS_RADIANT_EFFECTS = 3;

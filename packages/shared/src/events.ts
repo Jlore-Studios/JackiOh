@@ -101,6 +101,13 @@ export type GameEvent =
       attack: number;
       maxHealth: number;
       killerId: string | null;
+      /**
+       * R426: the killer dealt the lethal hit attacking — its own strike or a Cleave hit, in the combat
+       * of an attack it made (declared or forced, §4.2, §4.4 step 10), never a defender's strike back.
+       * Present, and `true`, only then, so #32 Prem Panther's "that attack destroyed" is read off the
+       * death itself. Public, as the combat is.
+       */
+      killerAttacking?: true;
     }
   | { type: "enteredGraveyard"; instanceId: string; defId: string; owner: PlayerId }
   | { type: "exiled"; instanceId: string; defId: string; owner: PlayerId }

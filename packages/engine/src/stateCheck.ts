@@ -481,7 +481,12 @@ type DeathCause = "collected" | "sacrificed";
  * damage instance, so it names no killer (R42), and it bypasses Indestructible, which is why the
  * caller rather than `isDying` decides it dies.
  */
-function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathCause = "collected"): DeathPass {
+function collect(
+  sink: EngineSink,
+  dying: readonly CardInstance[],
+  cause: DeathCause = "collected",
+  combat: CombatCheck | null = null,
+): DeathPass {
   const pass: DeathPass = { owed: [], reborn: [], collected: [] };
 
   const read = dying.map((unit) => {
@@ -520,6 +525,10 @@ function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathC
       // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
       // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
       killerId: cause === "sacrificed" ? null : (unit.lastDamagedBy ?? null),
+      // R426: the combat this check follows was the killer's own attack.
+      ...(cause !== "sacrificed" && combat !== null && unit.lastDamagedBy === combat.attackerId
+        ? { killerAttacking: true as const }
+        : {}),
     });
     moveToZone(sink.state, unit, "graveyard");
   }
@@ -578,7 +587,15 @@ function forgetSpentKillers(sink: EngineSink, survivors: readonly CardInstance[]
   }
 }
 
-export function stateCheck(sink: EngineSink): void {
+/**
+ * R426: the check that closes a combat (§4.2 step 5, R53) knows the attacker, so a unit whose lethal
+ * hit that attacker dealt — its strike or a Cleave hit, since the defender's strike back is the
+ * defender's — dies as a unit that attack destroyed (`destroyed.killerAttacking`). Every other check
+ * passes none.
+ */
+export type CombatCheck = { attackerId: string };
+
+export function stateCheck(sink: EngineSink, combat: CombatCheck | null = null): void {
   for (let pass = 0; pass < STATE_CHECK_PASS_CAP; pass += 1) {
     if (sink.state.result !== null) return;
     resolveIndestructibleMarks(sink);
@@ -601,7 +618,7 @@ export function stateCheck(sink: EngineSink): void {
       return;
     }
 
-    const collected = collect(sink, dying);
+    const collected = collect(sink, dying, "collected", combat);
 
     // Step 2: heroes.
     if (heroCheck(sink)) return;

@@ -510,7 +510,8 @@ function resolveDeclaredAttack(sink: EngineSink, id: string): void {
   if (target === null) return;
 
   resolveCombat(sink, attacker, target);
-  stateCheck(sink);
+  // R426: the check that closes the combat knows whose attack it was.
+  stateCheck(sink, { attackerId: attacker.id });
 }
 
 /**
@@ -655,7 +656,8 @@ export function forceAttack(sink: EngineSink, attacker: CardInstance, target: At
   });
 
   resolveCombat(sink, attacker, target);
-  stateCheck(sink);
+  // R426: the check that closes the combat knows whose attack it was.
+  stateCheck(sink, { attackerId: attacker.id });
 }
 
 /** §4.2 step 2: an attack is made on an enemy unit or the enemy hero, forced or not (R173). */
