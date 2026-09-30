@@ -5,11 +5,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./catalog.json": "./catalog.json"
+    "./catalog.json": "./catalog.json",
+    "./history": "./src/history.ts",
+    "./patches/*": "./patches/*"
   },
   "scripts": {
     "gen": "pnpm exec tsx scripts/gen-registry.ts",
-    "missing-tests": "pnpm exec tsx scripts/missing-tests.ts"
+    "missing-tests": "pnpm exec tsx scripts/missing-tests.ts",
+    "patches": "pnpm exec tsx scripts/patches.ts"
   },
   "dependencies": {
     "@jackioh/engine": "workspace:*",

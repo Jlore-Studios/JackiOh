@@ -941,3 +941,33 @@ export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
 /** R371: the line over your own face-down trap's face in its preview and its sheet. */
 export const INSPECT_NOTE = "inspect-note";
+
+// ---------------------------------------------------------------------------------------------
+// A20: the card patch history (SPEC §10.10, R375). Documentation, like A11: each mirrors a name
+// `apps/web` renders — the `INSPECT_HISTORY*` names in `apps/web/src/cards/inspect/testids.ts`,
+// `patchNotesTestid` in `apps/web/src/routes/patch-notes.tsx` and the footer's two new links in
+// `apps/web/src/routes/SiteFooter.tsx`. An entry carries `data-version` and `data-kind`
+// ("created", "changed", "removed"), a change `data-field`, and a patch's section `data-version`.
+// ---------------------------------------------------------------------------------------------
+
+/** R375: the detail view's History section, its toggle (`aria-expanded`), and one version in it. */
+export const INSPECT_HISTORY = "inspect-history";
+export const INSPECT_HISTORY_TOGGLE = "inspect-history-toggle";
+export const INSPECT_HISTORY_ENTRY = "inspect-history-entry";
+/** R375: a version named only later, "Reconstructed". */
+export const INSPECT_HISTORY_BADGE = "inspect-history-badge";
+/** R375: the control that draws a version's faces, and the faces it draws. */
+export const INSPECT_HISTORY_SHOW = "inspect-history-show";
+export const INSPECT_HISTORY_FACES = "inspect-history-faces";
+
+/** R375: `/patch-notes`, one section per patch, and what each holds. */
+export const PATCH_NOTES_SCREEN = "patch-notes-screen";
+export const PATCH_NOTES_CURRENT = "patch-notes-current";
+export const PATCH_NOTES_PATCH = "patch-notes-patch";
+export const PATCH_NOTES_BADGE = "patch-notes-badge";
+export const PATCH_NOTES_SOURCE = "patch-notes-source";
+export const PATCH_NOTES_COMMIT = "patch-notes-commit";
+export const PATCH_NOTES_CARD = "patch-notes-card";
+/** R375: the site footer's link to the patch notes, and the current version, which links there too. */
+export const SITE_FOOTER_PATCH_NOTES = "site-footer-patch-notes";
+export const SITE_FOOTER_VERSION = "site-footer-version";

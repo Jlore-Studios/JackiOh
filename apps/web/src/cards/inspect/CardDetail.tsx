@@ -14,6 +14,9 @@
 // faces stand at the height the screen allows, with the rest of the dialog in a column beside
 // them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
 // is visible the moment the dialog opens, which is also where focus lands.
+//
+// Last in that column is the card's History (History.tsx, R375): collapsed, with its version count,
+// until the player opens it, which is when the catalog snapshots it reads are loaded.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -26,6 +29,7 @@ import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
+import { CardHistory } from "./History.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -134,6 +138,7 @@ export function CardDetail({ def, onClose, actions, meta }: CardDetailProps): Re
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
+              <CardHistory key={def.id} def={def} />
             </div>
           </RefsInteractive>
         </div>

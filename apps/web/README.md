@@ -36,7 +36,10 @@ src/
                         differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280)
+                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). The detail
+                        view ends with the card's History (inspect/History.tsx, R375): its versions newest
+                        first, each text word-diffed both ways (radiantDiff.ts's `wordDiff`), from the catalog
+                        snapshots cards/patches.ts loads on demand, never in the main bundle
   game/
     engine.ts           the EnginePort: the only seam onto packages/engine
     engine.real.ts      the real binding (see "Blocked on the engine" below)
@@ -112,6 +115,8 @@ src/
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and
                         intensity, animated foil, the audio panel), each with its reset
   routes/dev/hotseat.tsx  the dev hotseat route
+  routes/patch-notes.tsx  /patch-notes: every card patch, newest first, with its sources and cards (R375); the
+                        site footer (routes/SiteFooter.tsx) links it beside the current version
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these

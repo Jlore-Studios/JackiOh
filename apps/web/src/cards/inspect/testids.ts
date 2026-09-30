@@ -30,3 +30,12 @@ export const INSPECT_LIST_BACK = "inspect-list-back";
 export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
 export const INSPECT_NOTE = "inspect-note";
+
+// R375: the detail view's History section (History.tsx): its toggle, one entry per version, the
+// reconstructed badge, and the control that draws a version's faces and what it draws.
+export const INSPECT_HISTORY = "inspect-history";
+export const INSPECT_HISTORY_TOGGLE = "inspect-history-toggle";
+export const INSPECT_HISTORY_ENTRY = "inspect-history-entry";
+export const INSPECT_HISTORY_BADGE = "inspect-history-badge";
+export const INSPECT_HISTORY_SHOW = "inspect-history-show";
+export const INSPECT_HISTORY_FACES = "inspect-history-faces";

@@ -2686,6 +2686,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R374 deals the landing page's hand at random on each visit", () => {
     provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
   });
+
+  // Proved by packages/cards patches.test.ts "R375 …" (the list, its dates, commits and sources, the
+  // reconstructed labels, each shipped snapshot byte-equal to its commit's catalog.json, the newest
+  // equal to catalog.json, changes.json), history.test.ts "R375 …" (True Strike's three entries, #68's
+  // rename, The Coin and the Ghoul Token, #85's cost, #11's lone creation, one creation per card),
+  // and apps/web cards/patches.test.ts (the loaders, and no snapshot in the main bundle),
+  // cards/inspect/History.test.tsx (the section) and routes/patch-notes.test.tsx (the page, the footer).
+  it("R375 shows each card's patch history, and the Patch notes page lists every patch", () => {
+    provenIn(
+      375,
+      "../../cards/test/patches.test.ts",
+      "../../cards/test/history.test.ts",
+      "../../../apps/web/src/cards/patches.test.ts",
+      "../../../apps/web/src/cards/inspect/History.test.tsx",
+      "../../../apps/web/src/routes/patch-notes.test.tsx",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

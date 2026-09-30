@@ -1,0 +1,111 @@
+/* `/patch-notes` (routes/patch-notes.tsx): the sign-in screens' board (auth/tavern.css
+   `.panel--auth`), widened for reading as `/privacy` is, with the tavern palette. Scoped under
+   `.patch-notes-screen`. */
+
+.tavern.app-shell.patch-notes-screen .panel--auth {
+  max-width: 760px;
+}
+
+.tavern.app-shell .patch-notes__current,
+.tavern.app-shell .patch-notes__date {
+  color: var(--tavern-text-dim);
+  font-size: 14px;
+  text-align: center;
+}
+
+.tavern.app-shell .patch-notes__date {
+  margin: 0;
+  text-align: left;
+}
+
+.tavern.app-shell .patch-notes p {
+  max-width: none;
+  color: var(--tavern-parchment);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.tavern.app-shell .patch-notes__patch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(201, 149, 63, 0.35);
+}
+
+.tavern.app-shell .patch-notes h3 {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-notes h4 {
+  margin: 4px 0;
+  color: var(--tavern-text-dim);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A label given later: a dashed outline, so it does not rest on colour. */
+.tavern.app-shell .patch-notes__badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 1px 8px;
+  border: 1px dashed var(--tavern-text-dim);
+  border-radius: 999px;
+  color: var(--tavern-text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.tavern.app-shell .patch-notes__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.tavern.app-shell .patch-notes__links a {
+  color: var(--tavern-gold);
+}
+
+.tavern.app-shell .patch-notes__cards ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-notes__card {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid rgba(201, 149, 63, 0.55);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--tavern-parchment);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tavern.app-shell .patch-notes__card:hover {
+  border-color: var(--tavern-gold-pale);
+  color: var(--tavern-gold-pale);
+}
+
+@media (pointer: coarse) {
+  .tavern.app-shell .patch-notes__card {
+    min-height: 44px;
+  }
+}
