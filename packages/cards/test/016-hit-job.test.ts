@@ -84,7 +84,8 @@ describe("#16 Hit Job (base)", () => {
     s.play("core-016");
 
     s.expectInZone("core-016", "graveyard");
-    s.expectMana("p1", 2);
+    // Hit Job costs (3) since patch v0.2.0 (issue #40).
+    s.expectMana("p1", 1);
     s.expectEvents("cardPlayed");
   });
 });
