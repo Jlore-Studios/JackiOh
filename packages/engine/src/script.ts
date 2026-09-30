@@ -193,6 +193,12 @@ export type StaticFlags = {
    * two carries both grants (R102), so a fused face may hold a count.
    */
   heroArmor?: boolean | number;
+  // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
+  // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
+  // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
+  // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
+  // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
+  // ---- v0.2.0 static flags, by workstream: prompts and generation (E19, E26) ----
 };
 
 /** R195, R280: where `viewFor` is asking about a card. */
@@ -269,7 +275,63 @@ export type Script = {
   conditionMet?: ConditionHook;
   /** R280: the numbers the card's formula comes to now, which `viewFor` surfaces as `preview` (§10.8). */
   preview?: PreviewHook;
+  // ---- Patch v0.2.0 ----
+  /**
+   * B3.2, R384: the card's Activate abilities ("Activate:", "Activate N:", "Activate ♾️:"), used by
+   * the `activate` action while the card acts on the field (`subsystems/activate.ts`).
+   */
+  activations?: ActivationDecl[];
+  /**
+   * §10.6: the named predicates a declaration's `TargetFilter.check` points at, for a filter no data
+   * field can say (Classic #32's lane rule, #48's lines of code). A pure read, like `conditionMet`.
+   */
+  targetChecks?: Record<string, TargetCheck>;
+  // ---- v0.2.0 script hooks, by workstream: instance data (B3.3, B3.4) ----
+  // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
+  // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
+  // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
+  // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
+  // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
 };
+
+/**
+ * B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"
+ * ("unlimited", bounded by `ACTIVATE_UNLIMITED_CAP`); Degrade and Upgrade move a number by the tuning
+ * key "Activate" (B3.4). `cost` is what the ability pays as it is activated — mana (Heroic Power's
+ * "spend (X)", which v0.2.1 moves here), a random discard (Classic #15), a Tribute of the controller's
+ * units (Classic #21, the card itself allowed), or the card itself (Classic #84). `targets` and
+ * `modes` travel in the action as a play's do (R81). `canActivate` is a pure read for a condition the
+ * text sets (Classic #7: "that Spell" must exist). `run` is the effect.
+ */
+export type ActivationDecl = {
+  id: string;
+  label: string;
+  uses: number | "unlimited";
+  cost?: {
+    mana?: number;
+    discardRandom?: number;
+    tribute?: number;
+    tributeSelf?: boolean;
+  };
+  targets?: TargetDecl[];
+  modes?: ModeDecl[];
+  canActivate?: ConditionHook;
+  run: Hook;
+};
+
+/**
+ * §10.6: a card-specific target predicate (`TargetFilter.check`). `candidate` is the card a
+ * declaration would offer (null for a hero or a zone), `self` the card declaring it, `player` the
+ * chooser. A pure read: no writes, no rng.
+ */
+export type TargetCheck = (args: {
+  state: GameState;
+  self: CardInstance;
+  player: PlayerId;
+  radiant: boolean;
+  candidate: CardInstance | null;
+  selection: Selection;
+}) => boolean;
 
 export type CardScripts = { base: Script; radiant: Script };
 

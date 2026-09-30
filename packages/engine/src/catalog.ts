@@ -3,7 +3,8 @@
 // definitions live in `state.transientDefs` and win over the registry.
 
 import type { CardDef, CardDefs, CardType, CatalogQuery, Rarity, SetName, Tag } from "@jackioh/shared";
-import { POOL_TOKEN_TAGS, SET_ORDER } from "./config";
+import { SHIPPED_SETS } from "@jackioh/shared";
+import { POOL_TOKEN_TAGS } from "./config";
 
 let registered: CardDefs = {};
 let version = "0";
@@ -187,13 +188,13 @@ function indexRank(index: string): number {
 
 /** B2.2: a set's place in the catalog order; a set the order does not name sorts last. */
 function setRank(set: SetName): number {
-  const at = SET_ORDER.indexOf(set);
-  return at === -1 ? SET_ORDER.length : at;
+  const at = (SHIPPED_SETS as readonly SetName[]).indexOf(set);
+  return at === -1 ? SHIPPED_SETS.length : at;
 }
 
 /**
  * §5.1's single source of random pools and Discover: every definition the filters allow, set by set
- * (`SET_ORDER`), each set in §5 index order. The order is a strict total order (set, index as a
+ * (catalog order, `SHIPPED_SETS`: Core, Classic, Classic+), each set in §5 index order. The order is a strict total order (set, index as a
  * number, then the index itself, then the unique catalog id), so it never depends on the order the
  * registry happened to hand the defs over and a seeded `rng.pick`/`rng.shuffle` over the result
  * replays identically (R58, R60, §9.3).

@@ -264,8 +264,67 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       const why = resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason);
       return event.winner === "draw" ? `Draw. ${why}` : `${seatLabel(view, event.winner)} won. ${why}`;
     }
+    // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+    case "cardAnnounced":
+      // The play's own line is its `cardPlayed`; a countered one has its `countered` line.
+      return null;
+    case "countered":
+      return `${named(event.defId)} was countered${event.to === "hand" ? " and stolen" : ""}`;
+    case "stolen":
+      return capitalised(`${name.seat(event.to)} stole ${named(event.defId)} from ${name.whose(event.from)} ${STOLEN_FROM[event.zone]}`);
+    case "unlocked":
+      return `${capitalised(name.whose(event.player))} ${zoneLabel(event.row, event.lane)} was unlocked`;
+    case "activated":
+      return `${name.seat(event.player)} activated ${name.def(event.defId)}`;
+    case "animated":
+      return `${name.def(event.defId)} came to life in ${name.whose(event.player)} ${zoneLabel("units", event.unitLane)}`;
+    case "deanimated":
+      return `${name.def(event.defId)} returned to ${name.whose(event.player)} ${zoneLabel("backrow", event.backrowLane)}`;
+    case "crumbled":
+      return `${named(event.defId)} crumbled`;
+    case "degraded":
+      return `${named(event.defId)} was degraded`;
+    case "upgraded":
+      return `${named(event.defId)} was upgraded`;
+    case "redirected":
+      return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
+    case "healthSet":
+      return `${capitalised(name.whose(event.player))} hero's health was set to ${event.health}`;
+    case "questProgressed":
+      return `${name.seat(event.player)} quest ${event.quest}: ${event.progress}/${event.goal}`;
+    case "questCompleted":
+      return `${name.seat(event.player)} completed quest ${event.quest}`;
+    case "rolledBack":
+      return `The board went back ${event.turnsAgo} turn${event.turnsAgo === 1 ? "" : "s"}`;
+    case "chaosRolled":
+      return `${name.def(event.defId)} rolled: ${event.effects.join("; ")}`;
+    case "flickered":
+      return `${name.def(event.defId)} flickered`;
+    case "drawLimited":
+      return `${name.seat(event.player)} could not draw more this turn`;
+    case "turnCutShort":
+      return capitalised(`${name.whose(event.player)} turn was cut short`);
+    case "marked":
+      return event.added ? `${capitalised(name.instance(event.instanceId))} was marked (${event.mark})` : null;
   }
 }
+
+/** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */
+const STOLEN_FROM: Readonly<Record<Extract<GameEvent, { type: "stolen" }>["zone"], string>> = {
+  hand: "hand",
+  library: "deck",
+  resolving: "play",
+  graveyard: "graveyard",
+  exile: "exile",
+  field: "side of the field",
+};
+
+/** What a redirect moved. */
+const REDIRECTED: Readonly<Record<Extract<GameEvent, { type: "redirected" }>["what"], string>> = {
+  damage: "a hit",
+  attack: "an attack",
+  target: "a target",
+};
 
 /** The card a line is about: the one it names, by definition, and the face it wears where the view shows it. */
 type LineCard = { defId: string; radiant: boolean; instanceId?: string };
