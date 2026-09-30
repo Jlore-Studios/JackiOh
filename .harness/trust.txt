@@ -10,3 +10,5 @@
 # The bot never edits this file (.harness/ is outside what it may change).
 
 jgoetzmann 3 id:95732896
+MaxGoetzmann 2 id:87041877
+squishy-squooby 2 id:334289562
