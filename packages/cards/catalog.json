@@ -4239,6 +4239,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "loc": 3,
     "base": {
       "attack": 3,
       "health": 3,

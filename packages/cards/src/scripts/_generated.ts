@@ -124,6 +124,7 @@ import * as mt_felinor from "./t-felinor";
 import * as mt_ghoul from "./t-ghoul";
 import * as mt_rush from "./t-rush";
 import * as mt_sheep from "./t-sheep";
+import * as mclassic_041_state_of_the_game from "./classic/041-state-of-the-game";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -237,4 +238,5 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mt_ghoul,
   mt_rush,
   mt_sheep,
+  mclassic_041_state_of_the_game,
 ];
