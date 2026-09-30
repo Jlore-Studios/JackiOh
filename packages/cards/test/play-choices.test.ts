@@ -28,7 +28,6 @@ import {
 import { scenario, type Scenario } from "./_harness";
 
 const MR_VANILLA = "core-008";
-const HIT_JOB = "core-016";
 const MIDRANGE_MENACE = "core-019";
 const EFFICIENCY_DIVIDEND = "core-024";
 const ARCHIVIST = "core-030";
