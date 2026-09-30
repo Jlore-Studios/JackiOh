@@ -118,7 +118,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   Rush: {
     layer: "veil",
     priority: 8,
-    shape: "three short motion dashes trailing from the portrait's side",
+    shape: "three short motion dashes trailing off the portrait's right side",
     motion: { keyframes: "kw-dash-trail", when: "canAct" },
     numbered: false,
   },

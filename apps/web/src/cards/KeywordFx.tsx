@@ -190,7 +190,7 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
 
   Rush: () => (
     <Part className="kw-dashes" anim>
-      <Inked d="M6 38 H26 M2 50 H22 M6 62 H26" ink="#ffbe55" width={4} />
+      <Inked d="M74 38 H94 M78 50 H98 M74 62 H94" ink="#ffbe55" width={4} />
     </Part>
   ),
 
@@ -265,10 +265,10 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
   "First Strike": () => (
     <>
       <Part className="kw-glyph-art" fit="contain">
-        <path d="M50 8 L59 24 L59 62 L41 62 L41 24 Z" fill="#e9eef6" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
-        <path d="M50 16 V60" stroke="#9aa6ba" strokeWidth="2.5" />
-        <path d="M28 62 H72 V71 H28 Z" fill="#e2b04a" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
-        <path d="M45 71 H55 V90 H45 Z" fill="#7b4a1c" stroke="#0b0d12" strokeWidth="3" />
+        <path d="M50 3 L65 22 L65 60 L35 60 L35 22 Z" fill="#f1f5fb" stroke="#0b0d12" strokeWidth="4" strokeLinejoin="round" />
+        <path d="M50 12 V56" stroke="#8d99af" strokeWidth="4" />
+        <path d="M20 60 H80 V72 H20 Z" fill="#f0bd4f" stroke="#0b0d12" strokeWidth="4" strokeLinejoin="round" />
+        <path d="M43 72 H57 V96 H43 Z" fill="#8a5220" stroke="#0b0d12" strokeWidth="4" />
       </Part>
       <Part className="kw-glint" anim fit="contain">
         <path d={sparkle(62, 16, 13)} fill="#ffffff" stroke="#0b0d12" strokeWidth="1.5" />
@@ -296,8 +296,8 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
 
   Cleave: () => (
     <Part className="kw-glyph-art kw-crescent" anim fit="contain">
-      <path d="M16 74 A42 42 0 0 1 84 22 A34 34 0 0 0 16 74 Z" fill="#cdb8ff" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
-      <path d="M26 62 A32 32 0 0 1 70 26" fill="none" stroke="#f4eeff" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M10 82 A48 48 0 0 1 90 18 A62 62 0 0 0 10 82 Z" fill="#dccfff" stroke="#0b0d12" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M22 66 A40 40 0 0 1 72 22" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
     </Part>
   ),
 

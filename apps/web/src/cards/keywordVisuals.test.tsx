@@ -284,6 +284,21 @@ describe("R438 a unit with each keyword renders its treatment", () => {
     expect(fxOf(none, "Taunt")).toBeNull();
   });
 
+  it("R438 the Divine Shield bubble sits under the name plate, and the chip column stops above it", () => {
+    // Measured in a browser by keyword-visuals.cy.tsx; here, the two rules that make it so.
+    const zOf = (selector: string): number =>
+      Number(
+        cardsCss.rules
+          .filter((rule) => rule.media === null && rule.decls.has("z-index") && rule.selectors.some((s) => norm(s) === selector))
+          .at(-1)
+          ?.decls.get("z-index"),
+      );
+    expect(zOf(".cf .shield-icon")).toBeLessThan(zOf(".cf .card-name"));
+    const chips = cardsCss.rules.find((rule) => rule.selectors.some((s) => norm(s) === ".cf .keywords"));
+    expect(chips?.decls.get("flex-wrap")).toBe("wrap");
+    expect(chips?.decls.get("max-height")).toBe("calc(100% - 24cqmin - 2px - var(--mf-stat, 28cqmin) - var(--mf-plate, 11cqh))");
+  });
+
   it("R438 Armor's plate carries its treatment only while the view's armor is above 0", () => {
     const plated = renderUnit({ keywords: [{ kind: "Armor", n: 2 }], armor: 2 });
     expect(fxOf(plated, "Armor")?.getAttribute("data-n")).toBe("2");

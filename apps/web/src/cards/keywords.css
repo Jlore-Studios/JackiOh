@@ -4,10 +4,10 @@
    the card's own `cq` units like the rest of the face, and it never takes a pointer event.
 
    Stacking inside `.cf-scale` (cards.css): the frames behind the portrait (Taunt's shield, the
-   Stack's card edges) at 0, the portrait at 1, the veils and the frames over the ring at 2 but
-   before the name plate, the crest and the Divine Shield bubble in the DOM, so all three still
-   paint over them; the glyph row at 3 along the top edge between the cost gem and the switch
-   button; the gems at 3 and the chips at 4. Nothing here reaches the attack and health gems or the
+   Stack's card edges) at 0; the portrait at 1 and the Divine Shield bubble over it at 1; the veils
+   and the frames over the ring at 2 but before the name plate and the crest in the DOM, so both
+   still paint over them; the glyph row at 3 along the top edge between the cost gem and the switch
+   button; the gems at 3 and the chips at 4. Nothing here covers the attack and health gems or the
    name plate: the veils stay inside the portrait's oval, whose lower rim the plate already covers.
 
    Motion. Only a part marked `kw-anim` moves, only while its treatment is `data-kw-motion="on"`
@@ -38,8 +38,8 @@
   --kw-period-seal: 3.4s;
   --kw-period-edge: 3.6s;
 
-  /* The glyph disc: legible on a phone's minion, and a little larger on a big one. */
-  --kw-glyph: max(11px, 17cqmin);
+  /* The glyph disc: legible on a phone's minion, and larger on a big one. */
+  --kw-glyph: max(12px, 20cqmin);
 
   /* The portrait's box (cards.css `.cf .cf-portrait`), which the veils share. */
   --kw-portrait-bottom: calc(var(--mf-stat, 28cqmin) + var(--mf-plate, 11cqh) * 0.5);
@@ -247,7 +247,7 @@
   top: calc(1cqh + 10px);
 }
 
-@container cardface (max-width: 57.99px) {
+@container cardface (max-width: 65.99px) {
   .cf .kw-glyphs > .kw-fx:nth-child(n + 2) {
     display: none;
   }
@@ -259,15 +259,15 @@
   width: var(--kw-glyph);
   height: var(--kw-glyph);
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 32%, #434b63, #121521 72%);
+  background: radial-gradient(circle at 40% 32%, #4a5370, #141826 72%);
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.85),
-    inset 0 0 0 max(1px, 0.5cqmin) rgb(255 255 255 / 0.22),
+    0 0 0 1px rgb(0 0 0 / 0.9),
+    inset 0 0 0 max(1px, 0.6cqmin) #d8b25a,
     0 1px 2px rgb(0 0 0 / 0.6);
 }
 
 .cf .kw-glyphs .kw-part {
-  inset: 9%;
+  inset: 6%;
 }
 
 .cf .kw-glyphs .kw-shock {
@@ -439,11 +439,11 @@
 @keyframes kw-dash-trail {
   from {
     opacity: 1;
-    transform: translateX(8%);
+    transform: translateX(-8%);
   }
   to {
     opacity: 0;
-    transform: translateX(-22%);
+    transform: translateX(22%);
   }
 }
 

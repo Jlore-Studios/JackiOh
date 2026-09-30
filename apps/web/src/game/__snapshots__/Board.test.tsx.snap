@@ -1483,29 +1483,29 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                       viewBox="0 0 100 100"
                     >
                       <path
-                        d="M50 8 L59 24 L59 62 L41 62 L41 24 Z"
-                        fill="#e9eef6"
+                        d="M50 3 L65 22 L65 60 L35 60 L35 22 Z"
+                        fill="#f1f5fb"
                         stroke="#0b0d12"
                         stroke-linejoin="round"
-                        stroke-width="3"
+                        stroke-width="4"
                       />
                       <path
-                        d="M50 16 V60"
-                        stroke="#9aa6ba"
-                        stroke-width="2.5"
+                        d="M50 12 V56"
+                        stroke="#8d99af"
+                        stroke-width="4"
                       />
                       <path
-                        d="M28 62 H72 V71 H28 Z"
-                        fill="#e2b04a"
+                        d="M20 60 H80 V72 H20 Z"
+                        fill="#f0bd4f"
                         stroke="#0b0d12"
                         stroke-linejoin="round"
-                        stroke-width="3"
+                        stroke-width="4"
                       />
                       <path
-                        d="M45 71 H55 V90 H45 Z"
-                        fill="#7b4a1c"
+                        d="M43 72 H57 V96 H43 Z"
+                        fill="#8a5220"
                         stroke="#0b0d12"
-                        stroke-width="3"
+                        stroke-width="4"
                       />
                     </svg>
                   </span>

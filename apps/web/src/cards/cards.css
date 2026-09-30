@@ -1327,10 +1327,15 @@
   right: auto;
   display: flex;
   flex-direction: column;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-content: flex-start;
   align-items: flex-start;
   gap: max(1px, 0.6cqmin);
-  max-height: none;
+  /* The column stops above the name plate (its top is `--mf-stat` + `--mf-plate` up, less the
+     0.5cqh it sits below the gems): on a 43x60 desktop minion three chips at the 8px floor run
+     past it, so the third wraps into a second column over the portrait instead of covering the
+     name (R438's check, e2e/cypress/component/keyword-visuals.cy.tsx). */
+  max-height: calc(100% - 24cqmin - 2px - var(--mf-stat, 28cqmin) - var(--mf-plate, 11cqh));
   overflow: visible;
   font-size: max(8px, 9cqmin);
   line-height: 1;
@@ -1389,10 +1394,11 @@
 .cf .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
 .cf .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
 
-/* Divine Shield: a golden bubble over the portrait. */
+/* Divine Shield: a golden bubble over the portrait, and under the name plate its rim would
+   otherwise cross (R438: no keyword's treatment covers the name, the attack or the health). */
 .cf .shield-icon {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   top: 1cqh;
   left: 5cqw;
   right: 5cqw;
