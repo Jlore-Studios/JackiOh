@@ -21,6 +21,8 @@ import {
   GLOSSARY,
   KEYWORD_MARK,
   RULED_TERMS,
+  SHORT_REMINDERS,
+  SHORT_TERMS,
   inPlayerWords,
   type GlossaryTermId,
   type TriggerTermId,
@@ -50,6 +52,17 @@ function ruleColumn(section: "6.1" | "6.2" | "6.3"): Map<string, string> {
     rules.set(term, rule);
   }
   return rules;
+}
+
+/** The Cry line the glossary printed before R500 shortened it: §6.2's ruling in full. */
+const CRY_RULING_BEFORE_R500 =
+  "When you play this card from your hand, or it is cast (Cast on draw, Echo, Call to Chaos). Not when it is summoned, copied, Recruited, Reborn or Transformed into";
+
+/** R500: a short reminder is one line of at most this many words. */
+const SHORT_REMINDER_MAX_WORDS = 16;
+
+function isShort(id: GlossaryTermId): id is (typeof SHORT_TERMS)[number] {
+  return (SHORT_TERMS as readonly string[]).includes(id);
 }
 
 /** Where a glossary id's SPEC row spells it differently (a trailing X, a capital). */
@@ -308,12 +321,13 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.2");
-      if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
+      if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
+      else if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
       else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.2", id)));
     }
   });
 
-  it("B11 Cry states §6.2's ruling: played from hand or cast, never summoned, copied, Recruited, Reborn or Transformed", () => {
+  it("B11 R500 Cry states §6.2's ruling, short: played or cast, never onto the field another way", () => {
     // The ruling this pins, read from SPEC so a change there fails here.
     const row = SPEC.split("\n").find((line) => line.startsWith("| Cry |"));
     expect(row).toBeDefined();
@@ -321,11 +335,28 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(row).toContain("Copies, Recruit, Reborn, tokens and Transform results do not fire it");
 
     const rule = GLOSSARY.Cry.rule;
+    expect(rule).toBe(SHORT_REMINDERS.Cry);
     expect(rule).not.toContain("enters the field");
-    expect(rule).toMatch(/play this card from your hand/);
-    for (const cast of ["Cast on draw", "Echo", "Call to Chaos"]) expect(rule).toContain(cast);
-    for (const never of ["summoned", "copied", "Recruited", "Reborn", "Transformed"]) expect(rule).toContain(never);
+    expect(rule).toMatch(/play this card/);
+    expect(rule).toMatch(/casts it/);
+    expect(rule).toMatch(/^[^.]*\. Never /);
     expect(RULED_TERMS).toEqual(["Cry"]);
+  });
+
+  it("R500 Cry and Tribute are short reminders, each shorter than the SPEC text it replaces and a single line", () => {
+    expect([...SHORT_TERMS]).toEqual(["Cry", "Tribute"]);
+    expect(GLOSSARY.Tribute.rule).toBe(SHORT_REMINDERS.Tribute);
+    expect(GLOSSARY.Tribute.section).toBe("§6.3");
+    expect(SHORT_REMINDERS.Cry.length).toBeLessThan(CRY_RULING_BEFORE_R500.length);
+    expect(SHORT_REMINDERS.Tribute.length).toBeLessThan(inPlayerWords(specRule("6.3", "Tribute")).length);
+    for (const id of SHORT_TERMS) {
+      const words = SHORT_REMINDERS[id].split(/\s+/).length;
+      expect(words, id).toBeLessThanOrEqual(SHORT_REMINDER_MAX_WORDS);
+      expect(SHORT_REMINDERS[id], id).not.toMatch(/\n|\(R\d+\)|library|sacrific/i);
+    }
+    // Tribute's reminder is Units only (R428: Carnivorous Cube no longer eats the backrow).
+    expect(SHORT_REMINDERS.Tribute).toContain("Units");
+    expect(SHORT_REMINDERS.Tribute).not.toMatch(/permanent|backrow/i);
   });
 
   it("B11 every §6.3 term, with SPEC §6.3's rule text, and Radiant under §5.2 with a non-empty rule", () => {
@@ -334,7 +365,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.3");
-      expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
+      if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
+      else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
     }
     const radiant = GLOSSARY.Radiant;
     expect(radiant.id).toBe("Radiant");
@@ -353,7 +385,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
     expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
-    expect(GLOSSARY.Tribute.rule).toMatch(/^As an additional cost of playing a card, tribute X of your units/);
+    // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
+    expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific/i);
     }

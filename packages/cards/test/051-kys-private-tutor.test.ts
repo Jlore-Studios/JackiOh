@@ -248,7 +248,7 @@ describe("#51 KY's Private Tutor — base", () => {
   it("§6.3 fewer than three matches reveal what exists", () => {
     const s = tutor({ library: [SPELL_2, UNIT_1] });
     s.play(TUTOR).answer("Spell");
-    // Hit Job is the only Spell, so "2" is the only bracket and it is the only reveal.
+    // Call to Arms is the only Spell, so "2" is the only bracket and it is the only reveal.
     expect(modeOptions(open(s))).toEqual(["2"]);
 
     s.answer("2");

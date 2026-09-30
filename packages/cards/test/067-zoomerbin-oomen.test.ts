@@ -3,8 +3,8 @@
 //
 // §8.3's row: "Cry: summon a random Cost (1) Trap face-down into your backrow zone in this lane" →
 // "A random Radiant Trap" (R275). Patch v0.1.1 made #85 Unlicensed Experimentation cost 2, so the
-// base pool is #18, #41, #60, #71, #96 and the radiant face's is every Core trap, #85 included,
-// summoned Radiant; zone occupied or Locked → fizzles. A Radiant face-down trap is still hidden from the opponent, face and all (R33,
+// base pool is #18, #41, #60, #71, #96 — and since patch v0.2.0's one format (R380) Classic+ #22 —
+// and the radiant face's is every trap of every set, #85 included, summoned Radiant; zone occupied or Locked → fizzles. A Radiant face-down trap is still hidden from the opponent, face and all (R33,
 // R97, R177).
 //
 // §3.1 fixes what "this lane" means: "the backrow zone in the same column as the unit". §8's
@@ -19,10 +19,13 @@ import { TRAP_TYPES, catalog } from "../src/query";
 const OOMEN = "core-067"; // Unit 1/2 → 2/4, cost 1, Human.
 const MANA_WELL = "core-006"; // A Field Spell: something to occupy a backrow zone with.
 
-/** The base face's pool, by catalog id: the Cost (1) traps #18, #41, #60, #71, #96. */
-const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-096"];
-/** The radiant face's pool: every Core trap, #85 (Cost (2)) included. */
-const RADIANT_TRAP_POOL = [...TRAP_POOL, "core-085"];
+/**
+ * The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
+ * #71, #96 and Classic+ #22 Blood Moon, the one new Cost (1) Trap (docs/classic-sets.md B2.6).
+ */
+const TRAP_POOL = ["core-018", "core-041", "core-060", "core-071", "core-096", "classicplus-022"];
+/** The radiant face's pool: every trap of every set, Core #85 (Cost (2)) included. */
+const RADIANT_TRAP_POOL = catalog.query({ type: TRAP_TYPES }).map((def) => def.id);
 
 type Board = ReturnType<typeof scenario>;
 
@@ -54,12 +57,15 @@ describe("#67 Zoomerbin Oomen", () => {
   // The pool (§5.1, R60)
   // -------------------------------------------------------------------------------------------
 
-  it("BUILD row 67 the base pool is the five Cost (1) traps, and the radiant pool every trap", () => {
-    const indices = (defs: { index: string }[]): string[] => defs.map((entry) => entry.index);
+  it("BUILD row 67, R380 the base pool is every set's Cost (1) traps, and the radiant pool every trap", () => {
+    const ids = (defs: { id: string }[]): string[] => defs.map((entry) => entry.id);
     // The base face asks for Cost (1) traps, the radiant face for any trap. Field Trap counts as
     // Trap (§8 #51, R35, R61), and #85 costs 2, so only the radiant query reaches it.
-    expect(indices(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(["18", "41", "60", "71", "96"]);
-    expect(indices(catalog.query({ type: TRAP_TYPES }))).toEqual(["18", "41", "60", "71", "85", "96"]);
+    expect(ids(catalog.query({ type: TRAP_TYPES, cost: 1 }))).toEqual(TRAP_POOL);
+    const everyTrap = ids(catalog.query({ type: TRAP_TYPES }));
+    for (const id of [...TRAP_POOL, "core-085"]) expect(everyTrap).toContain(id);
+    expect(everyTrap.some((id) => id.startsWith("classic-"))).toBe(true);
+    expect(everyTrap.every((id) => catalog.query({ defId: id })[0]?.type.includes("Trap"))).toBe(true);
   });
 
   it("R81 the Cry asks for nothing: the lane is the unit's own, not a declared pick", () => {
@@ -169,7 +175,7 @@ describe("#67 Zoomerbin Oomen", () => {
     s.expectStats(OOMEN, { attack: 2, health: 4, maxHealth: 4 });
     const trap = s.backrow("p1", LANE);
     expect(trap).not.toBeNull();
-    expect(TRAP_POOL).toContain(trap?.defId);
+    expect(RADIANT_TRAP_POOL).toContain(trap?.defId);
     expect(trap?.radiant).toBe(true);
     expect(trap?.faceUp).not.toBe(true);
     expect(backrowIds(s)).toEqual([null, null, trap?.defId ?? null, null, null]);
@@ -183,9 +189,10 @@ describe("#67 Zoomerbin Oomen", () => {
     const trap = s.backrow("p1", LANE);
     if (trap === null) throw new Error("the Radiant Oomen should have summoned a trap");
 
-    // The opponent is told the zone is occupied and nothing more (§10.8).
+    // The opponent is told the zone is occupied and what its back shows (R351), nothing more (§10.8).
     const theirs = s.view("p2");
-    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true, cost: 1 });
+    const shownCost = s.view("p1").you.backrow[LANE - 1]?.cost;
+    expect(theirs.opponent.backrow[LANE - 1]).toEqual({ faceDown: true, cost: shownCost });
     // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
     const serialized = JSON.stringify(theirs);
     expect(serialized).not.toContain(`"${trap.id}"`);
@@ -196,16 +203,21 @@ describe("#67 Zoomerbin Oomen", () => {
     expect(mine).toMatchObject({ faceDown: false, defId: trap.defId, radiant: true });
   });
 
-  it("§8.3 the radiant pool drops the cost clause and still reaches every Core trap, each Radiant", () => {
+  it("§8.3 the radiant pool drops the cost clause: every pick is a trap of any set, each Radiant", () => {
     const seen = new Set<string>();
     for (let seed = 0; seed < 40; seed += 1) {
       const s = board({ seed: `oomen-radiant-${seed}`, p1: { hand: [{ def: OOMEN, radiant: true }] } });
       s.play(OOMEN, { zone: LANE });
       const trap = s.backrow("p1", LANE);
       expect(trap?.radiant).toBe(true);
-      if (trap !== null) seen.add(trap.defId);
+      if (trap !== null) {
+        expect(RADIANT_TRAP_POOL).toContain(trap.defId);
+        seen.add(trap.defId);
+      }
     }
-    expect([...seen].sort()).toEqual([...RADIANT_TRAP_POOL].sort());
+    // Forty seeds over a pool of every set's traps reach beyond the Cost (1) ones.
+    expect([...seen].some((id) => !TRAP_POOL.includes(id))).toBe(true);
+    expect(seen.size).toBeGreaterThan(TRAP_POOL.length);
   });
 
   it("R47 the radiant face fizzles on an occupied zone, and the unit still enters", () => {

@@ -175,7 +175,7 @@ describe("R214: a play's choices are the choices of the face it resolves with", 
 
   it("R214 a crafted Bigot + Twisted Sorcerer that Gifted Program will make Radiant names the Sorcerer's target alone (R90, R102)", () => {
     const g = scenario({
-      seed: "craft-17", // the first Discover offers Bigot, the second Twisted Sorcerer
+      seed: "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
       p1: { hand: [CRAFT_A_CARD, RENO], mana: 4, backrow: [GIFTED] },
       p2: { hand: [RENO], field: [PANTHER] },
     });

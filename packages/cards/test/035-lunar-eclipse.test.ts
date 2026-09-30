@@ -73,6 +73,7 @@ describe("#35 Lunar Eclipse — base", () => {
     s.play("15");
     s.expectMana("p1", 2);
 
+    // Hit Job's printed 3, less the 1 the unit play left standing.
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
     s.expectMana("p1", 0);
   });

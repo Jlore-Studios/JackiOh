@@ -2720,6 +2720,8 @@
         "name": "Archivist",
         "kind": "changed",
         "fields": [
+          "base.text",
+          "radiant.text",
           "loc"
         ]
       },
@@ -2913,6 +2915,7 @@
         "name": "Silly Silas",
         "kind": "changed",
         "fields": [
+          "radiant.text",
           "loc"
         ]
       },

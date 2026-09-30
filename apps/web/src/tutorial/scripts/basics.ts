@@ -184,7 +184,7 @@ export const script: LessonScript = {
     playBy(2, {
       id: "play-vanilla",
       title: "Play a unit",
-      text: "Mr. Vanilla costs 1 mana: the blue number at its top left. Drag it into any of your five unit zones, or click it and then a zone. Each column is a lane.",
+      text: "Mr. Vanilla costs (1): the blue number at its top left. Drag it into any of your five unit zones, or click it and then a zone. Each column is a lane.",
       defId: VANILLA,
     }),
     // After the first play rather than before it, so the turn's first "Got it"s stop at two, and the
@@ -235,7 +235,7 @@ export const script: LessonScript = {
     playBy(4, {
       id: "play-shredder",
       title: "A big unit",
-      text: "Jlockeed Shredder-10 costs 3. Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of your turn.",
+      text: "Jlockeed Shredder-10 costs (3). Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of your turn.",
       defId: SHREDDER,
     }),
     endTurnOn(3, {

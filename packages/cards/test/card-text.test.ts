@@ -64,6 +64,8 @@ function failures(face: Face): string[] {
   // R432: "(N) Cost" is the noun — never the old "Cost (N)", never a lowercase "(N) cost".
   if (/\bCost \(/.test(text)) out.push('writes the noun as "Cost (N)", not "(N) Cost"');
   if (/\(\S+\)\+? cost\b/.test(text)) out.push('writes the noun "(N) cost" without its capital');
+  if (/\bcosting \(/.test(text)) out.push('writes a price as "costing (N)", not "costs (N)"');
+  if (/\b[A-Za-z]+-cost\b/.test(text)) out.push('writes a kind of cost as "odd-cost", not "odd Cost"');
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
   const lines = text === "" ? [] : text.split("\n");
   // The keyword list: the first line, when every item on it is a printed keyword or a Tribute cost,
