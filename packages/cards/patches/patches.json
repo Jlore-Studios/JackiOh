@@ -1,0 +1,91 @@
+[
+  {
+    "version": "v0.1.0",
+    "date": "2026-09-18",
+    "title": "Core as first built",
+    "commits": [
+      "46266903212386e2d73f7b1eee8c4b8b5d73fa9b"
+    ],
+    "sources": [],
+    "reconstructed": true,
+    "notes": "The Core set as the repository's first commit built it: 100 cards and 9 tokens."
+  },
+  {
+    "version": "v0.1.0-r1",
+    "date": "2026-09-22",
+    "title": "Core Set balance changes",
+    "commits": [
+      "1539fa7e7b4f0279b0395db97e1b1bff982aeaba",
+      "cd780db96d226816d8051e756f9bda0314c10207"
+    ],
+    "sources": [
+      {
+        "kind": "issue",
+        "number": 1
+      },
+      {
+        "kind": "pr",
+        "number": 2
+      }
+    ],
+    "reconstructed": true,
+    "notes": "The designer's balance changes (issue #1), whose notes landed first on 2026-09-20 (PR #2): #3 Right-house defender gains Taunt, #68 “Twisted Sourcerer” becomes “Twisted Sorcerer”, #81 Radiant Saintess changes twice, the Rush, Sheep and Felinor Tokens' Radiant faces grow, and the Bread Token gets a Radiant face of its own."
+  },
+  {
+    "version": "v0.1.0-r2",
+    "date": "2026-09-24",
+    "title": "Call to Chaos and The Coin",
+    "commits": [
+      "f5b94bce13b4c967425ce67b6f8d1d34b66ec650",
+      "a17a9e8ddc7ac1272861ce93a80e65e1e906f356"
+    ],
+    "sources": [
+      {
+        "kind": "pr",
+        "number": 11
+      },
+      {
+        "kind": "pr",
+        "number": 14
+      }
+    ],
+    "reconstructed": true,
+    "notes": "#95 Call to Chaos's text changes (PR #11), and The Coin is added for the player going second (PR #14)."
+  },
+  {
+    "version": "v0.1.0-r3",
+    "date": "2026-09-25",
+    "title": "The Radiant pass",
+    "commits": [
+      "c219bb4ecbdc625d448fd558f68fc185c1fa1517"
+    ],
+    "sources": [
+      {
+        "kind": "pr",
+        "number": 18
+      }
+    ],
+    "reconstructed": true,
+    "notes": "99 entries change (PR #18). Every Radiant text is written out in full instead of in shorthand, Radiant stats and keywords are raised to one standard, #13 and #14 get the Jlockeed tag, and each card lists the cards its text names."
+  },
+  {
+    "version": "v0.1.1",
+    "date": "2026-09-27",
+    "title": "Patch v0.1.1",
+    "commits": [
+      "1005c50df56d244075879403230fa448259e7702"
+    ],
+    "sources": [
+      {
+        "kind": "issue",
+        "number": 27
+      },
+      {
+        "kind": "pr",
+        "number": 28
+      }
+    ],
+    "reconstructed": false,
+    "notes": "The Ghoul Token is added and 105 entries change: card text is reworded (Deck and Tribute), Pierce arrives on #44 True Strike, #50 “Kpop Fanatic” becomes “K-Pop Fanatic”, #85 and #90 cost 2 instead of 1, #99 costs 4 instead of 3, #1, #8, #20 and #77 change their stats, #8, #55 and #81 lose keywords, #25, #56, #86 and #92 change their Radiant keywords, and #30, #50, #62 and #80 gain a tag."
+  }
+]

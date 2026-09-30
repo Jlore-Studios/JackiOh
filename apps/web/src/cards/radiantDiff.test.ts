@@ -15,7 +15,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "./CardFace.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
-import { markedText, radiantMarks } from "./radiantDiff.ts";
+import { markedText, radiantMarks, wordDiff } from "./radiantDiff.ts";
 
 afterEach(cleanup);
 
@@ -106,5 +106,27 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
     expect(rule).toMatch(/font-weight:\s*800/);
     expect(rule).toMatch(/text-decoration:\s*underline/);
     expect(rule).toMatch(/color:\s*var\(--mark-ink\)/);
+  });
+});
+
+describe("R375 two versions of a text, word-diffed both ways", () => {
+  function diff(before: string, after: string): { removed: string[]; added: string[] } {
+    const ranges = wordDiff(before, after);
+    return { removed: markedText(before, ranges.removed), added: markedText(after, ranges.added) };
+  }
+
+  it("R375 marks the words the older text drops and the words the newer one adds", () => {
+    expect(diff("Cry: deal 4 damage to a target, 8 if your hero is below 10", "Cry: Deal 4 damage to a target, or 8 if your hero has less than 10 health.")).toEqual({
+      removed: ["is below"],
+      added: ["or", "has less than", "health"],
+    });
+    expect(diff("Deal 4 damage", "Deal 9 damage")).toEqual({ removed: ["4"], added: ["9"] });
+  });
+
+  it("R375 compares as R277 does: case and separators aside, and one text across its line breaks", () => {
+    expect(diff("Aura: your units have +2 Armor", "Aura: Your Units have +2 Armor.")).toEqual({ removed: [], added: [] });
+    expect(diff("Pierce, Taunt", "Pierce\nTaunt")).toEqual({ removed: [], added: [] });
+    expect(diff("", "Armor X")).toEqual({ removed: [], added: ["Armor X"] });
+    expect(diff("Armor X", "")).toEqual({ removed: ["Armor X"], added: [] });
   });
 });

@@ -90,6 +90,7 @@ const MatchRoute = lazy(() => import("./routes/match.tsx"));
 const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
+const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -397,6 +398,8 @@ function screenNameFor(path: string): string | null {
       return "Practice";
     case paths.privacy:
       return "Privacy";
+    case paths.patchNotes:
+      return "Patch notes";
     case paths.hotseat:
       return DEV_ONLY ? "Hotseat" : null;
   }
@@ -485,6 +488,7 @@ export function App(): ReactElement {
 
     if (path === paths.practice) return <PracticeRoute />;
     if (path === paths.privacy) return <PrivacyRoute />;
+    if (path === paths.patchNotes) return <PatchNotesRoute />;
 
     const matchId = matchIdOf(path);
     if (matchId !== null) {

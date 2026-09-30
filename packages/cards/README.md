@@ -11,8 +11,13 @@ When this README and SPEC.md disagree, SPEC.md wins and this file is the bug.
 ```
 packages/cards
 ├── catalog.json                 card data, proved against SPEC §8 by test/catalog.test.ts (M4-T1)
+├── patches                      the card patch history (R375, §7 below)
+│   ├── patches.json             every patch, oldest first
+│   ├── changes.json             GENERATED: the cards each patch created, changed and removed
+│   └── snapshots/<version>.json catalog.json exactly as that version left it
 ├── src
 │   ├── catalog-data.ts          the ONE reader of catalog.json: CATALOG, cardDef(id)
+│   ├── history.ts               a card's history from the patch list and the snapshots (R375)
 │   ├── query.ts                 SPEC §5.1's catalog.query — the only random-pool source
 │   ├── index.ts                 CARDS, registerAll() — the registry (M4-T2)
 │   └── scripts
@@ -22,11 +27,14 @@ packages/cards
 │   ├── naming.ts                the id <-> filename convention both scripts share
 │   ├── gen-registry.ts          rewrites src/scripts/_generated.ts from the directory
 │   ├── missing-tests.ts         prints catalog ids with no test file (M4-T3 acceptance)
+│   ├── patches.ts               writes patches/ from git and catalog.json (R375)
 │   └── validate-catalog.ts      catalog data checks (M4-T1)
 └── test
     ├── _harness.ts              scenario() — the only way a card test builds a game (M4-T3)
     ├── globalSetup.ts           regenerates the script barrel before every test run
     ├── catalog.test.ts          SPEC §8 as a fixture table (M4-T1)
+    ├── patches.test.ts          patches/ against git and catalog.json (R375)
+    ├── history.test.ts          src/history.ts against the real snapshots and made-up ones (R375)
     ├── query.test.ts            the §5.1 pools (M4-T2)
     ├── registry.test.ts         every catalog id has a script, every script a catalog entry (M4-T2)
     └── NNN-slug.test.ts         one card, one test file
@@ -395,7 +403,52 @@ which have no §8 row of their own.
 (Felinor Fiender/Stack), #93 (Combo-Index), #95 (Call to Chaos), #96 (My Pawn/lethal), #97
 (Zephyrs/scorer), #98 (Heroic Power), #99 (Craft a Card).
 
-## 7. Commands
+## 7. The patch history (R375)
+
+Every card shows when it was created and each change since (SPEC §10.10). The data is
+`patches/`, and `pnpm --filter @jackioh/cards run patches` writes all of it:
+
+- `patches.json` lists every patch, oldest first: `{ version, date, title, commits, sources,
+  reconstructed, notes }`, `sources` being `{ kind: "issue" | "pr", number }`. Its order is the
+  order of versions; nothing compares version strings (R105's rule for catalog versions, kept here).
+  Only v0.1.1 was named when it shipped; the versions before it are labels given later to states git
+  recorded, so they are `reconstructed`, and the client says so. The script writes those entries
+  from its `BACKFILL` table; every later entry it keeps as patches.json holds it.
+- `snapshots/<version>.json` is catalog.json exactly as the version left it. A shipped version's is
+  `git show <commit>:packages/cards/catalog.json` of its last commit (the script's `SHIPPED` table
+  records the commit and the file's git blob id, which `test/patches.test.ts` holds each snapshot
+  to, so the proof runs on a shallow clone too). The newest is always equal to catalog.json.
+- `changes.json` is `patchCards(patches, snapshots)`: the cards each version created, changed and
+  removed, which the client reads to count a card's versions and list a patch's cards without
+  loading a snapshot. `test/patches.test.ts` holds it to the snapshots.
+
+`src/history.ts` is the logic, pure and sync like the rest of `src/`: `cardHistory(id, patches,
+snapshots)` gives a card's creation entry, then one entry per version in which its entry changed,
+with what changed (name, cost, type, rarity, tags, each face's stats and keywords, the base and
+Radiant texts, `refs`, and any other field by its key). The client imports it as
+`@jackioh/cards/history`, and the data as `@jackioh/cards/patches/*`, loading the snapshots itself
+with a dynamic `import()` so its main bundle never carries them.
+
+**A change to `catalog.json` is a patch.** Once a version has shipped, `test/patches.test.ts` fails
+until the next one is named, so the history can never fall behind the catalog:
+
+```
+pnpm --filter @jackioh/cards run patches v0.2.0 2026-10-10 "Classic and Classic+"   # name it; snapshot catalog.json
+pnpm --filter @jackioh/cards run patches                                           # rerun after each catalog change
+```
+
+Write the new entry's `notes` and `sources` in patches.json by hand; a rerun keeps them. Add its
+snapshot's loader to `SNAPSHOT_LOADERS` in `apps/web/src/cards/patches.ts` in the same change:
+`apps/web/src/cards/patches.test.ts` fails, naming the list, until every patch has one. When the
+patch ships, put its last commit in its `commits` and add `{ version, commit, blob }` to `SHIPPED`
+in `scripts/patches.ts` (`git rev-parse <commit>:packages/cards/catalog.json` prints the blob). The
+tests pin the history up to v0.1.1 and read any later patch off the data, so those two steps are all
+a new patch asks of them. The script refuses to name a patch while the newest has not shipped, and
+to rewrite a shipped one. It reads git, so run it on a full clone (`git fetch --unshallow` first on
+a shallow one). History is presentation only: `CATALOG_VERSION` stays `core-1`, and no game, replay
+or server reads a snapshot.
+
+## 8. Commands
 
 ```
 pnpm exec vitest run --project cards                 # every card test
@@ -404,4 +457,5 @@ pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
+pnpm --filter @jackioh/cards run patches              # rewrite patches/ (see §7)
 ```

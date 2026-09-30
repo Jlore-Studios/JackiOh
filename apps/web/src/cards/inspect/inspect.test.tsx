@@ -30,6 +30,7 @@ import {
   INSPECT_FACE,
   INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
+  INSPECT_HISTORY_TOGGLE,
   INSPECT_HOVER,
   INSPECT_SCRIM,
   INSPECT_SHEET,
@@ -977,14 +978,16 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
+    // The first control is the History section's toggle (R375), at the end of the scrolling body.
+    const first = screen.getByTestId(INSPECT_HISTORY_TOGGLE);
     expect(close).toHaveFocus();
 
     expect(tabFrom(close)).toBe(false);
-    expect(action).toHaveFocus();
+    expect(first).toHaveFocus();
     expect(screen.getByTestId(INSPECT_DETAIL).contains(document.activeElement)).toBe(true);
 
     // Shift+Tab from the first control wraps to the last.
-    expect(tabFrom(action, true)).toBe(false);
+    expect(tabFrom(first, true)).toBe(false);
     expect(close).toHaveFocus();
 
     // A Tab between two controls inside is left to the browser.

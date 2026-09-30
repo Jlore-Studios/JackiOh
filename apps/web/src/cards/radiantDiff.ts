@@ -20,6 +20,9 @@
 // A fused definition's texts are its ingredients' texts one per line (R102); when both faces have
 // the same number of lines, each Radiant line is diffed against the base line of the same
 // ingredient, as each ingredient's own face is.
+//
+// A card's history (R375) diffs two versions of one text the same way, and marks both sides:
+// `wordDiff` gives the words the older version drops as well as the words the newer one adds.
 
 /** A stretch of a printed text, by UTF-16 offsets: `start` inclusive, `end` exclusive. */
 export type TextRange = { readonly start: number; readonly end: number };
@@ -41,8 +44,8 @@ function tokensOf(text: string, offset: number): Token[] {
   return tokens;
 }
 
-/** Which of `radiant`'s tokens are in a longest common subsequence with `base`'s, case aside. */
-function commonTokens(base: readonly Token[], radiant: readonly Token[]): boolean[] {
+/** Which tokens of each side are in one longest common subsequence of the two, case aside. */
+function commonTokens(base: readonly Token[], radiant: readonly Token[]): { base: boolean[]; radiant: boolean[] } {
   const a = base.map((token) => token.text.toLowerCase());
   const b = radiant.map((token) => token.text.toLowerCase());
   const rows = a.length + 1;
@@ -56,11 +59,13 @@ function commonTokens(base: readonly Token[], radiant: readonly Token[]): boolea
       row[j] = a[i] === b[j] ? (next[j + 1] ?? 0) + 1 : Math.max(next[j] ?? 0, row[j + 1] ?? 0);
     }
   }
+  const keptBase = new Array<boolean>(a.length).fill(false);
   const kept = new Array<boolean>(b.length).fill(false);
   let i = 0;
   let j = 0;
   while (i < a.length && j < b.length) {
     if (a[i] === b[j]) {
+      keptBase[i] = true;
       kept[j] = true;
       i += 1;
       j += 1;
@@ -70,18 +75,15 @@ function commonTokens(base: readonly Token[], radiant: readonly Token[]): boolea
       j += 1;
     }
   }
-  return kept;
+  return { base: keptBase, radiant: kept };
 }
 
-/** The marked stretches of one Radiant line against one base line. */
-function lineMarks(base: string, radiant: string, offset: number): TextRange[] {
-  const baseTokens = tokensOf(base, 0);
-  const radiantTokens = tokensOf(radiant, offset);
-  const kept = commonTokens(baseTokens, radiantTokens);
+/** The stretches of the words `kept` leaves out, from the first of a run to its last. */
+function markedRanges(tokens: readonly Token[], kept: readonly boolean[]): TextRange[] {
   const ranges: TextRange[] = [];
   let open: { start: number; end: number } | null = null;
-  for (let at = 0; at < radiantTokens.length; at += 1) {
-    const token = radiantTokens[at];
+  for (let at = 0; at < tokens.length; at += 1) {
+    const token = tokens[at];
     if (token === undefined || !token.word) continue;
     // A separator, changed or kept, waits to see what follows it; a kept word closes the stretch.
     if (kept[at] === true) {
@@ -95,6 +97,12 @@ function lineMarks(base: string, radiant: string, offset: number): TextRange[] {
   }
   if (open !== null) ranges.push(open);
   return ranges;
+}
+
+/** The marked stretches of one Radiant line against one base line. */
+function lineMarks(base: string, radiant: string, offset: number): TextRange[] {
+  const radiantTokens = tokensOf(radiant, offset);
+  return markedRanges(radiantTokens, commonTokens(tokensOf(base, 0), radiantTokens).radiant);
 }
 
 /**
@@ -114,6 +122,19 @@ export function radiantMarks(base: string, radiant: string): TextRange[] {
     return ranges;
   }
   return lineMarks(base, radiant, 0);
+}
+
+/**
+ * R375: what changed between two versions of one text, from one longest common subsequence of their
+ * tokens compared as R277 compares them: the stretches of `before` that `after` dropped, and the
+ * stretches of `after` that `before` did not have. The whole texts are compared, line breaks as
+ * spaces, since two versions of a card are one card's text and not a fusion's ingredients (R102).
+ */
+export function wordDiff(before: string, after: string): { removed: TextRange[]; added: TextRange[] } {
+  const beforeTokens = tokensOf(before, 0);
+  const afterTokens = tokensOf(after, 0);
+  const kept = commonTokens(beforeTokens, afterTokens);
+  return { removed: markedRanges(beforeTokens, kept.base), added: markedRanges(afterTokens, kept.radiant) };
 }
 
 /** The marked words themselves, for tests and accessible summaries. */
