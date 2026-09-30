@@ -3,6 +3,8 @@ export * from "./catalog";
 export * from "./rng";
 export * from "./state";
 export * from "./zones";
+// B3.1, R383: what an Animated card is and where it stands (field workstream).
+export * from "./animated";
 // The read-only board queries a card script asks its questions with (BUILD M3-T1, §10.9): the read
 // half of the card-facing surface, where `./effects` is the write half.
 export * from "./query";

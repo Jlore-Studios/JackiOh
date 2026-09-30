@@ -28,7 +28,7 @@ import { cardsInTriggerOrder, dispatchPending, markDispatched, queueTrigger, tri
 import { moveSourcedModifiers } from "./modifiers";
 import { exitMark, leftFieldAfter, movesIn, type LaterMoves } from "./stays";
 import { owe, paused as isPaused, registerWorkHandler } from "./work";
-import { activeUnitsOf, adjacent, cardAt, slotOf } from "./zones";
+import { activeUnitsOf, actsOnField, adjacent, cardAt, isCarried, slotOf } from "./zones";
 
 /**
  * What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
@@ -100,9 +100,17 @@ export function enterNewSide(sink: EngineSink, card: CardInstance, from: PlayerI
  * not on the field for anything: it neither acts nor can be targeted (R13).
  */
 export function isActiveOnField(state: GameState, unit: CardInstance): boolean {
-  const at = slotOf(state, unit);
-  if (at === null) return false;
-  return cardAt(state, at)?.id === unit.id;
+  // R446: a Unit a carrier holds acts from its backrow zone, with the carrier acting beneath it.
+  return actsOnField(state, unit);
+}
+
+/**
+ * R446: a Unit standing on a carrier (Classic+ #33 Ivory Tower) can neither attack nor be attacked —
+ * declared or forced (R53 waives position, sickness and Taunt, never this) — and so binds no attacker
+ * with its Taunt (§4.2 step 3).
+ */
+function carriedOutOfCombat(state: GameState, unit: CardInstance): boolean {
+  return isCarried(state, unit);
 }
 
 /**
@@ -147,6 +155,7 @@ export function switchPosition(
  */
 function whyCannotDeclare(state: GameState, attacker: CardInstance): string | null {
   if (!isActiveOnField(state, attacker)) return "that unit is not on the field";
+  if (carriedOutOfCombat(state, attacker)) return "a Unit on a carrier cannot attack";
   if (!hasExertion(attacker, "attack")) return "that unit has already acted this turn";
 
   const view = unitView(state, attacker);
@@ -166,7 +175,9 @@ function whyCannotDeclare(state: GameState, attacker: CardInstance): string | nu
 
 /** Every enemy unit whose Taunt forces the target, printed, granted or from Defense (§4.2 step 3). */
 function tauntWall(state: GameState, enemy: PlayerId): CardInstance[] {
-  return activeUnitsOf(state, enemy).filter((unit) => hasKeyword(unitView(state, unit).keywords, "Taunt"));
+  return activeUnitsOf(state, enemy).filter(
+    (unit) => !carriedOutOfCombat(state, unit) && hasKeyword(unitView(state, unit).keywords, "Taunt"),
+  );
 }
 
 /**
@@ -185,6 +196,7 @@ export function whyCannotAttack(state: GameState, attacker: CardInstance, target
   } else {
     if (target.instance.controller !== enemy) return "that target is not an enemy";
     if (!isActiveOnField(state, target.instance)) return "that unit is not on the field";
+    if (carriedOutOfCombat(state, target.instance)) return "a Unit on a carrier cannot be attacked";
     // R5 decided attacks are not lane-restricted; flipping the constant restricts a unit to the
     // lane it stands in, which is the only reading §3.1's lanes give an attack.
     if (LANE_RESTRICTED_ATTACKS) {
@@ -641,6 +653,10 @@ export function forceAttack(sink: EngineSink, attacker: CardInstance, target: At
   if (state.result !== null) return;
   if (!isActiveOnField(state, attacker)) return;
   if (target.kind === "unit" && !isActiveOnField(state, target.instance)) return;
+  // R446: nor a carried Unit's, which neither attacks nor is attacked.
+  if (carriedOutOfCombat(state, attacker) || (target.kind === "unit" && carriedOutOfCombat(state, target.instance))) {
+    return;
+  }
   // R173: the compulsion waives position, sickness and Taunt (R53), never whose side the target is
   // on. A target that is not this attacker's enemy — it changed sides mid-run, or had crossed to
   // the attacker's side before the run began — is not attacked, and the attacker is passed over in

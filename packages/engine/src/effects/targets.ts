@@ -8,7 +8,7 @@ import type { DamageTarget } from "../damage";
 import type { EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
 import { exitMark, leftFieldAfter } from "../stays";
-import { adjacent, cardAt, isBuried, slotOf, slotsOf, type ZoneSlot } from "../zones";
+import { adjacent, cardAt, carriedUnitsOf, isBuried, rowSize, slotOf, slotsOf, type ZoneSlot } from "../zones";
 
 export type TargetSpec =
   /** The unit running the script. */
@@ -207,9 +207,14 @@ export function cardsInScope(ctx: EffectContext, scope: BoardScope = {}): CardIn
   const out: CardInstance[] = [];
   for (const ref of slotsInScope(ctx, scope)) {
     const card = cardAt(ctx.state, ref);
-    if (card === null) continue;
-    if (!matchesScope(ctx, card, scope)) continue;
-    out.push(card);
+    if (card !== null && matchesScope(ctx, card, scope)) out.push(card);
+    // R446: a Unit a carrier holds is one of that side's units ("all Units" reach it), after the unit
+    // lanes; a backrow scope finds the carrier beneath it and never the Unit.
+    if (ref.row === "units" && ref.lane === rowSize("units")) {
+      for (const unit of carriedUnitsOf(ctx.state, ref.player)) {
+        if (matchesScope(ctx, unit, scope)) out.push(unit);
+      }
+    }
   }
   return out;
 }

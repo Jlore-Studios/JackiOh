@@ -48,7 +48,7 @@ import { syncFusedScripts } from "./subsystems/fuse";
 import { activatePower, whyCannotActivate } from "./subsystems/heroPower";
 import { settle } from "./triggers";
 import { answerDraw, canOfferDraw, concede, endTurn, hasStandingDrawOffer, offerDraw } from "./turn";
-import { activeUnitsOf } from "./zones";
+import { activeUnitsOf, carriedUnitsOf } from "./zones";
 
 export type ReduceResult = { state: GameState; events: GameEvent[]; error?: string };
 
@@ -87,9 +87,10 @@ export function attackTargetId(target: AttackTarget): string {
  * failure here (R13).
  */
 function attackerOf(state: GameState, player: PlayerId, instanceId: string): CardInstance | undefined {
-  return state.players[player]
-    .units.flatMap((pile) => pile ?? [])
-    .find((card) => card.id === instanceId);
+  // R446: a Unit a carrier holds is one of the player's units too, which `combat` refuses to attack.
+  return [...state.players[player].units.flatMap((pile) => pile ?? []), ...carriedUnitsOf(state, player)].find(
+    (card) => card.id === instanceId,
+  );
 }
 
 /**

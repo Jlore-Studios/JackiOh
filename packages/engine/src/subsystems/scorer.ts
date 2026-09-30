@@ -415,7 +415,9 @@ function concealFrom(base: GameState, viewer: PlayerId): void {
   for (const card of base.players[opponent].hand) hide(card, HIDDEN_CARD_DEF_ID);
   for (const player of [viewer, opponent]) {
     for (const card of base.players[player].library) hide(card, HIDDEN_CARD_DEF_ID);
-    for (const card of base.players[player].backrow) {
+    // B5 E21: a face-down card dormant under a backrow pile is as hidden as one on top (R447).
+    const side = base.players[player];
+    for (const card of [...side.backrow, ...(side.backrowPiles ?? []).flat()]) {
       if (card === null || card.controller === viewer || card.faceUp === true) continue;
       const type = defOf(base, card.defId).type;
       if (type === "Trap" || type === "Field Trap") hide(card, HIDDEN_TRAP_DEF_ID);

@@ -37,7 +37,7 @@
 // the rest of the window with no way back, which is worse than firing late.
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { animatedKindOf, faceTypeOf, isAnimated } from "./animated";
 import { applyResumable } from "./prompts";
 import { makeContext, type EngineSink } from "./resolve";
 import type { TriggerDef } from "./script";
@@ -139,14 +139,18 @@ export function isTrapWindowEvent(event: GameEvent): boolean {
   return TRAP_WINDOW_EVENTS.includes(event.type);
 }
 
-/** §5.1: a Field Trap is a Trap that stays after firing, so both are "a Trap" (R61). */
+/**
+ * §5.1: a Field Trap is a Trap that stays after firing, so both are "a Trap" (R61). Read off the
+ * running face's own type (B2.7, `animated.faceTypeOf`) and never off `faces.cardTypeOf`: an animated
+ * Field Trap is a Unit where it stands (R383) and still fires as the trap its face is.
+ */
 export function isTrapType(state: GameState, instance: CardInstance): boolean {
-  const type = defOf(state, instance.defId).type;
+  const type = faceTypeOf(state, instance);
   return type === "Trap" || type === "Field Trap";
 }
 
 export function isFieldTrap(state: GameState, instance: CardInstance): boolean {
-  return defOf(state, instance.defId).type === "Field Trap";
+  return faceTypeOf(state, instance) === "Field Trap";
 }
 
 function isOnField(instance: CardInstance): boolean {
@@ -154,18 +158,24 @@ function isOnField(instance: CardInstance): boolean {
 }
 
 /**
- * Every trap on the field, in R68 order: the active player's cards first, then the opponent's, each
- * side's backrow by lane 1–5. Traps only ever occupy backrow zones (§5.1), so the unit lanes of
- * R68's order hold none.
+ * Every trap on the field, in R68 order: the active player's cards first, then the opponent's; on each
+ * side the unit lanes 1–5, then the backrow lanes 1–5. A trap sits in a backrow zone (§5.1) unless it
+ * has animated (R383, B3.1 rule 3): an animated Field Trap stands in a unit zone as a Unit and keeps its
+ * text, so it fires from there, in the unit lanes of R68's order (Classic #5 Tesla keeps zapping). Only
+ * the card acting in a zone is one (§3.2): a trap dormant under a backrow pile never fires (R447).
  */
 export function trapsInOrder(state: GameState): CardInstance[] {
   const sides: PlayerId[] = state.active === "p1" ? ["p1", "p2"] : ["p2", "p1"];
-  return sides.flatMap((player) =>
-    slotsOf(player, "backrow").flatMap((ref) => {
+  return sides.flatMap((player) => [
+    ...slotsOf(player, "units").flatMap((ref) => {
+      const card = cardAt(state, ref);
+      return card !== null && isAnimated(state, card) && isTrapType(state, card) ? [card] : [];
+    }),
+    ...slotsOf(player, "backrow").flatMap((ref) => {
       const card = cardAt(state, ref);
       return card !== null && isTrapType(state, card) ? [card] : [];
     }),
-  );
+  ]);
 }
 
 function trapTriggersOf(trap: CardInstance): TrapTrigger[] {
@@ -242,6 +252,10 @@ export function isSpent(state: GameState, trap: CardInstance): boolean {
 export function consumeTrap(sink: EngineSink, instance: CardInstance): void {
   instance.faceUp = true;
   if (isFieldTrap(sink.state, instance)) return;
+  // R383 (B3.1 rules 2 and 4): an Animated Trap's firing ends by animating it, so it is a Unit in a unit
+  // zone now, or it could not for want of an open one and stays in its zone face-up, as a Field Trap
+  // does — either way it does not go to the graveyard. Spent all the same (`isSpent`): a Trap fires once.
+  if (isAnimated(sink.state, instance) || animatedKindOf(sink.state, instance) !== null) return;
 
   const moved = moveToZone(sink.state, instance, "graveyard");
   if (moved !== "moved") return;

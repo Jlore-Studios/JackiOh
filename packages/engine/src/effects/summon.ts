@@ -8,6 +8,7 @@
 // Trap and every fizzle stay in `zoneFor`/`summonOnto` for all of them.
 
 import type { CardDef, CardType, PlayerId, Row, Tag } from "@jackioh/shared";
+import { animateOnEntry } from "../animated";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { effectiveCost } from "../mana";
 import { runStartOfGame } from "../prompts";
@@ -117,6 +118,9 @@ function summonOnto(
     lane: ref.lane,
     ...(formerId === undefined ? {} : { formerId }),
   });
+  // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
+  // turn, animates as it enters the field.
+  animateOnEntry(ctx, card);
   // R43, R151: "one created later rolls when it is created", as it arrives anywhere a card can be
   // looked at, and the field is such a place. A #98 Heroic Power that #22's Death summons as a copy
   // or #95 summons into the backrow reaches neither a hand nor a library, the two arrivals

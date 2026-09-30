@@ -28,6 +28,7 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, hasKeyword } from "@jackioh/shared";
+import { settleCarried } from "./carriers";
 import { endGame } from "./gameOver";
 import { unitView } from "./layers";
 import { endOrphanedModifiers, installLastingModifiers } from "./modifiers";
@@ -581,6 +582,9 @@ function forgetSpentKillers(sink: EngineSink, survivors: readonly CardInstance[]
 export function stateCheck(sink: EngineSink): void {
   for (let pass = 0; pass < STATE_CHECK_PASS_CAP; pass += 1) {
     if (sink.state.result !== null) return;
+    // R446: a Unit whose carrier is gone steps down, or is marked destroyed for want of a unit zone,
+    // before anything is collected.
+    settleCarried(sink);
     resolveIndestructibleMarks(sink);
     endOrphanedModifiers(sink);
     installLastingModifiers(sink);

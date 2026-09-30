@@ -40,7 +40,7 @@ import {
 import { endHandedOverTurn, runTrapWindow } from "./traps";
 import { dispatchPending, queueHooksInTriggerOrder, settle } from "./triggers";
 import { owe, paused as isPaused, registerWorkHandler } from "./work";
-import { activeUnitsOf, cardAt, slotsOf } from "./zones";
+import { activeUnitsOf, cardAt, carriedUnitsOf, slotsOf } from "./zones";
 
 /**
  * R68: the active player's cards first, then the opponent's; units by lane, then the backrow.
@@ -147,6 +147,8 @@ function resetExertion(sink: EngineSink, player: PlayerId): void {
   for (const pile of sink.state.players[player].units) {
     for (const card of pile ?? []) card.exertion = { attacked: false, switched: false };
   }
+  // R446: and the Units this player's carriers hold, which may switch position like any unit.
+  for (const card of carriedUnitsOf(sink.state, player)) card.exertion = { attacked: false, switched: false };
 }
 
 // ---------------------------------------------------------------------------

@@ -174,6 +174,8 @@ export type BackrowView =
        * or without it (a view built before the patch, a test fixture).
        */
       cost?: number;
+      /** B5 E21: how many dormant cards lie beneath it in a backrow pile — a count, never an identity. */
+      buried?: number;
     }
   | null;
 
@@ -268,10 +270,17 @@ export type SideView = {
   resolving: CardView[];
   units: (UnitView | null)[];
   backrow: BackrowView[];
+  /**
+   * B5 E21, R446: the Unit standing on each backrow zone's carrier (Classic+ #33 Ivory Tower), by lane —
+   * a Unit on the field, public like any, that can neither attack nor be attacked. Absent when no
+   * carrier on this side holds one.
+   */
+  carried?: (UnitView | null)[];
   locks: { units: boolean[]; backrow: boolean[] };
   /**
    * R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
-   * Locked zone takes none, so a client that reads only `locks` would draw it open.
+   * Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the
+   * backrow zone an animated "Animated on your turn" card will return to is held the same way.
    */
   reserved: { units: boolean[]; backrow: boolean[] };
   fatigueCount: number;

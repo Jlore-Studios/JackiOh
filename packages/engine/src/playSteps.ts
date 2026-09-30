@@ -24,6 +24,7 @@
 
 import type { ActionBody, PlayerId, Selection } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
+import { animateOnEntry } from "./animated";
 import { defOf } from "./catalog";
 import { QUICKSTRIKER_COMBO_MULTIPLE } from "./config";
 import { dealDamage } from "./damage";
@@ -656,6 +657,8 @@ function fieldCardIds(state: GameState): string[] {
       if (top !== undefined) out.push(top.id);
     }
     for (const card of side.backrow) if (card !== null && card !== undefined) out.push(card.id);
+    // R446: a Unit a carrier holds acts on the field too.
+    for (const card of side.carried ?? []) if (card !== null) out.push(card.id);
   }
   return out;
 }
@@ -753,6 +756,9 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   run.radiant = card.radiant;
 
   playedEvents(sink, run, card, formerId);
+  // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
+  // turn, animates as it enters the field.
+  animateOnEntry(sink, card);
   // §6.2 Echo, R30: the Spell GAINS its Echo as it is played — "the next Spell you play gains Echo
   // +1" — so the grant is taken here, from the player who played it, and not at step 6 after the
   // Spell's own text has run. Taken later, a Spell that moves Twinspell to the other side (#87's

@@ -195,6 +195,13 @@ export type StaticFlags = {
   heroArmor?: boolean | number;
   // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
+  /**
+   * B5 E21, R446: "A Unit may be played on top of this" (Classic+ #33 Ivory Tower). While this backrow
+   * card acts in its zone, a Unit its controller plays may name that zone and stand on it: a Unit for
+   * every rule that can neither attack nor be attacked, with this card still acting beneath it
+   * (`zones.carrierZonesFor`, `zones.isCarried`).
+   */
+  carrier?: boolean;
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----

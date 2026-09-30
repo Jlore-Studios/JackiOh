@@ -274,8 +274,20 @@ export type GameEvent =
   | { type: "unlocked"; player: PlayerId; row: Row; lane: number }
   /** B3.2, R384: a card's Activate ability was used. `ability` names it (`"activate"` when it has one). */
   | { type: "activated"; player: PlayerId; instanceId: string; defId: string; ability: string }
-  /** B3.1, R383: a backrow card stepped into a unit zone as a Unit. */
-  | { type: "animated"; player: PlayerId; instanceId: string; defId: string; backrowLane: number; unitLane: number }
+  /**
+   * B3.1, R383: a backrow card stepped into a unit zone as a Unit. `carried` (R446): it was a Unit a
+   * carrier held (Classic+ #33 Ivory Tower), stepping down because its zone no longer carries it — the
+   * same move, from a backrow zone to a unit zone without leaving the field.
+   */
+  | {
+      type: "animated";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      backrowLane: number;
+      unitLane: number;
+      carried?: true;
+    }
   /** B3.1, R383: an "Animated on your turn" card went back to its backrow zone. */
   | { type: "deanimated"; player: PlayerId; instanceId: string; defId: string; unitLane: number; backrowLane: number }
   /** B3.3, R385: a Brittle count reached 0 and the card was destroyed (on the field) or went to its graveyard. */

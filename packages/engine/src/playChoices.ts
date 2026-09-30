@@ -39,24 +39,25 @@ import type {
   TargetFilter,
   ZoneChoice,
 } from "@jackioh/shared";
-import { hasKeyword, opponentOf } from "@jackioh/shared";
+import { opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
-import { faceOf } from "./layers";
+import { unitHas } from "./layers";
 import { effectiveCost, isXCost } from "./mana";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import {
+  acceptsStackCard,
   activeUnitsOf,
   cardAt,
+  carrierZonesFor,
   firstFreeZone,
-  isLocked,
   isOpen,
-  isReserved,
   openZones,
   rowSize,
   slotsOf,
+  whyCannotCarry,
   type ZoneSlot,
 } from "./zones";
 
@@ -190,31 +191,31 @@ export function needsZone(state: GameState, card: CardInstance): boolean {
 }
 
 /**
- * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's printed face,
- * because at play time the card is still in hand: `unitView` is the *field* reading — it adds
- * `grantedKeywords` and layer-5 auras, and no effect reaches a card in a hand with either — while
- * `faceOf` is the radiant-aware printed text, which is what a card in hand has (§5.2, §10.4 layer
- * 1). Only the unit row holds a pile (§3.2's zone table), so a backrow card never stacks.
+ * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's keywords as they stand
+ * where it is (§10.4, `layers.unitHas`): its face's, the ones granted to it in hand (B5 E38) and the
+ * ones an aura gives the cards in a hand (Classic+ #33 Ivory Tower's "Your cards have Stack"). A backrow
+ * card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
  */
 export function playsOnStack(state: GameState, card: CardInstance): boolean {
-  if (!needsZone(state, card) || rowForCard(state, card) !== "units") return false;
-  return hasKeyword(faceOf(state, card).keywords, "Stack");
+  if (!needsZone(state, card)) return false;
+  return unitHas(state, card, "Stack");
 }
 
 /**
  * §3.2: the zone a Stack card may enter. Occupancy is exactly the refusal Stack lifts, so what is
- * left is the two that occupancy never covered: a Locked zone "accepts no summons until the game
- * ends" and a zone reserved for a dying Reborn unit "counts as occupied for every other card that
- * would enter it" (R64). Neither takes a Stack card either.
+ * left is what occupancy never covered: a Locked zone "accepts no summons until the game ends", a
+ * zone reserved for a dying Reborn unit "counts as occupied for every other card that would enter it"
+ * (R64) — and a backrow zone carrying a Unit takes nothing more (R446). `zones.acceptsStackCard`.
  */
 function acceptsStack(state: GameState, ref: ZoneSlot): boolean {
-  return ref.row === "units" && !isLocked(state, ref) && !isReserved(state, ref);
+  return acceptsStackCard(state, ref);
 }
 
 /**
  * §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
- * the occupied unit zones for a Stack card (§6.2). `refuseZone` below reads the same two rules off
- * the same pair of predicates, so the client's greyed-out button and `reduce`'s refusal agree.
+ * the occupied zones of that row for a Stack card (§6.2, B5 E21), plus, for a Unit, the backrow zones
+ * of a carrier that holds none yet (R446, `zones.carrierZonesFor`). `refuseZone` below reads the same
+ * rules off the same predicates, so the client's greyed-out button and `reduce`'s refusal agree.
  */
 export function legalZonesFor(state: GameState, player: PlayerId, card: CardInstance): ZoneChoice[] {
   if (!needsZone(state, card)) return [];
@@ -222,7 +223,8 @@ export function legalZonesFor(state: GameState, player: PlayerId, card: CardInst
   const refs = playsOnStack(state, card)
     ? slotsOf(player, row).filter((ref) => acceptsStack(state, ref))
     : openZones(state, player, row);
-  return refs.map((ref) => ({ row: ref.row, lane: ref.lane }));
+  const carriers = row === "units" ? carrierZonesFor(state, player) : [];
+  return [...refs, ...carriers].map((ref) => ({ row: ref.row, lane: ref.lane }));
 }
 
 /**
@@ -854,6 +856,13 @@ function refuseZone(state: GameState, player: PlayerId, card: CardInstance, zone
   if (!needs) return `${name} takes no zone`;
 
   const row = rowForCard(state, card);
+  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower).
+  if (row === "units" && zone.row === "backrow") {
+    if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(zone.row)) {
+      return `there is no ${zone.row} zone ${zone.lane}`;
+    }
+    return whyCannotCarry(state, { player, row: zone.row, lane: zone.lane });
+  }
   if (zone.row !== row) return `${name} goes in the ${row} row`;
   // §3.2: a zone is one of the row's lanes, numbered 1 up — never a place between two of them.
   if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(row)) {
