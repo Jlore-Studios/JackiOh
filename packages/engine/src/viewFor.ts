@@ -80,6 +80,7 @@ import { gradeName } from "./subsystems/comboIndex";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { ownLibraryView } from "./ownLibrary";
+import { plagueOn } from "./plague";
 import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
 import { standingDrawOffer } from "./turn";
@@ -301,7 +302,11 @@ function canAct(state: GameState, card: CardInstance): boolean {
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
+  // B5 E19, R471: Plague Tokens are public wherever they sit, a face-down card's included.
+  const plague = plagueOn(card);
+  if (!backrowIsPublic(state, card, viewer)) {
+    return { faceDown: true, cost: effectiveCost(state, card), ...(plague === 0 ? {} : { plague }) };
+  }
   const grade = card.counters.grade;
   return {
     ...withPreview(
@@ -311,7 +316,10 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
     faceDown: false,
     type: defOf(state, card.defId).type,
     // R372: the engine names the grade's letter, so no client works out which letter 3 is.
-    counters: grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) },
+    counters: {
+      ...(grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) }),
+      ...(plague === 0 ? {} : { plague }),
+    },
     owner: card.owner,
     controller: card.controller,
     // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
