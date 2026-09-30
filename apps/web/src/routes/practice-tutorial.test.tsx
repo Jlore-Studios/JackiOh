@@ -193,14 +193,17 @@ afterEach(() => {
 });
 
 describe("the lesson path on /practice", () => {
-  it("sits at the very top of the lobby: under Back, above the practice header and its setup", async () => {
+  it("sits at the very top of the lobby: under Back and the page's H1, above the practice header and its setup", async () => {
     renderRoute(routeHost());
     await settle();
     const back = screen.getByTestId("nav-back");
+    const title = screen.getByRole("heading", { level: 1, name: "Practice" });
     const path = screen.getByTestId(tutorialTestid.path);
-    const header = screen.getByRole("heading", { level: 1, name: "Practice against the AI" });
+    const header = screen.getByRole("heading", { level: 2, name: "Practice against the AI" });
     const setup = screen.getByTestId(practiceTestid.setup);
     expect(before(back, path)).toBe(true);
+    expect(screen.getAllByRole("heading", { level: 1 })).toEqual([title]);
+    expect(before(title, path)).toBe(true);
     expect(before(path, header)).toBe(true);
     expect(before(path, setup)).toBe(true);
   });

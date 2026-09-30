@@ -751,7 +751,7 @@ function PromptModal(props: {
       >
         <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} />
         <p className="prompt-count">
-          Choose {range} — {selected.length} chosen
+          Choose {range}: {selected.length} chosen
         </p>
         {props.status}
         {body()}

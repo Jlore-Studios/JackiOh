@@ -208,7 +208,6 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
     >
       <div className="tutorial-path__head">
         <div className="tutorial-path__heading">
-          <p className="tutorial-path__eyebrow">{allDone ? "Tutorial complete" : "New to JackiOh?"}</p>
           <h2 className="tutorial-path__title" id={headingId}>
             Learn to play
           </h2>

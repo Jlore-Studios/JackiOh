@@ -320,7 +320,7 @@ function randomId(): string {
 // ---------------------------------------------------------------------------------------------
 
 /** What the status line says while a failed save waits to go again. */
-export const OFFLINE_MESSAGE = "Offline — your changes are kept on this device.";
+export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
 
 /** R341: why an import made nothing, when the server could not be asked. */
 export const IMPORT_OFFLINE_MESSAGE = "You’re offline, so nothing was imported. Try again once you’re back online.";

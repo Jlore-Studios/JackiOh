@@ -66,15 +66,6 @@
   min-width: 0;
 }
 
-.app-shell .tutorial-path__eyebrow {
-  margin: 0;
-  color: var(--coach);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .app-shell .tutorial-path__title {
   color: var(--text);
   font-size: 21px;
@@ -129,16 +120,9 @@
   white-space: nowrap;
 }
 
-.app-shell .tutorial-path__continue {
-  border-color: color-mix(in srgb, var(--coach) 70%, white);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
-  color: var(--coach-ink);
-}
-
-.app-shell .tutorial-path__continue:hover:not(:disabled) {
-  border-color: white;
-  background: linear-gradient(180deg, white, color-mix(in srgb, var(--coach) 85%, white));
-}
+/* The path sits in the practice lobby, a tavern screen (auth/tavern.css), whose Start game is the
+   screen's one gold "go". So Continue and every lesson's Start or Replay are the tavern's wood
+   secondary button, which tavern.css draws; the coach's lavender stays on the board. */
 
 /* Four stops along a path: each lesson's node sits on its card's top edge, and a line runs from
    node to node behind the cards, showing through the gaps between them. */
@@ -271,8 +255,8 @@
 
 .app-shell .tutorial-lesson__summary {
   color: var(--text-dim);
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .tutorial-lesson__chips {
@@ -343,18 +327,6 @@
   color: var(--text);
 }
 
-.app-shell .tutorial-lesson__button--next {
-  border-color: color-mix(in srgb, var(--coach) 70%, white);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
-  color: var(--coach-ink);
-  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--coach) 90%, transparent);
-}
-
-.app-shell .tutorial-lesson__button--next:hover:not(:disabled) {
-  border-color: white;
-  background: linear-gradient(180deg, white, color-mix(in srgb, var(--coach) 85%, white));
-}
-
 .app-shell .tutorial-lesson__button--completed {
   background: transparent;
   color: var(--text-dim);
@@ -367,6 +339,11 @@
   background: transparent;
   color: var(--text-dim);
   transform: none;
+}
+
+/* A locked lesson teaches nothing yet, so its chips wait until it opens. */
+.tutorial-lesson[data-status="locked"] .tutorial-lesson__chips {
+  display: none;
 }
 
 /* ---- the lesson's HUD ---------------------------------------------------------------------- */
@@ -1073,6 +1050,41 @@
   .tutorial-lesson__status {
     flex: none;
     text-align: right;
+  }
+}
+
+/* A phone: a locked lesson is one line, its title and its lock, so the practice setup is not
+   three screens down. Its number and why it is locked stay for a screen reader (the button's
+   label and description). */
+@media (max-width: 560px) {
+  .tutorial-lesson[data-status="locked"] .tutorial-lesson__card {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tutorial-lesson[data-status="locked"] :is(.tutorial-lesson__kicker, .tutorial-lesson__summary) {
+    display: none;
+  }
+
+  .tutorial-lesson[data-status="locked"] .tutorial-lesson__title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .tutorial-lesson[data-status="locked"] .tutorial-lesson__foot {
+    flex: none;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .tutorial-lesson[data-status="locked"] .tutorial-lesson__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

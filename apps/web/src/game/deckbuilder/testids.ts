@@ -95,7 +95,7 @@ export const DECK_CURVE = "deck-curve";
 /** On a phone, the toggle that folds the curve and the tiles away (`aria-expanded`). */
 export const DECK_FOLD = "deck-fold";
 
-/** The polite line naming the last add, removal or refusal, and "Deck complete — saved". */
+/** The polite line naming the last add, removal or refusal, and "Deck complete and saved". */
 export const DECK_STATUS = "deck-status";
 
 /** The server's refusal of this deck's last save, verbatim (R256). */

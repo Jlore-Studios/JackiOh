@@ -281,7 +281,7 @@ describe("a deck", () => {
     expect(within(verdict).getByTestId(loadoutErrorId("L2"))).toHaveAttribute("data-rule", "L2");
   });
 
-  it("R256 the twentieth card saves at once and says 'Deck complete — saved' once the server has it", async () => {
+  it("R256 the twentieth card saves at once and says 'Deck complete and saved' once the server has it", async () => {
     const { server } = mount({ decks: [savedDeck("a", "Aggro", ONE.slice(0, DECK_SIZE - 1), 1)], initialOpen: { kind: "deck", id: "a" } });
     const last = ONE[DECK_SIZE - 1] ?? "";
     await act(async () => {

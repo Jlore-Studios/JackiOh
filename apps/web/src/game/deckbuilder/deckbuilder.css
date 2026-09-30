@@ -23,14 +23,28 @@
   gap: 12px;
 }
 
-/* The screen's backdrop: two faint pools of light over the app's navy, warm from the upper left
-   and cool from the upper right, so the page has depth behind the cards rather than a flat fill. */
+/* The page is a tavern screen (auth/tavern.css: its light, its table, Back and the gear). The
+   builder keeps the wide shell's own frame, which its one-screen budget below is measured
+   against: tavern.css's padding and its 1120 px reading column are for a form, not a pool. */
 .deckbuilder.app-shell {
   min-height: 100vh;
   min-height: 100dvh;
-  background:
-    radial-gradient(70% 420px at 18% -80px, rgb(255 196 92 / 0.08), transparent 70%),
-    radial-gradient(55% 380px at 100% -60px, rgb(110 140 255 / 0.07), transparent 70%);
+}
+
+.tavern.deckbuilder.app-shell {
+  padding: 12px;
+  gap: 10px;
+}
+
+.tavern.deckbuilder.app-shell > * {
+  max-width: none;
+}
+
+/* The tavern's table, held inside the page's width: its planks run 20% past each side on the
+   other tavern screens, which here widened the builder's own scroll width past the screen's. */
+.tavern.deckbuilder.app-shell::before {
+  left: 0;
+  right: 0;
 }
 
 /* --- the title bar ------------------------------------------------------------------------------ */
@@ -59,63 +73,17 @@
   margin: 0;
 }
 
-.deckbuilder.app-shell .db-header .link-button {
-  padding: 5px 12px 5px 10px;
-  border: 1px solid var(--line-bright);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.03);
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.deckbuilder.app-shell .db-header .link-button:hover {
-  border-color: var(--text-dim);
-  background: rgb(255 255 255 / 0.07);
-  color: var(--text);
-}
-
+/* Back is the tavern's brass pill (tavern.css). The title is set as the tavern's screen titles are
+   (the auth board's h2): solid pale gold in the serif, over a plain shadow. */
 .deckbuilder.app-shell .db-title {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
   margin: 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font-family: var(--tavern-serif);
+  font-size: 21px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
   letter-spacing: 0;
-}
-
-.db-title-brand {
-  color: #c9a24a;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-
-/* The dash stays in the text (the heading reads "JackiOh — decks" everywhere) as a small diamond. */
-.db-title-sep {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  overflow: hidden;
-  align-self: center;
-  rotate: 45deg;
-  background: linear-gradient(135deg, #fff1b8, #d9a531);
-  color: transparent;
-  font-size: 0;
-}
-
-.db-title-page {
-  background: linear-gradient(180deg, #fff6d2 0%, #f4cf6a 48%, #b9801f 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-size: 28px;
-  text-transform: capitalize;
-  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.7)) drop-shadow(0 0 10px rgb(240 190 70 / 0.18));
+  color: var(--tavern-gold-pale);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* --- rarity colour, per element that carries data-rarity --------------------------------------- */
@@ -171,7 +139,7 @@
   padding: 10px;
   border: 1px solid var(--line-bright);
   border-radius: calc(var(--radius) + 3px);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 85%, #2a2f44), var(--bg-sunken));
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
@@ -388,7 +356,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
-    radial-gradient(90% 260px at 50% 0, rgb(120 140 210 / 0.1), transparent 75%),
+    radial-gradient(90% 260px at 50% 0, rgb(201 149 63 / 0.1), transparent 75%),
     var(--bg-sunken);
   box-shadow: inset 0 2px 10px rgb(0 0 0 / 0.45);
   min-width: 0;
@@ -807,9 +775,9 @@
   height: 34px;
   padding: 0 10px 0 3px;
   overflow: hidden;
-  border: 1px solid #2f3547;
+  border: 1px solid var(--line);
   border-radius: 6px;
-  background: linear-gradient(180deg, #1b1f2d, #10131c);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
   font-weight: 400;
   text-align: left;
@@ -840,7 +808,7 @@
 
 .deckbuilder.app-shell .db-tile:hover {
   border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
-  background: linear-gradient(180deg, #252a3b, #151925);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 80%, var(--line-bright)), var(--bg-raised));
 }
 
 /* Drawn inside the tile: the list scrolls, and an outline outside the tile was clipped by it to a

@@ -251,7 +251,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnEnded":
       return `${name.seat(event.player)} ended turn ${event.turn} with ${event.unspentMana} mana unspent`;
     case "turnAutoEnded":
-      return `${name.seat(event.player)} had no moves left — turn ${event.turn} ended`;
+      return `${name.seat(event.player)} had no moves left, so turn ${event.turn} ended`;
     case "promptOpened":
       return `${name.seat(event.player)} must choose (${event.kind})`;
     case "promptAnswered":

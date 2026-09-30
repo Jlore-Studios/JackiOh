@@ -3,9 +3,11 @@
    is Game.tsx, unchanged, laid out and drawn by board.css and the card faces exactly as in hotseat
    and online play; this file only gives it the screen's height (see "the game screen").
 
-   Every colour is a token from index.css. A tier's colour is `--tier` (Easy green, Medium gold,
-   Hard red), set wherever a tier is drawn, so a crest, a card and the HUD agree. Motion is scaled
-   by `--anim-scale`, which index.css sets to 0 under prefers-reduced-motion. */
+   Every colour is a token from index.css, except in the lobby, which is in the tavern
+   (auth/tavern.css, `.tavern` on the lobby's root) and takes its `--tavern-*` colours. A tier's
+   colour is `--tier` (Easy green, Medium gold, Hard red), set wherever a tier is drawn, so a crest,
+   a card and the HUD agree. Motion is scaled by `--anim-scale`, which index.css sets to 0 under
+   prefers-reduced-motion. */
 
 .practice-tier[data-tier="easy"],
 .practice-crest[data-tier="easy"],
@@ -70,23 +72,10 @@
 
 /* ---- the lobby: setup, loading, failure --------------------------------------------------- */
 
-.practice--lobby {
-  position: relative;
-  isolation: isolate;
-}
-
-/* A warm light over the table, behind everything on the screen. */
-.practice--lobby::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(70% 50% at 50% -8%, color-mix(in srgb, var(--radiant) 11%, transparent), transparent 72%),
-    radial-gradient(45% 45% at 90% 105%, color-mix(in srgb, var(--you) 9%, transparent), transparent 70%),
-    radial-gradient(40% 40% at 5% 100%, color-mix(in srgb, var(--opponent) 7%, transparent), transparent 70%);
-}
+/* The lobby is a tavern screen (`app-shell tavern`, routes/practice.tsx): the page, its light, the
+   table, Back, the gear, the notices and the buttons are tavern.css's. The rules below draw only
+   what is practice's own, in the tavern's colours; a hairline is its brass at 30%, a stronger edge
+   at 55%, as tavern.css draws them. */
 
 .practice-lobby__header {
   display: flex;
@@ -96,30 +85,34 @@
   text-align: center;
 }
 
-.app-shell .practice-lobby__eyebrow {
-  margin: 0;
-  color: color-mix(in srgb, var(--selected) 80%, var(--text));
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
+/* Set as the tavern's screen titles are (tavern.css, the auth board's h2): solid pale gold in the
+   serif, over a plain shadow. Gold leaf is the wordmark's alone. */
 .app-shell .practice-lobby__title {
+  font-family: var(--tavern-serif);
   font-size: clamp(28px, 5vw, 40px);
-  font-weight: 750;
-  background: linear-gradient(180deg, var(--text) 40%, color-mix(in srgb, var(--radiant) 70%, var(--text)));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--radiant) 18%, transparent));
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--tavern-gold-pale);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 .app-shell .practice-intro {
   max-width: 56ch;
   margin: 0 auto;
-  color: var(--text-dim);
+  color: var(--tavern-text-dim);
+  font-size: 16px;
   text-align: center;
+}
+
+/* "Choose your opponent" and "Your deck": the setup's two headings, in the same serif. */
+.app-shell .practice-setup__heading {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--tavern-gold-pale);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* ---- setup -------------------------------------------------------------------------------- */
@@ -141,12 +134,7 @@
   width: 100%;
   margin: 0 0 12px;
   padding: 0;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
   text-align: center;
-  text-transform: uppercase;
 }
 
 .practice-tiers {
@@ -157,14 +145,18 @@
 
 .practice-tier {
   --tier: var(--legal);
-  --tier-face: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 50%, var(--bg-sunken)));
+  --tier-face: linear-gradient(
+    180deg,
+    var(--tavern-wood-deep),
+    color-mix(in srgb, var(--tavern-wood-deep) 50%, var(--tavern-well))
+  );
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   padding: 22px 18px 18px;
-  border: 1px solid color-mix(in srgb, var(--tier) 22%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--tier) 22%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
   border-radius: 14px;
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--tier) 10%, transparent), transparent 70%),
@@ -182,7 +174,7 @@
 
 .practice-tier:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--tier) 55%, var(--line));
+  border-color: color-mix(in srgb, var(--tier) 55%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
 }
 
 .practice-tier[data-selected="true"] {
@@ -206,9 +198,9 @@
   width: 22px;
   height: 22px;
   margin: 0;
-  border: 2px solid color-mix(in srgb, var(--tier) 45%, var(--line-bright));
+  border: 2px solid color-mix(in srgb, var(--tier) 45%, color-mix(in srgb, var(--tavern-brass) 55%, transparent));
   border-radius: 50%;
-  background: var(--bg-sunken);
+  background: var(--tavern-well);
   appearance: none;
   cursor: pointer;
 }
@@ -248,14 +240,14 @@
 }
 
 .practice-tier__name {
-  color: var(--text);
+  color: var(--tavern-parchment);
   font-size: 20px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .practice-tier__tagline {
-  color: var(--text-dim);
+  color: var(--tavern-text-dim);
   font-size: 13px;
 }
 
@@ -266,7 +258,7 @@
   width: 100%;
   margin-top: 2px;
   padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--tier) 20%, var(--line));
+  border-top: 1px solid color-mix(in srgb, var(--tier) 20%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
 }
 
 .practice-tier__stat {
@@ -278,11 +270,11 @@
 }
 
 .practice-tier__stat-label {
-  color: var(--text-dim);
+  color: var(--tavern-text-dim);
 }
 
 .practice-tier__stat-value {
-  color: var(--text);
+  color: var(--tavern-parchment);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -290,7 +282,7 @@
 
 /* A line where the AI gets more than you: the tier's colour and a rising marker. */
 .practice-tier__stat[data-ahead="true"] .practice-tier__stat-value {
-  color: color-mix(in srgb, var(--tier) 72%, var(--text));
+  color: color-mix(in srgb, var(--tier) 72%, var(--tavern-parchment));
 }
 
 .practice-tier__stat[data-ahead="true"] .practice-tier__stat-value::before {
@@ -307,9 +299,9 @@
   justify-content: space-between;
   gap: 16px 20px;
   padding: 16px 18px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-raised) 72%, transparent);
+  background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
 }
 
 .practice-setup__deck {
@@ -322,11 +314,7 @@
 }
 
 .practice-setup__deck-label {
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  cursor: pointer;
 }
 
 .practice-select {
@@ -341,8 +329,8 @@
   right: 16px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid var(--text-dim);
-  border-bottom: 2px solid var(--text-dim);
+  border-right: 2px solid var(--tavern-text-dim);
+  border-bottom: 2px solid var(--tavern-text-dim);
   transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
 }
@@ -351,10 +339,14 @@
   width: 100%;
   min-height: 48px;
   padding: 10px 42px 10px 14px;
-  border: 1px solid var(--line-bright);
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 55%, transparent);
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--bg-sunken), color-mix(in srgb, var(--bg-sunken) 70%, var(--bg-raised)));
-  color: var(--text);
+  background: linear-gradient(
+    180deg,
+    var(--tavern-well),
+    color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep))
+  );
+  color: var(--tavern-parchment);
   font: inherit;
   font-weight: 550;
   appearance: none;
@@ -362,12 +354,12 @@
 }
 
 .practice-select select:hover {
-  border-color: var(--text-dim);
+  border-color: color-mix(in srgb, var(--tavern-gold) 70%, transparent);
 }
 
 .app-shell .practice-setup__hint {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ---- the chosen deck: name, identity, curve and cards ------------------------------------- */
@@ -382,15 +374,15 @@
   gap: 4px 16px;
   margin-top: 6px;
   padding: 12px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
   border-radius: 12px;
-  background: var(--bg-sunken);
+  background: var(--tavern-well);
 }
 
 .app-shell .deck-preview__title {
   grid-area: title;
   margin: 0;
-  color: var(--text);
+  color: var(--tavern-parchment);
   font-size: 16px;
   font-weight: 750;
 }
@@ -398,16 +390,16 @@
 .app-shell .deck-preview__identity {
   grid-area: identity;
   margin: 0;
-  color: var(--text-dim);
-  font-size: 13px;
+  color: var(--tavern-text-dim);
+  font-size: 14px;
   line-height: 1.35;
 }
 
 .app-shell .deck-preview__status {
   grid-area: cards;
   margin: 4px 0 0;
-  color: var(--text-dim);
-  font-size: 12px;
+  color: var(--tavern-text-dim);
+  font-size: 14px;
 }
 
 /* A Hearthstone-style curve: one column per cost, the count above, the cost below. */
@@ -426,7 +418,7 @@
   justify-items: center;
   width: 16px;
   height: 100%;
-  color: var(--text-dim);
+  color: var(--tavern-text-dim);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
@@ -440,11 +432,11 @@
 }
 
 .deck-preview__bar[data-count="0"] .deck-preview__bar-fill {
-  background: var(--line);
+  background: color-mix(in srgb, var(--tavern-brass) 30%, transparent);
 }
 
 .deck-preview__bar-cost {
-  color: var(--text);
+  color: var(--tavern-parchment);
   font-weight: 700;
 }
 
@@ -472,7 +464,7 @@
   min-width: 0;
   padding: 2px 0;
   break-inside: avoid;
-  color: var(--text);
+  color: var(--tavern-parchment);
   font-size: 13px;
 }
 
@@ -496,75 +488,37 @@
   white-space: nowrap;
 }
 
-/* ---- the call to action: gold, like the table's Play button ------------------------------- */
+/* ---- the call to action: the tavern's gold, as the landing's Play vs AI ------------------- */
 
+/* One recipe for every "go" (index.css's primary tokens hold the tavern's gold). In the lobby the
+   button is also `.button-primary`, so tavern.css draws it exactly as every tavern screen's call to
+   action: the serif, mixed case, pressed down on click. The dialogs over the board (the result,
+   "Leave this game?") sit outside the tavern and draw it from the tokens alone. */
 .practice .practice-play {
-  --play-face: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--radiant) 55%, white) 0%,
-    var(--radiant) 46%,
-    color-mix(in srgb, var(--selected) 72%, black) 100%
-  );
   position: relative;
-  overflow: hidden;
   min-width: 220px;
   min-height: 56px;
   padding: 12px 36px;
-  border: 1px solid color-mix(in srgb, var(--radiant) 60%, white);
+  border: 1px solid var(--primary-edge);
   border-radius: 12px;
-  background: var(--play-face);
-  color: color-mix(in srgb, var(--selected) 16%, black);
+  background: var(--primary-face);
+  color: var(--primary-ink);
   font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 700;
   text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 55%),
-    inset 0 -3px 0 rgb(0 0 0 / 22%),
-    0 0 0 3px color-mix(in srgb, var(--selected) 18%, transparent),
-    0 12px 30px -10px color-mix(in srgb, var(--selected) 75%, transparent);
+  box-shadow: var(--primary-shadow);
   transition:
     transform calc(120ms * var(--anim-scale, 1)),
     filter calc(120ms * var(--anim-scale, 1));
 }
 
 .practice .practice-play:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--radiant) 40%, white);
-  background: var(--play-face);
-  filter: brightness(1.07) saturate(1.05);
-  transform: translateY(-1px);
+  border-color: var(--primary-edge);
+  background: var(--primary-face-hover);
 }
 
 .practice .practice-play:active:not(:disabled) {
-  filter: brightness(0.97);
   transform: translateY(1px);
-}
-
-/* A slow glint across the face. */
-.practice .practice-play::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 45%) 50%, transparent 65%);
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .practice .practice-play::after {
-    animation: practice-glint 3.6s ease-in-out 1s infinite;
-  }
-}
-
-@keyframes practice-glint {
-  0%,
-  70% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(120%);
-  }
 }
 
 /* ---- loading and failure ------------------------------------------------------------------ */
@@ -1307,14 +1261,15 @@
     flex: none;
     max-width: none;
     padding: 14px;
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
     border-radius: 14px;
-    background: color-mix(in srgb, var(--bg-raised) 72%, transparent);
+    background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
   /* The last shadow is a halo in the page's own colour: invisible where Start rests, and a clean
-     edge over whatever scrolls beneath it. */
-  .practice-setup .practice-play {
+     edge over whatever scrolls beneath it. The rest are tavern.css's primary shadows, which this
+     rule outranks. */
+  .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 5;
@@ -1322,11 +1277,20 @@
     width: min(100%, 440px);
     min-width: 0;
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 55%),
-      inset 0 -3px 0 rgb(0 0 0 / 22%),
-      0 0 0 3px color-mix(in srgb, var(--selected) 18%, transparent),
-      0 12px 30px -10px color-mix(in srgb, var(--selected) 75%, transparent),
-      0 0 0 14px var(--bg);
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+      0 4px 0 #4a2a0e,
+      0 10px 20px rgba(0, 0, 0, 0.5),
+      0 0 0 14px var(--tavern-night);
+  }
+
+  .tavern.practice--lobby .practice-setup button.practice-play:hover:not(:disabled) {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+      0 4px 0 #4a2a0e,
+      0 10px 20px rgba(0, 0, 0, 0.5),
+      0 0 0 14px var(--tavern-night);
   }
 
   .app-shell.practice--lobby {
@@ -1392,22 +1356,31 @@
     flex: none;
     max-width: none;
     padding: 14px 18px;
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
     border-radius: 14px;
-    background: color-mix(in srgb, var(--bg-raised) 72%, transparent);
+    background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
-  .practice-setup .practice-play {
+  .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(14px, env(safe-area-inset-bottom));
     z-index: 5;
     align-self: center;
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 55%),
-      inset 0 -3px 0 rgb(0 0 0 / 22%),
-      0 0 0 3px color-mix(in srgb, var(--selected) 18%, transparent),
-      0 12px 30px -10px color-mix(in srgb, var(--selected) 75%, transparent),
-      0 0 0 14px var(--bg);
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+      0 4px 0 #4a2a0e,
+      0 10px 20px rgba(0, 0, 0, 0.5),
+      0 0 0 14px var(--tavern-night);
+  }
+
+  .tavern.practice--lobby .practice-setup button.practice-play:hover:not(:disabled) {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+      0 4px 0 #4a2a0e,
+      0 10px 20px rgba(0, 0, 0, 0.5),
+      0 0 0 14px var(--tavern-night);
   }
 }
 
@@ -1423,7 +1396,6 @@
     margin-top: -34px;
   }
 
-  .app-shell .practice-lobby__eyebrow,
   .app-shell .practice-intro {
     display: none;
   }
@@ -1503,7 +1475,7 @@
     min-height: 44px;
   }
 
-  .practice .practice-play {
+  .tavern.app-shell.practice--lobby button.practice-play {
     min-height: 48px;
   }
 }

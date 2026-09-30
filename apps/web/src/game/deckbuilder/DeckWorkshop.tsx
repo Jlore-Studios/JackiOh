@@ -12,8 +12,12 @@
 // THE DATA. This component owns the store (sync.ts) and nothing else of note: the route hands it
 // the server's copy, the catalog, the collection and the four writes, and the store merges its
 // local mirror over them, saves as the player works and keeps what the server has not confirmed
-// on the device (R256). There is no Save button: "Saved", "Saving…", "Offline — kept on this
-// device" and "Couldn't save" say where things stand.
+// on the device (R256). There is no Save button: "Saved", "Saving…", "Offline. Kept on this
+// device." and "Couldn't save" say where things stand.
+//
+// THE LOOK. The root is a tavern screen (`.tavern`, auth/tavern.css) like the landing, `/play` and
+// `/practice`: its page, Back, the gear and the notices are the tavern's. The builder's own
+// controls keep deckbuilder.css's and workshop.css's drawing, sized to the page's pixel budget.
 //
 // NO RULE LIVES HERE (CLAUDE.md rule 7). The caps are the server's; the builder reads them from
 // `GET /api/decks`'s `limits` and turns New deck, New trio and Import off at them, with the reason,
@@ -25,6 +29,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactEle
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
 import type { DecksResponse } from "../../net/api.ts";
@@ -115,7 +120,7 @@ export function syncWords(status: SyncStatus): string {
     case "saving":
       return "Saving…";
     case "offline":
-      return "Offline — kept on this device";
+      return "Offline. Kept on this device.";
     case "error":
       return status.message === null ? "Couldn’t save" : `Couldn’t save: ${status.message}`;
   }
@@ -549,15 +554,10 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   }
 
   return (
-    <div className="app-shell app-shell--wide deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
+    <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
       <header className="db-header">
         <BackLink />
-        {/* The same words as the loading and error screens (routes/decks.tsx). */}
-        <h1 className="db-title">
-          <span className="db-title-brand">JackiOh</span>
-          <span className="db-title-sep"> — </span>
-          <span className="db-title-page">decks</span>
-        </h1>
+        <h1 className="db-title">Decks</h1>
         <SyncStatusLine status={snapshot.status} />
       </header>
 

@@ -72,6 +72,7 @@ import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../pra
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import { DIFFICULTY_LABEL, TierCrest } from "../practice/Tier.tsx";
+import "../auth/tavern.css";
 import "../practice/practice.css";
 import { useTutorialAccountSync, type TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { Coach } from "../tutorial/Coach.tsx";
@@ -448,11 +449,12 @@ function defaultHostFactory(): PracticeHost {
 }
 
 /**
- * The setup, loading and failure screens are a centred reading column (`app-shell`); the game is
- * the full-width board (`app-shell--wide`), like `/dev/hotseat` and `/match/<id>`.
+ * The setup, loading and failure screens are a centred reading column in the tavern
+ * (`app-shell tavern`, auth/tavern.css), like the landing and `/play` the player came from; the game
+ * is the full-width board (`app-shell--wide`), like `/dev/hotseat` and `/match/<id>`.
  */
 function Shell({ variant, children }: { variant: "lobby" | "game"; children: ReactNode }): ReactElement {
-  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell";
+  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern";
   return <div className={`${shell} practice practice--${variant}`}>{children}</div>;
 }
 
@@ -693,10 +695,12 @@ function PracticeScreen({
     return (
       <Shell variant="lobby">
         <BackLink to={paths.landing} />
+        {/* The page's one H1, first in the outline and read, not drawn: Back and the path say where
+            the player is. */}
+        <h1 className="tutorial-sr-only">Practice</h1>
         <TutorialPath onStart={onStartLesson} />
         <header className="practice-lobby__header" ref={practiceHeader}>
-          <p className="practice-lobby__eyebrow">Solo play · no account needed</p>
-          <h1 className="practice-lobby__title">Practice against the AI</h1>
+          <h2 className="practice-lobby__title">Practice against the AI</h2>
           <p className="practice-intro">
             A full game against a computer opponent, right here in your browser. It plays the same way at
             every difficulty; only its resources change.
@@ -721,7 +725,12 @@ function PracticeScreen({
           <p className="notice" data-testid={practiceTestid.error} role="alert">
             {state.failure ?? "Something went wrong while the game was running."}
           </p>
-          <button type="button" className="practice-play" data-testid={practiceTestid.newGame} onClick={onNewGame}>
+          <button
+            type="button"
+            className="practice-play button-primary"
+            data-testid={practiceTestid.newGame}
+            onClick={onNewGame}
+          >
             New game
           </button>
         </div>
@@ -773,6 +782,11 @@ function PracticeScreen({
 
   return (
     <Shell variant="game">
+      {/* The board has no heading of its own; this names the screen for a screen reader's heading
+          list, and draws nothing. */}
+      <h1 className="tutorial-sr-only">
+        {playing === undefined ? "Practice game" : `Lesson ${String(playing.number)}: ${playing.title}`}
+      </h1>
       {coached !== null ? (
         <TutorialHud
           lesson={coached.lesson}

@@ -16,7 +16,7 @@
 .workshop {
   --ws-amber: #e0a93b;
   --ws-clash: #ffb45c;
-  --ws-panel: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 85%, #2a2f44), var(--bg-sunken));
+  --ws-panel: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
 }
 
 /* --- the page's grid --------------------------------------------------------------------------- */
@@ -217,13 +217,13 @@
   padding: 7px 22px 7px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(180deg, #1b1f2d, #121521);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   text-align: left;
 }
 
 .deckbuilder.app-shell .ws-row[aria-current="true"] {
   border-color: color-mix(in srgb, var(--selected) 75%, var(--line-bright));
-  background: linear-gradient(180deg, #262a3a, #171a26);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 80%, var(--line-bright)), var(--bg-raised));
   box-shadow: inset 3px 0 0 var(--selected);
 }
 
@@ -589,8 +589,8 @@
 }
 
 .deckbuilder.app-shell .ws-ctile:hover {
-  border-color: #2f3547;
-  background: linear-gradient(180deg, #1b1f2d, #10131c);
+  border-color: var(--line);
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
 }
 
 .deckbuilder.app-shell .ws-ctile[data-conflict="true"],
@@ -830,19 +830,9 @@
   }
 }
 
-/* A phone: the title keeps its words for a screen reader but draws only "Decks", so the save
-   status fits on the row with Back and the gear instead of taking a row of its own. */
+/* A phone: the title is one short word, so the save status fits on the row with Back and the gear
+   instead of taking a row of its own. */
 @media (max-width: 560px) {
-  .workshop .db-title-brand,
-  .workshop .db-title-sep {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
   .workshop .db-header {
     column-gap: 10px;
   }

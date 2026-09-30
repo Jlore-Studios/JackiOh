@@ -135,7 +135,7 @@ describe("the lesson path", () => {
     render(<TutorialPath onStart={vi.fn()} />);
     const path = screen.getByTestId(tutorialTestid.path);
     expect(path).toHaveAttribute("data-complete", "true");
-    expect(path).toHaveTextContent("Tutorial complete");
+    expect(path).toHaveTextContent("Every lesson is done. Replay any of them whenever you like.");
     expect(path).toHaveTextContent("4 of 4 lessons complete");
     const toggle = screen.getByTestId(tutorialTestid.pathToggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");

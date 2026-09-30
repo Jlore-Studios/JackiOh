@@ -72,7 +72,7 @@ import {
 export const DECK_STATUS_MS = 2600;
 
 /** What the status line says once a deck reaches `DECK_SIZE` and the server has it (R256). */
-export const DECK_COMPLETE_SAVED = "Deck complete — saved";
+export const DECK_COMPLETE_SAVED = "Deck complete and saved";
 
 export type DeckEditorProps = {
   deck: DeckItem;

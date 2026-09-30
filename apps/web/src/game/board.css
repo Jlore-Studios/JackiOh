@@ -55,7 +55,7 @@
   padding: 8px;
   border-radius: 16px;
   background:
-    radial-gradient(120% 70% at 50% 45%, rgb(40 56 84 / 28%), transparent 70%),
+    radial-gradient(120% 70% at 50% 45%, rgb(90 52 27 / 28%), transparent 70%),
     var(--bg);
   color: var(--text);
 }
@@ -146,11 +146,11 @@
 }
 
 .hero-you {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--you) 30%, #121826), #0d1220);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--you) 30%, var(--bg-raised)), var(--bg-sunken));
 }
 
 .hero-opponent {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 30%, #1a1216), #140d10);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 30%, var(--bg-raised)), var(--bg-sunken));
 }
 
 /* The health gem sits first, the way a portrait's health does. */
@@ -492,7 +492,8 @@
 
 /* --------------------------------------------------------------------------------- field --- */
 
-/* The playmat: one framed surface for all four rows, with the line between the two sides. */
+/* The playmat: one framed surface for all four rows, with the line between the two sides. Wood
+   under a hearth's light, the tavern table the landing deals its cards onto. */
 .field {
   position: relative;
   display: grid;
@@ -503,11 +504,11 @@
   gap: var(--gap);
   min-width: 0;
   padding: 6px;
-  border: 1px solid #2a3448;
+  border: 1px solid var(--line);
   border-radius: 16px;
   background:
-    radial-gradient(110% 80% at 50% 50%, rgb(58 82 118 / 32%), transparent 72%),
-    linear-gradient(180deg, #161c2a, #10151f 50%, #161c2a);
+    radial-gradient(110% 80% at 50% 50%, rgb(138 90 51 / 32%), transparent 72%),
+    linear-gradient(180deg, var(--bg-raised), var(--bg) 50%, var(--bg-raised));
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 3%),
     inset 0 12px 28px rgb(0 0 0 / 40%),
@@ -524,7 +525,7 @@
   height: 2px;
   translate: 0 -50%;
   border-radius: 2px;
-  background: linear-gradient(90deg, transparent, rgb(148 197 255 / 38%) 20%, rgb(255 255 255 / 45%) 50%, rgb(148 197 255 / 38%) 80%, transparent);
+  background: linear-gradient(90deg, transparent, rgb(201 149 63 / 45%) 20%, rgb(251 231 176 / 50%) 50%, rgb(201 149 63 / 45%) 80%, transparent);
   pointer-events: none;
 }
 
@@ -566,9 +567,9 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  border: 1px solid rgb(148 163 184 / 13%);
+  border: 1px solid rgb(201 149 63 / 13%);
   border-radius: 10px;
-  background: rgb(30 41 59 / 30%);
+  background: rgb(90 52 27 / 30%);
   transition:
     background-color calc(150ms * var(--anim-scale)) ease,
     box-shadow calc(150ms * var(--anim-scale)) ease;
@@ -577,8 +578,8 @@
 /* The backrow is the trap row: darker and dashed, so it never reads as a place for units. */
 .zone[data-row="backrow"] {
   border-style: dashed;
-  border-color: rgb(148 163 184 / 12%);
-  background: rgb(4 6 11 / 45%);
+  border-color: rgb(201 149 63 / 12%);
+  background: rgb(14 9 5 / 45%);
 }
 
 .zone[data-side="opponent"][data-row="units"] {
@@ -599,7 +600,7 @@
   width: min(calc(var(--card-w) * 0.92), calc(100% - 8px));
   height: calc(100% - 10px);
   translate: -50% -50%;
-  border: 1px dashed rgb(148 163 184 / 16%);
+  border: 1px dashed rgb(201 149 63 / 16%);
   border-radius: 8px;
   pointer-events: none;
   transition: border-color calc(150ms * var(--anim-scale)) ease;
@@ -607,9 +608,9 @@
 
 .zone[data-row="units"]::before {
   border-style: solid;
-  border-color: rgb(148 163 184 / 10%);
+  border-color: rgb(201 149 63 / 10%);
   border-radius: 50% / 46%;
-  background: radial-gradient(closest-side, rgb(148 163 184 / 9%), transparent);
+  background: radial-gradient(closest-side, rgb(201 149 63 / 9%), transparent);
 }
 
 .zone:has(> .card)::before {
@@ -625,7 +626,7 @@
 }
 
 .zone-locked {
-  background: repeating-linear-gradient(45deg, rgb(11 13 19 / 80%), rgb(11 13 19 / 80%) 5px, #15171f 5px, #15171f 10px);
+  background: repeating-linear-gradient(45deg, rgb(14 9 5 / 80%), rgb(14 9 5 / 80%) 5px, #1c110a 5px, #1c110a 10px);
   border-color: var(--locked);
 }
 
@@ -929,10 +930,10 @@
 
 .keyword {
   padding: 0 3px;
-  border: 1px solid rgb(148 163 184 / 35%);
+  border: 1px solid rgb(201 149 63 / 35%);
   border-radius: 3px;
   background: rgb(0 0 0 / 28%);
-  color: #cbd5e1;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -976,7 +977,7 @@
   left: 2px;
   padding: 0 3px;
   border-radius: 3px;
-  background: #4b5563;
+  background: var(--bg-raised);
   font-size: 0.68em;
   font-weight: 700;
 }

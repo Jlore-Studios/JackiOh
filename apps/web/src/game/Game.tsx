@@ -63,7 +63,7 @@ import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
  */
 function bannerText(view: PlayerView, lastType: string | undefined): string | null {
   if (view.result !== null) return "Game over";
-  if (lastType === "turnAutoEnded") return "No moves left — turn ended";
+  if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
   if (view.phase === "mulligan") return "Mulligan";
   return view.active === view.viewer ? "Your turn" : "Opponent's turn";
 }

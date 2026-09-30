@@ -91,7 +91,7 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed }: DeckPr
 
   return (
     <section className="deck-preview" data-testid={practiceTestid.deckPreview} aria-live="polite">
-      <h2 className="deck-preview__title">{title}</h2>
+      <h3 className="deck-preview__title">{title}</h3>
       <p className="deck-preview__identity">{identity}</p>
       {body}
     </section>

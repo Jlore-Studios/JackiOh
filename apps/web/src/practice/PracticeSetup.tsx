@@ -171,7 +171,9 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
   return (
     <form className="practice-setup" data-testid={practiceTestid.setup} onSubmit={submit}>
       <fieldset className="practice-setup__difficulties">
-        <legend className="practice-setup__legend">Choose your opponent</legend>
+        <legend className="practice-setup__legend">
+          <h2 className="practice-setup__heading">Choose your opponent</h2>
+        </legend>
         <div className="practice-tiers">
           {DIFFICULTIES.map((d) => {
             const nameId = `${baseId}-${d}-name`;
@@ -216,9 +218,11 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
 
       <div className="practice-setup__footer">
         <div className="practice-setup__deck">
-          <label className="practice-setup__deck-label" htmlFor={`${baseId}-deck`}>
-            Your deck
-          </label>
+          <h2 className="practice-setup__heading">
+            <label className="practice-setup__deck-label" htmlFor={`${baseId}-deck`}>
+              Your deck
+            </label>
+          </h2>
           <span className="practice-select">
             <select
               id={`${baseId}-deck`}
@@ -249,7 +253,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
           />
         </div>
 
-        <button type="submit" className="practice-play" data-testid={practiceTestid.start}>
+        <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start}>
           Start game
         </button>
       </div>

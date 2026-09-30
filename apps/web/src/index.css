@@ -4,13 +4,17 @@
 :root {
   color-scheme: dark;
 
-  --bg: #10121a;
-  --bg-raised: #1a1d28;
-  --bg-sunken: #0b0d13;
-  --line: #2c3142;
-  --line-bright: #454d66;
-  --text: #e8eaf2;
-  --text-dim: #9aa1b8;
+  /* The neutrals are the tavern's (auth/tavern.css): hearth night, deep wood, the sunken well,
+     brass hairlines and parchment, so the board is the wooden table the landing shows. Parchment
+     is 14.9:1 on --bg, 13.1:1 on --bg-raised and 15.2:1 on --bg-sunken; --text-dim is 7.9, 7.3 and
+     8.1:1 (WCAG AA asks 4.5:1). */
+  --bg: #120b07;
+  --bg-raised: #2b170c;
+  --bg-sunken: #0e0905;
+  --line: rgb(201 149 63 / 30%);
+  --line-bright: rgb(201 149 63 / 55%);
+  --text: #efe0bf;
+  --text-dim: rgb(239 224 191 / 72%);
 
   --you: #3d7bd4;
   --opponent: #c0453f;
@@ -22,11 +26,12 @@
   --mana: #3d7bd4;
   --locked: #6b7280;
 
-  /* The one primary button: End turn's Hearthstone amber. The prompt's Confirm and the result
-     panel's first action wear it too, so a screen never shows two kinds of "go". */
+  /* The one primary button: End turn, in the tavern's gold (tavern.css's primary, the landing's
+     Play vs AI). The prompt's Confirm and the result panel's first action wear it too, so a screen
+     never shows two kinds of "go". The hover is the tavern's brightness(1.07), set into the stops. */
   --primary-edge: #fde68a;
-  --primary-face: linear-gradient(180deg, #fcd34d, #d4a017 55%, #a16207);
-  --primary-face-hover: linear-gradient(180deg, #fde68a, #e3b12a 55%, #b7791f);
+  --primary-face: linear-gradient(180deg, #fff0bf 0%, #f3c969 42%, #dc9b33 58%, #a86a1f 100%);
+  --primary-face-hover: linear-gradient(180deg, #ffffcc 0%, #ffd770 42%, #eba637 58%, #b47121 100%);
   --primary-ink: #2b1800;
   --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 2px 0 #713f12, 0 4px 12px rgb(0 0 0 / 45%);
 
@@ -220,9 +225,9 @@ button:disabled {
   margin: 4vh auto 0;
 }
 
+/* An even brass hairline all round, the tavern's frame, not a coloured stripe down one side. */
 .notice {
   border: 1px solid var(--line-bright);
-  border-left: 3px solid var(--you);
   background: var(--bg-raised);
   border-radius: var(--radius);
   padding: 11px 14px;
@@ -234,13 +239,13 @@ button:disabled {
    now opt-in, and role="alert" gets it without a class so an error cannot forget to look like one. */
 .notice--error,
 .notice[role="alert"] {
-  border-left-color: var(--opponent);
+  border-color: var(--opponent);
   color: var(--text);
 }
 
 .notice--ok,
 .notice[role="status"] {
-  border-left-color: var(--legal);
+  border-color: var(--legal);
 }
 
 .notice code {
