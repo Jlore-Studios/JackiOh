@@ -620,6 +620,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "buff" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
+  // Classic+ #41: the number KY's Constant set flashes on the card.
+  numberChanged: {
+    animation: "jk-stat-tick",
+    durationMs: 300,
+    testid: "card-<instanceId> | hand-card-<instanceId>",
+    fx: { recipe: "glint" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
   // B5 E9: the new target shakes as the hit, the attack or the pick swings onto it.
   redirected: {
     animation: "jk-snap-back",

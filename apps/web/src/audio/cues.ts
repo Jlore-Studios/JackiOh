@@ -287,6 +287,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   crumbled: { sfx: "death", cues: () => [sfx("death")] },
   degraded: { sfx: "debuff", cues: () => [sfx("debuff")] },
   upgraded: { sfx: "buff", cues: () => [sfx("buff")] },
+  numberChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   redirected: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   healthSet: { sfx: "drain", cues: () => [sfx("drain")] },
   questProgressed: { sfx: "uiClick", cues: () => [sfx("uiClick")] },

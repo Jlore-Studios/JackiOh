@@ -123,6 +123,28 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     drawOffered: { type: "drawOffered", player: "p2" },
     drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
     gameOver: { type: "gameOver", winner: "p1", reason: "concede" },
+    // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+    cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: hand, defId: "core-002", cardType: "Unit", costPaid: 1, targets: [] },
+    countered: { type: "countered", player: "p1", instanceId: hand, defId: "core-002", byInstanceId: trap, to: "graveyard" },
+    stolen: { type: "stolen", instanceId: hand, defId: "core-002", from: "p2", to: "p1", zone: "hand" },
+    unlocked: { type: "unlocked", player: "p2", row: "backrow", lane: 1 },
+    activated: { type: "activated", player: "p1", instanceId: unit, defId: "core-004", ability: "activate" },
+    animated: { type: "animated", player: "p1", instanceId: trap, defId: "core-084", backrowLane: 5, unitLane: 3 },
+    deanimated: { type: "deanimated", player: "p1", instanceId: trap, defId: "core-084", unitLane: 3, backrowLane: 5 },
+    crumbled: { type: "crumbled", instanceId: unit, defId: "core-004", owner: "p1", zone: "field" },
+    degraded: { type: "degraded", instanceId: unit, defId: "core-004", change: { kind: "cost", delta: 1 } },
+    upgraded: { type: "upgraded", instanceId: unit, defId: "core-004", change: { kind: "stats", attack: 2, health: 2 } },
+    numberChanged: { type: "numberChanged", instanceId: unit, defId: "core-004", key: "attack", value: 3 },
+    redirected: { type: "redirected", what: "attack", fromId: unit, toId: enemy, byInstanceId: trap },
+    healthSet: { type: "healthSet", player: "p2", health: 13, sourceId: null },
+    questProgressed: { type: "questProgressed", player: "p1", instanceId: trap, quest: "1", progress: 1, goal: 2 },
+    questCompleted: { type: "questCompleted", player: "p1", instanceId: trap, quest: "1" },
+    rolledBack: { type: "rolledBack", player: "p1", turnsAgo: 1, sides: ["p1"] },
+    chaosRolled: { type: "chaosRolled", player: "p1", instanceId: "gone", defId: "core-095", effects: ["Summon 3 random Units"] },
+    flickered: { type: "flickered", player: "p1", instanceId: unit, defId: "core-004", row: "units", lane: 1 },
+    drawLimited: { type: "drawLimited", player: "p1" },
+    turnCutShort: { type: "turnCutShort", player: "p1", byInstanceId: null },
+    marked: { type: "marked", instanceId: enemy, mark: "steal", color: "purple", added: true },
   };
 }
 
