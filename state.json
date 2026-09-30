@@ -54,6 +54,12 @@
       "run_id": "36678737643",
       "started_at": "2026-09-30T06:32:44Z",
       "stop_requested": false
+    },
+    "43": {
+      "failures": 0,
+      "feedback_since": "2026-09-30T06:32:44Z",
+      "issue": 39,
+      "kind": "revise"
     }
   },
   "last_infra": {
