@@ -16,7 +16,8 @@
 // must be able to outlive its card, which is why a card carries what it needs in `data` rather
 // than reaching back through `ctx.self`.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { CardMark, PlayerId } from "@jackioh/shared";
+import { markDelayed } from "../marks";
 import { scheduleDelayed } from "../modifiers";
 import { SELF_KEY, resumeSelf } from "../prompts";
 import { RUN_MARKS_KEY } from "../work";
@@ -73,6 +74,11 @@ export function delay(args: {
    * that card leaves the field, so it never lands on a card that left and came back (#50).
    */
   watch?: string;
+  /**
+   * R437: the mark the watched card carries in both views while this effect waits (#50's pending
+   * steal, `{ mark: "steal", color: "purple" }`). Ignored without `watch`.
+   */
+  mark?: CardMark;
 }): Effect {
   return {
     kind: "delay",
@@ -97,7 +103,15 @@ export function delay(args: {
       // point as a run of its own, and a card it watches is watched through `watch` (R174).
       const { [SELF_KEY]: _snapshot, [RUN_MARKS_KEY]: _run, ...data } = built.data;
       const resume = { ...built, data, hook: args.hook ?? DELAYED_HOOK };
-      scheduleDelayed(ctx, ctx.controller, { phase: args.at.phase, player: delayPlayer(ctx, args.at) }, resume, args.watch);
+      const entry = scheduleDelayed(
+        ctx,
+        ctx.controller,
+        { phase: args.at.phase, player: delayPlayer(ctx, args.at) },
+        resume,
+        args.watch,
+      );
+      // R437: the card it waits for carries the mark until it resolves, fizzles or is forgotten.
+      if (args.mark !== undefined) markDelayed(ctx, entry, args.mark);
     },
   };
 }

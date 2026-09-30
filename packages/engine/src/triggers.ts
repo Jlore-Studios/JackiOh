@@ -44,6 +44,7 @@ import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
+import { sweepMarks } from "./marks";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
@@ -684,6 +685,8 @@ const collected = new WeakSet<GameEvent>();
  */
 function collectEvents(sink: SettleSink): void {
   const state = sink.state;
+  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves.
+  sweepMarks(sink);
   for (let at = sink.dispatched ?? 0; at < sink.events.length; at += 1) {
     sink.dispatched = at + 1;
     const event = sink.events[at];

@@ -26,6 +26,8 @@ export * from "./traps";
 export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
+// R437: the marks a card carries while an effect aimed at it waits.
+export * from "./marks";
 // R429: the times a card has been played, which #31 KY's Math Equation reads.
 export * from "./timesPlayed";
 export * from "./replay";

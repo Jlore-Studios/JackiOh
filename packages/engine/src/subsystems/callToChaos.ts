@@ -294,7 +294,7 @@ export const CHAOS_EFFECTS: readonly ChaosEffectDef[] = [
   { name: "units", label: "Summon 3 random (3) Cost Units", build: summonRandomThreeCostUnits },
   { name: "heal", label: "Heal your hero 30", build: healHeroThirty },
   { name: "draw", label: "Draw your whole deck and gain 4 mana", build: drawLibraryAndGainMana },
-  { name: "add", label: "Add 3 random cards costing (0) to your hand", build: addRandomZeroCostCards },
+  { name: "add", label: "Add 3 random cards to your hand, which cost (0)", build: addRandomZeroCostCards },
   { name: "radiant", label: "Make your hand Radiant", build: makeHandRadiant },
   { name: "tokens", label: "Summon 5 Radiant Rush Tokens", build: summonRushTokens },
   { name: "discount", label: "Cards in your hand and deck cost (2) less", build: discountHandAndLibrary },

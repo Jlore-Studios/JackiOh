@@ -31,6 +31,10 @@
 //     one, #64 and #79 install theirs without one, and only #77 is a Cry. The caption is built from
 //     the modifier's own kind and numbers and never from its `sourceId`, so no card identity can
 //     leave through a badge.
+//   - R434: once the game is over, the opponent's hand travels in full, as the owner's does; the
+//     libraries, face-down traps and R97's event redaction stay as they were.
+//   - R437: a mark (an effect aimed at the card that still waits, #50's pending steal) rides every
+//     view of the card in both seats, a face-down card's back included (`marks.ts`).
 //   - R195, R280: two things the engine works out for a card ride on its view. `conditionActive`
 //     (the yellow glow) on the viewer's own cards only; `preview` (what a formula comes to now) on
 //     every card view the viewer may read — the viewer's hand, the top of a unit pile and a backrow
@@ -42,6 +46,7 @@
 import type {
   BackrowView,
   CardDef,
+  CardMark,
   CardView,
   GameEvent,
   HeroPowerView,
@@ -79,6 +84,7 @@ import {
 import { gradeName } from "./subsystems/comboIndex";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
 import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
@@ -209,7 +215,17 @@ function cardView(state: GameState, card: CardInstance): CardView {
     defId: card.defId,
     radiant: card.radiant,
     cost: effectiveCost(state, card),
+    ...withMarks(state, card.id),
   };
+}
+
+/**
+ * R437: the marks a card carries while an effect aimed at it waits (#50's pending steal), on every
+ * view of it and in both players' views — or no key at all, so an unmarked card looks as it did.
+ */
+function withMarks(state: GameState, instanceId: string): { marks?: CardMark[] } {
+  const marks = marksOn(state, instanceId);
+  return marks.length === 0 ? {} : { marks };
 }
 
 /**
@@ -301,7 +317,10 @@ function canAct(state: GameState, card: CardInstance): boolean {
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
+  // R437: a mark on a face-down card rides its back, which is all the other player sees of it (R33).
+  if (!backrowIsPublic(state, card, viewer)) {
+    return { faceDown: true, cost: effectiveCost(state, card), ...withMarks(state, card.id) };
+  }
   const grade = card.counters.grade;
   return {
     ...withPreview(
@@ -446,7 +465,8 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     // R169: the badge list beside the hero, public on both seats.
     modifiers: modifierViews(state, player),
     mana: { current: side.mana.current, max: side.mana.max },
-    // §10.8: the viewer's own hand in full, the opponent's as a count.
+    // §10.8: the viewer's own hand in full, the opponent's as a count — until the game is over, when
+    // both hands are revealed (R434): the opponent's cards as they stand, as their owner saw them.
     hand:
       player === viewer
         ? side.hand.map((card) =>
@@ -455,7 +475,9 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
               previewOf(state, card, viewer, "hand"),
             ),
           )
-        : { count: side.hand.length },
+        : state.result !== null
+          ? side.hand.map((card) => handCardView(state, card))
+          : { count: side.hand.length },
     // §9.1: a library's order ships to nobody, and the opponent's library is a count and nothing
     // else. R310–R312: the viewer's own is a list without order as well, of what they were shown
     // going in (`ownLibrary.ts`), with no instance id or position in it.
