@@ -65,10 +65,24 @@ def pull_text(pull: dict[str, Any]) -> str:
     return data(_clip(text), f"Pull request #{pull.get('number')}")
 
 
-def pull_feedback(gh: Any, trust: Trust, number: int, bot_login: str, since: str | None) -> str:
-    """Trusted comments, reviews and line comments on a PR newer than `since`."""
+def pull_feedback(gh: Any, trust: Trust, number: int, bot_login: str, since: str | None,
+                  issue: int | None = None) -> str:
+    """Trusted comments, reviews and line comments on a PR newer than `since`, and trusted
+    comments on the issue it closes, since a request made there is routed to the PR."""
     cutoff = parse_iso(since)
     entries: list[tuple[str, str]] = []
+    if issue:
+        try:
+            for comment in gh.list_comments(issue):
+                at = parse_iso(comment.get("created_at"))
+                if _is_bot(comment, bot_login) or not _trusted(comment, trust):
+                    continue
+                if cutoff is None or at is None or at > cutoff:
+                    who = comment["user"]["login"]
+                    entries.append((comment.get("created_at", ""),
+                                    f"Comment by @{who} on issue #{issue}:\n\n{comment.get('body') or ''}"))
+        except Exception:  # noqa: BLE001 - the PR's own feedback still goes through
+            pass
 
     def newer(entry: dict[str, Any], key: str) -> bool:
         at = parse_iso(entry.get(key))

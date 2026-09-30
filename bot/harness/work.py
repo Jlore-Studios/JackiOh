@@ -483,6 +483,7 @@ class Worker:
         else:
             self.result.update(status="not_approved",
                                reason=f"no approval after {self.cfg.max_review_cycles} review cycles")
+        self._last_checkpoint()
         self.result.update(
             title=report.title or self.plan.get("title", ""),
             report=report.body,
@@ -491,6 +492,15 @@ class Worker:
             findings=[f.to_dict() for f in findings] if self.result["status"] != "approved" else [],
         )
         self._finish()
+
+    def _last_checkpoint(self) -> None:
+        """A halt or a stop said during the last review still counts: no finished change is
+        handed on past one. The clock and the usage stop no longer matter here."""
+        if self.probe is None:
+            return
+        found = self.probe(None)
+        if found and found[1] in ("halt", "stop"):
+            raise Interrupt(found[0], found[1])
 
     # ------------------------------------------------------------------ endings
 

@@ -41,7 +41,7 @@ class CommentTests(unittest.TestCase):
         self.send("/harness build")
         self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
         self.assertIn("Queued #5", self.reply())
-        self.assertIn((501, "eyes"), self.gh.reactions)
+        self.assertIn((501, "eyes"), self.gh.reacted)
         self.assertEqual(self.gh.dispatches, [])
         self.assertEqual(self.ctx.store.load()["items"]["5"]["requested_by"], "jgoetzmann")
 
@@ -123,7 +123,8 @@ class CommentTests(unittest.TestCase):
     def test_stop_takes_it_out_and_tells_a_running_job(self):
         self.gh.threads[5]["labels"] = [{"name": LABEL_WORKING}]
         self.send("/harness stop")
-        self.assertEqual(self.gh.label_names(5), set())
+        # The run still holds it until it stops, so a new request waits for that run.
+        self.assertEqual(self.gh.label_names(5), {LABEL_WORKING})
         self.assertTrue(self.ctx.store.load()["items"]["5"]["stop_requested"])
         self.assertIn("next checkpoint", self.reply())
 

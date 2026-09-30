@@ -1,6 +1,6 @@
 """The command line: `python -m harness <command>` from the `bot/` directory.
 
-The workflows call `peek`, `quiet`, `plan`, `work`, `deliver` and `event`. An operator calls `status`, `halt`,
+The workflows call `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An operator calls `status`, `halt`,
 `start`, `dispatch`, `doctor`, `setup` and `window`, with a token in BOT_GITHUB_TOKEN,
 GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 """
@@ -23,6 +23,7 @@ from harness import events as events_mod
 from harness import plan as plan_mod
 from harness import quiet as quiet_mod
 from harness import status as status_mod
+from harness import sweep as sweep_mod
 from harness.clock import human_delta, iso
 from harness.config import LABELS, Config
 from harness.errors import ConfigError, GitHubError, HarnessError
@@ -180,6 +181,14 @@ def cmd_event(cfg: Config, args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------- operator commands
 
 
+def cmd_sweep(cfg: Config, args: argparse.Namespace) -> int:
+    notes = sweep_mod.sweep(_ctx(cfg))
+    for line in notes or ["nothing was left unanswered"]:
+        print(redact(f"sweep: {line}"))
+    _summary("### Sweep\n\n" + "\n".join(f"- {n}" for n in notes or ["nothing was left unanswered"]))
+    return 0
+
+
 def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
     print(status_mod.report(_ctx(cfg)))
     return 0
@@ -240,6 +249,8 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
                 f"BOT_GITHUB_TOKEN belongs to @{who} (expected @{cfg.bot_login})")
         except GitHubError as exc:
             errors.append(f"BOT_GITHUB_TOKEN does not work: {exc}")
+    elif cfg.actions_token and args.work:
+        ok.append("no GitHub write token here, as intended: the model job never holds one")
     elif cfg.actions_token:
         warnings.append("no BOT_GITHUB_TOKEN: GitHub writes use the Actions token, so comments "
                         "come from github-actions[bot] and a pull request the bot opens does not "
@@ -348,6 +359,7 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("event", help="handle one GitHub event")
     p.add_argument("--name", default="")
     p.add_argument("--payload", default="")
+    sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
@@ -374,6 +386,7 @@ COMMANDS = {
     "work": cmd_work,
     "deliver": cmd_deliver,
     "event": cmd_event,
+    "sweep": cmd_sweep,
     "status": cmd_status,
     "halt": cmd_halt,
     "start": cmd_start,

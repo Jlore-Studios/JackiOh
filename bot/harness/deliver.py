@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from harness import gates as gates_mod
-from harness.clock import iso
+from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_REVIEW, LABEL_PR,
                             LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION)
 from harness.context import Context
@@ -27,6 +27,8 @@ from harness.state import item as state_item
 from harness.state import record_usage, usage_refusal
 
 REPORT_CHARS = 30_000
+#: Runs that die without a result on one item before it is blocked.
+DIED_LIMIT = 2
 NO_RESULT = ("the model job left no result: it failed before the model started (the doctor "
              "step, the install or the CLI setup), or it was cancelled")
 
@@ -39,7 +41,7 @@ def load_result(out_dir: Path) -> dict[str, Any]:
             return data
     except (OSError, ValueError):
         pass
-    return {"status": "infra", "reason": NO_RESULT}
+    return {"status": "infra", "reason": NO_RESULT, "no_result": True}
 
 
 class Deliverer:
@@ -148,9 +150,27 @@ class Deliverer:
 
     # ------------------------------------------------------------------ an item
 
+    def _late_stop(self, number: int, status: str) -> str:
+        """A stop or a halt that came after the model job's last checkpoint still counts."""
+        if status in ("failed", "infra", "stopped"):
+            return status
+        state = self.ctx.store.load()
+        record = state["items"].get(str(number), {})
+        started = parse_iso(record.get("started_at"))
+        stopped = parse_iso(record.get("stopped_at"))
+        if record.get("stop_requested") and (started is None or stopped is None or stopped >= started):
+            self.result.update(status="stopped", reason=f"stopped by @{record.get('stopped_by')}")
+            return "stopped"
+        if status in ("approved", "not_approved", "blocked") and (
+                state.get("halted") or self.ctx.repo_halted()):
+            self.result.update(status="interrupted", interrupt="halt",
+                               reason="the bot was halted before this work could be published")
+            return "interrupted"
+        return status
+
     def _item(self) -> None:
         number = int(self.plan["number"])
-        status = str(self.result.get("status"))
+        status = self._late_stop(number, str(self.result.get("status")))
         kind = "revise" if self.plan["action"] == "revise" else "build"
         if status == "infra":
             self._infra(number, kind)
@@ -181,16 +201,34 @@ class Deliverer:
                         LABEL_REVISE if kind == "revise" else LABEL_BUILD)
 
     def _infra(self, number: int, kind: str) -> None:
-        """Not the item's fault: requeue it, charge nothing, and start no further run."""
+        """A run that could not work. When the model job reported why (auth, the CLI, an install
+        on untouched main), it is the environment's fault: nothing is charged and runs back off.
+        When the job left no result at all (its runner died or timed out), it may be this item:
+        it goes to the back of the queue, and two in a row block it."""
         self.chain = False
+        reason = str(self.result.get("reason") or NO_RESULT)
+        now = iso(self.ctx.now())
+        if not self.result.get("no_result"):
+            self._requeue_label(number, kind)
+            self.ctx.store.update(lambda s: s.update(last_infra={"at": now, "reason": reason[:500]}),
+                                  "infra")
+            self.gh.create_comment(number, f"The run could not work on this ({self._link()}): "
+                                   f"{reason}\n\nThat is not this item's fault; it stays queued "
+                                   "for the next run.")
+            return
+        state = self.ctx.store.update(lambda s: state_item(s, number).update(
+            died=int(state_item(s, number).get("died", 0)) + 1, queued_at=now), f"died #{number}")
+        died = int(state_item(state, number).get("died", 0))
+        if died >= DIED_LIMIT:
+            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
+            self._remember(number, forced=False)
+            self.gh.create_comment(number, f"The run working on this died {died} times in a row "
+                                   f"({self._link()}), so I stopped trying: {reason}. It may be "
+                                   "too big or too heavy for one run; `/harness build` tries again.")
+            return
         self._requeue_label(number, kind)
-        reason = self.result.get("reason") or NO_RESULT
-        self.ctx.store.update(lambda s: s.update(last_infra={"at": iso(self.ctx.now()),
-                                                             "reason": str(reason)[:500]}),
-                              "infra")
-        self.gh.create_comment(number, f"The run could not work on this ({self._link()}): "
-                               f"{reason}\n\nThat is not this item's fault; it stays queued for "
-                               "the next run.")
+        self.gh.create_comment(number, f"The run working on this died ({self._link()}): {reason}. "
+                               "It is back in the queue, behind the others.")
 
     def _interrupted(self, number: int, kind: str) -> None:
         interrupt = str(self.result.get("interrupt") or "budget")
@@ -240,13 +278,21 @@ class Deliverer:
 
     def _settle(self, number: int) -> None:
         """After a finished run: clear the one-run flags, and go round again for a comment that
-        arrived while the run held the thread."""
-        record = self._record(number)
+        arrived while the run held the thread (after a stop, one that came after it)."""
         status = str(self.result.get("status"))
         if status == "failed":
             return
-        self._remember(number, forced=False, interruptions=0, pending_request=False)
-        if not record.get("pending_request") or status == "stopped":
+        seen: dict[str, Any] = {}
+
+        def change(state: dict[str, Any]) -> None:
+            entry = state_item(state, number)
+            seen.update(entry)
+            entry.update(forced=False, interruptions=0, died=0, pending_request=False)
+
+        self.ctx.store.update(change, f"settle #{number}")
+        record = seen
+        # `/harness stop` clears any earlier pending request, so one still set came after it.
+        if not record.get("pending_request"):
             return
         target = number
         pr = int(record.get("pr") or 0) if status == "approved" else 0
@@ -274,11 +320,16 @@ class Deliverer:
         branch = str(self.plan["branch"])
         if status == "stopped":
             pushed, _ = self._publish(approved=False)
+            set_state_label(self.ctx, number, self._labels(number), None)
             kept = f" What I had is on `{branch}`." if pushed else ""
             self.gh.create_comment(number, f"Stopped, as asked.{kept}")
             return
         approved = status == "approved"
         pushed, problem = self._publish(approved=approved)
+        if problem.startswith("the push was refused"):
+            self.result.update(status="infra", reason=problem, no_result=True)
+            self._infra(number, "build")
+            return
         if problem:
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self.gh.create_comment(number, f"I could not publish this run's work ({self._link()}): "
@@ -315,10 +366,14 @@ class Deliverer:
             set_state_label(self.ctx, number, issue_labels, None)
             if LABEL_PR_OPEN not in issue_labels:
                 self.gh.add_labels(number, [LABEL_PR_OPEN])
-            if pr:
+            asked = pr and LABEL_REVISE in self._labels(pr)
+            if pr and not asked:
                 set_state_label(self.ctx, pr, self._labels(pr), None)
             merge_note = ""
-            if pr and self._record(number).get("pending_request"):
+            if asked:
+                merge_note = ("A revision was asked for on it while I built, so it stays queued "
+                              "and auto-merge waits for it.")
+            elif pr and self._record(number).get("pending_request"):
                 merge_note = ("A comment arrived during the run, so auto-merge waits for the "
                               "revision that answers it.")
             elif pr:
@@ -329,7 +384,7 @@ class Deliverer:
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
-            if pr:
+            if pr and LABEL_REVISE not in self._labels(pr):
                 set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
             self.gh.create_comment(number, f"After {self.cfg.max_review_cycles} rounds the "
                                    f"reviewer still had blocking findings, so #{pr} stays a "
@@ -356,6 +411,7 @@ class Deliverer:
             self._fail(number, "revise")
             return
         if status == "stopped":
+            set_state_label(self.ctx, number, self._labels(number), None)
             self.gh.create_comment(number, "Stopped, as asked. I pushed nothing.")
             return
         if status == "blocked":
@@ -522,6 +578,11 @@ class Deliverer:
     def _suggestions(self) -> None:
         if self.result.get("status") == "infra":
             self.chain = False
+        if self.result.get("status") != "suggested":
+            # A survey that did not finish gives its slot back: it is due again as before.
+            before = {"last_run": self.plan.get("previous_last_run"),
+                      "requested": bool(self.plan.get("was_requested"))}
+            self.ctx.store.update(lambda s: s["suggest"].update(before), "survey unfinished")
         found = self.result.get("suggestions") or []
         open_now = [i for i in self.gh.list_issues(labels=LABEL_SUGGESTION) if "pull_request" not in i]
         room = max(0, self.cfg.suggestions_max_open - len(open_now))

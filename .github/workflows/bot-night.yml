@@ -8,12 +8,12 @@ name: bot-night
 
 on:
   schedule:
-    # Hourly at :17, 02:17-13:17 UTC. That covers 21:00-07:00 Central both in summer (CDT: 02-12
-    # UTC) and in winter (CST: 03-13 UTC); the planner checks the local window itself, so a firing
-    # outside it ends in seconds. Every hour fires, rather than once a night, because GitHub starts
-    # scheduled runs late and sometimes drops them, and because a run that finishes an item with
-    # more queued dispatches the next run itself.
-    - cron: "17 2-13 * * *"
+    # Hourly at :17, all day. The gate checks the local window (21:00-07:00 Central, in CDT and
+    # CST alike) and reads only, so a firing outside it ends in seconds, unless an operator forced
+    # an item, which then never waits longer than an hour for a run to pick it up. Every hour
+    # fires, rather than once a night, because GitHub starts scheduled runs late and sometimes
+    # drops them, and a run that finishes an item with more queued dispatches the next one itself.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       item:

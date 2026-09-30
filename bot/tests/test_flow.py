@@ -92,8 +92,12 @@ class PlanTests(unittest.TestCase):
 
     def test_usage_stop(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
-        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
+        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95},
+                                                        "observed_at": "2026-09-30T02:00:00Z"}))
         self.assertIn("usage stop", plan_mod.make(self.ctx)["reason"])
+        # A reading that cannot be dated never blocks for ever.
+        self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
+        self.assertNotIn("usage stop", plan_mod.make(self.ctx).get("reason", ""))
 
     def test_claims_the_oldest_forced_first_and_marks_it(self):
         self.gh.add_issue(3, title="old", labels=(LABEL_BUILD,))
@@ -137,10 +141,16 @@ class PlanTests(unittest.TestCase):
         planned = plan_mod.make(self.ctx)
         self.assertEqual((planned["action"], planned["source"]), ("revise", "conflict"))
 
-    def test_items_that_failed_too_often_are_skipped(self):
+    def test_a_queue_label_is_taken_even_after_failures(self):
+        # Failing too often moves an item to bot:blocked; a queue label put back is a new request.
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         self.ctx.store.update(lambda s: state_item(s, 3).update(failures=3))
-        self.assertEqual(plan_mod.make(self.ctx)["action"], "suggest")
+        self.assertEqual(plan_mod.make(self.ctx)["number"], 3)
+
+    def test_either_queue_label_on_either_kind_of_thread(self):
+        self.gh.add_pull(9, "bot/issue-2", labels=(LABEL_BUILD,))
+        planned = plan_mod.make(self.ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("revise", 9))
 
     def test_suggestions_when_idle_up_to_the_cap(self):
         for n in (20, 21, 22):
@@ -286,19 +296,39 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.origin_sha("bot/issue-12"), someone)
         self.assertIn("moved on GitHub", h.gh.bot_comments(12)[-1])
 
-    def test_a_run_with_no_result_is_not_the_items_fault(self):
+    def test_a_run_that_dies_goes_to_the_back_and_is_blocked_after_two(self):
         h = Harness(self)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         h.gh.add_issue(13, labels=(LABEL_BUILD,))
         planned = plan_mod.make(h.ctx)
-        out = h.root / "empty"
+        self.assertEqual(planned["number"], 12)
+        out = h.root / "empty-1"
         out.mkdir()
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
-        self.assertIn("backing off", plan_mod.make(h.ctx)["reason"])
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
-        self.assertEqual(h.ctx.store.load()["items"]["12"].get("failures", 0), 0)
-        self.assertEqual(h.gh.dispatches, [])  # no chaining into a broken environment
-        self.assertIn("not this item's fault", h.gh.bot_comments(12)[-1])
+        self.assertIn("behind the others", h.gh.bot_comments(12)[-1])
+        self.assertEqual(h.gh.dispatches, [])  # no chaining after a run that died
+        self.assertEqual(plan_mod.make(h.ctx)["number"], 13)  # #12 went to the back
+        h.gh.threads[13]["labels"] = []
+        planned = plan_mod.make(h.ctx)
+        out = h.root / "empty-2"
+        out.mkdir()
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertEqual(h.gh.label_names(12), {LABEL_BLOCKED})
+        self.assertIn("died 2 times", h.gh.bot_comments(12)[-1])
+
+    def test_an_environment_failure_is_not_the_items_fault(self):
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(h.ctx)
+        out = h.root / "infra"
+        out.mkdir()
+        (out / "result.json").write_text(json.dumps({"status": "infra",
+                                                     "reason": "the claude CLI could not run"}))
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertNotIn("died", h.ctx.store.load()["items"]["12"])
+        self.assertIn("backing off", plan_mod.make(h.ctx)["reason"])
 
     def test_a_failed_run_is_requeued_then_blocked(self):
         h = Harness(self, max_failures=2)

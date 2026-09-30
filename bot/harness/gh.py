@@ -49,9 +49,13 @@ class GitHub:
         dry_run: bool = False,
         opener: Callable[..., Any] | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        fallback_token: str = "",
     ) -> None:
         self.repo = repo
         self.token = token
+        #: Used for the rest of the run when `token` is refused (a revoked or expired bot token),
+        #: so replies still go out, as the Actions bot.
+        self.fallback_token = fallback_token
         self.dry_run = dry_run
         self._open = opener or urllib.request.urlopen
         self._sleep = sleep
@@ -103,6 +107,9 @@ class GitHub:
                     return json.loads(text) if text.strip() else {}
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", "replace") if exc.fp else ""
+                if exc.code == 401 and self.fallback_token and self.token != self.fallback_token:
+                    self.token = self.fallback_token
+                    continue
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
                 limited = exc.code in (403, 429) and (
                     retry_after or "secondary rate limit" in detail.lower()
@@ -182,11 +189,29 @@ class GitHub:
     def get_issue(self, number: int) -> dict[str, Any]:
         return self.request("GET", f"{self._r}/issues/{int(number)}")
 
-    def list_issues(self, *, labels: str = "", state: str = "open", limit: int = 300) -> list[dict]:
+    def list_issues(self, *, labels: str = "", state: str = "open", limit: int = 300,
+                    assignee: str = "") -> list[dict]:
         params: dict[str, Any] = {"state": state}
         if labels:
             params["labels"] = labels
+        if assignee:
+            params["assignee"] = assignee
         return self.paginate(f"{self._r}/issues", params, limit=limit)
+
+    def list_repo_comments(self, since: str, limit: int = 500) -> list[dict]:
+        """Every issue and pull request conversation comment updated since `since`, newest
+        first, so a limit drops the oldest."""
+        return self.paginate(f"{self._r}/issues/comments",
+                             {"since": since, "sort": "created", "direction": "desc"}, limit=limit)
+
+    def list_repo_review_comments(self, since: str, limit: int = 500) -> list[dict]:
+        """Every line comment on a pull request's diff updated since `since`, newest first."""
+        return self.paginate(f"{self._r}/pulls/comments",
+                             {"since": since, "sort": "created", "direction": "desc"}, limit=limit)
+
+    def reactions(self, comment_id: int, *, review_comment: bool = False) -> list[dict]:
+        kind = "pulls/comments" if review_comment else "issues/comments"
+        return self.paginate(f"{self._r}/{kind}/{int(comment_id)}/reactions")
 
     def list_comments(self, number: int, limit: int = 300) -> list[dict]:
         return self.paginate(f"{self._r}/issues/{int(number)}/comments", limit=limit)
@@ -400,6 +425,10 @@ class GitHub:
         return self.paginate(
             f"{self._r}/actions/workflows/{workflow}/runs", params, key="workflow_runs", limit=limit
         )
+
+    def runs_for_sha(self, sha: str, limit: int = 30) -> list[dict]:
+        return self.paginate(f"{self._r}/actions/runs", {"head_sha": sha}, key="workflow_runs",
+                             limit=limit)
 
     def rerun_failed_jobs(self, run_id: int | str) -> None:
         self.request("POST", f"{self._r}/actions/runs/{run_id}/rerun-failed-jobs")

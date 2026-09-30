@@ -88,9 +88,10 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertGreater(gate, cfg.quiet.max_wait_minutes + cfg.quiet.interval_minutes)
         self.assertIn("cancel-in-progress: false", self.text)
 
-    def test_the_crons_cover_the_window(self):
+    def test_a_run_fires_every_hour_all_day(self):
+        """The gate reads the window itself, and a forced item never waits for the night."""
         crons = re.findall(r'cron: "([^"]+)"', self.text)
-        self.assertEqual(crons, ["17 2-13 * * *"])
+        self.assertEqual(crons, ["17 * * * *"])
 
     def test_deliver_takes_the_item_from_the_plan_jobs_outputs(self):
         deliver = job(self.text, "deliver")
@@ -119,7 +120,16 @@ class CommandsWorkflowTests(unittest.TestCase):
         cfg = config.load(env={})
         self.assertIn(f"github.actor != '{cfg.bot_login}'", self.text)
         self.assertIn(f"'@{cfg.bot_login}'", self.text)
-        self.assertIn(f"workflows: [{cfg.ci_workflow}]", self.text)
+        self.assertIn(f"workflows: [{cfg.ci_workflow}, bot selftest]", self.text)
+
+    def test_every_way_a_request_arrives_is_heard(self):
+        for trigger in ("issue_comment:\n    types: [created, edited]",
+                        "pull_request_review_comment:\n    types: [created, edited]",
+                        "pull_request_review:", "issues:", "pull_request_target:", "workflow_run:",
+                        "workflow_dispatch:"):
+            self.assertIn(trigger, self.text)
+        self.assertRegex(self.text, r'cron: "\d+(,\d+)* \* \* \* \*"')  # the sweep, every half hour
+        self.assertIn("python -m harness sweep", self.text)
 
     def test_pull_request_events_use_target(self):
         self.assertIn("pull_request_target:", self.text)

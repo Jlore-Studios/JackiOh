@@ -106,8 +106,11 @@ class WaitTests(unittest.TestCase):
         self.assertFalse(result.quiet)
         self.assertIn("refused", result.reason)
         result, world = verdict([None])
-        self.assertFalse(result.quiet)
+        self.assertTrue(result.quiet)  # no reading at all: going ahead, as the partner does
+        self.assertIn("going ahead", result.reason)
         self.assertEqual(world.sleeps, [])
+        result, _ = verdict([usage(0.10), None, usage(0.10)])
+        self.assertTrue(result.quiet)  # a reading missing later is skipped, not a verdict
 
 
 class FakeReader:
@@ -140,6 +143,11 @@ class PartnerTests(unittest.TestCase):
     def test_a_spending_step_inside_the_interval(self):
         found = self.spending([step("Run planned items (harness run --item)", self.t1 - timedelta(hours=1))])
         self.assertIn("Run planned items", found)
+
+    def test_a_step_github_skipped_spent_nothing(self):
+        skipped = step("Run planned items", self.t1)
+        skipped["conclusion"] = "skipped"
+        self.assertIsNone(self.spending([skipped]))
 
     def test_a_step_that_ended_before_or_never_started(self):
         before = step("Run planned items", self.t1 - timedelta(hours=2), self.t1 - timedelta(minutes=1))

@@ -87,15 +87,40 @@ def command_lines(body: str) -> list[str]:
     return lines
 
 
+#: In the `@bot <verb>` form, a control verb counts only when what follows fits it; otherwise
+#: the line is a request in plain words ("@bot start with option A" asks for a build, it does not
+#: lift a halt). `/harness <verb>` is always a command.
+_MENTION_ARGS: dict[str, re.Pattern[str]] = {
+    "status": re.compile(r"^$"),
+    "stop": re.compile(r"^$"),
+    "halt": re.compile(r"^$"),
+    "start": re.compile(r"^$"),
+    "suggest": re.compile(r"^$"),
+    "run": re.compile(r"^(#?\d+)?$"),
+}
+_LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+_WRAP = "`*_~"
+
+
+def _unmark(line: str) -> str:
+    """A line without the markdown a person may wrap a command in: a list marker, and backticks
+    or emphasis around the whole command."""
+    text = _LIST_MARK.sub("", line).strip()
+    while text and text[0] in _WRAP and text[-1] in _WRAP:
+        text = text[1:-1].strip()
+    return text.lstrip(_WRAP).rstrip(_WRAP)
+
+
 def parse(body: str, bot_login: str) -> list[Command]:
     """Every command in a comment, in order, at most `MAX_COMMANDS`."""
     mention = re.compile(
         r"^\s*@" + re.escape(bot_login.lstrip("@")) + r"\b[:,]?\s*(.*)$", re.IGNORECASE
     )
     found: list[Command] = []
-    for line in command_lines(body):
+    for raw in command_lines(body):
         if len(found) >= MAX_COMMANDS:
             break
+        line = _unmark(raw)
         slash = _SLASH.match(line)
         if slash:
             verb = _canonical(slash.group(1))
@@ -110,8 +135,9 @@ def parse(body: str, bot_login: str) -> list[Command]:
             continue  # `@bot /harness verb` is matched by _SLASH above
         first, _, tail = rest.partition(" ")
         verb = _canonical(first) if first else None
-        if verb is not None:
-            args, force = _strip_force(tail)
+        args, force = _strip_force(tail)
+        shape = _MENTION_ARGS.get(verb or "")
+        if verb is not None and (shape is None or shape.match(args)):
             found.append(Command(verb, args, force, line.strip()))
         else:
             args, force = _strip_force(rest)
@@ -122,6 +148,15 @@ def parse(body: str, bot_login: str) -> list[Command]:
 def mentions(body: str, bot_login: str) -> bool:
     """True when a command line of `body` names the bot or says `/harness`."""
     return bool(parse(body, bot_login))
+
+
+def names_the_bot(body: str, bot_login: str) -> bool:
+    """True when the bot's handle, or `/harness`, appears anywhere outside quotes and code, even
+    mid-sentence: a request that did not parse is answered with a hint, never ignored."""
+    handle = re.compile(r"(?<![\w-])@" + re.escape(bot_login.lstrip("@")) + r"(?![\w-])",
+                        re.IGNORECASE)
+    slash = re.compile(r"(?<![\w/])/harness\b", re.IGNORECASE)
+    return any(handle.search(line) or slash.search(line) for line in command_lines(body))
 
 
 HELP = """\

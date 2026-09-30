@@ -20,6 +20,8 @@ from harness.errors import GitHubError, StateConflict
 
 MAX_ATTEMPTS = 6
 WINDOW_NAMES = {"five_hour": "5-hour", "seven_day": "7-day"}
+#: How long a reading with no reset time of its own can hold: its window's length.
+WINDOW_LENGTH = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
 
 
 def default_state() -> dict[str, Any]:
@@ -129,13 +131,16 @@ def usage_refusal(state: dict[str, Any], stops: dict[str, float], at: datetime) 
     if until is not None and until > at:
         return f"the subscription refused a call; it resets at {iso(until)}"
     usage = state.get("usage") or {}
+    observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
     for window, stop in stops.items():
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
         resets = parse_iso(reading.get("resets_at"))
-        if resets is not None and resets <= at:
-            continue  # that window has reset since the reading
+        if resets is None and observed is not None:
+            resets = observed + WINDOW_LENGTH.get(window, timedelta(hours=5))
+        if resets is None or resets <= at:
+            continue  # that window has reset since the reading, or cannot be dated
         utilization = reading.get("utilization")
         if isinstance(utilization, (int, float)) and utilization >= stop:
             when = f"; it resets at {iso(resets)}" if resets else ""
