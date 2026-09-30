@@ -1,6 +1,14 @@
 {
   "halt": {},
   "halted": false,
+  "handled": {
+    "c:5905520823": {
+      "at": "2026-09-30T06:32:14Z",
+      "lines": [
+        "/harness run"
+      ]
+    }
+  },
   "items": {
     "31": {
       "failures": 0,
