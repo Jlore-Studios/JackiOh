@@ -142,7 +142,7 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `CHAOS_PLUS_UPGRADES` / `CHAOS_PLUS_DEGRADES` | 2 per card of your hand and deck / 3 per card of the opponent's field and hand | §8.7 C+ #73, R386 |
 | `MID_LANE` | 3, the middle lane of `UNIT_ZONES` ("midlane") | §3.1, §8.6 C #22 |
 | `GLITCH_NUMBERS` | 0 to 10: C #18's number prompt | §8.6 C #18, §10.6 |
-| `BLADE_STORM_ROUNDS` | 30 | §4.5, §8.7 C+ #32.3, R59 |
+| `BLADE_STORM_ROUNDS` | 30: the printed round cap, C+ #32.3's `rounds` param, which a Degrade or Upgrade moves on that card | §4.5, §8.7 C+ #32.3, R59 |
 | `ROLLBACK_MAX_TURNS` / `BOARD_HISTORY_DEPTH` | 3 / 4 (this turn's snapshot and the three before it) | §10.1, §8.7 C+ #35, R419 |
 | `GRAPE_ODDS` | Rotten 12, Normal 60, Large 20, Golden 7, Mythic 1 percent, in Lucky's order worst to best | §8.7 C+ #65, C+ #66, R382 |
 | `KY_TEST_DIFFICULTIES` / `KY_TEST_OPTIONS` / `KY_TEST_MIN_PROBLEMS` | Easy, Medium, Hard / 4 / 30 per difficulty (the bank test's floor, in `packages/cards`) | §8.7 C+ #42, R420 |
