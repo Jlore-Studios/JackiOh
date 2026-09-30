@@ -17,12 +17,41 @@
 // family's chimes. The family is the card art's theme (cards/art/themes.ts), so a card looks and
 // sounds like the same kind of thing. R203 bounds it: only a unit on the field (always public) and a
 // cast spell vary, never a card behind the sentinel and never a Trap, whose set must sound the same
-// for every Trap.
+// for every Trap. A token that prints a rarity (B2.5's `printedRarity`) enters with that rarity's
+// sting.
+//
+// R506 adds the card moments of patch v0.2.0. A sound may also answer the readable play an event
+// happens inside (`CueContext.playing`, which the director keeps: the innermost `cardPlayed` whose
+// `cardResolved` has not come): #21 Hinder's rider landing on the victim's next refresh cracks like
+// glass, and each card #27 Blood Ridden Glowy Jelly Bean turns Radiant is a blood drain and a gold
+// burst, on the opponent's seat too, where that `radiantSet` carries the sentinel: the burst reads
+// the public cast, never the card it hit. A card cast as it is drawn stings (`castOnDraw`), Call to
+// Chaos's roll dings once for each effect it names (R436), and a mark brands its card (R437).
 
-import type { CardType, GameEvent, GameEventType, PlayerId, PlayerView, Rarity, Tag, UnitView } from "@jackioh/shared";
+import type {
+  CardType,
+  GameEvent,
+  GameEventType,
+  PlayerId,
+  PlayerView,
+  PrintedRarity,
+  Rarity,
+  Tag,
+  UnitView,
+} from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
-import { DEATH_VOICE_DELAY_MS, HIDDEN_DEF_ID, VOICE_DELAY_MS, VOICE_PRIORITY } from "./constants.ts";
+import {
+  BLOOD_BEAN_DEF_ID,
+  CHAOS_REVEAL_MAX,
+  DEATH_VOICE_DELAY_MS,
+  GOLD_BURST_DELAY_MS,
+  HIDDEN_DEF_ID,
+  HINDER_DEF_ID,
+  NEXT_REFRESH_MODIFIER_ID,
+  VOICE_DELAY_MS,
+  VOICE_PRIORITY,
+} from "./constants.ts";
 import type {
   SfxId,
   SfxParams,
@@ -34,8 +63,18 @@ import type {
 } from "./types.ts";
 import { entryFor } from "./voiceData.ts";
 
-/** The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden". */
-export type CueCard = { type: CardType; tags: readonly Tag[]; rarity?: Rarity };
+/**
+ * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
+ * `printedRarity` is a token's printed rarity (B2.5), for its summon sting only.
+ */
+export type CueCard = { type: CardType; tags: readonly Tag[]; rarity?: Rarity; printedRarity?: PrintedRarity };
+
+/**
+ * R506: a play in progress, as the director follows the stream: from its `cardPlayed` until its
+ * `cardResolved`. `defId` is the sentinel for a card the viewer cannot read, which no card moment
+ * matches. `castOnDraw`: the play is a card cast as it was drawn.
+ */
+export type PlayFrame = { defId: string; instanceId: string; player: PlayerId; castOnDraw: boolean };
 
 export type CueContext = {
   /** The view the batch was planned against (pre-batch): `viewer` and seat orientation come from here. */
@@ -52,6 +91,16 @@ export type CueContext = {
   unitNow?: (instanceId: string) => UnitView | null;
   /** The public catalog, by a defId the viewer can read. Absent (or undefined): the plain sounds. */
   card?: (defId: string) => CueCard | undefined;
+  /**
+   * R506: the innermost play this event happens inside, or null. Absent: none is known, and every
+   * event makes its row's plain sound.
+   */
+  playing?: () => PlayFrame | null;
+  /**
+   * R506: true when this `cardPlayed` is the card a readable `drawn` has just drawn, cast as it was
+   * drawn. Absent: no play is a cast on draw.
+   */
+  castOnDraw?: (instanceId: string) => boolean;
 };
 
 export type CueRow<K extends GameEventType> = {
@@ -63,11 +112,24 @@ export type CueRow<K extends GameEventType> = {
 };
 
 /**
+ * Patch v0.2.0's tags and their families (R506). The card art gives them themes of the same ids;
+ * until `themeFor` names one (cards/art/themes.ts is the art's file), `timbreFor` reads the tag
+ * itself, after every tag the art already knows and before Token and the type, as a tag theme
+ * comes.
+ */
+const NEW_TAG_TIMBRES: readonly (readonly [Tag, SfxTimbre])[] = [
+  ["Book", "book"],
+  ["Pancake", "pancake"],
+  ["AI", "ai"],
+];
+
+/**
  * A card's sound family: the card art's theme (tags first, then Token, then the type), where it is
  * one the recipes know. A plain Unit, Spell or Trap theme has no family of its own.
  */
 export function timbreFor(card: CueCard): SfxTimbre | undefined {
-  const theme = themeFor(card.tags, card.type);
+  // Widened on purpose: the art's theme ids may grow the new families' ids before or after this.
+  const theme: string = themeFor(card.tags, card.type);
   switch (theme) {
     case "human":
     case "felinor":
@@ -76,13 +138,17 @@ export function timbreFor(card: CueCard): SfxTimbre | undefined {
     case "fruit":
     case "chaos":
     case "quickdraw":
-    case "token":
+    case "book":
+    case "pancake":
+    case "ai":
       return theme;
-    case "field-spell":
-      return "field";
     default:
-      return undefined;
+      break;
   }
+  for (const [tag, timbre] of NEW_TAG_TIMBRES) if (card.tags.includes(tag)) return timbre;
+  if (theme === "token") return "token";
+  if (theme === "field-spell") return "field";
+  return undefined;
 }
 
 /** The catalog facts for a card the viewer can name, else undefined (R203: never for "hidden"). */
@@ -120,14 +186,45 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   if (unit !== null) params.amount = unit.attack + unit.health;
   if (timbre !== undefined) params.timbre = timbre;
   const cues: SoundCue[] = [sfx("summon", Object.keys(params).length === 0 ? undefined : params)];
-  if (card?.rarity === "Legendary") cues.push(sfx("entrance"));
-  else if (card?.rarity === "Mythic") cues.push(sfx("entrance", { mythic: true }));
+  // B2.5: a token's printed rarity is the one it enters with; its `rarity` stays "Token".
+  const rarity = card?.printedRarity ?? card?.rarity;
+  if (rarity === "Legendary") cues.push(sfx("entrance"));
+  else if (rarity === "Mythic") cues.push(sfx("entrance", { mythic: true }));
   if (unit?.radiant === true) cues.push(sfx("radiant", undefined, RADIANT_GLINT_DELAY_MS));
   const played = ctx.wasPlayed?.(event.instanceId) ?? false;
   if (!played && entryFor(ctx.lines, event.defId)?.kind === "unit") {
     cues.push(voice(event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
   }
   return cues;
+}
+
+/** R506: the readable play this event happens inside is `defId`'s (never true for the sentinel). */
+function inPlayOf(ctx: CueContext, defId: string): boolean {
+  return defId !== HIDDEN_DEF_ID && ctx.playing?.()?.defId === defId;
+}
+
+/**
+ * R506: a card cast as it is drawn arrives with the cast-on-draw sting in place of the play whoosh.
+ * Only a card the viewer can read (the director never marks the sentinel), and never a Trap, whose
+ * set sounds like every Trap's (R203).
+ */
+function arrival(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueContext): SoundCue {
+  if (event.defId === HIDDEN_DEF_ID || ctx.castOnDraw?.(event.instanceId) !== true) return sfx("play");
+  const type = readable(ctx, event.defId)?.type;
+  return type === "Trap" || type === "Field Trap" ? sfx("play") : sfx("castOnDraw");
+}
+
+/** R436: the slot machine's spin and a ding for each effect the roll names (both seats read them). */
+export function chaosRollCues(event: Extract<GameEvent, { type: "chaosRolled" }>): readonly SoundCue[] {
+  return [sfx("chaosRoll", { amount: Math.min(CHAOS_REVEAL_MAX, event.effects.length) })];
+}
+
+/**
+ * R437: a mark brands its card as it lands and lets go softly as it lifts. The same whatever the
+ * mark, its colour or the card, which may be the sentinel: the sound says no more than the event.
+ */
+export function markCues(event: Extract<GameEvent, { type: "marked" }>): readonly SoundCue[] {
+  return [event.added ? sfx("brand") : sfx("brand", { release: true })];
 }
 
 function silent(because: string): { sfx: null; silentBecause: string; cues: () => readonly SoundCue[] } {
@@ -141,18 +238,19 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "play",
     cues: (event, ctx) => {
       const kind = entryFor(ctx.lines, event.defId)?.kind;
-      if (kind === "unit") return [sfx("play"), voice(event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
+      if (kind === "trap") return [sfx("trapSet")];
+      const arrive = arrival(event, ctx);
+      if (kind === "unit") return [arrive, voice(event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
       if (kind === "spell") {
         const card = readable(ctx, event.defId);
         const timbre = card === undefined ? undefined : timbreFor(card);
         return [
-          sfx("play"),
+          arrive,
           sfx("spell", timbre === undefined ? undefined : { timbre }, SPELL_SHIMMER_DELAY_MS),
           voice(event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.play),
         ];
       }
-      if (kind === "trap") return [sfx("trapSet")];
-      return [sfx("play")];
+      return [arrive];
     },
   },
   cardResolved: silent("the effects a card resolves into carry their own events"),
@@ -200,11 +298,24 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   keywordGranted: { sfx: "buff", cues: () => [sfx("buff")] },
   counterChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   costChanged: silent("the gem ticks visually, and a cost recomputed on every read (#100) would chatter"),
+  // R506: #21 Hinder's rider landing on the victim's next refresh (added, or cancelling a rider
+  // already there) cracks the crystal it takes; every other change notifies as it appears.
   modifierChanged: {
     sfx: "notify",
-    cues: (event) => (event.added ? [sfx("notify")] : NONE),
+    cues: (event, ctx) => {
+      if (event.modifierId === NEXT_REFRESH_MODIFIER_ID && inPlayOf(ctx, HINDER_DEF_ID)) return [sfx("manaCrack")];
+      return event.added ? [sfx("notify")] : NONE;
+    },
   },
-  radiantSet: { sfx: "radiant", cues: () => [sfx("radiant")] },
+  // R506: a card #27 turns Radiant is paid for in blood, then bursts gold; on the other seat the
+  // event carries the sentinel and the same sound plays, read off the public cast alone (R203).
+  radiantSet: {
+    sfx: "radiant",
+    cues: (_event, ctx) =>
+      inPlayOf(ctx, BLOOD_BEAN_DEF_ID)
+        ? [sfx("bloodDrain"), sfx("goldBurst", undefined, GOLD_BURST_DELAY_MS)]
+        : [sfx("radiant")],
+  },
   transformed: { sfx: "poof", cues: () => [sfx("poof")] },
   fused: { sfx: "poof", cues: () => [sfx("poof")] },
   positionSwitched: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
@@ -293,14 +404,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   questProgressed: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   questCompleted: { sfx: "radiant", cues: () => [sfx("radiant"), sfx("notify")] },
   rolledBack: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  // R436: the roll is announced to both seats like a trap springing.
-  chaosRolled: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  // R436: the roll is announced to both seats: a slot machine's spin, a ding for each effect named.
+  chaosRolled: { sfx: "chaosRoll", cues: chaosRollCues },
   flickered: { sfx: "poof", cues: () => [sfx("poof")] },
   // B5 E3: the draw is called off, like an attack; R319 keeps the refusal sound the full library's own.
   drawLimited: { sfx: "cancel", cues: () => [sfx("cancel")] },
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
-  // R437: a mark settling on a card sounds like a keyword arriving; losing it is silent.
-  marked: { sfx: "debuff", cues: (event) => (event.added ? [sfx("debuff")] : NONE) },
+  // R437: a mark brands its card as it lands (#50's pending steal) and lets go softly as it lifts.
+  marked: { sfx: "brand", cues: markCues },
 };
 
 /** The cues for one event. */

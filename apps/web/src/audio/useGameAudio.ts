@@ -32,13 +32,18 @@ function quietly(run: () => void): void {
   }
 }
 
-/** The catalog facts a cue may use, from the board's lookup (base face; "hidden" never reaches it). */
-function cueCard(lookup: CardLookup | null, defId: string): CueCard | undefined {
+/**
+ * The catalog facts a cue may use, from the board's lookup (base face; "hidden" never reaches it):
+ * type, tags, rarity and, for a token that prints one, its printed rarity (B2.5, R506).
+ */
+export function cueCard(lookup: CardLookup | null, defId: string): CueCard | undefined {
   const info = lookup?.(defId, false);
   if (info === undefined) return undefined;
-  return info.rarity === undefined
-    ? { type: info.type, tags: info.tags }
-    : { type: info.type, tags: info.tags, rarity: info.rarity };
+  const card: CueCard = { type: info.type, tags: info.tags };
+  if (info.rarity !== undefined) card.rarity = info.rarity;
+  const printed = info.def?.printedRarity;
+  if (printed !== undefined) card.printedRarity = printed;
+  return card;
 }
 
 export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {

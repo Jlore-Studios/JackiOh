@@ -8,10 +8,25 @@
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { DEATH_VOICE_DELAY_MS, HIDDEN_DEF_ID, VOICE_DELAY_MS, VOICE_PRIORITY } from "./constants.ts";
-import { SOUND_CUES, cuesFor, timbreFor, type CueCard, type CueContext } from "./cues.ts";
-import { SFX_IDS } from "./sfx.ts";
+import { CATALOG } from "@jackioh/cards";
+
+import {
+  BLOOD_BEAN_DEF_ID,
+  CHAOS_REVEAL_MAX,
+  DEATH_VOICE_DELAY_MS,
+  GOLD_BURST_DELAY_MS,
+  HIDDEN_DEF_ID,
+  HINDER_DEF_ID,
+  NEXT_REFRESH_MODIFIER_ID,
+  VOICE_DELAY_MS,
+  VOICE_PRIORITY,
+} from "./constants.ts";
+import { SOUND_CUES, cuesFor, timbreFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
+import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, VoiceLineTable } from "./types.ts";
+import { cueCard } from "./useGameAudio.ts";
+import { themeFor } from "../cards/art/themes.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
 /* --------------------------------------------------------------------------------------------- *
@@ -238,11 +253,11 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   questProgressed: "uiClick",
   questCompleted: "radiant",
   rolledBack: "whoosh",
-  chaosRolled: "trapSting",
+  chaosRolled: "chaosRoll",
   flickered: "poof",
   drawLimited: "cancel",
   turnCutShort: "notify",
-  marked: "debuff",
+  marked: "brand",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -285,6 +300,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "chaosRolled",
   "flickered",
   "drawLimited",
+  "marked",
 ];
 
 /* --------------------------------------------------------------------------------------------- *
@@ -825,5 +841,220 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
     const arrival = sfxCue(cuesFor(summoned(TRAP, "backrow"), withCatalog()), "summon");
     expect(arrival?.params?.timbre).toBeUndefined();
     expect(sfxCue(cuesFor(summoned("core-mythic", "backrow"), withCatalog()), "entrance")).toBeUndefined();
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * Patch v0.2.0 (R506): the Book, Pancake and AI families, a token's printed rarity, the card
+ * moments, Call to Chaos's roll and a mark. Real catalog cards, through the board's own lookup.
+ * --------------------------------------------------------------------------------------------- */
+
+const LOOKUP = lookupFromDefs(CATALOG);
+const realCard = (defId: string): CueCard | undefined => cueCard(LOOKUP, defId);
+/** The inline voice table, with the Book spell's entry: a spell's shimmer rides its table kind. */
+const REAL_LINES: VoiceLineTable = {
+  ...LINES,
+  cards: { ...LINES.cards, "classic-016": { kind: "spell", persona: "narrator", cast: "Hot off the press." } },
+};
+const withRealCatalog = (over: Partial<CueContext> = {}): CueContext => ctx({ card: realCard, lines: REAL_LINES, ...over });
+const BOOK_SPELL = "classic-016"; // Book of Flame
+const PANCAKE_UNIT = "classicplus-012"; // The Mother Pancake, Legendary
+const AI_TOKEN_UNIT = "classicplus-t-ai-01"; // Helpful Assistant
+const GOLEM_TOKEN = "classicplus-073-1"; // Classic Golem: a token that prints Legendary
+const EPIC_TOKEN = "classicplus-038-1"; // Solarius-Prime: a token that prints Epic
+const LEGENDARY_FIELD_TOKEN = "classicplus-012-5"; // Anti-Waffle Shell: a Field Spell token printing Legendary
+
+const landedAs = (defId: string, row: "units" | "backrow" = "units", instanceId = "u9"): GameEvent => ({
+  type: "summoned",
+  player: "p2",
+  instanceId,
+  defId,
+  row,
+  lane: 2,
+});
+const sfxOf = (cues: readonly SoundCue[], id: SfxId): Extract<SoundCue, { kind: "sfx" }> | undefined =>
+  cues.find((cue): cue is Extract<SoundCue, { kind: "sfx" }> => cue.kind === "sfx" && cue.id === id);
+const frame = (defId: string, instanceId = "c7", player: PlayerId = "p2"): PlayFrame => ({ defId, instanceId, player, castOnDraw: false });
+const inside = (defId: string | null): Partial<CueContext> => ({ playing: () => (defId === null ? null : frame(defId)) });
+
+describe("R506 the Book, Pancake and AI families", () => {
+  it("R506 the real catalog's Book spell, Pancake unit and AI token take their tag's family", () => {
+    expect(timbreFor(realCard(BOOK_SPELL) ?? { type: "Unit", tags: [] })).toBe("book");
+    expect(timbreFor(realCard(PANCAKE_UNIT) ?? { type: "Unit", tags: [] })).toBe("pancake");
+    expect(timbreFor(realCard(AI_TOKEN_UNIT) ?? { type: "Unit", tags: [] })).toBe("ai");
+  });
+
+  it("R506 wherever the card art names a family for a catalog card, the sound takes that same family", () => {
+    const families = new Set<string>(SFX_TIMBRES.filter((t) => t !== "field" && t !== "token"));
+    const differ: string[] = [];
+    for (const def of Object.values(CATALOG)) {
+      const theme: string = themeFor(def.tags, def.type);
+      if (!families.has(theme)) continue;
+      const timbre = timbreFor({ type: def.type, tags: def.tags });
+      if (timbre !== theme) differ.push(`${def.id}: art ${theme}, sound ${String(timbre)}`);
+    }
+    expect(differ).toEqual([]);
+  });
+
+  it("R506 a Book, Pancake or AI card the art gives no family of its own still takes its tag's, ahead of Token and its type", () => {
+    const wrong: string[] = [];
+    const tagged: Record<string, string> = { Book: "book", Pancake: "pancake", AI: "ai" };
+    const known = new Set<string>(SFX_TIMBRES);
+    for (const def of Object.values(CATALOG)) {
+      const tag = def.tags.find((t) => t in tagged);
+      if (tag === undefined) continue;
+      const theme: string = themeFor(def.tags, def.type);
+      if (known.has(theme) && theme !== "token" && theme !== "field") continue; // the art's family decides (above)
+      const timbre = timbreFor({ type: def.type, tags: def.tags });
+      if (timbre !== tagged[tag]) wrong.push(`${def.id} (${def.tags.join("+")}): ${String(timbre)}`);
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("R506 a Pancake unit lands with the pancake accent, a Book spell rings in the book's chimes, an AI token lands with the AI's", () => {
+    expect(sfxOf(cuesFor(landedAs(PANCAKE_UNIT), withRealCatalog()), "summon")?.params?.timbre).toBe("pancake");
+    expect(sfxOf(cuesFor(played(BOOK_SPELL, "p2"), withRealCatalog()), "spell")?.params).toEqual({ timbre: "book" });
+    expect(sfxOf(cuesFor(landedAs(AI_TOKEN_UNIT), withRealCatalog()), "summon")?.params?.timbre).toBe("ai");
+  });
+
+  it("R203 a new family never reaches a card behind the sentinel", () => {
+    const cues = cuesFor(landedAs(HIDDEN_DEF_ID, "units", HIDDEN_DEF_ID), withRealCatalog());
+    expect(sfxOf(cues, "summon")?.params?.timbre).toBeUndefined();
+    expect(shape(played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), withRealCatalog())).toEqual([sfx("play")]);
+  });
+});
+
+describe("R506 a token's printed rarity gives its summon the rarity sting", () => {
+  it("R506 the board's catalog facts carry a token's printed rarity beside its Token rarity", () => {
+    expect(realCard(GOLEM_TOKEN)).toMatchObject({ rarity: "Token", printedRarity: "Legendary" });
+    expect(realCard(PANCAKE_UNIT)?.printedRarity).toBeUndefined();
+  });
+
+  it("R506 a unit token that prints Legendary enters with the Legendary sting; one that prints Epic does not", () => {
+    expect(sfxOf(cuesFor(landedAs(GOLEM_TOKEN), withRealCatalog()), "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
+    expect(sfxOf(cuesFor(landedAs(EPIC_TOKEN), withRealCatalog()), "entrance")).toBeUndefined();
+    expect(sfxOf(cuesFor(landedAs(AI_TOKEN_UNIT), withRealCatalog()), "entrance")).toBeUndefined();
+  });
+
+  it("R506 a printed Mythic enters with the Mythic sting", () => {
+    const mythicToken: CueCard = { type: "Unit", tags: ["Token"], rarity: "Token", printedRarity: "Mythic" };
+    const cues = cuesFor(landedAs("core-t-x"), ctx({ card: () => mythicToken }));
+    expect(sfxOf(cues, "entrance")).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
+  });
+
+  it("R203 a printed rarity never colours the backrow or a card behind the sentinel", () => {
+    expect(sfxOf(cuesFor(landedAs(LEGENDARY_FIELD_TOKEN, "backrow"), withRealCatalog()), "entrance")).toBeUndefined();
+    const asked: string[] = [];
+    const context = ctx({
+      card: (defId) => {
+        asked.push(defId);
+        return realCard(GOLEM_TOKEN);
+      },
+    });
+    expect(sfxOf(cuesFor(landedAs(HIDDEN_DEF_ID, "units", HIDDEN_DEF_ID), context), "entrance")).toBeUndefined();
+    expect(asked).toEqual([]);
+  });
+});
+
+describe("R506 a card cast as it is drawn stings", () => {
+  const cast = (instanceId: string): Partial<CueContext> => ({ castOnDraw: (id) => id === instanceId });
+
+  it("R506 a readable spell cast on draw stings in place of the play whoosh, keeping its shimmer and its line", () => {
+    expect(shape(played(SPELL, "p2", "c7"), ctx(cast("c7")))).toEqual(
+      [sfx("castOnDraw"), sfx("spell", 60), voice(SPELL, "cast", VOICE_DELAY_MS)].sort(),
+    );
+    expect(shape(played(UNIT, "p2", "c7"), ctx(cast("c7")))).toEqual([sfx("castOnDraw"), voice(UNIT, "play", VOICE_DELAY_MS)].sort());
+  });
+
+  it("R506 only the card the director marks stings: any other play whooshes as before", () => {
+    expect(shape(played(SPELL, "p2", "c8"), ctx(cast("c7")))).toContain(sfx("play"));
+    expect(shape(played(SPELL, "p2", "c7"))).toContain(sfx("play"));
+    expect(shape(played(NOT_IN_TABLE, "p2", "c7"), ctx(cast("c7")))).toEqual([sfx("castOnDraw")]);
+  });
+
+  it("R203 a cast on draw behind the sentinel, or a Trap's, sounds like any other play of it", () => {
+    expect(shape(played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), ctx(cast(HIDDEN_DEF_ID)))).toEqual([sfx("play")]);
+    expect(shape(played(TRAP, "p1", "c7"), ctx(cast("c7")))).toEqual([sfx("trapSet")]);
+    const trapCard: CueCard = { type: "Trap", tags: [] };
+    expect(shape(played(NOT_IN_TABLE, "p1", "c7"), ctx({ ...cast("c7"), card: () => trapCard }))).toEqual([sfx("play")]);
+  });
+});
+
+describe("R506 #21 Hinder cracks the victim's mana", () => {
+  const rider = (added: boolean, player: PlayerId = "p1"): GameEvent => ({ type: "modifierChanged", player, modifierId: NEXT_REFRESH_MODIFIER_ID, added });
+
+  it("R506 the next-refresh rider landing inside a readable Hinder play is a mana crack, on either seat", () => {
+    expect(shape(rider(true), ctx(inside(HINDER_DEF_ID)))).toEqual([sfx("manaCrack")]);
+    const p2Seat = ctx({ ...inside(HINDER_DEF_ID), view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
+    expect(shape(rider(true), p2Seat)).toEqual([sfx("manaCrack")]);
+  });
+
+  it("R506 it cracks even when it cancels a rider already there (the badge goes, R169)", () => {
+    expect(shape(rider(false), ctx(inside(HINDER_DEF_ID)))).toEqual([sfx("manaCrack")]);
+  });
+
+  it("R506 any other rider, or any other modifier inside Hinder's play, sounds as before", () => {
+    expect(shape(rider(true), ctx(inside("core-024")))).toEqual([sfx("notify")]);
+    expect(shape(rider(true), ctx(inside(null)))).toEqual([sfx("notify")]);
+    expect(shape(rider(false))).toEqual([]);
+    expect(shape({ type: "modifierChanged", player: "p1", modifierId: "m1", added: true }, ctx(inside(HINDER_DEF_ID)))).toEqual([sfx("notify")]);
+  });
+
+  it("R203 a play behind the sentinel is no Hinder", () => {
+    expect(shape(rider(true), ctx(inside(HIDDEN_DEF_ID)))).toEqual([sfx("notify")]);
+  });
+});
+
+describe("R506 #27 Blood Ridden Glowy Jelly Bean: a blood drain, then a gold burst", () => {
+  const radiantInHand = (instanceId: string, defId: string, player: PlayerId): GameEvent => ({
+    type: "radiantSet",
+    instanceId,
+    defId,
+    zone: { z: "hand", player },
+  });
+  const BURST = [sfx("bloodDrain"), sfx("goldBurst", GOLD_BURST_DELAY_MS)].sort();
+
+  it("R506 a card #27 turns Radiant is its blood drain and gold burst, the burst GOLD_BURST_DELAY_MS behind", () => {
+    expect(shape(radiantInHand("c3", UNIT, "p1"), ctx(inside(BLOOD_BEAN_DEF_ID)))).toEqual(BURST);
+  });
+
+  it("R203 on the other seat the card is the sentinel, and the same sound plays: it reads the public cast alone", () => {
+    const p1Seat = ctx(inside(BLOOD_BEAN_DEF_ID));
+    expect(shape(radiantInHand(HIDDEN_DEF_ID, HIDDEN_DEF_ID, "p2"), p1Seat)).toEqual(BURST);
+    // …and whatever the hidden card, the same.
+    expect(shape(radiantInHand(HIDDEN_DEF_ID, HIDDEN_DEF_ID, "p2"), p1Seat)).toEqual(shape(radiantInHand("c3", UNIT, "p2"), p1Seat));
+  });
+
+  it("R506 any other Radiant, or #27 behind the sentinel, is the plain glint", () => {
+    expect(shape(radiantInHand("c3", UNIT, "p1"), ctx(inside("core-026")))).toEqual([sfx("radiant")]);
+    expect(shape(radiantInHand("c3", UNIT, "p1"))).toEqual([sfx("radiant")]);
+    expect(shape(radiantInHand("c3", UNIT, "p1"), ctx(inside(HIDDEN_DEF_ID)))).toEqual([sfx("radiant")]);
+  });
+});
+
+describe("R506 Call to Chaos's roll (R436) and a mark (R437)", () => {
+  const rolled = (effects: string[], instanceId = "c1", defId = SPELL): GameEvent => ({ type: "chaosRolled", player: "p2", instanceId, defId, effects });
+
+  it("R506 the roll dings once for each effect it names, up to CHAOS_REVEAL_MAX", () => {
+    expect(onlySfx(rolled(["Heal your hero 30"])).params).toEqual({ amount: 1 });
+    expect(onlySfx(rolled(["a", "b", "c"])).params).toEqual({ amount: 3 });
+    expect(onlySfx(rolled(["a", "b", "c", "d", "e"])).params).toEqual({ amount: CHAOS_REVEAL_MAX });
+    expect(onlySfx(rolled([])).params).toEqual({ amount: 0 });
+  });
+
+  it("R203 both seats hear the same roll, and a card behind the sentinel changes nothing", () => {
+    const p2Seat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
+    const event = rolled(["a", "b"]);
+    expect(cuesFor(event, p2Seat)).toEqual(cuesFor(event, ctx()));
+    expect(cuesFor(rolled(["a", "b"], HIDDEN_DEF_ID, HIDDEN_DEF_ID), ctx())).toEqual(cuesFor(event, ctx()));
+  });
+
+  it("R506 a mark brands its card as it lands and lets go softly as it lifts", () => {
+    const mark = (added: boolean, instanceId = "u6"): GameEvent => ({ type: "marked", instanceId, mark: "steal", color: "purple", added });
+    expect(onlySfx(mark(true))).toEqual({ kind: "sfx", id: "brand", delayMs: 0 });
+    expect(onlySfx(mark(false))).toEqual({ kind: "sfx", id: "brand", params: { release: true }, delayMs: 0 });
+    expect(cuesFor(mark(true, HIDDEN_DEF_ID), ctx())).toEqual(cuesFor(mark(true), ctx()));
+    const recoloured: GameEvent = { type: "marked", instanceId: "u6", mark: "curse", color: "green", added: true };
+    expect(cuesFor(recoloured, ctx())).toEqual(cuesFor(mark(true), ctx()));
   });
 });
