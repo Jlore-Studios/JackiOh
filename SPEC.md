@@ -1,6 +1,6 @@
 # JackiOh — Master Game Specification
 
-2026-09-16, revision 5 of 2026-09-17 · @Someone
+2026-09-16, revision 5 of 2026-09-17, patch v0.2.0 of 2026-09-30 · @Someone
 
 ## 1. Overview
 
