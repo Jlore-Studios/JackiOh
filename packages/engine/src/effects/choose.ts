@@ -226,7 +226,7 @@ export function chooseFromHand(args: {
 // ---------------------------------------------------------------------------
 
 /**
- * B5 E17: the costs present in a hand, each an option of a `number` prompt (Classic #11 Mind Melt's
+ * B5 E17: the costs present in a hand, each an option of a `mode` prompt (Classic #11 Mind Melt's
  * Radiant: "choose a cost; exile every card of that cost from it"). A cost is the one the card would
  * be played for now (R65, `effectiveCost`), which is also what `exileMatching`'s `cost` reads, so the
  * group chosen is the group exiled. Each option's caption names the cards of that cost, which only
@@ -252,7 +252,7 @@ export function chooseCostInHand(args: {
       openPrompt(ctx, {
         player: playerOf(ctx, args.by ?? "self"),
         owner: ctx.controller,
-        kind: "number",
+        kind: "mode",
         prompt: args.prompt ?? "Choose a cost",
         options: costs.map((cost) => modeOption(String(cost), `(${cost}) ${(groups.get(cost) ?? []).join(", ")}`)),
         resume: resumeSelf(ctx, args.step, args.data ?? {}),
@@ -446,8 +446,39 @@ export function chooseReward(args: {
   };
 }
 
-/** A pile a `pick` prompt draws its options from (B5 E18). */
-export type PileSpec = { zone: "graveyard" | "exile" | "hand"; player?: PlayerSpec };
+/**
+ * A pile a `pick` prompt draws its options from (B5 E18): a graveyard, an exile pile, a hand (the other
+ * player's too — Classic #11's "look at your opponent's hand"), a library, or the field (the tops of
+ * the unit piles and the backrow cards of that side — Classic #78's Radiant "on your field, in your
+ * hand or in your deck").
+ */
+export type PileSpec = { zone: "graveyard" | "exile" | "hand" | "library" | "field"; player?: PlayerSpec };
+
+/** `c17` → 17: an instance's place in creation order (`state.newInstance` numbers ids from `nextId`). */
+function creationNumber(id: string): number {
+  const match = /^c(\d+)$/.exec(id);
+  return match === null ? Number.MAX_SAFE_INTEGER : Number.parseInt(match[1] ?? "", 10);
+}
+
+/**
+ * The cards of one pile, in the order a `pick` prompt offers them. A library's are in the order the
+ * instances were created, never library order, which the options would otherwise show the chooser
+ * (§9.1: a library's order is hidden from both players). The field's are the side's unit piles' tops,
+ * lane 1 upward, then its backrow (R13: a dormant card is not on the field).
+ */
+function pileCards(state: GameState, player: PlayerId, zone: PileSpec["zone"]): CardInstance[] {
+  if (zone === "field") {
+    return [
+      ...activeUnitsOf(state, player),
+      ...slotsOf(player, "backrow").flatMap((ref) => {
+        const card = cardAt(state, ref);
+        return card === null ? [] : [card];
+      }),
+    ];
+  }
+  const pile = state.players[player][zone];
+  return zone === "library" ? [...pile].sort((a, b) => creationNumber(a.id) - creationNumber(b.id)) : pile;
+}
 
 /** Which cards of those piles a `pick` prompt offers. */
 export type PickFilter = {
@@ -469,15 +500,20 @@ function pickable(state: GameState, card: CardInstance, filter: PickFilter): boo
 }
 
 /**
- * B5 E18: a budgeted multi-pick from a pile, or several (Classic #34 Ancient Acquisition's "2 cards
- * from your graveyard", Radiant "4 from your graveyard or exile"; Classic #44 Back from the GY's
- * "Units with a total cost of (5) or less"). Every matching card of the piles is an option — no
- * Discover limit of three — carrying its cost as R65 reads it where it lies (`effectiveCost`: a
- * graveyard or exile card at its own cost), and with `budget` the picks may cost no more than it
- * together (`prompts.whyAnswerRefused`; `promptAnswers` lists only sets that fit). `min` and `max`
- * are picks, clamped to what the piles hold; `min` defaults to 0 ("up to"). The picks arrive in
- * `ctx.targets` in offered order. Piles are public here (graveyards, exile, the chooser's own hand),
- * so the prompt is the chooser's alone like any other (R81). No matching card asks nothing.
+ * B5 E18: a pick of one card or several from a pile, or from cards across zones, budgeted by count
+ * (`max`) or by cost (`budget`) — Classic #11 Mind Melt's "a card of your opponent's hand" (one
+ * card), #34 Ancient Acquisition's "2 cards from your graveyard" (Radiant "4 from your graveyard or
+ * exile"), #44 Back from the GY's "Units with a total cost of (5) or less", #56's "up to 3 Spells",
+ * #78's Radiant "a card of yours of its type on your field, in your hand or in your deck". Every
+ * matching card of the piles is an option — no Discover limit of three — carrying its cost as R65
+ * reads it where it lies (`effectiveCost`: a hand card at its hand cost, any other at its own), and
+ * with `budget` the picks may cost no more than it together (`prompts.whyAnswerRefused`;
+ * `promptAnswers` lists only sets that fit). `min` and `max` are picks, clamped to what the piles
+ * hold; `min` defaults to 0 ("up to"). The picks arrive in `ctx.targets` in offered order. The options
+ * go to the chooser alone (R81, §10.8), which is what makes the other player's hand or a library
+ * safe to offer: the other seat sees that a prompt is open, and a library's order never shows
+ * (`pileCards`). A face-down card of the other player's is offered as its zone only (R177, `viewFor`).
+ * No matching card asks nothing.
  */
 export function choosePick(args: {
   step: string;
@@ -497,7 +533,7 @@ export function choosePick(args: {
       const options: PromptOption[] = [];
       for (const pile of args.from) {
         const player = playerOf(ctx, pile.player ?? "self");
-        for (const card of ctx.state.players[player][pile.zone]) {
+        for (const card of pileCards(ctx.state, player, pile.zone)) {
           if (seen.has(card.id) || !pickable(ctx.state, card, filter)) continue;
           seen.add(card.id);
           options.push({

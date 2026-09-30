@@ -30,7 +30,7 @@ import {
   incomeTax,
   quickdrawOf,
 } from "./fixtures/prompts";
-import { act, answerKeys, board, castNow, expectReplays, handCard, must, openAs, replayable, roundTrip } from "./fixtures/promptHarness";
+import { act, answerKeys, board, castNow, expectReplays, handCard, openAs, replayable, roundTrip } from "./fixtures/promptHarness";
 
 /** Apply one effect for `controller` outside any card, and record its events as an applied action. */
 function run(state: GameState, effect: Effect, controller: PlayerId = "p1"): GameEvent[] {
@@ -123,7 +123,8 @@ describe("E16, E2: a card out of the other player's deck (Classic+ #12.3)", () =
 
   it("E16 a Fluffy Grip game replays from its log", () => {
     const qd = quickdrawOf(fluffyGrip).id;
-    let { state, log, decks } = replayable("fluffy-replay", [qd]);
+    const { state: dealt, log, decks } = replayable("fluffy-replay", [qd]);
+    let state = dealt;
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", qd).id }, log);
     expect(state.players.p1.hand.some((card) => card.owner === "p1" && card.costOverride === 0)).toBe(true);
     expectReplays("fluffy-replay", decks, log, state);

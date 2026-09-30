@@ -251,11 +251,16 @@ const backScript: Script = {
 // E17: the opponent's hand as the options
 // ---------------------------------------------------------------------------------------------
 
-/** Classic #11 Mind Melt's shape: base exiles one card of their hand; Radiant every card of a cost. */
+/**
+ * Classic #11 Mind Melt's shape (SPEC §8.6): base, a `pick` of one card of their hand, exiled; Radiant,
+ * a `mode` prompt of the costs in their hand, and every card of the chosen cost exiled.
+ */
 export const mindMelt = def("mind-melt", "Spell", { cost: 1 });
 export const mindMeltScripts: CardScripts = {
   base: {
-    cry: () => [chooseFromHand({ of: "enemy", step: "exile", prompt: "Exile a card from their hand" })],
+    cry: () => [
+      choosePick({ step: "exile", from: [{ zone: "hand", player: "enemy" }], min: 1, max: 1, prompt: "Exile a card from their hand" }),
+    ],
     resume: { exile: () => [exile({ target: { of: "chosen" } })] },
   },
   radiant: {
@@ -393,16 +398,17 @@ const graveRewindScript: Script = {
 // E26: deck and graveyard triggers, "summon this"
 // ---------------------------------------------------------------------------------------------
 
-function playedEvent(ctx: EffectContext): Extract<GameEvent, { type: "cardPlayed" }> | null {
+/** "After you play …": the play's `cardResolved` (§10.5 step 7), once the played card has resolved. */
+function playedEvent(ctx: EffectContext): Extract<GameEvent, { type: "cardResolved" }> | null {
   const event = (ctx as EffectContext & { event?: GameEvent }).event;
-  return event !== undefined && event.type === "cardPlayed" ? event : null;
+  return event !== undefined && event.type === "cardResolved" ? event : null;
 }
 
 /** Classic #66 EU Striker's shape: from your hand, after you play a Unit, summon this (its Cry would ping). */
 export const striker = unit("striker", 5, 4, { cost: 2 });
 const strikerTrigger: TriggerDef = {
   id: "striker-arrive",
-  on: ["cardPlayed"],
+  on: ["cardResolved"],
   run: (ctx) => {
     const played = playedEvent(ctx);
     if (played === null || played.player !== ctx.controller || played.instanceId === ctx.self?.id) return [];
@@ -418,7 +424,7 @@ const strikerScript: Script = {
 export const wardrum = unit("wardrum", 5, 5, { cost: 5 });
 const wardrumTrigger: TriggerDef = {
   id: "wardrum-arrive",
-  on: ["cardPlayed"],
+  on: ["cardResolved"],
   run: (ctx) => {
     const played = playedEvent(ctx);
     if (played === null || played.player !== ctx.controller) return [];
@@ -433,7 +439,7 @@ const deckAskerScript: Script = {
   deckTriggers: [
     {
       id: "deck-ask",
-      on: ["cardPlayed"],
+      on: ["cardResolved"],
       run: (ctx) => {
         const played = playedEvent(ctx);
         if (played === null || played.player !== ctx.controller || defOf(ctx.state, played.defId).type !== "Spell") return [];
@@ -450,7 +456,7 @@ const deckAskerScript: Script = {
 /** A deck trigger that answers every play and does nothing: the hidden card that must stay hidden. */
 export const deckWatcher = unit("deck-watcher", 1, 1, { cost: 1 });
 const deckWatcherScript: Script = {
-  deckTriggers: [{ id: "deck-watch", on: ["cardPlayed"], run: () => [] }],
+  deckTriggers: [{ id: "deck-watch", on: ["cardPlayed", "cardResolved"], run: () => [] }],
 };
 
 /** Classic #47 Recurring Felinor's shape: in your graveyard, when one of your Traps fires, return this. */
@@ -470,6 +476,28 @@ function recurringScript(radiant: boolean): Script {
     ],
   };
 }
+
+/** A graveyard trigger that answers every play and does nothing: R464's last place in a side's order. */
+export const graveWatcher = unit("grave-watcher", 1, 1, { cost: 1 });
+const graveWatcherScript: Script = {
+  graveyardTriggers: [{ id: "grave-watch", on: ["cardPlayed", "cardResolved"], run: () => [] }],
+};
+
+/** Classic #78 Radiant's pick across zones: one Unit of yours on the field, in your hand or in your deck. */
+export const crossPick = def("cross-pick", "Spell", { cost: 0 });
+const crossPickScript: Script = {
+  cry: () => [
+    choosePick({
+      step: "picked",
+      from: [{ zone: "field" }, { zone: "hand" }, { zone: "library" }],
+      filter: { type: "Unit" },
+      min: 1,
+      max: 1,
+      prompt: "A Unit of yours",
+    }),
+  ],
+  resume: { picked: () => [exile({ target: { of: "chosen" } })] },
+};
 
 /** A Trap that fires when the other player plays a card, and does nothing else. */
 export const snare = def("snare", "Trap", { cost: 1 });
@@ -530,6 +558,7 @@ const QUICKDRAW_OF = [
   fluffyGrip,
   striker,
   wardrum,
+  quest,
 ];
 
 export const PROMPT_DEFS: CardDef[] = [
@@ -563,6 +592,8 @@ export const PROMPT_DEFS: CardDef[] = [
   spark,
   grunt,
   mill,
+  graveWatcher,
+  crossPick,
   ...QUICKDRAW_OF.map(quickdrawOf),
 ];
 
@@ -600,6 +631,8 @@ const BASE_SCRIPTS: Record<string, CardScripts> = {
   [snare.id]: both(snareScript),
   [spark.id]: both(sparkScript),
   [mill.id]: both(millScript),
+  [graveWatcher.id]: both(graveWatcherScript),
+  [crossPick.id]: both(crossPickScript),
 };
 
 export const PROMPT_SCRIPTS: Record<string, CardScripts> = {

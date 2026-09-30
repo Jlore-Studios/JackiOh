@@ -9,7 +9,8 @@
 import type { PendingView, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { HERO_HEALTH } from "../src/config";
-import { ANSWER_OPTION_IDS } from "../src/effects";
+import { ANSWER_OPTION_IDS, chooseFromHand } from "../src/effects";
+import { makeContext } from "../src/resolve";
 import { ANSWER_KEY, MAX_PROMPT_ANSWERS, answerKeyOf, promptAnswers, whyAnswerRefused } from "../src/prompts";
 import { legalActions } from "../src/reduce";
 import { hashState } from "../src/replay";
@@ -25,6 +26,7 @@ import {
   QUIZ,
   acquire,
   backFromGy,
+  crossPick,
   glitch,
   grunt,
   mill,
@@ -162,7 +164,8 @@ describe("E18: a mode prompt the other player holds (Classic #8)", () => {
 
   it("E18 a Pickle game replays from its log", () => {
     const qd = quickdrawOf(pickle).id;
-    let { state, log, decks } = replayable("pickle-replay", [qd]);
+    const { state: dealt, log, decks } = replayable("pickle-replay", [qd]);
+    let state = dealt;
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", qd).id }, log);
     for (const option of ["draw", "exile", "discard"]) {
       const pending = openAs(state, "mode", "p2");
@@ -280,7 +283,8 @@ describe("E18: the answer kind (Classic+ #42, R465)", () => {
 
   it("R465 a KY's Test game replays from its log", () => {
     const qd = quickdrawOf(quiz).id;
-    let { state, log, decks } = replayable("quiz-replay", [qd]);
+    const { state: dealt, log, decks } = replayable("quiz-replay", [qd]);
+    let state = dealt;
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", qd).id }, log);
     const pending = openAs(state, "answer", "p1");
     const key = must(answerKeyOf(pending.resume.data), "the key");
@@ -332,9 +336,21 @@ describe("E18: the cell kind (Classic+ #62)", () => {
     expect(state.pending).toBeNull();
   });
 
+  it("E18 R79 a timeout answers a cell prompt with one of its cells", () => {
+    let state = board("papaya-timeout");
+    castNow(state, papaya.id);
+    const first = must(state.pending, "the first cell").id;
+    state = act(state, { type: "timeout", playerId: "p1" });
+    // The turn clock answers every prompt the answers open in turn, then ends the turn (R79).
+    expect(state.pending).toBeNull();
+    expect(state.active).toBe("p2");
+    expect(first).toMatch(/^q/);
+  });
+
   it("E18 a Papaya game replays from its log", () => {
     const qd = quickdrawOf(papaya).id;
-    let { state, log, decks } = replayable("papaya-replay", [qd]);
+    const { state: dealt, log, decks } = replayable("papaya-replay", [qd]);
+    let state = dealt;
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", qd).id }, log);
     for (const selection of [
       { pick: "zone" as const, player: "p2" as const, row: "units" as const, lane: 3 },
@@ -376,6 +392,19 @@ describe("E18: the reward kind (Classic #90)", () => {
     const healed = state.players.p1.hero.health === HERO_HEALTH + 6;
     const hit = state.players.p2.hero.health === HERO_HEALTH - 3;
     expect(healed !== hit).toBe(true);
+  });
+
+  it("E18 a quest game, its reward asked on the other player's turn, replays from its log", () => {
+    const qd = quickdrawOf(quest).id;
+    const { state: dealt, log, decks } = replayable("quest-replay", [qd]);
+    let state = act(dealt, { type: "play", playerId: "p1", instanceId: handCard(dealt, "p1", qd).id, zone: { row: "backrow", lane: 1 } }, log);
+    if (state.active === "p1") state = act(state, { type: "endTurn", playerId: "p1" }, log);
+    // p2's start-of-turn draw completed the quest: p1's reward prompt, on p2's turn.
+    const pending = openAs(state, "reward", "p1");
+    expect(state.active).toBe("p2");
+    state = act(state, { type: "answer", playerId: "p1", choiceId: pending.id, selection: [{ pick: "mode", option: "B" }] }, log);
+    expect(state.players.p2.hero.health).toBe(HERO_HEALTH - 3);
+    expectReplays("quest-replay", decks, log, state);
   });
 });
 
@@ -469,7 +498,8 @@ describe("E18: the pick kind (Classic #34, #44)", () => {
   it("E18 a Back from the GY game replays from its log", () => {
     const back = quickdrawOf(backFromGy).id;
     const millCard = quickdrawOf(mill).id;
-    let { state, log, decks } = replayable("back-replay", [millCard, back]);
+    const { state: dealt, log, decks } = replayable("back-replay", [millCard, back]);
+    let state = dealt;
     // The mill puts three of p1's Units in the graveyard; Back from the GY brings two of them back.
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", millCard).id }, log);
     expect(state.players.p1.graveyard.filter((card) => card.defId !== millCard)).toHaveLength(3);
@@ -483,13 +513,45 @@ describe("E18: the pick kind (Classic #34, #44)", () => {
   });
 });
 
+describe("E18: a pick across zones (Classic #78's Radiant)", () => {
+  it("E18 a pick reaches the field, the hand and the deck, and never shows the deck's order", () => {
+    const state = board("cross-pick");
+    const onField = put(state, plain.id, slot("p1", "units", 3));
+    const held = inHand(state, grunt.id, "p1")[0] as CardInstance;
+    const deck = [...setLibrary(state, "p1", [plain.id, prize.id, glitch.id])];
+    // Library order is the reverse of creation order: the options must not follow it.
+    state.players.p1.library = [...deck].reverse();
+    castNow(state, crossPick.id);
+    const pending = openAs(state, "pick", "p1");
+    expect(pending.options.map((option) => option.key)).toEqual(
+      [onField, held, deck[0], deck[1]].map((card) => `instance:${card?.id ?? ""}`),
+    );
+    expectOnlyThatItIsOpen(state, "p2", "p1");
+    answerKeys(state, `instance:${deck[1]?.id ?? ""}`);
+    expect(state.players.p1.exile.map((card) => card.id)).toEqual([deck[1]?.id]);
+  });
+});
+
 describe("E17: the other player's hand as a prompt (Classic #11)", () => {
+  it("E17 a hand prompt over the other player's hand is the chooser's to answer and to see", () => {
+    const state = board("their-hand");
+    const hand = inHand(state, plain.id, "p2", 2);
+    const sink = sinkFor(state);
+    chooseFromHand({ of: "enemy", step: "none", prompt: "Look" }).apply(makeContext(sink, null, { controller: "p1" }));
+    const pending = openAs(state, "hand", "p1");
+    expect(pending.options.map((option) => option.key)).toEqual(hand.map((card) => `instance:${card.id}`));
+    expect(forYou(viewFor(state, "p1").pending).options.map((option) => option.defId)).toEqual([plain.id, plain.id]);
+    expectOnlyThatItIsOpen(state, "p2", "p1");
+  });
+
   it("E17 the chooser sees the other player's hand as the options; its holder sees a prompt and nothing else", () => {
     const state = board("mind-melt");
     const hand = [...inHand(state, plain.id, "p2"), ...inHand(state, grunt.id, "p2"), ...inHand(state, prize.id, "p2")];
     (hand[2] as CardInstance).radiant = true;
     castNow(state, mindMelt.id);
-    const pending = openAs(state, "hand", "p1");
+    const pending = openAs(state, "pick", "p1");
+    expect(pending.min).toBe(1);
+    expect(pending.max).toBe(1);
     expect(pending.options.map((option) => option.key)).toEqual(hand.map((card) => `instance:${card.id}`));
     const shown = forYou(viewFor(state, "p1").pending).options;
     expect(shown.map((option) => option.defId)).toEqual(hand.map((card) => card.defId));
@@ -517,7 +579,7 @@ describe("E17: the other player's hand as a prompt (Classic #11)", () => {
     const three = inHand(state, plain.id, "p2")[0] as CardInstance;
     three.costOverride = 3;
     castNow(state, mindMelt.id, "p1", true);
-    const pending = openAs(state, "number", "p1");
+    const pending = openAs(state, "mode", "p1");
     expect(pending.options.map((option) => option.key)).toEqual(["mode:0", "mode:1", "mode:3"]);
     expect(pending.options[1]?.label).toContain(plain.name);
     expectOnlyThatItIsOpen(state, "p2", "p1");
@@ -528,9 +590,10 @@ describe("E17: the other player's hand as a prompt (Classic #11)", () => {
 
   it("E17 a Mind Melt game replays from its log", () => {
     const qd = quickdrawOf(mindMelt).id;
-    let { state, log, decks } = replayable("mind-melt-replay", [qd]);
+    const { state: dealt, log, decks } = replayable("mind-melt-replay", [qd]);
+    let state = dealt;
     state = act(state, { type: "play", playerId: "p1", instanceId: handCard(state, "p1", qd).id }, log);
-    const pending = openAs(state, "hand", "p1");
+    const pending = openAs(state, "pick", "p1");
     state = act(state, { type: "answer", playerId: "p1", choiceId: pending.id, selection: [at0(pending)] }, log);
     expect(state.players.p2.exile).toHaveLength(1);
     expectReplays("mind-melt-replay", decks, log, state);

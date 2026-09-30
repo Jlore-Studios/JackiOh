@@ -226,7 +226,8 @@ describe("E13: trigger a Cry", () => {
   it("R467 a Rewind game replays from its log", () => {
     const aim = quickdrawOf(aimer).id;
     const back = quickdrawOf(rewind).id;
-    let { state, log, decks } = replayable("cry-replay", [aim, back]);
+    const { state: dealt, log, decks } = replayable("cry-replay", [aim, back]);
+    let state = dealt;
     const unit = handCard(state, "p1", aim);
     state = act(state, { type: "play", playerId: "p1", instanceId: unit.id, targets: [{ pick: "hero", player: "p2" }] }, log);
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH - 3);
