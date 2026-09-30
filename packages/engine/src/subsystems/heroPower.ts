@@ -40,6 +40,7 @@ import type { Effect, EffectContext, Hook } from "../script";
 import { stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState } from "../state";
 import { paused as isPaused } from "../work";
+import { actsOnField } from "../zones";
 
 /** R43: where the rolled power and its last use live on the instance. */
 export const POWER_KEY = "power";
@@ -385,7 +386,8 @@ export function whyCannotActivate(state: GameState, player: PlayerId, instanceId
   const card = findInstance(state, instanceId);
   if (card === undefined) return `no card ${instanceId}`;
   if (card.controller !== player) return "that card is not yours";
-  if (card.zone.z !== "field") return "that card is not on the field";
+  // B5 E21: a card dormant under a backrow pile does not act (§3.2, R13).
+  if (card.zone.z !== "field" || !actsOnField(state, card)) return "that card is not on the field";
 
   const power = powerOf(card);
   if (power === null) return "that card has no power";

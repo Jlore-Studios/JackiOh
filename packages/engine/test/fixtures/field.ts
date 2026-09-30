@@ -104,6 +104,9 @@ export const doom = def("doom", "Trap");
 /** Classic #71 Lane Eater's shape: Cry: Lock this lane (Radiant: the enemy side of it). */
 export const eater = def("eater", "Unit", { cost: 3, base: face(4, 4, []), radiant: face(8, 8, []) });
 
+/** A Field Spell that notes every death it answers: silent for the death that uncovers it (R212). */
+export const mourner = def("mourner", "Field Spell");
+
 /** Classic+ #77's Unlock half: Unlock every zone. */
 export const unlocker = def("unlocker", "Spell");
 
@@ -129,6 +132,7 @@ export const FIELD_DEFS: CardDef[] = [
   eater,
   unlocker,
   blink,
+  mourner,
 ];
 
 function both(script: Script): CardScripts {
@@ -237,6 +241,7 @@ export const FIELD_SCRIPTS: Record<string, CardScripts> = {
   }),
   [eater.id]: { base: { cry: () => [lockLane()] }, radiant: { cry: () => [lockLane({ side: "enemy" })] } },
   [unlocker.id]: both({ cry: () => [unlockAll()] }),
+  [mourner.id]: both({ triggers: [{ id: "fd-mourn", on: ["destroyed"], run: () => [note("mourned")] }] }),
   [blink.id]: both({
     targets: [{ kind: "target", min: 1, max: 1 }],
     cry: () => [

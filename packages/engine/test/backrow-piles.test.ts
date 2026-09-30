@@ -15,6 +15,7 @@ import { legalActions } from "../src/reduce";
 import { hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
+import { whyCannotActivate } from "../src/subsystems/heroPower";
 import { settle } from "../src/triggers";
 import { viewFor } from "../src/viewFor";
 import {
@@ -35,6 +36,7 @@ import {
   banner,
   cover,
   flush,
+  mourner,
   notesOf,
   playing,
   tower,
@@ -42,6 +44,7 @@ import {
   wrecker,
 } from "./fixtures/field";
 import { eventsOfType, inHand, put, sinkFor, slot } from "./fixtures/harness";
+import { heroicPower } from "./fixtures/scripts";
 
 function byId(state: GameState, id: string): CardInstance {
   const card = findInstance(state, id);
@@ -130,6 +133,22 @@ describe("B5 E21 backrow piles (R447)", () => {
     expect(eventsOfType(second.events, "trapFired").map((e) => e.instanceId)).toEqual([trap.id]);
   });
 
+  it("R447 a card that resumes answers nothing of the removal that uncovered it, and what comes after (R212)", () => {
+    const state = playing("piles-uncovered");
+    const under = put(state, mourner.id, slot("p1", "backrow", 4));
+    const top = stackOnto(state, cover.id, under);
+    const unit = put(state, plain.id, slot("p2", "units", 1));
+    const sink = sinkFor(state);
+    destroyAll({ side: "self", rows: ["backrow"] }).apply(makeContext(sink, null, { controller: "p1" }));
+    settle(sink);
+    expect(cardAt(state, slot("p1", "backrow", 4))?.id).toBe(under.id);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toContain(top.id);
+    expect(notesOf(under)).toEqual([]);
+    unit.damage = 3;
+    settle(sink);
+    expect(notesOf(under)).toEqual(["mourned"]);
+  });
+
   it("R447 hidden information: a face-down card beneath is a count to both seats, never an identity", () => {
     const state = playing("piles-hidden");
     const trap = put(state, watcher.id, slot("p2", "backrow", 1));
@@ -176,6 +195,17 @@ describe("B5 E21 backrow piles (R447)", () => {
     expect(beneathAt(state, slot("p2", "backrow", 5)).map((c) => c.id)).toEqual([flag.id]);
     expect(byId(state, flag.id).controller).toBe("p2");
     expect(state.players.p1.backrowPiles).toBeUndefined();
+  });
+
+  it("R447 a card dormant under a backrow pile does not act: a buried Heroic Power cannot be used", () => {
+    const state = playing("piles-power");
+    const power = put(state, heroicPower.id, slot("p1", "backrow", 3));
+    power.memory.power = "ping";
+    flush(state, "p1");
+    expect(whyCannotActivate(state, "p1", power.id)).toBeNull();
+    stackOnto(state, cover.id, power);
+    expect(whyCannotActivate(state, "p1", power.id)).toBe("that card is not on the field");
+    expect(legalActions(state, "p1").some((action) => action.type === "activatePower")).toBe(false);
   });
 
   it("R447 a JSON round trip keeps the pile, and a game with no pile carries no pile field", () => {

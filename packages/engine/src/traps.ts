@@ -47,7 +47,7 @@ import { eventMark, exitMark, leftFieldAfter, type LaterMoves } from "./stays";
 import { findInstance, type CardInstance, type DeclaredAttack, type GameState, type Resume, type WorkItem } from "./state";
 import { EVENT_KEY, owe, oweUnnumbered, paused as isPaused, registerWorkHandler } from "./work";
 import { slotOf } from "./zones";
-import { cardAt, moveToZone, slotsOf } from "./zones";
+import { actsOnField, cardAt, moveToZone, slotsOf } from "./zones";
 
 /**
  * A trap trigger, and the two rows that settle what firing means.
@@ -155,6 +155,11 @@ export function isFieldTrap(state: GameState, instance: CardInstance): boolean {
 
 function isOnField(instance: CardInstance): boolean {
   return instance.zone.z === "field";
+}
+
+/** §3.2, R447: a trap acts only on top of its zone — one a Stack card buried since it was matched never fires. */
+function actsAsTrap(state: GameState, instance: CardInstance): boolean {
+  return isOnField(instance) && actsOnField(state, instance);
 }
 
 /**
@@ -480,7 +485,7 @@ function declarationStands(state: GameState, event: GameEvent): boolean {
  */
 function liveMatch(state: GameState, match: TrapMatch, event: GameEvent): TrapMatch | null {
   const trap = findInstance(state, match.trap.id);
-  if (trap === undefined || !isOnField(trap) || !isTrapType(state, trap)) return null;
+  if (trap === undefined || !actsAsTrap(state, trap) || !isTrapType(state, trap)) return null;
   if (isSpent(state, trap) || isOwnArrival(trap, event)) return null;
   const triggers = trapTriggersOf(trap).filter((trigger) => trigger.on.includes(event.type));
   return triggers.length === 0 ? null : { trap, triggers };
