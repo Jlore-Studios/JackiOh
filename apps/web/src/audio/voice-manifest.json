@@ -2,6 +2,1102 @@
   "version": 1,
   "format": "m4af aac@22050 mono 32000",
   "files": {
+    "classic-001-cast": {
+      "hash": "bcf8447e33af1e66",
+      "bytes": 12776
+    },
+    "classic-002-death": {
+      "hash": "a72e0374b724bbd9",
+      "bytes": 9692
+    },
+    "classic-002-play": {
+      "hash": "219e3f9a07a1f2c2",
+      "bytes": 10441
+    },
+    "classic-003-cast": {
+      "hash": "c40c15fa31c2bf4e",
+      "bytes": 10610
+    },
+    "classic-004-cast": {
+      "hash": "b4a060ecbd33218c",
+      "bytes": 9891
+    },
+    "classic-005-cast": {
+      "hash": "cf48fbbf4aec5a38",
+      "bytes": 11599
+    },
+    "classic-006-death": {
+      "hash": "793e0ecfb3935b67",
+      "bytes": 9402
+    },
+    "classic-006-play": {
+      "hash": "1b72406abce30dd8",
+      "bytes": 10037
+    },
+    "classic-007-cast": {
+      "hash": "f403b9d7e97d14ee",
+      "bytes": 12275
+    },
+    "classic-008-cast": {
+      "hash": "964c63c403799e58",
+      "bytes": 5168
+    },
+    "classic-009-cast": {
+      "hash": "685e41a46b365c5c",
+      "bytes": 12937
+    },
+    "classic-010-cast": {
+      "hash": "f8c164d1296cf180",
+      "bytes": 10964
+    },
+    "classic-011-cast": {
+      "hash": "3b1543b6b8652974",
+      "bytes": 7658
+    },
+    "classic-012-cast": {
+      "hash": "b4f2c524ef959c3f",
+      "bytes": 9634
+    },
+    "classic-013-death": {
+      "hash": "a0b16cfdcad7d515",
+      "bytes": 9573
+    },
+    "classic-013-play": {
+      "hash": "dccc36dcf1320205",
+      "bytes": 9123
+    },
+    "classic-014-cast": {
+      "hash": "967055b3e4f92141",
+      "bytes": 13603
+    },
+    "classic-015-death": {
+      "hash": "277ed46e26ec06a8",
+      "bytes": 8950
+    },
+    "classic-015-play": {
+      "hash": "d03bf9591776590d",
+      "bytes": 6014
+    },
+    "classic-016-cast": {
+      "hash": "1d08fd9c88d08710",
+      "bytes": 11628
+    },
+    "classic-017-cast": {
+      "hash": "e5f010818d7c7e0a",
+      "bytes": 9849
+    },
+    "classic-018-cast": {
+      "hash": "aa7d8275fbcc6778",
+      "bytes": 13013
+    },
+    "classic-019-cast": {
+      "hash": "6d808d9d0c4cd9c8",
+      "bytes": 9018
+    },
+    "classic-020-cast": {
+      "hash": "642ec5dbafae5c9c",
+      "bytes": 8003
+    },
+    "classic-021-death": {
+      "hash": "4c2fc2e3c973157b",
+      "bytes": 6944
+    },
+    "classic-021-play": {
+      "hash": "a376b7110300d3fe",
+      "bytes": 8375
+    },
+    "classic-022-death": {
+      "hash": "3677676f66c02b65",
+      "bytes": 11896
+    },
+    "classic-022-play": {
+      "hash": "1c22a25658b52d85",
+      "bytes": 8876
+    },
+    "classic-023-cast": {
+      "hash": "08d0095b4bda5ca4",
+      "bytes": 13908
+    },
+    "classic-024-cast": {
+      "hash": "c972f1e9c92a97fc",
+      "bytes": 9603
+    },
+    "classic-025-cast": {
+      "hash": "47ca4e732da0fbee",
+      "bytes": 10399
+    },
+    "classic-026-cast": {
+      "hash": "f908ae9f4b95d840",
+      "bytes": 6075
+    },
+    "classic-027-death": {
+      "hash": "16dd2b1a7d5feb4a",
+      "bytes": 3252
+    },
+    "classic-027-play": {
+      "hash": "5207cfdb27b29170",
+      "bytes": 10432
+    },
+    "classic-028-cast": {
+      "hash": "8e9a52cf52ebe861",
+      "bytes": 9452
+    },
+    "classic-029-cast": {
+      "hash": "74160da5ea1530ca",
+      "bytes": 10416
+    },
+    "classic-030-cast": {
+      "hash": "e22ae484657e0cfd",
+      "bytes": 13014
+    },
+    "classic-031-death": {
+      "hash": "2586d05e5d2d7229",
+      "bytes": 9998
+    },
+    "classic-031-play": {
+      "hash": "8e9928191a651f91",
+      "bytes": 9097
+    },
+    "classic-032-cast": {
+      "hash": "f958e0479bac2d7d",
+      "bytes": 10508
+    },
+    "classic-033-death": {
+      "hash": "eb8e841bdd283674",
+      "bytes": 9504
+    },
+    "classic-033-play": {
+      "hash": "7770641e0ec80a8e",
+      "bytes": 15398
+    },
+    "classic-034-cast": {
+      "hash": "e51dc928036f43b3",
+      "bytes": 10731
+    },
+    "classic-035-cast": {
+      "hash": "b09156db3db60864",
+      "bytes": 17067
+    },
+    "classic-036-cast": {
+      "hash": "d02c9a030c117caa",
+      "bytes": 8316
+    },
+    "classic-037-cast": {
+      "hash": "030739c1d4ce9578",
+      "bytes": 9518
+    },
+    "classic-038-cast": {
+      "hash": "21f4b2192e699a27",
+      "bytes": 11676
+    },
+    "classic-039-cast": {
+      "hash": "85329266b1bbb25e",
+      "bytes": 13018
+    },
+    "classic-040-death": {
+      "hash": "61a3b5db29911df0",
+      "bytes": 3487
+    },
+    "classic-040-play": {
+      "hash": "8a49665d00b366f1",
+      "bytes": 11672
+    },
+    "classic-041-death": {
+      "hash": "ab9e0ec655f58eff",
+      "bytes": 4988
+    },
+    "classic-041-play": {
+      "hash": "0fb40d2a569d506d",
+      "bytes": 6411
+    },
+    "classic-042-cast": {
+      "hash": "4b9c372742e8da75",
+      "bytes": 12743
+    },
+    "classic-043-cast": {
+      "hash": "37d51f1e7305c060",
+      "bytes": 10549
+    },
+    "classic-044-cast": {
+      "hash": "587e5b58396ad6cc",
+      "bytes": 11199
+    },
+    "classic-045-death": {
+      "hash": "a22c6f1f5682c9af",
+      "bytes": 6347
+    },
+    "classic-045-play": {
+      "hash": "5cb139e99d6284bb",
+      "bytes": 6799
+    },
+    "classic-046-cast": {
+      "hash": "14c23d42915b9608",
+      "bytes": 7544
+    },
+    "classic-047-death": {
+      "hash": "9ca055dc7241a392",
+      "bytes": 7936
+    },
+    "classic-047-play": {
+      "hash": "e2ad3629e8172bed",
+      "bytes": 8014
+    },
+    "classic-048-death": {
+      "hash": "f0d8c88994774f67",
+      "bytes": 5568
+    },
+    "classic-048-play": {
+      "hash": "9c00b5ac1ff83807",
+      "bytes": 8623
+    },
+    "classic-049-death": {
+      "hash": "35f588a4217b53c1",
+      "bytes": 12429
+    },
+    "classic-049-play": {
+      "hash": "825ae8cbccb39fef",
+      "bytes": 12424
+    },
+    "classic-050-death": {
+      "hash": "a028b17d24f4ef15",
+      "bytes": 6420
+    },
+    "classic-050-play": {
+      "hash": "7d8a8a6d6a2c78c9",
+      "bytes": 9758
+    },
+    "classic-051-death": {
+      "hash": "829090943ea249af",
+      "bytes": 8743
+    },
+    "classic-051-play": {
+      "hash": "25e9afc84b4e7d61",
+      "bytes": 13497
+    },
+    "classic-052-cast": {
+      "hash": "9ad8456adeeb8cc5",
+      "bytes": 12328
+    },
+    "classic-053-death": {
+      "hash": "6caa4aa747142a2b",
+      "bytes": 3494
+    },
+    "classic-053-play": {
+      "hash": "4b0f3513a91dfcfb",
+      "bytes": 12882
+    },
+    "classic-054-cast": {
+      "hash": "c866fe7d3636b8cb",
+      "bytes": 10318
+    },
+    "classic-055-cast": {
+      "hash": "2e8dfb5b14f99a11",
+      "bytes": 10053
+    },
+    "classic-056-death": {
+      "hash": "0ae143f913763b30",
+      "bytes": 9996
+    },
+    "classic-056-play": {
+      "hash": "26b932e0aa4c9c98",
+      "bytes": 6852
+    },
+    "classic-057-cast": {
+      "hash": "25c834383e981845",
+      "bytes": 12588
+    },
+    "classic-058-cast": {
+      "hash": "9a208243449d9d93",
+      "bytes": 12289
+    },
+    "classic-059-death": {
+      "hash": "6e60fafcdb31e0b2",
+      "bytes": 14050
+    },
+    "classic-059-play": {
+      "hash": "11ee7f909c4c3251",
+      "bytes": 6936
+    },
+    "classic-060-cast": {
+      "hash": "8bbedf8f73ea7d57",
+      "bytes": 5049
+    },
+    "classic-061-death": {
+      "hash": "c7b662bc5b4618dd",
+      "bytes": 5703
+    },
+    "classic-061-play": {
+      "hash": "251687d8bb4e0833",
+      "bytes": 9708
+    },
+    "classic-062-cast": {
+      "hash": "4dc7de7aae17ca0e",
+      "bytes": 14278
+    },
+    "classic-063-cast": {
+      "hash": "068693f69ef64059",
+      "bytes": 7135
+    },
+    "classic-064-cast": {
+      "hash": "67f2e5280f46165d",
+      "bytes": 8664
+    },
+    "classic-065-cast": {
+      "hash": "4c15ab4caf82580a",
+      "bytes": 6005
+    },
+    "classic-066-death": {
+      "hash": "ba1cbfb4dd13b1aa",
+      "bytes": 8412
+    },
+    "classic-066-play": {
+      "hash": "5c6bdd0322ef2c6e",
+      "bytes": 9641
+    },
+    "classic-067-death": {
+      "hash": "4b413258befacc12",
+      "bytes": 6034
+    },
+    "classic-067-play": {
+      "hash": "c537d5341212ad28",
+      "bytes": 6525
+    },
+    "classic-068-death": {
+      "hash": "dce387041f4b7c3e",
+      "bytes": 8331
+    },
+    "classic-068-play": {
+      "hash": "fbcbd7c820f8f8e9",
+      "bytes": 8632
+    },
+    "classic-069-death": {
+      "hash": "9adf0cd7a64860ea",
+      "bytes": 5785
+    },
+    "classic-069-play": {
+      "hash": "04f8716b355f9f00",
+      "bytes": 12322
+    },
+    "classic-070-cast": {
+      "hash": "2abf4038370dcf4e",
+      "bytes": 6629
+    },
+    "classic-071-death": {
+      "hash": "d0aef03a8ac2d3be",
+      "bytes": 8448
+    },
+    "classic-071-play": {
+      "hash": "e05cc6216435a97a",
+      "bytes": 15008
+    },
+    "classic-072-cast": {
+      "hash": "aeadc3fe715ead80",
+      "bytes": 12542
+    },
+    "classic-073-death": {
+      "hash": "880477ffe4c01123",
+      "bytes": 5892
+    },
+    "classic-073-play": {
+      "hash": "878d29adaa09f8df",
+      "bytes": 9172
+    },
+    "classic-074-cast": {
+      "hash": "cbf0481bc257e1b8",
+      "bytes": 11202
+    },
+    "classic-075-cast": {
+      "hash": "5b2d48113d77498f",
+      "bytes": 7994
+    },
+    "classic-076-death": {
+      "hash": "a3d7c1bd80812e50",
+      "bytes": 4397
+    },
+    "classic-076-play": {
+      "hash": "c9a84315d196ef64",
+      "bytes": 12462
+    },
+    "classic-077-death": {
+      "hash": "18bfa447f8486f95",
+      "bytes": 4065
+    },
+    "classic-077-play": {
+      "hash": "50365ac79181eea6",
+      "bytes": 7481
+    },
+    "classic-078-cast": {
+      "hash": "d6c9209809524d86",
+      "bytes": 15272
+    },
+    "classic-079-cast": {
+      "hash": "1aecd65a9555a36e",
+      "bytes": 8313
+    },
+    "classic-080-death": {
+      "hash": "f006117c42bfd07e",
+      "bytes": 3189
+    },
+    "classic-080-play": {
+      "hash": "037794c0b34b09c3",
+      "bytes": 6399
+    },
+    "classic-081-cast": {
+      "hash": "4ffa632032d990a1",
+      "bytes": 8988
+    },
+    "classic-082-death": {
+      "hash": "7d557af358222987",
+      "bytes": 5534
+    },
+    "classic-082-play": {
+      "hash": "54fafd0d00b3c52f",
+      "bytes": 6601
+    },
+    "classic-083-cast": {
+      "hash": "1c823c474ddede26",
+      "bytes": 5705
+    },
+    "classic-084-cast": {
+      "hash": "70b955b2e292fcfb",
+      "bytes": 11091
+    },
+    "classic-085-death": {
+      "hash": "05b895236ef3c5ef",
+      "bytes": 7478
+    },
+    "classic-085-play": {
+      "hash": "36c932b6b2b6ef1c",
+      "bytes": 9276
+    },
+    "classic-086-death": {
+      "hash": "f5517d03c207fa30",
+      "bytes": 8165
+    },
+    "classic-086-play": {
+      "hash": "32d93a67ce208138",
+      "bytes": 7623
+    },
+    "classic-087-cast": {
+      "hash": "aed4b5f89fcbc1a7",
+      "bytes": 8317
+    },
+    "classic-088-cast": {
+      "hash": "ac2d307c8ce580f4",
+      "bytes": 11818
+    },
+    "classic-089-death": {
+      "hash": "9ce8cc32fcde05bf",
+      "bytes": 10864
+    },
+    "classic-089-play": {
+      "hash": "9fb6f81916b1ac0c",
+      "bytes": 10415
+    },
+    "classic-090-cast": {
+      "hash": "e7ba3a2a0b08a91b",
+      "bytes": 6501
+    },
+    "classicplus-001-cast": {
+      "hash": "938c53460dd314be",
+      "bytes": 10802
+    },
+    "classicplus-002-cast": {
+      "hash": "db9a40966b688a1f",
+      "bytes": 9489
+    },
+    "classicplus-003-death": {
+      "hash": "518f9c2287d2a9a7",
+      "bytes": 8070
+    },
+    "classicplus-003-play": {
+      "hash": "f7a38086d4a03b8b",
+      "bytes": 8410
+    },
+    "classicplus-004-death": {
+      "hash": "a26ed03a1c448cae",
+      "bytes": 10483
+    },
+    "classicplus-004-play": {
+      "hash": "9d0e4fb4394b86d0",
+      "bytes": 6492
+    },
+    "classicplus-005-death": {
+      "hash": "69335aeab83f3127",
+      "bytes": 9338
+    },
+    "classicplus-005-play": {
+      "hash": "096c5199d7cac160",
+      "bytes": 12099
+    },
+    "classicplus-006-death": {
+      "hash": "ef308f6612ae3de5",
+      "bytes": 9798
+    },
+    "classicplus-006-play": {
+      "hash": "2005ae849c897baf",
+      "bytes": 9280
+    },
+    "classicplus-007-cast": {
+      "hash": "2db445f7d64649ae",
+      "bytes": 9249
+    },
+    "classicplus-008-cast": {
+      "hash": "4d2ffd36784f1532",
+      "bytes": 8869
+    },
+    "classicplus-009-cast": {
+      "hash": "f4e296f44e63b218",
+      "bytes": 12263
+    },
+    "classicplus-010-cast": {
+      "hash": "8bddbc0712bae571",
+      "bytes": 9890
+    },
+    "classicplus-011-death": {
+      "hash": "67b3410428924d81",
+      "bytes": 8418
+    },
+    "classicplus-011-play": {
+      "hash": "c8562665e9c58c11",
+      "bytes": 12645
+    },
+    "classicplus-012-1-cast": {
+      "hash": "2fb4b51b71dd14ce",
+      "bytes": 9489
+    },
+    "classicplus-012-2-cast": {
+      "hash": "c791113f437447bf",
+      "bytes": 5695
+    },
+    "classicplus-012-3-cast": {
+      "hash": "4d7349498134aa31",
+      "bytes": 8656
+    },
+    "classicplus-012-4-cast": {
+      "hash": "d94b09c78438fd32",
+      "bytes": 6731
+    },
+    "classicplus-012-5-cast": {
+      "hash": "153035171bdfb841",
+      "bytes": 6331
+    },
+    "classicplus-012-6-cast": {
+      "hash": "4be83cd2a25dd59f",
+      "bytes": 10855
+    },
+    "classicplus-012-7-cast": {
+      "hash": "5cc935c6a855a141",
+      "bytes": 9418
+    },
+    "classicplus-012-8-cast": {
+      "hash": "e92b514a86b384fb",
+      "bytes": 9630
+    },
+    "classicplus-012-death": {
+      "hash": "a99fa97eced2b450",
+      "bytes": 7869
+    },
+    "classicplus-012-play": {
+      "hash": "a8fd4fe06f85a2a7",
+      "bytes": 11615
+    },
+    "classicplus-013-death": {
+      "hash": "af9000153d884be3",
+      "bytes": 7584
+    },
+    "classicplus-013-play": {
+      "hash": "8339b0656e4b332c",
+      "bytes": 7452
+    },
+    "classicplus-014-cast": {
+      "hash": "02cf972f1fc06a18",
+      "bytes": 9088
+    },
+    "classicplus-015-cast": {
+      "hash": "d418a873a65ae289",
+      "bytes": 6375
+    },
+    "classicplus-016-cast": {
+      "hash": "31f90ce0a181c227",
+      "bytes": 9183
+    },
+    "classicplus-017-cast": {
+      "hash": "bda6767bdc8417a5",
+      "bytes": 9825
+    },
+    "classicplus-018-death": {
+      "hash": "ae40fb2016d6c3ae",
+      "bytes": 3771
+    },
+    "classicplus-018-play": {
+      "hash": "9dfe5b3975d26672",
+      "bytes": 8059
+    },
+    "classicplus-019-1-death": {
+      "hash": "160e84ed828818c6",
+      "bytes": 3645
+    },
+    "classicplus-019-1-play": {
+      "hash": "981001469e089cf1",
+      "bytes": 8218
+    },
+    "classicplus-019-2-death": {
+      "hash": "606dad6432ec768a",
+      "bytes": 6840
+    },
+    "classicplus-019-2-play": {
+      "hash": "4d51cdfa0b5978e8",
+      "bytes": 8436
+    },
+    "classicplus-019-3-death": {
+      "hash": "6dff2b95e36929ff",
+      "bytes": 4277
+    },
+    "classicplus-019-3-play": {
+      "hash": "dffcc326a6b184d8",
+      "bytes": 4361
+    },
+    "classicplus-019-4-death": {
+      "hash": "b21bf70b70d9c8c5",
+      "bytes": 6938
+    },
+    "classicplus-019-4-play": {
+      "hash": "44b55ff3b73ad825",
+      "bytes": 9339
+    },
+    "classicplus-019-5-death": {
+      "hash": "0c782536864fe6aa",
+      "bytes": 4964
+    },
+    "classicplus-019-5-play": {
+      "hash": "c1ae12daeb4b5fe0",
+      "bytes": 7725
+    },
+    "classicplus-019-cast": {
+      "hash": "5d2b1815e0211f77",
+      "bytes": 10807
+    },
+    "classicplus-020-death": {
+      "hash": "a673b0bc53530c03",
+      "bytes": 4007
+    },
+    "classicplus-020-play": {
+      "hash": "b1a92bf471f6fdb9",
+      "bytes": 8846
+    },
+    "classicplus-021-cast": {
+      "hash": "e37bac9a4af05857",
+      "bytes": 3862
+    },
+    "classicplus-022-cast": {
+      "hash": "ce0ab1e408d83815",
+      "bytes": 6680
+    },
+    "classicplus-023-cast": {
+      "hash": "162a713c9ae844a0",
+      "bytes": 7481
+    },
+    "classicplus-024-cast": {
+      "hash": "3c290562ad50dce8",
+      "bytes": 7134
+    },
+    "classicplus-025-cast": {
+      "hash": "7a83b33c89c07749",
+      "bytes": 6665
+    },
+    "classicplus-026-death": {
+      "hash": "1d22f884248a2e96",
+      "bytes": 3496
+    },
+    "classicplus-026-play": {
+      "hash": "c04c4f0514c04c50",
+      "bytes": 8246
+    },
+    "classicplus-027-cast": {
+      "hash": "5d65602c40c5fa89",
+      "bytes": 8251
+    },
+    "classicplus-028-death": {
+      "hash": "30a1dd859dedf670",
+      "bytes": 6066
+    },
+    "classicplus-028-play": {
+      "hash": "c8370e7f1b630d21",
+      "bytes": 10422
+    },
+    "classicplus-029-cast": {
+      "hash": "2c50ddd844cfbb57",
+      "bytes": 11791
+    },
+    "classicplus-030-death": {
+      "hash": "6f2a37961c12733d",
+      "bytes": 7008
+    },
+    "classicplus-030-play": {
+      "hash": "44dca9af49f5058f",
+      "bytes": 7556
+    },
+    "classicplus-031-cast": {
+      "hash": "4761b5b75f86301f",
+      "bytes": 11138
+    },
+    "classicplus-032-1-cast": {
+      "hash": "b12baf26d7ead65a",
+      "bytes": 4936
+    },
+    "classicplus-032-2-cast": {
+      "hash": "2694293106caeb36",
+      "bytes": 13825
+    },
+    "classicplus-032-3-cast": {
+      "hash": "c7e0e3c33e666059",
+      "bytes": 12551
+    },
+    "classicplus-032-cast": {
+      "hash": "d8087d2635ed72b6",
+      "bytes": 11541
+    },
+    "classicplus-033-cast": {
+      "hash": "4be704d5095483b2",
+      "bytes": 9020
+    },
+    "classicplus-034-cast": {
+      "hash": "c584f268d914ae4f",
+      "bytes": 11650
+    },
+    "classicplus-035-cast": {
+      "hash": "a3e1df64ad69433d",
+      "bytes": 8464
+    },
+    "classicplus-036-1-cast": {
+      "hash": "6558c493d26e3373",
+      "bytes": 10928
+    },
+    "classicplus-036-cast": {
+      "hash": "ba5b2067e434a51f",
+      "bytes": 15001
+    },
+    "classicplus-037-death": {
+      "hash": "3049366646e30c29",
+      "bytes": 6602
+    },
+    "classicplus-037-play": {
+      "hash": "12ef244897d1d20b",
+      "bytes": 14531
+    },
+    "classicplus-038-1-death": {
+      "hash": "5970e36336f6d10c",
+      "bytes": 4315
+    },
+    "classicplus-038-1-play": {
+      "hash": "9df50eaede035276",
+      "bytes": 11576
+    },
+    "classicplus-038-death": {
+      "hash": "d47bbe81c9bbb066",
+      "bytes": 3276
+    },
+    "classicplus-038-play": {
+      "hash": "8cb7069bbc9c27a3",
+      "bytes": 6304
+    },
+    "classicplus-039-death": {
+      "hash": "0d3e29538fb75e4f",
+      "bytes": 6691
+    },
+    "classicplus-039-play": {
+      "hash": "f6d482b04baa2026",
+      "bytes": 9726
+    },
+    "classicplus-040-cast": {
+      "hash": "a9d5083a2e9b6180",
+      "bytes": 12047
+    },
+    "classicplus-041-cast": {
+      "hash": "d47886e79af99631",
+      "bytes": 6794
+    },
+    "classicplus-042-1-cast": {
+      "hash": "40a05382e130641c",
+      "bytes": 12455
+    },
+    "classicplus-042-cast": {
+      "hash": "5b65f839a287caf9",
+      "bytes": 11268
+    },
+    "classicplus-043-cast": {
+      "hash": "f1ae2314a00ffdcb",
+      "bytes": 13064
+    },
+    "classicplus-044-cast": {
+      "hash": "21ba5af0f78a9711",
+      "bytes": 10777
+    },
+    "classicplus-045-cast": {
+      "hash": "5dc84d5a32900b0e",
+      "bytes": 11287
+    },
+    "classicplus-046-1-death": {
+      "hash": "52171829725e5675",
+      "bytes": 8365
+    },
+    "classicplus-046-1-play": {
+      "hash": "7ab4d4acd1ddaab4",
+      "bytes": 6245
+    },
+    "classicplus-046-death": {
+      "hash": "e9bcfb3606687146",
+      "bytes": 6492
+    },
+    "classicplus-046-play": {
+      "hash": "629519e8bc354529",
+      "bytes": 8249
+    },
+    "classicplus-047-cast": {
+      "hash": "ec549f7eaa927b62",
+      "bytes": 9348
+    },
+    "classicplus-048-death": {
+      "hash": "58b1cc0597232ac4",
+      "bytes": 9180
+    },
+    "classicplus-048-play": {
+      "hash": "f6ebdab55e240c29",
+      "bytes": 8295
+    },
+    "classicplus-049-death": {
+      "hash": "bc0c7c1f934f00d9",
+      "bytes": 6728
+    },
+    "classicplus-049-play": {
+      "hash": "acf816f195e3d518",
+      "bytes": 5221
+    },
+    "classicplus-050-cast": {
+      "hash": "53ab2b11baa1ffe7",
+      "bytes": 10328
+    },
+    "classicplus-051-death": {
+      "hash": "e53cbb9978a2cc8f",
+      "bytes": 8280
+    },
+    "classicplus-051-play": {
+      "hash": "b859bc5092be0fd5",
+      "bytes": 9710
+    },
+    "classicplus-052-cast": {
+      "hash": "a7aa85cbb33377e1",
+      "bytes": 19114
+    },
+    "classicplus-053-cast": {
+      "hash": "8abfef6821c902c5",
+      "bytes": 7476
+    },
+    "classicplus-054-cast": {
+      "hash": "92aa945b8b19f2e5",
+      "bytes": 10956
+    },
+    "classicplus-055-cast": {
+      "hash": "21f48adbfa308d5f",
+      "bytes": 10028
+    },
+    "classicplus-056-cast": {
+      "hash": "11b3b652651d0f0d",
+      "bytes": 10801
+    },
+    "classicplus-057-cast": {
+      "hash": "4f0a62a4c8eb877f",
+      "bytes": 5852
+    },
+    "classicplus-058-cast": {
+      "hash": "dfd44093a0369dea",
+      "bytes": 5985
+    },
+    "classicplus-059-cast": {
+      "hash": "e45a5223839bde43",
+      "bytes": 8164
+    },
+    "classicplus-060-cast": {
+      "hash": "feb85a5135503d87",
+      "bytes": 9142
+    },
+    "classicplus-061-cast": {
+      "hash": "b658dabf9618fa1a",
+      "bytes": 8289
+    },
+    "classicplus-062-cast": {
+      "hash": "b4fab096007d1350",
+      "bytes": 10860
+    },
+    "classicplus-063-cast": {
+      "hash": "ce1373ba7d64728c",
+      "bytes": 9292
+    },
+    "classicplus-064-death": {
+      "hash": "8003bd05e5d92e11",
+      "bytes": 4261
+    },
+    "classicplus-064-play": {
+      "hash": "df3bf461a48b2c20",
+      "bytes": 10979
+    },
+    "classicplus-065-1-cast": {
+      "hash": "eab7c15841a5b08f",
+      "bytes": 7854
+    },
+    "classicplus-065-2-cast": {
+      "hash": "82e1dcd018db87d0",
+      "bytes": 4983
+    },
+    "classicplus-065-3-cast": {
+      "hash": "83d678ba164de661",
+      "bytes": 7710
+    },
+    "classicplus-065-4-cast": {
+      "hash": "f08a077c06153487",
+      "bytes": 9082
+    },
+    "classicplus-065-5-cast": {
+      "hash": "3108fe0265ccabef",
+      "bytes": 10665
+    },
+    "classicplus-065-cast": {
+      "hash": "25b33b353bad9c6a",
+      "bytes": 6387
+    },
+    "classicplus-066-cast": {
+      "hash": "59a4e57cd70b2f9e",
+      "bytes": 7905
+    },
+    "classicplus-067-cast": {
+      "hash": "f195138627a38359",
+      "bytes": 8301
+    },
+    "classicplus-068-cast": {
+      "hash": "ecf2d4598ca4fd98",
+      "bytes": 12312
+    },
+    "classicplus-069-death": {
+      "hash": "4fe719af679d62e9",
+      "bytes": 4572
+    },
+    "classicplus-069-play": {
+      "hash": "ffee57a23b452725",
+      "bytes": 6135
+    },
+    "classicplus-070-cast": {
+      "hash": "d8c1190e8e28a1f3",
+      "bytes": 10582
+    },
+    "classicplus-071-cast": {
+      "hash": "10f1d5a2c1ccbfc6",
+      "bytes": 13029
+    },
+    "classicplus-072-cast": {
+      "hash": "2476f5a8b65947a5",
+      "bytes": 11573
+    },
+    "classicplus-073-1-death": {
+      "hash": "dba3551ffdbf7220",
+      "bytes": 9142
+    },
+    "classicplus-073-1-play": {
+      "hash": "661a269beefe66e3",
+      "bytes": 14095
+    },
+    "classicplus-073-cast": {
+      "hash": "f87aef971ad70fe1",
+      "bytes": 10057
+    },
+    "classicplus-074-cast": {
+      "hash": "329928abb9a2f460",
+      "bytes": 10836
+    },
+    "classicplus-075-1-cast": {
+      "hash": "44a742d05a1b46c9",
+      "bytes": 6087
+    },
+    "classicplus-075-death": {
+      "hash": "ee7ecf22423a57e0",
+      "bytes": 5248
+    },
+    "classicplus-075-play": {
+      "hash": "8c77691c071cddd7",
+      "bytes": 10772
+    },
+    "classicplus-076-1-death": {
+      "hash": "6c28afd51568935f",
+      "bytes": 6135
+    },
+    "classicplus-076-1-play": {
+      "hash": "33efc1d3ef6f3b81",
+      "bytes": 8731
+    },
+    "classicplus-076-death": {
+      "hash": "d2b89a0410016e8f",
+      "bytes": 9083
+    },
+    "classicplus-076-play": {
+      "hash": "7610ea518748c334",
+      "bytes": 10150
+    },
+    "classicplus-077-cast": {
+      "hash": "bd1e1876445c4f54",
+      "bytes": 10339
+    },
+    "classicplus-078-cast": {
+      "hash": "bb882e41fbd0a2db",
+      "bytes": 6170
+    },
+    "classicplus-t-ai-01-death": {
+      "hash": "8c625cf2f22cff89",
+      "bytes": 8279
+    },
+    "classicplus-t-ai-01-play": {
+      "hash": "09974adb23622a49",
+      "bytes": 6598
+    },
+    "classicplus-t-ai-02-death": {
+      "hash": "bcc05cae908f3bf2",
+      "bytes": 5907
+    },
+    "classicplus-t-ai-02-play": {
+      "hash": "aacd11401176ef01",
+      "bytes": 9202
+    },
+    "classicplus-t-ai-03-cast": {
+      "hash": "0d87b54ba725554c",
+      "bytes": 8677
+    },
+    "classicplus-t-ai-04-cast": {
+      "hash": "e923f3f7b47cacbe",
+      "bytes": 7454
+    },
+    "classicplus-t-ai-05-cast": {
+      "hash": "38113d953ffb2f31",
+      "bytes": 7507
+    },
+    "classicplus-t-ai-06-cast": {
+      "hash": "a6aeec515189b710",
+      "bytes": 4857
+    },
+    "classicplus-t-ai-07-cast": {
+      "hash": "ea1cdb6f37324ae4",
+      "bytes": 12213
+    },
+    "classicplus-t-ai-08-cast": {
+      "hash": "76194ddf0b88c910",
+      "bytes": 11945
+    },
+    "classicplus-t-ai-09-cast": {
+      "hash": "1631c6cafaf5e374",
+      "bytes": 11225
+    },
+    "classicplus-t-ai-10-cast": {
+      "hash": "140817483a00af13",
+      "bytes": 11869
+    },
     "core-001-death": {
       "hash": "1dd9ab5a4f74469a",
       "bytes": 11877

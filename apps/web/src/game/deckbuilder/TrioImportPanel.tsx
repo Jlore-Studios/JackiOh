@@ -17,6 +17,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 
 import { checkImportRoom, trioConflicts, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
+import { TRIO_CODE_VERSION } from "../../../../server/src/config.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { droppedLines } from "./ImportPanel.tsx";
 import type { TrioImport, TrioImportResult, WorkshopLimits } from "./sync.ts";
@@ -32,7 +33,7 @@ import {
   WORKSHOP_BACK,
   trioImportSlotId,
 } from "./testids.ts";
-import { decodeTrioCode } from "./trioCode.ts";
+import { TRIO_CODE_PREFIX, decodeTrioCode } from "./trioCode.ts";
 
 export type TrioImportPanelProps = {
   catalog: CatalogSnapshot;
@@ -140,7 +141,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
         spellCheck={false}
         autoComplete="off"
         autoCapitalize="off"
-        placeholder="JKT1.…"
+        placeholder={`${TRIO_CODE_PREFIX}${String(TRIO_CODE_VERSION)}.…`}
         onChange={(event) => {
           setText(event.target.value);
           setRefusal(null);

@@ -9,8 +9,11 @@ import { checkTrioDraft, normalizeName, type CatalogSnapshot, type Collection } 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import type { CardDef } from "@jackioh/shared";
+
 import {
   DECK_NAME_MAX_LENGTH,
+  TRIO_CODE_CORE_ONLY_VERSION,
   TRIO_CODE_MAX_INPUT_LENGTH,
   TRIO_CODE_VERSION,
 } from "../../../../server/src/config.ts";
@@ -65,10 +68,16 @@ function deckBody(name: string, numbers: readonly number[]): number[] {
   return [...nameBytes(name), numbers.length, ...numbers];
 }
 
-function rawTrio(name: string, mask: number, bodies: readonly number[][], trailing: readonly number[] = []): string {
+function rawTrio(
+  name: string,
+  mask: number,
+  bodies: readonly number[][],
+  trailing: readonly number[] = [],
+  header: string = HEADER,
+): string {
   const body = [...nameBytes(name), mask, ...bodies.flat(), ...trailing];
   const sum = fnv1a16(body);
-  return HEADER + base64url([...body, sum >> 8, sum & 0xff]);
+  return header + base64url([...body, sum >> 8, sum & 0xff]);
 }
 
 function expectOk(result: DecodedTrio): Extract<DecodedTrio, { ok: true }> {
@@ -203,7 +212,9 @@ describe("R339 — refusals, each with its own sentence", () => {
       ok: false,
       message: TRIO_CODE_MESSAGES.newer,
     });
-    expect(decodeTrioCode(`${TRIO_CODE_PREFIX}${String(TRIO_CODE_VERSION - 1)}.${body}`, catalog, collection)).toEqual({
+    // Version 1 is still read (R339); version 0 never was.
+    expect(TRIO_CODE_CORE_ONLY_VERSION).toBe(TRIO_CODE_VERSION - 1);
+    expect(decodeTrioCode(`${TRIO_CODE_PREFIX}${String(TRIO_CODE_CORE_ONLY_VERSION - 1)}.${body}`, catalog, collection)).toEqual({
       ok: false,
       message: TRIO_CODE_MESSAGES.older,
     });
@@ -281,5 +292,24 @@ describe("R339 — each deck is read as a deck code's deck is", () => {
     );
     expect(decoded.slots[0]?.cards).toEqual(shared);
     expect(decoded.slots[1]?.cards).toEqual(shared);
+  });
+});
+
+describe("version 2: each deck's numbers carry their set (patch v0.2.0, B2.2)", () => {
+  const classicOne: CardDef = { ...(catalog.cards[fixtureCardId(1)] as CardDef), id: "classic-001", set: "Classic" };
+  const threeSets: CatalogSnapshot = { version: catalog.version, cards: { ...catalog.cards, "classic-001": classicOne } };
+
+  it("R339 writes version 2 and reads a Classic card back from its own set", () => {
+    expect(TRIO_CODE_VERSION).toBe(2);
+    const code = encodeTrioCode("Mixed", [{ name: "Both", cards: [fixtureCardId(1), "classic-001"] }, null, null], threeSets);
+    expect(code.startsWith(`${TRIO_CODE_PREFIX}2.`)).toBe(true);
+    const decoded = expectOk(decodeTrioCode(code, threeSets, null));
+    expect(decoded.slots[0]?.cards).toEqual([fixtureCardId(1), "classic-001"]);
+  });
+
+  it("R339 reads a version 1 trio's decks as Core numbers, so every trio code minted before v0.2.0 still imports", () => {
+    const v1 = `${TRIO_CODE_PREFIX}${String(TRIO_CODE_CORE_ONLY_VERSION)}.`;
+    const decoded = expectOk(decodeTrioCode(rawTrio("Old trio", 0b001, [deckBody("Old", [1, 2])], [], v1), threeSets, null));
+    expect(decoded.slots[0]?.cards).toEqual([fixtureCardId(1), fixtureCardId(2)]);
   });
 });

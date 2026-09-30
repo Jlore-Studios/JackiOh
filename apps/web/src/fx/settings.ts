@@ -1,4 +1,4 @@
-// The viewer's effects settings (docs/polish/1-animations.md, Surface S3): speed (R201), intensity
+// The viewer's effects settings (docs/polish/1-animations.md, Surface S3): speed (R201, R435), intensity
 // and a motion override. They are a per-viewer presentation preference, so they live in this
 // browser only, under `FX_SETTINGS_KEY` in `localStorage`. Task 7's settings panel mounts
 // `useFxSettings` at integration; the animation runner reads `getFxSettings()` at every enqueue.

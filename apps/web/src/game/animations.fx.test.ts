@@ -364,8 +364,8 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   numberChanged: ["jk-stat-tick", 300, "card-<instanceId> | hand-card-<instanceId>"],
   redirected: ["jk-snap-back", 350, "card-<toId> | hero-<side>"],
   healthSet: ["jk-loss-pop", 400, "hero-<side>"],
-  questProgressed: ["jk-badge-tick", 200, "card-<instanceId>"],
-  questCompleted: ["jk-radiant-pulse", 500, "card-<instanceId>"],
+  questProgressed: ["jk-badge-tick", 200, "card-<instanceId> | backrow-<side>"],
+  questCompleted: ["jk-radiant-pulse", 500, "card-<instanceId> | backrow-<side>"],
   rolledBack: ["jk-swap-cross", 600, "board"],
   chaosRolled: ["jk-banner", 900, "turn-banner"],
   flickered: ["jk-summon-scale", 300, "zone-<side>-<row>-<lane>"],
@@ -661,20 +661,25 @@ describe("B3 default settings", () => {
  * ------------------------------------------------------------------------------------------- */
 
 describe("B4 the effects speed scales the table", () => {
-  it("R201 the effects speed divides every non-zero duration and the burst budget, clamped to [0.5, 2]", () => {
+  it("R201 R435 the effects speed divides every non-zero duration and the burst budget, clamped to [0.25, 3]", () => {
     // 700 + 600 + 600 = 1,900 ms: inside the budget at every speed once the budget is divided too.
     const burst = [TRAP, TURN_STARTED, TURN_AUTO_ENDED];
     expect(scheduledAt(1, burst)).toEqual([700, 600, 600]);
     expect(scheduledAt(2, burst)).toEqual([350, 300, 300]);
     expect(scheduledAt(0.5, burst)).toEqual([1400, 1200, 1200]);
-    // 5 is clamped to FX_SPEED_MAX.
-    expect(scheduledAt(5, burst)).toEqual([350, 300, 300]);
+    expect(scheduledAt(3, burst)).toEqual([233, 200, 200]);
+    expect(scheduledAt(0.25, burst)).toEqual([2800, 2400, 2400]);
+    // 5 is clamped to FX_SPEED_MAX, 0.1 to FX_SPEED_MIN.
+    expect(scheduledAt(5, burst)).toEqual([233, 200, 200]);
+    expect(scheduledAt(0.1, burst)).toEqual([2800, 2400, 2400]);
 
     // Over budget at speed 1, so over budget at every speed, and squeezed by the same factor.
     const over = [TRAP, TRAP, TRAP, TRAP];
     expect(scheduledAt(2, over)).toEqual([300, 300, 300, 300]);
     expect(scheduledAt(0.5, over)).toEqual([1200, 1200, 1200, 1200]);
-    expect(scheduledAt(5, over)).toEqual([300, 300, 300, 300]);
+    expect(scheduledAt(3, over)).toEqual([200, 200, 200, 200]);
+    expect(scheduledAt(0.25, over)).toEqual([2400, 2400, 2400, 2400]);
+    expect(scheduledAt(5, over)).toEqual([200, 200, 200, 200]);
   });
 
   it("B4 scaleForSpeed: 0 stays 0, speed 1 is the identity, other speeds divide and round", () => {
@@ -700,19 +705,19 @@ describe("B4 the effects speed scales the table", () => {
   });
 
   it("B4 scaleForSpeed clamps speeds above FX_SPEED_MAX and below FX_SPEED_MIN", () => {
-    expect(FX_SPEED_MIN).toBe(0.5);
-    expect(FX_SPEED_MAX).toBe(2);
-    expect(scaleForSpeed(300, 5)).toBe(150);
-    expect(scaleForSpeed(300, 100)).toBe(150);
-    expect(scaleForSpeed(300, 0.1)).toBe(600);
-    expect(scaleForSpeed(300, 0.25)).toBe(600);
+    expect(FX_SPEED_MIN).toBe(0.25);
+    expect(FX_SPEED_MAX).toBe(3);
+    expect(scaleForSpeed(600, 5)).toBe(200);
+    expect(scaleForSpeed(600, 100)).toBe(200);
+    expect(scaleForSpeed(300, 0.1)).toBe(1200);
+    expect(scaleForSpeed(300, 0.25)).toBe(1200);
   });
 
   it("B4 a zero or negative speed is clamped to FX_SPEED_MIN rather than dividing by it", () => {
-    expect(scaleForSpeed(300, 0)).toBe(600);
-    expect(scaleForSpeed(300, -2)).toBe(600);
-    expect(scheduledAt(0, [TRAP])).toEqual([1400]);
-    expect(scheduledAt(-1, [TRAP])).toEqual([1400]);
+    expect(scaleForSpeed(300, 0)).toBe(1200);
+    expect(scaleForSpeed(300, -2)).toBe(1200);
+    expect(scheduledAt(0, [TRAP])).toEqual([2800]);
+    expect(scheduledAt(-1, [TRAP])).toEqual([2800]);
   });
 
   it("B4 a zero duration stays zero whatever the speed, valid or not", () => {

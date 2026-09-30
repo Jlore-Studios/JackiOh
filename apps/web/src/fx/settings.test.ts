@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { createElement, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FX_SETTINGS_KEY, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEPS } from "./constants.ts";
+import { FX_SETTINGS_KEY, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "./constants.ts";
 import {
   DEFAULT_FX_SETTINGS,
   getFxSettings,
@@ -193,15 +193,17 @@ describe("B6 loadFxSettings and normalization", () => {
     }
   });
 
-  it("B6 normalizeSpeed clamps to [0.5, 2] and keeps values inside it", () => {
-    expect(normalizeSpeed(0)).toBe(0.5);
-    expect(normalizeSpeed(-1)).toBe(0.5);
-    expect(normalizeSpeed(0.49)).toBe(0.5);
-    expect(normalizeSpeed(2.01)).toBe(2);
-    expect(normalizeSpeed(100)).toBe(2);
+  it("R435 normalizeSpeed clamps to [0.25, 3] and keeps values inside it, a stored 0.5 or 2 included", () => {
+    expect(normalizeSpeed(0)).toBe(0.25);
+    expect(normalizeSpeed(-1)).toBe(0.25);
+    expect(normalizeSpeed(0.24)).toBe(0.25);
+    expect(normalizeSpeed(3.01)).toBe(3);
+    expect(normalizeSpeed(100)).toBe(3);
     expect(normalizeSpeed(0.75)).toBe(0.75);
     expect(normalizeSpeed(1.25)).toBe(1.25);
-    for (const step of FX_SPEED_STEPS) expect(normalizeSpeed(step)).toBe(step);
+    for (let step = FX_SPEED_MIN; step <= FX_SPEED_MAX; step += FX_SPEED_STEP) expect(normalizeSpeed(step)).toBe(step);
+    expect(normalizeSpeed(0.5)).toBe(0.5);
+    expect(normalizeSpeed(2)).toBe(2);
   });
 
   it("B6 normalizeFxSettings turns anything that is not a settings object into the defaults", () => {
@@ -245,8 +247,8 @@ describe("B6 getFxSettings and setFxSettings", () => {
   });
 
   it("B6 setFxSettings normalizes the patch before storing and returning it", () => {
-    expect(setFxSettings({ speed: 10 })).toEqual({ speed: 2, intensity: "normal", motion: "system" });
-    expect(getFxSettings().speed).toBe(2);
+    expect(setFxSettings({ speed: 10 })).toEqual({ speed: 3, intensity: "normal", motion: "system" });
+    expect(getFxSettings().speed).toBe(3);
     expect(setFxSettings({ speed: Number.NaN })).toEqual(DEFAULTS);
     expect(setFxSettings({ intensity: "loud" as FxSettings["intensity"] }).intensity).toBe("normal");
     expect(loadFxSettings(window.localStorage)).toEqual(getFxSettings());
@@ -317,8 +319,8 @@ describe("B7 subscriptions", () => {
     setFxSettings({ speed: 7, intensity: "low" });
 
     expect(first).toHaveBeenCalledTimes(1);
-    expect(first).toHaveBeenLastCalledWith({ speed: 2, intensity: "low", motion: "system" });
-    expect(second).toHaveBeenLastCalledWith({ speed: 2, intensity: "low", motion: "system" });
+    expect(first).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system" });
+    expect(second).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system" });
   });
 
   it("B7 an unsubscribed listener is not notified", () => {
@@ -360,7 +362,7 @@ describe("B7 subscriptions", () => {
     act(() => {
       setFxSettings({ speed: 99, motion: "reduce" });
     });
-    expect(probe.textContent).toBe("2|high|reduce");
+    expect(probe.textContent).toBe("3|high|reduce");
   });
 
   it("B7 the hook's setter updates the store and every subscriber", () => {

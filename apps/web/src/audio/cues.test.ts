@@ -240,7 +240,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   rolledBack: "whoosh",
   chaosRolled: "trapSting",
   flickered: "poof",
-  drawLimited: "refuse",
+  drawLimited: "cancel",
   turnCutShort: "notify",
   marked: "debuff",
 };

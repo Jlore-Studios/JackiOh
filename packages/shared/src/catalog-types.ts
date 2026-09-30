@@ -168,9 +168,28 @@ export type Param = {
 };
 
 /**
- * A face's text with its `{key}` placeholders filled in: from `values` when given (an instance's
- * current numbers), else from the face's printed values. Unknown keys are left as written. Pure, so
- * the client, the tests and R277's diff all fill a text the same way.
+ * A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
+ * damage."); `{key|singular|plural}` is the number and the words that agree with it ("Draw
+ * {draw|card|cards}." prints "Draw 1 card." and "Draw 2 cards."), so a text reads right at every
+ * value a Degrade or an Upgrade can move it to.
+ */
+export const PARAM_PLACEHOLDER = /\{([A-Za-z][A-Za-z0-9]*)(?:\|([^|{}]*)\|([^|{}]*))?\}/g;
+
+/** Every placeholder a text writes, in order: its key and, for the agreeing form, both wordings. */
+export function paramPlaceholders(text: string): { key: string; one?: string; many?: string }[] {
+  return [...text.matchAll(PARAM_PLACEHOLDER)].map((match) => {
+    const key = match[1] ?? "";
+    const one = match[2];
+    const many = match[3];
+    return one === undefined || many === undefined ? { key } : { key, one, many };
+  });
+}
+
+/**
+ * A face's text with its placeholders filled in: from `values` when given (an instance's current
+ * numbers), else from the face's printed values; `{key|singular|plural}` takes the singular wording
+ * at 1 and the plural at any other value. Unknown keys are left as written. Pure, so the client, the
+ * tests and R277's diff all fill a text the same way.
  */
 export function fillParams(
   def: Pick<CardDef, "params" | "base" | "radiant">,
@@ -180,11 +199,12 @@ export function fillParams(
   const text = def[face].text;
   const params = def.params;
   if (params === undefined || params.length === 0) return text;
-  return text.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (whole, key: string) => {
+  return text.replace(PARAM_PLACEHOLDER, (whole, key: string, one?: string, many?: string) => {
     const param = params.find((p) => p.key === key);
     if (param === undefined) return whole;
     const value = values?.[key] ?? param[face];
-    return String(value);
+    if (one === undefined || many === undefined) return String(value);
+    return `${String(value)} ${value === 1 ? one : many}`;
   });
 }
 
