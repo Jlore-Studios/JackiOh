@@ -180,6 +180,24 @@ describe("E19 Place N Plague Tokens: a prompt per placement (R471)", () => {
   });
 });
 
+describe("E19 a placement prompt held by the player who is not taking the turn", () => {
+  it("R471 the placer is the placing card's controller, whose prompt it is on either player's turn (C #90's reward D)", () => {
+    const { run: start, theirs } = board("plague-off-turn");
+    const state = start.state;
+    const sink = sinkFor(state);
+    // p2's card places on p1's turn: the prompt is p2's, and p1 cannot answer it.
+    placePlagueTokens({ count: 1, amount: 2 }).apply(makeContext(sink, null, { controller: "p2" }));
+    expect(state.active).toBe("p1");
+    expect(state.pending?.playerId).toBe("p2");
+    let run1 = frozen(start);
+    expect(() => answer(run1, pick(theirs), "p1")).toThrow(/other player/);
+    run1 = answer(run1, pick(theirs), "p2");
+    expect(run1.state.pending).toBeNull();
+    expect(plagueOn(run1.state.players.p2.units[1]?.[0] as CardInstance)).toBe(2);
+    expect(hashState(replayed(run1))).toBe(hashState(run1.state));
+  });
+});
+
 describe("E19 one placement, multipliers and the placed trigger (R471)", () => {
   it("R471 'Place N on X' is one placement of N on the declared card, Radiant 2", () => {
     const { run: start, theirs } = board("plague-outbreak");
