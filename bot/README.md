@@ -68,6 +68,49 @@ The issue is the spec, so write it the way you would for a careful contributor: 
 happen, where, and how you would check it. The builder reads the issue body, every comment from
 people on the trust list, `CLAUDE.md` and `SPEC.md`. Comments from anyone else are left out.
 
+## No request is lost
+
+Every way of asking either gets an answer at once, or is found again later:
+
+- **Commands** in a comment, a line comment on a pull request's diff, or an edit that adds a
+  command. The bot puts 👀 on the comment, replies, and adds 🚀. If a command fails, the reply says
+  so; the other commands in the same comment still run.
+- **Naming the bot mid-sentence** ("thanks @jgoetzmann-bot, could you…") gets a reply explaining
+  how to phrase a request. The bot does not guess a build from it, and does not ignore it.
+- **The sweep** runs every half hour (`harness sweep`, and on demand from the Actions tab). It
+  reads the last three days back from GitHub and answers anything no handler answered:
+  - a trusted command (in a comment, a diff comment or a review) that nobody claimed;
+  - an assignment nothing queued;
+  - a review asking for changes on a bot pull request, newer than anything the bot acted on;
+  - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head.
+
+  It leaves anything younger than ten minutes to the handler that may still be running, so
+  nothing is answered twice.
+- **Labels are the queue**, so a `bot:build` or `bot:revise` label is never lost, even if no
+  handler ever saw it being added.
+- **A request made while the bot is working** on the thread gets another pass once the run
+  ends, and auto-merge waits for it. A request means a command, naming the bot, a review asking
+  for changes, or a queue label. A plain comment is read as part of the thread, but it does not
+  start a pass of its own. This applies to requests on the issue, on its pull request, and on
+  the issue a pull request closes. A `/harness stop` holds the thread until the run has stopped,
+  so "stop, then do this instead" gets built.
+- **Each request runs once.** A comment, edit or review is claimed in the state file before it
+  runs, so the event handler and the sweep never both act on it. An edit runs only the lines it
+  added, and only when the comment's author made the edit.
+- **Commands are read the way people write them**: in a list, in backticks, in bold. A control
+  word in plain words ("@jgoetzmann-bot start with option A") is a request, not a command.
+- **A run that dies without a result** goes to the back of the queue and is blocked after two
+  in a row. A failure outside any item (the CLI refusing to start, a broken install on `main`)
+  charges nothing and pauses runs for 50 minutes.
+- **A stop or halt said after the last checkpoint** still counts: deliver checks again, so
+  nothing merges that you stopped.
+- **`--force`** and **`/harness run`** start a run at once. Both are written down first, so if
+  GitHub refuses to start one, or a newer run replaces it, the next hourly run picks it up
+  (`bot-night` fires every hour, all day).
+- **A run that dies** (cancelled, timed out, crashed) leaves its item for the next run, which
+  requeues it. A failure outside any item (a missing secret, the CLI refusing to start) is
+  never charged to the item.
+
 ## Commands
 
 Put one command per line in any issue or PR comment, as `/harness <verb>`, `/harness-<verb>` or

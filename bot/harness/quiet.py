@@ -69,6 +69,8 @@ def compare(a: Sample, b: Sample) -> str:
 
 
 def _overlaps(step: dict, t1: datetime, t2: datetime) -> bool:
+    if step.get("conclusion") == "skipped":
+        return False  # GitHub skipped it, so it spent nothing
     started = parse_iso(step.get("started_at"))
     if started is None or started > t2:
         return False
@@ -120,14 +122,16 @@ def wait_for_quiet(settings: Quiet, ping: Callable[[], dict | None],
     deadline = now() + timedelta(minutes=settings.max_wait_minutes)
     first = Sample.of(ping(), now())
     if first is None:
-        return Verdict(False, "the CLI gave no usage reading, so quiet cannot be told")
+        # No reading at all: nothing may depend on the usage signal being there, so the run goes
+        # ahead (bright-bots-harness does the same) rather than waiting every night for ever.
+        return Verdict(True, "the CLI gave no usage reading, so quiet cannot be told; going ahead")
     samples = [first.to_dict()]
     previous = first
     while now() + interval <= deadline + timedelta(seconds=30):
         sleep(interval.total_seconds())
         current = Sample.of(ping(), now())
         if current is None:
-            return Verdict(False, "the CLI gave no usage reading, so quiet cannot be told", samples)
+            continue  # this pair cannot be compared; the next reading is compared with `previous`
         samples.append(current.to_dict())
         verdict = compare(previous, current)
         if verdict == "quiet":

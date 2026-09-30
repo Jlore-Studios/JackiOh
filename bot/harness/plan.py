@@ -25,6 +25,8 @@ from harness.state import usage_refusal
 MODES = ("auto", "build", "revise", "suggest")
 #: After a failure that was not an item's fault, unforced runs wait this long before trying again.
 INFRA_BACKOFF = timedelta(minutes=50)
+#: A run asked for and never taken up is dropped after this long.
+RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
 
 
@@ -65,6 +67,10 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
     if mode not in MODES:
         return False, f"unknown mode {mode!r}", False
     state = ctx.store.load()
+    asked = run_request(ctx, state)
+    if asked is not None:
+        force = True
+        item = item if item is not None else asked.get("item")
     stop = stops(ctx, state, force)
     if stop:
         return False, stop, False
@@ -80,6 +86,9 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
         first = queue[0]
         return True, f"#{first.number} is queued to {first.kind}", bool(force or first.forced)
     if only_forced:
+        tidy = housekeeping_due(ctx, state, forced_only=True)
+        if tidy:
+            return True, tidy, True
         return False, f"outside the night window ({ctx.window.describe()})", False
     if item is not None and mode != "suggest":
         return False, f"#{item} is not queued", False
@@ -91,9 +100,21 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
     return False, "nothing is queued", False
 
 
-def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
+def run_request(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
+    """A `/harness run` (or `start --force`) not yet taken up, if one is fresh enough."""
+    asked = state.get("run_requested")
+    at = parse_iso((asked or {}).get("at"))
+    if not isinstance(asked, dict) or at is None or ctx.now() - at > RUN_REQUEST_TTL:
+        return None
+    return asked
+
+
+def housekeeping_due(ctx: Context, state: dict[str, Any], *,
+                     forced_only: bool = False) -> str | None:
     """What `housekeeping` would requeue, read without changing anything, or None."""
     for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+        if forced_only and not state["items"].get(str(thread["number"]), {}).get("forced"):
+            continue
         run_id = str(state["items"].get(str(thread["number"]), {}).get("run_id") or "")
         try:
             alive = bool(run_id) and ctx.gh.get_run(run_id).get("status") in (
@@ -102,6 +123,8 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
             alive = False
         if not alive:
             return f"#{thread['number']} was left working by a run that ended"
+    if forced_only:
+        return None
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
         if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
@@ -122,6 +145,12 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     if mode not in MODES:
         return nothing(f"unknown mode {mode!r}")
     state = ctx.store.load()
+    asked = run_request(ctx, state)
+    if asked is not None:
+        # Taken up here, whatever this run finds: one request, one run.
+        ctx.store.update(lambda s: s.update(run_requested=None), "run request taken")
+        force = True
+        item = item if item is not None else asked.get("item")
     stop = stops(ctx, state, force)
     if stop:
         return nothing(stop)
@@ -230,11 +259,11 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
                                   "to it. Taking it out of the queue.")
             return None
         source = str(record.get("source") or "request")
+        issue_number = threads.linked_issue(pull)
         feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
-                                         record.get("feedback_since"))
+                                         record.get("feedback_since"), issue=issue_number)
         if source == "ci":
             feedback += "\n\n" + ci_logs(ctx, record.get("ci_run_id"))
-        issue_number = threads.linked_issue(pull)
         issue_text = ""
         if issue_number:
             try:
@@ -261,7 +290,7 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, number)
         entry.update(run_id=cfg.run_id, started_at=iso(ctx.now()), kind=kind,
-                     stop_requested=False)
+                     stop_requested=False, pending_request=False)
         state["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url, "what": f"{kind} #{number}"}
     ctx.store.update(change, f"claim #{number}")
     ctx.gh.create_comment(number, message)
@@ -315,6 +344,8 @@ def suggestion_plan(ctx: Context, *, force: bool) -> dict[str, Any] | None:
         tags = ", ".join(sorted(label_names(issue)))
         lines.append(f"- {kind} #{issue['number']} [{issue.get('state')}] {issue.get('title', '')}"
                      + (f" ({tags})" if tags else ""))
+    was_requested = bool((ctx.store.load().get("suggest") or {}).get("requested"))
+
     def change(s: dict[str, Any]) -> None:
         s["suggest"] = {"last_run": iso(ctx.now()), "requested": False}
         s["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url, "what": "suggestions"}
@@ -324,4 +355,5 @@ def suggestion_plan(ctx: Context, *, force: bool) -> dict[str, Any] | None:
         "count": count,
         "existing": data("\n".join(lines) or "(none)", "Existing issues and pull requests"),
         "forced": bool(force),
+        "was_requested": was_requested,
     }

@@ -36,7 +36,7 @@ class FakeGitHub:
         self.runs: dict[str, dict[str, Any]] = {}
         self.jobs: dict[str, list[dict[str, Any]]] = {}
         self.reruns: list[Any] = []
-        self.reactions: list[tuple[int, str]] = []
+        self.reacted: list[tuple[int, str]] = []
         self.auto_merge: dict[str, str] = {}
         self.auto_merge_error: str = ""
         self.protection: dict[str, Any] | None = None
@@ -83,8 +83,19 @@ class FakeGitHub:
     def add_comment(self, number: int, body: str, user: dict[str, Any] | None = None,
                     association: str = "OWNER", created_at: str = "2026-09-20T00:00:00Z") -> dict:
         comment = {"id": next(self._ids), "body": body, "user": dict(user or OPERATOR),
-                   "author_association": association, "created_at": created_at}
+                   "author_association": association, "created_at": created_at,
+                   "issue_url": f"https://api.github.com/repos/{self.repo}/issues/{number}"}
         self.comments.setdefault(number, []).append(comment)
+        return comment
+
+    def add_review_comment(self, number: int, body: str, user: dict[str, Any] | None = None,
+                           association: str = "OWNER",
+                           created_at: str = "2026-09-20T00:00:00Z") -> dict:
+        comment = {"id": next(self._ids), "body": body, "user": dict(user or OPERATOR),
+                   "author_association": association, "created_at": created_at,
+                   "path": "src/x.ts", "line": 3,
+                   "pull_request_url": f"https://api.github.com/repos/{self.repo}/pulls/{number}"}
+        self.review_comments.setdefault(number, []).append(comment)
         return comment
 
     def label_names(self, number: int) -> set[str]:
@@ -100,7 +111,8 @@ class FakeGitHub:
             raise GitHubError(f"no issue {number}", 404)
         return copy.deepcopy(self.threads[number])
 
-    def list_issues(self, *, labels: str = "", state: str = "open", limit: int = 300) -> list[dict]:
+    def list_issues(self, *, labels: str = "", state: str = "open", limit: int = 300,
+                    assignee: str = "") -> list[dict]:
         wanted = [n for n in labels.split(",") if n]
         found = []
         for number in sorted(self.threads):
@@ -108,7 +120,8 @@ class FakeGitHub:
             if state != "all" and thread["state"] != state:
                 continue
             names = {label["name"] for label in thread["labels"]}
-            if all(n in names for n in wanted):
+            assigned = {a.get("login") for a in thread.get("assignees", [])}
+            if all(n in names for n in wanted) and (not assignee or assignee in assigned):
                 found.append(copy.deepcopy(thread))
         return found[:limit]
 
@@ -117,12 +130,29 @@ class FakeGitHub:
 
     def create_comment(self, number: int, body: str) -> dict[str, Any]:
         comment = {"id": next(self._ids), "body": with_marker(body), "user": dict(BOT),
-                   "author_association": "COLLABORATOR", "created_at": "2026-09-29T00:00:00Z"}
+                   "author_association": "COLLABORATOR", "created_at": "2026-09-29T00:00:00Z",
+                   "issue_url": f"https://api.github.com/repos/{self.repo}/issues/{number}"}
         self.comments.setdefault(number, []).append(comment)
         return comment
 
     def react(self, comment_id: int, content: str, *, review_comment: bool = False) -> None:
-        self.reactions.append((comment_id, content))
+        self.reacted.append((comment_id, content))
+
+    def reactions(self, comment_id: int, *, review_comment: bool = False) -> list[dict]:
+        return [{"content": c, "user": dict(BOT)} for i, c in self.reacted if i == comment_id]
+
+    def list_repo_comments(self, since: str, limit: int = 500) -> list[dict]:
+        found = [c for items in self.comments.values() for c in items
+                 if c.get("created_at", "") >= since]
+        return copy.deepcopy(found[:limit])
+
+    def list_repo_review_comments(self, since: str, limit: int = 500) -> list[dict]:
+        found = [c for items in self.review_comments.values() for c in items
+                 if c.get("created_at", "") >= since]
+        return copy.deepcopy(found[:limit])
+
+    def runs_for_sha(self, sha: str, limit: int = 30) -> list[dict]:
+        return [dict(r) for r in self.runs.values() if r.get("head_sha") == sha][:limit]
 
     def create_issue(self, title: str, body: str, labels: Any = ()) -> dict[str, Any]:
         number = max(self.threads, default=0) + 1

@@ -10,7 +10,9 @@ from __future__ import annotations
 from typing import Any
 
 from harness import commands
-from harness.clock import iso
+from datetime import timedelta
+
+from harness.clock import iso, parse_iso
 from harness.commands import Command
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_WORKING, MARKER)
@@ -23,6 +25,13 @@ from harness.status import report
 from harness.trust import LEVEL_NAMES
 
 ACTIONS_BOT = "github-actions[bot]"
+#: CI conclusions that leave a bot pull request unable to merge by itself.
+CI_FAILED = ("failure", "timed_out", "cancelled", "startup_failure")
+
+
+def ci_workflows(ctx: Context) -> tuple[str, ...]:
+    """The workflows whose checks a bot pull request must pass: CI and the bot's own selftest."""
+    return (ctx.cfg.ci_workflow, "bot selftest")
 
 
 #: Events handled even when the bot sent them: CI runs its own pushes started, and pull requests
@@ -37,8 +46,10 @@ def handle(ctx: Context, name: str, payload: dict[str, Any]) -> list[str]:
     if sender.lower() in (ctx.cfg.bot_login.lower(), ACTIONS_BOT) and (
             (name, action) not in FROM_THE_BOT_TOO):
         return ["ignored: the bot's own event"]
-    if name == "issue_comment" and action == "created":
+    if name == "issue_comment" and action in ("created", "edited"):
         return on_comment(ctx, payload)
+    if name == "pull_request_review_comment" and action in ("created", "edited"):
+        return on_comment(ctx, payload, review_comment=True)
     if name == "pull_request_review" and action == "submitted":
         return on_review(ctx, payload)
     if name == "issues" and action in ("labeled", "assigned"):
@@ -63,24 +74,100 @@ def _level(ctx: Context, user: dict[str, Any], association: str | None) -> int:
     return ctx.trust.level(str(user.get("login", "")), user.get("id"), association)
 
 
-def on_comment(ctx: Context, payload: dict[str, Any]) -> list[str]:
+#: The reaction the bot leaves once it has answered a comment. The sweep treats a command without
+#: it as never answered; nobody but the bot's own logins can leave it as the bot.
+ANSWERED = "rocket"
+
+
+def answered(ctx: Context, comment_id: int, *, review_comment: bool = False) -> bool:
+    """True when the bot has already answered this comment (its rocket reaction is there)."""
+    logins = {ctx.cfg.bot_login.lower(), ACTIONS_BOT}
+    for reaction in ctx.gh.reactions(comment_id, review_comment=review_comment):
+        who = str((reaction.get("user") or {}).get("login", "")).lower()
+        if reaction.get("content") == ANSWERED and who in logins:
+            return True
+    return False
+
+
+NUDGE = ("I saw my name, but no request I could act on. Start a line with "
+         "`@{bot} <what you want>` or `/harness build`; `/harness help` lists the rest.")
+
+
+#: How long a claim is kept: longer than the sweep looks back.
+CLAIM_DAYS = 5
+
+
+def claim(ctx: Context, key: str, lines: list[str]) -> list[str]:
+    """Record, compare-and-set, that these lines of one comment or review are being answered.
+
+    Returns the lines nobody claimed before, so an event handler and the sweep, or a comment and
+    its edit, never act on the same line twice. A line is claimed before it runs: a handler that
+    dies half-way leaves its 👀 and no reply rather than running a command a second time."""
+    now = ctx.now()
+    fresh: list[str] = []
+
+    def change(state: dict[str, Any]) -> None:
+        handled = state.setdefault("handled", {})
+        for old in [k for k, v in handled.items()
+                    if (parse_iso(v.get("at")) or now) < now - timedelta(days=CLAIM_DAYS)]:
+            del handled[old]
+        before = handled.get(key, {}).get("lines", [])
+        fresh[:] = [line for line in lines if line not in before]
+        if fresh:
+            handled[key] = {"at": iso(now), "lines": sorted(set(before) | set(lines))}
+
+    ctx.store.update(change, f"claim {key}")
+    return fresh
+
+
+def claimed(ctx: Context, key: str) -> bool:
+    return key in (ctx.store.load().get("handled") or {})
+
+
+def _reply(ctx: Context, number: int, body: str) -> None:
+    try:
+        ctx.gh.create_comment(number, body)
+    except GitHubError:
+        ctx.gh.create_comment(number, body)  # once more; a second failure is the job's error
+
+
+def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = False) -> list[str]:
+    """Answer the commands in a comment, a line comment on a diff, or an edit of either."""
     comment = payload.get("comment") or {}
     body = str(comment.get("body") or "")
     if _is_own(body):
         return ["ignored: the bot's own comment"]
     found = commands.parse(body, ctx.cfg.bot_login)
-    if not found:
+    nudge = not found and commands.names_the_bot(body, ctx.cfg.bot_login)
+    if not found and not nudge:
         return ["no command"]
-    thread = payload.get("issue") or {}
+    if review_comment:
+        pull = payload.get("pull_request") or {}
+        thread = {"number": pull.get("number"), "pull_request": {}}
+    else:
+        thread = payload.get("issue") or {}
     user = comment.get("user") or {}
+    if payload.get("action") == "edited":
+        editor = payload.get("sender") or {}
+        if editor.get("id") is not None and editor.get("id") != user.get("id"):
+            return ["ignored: an edit by someone other than the comment's author"]
     level = _level(ctx, user, comment.get("author_association"))
     if level <= 0:
         return [f"ignored: @{user.get('login')} is not on the trust list"]
-    ctx.gh.react(int(comment["id"]), "eyes")
-    replies = run_commands(ctx, found, thread, user, level)
+    comment_id = int(comment["id"])
+    key = f"{'rc' if review_comment else 'c'}:{comment_id}"
+    lines = [c.line for c in found] or ["(named the bot)"]
+    fresh = claim(ctx, key, lines)
+    if not fresh:
+        return ["ignored: already answered"]
+    ctx.gh.react(comment_id, "eyes", review_comment=review_comment)
+    if nudge:
+        replies = [NUDGE.format(bot=ctx.cfg.bot_login)]
+    else:
+        replies = run_commands(ctx, [c for c in found if c.line in fresh], thread, user, level)
     login = user.get("login", "")
-    ctx.gh.create_comment(int(thread["number"]), f"@{login}\n\n" + "\n\n".join(replies))
-    ctx.gh.react(int(comment["id"]), "rocket")
+    _reply(ctx, int(thread["number"]), f"@{login}\n\n" + "\n\n".join(replies))
+    ctx.gh.react(comment_id, ANSWERED, review_comment=review_comment)
     return replies
 
 
@@ -103,8 +190,9 @@ def run_commands(ctx: Context, found: list[Command], thread: dict[str, Any], use
             continue
         try:
             replies.append(head + execute(ctx, command, thread, user))
-        except GitHubError as exc:
-            replies.append(head + f"That failed: {exc}")
+        except Exception as exc:  # noqa: BLE001 - a failure is answered, never dropped in silence
+            replies.append(head + f"That failed ({type(exc).__name__}: {str(exc)[:300]}). "
+                           "Nothing is lost by saying it again.")
     return replies
 
 
@@ -127,15 +215,11 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         if ctx.repo_halted():
             extra = " `.harness/HALT` is still on `main`, though, and it wins until it is deleted."
         if command.force:
-            ctx.dispatch(force=True)
-            return "Started, and a run is starting now." + extra
+            return "Started. " + _run_now(ctx, None) + extra
         return "Started. The bot works in the next night window." + extra
     if verb == "run":
         target = command.args.lstrip("#")
-        item = int(target) if target.isdigit() else None
-        ctx.dispatch(force=True, item=item)
-        which = f" for #{item}" if item else ""
-        return f"A run{which} is starting now, outside the window if need be."
+        return _run_now(ctx, int(target) if target.isdigit() else None)
     if verb == "suggest":
         ctx.store.update(lambda s: s["suggest"].update(requested=True), "suggest")
         if command.force:
@@ -160,7 +244,23 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     return f"`{verb}` is not something I can do here."
 
 
+def _run_now(ctx: Context, item: int | None) -> str:
+    """Ask for a run now. The request is written down first, so a run that GitHub replaces or
+    refuses to start is made up by the next hourly one."""
+    ctx.store.update(lambda s: s.update(run_requested={"at": iso(ctx.now()), "item": item}),
+                     "run requested")
+    which = f" for #{item}" if item else ""
+    try:
+        ctx.dispatch(force=True, item=item)
+    except GitHubError as exc:
+        return (f"Starting a run{which} failed ({str(exc)[:200]}); the next hourly run does it "
+                "instead.")
+    return f"A run{which} is starting now, outside the window if need be."
+
+
 def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:
+    """A review: its body's commands, a hint when it names the bot, or a revision when a trusted
+    person asks a bot pull request for changes. Claimed like a comment, so it runs once."""
     review = payload.get("review") or {}
     pull = payload.get("pull_request") or {}
     user = review.get("user") or {}
@@ -169,17 +269,24 @@ def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:
         return [f"ignored: @{user.get('login')} is not on the trust list"]
     body = str(review.get("body") or "")
     found = commands.parse(body, ctx.cfg.bot_login)
-    thread = {"number": pull.get("number"), "pull_request": {}}
+    changes = (LABEL_PR in label_names(pull) and level >= 2
+               and str(review.get("state", "")).lower() == "changes_requested")
+    nudge = not found and not changes and commands.names_the_bot(body, ctx.cfg.bot_login)
+    if not (found or changes or nudge):
+        return ["no command in the review"]
+    lines = [c.line for c in found] or ["(changes requested)" if changes else "(named the bot)"]
+    if not claim(ctx, f"r:{review.get('id')}", lines):
+        return ["ignored: already answered"]
+    number = int(pull["number"])
+    login = user.get("login", "")
     if found:
-        replies = run_commands(ctx, found, thread, user, level)
-        ctx.gh.create_comment(int(pull["number"]), f"@{user.get('login')}\n\n" + "\n\n".join(replies))
-        return replies
-    names = label_names(pull)
-    if LABEL_PR in names and str(review.get("state", "")).lower() == "changes_requested" and level >= 2:
-        reply = queue_revise(ctx, int(pull["number"]), by=str(user.get("login")))
-        ctx.gh.create_comment(int(pull["number"]), f"@{user.get('login')}\n\n{reply}")
-        return [reply]
-    return ["no command in the review"]
+        replies = run_commands(ctx, found, {"number": number, "pull_request": {}}, user, level)
+    elif changes:
+        replies = [queue_revise(ctx, number, by=str(login))]
+    else:
+        replies = [NUDGE.format(bot=ctx.cfg.bot_login)]
+    _reply(ctx, number, f"@{login}\n\n" + "\n\n".join(replies))
+    return replies
 
 
 def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> list[str]:
@@ -193,7 +300,8 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
     wanted = False
     if action == "labeled":
         name = str((payload.get("label") or {}).get("name", ""))
-        wanted = (name == LABEL_BUILD and not is_pr) or (name == LABEL_REVISE and is_pr)
+        # Either queue label works on either kind of thread: an issue builds, a PR revises.
+        wanted = name in (LABEL_BUILD, LABEL_REVISE)
         if not wanted:
             return [f"ignored: label {name}"]
     elif action == "assigned":
@@ -203,7 +311,7 @@ def on_issue_change(ctx: Context, payload: dict[str, Any], *, is_pr: bool) -> li
             return [f"ignored: assigned to {assignee}"]
     if level < 2:
         if action == "labeled":
-            ctx.gh.remove_label(number, LABEL_REVISE if is_pr else LABEL_BUILD)
+            ctx.gh.remove_label(number, str((payload.get("label") or {}).get("name", "")))
         return [f"ignored: @{sender.get('login')} is below the maintainer level"]
     by = str(sender.get("login", ""))
     if is_pr:
@@ -235,9 +343,9 @@ def on_pull_closed(ctx: Context, payload: dict[str, Any]) -> list[str]:
 
 def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
     run = payload.get("workflow_run") or {}
-    if run.get("name") != ctx.cfg.ci_workflow:
+    if run.get("name") not in ci_workflows(ctx):
         return [f"ignored: workflow {run.get('name')}"]
-    if run.get("conclusion") not in ("failure", "timed_out"):
+    if run.get("conclusion") not in CI_FAILED:
         return [f"ignored: conclusion {run.get('conclusion')}"]
     branch = str(run.get("head_branch") or "")
     numbers = [int(p["number"]) for p in run.get("pull_requests") or [] if p.get("number")]

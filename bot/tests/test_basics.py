@@ -98,8 +98,8 @@ class WindowTests(unittest.TestCase):
             self.assertEqual(at.astimezone(fallback).hour, at.astimezone(real).hour, at)
 
     def test_crons_cover_the_window_in_both_seasons(self):
-        # bot-night.yml fires at :17 past 02..13 UTC; every local hour 21..06 must be covered.
-        hours = range(2, 14)
+        # bot-night.yml fires at :17 every hour; every local hour 21..06 must be covered.
+        hours = range(0, 24)
         for day in ("2026-07-01", "2026-12-01"):
             covered = set()
             for hour in hours:

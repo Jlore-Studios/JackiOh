@@ -76,8 +76,7 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     state = ctx.store.update(lambda s: _queued(s, number, "build", by, force, ctx),
                              f"queue #{number}")
     if force:
-        ctx.dispatch(item=number, force=True, mode="build")
-        return f"Queued #{number} and started a run now (`--force`).{_halt_note(ctx, state)}"
+        return _start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
     return f"Queued #{number}; I will build it {_when(ctx)}.{_halt_note(ctx, state)}"
 
 
@@ -109,9 +108,20 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
     state = ctx.store.update(change, f"queue revise #{number}")
     held = " Auto-merge is off until the revision lands." if LABEL_PR in names else ""
     if force:
-        ctx.dispatch(item=number, force=True, mode="revise")
-        return f"Queued a revision of #{number} and started a run now.{held}{_halt_note(ctx, state)}"
+        return (_start_now(ctx, number, "revise", f"Queued a revision of #{number}") + held
+                + _halt_note(ctx, state))
     return f"Queued a revision of #{number}; I will do it {_when(ctx)}.{held}{_halt_note(ctx, state)}"
+
+
+def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
+    """Start a forced run. If GitHub refuses, the item is still queued and still forced, and the
+    next hourly run starts it, inside the window or not."""
+    try:
+        ctx.dispatch(item=number, force=True, mode=mode)
+    except GitHubError as exc:
+        return (f"{queued}, but starting a run now failed ({str(exc)[:200]}). It stays forced, so "
+                "the next hourly run starts it.")
+    return f"{queued} and started a run now (`--force`)."
 
 
 def _queued(state: dict[str, Any], number: int, kind: str, by: str, force: bool, ctx: Context) -> None:
@@ -124,15 +134,17 @@ def _queued(state: dict[str, Any], number: int, kind: str, by: str, force: bool,
 
 def _pending(ctx: Context, number: int, by: str) -> None:
     """Remember a request that arrived while a run held the thread; deliver requeues it."""
-    ctx.store.update(lambda s: state_item(s, number).update(pending_request=True, pending_by=by),
-                     f"pending #{number}")
+    ctx.store.update(lambda s: state_item(s, number).update(
+        pending_request=True, pending_by=by, pending_at=iso(ctx.now())), f"pending #{number}")
 
 
 def stop(ctx: Context, number: int, *, by: str) -> str:
+    """Take a thread out of the queue. A run that holds it keeps `bot:working` until it has
+    stopped, so a request made in the meantime waits for that run instead of racing it."""
     thread = ctx.gh.get_issue(number)
     names = label_names(thread)
     working = LABEL_WORKING in names
-    set_state_label(ctx, number, names, None)
+    set_state_label(ctx, number, names, LABEL_WORKING if working else None)
     if "pull_request" in thread and LABEL_PR in names:
         try:
             pull = ctx.gh.get_pull(number)
@@ -142,7 +154,8 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
             pass
     def change(state: dict[str, Any]) -> None:
         record = state_item(state, number)
-        record.update(stop_requested=True, stopped_by=by, stopped_at=iso(ctx.now()), forced=False)
+        record.update(stop_requested=True, stopped_by=by, stopped_at=iso(ctx.now()), forced=False,
+                      pending_request=False)
     ctx.store.update(change, f"stop #{number}")
     if working:
         return f"Stopping work on #{number}; the run gives up at its next checkpoint."
@@ -159,25 +172,22 @@ class Candidate:
 
 
 def candidates(ctx: Context, state: dict[str, Any]) -> list[Candidate]:
-    """Queued threads: forced requests first, then revisions, then oldest first."""
-    found: list[Candidate] = []
-    for thread in ctx.gh.list_issues(labels=""):
-        names = label_names(thread)
-        number = int(thread["number"])
-        is_pr = "pull_request" in thread
-        record = state["items"].get(str(number), {})
-        if LABEL_WORKING in names:
-            continue
-        if is_pr and LABEL_REVISE in names:
-            kind = "revise"
-        elif not is_pr and LABEL_BUILD in names:
-            kind = "build"
-        else:
-            continue
-        if int(record.get("failures", 0)) >= ctx.cfg.max_failures:
-            continue
-        found.append(Candidate(number, kind, str(thread.get("title", "")),
-                               bool(record.get("forced")),
-                               str(record.get("queued_at") or thread.get("created_at") or "")))
-    found.sort(key=lambda c: (not c.forced, c.kind != "revise", c.queued_at, c.number))
-    return found
+    """Queued threads: forced requests first, then revisions, then oldest first.
+
+    Read by label, so no number of open threads hides one. Either queue label queues either kind
+    of thread: an issue builds and a pull request revises. A queue label is the request, so a
+    thread that failed before and was labelled again is taken again."""
+    found: dict[int, Candidate] = {}
+    for label in (LABEL_BUILD, LABEL_REVISE):
+        for thread in ctx.gh.list_issues(labels=label):
+            number = int(thread["number"])
+            if LABEL_WORKING in label_names(thread) or number in found:
+                continue
+            record = state["items"].get(str(number), {})
+            found[number] = Candidate(
+                number, "revise" if "pull_request" in thread else "build",
+                str(thread.get("title", "")), bool(record.get("forced")),
+                str(record.get("queued_at") or thread.get("created_at") or ""))
+    return sorted(found.values(), key=lambda c: (not c.forced, c.kind != "revise", c.queued_at,
+                                                 c.number))
+

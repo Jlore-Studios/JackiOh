@@ -49,7 +49,8 @@ class Context:
 def build(cfg: Config, *, token: str | None = None, gh: Any = None,
           clock_fn: Callable[[], datetime] | None = None) -> Context:
     client = gh if gh is not None else GitHub(
-        cfg.repo, cfg.write_token if token is None else token, dry_run=cfg.dry_run
+        cfg.repo, cfg.write_token if token is None else token, dry_run=cfg.dry_run,
+        fallback_token=cfg.actions_token if token is None and cfg.bot_token else "",
     )
     actions = None
     if gh is None and token is None and cfg.bot_token and cfg.actions_token:

@@ -1,11 +1,17 @@
 # The night bot's ears (bot/README.md): comment commands, labels, assignment, reviews, and the
 # results of CI on its pull requests. No model runs here; model work is queued for the night run,
-# or started at once when an operator adds --force.
+# or started at once when an operator adds --force. Every half hour a sweep reads the last three
+# days back and answers anything an event never delivered or a handler failed to answer.
 name: bot-commands
 
 on:
+  schedule:
+    - cron: "11,41 * * * *"
+  workflow_dispatch: {}
   issue_comment:
-    types: [created]
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [created, edited]
   issues:
     types: [labeled, assigned]
   # _target, so the job runs this repository's workflow with its secrets and never code from the
@@ -15,7 +21,7 @@ on:
   pull_request_review:
     types: [submitted]
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, bot selftest]
     types: [completed]
 
 # No concurrency group: a group keeps one pending run and cancels the rest, which would drop a
@@ -37,13 +43,14 @@ jobs:
     # run and a closed bot pull request are handled whoever caused them: the bot's own push
     # starts the CI runs it answers, and GitHub credits an auto-merge to the bot.
     if: >-
-      (github.event_name == 'workflow_run'
-        && contains(fromJSON('["failure", "timed_out"]'), github.event.workflow_run.conclusion)
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'workflow_run'
+        && contains(fromJSON('["failure", "timed_out", "cancelled", "startup_failure"]'), github.event.workflow_run.conclusion)
         && startsWith(github.event.workflow_run.head_branch, 'bot/'))
       || (github.event_name == 'pull_request_target' && github.event.action == 'closed'
         && contains(github.event.pull_request.labels.*.name, 'bot:pr'))
       || (github.actor != 'jgoetzmann-bot' && github.actor != 'github-actions[bot]' && (
-        (github.event_name == 'issue_comment'
+        ((github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment')
           && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
           && (contains(github.event.comment.body, '/harness')
               || contains(github.event.comment.body, '@jgoetzmann-bot')))
@@ -74,9 +81,14 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Handle the event
+      - name: Handle the event, or sweep for anything left unanswered
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: python -m harness event
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            python -m harness sweep
+          else
+            python -m harness event
+          fi
