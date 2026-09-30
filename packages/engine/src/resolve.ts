@@ -18,8 +18,17 @@ export type HookOptions = {
   data?: Record<string, unknown>;
 };
 
+/**
+ * Where a played card's Cry keeps its player's mana as the play began (`EffectContext.manaBeforePlay`):
+ * in the card's own data, which every continuation of the Cry carries (`prompts.resumeSelf`,
+ * `work.parkWork`), so the number survives a pause and a JSON round trip as the rest of the data does.
+ */
+export const MANA_BEFORE_PLAY_KEY = "__manaBeforePlay";
+
 export function makeContext(sink: EngineSink, self: CardInstance | null, options: HookOptions = {}): EffectContext {
+  const manaBeforePlay = options.data?.[MANA_BEFORE_PLAY_KEY];
   return {
+    ...(typeof manaBeforePlay === "number" ? { manaBeforePlay } : {}),
     state: sink.state,
     rng: sink.rng,
     events: sink.events,

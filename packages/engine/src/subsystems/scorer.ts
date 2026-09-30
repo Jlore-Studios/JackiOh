@@ -228,7 +228,7 @@ let dryRunning = false;
 /**
  * The plays a dry run tries: `playChoices.playActionsFor`'s, narrowed to one price per card — the
  * largest X and the embiggened price when either is affordable, the strongest thing the card can do
- * now — and one zone, since where a card lands is not what §10.7's three questions ask. What it aims
+ * now — and one zone per paying set, since where a card lands is not what §10.7's three questions ask. What it aims
  * at and what it tributes are: the enemy hero is lethal's target and the viewer's own a heal's, an
  * enemy card is what a clear takes off the board, and a Tribute of the enemy's units (#55, R101) is
  * one — so those plays come first, whatever order `playActionsFor` found them in, and a board full
@@ -239,14 +239,17 @@ function dryRunPlays(state: GameState, viewer: PlayerId, card: CardInstance): Pl
   if (all.length === 0) return [];
   const x = Math.max(...all.map((action) => action.x ?? 0));
   const embiggen = all.some((action) => action.embiggen === true);
-  const first = all.find((action) => (action.x ?? 0) === x && (action.embiggen === true) === embiggen);
-  const zone = JSON.stringify(first?.zone ?? null);
-  const priced = all.filter(
-    (action) =>
-      (action.x ?? 0) === x &&
-      (action.embiggen === true) === embiggen &&
-      JSON.stringify(action.zone ?? null) === zone,
-  );
+  // One zone per Tribute set: R391 pairs each set with the zones it leaves open, so a set that pays
+  // with the enemy's units (#55) may not be offered the zone a set of the viewer's own empties.
+  const zoneFor = new Map<string, string>();
+  const priced = all.filter((action) => {
+    if ((action.x ?? 0) !== x || (action.embiggen === true) !== embiggen) return false;
+    const paying = JSON.stringify(action.tributes ?? []);
+    const zone = JSON.stringify(action.zone ?? null);
+    const kept = zoneFor.get(paying);
+    if (kept === undefined) zoneFor.set(paying, zone);
+    return (kept ?? zone) === zone;
+  });
   // A stable sort, so plays that aim alike keep the order `playActionsFor` gave them.
   return priced
     .map((action, at) => ({

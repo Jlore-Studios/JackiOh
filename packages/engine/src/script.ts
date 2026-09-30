@@ -85,6 +85,13 @@ export type EffectContext = {
   embiggened: boolean;
   /** Captured data from a Resume, for chained steps (§10.6). */
   data: Record<string, unknown>;
+  /**
+   * play pipeline B (Classic #22 Mid Runner: "If you had 4 or more mana when you played this"): the
+   * current mana of the player who played or cast the card as the play began — at §10.5 step 1, before
+   * step 2 paid, or as a cast began — on the played card's own Cry and every continuation of it
+   * (`resolve.MANA_BEFORE_PLAY_KEY`, which rides the card's data across a pause). Absent anywhere else.
+   */
+  manaBeforePlay?: number;
 };
 
 /**

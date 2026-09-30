@@ -72,7 +72,8 @@ export function graveyardGrantsOf(state: GameState, player: PlayerId): Graveyard
 
 /** Whether a card lies in this player's own graveyard, where E11's permissions reach ("your graveyard"). */
 export function inOwnGraveyard(state: GameState, player: PlayerId, card: CardInstance): boolean {
-  return card.zone.z === "graveyard" && card.zone.player === player && state.players[player].graveyard.includes(card);
+  // By id: a price is often read off a copy of the card with a probe's X or embiggen (`playChoices`).
+  return card.zone.z === "graveyard" && card.zone.player === player && state.players[player].graveyard.some((held) => held.id === card.id);
 }
 
 /** The grants that admit this card at all: the right type (Units only, or every type). */

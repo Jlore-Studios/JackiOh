@@ -71,6 +71,7 @@ import {
 } from "./prompts";
 import { countChainCast, preferEnemies, randomCastOf, randomPicks, withCastMode } from "./randomCast";
 import {
+  MANA_BEFORE_PLAY_KEY,
   flagReturnToHandAtEndOfTurn,
   registerCastDriver,
   type CastOptions,
@@ -280,6 +281,11 @@ export type PlayRun = {
    * (R70, R138), nothing of its text resolves, and step 7 puts it in its owner's graveyard.
    */
   fizzled?: boolean;
+  /**
+   * The player's current mana as the play began — at step 1, before step 2 pays — or as a cast began,
+   * which the card's Cry reads as `ctx.manaBeforePlay` (Classic #22 Mid Runner).
+   */
+  manaBefore?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -418,6 +424,7 @@ export function validatePlay(
       ...slicesFor(state, player, card, cost, targets, modes),
       exitsFrom: exitMark(state),
       ...playBegins(state, player),
+      manaBefore: state.players[player].mana.current,
       ...(source.from === "graveyard" ? { source: "graveyard" as const } : {}),
       ...(action.plague === undefined ? {} : { plague: { from: action.plague.from, tokens: action.plague.tokens } }),
     },
@@ -1014,6 +1021,17 @@ function standingTargets(run: PlayRun): Selection[] {
 }
 
 /**
+ * What the card's Cry is handed in its data: a fused card's declaration slices (R90, R102), and the
+ * player's mana as the play began (`EffectContext.manaBeforePlay`, Classic #22).
+ */
+function cryData(run: PlayRun): Record<string, unknown> {
+  return {
+    ...(run.targetSlices === undefined ? {} : { [DECLARATION_SLICES_KEY]: run.targetSlices }),
+    ...(run.manaBefore === undefined ? {} : { [MANA_BEFORE_PLAY_KEY]: run.manaBefore }),
+  };
+}
+
+/**
  * §10.5 step 5: "Resolve Combo checks, Quickstriker, /fullsend's Combo draw, then the card's own
  * Cry or spell script (targets already chosen)". An ordinary card's own Combo check is part of its
  * own script, which reads `query.playedEarlier`; what the engine owes is the two Combo abilities
@@ -1040,7 +1058,7 @@ function resolveStep(sink: EngineSink, run: PlayRun): void {
           controller: run.player,
           targets: standingTargets(run),
           modes: run.modes,
-          ...(run.targetSlices === undefined ? {} : { data: { [DECLARATION_SLICES_KEY]: run.targetSlices } }),
+          data: cryData(run),
           // R174: the choices are aimed at the stays step 1 checked them on (a cast's, once made).
           ...(run.exitsFrom === undefined ? {} : { exitsFrom: run.exitsFrom }),
         });
@@ -1326,6 +1344,7 @@ function resolveRepeat(sink: EngineSink, run: PlayRun): boolean {
           targets: repeat.targets,
           modes: repeat.modes,
           exitsFrom: repeat.exitsFrom,
+          ...(run.manaBefore === undefined ? {} : { data: { [MANA_BEFORE_PLAY_KEY]: run.manaBefore } }),
         });
         break;
       default:
@@ -1589,6 +1608,7 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
     ...playBegins(sink.state, player),
     ...(random ? { random: true } : {}),
     ...(targetEnemies ? { targetEnemies: true } : {}),
+    manaBefore: state.players[player].mana.current,
   });
 }
 
