@@ -516,17 +516,23 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `countered` | The held card cracks under a "Countered" tag and drops to its owner's graveyard, or fades to exile | 450 ms | tag "Countered" visible; the graveyard or exile counter increments; no `cardPlayed` follows for it (§6.3 Counter) | `fizzle`: smoke puff, then `void` wisps when exiled |
 | `stolen` | The card flies from where it was (a hand, a deck, the held Spell) to the thief's hand, a back for a seat that may not read it (R97) | 450 ms | the thief's hand length or count increments and the old pile's decrements | `mindControl`: arcane motes stream to the thief's hand |
 | `unlocked` | The chain over the zone snaps open | 250 ms | zone loses `data-locked` | `lock`: dust ring over the zone |
-| `activated` | The card pulses and its Activate control ticks its uses | 250 ms | element gains `data-animating="activated"`; the uses shown equal the view's (R384) | `glint`: arcane glint at the card |
-| `animated` | The backrow card rises, turns and lands in its unit zone as a Unit | 450 ms | the card's testid is now under a unit zone of its side (R383) | `summon`: dust slam and ring |
-| `deanimated` | The unit sinks back into its backrow zone | 350 ms | the card's testid is now under its backrow zone (R383) | `smoke`: smoke puff |
+| `activated` | The card pulses and its Activate control ticks its uses | 300 ms | element gains `data-animating="activated"`; the uses shown equal the view's (R384) | `glint`: arcane glint at the card |
+| `animated` | The backrow card rises, turns and lands in its unit zone as a Unit | 350 ms | the card's testid is now under a unit zone of its side (R383) | `summon`: dust slam and ring |
+| `deanimated` | The unit sinks back into its backrow zone | 300 ms | the card's testid is now under its backrow zone (R383) | `smoke`: smoke puff |
 | `crumbled` | The card cracks and crumbles to dust toward the graveyard; a back in a hand the viewer may not read (R97) | 400 ms | the graveyard counter increments; the Brittle badge is gone (R385) | `death`: crack, embers, smoke |
-| `degraded` | The changed cost, stats, keyword or number flashes red and ticks to its new value | 250 ms | shown values equal the view; the opponent's seat sees only that a card of that pile changed (R386) | `buff`: red arrows down |
-| `upgraded` | The changed cost, stats, keyword or number flashes green and ticks to its new value | 250 ms | shown values equal the view; hidden as `degraded` is (R386) | `buff`: green arrows up |
-| `redirected` | A bent line runs from the old target to the new one | 300 ms | the new target gains `data-animating="redirected"` | `glint`: arcane glint at the new target |
+| `degraded` | The changed cost, stats, keyword or number flashes red and ticks to its new value | 300 ms | shown values equal the view; the opponent's seat sees only that a card of that pile changed (R386) | `buff`: red arrows down |
+| `upgraded` | The changed cost, stats, keyword or number flashes green and ticks to its new value | 300 ms | shown values equal the view; hidden as `degraded` is (R386) | `buff`: green arrows up |
+| `redirected` | A bent line runs from the old target to the new one | 350 ms | the new target gains `data-animating="redirected"` | `glint`: arcane glint at the new target |
 | `healthSet` | The hero's health number spins to its new value | 400 ms | hero health equals the view | `drain` when it fell, `heal` when it rose |
 | `questProgressed` | The quest panel's progress ticks | 200 ms | progress text equals the view ("1/2", R404) | `counter`: sparkle |
-| `questCompleted` | The quest panel flashes "Quest complete" before its reward picker opens | 600 ms | banner text; the `reward` prompt follows (R404) | `banner`: rays |
+| `questCompleted` | The quest panel flashes "Quest complete" before its reward picker opens | 500 ms | banner text; the `reward` prompt follows (R404) | `banner`: rays |
 | `rolledBack` | The board rewinds: every card the rollback moved slides to its snapshot zone together | 600 ms | every card's zone testid equals the view (R419) | `smoke`: smoke and arcane motes |
+| `chaosRolled` | A banner over the Call to Chaos card names each effect it rolled, one line per effect, on both seats (R436) | 900 ms | banner lists the rolled effects in the event's order | `banner`: arcane motes around the card |
+| `flickered` | The card blinks out and back into its zone, reset | 300 ms | the card's testid stays in its zone; its stats equal the view | `smoke`: smoke puff and a summon ring |
+| `drawLimited` | The deck pile shakes once under a "Draw limit" tag; nothing moves | 300 ms | the library pile gains `data-animating="drawLimited"`; hand and deck counts are unchanged (§2.4) | `fizzle`: smoke puff at the pile |
+| `turnCutShort` | Banner "Turn ended" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn ended" |
+| `marked` | The marked card takes its mark: a corruption sparkle in the mark's colour, purple for #50's pending steal (R437) | 400 ms | the card carries `data-mark`; a face-down card's back carries it | `radiant`-style pulse in the mark's colour |
+| `numberChanged` | The changed number on the card flashes and ticks to its new value; a back on a seat that may not read the card | 300 ms | the number shown equals the view's `{key}` value (C+ #41) | `glint`: arcane glint |
 
 The FX column names the effect recipe that decorates each row (`ANIMATIONS[type].fx`), specified with its cues in `docs/polish/1-animations.md`. Effects run on the `apps/web/src/fx` layer, start with their row's entry and pace nothing: the durations and acceptance cells above are unchanged, no effect carries a `data-animating` of its own, whatever trails an entry is gone within `FX_MAX_TAIL_MS` of its end, and the stage effects (a stand-in for a moved card, a hidden card, an aimed lunge) last no longer than the view swap (R200). The viewer's effects speed scales the durations (R201), and effects read only the redacted stream (R202).
 
