@@ -29,7 +29,7 @@
 
 import type { CardDef, CardFace, CardType, Keyword, PlayerId, Rarity, Selection, Tag } from "@jackioh/shared";
 import { keywordKey } from "@jackioh/shared";
-import { defOf } from "../catalog";
+import { defOf, fusedIdParts } from "../catalog";
 import { FUSE_COST_CAP } from "../config";
 import { addToHand } from "../draw";
 import { unitHas, wornStatsOverride } from "../layers";
@@ -269,25 +269,12 @@ function ingredientName(defId: string): string {
 /**
  * R179: the ingredient ids a fused def's id names, in ingredient order, or null for an id no Fuse
  * minted (a catalog card's, or a bare `t-<n>`). The inverse of `nextTransientId`: the list is split
- * at the `+` signs outside parentheses, and a parenthesised ingredient loses its parentheses.
+ * at the `+` signs outside parentheses, and a parenthesised ingredient loses its parentheses
+ * (`catalog.fusedIdParts`, which R387's self-exclusion reads too).
  */
 export function fusedIngredients(defId: string): string[] | null {
-  const head = FUSED_ID.exec(defId);
-  if (head === null) return null;
-  const parts: string[] = [];
-  let depth = 0;
-  let start = head[0].length;
-  for (let at = start; at <= defId.length; at += 1) {
-    const char = defId[at];
-    if (char === "(") depth += 1;
-    else if (char === ")") depth -= 1;
-    else if ((char === "+" && depth === 0) || at === defId.length) {
-      const part = defId.slice(start, at);
-      parts.push(part.startsWith("(") && part.endsWith(")") ? part.slice(1, -1) : part);
-      start = at + 1;
-    }
-  }
-  return parts.length >= FUSE_MIN_INGREDIENTS && parts.every((part) => part.length > 0) ? parts : null;
+  const parts = fusedIdParts(defId);
+  return parts !== null && parts.length >= FUSE_MIN_INGREDIENTS ? parts : null;
 }
 
 function buildDef(

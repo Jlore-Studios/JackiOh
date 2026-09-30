@@ -408,7 +408,7 @@ export function drawOne(sink: EngineSink, player: PlayerId, link?: ChainLink | n
   if (side.library.length === 0) {
     const reserves = infiniteReservesSource(sink, player);
     if (reserves !== null) {
-      const tokenDef = defByIndex("T-rush");
+      const tokenDef = defByIndex("Core", "T-rush");
       if (tokenDef !== undefined) {
         const token = newInstance(sink.state, tokenDef.id, player, { z: "hand", player });
         sink.state.counters.drawn += 1;

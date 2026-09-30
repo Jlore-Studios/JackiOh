@@ -31,7 +31,7 @@ const TAGS = [
   "Token",
 ] as const satisfies readonly Tag[];
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"] as const satisfies readonly Rarity[];
-const SET_NAMES = ["Core", "Classic", "Boss", "Boss-X"] as const satisfies readonly SetName[];
+const SET_NAMES = ["Core", "Classic", "Classic+", "Boss", "Boss-X"] as const satisfies readonly SetName[];
 
 type Exhaustive<Union, Listed extends Union> = [Exclude<Union, Listed>] extends [never] ? true : never;
 const _typesExhaustive: Exhaustive<CardType, (typeof CARD_TYPES)[number]> = true;
@@ -43,8 +43,8 @@ void _tagsExhaustive;
 void _raritiesExhaustive;
 void _setsExhaustive;
 
-/** §6.1: the two keywords that carry a number; every other kind is bare. */
-const NUMBERED_KEYWORDS: ReadonlySet<string> = new Set(["Armor", "Lucky"]);
+/** §6.1, R385, E6: the keywords that carry a number; every other kind is bare. */
+const NUMBERED_KEYWORDS: ReadonlySet<string> = new Set(["Armor", "Lucky", "Brittle", "Spell Damage"]);
 
 /* ------------------------------------------------------------- expectations */
 

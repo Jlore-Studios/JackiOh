@@ -56,6 +56,8 @@ function ruleColumn(section: "6.1" | "6.2" | "6.3"): Map<string, string> {
 const SPEC_ROW_NAME: Readonly<Partial<Record<GlossaryTermId, string>>> = {
   Armor: "Armor X",
   Lucky: "Lucky X",
+  Brittle: "Brittle X",
+  "Spell Damage": "Spell Damage X",
   "Start of game": "Start of Game",
   "Once per turn": "Once per Turn",
   Combo: "Combo X",
@@ -96,7 +98,10 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Choose one",
 ];
 
-/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, and R346's PI. */
+/**
+ * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
+ * patch v0.2.0's AN AT BR SD IS.
+ */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -115,6 +120,11 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Can't attack": "NA",
   Armor: "AR",
   Lucky: "LK",
+  Animated: "AN",
+  "Animated on your turn": "AT",
+  Brittle: "BR",
+  "Spell Damage": "SD",
+  "Immune to Spells": "IS",
 };
 
 type Term = { text: string; term: GlossaryTermId };

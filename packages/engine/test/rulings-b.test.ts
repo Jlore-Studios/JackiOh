@@ -1334,7 +1334,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(defOf(state, fuseB.id).tags).toContain(felinor);
 
     // A token index of the "N.1" form addresses a card (#90.1 CN-Virus).
-    expect(defByIndex("51.1")?.id).toBe(dotted.id);
+    expect(defByIndex("Core", "51.1")?.id).toBe(dotted.id);
 
     // #29 keeps cost 6 even though MAX_MANA is 4: castable only after a mana gain.
     expect(MAX_MANA).toBe(4);

@@ -106,6 +106,21 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Can't attack": keyword("Can't attack", "Cannot declare attacks"),
   Armor: keyword("Armor", "Reduce each damage instance by X"),
   Lucky: keyword("Lucky", "Repeat a luck-based roll X extra times, keep the best"),
+  // Patch v0.2.0's keywords (docs/classic-sets.md B3.1, B3.3, B5 E6 and E35; R383, R385).
+  Animated: keyword(
+    "Animated",
+    "A Field Spell or Trap that becomes a Unit in an open unit zone when it fires or enters the field",
+  ),
+  "Animated on your turn": keyword(
+    "Animated on your turn",
+    "A Unit on your turn; back in its backrow zone on your opponent's",
+  ),
+  Brittle: keyword(
+    "Brittle",
+    "At the start of your turn, after a full turn cycle, the count drops by 1; at 0 the card is destroyed",
+  ),
+  "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit"),
+  "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
 
   // §6.2 Triggers and timing words
   // §6.2's ruling, not its Rule column (see the header).
@@ -170,4 +185,9 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   "Can't attack": "NA",
   Armor: "AR",
   Lucky: "LK",
+  Animated: "AN",
+  "Animated on your turn": "AT",
+  Brittle: "BR",
+  "Spell Damage": "SD",
+  "Immune to Spells": "IS",
 };

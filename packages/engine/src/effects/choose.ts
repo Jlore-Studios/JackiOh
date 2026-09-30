@@ -3,7 +3,7 @@
 
 import type { CardType, PlayerId, Selection } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, excludingIndex, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { openPrompt, resumeSelf } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { effectiveCost } from "../mana";
@@ -195,7 +195,8 @@ export function chooseFromHand(args: {
  * option is a catalog id, labelled with the card's name, and the view names the card behind it
  * (§10.8). `index` offers the definitions' §5 indices instead — #82 KY's Trial's "Discover among 3
  * distinct random numbers" — so each option is the number, labelled with it and naming no
- * definition, and the resume step turns the number it gets back into its card (`defByIndex`).
+ * definition, and the resume step turns the number it gets back into its card (`defByIndex`, with the set its
+ * pool named, since a number is unique only within its set).
  */
 export type DiscoverOffer = "card" | "index";
 
@@ -225,7 +226,7 @@ export function discoverFromCatalog(args: {
       const asked = typeof args.query === "function" ? args.query(ctx) : args.query;
       // §5.1: a random pool never offers the card that generated it.
       const pool = query(
-        excludingIndex(asked ?? {}, self === null ? undefined : defOf(ctx.state, self.defId).index),
+        excludingDefId(asked ?? {}, self?.defId ?? ctx.defId),
       );
       if (pool.length === 0) return;
 

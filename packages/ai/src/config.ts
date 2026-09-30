@@ -203,6 +203,9 @@ export const AI_MULLIGAN = { keepMaxCost: 3 } as const;
 export const GREEDY_MULLIGAN = { keepMaxCost: 3 } as const;
 
 export const AI_DETERMINIZE = {
-  /** §5 indexes never sampled into a hidden slot: #98 keeps its rolled power in memory (R43). */
-  excludeIndexes: ["98"],
+  /**
+   * Catalog ids never sampled into a hidden slot: #98 keeps its rolled power in memory (R43). Ids,
+   * not indexes, since an index repeats across sets (B2.2, R387).
+   */
+  excludeDefIds: ["core-098"],
 } as const;

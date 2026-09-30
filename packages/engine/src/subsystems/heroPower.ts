@@ -65,6 +65,8 @@ export const POWER_HEALTH_COST = 2;
 /** §7: the tokens #98 summons, by catalog index (§5.3), so the engine names no catalog id. */
 export const RUSH_TOKEN_INDEX = "T-rush";
 export const FELINOR_TOKEN_INDEX = "T-felinor";
+/** B2.2: the set whose indices those are, since an index is unique only within its set. */
+const TOKEN_SET = "Core";
 
 /** "Deal 1 damage to a target": any unit or hero, either side. */
 const PING_SCOPE: TargetScope = { side: "any", of: ["unit", "hero"] };
@@ -83,7 +85,7 @@ export type HeroPower = {
 };
 
 function tokenDefId(index: string): string | null {
-  return defByIndex(index)?.id ?? null;
+  return defByIndex(TOKEN_SET, index)?.id ?? null;
 }
 
 /** §7: a token summon needs the token's def id, which the catalog holds under its index. */

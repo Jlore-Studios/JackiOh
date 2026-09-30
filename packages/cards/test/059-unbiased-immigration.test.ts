@@ -39,7 +39,7 @@ function onlyAdded(g: Scenario): Instance {
 /** Keeps a side's turn open past a play (R82's auto-end) and gives the start-of-turn draw a card. */
 const BUSY = { field: [{ def: "core-008", lane: 1 }], library: ["core-011", "core-016"] };
 
-const CORE_POOL = pool("59", { set: "Core" }).map((def) => def.id);
+const CORE_POOL = pool("core-059", { set: "Core" }).map((def) => def.id);
 
 describe("#59 Unbiased Immigration — the pool", () => {
   it("§5.1 the pool is the 99 non-token Core cards, without #59", () => {

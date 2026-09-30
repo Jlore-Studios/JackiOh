@@ -19,7 +19,7 @@
 
 import type { CardDef, CardFace, CardType, PlayerId } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
-import { defOf, query, queryCost } from "../catalog";
+import { defByIndex, defOf, query, queryCost } from "../catalog";
 import { canAttack } from "../combat";
 import { heroArmorOf, heroDamageCap, pierces } from "../damage";
 import { unitView } from "../layers";
@@ -77,9 +77,13 @@ export type Scored = {
   parts: { lethal: number; clear: number; kills: number; heal: number; stats: number; draw: number };
 };
 
-/** R29, §5.1: the candidate pool. `query` already drops tokens and the excluded index. */
+/**
+ * R29, §5.1: the candidate pool — Core only, because #97 says "only from the core set" (B2.6), and
+ * never #97 itself, named by its id (R387). `query` already drops tokens.
+ */
 export function candidateDefs(): CardDef[] {
-  return query({ set: "Core", excludeIndex: ZEPHYRS_INDEX });
+  const zephyrs = defByIndex("Core", ZEPHYRS_INDEX);
+  return query({ set: "Core", ...(zephyrs === undefined ? {} : { excludeDefId: zephyrs.id }) });
 }
 
 function faceFor(def: CardDef, radiant: boolean): CardFace {

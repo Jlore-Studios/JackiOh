@@ -559,7 +559,7 @@ describe("determinize (B12)", () => {
     const state = build("observe-pool-exhaust", { library: [...pool, "core-008", "core-011", "core-019"] }, {});
     const excluded = new Set(
       query({ set: "Core" })
-        .filter((def) => (AI_DETERMINIZE.excludeIndexes as readonly string[]).includes(def.index))
+        .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );
     const det = determinize(redact(state, AI), AI, createRng("observe-pool-exhaust"));
@@ -620,12 +620,12 @@ describe("determinize (B12)", () => {
     expect(hands.size).toBeGreaterThan(1);
   });
 
-  it("B12: a hidden hand or library slot never samples an excluded index (#98's memory, R43)", () => {
+  it("B12: a hidden hand or library slot never samples an excluded card (#98's memory, R43)", () => {
     // Freshly dealt: p2's four-card hand and sixteen-card library are all hidden from p1.
     const state = dealtGame("observe-b12-exclude");
     const excluded = new Set(
       query({ set: "Core" })
-        .filter((def) => (AI_DETERMINIZE.excludeIndexes as readonly string[]).includes(def.index))
+        .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );
     expect(excluded.size).toBeGreaterThan(0);

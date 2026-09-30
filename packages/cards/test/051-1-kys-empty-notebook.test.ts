@@ -110,7 +110,7 @@ describe("#51.1 KY's Empty Notebook — §5.1 absent from every random pool", ()
 
   it("§5.1 the KY pool is #31, #51 and #82 — the Token-tagged KY card is never offered", () => {
     // The pool #57 Conjure KY generates from: the KY tag, minus tokens, minus the generator.
-    expect(pool("57", { tags: ["KY"] }).map((card) => card.id)).toEqual([
+    expect(pool("core-057", { tags: ["KY"] }).map((card) => card.id)).toEqual([
       "core-031",
       "core-051",
       "core-082",

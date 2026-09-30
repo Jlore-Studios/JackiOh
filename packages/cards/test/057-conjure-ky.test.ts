@@ -20,11 +20,11 @@ const KY_POOL = ["core-031", "core-051", "core-082"];
 
 describe("#57 Conjure KY — the pool", () => {
   it("§5.1 the KY pool is exactly #31, #51 and #82", () => {
-    expect(pool("57", { tags: ["KY"] }).map((def) => def.id)).toEqual(KY_POOL);
+    expect(pool("core-057", { tags: ["KY"] }).map((def) => def.id)).toEqual(KY_POOL);
   });
 
   it("§5.1 the pool never offers the Token-tagged KY card (#51.1) nor #57 itself", () => {
-    const ids = pool("57", { tags: ["KY"] }).map((def) => def.id);
+    const ids = pool("core-057", { tags: ["KY"] }).map((def) => def.id);
 
     expect(ids).not.toContain("core-051-1");
     expect(ids).not.toContain("core-057");

@@ -14,7 +14,7 @@ import { catalog, pool } from "../src/query";
 import { cardDef } from "../src/catalog-data";
 
 /** §5.1's pool for this card, which is what the script passes to the effect: the legal answers. */
-const STRAAZA_POOL = pool("54", { type: "Unit", costRange: { min: 3, max: 4 } });
+const STRAAZA_POOL = pool("core-054", { type: "Unit", costRange: { min: 3, max: 4 } });
 const POOL_IDS = STRAAZA_POOL.map((def) => def.id);
 
 /** Nine cards to sit beside Straaza in a full hand (HAND_CAP 10), none of them Straaza. */

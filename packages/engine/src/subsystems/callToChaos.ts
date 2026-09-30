@@ -61,6 +61,8 @@ export const CHAOS_TAG: Tag = "Call to Chaos";
 /** §7: the tokens #95 summons, by catalog index. */
 const RUSH_TOKEN_INDEX = "T-rush";
 const CHAOS_GOLEM_INDEX = "95.1";
+/** B2.2: the set whose indices those are, since an index is unique only within its set. */
+const TOKEN_SET = "Core";
 
 /** §5.1: the backrow half of the catalog — "Field Spells or Traps (Field Traps included)" (§8). */
 const CHAOS_BACKROW_QUERY: CatalogQuery = { type: ["Field Spell", "Trap", "Field Trap"] };
@@ -87,9 +89,9 @@ function sinkOf(ctx: EffectContext): EngineSink {
   return { state: ctx.state, events: ctx.events, rng: ctx.rng };
 }
 
-/** §7: a token summon needs the token's def id, which the catalog holds under its index. */
+/** §7: a token summon needs the token's def id, which the catalog holds under its index in Core. */
 function tokenDefId(index: string): string | null {
-  return defByIndex(index)?.id ?? null;
+  return defByIndex(TOKEN_SET, index)?.id ?? null;
 }
 
 /**

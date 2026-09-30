@@ -8,7 +8,7 @@
 // Trap and every fizzle stay in `zoneFor`/`summonOnto` for all of them.
 
 import type { CardDef, CardType, PlayerId, Row, Tag } from "@jackioh/shared";
-import { defOf, excludingIndex, query, type CatalogQueryArgs } from "../catalog";
+import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { effectiveCost } from "../mana";
 import { runStartOfGame } from "../prompts";
 import type { Effect, EffectContext } from "../script";
@@ -287,7 +287,7 @@ export function summonCopy(args: SummonCopyArgs): Effect {
  * this lane" (#67 Zoomerbin Oomen), "summon 3 random 3-cost Units" and "summon 5 random Field Spells
  * or Traps" (#95 Call to Chaos, one of these per card). §10.7 makes `catalog.query` the single source
  * of random pools and §5.1 keeps the requesting def out of one, so the draw is one `ctx.rng.pick`
- * over `query({ …, excludeIndex })`, exactly as `discoverFromCatalog` builds its offer.
+ * over `query({ …, excludeDefId })` (R387), exactly as `discoverFromCatalog` builds its offer.
  *
  * The draw happens inside `apply`, never when the effect is built: a draw taken at
  * factory-construction time would escape the reducer and desync every later replay (§9.3, R60).
@@ -315,7 +315,7 @@ export function summonRandom(
       const self = ctx.self;
       // §5.1: a random pool never offers the card that generated it.
       const pool = query(
-        excludingIndex(args.query ?? {}, self === null ? undefined : defOf(ctx.state, self.defId).index),
+        excludingDefId(args.query ?? {}, self?.defId ?? ctx.defId),
       );
       const player = playerOf(ctx, args.player ?? "self");
       const rows = new Set(pool.flatMap((def) => {
@@ -339,7 +339,6 @@ export type RecruitFilter = {
   cost?: number;
   costRange?: { min?: number; max?: number };
   defId?: string | string[];
-  index?: string | string[];
 };
 
 function asList<T>(value: T | T[] | undefined): T[] {
@@ -361,8 +360,6 @@ function matchesFilter(ctx: EffectContext, card: CardInstance, filter: RecruitFi
   if (types.length > 0 && !types.includes(def.type)) return false;
   const defIds = asList(filter.defId);
   if (defIds.length > 0 && !defIds.includes(def.id)) return false;
-  const indexes = asList(filter.index);
-  if (indexes.length > 0 && !indexes.includes(def.index)) return false;
   if (filter.tags !== undefined && !filter.tags.every((tag) => def.tags.includes(tag))) return false;
   if (filter.notTags !== undefined && filter.notTags.some((tag) => def.tags.includes(tag))) return false;
 

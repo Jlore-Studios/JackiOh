@@ -1271,7 +1271,7 @@ describe("SPEC §11 R102–R103: Fuse and the Heroic Power surface (M3 gate)", (
         Object.entries(registeredCatalog()).filter(([, entry]) => entry.index !== RUSH_TOKEN_INDEX),
       ),
     );
-    expect(defByIndex(RUSH_TOKEN_INDEX)).toBeUndefined();
+    expect(defByIndex("Core", RUSH_TOKEN_INDEX)).toBeUndefined();
 
     const tokenSink = sinkFor(missing);
     const rusher = put(missing, heroic.id, slot("p1", "backrow", 1));

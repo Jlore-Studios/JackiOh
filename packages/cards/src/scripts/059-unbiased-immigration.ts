@@ -1,6 +1,6 @@
 // #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Start of turn: add a
 // random card to your hand (paid 4: it costs 0)" / radiant "A random Radiant card (paid 4: it costs
-// 0)". Engine cell: "Non-token Core pool excluding #59".
+// 0)". Engine cell: "Non-token pool excluding #59" — every set's since patch v0.2.0 (R380).
 //
 // §8 Conventions: the radiant cell restates the whole clause, so it replaces it — one random card
 // per start of turn either way, Radiant on the radiant face. The parenthesis is restated too and
@@ -18,8 +18,9 @@
 // printed at, and it persists in every zone (R78).
 //
 // R60: the pool may repeat across turns; nothing here says "different". §5.1: a random pool never
-// offers a Token-tagged card nor the generating card, which `{ set: "Core" }` plus `excludeIndex`
-// spell out. R4: an eleventh card is burned to the graveyard by the add-to-hand pipeline.
+// offers a Token-tagged card nor the generating card, which `excludeDefId` spells out (R387). R380:
+// "a random card" names no set, so it draws from every set. R4: an eleventh card is burned to the
+// graveyard by the add-to-hand pipeline.
 //
 // A hook may not roll dice — `ctx.rng.*` advances `rngCursor`, which is state — so the pick happens
 // inside `addRandomFromCatalog` (engine/src/effects/addToHand.ts), the verb #54 Straaza and #57
@@ -31,8 +32,8 @@ import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-059");
 
-/** §5.1's "a random card": the non-token Core catalog, minus this card. */
-const CORE_POOL: CatalogQueryArgs = { set: "Core", excludeIndex: "59" };
+/** §5.1's "a random card": the non-token catalog of every set (R380), minus this card (R387). */
+const CARD_POOL: CatalogQueryArgs = { excludeDefId: def.id };
 
 /**
  * One add. `ctx.embiggened` is the price this Field Spell was played for (R65), read at the moment
@@ -41,7 +42,7 @@ const CORE_POOL: CatalogQueryArgs = { set: "Core", excludeIndex: "59" };
  */
 function addRandomCard(ctx: EffectContext, asRadiant: boolean): Effect {
   return addRandomFromCatalog({
-    query: CORE_POOL,
+    query: CARD_POOL,
     count: 1,
     ...(asRadiant ? { radiant: true } : {}),
     // "(paid 4: it costs 0)" — the embiggen price, not the mana actually spent after discounts.

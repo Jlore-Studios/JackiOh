@@ -71,7 +71,7 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   }
 
   // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token Core pool.
-  const pool = query({ set: "Core", excludeIndex: [...AI_DETERMINIZE.excludeIndexes] }).map((def) => def.id);
+  const pool = query({ set: "Core", excludeDefId: [...AI_DETERMINIZE.excludeDefIds] }).map((def) => def.id);
   for (const card of next.players[opp].hand) {
     if (isPlaceholder(card)) card.defId = sampleDef(pool, seen, sampled, rng);
   }

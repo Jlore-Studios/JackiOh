@@ -64,73 +64,73 @@ describe("§5.1 tokens are out of every pool unless the card names the token poo
     expect(indices(query({ tags: ["Token"] })).sort()).toEqual([...TOKEN_INDICES].sort());
   });
 
-  it("§5.1 token: true and a pool named by index reach tokens too; token: false forbids them", () => {
+  it("§5.1 token: true and a pool named by id reach tokens too; token: false forbids them", () => {
     expect(indices(query({ token: true })).sort()).toEqual([...TOKEN_INDICES].sort());
-    // A card that names its token by index (Rush Token, Sheep Token, …) names the pool itself.
-    expect(indices(query({ index: ["T-rush", "T-sheep"] })).sort()).toEqual(["T-rush", "T-sheep"]);
+    // A card that names its token by id (Rush Token, Sheep Token, …) names the pool itself.
+    expect(indices(query({ defId: ["core-t-rush", "core-t-sheep"] })).sort()).toEqual(["T-rush", "T-sheep"]);
     expect(indices(query({ token: false, tags: ["Token"] }))).toEqual([]);
   });
 });
 
-describe("§5.1 excludeIndex: a random pool never offers the card that generated it", () => {
-  it("§5.1 excludeIndex removes a single index", () => {
-    // #57 Conjure KY carries the KY tag itself, so without excludeIndex it is in its own pool.
+describe("§5.1, R387 excludeDefId: a random pool never offers the card that generated it", () => {
+  it("§5.1 excludeDefId removes a single card", () => {
+    // #57 Conjure KY carries the KY tag itself, so without excludeDefId it is in its own pool.
     expect(indices(query({ tags: ["KY"] }))).toEqual(["31", "51", "57", "82"]);
-    expect(indices(query({ tags: ["KY"], excludeIndex: "57" }))).toEqual(["31", "51", "82"]);
+    expect(indices(query({ tags: ["KY"], excludeDefId: "core-057" }))).toEqual(["31", "51", "82"]);
   });
 
-  it("§5.1 excludeIndex removes every index in a list", () => {
-    expect(indices(query({ tags: ["KY"], excludeIndex: ["57", "82"] }))).toEqual(["31", "51"]);
+  it("§5.1 excludeDefId removes every card in a list", () => {
+    expect(indices(query({ tags: ["KY"], excludeDefId: ["core-057", "core-082"] }))).toEqual(["31", "51"]);
   });
 
-  it("§5.1 excludeIndex composes with the type, rarity and cost filters", () => {
-    expect(indices(query({ type: TRAP_TYPES, excludeIndex: "18" }))).toEqual(["41", "60", "71", "85", "96"]);
-    expect(indices(query({ rarity: "Mythic", excludeIndex: "96" }))).not.toContain("96");
-    expect(indices(query({ cost: 1, tags: ["KY"], excludeIndex: "31" }))).toEqual(["51", "82"]);
+  it("§5.1 excludeDefId composes with the type, rarity and cost filters", () => {
+    expect(indices(query({ type: TRAP_TYPES, excludeDefId: "core-018" }))).toEqual(["41", "60", "71", "85", "96"]);
+    expect(indices(query({ rarity: "Mythic", excludeDefId: "core-096" }))).not.toContain("96");
+    expect(indices(query({ cost: 1, tags: ["KY"], excludeDefId: "core-031" }))).toEqual(["51", "82"]);
   });
 
-  it("§5.1 pool(ownIndex, args) adds the caller's index to excludeIndex instead of replacing it", () => {
-    expect(indices(pool("57", { tags: ["KY"] }))).toEqual(["31", "51", "82"]);
-    expect(indices(pool("82", { tags: ["KY"], excludeIndex: "57" }))).toEqual(["31", "51"]);
+  it("§5.1 pool(ownId, args) adds the caller's id to excludeDefId instead of replacing it", () => {
+    expect(indices(pool("core-057", { tags: ["KY"] }))).toEqual(["31", "51", "82"]);
+    expect(indices(pool("core-082", { tags: ["KY"], excludeDefId: "core-057" }))).toEqual(["31", "51"]);
   });
 });
 
 describe("the KY pool (#57 Conjure KY) is exactly #31, #51, #82 (BUILD M4-T4 row 57)", () => {
   // THE ARGUMENTS A CARD SCRIPT PASSES:
-  //     catalog.query({ tags: ["KY"], excludeIndex: "57" })
+  //     catalog.query({ tags: ["KY"], excludeDefId: "core-057" })
   //   or, equivalently and harder to get wrong,
-  //     catalog.pool("57", { tags: ["KY"] })
+  //     catalog.pool("core-057", { tags: ["KY"] })
   // Nothing else is needed: tokens are excluded by default (§5.1), which is what keeps #51.1 KY's
   // Empty Notebook — a token that also carries the KY tag — out of the pool.
   const KY_POOL = ["31", "51", "82"];
 
   it("BUILD row 57 the query a card script writes returns exactly those three defs", () => {
-    expect(indices(catalog.query({ tags: ["KY"], excludeIndex: "57" }))).toEqual(KY_POOL);
-    expect(indices(catalog.pool("57", { tags: ["KY"] }))).toEqual(KY_POOL);
+    expect(indices(catalog.query({ tags: ["KY"], excludeDefId: "core-057" }))).toEqual(KY_POOL);
+    expect(indices(catalog.pool("core-057", { tags: ["KY"] }))).toEqual(KY_POOL);
   });
 
   it("BUILD row 51.1 the KY pool excludes the KY-tagged token #51.1 and the generator #57", () => {
-    const names = catalog.pool("57", { tags: ["KY"] }).map((def) => def.name);
+    const names = catalog.pool("core-057", { tags: ["KY"] }).map((def) => def.name);
 
     expect(names).toEqual(["KY's Math Equation", "KY's Private Tutor", "KY's Trial"]);
-    expect(cardDefByIndex("51.1").tags).toContain("KY"); // it really is in the tag …
-    expect(cardDefByIndex("51.1").token).toBe(true); // … and it really is a token
-    expect(indices(catalog.pool("57", { tags: ["KY"] }))).not.toContain("51.1");
-    expect(indices(catalog.pool("57", { tags: ["KY"] }))).not.toContain("57");
+    expect(cardDefByIndex("Core", "51.1").tags).toContain("KY"); // it really is in the tag …
+    expect(cardDefByIndex("Core", "51.1").token).toBe(true); // … and it really is a token
+    expect(indices(catalog.pool("core-057", { tags: ["KY"] }))).not.toContain("51.1");
+    expect(indices(catalog.pool("core-057", { tags: ["KY"] }))).not.toContain("57");
   });
 });
 
 describe("the trap pool (#67 Zoomerbin Oomen's Radiant face) is exactly #18, #41, #60, #71, #85, #96", () => {
   // THE ARGUMENTS A CARD SCRIPT PASSES:
   //     catalog.query({ type: catalog.trapTypes })      // TRAP_TYPES = ["Trap", "Field Trap"]
-  //   or catalog.pool("67", { type: TRAP_TYPES })       // #67 is not itself a trap, but §5.1 anyway
+  //   or catalog.pool("core-067", { type: TRAP_TYPES })       // #67 is not itself a trap, but §5.1 anyway
   // Both types, because SPEC says "Field Trap counts as Trap" (§8 #51, #85, R35, R61) while the
   // filter matches `def.type` exactly.
   const TRAP_POOL = ["18", "41", "60", "71", "85", "96"];
 
   it("BUILD row 67 the query a card script writes returns exactly those six defs", () => {
     expect(indices(catalog.query({ type: TRAP_TYPES }))).toEqual(TRAP_POOL);
-    expect(indices(catalog.pool("67", { type: TRAP_TYPES }))).toEqual(TRAP_POOL);
+    expect(indices(catalog.pool("core-067", { type: TRAP_TYPES }))).toEqual(TRAP_POOL);
   });
 
   it("§8 #67 base asks for a Cost (1) Trap, which since patch v0.1.1 is every Core trap but #85 (Cost (2))", () => {
@@ -152,38 +152,38 @@ describe("the trap pool (#67 Zoomerbin Oomen's Radiant face) is exactly #18, #41
 
 describe("R35 the Transmogulate pool (#83) is exactly #52, #85, #87, #92, #93, #95", () => {
   // THE ARGUMENTS A CARD SCRIPT PASSES:
-  //     catalog.query({ rarity: "Legendary", excludeIndex: "83" })
-  //   or catalog.pool("83", { rarity: "Legendary" })
+  //     catalog.query({ rarity: "Legendary", excludeDefId: "core-083" })
+  //   or catalog.pool("core-083", { rarity: "Legendary" })
   // R35: "Pool: the §8 Legendary-rarity cards except #83". For replacing a card on the board, the
   // script narrows the same pool by type and asks for TRAP_TYPES when the board card is a trap
   // ("Field Trap counts as Trap").
   const R35_POOL = ["52", "85", "87", "92", "93", "95"];
 
   it("R35 the filter a card script writes returns exactly the six-index list", () => {
-    expect(indices(catalog.query({ rarity: "Legendary", excludeIndex: "83" }))).toEqual(R35_POOL);
-    expect(indices(catalog.pool("83", { rarity: "Legendary" }))).toEqual(R35_POOL);
+    expect(indices(catalog.query({ rarity: "Legendary", excludeDefId: "core-083" }))).toEqual(R35_POOL);
+    expect(indices(catalog.pool("core-083", { rarity: "Legendary" }))).toEqual(R35_POOL);
   });
 
   it("R35 the pool is the §8 Legendary rarity set minus #83, and nothing else", () => {
     expect(indices(catalog.query({ rarity: "Legendary" }))).toEqual(["52", "83", "85", "87", "92", "93", "95"]);
-    expect(indices(catalog.pool("83", { rarity: "Legendary" }))).not.toContain("83");
-    expect(catalog.pool("83", { rarity: "Legendary" }).every((def) => def.rarity === "Legendary")).toBe(true);
-    expect(catalog.pool("83", { rarity: "Legendary" }).every((def) => !def.token)).toBe(true);
+    expect(indices(catalog.pool("core-083", { rarity: "Legendary" }))).not.toContain("83");
+    expect(catalog.pool("core-083", { rarity: "Legendary" }).every((def) => def.rarity === "Legendary")).toBe(true);
+    expect(catalog.pool("core-083", { rarity: "Legendary" }).every((def) => !def.token)).toBe(true);
   });
 
   it("R35 narrowed by type for a board replacement, with Field Trap counting as Trap", () => {
     // Only #85 is a Legendary trap, so a board trap — Trap or Field Trap — is replaced by it.
-    expect(indices(catalog.pool("83", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["85"]);
-    expect(indices(catalog.pool("83", { rarity: "Legendary", type: "Unit" }))).toEqual(["52", "92"]);
+    expect(indices(catalog.pool("core-083", { rarity: "Legendary", type: TRAP_TYPES }))).toEqual(["85"]);
+    expect(indices(catalog.pool("core-083", { rarity: "Legendary", type: "Unit" }))).toEqual(["52", "92"]);
   });
 });
 
 describe("R65 pools and filters read a definition's cost out of play", () => {
   it("R65 an X-cost card's queryCost is 0 and it answers a cost-0 query", () => {
     // #24 Efficiency Dividend, #74 Adaptive UI, #98 Heroic Power are the catalog's X-cost cards.
-    expect(queryCost(cardDefByIndex("24"))).toBe(0);
-    expect(queryCost(cardDefByIndex("74"))).toBe(0);
-    expect(queryCost(cardDefByIndex("98"))).toBe(0);
+    expect(queryCost(cardDefByIndex("Core", "24"))).toBe(0);
+    expect(queryCost(cardDefByIndex("Core", "74"))).toBe(0);
+    expect(queryCost(cardDefByIndex("Core", "98"))).toBe(0);
 
     const cost0 = indices(query({ cost: 0 }));
     expect(cost0).toContain("24");
@@ -194,7 +194,7 @@ describe("R65 pools and filters read a definition's cost out of play", () => {
   it("R65 an embiggen card's queryCost is its base price, and it answers that cost's query", () => {
     // #46 Suppressive Aura, #59 Unbiased Immigration, #84 Going Long are "2 embiggen 4".
     for (const index of ["46", "59", "84"]) {
-      const def = cardDefByIndex(index);
+      const def = cardDefByIndex("Core", index);
       expect(def.cost).toEqual({ base: 2, embiggen: 4 });
       expect(queryCost(def)).toBe(2);
       expect(indices(query({ cost: 2 }))).toContain(index);
@@ -236,7 +236,7 @@ describe("§9.3, R60 pool order is deterministic, so a seeded pick replays", () 
     try {
       registerCatalog(reversedCatalog, CATALOG_VERSION);
       expect(query({}).map((def) => def.id)).toEqual(forward);
-      expect(indices(query({ tags: ["KY"], excludeIndex: "57" }))).toEqual(["31", "51", "82"]);
+      expect(indices(query({ tags: ["KY"], excludeDefId: "core-057" }))).toEqual(["31", "51", "82"]);
     } finally {
       registerCatalog(CATALOG, CATALOG_VERSION);
     }
