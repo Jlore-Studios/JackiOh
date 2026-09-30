@@ -14,14 +14,17 @@
 // pipeline's step-7 event carries the player who played it, where `summoned` also covers Recruit,
 // copies, tokens and Reborn — none of which is a play (R1, R61).
 //
-// ARMING (R61, R472). `traps.ts` rules that `run` returning `[]` is "a trap that fired for nothing" and
-// "can never mean 'this event was not mine'", so every condition that must leave the trap armed and
-// face-down lives in the `when` predicate: the opponent's play, a Unit, and a Unit still standing on
-// the field from that play (`cardResolved.permanent`, which `traps.standingEvent` reads again for
-// each trap). So a Spell, a Field Spell, a Trap, the controller's own Unit, and a Unit that left the
-// field during its own resolution — its Cry killed it, an earlier trap answering the same play took
-// it — all leave Sheepish set (R472): there is no played Unit left to transform, and Hearthstone's
-// "after your opponent plays a minion" secrets wait for one that is.
+// ARMING (R61). `traps.ts` rules that `run` returning `[]` is "a trap that fired for nothing" and "can
+// never mean 'this event was not mine'", so every condition that must leave the trap armed and
+// face-down lives in the `when` predicate: the opponent's play, and a Unit. A Spell, a Field Spell, a
+// Trap, or the controller's own Unit therefore leaves Sheepish set.
+//
+// A UNIT THAT HAS LEFT (R427, R174). The play of a Unit is what Sheepish answers, so it fires on it
+// even when the Unit is no longer on the field by then — its own Cry took it off, or an earlier trap
+// answering the same play did: `cardResolved.permanent` says so (`traps.standingEvent` reads it again
+// for each trap), the Transform then has no Unit in play to land on and finds nothing — it never
+// reaches into a graveyard or a hand, or onto a Reborn body, a new arrival (R83) — and the trap is
+// consumed, the Radiant face's Lava Golem still added (R120).
 //
 // IMMUTABLE (R17, R23). `transform` already refuses an Immutable target, which is exactly R17's
 // "Sheepish on an Immutable unit still fires and is consumed with no effect". This card neither
@@ -51,16 +54,16 @@ function sheepish(lavaGolem: boolean): TrapTrigger {
       // §8: "your opponent". A trap never answers its own controller's play.
       if (event.player === ctx.controller) return false;
       // §5.1: a Unit, so a Spell or a backrow card leaves the trap armed (R61).
-      if (defOf(ctx.state, event.defId).type !== "Unit") return false;
-      // R472: the played Unit still stands on the field from that play, or there is nothing to
-      // transform and the trap stays set.
-      return event.permanent;
+      return defOf(ctx.state, event.defId).type === "Unit";
     },
     run: (ctx) => {
       const event = ctx.event;
       if (event.type !== "cardResolved") return [];
-      // Named by the event, not by a TargetSpec: nobody chose this unit, the play produced it.
-      const effects: Effect[] = [transform({ instanceId: event.instanceId, defId: SHEEP_TOKEN })];
+      // Named by the event, not by a TargetSpec: nobody chose this unit, the play produced it. R427:
+      // only a Unit still in play from that play is transformed; one that has left finds nothing.
+      const effects: Effect[] = event.permanent
+        ? [transform({ instanceId: event.instanceId, defId: SHEEP_TOKEN })]
+        : [];
       // R120: §8's conventions make an "Also" clause independent, so it still lands when an
       // Immutable target refused the Transform (R17, R23) and the trap is still consumed (R61).
       if (lavaGolem) effects.push(addToHand({ defId: LAVA_GOLEM, costOverride: 0 }));

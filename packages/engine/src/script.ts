@@ -193,6 +193,11 @@ export type StaticFlags = {
    * two carries both grants (R102), so a fused face may hold a count.
    */
   heroArmor?: boolean | number;
+  /**
+   * R429 (Core patches, v0.2.0): §10.5 step 4 counts each play of this card on its instance
+   * (`CardInstance.timesPlayed`, `timesPlayed.ts`) — #31 KY's Math Equation's "times played".
+   */
+  countsPlays?: boolean;
   // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----

@@ -141,6 +141,44 @@ describe("#32 Prem Panther — base", () => {
     expect(s.pile("p1", "library")).toHaveLength(1);
   });
 
+  it("R426, R212 a Panther stolen by the Death of the Unit it destroyed still draws, for the player who attacked with it (#86)", () => {
+    // #86 "Miss" Mrow: "Death: Take control of the Unit that destroyed this." The Panther survives the
+    // combat on the stay it attacked from (a change of control is not leaving the field, R171), so
+    // the draws are the ones that attack earned — for p1, who controlled it in that combat (R212).
+    const s = scenario({
+      seed: "panther-mrow",
+      p1: { field: ["32"], hand: ["5"], library: ["15", "15", "15"] },
+      p2: { field: ["86"], hand: ["15"], library: ["15", "15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    const mrow = must(s.unit("p2", 1), "p2's Mrow");
+
+    s.attack(panther, mrow);
+
+    s.expectInZone(mrow, "graveyard");
+    expect(s.card(panther).controller).toBe("p2");
+    expect(s.hand("p1")).toHaveLength(3);
+    expect(s.hand("p2")).toHaveLength(1);
+  });
+
+  it("R426, R83 a Panther that dies in the combat and comes back through Reborn draws nothing: the body is a new arrival", () => {
+    const s = scenario({
+      seed: "panther-reborn",
+      p1: { field: ["32"], hand: ["5"], library: ["15", "15", "15"] },
+      p2: { field: ["32"], hand: ["15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    s.card(panther).grantedKeywords.push({ kind: "Reborn" });
+
+    // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health.
+    s.attack(panther, must(s.unit("p2", 1), "p2's Panther"));
+
+    expect(s.events.some((event) => event.type === "destroyed" && event.instanceId === panther.id)).toBe(true);
+    s.expectInZone(panther, "field");
+    expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(false);
+    expect(s.hand("p1")).toHaveLength(1);
+  });
+
   it("R426 attacking the hero destroys no Unit and draws nothing", () => {
     const s = scenario({
       seed: "panther-face",

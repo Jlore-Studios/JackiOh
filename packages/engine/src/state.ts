@@ -105,6 +105,14 @@ export type CardInstance = {
   // ---- v0.2.0 instance fields, by workstream: damage and combat (E5, E6, E9, E35, E37) ----
   // ---- v0.2.0 instance fields, by workstream: prompts and generation (E13, E16–E19, E23–E26) ----
   // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
+  /**
+   * R429: how many times this card has been played, the play under way included — counted at §10.5
+   * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
+   * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
+   * zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
+   * Transform is a new card with a count of its own (R57).
+   */
+  timesPlayed?: number;
 };
 
 /** A unit zone holds a Stack pile, top card first (§3.2). */

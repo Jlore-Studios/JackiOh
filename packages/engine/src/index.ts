@@ -26,6 +26,8 @@ export * from "./traps";
 export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
+// R429: the times a card has been played, which #31 KY's Math Equation reads.
+export * from "./timesPlayed";
 export * from "./replay";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";
