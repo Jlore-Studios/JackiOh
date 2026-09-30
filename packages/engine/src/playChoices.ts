@@ -42,8 +42,9 @@ import type {
 import { hasKeyword, opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
-import { faceOf } from "./layers";
-import { effectiveCost, isXCost } from "./mana";
+import { whyPlayBanned } from "./costRules";
+import { faceOf, unitHas } from "./layers";
+import { isXCost, playCost } from "./mana";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
@@ -54,7 +55,7 @@ import {
   isLocked,
   isOpen,
   isReserved,
-  openZones,
+  pileAt,
   rowSize,
   slotsOf,
   type ZoneSlot,
@@ -165,14 +166,17 @@ export function resolvingFace(state: GameState, player: PlayerId, card: CardInst
   return { ...card, radiant: true };
 }
 
-/** What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65). */
+/**
+ * What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as
+ * a play wherever the card lies, so a play from a graveyard pays the player's prices (E11, R454).
+ */
 function costWith(state: GameState, card: CardInstance, x: number | undefined, embiggen: boolean | undefined): number {
   const probe: CardInstance = {
     ...card,
     x: choosesX(state, card) ? (x ?? 0) : card.x,
     embiggened: hasEmbiggenPrice(state, card) ? embiggen === true : card.embiggened,
   };
-  return effectiveCost(state, probe);
+  return playCost(state, probe);
 }
 
 // ---------------------------------------------------------------------------
@@ -215,14 +219,55 @@ function acceptsStack(state: GameState, ref: ZoneSlot): boolean {
  * §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
  * the occupied unit zones for a Stack card (§6.2). `refuseZone` below reads the same two rules off
  * the same pair of predicates, so the client's greyed-out button and `reduce`'s refusal agree.
+ *
+ * R391 (B4.5): with the Tribute a play pays (`tributes`), also every zone that Tribute empties
+ * (`freedByTribute`), in lane order with the open ones — the zone is judged once the Tribute is paid,
+ * since §10.5 pays at step 2 and places at step 4.
  */
-export function legalZonesFor(state: GameState, player: PlayerId, card: CardInstance): ZoneChoice[] {
+export function legalZonesFor(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  tributes: readonly string[] = [],
+): ZoneChoice[] {
   if (!needsZone(state, card)) return [];
   const row = rowForCard(state, card);
   const refs = playsOnStack(state, card)
     ? slotsOf(player, row).filter((ref) => acceptsStack(state, ref))
-    : openZones(state, player, row);
+    : slotsOf(player, row).filter((ref) => isOpen(state, ref) || freedByTribute(state, ref, tributes));
   return refs.map((ref) => ({ row: ref.row, lane: ref.lane }));
+}
+
+/**
+ * R391 (B4.5): whether the Tribute a play pays empties this zone for it — a zone whose pile is exactly
+ * one card, and that card one the Tribute takes (a Stack pile's next card would resume, R13, so
+ * tributing its top frees nothing), without Reborn (its zone would be reserved for the return, R64),
+ * in a zone neither Locked nor reserved for anything else. A zone that is open anyway is not "freed".
+ * The rule is the row's, not the Unit row's alone: a backrow card with a Tribute cost reads it the
+ * same way, though a Tribute pays with units and so empties a backrow zone only when a unit sits in
+ * one. An Activate cost needs no zone and never comes here (B3.2).
+ */
+export function freedByTribute(state: GameState, ref: ZoneSlot, tributes: readonly string[]): boolean {
+  if (tributes.length === 0) return false;
+  if (isLocked(state, ref) || isReserved(state, ref)) return false;
+  const held = cardAt(state, ref);
+  if (held === null || !tributes.includes(held.id)) return false;
+  if (ref.row === "units" && (pileAt(state, ref)?.length ?? 0) !== 1) return false;
+  return !unitHas(state, held, "Reborn");
+}
+
+/**
+ * R64, R391: the zone a play that names none takes — the leftmost open zone of its row, else, on a
+ * full row, the leftmost zone its own Tribute empties. Null when there is neither.
+ */
+export function defaultZoneFor(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  tributes: readonly string[] = [],
+): ZoneSlot | null {
+  const row = rowForCard(state, card);
+  return firstFreeZone(state, player, row) ?? slotsOf(player, row).find((ref) => freedByTribute(state, ref, tributes)) ?? null;
 }
 
 /**
@@ -793,38 +838,68 @@ export function playChoiceCombinations(
  * prices the player cannot pay. This is what `legalActions` lists for a card in hand.
  */
 export function playActionsFor(state: GameState, player: PlayerId, card: CardInstance): PlayAction[] {
+  const mana = state.players[player].mana.current;
+  return pricedPlayActions(state, player, card, (cost) => (cost <= mana ? [{}] : []));
+}
+
+/** How one play pays its price besides mana: the Plague Tokens a graveyard play spends (E11, R454). */
+export type PlayPayment = Pick<PlayAction, "plague">;
+
+/**
+ * R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
+ * choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
+ * `{}` for a price paid in mana alone. A hand card pays in mana (`playActionsFor`); a card a permission
+ * lets its player play from the graveyard may also pay with Plague Tokens (`graveyardPlay.ts`).
+ *
+ * R455: a price a ban forbids is never offered (`costRules.whyPlayBanned`). R391: each Tribute set is
+ * paired with the zones it leaves open, the open ones and the ones it empties itself, and never with a
+ * zone another set empties.
+ */
+export function pricedPlayActions(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  payments: (cost: number) => readonly PlayPayment[],
+): PlayAction[] {
   const out: PlayAction[] = [];
   const xValues: (number | undefined)[] = choosesX(state, card) ? legalXValues(state, player, card) : [undefined];
   const embiggens: (boolean | undefined)[] = hasEmbiggenPrice(state, card)
     ? legalEmbiggenChoices(state, card)
     : [undefined];
-  const zones: (ZoneChoice | undefined)[] = needsZone(state, card) ? legalZonesFor(state, player, card) : [undefined];
   const tributeSets = legalTributeSets(state, player, card);
 
   for (const x of xValues) {
     for (const embiggen of embiggens) {
       const probe: CardInstance = { ...card, x: x ?? card.x, embiggened: embiggen ?? card.embiggened };
-      const cost = effectiveCost(state, probe);
-      if (cost > state.players[player].mana.current) continue;
+      const cost = playCost(state, probe);
+      if (whyPlayBanned(state, player, probe, cost) !== null) continue;
+      const paid = payments(cost);
+      if (paid.length === 0) continue;
       // R214: the choices of the face step 5 will resolve, which this price decides (#64).
       const face = resolvingFace(state, player, card, cost);
       const bound = declaresBoundTribute(face);
       for (const tributes of tributeSets) {
+        const zones: (ZoneChoice | undefined)[] = needsZone(state, card)
+          ? legalZonesFor(state, player, card, tributes)
+          : [undefined];
         for (const zone of zones) {
           for (const choices of playChoiceCombinations(state, player, face)) {
             // R123: the declared Tribute's pick names the units this play tributes, and no others.
             if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
               continue;
             }
-            out.push({
-              type: "play",
-              instanceId: card.id,
-              ...(zone === undefined ? {} : { zone }),
-              ...(x === undefined ? {} : { x }),
-              ...(embiggen === undefined ? {} : { embiggen }),
-              ...(tributes.length === 0 ? {} : { tributes }),
-              ...choices,
-            });
+            for (const payment of paid) {
+              out.push({
+                type: "play",
+                instanceId: card.id,
+                ...(zone === undefined ? {} : { zone }),
+                ...(x === undefined ? {} : { x }),
+                ...(embiggen === undefined ? {} : { embiggen }),
+                ...(tributes.length === 0 ? {} : { tributes }),
+                ...choices,
+                ...payment,
+              });
+            }
           }
         }
       }
@@ -841,15 +916,22 @@ function plural(count: number, one: string): string {
   return count === 1 ? `${count} ${one}` : `${count} ${one}s`;
 }
 
-function refuseZone(state: GameState, player: PlayerId, card: CardInstance, zone?: ZoneChoice): string | null {
+function refuseZone(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  zone?: ZoneChoice,
+  tributes: readonly string[] = [],
+): string | null {
   const name = defOf(state, card.defId).name;
   const needs = needsZone(state, card);
 
   if (zone === undefined) {
     if (!needs) return null;
     const row = rowForCard(state, card);
-    // §3.2: playing a permanent from hand requires an open zone in the right row.
-    return firstFreeZone(state, player, row) === null ? `no free ${row} zone` : null;
+    // §3.2: playing a permanent from hand requires an open zone in the right row — or, R391, one the
+    // play's own Tribute empties.
+    return defaultZoneFor(state, player, card, tributes) === null ? `no free ${row} zone` : null;
   }
   if (!needs) return `${name} takes no zone`;
 
@@ -863,7 +945,10 @@ function refuseZone(state: GameState, player: PlayerId, card: CardInstance, zone
   // §6.2 Stack: an occupied unit zone is a legal zone for a Stack card, and only occupancy is
   // waived — `acceptsStack` still refuses a Locked or Reborn-reserved zone (R64).
   const ref: ZoneSlot = { player, row: zone.row, lane: zone.lane };
-  const takesIt = playsOnStack(state, card) ? acceptsStack(state, ref) : isOpen(state, ref);
+  // R391: a zone the play's own Tribute empties is open for it once the Tribute is paid.
+  const takesIt = playsOnStack(state, card)
+    ? acceptsStack(state, ref)
+    : isOpen(state, ref) || freedByTribute(state, ref, tributes);
   if (!takesIt) return `that ${row} zone is not open`;
   return null;
 }
@@ -991,7 +1076,7 @@ export function whyChoicesRefused(
   action: PlayAction,
 ): string | null {
   const price =
-    refuseZone(state, player, card, action.zone) ??
+    refuseZone(state, player, card, action.zone, action.tributes) ??
     refuseX(state, player, card, action.x) ??
     refuseEmbiggen(state, card, action.embiggen) ??
     refuseTributes(state, player, card, action.tributes);

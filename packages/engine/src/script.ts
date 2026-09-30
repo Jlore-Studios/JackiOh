@@ -2,6 +2,8 @@
 // never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
 
 import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, TargetDecl } from "@jackioh/shared";
+import type { CostAura, CostAuraArgs } from "./costRules";
+import type { GraveyardPlayPermission } from "./graveyardPlay";
 import type { Rng } from "./rng";
 import type { CardInstance, GameState } from "./state";
 import type { EventStay } from "./stays";
@@ -289,6 +291,15 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: instance data (B3.3, B3.4) ----
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
+  // play pipeline B (E11, E15). Both are pure reads, like `aura`, asked of a card acting on the field
+  // (the top of its pile, or its backrow card), and both return lists so a fused card carries each
+  // ingredient's (R102). A hook rather than a static flag, so a Degrade or Upgrade of the card's
+  // declared numbers moves what it grants (B3.4), and so a grant can hang on the card's state (Classic
+  // #90 In Too Deep's reward L).
+  /** E15, R455: the price rules this card lays on cards while it acts (`costRules.ts`). */
+  costAura?: (args: CostAuraArgs) => CostAura[];
+  /** E11, R454: the permissions this card gives its controller to play cards from their graveyard. */
+  graveyardPlay?: (args: CostAuraArgs) => GraveyardPlayPermission[];
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----

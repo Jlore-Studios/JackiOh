@@ -321,7 +321,13 @@ type ListFn = (...args: unknown[]) => unknown[];
  * instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
  * and each label still sits in the fused face's text, which prints every ingredient's text whole.
  */
-const EAGER_KEYS: readonly string[] = ["aura", "preview"];
+const EAGER_KEYS: readonly string[] = [
+  "aura",
+  "preview",
+  // B5 E15, E11 (R455, R454): a price rule and a graveyard permission are pure reads of the field too.
+  "costAura",
+  "graveyardPlay",
+];
 
 /**
  * §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that

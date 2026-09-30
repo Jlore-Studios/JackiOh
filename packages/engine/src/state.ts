@@ -26,6 +26,7 @@ import {
   type Handicap,
 } from "./config";
 import { registerCatalog, registeredCatalog } from "./catalog";
+import type { CostRule } from "./costRules";
 import { showToOwner } from "./ownLibrary";
 import { createRng } from "./rng";
 
@@ -107,6 +108,19 @@ export type CardInstance = {
   // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
 };
 
+/**
+ * B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
+ * its target picks to enemies when one is legal (`targetEnemies`), or both. `casts` counts the casts
+ * a random cast's resolution has made in all, itself included, against RANDOM_CAST_CHAIN_CAP.
+ */
+export type CastMode = {
+  instanceId: string;
+  player: PlayerId;
+  random: boolean;
+  targetEnemies: boolean;
+  casts: number;
+};
+
 /** A unit zone holds a Stack pile, top card first (§3.2). */
 export type Pile = CardInstance[];
 
@@ -128,6 +142,12 @@ export type PlayerModifier = {
   | { kind: "comboDraw"; amount: number }
   | { kind: "quickstrikerDamage" }
   // ---- v0.2.0 modifier kinds, by workstream: play pipeline (E15 costs, E39 stamping, Devil's Pact) ----
+  // play pipeline B (E15, E39; R455). A price rule on this player's cards (`costRules.ts`): Classic #2's
+  // "your next Trap or Field Spell costs (2) less" or "costs (0)" (until used, spent by the play it
+  // priced), AI Alignment Tax's "(1) more during their next turn" (R48's `nextTurnOf`).
+  | { kind: "costRule"; rule: CostRule }
+  /** Classic+ #14 Forever&: the next Spell its player plays gains this enchantment (E39), until used. */
+  | { kind: "enchantNextSpell"; enchantment: Enchantment }
   // ---- v0.2.0 modifier kinds, by workstream: activate and turn (E28 rest of the game) ----
   // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
 );
@@ -370,6 +390,13 @@ export type GameState = {
   fieldExits?: FieldExits;
   // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
   // ---- v0.2.0 game fields, by workstream: play pipeline (E1 announce, E4 last plays, E12) ----
+  /**
+   * play pipeline B (E12, R452): the casts being driven right now that change how choices are made —
+   * a random cast (every choice its caster makes answered from the rng) or a cast that targets
+   * enemies when it can — innermost last. Present only while such a cast's steps run
+   * (`randomCast.withCastMode`), so a state at rest, a paused one included, never carries it.
+   */
+  castsResolving?: CastMode[];
   // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
   // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----

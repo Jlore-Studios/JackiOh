@@ -183,6 +183,11 @@ export { forEachCard } from "./each";
 
 // ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----
 
+// play pipeline B: casts from anywhere and random casts (E12; R452, R453), and the price rules and
+// next-Spell rider a card puts on a player (E15, E39; R455).
+export { addCostRule, cast, castEach, castNew, castRandom, enchantNextSpell } from "./cast";
+export type { CastDef, CastHow, CostRuleSpan } from "./cast";
+
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
 // ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----

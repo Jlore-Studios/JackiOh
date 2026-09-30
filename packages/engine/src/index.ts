@@ -8,6 +8,11 @@ export * from "./zones";
 export * from "./query";
 export * from "./layers";
 export * from "./mana";
+// B5 E11, E12, E15 (R452–R455): the price rules and their readers (`costNow`, R396), graveyard play
+// permissions, and random casts' modes.
+export * from "./costRules";
+export * from "./graveyardPlay";
+export * from "./randomCast";
 export * from "./damage";
 export * from "./combat";
 export * from "./draw";

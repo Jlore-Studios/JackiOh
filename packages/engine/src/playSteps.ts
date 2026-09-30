@@ -22,20 +22,26 @@
 // (`mana.ts`, R65), what a card's text does (the card's script, which is a pure builder the engine
 // applies — CLAUDE.md rule 5) and R43's power mechanics (`subsystems/heroPower.ts`).
 
-import type { ActionBody, PlayerId, Selection } from "@jackioh/shared";
+import type { ActionBody, PlayerId, Selection, TargetDecl } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
-import { QUICKSTRIKER_COMBO_MULTIPLE } from "./config";
+import { MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE } from "./config";
+import { whyPlayBanned } from "./costRules";
 import { dealDamage } from "./damage";
-import { draw } from "./draw";
+import { addToHand, draw } from "./draw";
 import {
+  EXILE_ON_LANDING,
   dropEchoRepeats,
   echoRepeatsOwed,
+  exileOnLanding,
   landAfterResolution,
   queueEchoRepeats,
   takeEchoRepeat,
 } from "./echo";
-import { effectiveCost, isXCost, manaEvent, modifierIsLive, spendMana } from "./mana";
+import { hasEnchantment } from "./enchantments";
+import { cardTypeOf } from "./faces";
+import { inOwnGraveyard, manaDue, spendPlagueTokens, whyGraveyardPlayRefused } from "./graveyardPlay";
+import { costRulesSpentBy, isXCost, manaEvent, modifierIsLive, playCost, spendMana } from "./mana";
 import { removeModifier } from "./modifiers";
 import {
   DECLARATION_SLICES_KEY,
@@ -44,6 +50,7 @@ import {
   declarationSlices,
   declaredModes,
   declaredTargets,
+  defaultZoneFor,
   giftedMakesRadiant,
   inDeclaredOrder,
   legalSelectionsFor,
@@ -62,15 +69,17 @@ import {
   whyAnswerRefused,
   type AnswerInput,
 } from "./prompts";
+import { countChainCast, preferEnemies, randomCastOf, randomPicks, withCastMode } from "./randomCast";
 import {
   flagReturnToHandAtEndOfTurn,
   registerCastDriver,
+  type CastOptions,
   type EngineSink,
-  type HookOptions,
 } from "./resolve";
 import {
   findInstance,
   type CardInstance,
+  type CastMode,
   type GameState,
   type Resume,
   type WorkItem,
@@ -103,6 +112,10 @@ export const PLAY_STEPS = [
   "validate",
   "pay",
   "giftedHook",
+  // R70, R452: a cast's choices, made once step 3 has settled the face they answer (R214) and before
+  // the card moves — so an announce that follows (E1, between steps 3 and 4) names them. A play made
+  // its choices at step 1, and this step does nothing for it.
+  "castChoices",
   "place",
   "resolve",
   "echo",
@@ -250,6 +263,23 @@ export type PlayRun = {
    * resolution. What steps 2 and 3 did stands, and step 8 settles it.
    */
   lost?: boolean;
+  // ---- play pipeline B (E11, E12; R452–R454) ----
+  /**
+   * E11, R454: the card is played from its player's graveyard under a permission (`graveyardPlay.ts`)
+   * rather than from the hand. Absent for a play from hand and for a cast.
+   */
+  source?: "graveyard";
+  /** E11, R454: the Plague Tokens paying part of the price (`costPaid` is the whole price). */
+  plague?: { from: string; tokens: number };
+  /** E12, R452: a random cast — every choice its caster would make is made at random. */
+  random?: boolean;
+  /** E12, E39, R452: its target picks narrow to enemies when one is legal. */
+  targetEnemies?: boolean;
+  /**
+   * E12, R453: a cast Field Spell, Trap or Field Trap that found no zone. It still counts as played
+   * (R70, R138), nothing of its text resolves, and step 7 puts it in its owner's graveyard.
+   */
+  fizzled?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -289,6 +319,23 @@ function handCard(state: GameState, player: PlayerId, instanceId: string): CardI
   return state.players[player].hand.find((card) => card.id === instanceId);
 }
 
+/**
+ * E11, R454: where a play takes its card from — the player's hand, or their own graveyard, where a
+ * permission may let them play it (`graveyardPlay.ts`). Undefined when the card is in neither.
+ */
+function playSourceOf(
+  state: GameState,
+  player: PlayerId,
+  instanceId: string,
+): { card: CardInstance; from: "hand" | "graveyard" } | undefined {
+  const inHand = handCard(state, player, instanceId);
+  if (inHand !== undefined) return { card: inHand, from: "hand" };
+  const inGraveyard = state.players[player].graveyard.find((card) => card.id === instanceId);
+  return inGraveyard !== undefined && inOwnGraveyard(state, player, inGraveyard)
+    ? { card: inGraveyard, from: "graveyard" }
+    : undefined;
+}
+
 export function isPermanent(state: GameState, card: CardInstance): boolean {
   return defOf(state, card.defId).type !== "Spell";
 }
@@ -310,8 +357,13 @@ export function validatePlay(
   action: PlayAction,
 ): { error: string } | { run: PlayRun } {
   const state = sink.state;
-  const card = handCard(state, player, action.instanceId);
-  if (card === undefined) return { error: `no card ${action.instanceId} in ${player}'s hand` };
+  const source = playSourceOf(state, player, action.instanceId);
+  if (source === undefined) return { error: `no card ${action.instanceId} in ${player}'s hand` };
+  const card = source.card;
+  // R454: Plague Tokens pay only for a play from the graveyard a permission lets them pay for.
+  if (source.from === "hand" && action.plague !== undefined) {
+    return { error: "only a play from your graveyard can spend Plague Tokens" };
+  }
 
   const refused = whyChoicesRefused(state, player, card, action);
   if (refused !== null) return { error: refused };
@@ -319,18 +371,25 @@ export function validatePlay(
   if (choosesX(state, card)) card.x = action.x ?? 0;
   if (typeof defOf(state, card.defId).cost === "object") card.embiggened = action.embiggen === true;
 
-  const cost = effectiveCost(state, card);
-  if (cost > state.players[player].mana.current) {
+  // R65, R454, R455: the price of this play, the player's prices included wherever the card lies.
+  const cost = playCost(state, card);
+  const banned = whyPlayBanned(state, player, card, cost);
+  if (banned !== null) return { error: banned };
+  if (source.from === "graveyard") {
+    const why = whyGraveyardPlayRefused(state, player, card, cost, action.plague);
+    if (why !== null) return { error: why };
+  } else if (cost > state.players[player].mana.current) {
     return { error: `${defOf(state, card.defId).name} costs ${cost}, more than your mana` };
   }
 
-  // Step 1 accepted the zone; a play that named none takes the leftmost free one.
+  // Step 1 accepted the zone; a play that named none takes the leftmost free one — or, on a full
+  // row, the leftmost one its own Tribute empties (R391).
   let zone: ZoneSlot | null = null;
   if (isPermanent(state, card)) {
     const named = action.zone;
     zone =
       named === undefined
-        ? firstFreeZone(state, player, defOf(state, card.defId).type === "Unit" ? "units" : "backrow")
+        ? defaultZoneFor(state, player, card, action.tributes ?? [])
         : { player, row: named.row, lane: named.lane };
     if (zone === null) return { error: "no free zone" };
   }
@@ -359,6 +418,8 @@ export function validatePlay(
       ...slicesFor(state, player, card, cost, targets, modes),
       exitsFrom: exitMark(state),
       ...playBegins(state, player),
+      ...(source.from === "graveyard" ? { source: "graveyard" as const } : {}),
+      ...(action.plague === undefined ? {} : { plague: { from: action.plague.from, tokens: action.plague.tokens } }),
     },
   };
 }
@@ -462,9 +523,17 @@ function payStep(sink: EngineSink, run: PlayRun): void {
   const card = findInstance(sink.state, run.instanceId);
   if (card === undefined) return;
   const side = sink.state.players[run.player];
+  // R455: the "until used" price rules this play's price met, read before a Tribute can change the
+  // board they are read against.
+  const spentRules = costRulesSpentBy(sink.state, card);
 
-  spendMana(side, run.costPaid);
+  // R454: Plague Tokens pay their part of the price, and the mana the rest.
+  spendMana(side, manaDue(run.costPaid, run.plague));
   sink.events.push(manaEvent(run.player, side));
+  if (run.plague !== undefined) {
+    const holder = findInstance(sink.state, run.plague.from);
+    if (holder !== undefined) spendPlagueTokens(sink, holder, run.plague.tokens);
+  }
   // R210: the zone step 1 accepted is the play's until step 4 puts the card in it. A Tribute is
   // paid here, and a tributed unit's Death — #3 radiant's summon, #22's copies, #86's steals — lands
   // cards by R64 and R15 in the very row the play is going to; held like a Reborn zone (R64), the
@@ -474,6 +543,7 @@ function payStep(sink: EngineSink, run: PlayRun): void {
   if (tributesAnEnemy(sink.state, run)) run.enemyTributed = true;
   payTributes(sink, run);
   consumeUsedDiscounts(sink, run, card);
+  for (const id of spentRules) removeModifier(sink, run.player, id);
 }
 
 // ---------------------------------------------------------------------------
@@ -573,6 +643,9 @@ function playedEvents(sink: EngineSink, run: PlayRun, card: CardInstance, former
     ...(card.embiggened === undefined ? {} : { embiggened: card.embiggened }),
     ...former,
     ...arrivals,
+    // R454: a play from the graveyard says so, for a client to animate it from there. Public: the
+    // graveyard is.
+    ...(run.source === "graveyard" ? { from: "graveyard" as const } : {}),
     exitsFrom,
   });
   if (run.zone !== null) {
@@ -609,9 +682,10 @@ function placeStep(sink: EngineSink, run: PlayRun): void {
   // trigger killed has died before step 5's Cry counts the board (R118, R113).
   const resumed = run.placed === true;
   if (!resumed) {
-    // R70, R90: a cast makes its choices before step 4 puts it on the field, as a play makes them at
-    // step 1 with the card still in hand — so a cast Unit is never one of its own Cry's options.
-    if (run.cast === true && !castChoicesMade(sink, run, "place")) return;
+    // R70, R90: a cast has made its choices by now (`castChoicesStep`), before step 4 puts it on the
+    // field, as a play makes them at step 1 with the card still in hand — so a cast Unit is never one
+    // of its own Cry's options. A run owed from before that step existed makes them here.
+    if (run.cast === true && !castChoicesMade(sink, run, "castChoices")) return;
     run.placed = true;
     if (!placeCard(sink, run)) run.lost = true;
   }
@@ -703,10 +777,9 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   } else {
     // §10.1, §10.5 step 4: the card leaves the hand for the field or the resolving zone. One that is
     // no longer in its owner's hand — a Tribute's Death had it discarded at step 2 — is where that
-    // move put it, in one zone, and is not played (R226): placing it too would leave it in two.
-    const at = side.hand.findIndex((held) => held.id === card.id);
-    if (at < 0) return false;
-    side.hand.splice(at, 1);
+    // move put it, in one zone, and is not played (R226): placing it too would leave it in two. R454:
+    // a card played from the graveyard leaves the graveyard the same way, and the same holds for it.
+    if (!takeFromPlaySource(state, run, card)) return false;
     // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent. It is
     // still this player's play (`cardPlayed`), and its owner does not change (§3.2); the zone, and
     // so its controller, is the opponent's (`placeOnField`).
@@ -738,6 +811,9 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
     card.zone = { z: "resolving", player: run.player };
     side.resolving.push(card);
   }
+  // R453: a cast Field Spell, Trap or Field Trap with no zone fizzles; a cast permanent on the field
+  // has no landing for "then exile it" to change (Classic #56's rider is a Spell's).
+  if (run.cast === true) settleCastPlacement(state, run, card);
 
   // R119: a run owed from before the marks were kept reads the board the play was announced on.
   if (run.standing === undefined) {
@@ -760,7 +836,53 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   // The repeats still resolve at step 6, which only takes what is queued.
   run.echoQueued = true;
   queueEchoRepeats(sink, card, run.player);
+  // E39 (Classic+ #14): "the next Spell you play gains …" is gained as it is played, as Echo is (R178).
+  stampNextSpell(sink, card, run.player);
   return true;
+}
+
+/**
+ * E11, R454, §10.5 step 4: take the played card out of the pile the play takes it from — its owner's
+ * hand, or, for a play from the graveyard, its player's graveyard. False, and nothing moved, when it is
+ * no longer there (R226): a Tribute's Death at step 2 or a step-3 hook has moved it, and it is not
+ * played. Exported so a step that moves the card earlier (E1's announce) takes it the same way.
+ */
+export function takeFromPlaySource(state: GameState, run: PlayRun, card: CardInstance): boolean {
+  if (run.source === "graveyard") {
+    if (!inOwnGraveyard(state, run.player, card)) return false;
+    removeFromAnyZone(state, card);
+    return true;
+  }
+  const side = state.players[run.player];
+  const at = side.hand.findIndex((held) => held.id === card.id);
+  if (at < 0) return false;
+  side.hand.splice(at, 1);
+  return true;
+}
+
+/** R453: a cast permanent's placement settled — fizzled when it found no zone, the Spell rider dropped. */
+function settleCastPlacement(state: GameState, run: PlayRun, card: CardInstance): void {
+  if (run.zone !== null) {
+    delete card.memory[EXILE_ON_LANDING];
+    return;
+  }
+  const type = cardTypeOf(state, card);
+  if (type !== "Spell" && type !== "Unit") run.fizzled = true;
+}
+
+/**
+ * E39, R455 (Classic+ #14 Forever&): every live `enchantNextSpell` modifier of the player gives its
+ * enchantment to the Spell being played and is spent — "the next Spell you play gains …". A cast is a
+ * play (R70), so a cast Spell takes it; a countered play never reaches step 4 and leaves it waiting.
+ */
+function stampNextSpell(sink: EngineSink, card: CardInstance, player: PlayerId): void {
+  const state = sink.state;
+  if (cardTypeOf(state, card) !== "Spell") return;
+  for (const mod of [...state.players[player].mods]) {
+    if (mod.kind !== "enchantNextSpell" || !modifierIsLive(state, mod)) continue;
+    card.enchantments = [...(card.enchantments ?? []), { ...mod.enchantment }];
+    removeModifier(sink, player, mod.id);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -899,6 +1021,8 @@ function standingTargets(run: PlayRun): Selection[] {
  */
 function resolveStep(sink: EngineSink, run: PlayRun): void {
   if (run.cast === true && !castChoicesMade(sink, run)) return;
+  // R453: a cast that found no zone for its Field Spell or Trap resolves nothing.
+  if (run.fizzled === true) return;
   for (let at = run.resolveAt; at < RESOLVE_PARTS.length; at += 1) {
     run.resolveAt = at + 1;
     const card = stillResolving(sink.state, run);
@@ -1010,7 +1134,27 @@ function askLabel(step: PlayStepName, name: string): string {
   return step === "echo" ? `Echo: ${name}` : `Cast: ${name}`;
 }
 
+/**
+ * R70, R452: a cast's own choices, made as a step of their own once step 3 has settled the face they
+ * answer (R214) and before the card moves (R90) — so whatever announces the cast next (E1's window,
+ * between steps 3 and 4) announces them. A play made its choices at step 1: nothing to do.
+ */
+function castChoicesStep(sink: EngineSink, run: PlayRun): void {
+  if (run.cast !== true) return;
+  castChoicesMade(sink, run, "castChoices");
+}
+
 type RepeatRecord = NonNullable<PlayRun["repeat"]>;
+
+/**
+ * The options one declaration offers a pick the pipeline makes itself — an Echo repeat's or a cast's
+ * (R81, R70) — narrowed to enemies when the run targets enemies and one is legal (R452).
+ */
+function castTargetOptions(state: GameState, run: PlayRun, card: CardInstance, decl: TargetDecl): Selection[] {
+  const options = legalSelectionsFor(state, run.player, card, decl);
+  if (run.targetEnemies !== true) return options;
+  return preferEnemies(state, run.player, options, (selection) => selection, Math.min(decl.min, options.length));
+}
 
 /** The repeat's target declarations, each offered in turn; false while one is waiting (R81). */
 function askRepeatTargets(
@@ -1026,8 +1170,13 @@ function askRepeatTargets(
     repeat.declAt = at + 1;
     const decl = targets[at];
     if (decl === undefined) continue;
-    const options = legalSelectionsFor(sink.state, run.player, card, decl);
+    const options = castTargetOptions(sink.state, run, card, decl);
     if (options.length === 0) continue;
+    // R452: a random cast makes this pick itself, at random, and asks nobody.
+    if (run.random === true || randomCastOf(sink.state, run.player) !== null) {
+      repeat.targets.push(...randomPicks(sink.rng, options, decl.min, decl.max));
+      continue;
+    }
     run.awaiting = "echoTarget";
     const opened = openPrompt(sink, {
       player: run.player,
@@ -1062,6 +1211,12 @@ function askRepeatModes(
     repeat.modeAt = at + 1;
     const decl = modes[at];
     if (decl === undefined || decl.options.length === 0) continue;
+    // R452: a random cast makes this choice itself, at random.
+    if (run.random === true || randomCastOf(sink.state, run.player) !== null) {
+      const option = sink.rng.pick(decl.options);
+      if (option !== undefined) repeat.modes.push(option);
+      continue;
+    }
     run.awaiting = "echoMode";
     const opened = openPrompt(sink, {
       player: run.player,
@@ -1101,7 +1256,7 @@ function echoStep(sink: EngineSink, run: PlayRun): void {
 
 function resolveEchoRepeats(sink: EngineSink, run: PlayRun): void {
   const opening = stillResolving(sink.state, run);
-  if (opening === null) {
+  if (opening === null || run.fizzled === true) {
     dropEchoRepeats(sink.state, run.instanceId);
     return;
   }
@@ -1199,6 +1354,8 @@ function resolveRepeat(sink: EngineSink, run: PlayRun): boolean {
  * no-op for everything else the step lands — a permanent, and a Spell that exiled itself (#39).
  */
 function finishStep(sink: EngineSink, run: PlayRun): void {
+  // E39, R455 (Classic+ #14 Forever&): a Spell that resolved goes back to its owner's hand instead.
+  returnAfterResolving(sink, run);
   landAfterResolution(sink, {
     instanceId: run.instanceId,
     defId: run.defId,
@@ -1213,6 +1370,22 @@ function finishStep(sink: EngineSink, run: PlayRun): void {
     arrivedDuring: arrivedDuring(sink.state, run),
   });
   flagReturnToHandAtEndOfTurn(sink.state, run.instanceId);
+}
+
+/**
+ * E39, R455 (Classic+ #14 Forever&: "After this resolves, return it to your hand"): a Spell carrying a
+ * `returnAfterResolve` enchantment that has resolved — played or cast, and still in the resolving zone
+ * at step 7 — goes to its owner's hand instead of the graveyard, the hand cap burning it as always
+ * (§2.4). A Spell step 7 exiles (its own "exile this", a cast's "then exile it", R178) is exiled: exile
+ * is final (§6.3). A countered Spell never reaches step 7, and a fizzled cast resolved nothing.
+ */
+function returnAfterResolving(sink: EngineSink, run: PlayRun): void {
+  if (run.fizzled === true) return;
+  const card = findInstance(sink.state, run.instanceId);
+  if (card === undefined || card.zone.z !== "resolving") return;
+  if (card.memory[EXILE_ON_LANDING] === true) return;
+  if (cardTypeOf(sink.state, card) !== "Spell" || !hasEnchantment(card, "returnAfterResolve")) return;
+  addToHand(sink, card);
 }
 
 // ---------------------------------------------------------------------------
@@ -1231,6 +1404,7 @@ const STEP_TABLE: readonly Step[] = [
   { name: "validate", run: () => {} },
   { name: "pay", run: payStep },
   { name: "giftedHook", run: giftedHookStep, repeats: true },
+  { name: "castChoices", run: castChoicesStep, repeats: true },
   { name: "place", run: placeStep, repeats: true },
   { name: "resolve", run: resolveStep, repeats: true },
   { name: "echo", run: echoStep, repeats: true },
@@ -1261,6 +1435,24 @@ const STEP_TABLE: readonly Step[] = [
  * Returns true when the pipeline is finished with (a game that ended under it included).
  */
 function drive(sink: EngineSink, run: PlayRun): boolean {
+  // R452: a random cast, or one that targets enemies, is in force while its steps run, however often
+  // they are driven — the first time, and each time an answer brings the owed rest back.
+  return withCastMode(sink.state, castModeOf(run), () => driveSteps(sink, run));
+}
+
+/** R452: the mode a run's steps run under, or null for a play and an ordinary cast. */
+function castModeOf(run: PlayRun): CastMode | null {
+  if (run.cast !== true || (run.random !== true && run.targetEnemies !== true)) return null;
+  return {
+    instanceId: run.instanceId,
+    player: run.player,
+    random: run.random === true,
+    targetEnemies: run.targetEnemies === true,
+    casts: 1,
+  };
+}
+
+function driveSteps(sink: EngineSink, run: PlayRun): boolean {
   for (let at = Math.max(0, run.at); at < STEP_TABLE.length; at += 1) {
     const step = STEP_TABLE[at];
     if (step === undefined) break;
@@ -1350,14 +1542,28 @@ registerWorkHandler(PLAY_WORK_KIND, runOwedPlay);
  * `resolve.castCard` is the entry point; it reaches this through the driver registered below,
  * because `resolve.ts` sits under `prompts.ts` and cannot import the pipeline itself.
  */
-function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: HookOptions): void {
+function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: CastOptions): void {
   // The card an effect casts may be in no pile yet — drawn off the library (§2.4) or made from the
   // catalog (#95) — and the pipeline finds its card by id, so it waits in the resolving zone from
   // the start, as a card being played does (§10.5 step 4, R98).
+  const state = sink.state;
   const player = instance.controller;
-  removeFromAnyZone(sink.state, instance);
+  removeFromAnyZone(state, instance);
   instance.zone = { z: "resolving", player };
-  sink.state.players[player].resolving.push(instance);
+  state.players[player].resolving.push(instance);
+
+  // R452: a cast made while a random cast of its caster's resolves is random too, and counts in that
+  // cast's chain; a card that targets enemies (E39's enchantment) is cast so, whoever casts it.
+  const random = options.random === true || randomCastOf(state, player) !== null;
+  const targetEnemies = options.targetEnemies === true || hasEnchantment(instance, "targetEnemies");
+  if (random) countChainCast(state, player);
+  // R453: a cast pays nothing, so its X is not weighed against a price: the caster's current mana, at
+  // least MIN_CHOSEN_X (R348).
+  if (choosesX(state, instance) && instance.x === undefined) {
+    instance.x = Math.max(MIN_CHOSEN_X, state.players[player].mana.current);
+  }
+  // R453: "then exile it" (Classic #56) — step 7 lands the resolved Spell in exile (R178's mark).
+  if (options.afterward === "exile") exileOnLanding(instance);
 
   const targets = [...(options.targets ?? [])];
   const modes = [...(options.modes ?? [])];
@@ -1380,6 +1586,8 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
     cast: true,
     exitsFrom: exitMark(sink.state),
     ...playBegins(sink.state, player),
+    ...(random ? { random: true } : {}),
+    ...(targetEnemies ? { targetEnemies: true } : {}),
   });
 }
 
