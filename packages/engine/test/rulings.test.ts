@@ -2728,9 +2728,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(389, SERVER_CLOCK_TEST);
   });
 
-  // Proved by cards card-text.test.ts "R432 …" (every face's cost words).
+  // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
+  // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
-    provenIn(432, CARDS_CARD_TEXT_TEST);
+    provenIn(432, CARDS_CARD_TEXT_TEST, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // Proved by apps/web fx/constants.test.ts, fx/settings.test.ts, settings/wiring.test.tsx and
+  // game/animations.fx.test.ts "R435 …" (the range and step, the clamp, the slider and its readout, and
+  // the runner's durations and burst budget at 0.25x and 3x).
+  it("R435 runs the effects speed from 0.25x to 3x on a slider", () => {
+    provenIn(
+      435,
+      "../../../apps/web/src/fx/constants.test.ts",
+      "../../../apps/web/src/fx/settings.test.ts",
+      "../../../apps/web/src/settings/wiring.test.tsx",
+      WEB_ANIMATIONS_FX_TEST,
+    );
   });
 
   // Proved by cards references.test.ts "R480 …".
@@ -2746,6 +2760,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by cards params.test.ts "R482 …".
   it("R482 writes a card's tunable numbers as {key} in the faces that show them", () => {
     provenIn(482, CARDS_PARAMS_TEST);
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
+  it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
+    provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web audio/voice-assets.test.ts "R501 …" (a SAPI persona's hash, --catalog, the
+  // persona's ranges, the 6 MiB budget), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …";
+  // gen-voice.test.ts's "R501 …" cases render through SAPI and ffmpeg where a machine has them.
+  it("R501 renders the voice set on macOS or Windows, within 6 MiB", () => {
+    provenIn(
+      501,
+      "../../../apps/web/src/audio/voice-assets.test.ts",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+      "../../../apps/web/src/audio/voiceData.test.ts",
+    );
   });
 });
 

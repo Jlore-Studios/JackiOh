@@ -1,14 +1,20 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviour B45: `gen-voice.mjs` in its default, generate
 // mode (B37 covers `--check`).
 //
-//   B45  Off macOS, or without `say`, `afconvert` and `afinfo`, it exits 2 and prints
-//        `gen-voice: needs macOS say and afconvert`. On macOS it is idempotent by input hash: on an
-//        unchanged tree it renders nothing and writes nothing; it deletes an orphan file and an
-//        orphan manifest entry; and after one line is edited it renders that key alone and records
-//        its new hash, leaving every other file and entry as it was.
+//   B45  With no synthesizer at all (neither macOS `say`, `afconvert` and `afinfo`, nor Windows SAPI
+//        through `powershell.exe` with `ffmpeg`), it exits 2 and prints
+//        `gen-voice: needs macOS say and afconvert, or Windows SAPI (powershell.exe) and ffmpeg`. On
+//        macOS it is idempotent by input hash: on an unchanged tree it renders nothing and writes
+//        nothing; it deletes an orphan file and an orphan manifest entry; and after one line is
+//        edited it renders that key alone and records its new hash, leaving every other file and
+//        entry as it was.
+//   R501 Where Windows SAPI and ffmpeg are (WSL, or Windows), it renders a SAPI persona's line to an
+//        M4A in the committed format within the length cap and records its hash, renders nothing on
+//        an unchanged tree, and reports a stale `say` line as needing macOS instead of touching it.
 //
 // Every run points `--root` at a copy of the tree in a temp dir, never at the committed files. The
-// macOS cases need the real `say`, so they run only on a Mac; CI (Linux) runs the first case.
+// macOS cases need the real `say`, so they run only on a Mac, and the SAPI ones only where SAPI is;
+// CI (Linux) runs the first case.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -37,6 +43,16 @@ function hasTool(name: string): boolean {
 }
 
 const ON_MAC = process.platform === "darwin" && ["say", "afconvert", "afinfo"].every(hasTool);
+const POWERSHELL_WSL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+/** gen-voice.mjs's own test for its SAPI backend: Windows' PowerShell from WSL, and ffmpeg. */
+const ON_SAPI =
+  !ON_MAC &&
+  process.platform === "linux" &&
+  existsSync(POWERSHELL_WSL) &&
+  ["wslpath", "ffmpeg", "ffprobe"].every(hasTool);
+const CATALOG_PATH = resolve(WEB, "../../packages/cards/catalog.json");
+/** VOICE_FILE_MAX_MS in constants.ts, in seconds. */
+const MAX_SECONDS = 4;
 
 /** The Surface's formula, recomputed here rather than imported from the script. */
 function voiceHash(values: { say: string; rate: number; pbas: number; pmod: number; text: string }): string {
@@ -44,9 +60,26 @@ function voiceHash(values: { say: string; rate: number; pbas: number; pmod: numb
   return createHash("sha1").update(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).digest("hex").slice(0, 16);
 }
 
-function run(root: string, env: NodeJS.ProcessEnv = process.env): { status: number | null; output: string } {
-  const result = spawnSync(process.execPath, [GEN_VOICE, "--root", root], { encoding: "utf8", env, timeout: RUN_TIMEOUT_MS });
+function run(
+  root: string,
+  env: NodeJS.ProcessEnv = process.env,
+  extra: readonly string[] = [],
+): { status: number | null; output: string } {
+  const result = spawnSync(process.execPath, [GEN_VOICE, "--root", root, ...extra], {
+    encoding: "utf8",
+    env,
+    timeout: RUN_TIMEOUT_MS,
+  });
   return { status: result.status, output: `${result.stdout}\n${result.stderr}` };
+}
+
+/** R501: a SAPI persona's hash, recomputed from the formula rather than imported. */
+function sapiHash(values: { voice: string; rate: number; semitones: number; filter: string; text: string }): string {
+  const { voice, rate, semitones, filter, text } = values;
+  return createHash("sha1")
+    .update(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones, filter, text }))
+    .digest("hex")
+    .slice(0, 16);
 }
 
 let scratch = "";
@@ -92,7 +125,7 @@ describe("B45 gen-voice.mjs generate mode", () => {
       const result = run(root, { ...process.env, PATH: empty });
 
       expect(result.status, result.output).toBe(2);
-      expect(result.output).toContain("gen-voice: needs macOS say and afconvert");
+      expect(result.output).toContain("gen-voice: needs macOS say and afconvert, or Windows SAPI (powershell.exe) and ffmpeg");
       expect(readFileSync(join(root, REL_MANIFEST), "utf8")).toBe(before);
     },
     RUN_TIMEOUT_MS,
@@ -179,6 +212,69 @@ describe("B45 gen-voice.mjs generate mode", () => {
 
       const check = spawnSync(process.execPath, [GEN_VOICE, "--check", "--root", root], { encoding: "utf8" });
       expect(check.status, `${check.stdout}\n${check.stderr}`).toBe(0);
+    },
+    RUN_TIMEOUT_MS,
+  );
+
+  it.runIf(ON_SAPI)(
+    "R501 renders a SAPI persona's new line alone, in the committed format, and records its hash",
+    () => {
+      const root = copyTree();
+      const persona = { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 5, semitones: -2, filter: "lowpass=f=3500", web: { pitch: 1, rate: 1 } };
+      const text = "A voice from another machine.";
+      const lines = JSON.parse(readFileSync(join(root, REL_LINES), "utf8")) as { personas: Record<string, unknown>; cards: Record<string, unknown> };
+      lines.personas["test-sapi"] = persona;
+      lines.cards["classicplus-999"] = { kind: "spell", persona: "test-sapi", cast: text };
+      writeFileSync(join(root, REL_LINES), `${JSON.stringify(lines, null, 2)}\n`);
+      const catalog = join(root, "catalog.json");
+      const real = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as Record<string, unknown>;
+      writeFileSync(catalog, JSON.stringify({ ...real, "classicplus-999": { type: "Spell" } }));
+      const before = readManifest(root);
+
+      const result = run(root, process.env, ["--catalog", catalog]);
+
+      expect(result.status, result.output).toBe(0);
+      expect(result.output).toContain("gen-voice: rendered classicplus-999-cast");
+      expect(result.output).toContain(`rendered 1, kept ${String(Object.keys(before.files).length)}`);
+      const file = join(root, REL_VOICE_DIR, "classicplus-999-cast.m4a");
+      const head = readFileSync(file).subarray(0, 12);
+      expect(head.subarray(4, 8).toString("latin1")).toBe("ftyp");
+      expect(head.subarray(8, 12).toString("latin1")).toBe("M4A ");
+      const probe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream=sample_rate,channels", "-show_entries", "format=duration", "-of", "json", file], { encoding: "utf8" });
+      const info = JSON.parse(probe.stdout) as { streams: { sample_rate: string; channels: number }[]; format: { duration: string } };
+      expect(info.streams[0]?.sample_rate).toBe("22050");
+      expect(info.streams[0]?.channels).toBe(1);
+      expect(Number(info.format.duration)).toBeLessThanOrEqual(MAX_SECONDS);
+      expect(readManifest(root).files["classicplus-999-cast"]).toEqual({
+        hash: sapiHash({ ...persona, text }),
+        bytes: statSync(file).size,
+      });
+
+      const again = run(root, process.env, ["--catalog", catalog]);
+      expect(again.status, again.output).toBe(0);
+      expect(again.output).toContain(`rendered 0, kept ${String(Object.keys(before.files).length + 1)}`);
+    },
+    RUN_TIMEOUT_MS,
+  );
+
+  it.runIf(ON_SAPI)(
+    "R501 reports a stale macOS line as needing say, and leaves its file and entry alone",
+    () => {
+      const root = copyTree();
+      const lines = JSON.parse(readFileSync(join(root, REL_LINES), "utf8")) as Lines;
+      const entry = lines.cards["core-004"];
+      if (entry === undefined) throw new Error("core-004 should be in the table");
+      entry.play = "Let it ride, baby!";
+      writeFileSync(join(root, REL_LINES), `${JSON.stringify(lines, null, 2)}\n`);
+      const manifest = readManifest(root);
+      const before = mtimes(root, manifest);
+
+      const result = run(root);
+
+      expect(result.status, result.output).toBe(1);
+      expect(result.output).toContain("core-004-play: needs macOS say to render");
+      expect(readManifest(root).files["core-004-play"]).toEqual(manifest.files["core-004-play"]);
+      expect(mtimes(root, manifest)).toEqual(before);
     },
     RUN_TIMEOUT_MS,
   );

@@ -17,9 +17,9 @@ enforces rules and never sees hidden information.** In practice:
   read a field off it, which is how "never sees hidden information" is enforced by the compiler
   rather than by discipline.
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
-  targets and modes are built **inline into the `play` action** (and into the `activate` action,
-  for an Activate ability's, R384); everything decided during resolution is a `PendingChoice`
-  answered with an `answer` action. `game/Prompt.tsx` renders both with the same pickers.
+  targets and modes are built **inline into the `play` action**; everything decided during
+  resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
+  both with the same pickers.
 
 ## Layout
 
@@ -30,15 +30,13 @@ src/
   cards/                card faces, procedural art, inspect and card settings (docs/polish/6-cards.md). A face is
                         the card in play or the card as printed (SPEC §10.10): `faceModel` with `inPlay` reads
                         the view's own facts (a hand Unit's stats, a unit's keywords and Vanilla mark, a #98's
-                        rolled power, R243, what a formula comes to now, R280, a declared number's current value,
-                        R386, a Brittle count, R385) and inPlay.ts's words (#98's power, ??? for Call to Chaos);
-                        with no `inPlay` it is the collection's printed card. The inspect overlays in play show
-                        the printed text beside a face wherever the two differ (inspect/Printed.tsx), and print a
-                        card's lines of code (`loc`, §5). RulesText draws every face's text with its marks: a
+                        rolled power, R243, what a formula comes to now, R280) and inPlay.ts's words (#98's
+                        power, ??? for Call to Chaos); with no `inPlay` it is the collection's printed card.
+                        The inspect overlays in play show the printed text beside a face wherever the two
+                        differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), "{n}" values (R280) and `{key}` numbers
-                        (R386). The glossary (glossary.ts) copies SPEC §6's Rule column in players' words (R373)
+                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280)
   game/
     engine.ts           the EnginePort: the only seam onto packages/engine
     engine.real.ts      the real binding (see "Blocked on the engine" below)
@@ -50,13 +48,12 @@ src/
                         holds cards (public on both seats, §10.8) opens its cards on hover and in a dialog on a
                         click (cards/inspect/CardList.tsx), and so does your own library, from the list without
                         order the view carries for it (`SideView.ownLibrary`, R310–R313): grouped with counts,
-                        "Order hidden", unknown cards as backs, and for a deck its player did not build only the
-                        cards its owner has been shown (R433); the opponent's library is a count. Players read
+                        "Order hidden", unknown cards as backs; the opponent's library is a count. Players read
                         the rules' library as the Deck ("Deck", "Your deck") and Sacrifice as Tribute (R373;
                         src/wording.test.ts refuses the old words in any string a player can read). A log line
                         that names a card opens that card. A face-down backrow card is a back wearing the cost
-                        the view gives it, whose hover and sheet say "Face-down trap" and its "(N) Cost"
-                        (R370, R432, cards/inspect/FaceDown.tsx); your own face-down trap, `unrevealed` in the view,
+                        the view gives it, whose hover and sheet say "Face-down trap" and its "Cost (N)"
+                        (R370, cards/inspect/FaceDown.tsx); your own face-down trap, `unrevealed` in the view,
                         is its face under a dashed frame, a veil and a "Face down" tag with a struck-through
                         eye (R371, facedown.css, cards/faceDown.ts for the words); a grade badge prints the
                         letter the view names (R372)
@@ -98,10 +95,10 @@ src/
     cues.ts director.ts useGameAudio.ts      SOUND_CUES (a total map over GameEventType) and the runner-synced director
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
-    voice-lines.json voice-manifest.json     every card's and token's lines and personas; the generated hash and size of each file
+    voice-lines.json voice-manifest.json     every card's lines and personas; the generated hash and size of each file
   fx/                   the effects layer (docs/polish/1-animations.md; SPEC §10.10, R200–R202)
     types.ts constants.ts   the cue contract and every FX number
-    settings.ts         effects speed (0.25× to 3×, R435), intensity and motion (localStorage, jackioh.fx.v1)
+    settings.ts         effects speed, intensity and motion (localStorage, jackioh.fx.v1)
     cues.ts memory.ts   the planner: an entry's events → cues, pure (and the killing blow a game over replays)
     stage.ts            stage cues, pure: a stand-in for a moved card, a hidden card, an aimed lunge (B46–B48)
     rng.ts presets.ts sprites.ts particles.ts canvasFx.ts surface.ts loop.ts shake.ts   the canvas engine
@@ -181,101 +178,6 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
   offer lapses with the turn (R269). Practice hides the Offer draw
   control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
 
-## Patch v0.2.0 at the table
-
-Patch v0.2.0 (issue #40; SPEC §6, §10.6, §10.8, §10.10) brought Classic and Classic+, new keywords
-and engine systems, and a round of cosmetic work. Every layer below is presentation (rule 7): it
-reads what the view carries, takes its moves from `legal`, and has one owning module like the rest.
-
-**The new mechanics.**
-
-- **Activate** (R384). The Activate control generalises Heroic Power's `power` control to every card
-  with an Activate ability ("Activate:", "Activate X:", "Activate ♾️:"): the card on the field
-  carries its own control, live exactly when `legal` lists an `activate` for that card, and it sends
-  that listed body. A use that is spent this turn, a cost that cannot be paid or an open prompt
-  leaves nothing listed, so the control is greyed with nothing to fire. Targets and modes an ability
-  declares are picked inline, as a play's are (R81); choices made while it resolves are prompts.
-  Heroic Power's power is one such control.
-- **Animated cards on both rows** (R383). An Animated Field Spell, Trap or Field Trap is drawn where
-  the view puts it: in its backrow zone as a backrow card whose face prints the attack and health it
-  fights with (face-down, it is a back like any trap, R33), and in a unit zone as a Unit, with
-  everything a Unit shows. The `animated` and `deanimated` entries carry it between the rows. While
-  an "Animated on your turn" card is away, its backrow zone is held for its return and carries
-  `data-reserved`, as a dying Reborn unit's zone does (R64).
-- **The Brittle badge** (R385). A card's Brittle count is a badge on it, drawn like the grade badge,
-  on the field for both seats and in hand for its owner; `crumbled` plays the card falling apart
-  where it was, and in a pile the viewer cannot read it shows only that a card of that pile went.
-- **Degrade and Upgrade** (R386). A face's text writes each number the card declares as `{key}`, and
-  `RulesText` fills in the value the view carries for that instance, in play and in hand; the printed
-  card fills in each face's own value, so a number the Radiant face raises is marked in gold like any
-  other change (R277). A card a Degrade or an Upgrade has changed shows its current cost, stats,
-  keywords and numbers wherever its viewer may read it, with a mark on what changed. `degraded` and
-  `upgraded` play on the card; on a hand or a deck the viewer cannot
-  read they say only that some card of that pile changed, and the owner of a deck sees a change made
-  inside it once the card leaves the deck (R311).
-- **The new prompts** (§10.6). `Prompt.tsx` renders each new kind under its own `data-prompt-kind`:
-  `number`, a number from a fixed range (C #18 Glitch in the System); `answer`, a multiple-choice
-  problem (C+ #42 KY's Test: first the three problems, each labelled with the reward rolled for it,
-  then the chosen one's statement and four options, in plain text with Unicode maths, so no maths
-  renderer is needed); `cell`, one cell of the board per prompt from the lanes not yet used, then
-  "done" (C+ #62 KY's Papaya; the picker may show the equation the chosen cells make); `reward`, a
-  completed quest's reward (C #90 In Too Deep); and `pick`, a budgeted pick of several cards from a
-  pile (C #44 Back from the GY). A mode prompt held by the other player (C #8 Pickle) is the ordinary
-  mode picker on the seat that holds it. A prompt that shows cards shows them to the chooser only,
-  and KY's Test's answer key never reaches the client (§10.8).
-- **In Too Deep's quest panel** (C #90, R404). While In Too Deep is on the field, a panel beside it
-  shows what the view carries: the open quest (the open quests, on the Radiant face) with its progress
-  ("1/2") and the rewards on offer. A completed quest's reward is a `reward` prompt for the card's
-  controller, on either player's turn. The collection prints the whole tree.
-- **`loc` in the inspect overlay** (§5). The overlay prints a card's lines of code, public card data
-  that C #48 Hired Shrimp and C+ #44 and #45 compare.
-- **History and Patch notes** (R388). The card detail view (`cards/inspect/CardDetail.tsx`, which the
-  deck workshop's pool opens) has a History section: each patch in which the card changed, its faces
-  as they were, drawn from that patch's snapshot, and the words and numbers that changed marked the
-  way R277 marks a Radiant face (a word diff between versions). A public Patch notes page, open
-  without an account, lists every patch and the cards it touched. Both read `packages/cards/patches/`
-  (`packages/cards/README.md` §8).
-- **The glossary** gains a row for every new keyword, status and timing word of SPEC §6 — Animated
-  and Animated on your turn, Activate, Brittle, Degrade and Upgrade among them — copied from §6's
-  Rule column as every row is.
-- **The deck builder's set filter.** The workshop's pool filters by set (Core, Classic, Classic+);
-  a deck may mix them (R380).
-- **Art.** Every new card and token has a distinct, fitting procedural face: the art families
-  (`cards/art/`) extend to the new tags (Book, Pancake, AI) and to the two sets, and real art is
-  still listed in `art/manifest.ts`.
-- **Animation and sound.** `ANIMATIONS` and `SOUND_CUES` stay total over `GameEventType`, so every new
-  event has a row in both: `cardAnnounced`, `countered`, `stolen`, `unlocked`, `activated`,
-  `animated`, `deanimated`, `crumbled`, `degraded`, `upgraded`, `redirected`, `healthSet`,
-  `questProgressed`, `questCompleted` and `rolledBack`. A counter answers in §10.5's announce
-  window, so `cardAnnounced` shows the card being played (a card set face-down shows the opponent
-  only its zone, as `cardPlayed` does) and `countered` sends it to the graveyard without its ever
-  reaching the field. New sound families serve the Book, Pancake and AI tags, and every new card and
-  token has its voice lines (below).
-
-**The cosmetic items.**
-
-- **Unknown cards in a dealt deck** (R433). A deck its player did not build (All Random's, R258)
-  lists only the cards its owner has been shown; the library browser draws the rest as unknown
-  backs, and a card joins the list once its owner has seen it.
-- **Both hands at the end** (R434). Once the game is over the view carries both hands, and the board
-  shows the opponent's hand face-up.
-- **Effects speed** (R435) is a slider from 0.25× to 3× (`FX_SPEED_MIN`, `FX_SPEED_MAX` in
-  `fx/constants.ts`), applied live like every setting.
-- **Call to Chaos names its rolls** (R436). Both editions (#95, C+ #73) name the effects they rolled
-  in the event stream both players read, and the board names each one as it resolves, on both seats.
-- **A marked card shows its mark** (R437). The corruption effect is a sparkle that takes its colour
-  as a parameter, so any mark can reuse it; on the target of K-Pop Fanatic's (#50) pending steal it
-  is purple, in both seats' views. #21 Hinder and #27 Blood Ridden Glowy Jelly Bean play flashier
-  effects, so the opponent sees what they did.
-- **Keyword visuals** (R438). Keywords the view lists on a unit are drawn on it as well as named,
-  Taunt and Divine Shield among them.
-- **The last 30 seconds** (R439). A turn clock's final 30 seconds play a visual countdown on the
-  board (`Clock.tsx`), wherever a clock runs.
-- **Smaller things.** The Cry and Tribute reminder text is shorter. An empty hand keeps its place on
-  the board during a game rather than collapsing. `/play`'s Find a Match box shows no queue counts,
-  which the mode picker above it already gives. And every client string writes a cost the way card
-  text does (R432): "(N) Cost" is the noun ("Face-down trap, (2) Cost") and "costs (N)" the verb.
-
 ## Commands
 
 ```
@@ -298,16 +200,13 @@ queue, and the server's refusal, when it comes, is shown in its own words (rule 
 ```
 routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser with its set filter (Core, Classic, Classic+; one format, R380), the trio
-                        editor that marks every card two of its decks share (R251),
+                        browser, the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
-                        parts, R339) — version 2 since patch v0.2.0, each card number tagged with its set,
-                        version 1 still read as Core — with Copy trio code in the trio editor and Import trio
+                        parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
-                        trio choice with the validator's verdict as UX, the queue (its Find a Match box
-                        shows no queue counts: the mode picker does) and the room code; it
+                        trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
@@ -367,9 +266,6 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   as the media query does.
 - A game in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
   Menu leaves for the landing page, asking first while the game is on.
-- C+ #29 Portal to the Past reads "your last game" as the last finished game of the same kind, so
-  practice keeps the board its last practice game ended with on the device and hands it to the next
-  game's setup (R417); the server keeps its own for online games, and hotseat has none.
 
 ## The tutorial
 
@@ -425,18 +321,25 @@ src/tutorial/
 
 ## Regenerating the voice lines
 
-The voice files are generated from `src/audio/voice-lines.json` and committed, so CI never runs
-`say`. Every card and token of the three sets has its lines there, patch v0.2.0's 206 new cards and
-tokens included. After editing a line or a persona, run `pnpm --filter @jackioh/web gen:voice` on a
-Mac (it needs macOS `say` and `afconvert`, and exits 2 anywhere else). It renders only the keys whose
-input hash changed, deletes orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the
-set passes SPEC §10.11's size cap (3 MiB) or a line runs past 4 s; a change to the cap lands in SPEC
-§10.11 and the script together. `--only <defId>` limits it to one card and `--force` renders
-everything again (legacy voices such as Fred are not byte-deterministic, so expect a large diff).
-Commit the manifest together with `public/audio/voice/`. `node apps/web/scripts/gen-voice.mjs
---check` needs no `say`, runs on any OS and is what the asset test calls. A line must stay flavour
-text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file missing
-from the manifest falls back to the browser's `speechSynthesis`.
+The voice files are generated from `src/audio/voice-lines.json` and committed, so CI never runs a
+synthesizer. Each persona names its backend (R501): Core's personas are macOS `say` (the default),
+and the Classic and Classic+ personas are `"backend": "sapi"`, Windows SAPI (`System.Speech`, the
+"Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by `ffmpeg`: trimmed, pitched
+by the persona's `semitones`, coloured by its `filter` chain, peak-normalised and encoded to the same
+mono AAC at 22050 Hz and about 32 kbps. After editing a line or a persona, run
+`pnpm --filter @jackioh/web gen:voice` on a Mac for `say` personas, or on Windows or WSL (it finds
+`/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`) with `ffmpeg` and `ffprobe` on the
+`PATH` for SAPI personas; with neither it exits 2. It renders only the keys whose input hash changed
+and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
+orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
+`VOICE_BUDGET_BYTES` (6 MiB, R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
+byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
+`node apps/web/scripts/gen-voice.mjs --check` needs no synthesizer, runs on any OS and is what the
+asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
+flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
+missing from the manifest falls back to the browser's `speechSynthesis`, with the persona's `web`
+pitch and rate.
 
 ## Blocked on the engine
 
