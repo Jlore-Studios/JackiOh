@@ -396,6 +396,8 @@ describe("E23 fuse three generated cards into the hand (Classic+ #43)", () => {
     run1 = act(run1, { type: "play", instanceId: spell.id, playerId: "p1" });
     const made = must(run1.state.players.p1.hand.at(-1), "the fused card");
     expect(defOf(run1.state, made.defId).ingredients?.every((entry) => entry.radiant === true)).toBe(true);
+    // Every ingredient Radiant and no kept card: the fused card is Radiant too.
+    expect(made.radiant).toBe(true);
 
     const sink = sinkFor(start.state);
     const cursor = sink.rng.cursor;

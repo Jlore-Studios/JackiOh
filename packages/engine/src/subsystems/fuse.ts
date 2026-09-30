@@ -984,7 +984,8 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
   } else if (toHand !== undefined) {
     result = craftInHand(sink, def, toHand, ingredients, {
       handPrice: args.handPrice ?? "free",
-      radiant: args.radiant === true,
+      // R469: with no kept card and every ingredient Radiant, the result is Radiant (Classic+ #43).
+      radiant: args.radiant === true || forced.every((isRadiant) => isRadiant),
     });
   } else {
     return null;
