@@ -36,7 +36,11 @@ src/
                         differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280)
+                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
+                        (R437, #50's pending steal) are read through marks.ts (`marksOf`, `markEventOf`, the
+                        colour key → palette and mark → words tables) and drawn by CardMarks.tsx (marks.css):
+                        a corruption aura in the mark's colours and a badge with its words, still under
+                        reduced motion; the board's Card.tsx mounts it on units and face-up backrow cards
   game/
     engine.ts           the EnginePort: the only seam onto packages/engine
     engine.real.ts      the real binding (see "Blocked on the engine" below)
@@ -67,6 +71,9 @@ src/
     showcase/           the opponent's play held up beside the field for about a second (SHOWCASE_HOLD_MS over the
                         effects speed): plan.ts picks the opponent's `cardPlayed` out of the redacted events,
                         per viewer, and a card the view hides (R97, R227) is a back with "Opponent set a card".
+                        A cast on draw is held up on both seats, longer, under a "Cast on draw!" ribbon, out of
+                        its Deck pile, as the runner reaches it (R502); a Call to Chaos roll is said in words and,
+                        where the effects layer draws nothing, shown still (ChaosBanner.tsx, R436).
                         Click-through, never on `data-animating`; `data-showcase` holds practice's AI while it is up
     OverflowNotices.tsx overflow.css   §2.4's overflows on the board's own elements (R318): "Fatigue N" and
                         "Deck full" (with the refused card) inside the deck pile, "Hand full" (with the burned
@@ -105,8 +112,15 @@ src/
     anchors.ts          anchor → viewport box at fire time (a hand: its cards); the board shake sink
     director.ts         one frame loop: fires cues, steps and draws, expires DOM and stage effects
     dom.ts fx.css       DOM flourishes (splats, rays, banners, ghosts, stand-ins) and their keyframes
-    FxLayer.tsx         the overlay Game mounts after the board; listens to the runner's signals
-    index.ts            FxLayer, settings and types
+    castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
+    cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
+                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
+    manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
+                        marked on the board's trays (drawn in every mode: it is information)
+    chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand
+    build.ts            the small cue builders the v0.2.0 recipes share
+    FxLayer.tsx         the overlay Game mounts after the board; listens to the runner's signals, and reads
+                        the newest view (`latest`) for a number no event carries
   settings/             the settings store (localStorage, in try/catch) and the panel the
                         gear opens from the game's control bar and the nav
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and

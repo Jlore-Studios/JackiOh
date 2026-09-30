@@ -27,6 +27,8 @@ const PRESETS: readonly FxPreset[] = [
   "prismatic",
   "void",
   "confetti",
+  "blood",
+  "frost",
 ];
 
 const BOX = { x: 100, y: 120, width: 90, height: 126 };

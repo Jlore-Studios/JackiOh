@@ -1484,11 +1484,15 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   hold: ["kind", "from", "to", "delayMs", "landMs", "durationMs"],
   conceal: ["kind", "testid", "mode", "delayMs", "durationMs"],
   lunge: ["kind", "attacker", "target", "delayMs", "durationMs"],
+  fracture: ["kind", "at", "delayMs", "durationMs"],
+  brand: ["kind", "at", "tint", "delayMs", "durationMs"],
+  chaos: ["kind", "title", "lines", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {
   testid: { required: ["kind", "testid"], optional: ["at"] },
   crystal: { required: ["kind", "side", "index"], optional: [] },
+  handCard: { required: ["kind", "side", "pick"], optional: [] },
   viewport: { required: ["kind", "at"], optional: [] },
 };
 

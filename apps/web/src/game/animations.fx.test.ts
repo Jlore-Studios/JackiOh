@@ -263,11 +263,11 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   questProgressed: "counter",
   questCompleted: "radiant",
   rolledBack: null,
-  chaosRolled: "banner",
+  chaosRolled: "chaos",
   flickered: "void",
   drawLimited: "fizzle",
   turnCutShort: "banner",
-  marked: "keyword",
+  marked: "brand",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -302,6 +302,8 @@ const FX_RECIPES = [
   "banner",
   "fatigue",
   "overflow",
+  "chaos",
+  "brand",
 ];
 
 /** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */

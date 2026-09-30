@@ -670,12 +670,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "board",
     target: () => testid.board,
   },
-  // R436: a banner names each effect Call to Chaos rolled, on both seats.
+  // R436: a slot-machine reveal over the board names each effect Call to Chaos rolled, one line per
+  // effect, on both seats (fx/chaos.ts); the showcase's live region says it in words, and draws it
+  // still where the effects layer draws nothing (game/showcase/ChaosBanner.tsx).
   chaosRolled: {
     animation: "jk-banner",
     durationMs: 900,
     testid: "turn-banner",
-    fx: { recipe: "banner" },
+    fx: { recipe: "chaos" },
     target: () => testid.banner,
   },
   // B5 E22: the card blinks out and back in its zone.
@@ -702,12 +704,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
-  // R437: the mark's glow settles on (or leaves) the card.
+  // R437: the mark's sigil brands the card in the mark's colours (fx/brand.ts), and its aura stays
+  // on the card while the view lists the mark (cards/CardMarks.tsx).
   marked: {
     animation: "jk-radiant-pulse",
     durationMs: 400,
     testid: "card-<instanceId>",
-    fx: { recipe: "keyword" },
+    fx: { recipe: "brand" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
 };

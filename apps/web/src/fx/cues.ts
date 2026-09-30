@@ -21,6 +21,9 @@ import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
+import { brandCues } from "./brand.ts";
+import { castOnDrawCues, planCardFx } from "./cardFx.ts";
+import { chaosCues } from "./chaos.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -327,6 +330,8 @@ const cast: Recipe = (event, p) => {
     return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
   }
   if (event.type !== "cardPlayed") return [];
+  // R502: a card cast as it was drawn never was in a hand; it bursts out of the Deck pile instead.
+  if (p.env.memory.castOnDraw(event)) return castOnDrawCues(event, p);
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
   const at = anchor(p.tgt);
@@ -517,8 +522,6 @@ const buff: Recipe = (event, p) => {
 };
 
 const keyword: Recipe = (event, p) => {
-  // R437: a mark settles on its card as a void ring; its colour is the board's, not an effect's.
-  if (event.type === "marked") return event.added ? [ring(p.D, "void", anchor(p.tgt), 0)] : [];
   if (event.type !== "keywordGranted") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -652,8 +655,6 @@ const mana: Recipe = (event, p) => {
 
 const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
-  // R436: Call to Chaos names what it rolled, on both seats.
-  if (event.type === "chaosRolled") return [banner(p.D, `${FX_TEXT.chaosRolled} ${event.effects.join(" · ")}`, "muted")];
   // B5 E10: an effect cut the turn short.
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   if (event.type !== "turnStarted") return [];
@@ -735,17 +736,30 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   banner: turnBanner,
   fatigue,
   overflow,
+  // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
+  chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
+  // R437: a mark branded onto its card in the mark's colours (brand.ts).
+  brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
 };
 
 /* ------------------------------------------------------------------------------------------- *
  * Public planners (S6)
  * ------------------------------------------------------------------------------------------- */
 
-/** Plans every event of one entry: each event's row recipe, in event order, concatenated. */
+/**
+ * Plans every event of one entry: each event's row recipe, in event order, concatenated. R502: while
+ * a card with a signature recipe is resolving (`CARD_FX`, cardFx.ts), that recipe may claim an event
+ * of its own resolution first, adding to the row's cues or replacing them.
+ */
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
   const cues: FxCue[] = [];
   for (const event of entry.events) {
+    const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
+    if (signature !== null) {
+      cues.push(...signature.cues);
+      if (signature.row === "replace") continue;
+    }
     const recipe = ANIMATIONS[event.type].fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);

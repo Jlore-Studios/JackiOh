@@ -68,6 +68,27 @@ const S2 = {
   FX_ADAPT_RECOVER_WINDOWS: 3,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
+  // v0.2.0: R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand;
+  // R436's Call to Chaos reveal.
+  FX_MEMORY_RECENT: 16,
+  FX_MEMORY_RESOLVING: 8,
+  FX_CAST_ON_DRAW_TRAUMA: 0.25,
+  FX_CRACK_HIT_AT: 0.45,
+  FX_CRACK_STAGGER_MS: 50,
+  FX_FRACTURE_TAIL_MS: 800,
+  FX_CRACK_TRAUMA: 0.3,
+  FX_NEXT_REFRESH_MODIFIER_ID: "nextTurnMana",
+  FX_BLOOD_FLIGHT_FRACTION: 0.6,
+  FX_BLOOD_PICK_BASE: 1,
+  FX_BLOOD_PICK_STRIDE: 2,
+  FX_BLOOD_TRAUMA: 0.2,
+  FX_BRAND_SLAM_AT: 0.35,
+  FX_BRAND_TAIL_MS: 700,
+  FX_CHAOS_LAND_AT: 0.4,
+  FX_CHAOS_STAGGER: 0.2,
+  FX_CHAOS_LAND_LAST: 0.85,
+  FX_CHAOS_REEL_DECOYS: 6,
+  FX_CHAOS_DECOY_STEP: 3,
   FX_SPEED_MIN: 0.25,
   FX_SPEED_MAX: 3,
   FX_SPEED_DEFAULT: 1,
@@ -164,5 +185,16 @@ describe("S2 the effects constants", () => {
     // The result thumps hardest of all, and a trap reveal is still felt.
     expect(peak(constants.FX_RESULT_TRAUMA)).toBeGreaterThanOrEqual(12);
     expect(peak(constants.FX_TRAP_TRAUMA)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("R200 the v0.2.0 tails fit inside T", () => {
+  it("R502 R437 every new tail and landing fraction keeps its cue inside its entry plus FX_MAX_TAIL_MS", () => {
+    expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST]) {
+      expect(at).toBeGreaterThanOrEqual(0);
+      expect(at).toBeLessThanOrEqual(1);
+    }
   });
 });
