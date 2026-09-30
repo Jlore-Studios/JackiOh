@@ -11,6 +11,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
+  CATALOG_NUMBER_SET_OFFSETS,
+  DECK_CODE_CORE_ONLY_VERSION,
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_CODE_VERSION,
   DECK_NAME_MAX_LENGTH,
@@ -19,6 +21,7 @@ import {
   DECK_CODE_MESSAGES,
   DECK_CODE_PREFIX,
   IMPORTED_DECK_NAME,
+  catalogNumberOf,
   decodeDeckCode,
   encodeDeckCode,
   type DecodedDeck,
@@ -93,9 +96,14 @@ function payloadBytes(nameBytes: readonly number[], numbers: readonly number[], 
   return [...body, sum >> 8, sum & 0xff];
 }
 
-function rawCode(name: string | readonly number[], numbers: readonly number[], trailing: readonly number[] = []): string {
+function rawCode(
+  name: string | readonly number[],
+  numbers: readonly number[],
+  trailing: readonly number[] = [],
+  header: string = HEADER,
+): string {
   const nameBytes = typeof name === "string" ? [...new TextEncoder().encode(name)] : name;
-  return HEADER + base64url(payloadBytes(nameBytes, numbers, trailing));
+  return header + base64url(payloadBytes(nameBytes, numbers, trailing));
 }
 
 function bodyBytes(code: string): number[] {
@@ -252,7 +260,9 @@ describe("refusals", () => {
   });
 
   it("R255 an older or otherwise unknown version is refused with its own sentence", () => {
-    const older = `${DECK_CODE_PREFIX}${String(DECK_CODE_VERSION - 1)}.${code.slice(HEADER.length)}`;
+    // Version 1 is still read (every code minted before patch v0.2.0 is one); version 0 never was.
+    expect(DECK_CODE_CORE_ONLY_VERSION).toBe(DECK_CODE_VERSION - 1);
+    const older = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION - 1)}.${code.slice(HEADER.length)}`;
     expect(decodeDeckCode(older, catalog, collection)).toEqual({ ok: false, message: DECK_CODE_MESSAGES.older });
   });
 
@@ -381,5 +391,59 @@ describe("what an import drops, and what it flags", () => {
   it("R255 with no collection, ownership is unknown and nothing is flagged", () => {
     const decoded = expectOk(decodeDeckCode(rawCode("No collection", [1, 2]), catalog, null));
     expect(decoded.unowned).toEqual([]);
+  });
+});
+
+describe("version 2: a card's number carries its set (patch v0.2.0, B2.2)", () => {
+  /** A card of another set: Classic and Classic+ reuse Core's indices. */
+  function setDef(id: string, set: CardDef["set"], index: string): CardDef {
+    return { ...unitDef(id, index, false), set };
+  }
+  const CLASSIC_1 = "classic-001";
+  const PLUS_1 = "classicplus-001";
+  const threeSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      [CLASSIC_1]: setDef(CLASSIC_1, "Classic", "1"),
+      [PLUS_1]: setDef(PLUS_1, "Classic+", "1"),
+      "classicplus-012-1": { ...setDef("classicplus-012-1", "Classic+", "12.1"), token: true, tags: ["Token"], rarity: "Token" },
+    },
+  };
+
+  it("R255 numbers a card by its set: Core n, Classic 1000 + n, Classic+ 2000 + n", () => {
+    expect(DECK_CODE_VERSION).toBe(2);
+    expect(CATALOG_NUMBER_SET_OFFSETS).toEqual({ Core: 0, Classic: 1000, "Classic+": 2000 });
+    expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
+    expect(catalogNumberOf({ set: "Classic", index: "43" })).toBe(1043);
+    expect(catalogNumberOf({ set: "Classic+", index: "78" })).toBe(2078);
+    // A token's index is no number, and a set without an offset has none.
+    expect(catalogNumberOf({ set: "Classic+", index: "12.1" })).toBeUndefined();
+    expect(catalogNumberOf({ set: "Classic+", index: "T-AI-1" })).toBeUndefined();
+    expect(catalogNumberOf({ set: "Boss", index: "1" })).toBeUndefined();
+  });
+
+  it("R255 writes the three #1s as three numbers, LEB128, and reads each back to its own set", () => {
+    const code = encodeDeckCode("Three sets", [fixtureCardId(1), CLASSIC_1, PLUS_1], threeSets);
+    expect(code.startsWith(`${DECK_CODE_PREFIX}2.`)).toBe(true);
+    const bytes = bodyBytes(code);
+    const nameLength = bytes[0] ?? 0;
+    // [count 3] [1] [1001: 0xe9 0x07] [2001: 0xd1 0x0f]
+    expect(bytes.slice(1 + nameLength, bytes.length - 2)).toEqual([3, 1, ...varint(1001), ...varint(2001)]);
+    expect(expectOk(decodeDeckCode(code, threeSets, null)).cards).toEqual([fixtureCardId(1), CLASSIC_1, PLUS_1]);
+  });
+
+  it("R255 reads a version 1 code's numbers as Core's, so every code minted before v0.2.0 still imports", () => {
+    const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
+    const decoded = expectOk(decodeDeckCode(rawCode("Old deck", [1, 2, 1001], [], v1), threeSets, null));
+    // 1 and 2 are Core #1 and #2; 1001 was never a Core number, so it is unknown there.
+    expect(decoded.cards).toEqual([fixtureCardId(1), fixtureCardId(2)]);
+    expect(decoded.dropped.unknown).toEqual([1001]);
+  });
+
+  it("R255 drops a version 2 number whose set or card the catalog does not have", () => {
+    const decoded = expectOk(decodeDeckCode(rawCode("Unknown sets", [1001, 1002, 3001, 2001]), threeSets, null));
+    expect(decoded.cards).toEqual([CLASSIC_1, PLUS_1]);
+    expect(decoded.dropped.unknown).toEqual([1002, 3001]);
   });
 });

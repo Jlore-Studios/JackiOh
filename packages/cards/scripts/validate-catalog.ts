@@ -15,7 +15,15 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { KEYWORD_KINDS, type CardType, type Keyword, type Rarity, type SetName, type Tag } from "@jackioh/shared";
+import {
+  KEYWORD_KINDS,
+  paramPlaceholders,
+  type CardType,
+  type Keyword,
+  type Rarity,
+  type SetName,
+  type Tag,
+} from "@jackioh/shared";
 
 /* ------------------------------------------------------------------ unions */
 
@@ -313,14 +321,23 @@ function validateParams(where: string, value: Record<string, unknown>): void {
       }
       const extra = Object.keys(param).filter((k) => !["key", "base", "radiant", "better", "step", "min", "max"].includes(k));
       if (extra.length > 0) fail(at, `unknown param field(s) ${extra.join(", ")}`);
-      if (!texts.some((text) => text.includes(`{${key}}`))) fail(at, `${key}: no face's text writes {${key}}`);
+      if (!texts.some((text) => paramPlaceholders(text).some((placeholder) => placeholder.key === key))) {
+        fail(at, `${key}: no face's text writes {${key}}`);
+      }
     });
   }
   for (const [i, text] of texts.entries()) {
-    for (const match of text.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g)) {
-      const key = match[1] ?? "";
-      if (!declared.has(key)) fail(`${where}.${i === 0 ? "base" : "radiant"}.text`, `{${key}} is not a declared param`);
+    const at = `${where}.${i === 0 ? "base" : "radiant"}.text`;
+    for (const placeholder of paramPlaceholders(text)) {
+      if (!declared.has(placeholder.key)) fail(at, `{${placeholder.key}} is not a declared param`);
+      // R482: `{key|singular|plural}` names two different, non-empty wordings.
+      if (placeholder.one !== undefined && (placeholder.one === "" || placeholder.one === placeholder.many)) {
+        fail(at, `{${placeholder.key}|…} needs a singular and a different plural wording`);
+      }
     }
+    // A brace that is no placeholder is a typo in one.
+    const stripped = text.replace(/\{[A-Za-z][A-Za-z0-9]*(?:\|[^|{}]*\|[^|{}]*)?\}/g, "");
+    if (/[{}]/.test(stripped)) fail(at, "a brace that is not a param placeholder");
   }
 }
 

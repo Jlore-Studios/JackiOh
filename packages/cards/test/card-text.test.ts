@@ -64,6 +64,8 @@ function failures(face: Face): string[] {
   // R432: "(N) Cost" is the noun — never the old "Cost (N)", never a lowercase "(N) cost".
   if (/\bCost \(/.test(text)) out.push('writes the noun as "Cost (N)", not "(N) Cost"');
   if (/\(\S+\)\+? cost\b/.test(text)) out.push('writes the noun "(N) cost" without its capital');
+  if (/\bcosting \(/.test(text)) out.push('writes a price as "costing (N)", not "costs (N)"');
+  if (/\b[A-Za-z]+-cost\b/.test(text)) out.push('writes a kind of cost as "odd-cost", not "odd Cost"');
   if (/\(paid \d/i.test(text)) out.push('writes an embiggen price as "(paid N" rather than "Paid (N):"');
   const lines = text === "" ? [] : text.split("\n");
   // The keyword list: the first line, when every item on it is a printed keyword or a Tribute cost,
@@ -98,7 +100,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });
 
-  it('R432 writes a specific cost as "(N) Cost", a price as "costs (N)" and an embiggen price as "Paid (N)"', () => {
+  it("R432 writes a specific cost as the noun (N) Cost, a price as the verb costs (N) and an embiggen price as Paid (N)", () => {
     const wrong = swept.filter((face) => failures(face).some((why) => why.includes("cost") || why.includes("embiggen")));
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });

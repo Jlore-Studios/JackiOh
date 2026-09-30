@@ -171,14 +171,15 @@ describe("#50 K-Pop Fanatic", () => {
 
   it("R76 base: it fizzles when the target is already under your control", () => {
     const g = scenario({
-      p1: { hand: [KPOP, "core-049"], library: [...LIBRARY] },
+      // K-Pop Fanatic (1) and Snom Bunny Mind Control, (4) since patch v0.2.0 (issue #40).
+      p1: { hand: [KPOP, "core-049"], library: [...LIBRARY], mana: 5 },
       p2: { hand: [FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },
     });
     const prey = g.unit("p2", 2);
     if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
 
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
-    // #49 takes the same permanent this turn, for 3 of the 4 mana left.
+    // #49 takes the same permanent this turn, for the 4 mana left.
     g.play("core-049", { targets: [{ pick: "instance", instanceId: prey.id }] });
     expect(g.card(prey).controller).toBe("p1");
 
@@ -407,13 +408,15 @@ describe("#50 K-Pop Fanatic radiant — R282 the rider lands only on a card the 
   it("R282 a target bounced and replayed is a new arrival: neither stolen nor made Radiant (R174, R78)", () => {
     const g = scenario({
       p1: { hand: [RADIANT_KPOP, FILLER], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
-      p2: { hand: [FLOOD, FILLER], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
+      // The Coin pays for the replay: Flood costs (4) since patch v0.2.0 (issue #40).
+      p2: { hand: [FLOOD, FILLER, "core-t-coin"], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
     });
     const prey = g.unit("p2", 2);
     if (prey === null) throw new Error("setup: p2 should hold Mr. Vanilla in lane 2");
     g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
     g.endTurn();
 
+    g.play("core-t-coin");
     g.play(FLOOD);
     g.play(prey, { zone: 2 });
     expect(g.unit("p2", 2)?.id).toBe(prey.id);
@@ -450,7 +453,8 @@ describe("#50 K-Pop Fanatic radiant — R282 the rider lands only on a card the 
 
   it("R282 a target already this player's is not made Radiant: the delayed steal took nothing (R76)", () => {
     const g = scenario({
-      p1: { hand: [RADIANT_KPOP, MIND_CONTROL], library: [...LIBRARY] },
+      // K-Pop Fanatic (1) and Snom Bunny Mind Control, (4) since patch v0.2.0 (issue #40).
+      p1: { hand: [RADIANT_KPOP, MIND_CONTROL], library: [...LIBRARY], mana: 5 },
       p2: { hand: [FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },
     });
     const prey = g.unit("p2", 2);

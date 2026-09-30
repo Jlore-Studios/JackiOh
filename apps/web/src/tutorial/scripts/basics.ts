@@ -221,7 +221,7 @@ export const script: LessonScript = {
       title: "Two for one",
       text: (ctx) => {
         const cost = inHand(ctx.view, FELINORS)?.cost;
-        const costs = cost === undefined ? "" : ` costs ${String(cost)}`;
+        const costs = cost === undefined ? "" : ` costs (${String(cost)})`;
         return `Your mana refilled with one more crystal: ${String(ctx.view.you.mana.max)} now. Duplicating Felinors${costs}: when you play it, it brings a copy of itself, two units from one card.`;
       },
       defId: FELINORS,
