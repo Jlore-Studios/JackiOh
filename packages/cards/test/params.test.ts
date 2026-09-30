@@ -3,17 +3,18 @@
 // function that turns a face's text into what a player reads, from the printed values or from an
 // instance's current ones; the client, R277's diff and the text tests all read a face through it.
 //
-// R482 fixes how: every item of a card's Numbers line (docs/classic-sets.md B6–B8) is one param,
-// written `{key}` in each face's text that shows that number and nowhere as a literal, a face's text
-// reading right at its own printed value; a numbered keyword (Armor, Lucky, Brittle, Spell Damage)
-// and an Echo, Tribute or Activate count is no param, since B3.4's X change tunes those.
+// R482 fixes how: every item of a Classic or Classic+ card's Numbers line (docs/classic-sets.md
+// B6–B7; the AI generated cards of B8 have none) is one param, written `{key}` in each face's text
+// that shows that number and nowhere as a literal; a count and the words that agree with it are
+// written `{key|singular|plural}`, so the text reads right at every value a Degrade or an Upgrade can
+// move it to; a numbered keyword (Armor, Lucky, Brittle, Spell Damage) and an Echo, Tribute or
+// Activate count is no param, since B3.4's X change tunes those.
 
 import { describe, expect, it } from "vitest";
-import { fillParams, type CardDef } from "@jackioh/shared";
+import { fillParams, paramPlaceholders, type CardDef } from "@jackioh/shared";
 import { CATALOG, cardDef } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
-const PLACEHOLDER = /\{([A-Za-z][A-Za-z0-9]*)\}/g;
 
 describe("B3.4 params: the numbers a card declares", () => {
   it("fills each face's text with its own printed values", () => {
@@ -37,7 +38,7 @@ describe("B3.4 params: the numbers a card declares", () => {
     for (const card of ENTRIES) {
       const keys = new Set((card.params ?? []).map((param) => param.key));
       const written = new Set(
-        [card.base.text, card.radiant.text].flatMap((text) => [...text.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "")),
+        [card.base.text, card.radiant.text].flatMap((text) => paramPlaceholders(text).map((placeholder) => placeholder.key)),
       );
       for (const key of written) if (!keys.has(key)) wrong.push(`${card.id}: {${key}} is not declared`);
       for (const key of keys) if (!written.has(key)) wrong.push(`${card.id}: param ${key} is written in neither face`);
@@ -89,5 +90,37 @@ describe("B3.4 params: the numbers a card declares", () => {
         expect(["armor", "lucky", "brittle", "spellDamage", "echo", "activate"].includes(param.key) && card.base.keywords.some((k) => k.kind.toLowerCase() === param.key), `${card.id} ${param.key}`).toBe(false);
       }
     }
+  });
+
+  it("R482 writes a count with the words that agree with it, so the text reads right at every value", () => {
+    const pickle = cardDef("classic-008"); // Pickle: "they discard {discard|card|cards}"
+    expect(pickle.base.text).toContain("{discard|card|cards}");
+    expect(fillParams(pickle, "base")).toContain("they discard 1 card,");
+    expect(fillParams(pickle, "radiant")).toContain("they discard 2 cards,");
+    expect(fillParams(pickle, "base", { discard: 3 })).toContain("they discard 3 cards,");
+    expect(paramPlaceholders("Draw {draw|card|cards}, then {damage}.")).toEqual([
+      { key: "draw", one: "card", many: "cards" },
+      { key: "damage" },
+    ]);
+    // No filled face leaves a count disagreeing with its noun ("1 cards", "2 card").
+    const wrong: string[] = [];
+    for (const card of ENTRIES) {
+      for (const param of card.params ?? []) {
+        const low = param.min ?? 1;
+        for (const value of [low, low + (param.step ?? 1), param.base, param.radiant]) {
+          for (const face of ["base", "radiant"] as const) {
+            const text = fillParams(card, face, { [param.key]: value });
+            if (/\b1 (cards|times|Plague Tokens|Units|Spells)\b/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
+            if (/\b([2-9]|\d{2,}) (card|time|Plague Token|Unit|Spell)\b(?!s)/.test(text)) wrong.push(`${card.id} ${face} at ${value}: ${text}`);
+          }
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("R482 declares no params on the ten AI generated cards: B8 gives them no Numbers line", () => {
+    const withParams = ENTRIES.filter((card) => card.tags.includes("AI") && card.params !== undefined).map((card) => card.id);
+    expect(withParams).toEqual([]);
   });
 });
