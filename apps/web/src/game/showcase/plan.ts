@@ -9,6 +9,11 @@
 // somewhere this viewer may not read — carries the sentinel for its definition and becomes a card
 // back with a caption, never a face.
 //
+// R502: a card cast the moment it was drawn is held up on BOTH seats, the drawer's own too: nobody
+// chose it, and it never passed through a hand where it could have been read. It is read off the order
+// of the redacted events (`castOnDraw.ts`), so a hidden one is a back that says a card was cast as it
+// was drawn, never which.
+//
 // Which events are new. `view.events` is §10.8's sliding window, and R97 re-judges its redaction on
 // every view by where each card sits NOW: the opponent's `drawn` reads as the sentinel while the card
 // is in their hand and names the card once it has been played. So two windows that share their
@@ -18,6 +23,8 @@
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { castOnDrawAt } from "../../fx/castOnDraw.ts";
+import { chaosRollOf, type ChaosRoll } from "../../fx/chaos.ts";
 import { sideOf } from "../contract.ts";
 import { HIDDEN_CARD, cardInView } from "../faces.ts";
 
@@ -41,6 +48,8 @@ export type ShowcasePlay = {
    * landed while it still stands there face-down. Absent when the view gives none.
    */
   cost?: number;
+  /** R502: the card was cast the moment it was drawn (castOnDraw.ts). Absent for every other play. */
+  castOnDraw?: true;
 };
 
 /** The fields a redacted event keeps as they are (R97): who, and where. Everything else may be the sentinel's. */
@@ -123,28 +132,74 @@ function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number 
   return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
+/** One `cardPlayed` of `fresh` (at index `at`), as the view lets the viewer see it. */
+function playOf(event: Played, at: number, fresh: readonly GameEvent[], view: PlayerView): ShowcasePlay {
+  const hidden = event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD;
+  const lane = hidden ? setLane(event, at, fresh) : null;
+  const cost = lane === null ? undefined : faceDownCost(view, event.player, lane);
+  return hidden
+    ? { player: event.player, defId: null, radiant: false, set: lane !== null, ...(cost === undefined ? {} : { cost }) }
+    : {
+        player: event.player,
+        defId: event.defId,
+        instanceId: event.instanceId,
+        costPaid: event.costPaid,
+        radiant: radiantOf(event, fresh, view),
+        set: false,
+      };
+}
+
 /** The opponent's plays among `fresh`, in order, each as the view lets the viewer see it. */
 export function opponentPlays(fresh: readonly GameEvent[], view: PlayerView): ShowcasePlay[] {
   const plays: ShowcasePlay[] = [];
   fresh.forEach((event, at) => {
     if (event.type !== "cardPlayed" || sideOf(view, event.player) !== "opponent") return;
-    const hidden = event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD;
-    const lane = hidden ? setLane(event, at, fresh) : null;
-    const cost = lane === null ? undefined : faceDownCost(view, event.player, lane);
-    plays.push(
-      hidden
-        ? { player: event.player, defId: null, radiant: false, set: lane !== null, ...(cost === undefined ? {} : { cost }) }
-        : {
-            player: event.player,
-            defId: event.defId,
-            instanceId: event.instanceId,
-            costPaid: event.costPaid,
-            radiant: radiantOf(event, fresh, view),
-            set: false,
-          },
-    );
+    plays.push(playOf(event, at, fresh, view));
   });
   return plays;
+}
+
+/** A play the showcase holds up, and the `cardPlayed` it came from (the very object the view holds). */
+export type ShowcaseItem = { play: ShowcasePlay; event: GameEvent };
+
+/**
+ * Where `fresh` sits in the view's window: its first index there when it is the window's tail (the
+ * events before it are what a cast on draw is read off), else null.
+ */
+function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): number | null {
+  const offset = window.length - fresh.length;
+  if (offset < 0) return null;
+  return fresh.every((event, i) => window[offset + i] === event) ? offset : null;
+}
+
+/**
+ * R502: what the showcase holds up among `fresh`, in order: every play of the opponent, as
+ * `opponentPlays` finds them, and every cast on draw on either seat, the viewer's own included (the
+ * viewer did not choose it, and it never passed through their hand). A cast on draw is read off the
+ * view's whole window, so a `drawn` that came in an earlier view still counts; a hidden one is a back
+ * (R97, R202).
+ */
+export function showcasePlays(fresh: readonly GameEvent[], view: PlayerView): ShowcaseItem[] {
+  const offset = tailOffset(fresh, view.events);
+  const window = offset === null ? fresh : view.events;
+  const base = offset ?? 0;
+  const items: ShowcaseItem[] = [];
+  fresh.forEach((event, at) => {
+    if (event.type !== "cardPlayed") return;
+    const onDraw = castOnDrawAt(window, base + at);
+    if (!onDraw && sideOf(view, event.player) !== "opponent") return;
+    const play = playOf(event, at, fresh, view);
+    items.push({ play: onDraw ? { ...play, castOnDraw: true } : play, event });
+  });
+  return items;
+}
+
+/** R436: the Call to Chaos rolls among `fresh`, in order, with the event each came from. */
+export function chaosRollsIn(fresh: readonly GameEvent[]): { roll: ChaosRoll; event: GameEvent }[] {
+  return fresh.flatMap((event) => {
+    const roll = chaosRollOf(event);
+    return roll === null || roll.effects.length === 0 ? [] : [{ roll, event }];
+  });
 }
 
 /**

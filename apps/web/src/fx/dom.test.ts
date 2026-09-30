@@ -239,6 +239,62 @@ describe("B39 — a cue without the box it needs mounts nothing", () => {
   });
 });
 
+describe("R502 R437 R436 — the v0.2.0 DOM kinds", () => {
+  const FRACTURE: FxDomCue = { kind: "fracture", at: { kind: "crystal", side: "you", index: 2 }, delayMs: 90, durationMs: 910 };
+  const BRAND: FxDomCue = {
+    kind: "brand",
+    at: anchor,
+    tint: { rim: "#b46bff", core: "#f2e2ff", glow: "#7a2cff" },
+    delayMs: 0,
+    durationMs: 1100,
+  };
+  const CHAOS: FxDomCue = {
+    kind: "chaos",
+    title: "Call to Chaos:",
+    lines: [
+      { text: "Heal the caster's hero 30", reel: ["Summon a Chaos Golem", "Cast a random Call to Chaos", "Heal the caster's hero 30"], landMs: 360 },
+      { text: "Summon a Chaos Golem", reel: ["<b>Summon a Chaos Golem</b>"], landMs: 540 },
+    ],
+    delayMs: 0,
+    durationMs: 1800,
+  };
+
+  it("R502 a fracture covers its crystal's box", () => {
+    const el = expectMounted(mountDomEffect(root, FRACTURE, { at: AT }), FRACTURE);
+    expectCovering(el, AT);
+  });
+
+  it("R437 a brand is centred on its card and paints in the mark's colours", () => {
+    const el = expectMounted(mountDomEffect(root, BRAND, { at: AT }), BRAND);
+    expectCentredOn(el, AT);
+    expect(cssVar(el, "--fx-mark-rim")).toBe("#b46bff");
+    expect(cssVar(el, "--fx-mark-core")).toBe("#f2e2ff");
+    expect(cssVar(el, "--fx-mark-glow")).toBe("#7a2cff");
+  });
+
+  it("R436 a chaos reveal needs no box: a title, then one window per line over a reel of names that lands on the rolled one, all in attributes", () => {
+    const el = expectMounted(mountDomEffect(root, CHAOS, {}), CHAOS);
+    expect(el.getAttribute("data-text")).toBe("Call to Chaos:");
+    expect(cssVar(el, "--fx-lines")).toBe("2");
+    const lines = Array.from(el.querySelectorAll<HTMLElement>(".fx-chaos-line"));
+    expect(lines).toHaveLength(2);
+    expect(lines.map((line) => line.getAttribute("data-landed-text"))).toEqual(["Heal the caster's hero 30", "Summon a Chaos Golem"]);
+    expect(lines.map((line) => cssVar(line, "--fx-land-ms"))).toEqual(["360ms", "540ms"]);
+    expect(lines.map((line) => cssVar(line, "--fx-steps"))).toEqual(["2", "0"]);
+    const cells = Array.from(lines[0]?.querySelectorAll(".fx-chaos-cell") ?? []);
+    expect(cells.map((cell) => cell.getAttribute("data-text"))).toEqual(CHAOS.kind === "chaos" ? CHAOS.lines[0]?.reel : []);
+    expect(cells.map((cell) => cell.getAttribute("data-landed"))).toEqual([null, null, "true"]);
+    // Words that look like markup stay words in an attribute.
+    expect(el.querySelector("b")).toBeNull();
+  });
+
+  it("R502 R437 a fracture or a brand with no box mounts nothing", () => {
+    expect(mountDomEffect(root, FRACTURE, {})).toBeNull();
+    expect(mountDomEffect(root, BRAND, { at: null })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
+});
+
 describe("a stand-in swells inward from an edge (integration QA: lane 1 on a phone)", () => {
   // Imported here so the header's contract above stays about mountDomEffect.
   const view = { width: 390, height: 844 };

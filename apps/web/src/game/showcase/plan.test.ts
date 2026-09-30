@@ -5,8 +5,8 @@
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { baseView, card } from "../../test/fixtures.ts";
-import { capQueue, eventsSince, opponentPlays, sameOccurrence } from "./plan.ts";
+import { baseView, card, withEvents } from "../../test/fixtures.ts";
+import { capQueue, chaosRollsIn, eventsSince, opponentPlays, sameOccurrence, showcasePlays } from "./plan.ts";
 
 const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 const MANA: GameEvent = { type: "manaChanged", player: "p2", current: 3, max: 3 };
@@ -135,5 +135,54 @@ describe("the queue", () => {
   it("keeps the newest plays", () => {
     expect(capQueue([1, 2, 3, 4, 5], 3)).toEqual([3, 4, 5]);
     expect(capQueue([1, 2], 3)).toEqual([1, 2]);
+  });
+});
+
+describe("R502 a cast on draw is held up on both seats", () => {
+  const drawn = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "drawn", player, instanceId, defId });
+  const cast = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => played(player, instanceId, defId, { costPaid: 0 });
+
+  it("R502 the opponent's cast on draw is held up, marked as one", () => {
+    const events = [TURN, drawn("p2", "c21", "core-021"), cast("p2", "c21", "core-021")];
+    expect(showcasePlays(events, withEvents(view, events)).map((item) => item.play)).toEqual([
+      { player: "p2", defId: "core-021", instanceId: "c21", costPaid: 0, radiant: false, set: false, castOnDraw: true },
+    ]);
+  });
+
+  it("R502 the viewer's own cast on draw is held up too, though its other plays never are", () => {
+    const events = [drawn("p1", "c27", "core-027"), cast("p1", "c27", "core-027"), played("p1", "c3", "core-011")];
+    const items = showcasePlays(events, withEvents(view, events));
+    expect(items.map((item) => [item.play.defId, item.play.castOnDraw])).toEqual([["core-027", true]]);
+    // The item carries the very event the view holds, so the runner's entry can be matched to it.
+    expect(items[0]?.event).toBe(events[1]);
+  });
+
+  it("R502 R97 a hidden cast on draw is a back that names nothing", () => {
+    const events = [drawn("p2", "hidden", "hidden"), cast("p2", "hidden", "hidden")];
+    const items = showcasePlays(events, withEvents(view, events));
+    expect(items.map((item) => item.play)).toEqual([{ player: "p2", defId: null, radiant: false, set: false, castOnDraw: true }]);
+    expect(JSON.stringify(items.map((item) => item.play))).not.toMatch(/core-\d+/);
+  });
+
+  it("R502 a drawn that came in an earlier view still makes the cast one: it is read off the whole window", () => {
+    const window = [TURN, drawn("p2", "c21", "core-021"), cast("p2", "c21", "core-021")];
+    const fresh = window.slice(2);
+    expect(showcasePlays(fresh, withEvents(view, window))[0]?.play.castOnDraw).toBe(true);
+    // Fresh events that are not the window's tail are read on their own.
+    expect(showcasePlays([cast("p2", "c21", "core-021")], withEvents(view, [TURN]))[0]?.play.castOnDraw).toBeUndefined();
+  });
+
+  it("R502 the opponent's ordinary plays are held up as before, with no cast mark", () => {
+    const events = [MANA, played("p2", "c7", "core-032")];
+    expect(showcasePlays(events, withEvents(view, events)).map((item) => item.play)).toEqual(opponentPlays(events, view));
+    expect(opponentPlays(events, view)[0]?.castOnDraw).toBeUndefined();
+  });
+});
+
+describe("R436 the rolls a Call to Chaos names", () => {
+  it("R436 finds each roll among the fresh events, with its event, and skips an empty one", () => {
+    const roll: GameEvent = { type: "chaosRolled", player: "p2", instanceId: "c95", defId: "core-095", effects: ["heal", "units"] };
+    const empty: GameEvent = { type: "chaosRolled", player: "p1", instanceId: "c96", defId: "core-095", effects: [] };
+    expect(chaosRollsIn([TURN, roll, empty])).toEqual([{ roll: { player: "p2", instanceId: "c95", defId: "core-095", effects: ["heal", "units"] }, event: roll }]);
   });
 });

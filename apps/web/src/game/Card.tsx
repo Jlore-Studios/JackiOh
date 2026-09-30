@@ -20,6 +20,11 @@
 // Unit's grown stats (#89), a unit's numbers and keywords, the Vanilla mark, a Heroic Power's rolled
 // power — and a match-made card (a Fuse's) reads its definition from the view (`MatchCardsContext`,
 // R243) where the catalog has none.
+//
+// R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
+// on a face-up backrow card of either seat: the corruption aura and a badge per mark
+// (cards/CardMarks.tsx), and `data-marks` naming them on the root. A back carries no marks, because
+// its view carries nothing to mark.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -42,6 +47,8 @@ import {
   type InspectRenderSubject,
   type InspectSubject,
 } from "../cards/index.ts";
+import CardMarks from "../cards/CardMarks.tsx";
+import { marksOf } from "../cards/marks.ts";
 import { useCardInfo, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
@@ -308,6 +315,7 @@ export default function Card(props: CardProps): ReactElement {
   }
 
   const position = unit?.position;
+  const marks = marksOf(unit ?? card);
   const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
@@ -335,6 +343,8 @@ export default function Card(props: CardProps): ReactElement {
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}
+      // R437: the marks the view lists on the card, by name.
+      data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       // R371: your own face-down trap, which the other player sees only as a back.
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
@@ -355,6 +365,7 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
+      <CardMarks marks={marks} instanceId={card.instanceId} />
       {position !== undefined && <span className="position-tag">{position}</span>}
 
       {counters?.plague !== undefined && (
