@@ -366,7 +366,7 @@ const tributeCrierScript: Script = {
  * form picks the Unit out of the graveyard at resolution, as a card with `TargetFilter.of: "graveyard"`
  * will declare it once the play pipeline offers graveyard targets. Radiant: twice, each run its own.
  */
-export const rewind = def("rewind", "Spell", { cost: 1 });
+export const rewind = def("rewind", "Spell", { cost: 0 });
 export const rewindScripts: CardScripts = {
   base: {
     targets: [{ kind: "target", min: 1, max: 1, filter: { side: "ally", of: ["unit"] } }],
@@ -514,7 +514,23 @@ export function quickdrawOf(card: CardDef): CardDef {
   return { ...card, id: `${card.id}-qd`, index: `${card.index}-qd`, name: `${card.name} (quickdraw)` };
 }
 
-const QUICKDRAW_OF = [pickle, quiz, papaya, backFromGy, rewind, mindMelt, graveRewind, spark, grunt, mill, crier];
+const QUICKDRAW_OF = [
+  pickle,
+  quiz,
+  papaya,
+  backFromGy,
+  rewind,
+  mindMelt,
+  graveRewind,
+  spark,
+  grunt,
+  mill,
+  crier,
+  aimer,
+  fluffyGrip,
+  striker,
+  wardrum,
+];
 
 export const PROMPT_DEFS: CardDef[] = [
   prize,
