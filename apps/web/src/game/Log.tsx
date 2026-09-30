@@ -212,7 +212,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
       return event.cost < 0
         ? `${capitalised(name.instance(event.instanceId, "a card"))} changed cost`
-        : `${capitalised(name.instance(event.instanceId, "a card"))} now costs ${event.cost}`;
+        : `${capitalised(name.instance(event.instanceId, "a card"))} now costs (${event.cost})`;
     case "modifierChanged": {
       // The id is the engine's handle ("m123"); the label, while the view still lists it, is the words.
       const label = [...view.you.modifiers, ...view.opponent.modifiers].find((mod) => mod.id === event.modifierId)?.label;

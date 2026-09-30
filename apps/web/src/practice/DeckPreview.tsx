@@ -115,7 +115,7 @@ function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
       data-rarity={def?.rarity}
       {...inspect.handlers}
     >
-      <span className="deck-preview__cost" aria-label={`Cost ${String(card.cost)}`}>
+      <span className="deck-preview__cost" aria-label={`(${String(card.cost)}) Cost`}>
         {card.cost}
       </span>
       <span className="deck-preview__name">{card.name}</span>
