@@ -186,6 +186,12 @@ export type AuthProvider = {
   verifyAccessToken: (token: string) => Promise<AuthUser | null>;
   signUp: (email: string, password: string) => Promise<AuthSession | { pendingEmailVerification: true; userId: string }>;
   signInWithPassword: (email: string, password: string) => Promise<AuthSession>;
+  /**
+   * Deletes the provider's user for good (`DELETE /api/account`). A user that is already gone
+   * counts as deleted. Throws `ApiError("unavailable")` when the provider cannot be reached.
+   * Optional: a provider without it (the e2e fixture) answers the route with 503.
+   */
+  deleteUser?: (userId: string) => Promise<void>;
 };
 
 // ---------------------------------------------------------------------------
@@ -227,6 +233,14 @@ export type ProfileStore = {
   setRating: (profileId: string, rating: number) => Promise<void>;
   /** Pass null to clear. §9.5: every terminal reason clears both players'. */
   setInMatch: (profileId: string, matchId: string | null) => Promise<void>;
+  /**
+   * Deletes the profile and everything that is only its own: collection and its ledger, decks,
+   * trios, tutorial progress, queue tickets, rooms it opened that nobody joined, and its invite-code
+   * attempts' link to it. Finished matches, results and series stay for the other player, with this
+   * profile's seat left empty (migration 0012). False when there was no such profile. The caller
+   * refuses a profile in a live match or series first.
+   */
+  remove: (profileId: string) => Promise<boolean>;
 };
 
 export type InviteCode = {
@@ -749,6 +763,9 @@ export type TutorialStore = {
   merge: (input: TutorialMergeInput, maxLessons: number) => Promise<TutorialMergeOutcome>;
 };
 
+export type RetentionPurgeInput = { codeAttemptsBefore: number; matchActionsEndedBefore: number };
+export type RetentionPurgeResult = { codeAttempts: number; matchActions: number };
+
 /**
  * `tx` runs `fn` against a handle scoped to one database transaction and rolls back if `fn`
  * throws. Nested `tx` joins the enclosing transaction.
@@ -777,6 +794,14 @@ export type Store = {
    * response floor, which is the server's job (`codes.ts`) and which SQL cannot deliver.
    */
   redeem: (input: RedeemInviteCodeInput) => Promise<RedeemResult>;
+  /**
+   * The retention purge (`src/api/retention.ts`): deletes `code_attempts` rows made before
+   * `codeAttemptsBefore` and the action log of every match that ended before
+   * `matchActionsEndedBefore` (epoch ms). Results, and so ratings, are kept. Answers how many rows
+   * of each went. In Postgres this is `app.purge_expired_rows` (migration 0013), the one path the
+   * append-only guard on `match_actions` lets a delete through.
+   */
+  purgeExpired: (input: RetentionPurgeInput) => Promise<RetentionPurgeResult>;
   profiles: ProfileStore;
   codes: CodeStore;
   collection: CollectionStore;

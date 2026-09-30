@@ -143,6 +143,7 @@ top of every handler:
 | `POST` | `/api/auth/signup` | none | Convenience only; requires a publishable key to be configured. Normally the browser does this itself |
 | `POST` | `/api/auth/signin` | none | Same |
 | `GET` | `/api/auth/me` | user | Profile status, and whether an invite code is still needed |
+| `DELETE` | `/api/account` | user | Deletes the caller's own account: the profile and every row only it owns, then the auth user. 204 with no body. 409 while the caller is in a live match (`already_in_match`) or a Conquest series (`conflict`); 503 when the auth provider cannot delete users. The other player's finished matches, results and series stay, with the deleted seat empty (migration 0012) |
 | `POST` | `/api/codes/redeem` | user | The six-step redemption of §9.4 |
 | `GET` | `/api/collection` | active | The entitlement ledger. There is deliberately no write route |
 | `GET` | `/api/decks` | active | The profile's saved decks and trios, oldest first, and the caps (R250, R252) |
@@ -167,6 +168,13 @@ top of every handler:
 
 One socket per player, per match. The message union is `src/match/protocol.ts`: the client sends
 `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and `clock`.
+
+A browser sends its access token as the second `Sec-WebSocket-Protocol` entry,
+`new WebSocket(url, ["jackioh.v1", token])`, and the server echoes only `jackioh.v1`. A Node
+client may send `authorization: Bearer <token>`. `?token=` is still read for old clients, but it
+writes the token into every access log on the way, so nothing new should use it. A frame over
+`MAX_FRAME_BYTES` closes the socket with 1009, and one client address holds at most
+`WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes included (429 past it).
 
 Properties the actor holds, each with a test named after it:
 

@@ -1268,6 +1268,108 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
     // Transactions
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Deleting an account (migration 0012) and the retention purge (0013)
+    // -----------------------------------------------------------------------
+
+    describe("profiles.remove (account deletion)", () => {
+      it("removes the profile and its own rows, and keeps the other player's finished match", async () => {
+        const [gone, other] = [await activeProfile(), await activeProfile()];
+        const now = harness.now();
+        await store.decks.upsert(savedDeck(gone.id), 10);
+        await store.tutorial.merge({ profileId: gone.id, completed: ["basics"], hiddenChoice: null, at: now }, 32);
+        await store.tickets.insert({
+          id: id(),
+          profileId: gone.id,
+          rating: 1000,
+          mode: "bo1",
+          deck: deckOf(harness, 0),
+          trio: null,
+          catalogVersion: harness.catalogVersion,
+          enqueuedAt: now,
+          status: "open",
+          matchId: null,
+        });
+        await store.rooms.create({
+          code: "QWERTZ",
+          hostProfileId: gone.id,
+          mode: "bo1",
+          hostDeck: deckOf(harness, 0),
+          hostTrio: null,
+          catalogVersion: harness.catalogVersion,
+          createdAt: now,
+          expiresAt: now + 600_000,
+          guestProfileId: null,
+          matchId: null,
+        });
+        await store.codes.logAttempt({ profileId: gone.id, ipHash: "ip-gone", result: "rejected", reason: "missing", at: now });
+
+        const matchId = id();
+        await store.matches.create(matchRow(matchId, gone.id, other.id, harness, now));
+        await store.matches.appendActions([{ matchId, seq: 1, action: action("p1", "n1"), at: now }]);
+        await store.results.insert({
+          matchId,
+          players: [gone.id, other.id],
+          winnerProfileId: gone.id,
+          reason: "concede",
+          turns: 3,
+          endedAt: now,
+          ratingBefore: [1000, 1000],
+          ratingAfter: [1016, 984],
+        });
+        await store.matches.finish(matchId, now);
+
+        expect(await store.profiles.remove(gone.id)).toBe(true);
+        expect(await store.profiles.remove(gone.id)).toBe(false);
+
+        expect(await store.profiles.getById(gone.id)).toBeNull();
+        expect(await store.decks.list(gone.id)).toEqual([]);
+        expect(await store.tutorial.get(gone.id)).toBeNull();
+        expect(await store.collection.get(gone.id)).toEqual([]);
+        expect(await store.tickets.openForProfile(gone.id)).toBeNull();
+        expect(await store.rooms.get("QWERTZ")).toBeNull();
+        expect(await store.codes.countAttemptsByProfile(gone.id, now - 60_000)).toBe(0);
+        // The attempt itself stays for the per-IP limit.
+        expect(await store.codes.countAttemptsByIp("ip-gone", now - 60_000)).toBe(1);
+
+        // The other player keeps the log and the result, and the match they lost is still a loss.
+        expect(await store.matches.actions(matchId)).toHaveLength(1);
+        expect(await store.results.getByMatch(matchId)).not.toBeNull();
+        expect(await store.results.recordFor(other.id)).toEqual({ wins: 0, losses: 1, draws: 0 });
+        expect(await store.profiles.getById(other.id)).not.toBeNull();
+      });
+    });
+
+    describe("purgeExpired (retention)", () => {
+      it("deletes attempts and finished logs older than the cutoffs, and nothing newer", async () => {
+        const [a, b] = [await activeProfile(), await activeProfile()];
+        const now = harness.now();
+        const day = 86_400_000;
+        await store.codes.logAttempt({ profileId: a.id, ipHash: "ip-old", result: "rejected", reason: "missing", at: now - 31 * day });
+        await store.codes.logAttempt({ profileId: a.id, ipHash: "ip-new", result: "rejected", reason: "missing", at: now - 29 * day });
+
+        const matches = { old: id(), recent: id(), live: id() };
+        for (const matchId of Object.values(matches)) {
+          await store.matches.create(matchRow(matchId, a.id, b.id, harness, now));
+          await store.matches.appendActions([{ matchId, seq: 1, action: action("p1", "n1"), at: now }]);
+        }
+        await store.matches.finish(matches.old, now - 91 * day);
+        await store.matches.finish(matches.recent, now - 89 * day);
+
+        const purged = await store.purgeExpired({
+          codeAttemptsBefore: now - 30 * day,
+          matchActionsEndedBefore: now - 90 * day,
+        });
+        expect(purged).toEqual({ codeAttempts: 1, matchActions: 1 });
+        expect(await store.codes.countAttemptsByIp("ip-old", 0)).toBe(0);
+        expect(await store.codes.countAttemptsByIp("ip-new", 0)).toBe(1);
+        expect(await store.matches.actions(matches.old)).toEqual([]);
+        expect(await store.matches.actions(matches.recent)).toHaveLength(1);
+        expect(await store.matches.actions(matches.live)).toHaveLength(1);
+        expect(await store.matches.get(matches.old)).not.toBeNull();
+      });
+    });
+
     describe("tx", () => {
       it("joins a nested transaction rather than opening a second one", async () => {
         const profile = await activeProfile();

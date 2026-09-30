@@ -27,6 +27,8 @@ import {
 import {
   createMemoryDeckStores,
   createMemoryTutorialStore,
+  purgeExpiredRows,
+  removeProfileRows,
   type DeckTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
@@ -164,6 +166,12 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     return redeem(input);
   };
 
+  // Migration 0013's retention purge, shared with `src/api/e2e-store.ts`.
+  store.purgeExpired = async (input) => {
+    call("purgeExpired");
+    return purgeExpiredRows(tables, input);
+  };
+
   store.profiles = {
     getById: async (profileId) => {
       call("profiles.getById");
@@ -207,6 +215,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.rating = rating;
+    },
+    // Migration 0012's account deletion, shared with `src/api/e2e-store.ts`.
+    remove: async (profileId) => {
+      call("profiles.remove");
+      return removeProfileRows(tables, profileId);
     },
     setInMatch: async (profileId, matchId) => {
       call("profiles.setInMatch");

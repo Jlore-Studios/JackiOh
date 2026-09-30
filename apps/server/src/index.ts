@@ -35,9 +35,10 @@ import type { Logger, ServerDeps, Store } from "./api/ports";
 import { systemTimers } from "./api/ports";
 import { createQueueRoutes, startMatchmaker } from "./api/queue";
 import { createRecordResult, reapStuckMatches } from "./api/results";
+import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createTutorialRoutes } from "./api/tutorial";
-import { MATCH_REAPER_INTERVAL_SECONDS } from "./config";
+import { MATCH_REAPER_INTERVAL_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS } from "./config";
 import { loadEnv, type ServerEnv } from "./env";
 import { createMatchClock } from "./match/clock";
 import { loadEnginePort } from "./match/engine";
@@ -294,6 +295,8 @@ export async function start(env: ServerEnv = loadServerEnv()): Promise<RunningSe
   const sockets = attachWebSocketServer(server, deps, registry, {
     path: WS_PATH,
     allowedOrigins: origins,
+    // R190: sockets per address are counted on the same address the API's per-IP limits read.
+    trustedProxyHops: deps.trustedProxyHops,
   });
   deps.log.info("server.listening", {
     port: env.PORT,
@@ -325,12 +328,31 @@ export async function start(env: ServerEnv = loadServerEnv()): Promise<RunningSe
       });
   }
 
+  // The retention purge (src/api/retention.ts): once now, since a free instance may sleep before
+  // an hour is up, and then on its interval. A failure is logged and the next run tries again.
+  let purger = deps.timers.after(0, purge);
+  function purge(): void {
+    void purgeExpired(deps)
+      .then((purged) => {
+        if (purged.codeAttempts + purged.matchActions > 0) deps.log.info("retention.purged", purged);
+      })
+      .catch((error: unknown) => {
+        deps.log.warn("retention.purge_failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        if (!stopped) purger = deps.timers.after(RETENTION_PURGE_INTERVAL_SECONDS * 1000, purge);
+      });
+  }
+
   return {
     close: async () => {
       stopped = true;
       matchmaker.stop();
       seriesSweeper.stop();
       reaper.cancel();
+      purger.cancel();
       await sockets.close();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());

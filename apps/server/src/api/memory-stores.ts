@@ -21,11 +21,17 @@
 
 import type {
   DeckStore,
+  MatchActionRow,
+  MatchRow,
+  RetentionPurgeInput,
+  RetentionPurgeResult,
+  Room,
   SavedDeck,
   SavedTrio,
   SeriesRow,
   SeriesStore,
   TrioStore,
+  Ticket,
   TrioUpsertOutcome,
   TutorialMergeInput,
   TutorialMergeOutcome,
@@ -269,4 +275,73 @@ export function createMemoryTutorialStore(
       return { kind: "merged", progress: clone(merged) };
     },
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Account deletion and the retention purge (migrations 0012 and 0013), for both in-memory stores.
+// ---------------------------------------------------------------------------------------------
+
+/** The rows `ProfileStore.remove` and `Store.purgeExpired` reach, as both in-memory stores hold them. */
+export type AccountTables = DeckTables &
+  TutorialTables & {
+    profiles: { id: string }[];
+    attempts: { profileId: string | null; at: number }[];
+    collection: { profileId: string }[];
+    grants: { profileId: string }[];
+    matches: MatchRow[];
+    matchActions: MatchActionRow[];
+    rooms: Room[];
+    tickets: Ticket[];
+  };
+
+/** Drops the rows `wanted` refuses, in place, and says how many went. */
+function keepOnly<T>(rows: T[], wanted: (row: T) => boolean): number {
+  const before = rows.length;
+  let at = 0;
+  for (const row of rows) {
+    if (wanted(row)) {
+      rows[at] = row;
+      at += 1;
+    }
+  }
+  rows.length = at;
+  return before - at;
+}
+
+/**
+ * `ProfileStore.remove`, as migration 0012 makes Postgres do it: the profile's own rows go, its
+ * invite-code attempts lose their link to it, and a room it opened that nobody joined goes too.
+ * Finished matches, results and series stay for the other player. Postgres empties this profile's
+ * seat on them; here the id stays, since no port read of a finished match looks the seat up.
+ */
+export function removeProfileRows(tables: AccountTables, profileId: string): boolean {
+  if (keepOnly(tables.profiles, (row) => row.id !== profileId) === 0) return false;
+  for (const attempt of tables.attempts) {
+    if (attempt.profileId === profileId) attempt.profileId = null;
+  }
+  keepOnly(tables.collection, (row) => row.profileId !== profileId);
+  keepOnly(tables.grants, (row) => row.profileId !== profileId);
+  keepOnly(tables.decks, (row) => row.profileId !== profileId);
+  keepOnly(tables.trios, (row) => row.profileId !== profileId);
+  keepOnly(tables.tutorial, (row) => row.profileId !== profileId);
+  keepOnly(tables.tickets, (row) => row.profileId !== profileId);
+  keepOnly(tables.rooms, (row) => !(row.hostProfileId === profileId && row.guestProfileId === null));
+  return true;
+}
+
+/** `Store.purgeExpired`: old attempts, and the logs of matches that ended before the cutoff. */
+export function purgeExpiredRows(tables: AccountTables, input: RetentionPurgeInput): RetentionPurgeResult {
+  const codeAttempts = keepOnly(tables.attempts, (row) => row.at >= input.codeAttemptsBefore);
+  const expired = new Set(
+    tables.matches
+      .filter(
+        (match) =>
+          match.status === "finished" &&
+          match.finishedAt !== null &&
+          match.finishedAt < input.matchActionsEndedBefore,
+      )
+      .map((match) => match.id),
+  );
+  const matchActions = keepOnly(tables.matchActions, (row) => !expired.has(row.matchId));
+  return { codeAttempts, matchActions };
 }

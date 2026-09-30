@@ -180,6 +180,11 @@ export function createFakeAuth(): FakeAuth {
       }
       return session(user);
     },
+    // A deleted user's tokens stop verifying, as the real provider's session check makes them.
+    deleteUser: async (userId) => {
+      users.delete(userId);
+      for (const [token, owner] of tokens) if (owner === userId) tokens.delete(token);
+    },
   };
 }
 

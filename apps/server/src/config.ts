@@ -127,8 +127,13 @@ export const IPV6_RATE_LIMIT_PREFIX_BITS = 56;
  */
 export const API_MAX_BODY_BYTES = 65_536;
 
-/** The client's sign-up check, mirroring Supabase Auth's default minimum password length. */
-export const AUTH_PASSWORD_MIN_LENGTH = 6;
+/**
+ * The client's sign-up check. Twelve characters, not Supabase Auth's default of six: a six-letter
+ * password falls to guessing and credential stuffing. The auth provider's own minimum must be set
+ * to the same number in the Supabase dashboard (Authentication > Providers > Email), or it lets a
+ * shorter password through a client that does not run this check.
+ */
+export const AUTH_PASSWORD_MIN_LENGTH = 12;
 /**
  * The auth provider's bcrypt limit, in UTF-8 BYTES (the provider measures a Go string, and bcrypt
  * reads bytes), not characters: a letter outside ASCII takes two to four of them.
@@ -196,6 +201,24 @@ export const CODE_ATTEMPTS_PER_PROFILE_PER_HOUR = 5;
 export const CODE_ATTEMPTS_PER_IP_PER_HOUR = 20;
 /** §9.4: the rolling window both attempt limits above are counted over, in seconds. */
 export const CODE_ATTEMPT_WINDOW_SECONDS = 3600;
+
+// ---------------------------------------------------------------------------------------------
+// Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row.
+// The privacy policy must state these same periods.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Days a `code_attempts` row (profile id, peppered IP hash, time) is kept. The limits that read the
+ * table look back at most `CODE_ATTEMPT_WINDOW_SECONDS`, so 30 days is far past any of them.
+ */
+export const CODE_ATTEMPT_RETENTION_DAYS = 30;
+/**
+ * Days a finished match's action log is kept after the match ended. Only a live match is ever
+ * replayed from its log; the result row, and so the rating history, is kept.
+ */
+export const MATCH_ACTION_RETENTION_DAYS = 90;
+/** How often the retention purge runs. It also runs once at boot, since a free instance sleeps. */
+export const RETENTION_PURGE_INTERVAL_SECONDS = 3600;
 
 // ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
@@ -306,6 +329,13 @@ export const MATCH_ACTIONS_PER_SECOND = 5;
 // SPEC §11 R109: 300 requests/minute per account across the API is generous for normal client
 // polling and UI use while still bounding a runaway or malicious client.
 export const API_REQUESTS_PER_MINUTE = 300;
+/**
+ * Match sockets one client address may hold at once, counting handshakes still in progress. Not in
+ * SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
+ * reconnects; ten leaves room for several players behind one home or campus address. Past it the
+ * upgrade is refused with 429 before the handshake is read.
+ */
+export const WS_MAX_CONNECTIONS_PER_ADDRESS = 10;
 
 // ---------------------------------------------------------------------------------------------
 // The reaper (§9.5).
@@ -476,6 +506,9 @@ export const SERVER_CONFIG = Object.freeze({
   CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
   CODE_ATTEMPTS_PER_IP_PER_HOUR,
   CODE_ATTEMPT_WINDOW_SECONDS,
+  CODE_ATTEMPT_RETENTION_DAYS,
+  MATCH_ACTION_RETENTION_DAYS,
+  RETENTION_PURGE_INTERVAL_SECONDS,
   REDEMPTION_RESPONSE_FLOOR_MS,
   REDEMPTION_IDENTICAL_ERROR,
   REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
@@ -487,6 +520,7 @@ export const SERVER_CONFIG = Object.freeze({
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
   MATCH_ACTIONS_PER_SECOND,
   API_REQUESTS_PER_MINUTE,
+  WS_MAX_CONNECTIONS_PER_ADDRESS,
   MATCH_REAPER_INTERVAL_SECONDS,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,

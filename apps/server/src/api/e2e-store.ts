@@ -53,6 +53,8 @@ import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
   createMemoryDeckStores,
   createMemoryTutorialStore,
+  purgeExpiredRows,
+  removeProfileRows,
   type DeckTables,
   type TutorialTables,
 } from "./memory-stores";
@@ -401,6 +403,9 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
     ...(options.redemption === undefined ? {} : { settings: options.redemption }),
   });
 
+  // Migration 0013's retention purge (`src/api/retention.ts`), shared with the unit-test fake.
+  store.purgeExpired = async (input) => purgeExpiredRows(tables, input);
+
   // -------------------------------------------------------------------------
   // Profiles
   // -------------------------------------------------------------------------
@@ -453,6 +458,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.inMatchId = matchId;
     },
+    // Migration 0012's account deletion, shared with the unit-test fake.
+    remove: async (profileId) => removeProfileRows(tables, profileId),
   };
 
   // -------------------------------------------------------------------------

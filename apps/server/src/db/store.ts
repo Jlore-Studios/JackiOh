@@ -1,6 +1,6 @@
 /**
  * The production `Store` (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
- * migrations in `./migrations` (0001-0011) with the `pg` driver already in `apps/server/package.json`.
+ * migrations in `./migrations` (0001-0013) with the `pg` driver already in `apps/server/package.json`.
  *
  * `src/index.ts` finds this module by dynamic import and calls `createPostgresStore({
  * connectionString })`; until it existed the server threw `StoreUnavailableError` and could only
@@ -76,6 +76,14 @@ import type {
   UpsertOutcome,
 } from "../api/ports";
 import type { Action } from "@jackioh/shared";
+
+/**
+ * The endings that always have a winner (`GameOverReason`, packages/shared/src/events.ts): one
+ * hero died, a player conceded, or a player's disconnect grace ran out. The other four
+ * (`both-heroes-dead`, `draw-accepted`, `turn-cap`, `match-ceiling`) are draws. `results.recordFor`
+ * reads a winnerless decisive row as the deleted winner's (migration 0012).
+ */
+const DECISIVE_REASONS: readonly string[] = ["hero-death", "concede", "disconnect"];
 
 // ---------------------------------------------------------------------------
 // The role the server acts as
@@ -885,6 +893,21 @@ function buildStore(session: Session): Store {
     return toRedeemResult(row.redeem_invite_code);
   };
 
+  /**
+   * The retention purge, as one call to `app.purge_expired_rows` (migration 0013): the only path
+   * `match_actions`' append-only guard lets a delete through.
+   */
+  store.purgeExpired = async ({ codeAttemptsBefore, matchActionsEndedBefore }) => {
+    const { rows } = await session.query<{ code_attempts: unknown; match_actions: unknown }>(
+      null,
+      `select code_attempts, match_actions from app.purge_expired_rows(${ts("$1")}, ${ts("$2")})`,
+      [codeAttemptsBefore, matchActionsEndedBefore],
+    );
+    const row = rows[0];
+    if (row === undefined) throw new Error("app.purge_expired_rows returned no row");
+    return { codeAttempts: intOf(row.code_attempts), matchActions: intOf(row.match_actions) };
+  };
+
   // -------------------------------------------------------------------------
   // Profiles (SPEC §9.4)
   // -------------------------------------------------------------------------
@@ -983,6 +1006,25 @@ function buildStore(session: Session): Store {
         [profileId, matchId],
       );
       if (affected(rowCount) === 0) throw new Error(`no profile ${profileId}`);
+    },
+
+    /**
+     * `DELETE /api/account`'s store half: one delete, and migration 0012's foreign keys do the
+     * rest. Rows only this profile owns cascade; its invite-code attempts, the codes it minted and
+     * the finished matches, results, series and logged actions it played in keep their rows with
+     * its seat set to null; `profiles_release_open_matches` removes a room it opened that nobody
+     * joined. A profile still seated in a live match or an unfinished series makes the delete
+     * raise, by constraint; `src/api/auth.ts` refuses that case first. No `app.*` function: the
+     * schema is the rule here, and the statement is the whole of it.
+     */
+    remove: async (profileId) => {
+      if (!isUuid(profileId)) return false;
+      const { rowCount } = await session.query(
+        profileId,
+        `delete from public.profiles where id = $1::uuid`,
+        [profileId],
+      );
+      return affected(rowCount) === 1;
     },
   };
 
@@ -1734,18 +1776,24 @@ function buildStore(session: Session): Store {
      * accepted draw all winnerless — so the three counts partition every finished match and no
      * separate "played" column can drift from them. The profile may sit on either side, hence
      * the `in (p1, p2)` rather than a join.
+     *
+     * Since migration 0012 a row also has no winner when the winner deleted their account. The
+     * reason tells the two apart: a `DECISIVE_REASONS` ending always had a winner, so for the
+     * player who is left it is still a loss, not a draw.
      */
     recordFor: async (profileId: string) => {
       const { rows } = await session.query<{ wins: string; losses: string; draws: string }>(
         profileId,
         `select
            count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
-           count(*) filter (where winner_profile_id is not null
-                              and winner_profile_id <> $1::uuid)                        as losses,
-           count(*) filter (where winner_profile_id is null)                            as draws
+           count(*) filter (where winner_profile_id is distinct from $1::uuid
+                              and (winner_profile_id is not null
+                                   or reason = any($2::text[])))                         as losses,
+           count(*) filter (where winner_profile_id is null
+                              and reason <> all($2::text[]))                             as draws
          from public.results
         where p1_profile_id = $1::uuid or p2_profile_id = $1::uuid`,
-        [profileId],
+        [profileId, DECISIVE_REASONS],
       );
       const row = rows[0];
       return {
@@ -2072,6 +2120,11 @@ function fromTicketStatus(status: TicketStatus): string {
 //    back to null (`tickets.match_id` is `on delete set null`) and a claimed room's code is free
 //    again. `e2e-store.ts` keeps no such row, and its `discardOpen` changes nothing; there a
 //    matched ticket keeps the discarded id.
+//  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches,
+//    results and series to NULL, so `matches.get`, `results.getByMatch` and `series.get` can read
+//    back a null where the port types a profile id. The in-memory stores keep the id (they have no
+//    foreign keys). Nothing reads a finished match's seats back, and a live match or series cannot
+//    lose a seat: the delete is refused, by constraint here and by `DELETE /api/account` first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
 //    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
 //    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration

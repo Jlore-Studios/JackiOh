@@ -41,7 +41,13 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWTVerifyGetKey } from "jose";
+import {
+  createRemoteJWKSet,
+  decodeProtectedHeader,
+  jwtVerify,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+} from "jose";
 import { AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS } from "../config";
 import { ApiError, ok, route, str, type Route } from "./http";
 import {
@@ -101,6 +107,13 @@ const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an account.
 const PASSWORD_PATH_DISABLED_MESSAGE =
   "This server does not broker passwords: sign up and sign in against Supabase Auth from the client.";
 
+// Not in SPEC, and no R-row: wording only, for `DELETE /api/account`.
+const ACCOUNT_DELETION_UNAVAILABLE_MESSAGE = "Account deletion is not available on this server.";
+const ACCOUNT_DELETION_RETRY_MESSAGE = "Your account could not be deleted just now. Try again in a minute.";
+const ACCOUNT_DELETION_IN_MATCH_MESSAGE = "Finish or concede your match before you delete your account.";
+const ACCOUNT_DELETION_IN_SERIES_MESSAGE =
+  "Finish your Conquest series before you delete your account.";
+
 // ---------------------------------------------------------------------------
 // The slice of the provider's shapes this file reads
 // ---------------------------------------------------------------------------
@@ -153,9 +166,14 @@ export type AdminLookup =
   /** Nobody answered. The identity stands, but the email counts as unverified (fail closed). */
   | { kind: "unavailable" };
 
+/** What deleting a user can say: done, already gone, or nobody answered. */
+export type AdminDeletion = "deleted" | "missing" | "unavailable";
+
 /** The admin half (secret key only): §9.4 step 1's authoritative `email_confirmed_at`. */
 export type AdminAuthClient = {
   getUserById: (userId: string) => Promise<AdminLookup>;
+  /** `DELETE /api/account`'s last step. Optional so a test's admin double can leave it out. */
+  deleteUser?: (userId: string) => Promise<AdminDeletion>;
 };
 
 export type SupabaseAuthClients = {
@@ -320,6 +338,15 @@ export function createRealClients(input: SupabaseAuthClientInput): SupabaseAuthC
       const user = asAuthApiUser(result.data.user);
       return user === null ? { kind: "missing" } : { kind: "ok", user };
     },
+    deleteUser: async (userId) => {
+      try {
+        const { error } = await adminClient.auth.admin.deleteUser(userId);
+        if (error === null) return "deleted";
+        return (error as { status?: number }).status === 404 ? "missing" : "unavailable";
+      } catch {
+        return "unavailable";
+      }
+    },
   };
 
   return { password, admin };
@@ -350,6 +377,15 @@ type SessionCheck =
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
+
+/** True when the token parses as a JWT whose header names HS256 (a legacy shared-secret token). */
+function signedWithSharedSecret(token: string): boolean {
+  try {
+    return decodeProtectedHeader(token).alg === "HS256";
+  } catch {
+    return false;
+  }
+}
 
 export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
   const baseUrl = trimTrailingSlash(input.url);
@@ -580,6 +616,11 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
       }
 
       // Tier 3: unverifiable locally — ask the auth server, which is the authority either way.
+      // Only for the one token this server could not have checked itself: a legacy HS256 token
+      // while no shared secret is configured. Anything else that failed tiers 1 and 2 is forged,
+      // expired or not a JWT at all, and asking the provider about it would let any caller make
+      // this server send one request upstream per request it receives.
+      if (hsKey !== null || !signedWithSharedSecret(token)) return null;
       const lookup = await fetchUserByToken(token);
       if (lookup.kind !== "ok") return null;
       return toAuthUser(lookup.user);
@@ -606,6 +647,18 @@ export function createSupabaseAuth(input: SupabaseAuthInput): AuthProvider {
         throw new ApiError("unauthorized", SIGN_IN_FAILED_MESSAGE);
       }
       return toSession(result.session, result.user);
+    },
+
+    // Deleting a user ends its sessions and refresh tokens at the provider, but an access token
+    // already issued stays well-signed until it expires. It stops working here at once all the
+    // same: the confirmed-email memory is dropped below, so the next verification asks the
+    // provider, which answers "no such user" (see `verifyAccessToken`).
+    deleteUser: async (userId) => {
+      const remove = lazyClients().admin?.deleteUser;
+      if (remove === undefined) throw new ApiError("unavailable", ACCOUNT_DELETION_UNAVAILABLE_MESSAGE);
+      const outcome = await remove(userId).catch((): AdminDeletion => "unavailable");
+      if (outcome === "unavailable") throw new ApiError("unavailable", ACCOUNT_DELETION_RETRY_MESSAGE);
+      confirmed.delete(userId);
     },
   };
 }
@@ -714,6 +767,39 @@ export function createAuthRoutes(): Route[] {
             ? null
             : record.wins / (record.wins + record.losses + record.draws),
       });
+    }),
+
+    /**
+     * Deletes the caller's own account: the profile and everything only it owns (the store, with
+     * migration 0012's foreign keys), then the sign-in itself (the auth provider). `user`, not
+     * `active`, so a pending or banned account can leave too. 204 with no body on success.
+     *
+     * A player in a live match or a Conquest series is refused with 409 rather than having the
+     * game ended for them: the actor and the series rules own how a game ends, and conceding
+     * first is one click away. A queue ticket or an unjoined room is simply deleted with the
+     * account. The profile goes first, so a provider that fails afterwards leaves nothing but a
+     * sign-in; the same request, retried, removes the fresh pending profile that sign-in gets and
+     * tries the provider again.
+     */
+    route("DELETE", "/api/account", "user", async (req, deps) => {
+      const { profile, user } = req;
+      if (profile === null || user === null) throw new ApiError("unauthorized", "sign in first");
+      const deleteUser = deps.auth.deleteUser;
+      if (deleteUser === undefined) {
+        throw new ApiError("unavailable", ACCOUNT_DELETION_UNAVAILABLE_MESSAGE);
+      }
+      if (profile.inMatchId !== null) {
+        throw new ApiError("already_in_match", ACCOUNT_DELETION_IN_MATCH_MESSAGE);
+      }
+      if ((await deps.store.series.activeFor(profile.id)) !== null) {
+        throw new ApiError("conflict", ACCOUNT_DELETION_IN_SERIES_MESSAGE);
+      }
+
+      await deps.store.profiles.remove(profile.id);
+      await deleteUser(user.userId);
+      // No id in the line: the account is gone, and so is the reason to name it.
+      deps.log.info("account.deleted");
+      return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
     }),
 
     route("GET", "/api/auth/me", "user", async (req, deps) => {

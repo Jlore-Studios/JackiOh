@@ -11,8 +11,10 @@
  * declared.
  */
 
+import { SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 
+import { createSupabaseAuth } from "../../src/api/auth";
 import { floodLimits } from "../../src/api/deps";
 import {
   accountKey,
@@ -175,5 +177,61 @@ describe("the sliding window itself", () => {
 
     limiter.allow(accountKey("still-here"), 2000);
     expect(limiter.size).toBe(1);
+  });
+});
+
+describe("a flood of bad tokens costs the auth provider nothing past the address budget", () => {
+  /**
+   * The real provider with the network replaced by a counter. Tier 1 fails locally (no JWKS) and
+   * there is no shared secret, so the only way a token reaches `GET /auth/v1/user` is tier 3.
+   */
+  function floodHarness(): { router: Router; upstream: () => number } {
+    let calls = 0;
+    const auth = createSupabaseAuth({
+      url: "https://project.supabase.test",
+      secretKey: "secret-key",
+      keySet: () => {
+        throw new Error("this test publishes no JWKS");
+      },
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(JSON.stringify({ msg: "invalid JWT" }), { status: 401 });
+      },
+    });
+    const deps = createTestDeps({ auth });
+    const router = createRouter([route("GET", "/api/mine", "user", async () => ok({}))], deps);
+    return { router, upstream: () => calls };
+  }
+
+  const FLOOD = LIMIT + 100;
+
+  it("never asks the provider about a token that is not even a JWT", async () => {
+    const { router, upstream } = floodHarness();
+    const statuses = await burst(router, FLOOD, "/api/mine", { token: "x", ip: "203.0.113.21" });
+    expect(statuses.filter((status) => status === 401)).toHaveLength(LIMIT);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(FLOOD - LIMIT);
+    expect(upstream()).toBe(0);
+  });
+
+  it("asks about a legacy HS256 token only until the address budget is spent", async () => {
+    const { router, upstream } = floodHarness();
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-someone")
+      .sign(new TextEncoder().encode("a-secret-this-server-was-never-given"));
+    const statuses = await burst(router, FLOOD, "/api/mine", { token, ip: "203.0.113.22" });
+    expect(statuses.filter((status) => status === 429)).toHaveLength(FLOOD - LIMIT);
+    // One upstream call per request the budget admitted, and none for the ones it refused.
+    expect(upstream()).toBeLessThanOrEqual(LIMIT);
+    expect(upstream()).toBeGreaterThan(0);
+  });
+
+  it("still serves an account from another address while one address is flooding", async () => {
+    const deps = createTestDeps();
+    const router = createRouter([route("GET", "/api/mine", "user", async () => ok({}))], deps);
+    const token = signIn(deps, "neighbour");
+    await burst(router, LIMIT + 1, "/api/mine", { token: "not-a-token", ip: "203.0.113.23" });
+    const theirs = await router(jsonRequest("GET", "/api/mine", undefined, { token, ip: "198.51.100.23" }));
+    expect(theirs.status).toBe(200);
   });
 });

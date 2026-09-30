@@ -11,16 +11,29 @@
  *    `deps.auth`, resolves the profile, applies §9.4's gate (`assertActive`) and refuses unless
  *    that profile is in the match it asked for (§9.1: the client may only read its own view of a
  *    match it is playing). Only then does the registry get the socket.
+ *
+ * `attachWebSocketServer` also bounds what one client can cost before it has authenticated: a
+ * frame over `MAX_FRAME_BYTES` closes the socket with 1009 before `ws` buffers it, and one client
+ * address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes included.
  */
 
 import { WebSocketServer, type WebSocket } from "ws";
-import { ApiError, assertActive, bearerToken } from "../api/http";
+import { ApiError, assertActive, bearerToken, clientAddress, rateLimitAddress } from "../api/http";
 import type { AuthProvider, Logger, Store } from "../api/ports";
+import { DEFAULT_TRUSTED_PROXY_HOPS, WS_MAX_CONNECTIONS_PER_ADDRESS } from "../config";
 import type { Socket, SocketHandlers } from "./contracts";
-import { encode, errorMessage } from "./protocol";
+import { MAX_FRAME_BYTES, encode, errorMessage } from "./protocol";
 
 /** SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves. */
 export const WS_PATH = "/ws/match";
+
+/**
+ * The subprotocol a browser names on the handshake, with its access token as the second entry:
+ * `new WebSocket(url, [WS_SUBPROTOCOL, token])`. A browser cannot set an `authorization` header on
+ * a WebSocket, and a token in the URL is written to every access log on the way. The server echoes
+ * only this name back, never the token.
+ */
+export const WS_SUBPROTOCOL = "jackioh.v1";
 
 /**
  * SPEC §11 R148: "4401, 4403 and 4404 are private-use mirrors of the HTTP statuses the REST side
@@ -88,8 +101,25 @@ export type MatchSocketDeps = {
 };
 
 /**
- * Browsers cannot set headers on a WebSocket handshake, so the token may arrive as `?token=`; a
- * Node client (the e2e `wsPlayer` task) may use either.
+ * The token offered in `Sec-WebSocket-Protocol` next to `WS_SUBPROTOCOL`, or null. The header is a
+ * comma-separated list; the token is the one entry that is not the protocol name.
+ */
+export function subprotocolToken(raw: string | string[] | undefined): string | null {
+  const joined = Array.isArray(raw) ? raw.join(",") : raw;
+  if (typeof joined !== "string") return null;
+  const entries = joined
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (!entries.includes(WS_SUBPROTOCOL)) return null;
+  return entries.find((entry) => entry !== WS_SUBPROTOCOL) ?? null;
+}
+
+/**
+ * Browsers cannot set headers on a WebSocket handshake, so a browser sends the token as the second
+ * `Sec-WebSocket-Protocol` entry (`WS_SUBPROTOCOL`). A Node client (the e2e `wsPlayer` task) may
+ * send an `authorization` header instead. `?token=` is still read for clients that have not moved
+ * off it; it puts the token in access logs, so nothing new should use it.
  */
 function tokenFrom(request: UpgradeRequest, url: URL): string | null {
   const header = request.headers.authorization;
@@ -97,6 +127,8 @@ function tokenFrom(request: UpgradeRequest, url: URL): string | null {
     const fromHeader = bearerToken(new Headers({ authorization: header }));
     if (fromHeader !== null) return fromHeader;
   }
+  const offered = subprotocolToken(request.headers["sec-websocket-protocol"]);
+  if (offered !== null) return offered;
   const query = url.searchParams.get("token");
   return query === null || query.length === 0 ? null : query;
 }
@@ -172,8 +204,17 @@ type UpgradableServer = {
   on: (event: "upgrade", listener: (request: UpgradeRequest, socket: Duplexish, head: Buffer) => void) => unknown;
 };
 
-/** The raw TCP socket an upgrade hands over; only the refusal path touches it. */
-type Duplexish = { write: (chunk: string) => unknown; destroy: () => unknown };
+/**
+ * The raw TCP socket an upgrade hands over. The refusal path writes to it; the connection count
+ * reads its peer address and waits for it to close, which covers both a finished socket and a
+ * handshake that never completed.
+ */
+type Duplexish = {
+  write: (chunk: string) => unknown;
+  destroy: () => unknown;
+  once: (event: "close", listener: () => void) => unknown;
+  remoteAddress?: string | undefined;
+};
 
 export type AttachedSockets = { close: () => Promise<void> };
 
@@ -185,7 +226,21 @@ export type AttachOptions = {
    * Node client (the e2e `wsPlayer` task) sends — it has no `Origin` at all.
    */
   allowedOrigins?: readonly string[];
+  /**
+   * R190's hop count, so a socket is counted against the same client address the API's per-IP
+   * limits read (`clientAddress` in api/http.ts). Defaults to `DEFAULT_TRUSTED_PROXY_HOPS`.
+   */
+  trustedProxyHops?: number;
+  /** Defaults to `WS_MAX_CONNECTIONS_PER_ADDRESS`; a test lowers it. */
+  maxConnectionsPerAddress?: number;
 };
+
+/** The `X-Forwarded-For` of an upgrade, as the `Headers` that `clientAddress` reads. */
+function forwardedHeaders(request: UpgradeRequest): Headers {
+  const raw = request.headers["x-forwarded-for"];
+  const value = Array.isArray(raw) ? raw.join(",") : raw;
+  return new Headers(typeof value === "string" ? { "x-forwarded-for": value } : {});
+}
 
 /**
  * Wire the upgrade onto the listener the API already serves (§9.2). `ws` runs in `noServer` mode so
@@ -203,8 +258,21 @@ export function attachWebSocketServer(
 ): AttachedSockets {
   const path = options.path ?? WS_PATH;
   const allowed = options.allowedOrigins ?? [];
-  const wss = new WebSocketServer({ noServer: true });
+  const trustedProxyHops = options.trustedProxyHops ?? DEFAULT_TRUSTED_PROXY_HOPS;
+  const maxPerAddress = options.maxConnectionsPerAddress ?? WS_MAX_CONNECTIONS_PER_ADDRESS;
+  const wss = new WebSocketServer({
+    noServer: true,
+    // §9.8: every client message is a small JSON frame. Without this `ws` buffers up to 100 MiB of
+    // one frame before `parseClientMessage` could refuse it; with it the frame is refused with 1009
+    // as its length arrives.
+    maxPayload: MAX_FRAME_BYTES,
+    // Echo only the fixed name, never the token that was offered beside it.
+    handleProtocols: (protocols: Set<string>) => (protocols.has(WS_SUBPROTOCOL) ? WS_SUBPROTOCOL : false),
+  });
   const handle = createMatchSocketHandler({ ...deps, registry });
+
+  /** Open and in-progress sockets per client address (`rateLimitAddress` form). Never logged. */
+  const perAddress = new Map<string, number>();
 
   /**
    * R162 makes this list the same one the REST layer reads, "so the two doors cannot diverge" — so
@@ -236,6 +304,24 @@ export function attachWebSocketServer(
       socket.destroy();
       return;
     }
+
+    const address = rateLimitAddress(
+      clientAddress(forwardedHeaders(request), socket.remoteAddress ?? null, trustedProxyHops),
+    );
+    const held = perAddress.get(address) ?? 0;
+    if (held >= maxPerAddress) {
+      // No address in the log line: the count is the signal.
+      deps.log.warn("ws.upgrade.too_many", { limit: maxPerAddress });
+      socket.write("HTTP/1.1 429 Too Many Requests\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    perAddress.set(address, held + 1);
+    socket.once("close", () => {
+      const left = (perAddress.get(address) ?? 1) - 1;
+      if (left <= 0) perAddress.delete(address);
+      else perAddress.set(address, left);
+    });
 
     wss.handleUpgrade(request as never, socket as never, head, (ws: WebSocket) => {
       void handle(ws, request);

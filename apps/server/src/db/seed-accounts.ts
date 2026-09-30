@@ -16,27 +16,83 @@
 // entitlement ledger a redeemed invite code would have produced. What it skips is the invite gate
 // (§9.4's six-step redemption), which is the point -- that path has its own tests.
 //
-// REFUSES TO RUN AGAINST NODE_ENV=production. These are accounts with known passwords.
+// These accounts skip the invite gate, so the script refuses to run unless you opt in for one
+// named project, and the password comes from your environment, never from this file:
+//
+//   SEED_ACCOUNTS_PROJECT   must equal SUPABASE_URL's host (e.g. abcd.supabase.co). Set it only in
+//                           the .env of a dev or e2e project, never for the production one.
+//   SEED_ACCOUNTS_PASSWORD  the password every seeded account gets, at least
+//                           AUTH_PASSWORD_MIN_LENGTH characters. It is never printed.
+//
+// It also refuses under NODE_ENV=production.
 
 import { randomUUID } from "node:crypto";
 
 import { Client } from "pg";
 
 import { TRIO_DECKS } from "../api/loadout-validator";
-import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../config";
-import { loadEnv } from "../env";
+import {
+  AUTH_PASSWORD_MAX_LENGTH,
+  AUTH_PASSWORD_MIN_LENGTH,
+  MAX_SAVED_DECKS,
+  MAX_SAVED_TRIOS,
+} from "../config";
+import { loadEnv, type ServerEnv } from "../env";
 
-/** Known-weak by design; these accounts are for a test deployment, never a real one. */
 const DEFAULT_COUNT = 2;
-const PASSWORD = "jackioh-test-account";
 const EMAIL_DOMAIN = "example.com";
+
+/** The opt-in: the host of the one Supabase project this run may seed. */
+export const SEED_PROJECT_VAR = "SEED_ACCOUNTS_PROJECT";
+/** The password every seeded account gets. Read from the environment only. */
+export const SEED_PASSWORD_VAR = "SEED_ACCOUNTS_PASSWORD";
 
 export type SeededAccount = {
   email: string;
-  password: string;
   userId: string;
   created: boolean;
 };
+
+/**
+ * Checks the opt-in and reads the password, or throws one error listing every problem. Pure, so a
+ * test can drive it without a project.
+ */
+export function seedAccountsSettings(
+  source: Record<string, string | undefined>,
+  env: Pick<ServerEnv, "SUPABASE_URL" | "NODE_ENV">,
+): { password: string } {
+  const problems: string[] = [];
+
+  if (env.NODE_ENV === "production") {
+    problems.push("NODE_ENV is production: these accounts skip the invite gate.");
+  }
+
+  const host = new URL(env.SUPABASE_URL).hostname;
+  const optIn = source[SEED_PROJECT_VAR]?.trim() ?? "";
+  if (optIn !== host) {
+    problems.push(
+      `${SEED_PROJECT_VAR} must equal SUPABASE_URL's host (${host}) to seed this project` +
+        (optIn.length === 0 ? " (it is not set)." : ` (it is ${JSON.stringify(optIn)}).`) +
+        " Set it only for a dev or e2e project, never for the production one.",
+    );
+  }
+
+  const password = source[SEED_PASSWORD_VAR] ?? "";
+  if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
+    problems.push(
+      `${SEED_PASSWORD_VAR} must be at least ${String(AUTH_PASSWORD_MIN_LENGTH)} characters` +
+        (password.length === 0 ? " (it is not set)." : ".") +
+        " Generate one with: openssl rand -base64 18",
+    );
+  } else if (new TextEncoder().encode(password).length > AUTH_PASSWORD_MAX_LENGTH) {
+    problems.push(`${SEED_PASSWORD_VAR} must be at most ${String(AUTH_PASSWORD_MAX_LENGTH)} bytes.`);
+  }
+
+  if (problems.length > 0) {
+    throw new Error(`refusing to seed accounts:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
+  }
+  return { password };
+}
 
 function emailFor(index: number): string {
   return `player${String(index)}@${EMAIL_DOMAIN}`;
@@ -51,6 +107,7 @@ type AdminUser = { id?: unknown; msg?: unknown; error_code?: unknown };
 async function createOrFindUser(
   env: { SUPABASE_URL: string; SUPABASE_SECRET_KEY: string },
   email: string,
+  password: string,
 ): Promise<{ id: string; created: boolean }> {
   const headers = {
     "Content-Type": "application/json",
@@ -61,7 +118,7 @@ async function createOrFindUser(
   const created = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ email, password: PASSWORD, email_confirm: true }),
+    body: JSON.stringify({ email, password, email_confirm: true }),
   });
   const body = (await created.json().catch(() => ({}))) as AdminUser;
 
@@ -167,11 +224,7 @@ async function saveStarterDecks(
 
 export async function seedAccounts(count: number): Promise<SeededAccount[]> {
   const env = loadEnv();
-  if (env.NODE_ENV === "production") {
-    throw new Error(
-      "refusing to seed accounts with NODE_ENV=production: these have known passwords.",
-    );
-  }
+  const { password } = seedAccountsSettings(process.env, env);
 
   const out: SeededAccount[] = [];
   const client = new Client({ connectionString: env.DATABASE_URL });
@@ -180,7 +233,7 @@ export async function seedAccounts(count: number): Promise<SeededAccount[]> {
   try {
     for (let i = 1; i <= count; i += 1) {
       const email = emailFor(i);
-      const { id, created } = await createOrFindUser(env, email);
+      const { id, created } = await createOrFindUser(env, email, password);
 
       // `app.handle_new_user` inserts the profile from an auth.users trigger; that runs in
       // Supabase's transaction, not ours, so the row can lag a beat behind the API response.
@@ -202,7 +255,7 @@ export async function seedAccounts(count: number): Promise<SeededAccount[]> {
       );
 
       await saveStarterDecks(client, id, env.CATALOG_VERSION);
-      out.push({ email, password: PASSWORD, userId: id, created });
+      out.push({ email, userId: id, created });
     }
   } finally {
     await client.end();
@@ -221,7 +274,7 @@ async function main(): Promise<void> {
   const accounts = await seedAccounts(count);
   process.stderr.write(`seed-accounts: ${String(accounts.length)} account(s), all active\n`);
   for (const a of accounts) {
-    process.stdout.write(`${a.email}  ${a.password}  ${a.created ? "created" : "already existed"}\n`);
+    process.stdout.write(`${a.email}  ${a.created ? "created" : "already existed"}\n`);
   }
 }
 

@@ -602,11 +602,32 @@ export function createRouter(routes: readonly Route[], deps: ServerDeps): Router
       if (candidate.method !== request.method) continue;
 
       try {
+        // §9.4, §9.8: the client address is only ever seen hashed. Read once, for the limiter and
+        // for the request alike, and read as R190 says: the rightmost trusted hop, then the peer,
+        // with an IPv6 client counted by its /56.
+        const ipHash = deps.hashes.ip(
+          rateLimitAddress(clientAddress(request.headers, context?.peerAddress ?? null, trustedProxyHops)),
+        );
+
+        // An address whose own budget is spent is refused BEFORE its token is resolved. Resolving a
+        // token that does not verify locally can cost a round trip to the auth provider, and a flood
+        // of bad tokens fills exactly this bucket (below), so without this check the limiter counted
+        // the flood but still paid for every request of it. Only looked at, not counted: a request
+        // that names an account is counted against the account, as R157 says.
+        if (candidate.auth !== "none") {
+          const key = addressKey(ipHash);
+          const wait = limiter.retryAfterMs(key, deps.timers.now());
+          if (wait > 0) {
+            deps.log.warn("api.rate_limited", { path: url.pathname, key });
+            throw rateLimited("too many requests; slow down", wait);
+          }
+        }
+
         let user: AuthUser | null = null;
         let profile: Profile | null = null;
-        // Resolved before the rate limit because only auth knows which account a request belongs
-        // to, and the account is R109's key. A refusal is held rather than thrown, so a flood of
-        // bad tokens is still counted — against its address, since it named no account.
+        // Resolved before the account's rate limit because only auth knows which account a request
+        // belongs to, and the account is R109's key. A refusal is held rather than thrown, so a
+        // flood of bad tokens is still counted — against its address, since it named no account.
         let authError: ApiError | null = null;
         if (candidate.auth !== "none") {
           try {
@@ -618,13 +639,6 @@ export function createRouter(routes: readonly Route[], deps: ServerDeps): Router
             authError = error;
           }
         }
-
-        // §9.4, §9.8: the client address is only ever seen hashed. Read once, for the limiter and
-        // for the request alike, and read as R190 says: the rightmost trusted hop, then the peer,
-        // with an IPv6 client counted by its /56.
-        const ipHash = deps.hashes.ip(
-          rateLimitAddress(clientAddress(request.headers, context?.peerAddress ?? null, trustedProxyHops)),
-        );
 
         // §9.8: "per-account rate limit at the API" (R109: 300 a minute). Checked before the body
         // is read and before §9.4's gate, so a flood costs the least work this router can manage.
