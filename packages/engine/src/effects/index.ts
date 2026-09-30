@@ -150,7 +150,14 @@ export type { BuffAmount } from "./buff";
 // Forced attack, Cancel an attack, and My Pawn's AI playout: thin Effect wrappers over `../combat`
 // and `../subsystems/aiPolicy`, which a card hook cannot call itself for want of an `EngineSink`
 // (§6.3, §4.2, §10.7, R44, R53, R84).
-export { aiPlaysOutTurn, cancelAttack, forcedAttacks, forcedAttacksOn } from "./combat";
+export {
+  aiPlaysOutTurn,
+  cancelAttack,
+  forcedAttackOwnHero,
+  forcedAttackRandom,
+  forcedAttacks,
+  forcedAttacksOn,
+} from "./combat";
 export type { ForcedAttackerFilter, ForcedSide, ForcedTarget } from "./combat";
 
 // A delayed effect, resolved at its R62 point in creation order (§2.2, §10.6, R62, R68).
@@ -186,6 +193,14 @@ export { forEachCard } from "./each";
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
 // ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----
+// Set health (E7) and heals turned into Pierce damage (E8). The replacements themselves (E5, E9) are
+// declared as data (`Script.replacements`), and the forced attacks on a random enemy and on the unit's
+// own hero (E35) are `./combat`'s, exported above with the other forced attacks.
+export { convertHealing, setHealth } from "./health";
+// Random split damage (E37).
+export { damageSplit } from "./split";
+// Berserk and "may attack again" (E35).
+export { goBerserk, mayAttackAgain } from "./statuses";
 
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
 

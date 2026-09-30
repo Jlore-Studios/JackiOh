@@ -5,6 +5,7 @@ import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf } from "../catalog";
 import type { DamageTarget } from "../damage";
+import { unaffectedBy } from "../restrictions";
 import type { EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
 import { exitMark, leftFieldAfter } from "../stays";
@@ -40,7 +41,9 @@ export function resolveTarget(ctx: EffectContext, spec: TargetSpec): DamageTarge
   if (spec.of === "enemyHero") return { kind: "hero", player: opponentOf(ctx.controller) };
   if (spec.of === "instance") {
     const instance = instanceOnItsStay(ctx, spec.instanceId);
-    return instance === null ? null : { kind: "unit", instance };
+    if (instance === null) return null;
+    // B5 E35: a Spell's effect passes a unit immune to Spells by.
+    return unaffectedBy(ctx, instance) ? null : { kind: "unit", instance };
   }
 
   const selection = ctx.targets[spec.index ?? 0];
@@ -63,6 +66,9 @@ export function resolveTarget(ctx: EffectContext, spec: TargetSpec): DamageTarge
     // pile — one the play's own Stack card buried at §10.5 step 4 (a crafted Felinor Fiender played
     // onto the unit its Cry chose): #61's copy and #22's meal fizzle, as #68's damage does.
     if (isBuried(ctx.state, instance)) return null;
+    // B5 E35: "a Spell can't target it and doesn't affect it" — the pick the play pipeline refuses to
+    // offer, and a pick that became immune since, is passed by.
+    if (unaffectedBy(ctx, instance)) return null;
     return { kind: "unit", instance };
   }
   return null;
@@ -185,6 +191,8 @@ export function sidesOf(ctx: EffectContext, side: BoardScope["side"]): PlayerId[
 /** Whether one card passes a scope's filters. Zone membership is the caller's business. */
 export function matchesScope(ctx: EffectContext, card: CardInstance, scope: BoardScope = {}): boolean {
   if (scope.excludeSelf === true && ctx.self !== null && card.id === ctx.self.id) return false;
+  // B5 E35: every effect of a Spell passes a unit immune to Spells by — "all Units" included.
+  if (unaffectedBy(ctx, card)) return false;
   const def = defOf(ctx.state, card.defId);
   if (scope.types !== undefined && !scope.types.includes(def.type)) return false;
   if (scope.tags !== undefined && !scope.tags.some((tag) => def.tags.includes(tag))) return false;

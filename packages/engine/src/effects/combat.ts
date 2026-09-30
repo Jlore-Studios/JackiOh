@@ -17,7 +17,7 @@
 // wrong one, and an import of both in this file reads unambiguously.
 
 import { opponentOf } from "@jackioh/shared";
-import { forceAttacksOn, type AttackTarget } from "../combat";
+import { forceAttackOwnHero, forceAttacksOn, forceAttacksRandom, type AttackTarget } from "../combat";
 import { summonedSoFar } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import type { CardInstance } from "../state";
@@ -28,7 +28,7 @@ import { SETTLE_PASS_CAP, dispatchPending, runQueuedTrigger, type SettleSink } f
 import { paused } from "../work";
 import { activeUnitsOf } from "../zones";
 import { destroy } from "./destroy";
-import { playerOf, resolveTarget, type PlayerSpec, type TargetSpec } from "./targets";
+import { instanceOf, playerOf, resolveTarget, type PlayerSpec, type TargetSpec } from "./targets";
 
 /** Which side's units are compelled. "any" is both, in R68's order (active side first). */
 export type ForcedSide = PlayerSpec | "any";
@@ -249,4 +249,47 @@ function settleBeforePlayout(ctx: EffectContext): void {
     if (woken !== undefined) runQueuedTrigger(sink, woken);
   }
   throw new Error(`the board before the AI turn did not settle in ${SETTLE_PASS_CAP} passes (R283)`);
+}
+
+// ---------------------------------------------------------------------------
+// B5 E35: forced attacks on "a random enemy" and on the unit's own hero
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E35: "it attacks a random enemy" (Classic #78 Mutate Spell, twice on its Radiant face) and "this
+ * attacks a random enemy Unit" (Classic+ #19.2 Jungle Loser). A forced attack (R53), so position,
+ * sickness and Taunt are waived, but each target is drawn (match rng) from the targets the attacker
+ * may attack under the unit restrictions as that attack begins — "an enemy" is a unit or the hero,
+ * "an enemy Unit" a unit. `times` attacks, each its own combat and state check; the run ends once the
+ * attacker is gone or has nothing it may attack (`combat.forceAttacksRandom`).
+ */
+export function forcedAttackRandom(args: {
+  attacker: TargetSpec;
+  among?: "enemies" | "enemyUnits";
+  times?: number;
+}): Effect {
+  return {
+    kind: "forcedAttackRandom",
+    apply(ctx): void {
+      const attacker = instanceOf(ctx, args.attacker);
+      if (attacker === null || attacker.zone.z !== "field") return;
+      const times = Math.max(0, Math.trunc(args.times ?? 1));
+      forceAttacksRandom(ctx, attacker, args.among ?? "enemies", times, ctx.exitsFrom ?? exitMark(ctx.state));
+    },
+  };
+}
+
+/**
+ * B5 E35: "this attacks your hero" (Classic+ #19.5 Bot Loser while Berserk): a forced attack on the
+ * unit's own controller's hero, which does not strike back (`combat.forceAttackOwnHero`).
+ */
+export function forcedAttackOwnHero(args: { attacker: TargetSpec }): Effect {
+  return {
+    kind: "forcedAttackOwnHero",
+    apply(ctx): void {
+      const attacker = instanceOf(ctx, args.attacker);
+      if (attacker === null || attacker.zone.z !== "field") return;
+      forceAttackOwnHero(ctx, attacker);
+    },
+  };
 }

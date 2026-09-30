@@ -198,6 +198,23 @@ export type StaticFlags = {
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
+  /** B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter). */
+  cantBeAttacked?: boolean;
+  /**
+   * B5 E35: only a unit standing in this unit's lane may attack it, declared or forced (Classic+
+   * #19.1 Top Loser); a Taunt on it binds only the attackers that may reach it (§4.2 step 3).
+   */
+  attackedOnlyFromLane?: boolean;
+  /** B5 E35: this unit neither attacks nor is attacked, declared or forced. */
+  cantAttackOrBeAttacked?: boolean;
+  /** B5 E35: "This can't go Berserk" (Classic+ #19.5's Radiant face). */
+  neverBerserk?: boolean;
+  /**
+   * B5 E8: while this card acts on the field — face-up, when it is a Trap or Field Trap — a heal of X
+   * on one of its controller's enemies deals X Pierce damage to it instead, from this card (Classic+
+   * #22 Blood Moon's Radiant Field Trap, "From now on").
+   */
+  healToDamage?: boolean;
   // ---- v0.2.0 static flags, by workstream: prompts and generation (E19, E26) ----
 };
 
@@ -291,6 +308,26 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
+  /**
+   * B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
+   * on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
+   * opponent (`replacements.ts`). Declared as data and decided synchronously, never an effect list.
+   */
+  replacements?: import("./replacements").ReplacementDef[];
+  /**
+   * B5 E6: what this card does to hits on its controller's hero while it acts on the field — a
+   * per-hit cap (the lowest of every cap wins, Classic+ #11 Anime Armor) and a divisor applied after
+   * Armor (several multiply, rounded up once, Classic #75 Argusland). A PURE READ, like `aura`; a
+   * list, so a fused card carries each ingredient's.
+   */
+  heroGuard?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => { cap?: number; divisor?: number }[];
+  /**
+   * B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
+   * Strike "while it has a Plague Token"), read in the layers with its printed keywords (§10.4), so a
+   * Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
+   * back into `unitView`, or the layers would recurse.
+   */
+  conditionalKeywords?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => Keyword[];
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
 };
 

@@ -101,11 +101,22 @@ function auraMods(state: GameState, unit: CardInstance): StatMod[] {
 function asSet(keywords: readonly Keyword[]): Keyword[] {
   const seen = new Set<Keyword["kind"]>();
   return keywords.filter((keyword) => {
-    if (keyword.kind === "Armor" || keyword.kind === "Lucky") return true;
+    // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor.
+    if (keyword.kind === "Armor" || keyword.kind === "Lucky" || keyword.kind === "Spell Damage") return true;
     if (seen.has(keyword.kind)) return false;
     seen.add(keyword.kind);
     return true;
   });
+}
+
+/**
+ * B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
+ * "while it has a Plague Token"): the card's `conditionalKeywords` hook, read with its printed ones,
+ * so a Vanilla takes it (`scriptOf` runs no script for one). The hook reads instance data only.
+ */
+function conditionalKeywordsOf(state: GameState, instance: CardInstance): Keyword[] {
+  const hook = scriptOf(instance).conditionalKeywords;
+  return hook === undefined ? [] : hook({ state, self: instance, radiant: instance.radiant });
 }
 
 export function unitView(state: GameState, instance: CardInstance): UnitView {
@@ -150,6 +161,8 @@ export function unitView(state: GameState, instance: CardInstance): UnitView {
 
   const keywords: Keyword[] = [
     ...(instance.vanilla ? [] : printed.keywords),
+    // B5 E35: the keywords its text gives it only while a condition holds, beside the printed ones.
+    ...conditionalKeywordsOf(state, instance),
     ...instance.grantedKeywords,
     ...auras.flatMap((mod) => mod.keywords ?? []),
   ];

@@ -26,6 +26,8 @@ import { findInstance, type CardInstance, type DeclaredAttack, type GameState, t
 import { registerDeclarationCheck, runTrapWindow } from "./traps";
 import { cardsInTriggerOrder, dispatchPending, markDispatched, queueTrigger, triggersOnEvent, type SettleSink } from "./triggers";
 import { moveSourcedModifiers } from "./modifiers";
+import { answerTargeting } from "./replacements";
+import { attackRestriction } from "./restrictions";
 import { exitMark, leftFieldAfter, movesIn, type LaterMoves } from "./stays";
 import { owe, paused as isPaused, registerWorkHandler } from "./work";
 import { activeUnitsOf, adjacent, cardAt, slotOf } from "./zones";
@@ -164,9 +166,18 @@ function whyCannotDeclare(state: GameState, attacker: CardInstance): string | nu
   return null;
 }
 
-/** Every enemy unit whose Taunt forces the target, printed, granted or from Defense (§4.2 step 3). */
-function tauntWall(state: GameState, enemy: PlayerId): CardInstance[] {
-  return activeUnitsOf(state, enemy).filter((unit) => hasKeyword(unitView(state, unit).keywords, "Taunt"));
+/**
+ * Every enemy unit whose Taunt forces the target, printed, granted or from Defense (§4.2 step 3) —
+ * among the units this attacker may attack at all: B5 E35 has a Taunt bind only the attackers that
+ * could legally attack it, so a Taunt only its own lane may attack (Classic+ #19.1) leaves an attacker
+ * in another lane free, and one that cannot be attacked binds nobody.
+ */
+function tauntWall(state: GameState, attacker: CardInstance, enemy: PlayerId): CardInstance[] {
+  return activeUnitsOf(state, enemy).filter(
+    (unit) =>
+      hasKeyword(unitView(state, unit).keywords, "Taunt") &&
+      attackRestriction(state, attacker, { kind: "unit", instance: unit }) === null,
+  );
 }
 
 /**
@@ -193,6 +204,10 @@ export function whyCannotAttack(state: GameState, attacker: CardInstance, target
       if (from !== null && to !== null && from.lane !== to.lane) return "that target is not in this unit's lane";
     }
   }
+  // B5 E35: the unit restrictions — can't be attacked, attacked only from its own lane, can't attack
+  // or be attacked — which a forced attack obeys as well (`forceAttack`).
+  const restricted = attackRestriction(state, attacker, target);
+  if (restricted !== null) return restricted;
 
   // §6.1: Rush lifts sickness for unit targets only, Charge for units and the hero. Step 1 has
   // already established that a sick attacker has one of the two.
@@ -202,8 +217,8 @@ export function whyCannotAttack(state: GameState, attacker: CardInstance, target
     }
   }
 
-  // Step 3: while any enemy unit has Taunt, the target must be one of them.
-  const wall = tauntWall(state, enemy);
+  // Step 3: while any enemy unit this attacker may attack has Taunt, the target must be one of them.
+  const wall = tauntWall(state, attacker, enemy);
   if (wall.length > 0 && !(target.kind === "unit" && wall.some((unit) => unit.id === target.instance.id))) {
     return "a Taunt unit must be attacked first";
   }
@@ -570,10 +585,17 @@ registerWorkHandler(ATTACK_WINDOW_WORK, runOwedAttack);
  * `runTrapWindow` rather than `triggers.dispatchEvent`, whose remainder would wait *behind* the
  * combat in the trigger queue and so fire after the damage it exists to pre-empt.
  */
-export function declareAttack(sink: EngineSink, attacker: CardInstance, target: AttackTarget): CombatResult {
+export function declareAttack(sink: EngineSink, attacker: CardInstance, chosen: AttackTarget): CombatResult {
   const state = sink.state;
-  const refusal = whyCannotAttack(state, attacker, target);
+  const refusal = whyCannotAttack(state, attacker, chosen);
   if (refusal !== null) return { error: refusal };
+
+  // B5 E5, E9: step 2's target chosen, and before the trap window, "a friendly unit is targeted" —
+  // a card of the defender's that interposes (Classic #33 Joro, from the hand) is summoned and the
+  // attack moves to it (`replacements.answerTargeting`: `summoned`, then `redirected`).
+  const interposer =
+    chosen.kind === "unit" ? answerTargeting(sink, { target: chosen.instance, by: attacker.controller, what: "attack" }) : null;
+  const target: AttackTarget = interposer === null ? chosen : { kind: "unit", instance: interposer };
 
   // Step 4's first sentence. R44 never gives this back, so a cancelled attack is gone either way.
   attacker.exertion.attacked = true;
@@ -595,6 +617,9 @@ export function declareAttack(sink: EngineSink, attacker: CardInstance, target: 
   const at = sink.events.length;
   sink.events.push(event);
   withholdFromFrontier(sink, at);
+  // The interposer's `summoned` and `redirected` stand before the declaration on the frontier, which
+  // the window's own dispatch delivers (R100) — the declaration is the window's alone all the same.
+  if (interposer !== null) markDispatched([event]);
 
   // Step 4's second sentence: the traps answer the declaration, before any damage.
   runTrapWindow(sink, event);
@@ -646,6 +671,9 @@ export function forceAttack(sink: EngineSink, attacker: CardInstance, target: At
   // the attacker's side before the run began — is not attacked, and the attacker is passed over in
   // silence, as R96 passes over one that is gone.
   if (!isEnemyOf(attacker, target)) return;
+  // B5 E35: nor the unit restrictions — a forced attack on a target its attacker may not attack does
+  // not happen, and is passed over in silence the same way.
+  if (attackRestriction(state, attacker, target) !== null) return;
 
   sink.events.push({
     type: "attackDeclared",
@@ -747,3 +775,91 @@ function runOwedForcedRun(sink: EngineSink, item: WorkItem): void {
 }
 
 registerWorkHandler(FORCED_RUN_WORK, runOwedForcedRun);
+
+// ---------------------------------------------------------------------------
+// B5 E35: forced attacks on "a random enemy" and on the unit's own hero
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E35: what a forced attack on "a random enemy" draws from — the targets its attacker may attack,
+ * enemy units in lane order and then (for "an enemy", not "an enemy Unit") the enemy hero. R53 waives
+ * position, sickness and Taunt, so none of those narrows the list; the unit restrictions do.
+ */
+export function randomAttackTargets(state: GameState, attacker: CardInstance, among: "enemies" | "enemyUnits"): AttackTarget[] {
+  const enemy = opponentOf(attacker.controller);
+  const candidates: AttackTarget[] = [
+    ...activeUnitsOf(state, enemy).map((instance) => ({ kind: "unit" as const, instance })),
+    ...(among === "enemies" ? [{ kind: "hero" as const, player: enemy }] : []),
+  ];
+  return candidates.filter((target) => attackRestriction(state, attacker, target) === null);
+}
+
+/**
+ * B5 E35: the attacker makes `times` forced attacks (R53), each on a target drawn from the match rng
+ * among the ones it may attack as that attack begins (Classic #78's "attacks a random enemy", twice on
+ * its Radiant face; Classic+ #19.2's "a random enemy Unit"). Each is its own combat with its own state
+ * check; the run stops once the attacker has left the field on the stay it began on, or has nothing
+ * to attack. A Death between two of them that asks owes the rest (`FORCED_RANDOM_WORK`, R113).
+ */
+export function forceAttacksRandom(
+  sink: EngineSink,
+  attacker: CardInstance,
+  among: "enemies" | "enemyUnits",
+  times: number,
+  since = exitMark(sink.state),
+): void {
+  for (let made = 0; made < times; made += 1) {
+    const state = sink.state;
+    if (state.result !== null) return;
+    if (!isActiveOnField(state, attacker) || leftFieldAfter(state, since, attacker.id)) return;
+    if (isPaused(sink)) {
+      oweForcedRandom(sink, attacker.id, among, times - made, since);
+      return;
+    }
+    const target = sink.rng.pick(randomAttackTargets(state, attacker, among));
+    if (target === undefined) return;
+    forceAttack(sink, attacker, target);
+  }
+}
+
+/** R113: the `resume.hook` of a random forced run a Death's question stopped between two attacks. */
+export const FORCED_RANDOM_WORK = "@forcedRandom";
+
+type OwedForcedRandom = { attacker: string; among: "enemies" | "enemyUnits"; left: number; since: number };
+
+function oweForcedRandom(sink: EngineSink, attacker: string, among: "enemies" | "enemyUnits", left: number, since: number): void {
+  if (left <= 0 || sink.state.result !== null) return;
+  const owed: OwedForcedRandom = { attacker, among, left, since };
+  owe(sink, { defId: "", hook: FORCED_RANDOM_WORK, step: "run", radiant: false, data: { run: owed } });
+}
+
+/** `work.ts`'s handler for a random forced run a prompt stopped: the same run, where it stopped. */
+function runOwedForcedRandom(sink: EngineSink, item: WorkItem): void {
+  const raw: unknown = item.resume.data.run;
+  if (raw === null || typeof raw !== "object") return;
+  const owed = raw as Partial<OwedForcedRandom>;
+  if (typeof owed.attacker !== "string" || typeof owed.left !== "number" || typeof owed.since !== "number") return;
+  if (owed.among !== "enemies" && owed.among !== "enemyUnits") return;
+  const attacker = findInstance(sink.state, owed.attacker);
+  if (attacker === undefined) return;
+  forceAttacksRandom(sink, attacker, owed.among, owed.left, owed.since);
+}
+
+registerWorkHandler(FORCED_RANDOM_WORK, runOwedForcedRandom);
+
+/**
+ * B5 E35: a forced attack on the unit's OWN hero (Classic+ #19.5 Bot Loser while Berserk). R53's
+ * compulsion, with the one change R173 never allows elsewhere: the target is its controller's hero.
+ * A hero never strikes back (§4.3), so the unit deals its attack to its own hero, and the combat has
+ * its own state check. The unit restrictions still hold: one that cannot attack does not.
+ */
+export function forceAttackOwnHero(sink: EngineSink, attacker: CardInstance): void {
+  const state = sink.state;
+  if (state.result !== null) return;
+  if (!isActiveOnField(state, attacker)) return;
+  const target: AttackTarget = { kind: "hero", player: attacker.controller };
+  if (attackRestriction(state, attacker, target) !== null) return;
+  sink.events.push({ type: "attackDeclared", attackerId: attacker.id, targetId: targetIdOf(target), forced: true });
+  resolveCombat(sink, attacker, target);
+  stateCheck(sink);
+}

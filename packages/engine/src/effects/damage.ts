@@ -11,6 +11,12 @@ type DamageFlagArgs = {
   combat?: boolean;
   /** R85: this damage has Lifesteal of its own, without the source gaining the keyword. */
   lifesteal?: boolean;
+  /**
+   * B5 E6: this damage has Trample of its own (Classic #83 Flame Lance, "Trample. Deal 11 damage to a
+   * Unit"): the excess over the target Unit's health hits its controller's hero as a new instance. A
+   * Spell's printed Trample is read off it while it resolves too; stating it keeps it on a repeat.
+   */
+  trample?: boolean;
 };
 
 export type DamageEffectArgs = {
@@ -27,6 +33,7 @@ function damageFlags(args: DamageFlagArgs): NonNullable<DamageArgs["flags"]> {
     ignoreArmor: args.ignoreArmor === true,
     combat: args.combat === true,
     lifesteal: args.lifesteal === true,
+    ...(args.trample === true ? { trample: true } : {}),
   };
 }
 

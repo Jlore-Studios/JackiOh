@@ -274,6 +274,8 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
     canAct: canAct(state, top),
     // R243, §6.3 Vanilla: the text is gone, which the definition the client reads does not say.
     ...(top.vanilla === true ? { vanilla: true as const } : {}),
+    // B5 E35: a status, public on the field like the unit itself.
+    ...(top.berserk === true ? { berserk: true as const } : {}),
   };
 }
 
@@ -388,6 +390,9 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
       return `Your cards gain "Combo: draw ${mod.amount}"`;
     case "quickstrikerDamage":
       return `Your cards gain "Combo X: X damage to the enemy hero"`;
+    // B5 E8: Classic+ #22 Blood Moon's base face, read off the modifier alone.
+    case "healToDamage":
+      return "Healing on your enemies deals Pierce damage instead";
   }
 }
 

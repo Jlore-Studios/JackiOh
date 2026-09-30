@@ -27,5 +27,9 @@ export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
 export * from "./replay";
+// Patch v0.2.0, damage and combat (docs/classic-sets.md B5 E5, E6, E8, E9, E35): the replacement
+// windows and their declarations, and the restriction and status readers a card script asks with.
+export * from "./replacements";
+export * from "./restrictions";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";

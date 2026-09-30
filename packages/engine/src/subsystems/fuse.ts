@@ -321,7 +321,9 @@ type ListFn = (...args: unknown[]) => unknown[];
  * instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
  * and each label still sits in the fused face's text, which prints every ingredient's text whole.
  */
-const EAGER_KEYS: readonly string[] = ["aura", "preview"];
+// B5 E6, E35: `heroGuard` and `conditionalKeywords` are pure reads returning lists too, so a fusion
+// guards its hero with every ingredient's guard and has every ingredient's conditional keywords.
+const EAGER_KEYS: readonly string[] = ["aura", "preview", "heroGuard", "conditionalKeywords"];
 
 /**
  * §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that
