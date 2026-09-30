@@ -546,11 +546,12 @@ git. Proposal:
 3. **Making a patch** is one script, `pnpm --filter @jackioh/cards patch <version> "<title>"` (in
    `scripts/`, where fs is allowed): it snapshots `catalog.json`, diffs it against the previous
    snapshot and writes the patch-notes entry, card by card.
-4. **Retroactively**, from `git log --follow packages/cards/catalog.json`, checked on 2026-09-30:
+4. **Retroactively**, from `git log --follow packages/cards/catalog.json` on a full clone (a shallow
+   one stops at later commits that change no entry), checked on 2026-09-30:
 
    | Proposed version | Commit(s) | Date | Card data that changed |
    | --- | --- | --- | --- |
-   | v0.1.0 | `bb89220` | 2026-09-18 | Core as first built: 100 cards and 9 tokens |
+   | v0.1.0 | `4626690` | 2026-09-18 | The initial commit: Core as first built, 100 cards and 9 tokens |
    | v0.1.0-r1 | `1539fa7`, `cd780db` | 2026-09-22 | Core Set balance changes (issue #1): #3, #68's name, #81 (twice), the Rush, Sheep, Felinor and Bread Tokens' Radiant faces |
    | v0.1.0-r2 | `f5b94bc`, `a17a9e8` | 2026-09-24 | #95's text; The Coin added |
    | v0.1.0-r3 | `c219bb4` | 2026-09-25 | The Radiant pass (PR #18, R275–R279): Radiant faces, the Jlockeed tag and `refs` of 99 entries |
@@ -558,7 +559,8 @@ git. Proposal:
    | v0.2.0 | this work | | Classic, Classic+, the new keywords, Core's pool changes (B2.6) and the Core card patches in the v0.2.0 issue (B0) |
    | v0.2.1 | | | Heroic Power as an Activate, with thirteen powers (B3.2 rule 10) |
 
-   (`9fe5470` also appears in that log but changes no entry.) The "-rN" labels are proposals:
+   The designer's balance notes behind v0.1.0-r1 landed first, as `ba45d13` (2026-09-20, merged
+   in PR #2), in the source notes rather than the catalog. The "-rN" labels are proposals:
    **⚠ designer** may prefer other names for the pre-v0.1.1 changes.
 5. **Reading old versions.**
    - The collection's card detail view gets a History section: each patch in which the card changed,
