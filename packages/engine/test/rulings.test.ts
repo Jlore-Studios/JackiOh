@@ -2686,6 +2686,44 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R374 deals the landing page's hand at random on each visit", () => {
     provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
   });
+
+  // Proved by apps/web wording.test.ts "R432 …" (no player-readable string in the client writes the old
+  // cost noun, a bare number after "cost" or "2-cost"; the face-down trap's label) and facedown.test.tsx
+  // "R432 …" (the back's preview says "(2) Cost").
+  it("R432 writes a cost as \"(N) Cost\" when it is a noun and \"costs (N)\" when it is a verb", () => {
+    provenIn(432, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // Proved by apps/web fx/constants.test.ts, fx/settings.test.ts, settings/wiring.test.tsx and
+  // game/animations.fx.test.ts "R435 …" (the range and step, the clamp, the slider and its readout, and
+  // the runner's durations and burst budget at 0.25x and 3x).
+  it("R435 runs the effects speed from 0.25x to 3x on a slider", () => {
+    provenIn(
+      435,
+      "../../../apps/web/src/fx/constants.test.ts",
+      "../../../apps/web/src/fx/settings.test.ts",
+      "../../../apps/web/src/settings/wiring.test.tsx",
+      WEB_ANIMATIONS_FX_TEST,
+    );
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
+  it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
+    provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web audio/voice-assets.test.ts "R501 …" (a SAPI persona's hash, --catalog, the
+  // persona's ranges, the 6 MiB budget), gen-voice.test.ts "R501 …" (rendering through SAPI and ffmpeg,
+  // and a stale say line left alone), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …".
+  it("R501 renders the voice set on macOS or Windows, within 6 MiB", () => {
+    provenIn(
+      501,
+      "../../../apps/web/src/audio/voice-assets.test.ts",
+      "../../../apps/web/src/audio/gen-voice.test.ts",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+      "../../../apps/web/src/audio/voiceData.test.ts",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
