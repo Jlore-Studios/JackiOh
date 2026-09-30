@@ -12,7 +12,7 @@
   "call_timeout_minutes": 150,
   "job_budget_minutes": 330,
   "min_minutes_for_a_call": 25,
-  "max_review_cycles": 4,
+  "max_review_cycles": 10,
   "max_failures": 3,
   "usage_stop": { "five_hour": 0.98, "seven_day": 0.9 },
   "auto_merge": true,
@@ -32,7 +32,7 @@
   "quiet": {
     "enabled": true,
     "interval_minutes": 10,
-    "max_wait_minutes": 40,
+    "max_wait_minutes": 120,
     "ping_model": "haiku",
     "partners": [
       {
