@@ -11,6 +11,11 @@
 // played from hand or cast, and never for a copy, a Recruit, a Reborn, a token or a Transform
 // result (§6.3's Summon and Recruit rows agree). RULED_TERMS lists these rows for rules.test.ts.
 //
+// And two rows are short reminders rather than SPEC's full text (R500, patch v0.2.0): Cry's ruling and
+// Tribute's Rule column are long enough to crowd a card's inspect view, so the glossary says each in
+// one short line that is still true to the rule (Tribute's no longer mentions R41's backrow clause,
+// which R428 removed). SHORT_REMINDERS holds the two lines, and rules.test.ts pins them.
+//
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
 // are the other spellings the catalog uses for the same term.
 //
@@ -56,6 +61,18 @@ export type GlossaryEntry = {
 };
 
 const NONE: readonly string[] = [];
+
+/**
+ * R500: the two glossary rows written as short reminders instead of SPEC's full text. Cry states §6.2's
+ * ruling (played or cast, never another way onto the field); Tribute states §6.3's cost.
+ */
+export const SHORT_REMINDERS = {
+  Cry: "When you play this card or an effect casts it. Never when it enters play otherwise",
+  Tribute: "Playing this also costs X of your Units, which go to the graveyard",
+} as const satisfies Readonly<Partial<Record<string, string>>>;
+
+/** The terms whose `rule` is a short reminder (R500), in SHORT_REMINDERS. */
+export const SHORT_TERMS: readonly (keyof typeof SHORT_REMINDERS)[] = ["Cry", "Tribute"];
 
 /**
  * R373: SPEC's rules vocabulary in the words a player reads — the rules' library is the Deck, and
@@ -123,11 +140,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
 
   // §6.2 Triggers and timing words
-  // §6.2's ruling, not its Rule column (see the header).
-  Cry: trigger(
-    "Cry",
-    "When you play this card from your hand, or it is cast (Cast on draw, Echo, Call to Chaos). Not when it is summoned, copied, Recruited, Reborn or Transformed into",
-  ),
+  // §6.2's ruling, not its Rule column, and short (R500; see the header).
+  Cry: trigger("Cry", SHORT_REMINDERS.Cry),
   Death: trigger("Death", "When sent from the field to the GY"),
   "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw", ["Start of your turn"]),
   "End of turn": trigger("End of turn", "Controller's turn end, before cleanup"),
@@ -141,10 +155,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
 
   // §6.3 Actions and verbs
   Discover: verb("Discover", "Choose 1 of 3 options"),
-  Tribute: verb(
-    "Tribute",
-    "As an additional cost of playing a card, sacrifice X of your units; a card whose own text tributes (Carnivorous Cube) sacrifices what that text names instead, which may be any of your other permanents, backrow included (R41)",
-  ),
+  // Short (R500; see the header).
+  Tribute: verb("Tribute", SHORT_REMINDERS.Tribute),
   Embiggen: verb("Embiggen", "Two prices, bigger effect for the bigger one"),
   Recruit: verb("Recruit", "Summon from library, scanning top down"),
   Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4"),

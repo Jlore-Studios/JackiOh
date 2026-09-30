@@ -250,13 +250,13 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
     const preview = hover(root);
     expect(text(preview, ".card-text")).toBe(CONCEALED_TEXT);
     expect(preview.querySelector(`[data-testid="${INSPECT_PRINTED}"]`)).toBeNull();
-    expect(preview.textContent).not.toContain("Summon 3 random Cost (3) Units");
+    expect(preview.textContent).not.toContain("Summon 3 random (3) Cost Units");
   });
 
   it("the collection's detail view prints both faces' real text", () => {
     render(<CardDetail def={def("core-095")} onClose={() => {}} />);
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Summon 3 random Cost (3) Units");
-    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Cast a random Call to Chaos");
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Summon 3 random (3) Cost Units");
+    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Three different random effects");
   });
 });
 

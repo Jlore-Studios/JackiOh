@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef, CardFace } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
@@ -114,15 +114,17 @@ describe("B7: faceModel copies the def and picks the face", () => {
         expect(f.defId, where).toBe(card.id);
         expect(f.known, where).toBe(true);
         expect(f.name, where).toBe(card.name);
-        expect(f.type, where).toBe(card.type);
+        // B2.7: a face with its own type is drawn as that type (Classic+ #22's Radiant Field Trap).
+        expect(f.type, where).toBe(shown.type ?? card.type);
         expect(f.tags, where).toEqual(card.tags);
         expect(f.rarity, where).toBe(card.rarity);
         expect(f.index, where).toBe(card.index);
         expect(f.set, where).toBe(card.set);
         expect(f.radiant, where).toBe(radiant);
         expect(f.keywords, where).toEqual(shown.keywords);
-        // Each face prints its own catalog text whole; only a radiant face marks anything (R277).
-        expect(f.text.full, where).toBe(shown.text);
+        // Each face prints its own catalog text whole, its `{key}` numbers filled in (B3.4 rule 5); only
+        // a radiant face marks anything (R277).
+        expect(f.text.full, where).toBe(fillParams(card, radiant ? "radiant" : "base"));
         if (!radiant) expect(f.text.marks, where).toEqual([]);
 
         if (card.type === "Unit") {
@@ -238,11 +240,13 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
     // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
     // doubled stats are what R277 marks on it.
-    const pureDeletions = new Set(["core-055"]);
+    // Classic #60 and Classic+ #5 drop words too (radiantDiff.test.ts names all three).
+    const pureDeletions = new Set(["core-055", "classic-060", "classicplus-005"]);
     for (const card of DEFS) {
       const f = face(card.id, true);
-      expect(f.text.full, card.id).toBe(card.radiant.text);
-      if (card.radiant.text === card.base.text || pureDeletions.has(card.id)) {
+      // The Radiant face prints its catalog text with its `{key}` numbers filled in (B3.4 rule 5).
+      expect(f.text.full, card.id).toBe(fillParams(card, "radiant"));
+      if (fillParams(card, "radiant") === fillParams(card, "base") || pureDeletions.has(card.id)) {
         expect(f.text.marks, card.id).toEqual([]);
         continue;
       }
@@ -483,7 +487,9 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("Call to Chaos in the collection prints its real text, both faces", () => {
     expect(face("core-095", false).text.full).toBe(def("core-095").base.text);
-    expect(face("core-095", true).text.full).toContain("Cast a random Call to Chaos");
+    // R423: the Radiant face is three different random effects from the same list.
+    expect(face("core-095", true).text.full).toContain("Three different random effects");
+    expect(face("core-095", true).text.full).toContain("cast a random Call to Chaos");
   });
 
   it("R243 a Vanilla unit says its text is gone, and prints the keywords it still has as gained", () => {

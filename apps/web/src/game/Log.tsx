@@ -286,6 +286,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${named(event.defId)} was degraded`;
     case "upgraded":
       return `${named(event.defId)} was upgraded`;
+    case "numberChanged":
+      return event.key === HIDDEN_CARD ? `${named(event.defId)} changed` : `${named(event.defId)}'s ${event.key} became ${event.value}`;
     case "redirected":
       return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
     case "healthSet":

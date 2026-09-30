@@ -99,7 +99,7 @@ describe("R370 a face-down trap shows its cost", () => {
       expect(back.getAttribute("data-face-down")).toBe("true");
       expect(back.getAttribute("data-facedown-cost")).toBe(String(cost));
       expect(back.querySelector(".facedown-cost")?.textContent).toBe(String(cost));
-      expect(back.getAttribute("aria-label")).toBe(`Face-down trap, Cost (${String(cost)})`);
+      expect(back.getAttribute("aria-label")).toBe(`Face-down trap, (${String(cost)}) Cost`);
       // Still a back: no name, no definition, no instance id, no face.
       expect(back.textContent).toBe(String(cost));
       expect(back.hasAttribute("data-def-id")).toBe(false);
@@ -118,7 +118,7 @@ describe("R370 a face-down trap shows its cost", () => {
     expect(back.textContent).toBe("");
   });
 
-  it("R370 a resting mouse opens the back's preview: a face-down trap, Cost (2), and who can see it", () => {
+  it("R370 R432 a resting mouse opens the back's preview: a face-down trap, (2) Cost, and who can see it", () => {
     vi.useFakeTimers();
     renderBoard(backsView());
     hover(backIn("opponent", 1));
@@ -126,7 +126,7 @@ describe("R370 a face-down trap shows its cost", () => {
     expect(preview.getAttribute("data-mode")).toBe("hover");
     expect(preview.getAttribute("aria-hidden")).toBe("true");
     expect(preview.textContent).toContain("Face-down trap");
-    expect(within(preview).getByTestId(INSPECT_FACE_DOWN_COST).textContent).toBe("Cost (2)");
+    expect(within(preview).getByTestId(INSPECT_FACE_DOWN_COST).textContent).toBe("(2) Cost");
     expect(preview.textContent).toContain("Only the player who set it can see what it is.");
     // A back has no face to show large.
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();

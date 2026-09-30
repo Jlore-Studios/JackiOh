@@ -367,8 +367,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
  */
 function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): string {
   const less = `cost${mod.oncePerTurn === true ? "s" : ""} ${mod.amount} less`;
-  // R363: #77's own words, "Cost (4)+ cards cost (1) less".
-  if (mod.minCurrentCost !== undefined) return `Cost (${mod.minCurrentCost})+ cards cost (${mod.amount}) less`;
+  // R363, R432: #77's own words, "(4)+ Cost cards cost (1) less".
+  if (mod.minCurrentCost !== undefined) return `(${mod.minCurrentCost})+ Cost cards cost (${mod.amount}) less`;
   if (mod.onlyType !== undefined) {
     return mod.oncePerTurn === true ? `Next ${mod.onlyType} ${less}` : `${mod.onlyType}s ${less}`;
   }
@@ -813,6 +813,13 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
       const { hiddenFrom, ...shown } = event;
       return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
         ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, change: HIDDEN_TUNING_CHANGE }
+        : shown;
+    }
+    // Classic+ #41: a number set outright is the card's as well, so it follows `degraded`.
+    case "numberChanged": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, key: HIDDEN_ID, value: 0 }
         : shown;
     }
 

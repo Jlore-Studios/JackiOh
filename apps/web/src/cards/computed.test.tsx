@@ -60,7 +60,7 @@ function values(root: Element): string[] {
 function view(): PlayerView {
   return baseView({
     you: emptySide("p1", {
-      hand: [card({ instanceId: "h31", defId: "core-031", cost: 2, preview: [{ label: "Fib(cost+1)", value: 2 }] })],
+      hand: [card({ instanceId: "h31", defId: "core-031", cost: 2, preview: [{ label: "Fib(times played + 1)", value: 2 }] })],
       units: [
         unit("p1", {
           instanceId: "u91",
@@ -99,10 +99,10 @@ describe("R280 what a formula comes to now", () => {
     render(withCatalog(<Board view={view()} />));
     const hand = screen.getByTestId(testid.handCard("h31"));
     expect(values(hand)).toEqual(["{2}"]);
-    expect(hand.querySelector(".card-text")?.textContent).toContain("Deal Fib(cost+1) {2} damage to a target");
+    expect(hand.querySelector(".card-text")?.textContent).toContain("Deal Fib(times played + 1) {2} damage to a target");
     const value = hand.querySelector(".cf-value");
-    expect(value).toHaveAttribute("title", "Fib(cost+1): currently 2");
-    expect(value).toHaveAttribute("data-label", "Fib(cost+1)");
+    expect(value).toHaveAttribute("title", "Fib(times played + 1): currently 2");
+    expect(value).toHaveAttribute("data-label", "Fib(times played + 1)");
     // Its hover preview prints the same.
     expect(values(hover(hand))).toEqual(["{2}"]);
   });
