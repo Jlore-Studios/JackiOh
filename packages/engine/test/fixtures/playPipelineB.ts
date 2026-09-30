@@ -92,6 +92,8 @@ export const modeSpell = def("mode-spell", "Spell", { cost: 1 });
 export const discoverSpell = def("discover-spell", "Spell", { cost: 1 });
 /** An X Spell: X damage to the enemy hero. */
 export const xSpell = def("x-spell", "Spell", { cost: "X" });
+/** An X Spell with a declared target: X damage to it. */
+export const xTarget = def("x-target", "Spell", { cost: "X" });
 /** A Field Spell with a Cry — a cast one with no zone fizzles (R453). */
 export const castField = def("cast-field", "Field Spell", { cost: 1 });
 /** A Trap a cast sets face-down. */
@@ -167,6 +169,7 @@ export const PB_DEFS: CardDef[] = [
   modeSpell,
   discoverSpell,
   xSpell,
+  xTarget,
   castField,
   castTrap,
   theirChoice,
@@ -244,6 +247,10 @@ export const PB_SCRIPTS: Record<string, CardScripts> = {
     },
   }),
   [xSpell.id]: both({ cry: (ctx) => [damage({ to: { of: "enemyHero" }, amount: ctx.x })] }),
+  [xTarget.id]: both({
+    targets: [{ kind: "target", min: 1, max: 1, filter: { of: ["unit", "hero"] } }],
+    cry: (ctx) => [damage({ to: { of: "chosen" }, amount: ctx.x })],
+  }),
   [castField.id]: both({ cry: () => [damage({ to: { of: "enemyHero" }, amount: 1 })] }),
   [theirChoice.id]: both({
     cry: () => [askTheOpponent(), damage({ to: { of: "enemyHero" }, amount: 1 })],

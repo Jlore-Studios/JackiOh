@@ -35,7 +35,7 @@ import {
   toeCracker,
   trickster,
   tyrant,
-  zeroSpell,
+  xTarget,
 } from "./fixtures/playPipelineB";
 
 const DECK = [
@@ -49,7 +49,7 @@ const DECK = [
   monkey,
   tax,
   graveSpell,
-  zeroSpell,
+  xTarget,
   targetSpell,
   modeSpell,
   discoverSpell,
@@ -108,6 +108,7 @@ describe("play pipeline B folds exactly (§9.2, §9.3)", () => {
     let randomCasts = 0;
     let prompts = 0;
     let returns = 0;
+    let xAsked = 0;
     for (const seed of SEEDS) {
       const live = play(seed);
       const folded = fold({ seed, decks: [DECK, DECK], log: live.log });
@@ -127,6 +128,7 @@ describe("play pipeline B folds exactly (§9.2, §9.3)", () => {
         (event) => event.type === "cardPlayed" && event.costPaid === 0 && RANDOM_POOL.includes(event.defId),
       ).length;
       prompts += live.events.filter((event) => event.type === "promptOpened").length;
+      xAsked += live.events.filter((event) => event.type === "promptOpened" && event.kind === "number").length;
       returns += live.events.filter((event) => event.type === "addedToHand" && event.defId !== joggBox.id).length;
     }
     // The run reached what it exists to replay.
@@ -134,5 +136,6 @@ describe("play pipeline B folds exactly (§9.2, §9.3)", () => {
     expect(randomCasts).toBeGreaterThan(0);
     expect(prompts).toBeGreaterThan(0);
     expect(returns).toBeGreaterThan(0);
+    expect(xAsked).toBeGreaterThan(0);
   }, TEST_TIMEOUT_MS);
 });

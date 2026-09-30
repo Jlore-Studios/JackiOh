@@ -42,6 +42,7 @@ import {
   theirChoice,
   tyrant,
   xSpell,
+  xTarget,
 } from "./fixtures/playPipelineB";
 
 // Inline cards for the chain cap and the nested cases, indexed clear of the shared fixtures.
@@ -161,17 +162,53 @@ describe("E12 casts from anywhere (R70, R453)", () => {
     expect(done.players.p2.hero.health).toBe(paused.players.p2.hero.health - 3);
   });
 
-  it("R453 a cast X card's X is its caster's current mana, and at least 1", () => {
-    const rich = playing("r453-x-rich");
-    rich.players.p1.mana.current = 3;
-    const before = rich.players.p2.hero.health;
-    run(rich, [castNew({ def: xSpell.id })]);
-    expect(rich.players.p2.hero.health).toBe(before - 3);
+  it("R453 a cast X card asks its caster for X first — 1 up to their mana, at least 1 — then its target, and spends no mana", () => {
+    const state = playing("r453-x-asked");
+    state.players.p1.mana.current = 3;
+    const sink = run(state, [castNew({ def: xTarget.id })]);
+    expect(state.pending?.kind).toBe("number");
+    expect(state.pending?.options.map((option) => option.selection)).toEqual(
+      ["1", "2", "3"].map((option) => ({ pick: "mode", option })),
+    );
+    expect(eventsOfType(sink.events, "promptOpened")).toHaveLength(1);
+    // The other seat sees only that a prompt is open.
+    expect(viewFor(state, "p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
 
+    const round = roundTrip(state);
+    const two = only(legalActions(state, "p1").filter((action) => action.type === "answer" && JSON.stringify(action.selection).includes('"2"')));
+    const asked = pbAct(state, { ...two, playerId: "p1" });
+    const askedRound = pbAct(round, { ...two, playerId: "p1" });
+    expect(hashState(askedRound)).toBe(hashState(asked));
+    // Then its target, asked of the card as it will resolve (X is on it now).
+    expect(asked.pending?.kind).toBe("target");
+    expect(only(asked.players.p1.resolving).x).toBe(2);
+    const hero = only(
+      legalActions(asked, "p1").filter((action) => action.type === "answer" && JSON.stringify(action.selection) === JSON.stringify([{ pick: "hero", player: "p2" }])),
+    );
+    const done = pbAct(asked, { ...hero, playerId: "p1" });
+    expect(done.players.p2.hero.health).toBe(state.players.p2.hero.health - 2);
+    expect(done.players.p1.mana.current).toBe(3);
+
+    // With no mana the one X there is is 1.
     const broke = playing("r453-x-broke");
     broke.players.p1.mana.current = 0;
-    const was = broke.players.p2.hero.health;
     run(broke, [castNew({ def: xSpell.id })]);
+    expect(broke.pending?.options.map((option) => option.label)).toEqual(["1"]);
+  });
+
+  it("R452 a random cast's X is its caster's current mana, and at least 1", () => {
+    const rich = playing("r452-x-rich");
+    rich.players.p1.mana.current = 3;
+    const before = rich.players.p2.hero.health;
+    run(rich, [castRandom({ query: { defId: xSpell.id }, count: 1 })]);
+    expect(rich.pending).toBeNull();
+    expect(rich.players.p2.hero.health).toBe(before - 3);
+    expect(rich.players.p1.mana.current).toBe(3);
+
+    const broke = playing("r452-x-broke");
+    broke.players.p1.mana.current = 0;
+    const was = broke.players.p2.hero.health;
+    run(broke, [castRandom({ query: { defId: xSpell.id }, count: 1 })]);
     expect(broke.players.p2.hero.health).toBe(was - 1);
   });
 

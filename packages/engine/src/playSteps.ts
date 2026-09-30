@@ -184,7 +184,7 @@ export type PlayRun = {
     exitsFrom?: number;
   };
   /** Set while a prompt this pipeline opened is waiting; says which bucket the answer fills. */
-  awaiting: null | "echoTarget" | "echoMode";
+  awaiting: null | "echoTarget" | "echoMode" | "castX";
   /**
    * R70, R81: a cast's own choices are made. A play carries its targets and modes in the action, and
    * a cast has none, so step 4 asks the caster for them before it places the card (R90: a play's
@@ -286,6 +286,8 @@ export type PlayRun = {
    * which the card's Cry reads as `ctx.manaBeforePlay` (Classic #22 Mid Runner).
    */
   manaBefore?: number;
+  /** R453: the X its caster chose for a cast X card (the `number` prompt's answer), until it is set. */
+  castX?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -1085,6 +1087,8 @@ function castChoicesMade(sink: EngineSink, run: PlayRun, step: PlayStepName = "r
   if (run.castChosen === true) return true;
   const card = stillResolving(sink.state, run);
   if (card === null) return true;
+  // R453: an X card's X first, so its targets and modes are asked of the card as it will resolve.
+  if (!castXChosen(sink, run, card, step)) return false;
   if (run.repeat === null) {
     const declares = declaredTargets(card).length > 0 || declaredModes(card).length > 0;
     if (!declares || run.targets.length > 0 || run.modes.length > 0) {
@@ -1104,6 +1108,40 @@ function castChoicesMade(sink: EngineSink, run: PlayRun, step: PlayStepName = "r
   run.exitsFrom = exitMark(sink.state);
   // A fused card's Cry splits the choices by its ingredients' declarations (R90, R102).
   Object.assign(run, slicesFor(sink.state, run.player, card, run.costPaid, run.targets, run.modes));
+  return true;
+}
+
+/**
+ * R453: a cast X card's X, which its caster chooses (R70, R81) as the cast's first choice — a `number`
+ * prompt over MIN_CHOSEN_X up to their current mana, at least MIN_CHOSEN_X (R348), each option the
+ * number as a mode (`{ pick: "mode", option: "3" }`). A cast pays nothing, so the X costs nothing; it
+ * is stored on the instance, where the card's script and R396 read it. A random cast's X was set as the
+ * cast began: the caster's current mana (`castThroughPipeline`). False while the prompt waits.
+ */
+function castXChosen(sink: EngineSink, run: PlayRun, card: CardInstance, step: PlayStepName): boolean {
+  const state = sink.state;
+  if (!choosesX(state, card) || card.x !== undefined) return true;
+  const most = Math.max(MIN_CHOSEN_X, state.players[run.player].mana.current);
+  if (run.castX !== undefined) {
+    card.x = Math.max(MIN_CHOSEN_X, Math.min(most, run.castX));
+    return true;
+  }
+  if (run.random === true || randomCastOf(state, run.player) !== null) {
+    card.x = most;
+    return true;
+  }
+  const values = Array.from({ length: most - MIN_CHOSEN_X + 1 }, (_, at) => String(MIN_CHOSEN_X + at));
+  run.awaiting = "castX";
+  const opened = openPrompt(sink, {
+    player: run.player,
+    kind: "number",
+    prompt: `${askLabel(step, defOf(state, card.defId).name)}: choose X`,
+    options: values.map((option) => ({ key: `mode:${option}`, label: option, selection: { pick: "mode", option } })),
+    resume: resumeFor(run, PLAY_STEPS.indexOf(step)),
+  });
+  if (opened !== null) return false;
+  run.awaiting = null;
+  card.x = most;
   return true;
 }
 
@@ -1505,6 +1543,13 @@ function driveSteps(sink: EngineSink, run: PlayRun): boolean {
 function fileSelection(run: PlayRun, selection: readonly Selection[]): void {
   const awaiting = run.awaiting;
   run.awaiting = null;
+  if (awaiting === "castX") {
+    // R453: the X a cast's caster chose, applied to the card as the step goes on (`castXChosen`).
+    const picked = selection.find((pick) => pick.pick === "mode");
+    const value = picked?.pick === "mode" ? Number.parseInt(picked.option, 10) : Number.NaN;
+    if (Number.isInteger(value)) run.castX = value;
+    return;
+  }
   const repeat = run.repeat;
   if (repeat === null) return;
   if (awaiting === "echoTarget") repeat.targets.push(...selection);
@@ -1577,9 +1622,9 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
   const random = options.random === true || randomCastOf(state, player) !== null;
   const targetEnemies = options.targetEnemies === true || hasEnchantment(instance, "targetEnemies");
   if (random) countChainCast(state, player);
-  // R453: a cast pays nothing, so its X is not weighed against a price: the caster's current mana, at
-  // least MIN_CHOSEN_X (R348).
-  if (choosesX(state, instance) && instance.x === undefined) {
+  // R452, R453: a random cast's X is the caster's current mana, at least MIN_CHOSEN_X (R348); any
+  // other cast's caster chooses it as the cast's first choice (`castXChosen`).
+  if (random && choosesX(state, instance) && instance.x === undefined) {
     instance.x = Math.max(MIN_CHOSEN_X, state.players[player].mana.current);
   }
   // R453: "then exile it" (Classic #56) — step 7 lands the resolved Spell in exile (R178's mark).
