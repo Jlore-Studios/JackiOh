@@ -98,7 +98,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });
 
-  it('R432 writes a specific cost as "(N) Cost", a price as "costs (N)" and an embiggen price as "Paid (N)"', () => {
+  it("R432 writes a specific cost as the noun (N) Cost, a price as the verb costs (N) and an embiggen price as Paid (N)", () => {
     const wrong = swept.filter((face) => failures(face).some((why) => why.includes("cost") || why.includes("embiggen")));
     expect(wrong.map((face) => `${face.card.id} ${face.face}: ${face.text}`)).toEqual([]);
   });

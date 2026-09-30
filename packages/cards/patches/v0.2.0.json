@@ -1013,11 +1013,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "When your opponent plays a Unit, after its Cry: Transform it into a Sheep Token."
+      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "When your opponent plays a Unit, after its Cry: Transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
+      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
     }
   },
   "core-042": {
@@ -3176,11 +3176,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent has drawn {draws} cards in a turn: They keep one card of their choice and give you the rest of their hand."
+      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent has drawn {draws} cards in a turn: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
+      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
     }
   },
   "classic-010": {
@@ -3926,13 +3926,13 @@
       "attack": 2,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Recruit {units} ({costLimit}) Cost or less Unit."
+      "text": "Cry: Recruit {units} Unit that costs ({costLimit}) or less."
     },
     "radiant": {
       "attack": 4,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Recruit {units} ({costLimit}) Cost or less Units."
+      "text": "Cry: Recruit {units} Units that cost ({costLimit}) or less."
     }
   },
   "classic-032": {
@@ -4154,7 +4154,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nActivates when a player has played {plays} cards in a turn: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     },
     "radiant": {
       "attack": 8,
@@ -4164,7 +4164,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nActivates when a player has played {plays} cards in a turn: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     }
   },
   "classic-039": {
@@ -7545,13 +7545,13 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "While this is in your hand or deck: After you have played {threshold} Spells, Field Spells or Traps in a turn, summon this.\nEnd of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
+      "text": "While this is in your hand or deck: When the Spells, Field Spells and Traps you have played in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "While this is in your hand or deck: After you have played {threshold} Spells, Field Spells or Traps in a turn, summon this.\nEnd of turn: Cast a copy of each Spell, Field Spell and Trap you played this turn."
+      "text": "While this is in your hand or deck: When the Spells, Field Spells and Traps you have played in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of each Spell, Field Spell and Trap you played this turn."
     }
   },
   "classicplus-038": {
@@ -8780,6 +8780,13 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
+    "refs": [
+      "classicplus-065-1",
+      "classicplus-065-2",
+      "classicplus-065-3",
+      "classicplus-065-4",
+      "classicplus-065-5"
+    ],
     "params": [
       {
         "key": "grapes",
@@ -8792,11 +8799,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Add {grapes} Grapes to your hand, each rolled: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%."
+      "text": "Add {grapes} Grapes to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {grapes} Radiant Grapes to your hand, each rolled with Lucky 1: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%."
+      "text": "Add {grapes} Radiant Grapes to your hand, each rolled with Lucky 1: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     }
   },
   "classicplus-067": {
@@ -9425,7 +9432,7 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Add a copy of {cards} random card in your opponent's deck to your hand. Give it Brittle {brittle}."
+      "text": "Add {cards} copy of a random card in your opponent's deck to your hand. Give it Brittle {brittle}."
     },
     "radiant": {
       "keywords": [],
@@ -9485,23 +9492,13 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
-    "params": [
-      {
-        "key": "copyCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "base": {
       "keywords": [],
       "text": "Add a copy of the last Unit, Spell or Field Spell your opponent played to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a copy of the last Unit, Spell or Field Spell your opponent played to your hand. It costs ({copyCost})."
+      "text": "Add a copy of the last Unit, Spell or Field Spell your opponent played to your hand. It costs (0)."
     }
   },
   "classicplus-t-ai-06": {
@@ -9593,11 +9590,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Activates when your opponent has played {plays} cards in a turn: After the last of them resolves, their turn ends."
+      "text": "Activates when the cards your opponent has played in a turn reach {plays}: After the last of them resolves, their turn ends."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activates when your opponent has played {plays} cards in a turn: After the last of them resolves, their turn ends."
+      "text": "Activates when the cards your opponent has played in a turn reach {plays}: After the last of them resolves, their turn ends."
     }
   },
   "classicplus-t-ai-09": {

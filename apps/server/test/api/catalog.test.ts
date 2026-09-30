@@ -7,6 +7,8 @@
 //   * R164 — where L6's ban list lives: server state, never a flag on a card definition, read
 //     through the catalog handle.
 
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,8 +29,8 @@ describe("catalog", () => {
   it("loads packages/cards/catalog.json through the workspace link", async () => {
     expect(catalogUrl().pathname).toContain("packages/cards/catalog.json");
     const catalog = await loadCatalog();
-    // §8 and §7: 100 cards plus 11 tokens.
-    expect(catalog.cardIds.length).toBe(111);
+    // §8, §7 and patch v0.2.0 (B2.1): 268 cards and 49 tokens across Core, Classic and Classic+.
+    expect(catalog.cardIds.length).toBe(317);
     expect(catalog.defs["core-001"]?.name.length).toBeGreaterThan(0);
   });
 
@@ -46,7 +48,7 @@ describe("catalog", () => {
   it("marks tokens as tokens (§9.4 L3: no Token-tagged cards in a deck)", async () => {
     const catalog = await loadCatalog();
     const tokens = catalog.cardIds.filter((id) => catalog.isToken(id));
-    expect(tokens.length).toBe(11);
+    expect(tokens.length).toBe(49);
   });
 
   it("refuses to invent a catalog when the file is missing or malformed", async () => {
@@ -215,8 +217,8 @@ describe("R163 — the catalog endpoint (§9.1, §9.4, R105)", () => {
     expect(body.version).toBe(catalog.version);
     expect(body.version).toMatch(/^c1-[0-9a-f]{12}$/);
 
-    // Whole: §8's 100 cards plus §7's 11 tokens, every one of them.
-    expect(Object.keys(body.defs)).toHaveLength(111);
+    // Whole: all 268 cards and 49 tokens, every one of them.
+    expect(Object.keys(body.defs)).toHaveLength(317);
     expect(body.defs).toEqual(catalog.defs);
 
     // Unprojected: not one field is trimmed off a card on the way out. A trimmed card would be a
@@ -231,12 +233,10 @@ describe("R163 — the catalog endpoint (§9.1, §9.4, R105)", () => {
 
   it('R163 declares `auth: "none"`, like the file it stands in for', () => {
     const routes = createCatalogRoutes();
-    expect(routes).toHaveLength(1);
-    expect(routes[0]?.method).toBe("GET");
-    expect(routes[0]?.path).toBe("/api/catalog");
+    expect(routes.map((r) => `${r.method} ${r.path}`)).toEqual(["GET /api/catalog", "GET /api/catalog/:version"]);
     // "The same bytes for everybody, naming no profile": §9.4's gate is about collection, loadout,
-    // queue and match, and card data is none of those.
-    expect(routes[0]?.auth).toBe("none");
+    // queue and match, and card data is none of those. A patch's snapshot is the same (R388).
+    expect(routes.map((r) => r.auth)).toEqual(["none", "none"]);
   });
 
   it("R163 hands a pending account and an anonymous caller the identical bytes", async () => {
@@ -253,6 +253,61 @@ describe("R163 — the catalog endpoint (§9.1, §9.4, R105)", () => {
     expect(pending.status).toBe(200);
     // It names no profile, so it cannot differ by one.
     expect(await pending.text()).toBe(await anonymous.text());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R388 — card patch history: every patch's catalog, served by version
+// ---------------------------------------------------------------------------
+
+describe("R388 — GET /api/catalog/:version serves the catalog as each patch left it (B4.2)", () => {
+  const PATCHES = new URL("../../../../packages/cards/patches/", import.meta.url);
+
+  async function snapshotFile(version: string): Promise<CardDefs> {
+    return JSON.parse(await readFile(new URL(`${version}.json`, PATCHES), "utf8")) as CardDefs;
+  }
+
+  it("R388 serves every patch in patches.json, whole, to a caller with no account", async () => {
+    const catalog = await loadCatalog({ version: "v0.2.0" });
+    const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
+    const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+
+    for (const { version } of patches) {
+      const response = await router(jsonRequest("GET", `/api/catalog/${version}`));
+      expect(response.status, version).toBe(200);
+      const body = await readJson<CatalogBody>(response);
+      expect(body.version).toBe(version);
+      expect(body.defs, version).toEqual(await snapshotFile(version));
+    }
+  });
+
+  it("R388 shows what a patch changed: v0.1.0 knew 109 entries and Hit Job at (2); v0.2.0 knows 317 and (3)", async () => {
+    const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog: await loadCatalog() }));
+    const first = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/v0.1.0")));
+    const now = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/v0.2.0")));
+    expect(Object.keys(first.defs)).toHaveLength(109);
+    expect(first.defs["core-016"]?.cost).toBe(2);
+    expect(Object.keys(now.defs)).toHaveLength(317);
+    expect(now.defs["core-016"]?.cost).toBe(3);
+  });
+
+  it("R388 serves the version this server runs from the catalog it loaded, whatever it is called", async () => {
+    // An environment that still says an older name for today's catalog (CI's `core-1`) is answered
+    // with the loaded catalog under that name, never a 404.
+    const catalog = await loadCatalog({ version: "core-1" });
+    const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
+    const body = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/core-1")));
+    expect(body.version).toBe("core-1");
+    expect(body.defs).toEqual(catalog.defs);
+  });
+
+  it("R388 answers an unknown or malformed version with 404, and reads no file for it", async () => {
+    const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog: await loadCatalog() }));
+    for (const version of ["v9.9.9", "patches", "..%2Fcatalog", "v0.2.0.json", "%00"]) {
+      const response = await router(jsonRequest("GET", `/api/catalog/${version}`));
+      expect(response.status, version).toBe(404);
+    }
   });
 });
 

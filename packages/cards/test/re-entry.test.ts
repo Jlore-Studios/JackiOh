@@ -59,6 +59,8 @@ const HEROIC_POWER = "core-098";
 const VANILLA = "core-008";
 const HIT_JOB = "core-016";
 const FLOOD = "core-017";
+/** The Coin (§2.1): one more mana this turn, where a test's turn now needs it. */
+const COIN = "core-t-coin";
 const BREAD_AND_BUTTER = "core-018";
 const CUBE = "core-022";
 const SEVEN_SEVEN = "core-025";
@@ -127,13 +129,15 @@ describe("R174: #50 K-Pop Fanatic's delayed steal and a target that left the fie
   it("R174 the steal fizzles on a target that was bounced and replayed before it fired (R76, R78)", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
-      p2: { hand: [FLOOD, SEVEN_SEVEN], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
+      // The Coin pays for the replay: Flood costs (4) since patch v0.2.0 (issue #40).
+      p2: { hand: [FLOOD, SEVEN_SEVEN, COIN], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
     });
     const prey = unitAt(g, "p2", 2);
     g.play(KPOP, { targets: at(prey) });
     g.endTurn();
 
     // p2 bounces every unit, the prey included, and plays the prey again.
+    g.play(COIN);
     g.play(FLOOD);
     g.expectInZone(prey, "hand");
     g.play(prey, { zone: 2 });
@@ -269,7 +273,8 @@ describe("§7, R41, R57: what a copy keeps", () => {
         library: [...LIBRARY],
         mana: 3,
       },
-      p2: { hand: [HIT_JOB, JILLIAX, HIT_JOB], library: [...LIBRARY] },
+      // The Coin pays for Jilliax beside Hit Job, (3) since patch v0.2.0 (issue #40).
+      p2: { hand: [HIT_JOB, JILLIAX, HIT_JOB, COIN], library: [...LIBRARY] },
     });
     const saintess = g.card(SAINTESS);
 
@@ -280,6 +285,7 @@ describe("§7, R41, R57: what a copy keeps", () => {
     g.expectStats(bread, { attack: 3, health: 3 });
 
     // p2 kills the Saintess: her Death makes every other p1 unit Radiant, so the Bread is Armor 3.
+    g.play(COIN);
     g.play(HIT_JOB, { targets: at(saintess) });
     g.play(JILLIAX);
     expect(g.card(bread).radiant).toBe(true);
@@ -495,7 +501,8 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
         library: [...LIBRARY],
       },
       p2: {
-        hand: [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA],
+        // The Coin pays for Flood beside Magic Jammed: Flood costs (4) since patch v0.2.0 (issue #40).
+        hand: [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA, COIN],
         field: [{ def: KPOP, lane: 3 }],
         backrow: [{ def: EXPERIMENTATION, lane: 3 }],
         library: [...LIBRARY],
@@ -513,6 +520,7 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
     expect(g.backrow("p1", 2)?.id).toBe(jammed.id);
     g.endTurn();
     // Turn 10, p2: Magic Jammed locks p1's backrow lane 2, and Flood returns the fused unit to hand.
+    g.play(COIN);
     g.play(MAGIC_JAMMED, { targets: at(jammed) });
     g.play(FLOOD);
     g.expectInZone(fused, "hand");
