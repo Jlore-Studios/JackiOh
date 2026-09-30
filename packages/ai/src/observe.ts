@@ -13,6 +13,7 @@ import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
   SETUP_WORK,
+  announcedFaceDownTo,
   cloneState,
   effectiveCost,
   findDef,
@@ -81,6 +82,10 @@ export function hiddenInstanceIds(state: GameState, seat: PlayerId): Set<string>
   for (const player of PLAYER_IDS) {
     for (const card of state.players[player].backrow) {
       if (card !== null && backrowHiddenFrom(state, card, seat)) hidden.add(card.id);
+    }
+    // R448: a card waiting in the resolving zone to be set face-down is its player's alone.
+    for (const card of state.players[player].resolving) {
+      if (announcedFaceDownTo(state, card, seat)) hidden.add(card.id);
     }
   }
 

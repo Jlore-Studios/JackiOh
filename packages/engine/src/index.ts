@@ -27,5 +27,10 @@ export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
 export * from "./replay";
+// Patch v0.2.0, play pipeline A: the announce window's record (B5 E1, R448) and the targeting point's
+// rules (B5 E5, E9, R450), which the AI's redaction and the combat module read.
+export * from "./announce";
+export * from "./targeting";
+export * from "./targetingPoint";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";
