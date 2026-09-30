@@ -2734,6 +2734,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(432, CARDS_CARD_TEXT_TEST, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
   });
 
+  // R433's client half: apps/web game/dealtDeck.test.tsx "R433 …" (a mostly unknown deck is backs under
+  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck).
+  it("R433 lists a dealt deck with only the cards its owner has been shown", () => {
+    provenIn(433, "../../../apps/web/src/game/dealtDeck.test.tsx", WEB_PLAY_TEST);
+  });
+
+  // R434's client half: apps/web game/reveal.test.tsx and game/Hand.test.tsx "R434 …" (the opponent's
+  // hand turns face up at the end, and the result lists it).
+  it("R434 reveals both hands once the game is over", () => {
+    provenIn(434, "../../../apps/web/src/game/reveal.test.tsx", "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
   // Proved by apps/web fx/constants.test.ts, fx/settings.test.ts, settings/wiring.test.tsx and
   // game/animations.fx.test.ts "R435 …" (the range and step, the clamp, the slider and its readout, and
   // the runner's durations and burst budget at 0.25x and 3x).
@@ -2745,6 +2757,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/settings/wiring.test.tsx",
       WEB_ANIMATIONS_FX_TEST,
     );
+  });
+
+  // Proved by apps/web game/Clock.test.tsx "R439 …" (the thresholds, whose clock, a paused clock, the
+  // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
+  it("R439 marks the last 30 seconds of a turn clock", () => {
+    provenIn(439, "../../../apps/web/src/game/Clock.test.tsx", "../../../apps/web/src/routes/match.test.tsx");
   });
 
   // Proved by cards references.test.ts "R480 …".
@@ -2783,6 +2801,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/audio/voice-lines.test.ts",
       "../../../apps/web/src/audio/voiceData.test.ts",
     );
+  });
+
+  // Proved by apps/web game/Hand.test.tsx "R504 …" (the outline, its size rule, either seat).
+  it("R504 keeps an empty hand's place on the board", () => {
+    provenIn(504, "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
+  // Proved by apps/web routes/play.test.tsx "R505 …".
+  it("R505 shows the queue counts on the mode tiles alone", () => {
+    provenIn(505, WEB_PLAY_TEST);
   });
 
   // Proved by apps/web patches/PatchNotes.test.tsx "R507 …" (the page's grouping, filter and marks),
