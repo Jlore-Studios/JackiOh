@@ -20,7 +20,6 @@ import {
   placePlagueEach,
   placePlagueRandom,
   placePlagueTokens,
-  recruit,
   recruitAll,
   transformBeneath,
 } from "../../src/effects";

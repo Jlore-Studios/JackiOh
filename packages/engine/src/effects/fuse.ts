@@ -198,6 +198,16 @@ function poolFor(ctx: EffectContext, asked: CatalogQueryArgs | undefined): Retur
   return query(excludingDefId(asked ?? {}, ctx.self?.defId ?? ctx.defId));
 }
 
+/**
+ * R23, R470: a card a Fuse may keep — on the field and acting (R77's target), or in a hand or a
+ * library (`into`) — and not Immutable.
+ */
+function keepable(state: GameState, card: CardInstance): boolean {
+  const zone = card.zone.z;
+  if (zone === "field" ? isBuried(state, card) : zone !== "hand" && zone !== "library") return false;
+  return !unitHas(state, card, "Immutable");
+}
+
 /** Where a random ingredient is fused: one named card, or every card of a hand or a library. */
 export type FuseInto = { target: TargetSpec } | { pile: "hand" | "library"; player?: PlayerSpec };
 
@@ -237,8 +247,9 @@ export function fuseRandomInto(args: {
       const pool = poolFor(ctx, args.query);
       if (pool.length === 0) return;
       for (const card of kept) {
-        // A card an earlier fusion of this list has taken off its pile is no longer one to fuse into.
-        if (findInstance(ctx.state, card.id) === undefined) continue;
+        // A card an earlier fusion of this list has taken off its pile is no longer one to fuse into,
+        // and one the Fuse would refuse (R23, R470) draws nothing for it (R129).
+        if (findInstance(ctx.state, card.id) === undefined || !keepable(ctx.state, card)) continue;
         const picked = ctx.rng.pick(pool);
         if (picked === undefined) return;
         const ingredient = newInstance(ctx.state, picked.id, card.owner, { z: "gone", player: card.owner });
@@ -355,7 +366,7 @@ function fuseCandidates(
 /** The prompt `fuseOntoYourCard` opens, answered by `answerFuseOnto` below (R122). */
 export const FUSE_ONTO_HOOK = "fuse:onto";
 
-/** What the prompt carries to its answer: the ingredient, and the piles it was offered from. */
+/** What the prompt carries to its answer: the ingredient to fuse onto the pick. */
 type FuseOntoData = { ingredient: string };
 
 function fuseOntoData(data: Record<string, unknown>): FuseOntoData | null {

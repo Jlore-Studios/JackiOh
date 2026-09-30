@@ -18,7 +18,7 @@ import { makeContext, type EngineSink } from "../src/resolve";
 import type { Effect } from "../src/script";
 import { registerScripts, registeredScripts, scriptsFor } from "../src/scripts";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
-import { fuse, fusedDigest, fusedIngredients, syncFusedScripts } from "../src/subsystems/fuse";
+import { fuse, fusedDigest, fusedIngredients } from "../src/subsystems/fuse";
 import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import {
   GEN_SCRIPTS,
@@ -322,6 +322,15 @@ describe("R470 a fusion keeps a hand or deck card where it is, and 'its cost doe
     expect(fuse(sink, { ingredients: [phantom(state, fuseB.id)], into: locked })).toBeNull();
     expect(sink.events).toEqual([]);
     expect(state.transientDefs).toEqual({});
+
+    // A random fusion into a card the Fuse would refuse draws nothing for it (R129).
+    const cursor = sink.rng.cursor;
+    const targeted = (card: CardInstance): Effect =>
+      fuseRandomInto({ into: { target: { of: "instance", instanceId: card.id } }, query: { defId: LAB_POOL } });
+    run(sink, targeted(locked));
+    run(sink, targeted(gy));
+    expect(sink.rng.cursor).toBe(cursor);
+    expect(sink.events).toEqual([]);
   });
 
   it("R470 the deck fusion: a random card into every deck card, each keeping its cost, hidden from both players (Classic+ #73)", () => {

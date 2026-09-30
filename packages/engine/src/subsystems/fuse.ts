@@ -26,6 +26,14 @@
 // the fused card is that card, with its zone, damage, exertion, counters and memory intact, and the
 // other ingredients cease to exist without dying. So the only instance-level work here is the def
 // id, the summed buffs and the united granted keywords; everything else is deliberately untouched.
+//
+// Patch v0.2.0 (docs/classic-sets.md B5 E23) adds three things, each a ruling of its own. R468: an
+// id that would spell out a list longer than `FUSED_ID_CAP` is a digest of that list instead, and
+// the definition keeps the list (`CardDef.ingredients`), which is what rebuilds a digest's scripts.
+// R469: an ingredient may go in on its Radiant face ("fuse a random Radiant card"), lending that
+// face and its text to both fused forms; the id marks it `*`. R470: the kept instance may be a card
+// in a hand or a library (`into`), which stays where it is, and "its cost doesn't change" keeps the
+// cost it had (`keepCost`).
 
 import type {
   CardCost,
@@ -922,13 +930,14 @@ function craftInHand(
 }
 
 /**
- * §6.3 Fuse per R77. Returns the fused card — the kept target instance, or the crafted hand card —
- * or null when the fusion cannot happen, in which case nothing has changed.
+ * §6.3 Fuse per R77. Returns the fused card — the kept target instance, the kept hand or library
+ * card (R470), or the crafted hand card — or null when the fusion cannot happen, in which case
+ * nothing has changed.
  *
  * It does not happen when there are fewer than two ingredients, when a named target is not on the
- * field, when the target is Immutable (R23: an Immutable permanent is never chosen as a Fuse
- * target, and R61 has the trap fire and do nothing), or when the call names neither a target nor a
- * hand to craft into. A target the caller did not also list as an ingredient is one anyway, so #85
+ * field or a card named `into` is not in a hand or a library, when the kept card is Immutable (R23:
+ * an Immutable permanent is never chosen as a Fuse target, and R61 has the trap fire and do
+ * nothing), or when the call names neither a kept card nor a hand to craft into. A target the caller did not also list as an ingredient is one anyway, so #85
  * may name the played card and its victim separately.
  *
  * An ingredient only ever contributes its definition, so an ingredient that already ceased to exist
