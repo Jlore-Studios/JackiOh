@@ -788,6 +788,10 @@ declare
     ['join_room',                   'definer'],
     ['live_matches',                'definer'],
     ['on_profile_activated',        'definer'],
+    -- 0015, R481: the trigger on app.settings' catalog_version stamp, DEFINER like
+    -- on_profile_activated, the other trigger that grants the launch collection: it runs
+    -- app.grant_launch_collection_all as the owner, whoever stamped the version.
+    ['on_catalog_version_stamped',  'definer'],
     ['profile_is_active',           'definer'],
     ['reap_stale_matches',          'definer'],
     ['redeem_invite_code',          'definer'],

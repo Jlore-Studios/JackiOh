@@ -62,7 +62,10 @@ create trigger settings_grant_catalog_growth
 revoke all on function app.on_catalog_version_stamped() from public;
 
 -- Backfill: whatever the current version holds that an active profile lacks.
-select app.grant_launch_collection_all();
+do $$
+begin
+  perform app.grant_launch_collection_all();
+end $$;
 
 -- ----------------------------------------------------------------------------
 -- Grants: no role may call the trigger function; it runs as the table's
