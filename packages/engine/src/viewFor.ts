@@ -54,6 +54,7 @@ import type {
   PreviewValue,
   Row,
   SideView,
+  TuningChange,
   UnitView,
   Zone,
 } from "@jackioh/shared";
@@ -358,8 +359,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
  */
 function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): string {
   const less = `cost${mod.oncePerTurn === true ? "s" : ""} ${mod.amount} less`;
-  // R363: #77's own words, "Cost (4)+ cards cost (1) less".
-  if (mod.minCurrentCost !== undefined) return `Cost (${mod.minCurrentCost})+ cards cost (${mod.amount}) less`;
+  // R363, R432: #77's own words, "(4)+ Cost cards cost (1) less".
+  if (mod.minCurrentCost !== undefined) return `(${mod.minCurrentCost})+ Cost cards cost (${mod.amount}) less`;
   if (mod.onlyType !== undefined) {
     return mod.oncePerTurn === true ? `Next ${mod.onlyType} ${less}` : `${mod.onlyType}s ${less}`;
   }
@@ -772,8 +773,90 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     case "drawAnswered":
     case "gameOver":
       return event;
+
+    // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+
+    // B5 E1: an announce shows what `cardPlayed` would. A card being set face-down is its zone only
+    // to the other player (R97, R227): the identity and the targets it declared go, the zone stays.
+    case "cardAnnounced": {
+      const unread = (event.faceDown === true && event.player !== viewer) || hidden(event.instanceId);
+      if (!unread) return { ...event, targets: event.targets.map((id) => (hidden(id) ? HIDDEN_ID : id)) };
+      return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID, targets: event.targets.map(() => HIDDEN_ID) };
+    }
+
+    // B5 E1, E2, B3.3: judged by where the card is now (R97) — a countered card in a public pile reads,
+    // one stolen into a hand reads to that hand's owner only, a crumbled card reads once it is in the
+    // graveyard. `byInstanceId` is the countering card, a fired trap by then, judged the same way.
+    case "countered":
+      return {
+        ...event,
+        ...(hidden(event.instanceId) ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID } : {}),
+        ...(event.byInstanceId !== null && hidden(event.byInstanceId) ? { byInstanceId: HIDDEN_ID } : {}),
+      };
+    case "stolen":
+    case "crumbled":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+
+    // B3.4, R386, R177: a change is the card's, and over a library or a hidden hand it would say
+    // which card changed and how — so it stays unread for good for whoever could not read the card
+    // where it changed (`hiddenFrom`), and for whoever cannot read it now.
+    case "degraded":
+    case "upgraded": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, change: HIDDEN_TUNING_CHANGE }
+        : shown;
+    }
+    // Classic+ #41: a number set outright is the card's as well, so it follows `degraded`.
+    case "numberChanged": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, key: HIDDEN_ID, value: 0 }
+        : shown;
+    }
+
+    // B5 E9: a hit, an attack or a pick moves between cards on the field or heroes, all public; a
+    // card that has since gone somewhere unreadable is the sentinel, as on `damage`.
+    case "redirected":
+      return {
+        ...event,
+        fromId: hidden(event.fromId) ? HIDDEN_ID : event.fromId,
+        toId: hidden(event.toId) ? HIDDEN_ID : event.toId,
+        byInstanceId: event.byInstanceId !== null && hidden(event.byInstanceId) ? HIDDEN_ID : event.byInstanceId,
+      };
+
+    // A card on the field acting face-up (an ability, an animation, a quest, a flicker, a mark): public
+    // while it is readable, the sentinel once it has gone somewhere hidden (R97).
+    case "activated":
+    case "animated":
+    case "deanimated":
+    case "flickered":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+    case "questProgressed":
+    case "questCompleted":
+    case "marked":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+
+    // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
+    case "chaosRolled":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+
+    case "turnCutShort":
+      return event.byInstanceId !== null && hidden(event.byInstanceId) ? { ...event, byInstanceId: HIDDEN_ID } : event;
+
+    // Public: a zone, a player, a number.
+    case "unlocked":
+    case "healthSet":
+    case "rolledBack":
+    case "drawLimited":
+      return event.type === "healthSet" && event.sourceId !== null && hidden(event.sourceId)
+        ? { ...event, sourceId: HIDDEN_ID }
+        : event;
   }
 }
+
+/** R386, R177: what a hidden Degrade or Upgrade shows — that a card changed, never how. */
+const HIDDEN_TUNING_CHANGE: TuningChange = { kind: "number", key: HIDDEN_ID, delta: 0 };
 
 /**
  * §10.8: "the last N events for animation". `state.applied` is the only event history a state

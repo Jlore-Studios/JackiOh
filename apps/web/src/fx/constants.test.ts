@@ -79,6 +79,8 @@ const S2 = {
     yourTurn: "Your turn",
     opponentTurn: "Opponent's turn",
     autoEnded: "No moves left",
+    chaosRolled: "Call to Chaos:",
+    turnCutShort: "Turn cut short",
     victory: "Victory",
     defeat: "Defeat",
     draw: "Draw",
