@@ -64,6 +64,10 @@
     "what": "suggestions"
   },
   "rate_limited_until": "2026-09-30T05:30:00Z",
+  "run_requested": {
+    "at": "2026-09-30T06:32:15Z",
+    "item": null
+  },
   "suggest": {
     "last_run": null,
     "requested": false
