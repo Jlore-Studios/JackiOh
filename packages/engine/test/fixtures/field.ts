@@ -9,6 +9,9 @@ import { registerCatalog, registeredCatalog } from "../../src/catalog";
 import { animate } from "../../src/effects/animate";
 import { chooseTarget } from "../../src/effects/choose";
 import { damage } from "../../src/effects/damage";
+import { destroyAll } from "../../src/effects/destroy";
+import { flicker } from "../../src/effects/flicker";
+import { lockLane, lockOwnZone, lockPlayedZone, lockRandomZone, unlockAll } from "../../src/effects/locks";
 import { beginGame, reduce } from "../../src/reduce";
 import type { CardScripts, Effect, Script } from "../../src/script";
 import { registerScripts, registeredScripts } from "../../src/scripts";
@@ -86,7 +89,47 @@ export const listener = def("listener", "Field Trap");
 /** An Animated Field Trap that notes every enemy play and animates: a turret on `cardPlayed`. */
 export const ears = def("ears", "Field Trap", { base: face(1, 5, [ANIMATED]), radiant: face(2, 10, [ANIMATED]) });
 
-export const FIELD_DEFS: CardDef[] = [tesla, springer, asker, spatula, golem, tower, cover, banner, watcher, listener, ears];
+/** A Spell that destroys its caster's backrow, then asks (a pause after a carrier has gone, R446). */
+export const wrecker = def("wrecker", "Spell");
+
+/** Classic+ #34's first mode as a Spell: Lock a random zone on the opponent's side. */
+export const leak = def("leak", "Spell");
+
+/** Classic #84 Lockdown's shape: after a permanent is played, Lock its zone (either player's play). */
+export const lockdown = def("lockdown", "Field Spell", { cost: 2 });
+
+/** Classic+ #1 Doom Shroom's shape: fires on an enemy play and Locks its own zone. */
+export const doom = def("doom", "Trap");
+
+/** Classic #71 Lane Eater's shape: Cry: Lock this lane (Radiant: the enemy side of it). */
+export const eater = def("eater", "Unit", { cost: 3, base: face(4, 4, []), radiant: face(8, 8, []) });
+
+/** Classic+ #77's Unlock half: Unlock every zone. */
+export const unlocker = def("unlocker", "Spell");
+
+/** Classic #14's Radiant move as a Spell: flicker a chosen Unit, then ask (a pause after the flicker). */
+export const blink = def("blink", "Spell");
+
+export const FIELD_DEFS: CardDef[] = [
+  tesla,
+  springer,
+  asker,
+  spatula,
+  golem,
+  tower,
+  cover,
+  banner,
+  watcher,
+  listener,
+  ears,
+  wrecker,
+  leak,
+  lockdown,
+  doom,
+  eater,
+  unlocker,
+  blink,
+];
 
 function both(script: Script): CardScripts {
   return { base: script, radiant: script };
@@ -177,6 +220,30 @@ export const FIELD_SCRIPTS: Record<string, CardScripts> = {
   }),
   [ears.id]: both({
     triggers: [{ id: "fd-ears", on: ["cardPlayed"], when: enemyPlay, run: () => [note("heard"), animate()] }],
+  }),
+  [wrecker.id]: both({
+    cry: () => [
+      destroyAll({ side: "self", rows: ["backrow"] }),
+      chooseTarget({ step: "after", scope: { side: "enemy", of: ["hero"] } }),
+    ],
+    resume: { after: () => [] },
+  }),
+  [leak.id]: both({ cry: () => [lockRandomZone({ side: "enemy" })] }),
+  [lockdown.id]: both({
+    triggers: [{ id: "fd-lockdown", on: ["cardPlayed"], run: () => [lockPlayedZone()] }],
+  }),
+  [doom.id]: both({
+    triggers: [{ id: "fd-doom", on: ["cardPlayed"], when: enemyPlay, run: () => [note("doomed"), lockOwnZone()] }],
+  }),
+  [eater.id]: { base: { cry: () => [lockLane()] }, radiant: { cry: () => [lockLane({ side: "enemy" })] } },
+  [unlocker.id]: both({ cry: () => [unlockAll()] }),
+  [blink.id]: both({
+    targets: [{ kind: "target", min: 1, max: 1 }],
+    cry: () => [
+      flicker({ target: { of: "chosen" } }),
+      chooseTarget({ step: "then", scope: { side: "enemy", of: ["hero"] } }),
+    ],
+    resume: { then: () => [] },
   }),
 };
 
