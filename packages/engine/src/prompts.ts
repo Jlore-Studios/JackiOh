@@ -1,5 +1,7 @@
-// Prompts: `state.pending`, the ten kinds of SPEC §10.6, and the serializable continuation that
-// makes answering one re-enter the script that asked (BUILD M3-T3).
+// Prompts: `state.pending`, the kinds of SPEC §10.6 — Core's ten and patch v0.2.0's five (B5 E18) —
+// and the serializable continuation that makes answering one re-enter the script that asked
+// (BUILD M3-T3). A prompt may be held by a player other than the asking card's controller (B5 E18,
+// `PROMPT_OWNER_KEY`), and an `answer` prompt keeps its key where no view reaches (R465, `ANSWER_KEY`).
 //
 // §9.3: "Mid-action choices are state, not callbacks." Nothing here ever puts a function in state.
 // A paused sequence is named by two plain records instead:

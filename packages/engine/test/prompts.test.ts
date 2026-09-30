@@ -721,7 +721,7 @@ describe("prompts (§10.6, M3-T3)", () => {
 
   it("R81 opens discover, target, mode and hand prompts, and never one of the five play choices", () => {
     // §10.6 lists ten kinds; the module names all ten, since the five play choices stay for later sets,
-    // and B5 E18's five new ones (prompts-kinds.test.ts proves each of those).
+    // and B5 E18's five new ones (prompt-kinds.test.ts proves each of those).
     expect([...PROMPT_KINDS].sort()).toEqual([
       "answer",
       "cell",
