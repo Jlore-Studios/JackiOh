@@ -6,11 +6,12 @@
 
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf } from "../catalog";
+import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { unitHas } from "../layers";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
-import { ceaseToExist, moveToZone, replaceInZone, slotOf, zoneOf, type OffFieldZone } from "../zones";
+import { ceaseToExist, moveToZone, pileAt, replaceInZone, slotOf, zoneOf, type OffFieldZone } from "../zones";
+import { cloneOf } from "./summon";
 import { instanceOnItsStay, resolveTarget, type TargetSpec } from "./targets";
 
 /**
@@ -101,33 +102,39 @@ export function transform(args: TransformTarget & { defId: string; radiant?: boo
     kind: "transform",
     apply(ctx): void {
       const old = instanceOf(ctx, args);
-      if (old === null) return;
-      // R23: Immutable blocks a Transform, which is what a Replace is on the field (§6.3). Off the
-      // field a Replace is no Transform — the card is not rewritten, it ceases to exist and another
-      // takes its place — so R35's "other zones: any card from the pool, same counts" replaces an
-      // Immutable card too, and a library keeps its count whatever it held (§9.1).
-      if (old.zone.z === "field" && unitHas(ctx.state, old, "Immutable")) return;
-
-      const def = defOf(ctx.state, args.defId);
-      const radiant = args.radiant === true;
-      const fromDefId = old.defId;
-      const hiddenFrom = unreadableBy(ctx, old);
-      const replacement =
-        old.zone.z === "field"
-          ? replaceOnField(ctx, old, def, radiant)
-          : replaceOffField(ctx, old, def, radiant);
-      if (replacement === null) return;
-
-      ctx.events.push({
-        type: "transformed",
-        instanceId: old.id,
-        fromDefId,
-        toDefId: replacement.defId,
-        newInstanceId: replacement.id,
-        ...(hiddenFrom.length === 0 ? {} : { hiddenFrom }),
-      });
+      if (old === null || !transformable(ctx, old)) return;
+      replaceCard(ctx, old, defOf(ctx.state, args.defId), args.radiant === true);
     },
   };
+}
+
+/**
+ * R23: Immutable blocks a Transform, which is what a Replace is on the field (§6.3). Off the field a
+ * Replace is no Transform — the card is not rewritten, it ceases to exist and another takes its
+ * place — so R35's "other zones: any card from the pool, same counts" replaces an Immutable card too,
+ * and a library keeps its count whatever it held (§9.1).
+ */
+function transformable(ctx: EffectContext, old: CardInstance): boolean {
+  return !(old.zone.z === "field" && unitHas(ctx.state, old, "Immutable"));
+}
+
+/** Replace `old` with a new card of `def` where it is, and report it; null when the zone refuses it. */
+function replaceCard(ctx: EffectContext, old: CardInstance, def: CardDef, radiant: boolean): CardInstance | null {
+  const fromDefId = old.defId;
+  const hiddenFrom = unreadableBy(ctx, old);
+  const replacement =
+    old.zone.z === "field" ? replaceOnField(ctx, old, def, radiant) : replaceOffField(ctx, old, def, radiant);
+  if (replacement === null) return null;
+
+  ctx.events.push({
+    type: "transformed",
+    instanceId: old.id,
+    fromDefId,
+    toDefId: replacement.defId,
+    newInstanceId: replacement.id,
+    ...(hiddenFrom.length === 0 ? {} : { hiddenFrom }),
+  });
+  return replacement;
 }
 
 /**
@@ -170,6 +177,95 @@ export function vanilla(args: TransformTarget = {}): Effect {
         toDefId: card.defId,
         newInstanceId: card.id,
       });
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Patch v0.2.0: the Transform variants (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Whether `def` could take `old`'s place: on the field only a definition of the same row, as R35
+ * keeps a board card's type (a Unit for a Unit); in a graveyard or exile never a unit token (R11).
+ */
+function canReplace(old: CardInstance, def: CardDef): boolean {
+  const zone = old.zone;
+  if (zone.z === "field") return rowFor(def.type) === zone.row;
+  if (zone.z === "graveyard" || zone.z === "exile") return !(def.token && def.type === "Unit");
+  return zone.z === "hand" || zone.z === "library";
+}
+
+/**
+ * E24, Classic+ #73.1 Classic Golem: "it transforms into a random Classic or Classic+ Unit". A §6.3
+ * Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
+ * card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on
+ * the field, one of its row (R35) — so the draw never lands on one the zone would refuse. Immutable
+ * refuses it (R23), and a refusal or an empty pool draws nothing (R129). `radiant` is the new card's
+ * face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` is Classic Golem's
+ * "the new Unit may attack again this turn" (R424): the new body on the field is not summoning sick
+ * this turn (a new instance's exertion is already fresh).
+ */
+export function transformRandom(
+  args: TransformTarget & { query?: CatalogQueryArgs; radiant?: boolean | "keep"; readyToAttack?: boolean },
+): Effect {
+  return {
+    kind: "transformRandom",
+    apply(ctx): void {
+      const old = instanceOf(ctx, args);
+      if (old === null || !transformable(ctx, old)) return;
+      const pool = query(excludingDefId(args.query ?? {}, ctx.self?.defId ?? ctx.defId)).filter((def) =>
+        canReplace(old, def),
+      );
+      const def = ctx.rng.pick(pool);
+      if (def === undefined) return;
+      const radiant = args.radiant === "keep" ? old.radiant : args.radiant === true;
+      const replacement = replaceCard(ctx, old, def, radiant);
+      if (replacement !== null && args.readyToAttack === true && replacement.zone.z === "field") {
+        delete replacement.summonedTurn;
+      }
+    },
+  };
+}
+
+/**
+ * E24, Classic+ #4 Juhan Biggest Bat: "the cards beneath it become copies of this". Every card dormant
+ * beneath the top of the unit pile `of` names (default the running card, which must be that top) is
+ * Replaced (§6.3) by a copy of the top — R57's copy, with the top's face, buffs, granted keywords,
+ * Vanilla state and X/X — that keeps the old card's owner and controller, its position and its place
+ * in the pile, and stays dormant (R13): when the top leaves, the next copy resumes. An Immutable card
+ * stays as it is (R23). Each replaced card ceases to exist (R35) with a `transformed` event.
+ */
+export function transformBeneath(args: { of?: TargetSpec } = {}): Effect {
+  return {
+    kind: "transformBeneath",
+    apply(ctx): void {
+      const target = resolveTarget(ctx, args.of ?? { of: "self" });
+      if (target === null || target.kind !== "unit") return;
+      const top = target.instance;
+      const at = slotOf(ctx.state, top);
+      if (at === null || at.row !== "units") return;
+      const pile = pileAt(ctx.state, at);
+      if (pile === null || pile[0]?.id !== top.id) return;
+      for (const old of pile.slice(1)) {
+        if (unitHas(ctx.state, old, "Immutable")) continue;
+        const copy = cloneOf(ctx, top, old.owner, { of: { of: "self" } });
+        if (old.position !== undefined) copy.position = old.position;
+        // A new body in the pile, like any Transform result (§4.1).
+        copy.summonedTurn = ctx.state.turn;
+        const hiddenFrom = unreadableBy(ctx, old);
+        if (!replaceInZone(ctx.state, old, copy)) continue;
+        copy.controller = old.controller;
+        ceaseToExist(ctx.state, old);
+        ctx.events.push({
+          type: "transformed",
+          instanceId: old.id,
+          fromDefId: old.defId,
+          toDefId: copy.defId,
+          newInstanceId: copy.id,
+          ...(hiddenFrom.length === 0 ? {} : { hiddenFrom }),
+        });
+      }
     },
   };
 }

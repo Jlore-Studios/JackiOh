@@ -27,10 +27,28 @@
 // other ingredients cease to exist without dying. So the only instance-level work here is the def
 // id, the summed buffs and the united granted keywords; everything else is deliberately untouched.
 
-import type { CardDef, CardFace, CardType, Keyword, PlayerId, Rarity, Selection, Tag } from "@jackioh/shared";
+import type {
+  CardCost,
+  CardDef,
+  CardFace,
+  CardType,
+  FusedIngredient,
+  Keyword,
+  PlayerId,
+  Rarity,
+  Selection,
+  Tag,
+} from "@jackioh/shared";
 import { keywordKey } from "@jackioh/shared";
-import { defOf, fusedIdParts } from "../catalog";
-import { FUSE_COST_CAP } from "../config";
+import {
+  FUSED_DIGEST_MARK,
+  RADIANT_INGREDIENT_MARK,
+  defOf,
+  fusedIdParts,
+  fusedIdSpecs,
+  registerFusedIngredients,
+} from "../catalog";
+import { FUSED_ID_CAP, FUSE_COST_CAP } from "../config";
 import { addToHand } from "../draw";
 import { unitHas, wornStatsOverride } from "../layers";
 import { printedCost } from "../mana";
@@ -46,6 +64,7 @@ import {
   ingredientRecord,
   registerScripts,
   registeredScripts,
+  scriptOf,
   scriptsFor,
 } from "../scripts";
 import { newInstance, type CardInstance, type GameState } from "../state";
@@ -72,6 +91,8 @@ const COST_KEY = "cost";
 const RESUME_KEY = "resume";
 const SET_STAT_KEY = "setStat";
 const CONDITION_MET_KEY = "conditionMet";
+/** R471: a placement multiplier answers a number, so the ingredients' multipliers multiply. */
+const PLAGUE_MULTIPLIER_KEY = "plagueMultiplier";
 
 /** The script keys whose entries carry an `id` that has to stay unique across the ingredients. */
 const TRIGGER_KEYS = ["triggers", "handTriggers"] as const;
@@ -97,6 +118,27 @@ export type FuseArgs = {
   handPrice?: HandPrice;
   /** R352: the hand card is Radiant (radiant Stitching). Absent is R77's non-Radiant hand card. */
   radiant?: boolean;
+  // ---- v0.2.0, generation (E23, R468–R470) ----
+  /**
+   * R470: a card in a hand or a library that the result keeps as its instance, as R77's `target`
+   * keeps one on the field — Classic+ #31 Fusion Lab's hand card, Classic+ #73's deck cards, the
+   * card Classic #78's Radiant face picks from a hand or a deck. It stays where it is; its type is
+   * the result's (R77). A card named here that is not in a hand or a library, or is Immutable (R23),
+   * refuses the fusion. `target` wins when both are named.
+   */
+  into?: CardInstance;
+  /**
+   * R469: the ingredients, by instance id, that go in on their Radiant face — "fuse a random Radiant
+   * card into it", "a Radiant copy of it is fused into this". Such an ingredient puts its Radiant face
+   * and text into both of the fused forms; every other ingredient puts in the face the form is.
+   */
+  radiantIngredients?: readonly string[];
+  /**
+   * R470: "its cost doesn't change" — the kept card (`target` or `into`) keeps the cost it had:
+   * a `costOverride` of its own cost as it stood (its override if it had one), or, for an X-cost or
+   * embiggen card with no override, that printed cost form on the fused definition.
+   */
+  keepCost?: boolean;
 };
 
 /** R352: the two prices a fused hand card can have. */
@@ -182,9 +224,17 @@ function wornFace(def: CardDef, card: CardInstance | undefined, radiant: boolean
   };
 }
 
-/** R77: one face of the fusion — summed stats, united keywords, both texts. */
-function fusedFace(ingredients: readonly CardInstance[], defs: readonly CardDef[], radiant: boolean): CardFace {
-  const faces = defs.map((def, at) => wornFace(def, ingredients[at], radiant));
+/**
+ * R77: one face of the fusion — summed stats, united keywords, both texts. R469: an ingredient that
+ * went in on its Radiant face (`forced`) puts that face into the base form too.
+ */
+function fusedFace(
+  ingredients: readonly CardInstance[],
+  defs: readonly CardDef[],
+  radiant: boolean,
+  forced: readonly boolean[],
+): CardFace {
+  const faces = defs.map((def, at) => wornFace(def, ingredients[at], radiant || forced[at] === true));
   const attack = sumDefined(faces.map((face) => face.attack));
   const health = sumDefined(faces.map((face) => face.health));
   return {
@@ -249,32 +299,77 @@ function rarestOf(defs: readonly CardDef[]): Rarity {
  * two matches that fused different pairs into the same slot shared one registry entry, and the
  * later fusion replaced the scripts of the earlier match's card. The fused scripts are a function of
  * the ingredients' ids and nothing else (`fusedScript`), so an id that carries them names the same
- * scripts in every match that can mint it.
+ * scripts in every match that can mint it. R469: an ingredient that went in on its Radiant face is
+ * written with a trailing `*`, since its scripts are its Radiant ones on both forms.
+ *
+ * R468: the list is spelled out only while it fits `FUSED_ID_CAP`. A card fused onto again and
+ * again (Classic+ #74) nests every earlier id inside the next, so the spelled-out id grows with every
+ * fusion; past the cap the id is `t-<n>:#<digest>`, the digest a pure hash of the very list the id
+ * would have spelled out (`fusedDigest`). It still names one list and so one pair of scripts in every
+ * match (R179), and the definition keeps the list itself (`CardDef.ingredients`), which is where the
+ * scripts are rebuilt from (`syncFusedScripts`).
  */
-function nextTransientId(state: GameState, defs: readonly CardDef[]): string {
+function nextTransientId(state: GameState, specs: readonly FusedIngredient[]): string {
   const taken = (n: number): boolean =>
     Object.keys(state.transientDefs).some((id) => id === `t-${n}` || id.startsWith(`t-${n}:`));
   let n = Object.keys(state.transientDefs).length + 1;
   while (taken(n)) n += 1;
-  return `t-${n}:${defs.map((def) => ingredientName(def.id)).join("+")}`;
+  const body = specs.map(ingredientName).join("+");
+  return body.length <= FUSED_ID_CAP ? `t-${n}:${body}` : `t-${n}:${FUSED_DIGEST_MARK}${fusedDigest(body)}`;
 }
 
 const FUSED_ID = /^t-\d+:/;
 
-/** An ingredient's id as a fused id writes it: in parentheses when it is itself a fused card (R179). */
-function ingredientName(defId: string): string {
-  return FUSED_ID.test(defId) ? `(${defId})` : defId;
+/**
+ * An ingredient as a fused id writes it: in parentheses when it is itself a fused card (R179), and
+ * followed by `*` when it went in on its Radiant face (R469).
+ */
+function ingredientName(spec: FusedIngredient): string {
+  const name = FUSED_ID.test(spec.defId) ? `(${spec.defId})` : spec.defId;
+  return spec.radiant === true ? `${name}${RADIANT_INGREDIENT_MARK}` : name;
+}
+
+/**
+ * R468: a pure, deterministic 64-bit digest of a string, as 16 hex digits — two 32-bit lanes of
+ * multiply-xorshift mixing (the cyrb53 construction, widened to both lanes), so no `crypto` and no
+ * I/O (CLAUDE.md rule 4). It names an ingredient list, not a secret: all it must do is give two
+ * different lists two different ids in any process that could hold both.
+ */
+export function fusedDigest(text: string): string {
+  let h1 = 0xdeadbeef ^ text.length;
+  let h2 = 0x41c6ce57 ^ text.length;
+  for (let at = 0; at < text.length; at += 1) {
+    const code = text.charCodeAt(at);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${(h2 >>> 0).toString(16).padStart(8, "0")}${(h1 >>> 0).toString(16).padStart(8, "0")}`;
 }
 
 /**
  * R179: the ingredient ids a fused def's id names, in ingredient order, or null for an id no Fuse
  * minted (a catalog card's, or a bare `t-<n>`). The inverse of `nextTransientId`: the list is split
  * at the `+` signs outside parentheses, and a parenthesised ingredient loses its parentheses
- * (`catalog.fusedIdParts`, which R387's self-exclusion reads too).
+ * (`catalog.fusedIdParts`, which R387's self-exclusion reads too). R468: a digest id's list comes
+ * from the definitions this process has minted or entered.
  */
 export function fusedIngredients(defId: string): string[] | null {
   const parts = fusedIdParts(defId);
   return parts !== null && parts.length >= FUSE_MIN_INGREDIENTS ? parts : null;
+}
+
+/** R179, R468, R469: `fusedIngredients` with each ingredient's Radiant mark. */
+export function fusedIngredientSpecs(defId: string): FusedIngredient[] | null {
+  const specs = fusedIdSpecs(defId);
+  return specs !== null && specs.length >= FUSE_MIN_INGREDIENTS ? specs : null;
+}
+
+/** E36: a fused definition's lines of code are its ingredients' sum, absent when none has any. */
+function summedLoc(defs: readonly CardDef[]): number | null {
+  const counted = defs.flatMap((def) => (def.loc === undefined ? [] : [def.loc]));
+  return counted.length === 0 ? null : counted.reduce((sum, loc) => sum + loc, 0);
 }
 
 function buildDef(
@@ -282,9 +377,16 @@ function buildDef(
   ingredients: readonly CardInstance[],
   defs: readonly CardDef[],
   targetDef: CardDef | null,
+  forced: readonly boolean[],
+  keptCost: KeptCost | null,
 ): CardDef {
-  const id = nextTransientId(state, defs);
+  const specs: FusedIngredient[] = defs.map((def, at) => ({
+    defId: def.id,
+    ...(forced[at] === true ? { radiant: true as const } : {}),
+  }));
+  const id = nextTransientId(state, specs);
   const refs = unionRefs(defs);
+  const loc = summedLoc(defs);
   return {
     id,
     // Transient defs are not catalog cards, so no random pool or Discover can reach one (§5.1);
@@ -298,11 +400,33 @@ function buildDef(
     // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
     // gives a result that no longer ceases to exist off the field (R11).
     token: defs.every((def) => def.token),
-    cost: fusedCost(state, ingredients),
+    // R470: a kept X-cost or embiggen card that keeps its cost keeps that printed form.
+    cost: keptCost?.form ?? fusedCost(state, ingredients),
     ...(refs === null ? {} : { refs }),
-    base: fusedFace(ingredients, defs, false),
-    radiant: fusedFace(ingredients, defs, true),
+    ...(loc === null ? {} : { loc }),
+    // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
+    // it even when the id is only a digest of it.
+    ingredients: specs,
+    base: fusedFace(ingredients, defs, false, forced),
+    radiant: fusedFace(ingredients, defs, true, forced),
   };
+}
+
+/**
+ * R470: what "its cost doesn't change" writes, read off the kept card before it becomes the fusion:
+ * nothing when it already has a `costOverride` (which the kept instance keeps); for an X-cost or
+ * embiggen card with no cost hook, that printed form (`form`), which the fused definition then
+ * prints; otherwise its own cost as it stands (`override`, R65's printed cost with a hook's computed
+ * one), which becomes its `costOverride`. `costMod` is the instance's and stays, so the card's cost
+ * after the fusion is the one it had before it.
+ */
+type KeptCost = { form?: CardCost; override?: number };
+
+function keptCostOf(state: GameState, kept: CardInstance): KeptCost {
+  if (kept.costOverride !== undefined) return {};
+  const printed = defOf(state, kept.defId).cost;
+  if (typeof printed !== "number" && scriptOf(kept).cost === undefined) return { form: printed };
+  return { override: printedCost(state, kept) };
 }
 
 // ---------------------------------------------------------------------------
@@ -491,6 +615,7 @@ function scriptRecord(script: Script, defId: string, index: number): Record<stri
   delete out[COST_KEY];
   delete out[SET_STAT_KEY];
   delete out[CONDITION_MET_KEY];
+  delete out[PLAGUE_MULTIPLIER_KEY];
   for (const key of TRIGGER_KEYS) {
     const list = out[key];
     if (!Array.isArray(list)) continue;
@@ -533,6 +658,23 @@ function fusedSetStat(scripts: readonly Script[]): Script["setStat"] | undefined
       ...(maxHealth === undefined ? {} : { maxHealth }),
     };
   };
+}
+
+/**
+ * R471: "Plague Tokens placed on this are doubled" (Classic #27). Each ingredient's text multiplies
+ * what is placed on the fused card, so two such texts multiply: a Pestilent Slime fused onto a
+ * Pestilent Slime quadruples, as two doublings in a row do. Each hook is asked about the fused card
+ * at its own ingredient's price (`scripts.asIngredient`, R102).
+ */
+function fusedPlagueMultiplier(scripts: readonly Script[]): Script["plagueMultiplier"] | undefined {
+  const hooks = scripts.map((script) => script.plagueMultiplier);
+  if (hooks.every((hook) => hook === undefined)) return undefined;
+  return (args) =>
+    hooks.reduce(
+      (product, hook, index) =>
+        hook === undefined ? product : product * hook({ ...args, self: asIngredient(args.self, index) }),
+      1,
+    );
 }
 
 type Face = { defId: string; script: Script };
@@ -622,10 +764,14 @@ function fusedConditionMet(scripts: readonly Script[]): Script["conditionMet"] |
   return (ctx) => hooks.some((hook) => hook(ctx) === true);
 }
 
-function fusedScript(defIds: readonly string[], radiant: boolean): Script {
-  const faces: Face[] = defIds.map((defId) => {
-    const pair = scriptsFor(defId);
-    return { defId, script: radiant ? pair.radiant : pair.base };
+/**
+ * One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
+ * whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
+ */
+function fusedScript(specs: readonly FusedIngredient[], radiant: boolean): Script {
+  const faces: Face[] = specs.map((spec) => {
+    const pair = scriptsFor(spec.defId);
+    return { defId: spec.defId, script: radiant || spec.radiant === true ? pair.radiant : pair.base };
   });
   const scripts = faces.map((face) => face.script);
   const combined = combineObjects(
@@ -635,12 +781,14 @@ function fusedScript(defIds: readonly string[], radiant: boolean): Script {
   const conditionMet = fusedConditionMet(scripts);
   const cry = fusedCry(faces);
   const aura = fusedAura(faces);
+  const plagueMultiplier = fusedPlagueMultiplier(scripts);
   return {
     ...combined,
     ...(setStat === undefined ? {} : { setStat }),
     ...(conditionMet === undefined ? {} : { conditionMet }),
     ...(aura === undefined ? {} : { aura }),
     ...(cry === undefined ? {} : { cry }),
+    ...(plagueMultiplier === undefined ? {} : { plagueMultiplier }),
   };
 }
 
@@ -656,10 +804,10 @@ function fusedScript(defIds: readonly string[], radiant: boolean): Script {
  */
 function ensureFused(defId: string, seen: ReadonlySet<string> = new Set()): void {
   if (registeredScripts()[defId] !== undefined || seen.has(defId)) return;
-  const from = fusedIngredients(defId);
+  const from = fusedIngredientSpecs(defId);
   if (from === null) return;
   const inside = new Set([...seen, defId]);
-  for (const ingredient of from) ensureFused(ingredient, inside);
+  for (const ingredient of from) ensureFused(ingredient.defId, inside);
   const scripts: CardScripts = { base: fusedScript(from, false), radiant: fusedScript(from, true) };
   registerScripts({ ...registeredScripts(), [defId]: scripts });
 }
@@ -668,10 +816,16 @@ function ensureFused(defId: string, seen: ReadonlySet<string> = new Set()): void
  * Register any of this state's fused scripts the process's registry lacks (§9.3, R77, R179): a state
  * that came through JSON into a process that never ran its Fuse, or a registry that was replaced
  * wholesale. Cheap when nothing is missing: a state with no transient defs does nothing, and a
- * registered id is left alone.
+ * registered id is left alone. R468: a digest id's list is read off its definition first
+ * (`CardDef.ingredients`), every definition's before any script is rebuilt, so a digest that names
+ * another digest finds both.
  */
 export function syncFusedScripts(state: GameState): void {
-  for (const defId of Object.keys(state.transientDefs)) ensureFused(defId);
+  const defs = Object.values(state.transientDefs);
+  for (const def of defs) {
+    if (def.ingredients !== undefined) registerFusedIngredients(def.id, def.ingredients);
+  }
+  for (const def of defs) ensureFused(def.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -781,7 +935,8 @@ function craftInHand(
  */
 export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
   const state = sink.state;
-  const target = args.target ?? null;
+  // R470: the kept instance — R77's target on the field, or a hand or library card (`into`).
+  const target = args.target ?? args.into ?? null;
   const toHand = args.toHand;
 
   const ingredients: CardInstance[] = [];
@@ -791,7 +946,9 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
   if (ingredients.length < FUSE_MIN_INGREDIENTS) return null;
 
   if (target !== null) {
-    if (target.zone.z !== "field") return null;
+    const zone = target.zone.z;
+    const allowed = args.target !== undefined ? zone === "field" : zone === "hand" || zone === "library";
+    if (!allowed) return null;
     if (unitHas(state, target, "Immutable")) return null;
   } else if (toHand === undefined) {
     return null;
@@ -799,15 +956,22 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
 
   const defs = ingredients.map((card) => defOf(state, card.defId));
   const targetDef = target === null ? null : defOf(state, target.defId);
-  const def = buildDef(state, ingredients, defs, targetDef);
+  const radiantIds = new Set(args.radiantIngredients ?? []);
+  const forced = ingredients.map((card) => radiantIds.has(card.id));
+  // R470: read before the kept card becomes the fusion, whose own cost is R77's.
+  const keptCost = args.keepCost === true && target !== null ? keptCostOf(state, target) : null;
+  const def = buildDef(state, ingredients, defs, targetDef, forced, keptCost);
 
-  // The def is match state; its id names the scripts, which join the process's registry (R179).
+  // The def is match state; its id names the scripts, which join the process's registry (R179), and
+  // a digest id's list joins the process's table of them (R468).
   state.transientDefs[def.id] = def;
+  registerFusedIngredients(def.id, def.ingredients ?? []);
   ensureFused(def.id);
 
   let result: CardInstance;
   if (target !== null) {
     result = keepInstance(state, def, ingredients, target);
+    if (keptCost?.override !== undefined) result.costOverride = keptCost.override;
     // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included —
     // and "one created later rolls when it is created". The ingredient's rolled power ceased to exist
     // with it, and the kept instance's memory is the target's (R77), so without the roll the card

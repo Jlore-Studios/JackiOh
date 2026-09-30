@@ -230,4 +230,14 @@ export const AI_TUTORIAL: Handicap = {
 
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
+// generation (E19, E23–E25), below A6a's prompts constants:
+/**
+ * R468: the longest ingredient list a fused id spells out (`t-<n>:<a>+<b>`, R179), in characters of
+ * the part after `t-<n>:`. A longer one — a card fused onto again and again, Classic+ #74 — is named
+ * by a digest of that list instead (`t-<n>:#<hex>`), and its definition keeps the whole list.
+ */
+export const FUSED_ID_CAP = 120;
+/** R471: the placement multiplier of a card that doubles nothing (the Plague Tokens placed as written). */
+export const PLAGUE_MULTIPLIER_NONE = 1;
+
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----

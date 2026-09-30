@@ -292,6 +292,13 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
+  /**
+   * B5 E19, R471: "Plague Tokens placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
+   * its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
+   * receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
+   * A fused card's multipliers multiply (`subsystems/fuse`).
+   */
+  plagueMultiplier?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
 };
 
 /**

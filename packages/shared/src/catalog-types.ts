@@ -228,9 +228,19 @@ export type CardDef = {
    * Radiant forms).
    */
   radiantFallback?: true;
+  /**
+   * R179, R468, R469: a fused definition's ingredients, in ingredient order — the definition each
+   * was, and `radiant` when it went into both of the fused forms on its Radiant face ("fuse a random
+   * Radiant card"). Only a Fuse writes it. While the list is short the id spells it out too; past
+   * `FUSED_ID_CAP` the id is a digest of it, and this list is what rebuilds the scripts.
+   */
+  ingredients?: FusedIngredient[];
   base: CardFace;
   radiant: CardFace;
 };
+
+/** R179, R469: one ingredient of a fused definition (`CardDef.ingredients`). */
+export type FusedIngredient = { defId: string; radiant?: true };
 
 export type CardDefs = Readonly<Record<string, CardDef>>;
 

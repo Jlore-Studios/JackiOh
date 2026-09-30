@@ -189,4 +189,22 @@ export { forEachCard } from "./each";
 
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
 
+// generation, below A6a's prompt verbs — Plague placements and removal (B5 E19, R471):
+export {
+  PLAGUE_PLACEMENT_HOOK,
+  consumePlague,
+  placePlague,
+  placePlagueEach,
+  placePlagueRandom,
+  placePlagueTokens,
+} from "./plague";
+// the Fuse variants (B5 E23, R468–R470):
+export { FUSE_ONTO_HOOK, fuseGenerated, fuseOntoYourCard, fuseRandomInto } from "./fuse";
+export type { FuseInto, FuseOntoPile } from "./fuse";
+// the Transform variants (B5 E24):
+export { transformBeneath, transformRandom } from "./transform";
+// the Recruit extensions (B5 E25; `recruit` above gained `from`, `whose` and `count`):
+export { recruitAll } from "./summon";
+export type { RecruitSource } from "./summon";
+
 // ---- v0.2.0 verbs: Core patches (R426–R437) ----
