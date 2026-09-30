@@ -97,8 +97,15 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * Patch v0.1.1 (R360–R366) re-recorded it by the procedure above: its decks hold #1, #8, #20, #25,
  * #56, #77, #81 and #92, whose stats, keywords or rules the patch changed, so the same seed plays a
  * different game. 37 actions, still won by p1 by hero death.
+ *
+ * Patch v0.2.0's announce (R448) and play records (R451) moved it and not the game, under the
+ * exception above: every play now emits `cardAnnounced` before it moves, which the frontier numbers
+ * from `nextSeq`, so every id numbered after a play is one higher per play; and the state records
+ * each player's plays by type this turn (`turnLog.playedByType`), by tag this game and their last
+ * face-up play (`gameLog`), and the last Spell played (`lastSpell`). The same 37 actions fold with no
+ * refusal to the same end, won by p1 by hero death.
  */
-const EXPECTED_HASH = "2d546ddf";
+const EXPECTED_HASH = "eb10195c";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;
