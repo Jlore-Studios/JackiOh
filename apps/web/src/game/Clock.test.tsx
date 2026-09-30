@@ -11,7 +11,11 @@
 //
 // Every duration comes from `apps/server/src/config.ts`; no test below spells a number of seconds.
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -21,7 +25,19 @@ import {
   PROMPT_CLOCK_MS,
   TURN_CLOCK_MS,
 } from "../../../server/src/config.ts";
-import Clock, { formatClock, readClock, type ClockFrame, type ClockProps } from "./Clock.tsx";
+import Clock, {
+  formatClock,
+  readClock,
+  turnKeyOf,
+  useFrameFor,
+  type ClockFrame,
+  type ClockLine,
+  type ClockProps,
+} from "./Clock.tsx";
+import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "./clockConstants.ts";
+import { NO_URGENCY, fuseGeometry, readUrgency, turnClockUrgency } from "./clockUrgency.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { setReducedMotion } from "../test/setup.ts";
 
 afterEach(cleanup);
 
@@ -316,5 +332,220 @@ describe("R268 — while both mulligans are open, one mulligan clock for both se
       expect(line, id).toHaveTextContent(formatClock(MULLIGAN_CLOCK_MS));
     }
     expect(screen.queryByTestId("turn-clock")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R439: the last 30 seconds of a turn clock
+// ---------------------------------------------------------------------------------------------
+
+describe("R439 — the last 30 seconds of a turn clock", () => {
+  afterEach(() => {
+    setReducedMotion(false);
+    window.localStorage.clear();
+    __resetSettingsForTests();
+  });
+
+  /** A turn line with `remainingMs` left, running unless `paused`. */
+  function turnLine(remainingMs: number | null, over: Partial<ClockLine> = {}): ClockLine {
+    return { side: "you", kind: "turn", remainingMs, totalMs: TURN_CLOCK_MS, paused: false, ...over };
+  }
+
+  /** The viewer's (p1's) turn clock with `ms` left on it, in the frame the server pushed. */
+  function finalFrame(ms: number): ClockFrame {
+    return frame({ turnDeadline: NOW + ms });
+  }
+
+  it("R439 the thresholds: urgent from 30 seconds, sharper from 10, as the readout rounds them", () => {
+    expect(turnClockUrgency(turnLine(TURN_CLOCK_FINAL_MS + 1))).toBe("none");
+    expect(formatClock(TURN_CLOCK_FINAL_MS + 1), "one more millisecond still reads 31s").not.toBe(formatClock(TURN_CLOCK_FINAL_MS));
+    expect(turnClockUrgency(turnLine(TURN_CLOCK_FINAL_MS))).toBe("final");
+    expect(turnClockUrgency(turnLine(TURN_CLOCK_LAST_MS + 1))).toBe("final");
+    expect(turnClockUrgency(turnLine(TURN_CLOCK_LAST_MS))).toBe("last10");
+    expect(turnClockUrgency(turnLine(0))).toBe("last10");
+    expect(turnClockUrgency(turnLine(-500)), "past the deadline, until the server ends the turn").toBe("last10");
+    expect(TURN_CLOCK_FINAL_MS).toBeLessThan(TURN_CLOCK_MS);
+    expect(TURN_CLOCK_LAST_MS).toBeLessThan(TURN_CLOCK_FINAL_MS);
+  });
+
+  it("R439 only a running turn clock has a final stretch: never a prompt's, the mulligan's, an idle side or no number", () => {
+    const ms = TURN_CLOCK_LAST_MS;
+    expect(turnClockUrgency(turnLine(ms, { kind: "prompt", totalMs: PROMPT_CLOCK_MS }))).toBe("none");
+    expect(turnClockUrgency(turnLine(ms, { kind: "mulligan", totalMs: MULLIGAN_CLOCK_MS }))).toBe("none");
+    expect(turnClockUrgency(turnLine(ms, { kind: "idle" }))).toBe("none");
+    expect(turnClockUrgency(turnLine(null))).toBe("none");
+    expect(turnClockUrgency(null)).toBe("none");
+
+    // The mulligan window's one clock, and a prompt held by the other seat, rendered.
+    const mulligan = readClock(props({ frame: frame({ turnDeadline: null, promptDeadline: NOW + ms }), mulligan: true }), 0);
+    expect(readUrgency(mulligan)).toEqual(NO_URGENCY);
+    render(
+      <Clock
+        {...props({
+          frame: frame({ turnDeadline: null, promptDeadline: NOW + ms }),
+          activePlayer: "p2",
+          promptHolder: "p1",
+          monotonic: monotonicAt({ ms: 0 }),
+        })}
+      />,
+    );
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-kind", "prompt");
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-urgency", "none");
+    expect(document.querySelector(".clock")).toHaveAttribute("data-clock-urgency", "none");
+  });
+
+  it("R439 a paused clock (a null turn deadline) shows no urgency, whatever was left on it", () => {
+    const paused = props({
+      frame: frame({ turnDeadline: null, promptDeadline: NOW + PROMPT_CLOCK_MS }),
+      activePlayer: "p1",
+      promptHolder: "p2",
+      youMs: TURN_CLOCK_LAST_MS,
+      monotonic: monotonicAt({ ms: 0 }),
+    });
+    const readout = readClock(paused, 0);
+    expect(readout.you.paused).toBe(true);
+    expect(readout.you.remainingMs).toBe(TURN_CLOCK_LAST_MS);
+    expect(readUrgency(readout)).toEqual(NO_URGENCY);
+
+    render(<Clock {...paused} />);
+    const root = document.querySelector(".clock");
+    expect(root).toHaveAttribute("data-clock-urgency", "none");
+    expect(root).toHaveAttribute("data-clock-side", "");
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-urgency", "none");
+    expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
+  });
+
+  it("R439 whose clock: the viewer's own final stretch is the urgent readout and the fuse", () => {
+    const left = TURN_CLOCK_FINAL_MS - 8_000;
+    render(<Clock {...props({ frame: finalFrame(left), activePlayer: "p1", viewer: "p1", monotonic: monotonicAt({ ms: 0 }) })} />);
+
+    const root = document.querySelector(".clock");
+    expect(root).toHaveAttribute("data-clock-urgency", "final");
+    expect(root).toHaveAttribute("data-clock-side", "you");
+    expect(root).toHaveAttribute("data-motion", "full");
+
+    const line = screen.getByTestId("clock-you");
+    expect(line).toHaveAttribute("data-urgency", "final");
+    // Read by words and shape, not colour alone: a timer with a name, the words and the gauge.
+    expect(line).toHaveAttribute("role", "timer");
+    expect(line).toHaveAttribute("aria-label", `Your turn ends in ${String(left / 1000)} seconds`);
+    expect(line).toHaveTextContent("Your turn");
+    expect(line).toHaveTextContent(formatClock(left));
+    expect(line.querySelector("svg.clock-gauge")).not.toBeNull();
+    expect(screen.getByTestId("clock-opponent")).toHaveAttribute("data-urgency", "none");
+
+    const fuse = screen.getByTestId("turn-clock-fuse");
+    expect(fuse).toHaveAttribute("data-urgency", "final");
+    expect(fuse).toHaveAttribute("aria-hidden", "true");
+    expect(fuse.querySelectorAll(".clock-fuse-edge")).toHaveLength(4);
+    expect(screen.getByTestId("turn-clock")).toHaveAttribute("data-urgency", "final");
+  });
+
+  it("R439 whose clock: the opponent's final stretch is the quieter readout, with no fuse", () => {
+    const left = TURN_CLOCK_FINAL_MS - 1_000;
+    render(<Clock {...props({ frame: finalFrame(left), activePlayer: "p2", viewer: "p1", monotonic: monotonicAt({ ms: 0 }) })} />);
+    const root = document.querySelector(".clock");
+    expect(root).toHaveAttribute("data-clock-urgency", "final");
+    expect(root).toHaveAttribute("data-clock-side", "opponent");
+    const line = screen.getByTestId("clock-opponent");
+    expect(line).toHaveAttribute("data-urgency", "final");
+    expect(line).toHaveTextContent("Their turn");
+    expect(line).toHaveAttribute("aria-label", `Their turn ends in ${String(left / 1000)} seconds`);
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-urgency", "none");
+    expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
+  });
+
+  it("R439 the stretch starts as the clock ticks into it, and sharpens in the last 10, with no new frame", () => {
+    const at = { ms: 0 };
+    const pinned = props({ frame: finalFrame(TURN_CLOCK_FINAL_MS + 2_000), activePlayer: "p1", monotonic: monotonicAt(at) });
+    const view = render(<Clock {...pinned} />);
+    const root = (): Element | null => document.querySelector(".clock");
+    expect(root()).toHaveAttribute("data-clock-urgency", "none");
+    expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
+
+    at.ms = 2_000;
+    view.rerender(<Clock {...pinned} />);
+    expect(root()).toHaveAttribute("data-clock-urgency", "final");
+    const fuse = screen.getByTestId("turn-clock-fuse");
+    // At the start of the stretch the whole fuse is left.
+    for (const edge of Array.from(fuse.querySelectorAll<HTMLElement>(".clock-fuse-edge"))) {
+      expect(edge.style.getPropertyValue("--lit")).toBe("1");
+    }
+
+    at.ms = 2_000 + TURN_CLOCK_FINAL_MS - TURN_CLOCK_LAST_MS;
+    view.rerender(<Clock {...pinned} />);
+    expect(root()).toHaveAttribute("data-clock-urgency", "last10");
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-urgency", "last10");
+    expect(screen.getByTestId("turn-clock-fuse")).toHaveAttribute("data-urgency", "last10");
+    expect(screen.getByTestId("clock-you")).toHaveTextContent(formatClock(TURN_CLOCK_LAST_MS));
+  });
+
+  it("R439 under reduced motion (the panel's switch or the media query) nothing moves and the urgent readout stays", () => {
+    for (const reduce of [() => writeSettings({ reduceMotion: true }), () => setReducedMotion(true)]) {
+      reduce();
+      render(<Clock {...props({ frame: finalFrame(TURN_CLOCK_LAST_MS), activePlayer: "p1", monotonic: monotonicAt({ ms: 0 }) })} />);
+      const root = document.querySelector(".clock");
+      expect(root).toHaveAttribute("data-motion", "reduced");
+      expect(root).toHaveAttribute("data-clock-urgency", "last10");
+      // No fuse at all; the readout keeps its words, its gauge and its urgent state.
+      expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
+      const line = screen.getByTestId("clock-you");
+      expect(line).toHaveAttribute("data-urgency", "last10");
+      expect(line).toHaveTextContent("Your turn");
+      expect(line.querySelector("svg.clock-gauge")).not.toBeNull();
+      cleanup();
+      setReducedMotion(false);
+      window.localStorage.clear();
+      __resetSettingsForTests();
+    }
+
+    // clock.css: every motion of the stretch stops under both switches, and the fuse goes.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "clock.css"), "utf8").replace(/\s+/g, " ");
+    expect(css).toContain('.clock[data-motion="reduced"] *, .clock[data-motion="reduced"] .clock-line { animation: none !important; transition: none !important; }');
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \.clock \*, \.clock \.clock-line \{ animation: none !important; transition: none !important; \} \.clock-fuse \{ display: none; \}/);
+    expect(css).toContain(':root[data-reduce-motion="true"] .clock-fuse, :root[data-reduce-motion="true"] .hand-you::before { display: none; }');
+    // The heartbeat only runs under full motion, and the fuse never takes the pointer.
+    expect(css).toContain('.clock[data-motion="full"][data-clock-side="you"]');
+    expect(css).toMatch(/\.clock-fuse \{ position: fixed; inset: 0; z-index: 37; pointer-events: none; \}/);
+  });
+
+  it("R439 the fuse burns clockwise from the top-left corner, one edge per quarter", () => {
+    expect(fuseGeometry(1)).toEqual({ edges: [1, 1, 1, 1], spark: { x: 0, y: 0 } });
+    const half = fuseGeometry(0.5);
+    expect(half.edges).toEqual([0, 0, 1, 1]);
+    expect(half.spark, "half burnt: at the bottom-right corner").toEqual({ x: 100, y: 100 });
+    const eighth = fuseGeometry(7 / 8);
+    expect(eighth.edges).toEqual([0.5, 1, 1, 1]);
+    expect(eighth.spark).toEqual({ x: 50, y: 0 });
+    expect(fuseGeometry(3 / 8).spark).toEqual({ x: 50, y: 100 });
+    expect(fuseGeometry(1 / 8).spark).toEqual({ x: 0, y: 50 });
+    expect(fuseGeometry(0).edges).toEqual([0, 0, 0, 0]);
+    expect(fuseGeometry(2).edges, "clamped").toEqual([1, 1, 1, 1]);
+  });
+
+  it("R439 a turn clock no seat holds warns nobody", () => {
+    // A frame with a deadline but no active player named (the readout's `side: null`).
+    const readout = readClock(props({ frame: finalFrame(TURN_CLOCK_LAST_MS), activePlayer: null }), 0);
+    expect(readout.turn?.side).toBeNull();
+    expect(readUrgency(readout)).toEqual(NO_URGENCY);
+  });
+
+  it("R439 hands on a frame only while the view is on the turn it arrived in", () => {
+    const first = finalFrame(TURN_CLOCK_LAST_MS);
+    const next = finalFrame(TURN_CLOCK_MS);
+    type HookProps = { f: ClockFrame | null; key: string | null };
+    const start: HookProps = { f: first, key: "p1:3" };
+    const { result, rerender } = renderHook(({ f, key }: HookProps) => useFrameFor(f, key), { initialProps: start });
+    expect(result.current).toBe(first);
+    // The next turn's view lands before its frame: the last turn's deadline is not read against it.
+    rerender({ f: first, key: "p2:4" });
+    expect(result.current).toBeNull();
+    rerender({ f: next, key: "p2:4" });
+    expect(result.current).toBe(next);
+    rerender({ f: null, key: "p2:4" });
+    expect(result.current).toBeNull();
+    expect(turnKeyOf({ active: "p2", turn: 4, result: null })).toBe("p2:4");
+    expect(turnKeyOf({ active: "p2", turn: 4, result: { winner: "p1" } })).toBeNull();
+    expect(turnKeyOf(null)).toBeNull();
   });
 });

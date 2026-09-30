@@ -1,0 +1,419 @@
+/* The match clock's readout and the last 30 seconds of a turn (R439). Clock.tsx lays the readout
+   out on the match bar; this file draws it, and the final stretch it announces:
+
+     - the running side's line turns into a red pill: an hourglass in a gauge that empties with the
+       stretch, "Your turn" / "Their turn", and digits that pop in each second (sharper and bigger
+       in the last 10). It reads by its words and its shape, not by colour alone;
+     - on the viewer's own turn an ember fuse burns round the edge of the screen (fixed, in the
+       page's margin, blind to the pointer, under the effects layer's 38) and a heartbeat glows up
+       from under the viewer's hand, quicker in the last 10;
+     - the opponent's final stretch is the quieter pill alone: no pulse, no fuse, no heartbeat.
+
+   Reduced motion (the media query, or `data-motion="reduced"` from the settings panel's switch,
+   which also sets `<html data-reduce-motion>`) stops all of it and keeps the static urgent pill.
+   None of it covers a card: the fuse sits in the shell's padding, and the heartbeat is painted
+   under the hand's cards (`.hand-slot` is positioned and comes after it). */
+
+.clock {
+  --clock-urgent: #ef4444;
+  --clock-urgent-deep: rgb(127 29 29 / 72%);
+  --clock-urgent-ink: #fee2e2;
+  --clock-ember: #fb923c;
+  --clock-ember-hot: #fde68a;
+
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.clock-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Tools and tests read these; a player reads the two side lines (see Clock.tsx). */
+.clock-line--aux {
+  display: none;
+}
+
+.clock-side-label {
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.clock-digits {
+  display: inline-block;
+  min-width: 2.6ch;
+  color: var(--text);
+  font-weight: 700;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ the urgent readout --- */
+
+.clock-line[data-urgency="final"],
+.clock-line[data-urgency="last10"] {
+  padding: 2px 10px 2px 4px;
+  border: 1px solid var(--clock-urgent);
+  border-radius: 999px;
+  background: var(--clock-urgent-deep);
+  color: var(--clock-urgent-ink);
+  font-size: 1.12em;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%), 0 0 12px rgb(239 68 68 / 45%);
+}
+
+.clock-line[data-urgency="last10"] {
+  border-width: 2px;
+  font-size: 1.26em;
+}
+
+.clock-line[data-urgency="final"] .clock-side-label,
+.clock-line[data-urgency="last10"] .clock-side-label {
+  color: var(--clock-urgent-ink);
+}
+
+.clock-line[data-urgency="final"] .clock-digits,
+.clock-line[data-urgency="last10"] .clock-digits {
+  color: #fff;
+  font-weight: 800;
+}
+
+.clock-gauge {
+  width: 1.5em;
+  height: 1.5em;
+  flex: 0 0 auto;
+  fill: none;
+}
+
+.clock-gauge-track {
+  stroke: rgb(255 255 255 / 18%);
+  stroke-width: 2.5;
+}
+
+.clock-gauge-fill {
+  stroke: var(--clock-ember-hot);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 200ms linear;
+}
+
+.clock-gauge-glass {
+  stroke: currentcolor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* The viewer's own pill breathes a red glow once a second, and each new second pops in. */
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"] {
+  animation: clock-pill-pulse 1s ease-in-out infinite;
+}
+
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"] .clock-digits {
+  animation: clock-tick 320ms ease-out both;
+}
+
+/* The last 10: a sharper tick, a harder pulse, and the hourglass shivers. */
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"] {
+  animation: clock-pill-pulse 500ms ease-in-out infinite;
+}
+
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"] .clock-digits {
+  animation: clock-tick-sharp 200ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"] .clock-gauge {
+  animation: clock-shiver 1s steps(2, end) infinite;
+}
+
+/* The opponent's final stretch is quieter: the pill in the opponent's muted red, no pulse, no pop. */
+.clock[data-clock-side="opponent"] .clock-line[data-urgency="final"],
+.clock[data-clock-side="opponent"] .clock-line[data-urgency="last10"] {
+  border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
+  background: color-mix(in srgb, var(--opponent) 22%, var(--bg-raised));
+  box-shadow: none;
+  font-size: 1em;
+}
+
+.clock[data-clock-side="opponent"] .clock-gauge-fill {
+  stroke: color-mix(in srgb, var(--opponent) 60%, white);
+}
+
+@keyframes clock-pill-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 35%), 0 0 8px rgb(239 68 68 / 35%);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 35%), 0 0 18px 3px rgb(239 68 68 / 70%);
+  }
+}
+
+@keyframes clock-tick {
+  0% {
+    transform: scale(1.3);
+    color: var(--clock-ember-hot);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes clock-tick-sharp {
+  0% {
+    transform: scale(1.55);
+    color: #fff;
+    text-shadow: 0 0 10px var(--clock-urgent);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes clock-shiver {
+  0% {
+    transform: rotate(-8deg);
+  }
+
+  100% {
+    transform: rotate(8deg);
+  }
+}
+
+/* --------------------------------------------------------------------------- the fuse --- */
+
+/* Four cords, one per edge of the screen, each scaled to what is left of it (`--lit`, Clock.tsx
+   `TurnFuse`), and the spark at the burning end. The cords are 3px in the shell's padding (12px,
+   6px on a phone), so they frame the game without touching it. */
+.clock-fuse {
+  position: fixed;
+  inset: 0;
+  z-index: 37;
+  pointer-events: none;
+}
+
+.clock-fuse-edge {
+  position: absolute;
+  background:
+    repeating-linear-gradient(var(--fuse-angle, 90deg), rgb(120 53 15 / 55%) 0 5px, transparent 5px 9px),
+    linear-gradient(var(--fuse-angle, 90deg), var(--clock-ember), var(--clock-ember-hot));
+  box-shadow: 0 0 8px rgb(251 146 60 / 75%);
+  transition: transform 200ms linear;
+  will-change: transform;
+}
+
+.clock-fuse-edge--top {
+  --fuse-angle: 90deg;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  height: 3px;
+  transform: scaleX(var(--lit));
+  transform-origin: right center;
+}
+
+.clock-fuse-edge--right {
+  --fuse-angle: 180deg;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  width: 3px;
+  transform: scaleY(var(--lit));
+  transform-origin: center bottom;
+}
+
+.clock-fuse-edge--bottom {
+  --fuse-angle: 270deg;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  height: 3px;
+  transform: scaleX(var(--lit));
+  transform-origin: left center;
+}
+
+.clock-fuse-edge--left {
+  --fuse-angle: 0deg;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: 3px;
+  transform: scaleY(var(--lit));
+  transform-origin: center top;
+}
+
+/* The burning head: a white-hot core in an orange halo, flickering, throwing sparks. `left`/`top`
+   are percentages of the screen from Clock.tsx; the margins centre it on the cord. */
+.clock-fuse-spark {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 22%, var(--clock-ember-hot) 38%, var(--clock-ember) 60%, transparent 72%);
+  box-shadow: 0 0 12px 4px rgb(251 146 60 / 70%);
+  transition:
+    left 200ms linear,
+    top 200ms linear;
+  animation: clock-spark-flicker 140ms steps(2, end) infinite alternate;
+}
+
+.clock-fuse-spark::before,
+.clock-fuse-spark::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--clock-ember-hot);
+  box-shadow:
+    6px -4px 0 0 var(--clock-ember),
+    -5px -7px 0 -0.5px var(--clock-ember-hot),
+    3px 7px 0 -0.5px var(--clock-ember);
+  animation: clock-spark-throw 520ms ease-out infinite;
+}
+
+.clock-fuse-spark::after {
+  animation-delay: -260ms;
+  rotate: 150deg;
+}
+
+.clock-fuse[data-urgency="last10"] .clock-fuse-edge {
+  box-shadow: 0 0 12px 1px rgb(239 68 68 / 85%);
+}
+
+.clock-fuse[data-urgency="last10"] .clock-fuse-spark {
+  width: 18px;
+  height: 18px;
+  margin: -7px 0 0 -7px;
+  box-shadow: 0 0 18px 7px rgb(239 68 68 / 70%);
+  animation-duration: 90ms;
+}
+
+@keyframes clock-spark-flicker {
+  0% {
+    opacity: 0.8;
+    scale: 0.85;
+  }
+
+  100% {
+    opacity: 1;
+    scale: 1.15;
+  }
+}
+
+@keyframes clock-spark-throw {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.4);
+  }
+}
+
+/* --------------------------------------------------------------------- the heartbeat --- */
+
+/* Under the viewer's hand, over its own background and under its cards (every `.hand-slot` and the
+   empty hand's outline are positioned and come after this in the tree), a red glow rises from the
+   bottom edge and beats: lub-dub, rest. Match-bar clock to board, so the selector goes through the
+   route's shell. At rest (and under reduced motion, where it does not beat at all) it is not drawn. */
+.app-shell:has(> .match-bar .clock[data-motion="full"][data-clock-side="you"]:is([data-clock-urgency="final"], [data-clock-urgency="last10"]))
+  .hand-you::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(130% 110% at 50% 100%, rgb(239 68 68 / 60%), rgb(239 68 68 / 18%) 45%, transparent 75%);
+  opacity: 0.2;
+  pointer-events: none;
+  will-change: opacity;
+  animation: clock-heartbeat 1.2s ease-out infinite;
+}
+
+.app-shell:has(> .match-bar .clock[data-motion="full"][data-clock-side="you"][data-clock-urgency="last10"])
+  .hand-you::before {
+  animation-duration: 700ms;
+}
+
+@keyframes clock-heartbeat {
+  0%,
+  55%,
+  100% {
+    opacity: 0.2;
+  }
+
+  10% {
+    opacity: 0.95;
+  }
+
+  22% {
+    opacity: 0.35;
+  }
+
+  32% {
+    opacity: 0.8;
+  }
+}
+
+/* ---------------------------------------------------------------------- phones --------- */
+
+/* The match bar is one line on a phone: the side names step aside while nothing is urgent, and the
+   urgent pill keeps its words. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .clock {
+    gap: 8px;
+  }
+
+  .clock-line[data-urgency="none"] .clock-side-label {
+    display: none;
+  }
+
+  .clock-line[data-urgency="final"],
+  .clock-line[data-urgency="last10"] {
+    font-size: 1.05em;
+  }
+}
+
+/* ----------------------------------------------------------------- reduced motion ------ */
+
+/* Nothing of the final stretch moves: no pulse, no pop, no shiver, no fuse, no heartbeat. The pill,
+   its words, its gauge and its colour stay. Clock.tsx also leaves the fuse out under either switch. */
+.clock[data-motion="reduced"] *,
+.clock[data-motion="reduced"] .clock-line {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clock *,
+  .clock .clock-line {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .clock-fuse {
+    display: none;
+  }
+
+  .hand-you::before {
+    animation: none !important;
+    display: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .clock-fuse,
+:root[data-reduce-motion="true"] .hand-you::before {
+  display: none;
+}
