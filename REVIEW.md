@@ -34,7 +34,7 @@ Inputs: `SPEC.md`, `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `JackiOh_Cla
 | A2.1 Cross-references | Every "§n", "section n", "(n.n)" and "R<n>" mentioned in SPEC resolves to an existing heading or row. |
 | A2.2 Counts | §1 says 268 cards (100 Core, 90 Classic, 78 Classic+) and 49 tokens; §7 has 49 token rows; §8 has 268 non-token rows (100 in §8.1–§8.5, 90 in §8.6, 78 in §8.7); each set's rarity sentence in §8 sums to its card count and equals the count of each rarity value in that set's tables (recount them). |
 | A2.3 Rulings | Every "(ruling)" or "Ruling:" in §2–§10 has a matching row in §11, and every §11 row's "Cards affected" indices exist in §8. Rows marked "decide" are exactly the ones §11's intro lists. |
-| A2.4 Pipeline order | The 10-step damage order in §4.4 is the order every other mention uses (§6.1 Armor/Divine Shield/Poisonous/Lifesteal/Trample/Cleave rows, §8 True Strike, Anti-oneshot Armor, Fed Fauci). |
+| A2.4 Pipeline order | The damage order in §4.4 (steps 0–10, and 4a) is the order every other mention uses (§6.1 Armor/Divine Shield/Poisonous/Lifesteal/Trample/Cleave rows, §8 True Strike, Anti-oneshot Armor, Fed Fauci). |
 | A2.5 Pools | Compute from §8 across the three sets (pools reach every set unless a card names one, R380): KY-tagged non-token cards (Core #31, #51, #82, C+ #41, #42, #62; +#57 itself); (1) Cost Trap and Field Trap cards; Legendary-rarity non-token cards per the rarity columns; Fruit cards plus the five Grapes (R382). Check the pool statements in §8 (#57, #67, #83, and every §8.6/§8.7 card that names a pool) and in §11 match these computed sets. If the rarity columns changed the Legendary set, the Transmogulate pool statement must reflect it; otherwise BLOCKER. |
 | A2.6 Token rules | §3.2, §6.3 and §7 agree on what happens to unit tokens and spell tokens leaving the field, hand and library. |
 | A2.7 Radiant rules | §5.2's five bullets are not contradicted by any §8 Engine cell (search "radiant" in §8 Engine column). |
@@ -99,13 +99,13 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 | §2.2 Turn loop | Phase order; start-of-turn triggers before draw; cleanup expiry; Twinspell survives | M1-T6 tests |
 | §2.3 Mana | Refresh formula; temp mana over 4; Hinder floor; X and embiggen storage; cost floors at 0 | M1-T6 tests; `effectiveCost` unit tests for override + mod + player modifiers |
 | §2.4 Draw | Cast on draw chain; fatigue N; hand cap burn; Infinite Reserves hook | M1-T7 tests |
-| §2.5 End | Loss, simultaneous draw, concede, offer/decline block, cap after 30th player-turn, auto end | M1-T8 tests |
+| §2.5 End | Loss, simultaneous draw, concede, offer/decline block, cap after the 60th player-turn (R389), auto end | M1-T8 tests |
 | §2.6 Deckbuilding | `createGame` and validator reject size ≠ 20, duplicates, tokens | M1-T1 and M6-T3 tests |
 | §3 Zones | Adjacency, ring, locks, stack dormancy, tokens vanish, ownership vs control | M1-T4 tests; R11–R15 tests |
 | §4.1–4.2 | Exertion, positions, sickness, 0-attack, Taunt filter, forced attacks | M2-T1, T2, T4 tests; R6, R7, R20, R49, R53 |
-| §4.4 Pipeline | Ten ordered tests | M2-T3, one per step, in order |
+| §4.4 Pipeline | One ordered test per step (0–10, and 4a) | M2-T3, one per step, in order |
 | §4.5 State check | Simultaneous deaths, Death order, Reborn, Indestructible would-destroy | M2-T5 tests; R8, R46, R47 |
-| §5 Catalog | `catalog.test.ts` diffs against §8 including rarity counts 35/37/16/7/5 and §5.3 corrections | Green |
+| §5 Catalog | `catalog.test.ts` diffs against §8 including rarity counts per set: Core 35/37/16/7/5, Classic 42/25/13/9/1, Classic+ 13/25/25/13/2 and §5.3 corrections | Green |
 | §5.2 Radiant | On-field conversion keeps damage and buffs, no Cry re-fire, copies inherit flag | R22, R57 tests |
 | §6 Keywords | Every state-changing §6.3 verb is exported from the effects barrel (BUILD M3-T1); keyword set computation per §10.4 | M3-T1, M3-T4 tests; `grep -c "^  [a-z]" packages/engine/src/effects/index.ts` against §6.3's verb list — files are grouped by family, so check the barrel and not the directory listing |
 | §6.2 Triggers | Ordering (active player, lanes, backrow), traps first, opponent-turn prompts pause the action | M3-T2 tests |
@@ -121,7 +121,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 
 ### B4 Rulings (SPEC §11)
 
-`grep -o "R[0-9]\+ " packages/engine/test/rulings.test.ts packages/cards/test/*.test.ts | sort -u` must contain every row id in SPEC §11 (R1 through R168 as of 2026-09-17). Each "decide" row (R1, R2, R4, R5, R14, R26, R39) is a named constant in `engine/src/config.ts` with the spec's value. Any ruling found in a code comment but not in §11 is MAJOR.
+`grep -o "R[0-9]\+ " packages/engine/test/rulings.test.ts packages/cards/test/*.test.ts | sort -u` must contain every row id in SPEC §11 (R1 through R168 as of 2026-09-17). Each "decide" row (R1, R4, R5, R14, R26, R39; R2's cap is still a constant, R389) is a named constant in `engine/src/config.ts` with the spec's value. Any ruling found in a code comment but not in §11 is MAJOR.
 
 ### B5 Client and animations (SPEC §10.8, §10.10; BUILD M5)
 

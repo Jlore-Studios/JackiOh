@@ -44,7 +44,7 @@ jackioh/
       src/setup.ts             shuffle, opening draw table, Quickdraw, mulligan, start-of-game
       src/turn.ts              phases, start/end-of-turn trigger dispatch, cleanup, turn cap
       src/combat.ts            attack validation, forced attacks, combat resolution (§4.2–4.3)
-      src/damage.ts            the 10-step damage pipeline (§4.4); heal; lose-health
+      src/damage.ts            the damage pipeline (§4.4, steps 0–10 and 4a); heal; lose-health
       src/stateCheck.ts        deaths, Reborn, Death triggers, hero check loop (§4.5)
       src/layers.ts            stat and keyword layer computation (§10.4)
       src/events.ts            emit helpers
@@ -121,7 +121,7 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `LIBRARY_CAP` | 60 | R80 |
 | `ANTI_ONESHOT_CAP` | `{ base: 5, radiant: 3 }` | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |
-| `RANDOM_KEYWORD_POOL` | Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave | R21 |
+| `RANDOM_KEYWORD_POOL` | Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce | R21, R346 |
 | `FIB` | `[0,1,1,2,3,5,8,13,21,34,55,89]`, index clamps at 11 | R25 |
 | `FUSE_COST_CAP` | 4 | §6.3 |
 | `MULLIGAN_ORDER` | "draw-then-shuffle" | R9 |
@@ -204,13 +204,13 @@ Acceptance:
 - Either answer order deals the same game (the same state hash, and both logs fold to it); the other player's view is the same whatever a sealed answer kept; a `timeout` while the mulligans are open keeps that player's whole hand (R265, R266, R268).
 
 **M1-T6 Turn loop and mana.** Files: `engine/src/turn.ts`, `engine/src/mana.ts`, `engine/src/modifiers.ts`.
-Phases per §2.2 and R62. Start-of-turn: refresh mana (`min(turnsStarted, MAX_MANA) + permMod + nextTurnMod`, floor 0), delayed effects due, start-of-turn triggers, then draw. End-of-turn: end-of-turn triggers (Combo-Index and "add back to hand" spells included), the Bread and Butter / Intern Stimmy trap window, delayed effects due, cleanup expiring "this turn" modifiers, turn-cap check. Cost calculation per R65: `effectiveCost(instance, player)` starts from `costOverride` or the printed cost, adds instance `costMod`, then player discounts (next-spell, this-turn), then Curvature, floors at 0; X-cost cards cost exactly X. X and embiggen selection are part of the `play` action and stored on the instance.
+Phases per §2.2 and R62. Start-of-turn: the board snapshot (R419), refresh mana (`min(turnsStarted, MAX_MANA) + permMod + nextTurnMod`, floor 0), the Brittle tick (R385), "Animated on your turn" cards animate (R383), delayed effects due, start-of-turn triggers, then draw. End-of-turn: end-of-turn triggers (Combo-Index and "add back to hand" spells included), the Bread and Butter / Intern Stimmy trap window, delayed effects due, cleanup expiring "this turn" modifiers and, last, returning animated "on your turn" cards to their backrow zones (R383), turn-cap check. Cost calculation per R65: `effectiveCost(instance, player)` starts from `costOverride` or the printed cost, adds instance `costMod`, then player discounts (next-spell, this-turn), then Curvature, floors at 0; X-cost cards cost exactly X. X and embiggen selection are part of the `play` action and stored on the instance.
 Acceptance:
 - Turn 1 P1: 1 mana; turn 4: 4; turn 10: 4. Mana Well turn 4: 5 available.
 - `nextTurnMod = −1` (Hinder) on a turn-2 player yields 1 mana, and 0 mana never goes negative.
 - A "this turn" discount is gone after `endTurn`; Twinspell's pending Echo is not (R30).
 - Start-of-turn triggers fire before the draw (test: Gravedigger adds a card, then the draw happens; hand order proves it).
-- `play` with `x` greater than current mana errors; `x = 0` is legal.
+- `play` with `x` greater than current mana errors; `x = 0` errors (R348).
 
 **M1-T7 Draw.** Files: `engine/src/draw.ts`.
 `draw(player, n)`: from top; cast-on-draw resolves immediately and draws again; empty library → fatigue damage `FATIGUE_DAMAGE(fatigueCount)` unless an Infinite Reserves hook supplies a Rush Token card; hand at `HAND_CAP` burns the card to the graveyard (spell tokens too; unit tokens vanish).
@@ -243,7 +243,7 @@ Steps 1–3 of §4.2: attacker eligible (exertion, ATK position, not sick unless
 Acceptance: each rejection reason has a test; a DEF-position enemy forces targeting even with no printed Taunt; Big D-fender (0 attack) can never be an attacker.
 
 **M2-T3 Damage pipeline.** Files: `engine/src/damage.ts`.
-`dealDamage({ source, target, amount, flags: { ignoreArmor, combat } })` implementing the 10 steps of §4.4 in order; `loseHealth` bypasses it (R18); `heal` per §6.3 (units capped at max, heroes uncapped, "heal to full", "heal up to N").
+`dealDamage({ source, target, amount, flags: { ignoreArmor, combat } })` implementing the steps of §4.4 (0–10, and 4a) in order; `loseHealth` bypasses it (R18); `heal` per §6.3 (units capped at max, heroes uncapped, "heal to full", "heal up to N").
 Acceptance (one test per step, in order):
 1. Divine Shield negates a 10 hit fully and is gone; a second hit lands; a 0-attack unit's strike-back leaves the shield (R63).
 2. Armor 7 turns 7 into 0; DEF adds 1; Big D-fender adds 2 more; True Strike ignores all of it.
@@ -610,7 +610,7 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 
 ### M9 — Patch v0.2.0: Classic, Classic+, the new keywords and mechanics (issue #40)
 
-SPEC R380–R439, §8.6 and §8.7. The design brief `docs/classic-sets.md` is the reading of each card; SPEC is the rule. Engine first (T1–T5), then the cards in three waves (T6–T8), then the AI, the client, the server and the end-to-end specs. Every engine behaviour a card needs is tested in the engine through a fixture script in `packages/engine/test/fixtures/` before a card uses it, and again in the card's own test (§0). No R number is cited in code or tests that §11 lacks (CLAUDE.md rule 3); rulings the workstreams discover take the next number of their block (§11's v0.2.0 provenance paragraph).
+SPEC R380–R439, §8.6 and §8.7. The design brief `docs/classic-sets.md` is the reading of each card; SPEC is the rule. Engine first (T1–T5), then the cards in three waves (T6–T8), then the AI, the client, the server and the end-to-end specs. Every engine behaviour a card needs is tested in the engine through a fixture script in `packages/engine/test/fixtures/` before a card uses it, and again in the card's own test (BUILD §0). No R number is cited in code or tests that §11 lacks (CLAUDE.md rule 3); rulings the workstreams discover take the next number of their block (§11's v0.2.0 provenance paragraph).
 
 **M9-T1 Catalog shape.** Files: `shared/src/catalog-types.ts`, `cards/src/{catalog-data,query,index}.ts`, `cards/scripts/{naming,gen-registry,missing-tests,validate-catalog}.ts`, `engine/src/catalog.ts`, `ai/src/{deck,determinize}.ts`, `engine/src/subsystems/scorer.ts`, `shared/src/codes.ts`.
 `SetName` gains "Classic+"; tags Book, Pancake, AI; `printedRarity`, `params`, `loc`, `CardFace.type`, `CardFace.xStats` (§5); ids and set folders (§5, BUILD §1); `excludeDefId` and every index lookup keyed by set (`defByIndex(set, index)`, `cardDefByIndex`, the `excludingIndex` helpers, the index filters); pools across sets (R380) with Core #82 and #97 kept to Core; the Fruit pool and `withTokens` (R382); deck and trio codes v2 (R255, R339).
@@ -636,7 +636,7 @@ Acceptance:
 
 **M9-T4 Keywords.** Files: `engine/src/{layers,turn,zones,combat,reduce,heroPower}.ts`, `engine/src/effects/*`, fixtures.
 Animated and Animated on your turn (R383), Activate / Activate X / Activate ♾️ with `activatePower` kept as an alias (R384), Brittle X (R385), Degrade and Upgrade with `tuning`, `params` and `param(ctx, key)` (R386).
-Acceptance: an engine test per rule of each keyword's §6.1, §6.2 or §6.3 row, among them: an Animated trap animates as the last step of its firing, into its own lane's unit zone or the leftmost open one, and stays face-up in the backrow with no open zone; an "on your turn" card animates after the Brittle tick and returns at the end of cleanup, keeps its damage both ways, and stays a Unit when its zone was Locked or it changed controller (R383); `activate` is listed exactly when the reducer accepts it, counts uses per card per turn, resets on leaving the field, stops at `ACTIVATE_UNLIMITED_CAP`, is no play, and an old log's `activatePower` folds to the same hash (R384); a count given on turn t first ticks at t + 2, a printed one starts on entering the field, at 0 it destroys on the field (Indestructible ignores it and the count stays 0) and sends a hand or deck card to the graveyard without a discard, Vanilla keeps a given count, a copy never inherits one (R385); each change of the Degrade and Upgrade menu applies only where it can, draws uniformly from the match rng, never touches an Immutable card, is kept through every zone and by a copy, summed by a Fuse and dropped by a Transform, and its event is hidden per zone (R386).
+Acceptance: an engine test per rule of each keyword's §6.1, §6.2 or §6.3 row, among them: an Animated trap animates as the last step of its firing, into its own lane's unit zone or the leftmost open one, and stays face-up in the backrow with no open zone; an "on your turn" card animates after the Brittle tick and returns at the end of cleanup, keeps its damage both ways, stays a Unit when its zone was Locked since or it lies dormant under a Stack, and after a change of controller returns to its new controller's leftmost open backrow zone, staying a Unit only when there is none (R383); `activate` is listed exactly when the reducer accepts it, counts uses per card per turn, resets on leaving the field, stops at `ACTIVATE_UNLIMITED_CAP`, is no play, and an old log's `activatePower` folds to the same hash (R384); a count given on turn t first ticks at t + 2, a printed one starts on entering the field, at 0 it destroys on the field (Indestructible ignores it and the count stays 0) and sends a hand or deck card to the graveyard without a discard, Vanilla keeps a given count, a copy never inherits one (R385); each change of the Degrade and Upgrade menu applies only where it can, draws uniformly from the match rng, never touches an Immutable card, is kept through every zone and by a copy, summed by a Fuse and dropped by a Transform, and its event is hidden per zone (R386).
 
 **M9-T5 Systems.** Files: `engine/src/*`, `engine/src/effects/*`, `engine/src/subsystems/*`, `shared/src/{events,actions,view}.ts`, fixtures.
 The systems §2.4, §3.2, §4.2, §4.4, §4.5, §6.1–§6.3 and §10 now describe, in dependency order (Counter and the announce step, Steal off the field, the per-turn and per-game counts, the replacement points, the pipeline additions, the cost rules, Plague Token placement, play from the graveyard and casts from anywhere first: most cards need them), each new event with its M5-T4 row and its `SOUND_CUES` row, and `viewFor` for all of it.
