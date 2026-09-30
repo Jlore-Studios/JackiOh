@@ -74,7 +74,7 @@ const SET_STAT_KEY = "setStat";
 const CONDITION_MET_KEY = "conditionMet";
 
 /** The script keys whose entries carry an `id` that has to stay unique across the ingredients. */
-const TRIGGER_KEYS = ["triggers", "handTriggers"] as const;
+const TRIGGER_KEYS = ["triggers", "handTriggers", "deckTriggers", "graveyardTriggers"] as const;
 
 /** §8's rarity ladder, lowest first, so a fusion can report the rarest ingredient's rarity. */
 const RARITY_ORDER: readonly Rarity[] = ["Token", "Common", "Rare", "Epic", "Legendary", "Mythic"];

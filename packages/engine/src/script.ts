@@ -292,6 +292,19 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
+  /**
+   * B5 E26, R464: triggers this card answers while it lies in its owner's library ("While this is in
+   * your deck: …", Classic+ #37 Wardrum). A library card is hidden (§9.1), so its queue entries take
+   * no number (R177), and within a side they come after the hand's and before the graveyard's, in the
+   * order the instances were created — never by library position (`triggers.triggerHoldersOf`).
+   */
+  deckTriggers?: TriggerDef[];
+  /**
+   * B5 E26: triggers this card answers while it lies in a graveyard ("While this is in your
+   * graveyard: when one of your Traps activates, return this", Classic #47). R153's other graveyard
+   * answer, the end-of-turn return, stays the `endOfTurn` hook's.
+   */
+  graveyardTriggers?: TriggerDef[];
 };
 
 /**

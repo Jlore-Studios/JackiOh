@@ -197,6 +197,10 @@ export type PromptOption = {
   key: string;
   label: string;
   selection: Selection;
+  /** B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies). */
+  cost?: number;
+  /** A face the option shows: the card it offers is Radiant, or a definition is offered Radiant. */
+  radiant?: true;
 };
 
 export type PendingChoice = {
@@ -207,6 +211,12 @@ export type PendingChoice = {
   options: PromptOption[];
   min: number;
   max: number;
+  /**
+   * B5 E18: a `pick` prompt's budget — the most its picked options' `cost`s may add up to (Classic
+   * #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
+   * as it did before the field existed.
+   */
+  budget?: number;
   resume: Resume;
 };
 

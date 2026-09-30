@@ -59,8 +59,11 @@ import {
 export const SELF_KEY = "__self";
 
 /** The ten kinds of §10.6. `x`, `embiggen`, `zone`, `tribute` and `direction` are play choices for
- * every Core card (R81) and stay here for later sets; nothing in this module reads the kind except
- * the mulligan, which §2.1 answers with its own action. */
+ * every Core card (R81) and stay here for later sets. B5 E18 adds five: `number` (a number from a
+ * fixed range), `answer` (one option of a multiple-choice problem, whose key never leaves the engine,
+ * R465), `cell` (a board cell, either side, either row), `reward` (a completed quest's reward) and
+ * `pick` (several cards from a pile under a budget). This module reads the kind for the mulligan,
+ * which §2.1 answers with its own action, and for `pick`, whose answers it enumerates its own way. */
 export const PROMPT_KINDS: readonly PromptKind[] = [
   "discover",
   "target",
@@ -72,6 +75,11 @@ export const PROMPT_KINDS: readonly PromptKind[] = [
   "direction",
   "x",
   "embiggen",
+  "number",
+  "answer",
+  "cell",
+  "reward",
+  "pick",
 ];
 
 /** The `Script` key holding the step table a prompt answer re-enters (`resume: { picked: … }`). */
@@ -99,8 +107,54 @@ export type OpenPromptArgs = {
   /** Defaults to one pick (§10.6). */
   min?: number;
   max?: number;
+  /** B5 E18: a `pick` prompt's budget, which the picked options' `cost`s may not exceed. */
+  budget?: number;
+  /**
+   * B5 E18: whose sequence the answer continues, when that is not the player asked — a mode prompt
+   * the other player holds (Classic #8) or their own hand pick (Classic #9). The answered step runs
+   * as this player, the card's controller, so "you draw" is still the asking card's controller's
+   * draw. Absent is the player asked, as for every prompt before E18.
+   */
+  owner?: PlayerId;
   resume: Resume;
 };
+
+/**
+ * B5 E18: where a prompt held by a player other than the asking card's controller keeps that
+ * controller (`OpenPromptArgs.owner`), in its resume data. It belongs to that one prompt: a
+ * continuation built from the answered step (`resumeSelf`) drops it, and the next prompt that step
+ * opens for the other player writes it again.
+ */
+export const PROMPT_OWNER_KEY = "__owner";
+
+/**
+ * R465: where an `answer` prompt keeps the id of its correct option — in its resume data, which
+ * `viewFor` never sends (§10.8) and the AI's redaction strips (`packages/ai`, R185), so the key never
+ * leaves the engine. The answered step reads it (`answerKeyOf`); a continuation built from that step
+ * drops it (`resumeSelf`), since it belongs to the one prompt that asked.
+ */
+export const ANSWER_KEY = "__answerKey";
+
+/** The controller an answered prompt's step runs as (`PROMPT_OWNER_KEY`), else the player asked. */
+export function promptOwnerOf(pending: Pick<PendingChoice, "playerId" | "resume">): PlayerId {
+  const owner: unknown = pending.resume.data[PROMPT_OWNER_KEY];
+  return owner === "p1" || owner === "p2" ? owner : pending.playerId;
+}
+
+/**
+ * R465: the correct option an `answer` prompt's data holds, or null when it holds none — a state
+ * whose key was stripped (the AI's redacted copy, R185), where no answer can be judged right.
+ */
+export function answerKeyOf(data: Record<string, unknown>): string | null {
+  const key: unknown = data[ANSWER_KEY];
+  return typeof key === "string" ? key : null;
+}
+
+/** A card's data with the two one-prompt control keys taken out (`PROMPT_OWNER_KEY`, `ANSWER_KEY`). */
+export function withoutPromptKeys(data: Record<string, unknown>): Record<string, unknown> {
+  const { [PROMPT_OWNER_KEY]: _owner, [ANSWER_KEY]: _key, ...rest } = data;
+  return rest;
+}
 
 /** The `answer` action of §10.2, without the parts the reducer has already checked. */
 export type AnswerInput = {
@@ -176,7 +230,8 @@ export function resumeSelf(
     step,
     radiant: ctx.radiant,
     ...(self === null ? {} : { instanceId: self.id }),
-    data: { ...cardData(ctx.data), ...data },
+    // B5 E18, R465: the owner and the answer key belong to the prompt that asked, not to the run.
+    data: { ...withoutPromptKeys(cardData(ctx.data)), ...data },
   });
   // R113, §10.6: the answer re-invokes the same script, so the step it re-enters is the same run —
   // it reads the stays the run began with (R174) and counts the units it summoned (R136), whichever
@@ -222,6 +277,7 @@ export function openPrompt(sink: EngineSink, args: OpenPromptArgs): PendingChoic
   if (args.options.length === 0) return null;
 
   const max = clamp(args.max ?? 1, 0, args.options.length);
+  const owned = args.owner !== undefined && args.owner !== args.player;
   const pending: PendingChoice = {
     id: `q${state.nextId}`,
     playerId: args.player,
@@ -230,7 +286,10 @@ export function openPrompt(sink: EngineSink, args: OpenPromptArgs): PendingChoic
     options: args.options.map((option) => ({ ...option })),
     min: clamp(args.min ?? 1, 0, max),
     max,
-    resume: args.resume,
+    ...(args.budget === undefined ? {} : { budget: Math.max(0, args.budget) }),
+    resume: owned
+      ? { ...args.resume, data: { ...args.resume.data, [PROMPT_OWNER_KEY]: args.owner } }
+      : args.resume,
   };
 
   state.nextId += 1;
@@ -319,6 +378,11 @@ export function whyAnswerRefused(pending: PendingChoice, answer: AnswerInput): s
     if (free === undefined) return `${nameOf(pick)} is picked twice`;
     used.add(free);
   }
+  // B5 E18: a `pick` prompt's picks may cost no more than its budget together (Classic #44).
+  if (pending.budget !== undefined) {
+    const spent = [...used].reduce((sum, index) => sum + (pending.options[index]?.cost ?? 0), 0);
+    if (spent > pending.budget) return `those picks cost ${spent} together, over the budget of ${pending.budget}`;
+  }
   return null;
 }
 
@@ -377,7 +441,8 @@ export function answerPrompt(sink: EngineSink, answer: AnswerInput): string | nu
   // not behind it at whatever place the action before this one left the cursor.
   beginWorkCascade(sink);
   runResume(sink, resumeOf(pending), {
-    controller: pending.playerId,
+    // B5 E18: a prompt the other player held continues the asking card's sequence, as its controller.
+    controller: promptOwnerOf(pending),
     targets: inOfferedOrder(pending, answer.selection),
     // R174, §10.6: the picks are cards as the prompt offered them, on the stays they stand on now —
     // whatever the list that asked did to the board before it asked.
@@ -412,6 +477,7 @@ export function inOfferedOrder(pending: PendingChoice, selection: readonly Selec
  */
 export function promptAnswers(pending: PendingChoice): Extract<ActionBody, { type: "answer" }>[] {
   if (pending.kind === "mulligan") return [];
+  if (pending.kind === "pick") return pickAnswers(pending);
 
   const out: Extract<ActionBody, { type: "answer" }>[] = [];
   const emit = (options: PromptOption[]): boolean => {
@@ -435,6 +501,68 @@ export function promptAnswers(pending: PendingChoice): Extract<ActionBody, { typ
 
   for (let size = pending.min; size <= pending.max; size += 1) {
     if (!walk(0, [], size)) break;
+  }
+  return out;
+}
+
+/**
+ * B5 E18: a `pick` prompt's answers — every set of `min` to `max` options whose costs fit the budget,
+ * bounded by `MAX_PROMPT_ANSWERS` like every other prompt's (R90). A pile can be long (a graveyard of
+ * thirty cards picked four at a time is 27,405 sets), so a plain walk would cut off every set past the
+ * first few options and leave most cards unpickable by `legalActions`, the fuzz suite and the AI. So a
+ * cut drops sets, never a card, as R90's play enumeration does: first, for each option in turn, the
+ * set that starts at it and takes the options after it (wrapping round) while they fit, so every
+ * option the budget allows is in some listed answer at the most picks it can have; then the ordinary
+ * walk, smallest sets first, for the rest of the room. Each set is listed once, in offered order (R221).
+ */
+function pickAnswers(pending: PendingChoice): Extract<ActionBody, { type: "answer" }>[] {
+  const options = pending.options;
+  const out: Extract<ActionBody, { type: "answer" }>[] = [];
+  const seen = new Set<string>();
+  const costOf = (index: number): number => options[index]?.cost ?? 0;
+  const fits = (spent: number): boolean => pending.budget === undefined || spent <= pending.budget;
+
+  const emit = (indices: readonly number[]): boolean => {
+    const sorted = [...indices].sort((a, b) => a - b);
+    const key = sorted.join(",");
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push({
+        type: "answer",
+        choiceId: pending.id,
+        selection: sorted.map((index) => (options[index] as PromptOption).selection),
+      });
+    }
+    return out.length < MAX_PROMPT_ANSWERS;
+  };
+
+  // Every option, each in the fullest set that starts with it.
+  for (let start = 0; start < options.length && pending.max > 0; start += 1) {
+    if (!fits(costOf(start))) continue;
+    const set = [start];
+    let spent = costOf(start);
+    for (let step = 1; step < options.length && set.length < pending.max; step += 1) {
+      const next = (start + step) % options.length;
+      if (!fits(spent + costOf(next))) continue;
+      set.push(next);
+      spent += costOf(next);
+    }
+    if (set.length < pending.min) continue;
+    if (!emit(set)) return out;
+  }
+
+  // The rest, smallest sets first; costs are never negative, so an over-budget branch is cut.
+  const walk = (start: number, chosen: number[], spent: number, size: number): boolean => {
+    if (chosen.length === size) return emit(chosen);
+    for (let index = start; index < options.length; index += 1) {
+      const cost = spent + costOf(index);
+      if (!fits(cost)) continue;
+      if (!walk(index + 1, [...chosen, index], cost, size)) return false;
+    }
+    return true;
+  };
+  for (let size = pending.min; size <= pending.max; size += 1) {
+    if (!walk(0, [], 0, size)) break;
   }
   return out;
 }
