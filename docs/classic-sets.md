@@ -76,6 +76,17 @@ numbered N.k. The designer asked, inside the cards, for three things only an imp
 cleaner text for Classic #10 Exile's Radiant face, clean wording for Classic+ Forever&, and "10 AI
 generated cards with any effect you want" shared by Claude's Datacenter and AI Slop (B8 has them).
 
+**Where this fits.** This brief is the design half of **patch v0.2.0**. The patch's tracking issue
+lists these sets, keywords and mechanics beside Core card patches (new costs for Core #65 Masochism
+Mask, #43 Big Felinor, #88 Twisting Nether, #49 Snom Bunny Mind Control, #17 Flood, #34 Collateral
+Damage and #16 Hit Job; new text for #32 Prem Panther, #41 Sheepish, #22 Carnivorous Cube, #31 KY's
+Math Equation, #60 Bear Honeypot, #21 Hinder and #95 Call to Chaos) and cosmetic work, none of which
+this brief specifies. Four of those items reach into it: #95's Radiant becomes three random effects,
+the shape Classic+ #73 already has (CL44); Sheepish stops costing a Unit its Cry, which E1's announce
+window never relied on; "(N) Cost" becomes the noun in every card text (B1); and each Core patch is a
+line of B4.2's history. **Patch v0.2.1** follows and moves Core #98 Heroic Power onto this brief's
+Activate (B3.2 rule 10), with thirteen powers.
+
 How these relate to what exists: the source notes already reserve the set name Classic
 (`JackiOh_Mechanics.md`, "Sets (Classic, Core, Boss, Boss-X)") and already state the self-generation
 rule ("A discover card OR a random generation card cannot discover nor randomly generate a copy of
@@ -98,7 +109,9 @@ text this brief proposes is written the way R366 says card text is written: "Cos
 specific cost, "(N)" for a price, keywords first on a line of their own, each labelled ability
 ("Cry:", "Death:", "Start of turn:", "End of turn:", "Aura:", "Activate:", "Cast on draw:",
 "Paid (4):") on a line of its own, and sentences that start with a capital and end with a full stop.
-The engine keeps `library`, `sacrifice` and its other identifiers.
+The engine keeps `library`, `sacrifice` and its other identifiers. Patch v0.2.0 turns the cost
+style around, "(N) Cost" for the noun and "costs (N)" for the verb (B0); the text pass that makes
+that change for Core rewrites the proposals here with it.
 
 **A card entry** looks like this:
 
@@ -161,14 +174,27 @@ later "legacy format" possible.
 unique within its set, so everything that looks a card up by index alone must key on `(set, index)`
 or on the id instead:
 
-- `cardDefByIndex` (cards), `query`'s `index`/`excludeIndex` and `pool(ownIndex)`: switch the
-  self-exclusion to the def id (`excludeDefId`, `pool(ownId)`), which is also what B4.1 needs.
+- Lookups by index alone, in both packages: `cardDefByIndex` (cards); the engine's `defByIndex`
+  (`catalog.ts`), which `draw.ts` uses to find the Rush Token and `callToChaos.ts` and `heroPower.ts`
+  use to turn a rolled number back into a card; the query filters `index`, `notIndex` and
+  `excludeIndex`; and the self-exclusion helpers, the engine's `excludingIndex` (`addToHand.ts`,
+  `summon.ts`, `choose.ts`) and the cards package's `pool(ownIndex)`. Switch the self-exclusion to the
+  def id (`excludeDefId`, `pool(ownId)`), which is also what B4.1 needs, and give every remaining
+  index lookup a set (`defByIndex(set, index)`), so `"43"` can never find two cards.
+- Pools that are Core today because Core was all there was: `packages/ai/src/deck.ts`
+  (`buildAiDeck`'s `query({ set: "Core" })`) and `packages/ai/src/determinize.ts` (R185's resample:
+  its two `set: "Core"` queries, and `AI_DETERMINIZE.excludeIndexes`, whose `["98"]` becomes an id)
+  reach every set (B2.6). `packages/engine/src/subsystems/scorer.ts` (`query({ set: "Core",
+  excludeIndex: ZEPHYRS_INDEX })`) stays Core, because Core #97 Zephyrs says so, and keys its
+  exclusion by id.
 - Core #82 KY's Trial rolls Core numbers 1–100 and adds "the Radiant Core card" with that index: filter
   `set: "Core"` explicitly. Core #97 Zephyrs ("only from the core set") the same.
 - Deck codes carry "catalog numbers" (R255, `deckCode.ts`): bump `DECK_CODE_VERSION` to 2 and write
   a set tag with each number (a number offset per set is enough: Core n, Classic 1000 + n,
   Classic+ 2000 + n, still LEB128). Keep reading version 1 codes as Core numbers, since every code
-  minted so far is one; R255's "an older one is refused" becomes "version 1 is read as Core".
+  minted so far is one: R255 refuses "another version", which becomes "a version other than 1 or 2".
+  Trio codes (R339, `trioCode.ts`) write each deck as R255 does, so `TRIO_CODE_VERSION` goes to 2 in
+  the same change and reads version 1 the same way. Both constants live in `apps/server/src/config.ts`.
 - `scripts/naming.ts`, `gen-registry.ts` and `missing-tests.ts` learn the set folders;
   `validate-catalog.ts` and `catalog.test.ts` count per set (B2.5).
 - BUILD's must-pass table (M4-T4) gains a Classic and a Classic+ table keyed by set and number.
@@ -200,8 +226,9 @@ Pancake tokens), **AI** (the ten AI generated cards). Reused: Human, Felinor, KY
 "Call to Chaos", Quickdraw, Token.
 
 **Jlockheed vs Jlockeed (⚠ designer).** Core's tag and names are "Jlockeed" (#13 Jlockeed
-Shredder-10, #14 Jlockeed's Weapons, R278); the three Classic+ cards spell it "Jlockheed". They are
-one faction: #48, #52 and #75's pools ("a random Jlockheed card") should find Core's two as well.
+Shredder-10, #14 Jlockeed's Weapons, R278); the three Classic+ cards (#48, #51, #52) spell it
+"Jlockheed". They are one faction: #48 and #52's pools ("a random Jlockheed card") should find Core's
+two as well.
 Proposed: one tag, the existing `Jlockeed`, on all five, the Classic+ names kept as the designer
 spelled them, and R278 rewritten, since the tag stops being "a filter and nothing else" once cards
 count it. If the designer prefers "Jlockheed" everywhere, that is a patch (B4.2) renaming #13 and #14
@@ -224,8 +251,11 @@ in `catalog.test.ts`:
 | Classic+ (with B2.3's numbers) | 13 | 25 | 25 | 13 | 2 |
 
 Tokens keep `rarity: "Token"`, so no pool ever finds one by rarity. The designer printed a rarity on
-each Grape (Rotten and Normal Common, Large Rare, Golden Legendary, Mythic Mythic); keep it as a
-display field (`printedRarity`) for the card frame and the summon sting, never for a pool.
+every Classic+ token but the AI generated cards (B8): Legendary on the eight Pancakes, the five Losers,
+KY's Gift, Felinor Flagbearer Prime, Classic Golem and the J-lease Pack; Epic on Otherworldly
+Removal's three and Solarius-Prime; Rare on Bone Storm and Brother Ping; and on each Grape (Rotten and
+Normal Common, Large Rare, Golden Legendary, Mythic Mythic). Keep it on each of them as a display
+field (`printedRarity`) for the card frame and the summon sting, never for a pool.
 
 ### B2.6 Random pools across sets (CL1)
 
@@ -242,15 +272,18 @@ with it:
   Classic+ Edition too, R28), #98 Heroic Power's Discover and Stitching, #99 Craft a Card.
 - Core pools that stay Core because the card says so: #82 KY's Trial, #97 Zephyrs.
 - The AI: R184 ("distinct, token-free Core cards"), R185 (determinization "resampled from non-token
-  Core cards") and `buildAiDeck`'s `query({})` all become "every set". The tutorial's fixed decks
-  (R291) do not change.
+  Core cards"), `buildAiDeck`'s `query({ set: "Core" })` and `determinize.ts`'s two Core queries all
+  become "every set" (B2.2). The tutorial's fixed decks (R291) do not change.
 - Pools a new card names by set: Classic+ #75.1's "Classic or Classic+ cards", #73's "Classic cards",
   #73.1's "a random Classic or Classic+ card", #27 Zephrys Zealotism's "only using cards from Classic &
   Classic+".
 
 Fruit is special by the designer's own note: the five Grapes are Tokens "that can be generated by any
 Fruit card", so **a Fruit pool is the non-token Fruit cards plus the five Grapes**, and the Grapes
-appear in no other pool (CL3).
+appear in no other pool but the one that takes every token, Classic+ #23 Dropshipping's (CL3).
+Dropshipping's "(including tokens)" is the designer's own exception to every "only through" in this
+brief: it can hand out any token of any set, a Grape, a Loser (CL32) or an AI generated card (B8)
+included.
 
 ### B2.7 Faces that change more than text
 
@@ -267,7 +300,7 @@ appear in no other pool (CL3).
 | --- | --- | --- |
 | Two cards named Book of Flame | Classic #16 (Common) and #55 (Epic), identical text | Keep #16 as *the* Book of Flame, the one Book of Vital Kill and Devil's Pact name. **⚠ designer:** #55 looks like a copy-paste slip; hold it out of the first wave until it has its own name and text, or cut it (Classic would then be 89 cards) |
 | Two cards named Counterspell | Classic #17 (Common) and #72 (Rare), different text | **⚠ designer:** rename #72 (suggestion: "Grand Counterspell", since it answers Spells and Traps). No card names either, so nothing else changes |
-| A card named like a rules word | Classic #10 **Exile**, #36 **Burn**, #57 **Echo** (also the keyword Echo X), #30 **Recycle** (also inside "Malzahar's Recycler") | Keep the names. R279's proof (`references.test.ts`) matches every card name in every text, so it would call each "exile", "burned", "Echo 1" and "Recycler" a reference: give it a named list of rules words it never treats as a card reference unless `refs` lists the card, and let a card's `refs` stay curated |
+| A card named like a rules word | Classic #10 **Exile**, #36 **Burn**, #57 **Echo** (also the keyword Echo X), #30 **Recycle** (also inside "Malzahar's Recycler") | Keep the names. R279's proof (`references.test.ts`) matches a card name as whole words, case-sensitively, with an optional plural "s". Today that catches two of the four: "Exile" in twelve Core texts (#34, #39, #42, #44, #65, #72, #76, #78, #87, #94, #97, #100) and "Echo" in Core #51 and #79's "Echo 1"; "burned" and "Recycler" don't match, though a new text that says "Burn" or "Recycles" would. Give the proof a named list of rules words it never treats as a card reference unless `refs` lists the card, and let a card's `refs` stay curated |
 
 ---
 ## B3. New keywords
@@ -307,7 +340,8 @@ your turn and hides in the backrow on the opponent's, where nothing that attacks
      already a Unit when it fires again does not move or change position.
    - An Animated Field Spell animates as it enters the field.
    - **Animated on your turn**: it animates at the start of its controller's turn (a step after the
-     mana refresh and before start-of-turn triggers, §2.2) and when it enters the field during its
+     mana refresh and the Brittle tick, B3.3, and before start-of-turn delayed effects and triggers,
+     §2.2 and R62) and when it enters the field during its
      controller's turn; it returns to its backrow zone at its controller's cleanup, after every
      end-of-turn step (§2.2), so its own end-of-turn text runs while it is a Unit.
 5. **Moving is not leaving the field.** Between its backrow zone and a unit zone it keeps damage,
@@ -337,8 +371,8 @@ Punish, #21 Turtinator (♾️), #23 Devil's Pact, #42 Transmutable Toxins, #78 
 #81 The Power to Thrive, #84 Lockdown; Classic+ #76.1 Brother Ping (Activate, Radiant Activate 2).
 
 The engine already has one activated ability, Heroic Power's once-a-turn power (Core #98, R43:
-`activatePower`, `memory.usedTurn`, and an `activate` hook in `Script` that nothing uses yet). Activate
-generalises it.
+`activatePower`, `memory.usedTurn`, and an `activate` hook in `Script` that only #98's script
+declares). Activate generalises it.
 
 1. "Activate: …" may be used once per turn, "Activate X: …" up to X times, "Activate ♾️: …" any
    number of times.
@@ -359,12 +393,17 @@ generalises it.
    play a card", Ceaseless Void). What the effect plays or casts counts as usual (R70).
 7. **♾️ is bounded** by `ACTIVATE_UNLIMITED_CAP` (100 per card per turn, `config.ts`) so a fuzz game
    still ends. Every ♾️ card here is bounded anyway by a resource (units to tribute, Plague Tokens).
-8. **Legal actions.** `legalActions` lists `activate` exactly as it lists `activatePower` today: one
-   reason function (`whyCannotActivate`) is both the refusal and the list (§10.2's pattern).
+8. **Legal actions.** `legalActions` lists `activate` exactly as it lists `activatePower` today:
+   `heroPower.whyCannotActivate` is already both the refusal and the list for Heroic Power (R43,
+   §10.2's pattern), and it generalises to any card's ability.
 9. **X.** Degrade and Upgrade's X option moves Activate X by 1, never below 1; Upgrade turns
    "Activate" into "Activate 2". Neither touches ♾️.
-10. **Heroic Power.** Optional refactor: Core #98 becomes "Activate: Spend (X): <power>", with
-    `activatePower` kept as an alias of `activate` so old logs replay. R43 is otherwise unchanged.
+10. **Heroic Power.** Patch v0.2.1 moves Core #98 onto Activate: Heroic Power costs (0) to play,
+    playing it no longer uses the power, each use is an Activate that still pays its power's (X) in
+    mana, a power can be dragged to its target, and thirteen powers replace the eight. Build Activate
+    so that v0.2.1 is a card patch, not an engine change: an ability with a mana price
+    (`Activate: Spend (X): …`), a target declared with the activation, and `activatePower` kept as an
+    alias of `activate` so old logs replay.
 
 Event: `activated { instanceId, ability }`.
 
@@ -383,10 +422,12 @@ Backwards (prints Brittle 4, and gains Brittle), and the AI card Hallucination (
 2. **The tick.** At the start of its controller's turn (its owner's, in a hand or a deck), as a step
    right after the mana refresh, the count drops by 1 — but only once the card has had a full turn
    cycle with it: a count started on turn t first ticks at the first start of its controller's turn
-   numbered t + 2 or later, so both players have had a whole turn with it. After that it ticks at
-   each start of its controller's turn. (So a card given Brittle 2 on your turn 5 ticks to 1 at the
-   start of your turn 7 and crumbles at the start of your turn 9: you can use it for the rest of
-   turn 5 and during turn 7.)
+   numbered t + 2 or later, by which time the card has lived through a whole turn of the other
+   player's and the rest of the turn it arrived on. After that it ticks at each start of its
+   controller's turn. (So a card given Brittle 2 on your turn 5 ticks to 1 at the start of your turn
+   7 and crumbles at the start of your turn 9: you can use it for the rest of turn 5 and during turn
+   7.) **⚠ designer:** the stricter reading, a whole turn of each player's, puts the first tick at
+   t + 4 and gives every Brittle card one more turn (B9).
 3. **At 0** the card is destroyed. On the field that is an ordinary destroy, so Indestructible
    ignores it (R46) and the count stays at 0, checked again at each tick. In a hand or a deck it goes
    to its owner's graveyard (a unit token ceases to exist, R11). That is not a discard, so "whenever
@@ -429,8 +470,11 @@ Edition), and the AI card Fine-Tuning (B8).
 4. **It stays.** These changes are part of the card: stored on the instance as `tuning` (a stat delta
    beside `buffs`, keywords added and removed, X deltas, number deltas; the cost change is
    `costMod`), kept in every zone and through leaving the field — R78's reset list does not include
-   `tuning`, exactly as it leaves out `costMod` and `radiant`. A copy keeps it (R57, the library copy
-   included). A Transform makes a new card without it; a Fuse sums it (R102).
+   `tuning`, exactly as it leaves out `costMod` and `radiant`. A copy keeps it, which changes R57: a
+   copy on the field keeps `tuning` with the buffs and keywords it already keeps, and a copy shuffled
+   into a library carries `tuning` beside the radiant flag and `statsOverride`. (A copy still resets
+   counters, R57, so it never inherits a Brittle count.) A Transform makes a new card without it; a
+   Fuse sums it (R102).
 5. **Declared numbers.** Each card declares its tunable numbers in the catalog, per face:
    `params: [{ key, base, radiant, better: "up" | "down", step, min, max }]`, and writes them into
    its text as `{key}`; the view carries the instance's current values and the client fills them in,
@@ -492,8 +536,13 @@ git. Proposal:
    catalog as that patch left it (snapshots rather than diffs: simple, and small next to the client
    bundle). A generated index maps each card id to the versions in which it changed.
 2. **The version is the patch.** `CATALOG_VERSION` becomes the latest patch's version and every patch
-   bumps it — `catalog-data.ts`, `apps/server`'s `CATALOG_VERSION` and `.env.example` together. A
-   test holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version.
+   bumps it everywhere the string lives: `catalog-data.ts`; the server's env (`apps/server/src/env.ts`
+   reads it, `.env.example` and `render.yaml` set it, and `VITE_CATALOG_VERSION` is the client's
+   copy); and the database, where `db:seed-catalog` stamps every `cards` row and `app.settings`'
+   `catalog_version` (migration 0001 seeded `"core-1"`), so each patch reseeds. R105 is rewritten with
+   it: it names `core-1` as the Core set's version and forbids parsing or ordering a version, so the
+   order of patches comes from `patches.json`, never from comparing version strings. A test holds
+   `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version.
 3. **Making a patch** is one script, `pnpm --filter @jackioh/cards patch <version> "<title>"` (in
    `scripts/`, where fs is allowed): it snapshots `catalog.json`, diffs it against the previous
    snapshot and writes the patch-notes entry, card by card.
@@ -506,7 +555,8 @@ git. Proposal:
    | v0.1.0-r2 | `f5b94bc`, `a17a9e8` | 2026-09-24 | #95's text; The Coin added |
    | v0.1.0-r3 | `c219bb4` | 2026-09-25 | The Radiant pass (PR #18, R275–R279): Radiant faces, the Jlockeed tag and `refs` of 99 entries |
    | v0.1.1 | `1005c50` | 2026-09-27 | Patch v0.1.1 (issue #27, PR #28): the Ghoul Token added and 105 entries changed |
-   | v0.2.0 | this work | | Classic, Classic+, the new keywords, and Core's pool changes (B2.6) |
+   | v0.2.0 | this work | | Classic, Classic+, the new keywords, Core's pool changes (B2.6) and the Core card patches in the v0.2.0 issue (B0) |
+   | v0.2.1 | | | Heroic Power as an Activate, with thirteen powers (B3.2 rule 10) |
 
    (`9fe5470` also appears in that log but changes no entry.) The "-rN" labels are proposals:
    **⚠ designer** may prefer other names for the pre-v0.1.1 changes.
@@ -539,18 +589,28 @@ to 150 seconds instead and the cap stays 30.
 
 Knock-on work:
 
-- §2.5's reason for 30 ("lines up with a 20-card deck … keeps fatigue rare") is rewritten: at 60
-  player-turns a deck of 20 runs dry around a player's 17th turn, so long games now end by fatigue
-  more often than by the cap, and CN-Virus, Pile On, Last Hurrah, Rapid Draw and Second Wind make
-  fatigue a real clock. R2 loses "decide".
+- §2.5's reason for 30 ("lines up with a 20-card deck … keeps fatigue rare") no longer holds and is
+  rewritten. One draw a turn empties a 20-card deck on the first player's 17th turn and the second
+  player's 16th (3 or 4 opening cards, §2.4), and fatigue, N damage on the Nth empty draw, then kills a
+  hero at 30 health on the eighth. So two decks that do nothing end by fatigue on the second player's
+  24th turn, player-turn 48, and 60 is reached only by games that heal, gain Armor, refill a deck
+  (Classic #30) or replace fatigue (Core #75 Infinite Reserves). The cap becomes a backstop, fatigue
+  the usual end of a long game, and CN-Virus, Pile On, Last Hurrah, Rapid Draw and Second Wind bring
+  it sooner. R2 loses "decide". **⚠ designer:** if "double" meant longer games that still end on the
+  cap, the cap alone won't do it; the deck size or fatigue would have to change too.
 - The hard match ceiling (`MATCH_CEILING_MINUTES`, 60, R79): 60 player-turns at a full 75-second
-  clock is 75 minutes, so a slow game would hit the ceiling first. Raise it to 120 minutes (proposal)
-  or accept that such games end as ceiling draws.
+  clock is 75 minutes, and even a game that fatigues out at player-turn 48 can take 60, so a slow game
+  would hit the ceiling first. Raise it to 120 minutes (proposal) or accept that such games end as
+  ceiling draws.
 - The AI weighs face damage "more as the turn cap nears" by reading the constant, so it adapts; the
   sweep's `maxActions` (600) and the gates' game lengths may need raising, and gate counts will move
   (fewer turn-cap draws).
-- Fuzz still "always terminates within the cap"; long seeds take longer. The e2e spec that plays a
-  game to the cap takes twice the turns. Any client text that prints the cap reads the constant.
+- Fuzz still "always terminates within the cap"; long seeds take longer. The e2e spec
+  `08-turn-cap-draw.cy.ts` can't reach the cap as written: its two do-nothing decks fatigue out at
+  player-turn 48, and it asserts both heroes are still at `HERO_HEALTH` when the Draw appears. It
+  needs decks that never fatigue (both seats play Core #75 Infinite Reserves) or a game seeded near
+  the cap, and its R2 arithmetic (15 turns each) becomes 30. Any client text that prints the cap
+  reads the constant.
 
 ### B4.4 The shadow-ban sweep leans toward cards at risk (CL11)
 
@@ -560,8 +620,9 @@ Knock-on work:
 Today (R186, `packages/ai/src/sweep.ts`): each non-token card is forced into AI decks, 8 seeds at Easy
 and 8 at Hard, against the greedy baseline; a card is flagged `error`, `timeout`, `neverPlayed`
 (affordable on 3 or more turns, never played) or `selfHarm`, and any flag bans it at every tier. The
-other 19 cards of each AI deck are an ordinary `buildAiDeck` draw. "Training" is this sweep: the AI has
-no learned weights.
+rest of each AI deck, 19 cards at Easy and 29 at Hard, is an ordinary `buildAiDeck` draw that leaves
+out every banned card but the swept one, "so its errors are not charged to this one" (`sweep.ts`).
+"Training" is this sweep: the AI has no learned weights.
 
 1. **At risk.** A card is at risk when a pass's numbers meet a flag's condition at half strength
    (affordable on `minAffordableTurns` turns and played at most once; an average evaluation change
@@ -581,6 +642,12 @@ no learned weights.
 5. **Memory between sweeps.** `shadowBan.ts` gains `SHADOW_WATCH`, the cards that were at risk and
    cleared, with their numbers, which the next sweep counts as at risk from the start: "currently on
    track" carries over.
+6. **Filler and blame.** Pass 2's filler draw lifts the ban for at-risk cards banned for
+   `neverPlayed` or `selfHarm`, the judgements pass 2 exists to revisit, and keeps out cards banned
+   for `error` or `timeout`, so a known bug is never filler. `neverPlayed` and `selfHarm` are counted
+   per card, so a card's filler games are its own evidence. An `error` or `timeout` still bans only
+   the game's forced card; one in a game that also dealt at-risk filler is listed against that filler
+   too (a `suspect` line in the sweep's output), and bans it only if its own forced games repeat it.
 
 Rejected: rewarding the AI's search for playing at-risk cards during the sweep. That would measure a
 different AI from the one that plays. The ban's scope is unchanged (R186): AI deck building only.
@@ -618,11 +685,11 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 
 | # | System | What it is | Used by |
 | --- | --- | --- | --- |
-| E1 | **Counter** | Cancel a card being played or cast: it never resolves or enters the field and goes to its owner's graveyard, or exile when the text says so. It is treated as never played: no Cry, no Death, no `cardResolved`, not counted by Combo, Quickstriker or Ceaseless Void. Mana paid stays spent (Hearthstone). A counter answers `cardPlayed` in §10.5 step 4's window, the one Sheepish uses (R17), so it lands before step 5 resolves anything; a countered card's Echo repeats never happen. Event `countered`. | C #4 r, #10, #17, #72, #87; AI Refusal |
+| E1 | **Counter** | Cancel a card being played or cast: it never resolves or enters the field and goes to its owner's graveyard, or exile when the text says so. It is treated as never played: no Cry, no Death, no `cardPlayed`, no `cardResolved`, not counted by `turnLog.cardsPlayed`, the game's `played` counter, Combo, Quickstriker or Ceaseless Void. Mana and Tributes paid stay spent (Hearthstone). **Timing:** §10.5 step 4 places the card before it emits `cardPlayed` (R119), so a counter can't answer that event. §10.5 gains a step between 3 and 4 instead: once the price is paid and before the card moves, the engine emits `cardAnnounced { instanceId, player, type, costPaid, targets }` and runs a window in which counters answer it, as traps answer any event (§10.3: traps first, then other triggers). The first counter to resolve cancels the play; the rest find no card and stay set. A cancelled play stops there, so step 4 never places the card or emits `cardPlayed`, Sheepish (which answers `cardPlayed`, R17) never sees it, and a countered card's Echo repeats never happen. The window can open a prompt (Palantir's base face asks), so steps 4–8 park on `state.work` (`work.ts`) while it is open. The announce shows what `cardPlayed` would: a card set face-down shows the opponent only its zone. Event `countered`. | C #4, #10, #17, #72, #87; AI Refusal |
 | E2 | **Steal off the field** | A Spell as it is cast (countered, then moved), or a card in a hand or deck, moves to the thief's hand and **its owner becomes the thief**: the second exception to "a card always goes to its owner's piles" (§3.2), beside R73's library swap. The hand cap applies (a burned card goes to its new owner's graveyard). Event `stolen { instanceId, from, to, zone }`, hidden per zone. | C #4, #72 r, #9, #58; C+ #12.3 |
 | E3 | **Draw limit** | "Limited to 1 Draw per turn": a player's draws beyond the limit in one turn (any player's turn; the start-of-turn draw counts) do not happen at all — no card moves, no fatigue, no cast on draw. With several limits the lowest holds. | C #4, #49 |
-| E4 | **More counters** | Per player, per turn, on both players' turns: draws (C #9), plays by type (C+ #37). Per player, per game: plays by tag (`playedByTag`, C+ #64, AI Scaling Law). Game-wide: the last Spell played by anyone (C #57), the last face-up card each player played (AI Autocomplete). All reset and survive exactly as `turnLog` does. | as listed |
-| E5 | **Replacement windows** | Effects that change an event before it happens. The engine has one, My Pawn's attack cancel (R44). New points, each at a fixed place: *would take lethal damage* (§4.4 before step 5; lethal projected as My Pawn's is), *would be healed* (inside `heal`), *would die* (§4.5 step 1, before cards move), *would go to a graveyard* (every zone move into a GY), *a friendly unit is targeted* (§4.2 step 2 for attacks, §10.5 step 1 and every target prompt for effects). | C #14 r, #28, #33, #50, #52, #89; C+ #22 |
+| E4 | **More counters** | Per player, per turn, on both players' turns: draws (C #9), plays by type (C+ #37). Per player, per game: plays by tag (`playedByTag`, C+ #64, AI Scaling Law). Game-wide: the last Spell played by anyone (C #57), the last face-up card each player played (AI Autocomplete). The per-turn counts reset and survive exactly as `turnLog` does; the per-game counts never reset, like the game `played` counter; each "last" record is overwritten by the next play and never cleared. | as listed |
+| E5 | **Replacement windows** | Effects that change an event before it happens. The engine has one, My Pawn's attack cancel (R44). New points, each at a fixed place: *would take lethal damage* (§4.4 before step 5; lethal projected as My Pawn's is), *would be healed* (inside `heal`), *would die* (§4.5 step 1, before cards move), *would go to a graveyard* (every zone move into a GY), *a friendly unit is targeted* (§4.2 step 2 for attacks, §10.5 step 1 and every target prompt for effects). | C #14 r, #28, #33, #50, #52, #60, #89; C+ #22 |
 | E6 | **Damage pipeline additions** | Spell Damage +X (before step 1: a Spell's hit is raised by the Spell Damage on its controller's side; Spells only, not Field Spells or Traps); hero damage multipliers after Armor (half or a quarter, rounded up); per-hit caps (the lowest cap wins: Anti-oneshot Armor 5 or 3, Anime Armor 1); Trample on a Spell (the excess over the target Unit's health hits that Unit's controller's hero as a new instance, as R346 put Pierce on a Spell). | C #75, #83; C+ #11, #38, #38.1 |
 | E7 | **Set health** | "Set a Hero's health to 13": no pipeline, not damage, not a heal (like R18's lose health). Event `healthSet`. | C #29 |
 | E8 | **Heal becomes damage** | A heal of X on a matching target becomes X Pierce damage from the converting card. | C+ #22 |
@@ -638,7 +705,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E18 | **New prompt kinds** | `number` (pick a number from a fixed range: C #18), a mode prompt held by the *other* player (C #8), a multiple-choice answer (C+ #42), board cells (C+ #62), a quest reward (C #90), a budgeted multi-pick from a pile (C #44). The existing kinds stay. | as listed |
 | E19 | **Plague Tokens, extended** | "Place N Plague Tokens" with no card named is N placements, each on a permanent (either side, face-down cards included) the placer chooses, repeats allowed, one prompt per token; "Place N Plague Tokens on X" is one placement of N. Placement multipliers (×2, ×3); "when a Plague Token is placed on this" (once per placement); stats per token (aura or self); tokens spent as mana; tokens consumed. `counterChanged` already carries `plague`. | C #27, #39, #42, #43, #53, #59, #61, #62, #63, #69, #70, #74, #76, #78, #87; C+ #3 |
 | E20 | **Lock variants, Unlock** | Lock a whole lane, the zone a permanent was just played into, a random zone, the firing trap's own zone; unlock every zone (event `unlocked`). | C #71, #84; C+ #1, #34, #77 |
-| E21 | **Backrow piles** | §3.2 today: "only the unit row holds a pile". Backrow zones hold piles too once something gives backrow cards Stack; only the top acts, so a face-down trap under a pile cannot fire and an aura under one is off. Ivory Tower is the one backrow pile a Unit may top. | C+ #33, #77 |
+| E21 | **Backrow piles** | §3.2 already lets a Stack card onto an occupied zone "of the right row", but no backrow card has had Stack, so no backrow pile has ever existed and nothing handles one. Once something gives backrow cards Stack, backrow zones hold piles; only the top acts, so a face-down trap under a pile cannot fire and an aura under one is off. Ivory Tower is the one backrow pile a Unit may top (CL39). | C+ #33, #77 |
 | E22 | **Flicker** | The card leaves the field and re-enters the same zone at once: R78's reset, summoning sick, no Cry, no Death. It counts as summoned. | C #14 r |
 | E23 | **Fuse variants** | Fuse into a hand card keeping that card's cost; fuse a random card into every deck card keeping each one's cost; fuse the opponent's played card into your permanent; fuse three generated cards; Discover and fuse onto self; fuse an enemy card onto one of yours of its type. All R77/R102; "keeps its cost" is a `costOverride` of the cost it had. | C #78 r; C+ #30, #31, #43, #73, #74 |
 | E24 | **Transform variants** | The cards beneath a Stack become copies of the top card; a unit becomes a random Classic or Classic+ Unit. | C+ #4, #73.1 |
@@ -652,7 +719,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E32 | **Curve targeting** | See Classic+ #62 KY's Papaya. | C+ #62 |
 | E33 | **Quests** | See Classic #90 In Too Deep. | C #90 |
 | E34 | **Perfect-hand scorer** | R29's Zephyrs scorer, extended to choose a hand. | C+ #27 |
-| E35 | **Unit restrictions and statuses** | Can't be attacked; can be attacked only by units in its lane; can't attack or be attacked; immune to Spells (not targeted by one and unaffected by one); Berserk; may attack again after a kill; a keyword that holds only while a condition does; forced attacks on "a random enemy" and on the unit's *own* hero. | C #69, #78; C+ #19.1, #19.2, #19.5, #33, #51, #73.1 |
+| E35 | **Unit restrictions and statuses** | Can't be attacked; can be attacked only by units in its lane; can't attack or be attacked; immune to Spells (not targeted by one and unaffected by one); Berserk; may attack again after a kill; a keyword that holds only while a condition does; forced attacks on "a random enemy" and on the unit's *own* hero. Forced attacks skip §4.2's steps 1–3 (R53) but not these restrictions: a forced attack on a target its attacker may not attack does not happen, and "a random enemy" is drawn from the targets it may attack. | C #69, #78; C+ #19.1, #19.2, #19.5, #33, #51, #73.1 |
 | E36 | **Lines of code** | Every card definition carries `loc`: the non-blank, non-comment lines of its script file (imports excluded), computed by a `scripts/` generator into the catalog and held current by a test, as `_generated.ts` is. A fused card's `loc` is its ingredients' sum. It is public (printed in the inspect overlay) and part of the card's patch history (B4.2), so a refactor that moves a card's `loc` is a balance change. | C #48; C+ #44, #45 |
 | E37 | **Random split damage** | "Deal N damage split among enemies": N hits of 1, each to a random enemy (hero or unit) still standing. | C+ #3 |
 | E38 | **Buffs and keywords in hand and deck** | §10.4's layer 4 already keeps a hand buff (R243, Corpse Eater); extend it to granted keywords and to the deck, carried onto the field when the card enters. | C+ #40, #77 |
@@ -660,7 +727,7 @@ through a fixture script, as CLAUDE.md asks of engine behaviour, before any card
 | E40 | **Catalog shape** | X in stats (C+ #69), a face's own type (C+ #22), a Token's printed rarity (C+ #65.x), `params` (B3.4), `loc` (E36). | as listed |
 
 New events, each with a BUILD M5-T4 row and a `SOUND_CUES` row (the maps are total, so the build fails
-until they exist): `countered`, `stolen`, `unlocked`, `activated`, `animated`, `deanimated`, `crumbled`,
+until they exist): `cardAnnounced`, `countered`, `stolen`, `unlocked`, `activated`, `animated`, `deanimated`, `crumbled`,
 `degraded`, `upgraded`, `redirected`, `healthSet`, `questProgressed`, `questCompleted`, `rolledBack`.
 
 ---
@@ -723,10 +790,10 @@ base → Radiant.
 - **Radiant:** Aura: Your opponent can't draw more than 1 card each turn.
   When your opponent plays a Spell, steal it. Once this has stolen Spells costing (2) or more in
   total, Tribute this.
-- **Engine:** E3 on the opponent, on every turn. The steal answers the opponent's `cardPlayed` of a
-  Spell with the Book tag at §10.5 step 4: the base face asks its controller (a prompt during the
-  opponent's turn, with R79's 30-second clock); yes sacrifices Palantir, counters the Book (E1) and
-  moves it to your hand as yours (E2). The Radiant face steals every Spell with no question, adds
+- **Engine:** E3 on the opponent, on every turn. The steal answers the opponent's announce of a
+  Spell with the Book tag, in E1's window before §10.5 step 4: the base face asks its controller (a
+  prompt during the opponent's turn, with R79's 30-second clock); yes sacrifices Palantir, counters
+  the Book (E1) and moves it to your hand as yours (E2). The Radiant face steals every Spell with no question, adds
   each one's own cost (R65, out of play) to `memory.stolenCost`, and sacrifices itself once that
   reaches 2.
 - **Rulings:** "casts" is the designer's word for plays; a cast by an effect (R70) counts too. "Tribute
@@ -767,8 +834,8 @@ base → Radiant.
 #### Classic #7 · InfiniScepter
 `classic-007` · (1) Field Spell · Legendary
 
-> **Designer:** Cry: Exile a (0) or (1) cost Spell from your hand. Activate: Cast a copy of that Spell.
-> ~~~ Cry: Exile a (0)-(2) cost Spell. Activate: Cast a copy of that Spell.
+> **Designer:** Cry: Exile a (0) or (1) cost Spell from your hand. Activate: Cast a copy of that Spell. ~~~
+> Cry: Exile a (0)-(2) cost Spell. Activate: Cast a copy of that Spell.
 
 - **Text:** Cry: Exile a Cost (1) or less Spell from your hand.
   Activate: Cast a copy of that Spell.
@@ -829,10 +896,10 @@ base → Radiant.
 - **Radiant (the clean-up asked for):** Activates when your opponent plays a card that costs (3) or
   less: Counter and exile it. Then exile random enemy permanents with a total cost of up to (3) minus
   its cost.
-- **Engine:** E1 answering `cardPlayed`, the card exiled rather than sent to the graveyard. Radiant:
+- **Engine:** E1 in the announce window, the card exiled rather than sent to the graveyard. Radiant:
   budget = 3 − the countered card's cost; repeat: pick a random enemy permanent whose cost (R65 as it
-  stands on the field; an X card at the X it was played for) is at most the budget, exile it, subtract
-  its cost; stop when the budget is 0 or nothing fits.
+  stands on the field; an X card at the X it was played for, CL17) is at most the budget, exile it,
+  subtract its cost; stop when the budget is 0 or nothing fits.
 - **Rulings:** "costs" is the cost paid, as Core #60 Bear Honeypot reads it, so a card cast for free
   (R70) always qualifies. A 0-cost permanent always fits while the budget is above 0.
 - **Numbers:** threshold 1 ↑ (Radiant 3).
@@ -932,7 +999,7 @@ base → Radiant.
 - **Text:** Activates when your opponent plays a Spell: Counter it.
 - **Radiant:** Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
   The copy costs (0).
-- **Engine:** E1 on `cardPlayed` of a Spell (the Spell type, not Field Spells). Radiant: a fresh copy
+- **Engine:** E1 on the announce of a Spell (the Spell type, not Field Spells). Radiant: a fresh copy
   (Radiant flag kept) in your hand, yours, `costOverride 0`.
 - **Numbers:** Radiant cost 0 ↓.
 - **Check:** shares its name with #72 (B2.8).
@@ -949,7 +1016,8 @@ base → Radiant.
 - **Engine:** E18's `number` choice, declared with the play (R81) from a fixed list, 0 to 10
   (`GLITCH_NUMBERS`), so the options reveal nothing. Costs read per R65 at resolution, as R66 reads
   Genn's Greed's: a hand card at its hand cost, a deck or field card at its own; an X-cost card counts
-  0. The spell itself is resolving, in no pile, and is spared.
+  the X it was played for on the field and 0 anywhere else (CL17). The spell itself is resolving, in
+  no pile, and is spared.
 - **Rulings:** the base face reaches both players' field, hand and deck — the zones its Radiant face
   names; the Radiant narrows whose, not where. Graveyards and exile are untouched.
 - **Numbers:** none (the number is chosen).
@@ -1051,8 +1119,8 @@ base → Radiant.
 - **Text:** Exile every card on the field, in hands and in decks that costs (1) or less.
 - **Radiant:** Exile every enemy card on the field, in their hand and in their deck that costs (1) or
   less.
-- **Engine:** #18 with the numbers fixed at 0 and 1: the same zones, the same cost reading, the spell
-  itself spared.
+- **Engine:** #18 with the numbers fixed at 0 and 1: the same zones, the same cost reading (CL17: an
+  X card in a hand or deck costs 0, so it goes; on the field it costs its X), the spell itself spared.
 - **Numbers:** threshold 1 ↑.
 
 #### Classic #26 · Rapid Draw
@@ -1139,9 +1207,10 @@ base → Radiant.
 - **Radiant:** Summon a Felinor Token. Then steal an enemy permanent in a lane where you control a
   Cost (1) Unit.
 - **Engine:** base: a declared target (R81), any enemy permanent (unit, backrow card, face-down card —
-  you see a stolen trap from then on, R33) in a lane where a Unit you control has its own cost (R65) of
-  1. Steal per §6.3 and R15. Radiant: the Felinor Token (Cost (1)) lands first in your leftmost open
-  zone, so the target is a prompt after it lands rather than a play-time pick.
+  you see a stolen trap from then on, R33) in a lane where a Unit you control has its own cost (R65;
+  an X Unit its X, CL17) of exactly 1. Steal per §6.3 and R15. Radiant: the Felinor Token (Cost (1))
+  lands first in your leftmost open zone, so the target is a prompt after it lands rather than a
+  play-time pick.
 - **Numbers:** none.
 
 #### Classic #33 · Joro
@@ -1253,6 +1322,12 @@ base → Radiant.
 - **Engine:** one declared target, one placement of 1 (2) (E19; a Pestilent Slime doubles it). Its
   cost is R65's on the field (an X card at the X it was played for, CL17). Steal per §6.3 and R15;
   otherwise draw N (hand cap).
+- **Rulings (CL17):** an X-cost card on the field costs the X it was played for (the instance's `x`,
+  which §2.3 already stores) wherever a rule compares or counts costs; anywhere else, and on the field
+  when it arrived without a chosen X (Recruit, a summon), it costs 0, as R65 says. This amends R65,
+  whose "outside play … comparisons" would otherwise read a field card at 0, so Classic #25 Lag in the
+  System would exile a Classic+ #69 Buff Billy played for 3. Classic #10, #18, #25 and #32 read costs
+  the same way.
 - **Numbers:** tokens 1 ↑.
 
 #### Classic #40 · MC Tech
@@ -1274,8 +1349,11 @@ base → Radiant.
 
 > **Designer:** 3/3 Indestructible ~~~ 6/6 Indestructible
 
-- **Text:** Indestructible. **Radiant:** Indestructible.
+- **Text:** Indestructible. **Radiant (proposed):** Indestructible, Lifesteal.
 - **Engine:** keywords only; under R347 it never has Taunt.
+- **Check:** **R275**: the designer's Radiant only doubles the stats, and a keyword-only Unit's
+  Radiant owes one more keyword or a stronger one. Proposed Lifesteal (Taunt is out, R347).
+  **⚠ designer.**
 
 #### Classic #42 · Transmutable Toxins
 `classic-042` · (2) Field Spell · Rare
@@ -1287,11 +1365,12 @@ base → Radiant.
 
 - **Text:** Aura: Your Units have +1/+1 for each Plague Token on them. Enemy Units have −1/−1 for each
   Plague Token on them.
-  Activate: Place 2 Plague Tokens, each on a random Unit.
+  Activate: Place a Plague Token on each of 2 random Units.
 - **Radiant:** +2/+2 and −2/−2.
 - **Engine:** an aura (§10.4 layer 5) reading each unit's `counters.plague`; −1/−1 lowers max health, so
-  an enemy can die of it at the state check (Core #46's rule). Activate (once per turn): two
-  placements, each on a uniformly random unit on the field (either side; the same one may get both).
+  an enemy can die of it at the state check (Core #46's rule). Activate (once per turn): one token
+  on each of two different random units on the field, either side (R60: a random pick of N picks N
+  different cards; with one unit on the field, it gets one token).
 - **Numbers:** tokens 2 ↑; stats per token 1 ↑.
 - **Check:** "a 2" typo.
 
@@ -1718,8 +1797,9 @@ base → Radiant.
 
 - **Text:** Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it.
 - **Radiant:** Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it.
-- **Engine:** E1 on the opponent's `cardPlayed` of any non-Unit; a Trap is countered as it is set and
-  never reaches the backrow. Radiant: E2 — countered and moved to your hand as yours.
+- **Engine:** E1 on the opponent's announce of any non-Unit, so a Field Spell or a Trap is countered
+  before it reaches the backrow (a face-down set is announced by its zone only, but the engine knows
+  what it is). Radiant: E2 — countered and moved to your hand as yours.
 - **Numbers:** none.
 - **Check:** shares its name with #17 (B2.8).
 
@@ -1793,10 +1873,13 @@ base → Radiant.
 - **Text:** Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it.
   If it's your backrow card, draw 2. If it's your Unit, it attacks a random enemy.
 - **Radiant:** Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, fuse it
-  onto a random card of yours of its type on your field, in your hand or in your deck, or exile it if
-  you have none. If it's your backrow card, draw 4. If it's your Unit, it attacks a random enemy twice.
+  onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you
+  have none. If it's your backrow card, draw 4. If it's your Unit, it attacks a random enemy twice.
 - **Engine:** B3.2 Activate ♾️ with a declared target (a permanent with a token). A forced attack (R53)
-  on a random enemy (hero or unit). The Radiant's fuse is E23 (R77; the enemy card ceases to exist).
+  on a random enemy (hero or unit). The Radiant's fuse is E23 (R77; the enemy card ceases to exist)
+  onto the card you choose: the designer's "a valid card" is a choice, a prompt over your cards of its
+  type on the field, in your hand and in your deck, the deck's shown to you only (§10.8, as Core #51
+  shows library cards).
 - **Rulings (CL23):** an Activate ability needs a card that stays on the field, so the card is read as a
   Field Spell, as §5.3 corrected Core #68's type. **⚠ designer:** the other reading is a Spell whose one
   resolution lets you consume tokens again and again until you stop.
@@ -1823,8 +1906,10 @@ base → Radiant.
 
 - **Text:** Tribute 2, Rush, Trample, Indestructible. **Radiant:** the same.
 - **Engine:** keywords only; Tribute 2 (B4.5 applies); no Taunt ever (R347).
-- **Check:** **R275**: the Radiant attack is not doubled. Register a named exception in the
-  radiant-standard test (the designer's number stands, as in v0.1.1) or print 52/16. **⚠ designer.**
+- **Check:** **R275**: the Radiant attack is not doubled, and as a keyword-only Unit its Radiant also
+  owes one more keyword or a stronger one. Register a named exception in the radiant-standard test
+  (the designer's number stands, as in v0.1.1) or print 52/16, and add a rider either way (proposed:
+  Charge for Rush, as R276 gave Core #95.1). **⚠ designer.**
 
 #### Classic #81 · The Power to Thrive
 `classic-081` · (2) Field Spell · Rare
@@ -1894,14 +1979,16 @@ base → Radiant.
 - **Numbers:** Radiant recruits 1 ↑.
 
 #### Classic #86 · Genn
-`classic-086` · (4) Unit · Common · 14/14 → 14/14 (proposed 28/28)
+`classic-086` · (4) Unit · Common · 14/14 → 14/14 (proposed 42/42)
 
 > **Designer:** 14/14 ~~~ 14/14
 
 - **Text:** none. **Radiant:** none.
 - **Engine:** a vanilla Unit, like Core #8 Mr. Vanilla.
-- **Check:** **R276/R275**: identical faces, which R276's test refuses. Proposed Radiant 28/28, R275's
-  minimum (Mr. Vanilla's triples). **⚠ designer.**
+- **Check:** **R276/R275**: identical faces, which R276's test refuses. Proposed Radiant 42/42: a
+  vanilla Unit has no text to scale, so it follows Core #8 Mr. Vanilla, whose Radiant face triples its
+  stats (4/4 → 12/12, `docs/radiant-audit.md`); 28/28 would meet only the stat half.
+  **⚠ designer.**
 
 #### Classic #87 · Plague Chalice
 `classic-087` · (X) Field Spell · Epic
@@ -1914,9 +2001,9 @@ base → Radiant.
   Aura: Counter every card played whose cost equals the number of Plague Tokens on this.
 - **Radiant:** This enters with X Plague Tokens on it.
   Aura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this.
-- **Engine:** X is at least 1 (R348). E1 on every `cardPlayed` whose cost paid equals the current count
+- **Engine:** X is at least 1 (R348). E1 on every announce whose cost paid equals the current count
   (both players'; the Radiant's: the opponent's). The count moves: Mutate Spell consumes tokens, other
-  cards add them. Its own play is never countered by itself (R119).
+  cards add them. It is not on the field during its own announce, so it never counters itself.
 - **Rulings:** "cost" is the cost paid, as Core #60 reads it, so a free cast (R70) is countered only at
   a count of 0.
 - **Numbers:** none.
@@ -1996,7 +2083,7 @@ base → Radiant.
   | 6 | your Units have 10 or more total Attack and 10 or more total health at once | H → 9, I → 10 |
   | 7 | you end a turn with 5 or more unspent mana | J (end) |
   | 8 | 3 cards have been exiled (either exile pile) | K (end) |
-  | 9 | your deck is empty | L (end) |
+  | 9 | a draw of yours takes the last card of your deck (a deck already empty when the quest opens completes it at once) | L (end) |
   | 10 | your graveyard holds 6 or more Units | M (end) |
 
   Rewards: **A** heal your hero 6 · **B** deal 3 damage (a target) · **C** return 2 random cards from
@@ -2016,7 +2103,9 @@ base → Radiant.
   by two paths opens once, and a reward two completed quests offer (D, G, H) is granted by each.
 - **Rulings (CL25):** the quest wording above makes each condition countable: "Destroy 2 cards" counts
   enemy permanents destroyed by anything, "Deal 12 damage" counts damage your cards deal to enemies,
-  "Exile 3 cards" counts cards entering either exile, "Float" is unspent mana at the end of your turn.
+  "Exile 3 cards" counts cards entering either exile, "Float" is unspent mana at the end of your turn,
+  and "Draw your entire Deck" is done by the draw that empties it, never by cards leaving it any other
+  way.
   **⚠ designer**, especially quest 2 (anything, or only your own effects?).
 - **Numbers:** none.
 - **Check:** "work of stats" is "worth of stats". Quickdraw: it starts in your opening hand (§2.1).
@@ -2337,16 +2426,18 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 - **Radiant:** the same, all five Radiant.
 - **Engine:** five summons aimed at named zones (§3.2: an aimed summon fails when its zone is occupied
   or Locked).
-- **Rulings (CL32):** Mid Loser's Cry fires when League of Losers summons it. That is the only way it
-  reaches the field, so under R1 its Cry would be dead text; the exception is a summon that names the
-  card it summons. **⚠ designer:** or reword Mid Loser's Cry as "When this is summoned:".
+- **Rulings (CL32):** Mid Loser's Cry fires when League of Losers summons it. That is its only way onto
+  the field but one (Dropshipping can hand a Loser out as a card, and a Loser played from hand fires its
+  Cry under R1 like any card), so under R1 alone its Cry would be nearly dead text; the exception is a
+  summon that names the card it summons. **⚠ designer:** or reword Mid Loser's Cry as "When this is
+  summoned:".
 - **Check:** League of Legends' five roles.
 
 The five Losers (`classicplus-019-1` … `-5`), Units, Tokens, Legendary by the designer:
 
 - **#19.1 Top Loser** · (2) · 5/5 → 10/10.
-  > **Designer:** 5/5 Armor 3 Cannot be in Defense Position. Can only be attacked by Units in this lane.
-  > ~~~ 10/10 Armor 6 Cannot be in Defense Position. Can only be attacked by Units in this lane, Immune
+  > **Designer:** 5/5 Armor 3 Cannot be in Defense Position. Can only be attacked by Units in this lane. ~~~
+  > 10/10 Armor 6 Cannot be in Defense Position. Can only be attacked by Units in this lane, Immune
   > to Spells.
   - **Text:** Armor 3
     Cannot be in Defense Position. Only Units in this lane can attack this.
@@ -2457,8 +2548,10 @@ The five Losers (`classicplus-019-1` … `-5`), Units, Tokens, Legendary by the 
 - **Text:** Add 3 random cards to your hand. They may be tokens. Give them Brittle 2.
 - **Radiant:** Add 3 random cards to your hand. They may be tokens. Give them Brittle 2. They cost (1).
 - **Engine:** the pool is every card and token of every set but Dropshipping (B4.1); repeats allowed
-  (R60); a unit-token card may sit in a hand (R11's Infinite Reserves case). Brittle per B3.3;
-  `costOverride 1`.
+  (R60); a unit-token card may sit in a hand (R11's Infinite Reserves case). It is the one pool that
+  reaches the Grapes outside Fruit (CL3), the Losers outside League of Losers (CL32) and the AI
+  generated cards outside Claude's Datacenter and AI Slop (B8), at their printed cost (Radiant: (1)).
+  Brittle per B3.3; `costOverride 1`.
 - **Numbers:** cards 3 ↑; Brittle 2 ↑.
 
 #### Classic+ #24 · Crushing Walls
@@ -2634,7 +2727,11 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
   and hit by "all Units" effects as usual, and can neither attack nor be attacked.
 - **Rulings (CL39):** the Tower stays active beneath the Unit it carries — the one exception to "only the
   top of a pile acts", as R13 makes Felinor Fiender's count one — so its aura and its protection keep
-  working. It carries one Unit.
+  working, and "all Field Spells" effects still find it. It carries one Unit, and that Unit is a Unit
+  for every rule, not a backrow card, so backrow effects (Back Breaker, Crushing Walls) pass it by. If
+  the Tower leaves the field, the Unit moves to its controller's unit zone in that lane, or the
+  leftmost open one (R64), without leaving the field (no Cry, no reset: R78 doesn't apply); with no
+  open unit zone it is destroyed.
 - **Numbers:** none.
 
 #### Classic+ #34 · Memory Leak
@@ -2794,12 +2891,13 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
 > **Designer:** Change a random number on a card in your hand to 3. ~~~ Discover a number number on a
 > card in your hand to 3.
 
-- **Text:** Change a random number on a random card in your hand to 3.
-- **Radiant:** Discover a number on a card in your hand. Change it to 3.
+- **Text:** Choose a card in your hand. Change a random number on it to 3.
+- **Radiant:** Choose a card in your hand. Discover a number on it and change that number to 3.
 - **Engine:** "a number on a card" per B3.4: its cost (not X), attack, health, a numbered keyword's
-  value, or a declared number. Base: a random hand card with a number that isn't already 3, then a random
-  such number. Radiant: a Discover of 3 different (card, number) pairs. The change is `tuning` (B3.4),
-  so it stays with the card.
+  value, or a declared number. The designer wrote "a card in your hand", not a random one, so the card
+  is a declared hand pick (R81, as Glowy Jelly Bean's), among cards with a number that isn't already 3.
+  Base: a random such number on it. Radiant: a Discover of up to 3 different such numbers on it. The
+  change is `tuning` (B3.4), so it stays with the card.
 - **Numbers:** none.
 - **Check:** "number number" typo. The KY pool gains this card (B2.6).
 
@@ -2811,8 +2909,8 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
 > reward. Easy (simple addition): 3 Coins, a random (2) cost KY card, a random Legendary card that
 > costs (0), or 2 random Books. Medium (relatively simple double integrals): 2 random (4) cost cards
 > that cost (1), 5 random Books, 5 random KY cards, or fill your hand with Books. Hard (rigorous proofs,
-> complex Markov chains, statistics, PDEs, linear algebra): Add KY’s Gift to your hand. It costs (0).
-> ~~~ (the same) Rewards are Radiant.
+> complex Markov chains, statistics, PDEs, linear algebra): Add KY’s Gift to your hand. It costs (0). ~~~
+> (the same) Rewards are Radiant.
 
 - **Text:** Offer an Easy, a Medium and a Hard problem, each showing a random reward from its list.
   Choose one and answer it. If you're right, gain its reward.
@@ -2835,7 +2933,9 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
   text with Unicode maths (∫, ², √, subscripts), so the client needs no maths renderer. The AI will find
   the right answer by simulating each (every answer is a `reduce`), which is fine for a computer.
   **⚠ designer:** the turn clock (75 s, R79) keeps running while a player works on a Hard problem; pause
-  it or give the prompt its own clock?
+  it or give the prompt its own clock? Default: neither; the clock runs, as for every prompt. The bank
+  ships with the engine, client bundle included, so a determined player can look answers up; keeping
+  the keys server-only would cost hotseat and practice the card.
 - **Numbers:** none.
 
 - **#42.1 KY’s Gift** · (4) Field Spell, KY · Token, Legendary by the designer (`classicplus-042-1`).
@@ -3113,8 +3213,11 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
 - **Engine (E32):** the answer is 1 to 4 cells in different lanes (E18's `cells` prompt, at
   resolution); the curve is the lowest-degree polynomial through them (Lagrange, in exact rationals,
   degree at most 3). A card is on the curve when its cell satisfies y = p(x) exactly, so with four
-  cells the curve is fixed and may also hit a cell in the fifth lane. `legalActions` can list every
-  answer (about 2,100) or the AI can sample them.
+  cells the curve is fixed and may also hit a cell in the fifth lane. There are about 2,100 answers,
+  and `promptAnswers` stops listing at `MAX_PROMPT_ANSWERS` (256), so one prompt would leave most
+  curves out of `legalActions`, the fuzz suite and the AI. Ask for the cells one prompt at a time
+  instead: each offers the 4 cells of every lane not yet used and, after the first, "done", so at most
+  21 answers, and every curve stays reachable.
 - **Rulings (CL43):** the player picks points, not coefficients: up to four cells define the cubic,
   which is how a player "creates" one without typing it; a client may show the equation it makes. Cards
   are points at their cells; between lanes the curve touches nothing.
@@ -3309,7 +3412,9 @@ The five Grapes (`classicplus-065-1` … `-5`), Fruit Spell Tokens that any Frui
   nothing). The deck replacement names its pool, so it may bring this card back (B4.1); the deck fusion
   is E23 with every set's non-token cards but this one; "Classic cards" is the Classic set.
 - **Rulings (CL44):** the Radiant's three effects are three different entries, resolved in the list's
-  order, the recursion where it falls. **⚠ designer.**
+  order, the recursion where it falls. Patch v0.2.0 gives Core #95's Radiant the same shape (three
+  random effects in place of the recursion plus one, R28 and R87 rewritten with it), so one rule
+  serves both editions. **⚠ designer.**
 - **Check:** in play the rules box reads "???" (Core's rule for the tag, §10.10), "!!!" on the Radiant.
 
 - **#73.1 Classic Golem** · (4) Unit · Token, Legendary by the designer · 10/10 → 20/20
@@ -3430,9 +3535,10 @@ The five Grapes (`classicplus-065-1` … `-5`), Fruit Spell Tokens that any Frui
 > cards, make 10 of them with any effect you want, they should be the same as Claude’s Datacenter
 
 Ten Tokens of the Classic+ set, tag **AI**, ids `classicplus-t-ai-01` … `-10`, indices `T-AI-1` …
-`T-AI-10` (shared tokens: two cards make them). They reach play only through #78 Claude's Datacenter
-and #43 AI Slop, which hand them out costing (0), so their printed costs matter only for Degrade and
-Upgrade, KY's Constant, copies (Autocomplete's) and fusions. Each is built from systems the two sets need anyway, so none asks for
+`T-AI-10` (shared tokens: two cards make them). They reach play through #78 Claude's Datacenter and
+#43 AI Slop, which hand them out costing (0), and through #23 Dropshipping's pool of every card and
+token (CL3), which hands them out at their printed cost; their printed costs matter there and for
+Degrade and Upgrade, KY's Constant and fusions. Each is built from systems the two sets need anyway, so none asks for
 an engine feature of its own, and each Radiant face meets R275. The theme is the thing that made them:
 a language model's habits, good and bad.
 
@@ -3486,7 +3592,7 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 6 | B2.8 | Classic #72 shares Counterspell's name. Rename? | "Grand Counterspell" suggested |
 | 7 | B3.4 | Upgrade's list was blank. Mirror of Degrade? | Yes |
 | 8 | B4.2 | Labels for the pre-v0.1.1 history | v0.1.0, v0.1.0-r1 … r3 |
-| 9 | B4.3 | "Double turn limit": the turn cap (30 → 60) or the turn clock (75 → 150 s)? | The cap; match ceiling 60 → 120 min |
+| 9 | B4.3 | "Double turn limit": the turn cap (30 → 60) or the turn clock (75 → 150 s)? At 60, two 20-card decks fatigue out at player-turn 48, so the cap is rarely reached | The cap; match ceiling 60 → 120 min |
 | 10 | C #1 | Does the Radiant keep "Draw 1"? | Yes |
 | 11 | C #4 | Is Palantir's base steal optional? | Yes ("Tribute this to …") |
 | 12 | C #5 | Does Tesla keep firing while animated? | Yes (a Field Trap) |
@@ -3497,8 +3603,8 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 17 | C #33 | Joro: from hand only? Radiant 1/1 (R275)? | Hand only; named exception |
 | 18 | C #63 | Crop Dusting has no Radiant face | 2 Plague Tokens each, draw 2 |
 | 19 | C #78 | Mutate Spell: a Field Spell? | Yes |
-| 20 | C #80 | BOOM! Big Max Radiant 26/16 (R275) | Named exception |
-| 21 | C #86 | Genn's faces are identical (R276) | Radiant 28/28 |
+| 20 | C #80 | BOOM! Big Max Radiant 26/16 and no rider (R275) | Named exception for the stats; Charge for Rush |
+| 21 | C #86 | Genn's faces are identical (R276) | Radiant 42/42, tripled as Mr. Vanilla's |
 | 22 | C #90 | In Too Deep: what each quest counts | As its table says |
 | 23 | C+ #2 | Groom Shroom: redirect the attack to a new Taunt? | No |
 | 24 | C+ #7 | "Right-House Protector" is Core #3? | Yes |
@@ -3509,7 +3615,7 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 29 | C+ #27 | Zephrys Zealotism: same hand size, or a full hand? | Same size |
 | 30 | C+ #29 | Portal to the Past: which games count, and whose side? | Same kind of game; both sides, minus hidden cards |
 | 31 | C+ #35 | Rollback: where do cards that weren't there go? | Their owners' hands |
-| 32 | C+ #42 | KY's Test: pause the turn clock while answering? | Not yet decided |
+| 32 | C+ #42 | KY's Test: pause the turn clock while answering? | No; the clock runs, as for any prompt |
 | 33 | C+ #60 | Doctors Orders: a Field Spell? | Yes |
 | 34 | C+ #63 | Fruit Tree's faces are identical (R276) | Radiant: a Radiant Fruit |
 | 35 | C+ #66 | Vine of Grapes Radiant says 3 Grapes | 5 |
@@ -3518,6 +3624,8 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 38 | C+ #73.1 | Classic Golem: transform after the combat? | Yes |
 | 39 | C+ #74 | Twice Forward One Step Backwards: a Field Trap? | Yes |
 | 40 | C+ #75 | J-lease Explorer's Radiant repeats its base text (R275) | Shuffle a Radiant Pack |
+| 41 | B3.3 | Brittle's first tick: at your next turn (t + 2) or after a whole turn of each player's (t + 4)? | t + 2 |
+| 42 | C #41 | State of the Game's Radiant only doubles the stats (R275) | Add Lifesteal |
 
 ---
 
@@ -3528,18 +3636,25 @@ server, each task done when its acceptance items are green tests (CLAUDE.md rule
 
 ### B10.1 Documents first
 
-1. **SPEC.md.** Port this brief: §1 (the pillars' "30-turn cap"), §2.5 (the cap, R2), §3.2 (backrow
-   piles, the Tribute zone rule), §4.4 (Spell Damage, multipliers, caps, spell Trample, the lethal
-   window), §4.5 (backrow Death, the would-die window), §5 (sets, `SetName`, tags, the new catalog
-   fields), §5.1 (pools across sets, self-exclusion by id), §6 (Animated, Activate, Brittle, Degrade,
-   Upgrade, Spell Damage and the E-systems' verbs: Counter, Flicker, Unlock, steal off the field),
-   §7 (the 38 tokens), §8 (two new tables, §8.6 Classic and §8.7 Classic+, in §8's column format),
-   §9.4 (deck codes v2), §9.9 (AI pools, the sweep), §10.1–§10.10 (state fields, the `activate`
-   action, new events, new prompt kinds, `viewFor` marks), and a block of §11 rows for every CL here
-   plus the rulings each changes: R1 (Mid Loser), R2, R13 (Ivory Tower), R28 and R87 (two editions),
-   R35 (the Legendary pool), R43 (Heroic Power as Activate, optional), R59 (Blade Storm), R65 (floors,
-   an X card's cost on the field), R73 (a second ownership change), R78 (`tuning` and Brittle persist),
-   R79 (the ceiling), R184–R186 (AI pools and the sweep), R255, R278, R279 (rules-word names).
+1. **SPEC.md.** Port this brief: §1 (the pillars' "30-turn cap"), §2.2 and R62 (two new start-of-turn
+   steps, so refresh → Brittle tick → "on your turn" cards animate → delayed effects → triggers →
+   draw, in the diagram too), §2.5 (the cap, R2), §3.1 and R5 (attacks stay free of lanes and
+   `LANE_RESTRICTED_ATTACKS` stays false, but a card may restrict who attacks it, E35), §3.2 (backrow
+   piles, the Tribute zone rule), §4.2 (E35's restrictions in step 2, which forced attacks obey too),
+   §4.4 (Spell Damage, multipliers, caps, spell Trample, the lethal window), §4.5 (backrow Death, the
+   would-die window), §5 (sets, `SetName`, tags, the new catalog fields), §5.1 (pools across sets,
+   self-exclusion by id), §6 (Animated, Activate, Brittle, Degrade, Upgrade, Spell Damage and the
+   E-systems' verbs: Counter, Flicker, Unlock, steal off the field), §7 (the 38 tokens), §8 (two new
+   tables, §8.6 Classic and §8.7 Classic+, in §8's column format), §9.4 (deck and trio codes v2),
+   §9.9 (AI pools, the sweep), §10.1–§10.10 (state fields, the `activate` action, §10.5's announce
+   step, new events, new prompt kinds, `viewFor` marks), and a block of §11 rows for every CL here
+   plus the rulings each changes: R1 (Mid Loser), R2, R12 and R73 (a second ownership change), R13
+   (Ivory Tower), R17 (counters answer before Sheepish), R28 and R87 (two editions), R35 (the
+   Legendary pool), R43 (Heroic Power as Activate, patch v0.2.1), R57 (copies keep `tuning`), R59
+   (Blade Storm), R65 (floors; an X card's cost on the field, CL17), R78 (`tuning` and Brittle
+   persist), R79 (the ceiling), R105 (the catalog version is the patch), R184–R186 (AI pools and the
+   sweep), R255 and R339 (codes v2), R278, R279 (rules-word names), R366 (the Activate labels, and
+   v0.2.0's "(N) Cost").
 2. **BUILD.md.** A milestone for the sets (call it M9): its tasks below, its constants in §2 (every
    number this brief names: `TURN_CAP_PLAYER_TURNS` 60, `ACTIVATE_UNLIMITED_CAP`, `GLITCH_NUMBERS`,
    `GRAPE_ODDS`, `BLADE_STORM_ROUNDS`, the sweep's new fields, `MATCH_CEILING_MINUTES`…; CLAUDE.md
@@ -3556,17 +3671,17 @@ server, each task done when its acceptance items are green tests (CLAUDE.md rule
 
 | Task | Scope | Done when |
 | --- | --- | --- |
-| M9-T1 Catalog shape | `SetName` "Classic+", tags Book, Pancake, AI; `CardFace.type`; `params`; `loc` and its generator; `printedRarity`; ids and set folders in `naming.ts`, `gen-registry.ts`, `missing-tests.ts`; `excludeDefId`; deck codes v2 | catalog, query, deck-code and registry tests pass with Core alone, unchanged |
-| M9-T2 Patch history | `patches/`, snapshots for v0.1.0 … v0.1.1 rebuilt from git (B4.2), the `patch` script, `CATALOG_VERSION` from the latest patch, the server's env and `GET /api/catalog/:version` | the snapshot test; the server serves each version |
-| M9-T3 Global mechanics | turn cap 60 (B4.3), Tribute zones (B4.5), self-exclusion by id (B4.1) | their R-tests; fuzz green at 1,000 seeds |
+| M9-T1 Catalog shape | `SetName` "Classic+", tags Book, Pancake, AI; `CardFace.type`; `params`; `loc` and its generator; `printedRarity`; ids and set folders in `naming.ts`, `gen-registry.ts`, `missing-tests.ts`; `excludeDefId` and every index lookup keyed by set (B2.2: `defByIndex`, `cardDefByIndex`, `excludingIndex`, the `index`/`notIndex`/`excludeIndex` filters, `deck.ts`, `determinize.ts`, `scorer.ts`); deck and trio codes v2 | catalog, query, deck-code, trio-code and registry tests pass with Core alone, unchanged |
+| M9-T2 Patch history | `patches/`, snapshots for v0.1.0 … v0.1.1 rebuilt from git (B4.2), the `patch` script, `CATALOG_VERSION` from the latest patch everywhere it lives (`catalog-data.ts`, the server's env, `render.yaml`, `VITE_CATALOG_VERSION`, the reseeded `cards` rows and `app.settings`; R105 rewritten), and `GET /api/catalog/:version` | the snapshot test; the server serves each version |
+| M9-T3 Global mechanics | turn cap 60 (B4.3), with `08-turn-cap-draw.cy.ts` reworked in the same change; Tribute zones (B4.5); self-exclusion by id (B4.1) | their R-tests; fuzz green at 1,000 seeds; e2e 08 green |
 | M9-T4 Keywords | Animated, Activate, Brittle, Degrade/Upgrade (B3) with fixture scripts in `packages/engine/test/fixtures/` | an engine test per rule of B3 |
 | M9-T5 Systems | E1–E40, each with fixture tests, in dependency order (E1, E2, E4, E5, E6, E15, E19, E11, E12 first: most cards need them) | an engine test per row of B5 |
-| M9-T6 Cards, wave A | keyword-only and one-primitive cards (Classic #3, #12, #16, #24, #26, #35, #41, #73, #82, #83; Classic+ #6, #10, #15, #16, #20, #28, #53–#57, #59, #67, …) | their card tests (base and Radiant, CLAUDE.md rule 6) |
+| M9-T6 Cards, wave A | keyword-only and one-primitive cards (Classic #3, #12, #16, #24, #26, #41, #73, #82; Classic+ #6, #10, #15, #16, #20, #28, #53–#57, #59, #67, …) | their card tests (base and Radiant, CLAUDE.md rule 6) |
 | M9-T7 Cards, wave B | cards on one or two B5 systems | the same |
 | M9-T8 Cards, wave C | the subsystems: Classic #57, #90; Classic+ #19 and the Losers, #27, #29, #35, #42, #62, #73, #74, the Audits and Hired Shrimp | the same, plus each subsystem's own tests |
 | M9-T9 AI | pools across sets (R184, R185), the two-pass sweep (B4.4), a sweep of record over 268 cards, the gates re-run and their counts recorded in §9.9 | `pnpm ai:gate`; the new `shadowBan.ts` |
 | M9-T10 Client | the Activate control (as Heroic Power's), animations and cues for the new events, the Brittle badge, Degrade/Upgrade marks, the KY's Test dialog, the Papaya cell picker, the In Too Deep quest panel, the History tab and Patch notes page, `loc` in the inspect overlay, glossary rows, deck builder set filter | component tests; `ANIMATIONS` and `SOUND_CUES` stay total |
-| M9-T11 Server | new cards seeded (`db:seed-catalog`) and granted to every account (the collection is a ledger: a grant migration through `collection_grants`), last boards stored per profile for Portal to the Past (with RLS, `test:sql`) | `test:sql`, `test:db`, the API tests |
+| M9-T11 Server | a migration re-adding `cards_tags_check` with Book, Pancake and AI, as `0010_jlockeed_tag.sql` did for Jlockeed (without it `db:seed-catalog` refuses the whole catalog); new cards seeded (`db:seed-catalog`) and granted to every account (the collection is a ledger: a grant migration through `collection_grants`), last boards stored per profile for Portal to the Past (with RLS, `test:sql`) | `test:sql`, `test:db`, the API tests |
 | M9-T12 End to end | Cypress specs for an Animated trap springing, an Activate, a Counter on the opponent's turn and a Tribute onto a full board | the e2e job on Chrome and Electron |
 | M9-T13 Review | REVIEW.md's paste-in prompt as a separate session (CLAUDE.md rule 8) | the report in `reviews/` |
 
