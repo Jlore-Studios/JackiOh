@@ -3,7 +3,7 @@
 // (lessons/spells.ts), so it may name the cards the seed deals.
 //
 // The seed deals the player Tempo Timmy, Mr. Vanilla and Twisted Sorcerer, then draws Lunar Eclipse,
-// Deft Duelist, True Strike, Hit Job and Big D-fender in that order; the AI opens with Me and Mr
+// Deft Duelist, True Strike, Big D-fender and Hit Job in that order; the AI opens with Me and Mr
 // Token, The Coin and Right-house defender (Taunt, Divine Shield, Reborn). The coach line:
 //
 //   turn 1  Mr. Vanilla; read a card; end the turn.
@@ -11,10 +11,11 @@
 //           defender, and Reborn brings it back; Tempo Timmy arrives and attacks at once (Rush).
 //   turn 3  Twisted Sorcerer's Cry and True Strike (which ignores Armor) destroy the AI's Archivist in
 //           Defense; Tempo Timmy's First Strike finishes the defender; Mr. Vanilla hits the hero.
-//   turn 4  Hit Job destroys the biggest Taunt, Twisted Sorcerer the other; Deft Duelist charges the
-//           hero the turn it arrives, and the rest follow.
-//   turn 5  Big D-fender goes to Defense Position; from then on the coach names every next move
-//           (`yourMove`) until the enemy hero falls.
+//   turn 4  Twisted Sorcerer clears the AI's Taunt (Jilliax); Deft Duelist charges the hero the turn
+//           it arrives, and Mr. Vanilla follows; Big D-fender arrives and goes to Defense Position.
+//   turn 5  Hit Job, which costs (3), destroys the Taunt the AI has put in the way (its Rush Token in
+//           Defense); from then on the coach names every next move (`yourMove`) until the enemy hero
+//           falls, on the player's 8th turn.
 //
 // Every step belongs to one of the player's turns (`onTurn`), reads only the view and the legal
 // actions (CLAUDE.md rule 7), and retires without a word once its moment has passed, so a player who
@@ -132,10 +133,21 @@ function biggestOpen(ctx: CoachCtx): Selection | null {
   return target === undefined ? { pick: "hero", player: ctx.view.opponent.player } : { pick: "instance", instanceId: target.instanceId };
 }
 
-/** The enemy unit most worth destroying: the biggest on the board. */
-function biggestEnemy(ctx: CoachCtx): Selection | null {
-  const target = [...unitsOf(ctx.view, "opponent")].sort(byValue)[0];
+/**
+ * The enemy unit most worth destroying outright: the biggest Taunt, as it stands between the
+ * player's units and the hero; else the biggest unit on the board.
+ */
+function removalAim(ctx: CoachCtx): Selection | null {
+  const taunts = enemyTaunts(ctx.view);
+  const target = [...(taunts.length > 0 ? taunts : unitsOf(ctx.view, "opponent"))].sort(byValue)[0];
   return target === undefined ? null : { pick: "instance", instanceId: target.instanceId };
+}
+
+/** What `removalAim` picks, and why when it is a Taunt. */
+function removalText(ctx: CoachCtx): string {
+  const taunts = enemyTaunts(ctx.view).length;
+  const why = taunts === 0 ? "" : taunts === 1 ? ", the Taunt in your way" : ", the biggest Taunt in your way";
+  return `Hit Job destroys a unit outright. It's not damage, so no shield or Armor saves it. Aim it at ${aimName(ctx, removalAim)}${why}.`;
 }
 
 function aimName(ctx: CoachCtx, aim: Aim): string {
@@ -450,16 +462,6 @@ export const script: LessonScript = {
       }),
     ),
 
-    onTurn(
-      4,
-      playAt({
-        id: "removal",
-        defId: HIT_JOB,
-        aim: biggestEnemy,
-        title: "Destroy a unit",
-        text: (ctx) => `Hit Job destroys a unit outright. It's not damage, so no shield or Armor saves it. Aim it at ${aimName(ctx, biggestEnemy)}.`,
-      }),
-    ),
     onTurn(4, attackWell({ id: "clear-way", title: "Clear the way", text: attackAdvice, clearing: true })),
     onTurn(
       4,
@@ -482,10 +484,8 @@ export const script: LessonScript = {
       }),
     ),
     onTurn(4, attackWell({ id: "attack-4", title: "Attack", text: attackAdvice })),
-    onTurn(4, endTurn({ id: "end-4", title: "End your turn", text: endTurnText("Your mana is spent. Press End turn.") })),
-
     onTurn(
-      5,
+      4,
       playCard({
         id: "play-guard",
         defId: BIG_D,
@@ -494,13 +494,25 @@ export const script: LessonScript = {
       }),
     ),
     onTurn(
-      5,
+      4,
       switchPosition({
         id: "defense",
         defId: BIG_D,
         to: "DEF",
         title: "Defense Position",
         text: "Press the small ⟳ button at the top right of Big D-fender. In Defense it turns sideways and gains Taunt and Armor, so enemies must hit it first.",
+      }),
+    ),
+    onTurn(4, endTurn({ id: "end-4", title: "End your turn", text: endTurnText("Your mana is spent. Press End turn.") })),
+
+    onTurn(
+      5,
+      playAt({
+        id: "removal",
+        defId: HIT_JOB,
+        aim: removalAim,
+        title: "Destroy a unit",
+        text: removalText,
       }),
     ),
     win,
