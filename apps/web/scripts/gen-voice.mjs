@@ -55,6 +55,8 @@ const PEAK_TARGET_DB = -4;
 /** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501). */
 const BUDGET_BYTES = 6 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
+/** The mode every rendered file is written with. */
+const FILE_MODE = 0o644;
 /** VOICE_FILE_MAX_MS in src/audio/constants.ts, measured by `afinfo` or `ffprobe` (voice-assets.test.ts reads the MP4 header). */
 const MAX_SECONDS = 4.0;
 /** Concurrent render jobs; the machine is shared, so two are plenty. */
@@ -520,7 +522,10 @@ async function encodeSapi(key, want, wav, dir, voiceDir) {
     "-hide_banner", "-loglevel", "error", "-y", "-i", shaped, "-af", `volume=${gain}dB`, ...FFMPEG_ENCODE, m4a,
   ]);
   if (encoded.code !== 0 || fileSize(m4a) === null) return `ffmpeg encoding failed (${encoded.code}) ${encoded.stderr}`.trim();
-  fs.copyFileSync(m4a, path.join(voiceDir, `${key}.m4a`));
+  const out = path.join(voiceDir, `${key}.m4a`);
+  fs.copyFileSync(m4a, out);
+  // A file made on a Windows drive reads as executable from WSL; a voice file is plain data.
+  fs.chmodSync(out, FILE_MODE);
   return null;
 }
 

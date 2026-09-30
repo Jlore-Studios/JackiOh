@@ -10,7 +10,7 @@
 // hides cards from view; it never refuses one. Filter and sort state is deliberately not persisted:
 // a filter that survived a reload could hide cards and confuse a player (and spec 09).
 
-import type { CardCost, CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/shared";
+import { fillParams, type CardCost, type CardDef, type CardType, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { poolFrom } from "./loadout.ts";
@@ -107,8 +107,9 @@ function haystackOf(def: CardDef): string {
     def.type,
     ...def.tags,
     def.rarity,
-    def.base.text,
-    def.radiant.text,
+    // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
+    fillParams(def, "base"),
+    fillParams(def, "radiant"),
     ...keywordKindsOf(def),
   ]
     .join("\n")

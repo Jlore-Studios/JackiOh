@@ -67,7 +67,7 @@ const NONE: readonly string[] = [];
  * ruling (played or cast, never another way onto the field); Tribute states §6.3's cost.
  */
 export const SHORT_REMINDERS = {
-  Cry: "When you play this card or an effect casts it. Never when it enters play another way",
+  Cry: "When you play this card or an effect casts it. Never when it enters play otherwise",
   Tribute: "Playing this also costs X of your Units, which go to the graveyard",
 } as const satisfies Readonly<Partial<Record<string, string>>>;
 

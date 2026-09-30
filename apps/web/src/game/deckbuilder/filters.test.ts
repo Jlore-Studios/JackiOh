@@ -563,10 +563,11 @@ describe("deckListOrder (B35)", () => {
 describe("the Jlockeed tag (R278)", () => {
   const REAL: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
 
-  it("R278 offers a Jlockeed chip, and filtering on it keeps #13 and #14 of the real catalog and nothing else", () => {
+  it("R278 offers a Jlockeed chip, and filtering on it keeps Core #13 and #14 and Classic+'s three Jlockheed cards", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
-    expect([...kept].sort()).toEqual(["core-013", "core-014"]);
+    // docs/classic-sets.md B2.4: one faction, one tag, Classic+ #48, #51 and #52 beside Core's two.
+    expect([...kept].sort()).toEqual(["classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]);
   });
 });
