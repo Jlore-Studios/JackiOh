@@ -320,6 +320,12 @@ type Plan = {
 type Recipe = (event: GameEvent, p: Plan) => FxCue[];
 
 const cast: Recipe = (event, p) => {
+  // B5 E1: an announced play glows where it hangs; B3.2: an ability flares on its card.
+  if (event.type === "cardAnnounced") return [ring(p.D, "arcane", anchor(p.tgt), 0)];
+  if (event.type === "activated") {
+    const at = anchor(p.tgt);
+    return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
+  }
   if (event.type !== "cardPlayed") return [];
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
@@ -331,6 +337,10 @@ const cast: Recipe = (event, p) => {
 };
 
 const summon: Recipe = (event, p) => {
+  // B3.1: a backrow card stepping into its unit zone lands like a summon, with no entrance of its own.
+  if (event.type === "animated") {
+    return [ring(p.D, "dust", anchor(p.tgt), 0), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", frac(FX_SLAM_AT, p.D), "summonDust")];
+  }
   if (event.type !== "summoned") return [];
   const i = p.env.intensity;
   const slam = frac(FX_SLAM_AT, p.D);
@@ -383,6 +393,8 @@ const impact: Recipe = (event, p) => {
 };
 
 const drain: Recipe = (event, p) => {
+  // B5 E7: a hero's health set outright — a drain of void with no number, since it is not a loss.
+  if (event.type === "healthSet") return [burst(p.env.intensity, "void", anchor(p.tgt), "area", 0, "drainVoid")];
   if (event.type !== "healthLost") return [];
   const at = anchor(p.tgt);
   return [burst(p.env.intensity, "void", at, "area", 0, "drainVoid"), splat(p.D, "loss", event.amount, at, 0)];
@@ -405,7 +417,7 @@ const shieldBreak: Recipe = (event, p) => {
 };
 
 const death: Recipe = (event, p) => {
-  if (event.type !== "destroyed") return [];
+  if (event.type !== "destroyed" && event.type !== "crumbled") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
   if (!isCard(p.tgt)) return [burst(i, "smoke", at, "point", 0, "pileSmoke")];
@@ -417,7 +429,8 @@ const death: Recipe = (event, p) => {
 };
 
 const exile: Recipe = (event, p) => {
-  if (event.type !== "exiled") return [];
+  // B5 E22: a flicker blinks the card through the void and back into its zone.
+  if (event.type !== "exiled" && event.type !== "flickered") return [];
   const at = anchor(p.tgt);
   return [ring(p.D, "void", at, 0), burst(p.env.intensity, "void", at, "area", 0, "exileVoid")];
 };
@@ -479,9 +492,14 @@ const shuffle: Recipe = (event, p) => {
   ];
 };
 
+/** B3.4: which way a Degrade or Upgrade moved the card, for the arrows. */
+function tuningDirection(event: Extract<GameEvent, { type: "degraded" | "upgraded" }>): number {
+  return event.type === "upgraded" ? 1 : -1;
+}
+
 const buff: Recipe = (event, p) => {
-  if (event.type !== "buffed") return [];
-  const net = event.attack + event.health;
+  if (event.type !== "buffed" && event.type !== "degraded" && event.type !== "upgraded") return [];
+  const net = event.type === "buffed" ? event.attack + event.health : tuningDirection(event);
   const at = anchor(p.tgt);
   if (net > 0) {
     return [
@@ -499,6 +517,8 @@ const buff: Recipe = (event, p) => {
 };
 
 const keyword: Recipe = (event, p) => {
+  // R437: a mark settles on its card as a void ring; its colour is the board's, not an effect's.
+  if (event.type === "marked") return event.added ? [ring(p.D, "void", anchor(p.tgt), 0)] : [];
   if (event.type !== "keywordGranted") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -515,6 +535,8 @@ const keyword: Recipe = (event, p) => {
 };
 
 const counter: Recipe = (event, p) => {
+  // Classic #90: a quest's count ticks like a counter.
+  if (event.type === "questProgressed") return [burst(p.env.intensity, "sparkle", anchor(p.tgt), "point", 0, "counterSparkle")];
   if (event.type !== "counterChanged") return [];
   const at = anchor(p.tgt);
   if (event.counter === "plague") return [burst(p.env.intensity, "poison", at, "area", 0, "counterPoison")];
@@ -526,11 +548,15 @@ const glint: Recipe = (event, p) => {
   if (event.type === "modifierChanged" && event.added) {
     return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
   }
+  // B3.1: a Unit sinking back into its backrow zone glints there; Classic+ #41: a number set outright.
+  if (event.type === "deanimated" || event.type === "numberChanged") {
+    return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
+  }
   return [];
 };
 
 const radiant: Recipe = (event, p) => {
-  if (event.type !== "radiantSet") return [];
+  if (event.type !== "radiantSet" && event.type !== "questCompleted") return [];
   const at = anchor(p.tgt);
   const cues: FxCue[] = [
     { kind: "sheen", at, delayMs: 0, durationMs: p.D },
@@ -569,6 +595,8 @@ const fuse: Recipe = (event, p) => {
 };
 
 const mindControl: Recipe = (event, p) => {
+  // B5 E2, E16: a stolen card's arcane lands on the thief's hand.
+  if (event.type === "stolen") return [burst(p.env.intensity, "arcane", anchor(p.tgt), "area", 0, "controlArcane")];
   if (event.type !== "controlChanged") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -579,7 +607,7 @@ const mindControl: Recipe = (event, p) => {
 };
 
 const lock: Recipe = (event, p) => {
-  if (event.type !== "locked") return [];
+  if (event.type !== "locked" && event.type !== "unlocked") return [];
   const at = anchor(p.tgt);
   return [ring(p.D, "dust", at, 0), burst(p.env.intensity, "dust", at, "area", 0, "lockDust")];
 };
@@ -595,12 +623,15 @@ const trap: Recipe = (event, p) => {
 };
 
 const lunge: Recipe = (event, p) => {
+  // B5 E9: the redirected hit, attack or pick kicks up dust at its new target.
+  if (event.type === "redirected") return [ring(p.D, "arcane", anchor(p.tgt), 0), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "point", 0, "lungeDust")];
   if (event.type !== "attackDeclared") return [];
   return [burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "point", 0, "lungeDust")];
 };
 
 const fizzle: Recipe = (event, p) => {
-  if (event.type !== "attackCancelled") return [];
+  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck.
+  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited") return [];
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
 };
 
@@ -621,6 +652,10 @@ const mana: Recipe = (event, p) => {
 
 const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
+  // R436: Call to Chaos names what it rolled, on both seats.
+  if (event.type === "chaosRolled") return [banner(p.D, `${FX_TEXT.chaosRolled} ${event.effects.join(" · ")}`, "muted")];
+  // B5 E10: an effect cut the turn short.
+  if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   if (event.type !== "turnStarted") return [];
   if (event.player === p.view.viewer) {
     return [banner(p.D, FX_TEXT.yourTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];

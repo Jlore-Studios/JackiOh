@@ -74,6 +74,10 @@ export const FX_TEXT = {
   yourTurn: "Your turn",
   opponentTurn: "Opponent's turn",
   autoEnded: "No moves left",
+  /** R436: the banner Call to Chaos's rolled effects follow. */
+  chaosRolled: "Call to Chaos:",
+  /** B5 E10: an effect ended the turn. */
+  turnCutShort: "Turn cut short",
   victory: "Victory",
   defeat: "Defeat",
   draw: "Draw",

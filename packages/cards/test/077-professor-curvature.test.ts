@@ -13,7 +13,7 @@ import { scenario, type Scenario } from "./_harness";
 const CURVATURE = "core-077";
 
 /** The probes, in hand and never played except where a test says so. */
-const COST_3 = "core-017"; // Flood
+const COST_3 = "core-070"; // Spiteful Stab (Flood costs (4) since patch v0.2.0)
 const COST_4 = "core-025"; // 4-mana 7/7 — a Unit, so it has a lane to enter
 const COST_6 = "core-029"; // GIGA Glowy Jelly Bean
 
@@ -134,7 +134,7 @@ describe("#77 Professor Curvature — visible to the player while active (R169, 
 
     const badges = s.view("p1").you.modifiers;
     expect(badges, "the discount is on the board and so is its badge").toHaveLength(1);
-    expect(badges[0]?.label).toBe("Cost (4)+ cards cost (1) less (next turn)");
+    expect(badges[0]?.label).toBe("(4)+ Cost cards cost (1) less (next turn)");
     // §10.3 names the badge by id, so the animation lands on the element the view carries.
     expect(badges[0]?.id).toBe(s.state.players.p1.mods[0]?.id);
   });
@@ -145,7 +145,7 @@ describe("#77 Professor Curvature — visible to the player while active (R169, 
 
     toMyNextTurn(s);
 
-    expect(s.view("p1").you.modifiers.map((modifier) => modifier.label)).toEqual(["Cost (4)+ cards cost (1) less"]);
+    expect(s.view("p1").you.modifiers.map((modifier) => modifier.label)).toEqual(["(4)+ Cost cards cost (1) less"]);
     // R48: the same cleanup that ends the discount ends the badge, so neither outlives the other.
     s.endTurn();
     expect(s.view("p1").you.modifiers).toEqual([]);
@@ -157,7 +157,7 @@ describe("#77 Professor Curvature — visible to the player while active (R169, 
     s.play(CURVATURE);
 
     expect(s.view("p2").opponent.modifiers.map((modifier) => modifier.label)).toEqual([
-      "Cost (4)+ cards cost (2) less (next turn)",
+      "(4)+ Cost cards cost (2) less (next turn)",
     ]);
   });
 });

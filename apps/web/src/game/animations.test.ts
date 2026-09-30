@@ -80,6 +80,28 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   drawAnswered: 300,
   costChanged: 200,
   modifierChanged: 200,
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  cardAnnounced: 300,
+  countered: 450,
+  stolen: 450,
+  unlocked: 250,
+  activated: 300,
+  animated: 350,
+  deanimated: 300,
+  crumbled: 400,
+  degraded: 300,
+  upgraded: 300,
+  numberChanged: 300,
+  redirected: 350,
+  healthSet: 400,
+  questProgressed: 200,
+  questCompleted: 500,
+  rolledBack: 600,
+  chaosRolled: 900,
+  flickered: 300,
+  drawLimited: 300,
+  turnCutShort: 600,
+  marked: 400,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -149,6 +171,28 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
+  countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
+  stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
+  unlocked: { type: "unlocked", player: "p2", row: "backrow", lane: 1 },
+  activated: { type: "activated", player: "p1", instanceId: "u1", defId: "core-004", ability: "activate" },
+  animated: { type: "animated", player: "p1", instanceId: "b5", defId: "core-084", backrowLane: 3, unitLane: 3 },
+  deanimated: { type: "deanimated", player: "p1", instanceId: "b5", defId: "core-084", unitLane: 3, backrowLane: 3 },
+  crumbled: { type: "crumbled", instanceId: "u2", defId: "core-004", owner: "p1", zone: "field" },
+  degraded: { type: "degraded", instanceId: "u2", defId: "core-004", change: { kind: "cost", delta: 1 } },
+  upgraded: { type: "upgraded", instanceId: "u2", defId: "core-004", change: { kind: "stats", attack: 2, health: 2 } },
+  numberChanged: { type: "numberChanged", instanceId: "u2", defId: "core-004", key: "attack", value: 3 },
+  redirected: { type: "redirected", what: "damage", fromId: "hero-p1", toId: "hero-p2", byInstanceId: "b5" },
+  healthSet: { type: "healthSet", player: "p2", health: 13, sourceId: "c1" },
+  questProgressed: { type: "questProgressed", player: "p1", instanceId: "b5", quest: "1", progress: 1, goal: 2 },
+  questCompleted: { type: "questCompleted", player: "p1", instanceId: "b5", quest: "1" },
+  rolledBack: { type: "rolledBack", player: "p1", turnsAgo: 2, sides: ["p1", "p2"] },
+  chaosRolled: { type: "chaosRolled", player: "p1", instanceId: "c1", defId: "core-035", effects: ["Destroy all enemy permanents"] },
+  flickered: { type: "flickered", player: "p1", instanceId: "u2", defId: "core-004", row: "units", lane: 2 },
+  drawLimited: { type: "drawLimited", player: "p2" },
+  turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
+  marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -219,7 +263,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(43);
+    expect(rows).toHaveLength(64);
   });
 
   it("gives every row an animation name and a testid template", () => {

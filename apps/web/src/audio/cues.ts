@@ -262,6 +262,45 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       return event.winner === ctx.view.viewer ? [sfx("victory")] : [sfx("defeat")];
     },
   },
+
+  // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+  // B5 E1: the announce is the play's own moment; its `cardPlayed` sounds and speaks once it lands.
+  cardAnnounced: silent("the play it announces sounds on its cardPlayed; a countered one sounds on countered"),
+  // B5 E1: a Counter snuffs the card out like a called-off attack.
+  countered: { sfx: "cancel", cues: () => [sfx("cancel"), sfx("poof", undefined, SPELL_SHIMMER_DELAY_MS)] },
+  // B5 E2, E16: the card is whisked across the table.
+  stolen: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  unlocked: { sfx: "lock", cues: () => [sfx("lock")] },
+  // B3.2: an ability is a small cast; the effects it resolves into carry their own sounds.
+  activated: {
+    sfx: "spell",
+    cues: (event, ctx) => {
+      const card = readable(ctx, event.defId);
+      const timbre = card === undefined ? undefined : timbreFor(card);
+      return [sfx("spell", timbre === undefined ? undefined : { timbre })];
+    },
+  },
+  // B3.1: the card lands in its unit zone with a summon's thud.
+  animated: { sfx: "summon", cues: () => [sfx("summon")] },
+  deanimated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // B3.3: a crumbling card dies quietly: no death line, since nothing killed it.
+  crumbled: { sfx: "death", cues: () => [sfx("death")] },
+  degraded: { sfx: "debuff", cues: () => [sfx("debuff")] },
+  upgraded: { sfx: "buff", cues: () => [sfx("buff")] },
+  numberChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  redirected: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  healthSet: { sfx: "drain", cues: () => [sfx("drain")] },
+  questProgressed: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  questCompleted: { sfx: "radiant", cues: () => [sfx("radiant"), sfx("notify")] },
+  rolledBack: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R436: the roll is announced to both seats like a trap springing.
+  chaosRolled: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  flickered: { sfx: "poof", cues: () => [sfx("poof")] },
+  // B5 E3: the draw is called off, like an attack; R319 keeps the refusal sound the full library's own.
+  drawLimited: { sfx: "cancel", cues: () => [sfx("cancel")] },
+  turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
+  // R437: a mark settling on a card sounds like a keyword arriving; losing it is silent.
+  marked: { sfx: "debuff", cues: (event) => (event.added ? [sfx("debuff")] : NONE) },
 };
 
 /** The cues for one event. */

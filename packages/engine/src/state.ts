@@ -4,11 +4,13 @@
 import type {
   CardDef,
   CardDefs,
+  Enchantment,
   Keyword,
   PlayerId,
   PromptKind,
   Row,
   Selection,
+  Tuning,
   Zone,
 } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
@@ -83,6 +85,26 @@ export type CardInstance = {
    * this record as it was.
    */
   knownAs?: { defId: string; radiant: boolean };
+  // ---- Patch v0.2.0: what rides a card through every zone (R78's reset leaves these alone) ----
+  /**
+   * B3.4, R386: what Degrade, Upgrade and KY's Constant have changed on this card (`tuning.ts`). Kept
+   * in every zone and through leaving the field; a copy keeps it, a Transform makes a card without
+   * it, a Fuse sums it (R57, R102).
+   */
+  tuning?: Tuning;
+  /**
+   * B3.3, R385: the card's Brittle count and the turn it started, which the first tick waits two
+   * player-turns behind (`brittle.ts`). Kept in every zone; a copy never inherits it (R57).
+   */
+  brittle?: { count: number; since: number };
+  /** B5 E39: lasting instructions riding the card through every zone (`enchantments.ts`). */
+  enchantments?: Enchantment[];
+  // ---- v0.2.0 instance fields, by workstream: field (B3.1, E21, E22) ----
+  // ---- v0.2.0 instance fields, by workstream: play pipeline (E1, E2, E4, E5, E11, E12, E15) ----
+  // ---- v0.2.0 instance fields, by workstream: activate and turn (B3.2, E3, E10, E27, E28) ----
+  // ---- v0.2.0 instance fields, by workstream: damage and combat (E5, E6, E9, E35, E37) ----
+  // ---- v0.2.0 instance fields, by workstream: prompts and generation (E13, E16–E19, E23–E26) ----
+  // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
 };
 
 /** A unit zone holds a Stack pile, top card first (§3.2). */
@@ -105,6 +127,9 @@ export type PlayerModifier = {
   | { kind: "radiantFirstCheapCard"; maxCost: number; usedTurn?: number }
   | { kind: "comboDraw"; amount: number }
   | { kind: "quickstrikerDamage" }
+  // ---- v0.2.0 modifier kinds, by workstream: play pipeline (E15 costs, E39 stamping, Devil's Pact) ----
+  // ---- v0.2.0 modifier kinds, by workstream: activate and turn (E28 rest of the game) ----
+  // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
 );
 
 export type DelayedEffect = {
@@ -274,6 +299,11 @@ export type PlayerState = {
    * the setting hashes exactly as it did before this field existed.
    */
   autoEndTurn?: false;
+  // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
+  // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
+  // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
+  // ---- v0.2.0 player fields, by workstream: damage and combat (E5–E9, E35) ----
+  // ---- v0.2.0 player fields, by workstream: Core patches and cosmetics (R433, R434) ----
 };
 
 export type GameState = {
@@ -338,6 +368,12 @@ export type GameState = {
    * leaves the field.
    */
   fieldExits?: FieldExits;
+  // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
+  // ---- v0.2.0 game fields, by workstream: play pipeline (E1 announce, E4 last plays, E12) ----
+  // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
+  // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
+  // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----
+  // ---- v0.2.0 game fields, by workstream: Core patches and cosmetics (R433) ----
 };
 
 /**

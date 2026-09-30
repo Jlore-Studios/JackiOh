@@ -1,7 +1,7 @@
 // Every rules constant lives here (BUILD §2). The engine never hard-codes these numbers.
 // Rows SPEC §11 marks "decide" (R1, R2, R4, R5, R14, R26, R39) are flipped here in one line.
 
-import type { SetName, Tag } from "@jackioh/shared";
+import type { Tag } from "@jackioh/shared";
 
 /** §2.6 */
 export const DECK_SIZE = 20;
@@ -33,12 +33,6 @@ export const OPENING_DRAW: readonly number[] = [3, 4];
 export const OPENING_COINS: readonly number[] = [0, 1];
 /** §7, R245: the catalog id of The Coin, the one token a rule deals rather than a card. */
 export const COIN_DEF_ID = "core-t-coin";
-
-/**
- * B2.2, R380: the order a pool lists the sets in. One format holds every set, and a pool over all of
- * them is still one total order (`catalog.query`), Core first so a Core-only pool reads as before.
- */
-export const SET_ORDER: readonly SetName[] = ["Core", "Classic", "Classic+", "Boss", "Boss-X"];
 
 /**
  * R382: a pool named by one of these tags also holds that tag's tokens. The five Grapes are Fruit
@@ -219,3 +213,21 @@ export const AI_TUTORIAL: Handicap = {
   extraDrawsPerTurn: 0,
   heroHealth: 20,
 };
+
+// ---------------------------------------------------------------------------------------------
+// Patch v0.2.0 (docs/classic-sets.md B3–B5). Every number the new rules state, by workstream.
+// ---------------------------------------------------------------------------------------------
+
+// ---- v0.2.0 constants: instance data (B3.3 Brittle, B3.4 Degrade and Upgrade) ----
+
+// ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
+
+// ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----
+
+// ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
+
+// ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
+
+// ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
+
+// ---- v0.2.0 constants: Core patches (R423, R426–R431) ----
