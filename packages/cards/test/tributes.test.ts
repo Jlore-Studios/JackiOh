@@ -81,7 +81,7 @@ describe("R68: a Tribute's Deaths resolve in lane order, whatever order the play
 describe("R174: a target the play's own Tribute sacrificed is no longer a target", () => {
   it("R174 a crafted Lava Golem + Twisted Sorcerer that tributes its own target leaves that card in the graveyard undamaged (§8 Conventions, R78)", () => {
     const g = scenario({
-      seed: "r3craft-36", // the first Discover offers Lava Golem, the second Twisted Sorcerer
+      seed: "r3craft-1990", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380)
       p1: {
         hand: [CRAFT_A_CARD, RENO],
         mana: 4,
