@@ -58,7 +58,7 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     const set: GameEvent = { type: "summoned", player: "p2", instanceId: "hidden", defId: "hidden", row: "backrow", lane: 3 };
     const withCost = baseView({ opponent: { ...baseView().opponent, backrow: [null, null, { faceDown: true, cost: 2 }, null, null] } });
     render(<Log view={withEvents(withCost, [set])} />);
-    expect(lines()).toEqual(["The opponent's backrow lane 3: a face-down trap was set, Cost (2)"]);
+    expect(lines()).toEqual(["The opponent's backrow lane 3: a face-down trap was set, (2) Cost"]);
     cleanup();
     // Gone from the zone (it fired), or a back with no cost: the line claims none.
     render(<Log view={withEvents(baseView(), [set])} />);

@@ -33,8 +33,12 @@ export const PROMPT_CLOCK_SECONDS = 30;
 export const MULLIGAN_CLOCK_SECONDS = 45;
 /** R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss. */
 export const DISCONNECT_GRACE_SECONDS = 60;
-/** R79: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`. */
-export const MATCH_CEILING_MINUTES = 60;
+/**
+ * R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
+ * Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
+ * minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
+ */
+export const MATCH_CEILING_MINUTES = 120;
 /** R79, §9.5: room codes are 6 characters from the invite-code alphabet. */
 export const ROOM_CODE_LENGTH = 6;
 /** R79, §9.5: Elo K-factor. */
@@ -369,8 +373,23 @@ export const DECK_NAME_MAX_LENGTH = 40;
  * still the error's message, so nothing a player could fix is hidden.
  */
 export const DRAFT_ISSUES_REPORTED_MAX = 50;
-/** SPEC §11 R255: the deck-code format's version; a code naming any other version is refused. */
-export const DECK_CODE_VERSION = 1;
+/**
+ * SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
+ * writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
+ * other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused.
+ */
+export const DECK_CODE_VERSION = 2;
+/**
+ * SPEC §11 R255: the one older deck-code version still read. Every code minted before patch v0.2.0
+ * is a version 1 code, and its numbers are Core's (the only set there was).
+ */
+export const DECK_CODE_CORE_ONLY_VERSION = 1;
+/**
+ * SPEC §11 R255, R339 (B2.2): a card's catalog number in a version 2 deck or trio code is its §5
+ * index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n — still written as
+ * LEB128. No set holds 1000 cards, so a number names one set and one card.
+ */
+export const CATALOG_NUMBER_SET_OFFSETS = { Core: 0, Classic: 1000, "Classic+": 2000 } as const;
 /**
  * SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
  * a full deck with the longest name is under 200 characters, so this leaves room for whatever a
@@ -381,8 +400,14 @@ export const DECK_CODE_MAX_INPUT_LENGTH = 512;
 export const DECK_AUTOSAVE_DEBOUNCE_MS = 800;
 /** SPEC §11 R256: how long the builder waits before it tries a failed save again. */
 export const DECK_AUTOSAVE_RETRY_SECONDS = 5;
-/** SPEC §11 R339: the trio-code format's version; a code naming any other version is refused. */
-export const TRIO_CODE_VERSION = 1;
+/**
+ * SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
+ * does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
+ * `TRIO_CODE_CORE_ONLY_VERSION` is refused.
+ */
+export const TRIO_CODE_VERSION = 2;
+/** SPEC §11 R339: the one older trio-code version still read, whose decks carry Core numbers. */
+export const TRIO_CODE_CORE_ONLY_VERSION = 1;
 /**
  * SPEC §11 R339: raw trio-code input longer than this is refused before it is read. A trio code
  * carries three decks' names and cards and the trio's name: about 200 characters for ASCII names,
@@ -527,10 +552,13 @@ export const SERVER_CONFIG = Object.freeze({
   DECK_NAME_MAX_LENGTH,
   DRAFT_ISSUES_REPORTED_MAX,
   DECK_CODE_VERSION,
+  DECK_CODE_CORE_ONLY_VERSION,
+  CATALOG_NUMBER_SET_OFFSETS,
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_AUTOSAVE_DEBOUNCE_MS,
   DECK_AUTOSAVE_RETRY_SECONDS,
   TRIO_CODE_VERSION,
+  TRIO_CODE_CORE_ONLY_VERSION,
   TRIO_CODE_MAX_INPUT_LENGTH,
   SERIES_WINS_NEEDED,
   SERIES_MAX_GAMES,

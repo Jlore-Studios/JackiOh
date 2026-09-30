@@ -10,7 +10,7 @@ import { createElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef } from "@jackioh/shared";
+import { fillParams, type CardDef } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
 import { faceModel } from "./model.ts";
@@ -20,6 +20,23 @@ import { markedText, radiantMarks } from "./radiantDiff.ts";
 afterEach(cleanup);
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
+
+/** The runs of marked text in `root`, in reading order: consecutive text inside a `.cf-mark` is one run. */
+function markedStretches(root: Element): string[] {
+  const out: string[] = [];
+  let current: string | null = null;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const marked = node.parentElement?.closest(".cf-mark") !== null;
+    if (marked) current = (current ?? "") + (node.textContent ?? "");
+    else if (current !== null && (node.textContent ?? "") !== "") {
+      out.push(current);
+      current = null;
+    }
+  }
+  if (current !== null) out.push(current);
+  return out;
+}
 
 function marks(base: string, radiant: string): string[] {
   return markedText(radiant, radiantMarks(base, radiant));
@@ -69,21 +86,26 @@ describe("R277 the word diff", () => {
     expect(marks(base, radiant)).toEqual(["Charge", "all", "units"]);
   });
 
-  it("R277 a pure deletion marks nothing, so only the one Core Radiant text written as one marks nothing", () => {
+  it("R277 a pure deletion marks nothing, so only the Radiant texts written as one mark nothing", () => {
     expect(marks("Cry: choose a Human unit", "Cry: choose a unit")).toEqual([]);
-    const silent = DEFS.filter(
-      (card) => card.radiant.text !== card.base.text && radiantMarks(card.base.text, card.radiant.text).length === 0,
-    ).map((card) => card.id);
-    // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback, so it
-    // is a pure deletion by design; its doubled stats carry its marks (R277).
-    expect(silent).toEqual(["core-055"]);
+    const silent = DEFS.filter((card) => {
+      const base = fillParams(card, "base");
+      const radiant = fillParams(card, "radiant");
+      return radiant !== base && radiantMarks(base, radiant).length === 0;
+    }).map((card) => card.id);
+    // Designer patch v0.1.1: Core #55 Lava Golem's Radiant face is its base text less the drawback, so
+    // it is a pure deletion by design; its doubled stats carry its marks (R277). So are Classic #60
+    // Pile On's (no longer returns to the deck) and Classic+ #5 Guy Att's (destroys every backrow
+    // card, not only yours), the brief's own Radiant texts (docs/classic-sets.md, B6, B7).
+    expect(silent).toEqual(["core-055", "classic-060", "classicplus-005"]);
   });
 });
 
 describe("R277 every Radiant face renders its marks gold, bold and underlined", () => {
   it("R277 R279 every catalog card's Radiant face shows each marked stretch in a .cf-mark, references and all, and its base face none", () => {
     for (const card of DEFS) {
-      const expected = marks(card.base.text, card.radiant.text);
+      // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
+      const expected = marks(fillParams(card, "base"), fillParams(card, "radiant"));
       // Inside the catalog, so the names its refs link are references and nest with the marks.
       const { container, unmount } = render(
         createElement(CardDefsProvider, {
@@ -91,8 +113,9 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
           children: createElement(CardFace, { face: faceModel({ defId: card.id, def: card, radiant: true }), layout: "full" }),
         }),
       );
-      const shown = [...container.querySelectorAll(".cf-mark")].map((mark) => mark.textContent);
-      expect(shown.join("|"), card.id).toBe(expected.join("|"));
+      // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one
+      // stretch of marked text still, so the stretches are read off the text nodes in order.
+      expect(markedStretches(container).join("|"), card.id).toBe(expected.join("|"));
       unmount();
       const base = render(createElement(CardFace, { face: faceModel({ defId: card.id, def: card, radiant: false }), layout: "full" }));
       expect(base.container.querySelector(".cf-mark"), `${card.id} base`).toBeNull();

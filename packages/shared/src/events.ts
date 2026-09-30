@@ -299,6 +299,12 @@ export type GameEvent =
    */
   | { type: "degraded"; instanceId: string; defId: string; change: TuningChange; hiddenFrom?: PlayerId[] }
   | { type: "upgraded"; instanceId: string; defId: string; change: TuningChange; hiddenFrom?: PlayerId[] }
+  /**
+   * B3.4, Classic+ #41 KY's Constant: one of a card's numbers set outright (`key` as `numbersOn` names
+   * it: "cost", "attack", "health", a numbered keyword, a declared number's key). `hiddenFrom` as on
+   * `degraded`: the view uses it and never forwards it.
+   */
+  | { type: "numberChanged"; instanceId: string; defId: string; key: string; value: number; hiddenFrom?: PlayerId[] }
   /** B5 E9: a damage instance, an attack or a chosen target moved to a new one. Ids as `damage` writes them. */
   | {
       type: "redirected";
@@ -417,6 +423,7 @@ export const GAME_EVENT_TYPES = [
   "crumbled",
   "degraded",
   "upgraded",
+  "numberChanged",
   "redirected",
   "healthSet",
   "questProgressed",

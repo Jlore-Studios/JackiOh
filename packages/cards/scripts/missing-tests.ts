@@ -29,7 +29,15 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compareSortKeys, expectedBasename, resolveBasename, slugPrefixOf, sortKey } from "./naming";
+import {
+  SET_SUBFOLDERS,
+  compareSortKeys,
+  expectedRelPath,
+  resolveRelPath,
+  setSegmentOf,
+  slugPrefixOf,
+  sortKey,
+} from "./naming";
 
 const TEST_DIR_LABEL = "packages/cards/test";
 
@@ -99,15 +107,17 @@ function looksLikeCardTest(basename: string): boolean {
 /**
  * The cards a token's coverage may live in, nearest first: its generator, then its generator's
  * generator, and so on. A token id is its generator's id plus a `-<n>` sub-index (`core-090-1` ->
- * `core-090`), so the chain is read straight off the id — a plain card and a shared token
- * (`core-t-rush`) have none, and a generator that ships no card of that id is skipped.
+ * `core-090`, `classicplus-012-1` -> `classicplus-012`), so the chain is read straight off the id,
+ * within the token's own set — a plain card and a shared token (`core-t-rush`) have none, and a
+ * generator that ships no card of that id is skipped.
  */
 function generatorIdsOf(id: string, allIds: readonly string[]): string[] {
   const chain: string[] = [];
+  const set = setSegmentOf(id);
   let prefix = slugPrefixOf(id);
   while (/-\d+$/.test(prefix)) {
     prefix = prefix.replace(/-\d+$/, "");
-    const owner = allIds.find((other) => slugPrefixOf(other) === prefix);
+    const owner = allIds.find((other) => setSegmentOf(other) === set && slugPrefixOf(other) === prefix);
     if (owner !== undefined) chain.push(owner);
   }
   return chain;
@@ -128,33 +138,41 @@ export function auditTests(): Audit {
   const ids = entries.map((entry) => entry.id);
   const nameOf = new Map(entries.map((entry) => [entry.id, entry.name]));
 
-  let files: string[];
-  try {
-    files = readdirSync(TEST_DIR);
-  } catch {
-    files = []; // no test/ directory yet: every card is missing its test
-  }
+  /** Every `*.test.ts` path under `test/` and its set folders, without the extension. */
+  const testsIn = (folder: string): string[] => {
+    try {
+      return readdirSync(folder === "" ? TEST_DIR : join(TEST_DIR, folder))
+        .filter((file) => file.endsWith(".test.ts"))
+        .map((file) => {
+          const basename = file.slice(0, -".test.ts".length);
+          return folder === "" ? basename : `${folder}/${basename}`;
+        });
+    } catch {
+      return []; // no such directory yet: every card of that set is missing its test
+    }
+  };
+  const paths = [...testsIn(""), ...SET_SUBFOLDERS.flatMap((folder) => testsIn(folder))];
 
   const testedIds = new Set<string>();
   const notes: TestFileNote[] = [];
   /** The test file each covered card owns, so a token can go looking inside its generator's. */
   const fileOf = new Map<string, string>();
 
-  for (const file of files) {
-    if (!file.endsWith(".test.ts")) continue;
-    const basename = file.slice(0, -".test.ts".length);
-    // The prefix decides which card a file belongs to, so `resolveBasename` (longest matching id
-    // prefix) is what maps file -> card: `051-1-…` is KY's Empty Notebook, not a slug of #51, and
-    // `025-4-mana-7-7` is #25 even though its slug opens with a digit segment.
-    const id = resolveBasename(basename, ids);
+  for (const path of paths) {
+    const basename = path.slice(path.lastIndexOf("/") + 1);
+    // The prefix decides which card a file belongs to, within its folder's set, so
+    // `resolveRelPath` (longest matching id prefix) is what maps file -> card: `051-1-…` is KY's
+    // Empty Notebook, not a slug of #51, and `025-4-mana-7-7` is #25 even though its slug opens
+    // with a digit segment.
+    const id = resolveRelPath(path, ids);
     if (id === undefined) {
-      if (looksLikeCardTest(basename)) notes.push({ basename, id: undefined });
+      if (looksLikeCardTest(basename)) notes.push({ basename: path, id: undefined });
       continue;
     }
     testedIds.add(id);
-    fileOf.set(id, file);
-    const expected = expectedBasename(id, nameOf.get(id) ?? id);
-    if (basename !== expected) notes.push({ basename, id, expected: `${expected}.test.ts` });
+    fileOf.set(id, `${path}.test.ts`);
+    const expected = expectedRelPath(id, nameOf.get(id) ?? id);
+    if (path !== expected) notes.push({ basename: path, id, expected: `${expected}.test.ts` });
   }
 
   // A token with no file of its own: covered when its generator's file exercises it by id.
@@ -185,7 +203,7 @@ export function auditTests(): Audit {
     .map((entry) => ({
       id: entry.id,
       name: entry.name,
-      expected: `test/${expectedBasename(entry.id, entry.name)}.test.ts`,
+      expected: `test/${expectedRelPath(entry.id, entry.name)}.test.ts`,
     }))
     .sort(byIndex);
 

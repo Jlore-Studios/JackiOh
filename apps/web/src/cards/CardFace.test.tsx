@@ -10,7 +10,7 @@ import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef, CardType, Rarity } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
 import {
@@ -348,7 +348,8 @@ describe("B10: RulesText marks terms in bold", () => {
         const text = faceModel({ defId: card.id, def: card, radiant }).text;
         const cf = catalogFace(card.id, radiant);
         expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
-        expect(text.full, card.id).toBe(radiant ? card.radiant.text : card.base.text);
+        // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
+        expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
         cleanup();
       }
     }

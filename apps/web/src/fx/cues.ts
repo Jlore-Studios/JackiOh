@@ -548,8 +548,10 @@ const glint: Recipe = (event, p) => {
   if (event.type === "modifierChanged" && event.added) {
     return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
   }
-  // B3.1: a Unit sinking back into its backrow zone glints there.
-  if (event.type === "deanimated") return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
+  // B3.1: a Unit sinking back into its backrow zone glints there; Classic+ #41: a number set outright.
+  if (event.type === "deanimated" || event.type === "numberChanged") {
+    return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
+  }
   return [];
 };
 

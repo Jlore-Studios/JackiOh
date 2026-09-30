@@ -188,7 +188,7 @@ function kinds(g: Scenario, card: CardInstance): string[] {
 describe("R41, R77: a fused Cry's later part reads the board its earlier parts left", () => {
   it("R41 a crafted Ceaseless Void + Carnivorous Cube whose Void exiled the meal has eaten nothing, so its Death summons nothing (R102, R174)", () => {
     const g = scenario({
-      seed: "r6cube-17", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube
+      seed: "r6cube-2131", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube (every set's Units, R380)
       p1: { hand: [CRAFT_A_CARD, HIT_JOB, STOCKPILE], mana: 10, field: [{ def: GARY, lane: 1 }] },
       p2: { hand: [STOCKPILE], field: [{ def: RENO, lane: 1 }] },
     });
@@ -219,7 +219,7 @@ describe("R41, R77: a fused Cry's later part reads the board its earlier parts l
 describe("§8 #68, R77: a fused Cry's later part reads the board its earlier parts left", () => {
   it("§8 #68 a crafted Reno + Twisted Sorcerer reads the hero Reno has just set to 30, so it deals 4, not 8 (R102)", () => {
     const g = scenario({
-      seed: "r6reno-115", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer
+      seed: "r6reno-266", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer (every set's Units, R380)
       p1: { hand: [CRAFT_A_CARD, STOCKPILE], mana: 10, health: 5 },
       p2: { hand: [STOCKPILE], field: [{ def: RENO, lane: 1 }] },
     });

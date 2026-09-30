@@ -139,7 +139,7 @@ const PROFESSOR_CURVATURE = spec8Name(77);
  * appends "(next turn)" only while `modifierIsLive` is false, which is the turn it was played and
  * the opponent's turn after it.
  */
-const CURVATURE_LIVE_LABEL = "Cost (4)+ cards cost (1) less";
+const CURVATURE_LIVE_LABEL = "(4)+ Cost cards cost (1) less";
 
 function api(path: string): string {
   return `${server.http()}${path}`;

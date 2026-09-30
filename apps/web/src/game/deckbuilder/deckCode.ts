@@ -12,16 +12,19 @@
 //
 //   [name byte length: 1 byte] [name: UTF-8] [card count: LEB128] [card number: LEB128]… [checksum: 2 bytes]
 //
-// - A card is carried as its catalog NUMBER (`index`, "1".."100" in Core), not its id: numbers are
-//   what the printed set shows, and a code stays valid through an id rename. Only whole numbers
-//   are encodable; Tokens carry numbers like "51.1" and are never deckable anyway (R251).
+// - A card is carried as its catalog NUMBER, not its id: numbers are what the printed set shows,
+//   and a code stays valid through an id rename. Version 2 (patch v0.2.0, B2.2) writes the set
+//   with it: the §5 index plus the set's offset (`CATALOG_NUMBER_SET_OFFSETS`: Core n, Classic
+//   1000 + n, Classic+ 2000 + n). Only whole-number indices are encodable; Tokens carry numbers
+//   like "51.1" or "T-AI-1" and are never deckable anyway (R251).
 // - The name is the deck's name as it is stored (`normalizeName`), cut to `DECK_NAME_MAX_LENGTH`
 //   characters; a name the draft rule D1 would refuse is written as "Imported deck" instead.
 // - The checksum is FNV-1a (32-bit) over every byte before it, folded to 16 bits. It is not
 //   security: it catches a paste that lost or mangled characters, so the player is told the code
 //   is damaged instead of being handed a different deck.
 // - The version is `DECK_CODE_VERSION`. A newer one is refused with a sentence saying so (this
-//   client cannot know what it means); so is an older one.
+//   client cannot know what it means); so is an older one, except `DECK_CODE_CORE_ONLY_VERSION`
+//   (1): every code minted before v0.2.0 is one, and its numbers are read as Core's (R255).
 //
 // DECODING IS TOTAL. It never throws, whatever it is handed: over-long input is refused before it
 // is read at all (`DECK_CODE_MAX_INPUT_LENGTH`), and each failure is a sentence for the player. The
@@ -36,7 +39,10 @@
 
 import { checkDeckDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
+import type { CardDef } from "@jackioh/shared";
 import {
+  CATALOG_NUMBER_SET_OFFSETS,
+  DECK_CODE_CORE_ONLY_VERSION,
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_CODE_VERSION,
   DECK_NAME_MAX_LENGTH,
@@ -204,6 +210,27 @@ function nameForCode(raw: string): string {
   return passesD1(cut) ? cut : IMPORTED_DECK_NAME;
 }
 
+/**
+ * B2.2: a card's catalog number in a version 2 code — its whole-number §5 index plus its set's
+ * offset — or `undefined` for a card no code can carry (a token's index, a set with no offset).
+ */
+export function catalogNumberOf(def: Pick<CardDef, "set" | "index">): number | undefined {
+  if (!WHOLE_NUMBER.test(def.index)) return undefined;
+  const offset = (CATALOG_NUMBER_SET_OFFSETS as Readonly<Record<string, number>>)[def.set];
+  return offset === undefined ? undefined : offset + Number(def.index);
+}
+
+/**
+ * What a code's numbers mean, by the code's version: a version 2 number names a set and a card
+ * (`catalogNumberOf`); a version 1 number is a Core index, the only set there was (R255).
+ */
+function numberOfIn(version: number): (def: CardDef) => number | undefined {
+  if (version === DECK_CODE_CORE_ONLY_VERSION) {
+    return (def) => (def.set === "Core" && WHOLE_NUMBER.test(def.index) ? Number(def.index) : undefined);
+  }
+  return catalogNumberOf;
+}
+
 function isToken(catalog: CatalogSnapshot, cardId: string): boolean {
   const def = catalog.cards[cardId];
   return def !== undefined && (def.token || def.tags.includes("Token"));
@@ -223,17 +250,18 @@ export function pushName(out: number[], name: string, fallback: string): void {
 
 /**
  * One deck's body, as a deck code and each deck of a trio code carry it: its name, the card count
- * and each card's catalog number. Cards the catalog does not know, or whose number is not a whole
- * number, are skipped; everything else is written as given, in order, so the code says exactly what
- * the deck holds (duplicates and all: the decoder is the one that drops).
+ * and each card's catalog number (`catalogNumberOf`, version 2). Cards the catalog does not know, or
+ * that no number can carry, are skipped; everything else is written as given, in order, so the code
+ * says exactly what the deck holds (duplicates and all: the decoder is the one that drops).
  */
 export function writeDeckBody(out: number[], name: string, cardIds: readonly string[], catalog: CatalogSnapshot): void {
   pushName(out, nameForCode(name), IMPORTED_DECK_NAME);
   const numbers: number[] = [];
   for (const cardId of cardIds) {
-    const index = catalog.cards[cardId]?.index;
-    if (index === undefined || !WHOLE_NUMBER.test(index)) continue;
-    numbers.push(Number(index));
+    const def = catalog.cards[cardId];
+    const number = def === undefined ? undefined : catalogNumberOf(def);
+    if (number === undefined) continue;
+    numbers.push(number);
   }
   pushVarint(out, numbers.length);
   for (const number of numbers) pushVarint(out, number);
@@ -364,14 +392,21 @@ export type ResolvedDeck = Omit<Extract<DecodedDeck, { ok: true }>, "ok">;
 /**
  * R255: a deck body against this catalog and collection — numbers the catalog does not know,
  * Tokens, copies past `MAX_COPIES` and cards past `DECK_SIZE` dropped and listed; cards the player
- * does not own kept and flagged.
+ * does not own kept and flagged. `version` is the code's: a version 1 code's numbers are Core's.
  */
-export function resolveDeck(body: DeckBody, catalog: CatalogSnapshot, collection: Collection | null): ResolvedDeck {
+export function resolveDeck(
+  body: DeckBody,
+  catalog: CatalogSnapshot,
+  collection: Collection | null,
+  version: number = DECK_CODE_VERSION,
+): ResolvedDeck {
   const { name, fellBack } = decodeName(body.nameBytes, IMPORTED_DECK_NAME, passesD1);
 
+  const numberOf = numberOfIn(version);
   const byNumber = new Map<number, string>();
   for (const [cardId, def] of Object.entries(catalog.cards)) {
-    if (WHOLE_NUMBER.test(def.index)) byNumber.set(Number(def.index), cardId);
+    const number = numberOf(def);
+    if (number !== undefined) byNumber.set(number, cardId);
   }
 
   const cards: string[] = [];
@@ -423,13 +458,21 @@ export type HeaderMessages = {
  * The text of a pasted code, read as far as its payload's bytes: the length cap first, unread
  * (`maxInputLength`), then whitespace, the prefix and version, and base64url. `other` is the prefix
  * of the other kind of code, answered with `otherMessage` so a trio code pasted as a deck (or the
- * reverse) is sent where it belongs.
+ * reverse) is sent where it belongs. `alsoReads` is the older version still read (R255, R339),
+ * and the version read comes back with the bytes.
  */
 export function readCodeText(
   text: unknown,
-  format: { prefix: string; version: number; maxInputLength: number; other: string; otherMessage: string },
+  format: {
+    prefix: string;
+    version: number;
+    alsoReads: number;
+    maxInputLength: number;
+    other: string;
+    otherMessage: string;
+  },
   messages: HeaderMessages,
-): { ok: true; bytes: Uint8Array } | { ok: false; message: string } {
+): { ok: true; bytes: Uint8Array; version: number } | { ok: false; message: string } {
   if (typeof text !== "string") return { ok: false, message: messages.notACode };
   // Refused unread: nothing below runs on a paste this long.
   if (text.length > format.maxInputLength) return { ok: false, message: messages.tooLong };
@@ -443,11 +486,11 @@ export function readCodeText(
   if (header[1] !== format.prefix) return { ok: false, message: messages.notACode };
   const version = Number(header[2] ?? "");
   if (version > format.version) return { ok: false, message: messages.newer };
-  if (version !== format.version) return { ok: false, message: messages.older };
+  if (version !== format.version && version !== format.alsoReads) return { ok: false, message: messages.older };
 
   const bytes = fromBase64Url((header[3] ?? "").replace(TRAILING_PADDING, ""));
   if (bytes === null) return { ok: false, message: messages.damaged };
-  return { ok: true, bytes };
+  return { ok: true, bytes, version };
 }
 
 /** The trio code's prefix (R339), which the deck import recognises and sends where it belongs. */
@@ -459,6 +502,7 @@ function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Colle
     {
       prefix: DECK_CODE_PREFIX,
       version: DECK_CODE_VERSION,
+      alsoReads: DECK_CODE_CORE_ONLY_VERSION,
       maxInputLength: DECK_CODE_MAX_INPUT_LENGTH,
       other: TRIO_CODE_PREFIX_SEEN,
       otherMessage: DECK_CODE_MESSAGES.trioCode,
@@ -468,7 +512,7 @@ function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Colle
   if (!read.ok) return read;
   const parsed = parsePayload(read.bytes);
   if (!parsed.ok) return parsed;
-  return { ok: true, ...resolveDeck(parsed.body, catalog, collection) };
+  return { ok: true, ...resolveDeck(parsed.body, catalog, collection, read.version) };
 }
 
 /**

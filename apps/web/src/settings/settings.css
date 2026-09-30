@@ -250,6 +250,94 @@
   outline-offset: 0;
 }
 
+/* R435: the effects speed slider. The label and the value share the top line; the track runs the
+   row's full width under them, with its own 44px touch height, and the part left of the thumb is
+   filled so the setting reads at a glance. */
+.settings-control--slider {
+  min-height: 32px;
+  cursor: default;
+}
+
+.settings-slider-value {
+  min-width: 4ch;
+  padding: 2px 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+.settings-slider {
+  --fx-speed-fill: 0.27;
+
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  accent-color: #7dd3fc;
+  appearance: none;
+}
+
+.settings-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #7dd3fc calc(var(--fx-speed-fill) * 100%),
+    var(--line-bright) calc(var(--fx-speed-fill) * 100%)
+  );
+}
+
+.settings-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-bright);
+}
+
+.settings-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #7dd3fc;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: #e0f2fe;
+  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+  appearance: none;
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: #e0f2fe;
+  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+.settings-slider:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+.settings-slider-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: -6px 0 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
 /* Task 2's AudioControls inside the Audio section: the section's heading already says "Audio",
    so the fieldset's own frame and legend give way (the legend stays for a screen reader). */
 .settings-slot .settings-audio {

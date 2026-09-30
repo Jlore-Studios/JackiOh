@@ -1,10 +1,11 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34: `voice-lines.json` against the
 // catalog it voices.
 //
-//   B33  exactly the 111 catalog ids, each `kind` from the catalog type, units carry `play` and
-//        `death` and nothing else carries either, non-units carry `cast`, and every referenced
-//        persona exists with a usable `say` voice and in-range rate, pbas, pmod, web values and
-//        (where set) loudness trim `gain`, 0-2.
+//   B33  exactly the catalog's ids (Core's 111 among them), each `kind` from the catalog type, units
+//        carry `play` and `death` and nothing else carries either, non-units carry `cast`, and every
+//        referenced persona exists with a usable voice for its backend (a `say` voice with in-range
+//        rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and a
+//        filter chain), web values and (where set) loudness trim `gain`, 0-2.
 //   B34  every line is non-empty, uses only /^[A-Za-z ,.'!?-]+$/, stays within
 //        VOICE_MAX_WORDS[line] words (a word is a token that contains a letter), and never uses a
 //        BANNED_RULES_WORDS entry as a whole word, in any case.
@@ -47,6 +48,11 @@ const ALLOWED_FIELDS: Readonly<Record<EntryKind, readonly string[]>> = {
   spell: ["kind", "persona", "cast", ...OVERRIDE_FIELDS],
   trap: ["kind", "persona", "cast", ...OVERRIDE_FIELDS],
 };
+
+/** R501: the SAPI voices a Windows install ships, which the SAPI personas choose from. */
+const SAPI_VOICES: readonly string[] = ["Microsoft David Desktop", "Microsoft Zira Desktop"];
+/** gen-voice.mjs's FILTER_CHARSET: filter names, numbers, `=`, `:`, `,`, `.`, `|` and `-`. */
+const FILTER_CHARSET = /^[a-z0-9_=:,.|-]*$/;
 
 /** B34's charset, verbatim. */
 const LINE_CHARSET = /^[A-Za-z ,.'!?-]+$/;
@@ -92,6 +98,12 @@ function allLines(): Line[] {
   return out;
 }
 
+/** R501: a persona rendered by Windows SAPI rather than macOS `say`. */
+function isSapi(name: string): boolean {
+  const persona = PERSONAS[name];
+  return isRecord(persona) && persona.backend === "sapi";
+}
+
 /** The personas the cards table actually names. */
 function referencedPersonas(): string[] {
   const names = new Set<string>();
@@ -121,10 +133,13 @@ function bannedMatcher(word: string): RegExp {
 }
 
 describe("voice-lines.json covers the catalog (B33)", () => {
-  it("B33 declares version 1 and one cards entry per catalog card, 111 in all", () => {
+  it("B33 declares version 1 and one cards entry per catalog card, Core's 111 among them", () => {
     expect(TABLE.version, "voice-lines.json version").toBe(1);
-    expect(CATALOG_IDS, "packages/cards/catalog.json holds the 100 Core cards and 11 tokens").toHaveLength(111);
-    expect(Object.keys(CARDS), "one cards entry per catalog id").toHaveLength(111);
+    expect(
+      CATALOG_IDS.filter((id) => id.startsWith("core-")),
+      "packages/cards/catalog.json holds the 100 Core cards and 11 tokens",
+    ).toHaveLength(111);
+    expect(Object.keys(CARDS), "one cards entry per catalog id").toHaveLength(CATALOG_IDS.length);
   });
 
   it("B33 leaves no catalog id, tokens included, without an entry", () => {
@@ -199,11 +214,11 @@ describe("voice-lines.json covers the catalog (B33)", () => {
     expect(dangling, "entries whose persona is missing from personas").toEqual([]);
   });
 
-  it("B33 gives every referenced persona a non-empty say voice", () => {
+  it("B33 gives every referenced `say` persona a non-empty say voice", () => {
     const personas = referencedPersonas();
     expect(personas.length, "the cards table names at least one persona").toBeGreaterThan(0);
     const wrong = personas
-      .filter((name) => isRecord(PERSONAS[name]))
+      .filter((name) => isRecord(PERSONAS[name]) && !isSapi(name))
       .filter((name) => {
         const say = (PERSONAS[name] as Json).say;
         return typeof say !== "string" || say.trim() === "";
@@ -211,9 +226,34 @@ describe("voice-lines.json covers the catalog (B33)", () => {
     expect(wrong, "personas with no usable `say -v` voice").toEqual([]);
   });
 
-  it("B33 keeps every referenced persona's rate within 90-360 and its pbas and pmod within 0-127", () => {
+  it("R501 gives every referenced SAPI persona a SAPI voice, a rate in -50-100, semitones in -12-12 and a filter chain", () => {
     const wrong: string[] = [];
-    for (const name of referencedPersonas()) {
+    for (const name of referencedPersonas().filter(isSapi)) {
+      const persona = PERSONAS[name] as Json;
+      if (typeof persona.voice !== "string" || !SAPI_VOICES.includes(persona.voice)) {
+        wrong.push(`${name}: voice ${JSON.stringify(persona.voice)}`);
+      }
+      if (!inRange(persona.rate, -50, 100)) wrong.push(`${name}: rate ${JSON.stringify(persona.rate)}`);
+      if (!inRange(persona.semitones, -12, 12)) wrong.push(`${name}: semitones ${JSON.stringify(persona.semitones)}`);
+      if (typeof persona.filter !== "string" || !FILTER_CHARSET.test(persona.filter)) {
+        wrong.push(`${name}: filter ${JSON.stringify(persona.filter)}`);
+      }
+      if ("say" in persona || "pbas" in persona || "pmod" in persona) wrong.push(`${name}: carries a say field`);
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("R501 puts no rate, pbas or pmod override on a line a SAPI persona speaks", () => {
+    const wrong = Object.entries(CARDS)
+      .filter(([, entry]) => typeof entry.persona === "string" && isSapi(entry.persona))
+      .filter(([, entry]) => OVERRIDE_FIELDS.some((field) => field in entry))
+      .map(([id]) => id);
+    expect(wrong).toEqual([]);
+  });
+
+  it("B33 keeps every referenced `say` persona's rate within 90-360 and its pbas and pmod within 0-127", () => {
+    const wrong: string[] = [];
+    for (const name of referencedPersonas().filter((persona) => !isSapi(persona))) {
       const persona = PERSONAS[name];
       if (!isRecord(persona)) continue;
       if (!inRange(persona.rate, 90, 360)) wrong.push(`${name}: rate ${JSON.stringify(persona.rate)}`);
@@ -240,11 +280,17 @@ describe("voice-lines.json covers the catalog (B33)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("B33 comes to 44 units (the Ghoul Token included, R353) and 67 spells and traps (The Coin included, R245), which is 155 lines", () => {
-    const kinds = Object.values(CARDS).map((entry) => entry.kind);
+  it("B33 gives Core 44 units (the Ghoul Token included, R353) and 67 spells and traps (The Coin included, R245), which is 155 lines", () => {
+    const core = Object.entries(CARDS).filter(([id]) => id.startsWith("core-"));
+    const kinds = core.map(([, entry]) => entry.kind);
     expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(44);
     expect(kinds.filter((kind) => kind === "spell" || kind === "trap"), "spell and trap entries").toHaveLength(67);
-    expect(allLines(), "lines in the table").toHaveLength(155);
+    expect(allLines().filter(({ key }) => key.startsWith("core-")), "Core's lines in the table").toHaveLength(155);
+  });
+
+  it("B33 gives every card a line per its kind: twice the units plus the spells and traps", () => {
+    const units = Object.values(CARDS).filter((entry) => entry.kind === "unit").length;
+    expect(allLines(), "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
   });
 });
 
@@ -281,6 +327,8 @@ describe("every voice line is short, plain flavour (B34)", () => {
       "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
       "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
       "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
+      "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
+      "Flicker", "Plague Token",
     ]);
     // The matcher itself: whole words in any case, across whitespace, and never inside a longer word.
     expect(bannedMatcher("Taunt").test("I TAUNT you!")).toBe(true);
