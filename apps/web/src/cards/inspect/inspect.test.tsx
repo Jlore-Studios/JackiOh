@@ -17,6 +17,7 @@ import type { CardDef, PlayerView, UnitView } from "@jackioh/shared";
 import Board from "../../game/Board.tsx";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { testid, type ClickTarget, type Highlight } from "../../game/contract.ts";
+import { patchTestid } from "../../patches/testids.ts";
 import { fullBoardView } from "../../test/fixtures.ts";
 import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
 import { faceModel, type FaceModel } from "../model.ts";
@@ -977,14 +978,16 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
+    // R388: the History section's control is the detail's first, before the caller's actions.
+    const first = screen.getByTestId(patchTestid.historyToggle);
     expect(close).toHaveFocus();
 
     expect(tabFrom(close)).toBe(false);
-    expect(action).toHaveFocus();
+    expect(first).toHaveFocus();
     expect(screen.getByTestId(INSPECT_DETAIL).contains(document.activeElement)).toBe(true);
 
     // Shift+Tab from the first control wraps to the last.
-    expect(tabFrom(action, true)).toBe(false);
+    expect(tabFrom(first, true)).toBe(false);
     expect(close).toHaveFocus();
 
     // A Tab between two controls inside is left to the browser.

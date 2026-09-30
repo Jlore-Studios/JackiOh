@@ -216,5 +216,6 @@ describe("CardDetail (B29)", () => {
       expect(detail.textContent ?? "", def.id).toContain(metaOf(def));
       unmount();
     }
-  });
+    // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
+  }, 30_000);
 });
