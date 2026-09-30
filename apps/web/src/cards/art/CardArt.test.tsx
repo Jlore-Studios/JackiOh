@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
+import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, artUrl, themeFor, type ArtManifest, type ArtShape, type CardArtProps } from "./index.ts";
 
 afterEach(cleanup);
@@ -160,5 +162,57 @@ describe("B6: CardArt", () => {
     const art = renderArt("core-002", { manifest: {}, className: "extra-art" });
     expect(art.classList.contains("extra-art")).toBe(true);
     expect(art.classList.contains("cf-art")).toBe(true);
+  });
+});
+
+describe("R503: CardArt draws the card's motif", () => {
+  it("R503 the name picks the motif: data-art-motif, and a picture of its own", () => {
+    const named = renderArt("classic-036", { manifest: {}, name: "Burn" });
+    expect(named.getAttribute("data-art-motif")).toBe("flames");
+    const withMotif = backgroundOf(named);
+    cleanup();
+    const bare = renderArt("classic-036", { manifest: {} });
+    expect(bare.hasAttribute("data-art-motif")).toBe(false);
+    expect(backgroundOf(bare)).not.toBe(withMotif);
+  });
+
+  it("R503 a family skips its own motif: a Book of Flame burns, it does not print another book", () => {
+    const art = renderArt("classic-016", { manifest: {}, name: def("classic-016").name });
+    expect(art.getAttribute("data-art-theme")).toBe("book");
+    expect(art.getAttribute("data-art-motif")).toBe("flames");
+  });
+
+  it("R503 with no name it reads the card's name from the deck builder's catalog, and draws the same picture", () => {
+    const card = def("classicplus-048");
+    const named = backgroundOf(renderArt(card.id, { manifest: {}, name: card.name }));
+    cleanup();
+    const { container } = render(
+      <CardDefsProvider defs={CATALOG}>
+        <CardArt defId={card.id} radiant={false} tags={card.tags} type={card.type} shape="strip" manifest={{}} />
+      </CardDefsProvider>,
+    );
+    const art = container.querySelector<HTMLElement>(".cf-art");
+    expect(art?.getAttribute("data-art-motif")).toBe("coins");
+    expect(art === null ? "" : backgroundOf(art)).toBe(named);
+  });
+
+  it("R503 with no name it reads the board's catalog, so a minion draws what its card drew in the hand", () => {
+    const card = def("classic-021");
+    const named = backgroundOf(renderArt(card.id, { manifest: {}, name: card.name, radiant: true }));
+    cleanup();
+    const { container } = render(
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <CardArt defId={card.id} radiant tags={card.tags} type={card.type} shape="oval" manifest={{}} />
+      </CatalogContext.Provider>,
+    );
+    const art = container.querySelector<HTMLElement>(".cf-art");
+    expect(art?.getAttribute("data-art-motif")).toBe("turtle");
+    expect(art === null ? "" : backgroundOf(art)).toBe(named);
+  });
+
+  it("R503 real art carries no motif: the file is the picture", () => {
+    const art = renderArt("classic-036", { manifest: { "classic-036": { base: true } }, name: "Burn" });
+    expect(art.getAttribute("data-art")).toBe("real");
+    expect(art.hasAttribute("data-art-motif")).toBe(false);
   });
 });

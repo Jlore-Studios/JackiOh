@@ -16,9 +16,22 @@
 //
 // Everything lives in a 0..100 box and every number is rounded to 2 dp, so the SVG that
 // `svg.ts` prints is short and identical on every machine.
+//
+// v0.2.0 (R503). Three things join the picture, each from its own salted stream so a Core card
+// without them draws exactly what it drew before:
+// - the card's MOTIF (motifs.ts), the picture its name asks for: a plain card (a type theme or a
+//   Token) wears it as its emblem, in the motif's own colours; a tribe or family keeps its emblem
+//   and carries the motif beside it (a corner glyph, a scatter, a row along the ground or a fall
+//   from the sky), and a figure may wear it on its head;
+// - the Book, Pancake and AI families' TWIST: pages in the air, steam and syrup, circuit traces with
+//   scanlines and a glitch;
+// - a per-set VARIETY SALT: the Classic and Classic+ cards draw their layout, backdrop, sky and
+//   emblem from their own salted streams, chosen (like Core's) so that no two catalog cards of one
+//   theme share all of them, while Core's stays the salt it always was.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
+import { MOTIFS, type Motif, type MotifHeadgear, type MotifId } from "./motifs.ts";
 import {
   driftPalette,
   EMBLEM_POOLS,
@@ -27,9 +40,11 @@ import {
   turnHue,
   RADIANT_MIX,
   RADIANT_PALETTE,
+  THEME_MOTES,
   THEME_PALETTES,
   type ArtThemeId,
   type Composition,
+  type MoteShape,
   type ThemePalette,
 } from "./themes.ts";
 
@@ -62,6 +77,8 @@ export const BACKDROPS: readonly Backdrop[] = [
 export const SKY_SCHEMES: readonly SkyScheme[] = ["dusk", "night", "dawn", "split"];
 
 type Glyph = { glyph: EmblemGlyph; x: number; y: number; size: number; rotate: number; fill: string; stroke: string };
+/** A motif's glyph: a placed glyph with its own opacity. */
+type MotifGlyphSpec = Glyph & { opacity: number };
 
 /** Everything the SVG is drawn from. Coordinates are in a 0..100 box, numbers rounded to 2 dp. */
 export type ArtSpec = {
@@ -80,8 +97,14 @@ export type ArtSpec = {
   /** A second, smaller glyph in the corner furthest from the emblem, or null. */
   accent: Glyph | null;
   motes: readonly { x: number; y: number; r: number; fill: string; opacity: number }[];
+  /** How the motes are drawn: round dust, ink drops or square pixels (THEME_MOTES). */
+  moteShape: MoteShape;
   /** Empty on the base variant; 7 to 11 rays on the radiant one. */
   rays: readonly { angle: number; width: number; opacity: number }[];
+  /** R503: the motif the card's name calls up (motifs.ts), or null. */
+  motif: MotifId | null;
+  /** The motif's glyphs, drawn over the composition and under the emblem; empty without one. */
+  motifGlyphs: readonly MotifGlyphSpec[];
 };
 
 /** The drawing box is 0..ART_BOX on both axes. */
@@ -91,6 +114,23 @@ const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;
 /** Salts the generator that picks a card's emblem and hue drift, so the geometry stream is untouched. */
 const VARIETY_SALT = 0x2545f491;
+/**
+ * R503: the variety salt of each set's cards, by the set's id prefix (B2.2: `classic-043`,
+ * `classicplus-012-1`). Each was chosen, as Core's was, so that no two catalog cards of one theme
+ * share their layout, backdrop, sky, emblem and motif, and the families spread over every layout;
+ * an id of any other set (a transient `t-<n>`) uses Core's.
+ */
+const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
+  classic: 0x79bdaf98,
+  classicplus: 0x5921ab01,
+};
+/** Salt the motif's and the family twist's own streams, so neither moves anything else. */
+const MOTIF_SALT = 0x165667b1;
+const TWIST_SALT = 0x3c6ef372;
+/** A radiant face mixes a motif's own colours this far toward the gold. */
+const RADIANT_MOTIF_MIX = 0.5;
+/** A plain card's emblem is this much larger when it is the card's motif, so the picture reads. */
+export const MOTIF_EMBLEM_SCALE = 1.2;
 const RADIANT_GLOW_BOOST = 0.1;
 const FULL_TURN = 360;
 const DEGREES = Math.PI / 180;
@@ -126,7 +166,8 @@ const ACCENT_POOL: readonly EmblemGlyph[] = [
 ];
 
 type Rng = () => number;
-type LayerFill = "far" | "mid" | "near" | "glow" | "accent";
+/** A layer's colour: a palette slot, the motif's own colour, or the family twist's. */
+type LayerFill = "far" | "mid" | "near" | "glow" | "accent" | "motif" | "twist";
 type Layer = { d: string; fill: LayerFill; opacity: number };
 type Geometry = {
   layers: Layer[];
@@ -228,7 +269,7 @@ function tickPath(cx: number, cy: number, degrees: number, from: number, to: num
 }
 
 /** What a figure wears on its head. Drawn as its own layer, so it can overlap the head freely. */
-type Headgear = "bare" | "hood" | "crown" | "helm" | "ears" | "hat" | "antennae" | "sprout" | "horns" | "brim" | "blob";
+type Headgear = "bare" | "hood" | "crown" | "helm" | "ears" | "hat" | "antennae" | "sprout" | "horns" | "brim" | "blob" | "toque";
 /** What its shoulders look like. */
 type Build = "plain" | "pauldrons" | "collar";
 
@@ -236,7 +277,8 @@ type Build = "plain" | "pauldrons" | "collar";
  * Per theme, the silhouettes a Unit may take; the geometry stream picks one. A tribe's own shape
  * is listed more than once so most of its units wear it: Felinor ears, KY's pointed hat, CN's
  * antennae, a Fruit's sprout, Call to Chaos horns, a Quickdraw's wide brim, a Token's round
- * critter. Only Units are figures, so the Spell and Trap themes never reach this table.
+ * critter, a Book scholar's hood, a Pancake cook's toque, an AI's helm and antennae. Only Units are
+ * figures, so the Spell and Trap themes never reach this table.
  */
 const HEADGEAR: Readonly<Record<ArtThemeId, readonly Headgear[]>> = {
   human: ["bare", "hood", "crown", "helm", "helm"],
@@ -246,6 +288,9 @@ const HEADGEAR: Readonly<Record<ArtThemeId, readonly Headgear[]>> = {
   fruit: ["sprout", "sprout", "blob"],
   chaos: ["horns", "horns", "hood"],
   quickdraw: ["brim", "brim", "bare"],
+  book: ["hood", "hat", "bare"],
+  pancake: ["toque", "toque", "blob"],
+  ai: ["helm", "antennae", "helm"],
   token: ["blob", "blob", "bare"],
   unit: ["bare", "hood", "crown", "helm", "horns"],
   spell: ["bare", "hood", "crown"],
@@ -262,6 +307,9 @@ const BUILDS: Readonly<Record<ArtThemeId, readonly Build[]>> = {
   fruit: ["plain"],
   chaos: ["collar", "pauldrons", "plain"],
   quickdraw: ["plain", "plain", "pauldrons"],
+  book: ["plain", "collar"],
+  pancake: ["plain"],
+  ai: ["plain", "pauldrons"],
   token: ["plain"],
   unit: ["plain", "pauldrons", "collar"],
   spell: ["plain"],
@@ -398,6 +446,18 @@ function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail:
         `L${pt(cx - r * 0.85, by - r * 0.08)}Q${pt(cx - w * 0.6, by - r * 0.05)} ${pt(cx - w, by - r * 0.3)}Z`;
       return { gear, detail: eyes };
     }
+    case "toque": {
+      // A cook's hat: a band round the head and a puffed crown of three lobes on it.
+      const w = r * 0.92;
+      const bandTop = top - r * 0.12;
+      const band = `M${pt(cx - w, bandTop)}L${pt(cx + w, bandTop)}L${pt(cx + w, top + r * 0.32)}L${pt(cx - w, top + r * 0.32)}Z`;
+      const lobe = r * 0.62;
+      const puff =
+        `M${pt(cx - w, bandTop)}A${fmt(lobe)} ${fmt(lobe)} 0 0 1 ${pt(cx - r * 0.3, bandTop - r * 1.05)}` +
+        `A${fmt(lobe)} ${fmt(lobe)} 0 0 1 ${pt(cx + r * 0.3, bandTop - r * 1.05)}` +
+        `A${fmt(lobe)} ${fmt(lobe)} 0 0 1 ${pt(cx + w, bandTop)}Z`;
+      return { gear: band + puff, detail: eyes };
+    }
     case "blob":
     case "bare":
       return { gear: "", detail: eyes };
@@ -442,7 +502,7 @@ const FIGURE_STANCE: Readonly<Record<string, { from: number; to: number; scale: 
   close: { from: 46, to: 54, scale: 1.3, drop: 7 },
 };
 
-function figure(rng: Rng, theme: ArtThemeId, layout: string): Geometry {
+function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadgear): Geometry {
   const stance = FIGURE_STANCE[layout] ?? { from: 44, to: 56, scale: 1, drop: 0 };
   const far = hills(rng, between(rng, 56, 64), 7, 5);
   const near = hills(rng, between(rng, 80, 86), 4, 4);
@@ -451,7 +511,10 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string): Geometry {
   const neck = between(rng, 4.2, 5.6) * stance.scale;
   const neckTop = shoulderY - between(rng, 5, 7.5) * stance.scale;
   const lean = between(rng, -3, 3);
-  const kind = pick(rng, HEADGEAR[theme], "bare");
+  // A motif may put something on the figure's head (motifs.ts); the pick still draws, so the rest of
+  // the stream reads as it did.
+  const picked = pick(rng, HEADGEAR[theme], "bare");
+  const kind: Headgear = wears ?? picked;
   const build = pick(rng, BUILDS[theme], "plain");
   const half = (kind === "blob" ? between(rng, 30, 36) : between(rng, 28, 36)) * stance.scale;
   const headR = (kind === "blob" ? between(rng, 12.5, 14.5) : between(rng, 10.5, 13.5)) * stance.scale;
@@ -1093,12 +1156,279 @@ function backdropLayers(rng: Rng, backdrop: Backdrop): Layer[] {
   }
 }
 
-const COMPOSERS: Readonly<Record<Composition, (rng: Rng, theme: ArtThemeId, layout: string) => Geometry>> = {
+const COMPOSERS: Readonly<Record<Composition, (rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadgear) => Geometry>> = {
   figure,
   burst,
   landscape,
   sigil,
 };
+
+/* ------------------------------------------------------------------ R503: twists and motifs --- */
+
+/** A thin band along a polyline, as one closed path. */
+function bandPath(points: readonly (readonly [number, number])[], width: number): string {
+  const left: string[] = [];
+  const right: string[] = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const [px, py] = points[Math.max(0, i - 1)] ?? [0, 0];
+    const [nx, ny] = points[Math.min(points.length - 1, i + 1)] ?? [0, 0];
+    const [x, y] = points[i] ?? [0, 0];
+    const length = Math.hypot(nx - px, ny - py) || 1;
+    const ox = (-(ny - py) / length) * (width / 2);
+    const oy = ((nx - px) / length) * (width / 2);
+    left.push(pt(x + ox, y + oy));
+    right.push(pt(x - ox, y - oy));
+  }
+  return `M${left.join("L")}L${right.reverse().join("L")}Z`;
+}
+
+/**
+ * Circuit traces: runs that leave an edge of the box, travel straight, take one 45° bend and end in
+ * a ringed pad. The AI family's backdrop, and the `circuits` motif's pattern.
+ */
+function circuitTraces(rng: Rng): string {
+  const count = whole(rng, 6, 8);
+  let d = "";
+  for (let k = 0; k < count; k += 1) {
+    const side = k % 4;
+    const along = between(rng, 10, 90);
+    const reach = between(rng, 14, 30);
+    const bend = between(rng, 6, 14) * (rng() < 0.5 ? -1 : 1);
+    // Out from the edge, then a diagonal of `bend` each way.
+    const inward: readonly (readonly [number, number])[] =
+      side === 0 ? [[along, -1], [along, reach], [along + bend, reach + Math.abs(bend)]]
+        : side === 1 ? [[ART_BOX + 1, along], [ART_BOX - reach, along], [ART_BOX - reach - Math.abs(bend), along + bend]]
+          : side === 2 ? [[along, ART_BOX + 1], [along, ART_BOX - reach], [along + bend, ART_BOX - reach - Math.abs(bend)]]
+            : [[-1, along], [reach, along], [reach + Math.abs(bend), along + bend]];
+    const [ex, ey] = inward[2] ?? [0, 0];
+    const [bx, by] = inward[1] ?? [0, 0];
+    // Stop the run at the pad's rim, so the two never overlap (layers fill even-odd).
+    const toPad = Math.hypot(ex - bx, ey - by) || 1;
+    const stop: readonly [number, number] = [ex - ((ex - bx) / toPad) * 2.2, ey - ((ey - by) / toPad) * 2.2];
+    d += bandPath([inward[0] ?? [0, 0], inward[1] ?? [0, 0], stop], 1.1);
+    d += circlePath(ex, ey, 2.2) + circlePath(ex, ey, 1);
+  }
+  return d;
+}
+
+/** Waves across the lower part of the band a face shows, the `waves` motif's pattern. */
+function waveBands(rng: Rng): string {
+  let d = "";
+  const first = between(rng, 60, 64);
+  for (let k = 0; k < 3; k += 1) {
+    const y = first + k * between(rng, 6, 8);
+    const lift = between(rng, 1.6, 2.8);
+    const thick = between(rng, 1.8, 2.8);
+    let top = `M${pt(0, y)}`;
+    for (let x = 0; x < ART_BOX; x += 16) top += `Q${pt(x + 4, y - lift)} ${pt(x + 8, y)}Q${pt(x + 12, y + lift)} ${pt(x + 16, y)}`;
+    let bottom = `L${pt(ART_BOX, y + thick)}`;
+    for (let x = ART_BOX; x > 0; x -= 16) bottom += `Q${pt(x - 4, y + thick + lift)} ${pt(x - 8, y + thick)}Q${pt(x - 12, y + thick - lift)} ${pt(x - 16, y + thick)}`;
+    d += `${top}${bottom}Z`;
+  }
+  return d;
+}
+
+/** Book: loose pages drifting in the sky, each ruled with three lines. */
+function pages(rng: Rng): string {
+  let d = "";
+  const count = whole(rng, 3, 4);
+  for (let k = 0; k < count; k += 1) {
+    const cx = ART_BOX * ((k + 0.5) / count) + between(rng, -6, 6);
+    const cy = between(rng, 24, 42);
+    const w = between(rng, 6.5, 8.5);
+    const h = w * 1.3;
+    const tilt = between(rng, -28, 28) * DEGREES;
+    const at = (x: number, y: number): string => pt(cx + x * Math.cos(tilt) - y * Math.sin(tilt), cy + x * Math.sin(tilt) + y * Math.cos(tilt));
+    d += `M${at(-w / 2, -h / 2)}L${at(w / 2, -h / 2)}L${at(w / 2, h / 2)}L${at(-w / 2, h / 2)}Z`;
+    for (const row of [-0.25, 0, 0.25]) {
+      const y = row * h;
+      d += `M${at(-w * 0.32, y - 0.3)}L${at(w * 0.32, y - 0.3)}L${at(w * 0.32, y + 0.3)}L${at(-w * 0.32, y + 0.3)}Z`;
+    }
+  }
+  return d;
+}
+
+/** Pancake: steam curling up from the middle of the picture. */
+function steam(rng: Rng): string {
+  let d = "";
+  const count = whole(rng, 2, 3);
+  for (let k = 0; k < count; k += 1) {
+    const x0 = 34 + (32 * (k + 0.5)) / count + between(rng, -4, 4);
+    const sway = between(rng, 3, 5) * (rng() < 0.5 ? -1 : 1);
+    const points: [number, number][] = [];
+    for (let i = 0; i <= 10; i += 1) {
+      const t = i / 10;
+      points.push([x0 + sway * Math.sin(t * 2 * Math.PI), 54 - t * 32]);
+    }
+    d += bandPath(points, between(rng, 1.6, 2.4));
+  }
+  return d;
+}
+
+/**
+ * Pancake: syrup across the top, running down in drips. It reaches just past the top of the band a
+ * full face shows, so the drips hang from the window's top edge there, and a squarer window shows
+ * the pool they run from.
+ */
+function syrup(rng: Rng): string {
+  const depth = between(rng, 17.5, 19.5);
+  let d = `M0 0L${ART_BOX} 0L${pt(ART_BOX, depth)}L${pt(0, depth)}Z`;
+  const count = whole(rng, 3, 5);
+  for (let k = 0; k < count; k += 1) {
+    const x = ART_BOX * ((k + 0.5) / count) + between(rng, -6, 6);
+    const r = between(rng, 1.1, 1.8);
+    const length = between(rng, 4, 11);
+    d += `M${pt(x - r, depth)}L${pt(x + r, depth)}L${pt(x + r, depth + length)}A${fmt(r)} ${fmt(r)} 0 0 1 ${pt(x - r, depth + length)}Z`;
+  }
+  return d;
+}
+
+/** AI: faint scanlines over the whole picture. */
+function scanlines(): string {
+  let d = "";
+  for (let y = 1; y < ART_BOX; y += 3) d += rectPath(0, y, ART_BOX, 0.7);
+  return d;
+}
+
+/** AI: one or two glitch bars, knocked sideways. */
+function glitch(rng: Rng): string {
+  let d = "";
+  const count = whole(rng, 1, 2);
+  for (let k = 0; k < count; k += 1) {
+    const y = between(rng, 18, 82);
+    const x = between(rng, -10, 30);
+    d += rectPath(x, y, between(rng, 40, 70), between(rng, 1.4, 3.2));
+  }
+  return d;
+}
+
+type Twist = { under: Layer[]; over: Layer[] };
+
+/** A family's own touch (R503), from its own stream: pages, steam and syrup, or circuitry. */
+function twistLayers(rng: Rng, theme: ArtThemeId): Twist {
+  switch (theme) {
+    case "book":
+      return { under: [{ d: pages(rng), fill: "twist", opacity: 0.5 }], over: [] };
+    case "pancake":
+      return {
+        under: [{ d: steam(rng), fill: "glow", opacity: 0.28 }],
+        over: [{ d: syrup(rng), fill: "twist", opacity: 0.9 }],
+      };
+    case "ai":
+      return {
+        under: [{ d: circuitTraces(rng), fill: "twist", opacity: 0.4 }],
+        over: [
+          { d: glitch(rng), fill: "twist", opacity: 0.22 },
+          { d: scanlines(), fill: "glow", opacity: 0.07 },
+        ],
+      };
+    default:
+      return { under: [], over: [] };
+  }
+}
+
+/** Each family twist's own colour: parchment pages, amber syrup, neon traces. */
+const TWIST_COLORS: Readonly<Partial<Record<ArtThemeId, string>>> = {
+  book: "#f4e4bf",
+  pancake: "#a8561c",
+  ai: "#39f3ff",
+};
+
+/** The themes with no emblem of their own to keep: a plain card, or a Token. */
+const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spell", "field-spell", "trap", "field-trap", "token"]);
+
+type Placed = { x: number; y: number; size: number };
+
+/**
+ * The band of the square every face shows. A full face's art window is about 1.6 times as wide as
+ * it is tall and `background-size: cover` fills it, so it shows roughly y 18 to 82 of the box (a
+ * Unit's portrait a little more, a compact face nearly all). A motif stays inside this band.
+ */
+const SHOWN_TOP = 22;
+const SHOWN_BOTTOM = 78;
+
+function farEnough(x: number, y: number, size: number, taken: readonly Placed[]): boolean {
+  return taken.every((other) => Math.hypot(other.x - x, other.y - y) >= (other.size + size) / 2 + 1.5);
+}
+
+/**
+ * Where a motif's glyphs go (R503), from the motif stream, inside the band every face shows and
+ * inside the rounded windows (a portrait's oval, a Field Spell's arch). `hero` puts one larger glyph
+ * in the upper corner furthest from the emblem and the glow (a plain card has already made it its
+ * emblem, so it adds nothing; a figure standing to one side has its emblem in that corner, so the
+ * motif goes just under it); `scatter` strews a handful through the composition's sky; `rise`
+ * stands a row along the ground; `fall` drops a few from above. Nothing lands on the emblem.
+ */
+function motifPlacements(
+  rng: Rng,
+  motif: Motif,
+  plain: boolean,
+  composition: Composition,
+  layout: string,
+  geometry: Geometry,
+): (Placed & { rotate: number; opacity: number })[] {
+  const emblem: Placed = { x: geometry.emblem.x, y: geometry.emblem.y, size: geometry.emblem.size };
+  const taken: Placed[] = [emblem];
+  const out: (Placed & { rotate: number; opacity: number })[] = [];
+  const place = (x: number, y: number, size: number, rotate: number, opacity: number): void => {
+    if (!farEnough(x, y, size, taken)) return;
+    taken.push({ x, y, size });
+    out.push({ x, y, size, rotate, opacity });
+  };
+  const figure = composition === "figure";
+  switch (motif.arrangement) {
+    case "hero": {
+      if (plain) return out;
+      const flip = rng() < 0.5;
+      const size = figure ? between(rng, 14, 16) : between(rng, 15, 18);
+      const rotate = between(rng, -10, 10);
+      if (figure && (layout === "left" || layout === "right")) {
+        out.push({ x: emblem.x, y: emblem.y + emblem.size / 2 + size / 2 + 3, size, rotate, opacity: 0.95 });
+        return out;
+      }
+      const inset = figure ? 28 : 20;
+      const corners = [
+        { x: inset, y: 30 },
+        { x: ART_BOX - inset, y: 30 },
+      ];
+      const score = (corner: { x: number; y: number }): number =>
+        Math.min(Math.hypot(corner.x - emblem.x, corner.y - emblem.y), Math.hypot(corner.x - geometry.glow.cx, corner.y - geometry.glow.cy));
+      const [a, b] = flip ? [corners[1], corners[0]] : [corners[0], corners[1]];
+      const corner = a !== undefined && b !== undefined && score(b) > score(a) ? b : (a ?? { x: inset, y: 30 });
+      out.push({ x: corner.x, y: corner.y, size, rotate, opacity: 0.95 });
+      return out;
+    }
+    case "scatter": {
+      const count = whole(rng, 4, 6);
+      const top = Math.max(geometry.motes.top, SHOWN_TOP) + 3;
+      const bottom = Math.max(top + 6, Math.min(geometry.motes.bottom, SHOWN_BOTTOM) - 3);
+      for (let k = 0; k < count * 3 && out.length < count; k += 1) {
+        place(between(rng, 12, 88), between(rng, top, bottom), between(rng, 7, 10), between(rng, -25, 25), between(rng, 0.8, 0.95));
+      }
+      return out;
+    }
+    case "rise": {
+      const count = whole(rng, 3, 5);
+      // A figure's portrait shows a little lower, and its oval narrows at the foot.
+      const [left, right, low, high] = figure ? [26, 74, 76, 82] : [15, 85, 68, 74];
+      for (let k = 0; k < count; k += 1) {
+        const size = between(rng, 9, 12);
+        place(left + ((right - left) * k) / (count - 1) + between(rng, -3, 3), between(rng, low, high), size, between(rng, -8, 8), 0.95);
+      }
+      return out;
+    }
+    case "fall": {
+      const count = whole(rng, 3, 5);
+      for (let k = 0; k < count; k += 1) {
+        const size = between(rng, 6.5, 9.5);
+        place(14 + (72 * (k + 0.5)) / count + between(rng, -5, 5), between(rng, 24, 40), size, between(rng, -18, 18), 0.9);
+      }
+      return out;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------------ colour --- */
 
 type Colors = {
   sky: readonly [string, string];
@@ -1124,7 +1454,10 @@ function skyFor(sky: readonly [string, string], scheme: SkyScheme, turn: number)
   }
 }
 
-function colorsFor(palette: ThemePalette, radiant: boolean): Colors {
+/** The colours outside the palette: the motif's own, and the family twist's. */
+type ExtraColors = { motif: string; twist: string };
+
+function colorsFor(palette: ThemePalette, radiant: boolean, extra: ExtraColors): Colors {
   if (!radiant) {
     return {
       sky: palette.sky,
@@ -1134,6 +1467,8 @@ function colorsFor(palette: ThemePalette, radiant: boolean): Colors {
         near: palette.ridges[2],
         glow: palette.glow,
         accent: palette.emblem.fill,
+        motif: extra.motif,
+        twist: extra.twist,
       },
       glow: palette.glow,
       emblemFill: palette.emblem.fill,
@@ -1151,6 +1486,8 @@ function colorsFor(palette: ThemePalette, radiant: boolean): Colors {
       near: toward(palette.ridges[2], gold.ridges[2]),
       glow: gold.glow,
       accent: gold.emblem.fill,
+      motif: mixHex(extra.motif, gold.emblem.fill, RADIANT_MOTIF_MIX),
+      twist: mixHex(extra.twist, gold.glow, RADIANT_MOTIF_MIX),
     },
     glow: gold.glow,
     emblemFill: gold.emblem.fill,
@@ -1207,38 +1544,90 @@ function accentCorner(emblem: { x: number; y: number }): { x: number; y: number 
   return best;
 }
 
-/** Pure. The seed is hashId(defId); the radiant variant reuses the base geometry. */
-export function artSpec(defId: string, theme: ArtThemeId, composition: Composition, radiant: boolean): ArtSpec {
+/** R503: the variety salt for a card's set, read off its id's prefix (B2.2); Core's otherwise. */
+export function varietySalt(defId: string): number {
+  const dash = defId.indexOf("-");
+  const prefix = dash < 0 ? "" : defId.slice(0, dash);
+  return Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
+}
+
+/**
+ * Pure. The seed is hashId(defId); the radiant variant reuses the base geometry. `motif` is the
+ * motif the card's name calls up (`motifFor`), or null for none.
+ */
+export function artSpec(
+  defId: string,
+  theme: ArtThemeId,
+  composition: Composition,
+  radiant: boolean,
+  motif: MotifId | null = null,
+): ArtSpec {
   const seed = hashId(defId);
   const rng = seededRandom(seed);
   // Per card, never per variant: the emblem from the theme's pool, how far the palette turns, the
   // layout, the backdrop, the sky's lighting and the accent. All come from their own salted stream,
   // so the base and radiant faces agree on them (B2).
-  const variety = seededRandom((seed ^ VARIETY_SALT) >>> 0);
+  const variety = seededRandom((seed ^ varietySalt(defId)) >>> 0);
   const pool = EMBLEM_POOLS[theme];
-  const glyph = pool[Math.floor(variety() * pool.length)] ?? THEME_PALETTES[theme].emblem.glyph;
+  const pooled = pool[Math.floor(variety() * pool.length)] ?? THEME_PALETTES[theme].emblem.glyph;
   const drift = (variety() * 2 - 1) * HUE_DRIFT[theme];
   const layouts = LAYOUTS[composition];
   const layout = layouts[Math.floor(variety() * layouts.length)] ?? layouts[0] ?? "";
   const backdrop = BACKDROPS[Math.floor(variety() * BACKDROPS.length)] ?? "none";
   const skyScheme = SKY_SCHEMES[Math.floor(variety() * SKY_SCHEMES.length)] ?? "dusk";
   const splitTurn = between(variety, SPLIT_TURN_MIN, SPLIT_TURN_MAX) * (variety() < 0.5 ? -1 : 1);
-  const accentPool = ACCENT_POOL.filter((candidate) => candidate !== glyph);
-  const accentGlyph = variety() < ACCENT_CHANCE ? (accentPool[Math.floor(variety() * accentPool.length)] ?? null) : null;
+  const accentPool = ACCENT_POOL.filter((candidate) => candidate !== pooled);
+  const accentPick = variety() < ACCENT_CHANCE ? (accentPool[Math.floor(variety() * accentPool.length)] ?? null) : null;
   const accentSize = between(variety, 7, 10);
   const accentTurn = between(variety, -20, 20);
 
+  // R503: a plain card wears its motif as its emblem, in the motif's own colours; a tribe or family
+  // keeps its emblem and carries the motif beside it, in place of the accent when that is a corner.
+  const drawn: Motif | null = motif === null ? null : MOTIFS[motif];
+  const plain = PLAIN_THEMES.has(theme);
+  const glyph: EmblemGlyph = drawn !== null && plain ? drawn.glyph : pooled;
+  const heroInCorner = drawn !== null && !plain && drawn.arrangement === "hero";
+  const accentGlyph = heroInCorner || accentPick === glyph ? null : accentPick;
+
   const themed = driftPalette(THEME_PALETTES[theme], drift, glyph);
-  const palette: ThemePalette = { ...themed, sky: skyFor(themed.sky, skyScheme, splitTurn) };
-  const colors = colorsFor(palette, radiant);
+  const worn = drawn !== null && plain ? { ...themed, emblem: { glyph, fill: drawn.fill, stroke: drawn.stroke } } : themed;
+  const palette: ThemePalette = { ...worn, sky: skyFor(worn.sky, skyScheme, splitTurn) };
+  const colors = colorsFor(palette, radiant, { motif: drawn?.fill ?? palette.glow, twist: TWIST_COLORS[theme] ?? palette.glow });
   // Geometry first, in a fixed order that never depends on `radiant` (B2).
   const angle = between(rng, SKY_ANGLE_MIN, SKY_ANGLE_MAX);
   const behind = backdropLayers(rng, backdrop);
-  const composed = COMPOSERS[composition](rng, theme, layout);
-  const geometry: Geometry = { ...composed, layers: [...behind, ...composed.layers] };
+  const composed = COMPOSERS[composition](rng, theme, layout, drawn?.headgear);
+  // The family twist and the motif draw from streams of their own, after everything else.
+  const twist = twistLayers(seededRandom((seed ^ TWIST_SALT) >>> 0), theme);
+  const motifStream = seededRandom((seed ^ MOTIF_SALT) >>> 0);
+  const pattern: Layer[] =
+    drawn?.pattern === "circuits"
+      ? [{ d: circuitTraces(motifStream), fill: "motif", opacity: 0.4 }]
+      : drawn?.pattern === "waves"
+        ? [{ d: waveBands(motifStream), fill: "motif", opacity: 0.45 }]
+        : [];
+  const circuitsUnder = drawn?.pattern === "circuits" ? pattern : [];
+  const wavesOver = drawn?.pattern === "waves" ? pattern : [];
+  const geometry: Geometry = {
+    ...composed,
+    layers: [...behind, ...twist.under, ...circuitsUnder, ...composed.layers, ...wavesOver, ...twist.over],
+  };
   const motes = scatterMotes(rng, geometry.motes, colors.mote);
   const corner = accentCorner(geometry.emblem);
   const glowOpacity = radiant ? Math.min(1, geometry.glow.opacity + RADIANT_GLOW_BOOST) : geometry.glow.opacity;
+  const motifGlyphs: MotifGlyphSpec[] =
+    drawn === null
+      ? []
+      : motifPlacements(motifStream, drawn, plain, composition, layout, geometry).map((placed) => ({
+          glyph: drawn.glyph,
+          x: round2(placed.x),
+          y: round2(placed.y),
+          size: round2(placed.size),
+          rotate: round2(placed.rotate + (drawn.turn ?? 0)),
+          fill: colors.fills.motif,
+          stroke: radiant ? mixHex(drawn.stroke, RADIANT_PALETTE.emblem.stroke, RADIANT_MOTIF_MIX) : drawn.stroke,
+          opacity: round2(placed.opacity),
+        }));
   return {
     theme,
     composition,
@@ -1259,8 +1648,8 @@ export function artSpec(defId: string, theme: ArtThemeId, composition: Compositi
       glyph: palette.emblem.glyph,
       x: round2(geometry.emblem.x),
       y: round2(geometry.emblem.y),
-      size: round2(geometry.emblem.size),
-      rotate: round2(geometry.emblem.rotate),
+      size: round2(geometry.emblem.size * (drawn !== null && plain ? MOTIF_EMBLEM_SCALE : 1)),
+      rotate: round2(geometry.emblem.rotate + (drawn !== null && plain ? (drawn.turn ?? 0) : 0)),
       fill: colors.emblemFill,
       stroke: colors.emblemStroke,
     },
@@ -1277,6 +1666,9 @@ export function artSpec(defId: string, theme: ArtThemeId, composition: Compositi
             stroke: colors.emblemStroke,
           },
     motes,
+    moteShape: THEME_MOTES[theme],
     rays: radiant ? radiantRays(seed) : [],
+    motif,
+    motifGlyphs,
   };
 }

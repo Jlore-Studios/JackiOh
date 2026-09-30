@@ -28,6 +28,7 @@ import {
   type Keyword,
   type Rarity,
   type PreviewValue,
+  type PrintedRarity,
   type SetName,
   type Tag,
 } from "@jackioh/shared";
@@ -86,6 +87,12 @@ export type FaceModel = {
   type: CardType;
   tags: readonly Tag[];
   rarity: Rarity | null;
+  /**
+   * B2.5, R503: the rarity a token prints (`CardDef.printedRarity`), which its frame shows in place
+   * of Token's; null (or absent, on a face built by hand) for every other card. Display only:
+   * `rarity` stays "Token" for everything else.
+   */
+  printedRarity?: PrintedRarity | null;
   index: string | null;
   set: SetName | null;
   radiant: boolean;
@@ -192,6 +199,7 @@ export function faceModel(source: FaceSource): FaceModel {
     type,
     tags: def?.tags ?? [],
     rarity: def?.rarity ?? null,
+    printedRarity: def?.printedRarity ?? null,
     index: def?.index ?? null,
     set: def?.set ?? null,
     radiant: source.radiant,
@@ -271,6 +279,14 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
     }
   }
   return printedText;
+}
+
+/**
+ * The rarity a face's frame is drawn in (R503): a token's printed rarity when it has one, else the
+ * card's own. Display only; nothing reads it as the card's rarity.
+ */
+export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
+  return face.printedRarity ?? face.rarity;
 }
 
 /**

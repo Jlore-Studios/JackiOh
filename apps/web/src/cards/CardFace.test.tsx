@@ -5,6 +5,10 @@
 // elements exist, what they carry, and that `useFitText` leaves an element with no layout alone.
 // The pixel half of B15 is e2e/cypress/component/card-faces.cy.tsx.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +28,7 @@ import {
 } from "./constants.ts";
 import { nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
+import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
 afterEach(() => {
@@ -37,6 +42,14 @@ afterEach(() => {
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const XHTML = "http://www.w3.org/1999/xhtml";
 const UNKNOWN_ID = "core-999";
+/**
+ * The sweeps below render both faces of all 317 catalog entries (v0.2.0's Core, Classic and
+ * Classic+), which outruns vitest's 5 s default on a loaded machine.
+ */
+const CATALOG_SWEEP_TIMEOUT_MS = 60_000;
+
+/** vitest stubs CSS imports, so the set mark's stylesheet is read as text. */
+const setMarkCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "setmark.css"), "utf8");
 
 function def(id: string): CardDef {
   const found = CATALOG[id];
@@ -118,15 +131,19 @@ const TYPE_CARD: readonly (readonly [CardType, string, string])[] = [
 /* ----------------------------------------------------------------------------------------- B12 */
 
 describe("B12: the full face's DOM", () => {
-  it("B12 every catalog card, both faces: only span, strong and img, and nothing a face may not carry", () => {
-    for (const card of DEFS) {
-      for (const radiant of [false, true]) {
-        const cf = catalogFace(card.id, radiant);
-        expect(faceProblems(cf), `${card.id} radiant=${String(radiant)}`).toEqual([]);
-        cleanup();
+  it(
+    "B12 every catalog card, both faces: only span, strong and img, and nothing a face may not carry",
+    () => {
+      for (const card of DEFS) {
+        for (const radiant of [false, true]) {
+          const cf = catalogFace(card.id, radiant);
+          expect(faceProblems(cf), `${card.id} radiant=${String(radiant)}`).toEqual([]);
+          cleanup();
+        }
       }
-    }
-  });
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
 
   it("B12 cost gem, art frame holding the art, the name as one text node, and the type line", () => {
     const cf = catalogFace("core-020");
@@ -342,18 +359,22 @@ describe("B10: RulesText marks terms in bold", () => {
     expect(one(cf, ".card-text").textContent).toBe("taunt the Locked Rushing units");
   });
 
-  it("B10 every catalog text reads back unchanged through RulesText, marks and all", () => {
-    for (const card of DEFS) {
-      for (const radiant of [false, true]) {
-        const text = faceModel({ defId: card.id, def: card, radiant }).text;
-        const cf = catalogFace(card.id, radiant);
-        expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
-        // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
-        expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
-        cleanup();
+  it(
+    "B10 every catalog text reads back unchanged through RulesText, marks and all",
+    () => {
+      for (const card of DEFS) {
+        for (const radiant of [false, true]) {
+          const text = faceModel({ defId: card.id, def: card, radiant }).text;
+          const cf = catalogFace(card.id, radiant);
+          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
+          // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
+          expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
+          cleanup();
+        }
       }
-    }
-  });
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
 });
 
 /* ----------------------------------------------------------------------------------------- B13 */
@@ -636,6 +657,133 @@ describe("B15: length tiers, and useFitText without layout", () => {
       }
       cleanup();
     }
+  });
+});
+
+/* ---------------------------------------------------------------------------------------- R503 */
+
+describe("R503: the set mark and a token's printed rarity", () => {
+  function setMark(cf: HTMLElement): HTMLElement {
+    const marks = cf.querySelectorAll<HTMLElement>(".cf-set");
+    expect(marks).toHaveLength(1);
+    const mark = marks[0];
+    if (mark === undefined) throw new Error("no .cf-set");
+    return mark;
+  }
+
+  it("R503 a face shows its set: a glyph per set, named by title and aria-label, with data-set", () => {
+    for (const [id, set, kind] of [
+      ["core-002", "Core", "core"],
+      ["classic-043", "Classic", "classic"],
+      ["classicplus-043", "Classic+", "classic-plus"],
+      ["classicplus-012-1", "Classic+", "classic-plus"],
+    ] as const) {
+      const mark = setMark(catalogFace(id));
+      expect(mark.getAttribute("data-set"), id).toBe(set);
+      expect(mark.getAttribute("data-set-mark"), id).toBe(kind);
+      expect(mark.getAttribute("role"), id).toBe("img");
+      expect(mark.getAttribute("aria-label"), id).toBe(`${set} set`);
+      expect(mark.getAttribute("title"), id).toBe(`${set} set`);
+      const glyph = one(mark, "img.cf-set-glyph");
+      expect(glyph.getAttribute("alt"), id).toBe("");
+      expect(glyph.getAttribute("aria-hidden"), id).toBe("true");
+      expect(glyph.getAttribute("src"), id).toBe(setMarkOf(set).src);
+      expect(mark.textContent, id).toBe("");
+      cleanup();
+    }
+  });
+
+  it("R503 the four glyphs differ, and Classic+'s is Classic's temple with a plus", () => {
+    const sources = new Set(["Core", "Classic", "Classic+", "Boss"].map((set) => setMarkOf(set).src));
+    expect(sources.size).toBe(4);
+    const classic = decodeURIComponent(setMarkOf("Classic").src);
+    const plus = decodeURIComponent(setMarkOf("Classic+").src);
+    const temple = /<path d='M12 1\.8L22 7\.2H2Z[^']*'/.exec(classic)?.[0];
+    expect(temple).toBeDefined();
+    expect(plus).toContain(temple ?? "");
+    for (const src of sources) {
+      const svg = decodeURIComponent(src);
+      expect(svg).not.toContain("<text");
+      expect(svg).not.toContain("<title");
+    }
+  });
+
+  it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
+    const boss: CardDef = { ...def("core-002"), set: "Boss" };
+    const mark = setMark(renderFace({ defId: boss.id, def: boss, radiant: false }));
+    expect(mark.getAttribute("data-set")).toBe("Boss");
+    expect(mark.getAttribute("data-set-mark")).toBe("unknown");
+    expect(mark.getAttribute("aria-label")).toBe("Boss set");
+    cleanup();
+    const unknown = renderFace({ defId: UNKNOWN_ID, name: "Nobody", type: "Spell", radiant: false });
+    expect(unknown.querySelector(".cf-set")).toBeNull();
+  });
+
+  it("R503 the mark shows on the radiant and compact faces too", () => {
+    expect(setMark(catalogFace("classic-043", true)).getAttribute("data-set")).toBe("Classic");
+    cleanup();
+    expect(setMark(catalogFace("classicplus-038", false, "compact")).getAttribute("data-set")).toBe("Classic+");
+  });
+
+  it(
+    "R503 every catalog face carries exactly one mark, its own set's",
+    () => {
+      for (const card of DEFS) {
+        expect(setMark(catalogFace(card.id)).getAttribute("data-set"), card.id).toBe(card.set);
+        cleanup();
+      }
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
+
+  it("R503 setmark.css hides the mark on the smallest faces and moves it for the small layout, at the constants' sizes", () => {
+    expect(setMarkCss).toContain(`@container cardface (max-height: ${FACE_TEXT_MIN_HEIGHT_PX - 1}px)`);
+    expect(setMarkCss).toContain(`@container cardface (max-height: ${SET_MARK_MIN_FACE_PX - 1}px)`);
+    expect(SET_MARK_MIN_FACE_PX).toBeLessThan(FACE_TEXT_MIN_HEIGHT_PX);
+    // Nothing about the mark moves, so reduced motion has nothing to stop.
+    expect(setMarkCss).not.toMatch(/animation|transition/);
+  });
+
+  it("R503 a token that prints a rarity wears that rarity's frame, gem and crest; its rarity stays Token", () => {
+    const top = def("classicplus-019-1");
+    expect(top.rarity).toBe("Token");
+    expect(top.printedRarity).toBe("Legendary");
+    const cf = catalogFace(top.id);
+    expect(cf.getAttribute("data-rarity")).toBe("Legendary");
+    expect(cf.getAttribute("data-printed-rarity")).toBe("Legendary");
+    expect(one(cf, ".cf-gem").getAttribute("data-rarity")).toBe("Legendary");
+    expect(cf.querySelectorAll(".cf-crest")).toHaveLength(1);
+    expect(faceModel({ defId: top.id, def: top, radiant: false }).rarity).toBe("Token");
+    cleanup();
+
+    const rotten = catalogFace("classicplus-065-1");
+    expect(rotten.getAttribute("data-rarity")).toBe("Common");
+    expect(one(rotten, ".cf-gem").getAttribute("data-rarity")).toBe("Common");
+    expect(rotten.querySelector(".cf-crest")).toBeNull();
+  });
+
+  it("R503 a Mythic-printed token carries the Mythic foil, animated or still as the setting says", () => {
+    writeCardSettings({ animatedFoil: true });
+    expect(catalogFace("classicplus-065-5").getAttribute("data-foil")).toBe("animated");
+    cleanup();
+    writeCardSettings({ animatedFoil: false });
+    expect(catalogFace("classicplus-065-5").getAttribute("data-foil")).toBe("static");
+  });
+
+  it("R503 a token with no printed rarity keeps Token's look: no gem, no crest, no printed rarity", () => {
+    for (const id of ["core-t-rush", "classicplus-t-ai-01", "core-095-1"]) {
+      const cf = catalogFace(id);
+      expect(cf.getAttribute("data-rarity"), id).toBe("Token");
+      expect(cf.hasAttribute("data-printed-rarity"), id).toBe(false);
+      expect(cf.querySelector(".cf-gem"), id).toBeNull();
+      expect(cf.querySelector(".cf-crest"), id).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("R503 the face's art is drawn with the card's name, so it carries the name's motif", () => {
+    const art = one(catalogFace("classic-036"), ".cf-art-frame > .cf-art");
+    expect(art.getAttribute("data-art-motif")).toBe("flames");
   });
 });
 
