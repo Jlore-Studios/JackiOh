@@ -232,6 +232,19 @@ class DeliverTests(unittest.TestCase):
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertTrue(h.ctx.store.load()["suggest"]["requested"])
 
+    def test_an_unfinished_survey_is_due_again(self):
+        h = Harness(self)
+        h.ctx.store.update(lambda s: s.update(suggest={"last_run": None, "requested": False}))
+        planned = plan_mod.make(h.ctx, force=True, mode="suggest")
+        self.assertEqual(planned["action"], "suggest")
+        out = h.root / "out-cut-short"
+        out.mkdir()
+        (out / "result.json").write_text(json.dumps({"status": "interrupted",
+                                                     "reason": "the usage limit was reached"}))
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertIsNone(h.ctx.store.load()["suggest"]["last_run"])
+        self.assertTrue(plan_mod.suggestions_due(h.ctx, h.ctx.store.load()))
+
 
 if __name__ == "__main__":
     unittest.main()

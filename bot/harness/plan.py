@@ -344,7 +344,8 @@ def suggestion_plan(ctx: Context, *, force: bool) -> dict[str, Any] | None:
         tags = ", ".join(sorted(label_names(issue)))
         lines.append(f"- {kind} #{issue['number']} [{issue.get('state')}] {issue.get('title', '')}"
                      + (f" ({tags})" if tags else ""))
-    was_requested = bool((ctx.store.load().get("suggest") or {}).get("requested"))
+    previous = ctx.store.load().get("suggest") or {}
+    was_requested = bool(previous.get("requested"))
 
     def change(s: dict[str, Any]) -> None:
         s["suggest"] = {"last_run": iso(ctx.now()), "requested": False}
@@ -356,4 +357,5 @@ def suggestion_plan(ctx: Context, *, force: bool) -> dict[str, Any] | None:
         "existing": data("\n".join(lines) or "(none)", "Existing issues and pull requests"),
         "forced": bool(force),
         "was_requested": was_requested,
+        "previous_last_run": previous.get("last_run"),
     }

@@ -249,6 +249,8 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
                 f"BOT_GITHUB_TOKEN belongs to @{who} (expected @{cfg.bot_login})")
         except GitHubError as exc:
             errors.append(f"BOT_GITHUB_TOKEN does not work: {exc}")
+    elif cfg.actions_token and args.work:
+        ok.append("no GitHub write token here, as intended: the model job never holds one")
     elif cfg.actions_token:
         warnings.append("no BOT_GITHUB_TOKEN: GitHub writes use the Actions token, so comments "
                         "come from github-actions[bot] and a pull request the bot opens does not "

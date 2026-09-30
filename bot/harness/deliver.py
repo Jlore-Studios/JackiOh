@@ -578,8 +578,11 @@ class Deliverer:
     def _suggestions(self) -> None:
         if self.result.get("status") == "infra":
             self.chain = False
-        if self.result.get("status") != "suggested" and self.plan.get("was_requested"):
-            self.ctx.store.update(lambda s: s["suggest"].update(requested=True), "suggest again")
+        if self.result.get("status") != "suggested":
+            # A survey that did not finish gives its slot back: it is due again as before.
+            before = {"last_run": self.plan.get("previous_last_run"),
+                      "requested": bool(self.plan.get("was_requested"))}
+            self.ctx.store.update(lambda s: s["suggest"].update(before), "survey unfinished")
         found = self.result.get("suggestions") or []
         open_now = [i for i in self.gh.list_issues(labels=LABEL_SUGGESTION) if "pull_request" not in i]
         room = max(0, self.cfg.suggestions_max_open - len(open_now))
