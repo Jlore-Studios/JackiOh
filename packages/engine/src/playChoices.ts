@@ -611,7 +611,8 @@ export function legalSelectionsFor(
 /**
  * B5 E5, R450: which of a play's flat `targets` are targetings — each pick's declaration when it is a
  * `target` declaration, null for a Tribute, hand or zone pick (R90's reading of the list). The
- * targeting point reads it: a cost is owed, and an interception answers, only for these.
+ * targeting point reads it: a cost is owed, and an interception answers, only for these. `declared`
+ * is the card's own declarations by default; an activation passes its ability's (B3.2, R384).
  */
 export function targetingDeclsOf(
   state: GameState,
@@ -619,8 +620,9 @@ export function targetingDeclsOf(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
 ): (TargetDecl | null)[] {
-  const decls = activeTargetDecls(declaredTargets(card), modes);
+  const decls = activeTargetDecls(declared, modes);
   if (decls.length === 0) return selections.map(() => null);
   const offered = decls.map((decl) => legalSelectionsFor(state, player, card, decl));
   const slices = splitSelections(decls, offered, selections);
@@ -632,7 +634,8 @@ export function targetingDeclsOf(
 
 /**
  * B5 E5, R450: the discards a play's declared targets cost it (Classic #89), read against the face
- * the play resolves (R214). 0 for a play that targets nothing costly.
+ * the play resolves (R214) — or an activation's, against its ability's declarations. 0 for choices
+ * that target nothing costly.
  */
 export function targetingDiscardsRequired(
   state: GameState,
@@ -640,8 +643,9 @@ export function targetingDiscardsRequired(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
 ): number {
-  const decls = targetingDeclsOf(state, player, card, selections, modes);
+  const decls = targetingDeclsOf(state, player, card, selections, modes, declared);
   let total = 0;
   selections.forEach((selection, index) => {
     if (decls[index] === null || decls[index] === undefined || selection.pick !== "instance") return;

@@ -78,7 +78,7 @@ describe("R451 plays by type, this turn (Classic+ #37)", () => {
     state = must(state, "p1", { type: "endTurn" }).state;
     expect(state.active).toBe("p2");
     expect(playedThisTurnOfType(state, "p1", "Spell")).toBe(0);
-    expect(state.players.p1.turnLog.playedTypes).toBeUndefined();
+    expect(state.players.p1.turnLog.playedByType).toBeUndefined();
   });
 
   it("R451 a cast counts (R70), on the turn it happens, whoever's turn that is", () => {

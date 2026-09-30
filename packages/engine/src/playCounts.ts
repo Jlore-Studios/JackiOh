@@ -4,11 +4,11 @@
 // R213's `costsPaid` and the game's `played` counter (R55), and now these too —
 //   * per player, per turn (on both players' turns): plays by the type each was played as (B2.7),
 //     in the turn log, which `startTurn` rebuilds for both players (Classic+ #37 Wardrum);
-//   * per player, per game: plays by tag, never reset (Classic+ #64 Mulch Muncher's Fruit, AI
-//     Scaling Law's AI generated cards);
-//   * game-wide: the last Spell anyone played (Classic #57 Echo), and per player the last face-up
-//     card they played (AI Autocomplete). Each "last" record is overwritten by the next play and
-//     never cleared.
+//   * per player, per game: plays by tag in the player's `gameLog`, never reset (Classic+ #64 Mulch
+//     Muncher's Fruit, AI Scaling Law's AI generated cards);
+//   * game-wide: the last Spell anyone played (Classic #57 Echo, `state.lastSpell`), and per player
+//     the last face-up card they played (AI Autocomplete, `gameLog.lastFaceUpPlay`). Each "last"
+//     record is overwritten by the next play and never cleared.
 // A cast is a play and counts (R70). A countered play never reaches step 4, so it counts for nothing
 // (R448). An Echo repeat is the same play resolving again, not a play (§6.2).
 //
@@ -19,7 +19,7 @@ import { defOf, fusedIdParts } from "./catalog";
 import { LAST_FACE_UP_SKIPPED_TAGS } from "./config";
 import { cardTypeOf } from "./faces";
 import { scriptOf } from "./scripts";
-import type { CardInstance, GameState, PlayRecord } from "./state";
+import type { CardInstance, GameLog, GameState, PlayRecord } from "./state";
 
 /**
  * R451: what a play records as the card played — the card itself, or what its `recordsPlayAs` hook
@@ -50,15 +50,14 @@ export function recordPlay(state: GameState, player: PlayerId, card: CardInstanc
   const type = cardTypeOf(state, card);
   const def = defOf(state, card.defId);
 
-  const types = { ...(side.turnLog.playedTypes ?? {}) };
+  const types = { ...(side.turnLog.playedByType ?? {}) };
   types[type] = (types[type] ?? 0) + 1;
-  side.turnLog.playedTypes = types;
+  side.turnLog.playedByType = types;
 
-  if (def.tags.length > 0) {
-    const tags = { ...(side.playedByTag ?? {}) };
-    for (const tag of new Set(def.tags)) tags[tag] = (tags[tag] ?? 0) + 1;
-    side.playedByTag = tags;
-  }
+  const tags = { ...(side.gameLog?.playedByTag ?? {}) };
+  for (const tag of new Set(def.tags)) tags[tag] = (tags[tag] ?? 0) + 1;
+  const log: GameLog = { ...side.gameLog, playedByTag: tags };
+  side.gameLog = log;
 
   const record = playRecordOf(state, card);
   if (record === null) return;
@@ -66,5 +65,5 @@ export function recordPlay(state: GameState, player: PlayerId, card: CardInstanc
   // R451: the last face-up card, passing over Traps (set face-down, so nothing hidden is ever
   // recorded) and the tags `LAST_FACE_UP_SKIPPED_TAGS` names (the AI generated cards).
   if (playedFaceDown(type) || def.tags.some((tag) => LAST_FACE_UP_SKIPPED_TAGS.includes(tag))) return;
-  state.lastFaceUp = { ...(state.lastFaceUp ?? {}), [player]: { ...record, type } };
+  log.lastFaceUpPlay = { ...record, type };
 }

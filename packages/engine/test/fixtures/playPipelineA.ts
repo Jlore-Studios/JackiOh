@@ -82,7 +82,7 @@ export const PA = {
   hiddenTrap: def("hidden-trap", "Trap"),
   hiddenFieldTrap: def("hidden-field-trap", "Field Trap"),
   /** Classic #33 Joro: intercepts the opponent's targeting of your units from your hand. */
-  joro: def("joro", "Unit", { attack: 1, health: 1 }),
+  joro: def("joro", "Unit", { attack: 1, health: 3 }),
   /** Classic #89 Paul Allen's Ghost: 2 more cards to target it. */
   ghost: def("ghost", "Unit", { cost: 2, attack: 5, health: 6 }),
   /** A Unit Immune to Spells. */

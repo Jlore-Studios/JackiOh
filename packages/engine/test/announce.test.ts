@@ -128,9 +128,9 @@ describe("R448 a countered play never resolves and counts for nothing", () => {
     // §10.5 step 4 never ran, so no count moved: the turn log, the game counter, E4's records.
     expect(after.players.p1.turnLog.cardsPlayed).toBe(0);
     expect(after.players.p1.turnLog.playedIds).toEqual([]);
-    expect(after.players.p1.turnLog.playedTypes).toBeUndefined();
+    expect(after.players.p1.turnLog.playedByType).toBeUndefined();
     expect(after.counters.played).toBe(0);
-    expect(after.lastFaceUp).toBeUndefined();
+    expect(after.players.p1.gameLog).toBeUndefined();
     // The trap fired and was consumed (§5.1).
     expect(after.players.p2.graveyard.map((card) => card.id)).toContain(trap.id);
   });

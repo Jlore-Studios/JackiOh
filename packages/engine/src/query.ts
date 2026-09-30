@@ -199,7 +199,7 @@ export function playedThisTurnOfType(
   player: PlayerId,
   types: CardType | readonly CardType[],
 ): number {
-  const counts = state.players[player].turnLog.playedTypes ?? {};
+  const counts = state.players[player].turnLog.playedByType ?? {};
   const wanted: readonly CardType[] = typeof types === "string" ? [types] : types;
   return [...new Set(wanted)].reduce((sum, type) => sum + (counts[type] ?? 0), 0);
 }
@@ -209,7 +209,7 @@ export function playedThisTurnOfType(
  * countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
  */
 export function playedThisGameWithTag(state: GameState, player: PlayerId, tag: Tag): number {
-  return state.players[player].playedByTag?.[tag] ?? 0;
+  return state.players[player].gameLog?.playedByTag[tag] ?? 0;
 }
 
 /**
@@ -227,7 +227,7 @@ export function lastSpellPlayed(state: GameState): PlayRecord | null {
  * generated cards are passed over (`LAST_FACE_UP_SKIPPED_TAGS`). A copy.
  */
 export function lastFaceUpPlayed(state: GameState, player: PlayerId): FaceUpRecord | null {
-  const last = state.lastFaceUp?.[player];
+  const last = state.players[player].gameLog?.lastFaceUpPlay;
   return last === undefined ? null : { ...last };
 }
 

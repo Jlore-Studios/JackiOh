@@ -287,6 +287,12 @@ export type PlayRun = {
   /** R448: a Counter cancelled the play in its announce window: nothing after it happens but step 8. */
   countered?: boolean;
   /**
+   * R448: the pile the play takes its card from at the announce — its player's hand (absent), or,
+   * for a play from the graveyard under a permission (B5 E11), their graveyard. A card that is no
+   * longer in that pile by the announce is not played (R226).
+   */
+  from?: "hand" | "graveyard";
+  /**
    * R449: step 3 replaced the card played by a new card (Classic #23 Devil's Pact). The new card makes
    * its choices as a cast does (R70), before the announce, and takes its zone at step 4 by R64.
    */
@@ -683,9 +689,10 @@ function announcePlay(sink: EngineSink, run: PlayRun): boolean {
   if (run.cast === true || run.replaced === true) {
     if (card.zone.z !== "resolving") return false;
   } else {
-    const at = side.hand.findIndex((held) => held.id === card.id);
+    const pile = run.from === "graveyard" ? side.graveyard : side.hand;
+    const at = pile.findIndex((held) => held.id === card.id);
     if (at < 0) return false;
-    side.hand.splice(at, 1);
+    pile.splice(at, 1);
     card.zone = { z: "resolving", player: run.player };
     side.resolving.push(card);
   }

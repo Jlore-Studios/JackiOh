@@ -279,7 +279,7 @@ export type TurnLog = {
    * plays never — Classic+ #37 Wardrum counts Spells, Field Spells and Traps. `startTurn` rebuilds
    * the log for both players, which clears it as it clears the rest of "this turn".
    */
-  playedTypes?: Partial<Record<CardType, number>>;
+  playedByType?: Partial<Record<CardType, number>>;
 };
 
 export type PlayerState = {
@@ -316,11 +316,13 @@ export type PlayerState = {
   // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
   // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
   /**
-   * B5 E4: this player's plays this game by tag (Classic+ #64's Fruit, AI Scaling Law's AI), casts
-   * included (R70), countered plays never. Never reset. Absent until the first tagged play, so a
-   * game without one hashes as it did before this field existed (`playCounts.ts`).
+   * B5 E4, R451: what this player's plays leave for the rest of the game, never reset
+   * (`playCounts.ts`): `playedByTag`, their plays by tag (Classic+ #64's Fruit, AI Scaling Law's AI),
+   * casts included (R70) and countered plays never; `lastFaceUpPlay`, the last face-up card they
+   * played (AI Autocomplete). Absent until their first play, so a game without one hashes as it did
+   * before this field existed.
    */
-  playedByTag?: Partial<Record<Tag, number>>;
+  gameLog?: GameLog;
   // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
   // ---- v0.2.0 player fields, by workstream: damage and combat (E5–E9, E35) ----
   // ---- v0.2.0 player fields, by workstream: Core patches and cosmetics (R433, R434) ----
@@ -397,8 +399,6 @@ export type GameState = {
   announcing?: AnnounceRecord[];
   /** B5 E4: the last Spell anyone played (Classic #57 Echo), overwritten by the next, never cleared. */
   lastSpell?: PlayRecord;
-  /** B5 E4, R451: the last face-up card each player played (AI Autocomplete), never cleared. */
-  lastFaceUp?: Partial<Record<PlayerId, FaceUpRecord>>;
   // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
   // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----
@@ -439,6 +439,9 @@ export type PlayRecord = { defId: string; radiant: boolean };
 
 /** B5 E4: a face-up play's record, with the type it was played as (B2.7). */
 export type FaceUpRecord = PlayRecord & { type: CardType };
+
+/** B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`). */
+export type GameLog = { playedByTag: Partial<Record<Tag, number>>; lastFaceUpPlay?: FaceUpRecord };
 
 function emptyRow<T>(size: number): (T | null)[] {
   return Array.from({ length: size }, () => null);
