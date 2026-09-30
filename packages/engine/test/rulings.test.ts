@@ -2713,13 +2713,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by apps/web audio/voice-assets.test.ts "R501 …" (a SAPI persona's hash, --catalog, the
-  // persona's ranges, the 6 MiB budget), gen-voice.test.ts "R501 …" (rendering through SAPI and ffmpeg,
-  // and a stale say line left alone), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …".
+  // persona's ranges, the 6 MiB budget), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …";
+  // gen-voice.test.ts's "R501 …" cases render through SAPI and ffmpeg where a machine has them.
   it("R501 renders the voice set on macOS or Windows, within 6 MiB", () => {
     provenIn(
       501,
       "../../../apps/web/src/audio/voice-assets.test.ts",
-      "../../../apps/web/src/audio/gen-voice.test.ts",
       "../../../apps/web/src/audio/voice-lines.test.ts",
       "../../../apps/web/src/audio/voiceData.test.ts",
     );
