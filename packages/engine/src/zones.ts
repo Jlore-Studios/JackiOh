@@ -4,7 +4,9 @@
 import type { PlayerId, Row, Zone } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { BACKROW_ZONES, UNIT_ZONES } from "./config";
+import { dropSpentBrittle, startPrintedBrittle } from "./brittleCount";
 import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { CardInstance, GameState, Pile, PlayerState } from "./state";
 import { noteFieldExit, noteMoved, noteUncovered } from "./stays";
 
@@ -110,7 +112,7 @@ export function zoneOf(ref: ZoneSlot): Zone {
 /** True when this def is a unit token, which ceases to exist off the field (R11). */
 export function isUnitToken(state: GameState, instance: CardInstance): boolean {
   const def = defOf(state, instance.defId);
-  return def.token && def.type === "Unit";
+  return def.token && cardTypeOf(state, instance) === "Unit";
 }
 
 /**
@@ -140,6 +142,8 @@ export function placeOnField(
   instance.controller = ref.player;
   instance.zone = zoneOf(ref);
   if (ref.row === "units") instance.position ??= "ATK";
+  // B3.3 rule 1, R385: a printed Brittle starts as its card enters the field.
+  startPrintedBrittle(state, instance);
   return true;
 }
 
@@ -149,7 +153,7 @@ export function placeOnField(
  */
 export function landsFaceDown(state: GameState, instance: CardInstance, row: Row): boolean {
   if (row !== "backrow") return false;
-  const type = defOf(state, instance.defId).type;
+  const type = cardTypeOf(state, instance);
   return type === "Trap" || type === "Field Trap";
 }
 
@@ -191,6 +195,8 @@ export function replaceInZone(state: GameState, old: CardInstance, replacement: 
   replacement.controller = zone.player;
   replacement.zone = { ...zone };
   if (zone.row === "units") replacement.position ??= "ATK";
+  // B3.3 rule 1, R385: the new card has entered the field, so its printed Brittle starts.
+  startPrintedBrittle(state, replacement);
   return true;
 }
 
@@ -272,8 +278,14 @@ export function removeFromAnyZone(state: GameState, instance: CardInstance): voi
  * R78: leaving the field resets an instance, while costMod, costOverride and radiant persist. R215
  * applies the same reset to a hand or library card that reaches a graveyard or exile, and to a card
  * leaving the resolving zone once its play is over.
+ *
+ * Patch v0.2.0 adds three more that persist in every zone (R385, R386, B5 E39): `tuning` (what
+ * Degrade, Upgrade and KY's Constant changed), `brittle` (the Brittle count) and `enchantments` —
+ * none of them is touched here. The one exception is a Brittle count that has crumbled its card, which
+ * is spent and goes (R441, `brittleCount.dropSpentBrittle`).
  */
 export function resetInstance(instance: CardInstance): void {
+  dropSpentBrittle(instance);
   instance.damage = 0;
   instance.buffs = { attack: 0, health: 0 };
   instance.grantedKeywords = [];

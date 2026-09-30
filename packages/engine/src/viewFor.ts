@@ -59,10 +59,12 @@ import type {
   Zone,
 } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, findDef } from "./catalog";
+import { findDef } from "./catalog";
 import { hasExertion } from "./combat";
 import { conditionActive } from "./condition";
 import { heroArmorOf } from "./damage";
+import { cardTypeOf } from "./faces";
+import { handKeywordsView, instanceDataView } from "./instanceView";
 import { echoGrantOf } from "./echo";
 import { statsWithBuffs, unitView as unitLayers } from "./layers";
 import { NEXT_REFRESH_MODIFIER_ID, effectiveCost, modifierIsLive } from "./mana";
@@ -202,13 +204,18 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
 // Cards, units and the backrow
 // ---------------------------------------------------------------------------
 
-/** R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. */
+/**
+ * R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
+ * v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
+ * the viewer may read where it is.
+ */
 function cardView(state: GameState, card: CardInstance): CardView {
   return {
     instanceId: card.id,
     defId: card.defId,
     radiant: card.radiant,
     cost: effectiveCost(state, card),
+    ...instanceDataView(state, card),
   };
 }
 
@@ -221,13 +228,15 @@ function cardView(state: GameState, card: CardInstance): CardView {
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
   const view = cardView(state, card);
-  const stats =
-    defOf(state, card.defId).type === "Unit" ? statsWithBuffs(state, card) : null;
+  const stats = cardTypeOf(state, card) === "Unit" ? statsWithBuffs(state, card) : null;
   const power = powerOf(card);
+  // B5 E38: the keywords it gained in the hand or the deck, which it carries onto the field.
+  const keywords = handKeywordsView(state, card);
   return {
     ...view,
     ...(stats === null ? {} : { attack: Math.max(0, stats.attack), health: stats.maxHealth }),
     ...(power === null ? {} : { power: power.name }),
+    ...(keywords === null ? {} : { keywords }),
   };
 }
 
@@ -309,7 +318,7 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
       previewOf(state, card, viewer, "field"),
     ),
     faceDown: false,
-    type: defOf(state, card.defId).type,
+    type: cardTypeOf(state, card),
     // R372: the engine names the grade's letter, so no client works out which letter 3 is.
     counters: grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) },
     owner: card.owner,

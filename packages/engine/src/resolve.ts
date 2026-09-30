@@ -2,12 +2,13 @@
 // The full play pipeline of §10.5 arrives with M3; this is the part M1's draw and turn loop need.
 
 import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { Rng } from "./rng";
 import type { Effect, EffectContext, EffectPart, Hook, Script } from "./script";
 import { scriptOf } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { exitMark } from "./stays";
+import { xOf } from "./tuning";
 
 export type EngineSink = { state: GameState; events: GameEvent[]; rng: Rng };
 
@@ -37,7 +38,8 @@ export function makeContext(sink: EngineSink, self: CardInstance | null, options
     radiant: self?.radiant ?? false,
     targets: options.targets ?? [],
     modes: options.modes ?? [],
-    x: self?.x ?? 0,
+    // B2.7, B3.4: the X it was played for, as Degrade and Upgrade have tuned it (`tuning.xOf`).
+    x: self === null ? 0 : xOf(self),
     embiggened: self?.embiggened ?? false,
     data: options.data ?? {},
   };
@@ -171,7 +173,7 @@ export function flagReturnToHandAtEndOfTurn(state: GameState, instanceId: string
   const card = findInstance(state, instanceId);
   if (card === undefined) return;
   if (card.zone.z !== "graveyard") return;
-  if (defOf(state, card.defId).type !== "Spell") return;
+  if (cardTypeOf(state, card) !== "Spell") return;
   if (scriptOf(card).endOfTurn === undefined) return;
   card.returnToHandAtEndOfTurn = true;
 }

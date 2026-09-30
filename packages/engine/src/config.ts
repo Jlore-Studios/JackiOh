@@ -220,6 +220,51 @@ export const AI_TUTORIAL: Handicap = {
 
 // ---- v0.2.0 constants: instance data (B3.3 Brittle, B3.4 Degrade and Upgrade) ----
 
+/**
+ * B3.3, R385 (the designer's B9 #41: t + 2): a Brittle count started on player-turn t first ticks at
+ * the first start of its controller's turn numbered t + this or later, so the card lives through the
+ * rest of the turn it got the count on and a whole turn of the other player's first.
+ */
+export const BRITTLE_FIRST_TICK_TURNS = 2;
+/** B3.3 rule 2: how much one start-of-turn tick takes off a Brittle count. */
+export const BRITTLE_TICK = 1;
+/**
+ * B3.3 rule 5, B3.4: how far one Degrade or Upgrade moves a numbered keyword, a Brittle count or an
+ * X-cost card's X — one step of "one X on the card gets 1 worse / better".
+ */
+export const TUNE_X_STEP = 1;
+/** B3.4 rule 3: how far one Degrade or Upgrade moves a card's cost (`costMod`). */
+export const TUNE_COST_STEP = 1;
+/** B3.4 rule 3, the designer's "Increase cost by (1) (up to 4)": a Degrade never lifts a cost above this. */
+export const TUNE_COST_CAP = 4;
+/** B3.4 rule 3: an Upgrade never takes a cost below this. */
+export const TUNE_COST_FLOOR = 0;
+/**
+ * B3.4 rule 3, the designer's "reduces the stats … by a total of 4": the split one stats change
+ * rolls, k in 0 to this to attack and the rest to health.
+ */
+export const TUNE_STATS_TOTAL = 4;
+/** B3.4 rule 3: "attack floors at 0". */
+export const TUNE_ATTACK_FLOOR = 0;
+/** B3.4 rule 3, the designer's "not below 1 health": a Degrade never takes current health below this. */
+export const TUNE_HEALTH_FLOOR = 1;
+/**
+ * B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card —
+ * "Cannot be in Defense Position" is a static flag (§8 #65.1), not a keyword, so it is never offered.
+ */
+export const TUNE_HARMFUL_KEYWORDS = ["Can't attack", "Brittle"] as const;
+/**
+ * B3.4 rule 5: a declared number's default step — 1 for a number up to `small.upTo`, 2 up to
+ * `medium.upTo`, and above that a quarter of it, rounded (`largeDivisor`), never less than 1.
+ */
+export const PARAM_DEFAULT_STEP = {
+  small: { upTo: 5, step: 1 },
+  medium: { upTo: 12, step: 2 },
+  largeDivisor: 4,
+} as const;
+/** B3.4 rule 5, R386: "an amount never drops below 1" — a declared number's floor when it names none. */
+export const PARAM_DEFAULT_MIN = 1;
+
 // ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
 
 // ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----

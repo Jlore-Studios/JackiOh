@@ -25,6 +25,7 @@
 import type { ActionBody, PlayerId, Selection } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { QUICKSTRIKER_COMBO_MULTIPLE } from "./config";
 import { dealDamage } from "./damage";
 import { draw } from "./draw";
@@ -290,7 +291,7 @@ function handCard(state: GameState, player: PlayerId, instanceId: string): CardI
 }
 
 export function isPermanent(state: GameState, card: CardInstance): boolean {
-  return defOf(state, card.defId).type !== "Spell";
+  return cardTypeOf(state, card) !== "Spell";
 }
 
 /**
@@ -330,7 +331,7 @@ export function validatePlay(
     const named = action.zone;
     zone =
       named === undefined
-        ? firstFreeZone(state, player, defOf(state, card.defId).type === "Unit" ? "units" : "backrow")
+        ? firstFreeZone(state, player, cardTypeOf(state, card) === "Unit" ? "units" : "backrow")
         : { player, row: named.row, lane: named.lane };
     if (zone === null) return { error: "no free zone" };
   }
@@ -443,7 +444,7 @@ function handedOverZone(state: GameState, run: PlayRun, card: CardInstance): Zon
 function consumeUsedDiscounts(sink: EngineSink, run: PlayRun, card: CardInstance): void {
   const state = sink.state;
   if (isXCost(state, card)) return;
-  const type = defOf(state, card.defId).type;
+  const type = cardTypeOf(state, card);
   for (const mod of [...state.players[run.player].mods]) {
     if (mod.kind !== "costDiscount") continue;
     // §2.2 names the Lunar Eclipse discount as both "consumed on use" AND expired at cleanup, so
@@ -698,7 +699,7 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
     // the instance (R78), and a cast is a play, which does not.
     if (card.zone.z !== "resolving") return false;
     removeFromAnyZone(state, card);
-    const type = defOf(state, card.defId).type;
+    const type = cardTypeOf(state, card);
     run.zone = type === "Spell" ? null : firstFreeZone(state, run.player, type === "Unit" ? "units" : "backrow");
   } else {
     // §10.1, §10.5 step 4: the card leaves the hand for the field or the resolving zone. One that is

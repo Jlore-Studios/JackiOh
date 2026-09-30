@@ -7,13 +7,16 @@
 // `randomKeywords` on `summon` is R21's roll (#80). Placement, the `summoned` event, the face-down
 // Trap and every fizzle stay in `zoneFor`/`summonOnto` for all of them.
 
-import type { CardDef, CardType, PlayerId, Row, Tag } from "@jackioh/shared";
+import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { unitedEnchantments } from "../enchantments";
+import { cardTypeOf } from "../faces";
 import { effectiveCost } from "../mana";
 import { runStartOfGame } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
 import { exitMark } from "../stays";
+import { copyTuning } from "../tuning";
 import {
   fillBoardZones,
   firstFreeZone,
@@ -62,10 +65,13 @@ export type SummonArgs = SummonPlacement & {
   randomKeywords?: number;
 };
 
-/** §5.1: the row a card type lives in, or null for a Spell, which is never summoned. */
-function rowOf(def: CardDef): Row | null {
-  if (def.type === "Unit") return "units";
-  if (def.type === "Spell") return null;
+/**
+ * §5.1: the row a card type lives in, or null for a Spell, which is never summoned. B2.7: a card's
+ * type is its running face's (`faces.cardTypeOf`), a pool's definition its base face's.
+ */
+function rowOf(type: CardType): Row | null {
+  if (type === "Unit") return "units";
+  if (type === "Spell") return null;
   return "backrow";
 }
 
@@ -106,7 +112,7 @@ function summonOnto(
   if (at.statsOverride !== undefined) {
     card.statsOverride = { attack: at.statsOverride.attack, health: at.statsOverride.health };
   }
-  if (defOf(ctx.state, card.defId).type === "Field Spell") card.faceUp = true;
+  if (cardTypeOf(ctx.state, card) === "Field Spell") card.faceUp = true;
 
   ctx.events.push({
     type: "summoned",
@@ -135,7 +141,7 @@ function summonFresh(
   player: PlayerId,
   at: SummonPlacement,
 ): CardInstance | null {
-  const row = rowOf(defOf(ctx.state, defId));
+  const row = rowOf(cardTypeOf(ctx.state, { defId, radiant: at.radiant === true }));
   if (row === null) return null;
   const ref = zoneFor(ctx, player, row, at);
   if (ref === null) return null;
@@ -154,7 +160,7 @@ function summonExisting(
   at: SummonPlacement,
 ): CardInstance | null {
   if (card.zone.z === "field") return null;
-  const row = rowOf(defOf(ctx.state, card.defId));
+  const row = rowOf(cardTypeOf(ctx.state, { defId: card.defId, radiant: card.radiant || at.radiant === true }));
   if (row === null) return null;
   const ref = zoneFor(ctx, player, row, at);
   if (ref === null) return null;
@@ -252,6 +258,12 @@ function cloneOf(
   }
   // §7: a Bread Token's "Armor X" is carried beside its X/X, so a copy keeps both halves (R57).
   if (source.armorOverride !== undefined) copy.armorOverride = source.armorOverride;
+  // B3.4 rule 4, R443: a copy keeps the source's tuning and enchantments too — never its Brittle
+  // count, which a copy never inherits (R57's counters).
+  const tuning = copyTuning(source.tuning);
+  if (tuning !== undefined) copy.tuning = tuning;
+  const enchantments = unitedEnchantments([source]);
+  if (enchantments !== undefined) copy.enchantments = enchantments;
   return copy;
 }
 
@@ -271,7 +283,7 @@ export function summonCopy(args: SummonCopyArgs): Effect {
       // effect (R174), and a copy is never made of a card in a graveyard.
       if (source === null || source.zone.z !== "field") return;
       const player = playerOf(ctx, args.player ?? "self");
-      const row = rowOf(defOf(ctx.state, source.defId));
+      const row = rowOf(cardTypeOf(ctx.state, source));
       if (row === null) return;
 
       // The zone is found before the clone exists, so a fizzle creates nothing and takes no id.
@@ -319,7 +331,7 @@ export function summonRandom(
       );
       const player = playerOf(ctx, args.player ?? "self");
       const rows = new Set(pool.flatMap((def) => {
-        const row = rowOf(def);
+        const row = rowOf(def.type);
         return row === null ? [] : [row];
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
@@ -357,7 +369,7 @@ function asList<T>(value: T | T[] | undefined): T[] {
 function matchesFilter(ctx: EffectContext, card: CardInstance, filter: RecruitFilter): boolean {
   const def = defOf(ctx.state, card.defId);
   const types = asList(filter.type);
-  if (types.length > 0 && !types.includes(def.type)) return false;
+  if (types.length > 0 && !types.includes(cardTypeOf(ctx.state, card))) return false;
   const defIds = asList(filter.defId);
   if (defIds.length > 0 && !defIds.includes(def.id)) return false;
   if (filter.tags !== undefined && !filter.tags.every((tag) => def.tags.includes(tag))) return false;
@@ -384,7 +396,7 @@ export function recruit(
       const filter = args.filter ?? {};
       const found = ctx.state.players[player].library.find(
         (card) =>
-          isPermanentType(defOf(ctx.state, card.defId).type) &&
+          isPermanentType(cardTypeOf(ctx.state, card)) &&
           // R218: a unit-token card leaves a library only by being drawn (R11), so it is never
           // recruited — the scan passes over it to the next card that matches.
           !isUnitToken(ctx.state, card) &&
@@ -424,7 +436,7 @@ export function fillBoard(args: {
     kind: "fillBoard",
     apply(ctx): void {
       const player = playerOf(ctx, args.player ?? "self");
-      if (rowOf(defOf(ctx.state, args.defId)) !== "units") return;
+      if (rowOf(cardTypeOf(ctx.state, { defId: args.defId, radiant: args.radiant === true })) !== "units") return;
 
       for (const ref of fillBoardZones(ctx.state, player)) {
         summonFresh(ctx, args.defId, player, {

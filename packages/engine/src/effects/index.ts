@@ -179,6 +179,34 @@ export { forEachCard } from "./each";
 
 // ---- v0.2.0 verbs: instance data (Brittle, Degrade, Upgrade, KY's Constant's numbers, E38, E39) ----
 
+// Cards anywhere a player keeps them — the field, a hand, a deck — for the verbs below (B3.3, B3.4,
+// E38, E39), walked in R242's order, public cards first.
+export { cardsInCardScope, matchesCardScope, readersOf, unreadableBy } from "./cardScope";
+export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
+
+// Degrade and Upgrade (B3.4, R386, R440, R442), and KY's Constant's number set outright (Classic+ #41).
+export {
+  NUMBER_CARD_KEY,
+  chosenNumber,
+  degrade,
+  discoverNumber,
+  reachedCards,
+  setNumber,
+  tuneOnce,
+  upgrade,
+} from "./tune";
+export type { TuneArgs, TuneDirection } from "./tune";
+
+// Brittle X: give (set) and gain (add) a count (B3.3, R385, R441).
+export { gainBrittle, giveBrittle } from "./brittle";
+export type { BrittleTarget } from "./brittle";
+
+// Enchantments that ride a card through every zone (E39).
+export { enchant } from "./enchant";
+
+// Buffs and granted keywords that reach hands and decks and ride onto the field (E38).
+export { buffCards, grantKeywordCards } from "./buff";
+
 // ---- v0.2.0 verbs: field (Animate, Lock variants, Unlock, Flicker) ----
 
 // ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----

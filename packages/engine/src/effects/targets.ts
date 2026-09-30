@@ -4,6 +4,7 @@
 import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf } from "../catalog";
+import { cardTypeOf } from "../faces";
 import type { DamageTarget } from "../damage";
 import type { EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
@@ -186,7 +187,7 @@ export function sidesOf(ctx: EffectContext, side: BoardScope["side"]): PlayerId[
 export function matchesScope(ctx: EffectContext, card: CardInstance, scope: BoardScope = {}): boolean {
   if (scope.excludeSelf === true && ctx.self !== null && card.id === ctx.self.id) return false;
   const def = defOf(ctx.state, card.defId);
-  if (scope.types !== undefined && !scope.types.includes(def.type)) return false;
+  if (scope.types !== undefined && !scope.types.includes(cardTypeOf(ctx.state, card))) return false;
   if (scope.tags !== undefined && !scope.tags.some((tag) => def.tags.includes(tag))) return false;
   if (scope.notTags !== undefined && scope.notTags.some((tag) => def.tags.includes(tag))) return false;
   return true;

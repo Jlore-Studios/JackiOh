@@ -37,7 +37,7 @@
 // the rest of the window with no way back, which is worse than firing late.
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { applyResumable } from "./prompts";
 import { makeContext, type EngineSink } from "./resolve";
 import type { TriggerDef } from "./script";
@@ -141,12 +141,12 @@ export function isTrapWindowEvent(event: GameEvent): boolean {
 
 /** §5.1: a Field Trap is a Trap that stays after firing, so both are "a Trap" (R61). */
 export function isTrapType(state: GameState, instance: CardInstance): boolean {
-  const type = defOf(state, instance.defId).type;
+  const type = cardTypeOf(state, instance);
   return type === "Trap" || type === "Field Trap";
 }
 
 export function isFieldTrap(state: GameState, instance: CardInstance): boolean {
-  return defOf(state, instance.defId).type === "Field Trap";
+  return cardTypeOf(state, instance) === "Field Trap";
 }
 
 function isOnField(instance: CardInstance): boolean {

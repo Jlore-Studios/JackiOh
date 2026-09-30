@@ -27,5 +27,14 @@ export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
 export * from "./replay";
+// Patch v0.2.0, instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E39): what a card is now — its
+// face's type, its tuning, its declared numbers (`param`), the numbers on it, its Brittle count and
+// its enchantments — read by card scripts, `viewFor` and every rule that asks.
+export * from "./faces";
+export * from "./tuning";
+export * from "./params";
+export * from "./numbers";
+export * from "./brittle";
+export * from "./enchantments";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";

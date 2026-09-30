@@ -42,7 +42,7 @@
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
@@ -120,7 +120,7 @@ const NO_TRIGGERS: readonly TriggerDef[] = [];
 // ---------------------------------------------------------------------------
 
 function isTrapCard(state: GameState, card: CardInstance): boolean {
-  const type = defOf(state, card.defId).type;
+  const type = cardTypeOf(state, card);
   return type === "Trap" || type === "Field Trap";
 }
 

@@ -4,6 +4,7 @@
 import type { CardType, PlayerId, Selection } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { cardTypeOf } from "../faces";
 import { openPrompt, resumeSelf } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { effectiveCost } from "../mana";
@@ -286,7 +287,7 @@ function matchesFilter(state: GameState, card: CardInstance, filter: LibraryFilt
   // puts the pick in a hand passes over it, as a Recruit does.
   if (isUnitToken(state, card)) return false;
   const types = filterTypes(filter);
-  if (types !== undefined && !types.includes(defOf(state, card.defId).type)) return false;
+  if (types !== undefined && !types.includes(cardTypeOf(state, card))) return false;
 
   const cost = effectiveCost(state, card);
   const range = filter.costRange;

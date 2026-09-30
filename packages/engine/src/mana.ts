@@ -2,6 +2,7 @@
 
 import type { GameEvent } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { scriptOf } from "./scripts";
 import { handicapOf, type CardInstance, type GameState, type PlayerModifier, type PlayerState } from "./state";
 
@@ -117,7 +118,7 @@ export function effectiveCost(state: GameState, instance: CardInstance): number 
   let cost = (override ?? printedCost(state, instance)) + instance.costMod;
   // R65: a player's discounts price a play, and a play takes a card from its hand.
   if (instance.zone.z !== "hand") return Math.max(0, cost);
-  const type = defOf(state, instance.defId).type;
+  const type = cardTypeOf(state, instance);
 
   for (const mod of side.mods) {
     if (mod.kind !== "costDiscount") continue;

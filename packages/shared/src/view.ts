@@ -53,6 +53,13 @@ export type CardView = {
   tuning?: Tuning;
   /** B5 E39: the enchantments riding the card (Classic+ #14's return, #40's cast on draw). */
   enchantments?: Enchantment[];
+  /**
+   * B5 E38, R243: a card in the viewer's own hand, its keywords as it will carry them onto the field
+   * — printed as Degrade and Upgrade left them, and those it was granted in the hand or the deck —
+   * set only where they differ from its face's printed keywords. A unit on the field reads its
+   * keywords off `UnitView`.
+   */
+  keywords?: Keyword[];
   /** R437: the marks on the card — an effect aimed at it and waiting (K-Pop Fanatic's steal). Both views. */
   marks?: CardMark[];
   /** B3.2, R384: the card's Activate abilities, on its controller's own view of it on the field. */

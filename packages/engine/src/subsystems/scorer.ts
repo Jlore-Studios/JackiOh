@@ -19,9 +19,10 @@
 
 import type { CardDef, CardFace, CardType, PlayerId } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
-import { defByIndex, defOf, query, queryCost } from "../catalog";
+import { defByIndex, query, queryCost } from "../catalog";
 import { canAttack } from "../combat";
 import { heroArmorOf, heroDamageCap, pierces } from "../damage";
+import { cardTypeOf } from "../faces";
 import { unitView } from "../layers";
 import { playActionsFor } from "../playChoices";
 import { runPlaySteps, type PlayAction } from "../playSteps";
@@ -417,7 +418,7 @@ function concealFrom(base: GameState, viewer: PlayerId): void {
     for (const card of base.players[player].library) hide(card, HIDDEN_CARD_DEF_ID);
     for (const card of base.players[player].backrow) {
       if (card === null || card.controller === viewer || card.faceUp === true) continue;
-      const type = defOf(base, card.defId).type;
+      const type = cardTypeOf(base, card);
       if (type === "Trap" || type === "Field Trap") hide(card, HIDDEN_TRAP_DEF_ID);
     }
   }
