@@ -172,3 +172,21 @@ export { remember, rememberRandom } from "./memory";
 
 // One effect per card of a set read once off the board, which a pause resumes over whole (R113, R66).
 export { forEachCard } from "./each";
+
+// ---------------------------------------------------------------------------------------------
+// Patch v0.2.0's verbs (docs/classic-sets.md B3, B5), by workstream.
+// ---------------------------------------------------------------------------------------------
+
+// ---- v0.2.0 verbs: instance data (Brittle, Degrade, Upgrade, KY's Constant's numbers, E38, E39) ----
+
+// ---- v0.2.0 verbs: field (Animate, Lock variants, Unlock, Flicker) ----
+
+// ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----
+
+// ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
+
+// ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----
+
+// ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
+
+// ---- v0.2.0 verbs: Core patches (R426–R437) ----

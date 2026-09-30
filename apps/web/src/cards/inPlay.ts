@@ -62,8 +62,8 @@ export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   felinor: { base: "Summon a Felinor Token", radiant: "Summon two Felinor Tokens" },
   discover: { base: "Discover a Unit", radiant: "Discover a Radiant Unit" },
   stitching: {
-    base: "Stitching — Discover 2 Cost (2) or less Units. Fuse them and add the result to your hand",
-    radiant: "Stitching — Discover 2 Radiant Cost (2) or less Units. Fuse them and add the result to your hand",
+    base: "Stitching — Discover 2 (2) Cost or less Units. Fuse them and add the result to your hand",
+    radiant: "Stitching — Discover 2 Radiant (2) Cost or less Units. Fuse them and add the result to your hand",
   },
 };
 
