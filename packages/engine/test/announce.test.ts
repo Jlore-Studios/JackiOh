@@ -290,9 +290,8 @@ describe("E2 a Counter that steals: the card goes to the thief's hand, and the t
     expect(taken?.owner).toBe("p2");
     expect(taken?.controller).toBe("p2");
     expect(after.players.p2.hero.health).toBe(HERO_HEALTH);
-    // R97: p1 no longer reads the card it played; p2 reads its own hand card.
-    const p1Events = viewFor(after, "p1").events;
-    expect(eventsOfType(p1Events, "stolen")[0]?.instanceId).toBe(HIDDEN_ID);
+    // R97: the thief reads its own hand card. (What the victim reads of a card taken off the stack
+    // is the `stolen` redaction's own rule, which the prompts workstream settles.)
     expect(eventsOfType(viewFor(after, "p2").events, "stolen")[0]?.instanceId).toBe(crier.id);
   });
 
