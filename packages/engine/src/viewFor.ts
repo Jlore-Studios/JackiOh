@@ -807,6 +807,13 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
         ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, change: HIDDEN_TUNING_CHANGE }
         : shown;
     }
+    // Classic+ #41: a number set outright is the card's as well, so it follows `degraded`.
+    case "numberChanged": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, key: HIDDEN_ID, value: 0 }
+        : shown;
+    }
 
     // B5 E9: a hit, an attack or a pick moves between cards on the field or heroes, all public; a
     // card that has since gone somewhere unreadable is the sentinel, as on `damage`.
