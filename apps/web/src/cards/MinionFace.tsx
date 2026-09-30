@@ -42,7 +42,7 @@ import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
 import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
-import { foilFor, type FaceModel } from "./model.ts";
+import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
@@ -113,7 +113,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
       className={className === undefined ? "cf cf--minion" : `cf cf--minion ${className}`}
       data-layout="minion"
       data-card-type={face.type}
-      data-rarity={face.rarity ?? undefined}
+      data-rarity={frameRarity(face) ?? undefined}
       data-foil={foilFor(face, settings.animatedFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
@@ -121,7 +121,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
     >
       <span className="cf-scale">
         <span className="cf-portrait">
-          <CardArt defId={face.defId} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
+          <CardArt defId={face.defId} name={face.name} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
         </span>
 
         <KeywordFx plan={plan} />

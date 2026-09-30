@@ -42,6 +42,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
+import { useTurnClockAlarm } from "../audio/index.ts";
+
 import {
   DISCONNECT_GRACE_MS,
   MATCH_CEILING_MS,
@@ -439,6 +441,8 @@ export default function Clock(props: ClockProps) {
   // R439: the turn clock's final stretch, recomputed on every repaint.
   const urgency = readUrgency(readout);
   const turnRemaining = readout.turn?.remainingMs ?? null;
+  // R439, R506: the viewer's own running turn clock beats in its last 30 seconds (audio/clockAlarm.ts).
+  useTurnClockAlarm(turnRemaining, readout.turn !== null && readout.turn.side === "you" && !readout.turn.paused);
   const fuseMs = !reduced && urgency.side === "you" && urgency.level !== "none" ? turnRemaining : null;
 
   return (

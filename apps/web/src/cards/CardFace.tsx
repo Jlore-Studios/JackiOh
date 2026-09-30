@@ -97,9 +97,9 @@ export function costDigits(text: string): string | undefined {
   return text.length >= LONG_COST_CHARS ? String(LONG_COST_CHARS) : undefined;
 }
 
-/** The board minion's crest (MinionFace), by the card's own rarity. */
+/** The board minion's crest (MinionFace), by the rarity its frame shows (a token's printed one, B2.5). */
 export function hasCrest(face: FaceModel): boolean {
-  return crested(face.rarity);
+  return crested(frameRarity(face));
 }
 
 export function CardFace({ face, layout = "full", className }: CardFaceProps): ReactElement {

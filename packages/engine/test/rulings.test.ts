@@ -2772,6 +2772,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(437, "../../../apps/web/src/cards/CardMarks.test.tsx");
   });
 
+  // R438: apps/web cards/keywordVisuals.test.tsx "R438 …" (a treatment for every keyword kind, the layers
+  // and caps, canAct, Brittle's count, reduced motion, Vanilla).
+  it("R438 draws every keyword on a board unit", () => {
+    provenIn(438, "../../../apps/web/src/cards/keywordVisuals.test.tsx");
+  });
+
   // Proved by apps/web game/Clock.test.tsx "R439 …" (the thresholds, whose clock, a paused clock, the
   // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
   it("R439 marks the last 30 seconds of a turn clock", () => {
@@ -2816,6 +2822,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(502, "../../../apps/web/src/fx/cardFx.test.ts");
   });
 
+  // Proved by apps/web cards/art/motifs.test.ts "R503 …" (a motif per name, distinct faces over the whole
+  // catalog, the families), with art.test.ts, CardFace.test.tsx and model.test.ts (the set mark and a
+  // token's printed rarity).
+  it("R503 draws every card a face of its own, and its set on the frame", () => {
+    provenIn(503, "../../../apps/web/src/cards/art/motifs.test.ts");
+  });
+
   // Proved by apps/web game/Hand.test.tsx "R504 …" (the outline, its size rule, either seat).
   it("R504 keeps an empty hand's place on the board", () => {
     provenIn(504, "../../../apps/web/src/game/Hand.test.tsx");
@@ -2824,6 +2837,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by apps/web routes/play.test.tsx "R505 …".
   it("R505 shows the queue counts on the mode tiles alone", () => {
     provenIn(505, WEB_PLAY_TEST);
+  });
+
+  // Proved by apps/web audio/moments.test.ts, cues.test.ts and clockAlarm.test.ts "R506 …" (the play a
+  // sound answers, Hinder's crack, #27's drain, a cast on draw, the families, the clock alarm).
+  it("R506 lets sound answer the card moments of v0.2.0", () => {
+    provenIn(506, "../../../apps/web/src/audio/moments.test.ts");
   });
 
   // Proved by apps/web patches/PatchNotes.test.tsx "R507 …" (the page's grouping, filter and marks),
