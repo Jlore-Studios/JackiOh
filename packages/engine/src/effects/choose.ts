@@ -292,13 +292,13 @@ export function chooseNumber(args: {
   };
 }
 
-/** B5 E18: the number an answered `number` prompt (or a play's `number` mode) carries, or null. */
-export function chosenNumber(ctx: EffectContext): number | null {
+/** B5 E18: the number an answered `number` prompt (or a play's `number` mode) carries, if any. */
+export function chosenNumber(ctx: EffectContext): number | undefined {
   for (const option of chosenOptions(ctx)) {
     const value = Number(option);
     if (option.trim() !== "" && Number.isInteger(value)) return value;
   }
-  return null;
+  return undefined;
 }
 
 /** R465: the ids the options of an `answer` prompt carry, in the order they are shown. */

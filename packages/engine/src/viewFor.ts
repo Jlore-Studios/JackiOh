@@ -812,12 +812,15 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
         ...(event.byInstanceId !== null && hidden(event.byInstanceId) ? { byInstanceId: HIDDEN_ID } : {}),
       };
     // B5 E2, E16, R466: a stolen card reads to whoever could read it where it was taken from — the
-    // hand's holder, or everyone for a public pile — and to whoever can read it now (R97). A card out
-    // of a library was nobody's to read, so its old owner never learns which card left.
-    case "stolen":
-      return hidden(event.instanceId) && !readableWhereStolen(event, viewer)
-        ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID }
-        : event;
+    // hand's holder, the controller of a face-down zone, everyone for a face-up card or a public pile
+    // (`readableFrom`, written as it was taken) — and to whoever can read it where it is now (R97). A
+    // card out of a library was nobody's to read, so its old owner never learns which card left.
+    case "stolen": {
+      const { readableFrom, ...shown } = event;
+      return hidden(event.instanceId) && !readableWhereStolen(event, readableFrom, viewer)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID }
+        : shown;
+    }
     case "crumbled":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
 
@@ -873,12 +876,18 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
 }
 
 /**
- * B5 E2, E16, R466: whether `viewer` could read the card a `stolen` event names in the pile it was
- * taken from: a hand is its holder's (§9.1), a library nobody's, a graveyard, an exile pile or the
- * resolving zone everyone's (a play is public, R98). A card taken off the field is judged where it
- * is now alone, since whether it stood face-down there is not on the event.
+ * B5 E2, E16, R466: whether `viewer` could read the card a `stolen` event names where it was taken
+ * from. `ownership.changeOwner` writes who could (`readableFrom`) as it takes the card; an event
+ * without the record is judged by its pile alone — a hand is its holder's (§9.1), a library nobody's,
+ * a graveyard, an exile pile or the resolving zone everyone's (a play is public, R98), and a card off
+ * the field nobody's, since whether it stood face-down there is not otherwise on the event.
  */
-function readableWhereStolen(event: Extract<GameEvent, { type: "stolen" }>, viewer: PlayerId): boolean {
+function readableWhereStolen(
+  event: Extract<GameEvent, { type: "stolen" }>,
+  readableFrom: readonly PlayerId[] | undefined,
+  viewer: PlayerId,
+): boolean {
+  if (readableFrom !== undefined) return readableFrom.includes(viewer);
   switch (event.zone) {
     case "hand":
       return event.from === viewer;

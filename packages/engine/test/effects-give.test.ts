@@ -148,7 +148,7 @@ describe("E16: cards handed from one hand to the other (Classic #9)", () => {
     return state;
   }
 
-  it("E16 the other player keeps one card of their choice and the rest become the taker's", () => {
+  it("R466 the other player keeps one card of their choice and gives the rest; a victim who lost a card from their own hand reads it", () => {
     const state = taxed("tax");
     const pending = openAs(state, "hand", "p2");
     const hand = [...state.players.p2.hand];
@@ -268,6 +268,30 @@ describe("E16: a draw from the other player's deck (Classic #58)", () => {
   });
 });
 
+describe("R466: a card taken off the field", () => {
+  it("R466 a face-up card reads to both; a face-down one to whoever controlled it; neither once hidden from them now", () => {
+    const state = board("field-steal");
+    const faceUp = put(state, plain.id, slot("p2", "units", 1));
+    const ownTrap = put(state, incomeTax.id, slot("p2", "backrow", 1));
+    // p2's trap, taken over by p1 earlier (R33: the controller reads a face-down trap, not its owner).
+    const takenTrap = put(state, incomeTax.id, slot("p1", "backrow", 2));
+    takenTrap.owner = "p2";
+    const sink = sinkFor(state);
+    for (const card of [faceUp, ownTrap, takenTrap]) takeIntoHand(sink, card, "p1");
+    state.applied.push({ nonce: "field-steal", events: sink.events });
+    expect(eventsOfType(sink.events, "stolen").map((event) => event.readableFrom)).toEqual([
+      ["p1", "p2"],
+      ["p2"],
+      ["p1"],
+    ]);
+    // p1 holds all three now, so p1 reads all three.
+    expect(stolenSeenBy(state, "p1").map((event) => event.instanceId)).toEqual([faceUp.id, ownTrap.id, takenTrap.id]);
+    // p2 saw the face-up unit and controlled its own face-down trap: it knows what it lost. The trap p1
+    // controlled face-down it never read, so it learns only that a card left.
+    expect(stolenSeenBy(state, "p2").map((event) => event.instanceId)).toEqual([faceUp.id, ownTrap.id, HIDDEN_ID]);
+  });
+});
+
 describe("E2, E16: the change of owner itself", () => {
   it("E2 a card that has ceased to exist is not taken", () => {
     const state = board("gone");
@@ -279,7 +303,7 @@ describe("E2, E16: the change of owner itself", () => {
     expect(sink.events).toEqual([]);
   });
 
-  it("R466 a card taken off the stack or out of a public pile reads to both players", () => {
+  it("R466 a stolen card reads to whoever could read it where it was taken or can read it now: the stack and public piles to both", () => {
     const state = board("public");
     const resolving = newInstance(state, glitch.id, "p2", { z: "resolving", player: "p2" });
     state.players.p2.resolving.push(resolving);
@@ -292,6 +316,10 @@ describe("E2, E16: the change of owner itself", () => {
     expect(state.players.p1.hand.map((card) => card.id)).toEqual([resolving.id, dead.id]);
     for (const viewer of ["p1", "p2"] as const) {
       expect(stolenSeenBy(state, viewer).map((event) => event.instanceId)).toEqual([resolving.id, dead.id]);
+    }
+    // The event carries who could read the card where it was taken, and no view forwards it.
+    for (const viewer of ["p1", "p2"] as const) {
+      expect(JSON.stringify(viewFor(state, viewer).events)).not.toContain("readableFrom");
     }
     // And the other way round: p2 takes the top of p1's deck, and the rest of it turns unknown to p1.
     setLibrary(state, "p1", [plain.id, grunt.id]);

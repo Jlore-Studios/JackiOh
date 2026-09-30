@@ -268,7 +268,7 @@ export const mindMeltScripts: CardScripts = {
     resume: {
       cost: (ctx) => {
         const cost = chosenNumber(ctx);
-        return cost === null ? [] : [exileMatching({ zones: ["hand"], player: "enemy", cost })];
+        return cost === undefined ? [] : [exileMatching({ zones: ["hand"], player: "enemy", cost })];
       },
     },
   },

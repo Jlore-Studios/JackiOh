@@ -258,9 +258,11 @@ export type GameEvent =
       to: "graveyard" | "exile" | "hand" | "gone";
     }
   /**
-   * B5 E2, E16: a card changed owner as it moved to the thief's hand. `zone` is where it was taken
-   * from. Hidden per zone: a card out of a hand or a library is the sentinel to whoever could not
-   * read it there, and the thief reads it from then on.
+   * B5 E2, E16, R466: a card changed owner as it moved to the thief's hand. `zone` is where it was
+   * taken from. A viewer reads the card if they could read it where it was taken from — the hand's
+   * holder, everyone for a public pile or a face-up zone, the controller of a face-down zone, nobody
+   * for a library — or can read it where it is now (R97). `readableFrom` names the first set, written
+   * as the card is taken; the view uses it and never forwards it.
    */
   | {
       type: "stolen";
@@ -269,6 +271,7 @@ export type GameEvent =
       from: PlayerId;
       to: PlayerId;
       zone: "hand" | "library" | "resolving" | "graveyard" | "exile" | "field";
+      readableFrom?: PlayerId[];
     }
   /** B5 E20: a Locked zone opened again. */
   | { type: "unlocked"; player: PlayerId; row: Row; lane: number }

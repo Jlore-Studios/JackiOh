@@ -14,16 +14,18 @@
 //
 // Hidden information (R466). `stolen` names the card to whoever could read it where it was taken
 // from and to whoever can read it where it is now (`viewFor.redactEvent`): a card out of a hand is its
-// holder's, a card out of a library nobody's, so the victim of a deck steal never learns which card
-// left. The victim's own library list (R310) would give it away by what it stops listing, so a card
+// holder's, a face-down card its controller's, a public one everyone's, and a card out of a library
+// nobody's, so the victim of a deck steal never learns which card left. The victim's own library list (R310) would give it away by what it stops listing, so a card
 // taken out of a library by the other player turns the rest of that library unknown to its owner
 // (R312's `hideFromOwner`): the list may show less than they could piece together, never more.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
+import { PLAYER_IDS } from "@jackioh/shared";
 import { addToHand, completeDraw, type DrawOutcome } from "./draw";
 import { hideFromOwner } from "./ownLibrary";
+import { isFaceDown } from "./preview";
 import type { EngineSink } from "./resolve";
-import type { CardInstance } from "./state";
+import type { CardInstance, GameState } from "./state";
 
 type StolenFrom = Extract<GameEvent, { type: "stolen" }>["zone"];
 
@@ -42,6 +44,8 @@ function stolenFrom(instance: CardInstance): StolenFrom | null {
 export function changeOwner(sink: EngineSink, card: CardInstance, thief: PlayerId): boolean {
   const zone = stolenFrom(card);
   if (zone === null) return false;
+  // R466: who could read the card where it lies, judged before anything about it changes.
+  const readableFrom = readersWhereItLies(sink.state, card);
   const from = card.owner;
   card.owner = thief;
   card.controller = thief;
@@ -49,8 +53,21 @@ export function changeOwner(sink: EngineSink, card: CardInstance, thief: PlayerI
   if (zone === "library" && from !== thief) {
     for (const left of sink.state.players[from].library) hideFromOwner(left);
   }
-  sink.events.push({ type: "stolen", instanceId: card.id, defId: card.defId, from, to: thief, zone });
+  sink.events.push({ type: "stolen", instanceId: card.id, defId: card.defId, from, to: thief, zone, readableFrom });
   return true;
+}
+
+/**
+ * R466: the players who can read a card where it lies (§9.1, §10.8): a hand is its holder's, a library
+ * nobody's, a face-down backrow card its controller's (R33), and a face-up card, a graveyard, an exile
+ * pile and the resolving zone everyone's (a play is public, R98).
+ */
+function readersWhereItLies(state: GameState, card: CardInstance): PlayerId[] {
+  const zone = card.zone;
+  if (zone.z === "hand") return [zone.player];
+  if (zone.z === "library") return [];
+  if (zone.z === "field" && isFaceDown(state, card)) return [card.controller];
+  return [...PLAYER_IDS];
 }
 
 /**
