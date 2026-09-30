@@ -117,6 +117,20 @@ describe("R437 the mark on the board", () => {
     expect(badges[1]?.getAttribute("title")).toBe(UNKNOWN_MARK_WORDS.text);
   });
 
+  it("R437 R33 a marked face-down card's back carries the mark to the player who cannot read it, naming nothing", () => {
+    const view = fullBoardView();
+    // viewFor's face-down entry with its marks, read defensively as Backrow reads the cost.
+    const marked = { faceDown: true, cost: 2, marks: [STEAL] } as unknown as BackrowView;
+    const next: PlayerView = { ...view, opponent: { ...view.opponent, backrow: [marked, ...view.opponent.backrow.slice(1)] } };
+    const root = renderBoard(next);
+    const back = root.querySelector('[data-face-down="true"][data-marks="steal"]');
+    expect(back).not.toBeNull();
+    expect(back?.querySelector(".card-marks .card-mark-badge")?.getAttribute("title")).toBe(MARK_WORDS.steal?.text);
+    expect(back?.innerHTML).not.toMatch(/core-\d+/);
+    // The unmarked backs carry none.
+    expect(root.querySelectorAll('[data-face-down="true"] .card-marks')).toHaveLength(1);
+  });
+
   it("R437 no mark, no aura: the unmarked board renders none, and an empty list renders none", () => {
     const root = renderBoard(fullBoardView());
     expect(root.querySelector(".card-marks")).toBeNull();

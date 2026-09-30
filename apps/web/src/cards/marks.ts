@@ -80,11 +80,22 @@ export const MARK_GLYPH = "✦";
 /** The drifting motes of one aura (marks.css places them by index). */
 export const MARK_MOTES = 6;
 
-/** The marks the view puts on a card; none for a back, a card without marks, or a malformed entry. */
-export function marksOf(card: Pick<CardView, "marks"> | null | undefined): readonly CardMark[] {
-  const marks = card?.marks;
+function isMark(entry: unknown): entry is CardMark {
+  if (typeof entry !== "object" || entry === null) return false;
+  const record = entry as Record<string, unknown>;
+  return typeof record.mark === "string" && typeof record.color === "string";
+}
+
+/**
+ * The marks the view puts on a card: a `CardView`, or a face-down backrow entry, whose back carries
+ * its mark to the player who cannot read it (R437, R33), read defensively as Backrow reads its cost.
+ * None for a card without marks, or a malformed entry.
+ */
+export function marksOf(card: Pick<CardView, "marks"> | object | null | undefined): readonly CardMark[] {
+  if (card === null || card === undefined || !("marks" in card)) return [];
+  const marks: unknown = card.marks;
   if (!Array.isArray(marks)) return [];
-  return marks.filter((entry) => typeof entry.mark === "string" && typeof entry.color === "string");
+  return marks.filter(isMark);
 }
 
 /** The `marked` event as the client reads it: a mark coming onto (`added`) or leaving a card. */

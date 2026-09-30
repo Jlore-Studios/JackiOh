@@ -23,12 +23,13 @@
 //
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
 // on a face-up backrow card of either seat: the corruption aura and a badge per mark
-// (cards/CardMarks.tsx), and `data-marks` naming them on the root. A back carries no marks, because
-// its view carries nothing to mark.
+// (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
+// carries the marks its view entry lists (R33: the player who cannot read the card still sees it is
+// marked); the opponent's hand of backs carries none.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
-import type { CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
+import type { CardMark, CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
 
 import {
   CardBack,
@@ -169,9 +170,10 @@ export type CardProps = {
   /**
    * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
    * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
-   * back has no instance id. Absent for every other back (the opponent's hand).
+   * back has no instance id. Absent for every other back (the opponent's hand). R437: `marks` are
+   * the marks the view puts on the face-down card, which its back carries (R33).
    */
-  faceDown?: { cost?: number; at: string };
+  faceDown?: { cost?: number; at: string; marks?: readonly CardMark[] };
   /**
    * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
    * "Face down" tag, because the other player sees only its back.
@@ -298,6 +300,7 @@ export default function Card(props: CardProps): ReactElement {
           className={cx("card", "card-back", "card-facedown", props.className)}
           data-face-down="true"
           data-facedown-cost={faceDown.cost}
+          data-marks={faceDown.marks !== undefined && faceDown.marks.length > 0 ? faceDown.marks.map((entry) => entry.mark).join(" ") : undefined}
           role="img"
           aria-label={label}
           title={settings.hoverPreviews && panelHover ? undefined : label}
@@ -308,6 +311,7 @@ export default function Card(props: CardProps): ReactElement {
               {faceDown.cost}
             </span>
           )}
+          <CardMarks marks={faceDown.marks ?? []} instanceId={`facedown-${faceDown.at}`} />
         </div>
         {inspect.overlay}
       </>
