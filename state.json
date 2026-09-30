@@ -86,9 +86,9 @@
   "usage": {
     "five_hour": {
       "resets_at": "2026-09-30T10:30:00Z",
-      "utilization": 0.65
+      "utilization": 0.66
     },
-    "observed_at": "2026-09-30T07:55:12Z",
+    "observed_at": "2026-09-30T08:07:42Z",
     "status": "allowed"
   },
   "version": 1
