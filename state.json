@@ -35,22 +35,19 @@
     "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36671661941",
     "what": "suggestions"
   },
-  "rate_limited_until": null,
+  "rate_limited_until": "2026-09-30T05:30:00Z",
   "suggest": {
     "last_run": "2026-09-30T05:03:56Z",
     "requested": false
   },
   "usage": {
     "five_hour": {
-      "resets_at": "2026-09-29T19:40:00Z",
-      "utilization": 0.1
+      "resets_at": "2026-09-30T05:30:00Z",
+      "utilization": 1.0
     },
-    "observed_at": "2026-09-29T18:52:22Z",
-    "seven_day": {
-      "resets_at": "2026-09-29T20:00:00Z",
-      "utilization": 0.8
-    },
-    "status": "allowed_warning"
+    "observed_at": "2026-09-30T05:14:48Z",
+    "rejected_resets_at": "2026-09-30T05:30:00Z",
+    "status": "rejected"
   },
   "version": 1
 }
