@@ -759,6 +759,11 @@ export function filterTagId(tag: string): string {
   return `db-filter-tag-${slugOf(tag)}`;
 }
 
+/** A set chip: `db-filter-set-core`, `db-filter-set-classic`, `db-filter-set-classic-plus`. */
+export function filterSetId(set: string): string {
+  return `db-filter-set-${slugOf(set.replace(/\+/g, " plus"))}`;
+}
+
 /** A14: a rarity chip (`db-filter-rarity-legendary`). */
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
