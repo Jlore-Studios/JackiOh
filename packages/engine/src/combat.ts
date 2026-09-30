@@ -19,8 +19,9 @@ import { PLAYER_IDS, hasKeyword, opponentOf } from "@jackioh/shared";
 import { LANE_RESTRICTED_ATTACKS } from "./config";
 import { dealDamage, type DamageTarget } from "./damage";
 import { unitView } from "./layers";
-import type { EngineSink } from "./resolve";
-import { flagsOf } from "./scripts";
+import { SELF_KEY, runResumableList, type ResumePlan } from "./prompts";
+import { makeContext, type EngineSink } from "./resolve";
+import { flagsOf, scriptOf } from "./scripts";
 import { stateCheck } from "./stateCheck";
 import { findInstance, type CardInstance, type DeclaredAttack, type GameState, type Position, type WorkItem } from "./state";
 import { registerDeclarationCheck, runTrapWindow } from "./traps";
@@ -29,7 +30,7 @@ import { moveSourcedModifiers } from "./modifiers";
 import { answerTargeting } from "./replacements";
 import { attackRestriction } from "./restrictions";
 import { exitMark, leftFieldAfter, movesIn, type LaterMoves } from "./stays";
-import { owe, paused as isPaused, registerWorkHandler } from "./work";
+import { owe, paused as isPaused, pausedOf, registerWorkHandler, type PausedStep } from "./work";
 import { activeUnitsOf, adjacent, cardAt, slotOf } from "./zones";
 
 /**
@@ -525,7 +526,7 @@ function resolveDeclaredAttack(sink: EngineSink, id: string): void {
   if (target === null) return;
 
   resolveCombat(sink, attacker, target);
-  stateCheck(sink);
+  closeCombat(sink, attacker, target, false);
 }
 
 /**
@@ -683,7 +684,7 @@ export function forceAttack(sink: EngineSink, attacker: CardInstance, target: At
   });
 
   resolveCombat(sink, attacker, target);
-  stateCheck(sink);
+  closeCombat(sink, attacker, target, true);
 }
 
 /** §4.2 step 2: an attack is made on an enemy unit or the enemy hero, forced or not (R173). */
@@ -861,5 +862,142 @@ export function forceAttackOwnHero(sink: EngineSink, attacker: CardInstance): vo
   if (attackRestriction(state, attacker, target) !== null) return;
   sink.events.push({ type: "attackDeclared", attackerId: attacker.id, targetId: targetIdOf(target), forced: true });
   resolveCombat(sink, attacker, target);
-  stateCheck(sink);
+  closeCombat(sink, attacker, target, true);
 }
+
+// ---------------------------------------------------------------------------
+// "After this attacks": the attacker's `afterAttack` hook, once the combat's state check has closed
+// ---------------------------------------------------------------------------
+
+/**
+ * R113: the `resume.hook` of the engine sequence this section parks — an attacker's `afterAttack`
+ * hook owed behind the state check that closes its combat (a Death there asked something), or the
+ * rest of that hook after a question of its own, with the check that follows it.
+ */
+export const AFTER_ATTACK_WORK = "@afterAttack";
+
+/**
+ * The facts a combat hands its attacker's `afterAttack` hook, in the hook's `ctx.data`
+ * (`afterAttackOf` reads them back): the attack's target (a unit's id or `hero-<player>`), the units
+ * that combat destroyed — the ones whose lethal hit was the attacker's (R42's killer: the attacked
+ * unit, and Cleave's kills) — whether the attacker is still on the field on the stay it attacked from
+ * once the check has closed, and whether the attack was forced (R53).
+ */
+export type AfterAttackFacts = { targetId: string; destroyedIds: string[]; survived: boolean; forced: boolean };
+
+/** The combat facts an `afterAttack` hook was handed, or null outside one. */
+export function afterAttackOf(ctx: { data: Record<string, unknown> }): AfterAttackFacts | null {
+  const { targetId, destroyedIds, survived, forced } = ctx.data;
+  if (typeof targetId !== "string" || !Array.isArray(destroyedIds)) return null;
+  if (typeof survived !== "boolean" || typeof forced !== "boolean") return null;
+  return { targetId, destroyedIds: destroyedIds.filter((id): id is string => typeof id === "string"), survived, forced };
+}
+
+/** What an owed `afterAttack` carries, all JSON: the combat's facts and the attacker as it fought. */
+type OwedAfterAttack = {
+  attackerId: string;
+  /** The attacker just before the check that closed its combat (R78, R89): its self if it died. */
+  snapshot: CardInstance;
+  targetId: string;
+  destroyedIds: string[];
+  forced: boolean;
+  /** The field's departures before that check, to tell a survivor from a Reborn body (R174). */
+  since: number;
+  /** Judged once, as the hook first runs, when the check has closed. */
+  survived?: boolean;
+  /** The hook is done and only the state check that follows it is owed. */
+  checkOnly?: true;
+};
+
+const AFTER_ATTACK_KEY = "attack";
+
+/**
+ * The state check that closes a combat (§4.2 step 5, §4.3 step 3, R53), then the attacker's
+ * `afterAttack` hook (Classic #13, Classic+ #73.1, Core #32) — also when the attacker died in it, on
+ * the snapshot it fought with, as a Death hook reads its card (R78, R89). An attack that was called
+ * off (R44, R220) never fought and never reaches here. The hook is a whole effect, so a check follows
+ * it (R59); a question inside it, or a Death's question in the check before it, owes the rest to
+ * `state.work` (R113).
+ */
+function closeCombat(sink: EngineSink, attacker: CardInstance, target: AttackTarget, forced: boolean): void {
+  const state = sink.state;
+  const snapshot = JSON.parse(JSON.stringify(attacker)) as CardInstance;
+  const since = exitMark(state);
+  const from = sink.events.length;
+  stateCheck(sink);
+  if (scriptOf(snapshot).afterAttack === undefined || state.result !== null) return;
+  const destroyedIds = sink.events
+    .slice(from)
+    .flatMap((event) => (event.type === "destroyed" && event.killerId === snapshot.id ? [event.instanceId] : []));
+  const owed: OwedAfterAttack = { attackerId: snapshot.id, snapshot, targetId: targetIdOf(target), destroyedIds, forced, since };
+  if (isPaused(sink)) {
+    oweAfterAttack(sink, owed);
+    return;
+  }
+  runAfterAttack(sink, owed, null);
+}
+
+function oweAfterAttack(sink: EngineSink, owed: OwedAfterAttack): void {
+  owe(sink, { defId: "", hook: AFTER_ATTACK_WORK, step: "hook", radiant: false, data: { [AFTER_ATTACK_KEY]: owed } });
+}
+
+/** The attacker's hook, from `paused` when a question split it, then the check that follows it. */
+function runAfterAttack(sink: EngineSink, owed: OwedAfterAttack, paused: PausedStep | null): void {
+  const state = sink.state;
+  const hook = scriptOf(owed.snapshot).afterAttack;
+  if (hook === undefined || state.result !== null) return;
+  const live = findInstance(state, owed.attackerId);
+  const survived =
+    owed.survived ??
+    (live !== undefined && isActiveOnField(state, live) && !leftFieldAfter(state, owed.since, live.id));
+  const judged: OwedAfterAttack = { ...owed, survived };
+  // A survivor is itself, on the field (Classic+ #73.1 transforms it); one that died is the snapshot
+  // it fought with, which a continuation reads back too (`prompts.SELF_KEY`, R89).
+  const self = survived && live !== undefined ? live : owed.snapshot;
+  const facts: AfterAttackFacts = { targetId: owed.targetId, destroyedIds: owed.destroyedIds, survived, forced: owed.forced };
+  const ctx = {
+    ...makeContext(sink, self, {
+      controller: self.controller,
+      data: { ...facts, ...(survived ? {} : { [SELF_KEY]: owed.snapshot }) },
+    }),
+    ...(paused?.exitsFrom === undefined ? {} : { exitsFrom: paused.exitsFrom }),
+    ...(paused?.summoned === undefined ? {} : { summoned: paused.summoned }),
+  };
+  const plan: ResumePlan = {
+    defId: "",
+    hook: AFTER_ATTACK_WORK,
+    step: "hook",
+    radiant: false,
+    data: { [AFTER_ATTACK_KEY]: judged },
+    owner: self.controller,
+  };
+  const status = runResumableList(sink, ctx, plan, hook(ctx), paused);
+  if (status === "done") {
+    stateCheck(sink);
+    return;
+  }
+  // The hook's last effect asked: the hook is done, and the check after it waits for the answer.
+  if (status === "asked") oweAfterAttack(sink, { ...judged, checkOnly: true });
+}
+
+function owedAfterAttackOf(data: Record<string, unknown>): OwedAfterAttack | null {
+  const raw = data[AFTER_ATTACK_KEY];
+  if (raw === null || typeof raw !== "object") return null;
+  const owed = raw as Partial<OwedAfterAttack>;
+  if (typeof owed.attackerId !== "string" || typeof owed.targetId !== "string" || typeof owed.since !== "number") return null;
+  if (owed.snapshot === undefined || !Array.isArray(owed.destroyedIds) || typeof owed.forced !== "boolean") return null;
+  return raw as OwedAfterAttack;
+}
+
+/** `work.ts`'s handler: the hook (or its rest), then the check, where the pause left them (R113). */
+function runOwedAfterAttack(sink: EngineSink, item: WorkItem): void {
+  const owed = owedAfterAttackOf(item.resume.data);
+  if (owed === null) return;
+  if (owed.checkOnly === true) {
+    stateCheck(sink);
+    return;
+  }
+  runAfterAttack(sink, owed, pausedOf(item.resume.data));
+}
+
+registerWorkHandler(AFTER_ATTACK_WORK, runOwedAfterAttack);

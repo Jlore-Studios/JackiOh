@@ -80,8 +80,8 @@ export function heroArmorOf(state: GameState, player: PlayerId): number {
 
 /**
  * The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
- * card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's Spell
- * Damage and hero guards read.
+ * card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's hero
+ * guards read.
  */
 function actingTextsOf(state: GameState, player: PlayerId): CardInstance[] {
   const backrow = slotsOf(player, "backrow").flatMap((ref) => {
@@ -146,13 +146,13 @@ export function heroHitAmount(state: GameState, player: PlayerId, amount: number
 }
 
 /**
- * E6: the Spell Damage on a player's side — every "Spell Damage +N" among the keywords of the cards
- * acting on their field, summed (a numbered keyword, like Armor, §10.4). A face-down Trap's counts for
- * nothing until it fires (R463).
+ * E6, §4.4 step 0: the Spell Damage on a player's side — every "Spell Damage +N" among the keywords
+ * of the units acting on their field (the top of each pile, an animated card standing in a unit zone
+ * included), summed, as Armor sums (a numbered keyword, §10.4).
  */
 export function spellDamageOf(state: GameState, player: PlayerId): number {
   let total = 0;
-  for (const card of actingTextsOf(state, player)) {
+  for (const card of activeUnitsOf(state, player)) {
     for (const keyword of unitView(state, card).keywords) {
       if (keyword.kind === "Spell Damage") total += keyword.n;
     }

@@ -46,6 +46,7 @@ import {
   vitalKill,
   voidwalker,
   wall,
+  watcher,
 } from "./fixtures/damage-combat";
 import { eventsOfType, inHand, put, sinkFor, slot } from "./fixtures/harness";
 
@@ -537,6 +538,7 @@ describe("E5 a friendly unit is targeted, E9 attack redirect", () => {
     const attacker = put(state, grunt.id, slot("p1", "units", 1));
     const chosen = put(state, wall.id, slot("p2", "units", 1));
     const decoy = inHand(state, joro.id, "p2")[0] as CardInstance;
+    put(state, watcher.id, slot("p2", "backrow", 1));
     const game = recorder(state);
 
     const result = game.play({ type: "attack", attackerId: attacker.id, targetId: chosen.id, playerId: "p1" });
@@ -552,8 +554,9 @@ describe("E5 a friendly unit is targeted, E9 attack redirect", () => {
     expect(inPile(after, "p2", "graveyard", decoy.id)).toBe(true);
     expect(findInstance(after, chosen.id)?.damage).toBe(0);
     expect(findInstance(after, attacker.id)?.damage).toBe(1);
-    // The declaration went to the traps once, in its window, not again from the frontier (R100).
-    expect(eventsOfType(result.events, "attackDeclared")).toHaveLength(1);
+    // The declaration reached the traps once, in its window, not again from the frontier (R100); the
+    // interposer's summon reached them in that window too, before the combat.
+    expect(notes(after)).toEqual([`watch:attack:${decoy.id}`, `watch:summon:${decoy.id}`]);
     expect(replaysTo(game.start, game.log, after)).toBe(true);
   });
 
@@ -603,5 +606,63 @@ describe("E5 a friendly unit is targeted, E9 attack redirect", () => {
       return game;
     };
     expect(viewFor(build(joro.id).state(), "p1")).toEqual(viewFor(build(grunt.id).state(), "p1"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R97, R177: what each seat reads of the events these moments emit
+// ---------------------------------------------------------------------------
+
+describe("R97, R177 the replacement events in both views", () => {
+  it("a redirect, a flicker and the trap that did them are public to both seats once fired", () => {
+    const state = playing("dc-views");
+    const attacker = put(state, grunt.id, slot("p1", "units", 1));
+    const trap = put(state, gambit.id, slot("p2", "backrow", 1));
+    state.players.p2.hero.health = 2;
+    const game = recorder(state);
+    game.play({ type: "attack", attackerId: attacker.id, targetId: "hero-p2", playerId: "p1" });
+    for (const viewer of ["p1", "p2"] as const) {
+      const events = viewFor(game.state(), viewer).events;
+      expect(events.filter((event) => event.type === "redirected")).toEqual([
+        { type: "redirected", what: "damage", fromId: "hero-p2", toId: "hero-p1", byInstanceId: trap.id },
+      ]);
+      // `trapFired` names the trap to its controller only, as every firing does; the other seat reads
+      // the card where it went, its owner's graveyard.
+      expect(events.filter((event) => event.type === "trapFired").map((event) => event.type === "trapFired" && event.defId)).toEqual([
+        viewer === "p2" ? gambit.id : "hidden",
+      ]);
+      const graveyard = viewFor(game.state(), viewer)[viewer === "p2" ? "you" : "opponent"].graveyard;
+      expect(graveyard.map((card) => card.instanceId)).toContain(trap.id);
+    }
+
+    const flick = playing("dc-views-flicker");
+    const unit = put(flick, grunt.id, slot("p1", "units", 1));
+    put(flick, shadowstep.id, slot("p1", "backrow", 1));
+    const spell = inHand(flick, storm.id, "p1")[0] as CardInstance;
+    const other = recorder(flick);
+    other.play({ type: "play", instanceId: spell.id, playerId: "p1" });
+    for (const viewer of ["p1", "p2"] as const) {
+      const flickered = viewFor(other.state(), viewer).events.filter((event) => event.type === "flickered");
+      expect(flickered).toEqual([{ type: "flickered", player: "p1", instanceId: unit.id, defId: grunt.id, row: "units", lane: 1 }]);
+    }
+  });
+
+  it("R177 a face-down Blood Moon or Shadowstep that declines leaves the other seat's view as another trap would", () => {
+    const build = (trapId: string): GameState => {
+      const state = playing("dc-views-decline");
+      put(state, trapId, slot("p1", "backrow", 1));
+      const foe = put(state, rattle.id, slot("p2", "units", 1));
+      foe.markedDestroyed = true;
+      const game = recorder(state);
+      // p1 heals its own hero (no enemy of p1's trap) and p2's unit dies (none of p1's units).
+      const cure = inHand(game.state(), mend.id, "p1")[0] as CardInstance;
+      game.play({ type: "play", instanceId: cure.id, targets: [{ pick: "hero", player: "p1" }], playerId: "p1" });
+      return game.state();
+    };
+    const moon = build(bloodMoon.id);
+    const step = build(shadowstep.id);
+    const plain = build(gambit.id);
+    expect(viewFor(moon, "p2")).toEqual(viewFor(plain, "p2"));
+    expect(viewFor(step, "p2")).toEqual(viewFor(plain, "p2"));
   });
 });

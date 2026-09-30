@@ -58,10 +58,11 @@ export function effectIsFromSpell(ctx: Pick<EffectContext, "state" | "self" | "d
 
 /**
  * E35: the "doesn't affect it" half, as `effects/targets.ts` asks it of every card an effect names —
- * a Spell's effects pass an immune unit by.
+ * a Spell's effects pass an immune unit on the field by. A card in a hand or a deck is no unit, and
+ * its printed keyword protects nothing there.
  */
 export function unaffectedBy(ctx: Pick<EffectContext, "state" | "self" | "defId" | "radiant">, card: CardInstance): boolean {
-  return effectIsFromSpell(ctx) && immuneToSpells(ctx.state, card);
+  return card.zone.z === "field" && effectIsFromSpell(ctx) && immuneToSpells(ctx.state, card);
 }
 
 // ---------------------------------------------------------------------------

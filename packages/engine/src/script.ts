@@ -328,6 +328,15 @@ export type Script = {
    * back into `unitView`, or the layers would recurse.
    */
   conditionalKeywords?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => Keyword[];
+  /**
+   * "After this attacks" (Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem, Core #32
+   * Prem Panther): run for the attacker once the state check that closes each of its combats has run,
+   * a declared attack's or a forced one's, also when it died there — then on the snapshot it fought
+   * with, as a Death hook reads its card (R78, R89). Not for an attack called off before it fought
+   * (R44). `ctx.data` holds the combat's facts, read with `combat.afterAttackOf`: `{ targetId,
+   * destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
+   */
+  afterAttack?: Hook;
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
 };
 

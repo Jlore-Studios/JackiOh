@@ -39,7 +39,7 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
-import { DAMAGE_REDIRECT_CAP } from "./config";
+import { DAMAGE_REDIRECT_CAP, LIBRARY_CAP } from "./config";
 import { dealDamage, type DamageSink, type DamageTarget } from "./damage";
 import { cardTypeOf } from "./faces";
 import { modifierIsLive } from "./mana";
@@ -292,8 +292,9 @@ function finish(sink: DamageSink, cand: Candidate, def: ReplacementDef, record: 
     instanceId: card.id,
     data: { [REPLACED_KEY]: JSON.parse(JSON.stringify(record)) as ReplacementRecord },
   };
-  // R462: owed now, ahead of anything a pause left owed, so it resolves once the replaced event and
-  // the effect it happened in are done — where a trap answering that event would resolve.
+  // R462: owed as the card's own continuation the moment it fires (R113's cursor), so it resolves once
+  // the effect the replaced event happened in has finished or paused, before the resolution loop pops
+  // any queued trigger — where a trap answering that event would resolve.
   pushWork(sink, resume, cand.controller);
 }
 
@@ -515,6 +516,9 @@ function graveyardRedirectFor(state: GameState, card: CardInstance): GraveyardRe
   for (const cand of candidates(state, card)) {
     const def = answering(state, cand, "toGraveyard", event);
     if (def === undefined) continue;
+    // R80: a full library turns the card away, so that replacement cannot apply and the card goes on
+    // toward its graveyard, where a later one may still meet it.
+    if (def.instead.to === "bottomOfLibrary" && state.players[card.owner].library.length >= LIBRARY_CAP) continue;
     // R460: the first that applies sends the card elsewhere, and a card no longer on its way to a
     // graveyard is nothing any later one replaces.
     return def.instead.to === "exile" ? { to: "exile" } : { to: "library", position: "bottom" };

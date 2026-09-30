@@ -41,9 +41,7 @@ export function resolveTarget(ctx: EffectContext, spec: TargetSpec): DamageTarge
   if (spec.of === "enemyHero") return { kind: "hero", player: opponentOf(ctx.controller) };
   if (spec.of === "instance") {
     const instance = instanceOnItsStay(ctx, spec.instanceId);
-    if (instance === null) return null;
-    // B5 E35: a Spell's effect passes a unit immune to Spells by.
-    return unaffectedBy(ctx, instance) ? null : { kind: "unit", instance };
+    return instance === null ? null : { kind: "unit", instance };
   }
 
   const selection = ctx.targets[spec.index ?? 0];
@@ -89,6 +87,8 @@ export function instanceOnItsStay(ctx: EffectContext, instanceId: string): CardI
   if (instance === undefined) return null;
   // §3.2, R13: a card dormant under a Stack pile is not on the field for effects.
   if (isBuried(ctx.state, instance)) return null;
+  // B5 E35: a Spell's effect passes a unit immune to Spells by, named by id as much as chosen.
+  if (unaffectedBy(ctx, instance)) return null;
   return leftFieldAfter(ctx.state, stayMarkOf(ctx, instance.id), instance.id) ? null : instance;
 }
 

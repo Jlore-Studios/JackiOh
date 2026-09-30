@@ -5,7 +5,9 @@
 
 import type { Action, ActionInput, CardDef, CardType, GameEvent, Keyword, PlayerId } from "@jackioh/shared";
 import { registerCatalog, registeredCatalog } from "../../src/catalog";
+import { afterAttackOf } from "../../src/combat";
 import {
+  cancelAttack,
   damage,
   damageAll,
   damageSplit,
@@ -133,6 +135,8 @@ export const joro = unit("joro", 1, 1);
 
 /** Classic #75's shape: the hero's hits are halved (Radiant: quartered), rounded up, after Armor. */
 export const argus = def("argus", "Field Spell");
+/** A Trap guarding its hero like Argusland: it guards nothing while it is face-down (R463). */
+export const hiddenArgus = def("hidden-argus", "Trap");
 /** Classic+ #11's shape: the hero takes at most 1 per hit. */
 export const animeArmor = unit("anime-armor", 4, 4);
 /** Classic+ #38's shape: Spell Damage +2 (Radiant +5). */
@@ -197,6 +201,16 @@ export const leech = unit("leech", 3, 5, [{ kind: "Lifesteal" }]);
 /** A plain 2/2 and a plain 1/8, bodies to attack with and at. */
 export const grunt = unit("grunt", 2, 2);
 export const wall = unit("wall", 1, 8);
+/** A Field Trap that notes every declared attack and every summon it is offered (it fires again and again). */
+export const watcher = def("watcher", "Field Trap");
+/** "After this attacks": notes the combat's facts (Classic #13's shape). */
+export const veteran = unit("veteran", 2, 2);
+/** The same, whose hook asks its controller before it finishes. */
+export const veteranAsker = unit("veteran-asker", 2, 2);
+/** A 1/1 whose Death asks its controller something (a pause inside §4.5 step 3). */
+export const deathAsker = unit("death-asker", 1, 1);
+/** #96 My Pawn's shape: cancels every declared attack (R44). */
+export const pawn = def("pawn", "Trap");
 
 export const DC_DEFS: CardDef[] = [
   logCard,
@@ -209,6 +223,7 @@ export const DC_DEFS: CardDef[] = [
   bloodMoon,
   joro,
   argus,
+  hiddenArgus,
   animeArmor,
   solar,
   lens,
@@ -232,6 +247,11 @@ export const DC_DEFS: CardDef[] = [
   leech,
   grunt,
   wall,
+  watcher,
+  veteran,
+  veteranAsker,
+  deathAsker,
+  pawn,
 ];
 
 const anyTarget = [{ kind: "target" as const, min: 1, max: 1, filter: { of: ["unit" as const, "hero" as const] } }];
@@ -297,6 +317,7 @@ export const DC_SCRIPTS: Record<string, CardScripts> = {
   ),
   [joro.id]: both({ replacements: [{ id: "joro", on: "targeted", where: "hand", instead: { interpose: true } }] }),
   [argus.id]: both({ heroGuard: () => [{ divisor: 2 }] }, { heroGuard: () => [{ divisor: 4 }] }),
+  [hiddenArgus.id]: both({ heroGuard: () => [{ divisor: 2 }] }),
   [animeArmor.id]: both({ heroGuard: () => [{ cap: 1 }] }),
   [bolt.id]: both({ targets: anyTarget, cry: () => [damage({ to: { of: "chosen" }, amount: 3 })] }),
   [lance.id]: both({ targets: unitTarget, cry: () => [damage({ to: { of: "chosen" }, amount: 11, trample: true })] }),
@@ -319,6 +340,51 @@ export const DC_SCRIPTS: Record<string, CardScripts> = {
   }),
   [bauble.id]: both({ death: () => [note("bauble:death")] }),
   [rattle.id]: both({ death: (ctx) => [note(`rattle:death:${ctx.self?.controller ?? "?"}`)] }),
+  [veteran.id]: both({
+    afterAttack: (ctx) => {
+      const facts = afterAttackOf(ctx);
+      return [
+        note(
+          `after:${facts?.targetId ?? "?"}:${(facts?.destroyedIds ?? []).join("+")}:${String(facts?.survived)}:${String(facts?.forced)}:${ctx.self?.zone.z ?? "none"}`,
+        ),
+      ];
+    },
+  }),
+  [veteranAsker.id]: both({
+    afterAttack: () => [note("after:before"), askController("answered"), note("after:tail")],
+    resume: { answered: (ctx) => [note(`after:answered:${String(afterAttackOf(ctx)?.survived)}`)] },
+  }),
+  [deathAsker.id]: both({
+    death: () => [note("death:ask"), askController("answered")],
+    resume: { answered: () => [note("death:answered")] },
+  }),
+  [pawn.id]: both({
+    triggers: [
+      {
+        id: "pawn",
+        on: ["attackDeclared"],
+        when: (ctx) => ctx.event.type === "attackDeclared" && !ctx.event.forced,
+        run: () => [cancelAttack()],
+      },
+    ],
+  }),
+  [watcher.id]: both({
+    triggers: [
+      {
+        id: "watch",
+        on: ["attackDeclared", "summoned"],
+        run: (ctx) => [
+          note(
+            ctx.event.type === "attackDeclared"
+              ? `watch:attack:${ctx.event.targetId}`
+              : ctx.event.type === "summoned"
+                ? `watch:summon:${ctx.event.instanceId}`
+                : "watch",
+          ),
+        ],
+      },
+    ],
+  }),
 };
 
 // ---------------------------------------------------------------------------
