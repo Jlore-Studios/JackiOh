@@ -26,8 +26,21 @@
 // `deadline - now` against its own monotonic delta instead of trusting its wall clock." So each
 // frame is anchored to a `performance.now()` reading when it arrives, and every repaint adds the
 // monotonic delta to the server's `now` rather than reading `Date.now()`.
+//
+// THE LAST 30 SECONDS OF A TURN (R439). When the turn clock runs into its final stretch
+// (`TURN_CLOCK_FINAL_MS`, `clockConstants.ts`) the root says so as `data-clock-urgency`
+// ("none" | "final" | "last10") and `data-clock-side` (whose turn clock: "you" | "opponent" | ""),
+// and the running side's line turns urgent: a red pill with an hourglass inside a gauge that empties
+// with the stretch, the words "Your turn" or "Their turn", and digits that pop each second, sharper
+// in the last 10 (`TURN_CLOCK_LAST_MS`). On the viewer's own turn an ember fuse also burns round the
+// screen's edge (`TurnFuse`, fixed, blind to the pointer, in the page's margin so it never covers a
+// card), and clock.css beats a heartbeat under the viewer's hand. The opponent's final stretch is the
+// quieter readout alone. Only the turn clock has a final stretch: a paused turn clock (a null
+// deadline), a prompt's clock and the mulligan's are never urgent (`clockUrgency.ts` says why).
+// Reduced motion — the media query or the settings panel's switch — stops everything that moves and
+// keeps the static urgent readout (`data-motion="reduced"`, no fuse). None of it decides anything.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import {
   DISCONNECT_GRACE_MS,
@@ -36,6 +49,19 @@ import {
   PROMPT_CLOCK_MS,
   TURN_CLOCK_MS,
 } from "../../../server/src/config.ts";
+import { prefersReducedMotion } from "./animations.ts";
+import {
+  finalFraction,
+  fuseGeometry,
+  readUrgency,
+  secondsLeft,
+  urgencyAccessibleName,
+  urgencyLabel,
+  type TurnClockUrgency,
+  type TurnClockUrgencyLevel,
+} from "./clockUrgency.ts";
+import { useSetting } from "../settings/index.ts";
+import "./clock.css";
 
 /** How often the readout repaints. Not a SPEC value; see the header. */
 const TICK_MS = 200;
@@ -266,9 +292,128 @@ function attributes(line: ClockLine): Record<string, string> {
   };
 }
 
+/** A side's line: what the readout calls it when nothing is urgent. */
+const SIDE_LABEL: Readonly<Record<ClockSide, string>> = { you: "You", opponent: "Opponent" };
+
+/**
+ * The gauge round the hourglass (R439): a ring that empties with the final stretch. Decoration: the
+ * line's accessible name says the same in words.
+ */
+function UrgencyGauge({ fraction }: { fraction: number }): ReactElement {
+  return (
+    <svg className="clock-gauge" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle className="clock-gauge-track" cx="12" cy="12" r="10" pathLength={1} />
+      <circle
+        className="clock-gauge-fill"
+        cx="12"
+        cy="12"
+        r="10"
+        pathLength={1}
+        strokeDasharray={`${String(fraction)} 1`}
+        transform="rotate(-90 12 12)"
+      />
+      <path className="clock-gauge-glass" d="M8 6.5h8M8 17.5h8M9 6.5c0 3 6 3.5 6 5.5s-6 2.5-6 5.5M15 6.5c0 3-6 3.5-6 5.5s6 2.5 6 5.5" />
+    </svg>
+  );
+}
+
+/**
+ * One side's line: `clock-you` or `clock-opponent`. Its text is the side's name and the seconds;
+ * while it is the turn clock in its final stretch (R439) it is the urgent readout instead: the
+ * gauge, "Your turn" / "Their turn", and digits keyed on the second so each one pops in.
+ */
+function SideLine({
+  side,
+  line,
+  urgency,
+}: {
+  side: ClockSide;
+  line: ClockLine;
+  urgency: TurnClockUrgency;
+}): ReactElement {
+  const urgent = urgency.side === side && urgency.level !== "none" ? urgency.level : "none";
+  const text = formatClock(line.remainingMs);
+  if (urgent === "none" || line.remainingMs === null) {
+    return (
+      <span className="clock-line clock-side" data-testid={`clock-${side}`} data-urgency="none" {...attributes(line)}>
+        <span className="clock-side-label">{SIDE_LABEL[side]}</span>
+        <span className="clock-digits">{text}</span>
+      </span>
+    );
+  }
+  const seconds = secondsLeft(line.remainingMs);
+  return (
+    <span
+      className="clock-line clock-side"
+      data-testid={`clock-${side}`}
+      data-urgency={urgent}
+      role="timer"
+      aria-label={urgencyAccessibleName(side, seconds)}
+      {...attributes(line)}
+    >
+      <UrgencyGauge fraction={finalFraction(line.remainingMs)} />
+      <span className="clock-side-label">{urgencyLabel(side)}</span>
+      <span key={seconds} className="clock-digits">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * R439: the ember fuse, on the viewer's own turn clock only and never under reduced motion. It burns
+ * round the screen's edge, clockwise from the top-left corner, and is gone at the deadline; each
+ * repaint moves it on, and clock.css eases it between repaints. Fixed, in the page's margin, and blind
+ * to the pointer: it never covers a card and never takes a click.
+ */
+function TurnFuse({ remainingMs, level }: { remainingMs: number; level: TurnClockUrgencyLevel }): ReactElement {
+  const { edges, spark } = fuseGeometry(finalFraction(remainingMs));
+  const edge = (name: string, lit: number): ReactElement => (
+    <span className={`clock-fuse-edge clock-fuse-edge--${name}`} style={{ "--lit": lit } as CSSProperties} />
+  );
+  return (
+    <div className="clock-fuse" data-testid="turn-clock-fuse" data-urgency={level} aria-hidden="true">
+      {edge("top", edges[0])}
+      {edge("right", edges[1])}
+      {edge("bottom", edges[2])}
+      {edge("left", edges[3])}
+      <span className="clock-fuse-spark" style={{ left: `${String(spark.x)}%`, top: `${String(spark.y)}%` }} />
+    </div>
+  );
+}
+
+/**
+ * The latest `clock` frame, or null while it belongs to an earlier turn than the view beside it.
+ *
+ * After every change the server pushes the views and then the clocks (`actor.ts` `afterChange`), so
+ * for a moment the route can hold the new turn's view beside the old turn's frame; read together
+ * they would count the last seconds of one turn down on the next (and sound R439's alarm for it). So
+ * a frame is paired with the turn (`turnKey`) the view named when it arrived, and handed on only
+ * while the view still names that turn. The server's next frame follows the view at once.
+ */
+export function useFrameFor<F>(frame: F | null, turnKey: string | null): F | null {
+  const paired = useRef<{ frame: F; turnKey: string | null } | null>(null);
+  if (frame === null) paired.current = null;
+  else if (paired.current === null || paired.current.frame !== frame) paired.current = { frame, turnKey };
+  return paired.current !== null && paired.current.turnKey === turnKey ? frame : null;
+}
+
+/** The turn a view is on, for `useFrameFor`: whose it is and its number; null once the game is over. */
+export function turnKeyOf(view: { active: Seat; turn: number; result: unknown } | null): string | null {
+  if (view === null || view.result !== null) return null;
+  return `${view.active}:${String(view.turn)}`;
+}
+
+/** R439: the media query or the settings panel's "Reduce motion": nothing of the urgency moves. */
+function useReducedMotion(): boolean {
+  const panel = useSetting("reduceMotion");
+  return panel || prefersReducedMotion();
+}
+
 export default function Clock(props: ClockProps) {
   const monotonic = props.monotonic ?? defaultMonotonic;
   const frame = props.frame ?? null;
+  const reduced = useReducedMotion();
 
   // The anchor is set during render so the first paint is already correct; it is a ref, so this
   // does not schedule anything.
@@ -291,21 +436,29 @@ export default function Clock(props: ClockProps) {
 
   const elapsed = anchor.current === null ? 0 : Math.max(0, monotonic() - anchor.current.at);
   const readout = readClock(props, elapsed);
+  // R439: the turn clock's final stretch, recomputed on every repaint.
+  const urgency = readUrgency(readout);
+  const turnRemaining = readout.turn?.remainingMs ?? null;
+  const fuseMs = !reduced && urgency.side === "you" && urgency.level !== "none" ? turnRemaining : null;
 
   return (
-    <div className="clock">
-      <span className="clock-line" data-testid="clock-you" {...attributes(readout.you)}>
-        {formatClock(readout.you.remainingMs)}
-      </span>
-      <span className="clock-line" data-testid="clock-opponent" {...attributes(readout.opponent)}>
-        {formatClock(readout.opponent.remainingMs)}
-      </span>
+    <div
+      className="clock"
+      data-clock-urgency={urgency.level}
+      data-clock-side={urgency.side ?? ""}
+      data-motion={reduced ? "reduced" : "full"}
+    >
+      <SideLine side="you" line={readout.you} urgency={urgency} />
+      <SideLine side="opponent" line={readout.opponent} urgency={urgency} />
 
+      {/* The turn and prompt lines repeat a side's line (the active player's, the prompt holder's)
+          and the ceiling is hours off, so clock.css keeps these three for tools and tests only. */}
       {readout.turn === null ? null : (
         <span
-          className="clock-line"
+          className="clock-line clock-line--aux"
           data-testid="turn-clock"
           data-side={readout.turn.side ?? ""}
+          data-urgency={urgency.level}
           {...attributes(readout.turn)}
         >
           {formatClock(readout.turn.remainingMs)}
@@ -314,7 +467,7 @@ export default function Clock(props: ClockProps) {
 
       {readout.prompt === null ? null : (
         <span
-          className="clock-line"
+          className="clock-line clock-line--aux"
           data-testid="prompt-clock"
           data-side={readout.prompt.side ?? ""}
           {...attributes(readout.prompt)}
@@ -347,7 +500,7 @@ export default function Clock(props: ClockProps) {
 
       {readout.ceilingMs === null ? null : (
         <span
-          className="clock-line"
+          className="clock-line clock-line--aux"
           data-testid="match-ceiling"
           data-remaining-ms={String(Math.max(0, Math.round(readout.ceilingMs)))}
           data-total-ms={String(MATCH_CEILING_MS)}
@@ -355,6 +508,8 @@ export default function Clock(props: ClockProps) {
           {formatClock(readout.ceilingMs)}
         </span>
       )}
+
+      {fuseMs === null ? null : <TurnFuse remainingMs={fuseMs} level={urgency.level} />}
     </div>
   );
 }
