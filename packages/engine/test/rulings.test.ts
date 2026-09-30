@@ -2762,6 +2762,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(482, CARDS_PARAMS_TEST);
   });
 
+  // R388's client half (the catalog workstream proves its data half): apps/web patches/diff.test.ts
+  // "R388 …" (every field compared, text filled and word-diffed, cost words, added and removed cards).
+  it("R388 keeps each card's patch history, and the client shows it", () => {
+    provenIn(388, "../../../apps/web/src/patches/diff.test.ts");
+  });
+
   // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
   it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
     provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
@@ -2776,6 +2782,17 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/audio/voice-assets.test.ts",
       "../../../apps/web/src/audio/voice-lines.test.ts",
       "../../../apps/web/src/audio/voiceData.test.ts",
+    );
+  });
+
+  // Proved by apps/web patches/PatchNotes.test.tsx "R507 …" (the page's grouping, filter and marks),
+  // patches/history.test.ts and patches/CardHistory.test.tsx "R507 …" (the History section).
+  it("R507 marks a patch's changes in its own teal and lists the cards each patch touched", () => {
+    provenIn(
+      507,
+      "../../../apps/web/src/patches/PatchNotes.test.tsx",
+      "../../../apps/web/src/patches/history.test.ts",
+      "../../../apps/web/src/patches/CardHistory.test.tsx",
     );
   });
 });
