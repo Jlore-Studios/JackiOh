@@ -7,7 +7,7 @@
 
 import type { LibraryOverflowOutcome, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP } from "./config";
+import { CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP, SETUP_TURN } from "./config";
 import { defByIndex } from "./catalog";
 import { dealDamage } from "./damage";
 import { hasEnchantment } from "./enchantments";
@@ -179,18 +179,24 @@ export type DrawOutcome = "drawn" | "cast" | "burned" | "fatigue" | "token" | "l
 /**
  * B5 E4, R457: the draws `player` has made this turn, whoever's turn it is — every draw that happened,
  * a fatigue draw included, and none a limit stopped. `PlayerState.draws` is kept per turn, so a count
- * from an earlier turn reads as 0: it resets where the turn log does (§2.2).
+ * from an earlier turn reads as 0: it resets where the turn log does (§2.2). Setup is no player's turn
+ * (§2.1, `SETUP_TURN`), so the opening deal and the mulligan's draws count toward nothing.
  */
 export function drawsThisTurn(state: GameState, player: PlayerId): number {
   const draws = state.players[player].draws;
   return draws !== undefined && draws.turn === state.turn ? draws.count : 0;
 }
 
-/** Count one draw that happened, and return its number this turn (1 for the first). */
-function countDraw(state: GameState, player: PlayerId): number {
+/**
+ * Count one draw that happened, and return its number this turn (1 for the first) for the `drawn`
+ * event. Nothing during setup: R225 deals a Quickdraw card as an opening draw with an event of its
+ * own, and a number on the other draws would tell the opponent which one it was (§9.1, R97).
+ */
+function countDraw(state: GameState, player: PlayerId): { turnDraw?: number } {
+  if (state.turn === SETUP_TURN) return {};
   const count = drawsThisTurn(state, player) + 1;
   state.players[player].draws = { turn: state.turn, count };
-  return count;
+  return { turnDraw: count };
 }
 
 /**
@@ -449,8 +455,8 @@ export function completeDraw(
   state.counters.drawn += 1;
   // B5 E4, R457: the draw's number this turn rides the event, so a trap answering "the 2nd card they
   // draw in a turn" (Classic #9) reads it however much later the loop hands it the event.
-  const turnDraw = countDraw(state, player);
-  sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId, turnDraw });
+  const counted = countDraw(state, player);
+  sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId, ...counted });
 
   const at = linkFor(state, link);
   if (castsOnDraw(card) && at.chain < CAST_ON_DRAW_CHAIN_CAP && roomToCast(state, player, card)) {
@@ -517,8 +523,8 @@ export function drawOne(sink: EngineSink, player: PlayerId, link?: ChainLink | n
       if (tokenDef !== undefined) {
         const token = newInstance(sink.state, tokenDef.id, player, { z: "hand", player });
         sink.state.counters.drawn += 1;
-        const turnDraw = countDraw(sink.state, player);
-        sink.events.push({ type: "drawn", player, instanceId: token.id, defId: token.defId, turnDraw });
+        const counted = countDraw(sink.state, player);
+        sink.events.push({ type: "drawn", player, instanceId: token.id, defId: token.defId, ...counted });
         addToHand(sink, token);
         return "token";
       }

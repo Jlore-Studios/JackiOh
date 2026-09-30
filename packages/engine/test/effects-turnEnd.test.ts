@@ -21,7 +21,8 @@ import { fold, hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import { createGame, type CardInstance, type GameState } from "../src/state";
-import { viewFor } from "../src/viewFor";
+import { HIDDEN_ID, viewFor } from "../src/viewFor";
+import { moveToZone } from "../src/zones";
 import { vanillaDeck } from "./fixtures/catalog";
 import { eventsOfType, inHand, newGame, put, setLibrary, setupCatalog, sinkFor, slot } from "./fixtures/harness";
 import {
@@ -108,6 +109,19 @@ describe("B5 E10: End your turn (R456)", () => {
     // Cleanup ran: the turn log was closed and the rider went with the turn.
     expect(after.players.p1.turnLog.unspentAtEnd).toBe(state.players.p1.mana.current);
     expect(after.players.p1.mods.filter((mod) => mod.kind === "turnEnds")).toEqual([]);
+  });
+
+  it("R456 turnCutShort names its card while the viewer may read it, and the sentinel once it is in a hand (R97)", () => {
+    const state = playing("cut-hidden");
+    const { state: after, card } = play(state, "p1", cutter.id);
+    const cutFor = (viewer: PlayerId, at: GameState): GameEvent | undefined =>
+      viewFor(at, viewer).events.find((event) => event.type === "turnCutShort");
+    expect(cutFor("p2", after)).toMatchObject({ player: "p1", byInstanceId: card.id });
+    const moved = roundTrip(after);
+    const landed = moved.players.p1.graveyard.find((held) => held.id === card.id) as CardInstance;
+    moveToZone(moved, landed, "hand");
+    expect(cutFor("p2", moved)).toMatchObject({ player: "p1", byInstanceId: HIDDEN_ID });
+    expect(cutFor("p1", moved)).toMatchObject({ byInstanceId: card.id });
   });
 
   it("R456 a prompt the action opened is answered first; the paused game survives JSON and replays", () => {

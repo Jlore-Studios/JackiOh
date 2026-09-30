@@ -19,7 +19,7 @@ import { fold, hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import { createGame, type CardInstance, type GameState } from "../src/state";
-import { viewFor } from "../src/viewFor";
+import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import { vanillaDeck } from "./fixtures/catalog";
 import { eventsOfType, inHand, newGame, put, setLibrary, setupCatalog, sinkFor, slot } from "./fixtures/harness";
 import {
@@ -85,6 +85,24 @@ describe("B5 E4: draws counted per player per turn (R457)", () => {
       ["p1", already + 1],
       ["p2", 1],
     ]);
+  });
+
+  it("R457 setup is no player's turn: the opening deal and the mulligan count nothing and number no draw (R225)", () => {
+    const opened = beginGame(newGame("draw-limit-setup"));
+    expect(eventsOfType(opened.events, "drawn").length).toBeGreaterThan(0);
+    expect(eventsOfType(opened.events, "drawn").every((event) => event.turnDraw === undefined)).toBe(true);
+    expect(opened.state.players.p1.draws).toBeUndefined();
+    expect(opened.state.players.p2.draws).toBeUndefined();
+  });
+
+  it("R457 a drawn event's number is public, though the card it names is not (R97)", () => {
+    const state = playing("public-count");
+    setLibrary(state, "p2", ["fx-25", "fx-26"]);
+    const after = act(state, { type: "endTurn", playerId: "p1" }).state;
+    const theirDraw = viewFor(after, "p1").events.find((event) => event.type === "drawn" && event.player === "p2");
+    expect(theirDraw).toMatchObject({ instanceId: HIDDEN_ID, defId: HIDDEN_ID, turnDraw: 1 });
+    const ownDraw = viewFor(after, "p2").events.find((event) => event.type === "drawn" && event.player === "p2");
+    expect(ownDraw).toMatchObject({ defId: "fx-25", turnDraw: 1 });
   });
 
   it("R457 the count resets with the turn, as the turn log does, and the turn's own draw is the first of the new one", () => {
