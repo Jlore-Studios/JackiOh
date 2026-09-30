@@ -1115,23 +1115,13 @@
 
 /* Taunt: Hearthstone's big shield-shaped border. A steel shield stands behind the portrait and
    shows past it on every side, and the portrait's ring turns steel too, so a Taunt reads at a
-   glance even on a 48px phone zone. */
+   glance even on a 48px phone zone. The shield is the Taunt treatment of the keyword visuals
+   (keywords.css, `[data-keyword-fx="Taunt"]`, R438); the ring stays keyed on `data-taunt`. */
 .cf[data-taunt="true"] .cf-portrait {
   box-shadow:
     0 0 0 1.6cqmin #c3cad8,
     0 0 0 2.6cqmin #2b303b,
     0 0.6cqmin 1.6cqmin rgb(0 0 0 / 0.75);
-}
-
-.cf[data-taunt="true"] .cf-portrait::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: -3cqh -8.5cqw -9cqh;
-  clip-path: polygon(50% 0, 97% 9%, 95% 56%, 50% 100%, 5% 56%, 3% 9%);
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.18), transparent 30% 70%, rgb(0 0 0 / 0.25)),
-    linear-gradient(180deg, #e3e7ef, #9aa3b8 40%, #5a6275 75%, #3a404e);
 }
 
 .cf[data-layout="minion"] .cf-crest {
@@ -1327,7 +1317,8 @@
    never below a legible floor (8px bold on an 11px chip; on main's board a keyword was about 7px,
    and a chip scaled to a 59px minion alone came to under 5px). Keywords the minion draws as a
    state (the Taunt frame, the Divine Shield bubble, the Armor plate) keep their badge in the DOM
-   but no chip, and past KEYWORD_CHIPS_MAX (MinionFace.tsx) the rest fold into a "+n" chip. */
+   but no chip, and past KEYWORD_CHIPS_MAX (MinionFace.tsx) the rest fold into a "+n" chip. Every
+   keyword also has its drawn treatment beside the chip (keywords.css, R438). */
 .cf .keywords {
   position: absolute;
   z-index: 4;
@@ -1336,10 +1327,15 @@
   right: auto;
   display: flex;
   flex-direction: column;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-content: flex-start;
   align-items: flex-start;
   gap: max(1px, 0.6cqmin);
-  max-height: none;
+  /* The column stops above the name plate (its top is `--mf-stat` + `--mf-plate` up, less the
+     0.5cqh it sits below the gems): on a 43x60 desktop minion three chips at the 8px floor run
+     past it, so the third wraps into a second column over the portrait instead of covering the
+     name (R438's check, e2e/cypress/component/keyword-visuals.cy.tsx). */
+  max-height: calc(100% - 24cqmin - 2px - var(--mf-stat, 28cqmin) - var(--mf-plate, 11cqh));
   overflow: visible;
   font-size: max(8px, 9cqmin);
   line-height: 1;
@@ -1392,11 +1388,17 @@
 .cf .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
 .cf .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
 .cf .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
+.cf .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
+.cf .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
+.cf .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
+.cf .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
+.cf .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
 
-/* Divine Shield: a golden bubble over the portrait. */
+/* Divine Shield: a golden bubble over the portrait, and under the name plate its rim would
+   otherwise cross (R438: no keyword's treatment covers the name, the attack or the health). */
 .cf .shield-icon {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   top: 1cqh;
   left: 5cqw;
   right: 5cqw;

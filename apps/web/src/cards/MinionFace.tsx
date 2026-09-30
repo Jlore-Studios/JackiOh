@@ -14,6 +14,13 @@
 // at a pixel floor (cards.css); past that the last one becomes a "+n" count, and the hover preview
 // and the inspect sheet list them all.
 //
+// Keyword visuals (R438). Beside its chip, every keyword has a treatment on the minion drawn by
+// shape: a frame round the portrait, a veil over its art, a glyph in the top row, or Armor's plate
+// (keywordVisuals.ts has the map, the layers' caps and the cap on loops; KeywordFx.tsx draws them;
+// keywords.css their look and motion). Each carries `data-keyword-fx="<kind>"`: Taunt's shield,
+// which used to be the portrait's ::before, is now its own treatment, and the Divine Shield bubble
+// and the Armor plate carry the attribute on their existing elements.
+//
 // Vanilla. A unit a Vanilla took the text of (§6.3, R115) is marked Vanilla in the view
 // (`UnitView.vanilla`, R243), since its definition still names what it lost: the minion wears a
 // plain "Vanilla" stamp at its portrait's corner (`.cf-vanilla`, a "V" on a minion too small for
@@ -33,10 +40,13 @@ import { costDigits, hasCrest } from "./CardFace.tsx";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
+import { KeywordFx } from "./KeywordFx.tsx";
+import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
+import "./keywords.css";
 
 export type MinionFaceProps = { face: FaceModel; unit: UnitView; className?: string };
 
@@ -83,8 +93,15 @@ function KeywordIcons({ keywords, armor }: { keywords: readonly Keyword[]; armor
   );
 }
 
+/** The attributes of `kind`'s treatment, when the plan draws one. */
+function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): Record<string, string> {
+  const entry = plan.find((candidate) => candidate.kind === kind);
+  return entry === undefined ? {} : keywordFxAttributes(entry);
+}
+
 export function MinionFace({ face, unit, className }: MinionFaceProps): ReactElement {
   const settings = useCardSettings();
+  const plan = keywordFxPlan(unit);
   const nameRef = useRef<HTMLSpanElement>(null);
   useFitText(nameRef, face.name);
 
@@ -106,6 +123,8 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         <span className="cf-portrait">
           <CardArt defId={face.defId} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
         </span>
+
+        <KeywordFx plan={plan} />
 
         {hasCrest(face) && (
           <span className="cf-crest">
@@ -139,7 +158,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
             <span className="cf-max">/{unit.maxHealth}</span>
           </span>
           {unit.armor > 0 && (
-            <span className="stat stat-armor" data-armor={unit.armor}>
+            <span className="stat stat-armor" data-armor={unit.armor} {...fxAttributesOf(plan, "Armor")}>
               {unit.armor}
             </span>
           )}
@@ -149,7 +168,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
 
         {/* The `divineShieldLost` animation removes this by the keyword leaving the view. */}
         {hasKeyword(unit.keywords, "Divine Shield") && (
-          <span className="shield-icon" data-icon="shield" aria-label="Divine Shield" />
+          <span className="shield-icon" data-icon="shield" aria-label="Divine Shield" {...fxAttributesOf(plan, "Divine Shield")} />
         )}
 
       </span>

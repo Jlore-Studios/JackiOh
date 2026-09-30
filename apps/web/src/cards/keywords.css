@@ -1,0 +1,633 @@
+/* Keyword visuals on the board minion (issue #40, R438). The map, the layers and their caps are
+   keywordVisuals.ts; the drawings are KeywordFx.tsx. Every treatment is a
+   `span.kw-fx[data-keyword-fx="<kind>"][data-kw-layer]` inside the minion's `.cf-scale`, sized in
+   the card's own `cq` units like the rest of the face, and it never takes a pointer event.
+
+   Stacking inside `.cf-scale` (cards.css): the frames behind the portrait (Taunt's shield, the
+   Stack's card edges) at 0; the portrait at 1 and the Divine Shield bubble over it at 1; the veils
+   and the frames over the ring at 2 but before the name plate and the crest in the DOM, so both
+   still paint over them; the glyph row at 3 along the top edge between the cost gem and the switch
+   button; the gems at 3 and the chips at 4. Nothing here covers the attack and health gems or the
+   name plate: the veils stay inside the portrait's oval, whose lower rim the plate already covers.
+
+   Motion. Only a part marked `kw-anim` moves, only while its treatment is `data-kw-motion="on"`
+   (at most AMBIENT_MAX per unit), and only by transform and opacity. Each part's still style is
+   its static mark, so when a loop is off, capped or stopped by reduced motion (the media query
+   and the settings panel's `data-reduce-motion`, both blocks at the end) the mark stays. */
+
+.cf {
+  /* The loops' periods, one per treatment (CLAUDE.md rule 9 for the stylesheet's numbers). */
+  --kw-period-chain: 4.4s;
+  --kw-period-ward: 2.6s;
+  --kw-period-venom: 2.8s;
+  --kw-period-streak: 1s;
+  --kw-period-dash: 1.1s;
+  --kw-period-crack: 3.2s;
+  --kw-period-vein: 1.6s;
+  --kw-period-echo: 3.2s;
+  --kw-period-rune-glow: 2.8s;
+  --kw-period-glint: 2.4s;
+  --kw-period-shock: 2.2s;
+  --kw-period-swing: 2.2s;
+  --kw-period-thrust: 1.8s;
+  --kw-period-rune-turn: 14s;
+  --kw-period-clock: 6s;
+  --kw-period-cog: 8s;
+  --kw-period-cog-small: 6s;
+  --kw-period-sparkle: 2.6s;
+  --kw-period-seal: 3.4s;
+  --kw-period-edge: 3.6s;
+
+  /* The glyph disc: legible on a phone's minion, and larger on a big one. */
+  --kw-glyph: max(12px, 20cqmin);
+
+  /* The portrait's box (cards.css `.cf .cf-portrait`), which the veils share. */
+  --kw-portrait-bottom: calc(var(--mf-stat, 28cqmin) + var(--mf-plate, 11cqh) * 0.5);
+}
+
+.cf .kw-fx {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.cf .kw-part {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.cf .kw-part > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------------------------ frames ----- */
+
+/* Taunt: the steel heater shield behind the portrait (was the portrait's ::before). */
+.cf .kw-fx[data-keyword-fx="Taunt"] {
+  z-index: 0;
+  top: 0;
+  left: 0.5cqw;
+  right: 0.5cqw;
+  bottom: calc(var(--kw-portrait-bottom) - 9cqh);
+}
+
+.cf .kw-taunt-shield {
+  clip-path: polygon(50% 0, 97% 9%, 95% 56%, 50% 100%, 5% 56%, 3% 9%);
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0.18), transparent 30% 70%, rgb(0 0 0 / 0.25)),
+    linear-gradient(180deg, #e3e7ef, #9aa3b8 40%, #5a6275 75%, #3a404e);
+}
+
+/* Stack: two card edges stepped out above and right of the portrait, cards under this one. */
+.cf .kw-fx[data-keyword-fx="Stack"] {
+  z-index: 0;
+  inset: 0;
+}
+
+.cf .kw-edge {
+  border: max(1px, 0.9cqmin) solid rgb(222 229 244 / 0.9);
+  border-radius: 10% / 7%;
+  background: linear-gradient(180deg, #454036, #1d1a14);
+  box-shadow: 0 0 0 max(1px, 0.5cqmin) rgb(0 0 0 / 0.7);
+}
+
+.cf .kw-edge--far {
+  inset: 0.3cqh 0.8cqw 44% 22cqw;
+}
+
+.cf .kw-edge--near {
+  inset: 1.6cqh 4.6cqw 40% 17cqw;
+}
+
+/* Immune to Spells: a hexagonal ward just outside the portrait's ring, sparks on its corners. */
+.cf .kw-fx[data-keyword-fx="Immune to Spells"] {
+  z-index: 2;
+  top: 0.5cqh;
+  left: 3cqw;
+  right: 3cqw;
+  bottom: calc(var(--kw-portrait-bottom) - 2.5cqh);
+}
+
+/* Reborn: a ghost of the portrait's ring rising off it, and a pale halo over its head. */
+.cf .kw-fx[data-keyword-fx="Reborn"] {
+  z-index: 2;
+  top: 0;
+  left: 6cqw;
+  right: 6cqw;
+  bottom: calc(var(--kw-portrait-bottom) + 3cqh);
+}
+
+.cf .kw-echo {
+  opacity: 0.85;
+}
+
+.cf .kw-halo {
+  inset: 0 30% auto;
+  height: 16%;
+}
+
+/* Indestructible: stone blocks bolted round the ring, amber runes in the joints. */
+.cf .kw-fx[data-keyword-fx="Indestructible"] {
+  z-index: 2;
+  top: 1.5cqh;
+  left: 6.5cqw;
+  right: 6.5cqw;
+  bottom: calc(var(--kw-portrait-bottom) - 1.5cqh);
+}
+
+.cf .kw-runes {
+  opacity: 0.8;
+}
+
+/* ------------------------------------------------------------------------------- veils ----- */
+
+.cf .kw-fx[data-kw-layer="veil"] {
+  z-index: 2;
+  top: 3cqh;
+  left: 9cqw;
+  right: 9cqw;
+  bottom: var(--kw-portrait-bottom);
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* Can't attack: crossed chains, and the portrait under them greyed to a stance. */
+.cf:has(.kw-fx[data-keyword-fx="Can't attack"]) .cf-portrait {
+  filter: grayscale(0.75) brightness(0.82);
+}
+
+/* Poisonous: the venom band stays; its drops hang, stretch and fall. */
+.cf .kw-venom-drops {
+  transform-origin: 50% 0;
+}
+
+/* Brittle: one hairline at 3 or more, a web at 1; the count on a shard where the cracks start. */
+.cf .kw-fx[data-keyword-fx="Brittle"][data-stage="1"] .kw-crack-2,
+.cf .kw-fx[data-keyword-fx="Brittle"][data-stage="1"] .kw-crack-3,
+.cf .kw-fx[data-keyword-fx="Brittle"][data-stage="2"] .kw-crack-3 {
+  display: none;
+}
+
+.cf .kw-fx[data-keyword-fx="Brittle"]::after {
+  content: attr(data-n);
+  position: absolute;
+  top: 8%;
+  right: 16%;
+  display: block;
+  padding: max(1px, 0.6cqmin) max(2px, 1.2cqmin) max(1px, 0.4cqmin);
+  clip-path: polygon(18% 0, 100% 8%, 86% 100%, 0 84%);
+  background: linear-gradient(160deg, #f2f8ff, #a9c1d8);
+  color: #13202c;
+  font-size: max(7px, 10cqmin);
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Lifesteal: crimson veins, and the rim flushed from inside. */
+.cf .kw-fx[data-keyword-fx="Lifesteal"] {
+  box-shadow: inset 0 0 2.5cqmin rgb(255 47 82 / 0.55);
+}
+
+.cf .kw-veins {
+  opacity: 0.9;
+}
+
+/* Spell Damage: an arcane circle round the portrait's middle, the bonus at its centre. */
+.cf .kw-rune-ring {
+  inset: 10% 6%;
+}
+
+.cf .kw-fx[data-keyword-fx="Spell Damage"]::after {
+  content: "+" attr(data-n);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #e6efff;
+  font-size: max(8px, 13cqmin);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 0.8cqmin #0b1638, 0 0 1.6cqmin #3a6cff, 0 0.4cqmin 0.6cqmin #000;
+}
+
+/* Animated on your turn: a brass clock dial at the portrait's foot, its hand ticking round. */
+.cf .kw-dial,
+.cf .kw-hand {
+  inset: 50% 26% 4%;
+}
+
+/* Animated: two brass cogs meshing at the portrait's foot. */
+.cf .kw-cog--big {
+  inset: 50% 42% 2% 10%;
+}
+
+.cf .kw-cog--small {
+  inset: 60% 16% 8% 54%;
+}
+
+/* ------------------------------------------------------------------------------- glyphs ---- */
+
+/* The row along the top edge, after the cost gem; on a narrow minion the switch button leaves room
+   for one. A DEF card's position tab takes the top edge's middle, so its row drops under it. */
+.cf .kw-glyphs {
+  position: absolute;
+  z-index: 3;
+  top: max(1px, 1cqh);
+  left: calc(0.5cqw + 24cqmin + 2px);
+  display: flex;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.card.cf-host--minion[data-position="DEF"] .cf .kw-glyphs {
+  top: calc(1cqh + 10px);
+}
+
+@container cardface (max-width: 65.99px) {
+  .cf .kw-glyphs > .kw-fx:nth-child(n + 2) {
+    display: none;
+  }
+}
+
+.cf .kw-glyphs > .kw-fx {
+  position: relative;
+  flex: none;
+  width: var(--kw-glyph);
+  height: var(--kw-glyph);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #4a5370, #141826 72%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.9),
+    inset 0 0 0 max(1px, 0.6cqmin) #d8b25a,
+    0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.cf .kw-glyphs .kw-part {
+  inset: 6%;
+}
+
+.cf .kw-glyphs .kw-shock {
+  inset: -6%;
+  opacity: 0.6;
+}
+
+.cf .kw-glint,
+.cf .kw-sparkle {
+  opacity: 0.9;
+}
+
+.cf .kw-seal {
+  opacity: 0;
+}
+
+/* Lucky's X on the clover's corner. */
+.cf .kw-fx[data-keyword-fx="Lucky"]::after {
+  content: attr(data-n);
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  min-width: max(7px, 8cqmin);
+  padding: 0 1px;
+  border-radius: 999px;
+  background: #16693a;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.85);
+  color: #fff;
+  font-size: max(7px, 8cqmin);
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------------------- motion ---- */
+
+.cf .kw-fx[data-keyword-fx="Can't attack"][data-kw-motion="on"] .kw-anim {
+  animation: kw-chain-sway var(--kw-period-chain) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Immune to Spells"][data-kw-motion="on"] .kw-anim {
+  animation: kw-ward-shimmer var(--kw-period-ward) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Poisonous"][data-kw-motion="on"] .kw-anim {
+  animation: kw-venom-drip var(--kw-period-venom) ease-in infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Charge"][data-kw-motion="on"] .kw-anim {
+  animation: kw-streak-rush var(--kw-period-streak) linear infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Rush"][data-kw-motion="on"] .kw-anim {
+  animation: kw-dash-trail var(--kw-period-dash) ease-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Brittle"][data-kw-motion="on"] .kw-anim {
+  animation: kw-crack-flicker var(--kw-period-crack) linear infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Lifesteal"][data-kw-motion="on"] .kw-anim {
+  animation: kw-vein-pulse var(--kw-period-vein) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Reborn"][data-kw-motion="on"] .kw-anim {
+  animation: kw-echo-rise var(--kw-period-echo) ease-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Indestructible"][data-kw-motion="on"] .kw-anim {
+  animation: kw-rune-glow var(--kw-period-rune-glow) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="First Strike"][data-kw-motion="on"] .kw-anim {
+  animation: kw-glint-twinkle var(--kw-period-glint) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Trample"][data-kw-motion="on"] .kw-anim {
+  animation: kw-shockwave var(--kw-period-shock) ease-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Cleave"][data-kw-motion="on"] .kw-anim {
+  animation: kw-crescent-swing var(--kw-period-swing) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Pierce"][data-kw-motion="on"] .kw-anim {
+  animation: kw-spear-thrust var(--kw-period-thrust) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
+  animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Animated on your turn"][data-kw-motion="on"] .kw-anim {
+  animation: kw-clock-sweep var(--kw-period-clock) steps(12, end) infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Animated"][data-kw-motion="on"] .kw-anim {
+  animation: kw-cog-turn var(--kw-period-cog) linear infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Animated"][data-kw-motion="on"] .kw-cog--small {
+  animation-duration: var(--kw-period-cog-small);
+  animation-direction: reverse;
+}
+
+.cf .kw-fx[data-keyword-fx="Lucky"][data-kw-motion="on"] .kw-anim {
+  animation: kw-clover-sparkle var(--kw-period-sparkle) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Immutable"][data-kw-motion="on"] .kw-anim {
+  animation: kw-seal-glint var(--kw-period-seal) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Stack"][data-kw-motion="on"] .kw-anim {
+  animation: kw-edge-shift var(--kw-period-edge) ease-in-out infinite;
+}
+
+@keyframes kw-chain-sway {
+  from {
+    transform: rotate(-2deg);
+  }
+  to {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes kw-ward-shimmer {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes kw-venom-drip {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(6%) scaleY(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(46%) scaleY(1);
+  }
+}
+
+@keyframes kw-streak-rush {
+  0% {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+}
+
+@keyframes kw-dash-trail {
+  from {
+    opacity: 1;
+    transform: translateX(-8%);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(22%);
+  }
+}
+
+@keyframes kw-crack-flicker {
+  0%,
+  44%,
+  52%,
+  58%,
+  100% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 0.4;
+  }
+  55% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes kw-vein-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  24% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  36% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes kw-echo-rise {
+  from {
+    opacity: 0.9;
+    transform: translateY(4%) scale(0.97);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-7%) scale(1.05);
+  }
+}
+
+@keyframes kw-rune-glow {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kw-glint-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  70% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes kw-shockwave {
+  from {
+    opacity: 1;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes kw-crescent-swing {
+  from {
+    transform: rotate(-16deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes kw-spear-thrust {
+  0%,
+  100% {
+    transform: translateY(6%);
+  }
+  30% {
+    transform: translateY(-10%);
+  }
+  45% {
+    transform: translateY(-8%);
+  }
+}
+
+@keyframes kw-rune-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes kw-clock-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes kw-cog-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes kw-clover-sparkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.5) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(45deg);
+  }
+}
+
+@keyframes kw-seal-glint {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+    transform: translateX(-20%);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translateX(10%);
+  }
+}
+
+@keyframes kw-edge-shift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(2%, -1.5%);
+  }
+}
+
+/* ----------------------------------------------------------------------- reduced motion ---- */
+
+/* Both switches stop every loop; each part's still style is the mark that stays. */
+@media (prefers-reduced-motion: reduce) {
+  .cf .kw-fx,
+  .cf .kw-fx *,
+  .cf .kw-fx::after {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion="true"] .cf .kw-fx,
+:root[data-reduce-motion="true"] .cf .kw-fx *,
+:root[data-reduce-motion="true"] .cf .kw-fx::after {
+  animation: none !important;
+}
