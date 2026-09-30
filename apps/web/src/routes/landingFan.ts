@@ -31,7 +31,7 @@ export const FAN_RADIANT_AT = 2;
 const CATALOG = catalogJson as unknown as CardDefs;
 
 /** Every card a deck may hold: the Core cards, tokens aside (§2.6), in catalog order. */
-export const FAN_POOL: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token);
+export const FAN_POOL: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && def.set === "Core");
 
 /** A whole number in [0, n) from `random`, clamped so a source that returns 1 cannot overrun. */
 function below(random: RandomSource, n: number): number {

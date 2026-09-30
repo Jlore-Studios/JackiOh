@@ -42,8 +42,8 @@ describe("#30 Archivist — base", () => {
   });
 
   it("R24 ties go to the card nearest the top", () => {
-    // #13 and #17 both cost 3, and #13 is nearer the top, so #13 wins the highest.
-    const highest = archivist(["core-013", "core-017", "core-005"]);
+    // #13 and #19 both cost 3, and #13 is nearer the top, so #13 wins the highest.
+    const highest = archivist(["core-013", "core-019", "core-005"]);
     highest.play("core-030", { modes: ["highest"] });
     expect(handDefs(highest)).toEqual(["core-013"]);
 
@@ -121,8 +121,8 @@ describe("#30 Archivist — radiant", () => {
   });
 
   it("R24 applies the same tie rule to both ends", () => {
-    // #13 and #17 both cost 3 (the highest); #5 and #51 both cost 1 (the lowest). Top-down wins.
-    const s = archivist(["core-013", "core-017", "core-005", "core-051"], true);
+    // #13 and #19 both cost 3 (the highest); #5 and #51 both cost 1 (the lowest). Top-down wins.
+    const s = archivist(["core-013", "core-019", "core-005", "core-051"], true);
 
     s.play("core-030", { modes: [] });
 

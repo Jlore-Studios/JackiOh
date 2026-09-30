@@ -85,7 +85,7 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     const entry = VOICE_LINES.cards["core-016"];
     if (entry?.kind !== "spell") throw new Error("core-016 should be a spell in the shipped table");
     const base = VOICE_LINES.personas[entry.persona];
-    if (base === undefined) throw new Error(`no persona ${entry.persona}`);
+    if (base === undefined || base.backend === "sapi") throw new Error(`no say persona ${entry.persona}`);
 
     const spoken = lineFor(VOICE_LINES, "core-016", "cast");
 
@@ -168,6 +168,52 @@ describe("B42 parseVoiceLines", () => {
     wordy.cards["core-005"] = { ...wordy.cards["core-005"], cast: long };
 
     expect(parseVoiceLines(wordy).cards["core-005"]).toMatchObject({ kind: "spell", cast: long });
+  });
+});
+
+describe("R501 SAPI personas", () => {
+  const sapi = {
+    backend: "sapi",
+    voice: "Microsoft Zira Desktop",
+    rate: 10,
+    semitones: -3,
+    filter: "lowpass=f=3500",
+    web: { pitch: 0.8, rate: 1.1 },
+  };
+
+  function tableWithSapi(): ReturnType<typeof rawTable> {
+    const table = rawTable();
+    (table.personas as Record<string, unknown>)["test-sapi"] = sapi;
+    table.cards["core-005"] = { kind: "spell", persona: "test-sapi", cast: "A voice from another machine." };
+    return table;
+  }
+
+  it("R501 parses a SAPI persona and speaks its line with it, unchanged by any override", () => {
+    const table = parseVoiceLines(tableWithSapi());
+    expect(table.personas["test-sapi"]).toEqual(sapi);
+    expect(lineFor(table, "core-005", "cast")).toEqual({ text: "A voice from another machine.", persona: sapi });
+  });
+
+  it("R501 names the path and the problem of a malformed SAPI persona or an override on its line", () => {
+    const noVoice = tableWithSapi();
+    (noVoice.personas as Record<string, unknown>)["test-sapi"] = { ...sapi, voice: "" };
+    expect(parseError(noVoice)).toMatch(/^voice-lines\.json: personas\.test-sapi\.voice: /);
+
+    const tooHigh = tableWithSapi();
+    (tooHigh.personas as Record<string, unknown>)["test-sapi"] = { ...sapi, semitones: 13 };
+    expect(parseError(tooHigh)).toMatch(/^voice-lines\.json: personas\.test-sapi\.semitones: /);
+
+    const noFilter = tableWithSapi();
+    (noFilter.personas as Record<string, unknown>)["test-sapi"] = { ...sapi, filter: 3 };
+    expect(parseError(noFilter)).toMatch(/^voice-lines\.json: personas\.test-sapi\.filter: /);
+
+    const unknownBackend = tableWithSapi();
+    (unknownBackend.personas as Record<string, unknown>)["test-sapi"] = { ...sapi, backend: "espeak" };
+    expect(parseError(unknownBackend)).toMatch(/^voice-lines\.json: personas\.test-sapi\.backend: /);
+
+    const overridden = tableWithSapi();
+    overridden.cards["core-005"] = { ...overridden.cards["core-005"], rate: 200 };
+    expect(parseError(overridden)).toMatch(/^voice-lines\.json: cards\.core-005: .*SAPI/);
   });
 });
 

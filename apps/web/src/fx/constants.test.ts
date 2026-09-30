@@ -68,10 +68,10 @@ const S2 = {
   FX_ADAPT_RECOVER_WINDOWS: 3,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
-  FX_SPEED_MIN: 0.5,
-  FX_SPEED_MAX: 2,
+  FX_SPEED_MIN: 0.25,
+  FX_SPEED_MAX: 3,
   FX_SPEED_DEFAULT: 1,
-  FX_SPEED_STEPS: [0.5, 1, 1.5, 2],
+  FX_SPEED_STEP: 0.25,
   FX_INTENSITY_SCALE: { off: 0, low: 0.45, normal: 1, high: 1.6 },
   FX_SETTINGS_KEY: "jackioh.fx.v1",
   FX_CENTER: { x: 0.5, y: 0.45 },
@@ -120,13 +120,13 @@ describe("S2 the effects constants", () => {
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
   });
 
-  it("S2 the speed steps offered to task 7's panel lie in [FX_SPEED_MIN, FX_SPEED_MAX] and include the default", () => {
-    for (const step of constants.FX_SPEED_STEPS) {
-      expect(step).toBeGreaterThanOrEqual(constants.FX_SPEED_MIN);
-      expect(step).toBeLessThanOrEqual(constants.FX_SPEED_MAX);
-    }
-    expect(constants.FX_SPEED_STEPS).toContain(constants.FX_SPEED_DEFAULT);
-    expect([...constants.FX_SPEED_STEPS]).toEqual([...constants.FX_SPEED_STEPS].sort((a, b) => a - b));
+  it("R435 the slider runs from 0.25x to 3x in steps that land on both ends and on the default", () => {
+    expect(constants.FX_SPEED_MIN).toBe(0.25);
+    expect(constants.FX_SPEED_MAX).toBe(3);
+    const steps = (constants.FX_SPEED_MAX - constants.FX_SPEED_MIN) / constants.FX_SPEED_STEP;
+    expect(Number.isInteger(steps)).toBe(true);
+    const toDefault = (constants.FX_SPEED_DEFAULT - constants.FX_SPEED_MIN) / constants.FX_SPEED_STEP;
+    expect(Number.isInteger(toDefault)).toBe(true);
   });
 
   it("S2 the particle caps shrink from desktop to phone to the adaptive floor", () => {

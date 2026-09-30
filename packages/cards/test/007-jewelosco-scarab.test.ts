@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../src/catalog-data";
+import { queryCost } from "../src/query";
 import { scenario, type Scenario } from "./_harness";
 
 /** The open Discover prompt as its owner sees it (§10.8). */
@@ -34,7 +35,7 @@ function offered(s: Scenario): string[] {
 }
 
 describe("#7 Jewelosco Scarab (§8.1 row 7)", () => {
-  it("base Cry offers 3 distinct 2-cost non-token cards, and never #7 itself (§5.1)", () => {
+  it("base Cry offers 3 distinct 2-cost non-token cards of every set (R380), and never #7 itself (§5.1)", () => {
     const s = scenario({
       seed: "core-007-offer",
       p1: { hand: ["core-007"], mana: 4, library: ["core-020"] },
@@ -53,7 +54,8 @@ describe("#7 Jewelosco Scarab (§8.1 row 7)", () => {
     expect(new Set(ids).size).toBe(3);
     for (const id of ids) {
       const def = cardDef(id);
-      expect(def.cost).toBe(2);
+      // R65: an embiggen card's cost outside play is its base price, so "a 2-cost card" includes one.
+      expect(queryCost(def)).toBe(2);
       expect(def.token).toBe(false);
       expect(def.tags).not.toContain("Token");
       // §5.1: a random pool never offers the card that generated it. `discoverFromCatalog` adds

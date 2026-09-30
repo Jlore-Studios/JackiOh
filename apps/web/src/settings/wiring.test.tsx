@@ -21,7 +21,7 @@ import { DEFAULT_AUDIO_SETTINGS, readAudioSettings, resetAudioSettingsForTests }
 import { CardFace, faceModel, INSPECT_HOVER, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, CARD_SETTINGS_KEY, readCardSettings, writeCardSettings } from "../cards/settings.ts";
-import { FX_SETTINGS_KEY, FX_SPEED_STEPS } from "../fx/constants.ts";
+import { FX_SETTINGS_KEY, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { DEFAULT_FX_SETTINGS, getFxSettings, resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
@@ -85,6 +85,10 @@ function select(testId: string): HTMLSelectElement {
   return screen.getByTestId(testId) as HTMLSelectElement;
 }
 
+function slider(testId: string): HTMLInputElement {
+  return screen.getByTestId(testId) as HTMLInputElement;
+}
+
 function toggle(testId: string): HTMLInputElement {
   return screen.getByTestId(testId) as HTMLInputElement;
 }
@@ -119,23 +123,40 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       expect(controls.contains(screen.getByTestId(id)), id).toBe(true);
     }
     // Every control has an accessible name, including the task-owned ones.
-    expect(screen.getByRole("combobox", { name: "Effects speed" })).toBe(select("setting-fxSpeed"));
+    expect(screen.getByRole("slider", { name: "Effects speed" })).toBe(slider("setting-fxSpeed"));
     expect(screen.getByRole("combobox", { name: "Effects intensity" })).toBe(select("setting-fxIntensity"));
     expect(screen.getByRole("switch", { name: "Animated foil" })).toBe(toggle("setting-animatedFoil"));
   });
 
-  it("the speed picker offers R201's steps and shows the stored speed, even one off the steps", () => {
+  it("R435 the speed slider runs from 0.25x to 3x by its step, and shows the stored speed and its readout", () => {
     render(<SettingsPanel onClose={noop} />);
-    const values = Array.from(select("setting-fxSpeed").options).map((option) => Number(option.value));
-    expect(values).toEqual([...FX_SPEED_STEPS]);
-    expect(select("setting-fxSpeed").value).toBe(String(DEFAULT_FX_SETTINGS.speed));
+    const range = slider("setting-fxSpeed");
+    expect(range.type).toBe("range");
+    expect(Number(range.min)).toBe(FX_SPEED_MIN);
+    expect(Number(range.max)).toBe(FX_SPEED_MAX);
+    expect(Number(range.step)).toBe(FX_SPEED_STEP);
+    expect(range.value).toBe(String(DEFAULT_FX_SETTINGS.speed));
+    expect(range).toHaveAttribute("aria-valuetext", "1×");
+    expect(screen.getByTestId("setting-fxSpeed-value")).toHaveTextContent("1×");
     cleanup();
 
     act(() => {
       setFxSettings({ speed: 1.25 });
     });
     render(<SettingsPanel onClose={noop} />);
-    expect(select("setting-fxSpeed").value).toBe("1.25");
+    expect(slider("setting-fxSpeed").value).toBe("1.25");
+    expect(screen.getByTestId("setting-fxSpeed-value")).toHaveTextContent("1.25×");
+  });
+
+  it("R435 the slider's ends are a quarter speed and three times the speed, and it writes the store as it moves", () => {
+    render(<SettingsPanel onClose={noop} />);
+    fireEvent.change(slider("setting-fxSpeed"), { target: { value: "0.25" } });
+    expect(getFxSettings().speed).toBe(0.25);
+    expect(screen.getByTestId("setting-fxSpeed-value")).toHaveTextContent("0.25×");
+    fireEvent.change(slider("setting-fxSpeed"), { target: { value: "3" } });
+    expect(getFxSettings().speed).toBe(3);
+    expect(slider("setting-fxSpeed")).toHaveAttribute("aria-valuetext", "3×");
+    expect(stored(FX_SETTINGS_KEY)).toMatchObject({ speed: 3 });
   });
 });
 
@@ -143,11 +164,11 @@ describe("every setting persists and applies live, on a board already on screen"
   it("effects speed: the store the runner reads at every enqueue (R201), persisted", () => {
     renderGame();
     openFromBoard();
-    fireEvent.change(select("setting-fxSpeed"), { target: { value: "2" } });
+    fireEvent.change(slider("setting-fxSpeed"), { target: { value: "2.5" } });
 
-    expect(getFxSettings().speed).toBe(2);
-    expect(stored(FX_SETTINGS_KEY)).toMatchObject({ speed: 2 });
-    expect(select("setting-fxSpeed").value).toBe("2");
+    expect(getFxSettings().speed).toBe(2.5);
+    expect(stored(FX_SETTINGS_KEY)).toMatchObject({ speed: 2.5 });
+    expect(slider("setting-fxSpeed").value).toBe("2.5");
   });
 
   it("effects intensity Off turns the effects layer off at once, and Normal back on", () => {
@@ -212,7 +233,7 @@ describe("every setting persists and applies live, on a board already on screen"
     act(() => {
       writeSettings({ dragToPlay: false, reduceMotion: true });
     });
-    fireEvent.change(select("setting-fxSpeed"), { target: { value: "0.5" } });
+    fireEvent.change(slider("setting-fxSpeed"), { target: { value: "0.5" } });
     fireEvent.change(select("setting-fxIntensity"), { target: { value: "high" } });
     fireEvent.click(toggle("setting-animatedFoil"));
     fireEvent.change(screen.getByTestId("audio-sfx"), { target: { value: "10" } });
@@ -224,7 +245,7 @@ describe("every setting persists and applies live, on a board already on screen"
     expect(getFxSettings()).toEqual(DEFAULT_FX_SETTINGS);
     expect(readCardSettings()).toEqual(CARD_SETTINGS_DEFAULTS);
     expect(readAudioSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
-    expect(select("setting-fxSpeed").value).toBe(String(DEFAULT_FX_SETTINGS.speed));
+    expect(slider("setting-fxSpeed").value).toBe(String(DEFAULT_FX_SETTINGS.speed));
     expect(toggle("setting-animatedFoil").checked).toBe(true);
   });
 });
