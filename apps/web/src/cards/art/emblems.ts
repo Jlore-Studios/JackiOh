@@ -1,16 +1,20 @@
 // The emblem at the heart of every procedural picture: one small original glyph per art theme
 // (docs/polish/6-cards.md, Surface A). Each is drawn for this project in a 24×24 box centred on
 // (12, 12), as plain path data with no text, no external references and no borrowed artwork.
-// `svg.ts` places a glyph with a transform, so the paths here never move.
+// `svg.ts` places a glyph with a transform, so the paths here never move. The glyphs v0.2.0 adds
+// for the Book, Pancake and AI families and for the cards' motifs live in motifGlyphs.ts (R503).
 
 import { fmt } from "./hash.ts";
+import { MOTIF_GLYPHS, type GlyphPath, type MotifGlyph } from "./motifGlyphs.ts";
 
-export type EmblemGlyph =
+type CoreGlyph =
   | "shield" | "cat" | "book" | "virus" | "fruit" | "vortex" | "bolt" | "coin"
   | "sword" | "star" | "tower" | "eye" | "rune"
   | "flame" | "moon" | "crown" | "hourglass" | "crystal";
 
-type EmblemPath = { d: string; rule: "nonzero" | "evenodd" };
+export type EmblemGlyph = CoreGlyph | MotifGlyph;
+
+type EmblemPath = GlyphPath;
 
 /** The glyphs' drawing box: 24 units wide and tall. */
 export const EMBLEM_BOX = 24;
@@ -77,7 +81,7 @@ function vortexPath(): string {
   return parts.join("");
 }
 
-export const EMBLEMS: Readonly<Record<EmblemGlyph, EmblemPath>> = {
+const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
   // A heater shield, party per pale: the right half is cut away.
   shield: {
     d: "M12 2L20.5 5V11.2C20.5 16.4 17 20.1 12 22C7 20.1 3.5 16.4 3.5 11.2V5Z" +
@@ -182,3 +186,5 @@ export const EMBLEMS: Readonly<Record<EmblemGlyph, EmblemPath>> = {
     rule: "nonzero",
   },
 };
+
+export const EMBLEMS: Readonly<Record<EmblemGlyph, EmblemPath>> = { ...CORE_EMBLEMS, ...MOTIF_GLYPHS };
