@@ -120,7 +120,7 @@ export function animateCard(sink: FieldSink, card: CardInstance, options: { posi
   card.summonedTurn = state.turn;
   card.exertion = { attacked: false, switched: false };
   card.faceUp = true;
-  if (animatedKindOf(state, card) === ON_YOUR_TURN) reserveHome(state, from.player, from.lane, card.id);
+  if (animatedKindOf(state, card) === ON_YOUR_TURN) reserveHome(state, from, card.id);
   sink.events.push({
     type: "animated",
     player: from.player,
@@ -146,10 +146,10 @@ export function returnHome(sink: FieldSink, card: CardInstance): boolean {
   if (from === null || from.row !== "units" || !actsOnField(state, card) || !isAnimated(state, card)) return false;
 
   const home = homeOf(state, card.id);
-  const atHome = home !== undefined && home.player === from.player;
+  const atHome = home !== undefined && home.zone.player === from.player;
   let to: ZoneSlot | null;
   if (home !== undefined && atHome) {
-    to = { player: home.player, row: "backrow", lane: home.lane };
+    to = { ...home.zone };
     if (isLocked(state, to)) return false;
   } else {
     // A home on the other side belongs to the side the card left: that zone is free again.
@@ -162,7 +162,7 @@ export function returnHome(sink: FieldSink, card: CardInstance): boolean {
   // B5 E21) is the one thing the zone can hold, and it goes back on top of that pile.
   releaseHome(state, card.id);
   if (!stepIntoBackrow(state, card, to, { stack: atHome })) {
-    if (home !== undefined && atHome) reserveHome(state, home.player, home.lane, card.id);
+    if (home !== undefined && atHome) reserveHome(state, home.zone, card.id);
     return false;
   }
   delete card.position;

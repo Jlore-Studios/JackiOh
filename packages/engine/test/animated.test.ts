@@ -230,7 +230,7 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     flush(state, "p1");
     const next = act(state, { type: "play", instanceId: card.id, zone: { row: "backrow", lane: 2 }, playerId: "p1" });
     expect(cardAt(next, slot("p1", "units", 2))?.id).toBe(card.id);
-    expect(homeOf(next, card.id)).toEqual({ player: "p1", lane: 2, instanceId: card.id });
+    expect(homeOf(next, card.id)).toEqual({ instanceId: card.id, zone: { player: "p1", row: "backrow", lane: 2 } });
     expect(isReserved(next, slot("p1", "backrow", 2))).toBe(true);
     // Both seats see the held zone and the home lane on the unit.
     for (const viewer of ["p1", "p2"] as const) {
@@ -310,7 +310,7 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     lockZone(state, slot("p1", "backrow", 3));
     returnAtCleanup(sink, "p1");
     expect(cardAt(state, slot("p1", "units", 3))?.id).toBe(card.id);
-    expect(homeOf(state, card.id)).toEqual({ player: "p1", lane: 3, instanceId: card.id });
+    expect(homeOf(state, card.id)).toEqual({ instanceId: card.id, zone: { player: "p1", row: "backrow", lane: 3 } });
     unlockZone(state, slot("p1", "backrow", 3));
     returnAtCleanup(sink, "p1");
     expect(cardAt(state, slot("p1", "backrow", 3))?.id).toBe(card.id);

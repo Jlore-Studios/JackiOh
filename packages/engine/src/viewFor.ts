@@ -260,7 +260,7 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
   // B3.1, R383: a Field Spell, Trap or Field Trap standing here as a Unit, and the backrow lane an
   // "Animated on your turn" card will go back to (that zone is `reserved` meanwhile).
   const home = isAnimated(state, top) ? homeOf(state, top.id) : undefined;
-  const animated = isAnimated(state, top) ? { animated: home === undefined ? {} : { home: home.lane } } : {};
+  const animated = isAnimated(state, top) ? { animated: home === undefined ? {} : { home: home.zone.lane } } : {};
   return {
     ...withPreview(
       withCondition(cardView(state, top), conditionActive(state, top, viewer, "field")),

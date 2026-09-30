@@ -206,7 +206,9 @@ export function isOpen(state: GameState, ref: ZoneSlot): boolean {
  */
 export function isReserved(state: GameState, ref: ZoneSlot): boolean {
   if (state.reserved.some((r) => r.player === ref.player && r.row === ref.row && r.lane === ref.lane)) return true;
-  return ref.row === "backrow" && (state.homes ?? []).some((home) => home.player === ref.player && home.lane === ref.lane);
+  return (state.homes ?? []).some(
+    (home) => home.zone.player === ref.player && home.zone.row === ref.row && home.zone.lane === ref.lane,
+  );
 }
 
 /** B3.1 rule 6: the home zone held for this animated card, if any. */
@@ -215,9 +217,9 @@ export function homeOf(state: GameState, instanceId: string): HomeZone | undefin
 }
 
 /** B3.1 rule 6: hold a backrow zone for an animated card's return. One home per card. */
-export function reserveHome(state: GameState, player: PlayerId, lane: number, instanceId: string): void {
+export function reserveHome(state: GameState, zone: ZoneSlot, instanceId: string): void {
   const homes = (state.homes ?? []).filter((home) => home.instanceId !== instanceId);
-  homes.push({ player, lane, instanceId });
+  homes.push({ instanceId, zone: { player: zone.player, row: zone.row, lane: zone.lane } });
   state.homes = homes;
 }
 

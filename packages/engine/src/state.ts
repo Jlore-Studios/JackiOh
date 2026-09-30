@@ -12,6 +12,7 @@ import type {
   Selection,
   Tuning,
   Zone,
+  ZoneRef,
 } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import type { GameEvent, GameOverReason } from "@jackioh/shared";
@@ -110,8 +111,8 @@ export type CardInstance = {
 /** A unit zone holds a Stack pile, top card first (§3.2). */
 export type Pile = CardInstance[];
 
-/** B3.1 rule 6: an animated "Animated on your turn" card's backrow zone, held for its return. */
-export type HomeZone = { player: PlayerId; lane: number; instanceId: string };
+/** B3.1 rule 6: an animated "Animated on your turn" card's backrow zone, held for its return (SPEC §10.1). */
+export type HomeZone = { instanceId: string; zone: ZoneRef };
 
 export type ModifierExpiry =
   | { until: "thisTurn"; turn: number }
