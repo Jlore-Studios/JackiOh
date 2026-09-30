@@ -533,9 +533,9 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
   it("R439 hands on a frame only while the view is on the turn it arrived in", () => {
     const first = finalFrame(TURN_CLOCK_LAST_MS);
     const next = finalFrame(TURN_CLOCK_MS);
-    const { result, rerender } = renderHook(({ f, key }: { f: ClockFrame | null; key: string | null }) => useFrameFor(f, key), {
-      initialProps: { f: first, key: "p1:3" },
-    });
+    type HookProps = { f: ClockFrame | null; key: string | null };
+    const start: HookProps = { f: first, key: "p1:3" };
+    const { result, rerender } = renderHook(({ f, key }: HookProps) => useFrameFor(f, key), { initialProps: start });
     expect(result.current).toBe(first);
     // The next turn's view lands before its frame: the last turn's deadline is not read against it.
     rerender({ f: first, key: "p2:4" });
