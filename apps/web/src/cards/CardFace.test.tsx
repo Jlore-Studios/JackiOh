@@ -359,18 +359,22 @@ describe("B10: RulesText marks terms in bold", () => {
     expect(one(cf, ".card-text").textContent).toBe("taunt the Locked Rushing units");
   });
 
-  it("B10 every catalog text reads back unchanged through RulesText, marks and all", () => {
-    for (const card of DEFS) {
-      for (const radiant of [false, true]) {
-        const text = faceModel({ defId: card.id, def: card, radiant }).text;
-        const cf = catalogFace(card.id, radiant);
-        expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
-        // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
-        expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
-        cleanup();
+  it(
+    "B10 every catalog text reads back unchanged through RulesText, marks and all",
+    () => {
+      for (const card of DEFS) {
+        for (const radiant of [false, true]) {
+          const text = faceModel({ defId: card.id, def: card, radiant }).text;
+          const cf = catalogFace(card.id, radiant);
+          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
+          // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
+          expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
+          cleanup();
+        }
       }
-    }
-  });
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
 });
 
 /* ----------------------------------------------------------------------------------------- B13 */

@@ -27,6 +27,12 @@ import {
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const SVG_PREFIX = "data:image/svg+xml,";
+/**
+ * Where a glyph's centre may stand: a full face's art window shows about y 18 to 82 of the square
+ * (a Unit's portrait 12 to 88), and a portrait's oval narrows at the sides.
+ */
+const SHOWN = { left: 10, right: 90, top: 22, bottom: 78, figureBottom: 84 } as const;
+
 /** The themes whose cards have no emblem of their own, so a motif becomes the emblem. */
 const PLAIN_THEMES: readonly ArtThemeId[] = ["unit", "spell", "field-spell", "trap", "field-trap", "token"];
 
@@ -308,18 +314,20 @@ describe("R503 how a motif is drawn", () => {
     expect(flagbearer.motifGlyphs).toHaveLength(1);
     const [hero] = flagbearer.motifGlyphs;
     expect(hero?.glyph).toBe("flag");
-    expect(hero?.y).toBeLessThan(30);
+    // In the upper part of the band a full face's window shows (about y 18 to 82 of the box).
+    expect(hero?.y).toBeGreaterThanOrEqual(22);
+    expect(hero?.y).toBeLessThanOrEqual(40);
   });
 
-  it("R503 scatter, rise and fall glyphs keep clear of the emblem and inside the box", () => {
+  it("R503 motif glyphs stand inside the band every face's window shows, and a scatter, rise or fall keeps clear of the emblem", () => {
     for (const card of DEFS) {
       const spec = faceSpec(card, false);
       for (const placed of spec.motifGlyphs) {
         const where = `${card.id} ${placed.glyph}`;
-        expect(placed.x, where).toBeGreaterThan(0);
-        expect(placed.x, where).toBeLessThan(100);
-        expect(placed.y, where).toBeGreaterThan(0);
-        expect(placed.y, where).toBeLessThan(100);
+        expect(placed.x, where).toBeGreaterThan(SHOWN.left);
+        expect(placed.x, where).toBeLessThan(SHOWN.right);
+        expect(placed.y, where).toBeGreaterThanOrEqual(SHOWN.top);
+        expect(placed.y, where).toBeLessThanOrEqual(spec.composition === "figure" ? SHOWN.figureBottom : SHOWN.bottom);
         if (spec.motif !== null && MOTIFS[spec.motif].arrangement !== "hero") {
           const gap = Math.hypot(placed.x - spec.emblem.x, placed.y - spec.emblem.y);
           const placedAt = spec.emblem.size / (PLAIN_THEMES.includes(spec.theme) ? MOTIF_EMBLEM_SCALE : 1);

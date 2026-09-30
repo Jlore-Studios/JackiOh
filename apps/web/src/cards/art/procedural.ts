@@ -1211,12 +1211,12 @@ function circuitTraces(rng: Rng): string {
   return d;
 }
 
-/** Waves across the lower third, the `waves` motif's pattern. */
+/** Waves across the lower part of the band a face shows, the `waves` motif's pattern. */
 function waveBands(rng: Rng): string {
   let d = "";
-  const first = between(rng, 70, 76);
+  const first = between(rng, 60, 64);
   for (let k = 0; k < 3; k += 1) {
-    const y = first + k * between(rng, 7, 9);
+    const y = first + k * between(rng, 6, 8);
     const lift = between(rng, 1.6, 2.8);
     const thick = between(rng, 1.8, 2.8);
     let top = `M${pt(0, y)}`;
@@ -1234,7 +1234,7 @@ function pages(rng: Rng): string {
   const count = whole(rng, 3, 4);
   for (let k = 0; k < count; k += 1) {
     const cx = ART_BOX * ((k + 0.5) / count) + between(rng, -6, 6);
-    const cy = between(rng, 10, 38);
+    const cy = between(rng, 24, 42);
     const w = between(rng, 6.5, 8.5);
     const h = w * 1.3;
     const tilt = between(rng, -28, 28) * DEGREES;
@@ -1258,22 +1258,26 @@ function steam(rng: Rng): string {
     const points: [number, number][] = [];
     for (let i = 0; i <= 10; i += 1) {
       const t = i / 10;
-      points.push([x0 + sway * Math.sin(t * 2 * Math.PI), 46 - t * 34]);
+      points.push([x0 + sway * Math.sin(t * 2 * Math.PI), 54 - t * 32]);
     }
     d += bandPath(points, between(rng, 1.6, 2.4));
   }
   return d;
 }
 
-/** Pancake: syrup along the top edge, running down in drips. */
+/**
+ * Pancake: syrup across the top, running down in drips. It reaches just past the top of the band a
+ * full face shows, so the drips hang from the window's top edge there, and a squarer window shows
+ * the pool they run from.
+ */
 function syrup(rng: Rng): string {
-  const depth = between(rng, 1.6, 2.6);
+  const depth = between(rng, 17.5, 19.5);
   let d = `M0 0L${ART_BOX} 0L${pt(ART_BOX, depth)}L${pt(0, depth)}Z`;
   const count = whole(rng, 3, 5);
   for (let k = 0; k < count; k += 1) {
     const x = ART_BOX * ((k + 0.5) / count) + between(rng, -6, 6);
     const r = between(rng, 1.1, 1.8);
-    const length = between(rng, 4, 12);
+    const length = between(rng, 4, 11);
     d += `M${pt(x - r, depth)}L${pt(x + r, depth)}L${pt(x + r, depth + length)}A${fmt(r)} ${fmt(r)} 0 0 1 ${pt(x - r, depth + length)}Z`;
   }
   return d;
@@ -1335,17 +1339,34 @@ const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spel
 
 type Placed = { x: number; y: number; size: number };
 
+/**
+ * The band of the square every face shows. A full face's art window is about 1.6 times as wide as
+ * it is tall and `background-size: cover` fills it, so it shows roughly y 18 to 82 of the box (a
+ * Unit's portrait a little more, a compact face nearly all). A motif stays inside this band.
+ */
+const SHOWN_TOP = 22;
+const SHOWN_BOTTOM = 78;
+
 function farEnough(x: number, y: number, size: number, taken: readonly Placed[]): boolean {
   return taken.every((other) => Math.hypot(other.x - x, other.y - y) >= (other.size + size) / 2 + 1.5);
 }
 
 /**
- * Where a motif's glyphs go (R503), from the motif stream. `hero` puts one larger glyph in the top
- * corner furthest from the emblem and the glow (a plain card has already made it its emblem, so it
- * adds nothing); `scatter` strews a handful through the composition's sky; `rise` stands a row along
- * the ground; `fall` drops a few from the top. Nothing lands on the emblem.
+ * Where a motif's glyphs go (R503), from the motif stream, inside the band every face shows and
+ * inside the rounded windows (a portrait's oval, a Field Spell's arch). `hero` puts one larger glyph
+ * in the upper corner furthest from the emblem and the glow (a plain card has already made it its
+ * emblem, so it adds nothing; a figure standing to one side has its emblem in that corner, so the
+ * motif goes just under it); `scatter` strews a handful through the composition's sky; `rise`
+ * stands a row along the ground; `fall` drops a few from above. Nothing lands on the emblem.
  */
-function motifPlacements(rng: Rng, motif: Motif, plain: boolean, geometry: Geometry): (Placed & { rotate: number; opacity: number })[] {
+function motifPlacements(
+  rng: Rng,
+  motif: Motif,
+  plain: boolean,
+  composition: Composition,
+  layout: string,
+  geometry: Geometry,
+): (Placed & { rotate: number; opacity: number })[] {
   const emblem: Placed = { x: geometry.emblem.x, y: geometry.emblem.y, size: geometry.emblem.size };
   const taken: Placed[] = [emblem];
   const out: (Placed & { rotate: number; opacity: number })[] = [];
@@ -1354,34 +1375,45 @@ function motifPlacements(rng: Rng, motif: Motif, plain: boolean, geometry: Geome
     taken.push({ x, y, size });
     out.push({ x, y, size, rotate, opacity });
   };
+  const figure = composition === "figure";
   switch (motif.arrangement) {
     case "hero": {
       if (plain) return out;
+      const flip = rng() < 0.5;
+      const size = figure ? between(rng, 14, 16) : between(rng, 15, 18);
+      const rotate = between(rng, -10, 10);
+      if (figure && (layout === "left" || layout === "right")) {
+        out.push({ x: emblem.x, y: emblem.y + emblem.size / 2 + size / 2 + 3, size, rotate, opacity: 0.95 });
+        return out;
+      }
+      const inset = figure ? 28 : 20;
       const corners = [
-        { x: 19, y: 19 },
-        { x: 81, y: 19 },
+        { x: inset, y: 30 },
+        { x: ART_BOX - inset, y: 30 },
       ];
       const score = (corner: { x: number; y: number }): number =>
         Math.min(Math.hypot(corner.x - emblem.x, corner.y - emblem.y), Math.hypot(corner.x - geometry.glow.cx, corner.y - geometry.glow.cy));
-      const flip = rng() < 0.5;
       const [a, b] = flip ? [corners[1], corners[0]] : [corners[0], corners[1]];
-      const corner = a !== undefined && b !== undefined && score(b) > score(a) ? b : (a ?? { x: 19, y: 19 });
-      out.push({ x: corner.x, y: corner.y, size: between(rng, 17, 20), rotate: between(rng, -10, 10), opacity: 0.95 });
+      const corner = a !== undefined && b !== undefined && score(b) > score(a) ? b : (a ?? { x: inset, y: 30 });
+      out.push({ x: corner.x, y: corner.y, size, rotate, opacity: 0.95 });
       return out;
     }
     case "scatter": {
       const count = whole(rng, 4, 6);
+      const top = Math.max(geometry.motes.top, SHOWN_TOP) + 3;
+      const bottom = Math.max(top + 6, Math.min(geometry.motes.bottom, SHOWN_BOTTOM) - 3);
       for (let k = 0; k < count * 3 && out.length < count; k += 1) {
-        const size = between(rng, 7, 10);
-        place(between(rng, 8, 92), between(rng, geometry.motes.top + 4, Math.max(geometry.motes.top + 8, geometry.motes.bottom - 2)), size, between(rng, -25, 25), between(rng, 0.8, 0.95));
+        place(between(rng, 12, 88), between(rng, top, bottom), between(rng, 7, 10), between(rng, -25, 25), between(rng, 0.8, 0.95));
       }
       return out;
     }
     case "rise": {
       const count = whole(rng, 3, 5);
+      // A figure's portrait shows a little lower, and its oval narrows at the foot.
+      const [left, right, low, high] = figure ? [26, 74, 76, 82] : [15, 85, 68, 74];
       for (let k = 0; k < count; k += 1) {
-        const size = between(rng, 9, 13);
-        place(10 + (80 * k) / (count - 1) + between(rng, -3, 3), between(rng, 86, 92), size, between(rng, -8, 8), 0.95);
+        const size = between(rng, 9, 12);
+        place(left + ((right - left) * k) / (count - 1) + between(rng, -3, 3), between(rng, low, high), size, between(rng, -8, 8), 0.95);
       }
       return out;
     }
@@ -1389,7 +1421,7 @@ function motifPlacements(rng: Rng, motif: Motif, plain: boolean, geometry: Geome
       const count = whole(rng, 3, 5);
       for (let k = 0; k < count; k += 1) {
         const size = between(rng, 6.5, 9.5);
-        place(ART_BOX * ((k + 0.5) / count) + between(rng, -5, 5), between(rng, 8, 30), size, between(rng, -18, 18), 0.9);
+        place(14 + (72 * (k + 0.5)) / count + between(rng, -5, 5), between(rng, 24, 40), size, between(rng, -18, 18), 0.9);
       }
       return out;
     }
@@ -1586,7 +1618,7 @@ export function artSpec(
   const motifGlyphs: MotifGlyphSpec[] =
     drawn === null
       ? []
-      : motifPlacements(motifStream, drawn, plain, geometry).map((placed) => ({
+      : motifPlacements(motifStream, drawn, plain, composition, layout, geometry).map((placed) => ({
           glyph: drawn.glyph,
           x: round2(placed.x),
           y: round2(placed.y),

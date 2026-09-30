@@ -44,11 +44,12 @@
 }
 
 /* A small face (a hand card; 149 mirrors FACE_TEXT_MIN_HEIGHT_PX) moves its gem to the top-right
-   corner; the mark sits just under it at the gem's size. */
+   corner; the mark sits just under it at the gem's size, below the turned gem's corner (the gem is
+   a 7.5cqh square at 2.2cqh turned 45deg, so its lowest point is at 11.25cqh). */
 @container cardface (max-height: 149px) {
   .cf:not([data-layout="minion"]) .cf-set,
   .cf:not([data-layout="minion"])[data-layout] .cf-set {
-    top: 10.4cqh;
+    top: 12cqh;
     right: 4.5cqw;
     width: 7.5cqh;
     height: 7.5cqh;

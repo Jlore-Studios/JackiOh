@@ -27,7 +27,7 @@ const ART_CACHE_MAX = 512;
 
 /** The accent glyph is quieter than the emblem. */
 const ACCENT_OPACITY = 0.8;
-/** An ink-drop mote (Book) is this much taller than its radius says a dot is wide. */
+/** An ink-drop mote (Book): its tail rises this many radii above its centre. */
 const DROP_TAIL = 2.2;
 
 /** One glyph from EMBLEMS, placed, turned and scaled into the box. */
