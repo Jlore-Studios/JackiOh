@@ -37,6 +37,83 @@ def nothing(reason: str) -> dict[str, Any]:
     return {"action": "none", "reason": reason}
 
 
+def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
+    """Why no run may start now, whatever is queued, or None. `make` and `peek` share it."""
+    cfg = ctx.cfg
+    now = ctx.now()
+    if ctx.repo_halted():
+        return "halted by .harness/HALT on main"
+    if state.get("halted"):
+        return "halted by /harness halt"
+    refusal = usage_refusal(state, dict(cfg.usage_stop), now)
+    if refusal:
+        return f"usage stop: {refusal}"
+    if cfg.claude_ready_known and not cfg.claude_token_present:
+        return "the CLAUDE_CODE_OAUTH_TOKEN secret is not set, so no model can run"
+    last_infra = parse_iso((state.get("last_infra") or {}).get("at"))
+    if not force and last_infra is not None and now - last_infra < INFRA_BACKOFF:
+        return (f"backing off after a failure outside any item at {iso(last_infra)}: "
+                f"{(state.get('last_infra') or {}).get('reason', '')[:200]}")
+    return None
+
+
+def peek(ctx: Context, *, force: bool = False, item: int | None = None,
+         mode: str = "auto") -> tuple[bool, str, bool]:
+    """Whether a run would find work, why, and whether that work was forced. Changes nothing.
+
+    The gate asks this before it spends anything on reading the subscription's usage."""
+    if mode not in MODES:
+        return False, f"unknown mode {mode!r}", False
+    state = ctx.store.load()
+    stop = stops(ctx, state, force)
+    if stop:
+        return False, stop, False
+    only_forced = not ctx.window.is_open(ctx.now()) and not force
+    queue = candidates(ctx, state)
+    if only_forced:
+        queue = [c for c in queue if c.forced]
+    if item is not None:
+        queue = [c for c in queue if c.number == int(item)]
+    if mode in ("build", "revise"):
+        queue = [c for c in queue if c.kind == mode]
+    if mode != "suggest" and queue:
+        first = queue[0]
+        return True, f"#{first.number} is queued to {first.kind}", bool(force or first.forced)
+    if only_forced:
+        return False, f"outside the night window ({ctx.window.describe()})", False
+    if item is not None and mode != "suggest":
+        return False, f"#{item} is not queued", False
+    tidy = housekeeping_due(ctx, state)
+    if tidy:
+        return True, tidy, force
+    if mode in ("auto", "suggest") and suggestions_due(ctx, state, force=mode == "suggest"):
+        return True, "a suggestion survey is due", force
+    return False, "nothing is queued", False
+
+
+def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
+    """What `housekeeping` would requeue, read without changing anything, or None."""
+    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+        run_id = str(state["items"].get(str(thread["number"]), {}).get("run_id") or "")
+        try:
+            alive = bool(run_id) and ctx.gh.get_run(run_id).get("status") in (
+                "queued", "in_progress", "waiting")
+        except GitHubError:
+            alive = False
+        if not alive:
+            return f"#{thread['number']} was left working by a run that ended"
+    for thread in ctx.gh.list_issues(labels=LABEL_PR):
+        names = label_names(thread)
+        if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+            continue
+        record = state["items"].get(str(thread["number"]), {})
+        if record.get("stop_requested"):
+            continue
+        if ctx.gh.get_pull(int(thread["number"])).get("mergeable_state") == "dirty":
+            return f"#{thread['number']} conflicts with main"
+    return None
+
+
 def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: str = "auto") -> dict:
     """Decide what this run does. Outside the window only forced work runs: the `force` of this
     dispatch, or an item an operator queued with `--force`, which outlives the run it started."""
@@ -44,20 +121,10 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     now = ctx.now()
     if mode not in MODES:
         return nothing(f"unknown mode {mode!r}")
-    if ctx.repo_halted():
-        return nothing("halted by .harness/HALT on main")
     state = ctx.store.load()
-    if state.get("halted"):
-        return nothing("halted by /harness halt")
-    refusal = usage_refusal(state, dict(cfg.usage_stop), now)
-    if refusal:
-        return nothing(f"usage stop: {refusal}")
-    if cfg.claude_ready_known and not cfg.claude_token_present:
-        return nothing("the CLAUDE_CODE_OAUTH_TOKEN secret is not set, so no model can run")
-    last_infra = parse_iso((state.get("last_infra") or {}).get("at"))
-    if not force and last_infra is not None and now - last_infra < INFRA_BACKOFF:
-        return nothing(f"backing off after a failure outside any item at {iso(last_infra)}: "
-                       f"{(state.get('last_infra') or {}).get('reason', '')[:200]}")
+    stop = stops(ctx, state, force)
+    if stop:
+        return nothing(stop)
     in_window = ctx.window.is_open(now)
     only_forced = not in_window and not force
     if only_forced and not any(c.forced for c in candidates(ctx, state)):

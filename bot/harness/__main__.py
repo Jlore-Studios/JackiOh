@@ -1,6 +1,6 @@
 """The command line: `python -m harness <command>` from the `bot/` directory.
 
-The workflows call `plan`, `work`, `deliver` and `event`. An operator calls `status`, `halt`,
+The workflows call `peek`, `quiet`, `plan`, `work`, `deliver` and `event`. An operator calls `status`, `halt`,
 `start`, `dispatch`, `doctor`, `setup` and `window`, with a token in BOT_GITHUB_TOKEN,
 GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 """
@@ -12,6 +12,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -20,12 +21,13 @@ from harness import context as context_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import plan as plan_mod
+from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness.clock import human_delta, iso
 from harness.config import LABELS, Config
 from harness.errors import ConfigError, GitHubError, HarnessError
 from harness.redact import redact
-from harness.runner import get_runner
+from harness.runner import get_runner, ping_usage
 from harness.state import record_usage, usage_refusal
 from harness.state import item as state_item
 from harness.work import Worker, check_templates
@@ -82,6 +84,36 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
     _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n")
     print(f"plan: {what} {planned.get('reason', '')}".strip())
+    return 0
+
+
+def cmd_peek(cfg: Config, args: argparse.Namespace) -> int:
+    ctx = _ctx(cfg, write=False)
+    item = int(args.item) if str(args.item or "").strip().lstrip("#").isdigit() else None
+    work, reason, forced = plan_mod.peek(ctx, force=args.force, item=item, mode=args.mode)
+    check = work and not forced and cfg.quiet.enabled
+    _output({"work": str(work).lower(), "quiet_check": str(check).lower()})
+    then = " First, the subscription must be quiet." if check else ""
+    _summary(f"### Peek: {'work' if work else 'nothing to do'}\n\n{reason}.{then}\n")
+    print(f"peek: {'work' if work else 'nothing'}: {reason}.{then}")
+    return 0
+
+
+def cmd_quiet(cfg: Config, args: argparse.Namespace) -> int:
+    ctx = _ctx(cfg, write=False)
+    token = cfg.actions_token or cfg.bot_token
+    verdict = quiet_mod.wait_for_quiet(
+        cfg.quiet,
+        ping=lambda: ping_usage(cfg.claude_bin, cfg.quiet.ping_model),
+        partner=lambda t1, t2: quiet_mod.partner_spending(
+            cfg.quiet.partners, lambda repo: quiet_mod.PartnerReader(repo, token), t1, t2),
+        now=ctx.now,
+        sleep=time.sleep,
+    )
+    _output({"quiet": str(verdict.quiet).lower()})
+    excused = f" (the rise was {verdict.excused_by})" if verdict.excused_by else ""
+    _summary(f"### Quiet: {'yes' if verdict.quiet else 'no'}\n\n{verdict.reason}{excused}.\n")
+    _dump(verdict.to_dict())
     return 0
 
 
@@ -299,6 +331,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true", help="ignore the night window")
     p.add_argument("--item", default="")
     p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
+    p = sub.add_parser("peek", help="would a run find work? changes nothing")
+    p.add_argument("--force", action="store_true", help="ignore the night window")
+    p.add_argument("--item", default="")
+    p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
+    sub.add_parser("quiet", help="wait until nobody else is spending the subscription")
     p = sub.add_parser("work", help="the model job: build, review and fix one item")
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
@@ -331,6 +368,8 @@ def parser() -> argparse.ArgumentParser:
 
 
 COMMANDS = {
+    "peek": cmd_peek,
+    "quiet": cmd_quiet,
     "plan": cmd_plan,
     "work": cmd_work,
     "deliver": cmd_deliver,

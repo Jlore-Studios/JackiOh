@@ -23,6 +23,8 @@ flowchart TD
   E["bot-commands.yml, within seconds<br/>trust check, queue label, reply"]
   E -- "--force" --> PL
   subgraph night["bot-night.yml, hourly from 21:00 to 07:00 Central"]
+    GA["gate (Claude token, no write token)<br/>any work? then: is the subscription quiet?<br/>usage read twice, 10 minutes apart"]
+    GA -- "quiet, or only the partner bot spent" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? window? usage left?<br/>claim one item: bot:working"]
     PL --> B["work (Claude token only)<br/>builder: Opus, xhigh effort,<br/>subagents and worktrees"]
     B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
@@ -106,9 +108,36 @@ needs level 3.
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 
+## It waits for the subscription to be quiet
+
+The bot shares one Claude subscription with you and with
+[bright-bots-harness](https://github.com/jgoetzmann/bright-bots-harness). So before a run claims
+anything, the `gate` job checks two things:
+
+1. **Is there work?** (`harness peek`, which reads and changes nothing). If not, the run ends
+   here and spends nothing.
+2. **Is anyone else using the subscription?** (`harness quiet`). It reads the subscription's
+   usage with the smallest call there is (one turn of Haiku in an empty folder), waits 10
+   minutes, and reads it again.
+   - If usage did not rise, nobody else is working, and the run goes ahead.
+   - If it rose while bright-bots-harness was in one of its spending steps ("Run planned items",
+     "Discover and propose", "Sweep keywords", "Reconcile stale"), the rise is the partner's.
+     The bot goes ahead anyway, so the two bots can run at the same time.
+   - Any other rise is you or another agent, so it waits another 10 minutes and looks again.
+     After 40 minutes it gives up until the next hourly run.
+
+bright-bots-harness applies the same rule the other way round: its partner is this bot's "Build,
+check and review" step. The gate's own step, "Wait until the subscription is quiet", never counts
+as spending. A forced run (`--force`, `/harness run`, or an item queued with `--force`) skips the
+wait. The settings are `quiet` in `.harness/config.json`.
+
+There are two things it cannot tell apart. It cannot separate you from the partner while the
+partner is spending. And it cannot see a run of either bot that happens somewhere other than
+GitHub Actions, such as the harness's local `bb` container.
+
 ## One night, step by step
 
-1. **plan** (seconds, no model). It stops at once if `.harness/HALT` is on `main`, if someone
+1. **plan** (seconds, no model). It runs only after the gate says go. It stops at once if `.harness/HALT` is on `main`, if someone
    said `/harness halt`, if the window is closed (unless forced), or if the last usage reading is
    over a stop (`usage_stop`: 98% of the 5-hour session, 90% of the week). It requeues anything a
    dead run left `bot:working` and queues a revision for any bot pull request that conflicts with
@@ -250,7 +279,8 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `
 | `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
 | `trust.py`, `commands.py` | who may command it, and how a comment is read |
 | `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |
-| `plan.py`, `work.py`, `deliver.py` | the three jobs of a night run |
+| `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
+| `quiet.py` | the gate's second question: is anyone else spending the subscription |
 | `runner.py` | `claude -p` with stream-json usage readings, plus the test fake |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |

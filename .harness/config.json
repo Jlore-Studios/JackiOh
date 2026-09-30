@@ -29,6 +29,22 @@
   ],
   "ci_reruns": 1,
   "suggestions": { "enabled": true, "max_open": 4, "min_interval_hours": 20 },
+  "quiet": {
+    "enabled": true,
+    "interval_minutes": 10,
+    "max_wait_minutes": 40,
+    "ping_model": "haiku",
+    "partners": [
+      {
+        "repo": "jgoetzmann/bright-bots-harness",
+        "workflows": {
+          "implement.yml": ["Run planned items"],
+          "discover.yml": ["Discover and propose"],
+          "feedback.yml": ["Sweep keywords", "Reconcile stale"]
+        }
+      }
+    ]
+  },
   "forbidden_paths": [
     ".github/",
     ".harness/",

@@ -34,11 +34,15 @@ or comment `@jgoetzmann-bot <what you want>`. Overnight, Claude Opus builds it, 
 checks run, and an independent Opus reviewer tries to find every reason it should not ship. When
 the reviewer approves, the bot opens a pull request that merges itself once CI passes.
 `/harness status`, `/harness halt` and `/harness start` work in any comment. When the queue is
-empty, the bot suggests improvements as issues, at most four at a time.
+empty, the bot suggests improvements as issues, at most four at a time. It starts only when the
+Claude subscription is quiet. It reads the usage twice, ten minutes apart, and holds back while
+you or another agent are using it. The exception is its partner bot, bright-bots-harness, which
+it may run alongside.
 
 ```mermaid
 flowchart LR
-  A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> B["plan<br/>21:00–07:00 Central"]
+  A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> Q{"subscription quiet?<br/>21:00–07:00 Central"}
+  Q -- "yes" --> B["plan"]
   B --> C["Opus builder<br/>subagents, worktrees"]
   C --> D["repository checks"]
   D --> E{"adversarial<br/>Opus reviewer"}
