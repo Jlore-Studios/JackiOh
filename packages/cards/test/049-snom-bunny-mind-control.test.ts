@@ -48,7 +48,7 @@ describe("#49 Snom Bunny Mind Control", () => {
     expect(g.card(prey).controller).toBe("p1");
     expect(g.card(prey).owner).toBe("p2");
     g.expectEvents("cardPlayed", "controlChanged", "enteredGraveyard");
-    // Patch v0.2.0: Mind Control costs (4), all of the 4 mana the scenario starts with.
+    // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
     g.expectMana("p1", 0);
   });
 
@@ -171,7 +171,6 @@ describe("#49 Snom Bunny Mind Control", () => {
   it("R81: both faces declare one enemy permanent, and the radiant face adds the flag", () => {
     expect(def.id).toBe(MIND_CONTROL);
     expect(def.type).toBe("Spell");
-    // Patch v0.2.0 raised it from (3).
     expect(def.cost).toBe(4);
     for (const face of [base, radiant]) {
       expect(face.targets).toEqual([

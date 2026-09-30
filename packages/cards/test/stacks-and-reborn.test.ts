@@ -29,6 +29,8 @@ import { scenario, type Scenario } from "./_harness";
 
 const VANILLA = "core-008";
 const HIT_JOB = "core-016";
+/** Felinor Fiender (2) and Hit Job, (3) since patch v0.2.0 (issue #40), in one turn. */
+const MANA_FOR_FIENDER_AND_HIT_JOB = 5;
 const BIG_FELINOR = "core-043";
 const RUSH_TOKEN_FARM = "core-058";
 const FIENDER = "core-092";
@@ -54,8 +56,7 @@ describe("R13: the state check never reaches under a Stack pile", () => {
     const g = scenario({
       p1: {
         hand: [FIENDER, HIT_JOB],
-        // Felinor Fiender (2) and Hit Job ((3) since patch v0.2.0).
-        mana: 5,
+        mana: MANA_FOR_FIENDER_AND_HIT_JOB,
         field: [{ def: RUSH_TOKEN, lane: 1, damage: 4 }],
         backrow: [{ def: RUSH_TOKEN_FARM, lane: 1, radiant: true }],
         library: [...LIBRARY],
@@ -84,8 +85,7 @@ describe("R13: the state check never reaches under a Stack pile", () => {
     const g = scenario({
       p1: {
         hand: [FIENDER, HIT_JOB],
-        // Felinor Fiender (2) and Hit Job ((3) since patch v0.2.0).
-        mana: 5,
+        mana: MANA_FOR_FIENDER_AND_HIT_JOB,
         field: [{ def: FIENDER, lane: 1, damage: 10 }, { def: BIG_FELINOR, lane: 2 }],
         library: [...LIBRARY],
       },
@@ -200,7 +200,7 @@ describe("R212, R119: a card that resumes on top of its pile did not see what un
   // recorded, and a resume records none (`stays.noteUncovered` keeps it now).
   it("R212 a card dormant under a Stack does not answer the death that uncovers it (§3.2, R153)", () => {
     const g = scenario({
-      p1: { hand: [FIENDER, HIT_JOB], mana: 5 }, // Hit Job costs (3) since patch v0.2.0
+      p1: { hand: [FIENDER, HIT_JOB], mana: MANA_FOR_FIENDER_AND_HIT_JOB },
       p2: { field: ["core-011"], health: 20 },
     });
     // "Whenever a unit dies, deal 1 damage to the enemy hero", in p1's lane 1.
@@ -226,7 +226,7 @@ describe("R212, R119: a card that resumes on top of its pile did not see what un
 
   it("R119 a card a play uncovers in its Stack pile does not answer that play's cardResolved (§3.2, R153)", () => {
     const g = scenario({
-      p1: { hand: [FIENDER, HIT_JOB], mana: 5 }, // Hit Job costs (3) since patch v0.2.0
+      p1: { hand: [FIENDER, HIT_JOB], mana: MANA_FOR_FIENDER_AND_HIT_JOB },
       p2: { field: ["core-011"], health: 20 },
     });
     // "Whenever a card finishes resolving, deal 1 damage to the enemy hero", in p1's lane 1.
@@ -317,7 +317,7 @@ describe("R212: a resume is kept against the removal that caused it, and no late
   // long before was taken for one that resumed after whatever the same batch did first.
   it("R212 a card that resumed under a Stack answers a later hit even when the same list then exiles the card that uncovered it from the graveyard", () => {
     const g = scenario({
-      p1: { hand: [FIENDER, HIT_JOB], mana: 5 }, // Hit Job costs (3) since patch v0.2.0
+      p1: { hand: [FIENDER, HIT_JOB], mana: MANA_FOR_FIENDER_AND_HIT_JOB },
       p2: { field: ["core-011"], health: 20 },
     });
     const watcher = placeHitWatcher(g, "fixture:r11-hit-watcher", 1);

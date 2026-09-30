@@ -81,7 +81,7 @@ describe("R43, R151: a Heroic Power created on the field rolls its power", () =>
       .map((lane) => g.backrow("p1", lane))
       .filter((card): card is CardInstance => card !== null && card.defId === HEROIC_POWER);
     expect(copies).toHaveLength(2);
-    expect(g.state.players.p1.mana.current).toBe(4); // 10 − 3 (Cube) − 3 (Hit Job, patch v0.2.0): any power's X fits
+    expect(g.state.players.p1.mana.current).toBe(4); // 10 − 3 (Cube) − 3 (Hit Job, v0.2.0): any power's X fits
 
     const offered = legalActions(g.state, "p1")
       .filter((action) => action.type === "activatePower")

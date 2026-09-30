@@ -143,7 +143,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Discover: verb("Discover", "Choose 1 of 3 options"),
   Tribute: verb(
     "Tribute",
-    "As an additional cost of playing a card, sacrifice X of your units; a card whose own text tributes (Carnivorous Cube) sacrifices what that text names instead, which may be any of your other permanents, backrow included (R41)",
+    "As an additional cost of playing a card, sacrifice X of your units; a card whose own text tributes (Carnivorous Cube) sacrifices what that text names instead, one of your other Units (R41, R428)",
   ),
   Embiggen: verb("Embiggen", "Two prices, bigger effect for the bigger one"),
   Recruit: verb("Recruit", "Summon from library, scanning top down"),

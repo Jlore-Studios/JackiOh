@@ -60,13 +60,8 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
   it("R213 a Gifted Program stolen after it fired for its owner this turn still makes the thief's first cheap card Radiant (§8 Conventions, R171)", () => {
     // p1's turn. p2 holds Gifted Program, a Prem Panther, and a Hinder on top of the library.
     const g = scenario({
-      // Mind Control costs (4) since patch v0.2.0; the costMod keeps the (3) this test reads, which
-      // is above Gifted Program's 1 and leaves Stockpile affordable.
-      p1: {
-        hand: [{ def: MIND_CONTROL, costMod: -1 }, STOCKPILE],
-        field: [{ def: "core-011", lane: 1 }],
-        library: [...LIBRARY],
-      },
+      // Snom Bunny Mind Control (4 since patch v0.2.0, issue #40) and Stockpile (1).
+      p1: { hand: [MIND_CONTROL, STOCKPILE], field: [{ def: "core-011", lane: 1 }], library: [...LIBRARY], mana: 5 },
       p2: {
         hand: [VANILLA],
         field: [{ def: PANTHER, lane: 1 }],
@@ -84,7 +79,7 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
     expect(g.state.players.p1.mana.nextTurnMod).toBe(-2); // the radiant face ran: "2 lower"
 
     // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: Snom Bunny
-    // Mind Control cost 3. Stockpile is p1's first cheap card, so it resolves its radiant text.
+    // Mind Control cost 4. Stockpile is p1's first cheap card, so it resolves its radiant text.
     g.play(MIND_CONTROL, { targets: at(gifted) });
     expect(g.card(gifted).controller).toBe("p1");
     const stockpile = g.card(STOCKPILE);

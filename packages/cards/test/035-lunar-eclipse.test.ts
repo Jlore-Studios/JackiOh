@@ -13,8 +13,8 @@
 // with it. `src/scripts/035-lunar-eclipse.ts`'s header writes out the one-line engine fix.
 // Not one assertion in this file has been softened to go around it.
 //
-// The second spell is #16 Hit Job, a 2-cost Spell: at full price p1 would be left with 1 mana, with
-// the discount 2 (and 3 with the radiant −2).
+// The second spell is #16 Hit Job, a (3) Cost Spell since patch v0.2.0 (issue #40): at full price p1
+// would be left with 0 mana, with the discount 1 (and 2 with the radiant −2).
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
@@ -27,7 +27,7 @@ function must(card: CardInstance | null, what: string): CardInstance {
 
 const AT_ENEMY_HERO = [{ pick: "hero", player: "p2" } as const];
 
-/** p1 holds the eclipse, a 2-cost spell and a 1-cost unit; both sides keep a unit on the board. */
+/** p1 holds the eclipse, a (3) Cost spell and a (1) Cost unit; both sides keep a unit on the board. */
 function board(): ReturnType<typeof scenario> {
   return scenario({
     seed: "lunar",
@@ -60,7 +60,7 @@ describe("#35 Lunar Eclipse — base", () => {
     s.expectMana("p1", 3);
 
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    // Hit Job's printed 3 (patch v0.2.0), less 1.
+    // Hit Job's printed 3, less 1.
     s.expectMana("p1", 1);
   });
 
@@ -89,7 +89,7 @@ describe("#35 Lunar Eclipse — base", () => {
     s.expectMana("p1", 5);
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
     s.expectMana("p1", 3);
-    // The discount was consumed by the first Spell, so this one pays its printed 3 (patch v0.2.0).
+    // The discount was consumed by the first Spell, so this one pays its printed 3.
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 2), "p2 lane 2").id }] });
     s.expectMana("p1", 0);
   });
@@ -115,7 +115,6 @@ describe("#35 Lunar Eclipse — base", () => {
 
     const mana = s.state.players.p1.mana.current;
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    // Hit Job's printed 3 (patch v0.2.0).
     s.expectMana("p1", mana - 3);
   });
 });
@@ -136,7 +135,7 @@ describe("#35 Lunar Eclipse — radiant", () => {
     s.expectMana("p1", 3);
 
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    // Hit Job's printed 3 (patch v0.2.0), less 2.
+    // Hit Job's printed 3, less 2 (R65).
     s.expectMana("p1", 2);
   });
 

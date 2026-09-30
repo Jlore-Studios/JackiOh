@@ -788,6 +788,10 @@ declare
     ['join_room',                   'definer'],
     ['live_matches',                'definer'],
     ['on_profile_activated',        'definer'],
+    -- 0015, R481: the trigger on app.settings' catalog_version stamp, DEFINER like
+    -- on_profile_activated, the other trigger that grants the launch collection: it runs
+    -- app.grant_launch_collection_all as the owner, whoever stamped the version.
+    ['on_catalog_version_stamped',  'definer'],
     ['profile_is_active',           'definer'],
     ['reap_stale_matches',          'definer'],
     ['redeem_invite_code',          'definer'],
@@ -859,15 +863,16 @@ begin
     array_length(expected, 1);
 end $$;
 
-\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed included, and refuses any other ==='
+\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake and AI included, and refuses any other ==='
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
--- re-adds the check with it. Each probe row is removed before the next, and each probe runs in a
+-- re-adds the check with it, and 0014 with patch v0.2.0's Book, Pancake and AI (B2.4). Each probe row is removed before the next, and each probe runs in a
 -- block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$
 declare
   -- The `Tag` union in packages/shared/src/catalog-types.ts, in its order.
   catalog_tags constant text[] := array[
-    'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Token'];
+    'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
+    'AI', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -883,14 +888,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All nine on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All twelve on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all nine tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twelve tags';
   end;
   delete from public.cards where id = 'check18-probe';
 

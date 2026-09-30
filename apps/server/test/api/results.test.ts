@@ -17,10 +17,12 @@ import { initialClocks, matchCeilingAt } from "../../src/match/clock";
 import { eloUpdate } from "../../src/config";
 import type { FrozenTrio, MatchSeat, ResultRow, SeriesRow } from "../../src/api/ports";
 import type { TerminalOutcome } from "../../src/match/contracts";
-import { createFakeMatchDirectory, createTestDeps, type TestDeps } from "../fakes/deps";
+import { createFakeMatchDirectory, createTestDeps, testConfig, type TestDeps } from "../fakes/deps";
 import { createFakeEngine, fakeDeck } from "../fakes/engine";
 
 const MINUTE = 60 * 1000;
+/** A minute past the test config's ceiling (R79, R389), whatever it is. */
+const PAST_CEILING_MS = (testConfig().matchCeilingMinutes + 1) * MINUTE;
 const MATCH_ID = "match-1";
 const A = "profile-a";
 const B = "profile-b";
@@ -254,8 +256,8 @@ describe("results (M7-T2)", () => {
 
   describe("the reaper (§9.5, R112)", () => {
     it("resolves a match past its ceiling as a draw and leaves both ratings unchanged (R112)", async () => {
-      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: 61 * MINUTE });
-      const startedAt = deps.timers.now() - 61 * MINUTE;
+      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: PAST_CEILING_MS });
+      const startedAt = deps.timers.now() - PAST_CEILING_MS;
       expect(matchCeilingAt(startedAt, deps.config)).toBeLessThan(deps.timers.now());
 
       expect(await reapStuckMatches(deps)).toEqual([MATCH_ID]);
@@ -281,14 +283,14 @@ describe("results (M7-T2)", () => {
     });
 
     it("is a no-op once the actor has already recorded the ending", async () => {
-      const deps = await scenario({ startedOffsetMs: 61 * MINUTE });
+      const deps = await scenario({ startedOffsetMs: PAST_CEILING_MS });
       await record(deps, [{ type: "concede", playerId: "p2" }]);
       expect(await reapStuckMatches(deps)).toEqual([]);
       await expectOneEnding(deps, { winner: A, reason: "concede", ratingAfter: [WIN, LOSS] });
     });
 
     it("keeps its own row when an actor reports the same match afterwards", async () => {
-      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: 61 * MINUTE });
+      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: PAST_CEILING_MS });
       await reapStuckMatches(deps);
       const late = await record(deps, [{ type: "concede", playerId: "p2" }]);
       expect(late.reason).toBe("match-ceiling");

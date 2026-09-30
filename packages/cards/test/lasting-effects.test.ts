@@ -123,9 +123,7 @@ describe("R209: Twinspell's grant follows its current face", () => {
       active: "p2",
       turn: 8,
       p1: {
-        // Mind Control costs (4) since patch v0.2.0; the costMod keeps it at the (3) this test was
-        // built on, so Stockpile stays affordable and the turn does not end by itself (R82).
-        hand: [{ def: MIND_CONTROL, radiant: true, costMod: -1 }, STOCKPILE, VANILLA],
+        hand: [{ def: MIND_CONTROL, radiant: true }, STOCKPILE, VANILLA, "core-t-coin"],
         mana: 10,
         library: [...LIBRARY, ...LIBRARY],
       },
@@ -135,6 +133,9 @@ describe("R209: Twinspell's grant follows its current face", () => {
     g.play(TWINSPELL, { zone: 2 });
     g.endTurn();
     expect(g.state.active).toBe("p1");
+    // #49 costs (4) since patch v0.2.0 (issue #40): The Coin, played before Twinspell is p1's, pays
+    // for Stockpile after it.
+    g.play("core-t-coin");
 
     // "Steal target enemy permanent; it also becomes Radiant". Twinspell is p1's now, and Radiant
     // on the field, where §5.2 has its text be the radiant one from then on: "Echo +2".

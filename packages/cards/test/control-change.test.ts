@@ -427,8 +427,8 @@ describe("R171 with the cards that change control", () => {
 
   it("R171 #49 radiant: making a stolen #11 Radiant gives it Charge, so it may attack the hero at once", () => {
     const g = scenario({
-      // Mind Control costs (4) since patch v0.2.0: a fifth mana keeps Mr. Vanilla playable, so the
-      // turn does not end by itself (R82) and hand p2 a fatigue draw before the hit is read.
+      // #49 costs (4) since patch v0.2.0 (issue #40): a fifth mana keeps Mr. Vanilla playable, so the
+      // turn does not auto-end (R82) and hand p2 a fatigue draw before the hero is read.
       p1: { hand: [{ def: MIND_CONTROL, radiant: true }, VANILLA], mana: 5 },
       p2: { field: [{ def: TIMMY, lane: 2 }, { def: VANILLA, lane: 4 }] },
     });

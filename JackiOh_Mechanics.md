@@ -2,7 +2,7 @@
   * Jackioh is first and foremost a fusion of Heartstone combat and resource with Yugioh lanes  
   * Players gain 1 mana each turn up to 4\. It refreshes each turn. Turn 1 they have 1 mana. Turn 2 they have 2, etc.  
   * Players draw 1 card for free at the start of their turn  
-  * There is a 30 turn cap, where an auto-draw happens  
+  * There is a 60 turn cap, where an auto-draw happens  
   * If you have no valid actions, your turn is automatically skipped  
   * You can offer draw at any time (with appropriate spam restrictions)  
   * Player 1 draws 3 cards at the start of the game. Player 2 draws 4 cards. Etc. etc.  
@@ -29,6 +29,10 @@
     * A standard game has 5 Lanes  
 * Notes  
   * A discover card OR a random generation card cannot discover nor randomly generate a copy of itself \[unless specifically specified it can\]  
+  * Cards cannot Discover or generate random copies of themselves (unless specifically specified)  
+  * Card patches are tracked from here on (and retroactively) so older versions of cards can still be accessed  
+  * AI is less inclined to shadowban cards during its training. Its (pseudo)random decks are stacked to more frequently include cards that are currently on track to be shadowbanned.  
+  * If Tributing as a cost would open up enough board space for the permanent to be played, it can be played.  
 * Keywords  
   * Card Type  
     * Unit, Spell, Field Spell, Trap, Field Trap  
@@ -36,7 +40,7 @@
     * Classifiers are tags attached to cards that certain cards might have special interactions with  
       * Rarity (Common, Rare, Epic, Legendary, Mythic)  
       * Tribes (Human, Felinor, ..)  
-      * Sets (Classic, Core, Boss, Boss-X)  
+      * Sets (Classic, Classic\+, Core, Boss, Boss-X)  
       * Tokens (see below)  
   * Tokens  
     * A card with the blanket Token tag cannot be generated UNLESS its specifically mentioned by name by another card. Most tokens are denoted with \#X.X&nbsp;  
@@ -185,6 +189,29 @@
     * Combine the effects, stats of cards, and cost of cards (up to 4 mana)  
   * Steal  
     * Take control of
+  * Animated  
+    * For Field Spells and Traps  
+    * Becomes a Unit if there are open Unit spaces  
+    * Animated on your turn  
+      * Neat evasion tech  
+  * Degrade  
+    * Only affects non-immutable cards  
+    * Does one of the following effects:  
+      * Increase cost by (1) (up to 4)  
+      * Reduces the stats of the effected card by a total of 4 (not below 1 health)  
+      * Remove a keyword  
+      * Reduce a value of X by 1  
+      * Reduce a number on it by some small amount (you determine what it would be based on the card)  
+  * Upgrade  
+    * Only affects non-immutable cards  
+    * Does one of the following effects  
+  * Activate  
+    * Once per turn on your turn, click the card to do an effect  
+    * Variants  
+      * Activate X: Up to X times per turn  
+      * Activate ♾️: Can do unlimited times per turn  
+  * Brittle X  
+    * Brittle count decreases by 1 at Start of Turn after existing for a full turn cycle (yours and your opponents). When it reaches 0, destroy the card.
 
 &nbsp;
 
