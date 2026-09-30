@@ -39,14 +39,19 @@ function onlyAdded(g: Scenario): Instance {
 /** Keeps a side's turn open past a play (R82's auto-end) and gives the start-of-turn draw a card. */
 const BUSY = { field: [{ def: "core-008", lane: 1 }], library: ["core-011", "core-016"] };
 
-const CORE_POOL = pool("core-059", { set: "Core" }).map((def) => def.id);
+/** R380: "a random card" names no set, so the pool is every set's non-token cards but #59 itself. */
+const CARD_POOL = pool("core-059").map((def) => def.id);
 
 describe("#59 Unbiased Immigration — the pool", () => {
-  it("§5.1 the pool is the 99 non-token Core cards, without #59", () => {
-    expect(CORE_POOL).toHaveLength(99);
-    expect(CORE_POOL).not.toContain("core-059");
-    expect(CORE_POOL).not.toContain("core-t-rush");
-    expect(CORE_POOL).not.toContain("core-051-1");
+  it("R380 §5.1 the pool is the 267 non-token cards of every set, without #59", () => {
+    // Core 100, Classic 90 and Classic+ 78 non-token cards, less #59 itself.
+    expect(CARD_POOL).toHaveLength(267);
+    expect(CARD_POOL).not.toContain("core-059");
+    expect(CARD_POOL).not.toContain("core-t-rush");
+    expect(CARD_POOL).not.toContain("core-051-1");
+    expect(CARD_POOL).not.toContain("classicplus-065-1");
+    expect(CARD_POOL).toContain("classic-001");
+    expect(CARD_POOL).toContain("classicplus-078");
   });
 });
 
@@ -60,7 +65,7 @@ describe("#59 Unbiased Immigration — base", () => {
     g.startTurn();
 
     const added = onlyAdded(g);
-    expect(CORE_POOL).toContain(added.defId);
+    expect(CARD_POOL).toContain(added.defId);
     expect(added.radiant).toBe(false);
   });
 
@@ -153,7 +158,7 @@ describe("#59 Unbiased Immigration — base", () => {
     expect(build("seed-a")).toBe(build("seed-a"));
   });
 
-  it("R60 and §5.1: every card it can add is a non-token Core card that is not itself", () => {
+  it("R60 and §5.1: every card it can add is a non-token card of any set that is not itself (R380)", () => {
     const seeds = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"];
 
     for (const seed of seeds) {
@@ -163,7 +168,7 @@ describe("#59 Unbiased Immigration — base", () => {
         p2: { ...BUSY },
       });
       g.startTurn();
-      expect(CORE_POOL).toContain(onlyAdded(g).defId);
+      expect(CARD_POOL).toContain(onlyAdded(g).defId);
     }
   });
 });
@@ -179,7 +184,7 @@ describe("#59 Unbiased Immigration — radiant", () => {
 
     const added = onlyAdded(g);
     expect(added.radiant).toBe(true);
-    expect(CORE_POOL).toContain(added.defId);
+    expect(CARD_POOL).toContain(added.defId);
   });
 
   it("§8 Conventions: the restated clause replaces the base one — one card, not two", () => {

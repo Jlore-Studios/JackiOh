@@ -15,7 +15,8 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { decodeDeckCode, type DroppedCards } from "./deckCode.ts";
+import { DECK_CODE_VERSION } from "../../../../server/src/config.ts";
+import { DECK_CODE_PREFIX, decodeDeckCode, type DroppedCards } from "./deckCode.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import {
   DECK_IMPORT,
@@ -112,7 +113,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
         spellCheck={false}
         autoComplete="off"
         autoCapitalize="off"
-        placeholder="JKO1.…"
+        placeholder={`${DECK_CODE_PREFIX}${String(DECK_CODE_VERSION)}.…`}
         onChange={(event) => {
           setText(event.target.value);
         }}
