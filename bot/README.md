@@ -29,7 +29,7 @@ flowchart TD
     PL --> B["work (Claude token only)<br/>builder: Opus, xhigh effort,<br/>subagents and worktrees"]
     B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
     G --> R["adversarial reviewer<br/>a fresh Opus session, read-only"]
-    R -- "blocking findings or red checks<br/>(up to 4 rounds)" --> F["a fresh builder<br/>fixes the findings"]
+    R -- "blocking findings or red checks<br/>(up to 10 rounds)" --> F["a fresh builder<br/>fixes the findings"]
     F --> G
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push,<br/>open the PR, turn on auto-merge"]
     PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues"]
@@ -124,7 +124,7 @@ anything, the `gate` job checks two things:
      "Discover and propose", "Sweep keywords", "Reconcile stale"), the rise is the partner's.
      The bot goes ahead anyway, so the two bots can run at the same time.
    - Any other rise is you or another agent, so it waits another 10 minutes and looks again.
-     After 40 minutes it gives up until the next hourly run.
+     It keeps looking for up to two hours, then gives up until the next run.
 
 bright-bots-harness applies the same rule the other way round: its partner is this bot's "Build,
 check and review" step. The gate's own step, "Wait until the subscription is quiet", never counts
@@ -145,7 +145,7 @@ GitHub Actions, such as the harness's local `bb` container.
    nothing queued, it runs a suggestion survey if one is due (at most one every 20 hours, and only
    while fewer than four are open).
 2. **work** (up to about five and a half hours). A worktree on `bot/issue-<n>` (or the pull
-   request's own branch, with `main` merged in), then `pnpm install`. Then up to four rounds:
+   request's own branch, with `main` merged in), then `pnpm install`. Then up to ten rounds:
    - a builder session (`claude --model opus --effort xhigh`) that can read, edit, run commands,
      start subagents and make worktrees;
    - the repository's checks from `.harness/config.json`, with any check that is also red on

@@ -207,7 +207,7 @@ def _quiet(raw: Any) -> Quiet:
     return Quiet(
         enabled=bool(raw.get("enabled", True)),
         interval_minutes=interval,
-        max_wait_minutes=int(raw.get("max_wait_minutes", 40)),
+        max_wait_minutes=int(raw.get("max_wait_minutes", 120)),
         ping_model=str(raw.get("ping_model", "haiku")),
         partners=tuple(partners),
     )

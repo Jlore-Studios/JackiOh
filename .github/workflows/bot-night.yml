@@ -50,7 +50,7 @@ jobs:
   gate:
     name: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150     # the quiet wait is up to 120 minutes (quiet.max_wait_minutes)
     permissions:
       contents: read         # the queue and the state file; no write of any kind
       actions: read          # whether a run that holds an item is still alive
@@ -109,8 +109,8 @@ jobs:
           npm install --global @anthropic-ai/claude-code
           claude --version
 
-      # Skipped for forced work. Two usage readings ten minutes apart (a one-turn Haiku call
-      # each); a rise that is not the partner bot's holds the run back.
+      # Skipped for forced work. Usage readings ten minutes apart (a one-turn Haiku call each),
+      # for up to two hours; a rise that is not the partner bot's holds the run back.
       - name: Wait until the subscription is quiet
         id: quiet
         if: steps.peek.outputs.quiet_check == 'true'

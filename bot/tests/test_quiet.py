@@ -253,7 +253,7 @@ class PeekTests(unittest.TestCase):
     def test_the_committed_config(self):
         cfg = make_config()
         self.assertTrue(cfg.quiet.enabled)
-        self.assertEqual((cfg.quiet.interval_minutes, cfg.quiet.max_wait_minutes), (10, 40))
+        self.assertEqual((cfg.quiet.interval_minutes, cfg.quiet.max_wait_minutes), (10, 120))
         partner = cfg.quiet.partners[0]
         self.assertEqual(partner.repo, "jgoetzmann/bright-bots-harness")
         self.assertIn("Run planned items", partner.workflows["implement.yml"])
