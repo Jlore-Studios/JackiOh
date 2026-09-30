@@ -164,7 +164,7 @@ export const contractAsk = def("contract-ask", "Spell", { tags: ["Quickdraw"] })
 
 /** A Spell that schedules a note for the start of its controller's next turn (R62's delayed stage). */
 export const reminder = def("reminder", "Spell");
-/** A Field Spell with a start-of-turn hook (R62's triggers stage). */
+/** A Field Spell with a start-of-turn hook (R62's triggers stage) and an end-of-turn one. */
 export const clock = def("clock", "Field Spell");
 /** A Field Spell whose trigger on `crumbled` asks: a start-of-turn stage's own events can pause it. */
 export const crumbleWatcher = def("crumble-watcher", "Field Spell");
@@ -270,7 +270,10 @@ export const TURN_SCRIPTS: Record<string, CardScripts> = {
     cry: () => [delay({ at: { phase: "start", player: "self" }, step: "remind" })],
     delayed: () => [note("delayed")],
   }),
-  [clock.id]: faces({ startOfTurn: (ctx) => [note(`start-of-turn:${ctx.controller}`)] }),
+  [clock.id]: faces({
+    startOfTurn: (ctx) => [note(`start-of-turn:${ctx.controller}`)],
+    endOfTurn: (ctx) => [note(`end-of-turn:${ctx.controller}`)],
+  }),
   [crumbleWatcher.id]: faces({
     triggers: [{ id: "watch", on: ["crumbled"], run: () => [note("crumble-seen"), askController("seen")] }],
     resume: { seen: () => [note("crumble-answered")] },

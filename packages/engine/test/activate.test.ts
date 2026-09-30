@@ -144,7 +144,7 @@ describe("B3.2 Activate: using an ability (R384)", () => {
     expect(after.counters.played).toBe(state.counters.played);
     expect(after.players.p1.turnLog).toEqual(state.players.p1.turnLog);
     // Its use is counted on the instance, for this turn.
-    expect(after.players.p1.backrow[0]?.memory.activations).toEqual({ turn: state.turn, uses: { ping: 1 } });
+    expect(after.players.p1.backrow[0]?.memory.activations).toEqual({ turn: state.turn, count: 1 });
   });
 
   it("R384 an ability named by nothing is the card's only one; a card with several needs it named", () => {
@@ -179,6 +179,15 @@ describe("B3.2 rules 1, 3, 7, 9: how many uses (R384)", () => {
     // The Radiant face's "Activate 2" is the face's own count.
     const radiant = put(state, pinger.id, slot("p1", "backrow", 2), { radiant: true });
     expect(usesAllowed(radiant, activationDecls(ACTIVATE_SCRIPTS[pinger.id]?.radiant ?? {})[0] as ActivationDecl)).toBe(2);
+  });
+
+  it("R384 uses are counted per card: a card with several abilities counts every use of any of them", () => {
+    const state = playing("per-card");
+    const card = put(state, chooser.id, slot("p1", "backrow", 1));
+    card.memory[PICK_KEY] = "alpha";
+    const after = act(state, activate("p1", card.id, { ability: "gamma" })).state;
+    expect(after.players.p1.backrow[0]?.memory.activations).toEqual({ turn: state.turn, count: 1 });
+    expect(whyCannotActivateAbility(after, "p1", card.id, "alpha")).toBe("that ability has already been used this turn");
   });
 
   it("R384 uses reset on the controller's next turn, and on the opponent's turn nothing can be activated", () => {

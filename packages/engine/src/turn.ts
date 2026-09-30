@@ -6,9 +6,9 @@
 // v0.2.0 adds two start-of-turn stages between the refresh and the delayed effects — the Brittle tick
 // (`brittle.brittleTick`, B3.3) and the "Animated on your turn" cards stepping into their unit zones
 // (`animated.animateAtTurnStart`, B3.1) — the rest-of-game start-of-turn effects among the delayed
-// ones (B5 E28, R458), and those cards going back home at cleanup, after every end-of-turn step
-// (`animated.returnAtCleanup`). The start of a turn is therefore: refresh → Brittle tick → animate →
-// delayed effects → start-of-turn triggers → draw (R62).
+// ones (B5 E28, R458), and those cards going back home as cleanup's last step, after every
+// end-of-turn step (`animated.returnAtCleanup`). The start of a turn is therefore: refresh → Brittle
+// tick → animate → delayed effects → start-of-turn triggers → draw (R62).
 //
 // Every one of those parts can pause, because a trigger, a trap or a delayed effect may ask its
 // controller something (§9.3, §10.6). So BOTH turn boundaries are resumable sequences like any
@@ -513,6 +513,11 @@ function cleanup(sink: EngineSink, player: PlayerId): void {
   if (side.aiTurn) endHandedOverTurn(sink);
   side.aiTurn = false;
   clearReturnFlags(sink.state);
+  // §2.2, B3.1 rule 4 (R383): cleanup's last step — `player`'s animated "on your turn" cards go back
+  // to their backrow zones, after every end-of-turn step, so their own end-of-turn text ran while they
+  // were Units. The move is `animated.ts`'s; its events are answered by the loop after cleanup
+  // (`endOfTurnCleanupSettle`), which parks the rest of the turn on a prompt like any other stage.
+  returnAtCleanup(sink, player);
 }
 
 // ---------------------------------------------------------------------------
@@ -534,16 +539,14 @@ export const END_OF_TURN_WORK = "@endOfTurn";
  * `triggers` still has the end-of-turn trigger queue to finish before the `turnEnded` event is
  * even emitted; `window` has had its trap window and owes the loop the window's events wake
  * (§10.3), then everything after; `delayed` owes the delayed effects still due; `cleanup` has had
- * them and owes the loop their events wake, then the animated cards' return, cleanup and everything
- * after; `return` has had the return (B3.1) and owes the loop its events wake, then cleanup and
- * everything after; `next` has had cleanup and owes the loop its events wake, then the turn cap and
- * the next turn.
+ * them and owes the loop their events wake, then cleanup and everything after; `next` has had
+ * cleanup (the animated cards' return its last step, B3.1) and owes the loop its events wake, then
+ * the turn cap and the next turn.
  */
 const END_TRIGGERS_STEP = "triggers";
 const END_WINDOW_STEP = "window";
 const END_DELAYED_STEP = "delayed";
 const END_CLEANUP_STEP = "cleanup";
-const END_RETURN_STEP = "return";
 const END_NEXT_STEP = "next";
 
 /**
@@ -671,10 +674,7 @@ function endOfTurnAfterWindow(sink: EngineSink, player: PlayerId, dueBefore: num
   endOfTurnDelayedSettle(sink, player);
 }
 
-/**
- * §10.3 after the delayed effects, as after the window; then the animated cards' return, cleanup,
- * the turn cap, the next turn.
- */
+/** §10.3 after the delayed effects, as after the window; then cleanup, the turn cap, the next turn. */
 function endOfTurnDelayedSettle(sink: EngineSink, player: PlayerId): void {
   const state = sink.state;
 
@@ -682,30 +682,6 @@ function endOfTurnDelayedSettle(sink: EngineSink, player: PlayerId): void {
   if (state.result !== null) return;
   if (state.pending !== null) {
     oweEndOfTurn(sink, player, END_CLEANUP_STEP);
-    return;
-  }
-
-  endOfTurnReturn(sink, player);
-}
-
-/**
- * B3.1 rule 4 (R383): `player`'s animated "on your turn" cards go back to their backrow zones at
- * their controller's cleanup, after every end-of-turn step — so their own end-of-turn text ran while
- * they were Units — and before the "this turn" modifiers expire. The move is `animated.ts`'s.
- */
-function endOfTurnReturn(sink: EngineSink, player: PlayerId): void {
-  returnAtCleanup(sink, player);
-  endOfTurnReturnSettle(sink, player);
-}
-
-/** §10.3 after the return, as after every other stage; then cleanup and everything after it. */
-function endOfTurnReturnSettle(sink: EngineSink, player: PlayerId): void {
-  const state = sink.state;
-  if (state.result !== null) return;
-  if (state.pending === null) settle(sink);
-  if (state.result !== null) return;
-  if (state.pending !== null) {
-    oweEndOfTurn(sink, player, END_RETURN_STEP);
     return;
   }
 
@@ -779,10 +755,6 @@ function runOwedEndOfTurn(sink: EngineSink, item: WorkItem): void {
     return;
   }
 
-  if (item.resume.step === END_RETURN_STEP) {
-    endOfTurnReturnSettle(sink, player);
-    return;
-  }
 
   if (item.resume.step === END_NEXT_STEP) {
     endOfTurnCleanupSettle(sink, player);

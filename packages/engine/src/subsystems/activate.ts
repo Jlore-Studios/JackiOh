@@ -8,9 +8,10 @@
 //   2. Who and when: the card's controller, in their own main phase, with no prompt open and the game
 //      not over, while the card acts on the field — the top of its pile, or a face-up backrow card
 //      (`isActingOnField`). Summoning sickness and exertion do not apply: activating is not attacking.
-//   3. Uses are counted per card, per ability, per turn on the instance (`memory.activations`), which
-//      R78's reset clears when the card leaves the field, so a card bounced and played again, or a
-//      copy, starts fresh.
+//   3. Uses are counted per card per turn on the instance (`memory.activations = { turn, count }`,
+//      SPEC §6.2), which R78's reset clears when the card leaves the field, so a card bounced and
+//      played again, or a copy, starts fresh. A card with several abilities (a fusion's) counts every
+//      use of any of them, and each ability allows as many as its own number says.
 //   4. A cost is paid as the ability is activated — mana, a random discard, a Tribute of the
 //      controller's units (the card itself allowed) or the card itself — and an ability whose cost
 //      cannot be paid cannot be activated (`whyCannotActivateAbility`).
@@ -109,25 +110,23 @@ function declaredOf(decl: ActivationDecl): DeclaredChoices {
 // Uses (B3.2 rules 1, 3, 7, 9)
 // ---------------------------------------------------------------------------
 
-/** R384: where an instance counts its uses — `{ turn, uses: { [abilityId]: n } }` for one turn. */
+/** R384, SPEC §6.2: where an instance counts its uses — `{ turn, count }` for the turn it names. */
 export const ACTIVATIONS_MEMORY_KEY = "activations";
 
-type UsesRecord = { turn: number; uses: Record<string, number> };
+type UsesRecord = { turn: number; count: number };
 
 function usesRecord(card: CardInstance): UsesRecord | null {
   const raw: unknown = card.memory[ACTIVATIONS_MEMORY_KEY];
   if (raw === null || typeof raw !== "object") return null;
   const record = raw as Partial<UsesRecord>;
-  if (typeof record.turn !== "number" || record.uses === null || typeof record.uses !== "object") return null;
-  return { turn: record.turn, uses: record.uses };
+  if (typeof record.turn !== "number" || typeof record.count !== "number") return null;
+  return { turn: record.turn, count: record.count };
 }
 
-/** How many times this ability of the card has been used this turn. */
-export function usesThisTurn(state: GameState, card: CardInstance, abilityId: string): number {
+/** How many times the card's abilities have been used this turn. */
+export function usesThisTurn(state: GameState, card: CardInstance): number {
   const record = usesRecord(card);
-  if (record === null || record.turn !== state.turn) return 0;
-  const used = record.uses[abilityId];
-  return typeof used === "number" ? used : 0;
+  return record === null || record.turn !== state.turn ? 0 : record.count;
 }
 
 /**
@@ -140,11 +139,8 @@ export function usesAllowed(card: CardInstance, decl: ActivationDecl): number {
   return tunedCount(card, ACTIVATE_TUNING_KEY, Math.max(1, Math.trunc(decl.uses)));
 }
 
-function markUse(state: GameState, card: CardInstance, abilityId: string): void {
-  const record = usesRecord(card);
-  const uses = record !== null && record.turn === state.turn ? { ...record.uses } : {};
-  uses[abilityId] = (uses[abilityId] ?? 0) + 1;
-  card.memory[ACTIVATIONS_MEMORY_KEY] = { turn: state.turn, uses };
+function markUse(state: GameState, card: CardInstance): void {
+  card.memory[ACTIVATIONS_MEMORY_KEY] = { turn: state.turn, count: usesThisTurn(state, card) + 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +166,7 @@ function whyAbilityUnusable(state: GameState, player: PlayerId, card: CardInstan
   if (state.phase !== "main") return "an ability is activated in the main phase";
 
   const allowed = usesAllowed(card, decl);
-  if (usesThisTurn(state, card, decl.id) >= allowed) {
+  if (usesThisTurn(state, card) >= allowed) {
     return allowed === 1 ? "that ability has already been used this turn" : `that ability has been used ${allowed} times this turn`;
   }
   if (
@@ -493,7 +489,7 @@ export function activateAbility(sink: EngineSink, player: PlayerId, action: Acti
     exitsFrom: exitMark(state),
   };
 
-  markUse(state, card, decl.id);
+  markUse(state, card);
   sink.events.push({ type: "activated", player, instanceId: card.id, defId: card.defId, ability: decl.id });
   payCosts(sink, run, card, decl, action.tributes ?? []);
   if (paused(sink)) {
@@ -519,7 +515,7 @@ export function activationViewsFor(state: GameState, viewer: PlayerId, card: Car
   if (abilities.length === 0) return null;
   return abilities.map((decl) => {
     const reason = whyCannotActivateAbility(state, viewer, card.id, decl.id);
-    const usesLeft = decl.uses === "unlimited" ? null : Math.max(0, usesAllowed(card, decl) - usesThisTurn(state, card, decl.id));
+    const usesLeft = decl.uses === "unlimited" ? null : Math.max(0, usesAllowed(card, decl) - usesThisTurn(state, card));
     return {
       ability: decl.id,
       label: decl.label,
