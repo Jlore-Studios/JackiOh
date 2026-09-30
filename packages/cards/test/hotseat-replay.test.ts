@@ -97,8 +97,12 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * Patch v0.1.1 (R360–R366) re-recorded it by the procedure above: its decks hold #1, #8, #20, #25,
  * #56, #77, #81 and #92, whose stats, keywords or rules the patch changed, so the same seed plays a
  * different game. 37 actions, still won by p1 by hero death.
+ *
+ * Patch v0.2.0's draw count (B5 E4, R457) moved the hash and not the game: each player's state now
+ * counts the draws they made on the turn running (`draws`). The same fold with that field stripped
+ * from both players hashes to "2d546ddf", the value before it.
  */
-const EXPECTED_HASH = "2d546ddf";
+const EXPECTED_HASH = "d926e6ac";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;

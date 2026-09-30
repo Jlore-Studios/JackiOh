@@ -290,6 +290,12 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
+  /**
+   * B5 E3, R457: the draw limits this card sets while it acts on the field ("Your opponent can't draw
+   * more than 1 card each turn": Classic #4, #49). A pure read like an aura, so a card computes its
+   * number (a declared, tunable one included) from its own instance. The lowest limit on a player holds.
+   */
+  drawLimit?: DrawLimitHook;
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
   /**
@@ -314,6 +320,12 @@ export type ActivationDecl = {
   id: string;
   label: string;
   uses: number | "unlimited";
+  /**
+   * R384: `tribute` counts units, one each — "Tribute a Unit" is one unit, so a Sheep Token's "worth
+   * 2" does not stretch it (that worth counts only toward a play's Tribute X, §6.3). The card itself
+   * may be one of them when it is a Unit. `tributeSelf` is "Tribute this", which bypasses
+   * Indestructible as every Sacrifice does (§6.3).
+   */
   cost?: {
     mana?: number;
     discardRandom?: number;
@@ -323,8 +335,48 @@ export type ActivationDecl = {
   targets?: TargetDecl[];
   modes?: ModeDecl[];
   canActivate?: ConditionHook;
+  /**
+   * Whether the card has this ability now, when that depends on the instance — an ability it lacks is
+   * neither listed, shown nor accepted. Patch v0.2.1's Heroic Power declares one ability per power and
+   * has only the one it rolled (B3.2 rule 10). Absent: always.
+   */
+  has?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
   run: Hook;
 };
+
+/**
+ * R384: the `Resume.hook` an ability's own effect list runs under, `activation:<id>`, so a tail a
+ * prompt parks comes back to the same ability (`work.scriptStepFor`), as a trigger's comes back by its
+ * id. Distinct from every `Script` key.
+ */
+export const ACTIVATION_HOOK_PREFIX = "activation:";
+
+export function activationHook(id: string): string {
+  return `${ACTIVATION_HOOK_PREFIX}${id}`;
+}
+
+/**
+ * R384, R102: a face's abilities with ids made unique — a card fused from two Activate cards has both
+ * abilities, and the second of two that share an id is `<id>#2` — so the `activate` action, the view
+ * and a resumed tail all name the same one. Order is the face's own.
+ */
+export function activationDecls(script: Script): ActivationDecl[] {
+  const seen = new Map<string, number>();
+  return (script.activations ?? []).map((decl) => {
+    const count = (seen.get(decl.id) ?? 0) + 1;
+    seen.set(decl.id, count);
+    return count === 1 ? decl : { ...decl, id: `${decl.id}#${count}` };
+  });
+}
+
+/**
+ * B5 E3, R457: one draw limit a card sets. `player` is relative to the card's controller: "enemy" is
+ * the opponent (Classic #4), "both" every player (Classic #49); `count` is how many draws that player
+ * may make each turn, whoever's turn it is.
+ */
+export type DrawLimit = { player: "self" | "enemy" | "both"; count: number };
+
+export type DrawLimitHook = (args: { state: GameState; self: CardInstance; radiant: boolean }) => DrawLimit[];
 
 /**
  * §10.6: a card-specific target predicate (`TargetFilter.check`). `candidate` is the card a

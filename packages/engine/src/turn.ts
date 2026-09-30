@@ -1,8 +1,14 @@
 // The turn loop of SPEC §2.2 in R62's order, cleanup, the turn cap and the ways a game ends
-// (§2.5, R79). The sequence is fixed here; every part of it belongs to the module that owns it —
+// (§2.5, R79, R389). The sequence is fixed here; every part of it belongs to the module that owns it —
 // the start-of-turn and end-of-turn hooks to `triggers.queueHooksInTriggerOrder` (R68's order,
 // drained by `triggers.settle`), the end-of-turn trap window to `traps.runTrapWindow` (R62, R100),
-// the delayed effects to `modifiers.dueDelayed` in creation order, and mana to `mana.ts`.
+// the delayed effects to `modifiers.dueDelayed` in creation order, and mana to `mana.ts`. Patch
+// v0.2.0 adds two start-of-turn stages between the refresh and the delayed effects — the Brittle tick
+// (`brittle.brittleTick`, B3.3) and the "Animated on your turn" cards stepping into their unit zones
+// (`animated.animateAtTurnStart`, B3.1) — the rest-of-game start-of-turn effects among the delayed
+// ones (B5 E28, R458), and those cards going back home as cleanup's last step, after every
+// end-of-turn step (`animated.returnAtCleanup`). The start of a turn is therefore: refresh → Brittle
+// tick → animate → delayed effects → start-of-turn triggers → draw (R62).
 //
 // Every one of those parts can pause, because a trigger, a trap or a delayed effect may ask its
 // controller something (§9.3, §10.6). So BOTH turn boundaries are resumable sequences like any
@@ -19,11 +25,20 @@
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
+import { animateAtTurnStart, returnAtCleanup } from "./animated";
+import { brittleTick } from "./brittle";
 import { DRAWS_PER_TURN, DRAW_OFFER_BLOCK_TURNS, TURN_CAP_PLAYER_TURNS } from "./config";
 import { draw } from "./draw";
+import { runEngineDelayed } from "./effects/delay";
 import { endGame } from "./gameOver";
 import { NEXT_REFRESH_MODIFIER_ID, manaEvent, refreshMana } from "./mana";
-import { dropDelayed, dueDelayed, expireModifiers } from "./modifiers";
+import {
+  dropDelayed,
+  dueDelayed,
+  dueStartOfTurnEffects,
+  expireModifiers,
+  type StartOfTurnEffectModifier,
+} from "./modifiers";
 import { runResume } from "./prompts";
 import { unspentManaOf } from "./query";
 import type { EngineSink, HookName } from "./resolve";
@@ -33,6 +48,7 @@ import {
   findInstance,
   handicapOf,
   type CardInstance,
+  type DelayedEffect,
   type GameState,
   type Resume,
   type WorkItem,
@@ -91,22 +107,64 @@ function runDelayed(sink: EngineSink, phase: "start" | "end", player: PlayerId, 
   // while the stage is resolving — by the answer to an earlier one's question, say — is due at the
   // next such point, as it is when nothing asks: `dueBefore` is the creation mark the stage began
   // at, which a pause carries to the step that picks the stage up (R113).
-  for (const effect of dueDelayed(sink.state, phase, player).filter((due) => due.seq < dueBefore)) {
+  for (const entry of dueEntries(sink.state, phase, player, dueBefore)) {
     // One entry at a time in R68's order: a prompt, or a game that has just ended, stops the run.
     if (isPaused(sink)) return;
-    // R174: an earlier entry's resolution can end a later one — the state check after #50's first
-    // steal kills a second steal's target, and `zones.forgetWatchers` drops the entry aimed at it
-    // even if Reborn brings the card straight back. The list above was read before either ran, so
-    // an entry is run only while `state.delayed` still holds it.
-    if (!sink.state.delayed.some((due) => due.id === effect.id)) continue;
-    dropDelayed(sink.state, effect.id);
-    runResume(sink, effect.resume, { controller: effect.owner });
+    if (!runDueEntry(sink, player, entry)) continue;
     // R59: the check runs after the whole delayed effect, never between its parts. One that asked
     // is not whole yet — the answer finishes it — so the check is owed to the step that picks the
     // boundary up after it (`checkBeforeDelayed`), before the next delayed effect runs (R174).
     if (isPaused(sink)) return;
     if (!checkAfterDelayed(sink)) return;
   }
+}
+
+/**
+ * One entry of R62's delayed stage: a delayed effect (`state.delayed`), or at the start of a turn a
+ * rest-of-game effect of that player's (B5 E28, R458), which is a delayed effect that comes due at
+ * every start of their turn. Both are ordered by creation `seq` (R68).
+ */
+type DueEntry = { seq: number } & ({ delayed: DelayedEffect } | { recurring: StartOfTurnEffectModifier });
+
+function dueEntries(state: GameState, phase: "start" | "end", player: PlayerId, dueBefore: number): DueEntry[] {
+  const delayed: DueEntry[] = dueDelayed(state, phase, player)
+    .filter((due) => due.seq < dueBefore)
+    .map((due) => ({ seq: due.seq, delayed: due }));
+  const recurring: DueEntry[] =
+    phase === "start"
+      ? dueStartOfTurnEffects(state, player)
+          .filter((mod) => mod.seq < dueBefore)
+          .map((mod) => ({ seq: mod.seq, recurring: mod }))
+      : [];
+  return [...delayed, ...recurring].sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * Run one due entry, or pass it by (false) when it is no longer due. A delayed effect is dropped
+ * before it runs, so it can never fire twice; a rest-of-game effect marks the turn it ran on
+ * (`ranTurn`) for the same reason, since it stays for the next turn.
+ */
+function runDueEntry(sink: EngineSink, player: PlayerId, entry: DueEntry): boolean {
+  const state = sink.state;
+  if ("delayed" in entry) {
+    const effect = entry.delayed;
+    // R174: an earlier entry's resolution can end a later one — the state check after #50's first
+    // steal kills a second steal's target, and `zones.forgetWatchers` drops the entry aimed at it
+    // even if Reborn brings the card straight back. The list was read before either ran, so an
+    // entry is run only while `state.delayed` still holds it.
+    if (!state.delayed.some((due) => due.id === effect.id)) return false;
+    dropDelayed(state, effect.id);
+    // B5 E27: the engine's own delayed kinds (a destroy, a hand discarded) run as verbs; every other
+    // entry re-enters its card's step (R126).
+    if (!runEngineDelayed(sink, effect)) runResume(sink, effect.resume, { controller: effect.owner });
+    return true;
+  }
+  const mod = state.players[player].mods.find((held) => held.id === entry.recurring.id);
+  if (mod === undefined || mod.kind !== "startOfTurnEffect" || mod.ranTurn === state.turn) return false;
+  mod.ranTurn = state.turn;
+  // R127, R458: the player's effect now, re-entered by its def id with no instance.
+  runResume(sink, mod.resume, { controller: player });
+  return true;
 }
 
 /**
@@ -161,11 +219,16 @@ function resetExertion(sink: EngineSink, player: PlayerId): void {
 export const START_OF_TURN_WORK = "@startOfTurn";
 
 /**
- * Which part of R62's opening is still owed: `delayed` still has start-of-turn delayed effects to
- * finish and owes everything after them; `settle` has had them and owes the loop their events wake
- * (§10.3), then the triggers and the draw; `triggers` has had its effects and owes the rest of the
- * trigger queue and then the draw; `main` has drawn and owes only the phase the turn opens in.
+ * Which part of R62's opening is still owed: `brittle` has ticked the Brittle counts and owes the
+ * loop the events that woke (§10.3), then everything after; `animate` has moved the "Animated on your
+ * turn" cards and owes the same, then the delayed effects and everything after; `delayed` still has
+ * start-of-turn delayed effects to finish and owes everything after them; `settle` has had them and
+ * owes the loop their events wake (§10.3), then the triggers and the draw; `triggers` has had its
+ * effects and owes the rest of the trigger queue and then the draw; `main` has drawn and owes only the
+ * phase the turn opens in.
  */
+const START_BRITTLE_STEP = "brittle";
+const START_ANIMATE_STEP = "animate";
 const START_DELAYED_STEP = "delayed";
 const START_SETTLE_STEP = "settle";
 const START_TRIGGERS_STEP = "triggers";
@@ -194,8 +257,8 @@ function dueBeforeOf(data: Record<string, unknown>): number {
 }
 
 /**
- * Start a turn (§2.2, R62): refresh, then the start-of-turn delayed effects, then the start-of-turn
- * triggers, then the draw.
+ * Start a turn (§2.2, R62): refresh, then the Brittle tick, then the "Animated on your turn" cards,
+ * then the start-of-turn delayed effects, then the start-of-turn triggers, then the draw.
  *
  * Every one of those stages can pause, exactly as the end of a turn can, so the start of one is a
  * resumable sequence in the same shape (R113, R117, R122): each stage stops at a pause, parks what
@@ -234,7 +297,48 @@ export function startTurn(sink: EngineSink, player: PlayerId): void {
   // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.
   if (rider !== 0) sink.events.push({ type: "modifierChanged", player, modifierId: NEXT_REFRESH_MODIFIER_ID, added: false });
 
-  startOfTurnDelayed(sink, player, state.nextSeq);
+  // R62: the delayed effects due at this start are the ones that exist as the turn begins, so the
+  // mark is taken here and carried through the two stages before them.
+  startOfTurnBrittle(sink, player, state.nextSeq);
+}
+
+/**
+ * R62, B3.3 (R385): the first stage after the refresh — every Brittle count of `player`'s that has had
+ * a full turn cycle ticks, and a count that reaches 0 crumbles its card. The tick is `brittle.ts`'s;
+ * this is its place in the turn and what follows it (`afterStartStage`).
+ */
+function startOfTurnBrittle(sink: EngineSink, player: PlayerId, dueBefore: number): void {
+  brittleTick(sink, player);
+  afterStartStage(sink, player, START_BRITTLE_STEP, dueBefore);
+}
+
+/**
+ * R62, B3.1 (R383): `player`'s "Animated on your turn" cards step into their unit zones, after the
+ * Brittle tick and before the delayed effects. The move is `animated.ts`'s.
+ */
+function startOfTurnAnimate(sink: EngineSink, player: PlayerId, dueBefore: number): void {
+  animateAtTurnStart(sink, player);
+  afterStartStage(sink, player, START_ANIMATE_STEP, dueBefore);
+}
+
+/**
+ * §10.3 after a start-of-turn stage, as after the delayed effects (`startOfTurnSettle`): the events
+ * the stage emitted reach the traps and the trigger queue — a crumbled unit's Death, a trap answering
+ * an arrival — and what they wake resolves, with §4.5's check, before the next stage. A stage that
+ * asked something mid-way (a Death hook's prompt) has parked its own remainder; either way what is
+ * owed is this settle and every stage after it, parked behind that remainder (R113, R117).
+ */
+function afterStartStage(sink: EngineSink, player: PlayerId, step: string, dueBefore: number): void {
+  const state = sink.state;
+  if (state.result !== null) return;
+  if (state.pending === null) settle(sink);
+  if (state.result !== null) return;
+  if (state.pending !== null) {
+    oweStartOfTurn(sink, player, step, dueBefore);
+    return;
+  }
+  if (step === START_BRITTLE_STEP) startOfTurnAnimate(sink, player, dueBefore);
+  else startOfTurnDelayed(sink, player, dueBefore);
 }
 
 /** R62's first stage: the start-of-turn delayed effects, in creation order. */
@@ -338,6 +442,11 @@ function runOwedStartOfTurn(sink: EngineSink, item: WorkItem): void {
   const player = turnPlayerOf(item.resume.data);
   if (player === null) return;
 
+  if (item.resume.step === START_BRITTLE_STEP || item.resume.step === START_ANIMATE_STEP) {
+    afterStartStage(sink, player, item.resume.step, dueBeforeOf(item.resume.data));
+    return;
+  }
+
   if (item.resume.step === START_DELAYED_STEP) {
     const dueBefore = dueBeforeOf(item.resume.data);
     if (!checkBeforeDelayed(sink)) {
@@ -404,6 +513,11 @@ function cleanup(sink: EngineSink, player: PlayerId): void {
   if (side.aiTurn) endHandedOverTurn(sink);
   side.aiTurn = false;
   clearReturnFlags(sink.state);
+  // §2.2, B3.1 rule 4 (R383): cleanup's last step — `player`'s animated "on your turn" cards go back
+  // to their backrow zones, after every end-of-turn step, so their own end-of-turn text ran while they
+  // were Units. The move is `animated.ts`'s; its events are answered by the loop after cleanup
+  // (`endOfTurnCleanupSettle`), which parks the rest of the turn on a prompt like any other stage.
+  returnAtCleanup(sink, player);
 }
 
 // ---------------------------------------------------------------------------
@@ -426,7 +540,8 @@ export const END_OF_TURN_WORK = "@endOfTurn";
  * even emitted; `window` has had its trap window and owes the loop the window's events wake
  * (§10.3), then everything after; `delayed` owes the delayed effects still due; `cleanup` has had
  * them and owes the loop their events wake, then cleanup and everything after; `next` has had
- * cleanup and owes the loop its events wake, then the turn cap and the next turn.
+ * cleanup (the animated cards' return its last step, B3.1) and owes the loop its events wake, then
+ * the turn cap and the next turn.
  */
 const END_TRIGGERS_STEP = "triggers";
 const END_WINDOW_STEP = "window";
@@ -639,6 +754,7 @@ function runOwedEndOfTurn(sink: EngineSink, item: WorkItem): void {
     endOfTurnDelayedSettle(sink, player);
     return;
   }
+
 
   if (item.resume.step === END_NEXT_STEP) {
     endOfTurnCleanupSettle(sink, player);

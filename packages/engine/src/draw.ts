@@ -1,15 +1,21 @@
 // Drawing, fatigue, the hand cap, cast-on-draw chains and the library cap
 // (SPEC §2.4, R3, R4, R58, R80), the arrival hook of R151, and — since a cast-on-draw card is a
 // whole play and a play can ask — both draw loops resuming out of `state.work` across a prompt
-// (§9.3, §10.6, R113, R117, R122).
+// (§9.3, §10.6, R113, R117, R122). Patch v0.2.0 adds the draws a player makes each turn (B5 E4), the
+// draw limits a card on the field sets (E3), the `castOnDraw` enchantment (E39) and a Unit cast on draw
+// with nowhere to stand (R457, R459).
 
 import type { LibraryOverflowOutcome, PlayerId } from "@jackioh/shared";
-import { CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP } from "./config";
+import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
+import { CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP, SETUP_TURN } from "./config";
 import { defByIndex } from "./catalog";
 import { dealDamage } from "./damage";
+import { hasEnchantment } from "./enchantments";
+import { cardTypeOf } from "./faces";
 import { runStartOfGame } from "./prompts";
 import { castCard, type EngineSink } from "./resolve";
-import { flagsOf } from "./scripts";
+import type { DrawLimit } from "./script";
+import { flagsOf, scriptOf } from "./scripts";
 import {
   newInstance,
   type CardInstance,
@@ -21,7 +27,7 @@ import {
 import { stateCheck } from "./stateCheck";
 import { showToOwner } from "./ownLibrary";
 import { owe, paused, registerWorkHandler } from "./work";
-import { cardAt, isUnitToken, moveToZone, slotsOf } from "./zones";
+import { activeUnitsOf, cardAt, firstFreeZone, isUnitToken, moveToZone, slotsOf } from "./zones";
 
 /**
  * R151: a card whose script has a start-of-game hook runs it when it ARRIVES in a hand or a
@@ -163,7 +169,107 @@ export function shuffleIntoLibrary(
   return "library";
 }
 
-export type DrawOutcome = "drawn" | "cast" | "burned" | "fatigue" | "token";
+/** `limited`: a draw limit stopped it (B5 E3, R457) — nothing moved, no fatigue, nothing cast. */
+export type DrawOutcome = "drawn" | "cast" | "burned" | "fatigue" | "token" | "limited";
+
+// ---------------------------------------------------------------------------
+// ---- v0.2.0: activate and turn (B5 E3 draw limits, E4 draw counts, E39 cast on draw) ----
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E4, R457: the draws `player` has made this turn, whoever's turn it is — every draw that happened,
+ * a fatigue draw included, and none a limit stopped. `PlayerState.draws` is kept per turn, so a count
+ * from an earlier turn reads as 0: it resets where the turn log does (§2.2). Setup is no player's turn
+ * (§2.1, `SETUP_TURN`), so the opening deal and the mulligan's draws count toward nothing.
+ */
+export function drawsThisTurn(state: GameState, player: PlayerId): number {
+  const draws = state.players[player].draws;
+  return draws !== undefined && draws.turn === state.turn ? draws.count : 0;
+}
+
+/**
+ * Count one draw that happened, and return its number this turn (1 for the first) for the `drawn`
+ * event. Nothing during setup: R225 deals a Quickdraw card as an opening draw with an event of its
+ * own, and a number on the other draws would tell the opponent which one it was (§9.1, R97).
+ */
+function countDraw(state: GameState, player: PlayerId): { turnDraw?: number } {
+  if (state.turn === SETUP_TURN) return {};
+  const count = drawsThisTurn(state, player) + 1;
+  state.players[player].draws = { turn: state.turn, count };
+  return { turnDraw: count };
+}
+
+/**
+ * The cards whose static text is in force: the top of each unit pile and each backrow card, both
+ * sides — the cards an aura is read from (§10.4 layer 5). A Vanilla card carries no text (§6.3).
+ */
+function textOnField(state: GameState, player: PlayerId): CardInstance[] {
+  return [
+    ...activeUnitsOf(state, player),
+    ...slotsOf(player, "backrow").flatMap((ref) => {
+      const card = cardAt(state, ref);
+      return card === null ? [] : [card];
+    }),
+  ];
+}
+
+function limitBinds(limit: DrawLimit, controller: PlayerId, player: PlayerId): boolean {
+  if (limit.player === "both") return true;
+  return limit.player === "self" ? player === controller : player === opponentOf(controller);
+}
+
+/**
+ * B5 E3, R457: the most draws `player` may make each turn, or null when nothing limits them. Every
+ * card on the field may set limits (`Script.drawLimit`, Classic #4 Palantir, #49 Anti-Greed Machine),
+ * and with several the lowest holds.
+ */
+export function drawLimitOf(state: GameState, player: PlayerId): number | null {
+  let lowest: number | null = null;
+  for (const side of PLAYER_IDS) {
+    for (const card of textOnField(state, side)) {
+      const hook = scriptOf(card).drawLimit;
+      if (hook === undefined) continue;
+      for (const limit of hook({ state, self: card, radiant: card.radiant })) {
+        if (!limitBinds(limit, card.controller, player)) continue;
+        const count = Math.max(0, Math.trunc(limit.count));
+        lowest = lowest === null ? count : Math.min(lowest, count);
+      }
+    }
+  }
+  return lowest;
+}
+
+/**
+ * B5 E3, R457: whether `player`'s next draw may not happen — they have made as many draws this turn
+ * as their limit allows. A stopped draw does not happen at all: no card moves, no fatigue, nothing is
+ * cast, it is not counted, and `drawLimited` (public, it names no card) is all that is said. Every
+ * draw asks this before it takes its card: `drawOne`, a named draw (`effects/draw.drawFromLibrary`)
+ * and a draw out of the opponent's deck (B5 E16), which then hands the card to `completeDraw`.
+ */
+export function drawBlocked(sink: EngineSink, player: PlayerId): boolean {
+  const limit = drawLimitOf(sink.state, player);
+  if (limit === null || drawsThisTurn(sink.state, player) < limit) return false;
+  sink.events.push({ type: "drawLimited", player });
+  return true;
+}
+
+/**
+ * §2.4, R58, B5 E39: whether the drawn card casts itself — printed Cast on draw, or the `castOnDraw`
+ * enchantment riding it (Classic+ #40 Appropriations).
+ */
+export function castsOnDraw(card: CardInstance): boolean {
+  return flagsOf(card).castOnDraw === true || hasEnchantment(card, "castOnDraw");
+}
+
+/**
+ * R459 (Classic+ #26): a Unit cast on draw is played for free into its caster's leftmost open unit
+ * zone (R64, R70); with none open it is not cast and goes to the hand, as R58's cap sends a card
+ * that is not cast. Any other card is cast wherever it lands (a Spell resolves; a cast Field Spell or
+ * Trap with no zone is the cast pipeline's to settle, §10.5, R138).
+ */
+function roomToCast(state: GameState, player: PlayerId, card: CardInstance): boolean {
+  return cardTypeOf(state, card) !== "Unit" || firstFreeZone(state, player, "units") !== null;
+}
 
 // ---------------------------------------------------------------------------
 // Drawing across a prompt (§9.3, §10.6, R113, R117, R122)
@@ -347,10 +453,13 @@ export function completeDraw(
 ): DrawOutcome {
   const state = sink.state;
   state.counters.drawn += 1;
-  sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId });
+  // B5 E4, R457: the draw's number this turn rides the event, so a trap answering "the 2nd card they
+  // draw in a turn" (Classic #9) reads it however much later the loop hands it the event.
+  const counted = countDraw(state, player);
+  sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId, ...counted });
 
   const at = linkFor(state, link);
-  if (flagsOf(card).castOnDraw === true && at.chain < CAST_ON_DRAW_CHAIN_CAP) {
+  if (castsOnDraw(card) && at.chain < CAST_ON_DRAW_CHAIN_CAP && roomToCast(state, player, card)) {
     // R58, R217: counted before the cast resolves, so a draw the cast makes continues from here.
     state.castChain = at.chain + 1;
     card.zone = { z: "resolving", player };
@@ -404,6 +513,8 @@ function continueChain(sink: EngineSink, player: PlayerId, owns: boolean, before
  */
 export function drawOne(sink: EngineSink, player: PlayerId, link?: ChainLink | number): DrawOutcome {
   const side = sink.state.players[player];
+  // B5 E3, R457: a draw past the player's limit this turn does not happen at all.
+  if (drawBlocked(sink, player)) return "limited";
 
   if (side.library.length === 0) {
     const reserves = infiniteReservesSource(sink, player);
@@ -412,7 +523,8 @@ export function drawOne(sink: EngineSink, player: PlayerId, link?: ChainLink | n
       if (tokenDef !== undefined) {
         const token = newInstance(sink.state, tokenDef.id, player, { z: "hand", player });
         sink.state.counters.drawn += 1;
-        sink.events.push({ type: "drawn", player, instanceId: token.id, defId: token.defId });
+        const counted = countDraw(sink.state, player);
+        sink.events.push({ type: "drawn", player, instanceId: token.id, defId: token.defId, ...counted });
         addToHand(sink, token);
         return "token";
       }
@@ -421,6 +533,8 @@ export function drawOne(sink: EngineSink, player: PlayerId, link?: ChainLink | n
     // R315: `fatigue` announces it first, so the board shows the empty library before the hit
     // lands; it is a report and answers nothing, like R240's zero-damage one below.
     side.fatigueCount += 1;
+    // R457: a draw from an empty library is a draw that happened, and counts toward a limit.
+    countDraw(sink.state, player);
     const amount = FATIGUE_DAMAGE(side.fatigueCount);
     sink.events.push({ type: "fatigue", player, count: side.fatigueCount, amount });
     const dealt = dealDamage(sink, { source: null, target: { kind: "hero", player }, amount });

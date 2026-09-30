@@ -11,3 +11,5 @@ export * from "./lethal";
 export * from "./heroPower";
 export * from "./comboIndex";
 export * from "./callToChaos";
+// B3.2, R384: Activate abilities — the `activate` action, its refusal, its listing and its view.
+export * from "./activate";

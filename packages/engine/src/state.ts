@@ -129,6 +129,22 @@ export type PlayerModifier = {
   | { kind: "quickstrikerDamage" }
   // ---- v0.2.0 modifier kinds, by workstream: play pipeline (E15 costs, E39 stamping, Devil's Pact) ----
   // ---- v0.2.0 modifier kinds, by workstream: activate and turn (E28 rest of the game) ----
+  /**
+   * B5 E10, R456: this player's turn ends once `actionsLeft` more main-phase actions of theirs have
+   * resolved. 0 is "your turn ends" — as soon as what is resolving now has resolved (Classic+ #26's
+   * "End your turn", the AI card Rate Limit) — and 1 is "you may take one more action, then your turn
+   * ends" (Classic+ #26 Radiant). `byInstanceId` is the card whose effect it is. Expiry `thisTurn`:
+   * ending the turn any other way ends it too (`reduce.ts` counts the actions and ends the turn).
+   */
+  | { kind: "turnEnds"; actionsLeft: number; byInstanceId: string | null }
+  /**
+   * B5 E28, R458: "For the rest of the game: at the start of your turn, …" (Classic+ #52). `resume`
+   * re-enters the card's step at each start of this player's turn, in R62's delayed-effect stage
+   * among the delayed effects in creation order (`seq`); `ranTurn` is the turn it last ran, so a
+   * prompt that pauses the stage never runs it twice. `label` is its badge (R169), the card's own
+   * words. Expiry `never`; several stack, each its own modifier.
+   */
+  | { kind: "startOfTurnEffect"; seq: number; resume: Resume; label: string; ranTurn?: number }
   // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
 );
 
@@ -138,6 +154,12 @@ export type DelayedEffect = {
   seq: number;
   owner: PlayerId;
   at: { phase: "start" | "end"; player: PlayerId };
+  /**
+   * B5 E27, R458: the first turn number whose boundary may run it — "at the end of your *next* turn"
+   * (Classic #37 Radiant) is made with the current turn plus one, so the end of the turn it was made
+   * on passes it by. Absent: the next such boundary.
+   */
+  notBefore?: number;
   /** A serializable continuation: script id, hook name, captured data (§10.6). */
   resume: Resume;
   /**
@@ -302,6 +324,12 @@ export type PlayerState = {
   // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
   // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
   // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
+  /**
+   * B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
+   * fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
+   * so it resets where the turn log does without anything clearing it (`draw.drawsThisTurn`).
+   */
+  draws?: { turn: number; count: number };
   // ---- v0.2.0 player fields, by workstream: damage and combat (E5–E9, E35) ----
   // ---- v0.2.0 player fields, by workstream: Core patches and cosmetics (R433, R434) ----
 };

@@ -452,8 +452,10 @@ type ListFn = (...args: unknown[]) => unknown[];
  * ingredients' lists in ingredient order, each asked with the fused card's own context (the fused
  * instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
  * and each label still sits in the fused face's text, which prints every ingredient's text whole.
+ * `drawLimit` (B5 E3, R457) is a third: the limits a card sets while it acts, read on every draw, so a
+ * fusion sets every ingredient's limit and the lowest holds.
  */
-const EAGER_KEYS: readonly string[] = ["aura", "preview"];
+const EAGER_KEYS: readonly string[] = ["aura", "preview", "drawLimit"];
 
 /**
  * §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that
