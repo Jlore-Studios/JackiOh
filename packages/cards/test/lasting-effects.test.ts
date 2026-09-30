@@ -123,7 +123,9 @@ describe("R209: Twinspell's grant follows its current face", () => {
       active: "p2",
       turn: 8,
       p1: {
-        hand: [{ def: MIND_CONTROL, radiant: true }, STOCKPILE, VANILLA],
+        // Mind Control costs (4) since patch v0.2.0; the costMod keeps it at the (3) this test was
+        // built on, so Stockpile stays affordable and the turn does not end by itself (R82).
+        hand: [{ def: MIND_CONTROL, radiant: true, costMod: -1 }, STOCKPILE, VANILLA],
         mana: 10,
         library: [...LIBRARY, ...LIBRARY],
       },

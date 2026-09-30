@@ -60,7 +60,13 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
   it("R213 a Gifted Program stolen after it fired for its owner this turn still makes the thief's first cheap card Radiant (§8 Conventions, R171)", () => {
     // p1's turn. p2 holds Gifted Program, a Prem Panther, and a Hinder on top of the library.
     const g = scenario({
-      p1: { hand: [MIND_CONTROL, STOCKPILE], field: [{ def: "core-011", lane: 1 }], library: [...LIBRARY] },
+      // Mind Control costs (4) since patch v0.2.0; the costMod keeps the (3) this test reads, which
+      // is above Gifted Program's 1 and leaves Stockpile affordable.
+      p1: {
+        hand: [{ def: MIND_CONTROL, costMod: -1 }, STOCKPILE],
+        field: [{ def: "core-011", lane: 1 }],
+        library: [...LIBRARY],
+      },
       p2: {
         hand: [VANILLA],
         field: [{ def: PANTHER, lane: 1 }],
@@ -174,7 +180,7 @@ describe("R214: a play's choices are the choices of the face it resolves with", 
 
   it("R214 a crafted Bigot + Twisted Sorcerer that Gifted Program will make Radiant names the Sorcerer's target alone (R90, R102)", () => {
     const g = scenario({
-      seed: "craft-17", // the first Discover offers Bigot, the second Twisted Sorcerer
+      seed: "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
       p1: { hand: [CRAFT_A_CARD, RENO], mana: 4, backrow: [GIFTED] },
       p2: { hand: [RENO], field: [PANTHER] },
     });

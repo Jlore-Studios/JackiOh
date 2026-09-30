@@ -81,7 +81,7 @@ describe("R43, R151: a Heroic Power created on the field rolls its power", () =>
       .map((lane) => g.backrow("p1", lane))
       .filter((card): card is CardInstance => card !== null && card.defId === HEROIC_POWER);
     expect(copies).toHaveLength(2);
-    expect(g.state.players.p1.mana.current).toBe(5); // 10 − 3 (Cube) − 2 (Hit Job): any power's X fits
+    expect(g.state.players.p1.mana.current).toBe(4); // 10 − 3 (Cube) − 3 (Hit Job, patch v0.2.0): any power's X fits
 
     const offered = legalActions(g.state, "p1")
       .filter((action) => action.type === "activatePower")
@@ -103,7 +103,7 @@ describe("R90, R102: a fused card's declarations each read their own slice of th
 
   it("R102 a crafted Bigot + Twisted Sorcerer destroys Bigot's target and deals the Sorcerer's 4 to the Sorcerer's own target (R90)", () => {
     const g = scenario({
-      seed: "craft-17", // the first Discover offers Bigot, the second Twisted Sorcerer
+      seed: "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
       p1: { hand: [CRAFT_A_CARD, RENO], mana: 4 },
       p2: { hand: [RENO], field: [PREM_PANTHER] },
     });
@@ -132,7 +132,7 @@ describe("R90, R102: a fused card's declarations each read their own slice of th
 
   it("R102 a crafted Archivist + Silly Silas draws by Archivist's mode and rotates by Silas's direction (R81, R90)", () => {
     const g = scenario({
-      seed: "craft-76", // the first Discover offers Archivist, the second Silly Silas
+      seed: "craft-446", // the first Discover offers Archivist, the second Silly Silas (pools of every set, R380)
       p1: { hand: [CRAFT_A_CARD, RENO], mana: 4, library: [MR_VANILLA, MIDRANGE_MENACE, MR_VANILLA] },
       p2: { hand: [RENO], field: [MR_VANILLA] },
     });

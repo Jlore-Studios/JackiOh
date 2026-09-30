@@ -60,8 +60,8 @@ describe("#35 Lunar Eclipse — base", () => {
     s.expectMana("p1", 3);
 
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    // Hit Job's printed 2, less 1.
-    s.expectMana("p1", 2);
+    // Hit Job's printed 3 (patch v0.2.0), less 1.
+    s.expectMana("p1", 1);
   });
 
   it("a unit play does not consume the discount", () => {
@@ -73,8 +73,9 @@ describe("#35 Lunar Eclipse — base", () => {
     s.play("15");
     s.expectMana("p1", 2);
 
+    // Hit Job's printed 3, less the 1 the unit play left standing.
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    s.expectMana("p1", 1);
+    s.expectMana("p1", 0);
   });
 
   it("only the NEXT Spell is cheaper, not every Spell this turn", () => {
@@ -87,10 +88,10 @@ describe("#35 Lunar Eclipse — base", () => {
     s.play("35", { targets: AT_ENEMY_HERO });
     s.expectMana("p1", 5);
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    s.expectMana("p1", 4);
-    // The discount was consumed by the first Spell, so this one pays its printed 2.
+    s.expectMana("p1", 3);
+    // The discount was consumed by the first Spell, so this one pays its printed 3 (patch v0.2.0).
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 2), "p2 lane 2").id }] });
-    s.expectMana("p1", 2);
+    s.expectMana("p1", 0);
   });
 
   it("the discount expires at cleanup", () => {
@@ -114,7 +115,8 @@ describe("#35 Lunar Eclipse — base", () => {
 
     const mana = s.state.players.p1.mana.current;
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    s.expectMana("p1", mana - 2);
+    // Hit Job's printed 3 (patch v0.2.0).
+    s.expectMana("p1", mana - 3);
   });
 });
 
@@ -134,8 +136,8 @@ describe("#35 Lunar Eclipse — radiant", () => {
     s.expectMana("p1", 3);
 
     s.play("16", { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2 lane 1").id }] });
-    // Hit Job's printed 2, less 2, floored at 0 (R65).
-    s.expectMana("p1", 3);
+    // Hit Job's printed 3 (patch v0.2.0), less 2.
+    s.expectMana("p1", 2);
   });
 
   it("the radiant discount expires at cleanup too", () => {

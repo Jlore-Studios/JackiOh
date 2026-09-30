@@ -20,7 +20,7 @@ import type { Selection } from "@jackioh/shared";
 
 const STOCKPILE = "core-005";
 const VANILLA = "core-008";
-const FLOOD = "core-017"; // a printed 3-cost Spell
+const FLOOD = "core-017"; // a printed 4-cost Spell (patch v0.2.0 raised it from 3)
 const SHREDDER = "core-013"; // Jlockeed Shredder-10, a printed 3-cost Unit
 const MENACE = "core-019";
 const RAPID = "core-010";
@@ -89,7 +89,7 @@ describe("R65: one cost calculation, in play and out of it", () => {
     const s = scenario({
       p1: {
         hand: [TUTOR, RAPID],
-        library: [{ def: FLOOD, costMod: -2 }],
+        library: [{ def: FLOOD, costMod: -3 }],
       },
       p2: { hand: [STOCKPILE], field: [MENACE], library: [...LIBRARY] },
     });
