@@ -51,6 +51,8 @@
       "pending_request": false,
       "queued_at": "2026-09-30T05:50:41Z",
       "requested_by": "jgoetzmann",
+      "run_id": "36678737643",
+      "started_at": "2026-09-30T06:32:44Z",
       "stop_requested": false
     }
   },
@@ -59,9 +61,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-09-30T05:03:56Z",
-    "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36671661941",
-    "what": "suggestions"
+    "at": "2026-09-30T06:32:44Z",
+    "url": "https://github.com/jgoetzmann/JackiOh/actions/runs/36678737643",
+    "what": "build #39"
   },
   "rate_limited_until": "2026-09-30T05:30:00Z",
   "run_requested": null,
