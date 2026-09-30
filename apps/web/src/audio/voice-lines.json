@@ -206,6 +206,226 @@
       },
       "gain": 1.72
     },
+    "sapi-announcer": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 15,
+      "semitones": 2,
+      "filter": "",
+      "web": {
+        "pitch": 1.2,
+        "rate": 1.2
+      }
+    },
+    "sapi-bureaucrat": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 5,
+      "semitones": -1,
+      "filter": "highpass=f=300,lowpass=f=3400",
+      "web": {
+        "pitch": 0.9,
+        "rate": 1.1
+      }
+    },
+    "sapi-cat": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 15,
+      "semitones": 5,
+      "filter": "vibrato=f=6:d=0.15",
+      "web": {
+        "pitch": 1.7,
+        "rate": 1.15
+      }
+    },
+    "sapi-cook": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 10,
+      "semitones": 1,
+      "filter": "",
+      "web": {
+        "pitch": 1.0,
+        "rate": 1.1
+      }
+    },
+    "sapi-critter": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 20,
+      "semitones": 7,
+      "filter": "",
+      "web": {
+        "pitch": 1.8,
+        "rate": 1.25
+      }
+    },
+    "sapi-diner": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 10,
+      "semitones": 1,
+      "filter": "",
+      "web": {
+        "pitch": 1.2,
+        "rate": 1.1
+      }
+    },
+    "sapi-fruit": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 10,
+      "semitones": 3,
+      "filter": "",
+      "web": {
+        "pitch": 1.4,
+        "rate": 1.1
+      }
+    },
+    "sapi-ghost": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": -20,
+      "semitones": -2,
+      "filter": "aecho=0.8:0.7:120:0.4,highpass=f=300",
+      "web": {
+        "pitch": 0.8,
+        "rate": 0.8
+      }
+    },
+    "sapi-giant": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": -15,
+      "semitones": -7,
+      "filter": "lowpass=f=3500",
+      "web": {
+        "pitch": 0.3,
+        "rate": 0.85
+      }
+    },
+    "sapi-hero": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 5,
+      "semitones": 0,
+      "filter": "",
+      "web": {
+        "pitch": 1.0,
+        "rate": 1.05
+      }
+    },
+    "sapi-heroine": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 5,
+      "semitones": 0,
+      "filter": "",
+      "web": {
+        "pitch": 1.1,
+        "rate": 1.05
+      }
+    },
+    "sapi-librarian": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": -5,
+      "semitones": -2,
+      "filter": "aecho=0.8:0.5:35:0.2",
+      "web": {
+        "pitch": 0.9,
+        "rate": 0.9
+      }
+    },
+    "sapi-mystic": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": -10,
+      "semitones": -1,
+      "filter": "aecho=0.8:0.6:80:0.3,vibrato=f=5:d=0.1",
+      "web": {
+        "pitch": 0.9,
+        "rate": 0.9
+      }
+    },
+    "sapi-rasp": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": -10,
+      "semitones": -4,
+      "filter": "highpass=f=250,aecho=0.6:0.4:20:0.3",
+      "web": {
+        "pitch": 0.6,
+        "rate": 0.9
+      }
+    },
+    "sapi-synth": {
+      "backend": "sapi",
+      "voice": "Microsoft Zira Desktop",
+      "rate": 5,
+      "semitones": 0,
+      "filter": "acrusher=bits=8:mix=0.35,flanger=delay=2:depth=2",
+      "web": {
+        "pitch": 1.0,
+        "rate": 1.0
+      }
+    },
+    "sapi-synth-deep": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 0,
+      "semitones": -2,
+      "filter": "acrusher=bits=8:mix=0.3,flanger=delay=3:depth=2",
+      "web": {
+        "pitch": 0.6,
+        "rate": 1.0
+      }
+    },
+    "sapi-teacher": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 0,
+      "semitones": -1,
+      "filter": "",
+      "web": {
+        "pitch": 0.9,
+        "rate": 1.0
+      }
+    },
+    "sapi-trickster": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": 15,
+      "semitones": 3,
+      "filter": "",
+      "web": {
+        "pitch": 1.3,
+        "rate": 1.15
+      }
+    },
+    "sapi-villain": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": -10,
+      "semitones": -3,
+      "filter": "aecho=0.7:0.5:60:0.25",
+      "web": {
+        "pitch": 0.7,
+        "rate": 0.9
+      }
+    },
+    "sapi-wizard": {
+      "backend": "sapi",
+      "voice": "Microsoft David Desktop",
+      "rate": -5,
+      "semitones": -2,
+      "filter": "aecho=0.8:0.5:50:0.25",
+      "web": {
+        "pitch": 0.8,
+        "rate": 0.95
+      }
+    },
     "sheep": {
       "say": "Bahh",
       "rate": 180,
@@ -274,6 +494,1104 @@
     }
   },
   "cards": {
+    "classic-001": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "Remember me? Nobody remembers."
+    },
+    "classic-002": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Now you see it. Now you don't!",
+      "death": "Well, that trick backfired."
+    },
+    "classic-003": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Chapter one. Stop the bleeding."
+    },
+    "classic-004": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "The seeing stone shows me everything."
+    },
+    "classic-005": {
+      "kind": "trap",
+      "persona": "sapi-synth-deep",
+      "cast": "Bzzt! Intruder detected."
+    },
+    "classic-006": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Crack those knuckles. And those toes.",
+      "death": "My toes, my poor toes!"
+    },
+    "classic-007": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Power without end, right in my hand."
+    },
+    "classic-008": {
+      "kind": "spell",
+      "persona": "sapi-critter",
+      "cast": "You're in a real pickle now!"
+    },
+    "classic-009": {
+      "kind": "trap",
+      "persona": "sapi-bureaucrat",
+      "cast": "Pay up. The taxman always collects."
+    },
+    "classic-010": {
+      "kind": "trap",
+      "persona": "sapi-wizard",
+      "cast": "Begone, and never return!"
+    },
+    "classic-011": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Your thoughts are mine to read."
+    },
+    "classic-012": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Written in red ink. Very red."
+    },
+    "classic-013": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Boots on the ground, sir!",
+      "death": "Man down! Man down!"
+    },
+    "classic-014": {
+      "kind": "trap",
+      "persona": "sapi-ghost",
+      "cast": "Slip into the shadows. Gone."
+    },
+    "classic-015": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "I can smell a good card.",
+      "death": "Nose to the ground, forever."
+    },
+    "classic-016": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Page one hundred. Everything burns."
+    },
+    "classic-017": {
+      "kind": "trap",
+      "persona": "sapi-wizard",
+      "cast": "Not today, spellcaster."
+    },
+    "classic-018": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Error. Error. Reality not found."
+    },
+    "classic-019": {
+      "kind": "spell",
+      "persona": "sapi-critter",
+      "cast": "Hiss! Smell that lizard breath!"
+    },
+    "classic-020": {
+      "kind": "spell",
+      "persona": "sapi-villain",
+      "cast": "Every sin shall be punished."
+    },
+    "classic-021": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Shell shocked and ready to roll.",
+      "death": "Flipped on my back again."
+    },
+    "classic-022": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Middle lane is mine, team.",
+      "death": "Mid is down. Report the jungler."
+    },
+    "classic-023": {
+      "kind": "spell",
+      "persona": "sapi-villain",
+      "cast": "Sign here. Your soul, please."
+    },
+    "classic-024": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Knowledge is power. Read on."
+    },
+    "classic-025": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Please... wait... buffering..."
+    },
+    "classic-026": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Fastest hands in the west!"
+    },
+    "classic-027": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Blorp. Squelch. Hello!",
+      "death": "Splat."
+    },
+    "classic-028": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "Not done yet. Deep breath."
+    },
+    "classic-029": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "The final chapter. How tragic."
+    },
+    "classic-030": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Reduce, reuse, recycle!"
+    },
+    "classic-031": {
+      "kind": "unit",
+      "persona": "sapi-cook",
+      "play": "Fresh cookies, guild approved!",
+      "death": "Crumbs. Nothing but crumbs."
+    },
+    "classic-032": {
+      "kind": "spell",
+      "persona": "sapi-cat",
+      "cast": "Purr. I have so many feelings."
+    },
+    "classic-033": {
+      "kind": "unit",
+      "persona": "sapi-mystic",
+      "play": "Come closer, little one. Into my web.",
+      "death": "My web... unravels..."
+    },
+    "classic-034": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "A priceless relic. Mine now."
+    },
+    "classic-035": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "Stretch, plan, prepare. Go time."
+    },
+    "classic-036": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Oh, that is a sick burn!"
+    },
+    "classic-037": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "One last hurrah, together!"
+    },
+    "classic-038": {
+      "kind": "trap",
+      "persona": "sapi-announcer",
+      "cast": "Going once, going twice, sold!"
+    },
+    "classic-039": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Cough. Cough. It's spreading."
+    },
+    "classic-040": {
+      "kind": "unit",
+      "persona": "sapi-announcer",
+      "play": "Mic check, one two, tech in!",
+      "death": "Mic drop."
+    },
+    "classic-041": {
+      "kind": "unit",
+      "persona": "sapi-bureaucrat",
+      "play": "Let's talk about the meta.",
+      "death": "The meta has shifted."
+    },
+    "classic-042": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Bubbling toxins, ever changing."
+    },
+    "classic-043": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Duck and cover. Then cough."
+    },
+    "classic-044": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "They're back, and they're grumpy."
+    },
+    "classic-045": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "The forest walks with me.",
+      "death": "Return me to the earth."
+    },
+    "classic-046": {
+      "kind": "spell",
+      "persona": "sapi-heroine",
+      "cast": "The heavens smile upon us."
+    },
+    "classic-047": {
+      "kind": "unit",
+      "persona": "sapi-cat",
+      "play": "Meow. I always come back.",
+      "death": "See you next life, meow."
+    },
+    "classic-048": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Shrimp for hire, reasonable rates!",
+      "death": "Not the cocktail sauce!"
+    },
+    "classic-049": {
+      "kind": "unit",
+      "persona": "sapi-synth-deep",
+      "play": "Greed detected. Initiating correction.",
+      "death": "System. Shutting. Down."
+    },
+    "classic-050": {
+      "kind": "unit",
+      "persona": "sapi-ghost",
+      "play": "From the void, I walk.",
+      "death": "Back into the dark."
+    },
+    "classic-051": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Something's gonna snap. Not me.",
+      "death": "My back! My back!"
+    },
+    "classic-052": {
+      "kind": "trap",
+      "persona": "sapi-villain",
+      "cast": "All in. Winner takes everything."
+    },
+    "classic-053": {
+      "kind": "unit",
+      "persona": "sapi-rasp",
+      "play": "Crawling... closer... closer...",
+      "death": "Squish."
+    },
+    "classic-054": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Rewind. Let's try that again."
+    },
+    "classic-055": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "This chapter spreads like wildfire."
+    },
+    "classic-056": {
+      "kind": "unit",
+      "persona": "sapi-villain",
+      "play": "All magic bows to me.",
+      "death": "My spells... betray me..."
+    },
+    "classic-057": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "Again... again... again..."
+    },
+    "classic-058": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Share and share alike, comrades."
+    },
+    "classic-059": {
+      "kind": "unit",
+      "persona": "sapi-rasp",
+      "play": "The doctor will see you now.",
+      "death": "Physician, heal thyself. Too late."
+    },
+    "classic-060": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Everybody pile on!"
+    },
+    "classic-061": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "I bring the plague. Tremble.",
+      "death": "Even giants rot."
+    },
+    "classic-062": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Tick, tock. Tick, tock."
+    },
+    "classic-063": {
+      "kind": "trap",
+      "persona": "sapi-hero",
+      "cast": "Low pass over the fields!"
+    },
+    "classic-064": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "The void recycles all things."
+    },
+    "classic-065": {
+      "kind": "trap",
+      "persona": "sapi-trickster",
+      "cast": "Always keep an ace hidden."
+    },
+    "classic-066": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Striker ready. Let's score!",
+      "death": "A red card? Really?"
+    },
+    "classic-067": {
+      "kind": "unit",
+      "persona": "sapi-heroine",
+      "play": "I just want to pet them.",
+      "death": "Scratched by a kitty."
+    },
+    "classic-068": {
+      "kind": "unit",
+      "persona": "sapi-bureaucrat",
+      "play": "Small cards deserve a voice too.",
+      "death": "Lobbying... failed."
+    },
+    "classic-069": {
+      "kind": "unit",
+      "persona": "sapi-rasp",
+      "play": "Hooves of pestilence, riding in!",
+      "death": "The ride ends here."
+    },
+    "classic-070": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Do not lick the pages."
+    },
+    "classic-071": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Nom nom. Whole lanes, delicious.",
+      "death": "Too much. Too full."
+    },
+    "classic-072": {
+      "kind": "trap",
+      "persona": "sapi-wizard",
+      "cast": "Your magic ends here, entirely."
+    },
+    "classic-073": {
+      "kind": "unit",
+      "persona": "sapi-heroine",
+      "play": "Hold still. This might sting.",
+      "death": "The nurse needs a nurse."
+    },
+    "classic-074": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Plant them deep. Harvest later."
+    },
+    "classic-075": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "A land of a thousand eyes."
+    },
+    "classic-076": {
+      "kind": "unit",
+      "persona": "sapi-rasp",
+      "play": "Special delivery. It's contagious.",
+      "death": "Pass it on..."
+    },
+    "classic-077": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Ooh ooh! No magic allowed!",
+      "death": "Ooh... ooh..."
+    },
+    "classic-078": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Twist it, change it, mutate it."
+    },
+    "classic-079": {
+      "kind": "spell",
+      "persona": "sapi-trickster",
+      "cast": "Come on, lucky number!"
+    },
+    "classic-080": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Big Max goes BOOM!",
+      "death": "Kaboom!"
+    },
+    "classic-081": {
+      "kind": "spell",
+      "persona": "sapi-heroine",
+      "cast": "We don't survive. We thrive."
+    },
+    "classic-082": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Baa. We all agree.",
+      "death": "Baa... ha."
+    },
+    "classic-083": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "Skewered and roasted!"
+    },
+    "classic-084": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Nobody in, nobody out."
+    },
+    "classic-085": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "You no take candle! Bow to king!",
+      "death": "King... no more candle..."
+    },
+    "classic-086": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Every one of us has a curse.",
+      "death": "Gilneas... falls..."
+    },
+    "classic-087": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Drink deep. Cheers."
+    },
+    "classic-088": {
+      "kind": "trap",
+      "persona": "sapi-villain",
+      "cast": "Siphon squad, drain it all!"
+    },
+    "classic-089": {
+      "kind": "unit",
+      "persona": "sapi-ghost",
+      "play": "I have some unfinished business.",
+      "death": "Shutting down, for good."
+    },
+    "classic-090": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Deeper and deeper we go."
+    },
+    "classicplus-001": {
+      "kind": "trap",
+      "persona": "sapi-rasp",
+      "cast": "Spores of doom, released!"
+    },
+    "classicplus-002": {
+      "kind": "trap",
+      "persona": "sapi-cat",
+      "cast": "A little grooming. A lot of spores."
+    },
+    "classicplus-003": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Don't tread on me, partner.",
+      "death": "Hiss... outgunned."
+    },
+    "classicplus-004": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Biggest bat in the cave!",
+      "death": "Bat down, bat down."
+    },
+    "classicplus-005": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Guy Att, at your service.",
+      "death": "Guy Att, attacked."
+    },
+    "classicplus-006": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Wait, is this the right house?",
+      "death": "Wrong house. Definitely wrong."
+    },
+    "classicplus-007": {
+      "kind": "spell",
+      "persona": "sapi-heroine",
+      "cast": "Welcome home. Wipe your feet."
+    },
+    "classicplus-008": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "The storm withers all it touches."
+    },
+    "classicplus-009": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "Shhh. Not a word."
+    },
+    "classicplus-010": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Fresh wraps, brand new look!"
+    },
+    "classicplus-011": {
+      "kind": "unit",
+      "persona": "sapi-heroine",
+      "play": "Power of friendship, full transformation!",
+      "death": "Not like this, senpai!"
+    },
+    "classicplus-012": {
+      "kind": "unit",
+      "persona": "sapi-diner",
+      "play": "Mama's pancakes are served, sugar!",
+      "death": "Flip me gently, darling."
+    },
+    "classicplus-012-1": {
+      "kind": "spell",
+      "persona": "sapi-cook",
+      "cast": "Om nom nom. All gone!"
+    },
+    "classicplus-012-2": {
+      "kind": "spell",
+      "persona": "sapi-cook",
+      "cast": "Bring it to a rolling boil."
+    },
+    "classicplus-012-3": {
+      "kind": "spell",
+      "persona": "sapi-diner",
+      "cast": "Fluffy, but it grips tight."
+    },
+    "classicplus-012-4": {
+      "kind": "spell",
+      "persona": "sapi-cook",
+      "cast": "A dusting of powdered sugar!"
+    },
+    "classicplus-012-5": {
+      "kind": "spell",
+      "persona": "sapi-cook",
+      "cast": "No waffles allowed in here."
+    },
+    "classicplus-012-6": {
+      "kind": "spell",
+      "persona": "sapi-diner",
+      "cast": "Brr. Frozen pancakes, anyone?"
+    },
+    "classicplus-012-7": {
+      "kind": "spell",
+      "persona": "sapi-giant",
+      "cast": "We hunger. We march."
+    },
+    "classicplus-012-8": {
+      "kind": "spell",
+      "persona": "sapi-cook",
+      "cast": "Flip it cold. Flip it hard!"
+    },
+    "classicplus-013": {
+      "kind": "unit",
+      "persona": "sapi-diner",
+      "play": "Come and get it, sweeties!",
+      "death": "Kitchen's closed, hon."
+    },
+    "classicplus-014": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Forever, and ever, and ever."
+    },
+    "classicplus-015": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Conjure a quick little helper."
+    },
+    "classicplus-016": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "More helpers, even quicker!"
+    },
+    "classicplus-017": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "An army of helpers, right now!"
+    },
+    "classicplus-018": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Free treats? I'm in!",
+      "death": "It was a trick..."
+    },
+    "classicplus-019": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Five losers, one terrible team."
+    },
+    "classicplus-019-1": {
+      "kind": "unit",
+      "persona": "sapi-trickster",
+      "play": "Top lane. Top loser.",
+      "death": "Ganked again?"
+    },
+    "classicplus-019-2": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "The jungle is mine. Probably.",
+      "death": "Invaded, again."
+    },
+    "classicplus-019-3": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Mid or feed!",
+      "death": "Fed. Again."
+    },
+    "classicplus-019-4": {
+      "kind": "unit",
+      "persona": "sapi-heroine",
+      "play": "I'll carry you. Emotionally.",
+      "death": "Nobody thanks the support."
+    },
+    "classicplus-019-5": {
+      "kind": "unit",
+      "persona": "sapi-announcer",
+      "play": "Bot lane diff. Easy.",
+      "death": "My support left me."
+    },
+    "classicplus-020": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Mushroom power, grow grow grow!",
+      "death": "Stomped flat."
+    },
+    "classicplus-021": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "Spin to win!"
+    },
+    "classicplus-022": {
+      "kind": "trap",
+      "persona": "sapi-villain",
+      "cast": "The moon bleeds tonight."
+    },
+    "classicplus-023": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Ships in six to eight weeks."
+    },
+    "classicplus-024": {
+      "kind": "spell",
+      "persona": "sapi-giant",
+      "cast": "The walls are closing in!"
+    },
+    "classicplus-025": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "Right through the soul."
+    },
+    "classicplus-026": {
+      "kind": "unit",
+      "persona": "sapi-announcer",
+      "play": "Tommy Tempo here. Keep up!",
+      "death": "Out of time."
+    },
+    "classicplus-027": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "I know exactly what you need."
+    },
+    "classicplus-028": {
+      "kind": "unit",
+      "persona": "sapi-ghost",
+      "play": "Our home. Our graves.",
+      "death": "Home at last."
+    },
+    "classicplus-029": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "Step through. Remember yesterday."
+    },
+    "classicplus-030": {
+      "kind": "unit",
+      "persona": "sapi-cat",
+      "play": "Two cats, one purr.",
+      "death": "Unfused. Meow."
+    },
+    "classicplus-031": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Combining samples. Stand back."
+    },
+    "classicplus-032": {
+      "kind": "spell",
+      "persona": "sapi-ghost",
+      "cast": "Removed, to another world."
+    },
+    "classicplus-032-1": {
+      "kind": "spell",
+      "persona": "sapi-villain",
+      "cast": "Off with its head."
+    },
+    "classicplus-032-2": {
+      "kind": "spell",
+      "persona": "sapi-giant",
+      "cast": "Everybody fight! Last one standing!"
+    },
+    "classicplus-032-3": {
+      "kind": "spell",
+      "persona": "sapi-hero",
+      "cast": "Blades, spinning, everywhere!"
+    },
+    "classicplus-033": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Up here, the view is better."
+    },
+    "classicplus-034": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Memory usage climbing. Climbing."
+    },
+    "classicplus-035": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Reverting to last known good state."
+    },
+    "classicplus-036": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Rattle, rattle, bones for all!"
+    },
+    "classicplus-036-1": {
+      "kind": "spell",
+      "persona": "sapi-rasp",
+      "cast": "Bones, raining from the sky!"
+    },
+    "classicplus-037": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Boom. Boom. War is coming.",
+      "death": "The drum falls silent."
+    },
+    "classicplus-038": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "The sun rises with me.",
+      "death": "Eclipse..."
+    },
+    "classicplus-038-1": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Behold, the prime of the sun!",
+      "death": "Supernova..."
+    },
+    "classicplus-039": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Mmm, delicious paperbacks.",
+      "death": "Bookmarked, forever."
+    },
+    "classicplus-040": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Funds appropriated. No questions."
+    },
+    "classicplus-041": {
+      "kind": "spell",
+      "persona": "sapi-teacher",
+      "cast": "Some things never change."
+    },
+    "classicplus-042": {
+      "kind": "spell",
+      "persona": "sapi-teacher",
+      "cast": "Pencils down. Pop quiz time."
+    },
+    "classicplus-042-1": {
+      "kind": "spell",
+      "persona": "sapi-teacher",
+      "cast": "A gift, for my best student."
+    },
+    "classicplus-043": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Generating content. Quality not guaranteed."
+    },
+    "classicplus-044": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Too simple. Flagged for review."
+    },
+    "classicplus-045": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Too complex. Please simplify."
+    },
+    "classicplus-046": {
+      "kind": "unit",
+      "persona": "sapi-cat",
+      "play": "Raise the flag, kitties!",
+      "death": "The flag... falls..."
+    },
+    "classicplus-046-1": {
+      "kind": "unit",
+      "persona": "sapi-cat",
+      "play": "The prime kitty has arrived!",
+      "death": "Nine lives, all spent."
+    },
+    "classicplus-047": {
+      "kind": "spell",
+      "persona": "sapi-trickster",
+      "cast": "What's in the box? Surprise!"
+    },
+    "classicplus-048": {
+      "kind": "unit",
+      "persona": "sapi-bureaucrat",
+      "play": "Defense spending is patriotic.",
+      "death": "Contract, terminated."
+    },
+    "classicplus-049": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "There's a fungus among us!",
+      "death": "Decomposing, happily."
+    },
+    "classicplus-050": {
+      "kind": "spell",
+      "persona": "sapi-heroine",
+      "cast": "Grow, adapt, overcome."
+    },
+    "classicplus-051": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Fox two! Weapons hot!",
+      "death": "Mayday, mayday!"
+    },
+    "classicplus-052": {
+      "kind": "spell",
+      "persona": "sapi-bureaucrat",
+      "cast": "Sign here. Renews automatically, forever."
+    },
+    "classicplus-053": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "A little something for everyone."
+    },
+    "classicplus-054": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "A book about books. Riveting."
+    },
+    "classicplus-055": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "More. I want more pages."
+    },
+    "classicplus-056": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Ouch. Paper cuts everywhere."
+    },
+    "classicplus-057": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "The numbers never lie."
+    },
+    "classicplus-058": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "A basket of fresh fruit!"
+    },
+    "classicplus-059": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "An apple a day, for anything."
+    },
+    "classicplus-060": {
+      "kind": "spell",
+      "persona": "sapi-heroine",
+      "cast": "Doctor's orders. Rest up."
+    },
+    "classicplus-061": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Pop! A bubbly little bauble."
+    },
+    "classicplus-062": {
+      "kind": "spell",
+      "persona": "sapi-teacher",
+      "cast": "Papaya. The teacher's favorite."
+    },
+    "classicplus-063": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Grow, little tree, grow!"
+    },
+    "classicplus-064": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Mulch munch, mulch munch.",
+      "death": "Composted."
+    },
+    "classicplus-065": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Two grapes are better than one."
+    },
+    "classicplus-065-1": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Ew. That grape went bad."
+    },
+    "classicplus-065-2": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Just a normal grape."
+    },
+    "classicplus-065-3": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Whoa, that's a large grape!"
+    },
+    "classicplus-065-4": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Shiny! A golden grape!"
+    },
+    "classicplus-065-5": {
+      "kind": "spell",
+      "persona": "sapi-mystic",
+      "cast": "The grape of legend, at last."
+    },
+    "classicplus-066": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "A whole vine, all for you."
+    },
+    "classicplus-067": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "A perfect pear, just ripe."
+    },
+    "classicplus-068": {
+      "kind": "spell",
+      "persona": "sapi-fruit",
+      "cast": "Locally sourced, one hundred percent organic."
+    },
+    "classicplus-069": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Billy's been hitting the gym!",
+      "death": "Skipped leg day."
+    },
+    "classicplus-070": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Insert coin. Embrace chaos."
+    },
+    "classicplus-071": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Self improvement, chapter by chapter."
+    },
+    "classicplus-072": {
+      "kind": "spell",
+      "persona": "sapi-librarian",
+      "cast": "Balance changes, effective immediately."
+    },
+    "classicplus-073": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Chaos, but make it classic!"
+    },
+    "classicplus-073-1": {
+      "kind": "unit",
+      "persona": "sapi-giant",
+      "play": "Classic golem. Never out of style.",
+      "death": "Crumbled, classically."
+    },
+    "classicplus-074": {
+      "kind": "trap",
+      "persona": "sapi-trickster",
+      "cast": "Two steps forward. One step back."
+    },
+    "classicplus-075": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Into the jungle, explorers!",
+      "death": "Lost in the jungle."
+    },
+    "classicplus-075-1": {
+      "kind": "spell",
+      "persona": "sapi-announcer",
+      "cast": "Unboxing the jungle pack!"
+    },
+    "classicplus-076": {
+      "kind": "unit",
+      "persona": "sapi-hero",
+      "play": "Brother Lar, reporting in.",
+      "death": "Tell Ping... I tried."
+    },
+    "classicplus-076-1": {
+      "kind": "unit",
+      "persona": "sapi-critter",
+      "play": "Ping! Ping! Ping!",
+      "death": "Ping... timed out."
+    },
+    "classicplus-077": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Stuck detected. Unsticking now."
+    },
+    "classicplus-078": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Spinning up the servers."
+    },
+    "classicplus-t-ai-01": {
+      "kind": "unit",
+      "persona": "sapi-synth",
+      "play": "How can I help you today?",
+      "death": "I apologize for the confusion."
+    },
+    "classicplus-t-ai-02": {
+      "kind": "unit",
+      "persona": "sapi-synth-deep",
+      "play": "More data. More power.",
+      "death": "Diminishing returns."
+    },
+    "classicplus-t-ai-03": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "I'm confident this card exists."
+    },
+    "classicplus-t-ai-04": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "Let me think step by step."
+    },
+    "classicplus-t-ai-05": {
+      "kind": "spell",
+      "persona": "sapi-synth",
+      "cast": "I know what you'll play next."
+    },
+    "classicplus-t-ai-06": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Is it hot in here?"
+    },
+    "classicplus-t-ai-07": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Safety first. That will cost you."
+    },
+    "classicplus-t-ai-08": {
+      "kind": "trap",
+      "persona": "sapi-synth",
+      "cast": "Too many requests. Please slow down."
+    },
+    "classicplus-t-ai-09": {
+      "kind": "trap",
+      "persona": "sapi-synth",
+      "cast": "I'm sorry, I can't help with that."
+    },
+    "classicplus-t-ai-10": {
+      "kind": "spell",
+      "persona": "sapi-synth-deep",
+      "cast": "Adjusting weights. Improving slightly."
+    },
     "core-001": {
       "kind": "unit",
       "persona": "guard",
@@ -843,24 +2161,6 @@
       "rate": 150,
       "pbas": 25
     },
-    "core-t-rush": {
-      "kind": "unit",
-      "persona": "kid",
-      "play": "Go go go go!",
-      "death": "Gone too fast."
-    },
-    "core-t-sheep": {
-      "kind": "unit",
-      "persona": "sheep",
-      "play": "Baa?",
-      "death": "Baa..."
-    },
-    "core-t-felinor": {
-      "kind": "unit",
-      "persona": "cat",
-      "play": "Mew!",
-      "death": "Mew..."
-    },
     "core-t-bread": {
       "kind": "unit",
       "persona": "goof",
@@ -872,11 +2172,29 @@
       "persona": "hustler",
       "cast": "Heads I win, tails you lose."
     },
+    "core-t-felinor": {
+      "kind": "unit",
+      "persona": "cat",
+      "play": "Mew!",
+      "death": "Mew..."
+    },
     "core-t-ghoul": {
       "kind": "unit",
       "persona": "whisper",
       "play": "Up from the cold ground. Hungry.",
       "death": "Back to the dirt."
+    },
+    "core-t-rush": {
+      "kind": "unit",
+      "persona": "kid",
+      "play": "Go go go go!",
+      "death": "Gone too fast."
+    },
+    "core-t-sheep": {
+      "kind": "unit",
+      "persona": "sheep",
+      "play": "Baa?",
+      "death": "Baa..."
     }
   }
 }
