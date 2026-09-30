@@ -20,7 +20,7 @@ import type { Selection } from "@jackioh/shared";
 
 const STOCKPILE = "core-005";
 const VANILLA = "core-008";
-const FLOOD = "core-017"; // a printed 3-cost Spell
+const STAB = "core-070"; // Spiteful Stab, a printed 3-cost Spell (Flood costs (4) since patch v0.2.0)
 const SHREDDER = "core-013"; // Jlockeed Shredder-10, a printed 3-cost Unit
 const MENACE = "core-019";
 const RAPID = "core-010";
@@ -89,19 +89,19 @@ describe("R65: one cost calculation, in play and out of it", () => {
     const s = scenario({
       p1: {
         hand: [TUTOR, RAPID],
-        library: [{ def: FLOOD, costMod: -2 }],
+        library: [{ def: STAB, costMod: -2 }],
       },
       p2: { hand: [STOCKPILE], field: [MENACE], library: [...LIBRARY] },
     });
-    const flood = s.pile("p1", "library")[0];
-    if (flood === undefined) throw new Error("setup");
-    expect(effectiveCost(s.state, flood)).toBe(1);
+    const stab = s.pile("p1", "library")[0];
+    if (stab === undefined) throw new Error("setup");
+    expect(effectiveCost(s.state, stab)).toBe(1);
 
     s.play(TUTOR);
     s.answer("Spell");
     const brackets = s.state.pending;
     if (brackets === null) throw new Error("the bracket prompt should be open");
-    // The Flood costs 1, so the one bracket with a match is "0-1".
+    // The Stab costs 1, so the one bracket with a match is "0-1".
     const offered = brackets.options.map((o) => (o.selection.pick === "mode" ? o.selection.option : o.key));
     expect(offered).toEqual(["0-1"]);
   });

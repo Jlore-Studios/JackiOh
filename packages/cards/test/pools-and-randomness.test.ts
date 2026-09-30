@@ -56,7 +56,7 @@ describe("§5.1: a random pool never offers the card that generated it", () => {
   it("§5.1 a crafted card carrying #54 Straaza's text still never adds a Straaza (§8 #54 'pool excluding #54', R102)", () => {
     // Craft a Card at this cursor Discovers #54 Straaza and then #56 Jilliax (a keyword-only body).
     const SEED = "craft-straaza";
-    const CRAFT_CURSOR = 28;
+    const CRAFT_CURSOR = 1384; // pools of every set (R380)
     const added: string[] = [];
     for (let cursor = 0; cursor < 200; cursor += 1) {
       const s = scenario({ seed: SEED, p1: { hand: [CRAFT, MENACE], mana: 8 } });

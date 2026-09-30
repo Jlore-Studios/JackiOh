@@ -18,7 +18,17 @@ export { CardRef, REF_TOOLTIP_TESTID } from "./CardRef.tsx";
 export { RulesText } from "./RulesText.tsx";
 
 // What a face in play prints where play and print part ways (SPEC §10.10).
-export { CONCEALED_TAG, CONCEALED_TEXT, HEROIC_POWER_ID, POWER_WORDS, VANILLA_TEXT, concealedInPlay, powerText } from "./inPlay.ts";
+export {
+  CONCEALED_TAG,
+  CONCEALED_TEXT,
+  CONCEALED_TEXT_LOUD,
+  HEROIC_POWER_ID,
+  POWER_WORDS,
+  VANILLA_TEXT,
+  concealedInPlay,
+  concealedText,
+  powerText,
+} from "./inPlay.ts";
 export type { RolledPower } from "./inPlay.ts";
 
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";

@@ -20,7 +20,9 @@
 //   "Imported trio" when T1 would refuse it.
 // - One checksum over everything, FNV-1a folded to 16 bits, as a deck code's: it catches a paste
 //   that lost or mangled characters.
-// - The version is `TRIO_CODE_VERSION`; a newer or older one is refused with a sentence.
+// - The version is `TRIO_CODE_VERSION` (2: each deck's numbers carry their set, as a version 2 deck
+//   code's do, B2.2); a newer or older one is refused with a sentence, except
+//   `TRIO_CODE_CORE_ONLY_VERSION` (1), whose decks are read as Core numbers (R339).
 //
 // DECODING IS TOTAL. It never throws, whatever it is handed: input longer than
 // `TRIO_CODE_MAX_INPUT_LENGTH` is refused unread, a deck code is sent to the deck import, and every
@@ -29,7 +31,10 @@
 import { checkTrioDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
 import {
+  DECK_CODE_CORE_ONLY_VERSION,
+  DECK_CODE_VERSION,
   DECK_NAME_MAX_LENGTH,
+  TRIO_CODE_CORE_ONLY_VERSION,
   TRIO_CODE_MAX_INPUT_LENGTH,
   TRIO_CODE_VERSION,
 } from "../../../../server/src/config.ts";
@@ -167,6 +172,7 @@ function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Colle
     {
       prefix: TRIO_CODE_PREFIX,
       version: TRIO_CODE_VERSION,
+      alsoReads: TRIO_CODE_CORE_ONLY_VERSION,
       maxInputLength: TRIO_CODE_MAX_INPUT_LENGTH,
       other: DECK_CODE_PREFIX,
       otherMessage: TRIO_CODE_MESSAGES.deckCode,
@@ -178,8 +184,10 @@ function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Colle
   if (!parsed.ok) return parsed;
 
   const { name, fellBack } = decodeName(parsed.nameBytes, IMPORTED_TRIO_NAME, passesT1);
+  // A version 1 trio's decks carry Core numbers, as a version 1 deck code's do.
+  const deckVersion = read.version === TRIO_CODE_CORE_ONLY_VERSION ? DECK_CODE_CORE_ONLY_VERSION : DECK_CODE_VERSION;
   const resolve = (body: DeckBody | null | undefined): ResolvedDeck | null =>
-    body === null || body === undefined ? null : resolveDeck(body, catalog, collection);
+    body === null || body === undefined ? null : resolveDeck(body, catalog, collection, deckVersion);
   const [first, second, third] = parsed.bodies;
   return { ok: true, name, nameFellBack: fellBack, slots: [resolve(first), resolve(second), resolve(third)] };
 }

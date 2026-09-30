@@ -1,6 +1,6 @@
 // #77 Professor Curvature (SPEC §8.3, R48, R65, R363, §2.2, §10.1).
 //
-// Base: "Cry: Cost (4)+ cards cost (1) less on your next turn."; radiant "... cost (2) less ...".
+// Base: "Cry: (4)+ Cost cards cost (1) less on your next turn."; radiant "... cost (2) less ...".
 // Patch v0.1.1 widened it from cards whose cost is exactly 4 to cards whose cost is 4 or more
 // (R363), and cut its body to 3/3 → 6/6; the stats come from the catalog.
 //

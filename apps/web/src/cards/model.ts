@@ -20,6 +20,7 @@
 // numbers the view's `preview` carries are printed after their formulas (`values`, R280).
 
 import {
+  fillParams,
   keywordKey,
   type CardDef,
   type CardFace as PrintedFace,
@@ -32,10 +33,10 @@ import {
 } from "@jackioh/shared";
 
 import {
-  CONCEALED_TEXT,
   HEROIC_POWER_ID,
   VANILLA_TEXT,
   concealedInPlay,
+  concealedText,
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
@@ -165,7 +166,9 @@ const UNKNOWN_TYPE: CardType = "Unit";
 export function faceModel(source: FaceSource): FaceModel {
   const def = source.def;
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
-  const type: CardType = def?.type ?? source.type ?? UNKNOWN_TYPE;
+  // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
+  // the card's type is its face's (§5.2).
+  const type: CardType = printed?.type ?? def?.type ?? source.type ?? UNKNOWN_TYPE;
   const inPlay = source.inPlay;
   const vanilla = inPlay?.vanilla === true;
   const printedText = textOf(def, source.radiant);
@@ -249,7 +252,7 @@ function concealed(def: CardDef | undefined): boolean {
 function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay): FaceText {
   if (inPlay.vanilla === true) return { full: VANILLA_TEXT, marks: [] };
   if (def === undefined) return printedText;
-  if (concealed(def)) return { full: CONCEALED_TEXT, marks: [] };
+  if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
     const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "));
@@ -355,8 +358,14 @@ function statsOf(
  * cell written out (R277), with what the base face's text does not have marked; a fused definition's
  * lines are marked line by line against the base lines of the same ingredients (radiantDiff.ts).
  */
+/**
+ * A face's printed text, its `{key}` numbers filled in with the face's own printed values
+ * (`fillParams`, B3.4 rule 5), so R277's diff compares each face as it prints.
+ */
 function textOf(def: CardDef | undefined, radiant: boolean): FaceText {
   if (def === undefined) return { full: "", marks: [] };
-  if (!radiant) return { full: def.base.text, marks: [] };
-  return { full: def.radiant.text, marks: radiantMarks(def.base.text, def.radiant.text) };
+  const base = fillParams(def, "base");
+  if (!radiant) return { full: base, marks: [] };
+  const full = fillParams(def, "radiant");
+  return { full, marks: radiantMarks(base, full) };
 }

@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef } from "@jackioh/shared";
+import { fillParams, type CardDef } from "@jackioh/shared";
 
 import { REF_TOOLTIP_TESTID } from "./CardRef.tsx";
 import { CardFace } from "./CardFace.tsx";
@@ -46,17 +46,19 @@ describe("R279 the names a text links", () => {
     const refs = [def("core-t-rush"), def("core-095-1"), def("core-095")];
     const text = def("core-095").radiant.text;
     const found = findRefs(text, refs).map((match) => [text.slice(match.start, match.end), match.id, match.radiant]);
+    // R423: the Radiant face lists the effects first, the recursion last.
     expect(found).toEqual([
-      ["Call to Chaos", "core-095", false],
       ["Rush Tokens", "core-t-rush", true],
       ["Chaos Golem", "core-095-1", false],
+      ["Call to Chaos", "core-095", false],
     ]);
   });
 
   it("R279 every catalog text's names render as references, marked, with the id they name", () => {
     for (const card of Object.values(CATALOG)) {
       for (const radiant of [false, true]) {
-        const text = radiant ? card.radiant.text : card.base.text;
+        // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
+        const text = fillParams(card, radiant ? "radiant" : "base");
         const expected = findRefs(text, (card.refs ?? []).map(def)).map((match) => match.id);
         const { container, unmount } = render(
           <CardDefsProvider defs={CATALOG}>
@@ -227,10 +229,12 @@ describe("R279 the hover preview lists the named cards beside the face", () => {
       entry.getAttribute("data-ref"),
       entry.getAttribute("data-ref-face"),
     ]);
-    // The card itself ("cast a random Call to Chaos") is left out: the preview already shows it.
+    // The card itself ("cast a random Call to Chaos") is left out: the preview already shows it. The
+    // Classic+ Edition, which the same words can cast (R423), is named beside the tokens.
     expect(named).toEqual([
       ["core-t-rush", "radiant"],
       ["core-095-1", "base"],
+      ["classicplus-073", "base"],
     ]);
     // Inside the preview a reference is only a mark: the preview takes no pointer events.
     expect(preview.querySelector(".cf-ref[tabindex]")).toBeNull();

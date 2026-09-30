@@ -141,7 +141,7 @@ describe("the opponent's play is held up", () => {
     rerender(withCatalog(<CardShowcase view={after} />));
     const cost = screen.getByTestId(T.cost);
     expect(cost).toHaveTextContent("3");
-    expect(cost).toHaveAttribute("title", "Cost (3)");
+    expect(cost).toHaveAttribute("title", "(3) Cost");
     expect(screen.getByTestId(T.back)).toContainElement(cost);
     expect(screen.getByTestId(T.caption)).toHaveTextContent("Opponent set a card");
     expect(document.body.innerHTML).not.toMatch(/core-\d+/);
