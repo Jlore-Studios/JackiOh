@@ -21,7 +21,8 @@ const MIGRATIONS = resolve(import.meta.dirname, "../../src/db/migrations");
 
 /**
  * The tags `public.cards.cards_tags_check` admits once every migration has run: the array in the
- * last migration, in apply order, that adds the check. 0002 defines it and 0010 re-adds it.
+ * last migration, in apply order, that adds the check. 0002 defines it, 0010 re-adds it with
+ * Jlockeed and 0014 with Book, Pancake and AI.
  */
 function admittedTags(): { file: string; tags: string[] } {
   const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql")).sort();
@@ -60,11 +61,12 @@ async function fileHolding(contents: unknown): Promise<string> {
 }
 
 describe("readCatalog", () => {
-  it("reads the real packages/cards/catalog.json: 111 entries (100 cards + 11 tokens)", async () => {
+  it("reads the real packages/cards/catalog.json: 317 entries (268 cards + 49 tokens) in three sets", async () => {
     const entries = await readCatalog(REAL_CATALOG);
-    expect(entries).toHaveLength(111);
-    expect(entries.filter((entry) => entry.token)).toHaveLength(11);
+    expect(entries).toHaveLength(317);
+    expect(entries.filter((entry) => entry.token)).toHaveLength(49);
     expect(entries.map((entry) => entry.id)).toContain("core-001");
+    expect([...new Set(entries.map((entry) => entry.set))]).toEqual(["Core", "Classic", "Classic+"]);
   });
 
   it("accepts a bare array and a { cards: [...] } wrapper too", async () => {
@@ -101,12 +103,13 @@ describe("readCatalog", () => {
  * (seed-catalog.spec.ts) prove the same against Postgres.
  */
 describe("R278 the catalog's tags and the cards table's tag check", () => {
-  it("R278 every tag the real catalog carries, Jlockeed included, is one the latest cards_tags_check admits", async () => {
+  it("R278 every tag the real catalog carries, Jlockeed, Book, Pancake and AI included, is one the latest cards_tags_check admits", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const { file, tags } = admittedTags();
-    expect(file, "0010 re-adds the check with Jlockeed").toBe("0010_jlockeed_tag.sql");
+    expect(file, "0014 re-adds the check with Book, Pancake and AI").toBe("0014_classic_sets_tags.sql");
     const carried = [...new Set(entries.flatMap((entry) => entry.tags))].sort();
     expect(carried).toContain("Jlockeed");
+    expect(carried).toEqual(expect.arrayContaining(["Book", "Pancake", "AI"]));
     expect(carried.filter((tag) => !tags.includes(tag)), "tags the schema would refuse").toEqual([]);
     // No stale name either: every tag the check admits is one some catalog entry carries.
     expect([...tags].sort()).toEqual(carried);

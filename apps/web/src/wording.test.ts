@@ -2,6 +2,11 @@
 // Nothing in the client a player reads may say the old words: a label, an aria-label, a tooltip, a
 // log line, a prompt, a coach line or a setting.
 //
+// R432 (v0.2.0): a specific cost is written the way card text writes it, "(N) Cost" as the noun ("a
+// (1) Cost or less card", "Face-down trap, (2) Cost") and "costs (N)" as the verb ("costs (1) less").
+// So no client string says the old noun "Cost (N)", nor a bare number after "cost" ("costs 3"), nor
+// "a 2-cost card".
+//
 // The guard reads every source file under src/ (tests aside) and parses it, so comments — which
 // name the rules' library freely, as SPEC does — are not text. Of what is left, a machine word is
 // never read by a player (a zone kind, "library"; a testid, `library-you`; a data value,
@@ -17,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+
+import { costPhrase, faceDownLabel } from "./cards/faceDown.ts";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
@@ -79,5 +86,41 @@ describe("R373 players read Deck and Tribute", () => {
     expect(flagged("library-you")).toBe(false);
     expect(flagged("libraryFull")).toBe(false);
     expect(flagged("Your deck")).toBe(false);
+  });
+});
+
+/** R432: the old noun ("Cost (2)"), a bare number after the word cost ("costs 3"), and "2-cost". */
+const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i];
+
+function oldCostWords(text: string): boolean {
+  return OLD_COST_WORDS.some((pattern) => pattern.test(text));
+}
+
+describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", () => {
+  it("R432 no text a player can read in the client writes a cost the old way", () => {
+    const files = sources(SRC);
+    expect(files.length).toBeGreaterThan(100);
+    const found = files
+      .flatMap(wordsIn)
+      .filter(({ text }) => oldCostWords(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(found).toEqual([]);
+  });
+
+  it("R432 the guard flags the old ways and passes the new ones", () => {
+    expect(oldCostWords("Face-down trap, Cost (2)")).toBe(true);
+    expect(oldCostWords("Discover 2 Cost (2) or less Units")).toBe(true);
+    expect(oldCostWords("Jlockeed Shredder-10 costs 3.")).toBe(true);
+    expect(oldCostWords("a 2-cost unit")).toBe(true);
+    expect(oldCostWords("a card costing 1 or less")).toBe(true);
+    expect(oldCostWords("Face-down trap, (2) Cost")).toBe(false);
+    expect(oldCostWords("Discover 2 (2) Cost or less Units")).toBe(false);
+    expect(oldCostWords("cards cost (1) less")).toBe(false);
+    expect(oldCostWords("It costs (0).")).toBe(false);
+  });
+
+  it("R432 the face-down trap's label reads \"Face-down trap, (2) Cost\"", () => {
+    expect(faceDownLabel(2)).toBe("Face-down trap, (2) Cost");
+    expect(costPhrase(0)).toBe("(0) Cost");
   });
 });

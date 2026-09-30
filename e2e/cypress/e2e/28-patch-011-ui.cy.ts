@@ -10,7 +10,7 @@
 //      "Your deck" (R373). After the hand-over, player 1 sees a back labelled "Face-down trap",
 //      whose hover shows the face-down overlay and names nothing (R370). The view gives the back
 //      its cost (R351, the engine's half of v0.1.1), and the gem, the label and the overlay all
-//      state it as "Cost (1)", Sheepish's.
+//      state it as "(1) Cost", Sheepish's (R432).
 //   B. Combo-Index by its letter (R372), with `28-combo-a` (spec 03's player-1 deck with #93 in it)
 //      and seed 28-combo-16, which deals #93 into player 1's opening hand: played on player 1's
 //      third turn (three mana, so a one-mana card is still playable and R82 does not end the turn
@@ -132,8 +132,8 @@ function faceDownTrap(viewport: Viewport | null): void {
     // R351, R370: the view gives the back its cost, and the gem, the label and the overlay state it.
     cy.get(back).should("have.attr", "data-facedown-cost", String(SHEEPISH_COST));
     cy.get(back).find(".facedown-cost").should("have.text", String(SHEEPISH_COST));
-    cy.get(back).should("have.attr", "aria-label", `Face-down trap, Cost (${String(SHEEPISH_COST)})`);
-    cy.get(ts(INSPECT_FACE_DOWN)).find(ts(INSPECT_FACE_DOWN_COST)).should("have.text", `Cost (${String(SHEEPISH_COST)})`);
+    cy.get(back).should("have.attr", "aria-label", `Face-down trap, (${String(SHEEPISH_COST)}) Cost`);
+    cy.get(ts(INSPECT_FACE_DOWN)).find(ts(INSPECT_FACE_DOWN_COST)).should("have.text", `(${String(SHEEPISH_COST)}) Cost`);
     shoot(viewport, "opponent-face-down-trap-hover");
     unhover(back);
     cy.get(ts(INSPECT_FACE_DOWN)).should("not.exist");

@@ -185,7 +185,7 @@ export const script: LessonScript = {
     mulliganAway({
       id: "mulligan",
       title: "Send one back",
-      text: "Rule of thumb: send back cards you can't play in your first turns. The 4-mana 7/7 costs 4, so tap it to mark it Redraw, then press Ready.",
+      text: "Rule of thumb: send back cards you can't play in your first turns. The 7/7 costs (4), so tap it to mark it Redraw, then press Ready.",
       defIds: [SEVEN_SEVEN],
     }),
 
@@ -212,7 +212,7 @@ export const script: LessonScript = {
       ...playStep({
         id: "play-fiender",
         title: "A turn early",
-        text: "With 2 mana you can play Felinor Fiender, a 2-cost unit, a whole turn before you normally could.",
+        text: "With 2 mana you can play Felinor Fiender, a (2) Cost unit, a whole turn before you normally could.",
         defId: FELINOR_FIENDER,
       }),
       moot: (ctx, since) =>

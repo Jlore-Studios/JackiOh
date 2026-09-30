@@ -23,7 +23,7 @@
 
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compareSortKeys, moduleAliasOf, resolveBasename, sortKey } from "./naming";
+import { SET_SUBFOLDERS, compareSortKeys, moduleAliasOf, resolveRelPath, sortKey } from "./naming";
 
 /** Package-relative labels, so the output reads the same from either working directory. */
 const SCRIPTS_DIR_LABEL = "src/scripts";
@@ -34,7 +34,10 @@ const GENERATED_PATH = fileURLToPath(new URL("../src/scripts/_generated.ts", imp
 const CATALOG_PATH = fileURLToPath(new URL("../catalog.json", import.meta.url));
 
 export type ScriptFile = {
-  /** Filename without the `.ts` extension, e.g. `051-1-kys-empty-notebook`. */
+  /**
+   * The path under `src/scripts/` without the `.ts` extension, e.g. `051-1-kys-empty-notebook` or
+   * `classic/043-plague-nuke` (a set's folder, B2.2).
+   */
   basename: string;
   /** The catalog id the filename names, or `undefined` when it names no shipped card. */
   id: string | undefined;
@@ -58,30 +61,42 @@ function catalogIds(): readonly string[] {
   return Object.keys(raw);
 }
 
-/**
- * The card script files in `src/scripts/`: every `*.ts` whose basename does not start with `_`
- * (`_generated.ts` itself, and any future private helper), test files excluded.
- */
-function scriptFiles(ids: readonly string[]): ScriptFile[] {
+/** The script basenames directly inside one directory, or none when it does not exist yet. */
+function scriptsIn(dir: string): string[] {
   let entries: string[];
   try {
-    entries = readdirSync(SCRIPTS_DIR);
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts") && !name.endsWith(".test.ts"))
+    .filter((name) => !name.startsWith("_"))
+    .map((name) => name.slice(0, -".ts".length));
+}
+
+/**
+ * The card script files: every `*.ts` in `src/scripts/` (Core) and in each set's folder
+ * (`classic/`, `classic-plus/`, B2.2) whose basename does not start with `_` (`_generated.ts`
+ * itself, and any future private helper), test files excluded.
+ */
+function scriptFiles(ids: readonly string[]): ScriptFile[] {
+  try {
+    readdirSync(SCRIPTS_DIR);
   } catch {
     // First run: the directory arrives with the first card file (BUILD M4-T4).
     mkdirSync(SCRIPTS_DIR, { recursive: true });
-    entries = [];
   }
 
-  const files = entries
-    .filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts") && !name.endsWith(".test.ts"))
-    .filter((name) => !name.startsWith("_"))
-    .map((name) => {
-      const basename = name.slice(0, -".ts".length);
-      return { basename, id: resolveBasename(basename, ids) };
-    });
+  const paths = [
+    ...scriptsIn(SCRIPTS_DIR),
+    ...SET_SUBFOLDERS.flatMap((folder) => scriptsIn(`${SCRIPTS_DIR}${folder}/`).map((name) => `${folder}/${name}`)),
+  ];
+  const files = paths.map((path) => ({ basename: path, id: resolveRelPath(path, ids) }));
 
-  // Deterministic: §5 index ascending, card-defined tokens after their card, shared tokens last,
-  // unrecognised filenames after those — never the order readdir happened to return.
+  // Deterministic: catalog order (set, then §5 index ascending, card-defined tokens after their
+  // card, shared tokens last), unrecognised filenames after those — never the order readdir
+  // happened to return.
   return files.sort((a, b) => compareSortKeys(sortKey(a.basename, a.id), sortKey(b.basename, b.id)));
 }
 
