@@ -294,3 +294,60 @@ describe("BUILD M5-T1 — the full fixture board fits 1280x720, 844x390, 768x102
     });
   }
 });
+
+// R504: an empty hand keeps its place. jsdom lays nothing out (apps/web/src/game/Hand.test.tsx proves
+// the outline and its rules), so the size is measured here: at every viewport above, both hand rows
+// are exactly as tall with no cards as with the fixture's full hands, and the field has not moved.
+// Probed when written: with Hand.tsx's outline replaced by an empty span, all six went red (desktop:
+// "your empty hand keeps its height: expected 14 to be close to 139.578125"; landscape: "their empty
+// hand keeps its height: expected 30.125 to be close to 60.078125").
+describe("R504 an empty hand keeps its place at every size", () => {
+  /** The heights of both hand rows and the field's top edge, in px. */
+  function handRows(doc: Document): { you: number; opponent: number; fieldTop: number } {
+    const height = (id: string): number => doc.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().height ?? -1;
+    return {
+      you: height("hand-you"),
+      opponent: height("hand-opponent"),
+      fieldTop: doc.querySelector(`${BOARD} .field`)?.getBoundingClientRect().top ?? -1,
+    };
+  }
+
+  for (const viewport of VIEWPORTS) {
+    const where = `${viewport.label} ${viewport.width}x${viewport.height}`;
+
+    it(`R504 both hands keep their height with no cards, and the field stays put, at ${where}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      const full = fullBoardView();
+      const empty = { ...full, you: { ...full.you, hand: [] }, opponent: { ...full.opponent, hand: { count: 0 } } };
+      const seen: { full?: ReturnType<typeof handRows> } = {};
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={full} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(`${BOARD} [data-testid="hand-you"] .hand-slot`).should("have.length", Array.isArray(full.you.hand) ? full.you.hand.length : 0);
+      cy.document({ log: false }).then((doc) => {
+        seen.full = handRows(doc);
+      });
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={empty} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get('[data-testid="hand-empty-you"]').should("exist");
+      cy.get('[data-testid="hand-empty-opponent"]').should("exist");
+      cy.document({ log: false }).should((doc) => {
+        const before = seen.full;
+        expect(before, "the full board was measured").to.not.eq(undefined);
+        if (before === undefined) return;
+        const after = handRows(doc);
+        expect(before.you, `your hand has a height at ${where}`).to.be.greaterThan(0);
+        expect(after.you, `your empty hand keeps its height at ${where}`).to.be.closeTo(before.you, 1);
+        expect(after.opponent, `their empty hand keeps its height at ${where}`).to.be.closeTo(before.opponent, 1);
+        expect(after.fieldTop, `the field does not move at ${where}`).to.be.closeTo(before.fieldTop, 1);
+      });
+    });
+  }
+});
