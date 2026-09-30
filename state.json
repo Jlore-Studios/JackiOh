@@ -65,10 +65,12 @@
       "stop_requested": false
     },
     "43": {
+      "closed_at": "2026-09-30T14:01:12Z",
       "failures": 0,
       "feedback_since": "2026-09-30T06:32:44Z",
       "issue": 39,
-      "kind": "revise"
+      "kind": "revise",
+      "merged": true
     }
   },
   "last_infra": {
