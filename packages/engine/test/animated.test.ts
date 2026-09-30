@@ -264,8 +264,13 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
       { type: "deanimated", player: "p1", instanceId: card.id, defId: spatula.id, unitLane: 4, backrowLane: 4 },
     ]);
 
-    // On the opponent's turn it sits in the backrow, where no attack can reach it.
+    // On the opponent's turn it sits in the backrow, where no attack can reach it: no unit walk finds
+    // it, and a backrow effect does (rule 7).
     expect(activeUnitsOf(state, "p1").map((unit) => unit.id)).not.toContain(card.id);
+    const ctx = makeContext(sink, null, { controller: "p2" });
+    expect(cardsInScope(ctx, { side: "enemy" }).map((unit) => unit.id)).not.toContain(card.id);
+    expect(cardsInScope(ctx, { side: "enemy", rows: ["backrow"] }).map((unit) => unit.id)).toContain(card.id);
+    expect(cardTypeOf(state, card)).toBe("Field Spell");
     state.turn += 2;
     animateAtTurnStart(sink, "p1");
     expect(cardAt(state, slot("p1", "units", 4))?.id).toBe(card.id);
