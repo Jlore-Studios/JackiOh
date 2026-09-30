@@ -10,6 +10,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { MATCH_CEILING_MINUTES, TURN_CLOCK_SECONDS } from "../../src/config";
+import { defaultConfig } from "../../src/api/deps";
 import { createManualTimers, testConfig } from "../fakes/deps";
 import { createMatchClock, initialClocks, matchCeilingAt } from "../../src/match/clock";
 import type { ClockExpiry, ClockView } from "../../src/match/contracts";
@@ -397,5 +399,29 @@ describe("match clock", () => {
       graceDeadline: { p1: null, p2: null },
       ceilingAt: startedAt + ceilingMs,
     });
+  });
+});
+
+describe("R389 the match ceiling doubled with the turn cap (patch v0.2.0, B4.3)", () => {
+  /** B4.3, R389: the engine's turn cap since patch v0.2.0, 30 player-turns each. */
+  const PLAYER_TURNS_AT_CAP = 60;
+
+  it("R389 the hard ceiling is 120 minutes, and the server runs with it", () => {
+    expect(MATCH_CEILING_MINUTES).toBe(120);
+    expect(defaultConfig().matchCeilingMinutes).toBe(MATCH_CEILING_MINUTES);
+  });
+
+  it("R389 a game that plays every turn to the cap at a full turn clock ends on the cap, not the ceiling", () => {
+    // 60 player-turns × 75 s is 75 minutes: under 120, where the old 60-minute ceiling was not.
+    const longestGameMs = PLAYER_TURNS_AT_CAP * TURN_CLOCK_SECONDS * SECOND;
+    expect(longestGameMs).toBeLessThan(MATCH_CEILING_MINUTES * MINUTE);
+    expect(longestGameMs).toBeGreaterThan(60 * MINUTE);
+  });
+
+  it("R389 the clock arms the ceiling at the configured minutes from the match's start", () => {
+    const startedAt = 5 * SECOND;
+    expect(matchCeilingAt(startedAt, testConfig({ matchCeilingMinutes: MATCH_CEILING_MINUTES }))).toBe(
+      startedAt + MATCH_CEILING_MINUTES * MINUTE,
+    );
   });
 });

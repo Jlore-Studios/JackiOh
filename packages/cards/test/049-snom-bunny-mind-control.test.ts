@@ -48,7 +48,8 @@ describe("#49 Snom Bunny Mind Control", () => {
     expect(g.card(prey).controller).toBe("p1");
     expect(g.card(prey).owner).toBe("p2");
     g.expectEvents("cardPlayed", "controlChanged", "enteredGraveyard");
-    g.expectMana("p1", 1);
+    // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
+    g.expectMana("p1", 0);
   });
 
   it("R15 base: the first free zone of the row when the same lane is taken", () => {
@@ -170,7 +171,7 @@ describe("#49 Snom Bunny Mind Control", () => {
   it("R81: both faces declare one enemy permanent, and the radiant face adds the flag", () => {
     expect(def.id).toBe(MIND_CONTROL);
     expect(def.type).toBe("Spell");
-    expect(def.cost).toBe(3);
+    expect(def.cost).toBe(4);
     for (const face of [base, radiant]) {
       expect(face.targets).toEqual([
         { kind: "target", min: 1, max: 1, filter: { side: "enemy", of: ["unit", "backrow"] } },

@@ -17,7 +17,7 @@
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
-import type { CardDef, CardDefs, CardType, PlayerView, Rarity, Tag } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardDefs, type CardType, type PlayerView, type Rarity, type Tag } from "@jackioh/shared";
 
 import type { RolledPower } from "../cards/index.ts";
 
@@ -47,8 +47,10 @@ export function lookupFromDefs(defs: CardDefs): CardLookup {
     const face = radiant ? def.radiant : def.base;
     return {
       name: def.name,
-      type: def.type,
-      text: face.text,
+      // B2.7: a face with its own type is that type (Classic+ #22's Radiant Field Trap).
+      type: face.type ?? def.type,
+      // B3.4: the face's `{key}` numbers filled in with its printed values; a raw placeholder never shows.
+      text: fillParams(def, radiant ? "radiant" : "base"),
       tags: def.tags,
       attack: face.attack,
       health: face.health,

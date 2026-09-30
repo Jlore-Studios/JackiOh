@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { CardDef, CardDefs } from "@jackioh/shared";
-import { ok, route, type Route } from "./http";
+import { ApiError, ok, route, type Route } from "./http";
 import type { CatalogInfo } from "./ports";
 
 export class CatalogUnavailableError extends Error {
@@ -31,6 +31,55 @@ export class CatalogUnavailableError extends Error {
 export function catalogUrl(): URL {
   // `@jackioh/cards` exports "./src/index.ts"; the data file sits one level up from it.
   return new URL("../catalog.json", import.meta.resolve("@jackioh/cards"));
+}
+
+/**
+ * Where the card patch history lives (R388, B4.2): `patches.json`, the list of patches in the order
+ * they were made, and one `<version>.json` snapshot of the whole catalog per patch.
+ */
+export function patchesUrl(): URL {
+  return new URL("../patches/", import.meta.resolve("@jackioh/cards"));
+}
+
+/** A version as a snapshot's file name may spell it. Anything else names no patch. */
+const PATCH_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+/** Snapshots read once per process: they are static data, like catalog.json itself. */
+const snapshotCache = new Map<string, Promise<CardDefs | null>>();
+
+async function readSnapshot(base: URL, version: string): Promise<CardDefs | null> {
+  if (!PATCH_VERSION.test(version)) return null;
+  let listed: unknown;
+  try {
+    listed = JSON.parse(await readFile(new URL("patches.json", base), "utf8"));
+  } catch (cause) {
+    throw new CatalogUnavailableError(new URL("patches.json", base).pathname, cause);
+  }
+  const versions = Array.isArray(listed) ? listed.map((entry) => (entry as { version?: unknown }).version) : [];
+  // R105, R388: a version is compared for equality only, against the list, never parsed.
+  if (!versions.includes(version)) return null;
+  const url = new URL(`${version}.json`, base);
+  try {
+    return JSON.parse(await readFile(url, "utf8")) as CardDefs;
+  } catch (cause) {
+    throw new CatalogUnavailableError(url.pathname, cause);
+  }
+}
+
+/**
+ * R388: the whole catalog as patch `version` left it, or `null` when no patch has that version.
+ * `base` is the patches folder (tests pass their own).
+ */
+export function catalogAtVersion(version: string, base: URL = patchesUrl()): Promise<CardDefs | null> {
+  const key = `${base.href}\u0000${version}`;
+  let pending = snapshotCache.get(key);
+  if (pending === undefined) {
+    pending = readSnapshot(base, version);
+    snapshotCache.set(key, pending);
+    // A failed read is not remembered: the next request tries again.
+    pending.catch(() => snapshotCache.delete(key));
+  }
+  return pending;
 }
 
 function isCardDef(value: unknown): value is CardDef {
@@ -153,10 +202,26 @@ export async function loadCatalog(
  * That is the whole `CardDefs` record and `auth: "none"`, both for the reasons the proposal above
  * states; they are not restated here, so there is one place to change if the ruling changes.
  */
-export function createCatalogRoutes(): Route[] {
+export function createCatalogRoutes(options: { patches?: URL } = {}): Route[] {
   return [
     route("GET", "/api/catalog", "none", async (_req, deps) =>
       ok({ version: deps.catalog.version, defs: deps.catalog.defs }),
     ),
+
+    /**
+     * R388 (B4.2): `GET /api/catalog/:version` — the catalog as a patch left it, in the same shape
+     * as `/api/catalog`, so a client can print a card's older faces (the collection's History, the
+     * Patch notes page) and a replay can read a match under the version it started with. The
+     * versions are `packages/cards/patches/patches.json`'s; the version this server runs is served
+     * from the catalog it loaded. Unauthenticated for the same reasons as `/api/catalog`: it is
+     * public card data, the same bytes for everybody. An unknown version is a 404.
+     */
+    route("GET", "/api/catalog/:version", "none", async (req, deps) => {
+      const version = req.params["version"] ?? "";
+      if (version === deps.catalog.version) return ok({ version, defs: deps.catalog.defs });
+      const defs = await catalogAtVersion(version, options.patches);
+      if (defs === null) throw new ApiError("not_found", `No card patch has the catalog version "${version}".`);
+      return ok({ version, defs });
+    }),
   ];
 }

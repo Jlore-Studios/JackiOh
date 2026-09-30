@@ -14,6 +14,11 @@
 // faces stand at the height the screen allows, with the rest of the dialog in a column beside
 // them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
 // is visible the moment the dialog opens, which is also where focus lands.
+//
+// Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
+// "History" control, it loads the card's patch history when opened and lists each patch that changed
+// the card, newest first, with its faces as that patch left them and what changed marked. The
+// Patch notes page opens the detail with it already open (`historyOpen`).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -25,6 +30,7 @@ import { faceModel, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
+import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
@@ -36,7 +42,14 @@ import {
 } from "./testids.ts";
 import "./inspect.css";
 
-export type CardDetailProps = { def: CardDef; onClose: () => void; actions?: ReactNode; meta?: ReactNode };
+export type CardDetailProps = {
+  def: CardDef;
+  onClose: () => void;
+  actions?: ReactNode;
+  meta?: ReactNode;
+  /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
+  historyOpen?: boolean;
+};
 
 /** `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any. */
 function detailMetaLine(def: CardDef): string {
@@ -79,7 +92,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta }: CardDetailProps): ReactElement {
+export function CardDetail({ def, onClose, actions, meta, historyOpen = false }: CardDetailProps): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -134,6 +147,7 @@ export function CardDetail({ def, onClose, actions, meta }: CardDetailProps): Re
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
+              <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
             </div>
           </RefsInteractive>
         </div>
