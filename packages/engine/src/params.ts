@@ -17,7 +17,7 @@
 
 import type { Param } from "@jackioh/shared";
 import { defOf, fusedIdParts } from "./catalog";
-import { PARAM_DEFAULT_MIN, PARAM_DEFAULT_STEP } from "./config";
+import { TUNE_MIN_AMOUNT, PARAM_DEFAULT_STEP } from "./config";
 import type { CardInstance, GameState } from "./state";
 import { addStep, tidyTuning, tuningOf } from "./tuning";
 import { partPathOf } from "./work";
@@ -64,7 +64,7 @@ export function paramStep(param: Param, printed: number): number {
  * or its printed value where that is lower (a number printed at 0 is never taken below it).
  */
 function paramMin(param: Param, printed: number): number {
-  return param.min ?? Math.min(PARAM_DEFAULT_MIN, printed);
+  return param.min ?? Math.min(TUNE_MIN_AMOUNT, printed);
 }
 
 function paramMax(param: Param): number {

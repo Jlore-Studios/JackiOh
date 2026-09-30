@@ -38,7 +38,7 @@ import {
   TUNE_COST_STEP,
   TUNE_HARMFUL_KEYWORDS,
   TUNE_HEALTH_FLOOR,
-  TUNE_STATS_TOTAL,
+  TUNE_STAT_TOTAL,
   TUNE_X_STEP,
 } from "../config";
 import { cardTypeOf } from "../faces";
@@ -58,7 +58,7 @@ import {
 import { setParam, stepParam, steppableParams } from "../params";
 import { openPrompt, resumeSelf } from "../prompts";
 import type { Effect, EffectContext } from "../script";
-import type { CardInstance } from "../state";
+import type { CardInstance, GameState } from "../state";
 import { TUNED_FLOOR, X_KEY, addStep, tidyTuning, tunedCount, tuningOf, xOf } from "../tuning";
 import { randomPoolKeywords } from "./buff";
 import { cardsInCardScope, unreadableBy, type CardScope } from "./cardScope";
@@ -88,12 +88,15 @@ export type TuneArgs = {
 // ---------------------------------------------------------------------------
 
 /** One applicable row: `apply` makes the change (drawing within the row as it must) and reports it. */
-type MenuRow = { apply: (ctx: EffectContext) => TuningChange };
+type MenuRow = { row: TuneRow; apply: (ctx: EffectContext) => TuningChange };
+
+/** B3.4 rule 3's menu rows, in its order. */
+export type TuneRow = "cost" | "stats" | "keyword" | "x" | "number";
 
 /** The keywords the card has now — all five layers in the unit row (§10.4), layers 1 to 4 elsewhere. */
-function keywordsNow(ctx: EffectContext, card: CardInstance): Keyword[] {
+function keywordsNow(state: GameState, card: CardInstance): Keyword[] {
   const zone = card.zone;
-  return zone.z === "field" && zone.row === "units" ? unitView(ctx.state, card).keywords : cardKeywords(ctx.state, card);
+  return zone.z === "field" && zone.row === "units" ? unitView(state, card).keywords : cardKeywords(state, card);
 }
 
 /** A uniform pick (R442), drawing nothing when there is one choice (R129). */
@@ -106,15 +109,16 @@ function pickOne<T>(ctx: EffectContext, items: readonly T[]): T {
 }
 
 /** B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65). */
-function costRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow | null {
-  const own = ownCost(ctx.state, card);
+function costRow(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow | null {
+  const own = ownCost(state, card);
   if (own === null) return null;
   const delta =
     direction === "degrade"
       ? Math.min(TUNE_COST_STEP, TUNE_COST_CAP - own)
-      : -Math.min(TUNE_COST_STEP, own - TUNE_COST_FLOOR);
+      : 0 - Math.min(TUNE_COST_STEP, own - TUNE_COST_FLOOR);
   if ((direction === "degrade" && delta <= 0) || (direction === "upgrade" && delta >= 0)) return null;
   return {
+    row: "cost",
     apply: () => {
       card.costMod += delta;
       return { kind: "cost", delta };
@@ -123,22 +127,24 @@ function costRow(ctx: EffectContext, card: CardInstance, direction: TuneDirectio
 }
 
 /**
- * B3.4 rule 3, stats: a split of `TUNE_STATS_TOTAL` rolled as k to attack and the rest to health. A
+ * B3.4 rule 3, stats: a split of `TUNE_STAT_TOTAL` rolled as k to attack and the rest to health. A
  * Degrade's attack floors at 0 and its current health at 1, and what the floors refuse is lost; so a
  * Degrade can apply only while the card has attack above 0 or health above 1. On the field the change
  * moves max health, damage staying, so current health moves with it (B3.4 rule 6).
  */
-function statsRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow | null {
-  const stats = currentStats(ctx.state, card);
+function statsRow(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow | null {
+  const stats = currentStats(state, card);
   if (stats === null) return null;
   if (direction === "degrade" && stats.attack <= TUNE_ATTACK_FLOOR && stats.health <= TUNE_HEALTH_FLOOR) return null;
   return {
+    row: "stats",
     apply: (at) => {
-      const k = at.rng.int(TUNE_STATS_TOTAL + 1);
-      const rest = TUNE_STATS_TOTAL - k;
-      const attack = direction === "upgrade" ? k : -Math.min(k, Math.max(0, stats.attack - TUNE_ATTACK_FLOOR));
+      const k = at.rng.int(TUNE_STAT_TOTAL + 1);
+      const rest = TUNE_STAT_TOTAL - k;
+      // `0 - n`, never `-n`: a share the floors refuse whole is 0, not −0, in the event and the record.
+      const attack = direction === "upgrade" ? k : 0 - Math.min(k, Math.max(0, stats.attack - TUNE_ATTACK_FLOOR));
       const health =
-        direction === "upgrade" ? rest : -Math.min(rest, Math.max(0, stats.health - TUNE_HEALTH_FLOOR));
+        direction === "upgrade" ? rest : 0 - Math.min(rest, Math.max(0, stats.health - TUNE_HEALTH_FLOOR));
       const tuning = tuningOf(card);
       tuning.attack = (tuning.attack ?? 0) + attack;
       tuning.health = (tuning.health ?? 0) + health;
@@ -158,25 +164,27 @@ const HARMFUL: readonly KeywordKind[] = TUNE_HARMFUL_KEYWORDS;
  * Unit lacks (`tuning.addKeywords`); a Vanilla unit's text is gone, and an added keyword would be
  * text, so nothing is added to one.
  */
-function keywordRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow | null {
+function keywordRow(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow | null {
   if (direction === "degrade") {
-    const own = cardKeywords(ctx.state, card).filter((keyword) => !HARMFUL.includes(keyword.kind));
+    const own = cardKeywords(state, card).filter((keyword) => !HARMFUL.includes(keyword.kind));
     const kinds = [...new Set(own.map((keyword) => keyword.kind))];
     if (kinds.length === 0) return null;
     return {
+      row: "keyword",
       apply: (at) => {
         const kind = pickOne(at, kinds);
         const shown = own.find((keyword) => keyword.kind === kind);
-        removeKind(at, card, kind);
+        removeKind(at.state, card, kind);
         return { kind: "keyword", keyword: shown ?? ({ kind } as Keyword), added: false };
       },
     };
   }
-  if (cardTypeOf(ctx.state, card) !== "Unit" || card.vanilla) return null;
-  const held = keywordsNow(ctx, card);
+  if (cardTypeOf(state, card) !== "Unit" || card.vanilla) return null;
+  const held = keywordsNow(state, card);
   const candidates = randomPoolKeywords().filter((keyword) => !hasKeyword(held, keyword.kind));
   if (candidates.length === 0) return null;
   return {
+    row: "keyword",
     apply: (at) => {
       const keyword = pickOne(at, candidates);
       const tuning = tuningOf(card);
@@ -189,9 +197,9 @@ function keywordRow(ctx: EffectContext, card: CardInstance, direction: TuneDirec
   };
 }
 
-function removeKind(ctx: EffectContext, card: CardInstance, kind: KeywordKind): void {
+function removeKind(state: GameState, card: CardInstance, kind: KeywordKind): void {
   const tuning = tuningOf(card);
-  if (printedKeywordsOf(ctx.state, card).some((keyword) => keyword.kind === kind)) {
+  if (printedKeywordsOf(state, card).some((keyword) => keyword.kind === kind)) {
     if (!(tuning.removeKeywords ?? []).includes(kind)) tuning.removeKeywords = [...(tuning.removeKeywords ?? []), kind];
   }
   tuning.addKeywords = (tuning.addKeywords ?? []).filter((keyword) => keyword.kind !== kind);
@@ -215,7 +223,7 @@ function withXStep(card: CardInstance, key: string, delta: number): Pick<CardIns
  * step always applies ("its X counts 1 less or more when it resolves"); one on the field applies
  * while the X it counts can move.
  */
-function xItems(ctx: EffectContext, card: CardInstance, direction: TuneDirection): XItem[] {
+function xItems(state: GameState, card: CardInstance, direction: TuneDirection): XItem[] {
   const items: XItem[] = [];
   const better = direction === "upgrade" ? TUNE_X_STEP : -TUNE_X_STEP;
   const step = (key: string, delta: number) => (): void => {
@@ -224,7 +232,7 @@ function xItems(ctx: EffectContext, card: CardInstance, direction: TuneDirection
     tidyTuning(card);
   };
 
-  if (isXCost(ctx.state, card)) {
+  if (isXCost(state, card)) {
     if (card.x === undefined) {
       items.push({ key: X_KEY, before: 0, after: better, write: step(X_KEY, better) });
     } else {
@@ -234,7 +242,7 @@ function xItems(ctx: EffectContext, card: CardInstance, direction: TuneDirection
     }
   }
 
-  for (const entry of numberedKeywordsOn(ctx.state, card)) {
+  for (const entry of numberedKeywordsOn(state, card)) {
     const delta = entry.better === "up" ? better : -better;
     if (entry.printed === null) {
       const brittle = card.brittle;
@@ -258,10 +266,11 @@ function xItems(ctx: EffectContext, card: CardInstance, direction: TuneDirection
   return items;
 }
 
-function xRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow | null {
-  const items = xItems(ctx, card, direction);
+function xRow(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow | null {
+  const items = xItems(state, card, direction);
   if (items.length === 0) return null;
   return {
+    row: "x",
     apply: (at) => {
       const item = pickOne(at, items);
       item.write();
@@ -271,10 +280,11 @@ function xRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection):
 }
 
 /** B3.4 rule 3, number: one declared number one step worse or better (`params.steppableParams`). */
-function numberRow(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow | null {
-  const items = steppableParams(ctx.state, card, direction);
+function numberRow(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow | null {
+  const items = steppableParams(state, card, direction);
   if (items.length === 0) return null;
   return {
+    row: "number",
     apply: (at) => {
       const item = pickOne(at, items);
       stepParam(card, item.param.key, item.steps);
@@ -284,16 +294,24 @@ function numberRow(ctx: EffectContext, card: CardInstance, direction: TuneDirect
 }
 
 /** B3.4 rules 1–3: the rows that can change the card now, in the menu's order. */
-function menuOf(ctx: EffectContext, card: CardInstance, direction: TuneDirection): MenuRow[] {
+function menuOf(state: GameState, card: CardInstance, direction: TuneDirection): MenuRow[] {
   // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
-  if (hasKeyword(keywordsNow(ctx, card), "Immutable")) return [];
+  if (hasKeyword(keywordsNow(state, card), "Immutable")) return [];
   return [
-    costRow(ctx, card, direction),
-    statsRow(ctx, card, direction),
-    keywordRow(ctx, card, direction),
-    xRow(ctx, card, direction),
-    numberRow(ctx, card, direction),
+    costRow(state, card, direction),
+    statsRow(state, card, direction),
+    keywordRow(state, card, direction),
+    xRow(state, card, direction),
+    numberRow(state, card, direction),
   ].filter((row): row is MenuRow => row !== null);
+}
+
+/**
+ * B3.4 rule 3: the rows that can change the card now, in the menu's order — a pure read, for a
+ * `conditionMet` or a `targetChecks` predicate (a Degrade with nothing to change) and for the tests.
+ */
+export function applicableChanges(state: GameState, card: CardInstance, direction: TuneDirection): TuneRow[] {
+  return menuOf(state, card, direction).map((row) => row.row);
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +326,7 @@ function menuOf(ctx: EffectContext, card: CardInstance, direction: TuneDirection
 export function tuneOnce(ctx: EffectContext, card: CardInstance, direction: TuneDirection, matches = true): void {
   // R177: who could not read the card where it changed, judged before the change moves anything.
   const hiddenFrom = unreadableBy(ctx.state, card);
-  const menu = matches ? menuOf(ctx, card, direction) : [];
+  const menu = matches ? menuOf(ctx.state, card, direction) : [];
   if (menu.length === 0 && hiddenFrom.length === 0) return;
   const change: TuningChange = menu.length === 0 ? { kind: "none" } : pickOne(ctx, menu).apply(ctx);
   ctx.events.push({

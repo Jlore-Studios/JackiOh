@@ -22,10 +22,11 @@
 // The cost change is the card's `costMod` (R65), never a field here.
 
 import type { Keyword, KeywordKind, Tuning } from "@jackioh/shared";
+import { TUNE_MIN_AMOUNT } from "./config";
 import type { CardInstance } from "./state";
 
-/** B3.4: the least a tuned number may come to — "an amount never drops below 1". */
-export const TUNED_FLOOR = 1;
+/** B3.4: the least a tuned number may come to — "an amount never drops below 1" (`TUNE_MIN_AMOUNT`). */
+export const TUNED_FLOOR = TUNE_MIN_AMOUNT;
 
 /** B3.4 rule 3: the tuning key of an X-cost card's X (`xOf`). */
 export const X_KEY = "X";

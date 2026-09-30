@@ -187,6 +187,7 @@ export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
 // Degrade and Upgrade (B3.4, R386, R440, R442), and KY's Constant's number set outright (Classic+ #41).
 export {
   NUMBER_CARD_KEY,
+  applicableChanges,
   chosenNumber,
   degrade,
   discoverNumber,
@@ -195,7 +196,7 @@ export {
   tuneOnce,
   upgrade,
 } from "./tune";
-export type { TuneArgs, TuneDirection } from "./tune";
+export type { TuneArgs, TuneDirection, TuneRow } from "./tune";
 
 // Brittle X: give (set) and gain (add) a count (B3.3, R385, R441).
 export { gainBrittle, giveBrittle } from "./brittle";

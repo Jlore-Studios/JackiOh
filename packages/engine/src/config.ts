@@ -243,7 +243,7 @@ export const TUNE_COST_FLOOR = 0;
  * B3.4 rule 3, the designer's "reduces the stats … by a total of 4": the split one stats change
  * rolls, k in 0 to this to attack and the rest to health.
  */
-export const TUNE_STATS_TOTAL = 4;
+export const TUNE_STAT_TOTAL = 4;
 /** B3.4 rule 3: "attack floors at 0". */
 export const TUNE_ATTACK_FLOOR = 0;
 /** B3.4 rule 3, the designer's "not below 1 health": a Degrade never takes current health below this. */
@@ -262,8 +262,12 @@ export const PARAM_DEFAULT_STEP = {
   medium: { upTo: 12, step: 2 },
   largeDivisor: 4,
 } as const;
-/** B3.4 rule 5, R386: "an amount never drops below 1" — a declared number's floor when it names none. */
-export const PARAM_DEFAULT_MIN = 1;
+/**
+ * B3.4 rule 5, R386: "an amount never drops below 1" — a tuned number's floor: a declared number that
+ * names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
+ * Degrade lowers.
+ */
+export const TUNE_MIN_AMOUNT = 1;
 
 // ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
 

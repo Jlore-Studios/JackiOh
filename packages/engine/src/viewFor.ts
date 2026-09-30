@@ -107,6 +107,9 @@ const HIDDEN_POSITION = -1;
  */
 const HIDDEN_COST = -1;
 
+/** R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read. */
+const HIDDEN_COUNT = -1;
+
 /** R177: what a prompt option names when it offers a card the chooser may not read (§10.8, R33). */
 export const HIDDEN_OPTION_LABEL = "Face-down card";
 
@@ -724,10 +727,17 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     // One instance, no definition: the id alone would still name a card in a hidden zone.
     case "divineShieldLost":
     case "keywordGranted":
-    case "counterChanged":
     case "positionSwitched":
     case "controlChanged":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+
+    // R385: a Brittle count is its card's, read only where the card is (a face-down card's by its
+    // controller alone), so on a card this viewer may not read the number goes with the id.
+    case "counterChanged":
+      if (!hidden(event.instanceId)) return event;
+      return event.counter === "brittle"
+        ? { ...event, instanceId: HIDDEN_ID, value: HIDDEN_COUNT }
+        : { ...event, instanceId: HIDDEN_ID };
 
     // R177: the new cost is the card's too, and over a library it would give the order away — so a
     // change made in a library stays unread for good (`hiddenFrom`), whatever became of the card.
