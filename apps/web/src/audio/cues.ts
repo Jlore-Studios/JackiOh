@@ -296,7 +296,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R436: the roll is announced to both seats like a trap springing.
   chaosRolled: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   flickered: { sfx: "poof", cues: () => [sfx("poof")] },
-  drawLimited: { sfx: "refuse", cues: () => [sfx("refuse")] },
+  // B5 E3: the draw is called off, like an attack; R319 keeps the refusal sound the full library's own.
+  drawLimited: { sfx: "cancel", cues: () => [sfx("cancel")] },
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
   // R437: a mark settling on a card sounds like a keyword arriving; losing it is silent.
   marked: { sfx: "debuff", cues: (event) => (event.added ? [sfx("debuff")] : NONE) },

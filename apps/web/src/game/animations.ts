@@ -651,17 +651,17 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   questProgressed: {
     animation: "jk-badge-tick",
     durationMs: 200,
-    testid: "card-<instanceId>",
+    testid: "card-<instanceId> | backrow-<side>",
     fx: { recipe: "counter" },
-    target: (e, view) => locateInstance(view, e.instanceId),
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
   },
   // Classic #90: the quest card pulses gold as a quest completes.
   questCompleted: {
     animation: "jk-radiant-pulse",
     durationMs: 500,
-    testid: "card-<instanceId>",
+    testid: "card-<instanceId> | backrow-<side>",
     fx: { recipe: "radiant" },
-    target: (e, view) => locateInstance(view, e.instanceId),
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
   },
   // Classic+ #35: the whole board rewinds.
   rolledBack: {
