@@ -1,8 +1,9 @@
-# The night bot (bot/README.md): plan -> work -> deliver.
+# The night bot (bot/README.md): gate -> plan -> work -> deliver.
 #
-# plan and deliver hold the bot account's token and run no model. work runs the model and holds
-# no GitHub write token: its only secret is the Claude token, and its output is a result file and
-# a git bundle that deliver checks for itself before pushing anything.
+# gate starts nothing unless there is work and the Claude subscription is quiet: nobody else is
+# spending it, apart from the partner bot (bright-bots-harness). plan and deliver hold the bot
+# account's token and run no model. gate and work hold the Claude token and no GitHub write token;
+# work's output is a result file and a git bundle that deliver checks for itself before pushing.
 name: bot-night
 
 on:
@@ -46,8 +47,83 @@ env:
   HARNESS_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
 
 jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read         # the queue and the state file; no write of any kind
+      actions: read          # whether a run that holds an item is still alive
+    outputs:
+      go: ${{ steps.peek.outputs.work == 'true' && (steps.peek.outputs.quiet_check != 'true' || steps.quiet.outputs.quiet == 'true') }}
+    steps:
+      - name: HALT check (.harness/HALT on the default branch)
+        id: halt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/contents/.harness/HALT?ref=${REF}" || echo 000)"
+          if [ "${code}" = "200" ]; then
+            echo "halted by .harness/HALT"
+            echo "halted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "halted=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout the default branch
+        if: steps.halt.outputs.halted != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch || 'main' }}
+          persist-credentials: false
+
+      - name: Set up Python
+        if: steps.halt.outputs.halted != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Reads only. Nothing queued means no usage reading and no wait.
+      - name: Is there work? (harness peek)
+        id: peek
+        if: steps.halt.outputs.halted != 'true'
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_CLAUDE_READY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+          INPUT_ITEM: ${{ github.event.inputs.item }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+        run: |
+          force=""
+          if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
+          python -m harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
+
+      - name: Install the claude CLI
+        if: steps.peek.outputs.quiet_check == 'true'
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude --version
+
+      # Skipped for forced work. Two usage readings ten minutes apart (a one-turn Haiku call
+      # each); a rise that is not the partner bot's holds the run back.
+      - name: Wait until the subscription is quiet
+        id: quiet
+        if: steps.peek.outputs.quiet_check == 'true'
+        working-directory: bot
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}   # read-only: the partner's public runs
+        run: python -m harness quiet
+
   plan:
     name: plan
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

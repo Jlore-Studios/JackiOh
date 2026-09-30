@@ -106,7 +106,7 @@ Deployment: `apps/web` is a static bundle on Vercel (`vercel.json`), and `apps/s
 
 ## The night bot
 
-`@jgoetzmann-bot` builds issues from 21:00 to 07:00 Central (`bot/README.md` covers it in full). It picks up an issue labelled `bot:build`, assigned to it, or named in a `/harness build` or `@jgoetzmann-bot …` comment, and builds it with Claude Opus. An independent adversarial reviewer then reads the change, the two go round until the reviewer approves, and the pull request merges itself once CI passes. The bot code is Python in `bot/`, its switches are in `.harness/` (`config.json`, `trust.txt`, an optional `HALT`), and its workflows are `bot-night.yml`, `bot-commands.yml` and `bot-selftest.yml`.
+`@jgoetzmann-bot` builds issues from 21:00 to 07:00 Central (`bot/README.md` covers it in full). It picks up an issue labelled `bot:build`, assigned to it, or named in a `/harness build` or `@jgoetzmann-bot …` comment, and builds it with Claude Opus. An independent adversarial reviewer then reads the change, the two go round until the reviewer approves, and the pull request merges itself once CI passes. It starts only when the Claude subscription is quiet: nobody else's usage rose over ten minutes, bright-bots-harness excepted. The bot code is Python in `bot/`, its switches are in `.harness/` (`config.json`, `trust.txt`, an optional `HALT`), and its workflows are `bot-night.yml`, `bot-commands.yml` and `bot-selftest.yml`.
 
 When you are the bot's builder or reviewer, this file binds you like anyone else. You must not change `.github/`, `.harness/` or `bot/`: the harness puts such a change back, and the deliver job refuses to push one.
 

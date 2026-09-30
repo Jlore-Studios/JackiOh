@@ -71,6 +71,23 @@ class Gate:
 
 
 @dataclass(frozen=True)
+class Partner:
+    """Another bot on the same subscription, and the steps of its workflows that spend it."""
+
+    repo: str
+    workflows: Mapping[str, tuple[str, ...]]
+
+
+@dataclass(frozen=True)
+class Quiet:
+    enabled: bool
+    interval_minutes: int
+    max_wait_minutes: int
+    ping_model: str
+    partners: tuple[Partner, ...]
+
+
+@dataclass(frozen=True)
 class Config:
     """Everything the harness reads. Built once by `load()`."""
 
@@ -100,6 +117,7 @@ class Config:
     suggestions_enabled: bool
     suggestions_max_open: int
     suggestions_min_interval_hours: int
+    quiet: Quiet
     forbidden_paths: tuple[str, ...]
     review_paths: tuple[str, ...]
     upload_transcripts: bool
@@ -153,6 +171,7 @@ _REQUIRED = (
     "required_checks",
     "ci_reruns",
     "suggestions",
+    "quiet",
     "forbidden_paths",
     "review_paths",
     "upload_transcripts",
@@ -170,6 +189,28 @@ def _gate(raw: Any, where: str) -> Gate:
         return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]))
     except (KeyError, TypeError, ValueError) as exc:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
+
+
+def _quiet(raw: Any) -> Quiet:
+    if not isinstance(raw, Mapping):
+        raise ConfigError("quiet: expected an object")
+    partners = []
+    for i, entry in enumerate(raw.get("partners") or []):
+        try:
+            workflows = {str(k): tuple(str(s) for s in v) for k, v in dict(entry["workflows"]).items()}
+            partners.append(Partner(str(entry["repo"]), workflows))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ConfigError(f"quiet.partners[{i}]: needs repo and workflows ({exc})") from exc
+    interval = int(raw.get("interval_minutes", 10))
+    if interval < 1:
+        raise ConfigError("quiet.interval_minutes: must be at least 1")
+    return Quiet(
+        enabled=bool(raw.get("enabled", True)),
+        interval_minutes=interval,
+        max_wait_minutes=int(raw.get("max_wait_minutes", 40)),
+        ping_model=str(raw.get("ping_model", "haiku")),
+        partners=tuple(partners),
+    )
 
 
 def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
@@ -226,6 +267,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
         suggestions_enabled=bool(suggestions.get("enabled", True)),
         suggestions_max_open=int(suggestions.get("max_open", 4)),
         suggestions_min_interval_hours=int(suggestions.get("min_interval_hours", 20)),
+        quiet=_quiet(raw["quiet"]),
         forbidden_paths=tuple(str(p) for p in raw["forbidden_paths"]),
         review_paths=tuple(str(p) for p in raw["review_paths"]),
         upload_transcripts=bool(raw["upload_transcripts"]),

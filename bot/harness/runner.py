@@ -242,6 +242,32 @@ class ClaudeCli:
         )
 
 
+PING_PROMPT = "Reply with the word ok."
+PING_TIMEOUT_S = 180
+
+
+def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run) -> dict | None:
+    """The subscription's usage now, read off the smallest call there is: one turn of `model`
+    in an empty directory. None when the CLI gave no reading."""
+    import tempfile
+
+    argv = [claude_bin, "--print", "--output-format", "stream-json", "--verbose",
+            "--model", model, "--max-turns", "1", "--strict-mcp-config"]
+    env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
+    env.pop("ANTHROPIC_API_KEY", None)
+    for key in ACTIONS_FILES:
+        env.pop(key, None)
+    env.update(QUIET_ENV)
+    with tempfile.TemporaryDirectory(prefix="bot-ping-") as empty:
+        try:
+            proc = run(argv, cwd=empty, env=env, input=PING_PROMPT, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", timeout=PING_TIMEOUT_S)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+    _, usage = parse_stream((proc.stdout or "").splitlines())
+    return usage
+
+
 def _exhausted_reset(usage: dict[str, Any] | None) -> str | None:
     if not isinstance(usage, dict):
         return None
