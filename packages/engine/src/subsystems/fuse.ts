@@ -516,7 +516,10 @@ function ingredientPart(index: number, build: (ctx: EffectContext) => readonly E
   return lazyPart(`fused:part${index}`, (at) => {
     const patch = partData(at.data, index);
     const effects = build(inPlace(at, patch));
-    return { effects: effects.map((effect) => inIngredient(effect, patch)) };
+    // The part needs nothing handed to its rebuild; `null` says so in a form JSON keeps, where an
+    // absent memo would sit in a paused list's `memo` array as `undefined` and come back as `null`,
+    // so the paused state and its JSON round trip would differ (§9.3).
+    return { effects: effects.map((effect) => inIngredient(effect, patch)), memo: null };
   });
 }
 

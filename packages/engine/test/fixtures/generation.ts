@@ -179,7 +179,7 @@ const SCRIPTS: Record<string, CardScripts> = {
     base: { cry: () => [placePlagueTokens({ count: 2 }), damage({ to: { of: "enemyHero" }, amount: 1 })] },
     radiant: { cry: () => [placePlagueTokens({ count: 3 }), damage({ to: { of: "enemyHero" }, amount: 1 })] },
   },
-  [slime.id]: both({ plagueMultiplier: ({ radiant }) => (radiant ? 3 : 2) }),
+  [slime.id]: { base: { plagueMultiplier: () => 2 }, radiant: { plagueMultiplier: () => 3 } },
   [crawler.id]: both({
     triggers: [
       {
