@@ -10,12 +10,25 @@
 // hides cards from view; it never refuses one. Filter and sort state is deliberately not persisted:
 // a filter that survived a reload could hide cards and confuse a player (and spec 09).
 
-import { fillParams, type CardCost, type CardDef, type CardType, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
+import {
+  SHIPPED_SETS,
+  fillParams,
+  type CardCost,
+  type CardDef,
+  type CardType,
+  type KeywordKind,
+  type Rarity,
+  type SetName,
+  type Tag,
+} from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { poolFrom } from "./loadout.ts";
 
-/** Cost filter chips and mana-curve buckets. Core tops out at 6, plus the 100-cost Ceaseless Void. */
+/**
+ * Cost filter chips and mana-curve buckets. Core tops out at 6, plus the 100-cost Ceaseless Void, and
+ * Classic+ #64 Mulch Muncher costs 10: every price from 6 up shares "6+".
+ */
 export type CostBucket = "0" | "1" | "2" | "3" | "4" | "5" | "6+" | "X";
 
 export const COST_BUCKETS: readonly CostBucket[] = ["0", "1", "2", "3", "4", "5", "6+", "X"];
@@ -34,13 +47,21 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Fruit",
   "Call to Chaos",
   "Quickdraw",
-  // R278: #13 and #14's.
+  // R278: Core #13 and #14's, and Classic+ #48, #51 and #52's.
   "Jlockeed",
+  // Patch v0.2.0: every "Book of …" card, and Classic+ #12 and #13. "AI" is left out with "Token":
+  // only the ten AI tokens carry it, and the pool never offers a Token.
+  "Book",
+  "Pancake",
 ];
+
+/** The sets a deck may draw on (R380: one format, every set), in catalog order. */
+export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;
 
 export const FILTER_RARITIES: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
 export type PoolFilter = {
+  sets: ReadonlySet<SetName>;
   costs: ReadonlySet<CostBucket>;
   types: ReadonlySet<CardType>;
   tags: ReadonlySet<Tag>;
@@ -51,6 +72,7 @@ export type PoolFilter = {
 
 /** Every group empty (no constraint), no search, and only the cards the profile owns. */
 export const DEFAULT_FILTER: PoolFilter = {
+  sets: new Set<SetName>(),
   costs: new Set<CostBucket>(),
   types: new Set<CardType>(),
   tags: new Set<Tag>(),
@@ -133,10 +155,11 @@ export function searchMatches(def: CardDef, query: string): boolean {
 }
 
 /**
- * Cost, type, tag, rarity and search. Chips OR within a group and AND across groups, and an empty
- * group is no constraint. Ownership is `visiblePool`'s job, not this function's.
+ * Set, cost, type, tag, rarity and search. Chips OR within a group and AND across groups, and an
+ * empty group is no constraint. Ownership is `visiblePool`'s job, not this function's.
  */
 export function matchesFilter(def: CardDef, filter: PoolFilter): boolean {
+  if (filter.sets.size > 0 && !filter.sets.has(def.set)) return false;
   if (filter.costs.size > 0 && !filter.costs.has(costBucket(def.cost))) return false;
   if (filter.types.size > 0 && !filter.types.has(def.type)) return false;
   if (filter.tags.size > 0 && !def.tags.some((tag) => filter.tags.has(tag))) return false;

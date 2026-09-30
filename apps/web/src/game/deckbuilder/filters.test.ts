@@ -6,7 +6,7 @@
 // all five types, several tags and rarities, a card with no text, a card nobody owns, a token, and
 // two cards that tie on cost and name so the index tie-break is visible.
 
-import type { CardCost, CardDef, CardFace, CardType, Rarity, Tag } from "@jackioh/shared";
+import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { describe, expect, it } from "vitest";
 
@@ -18,6 +18,7 @@ import {
   DEFAULT_FILTER,
   DEFAULT_SORT,
   FILTER_RARITIES,
+  FILTER_SETS,
   FILTER_TAGS,
   FILTER_TYPES,
   SORT_KEYS,
@@ -34,7 +35,7 @@ import {
   type PoolSort,
   type SortKey,
 } from "./filters.ts";
-import { filterCostId, filterRarityId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
+import { filterCostId, filterRarityId, filterSetId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
 
 // ---------------------------------------------------------------------------------------------
 // The inline catalog
@@ -179,13 +180,27 @@ describe("the filter vocabulary (B31, B34)", () => {
 
   it("B31 the type, tag and rarity chips cover the deckable vocabulary and never Token", () => {
     expect([...FILTER_TYPES]).toEqual(["Unit", "Spell", "Field Spell", "Trap", "Field Trap"]);
-    expect([...FILTER_TAGS]).toEqual(["Human", "Felinor", "KY", "CN", "Fruit", "Call to Chaos", "Quickdraw", "Jlockeed"]);
+    expect([...FILTER_TAGS]).toEqual([
+      "Human",
+      "Felinor",
+      "KY",
+      "CN",
+      "Fruit",
+      "Call to Chaos",
+      "Quickdraw",
+      "Jlockeed",
+      "Book",
+      "Pancake",
+    ]);
+    // Only the ten AI tokens carry "AI", and the pool never offers a Token.
+    expect(FILTER_TAGS).not.toContain("AI");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
   });
 
   it("B31 DEFAULT_FILTER constrains nothing but ownership", () => {
+    expect(DEFAULT_FILTER.sets.size).toBe(0);
     expect(DEFAULT_FILTER.costs.size).toBe(0);
     expect(DEFAULT_FILTER.types.size).toBe(0);
     expect(DEFAULT_FILTER.tags.size).toBe(0);
@@ -559,6 +574,31 @@ describe("deckListOrder (B35)", () => {
 // ---------------------------------------------------------------------------------------------
 // R278: the Jlockeed tag
 // ---------------------------------------------------------------------------------------------
+
+describe("the set chips (R380: one format, every set)", () => {
+  const REAL: CatalogSnapshot = { version: "v0.2.0-test", cards: CORE_CATALOG };
+  const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
+
+  it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+"]);
+    expect(FILTER_SETS.map(filterSetId)).toEqual(["db-filter-set-core", "db-filter-set-classic", "db-filter-set-classic-plus"]);
+  });
+
+  it("a set chip keeps that set's cards and nothing else, and two chips keep both sets", () => {
+    const pool = (sets: readonly SetName[]): readonly string[] =>
+      visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, sets: new Set<SetName>(sets) }, DEFAULT_SORT);
+    const classic = pool(["Classic"]);
+    expect(classic).toHaveLength(90);
+    expect(new Set(classic.map(setOf))).toEqual(new Set(["Classic"]));
+    const plus = pool(["Classic+"]);
+    // Classic+'s 78 cards: its 38 tokens never enter the pool.
+    expect(plus).toHaveLength(78);
+    expect(new Set(plus.map(setOf))).toEqual(new Set(["Classic+"]));
+    expect(pool(["Core"])).toHaveLength(100);
+    expect(pool(["Core", "Classic"])).toHaveLength(190);
+    expect(pool([])).toHaveLength(268);
+  });
+});
 
 describe("the Jlockeed tag (R278)", () => {
   const REAL: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
