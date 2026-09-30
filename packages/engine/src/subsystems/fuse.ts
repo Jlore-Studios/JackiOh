@@ -455,7 +455,15 @@ type ListFn = (...args: unknown[]) => unknown[];
  * `drawLimit` (B5 E3, R457) is a third: the limits a card sets while it acts, read on every draw, so a
  * fusion sets every ingredient's limit and the lowest holds.
  */
-const EAGER_KEYS: readonly string[] = ["aura", "preview", "drawLimit"];
+const EAGER_KEYS: readonly string[] = [
+  "aura",
+  "preview",
+  // B5 E3 (R457): a draw limit is a pure read of the field.
+  "drawLimit",
+  // B5 E15, E11 (R455, R454): a price rule and a graveyard permission are pure reads of the field too.
+  "costAura",
+  "graveyardPlay",
+];
 
 /**
  * §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that

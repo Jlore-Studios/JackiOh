@@ -31,6 +31,7 @@
 // the queue is still the one `work.ts` owns; `settle` drains again and finds nothing left.
 
 import type { ActionBody, PlayerId, PromptKind, Selection } from "@jackioh/shared";
+import { castModeForPrompt, preferEnemies } from "./randomCast";
 import { makeContext, type EngineSink } from "./resolve";
 import type { Effect, EffectContext, Hook, Script } from "./script";
 import { scriptOf, scriptsFor } from "./scripts";
@@ -220,6 +221,11 @@ export function openPrompt(sink: EngineSink, args: OpenPromptArgs): PendingChoic
   const state = sink.state;
   if (state.pending !== null) return null;
   if (args.options.length === 0) return null;
+  // B5 E12, R452: a random cast's caster is answered for at once, and a cast that targets enemies
+  // offers them alone when it can (`castPromptShape`, below).
+  const shaped = castPromptShape(sink, args);
+  if (shaped === null) return null;
+  args = shaped;
 
   const max = clamp(args.max ?? 1, 0, args.options.length);
   const pending: PendingChoice = {
@@ -706,3 +712,62 @@ export function runStartOfGame(sink: EngineSink, card: CardInstance, controller:
 registerDefaultWorkHandler((sink, item) => {
   runResume(sink, item.resume, { controller: item.owner });
 });
+
+// ---------------------------------------------------------------------------
+// Prompts inside a cast (B5 E12, R452) — play pipeline B's random-answer mode
+// ---------------------------------------------------------------------------
+
+/**
+ * R452: what becomes of a prompt opened while a random cast, or a cast that targets enemies, is being
+ * driven (`randomCast.ts`). A prompt for the random cast's caster is answered at once, uniformly among
+ * the answers `promptAnswers` would list, and nothing opens (null): "a random cast makes every choice
+ * at random … so nothing pauses". A prompt a cast that targets enemies opens through its own text, or
+ * one a random cast that does answers, offers the enemies among its target options when there is one
+ * (`randomCast.preferEnemies`). Anything else is asked as it stands: the other player's prompts are
+ * theirs, and an engine sequence's own question (`registerPromptAnswerer`) makes its random picks
+ * itself (`playSteps`).
+ */
+function castPromptShape(sink: EngineSink, args: OpenPromptArgs): OpenPromptArgs | null {
+  if (answerers.has(args.resume.hook)) return args;
+  const mode = castModeForPrompt(sink.state, args.player, args.resume.instanceId);
+  if (mode === null) return args;
+  const max = clamp(args.max ?? 1, 0, args.options.length);
+  const required = clamp(args.min ?? 1, 0, max);
+  const options = mode.targetEnemies
+    ? preferEnemies(sink.state, args.player, args.options, (option) => option.selection, required)
+    : [...args.options];
+  const shaped: OpenPromptArgs = { ...args, options };
+  if (!mode.random) return shaped;
+  answerAtRandom(sink, shaped);
+  return null;
+}
+
+/**
+ * R452: answer a prompt that never opens — one of the answers `promptAnswers` lists for it, drawn
+ * uniformly from the match rng — and re-enter the step it names with that selection, exactly as
+ * `answerPrompt` does, inside the effect that asked: the step runs first and the rest of that effect's
+ * list after it, the order a parked tail would have kept (R113). Nothing is emitted for the prompt,
+ * since none was open. A prompt with no answer at all resolves into nothing.
+ */
+function answerAtRandom(sink: EngineSink, args: OpenPromptArgs): void {
+  const max = clamp(args.max ?? 1, 0, args.options.length);
+  const probe: PendingChoice = {
+    id: "",
+    playerId: args.player,
+    kind: args.kind,
+    prompt: args.prompt,
+    options: args.options.map((option) => ({ ...option })),
+    min: clamp(args.min ?? 1, 0, max),
+    max,
+    resume: args.resume,
+  };
+  const answers = promptAnswers(probe);
+  if (answers.length === 0) return;
+  const pick = answers[sink.rng.int(answers.length)];
+  if (pick === undefined) return;
+  runResume(sink, resumeOf(probe), {
+    controller: args.player,
+    targets: inOfferedOrder(probe, pick.selection),
+    chosenFrom: exitMark(sink.state),
+  });
+}

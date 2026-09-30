@@ -65,6 +65,7 @@ import { conditionActive } from "./condition";
 import { heroArmorOf } from "./damage";
 import { echoGrantOf } from "./echo";
 import { statsWithBuffs, unitView as unitLayers } from "./layers";
+import { costRuleModifierLabel, enchantNextSpellLabel } from "./costRules";
 import { NEXT_REFRESH_MODIFIER_ID, effectiveCost, modifierIsLive } from "./mana";
 import {
   findInstance,
@@ -446,6 +447,11 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
     // B5 E28, R458: the card's own words.
     case "startOfTurnEffect":
       return mod.label;
+    // B5 E15, E39 (R455): the play pipeline's price rules and Forever&'s rider, worded by their owner.
+    case "costRule":
+      return costRuleModifierLabel(mod);
+    case "enchantNextSpell":
+      return enchantNextSpellLabel(mod.enchantment);
   }
 }
 

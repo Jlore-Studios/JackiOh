@@ -2,6 +2,8 @@
 // never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
 
 import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, TargetDecl } from "@jackioh/shared";
+import type { CostAura, CostAuraArgs } from "./costRules";
+import type { GraveyardPlayPermission } from "./graveyardPlay";
 import type { Rng } from "./rng";
 import type { CardInstance, GameState } from "./state";
 import type { EventStay } from "./stays";
@@ -83,6 +85,13 @@ export type EffectContext = {
   embiggened: boolean;
   /** Captured data from a Resume, for chained steps (§10.6). */
   data: Record<string, unknown>;
+  /**
+   * play pipeline B (Classic #22 Mid Runner: "If you had 4 or more mana when you played this"): the
+   * current mana of the player who played or cast the card as the play began — at §10.5 step 1, before
+   * step 2 paid, or as a cast began — on the played card's own Cry and every continuation of it
+   * (`resolve.MANA_BEFORE_PLAY_KEY`, which rides the card's data across a pause). Absent anywhere else.
+   */
+  manaBeforePlay?: number;
 };
 
 /**
@@ -296,6 +305,15 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: instance data (B3.3, B3.4) ----
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
+  // play pipeline B (E11, E15). Both are pure reads, like `aura`, asked of a card acting on the field
+  // (the top of its pile, or its backrow card), and both return lists so a fused card carries each
+  // ingredient's (R102). A hook rather than a static flag, so a Degrade or Upgrade of the card's
+  // declared numbers moves what it grants (B3.4), and so a grant can hang on the card's state (Classic
+  // #90 In Too Deep's reward L).
+  /** E15, R455: the price rules this card lays on cards while it acts (`costRules.ts`). */
+  costAura?: (args: CostAuraArgs) => CostAura[];
+  /** E11, R454: the permissions this card gives its controller to play cards from their graveyard. */
+  graveyardPlay?: (args: CostAuraArgs) => GraveyardPlayPermission[];
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   /**
    * B5 E3, R457: the draw limits this card sets while it acts on the field ("Your opponent can't draw

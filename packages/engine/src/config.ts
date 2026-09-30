@@ -228,6 +228,23 @@ export const AI_TUTORIAL: Handicap = {
 
 // ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----
 
+// play pipeline B (E11, E12, E15; R452–R455). A cast's X is its caster's current mana, at least
+// MIN_CHOSEN_X (R348, R453); the other numbers of these rules are cards' own (`params`).
+
+/**
+ * B5 E11, R454: the fewest Plague Tokens a play from the graveyard that pays with tokens spends
+ * (Classic #74 Corpse Plantation: "each such play spends at least 1 token").
+ */
+export const MIN_PLAGUE_PAYMENT = 1;
+/** B5 E11, R454: what one Plague Token spent as mana pays of a price ("each token pays (1)"). */
+export const PLAGUE_TOKEN_MANA = 1;
+/**
+ * B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in
+ * all (Classic+ #47 Jogg's Box, #38.1 Solarius-Prime), as R28 caps a Call to Chaos chain and R58 a
+ * cast-on-draw chain: a random cast whose casts cast at random cannot multiply without end.
+ */
+export const RANDOM_CAST_CHAIN_CAP = 20;
+
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
 
 /**

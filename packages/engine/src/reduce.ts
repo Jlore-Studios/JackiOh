@@ -8,7 +8,9 @@
 // can never disagree (§9.3):
 //
 //   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
-//                      `playChoices.playActionsFor` (R81, R90). Step 1's validation is
+//                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
+//                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
+//                      lets its player play (E11, R454). Step 1's validation is
 //                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
 //                      reads the cost, so the refusal a client's greyed-out button comes from and
@@ -39,7 +41,7 @@ import { attackTargets, declareAttack, hasExertion, switchPosition, type AttackT
 import { NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS } from "./config";
 import { endGame } from "./gameOver";
 import { runPlaySteps } from "./playSteps";
-import { playActionsFor } from "./playChoices";
+import { graveyardPlayActionsFor, playActionsFor } from "./playChoices";
 import { answerPrompt, promptAnswers } from "./prompts";
 import { createRng, type Rng } from "./rng";
 import type { EngineSink } from "./resolve";
@@ -527,6 +529,9 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
 
   const side = state.players[player];
   for (const card of side.hand) out.push(...playActionsFor(state, player, card));
+  // B5 E11, R454: a card in the player's graveyard, while a permission on their field lets them play
+  // it (`graveyardPlay.ts`) — the same `play` action, naming a graveyard card.
+  for (const card of side.graveyard) out.push(...graveyardPlayActionsFor(state, player, card));
 
   for (const unit of activeUnitsOf(state, player)) {
     for (const target of attackTargets(state, unit)) {

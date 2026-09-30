@@ -192,6 +192,11 @@ export type { LaneSpec, ZoneScope } from "./locks";
 
 // ---- v0.2.0 verbs: play pipeline (Counter, steal off the stack, casts, cost rules) ----
 
+// play pipeline B: casts from anywhere and random casts (E12; R452, R453), and the price rules and
+// next-Spell rider a card puts on a player (E15, E39; R455).
+export { addCostRule, cast, castEach, castNew, castRandom, enchantNextSpell } from "./cast";
+export type { CastDef, CastHow, CostRuleSpan } from "./cast";
+
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
 // B5 E10, R456: end the turn from an effect, now or after N more actions.

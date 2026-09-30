@@ -18,6 +18,8 @@ export type GameEvent =
       x?: number;
       embiggened?: boolean;
       formerId?: string;
+      /** B5 E11, R454: the card was played from its player's graveyard, not the hand. Public. */
+      from?: "graveyard";
       /**
        * R119: the permanents that arrived on the field during this play before §10.5 step 4
        * announced it — a tributed unit's Death at step 2 (#22's copies) — which do not answer it, as
