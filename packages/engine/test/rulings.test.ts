@@ -306,6 +306,13 @@ const CLASSIC_PLUS_064_TEST = "../../cards/test/classic-plus/064-mulch-muncher.t
 const CLASSIC_PLUS_065_2_TEST = "../../cards/test/classic-plus/065-2-normal-grape.test.ts";
 const CLASSIC_PLUS_065_3_TEST = "../../cards/test/classic-plus/065-3-large-grape.test.ts";
 const CLASSIC_PLUS_070_TEST = "../../cards/test/classic-plus/070-chaos-machine.test.ts";
+const CLASSIC_PLUS_060_TEST = "../../cards/test/classic-plus/060-doctors-orders.test.ts";
+const CLASSIC_PLUS_073_TEST = "../../cards/test/classic-plus/073-call-to-chaos-classic-edition.test.ts";
+const CLASSIC_PLUS_073_1_TEST = "../../cards/test/classic-plus/073-1-classic-golem.test.ts";
+const CLASSIC_PLUS_047_TEST = "../../cards/test/classic-plus/047-joggs-box.test.ts";
+const CLASSIC_PLUS_052_TEST = "../../cards/test/classic-plus/052-jlockheeds-permanent-defense-contract.test.ts";
+const CLASSIC_PLUS_074_TEST = "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts";
+const CLASSIC_PLUS_T_AI_06_TEST = "../../cards/test/classic-plus/t-ai-06-datacenter-fire.test.ts";
 const CLASSIC_PLUS_T_AI_03_TEST = "../../cards/test/classic-plus/t-ai-03-hallucination.test.ts";
 const CLASSIC_018_TEST = "../../cards/test/classic/018-glitch-in-the-system.test.ts";
 const CLASSIC_025_TEST = "../../cards/test/classic/025-lag-in-the-system.test.ts";
@@ -2787,10 +2794,34 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(420, CLASSIC_PLUS_042_TEST, "kyTest.test.ts");
   });
 
+  // Proved by cards classic-plus/060-doctors-orders.test.ts "R421 …" (a Field Spell whose Cry and start of
+  // turn add an All Purpose Apple).
+  it("R421 reads C+ #60 Doctors Orders as a Field Spell", () => {
+    provenIn(421, CLASSIC_PLUS_060_TEST);
+  });
+
   // Proved by cards classic-plus/062-kys-papaya.test.ts and engine papaya.test.ts "R422 …" (cells one
   // prompt at a time, the lowest-degree curve in exact rationals, every card on it exiled).
   it("R422 draws C+ #62 KY's Papaya's curve through the cells its caster picks", () => {
     provenIn(422, CLASSIC_PLUS_062_TEST, "papaya.test.ts");
+  });
+
+  // Proved by cards 095-call-to-chaos.test.ts and classic-plus/073 and engine callToChaos.test.ts and
+  // callToChaosPlus.test.ts "R423 …" (three different effects, in the list's order, both editions).
+  it("R423 casts three different random effects on either Call to Chaos's Radiant face", () => {
+    provenIn(423, "../../cards/test/095-call-to-chaos.test.ts", CLASSIC_PLUS_073_TEST, "callToChaos.test.ts", "callToChaosPlus.test.ts");
+  });
+
+  // Proved by cards classic-plus/073-1-classic-golem.test.ts and engine transform-variants.test.ts "R424 …"
+  // (the transform after the combat; "may attack again" passes to the new Unit).
+  it("R424 transforms C+ #73.1 Classic Golem after the combat of an attack it declared on a Unit", () => {
+    provenIn(424, CLASSIC_PLUS_073_1_TEST, "transform-variants.test.ts");
+  });
+
+  // Proved by cards classic-plus/074 and engine twiceForward.test.ts "R425 …" (a Field Trap that fuses
+  // every second play of the opponent's and grows its Brittle).
+  it("R425 makes C+ #74 Twice Forward One Step Backwards a Field Trap that fuses every second play", () => {
+    provenIn(425, CLASSIC_PLUS_074_TEST, "twiceForward.test.ts");
   });
 
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
@@ -2968,6 +2999,29 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // "R586 …" (copies in the order drawn; a small deck copied whole with no draw).
   it("R586 hands T-AI-3 Hallucination's copies over in the order drawn", () => {
     provenIn(586, CLASSIC_PLUS_T_AI_03_TEST, "library-copies.test.ts");
+  });
+
+  // Proved by cards classic-plus/t-ai-06-datacenter-fire.test.ts and engine effects-datacenter.test.ts
+  // "R588 …" (an animated Field Spell is a Unit, neither destroyed nor counted).
+  it("R588 sweeps T-AI-6 Datacenter Fire's Field Spells from the backrow alone", () => {
+    provenIn(588, CLASSIC_PLUS_T_AI_06_TEST, "effects-datacenter.test.ts");
+  });
+
+  // Proved by cards classic-plus/074 and engine twiceForward.test.ts "R589 …" (an exiled card is
+  // nothing to fuse; the Brittle still grows).
+  it("R589 fuses into C+ #74 only a card still on the field or in a graveyard", () => {
+    provenIn(589, CLASSIC_PLUS_074_TEST, "twiceForward.test.ts");
+  });
+
+  // Proved by cards classic-plus/047-joggs-box.test.ts "R593 …" (a Call the Box casts is link 1 of its
+  // chain; engine effects-cast-chaos.test.ts proves the cast itself).
+  it("R593 makes a Call to Chaos a random cast makes a link of its chain", () => {
+    provenIn(593, CLASSIC_PLUS_047_TEST);
+  });
+
+  // Proved by cards classic-plus/052 "R594 …" (an Upgrade before the cast holds for the rest of the game).
+  it("R594 reads C+ #52's numbers as it resolves and carries them", () => {
+    provenIn(594, CLASSIC_PLUS_052_TEST);
   });
 
   // Proved by cards classic-plus/065-2 and 065-3 and engine effects-fruit.test.ts "R596 …" (a card
