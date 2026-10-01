@@ -5,11 +5,13 @@
  * filtering is `test/db/contract.ts`'s, against both stores; the arithmetic is packages/shared's.
  */
 
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 import type { GameRecord } from "@jackioh/shared";
 
 import { cardStatsReport, parseCardStatsArgs, renderCardStats, type CardStatsOptions } from "../../src/db/card-stats";
-import { importDevRecords } from "../../src/db/import-dev-records";
+import { importDevRecords, runFilePath } from "../../src/db/import-dev-records";
 import { createMemoryStore } from "../fakes/store";
 
 function gameRecord(id: string, partial: Partial<GameRecord> = {}): GameRecord {
@@ -92,7 +94,7 @@ describe("stats:cards's report", () => {
     expect((await cardStatsReport(store, options(["--source=all"]))).games).toBe(4);
   });
 
-  it("R378 sets a pre-release run beside the live games of the same patch", async () => {
+  it("R378 compares a pre-release run with the live games of the same patch, one query each", async () => {
     const store = await seeded();
     const live = await cardStatsReport(store, options(["--patch=v0.2.5"]));
     const prerelease = await cardStatsReport(store, options(["--patch=v0.2.5", "--source=dev"]));
@@ -144,5 +146,12 @@ describe("stats:import", () => {
       importDevRecords(store, lines([dev("dev:run:1"), dev("5f0c3c1e-0000-4000-8000-000000000001")])),
     ).rejects.toThrow(/does not begin "dev:"/);
     expect(store.tables.gameRecords).toEqual([]);
+  });
+
+  it("reads a relative path from the directory the command was started in, where ai:stats --out wrote it", () => {
+    // pnpm runs the script in apps/server and passes the caller's directory as INIT_CWD.
+    expect(runFilePath("v0.2.5-dev.jsonl", { INIT_CWD: "/repo" }, "/repo/apps/server")).toBe(resolve("/repo", "v0.2.5-dev.jsonl"));
+    expect(runFilePath("runs/a.jsonl", {}, "/repo/apps/server")).toBe(resolve("/repo/apps/server", "runs/a.jsonl"));
+    expect(runFilePath("/runs/a.jsonl", { INIT_CWD: "/repo" }, "/repo/apps/server")).toBe(resolve("/runs/a.jsonl"));
   });
 });

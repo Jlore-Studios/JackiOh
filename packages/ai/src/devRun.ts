@@ -1,6 +1,6 @@
 // SPEC §9.11, R378: an internal AI development run. AI-against-AI games played on a build before its
 // patch ships, each filed as a game record (R376) of its own source, so the card win rates of a
-// patch's pre-release run can be set beside the live games played on it once it ships.
+// patch's pre-release run can be compared with those of the live games played on it once it ships.
 //
 // A development game is an All Random game (R258) with two AI pilots: both decks are dealt by the
 // game's weighted random deck-builder with nothing banned, from the game seed and the seat

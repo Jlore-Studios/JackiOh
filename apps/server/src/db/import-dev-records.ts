@@ -1,10 +1,11 @@
 // Admin script: loads an AI development run's game records into `public.game_records` (SPEC §9.11,
-// R378), so `stats:cards --source=dev --patch=<version>` reads the pre-release run beside the live
-// games of the same patch.
+// R378), so `stats:cards --source=dev --patch=<version>` reads the pre-release run, to compare with
+// the same patch's live games, which `stats:cards --patch=<version>` reads.
 //
 //   pnpm --filter @jackioh/server stats:import <records.jsonl>
 //
-// The file is what `pnpm ai:stats` writes: one GameRecord per line. Every line is read and checked
+// The file is what `pnpm ai:stats` writes: one GameRecord per line, at a path read from the directory
+// the command was started in, as `--out`'s is. Every line is read and checked
 // before anything is written, and a file holding a record that is not a development record, or one
 // whose id does not begin `dev:`, is refused whole: a live record is the server's alone to write, at
 // the end of a match, so nothing typed into a file can ever count as live play or stand in a live
@@ -12,6 +13,7 @@
 // doubled.
 
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import { DEV_RECORD_ID_PREFIX, parseGameRecordLines } from "@jackioh/shared";
 
@@ -21,6 +23,15 @@ import { createPostgresStore } from "./store";
 const USAGE = "Usage: pnpm --filter @jackioh/server stats:import <records.jsonl>";
 
 export type ImportOutcome = { read: number; written: number; skipped: number };
+
+/**
+ * The file a path names, read from the directory the command was started in, as `pnpm ai:stats
+ * --out` writes it: pnpm runs this script in apps/server and passes the caller's directory as
+ * INIT_CWD.
+ */
+export function runFilePath(path: string, env: Readonly<Record<string, string | undefined>>, cwd: string): string {
+  return resolve(env["INIT_CWD"] ?? cwd, path);
+}
 
 /** R378: every record a development record, or nothing is written. */
 export async function importDevRecords(store: Store, contents: string): Promise<ImportOutcome> {
@@ -52,7 +63,7 @@ async function main(): Promise<void> {
     throw new Error("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
   }
 
-  const contents = await readFile(path, "utf8");
+  const contents = await readFile(runFilePath(path, process.env, process.cwd()), "utf8");
   // One connection: this process runs its inserts one after another and exits.
   const store = createPostgresStore({ connectionString, max: 1 });
   try {

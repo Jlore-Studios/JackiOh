@@ -4,8 +4,8 @@
 // finished one as a game record, one JSON line per game, and prints the run's card win rates. The
 // records are tagged `source: "dev"` and filed under the patch the run tests, so once they are
 // loaded with `pnpm --filter @jackioh/server stats:import <file>`, `stats:cards --source=dev
-// --patch=<version>` reads them beside that patch's live games, and no live figure ever counts them
-// unless asked.
+// --patch=<version>` reads them, to compare with what `stats:cards --patch=<version>` reads of that
+// patch's live games, and no live figure ever counts them unless asked.
 //
 //   pnpm ai:stats                                  AI_DEV_RUN.games games of the "dev" series,
 //                                                  tagged with the newest patch in patches.json

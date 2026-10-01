@@ -2737,10 +2737,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by packages/ai dev-run.test.ts "R378 …" (All Random's deal to two AI seats, each game a
   // development record of the patch it tests, with the patch in its id so another patch's run of the
   // same seeds is other records), packages/shared stats.test.ts "R378 …" (live unless
-  // asked), apps/server db/card-stats.test.ts "R378 …" (stats:cards reads a run only when asked and
-  // beside the same patch's live games; stats:import adds development records and nothing else) and
-  // db/contract.ts "R378 …" (both stores filter by source, mode and patch, and keep `dev:` ids to
-  // development records).
+  // asked), apps/server db/card-stats.test.ts "R378 …" (stats:cards reads a run only when asked, and
+  // the same patch's live games in a second query; stats:import adds development records and nothing
+  // else) and db/contract.ts "R378 …" (both stores filter by source, mode and patch, and keep `dev:`
+  // ids to development records).
   it("R378 keeps the AI's development runs apart from live data unless they are asked for", () => {
     provenIn(
       378,

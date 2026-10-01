@@ -266,7 +266,8 @@ pnpm --filter @jackioh/server stats:cards
 pnpm --filter @jackioh/server stats:cards --mode=random --patch=v0.2.5 --pilot=human
 pnpm --filter @jackioh/server stats:cards --card=core-002 --json
 
-# A pre-release AI run of a patch, loaded and set beside the same patch's live games.
+# A pre-release AI run of a patch, loaded, then compared with the same patch's live games: one
+# query each, the same --patch on both, since no one query shows the two side by side.
 pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl
 pnpm --filter @jackioh/server stats:import v0.2.5-dev.jsonl
 pnpm --filter @jackioh/server stats:cards --source=dev --patch=v0.2.5
@@ -278,7 +279,8 @@ only by name, R378), `--mode=bo1|bo3|random`, `--patch=<version>`, `--pilot=huma
 `--card=<id>` and `--json`, in any combination. Each card's row is its win rate in deck, in the
 opening hand, going first, going second, played and drawn but not played, every rate with its games
 beside it, and the played delta: the played rate minus the drawn-but-not-played rate, in points
-(R377 defines each). `stats:import` reads the file `pnpm ai:stats` wrote, refuses it whole if any
+(R377 defines each). `stats:import` reads the file `pnpm ai:stats` wrote, a relative path from the
+directory the command was started in as `--out`'s is (pnpm's `INIT_CWD`), refuses it whole if any
 line is not a development record, and skips a game already imported. Both read `DATABASE_URL`.
 
 ## Tests

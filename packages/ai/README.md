@@ -194,6 +194,7 @@ pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl   a pre-release run of v0.2.
 It prints the run's card win rates when it ends (progress goes to stderr). A game takes seconds at
 the browser's budget, so a run of a few hundred takes the better part of an hour on one core. The
 file, written a line per game as the run goes, is what `pnpm --filter @jackioh/server stats:import`
-loads, so that `stats:cards --source=dev --patch=<version>` sets the run beside that patch's live games
+loads, so that `stats:cards --source=dev --patch=<version>` reads the run and
+`stats:cards --patch=<version>` that patch's live games, two queries to compare
 (apps/server/README.md, "Card statistics"). This is the one script here that writes a file, and only
 the one `--out` names.
