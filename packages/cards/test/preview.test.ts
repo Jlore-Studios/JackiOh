@@ -47,6 +47,10 @@ const PLAGUE_NUKE = "classic-043"; // C #43 Plague Nuke
 const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
 const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
 
+/** Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file. */
+const BOOK_WORM = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
+const CLASSIC_PLUS_C_PREVIEWED = [BOOK_WORM];
+
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
 const BIG_D_FENDER = "core-001"; // 2-cost Unit
@@ -112,7 +116,7 @@ describe("R280 the Core cards that declare preview", () => {
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED].sort());
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED, ...CLASSIC_PLUS_C_PREVIEWED].sort());
     for (const id of hooked) {
       expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
       expect(CARDS[id]?.radiant.preview, `${id} radiant`).toBeTypeOf("function");
