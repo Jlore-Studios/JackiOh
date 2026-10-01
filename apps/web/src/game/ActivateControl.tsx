@@ -56,6 +56,11 @@ function usesWords(usesLeft: number | null): string {
   return usesLeft === 1 ? "1 use left this turn" : `${String(usesLeft)} uses left this turn`;
 }
 
+/** The words as one sentence, ending in a single full stop however the label ended. */
+function sentence(text: string): string {
+  return `${text.replace(/[\s.]+$/, "")}.`;
+}
+
 function capitalised(text: string): string {
   return text.length === 0 ? text : `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
@@ -155,7 +160,7 @@ function ActivateButton(props: {
       data-uses={activation.usesLeft ?? "unlimited"}
       data-flash={props.flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`Activate ${props.name}: ${props.label}. ${capitalised(uses)}.${why === null ? "" : ` ${why}.`}`}
+      aria-label={`Activate ${props.name}: ${sentence(props.label)} ${sentence(capitalised(uses))}${why === null ? "" : ` ${sentence(why)}`}`}
       title={why === null ? `Activate: ${props.label} (${uses})` : `Activate: ${props.label} — ${why}`}
       onClick={press}
       onKeyDown={key}
