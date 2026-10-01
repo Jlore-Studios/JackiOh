@@ -253,13 +253,17 @@ export function brittleStage(count: number): number {
 }
 
 /**
- * The kinds a unit's treatments come from: its keywords as the view lists them, once each, and the
- * Animated treatment for a backrow card the view says is standing as a Unit (`animated`, R383)
- * whose keywords do not already name it. A Vanilla unit (R243) shows its list and nothing else.
+ * The kinds a unit's treatments come from: its keywords as the view lists them, once each; Brittle
+ * for a unit the view gives a Brittle count (R385); and the Animated treatment for a backrow card the
+ * view says is standing as a Unit (`animated`, R383) whose keywords do not already name it, except on
+ * a Vanilla unit (R243), whose text is gone.
  */
 export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
   for (const keyword of source.keywords) if (!kinds.includes(keyword.kind)) kinds.push(keyword.kind);
+  // R385: a Brittle count the view gives (one an effect gave, "Give Brittle N") is Brittle whether or
+  // not the keyword list names it, a Vanilla unit's included (a Vanilla keeps a given count, §6.1).
+  if (source.brittle !== undefined && !kinds.includes("Brittle")) kinds.push("Brittle");
   if (source.vanilla !== true && source.animated !== undefined && !kinds.includes("Animated") && !kinds.includes("Animated on your turn")) {
     // `home` is the lane an "Animated on your turn" card goes back to at its controller's cleanup.
     kinds.push(source.animated.home === undefined ? "Animated" : "Animated on your turn");

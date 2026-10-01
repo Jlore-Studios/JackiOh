@@ -1,0 +1,293 @@
+/*
+ * Patch v0.2.0's per-card states on a face (CardStates.tsx, cardState.ts, tuning.ts; SPEC §10.8):
+ * the state rail of badges (Brittle R385, the tuned mark R386, the enchantments E39, the animated mark
+ * R383), the numbers a Degrade or an Upgrade moved, the tuned stat pips and the tuned keyword chips,
+ * and a backrow pile's depth (E21).
+ *
+ * Every mark reads by shape as well as colour: a glyph (a cracked pane, ▲ ▼ ◆, a return arrow, a
+ * spark, a crosshair, a cog), a dotted box, a "+" or a struck "−". Nothing here moves, so the reduced
+ * motion settings (the media query and the panel's switch) need nothing: every mark is still.
+ *
+ * Sizes are in the face's container units (`.cf-scale` is the `cardface` container) with a pixel
+ * floor, so a badge stays legible on a phone's hand card and board minion.
+ */
+
+.cf {
+  --cf-state-better: #7dff9a;
+  --cf-state-worse: #ff6b6b;
+  --cf-state-tuned: #ffd24a;
+  /* On the parchment rules box: dark enough to read on every stop of its gradient. */
+  --cf-tuned-better-ink: #13692a;
+  --cf-tuned-worse-ink: #a3120f;
+}
+
+/* ------------------------------------------------------------------------------ the rail --- */
+
+/* A full or compact face: a column down the art window's top-right corner, clear of the cost gem
+   (top left), the crest (top centre), the name ribbon and the rarity gem. */
+.cf .cf-states {
+  --cf-state-size: max(11cqw, 14px);
+
+  position: absolute;
+  z-index: 4;
+  top: 6cqh;
+  right: 2.5cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1cqh;
+  pointer-events: none;
+}
+
+.cf .cf-state {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--cf-state-size);
+  height: var(--cf-state-size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+.cf .cf-state > .cf-icon {
+  position: absolute;
+  inset: 0;
+}
+
+.cf .cf-state-text {
+  position: relative;
+  color: #fff;
+  font-size: calc(var(--cf-state-size) * 0.58);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: 0 0 2px #000, 0 1px 2px #000;
+}
+
+/* R385: the cracked pane, square rather than round so Brittle reads apart from the rest. */
+.cf .cf-state[data-state="brittle"] {
+  border-radius: 18%;
+  background: none;
+  box-shadow: 0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+/* R386: the card's tuned mark, ▲ Upgraded, ▼ Degraded, ◆ Tuned. */
+.cf .cf-state[data-state="tuned"][data-tuned="upgraded"] .cf-state-text {
+  color: var(--cf-state-better);
+}
+
+.cf .cf-state[data-state="tuned"][data-tuned="degraded"] .cf-state-text {
+  color: var(--cf-state-worse);
+}
+
+.cf .cf-state[data-state="tuned"][data-tuned="tuned"] .cf-state-text {
+  color: var(--cf-state-tuned);
+}
+
+/* The "+n" a small face folds the rest of its badges into (STATE_BADGES_SMALL_MAX, constants.ts). */
+.cf .cf-states-more {
+  display: none;
+  place-items: center;
+  min-width: var(--cf-state-size);
+  height: calc(var(--cf-state-size) * 0.8);
+  padding: 0 0.2em;
+  border-radius: 999px;
+  background: #0d1018;
+  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.75);
+  color: #fff;
+  font-size: calc(var(--cf-state-size) * 0.5);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* A small face (149 mirrors FACE_TEXT_MIN_HEIGHT_PX): a row along the art window's lower edge, right
+   aligned and clear of the rarity gem and the set mark (top right) and the name below; the first
+   STATE_BADGES_SMALL_MAX (2) badges show and the rest fold into "+n". */
+@container cardface (max-height: 149px) {
+  .cf:not([data-layout="minion"]) .cf-states {
+    --cf-state-size: max(20cqw, 12px);
+
+    top: auto;
+    bottom: 49cqh;
+    right: 5cqw;
+    flex-direction: row-reverse;
+    gap: 1cqw;
+  }
+
+  .cf:not([data-layout="minion"]) .cf-states > .cf-state:nth-child(n + 3) {
+    display: none;
+  }
+
+  .cf:not([data-layout="minion"]) .cf-states-more {
+    display: grid;
+  }
+}
+
+/* The board minion: a row just over its name plate, centred, the same fold. */
+.cf[data-layout="minion"] .cf-states {
+  --cf-state-size: max(15cqmin, 10px);
+
+  top: auto;
+  right: auto;
+  bottom: calc(var(--mf-stat, 26cqh) + var(--mf-plate, 11cqh) - 0.5cqh + 1px);
+  left: 50%;
+  translate: -50% 0;
+  flex-direction: row;
+  gap: 1cqw;
+}
+
+.cf[data-layout="minion"] .cf-states > .cf-state:nth-child(n + 3) {
+  display: none;
+}
+
+.cf[data-layout="minion"] .cf-states-more {
+  display: grid;
+}
+
+/* --------------------------------------------------------- R386: numbers that moved, in text --- */
+
+/* A dotted box round the number, and ▲ or ▼ after it; the tooltip says what it was printed as. */
+.cf-tuned {
+  padding: 0 0.12em;
+  border-radius: 0.2em;
+  outline: 0.09em dotted currentColor;
+  outline-offset: -0.02em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cf-tuned[data-way="better"] {
+  color: var(--cf-tuned-better-ink, #13692a);
+}
+
+.cf-tuned[data-way="worse"] {
+  color: var(--cf-tuned-worse-ink, #a3120f);
+}
+
+.cf-tuned[data-way="better"]::after {
+  content: "\25B2";
+  margin-left: 0.1em;
+  font-size: 0.62em;
+  vertical-align: 0.15em;
+}
+
+.cf-tuned[data-way="worse"]::after {
+  content: "\25BC";
+  margin-left: 0.1em;
+  font-size: 0.62em;
+  vertical-align: 0.1em;
+}
+
+/* On a dark panel (the inspect overlays' reading-size text and printed text): the bright tones. */
+.inspect-rules .cf-tuned[data-way="better"],
+.inspect-printed .cf-tuned[data-way="better"] {
+  color: #7dff9a;
+}
+
+.inspect-rules .cf-tuned[data-way="worse"],
+.inspect-printed .cf-tuned[data-way="worse"] {
+  color: #ff8a8a;
+}
+
+/* ------------------------------------------------------------------ R386: tuned stats ------ */
+
+/* Beside the usual buffed and reduced tones, a ▲ or ▼ pip on the gem's upper corner: the number is
+   untouched (the tests and e2e read it), the pip is drawn here. */
+.cf .cf-atk[data-tuned]::after,
+.cf .cf-hp[data-tuned]::after,
+.cf .stat[data-tuned]::after {
+  position: absolute;
+  top: -0.15em;
+  display: grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: 50%;
+  background: #0d1018;
+  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.8);
+  font-size: max(5cqw, 7px);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.cf .cf-atk[data-tuned]::after,
+.cf .stat-attack[data-tuned]::after {
+  right: -0.25em;
+}
+
+.cf .cf-hp[data-tuned]::after,
+.cf .stat-health[data-tuned]::after {
+  left: -0.25em;
+}
+
+.cf .stat[data-tuned]::after {
+  font-size: max(9cqmin, 7px);
+}
+
+.cf [data-tuned="better"]::after {
+  content: "\25B2";
+  color: var(--cf-state-better);
+}
+
+.cf [data-tuned="worse"]::after {
+  content: "\25BC";
+  color: var(--cf-state-worse);
+}
+
+/* --------------------------------------------------------- R386: tuned keywords, as chips --- */
+
+.cf .cf-text-tuning {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25em;
+  margin-top: 0.35em;
+  padding-top: 0.3em;
+  border-top: 0.3cqh dashed #6b5a3a;
+}
+
+.cf .cf-kw-chip {
+  display: inline-block;
+  padding: 0 0.3em;
+  border-radius: 0.3em;
+  border: 0.1em solid currentColor;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cf .cf-kw-chip[data-tuned="added"] {
+  color: var(--cf-tuned-better-ink);
+}
+
+.cf .cf-kw-chip[data-tuned="removed"] {
+  color: var(--cf-tuned-worse-ink);
+  border-style: dashed;
+  text-decoration: line-through;
+  text-decoration-thickness: 0.12em;
+}
+
+.cf .cf-kw-sign {
+  margin-right: 0.08em;
+}
+
+/* ------------------------------------------------------------ E21: a backrow pile's depth --- */
+
+/* Game/Backrow.tsx draws it beside the card, in the zone: the bottom-right corner, clear of the lock
+   (top left) and the card's own counters. It reads like a unit pile's depth badge (`.buried-badge`). */
+.zone > .backrow-pile {
+  top: auto;
+  right: 3px;
+  bottom: 3px;
+  left: auto;
+  z-index: 3;
+  min-width: 1.4em;
+  text-align: center;
+  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.6);
+  pointer-events: none;
+}

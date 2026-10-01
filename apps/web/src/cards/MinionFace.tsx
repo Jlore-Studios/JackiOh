@@ -26,6 +26,12 @@
 // plain "Vanilla" stamp at its portrait's corner (`.cf-vanilla`, a "V" on a minion too small for
 // the word), and its hover preview's rules box says the text is gone. Its keyword chips are the view's, which already leave the lost ones out.
 //
+// Patch v0.2.0's states (SPEC §10.8). Brittle's count and the Animated cog are keyword treatments
+// above (the view's `brittle` count draws the cracks even when no Brittle keyword lists it). The rest
+// ride a small rail of badges just over the name plate (CardStates.tsx): the tuned mark (▲ Upgraded,
+// ▼ Degraded, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
+// ▼ pip beside its tone (cardstate.css), the number itself unchanged.
+//
 // There is no "zzz". `canAct` is false for every unit whose controller is not the active player,
 // and a summoning-sick unit may still switch (§4.1), so it can neither say "this unit is asleep"
 // nor "this one can attack". Whether a unit can attack is `legalActions`', drawn by the board's
@@ -36,6 +42,8 @@ import { useRef, type ReactElement } from "react";
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import type { StateBadgeKind } from "./cardState.ts";
+import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
@@ -49,6 +57,9 @@ import "./cards.css";
 import "./keywords.css";
 
 export type MinionFaceProps = { face: FaceModel; unit: UnitView; className?: string };
+
+/** The states the minion's keyword treatments already draw (Brittle's cracks, the Animated cog). */
+const DRAWN_BY_TREATMENTS: readonly StateBadgeKind[] = ["brittle", "animated"];
 
 /** How many keyword chips a minion shows before the last becomes a "+n" count. */
 export const KEYWORD_CHIPS_MAX = 3;
@@ -118,6 +129,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
       data-radiant-face={face.radiant ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
+      data-tuned={face.tuning?.verdict}
     >
       <span className="cf-scale">
         <span className="cf-portrait">
@@ -150,10 +162,16 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         )}
 
         <span className="stats">
-          <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone}>
+          <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
-          <span className="stat stat-health" data-health={unit.health} data-max-health={unit.maxHealth} data-tone={healthTone}>
+          <span
+            className="stat stat-health"
+            data-health={unit.health}
+            data-max-health={unit.maxHealth}
+            data-tone={healthTone}
+            data-tuned={face.tuning?.health}
+          >
             {unit.health}
             <span className="cf-max">/{unit.maxHealth}</span>
           </span>
@@ -165,6 +183,8 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         </span>
 
         <KeywordIcons keywords={unit.keywords} armor={unit.armor} />
+
+        <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 
         {/* The `divineShieldLost` animation removes this by the keyword leaving the view. */}
         {hasKeyword(unit.keywords, "Divine Shield") && (

@@ -19,6 +19,27 @@
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
 // are the other spellings the catalog uses for the same term.
 //
+// Patch v0.2.0 adds the §6 rows its card texts print (R512):
+// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
+//   catalog's spelling of SPEC's "Cannot be in Defense Position", which stays an alias), "Can't be
+//   attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
+//   gets no row: the one card that names it (Classic+ #33 Ivory Tower) writes it mid-sentence in
+//   lower case ("That Unit can't attack or be attacked"), and matching stays case-sensitive, as
+//   "may tribute enemy units" stays plain words.
+// - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
+//   the count or the ♾️ with the label, as it takes "Armor 2").
+// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health
+//   ("Set a hero's health"), End the turn ("End your turn"), Trigger a Cry ("Trigger the Cry") and
+//   Look at a hand ("Look at your opponent's hand"): each label is SPEC's row name and each alias
+//   the words a card prints. Only capitalised spellings match, so "steal it" mid-sentence stays plain.
+// - §6.3's one row "Degrade / Upgrade" is two terms, since a card prints one word or the other: its
+//   Rule column "Weaken / strengthen a card: …" pairs the words before and after the slash, and each
+//   term's rule is its own word (capitalised) with the shared rest of the sentence: "Weaken a card:
+//   one change per application" and "Strengthen a card: one change per application".
+//
+// A rule a SPEC row cites a ruling in ("(R384)") is printed without the citation: a ruling's number is
+// not a player's word (`inPlayerWords`).
+//
 // Players read two of SPEC's words differently (v0.1.1, R373): the rules' "library" is the Deck and
 // its "sacrifice" is a Tribute. The rules below are still SPEC's text, copied verbatim, and every one
 // is put into players' words by `inPlayerWords` as the table is built, so a SPEC edit still lands
@@ -37,7 +58,8 @@ export type TriggerTermId =
   | "Combo"
   | "Echo"
   | "Cast on draw"
-  | "Quickdraw";
+  | "Quickdraw"
+  | "Activate";
 export type VerbTermId =
   | "Discover"
   | "Tribute"
@@ -48,8 +70,26 @@ export type VerbTermId =
   | "Vanilla"
   | "Lock"
   | "Choose one"
-  | "Radiant";
-export type GlossaryTermId = KeywordKind | TriggerTermId | VerbTermId;
+  | "Radiant"
+  | "Counter"
+  | "Steal"
+  | "Unlock"
+  | "Flicker"
+  | "Degrade"
+  | "Upgrade"
+  | "Plague Token"
+  | "Set health"
+  | "Redirect"
+  | "End the turn"
+  | "Trigger a Cry"
+  | "Look at a hand";
+/** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
+export type StatusTermId =
+  | "Can't be in Defense Position"
+  | "Can't be attacked"
+  | "Only Units in this lane can attack this"
+  | "Berserk";
+export type GlossaryTermId = KeywordKind | StatusTermId | TriggerTermId | VerbTermId;
 export type GlossaryEntry = {
   id: GlossaryTermId;
   label: string;
@@ -87,9 +127,15 @@ const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
   [/\bSacrific(e|es|ed|ing)\b/g, "Tribut$1"],
 ];
 
-/** R373: a rule as SPEC writes it, in the words a player reads. */
+/** A SPEC row's citation of its ruling, " (R384)" or " (R41, R428)": no player's word. */
+const RULING_CITATION = / \(R\d+(?:, R\d+)*\)/g;
+
+/**
+ * R373: a rule as SPEC writes it, in the words a player reads — the Deck and Tribute for the rules'
+ * library and sacrifice, and no ruling's number (R512).
+ */
 export function inPlayerWords(rule: string): string {
-  return PLAYER_WORDS.reduce((text, [pattern, word]) => text.replace(pattern, word), rule);
+  return PLAYER_WORDS.reduce((text, [pattern, word]) => text.replace(pattern, word), rule.replace(RULING_CITATION, ""));
 }
 
 function keyword(id: KeywordKind, rule: string): GlossaryEntry {
@@ -100,9 +146,35 @@ function trigger(id: TriggerTermId, rule: string, aliases: readonly string[] = N
   return { id, label: id, rule: inPlayerWords(rule), section: "§6.2", aliases };
 }
 
-function verb(id: VerbTermId, rule: string): GlossaryEntry {
-  return { id, label: id, rule: inPlayerWords(rule), section: "§6.3", aliases: NONE };
+function verb(id: VerbTermId, rule: string, aliases: readonly string[] = NONE): GlossaryEntry {
+  return { id, label: id, rule: inPlayerWords(rule), section: "§6.3", aliases };
 }
+
+function status(id: StatusTermId, rule: string, aliases: readonly string[] = NONE): GlossaryEntry {
+  return { id, label: id, rule: inPlayerWords(rule), section: "§6.1", aliases };
+}
+
+/**
+ * R512: §6.3's "Degrade / Upgrade" row as two rules. "Weaken / strengthen a card: one change per
+ * application" pairs "Weaken" with Degrade and "strengthen" with Upgrade, and each takes the rest of
+ * the sentence: "Weaken a card: …", "Strengthen a card: …". rules.test.ts splits SPEC's row the same
+ * way at test time.
+ */
+export function splitPairedRule(rule: string): [string, string] {
+  const slash = rule.indexOf(" / ");
+  if (slash < 0) return [rule, rule];
+  const first = rule.slice(0, slash);
+  const after = rule.slice(slash + " / ".length);
+  const space = after.indexOf(" ");
+  const second = space < 0 ? after : after.slice(0, space);
+  const rest = space < 0 ? "" : after.slice(space);
+  const capital = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+  return [`${capital(first)}${rest}`, `${capital(second)}${rest}`];
+}
+
+/** §6.3 "Degrade / Upgrade", copied verbatim; the glossary splits it (splitPairedRule). */
+const DEGRADE_UPGRADE_RULE = "Weaken / strengthen a card: one change per application (R386)";
+const [DEGRADE_RULE, UPGRADE_RULE] = splitPairedRule(DEGRADE_UPGRADE_RULE);
 
 export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // §6.1 Unit keywords
@@ -138,6 +210,16 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit"),
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
+  // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
+  "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", [
+    "Cannot be in Defense Position",
+  ]),
+  "Can't be attacked": status("Can't be attacked", "No attack may target it"),
+  "Only Units in this lane can attack this": status(
+    "Only Units in this lane can attack this",
+    "An attack on it is legal only from the enemy unit zone of its own lane",
+  ),
+  Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
 
   // §6.2 Triggers and timing words
   // §6.2's ruling, not its Rule column, and short (R500; see the header).
@@ -152,6 +234,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Echo: trigger("Echo", "Recast this card X more times"),
   "Cast on draw": trigger("Cast on draw", "Plays itself on draw, then draw again"),
   Quickdraw: trigger("Quickdraw", "Starts in your opening hand instead of a draw"),
+  // Patch v0.2.0 (B3.2, R384): "Activate", "Activate 2", "Activate ♾️" are this one term.
+  Activate: trigger(
+    "Activate",
+    'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times (R384)',
+  ),
 
   // §6.3 Actions and verbs
   Discover: verb("Discover", "Choose 1 of 3 options"),
@@ -164,6 +251,19 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Vanilla: verb("Vanilla", "Remove a unit's text"),
   Lock: verb("Lock", "Zone can't be summoned into"),
   "Choose one": verb("Choose one", "Modal effect"),
+  // Patch v0.2.0's verbs (R512, see the header).
+  Counter: verb("Counter", "Cancel a card being played or cast"),
+  Steal: verb("Steal", "Take control"),
+  Unlock: verb("Unlock", "A Locked zone accepts summons again"),
+  Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
+  Degrade: verb("Degrade", DEGRADE_RULE),
+  Upgrade: verb("Upgrade", UPGRADE_RULE),
+  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field", ["Plague Tokens"]),
+  "Set health": verb("Set health", "A hero's health becomes N", ["Set a hero's health"]),
+  Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another"),
+  "End the turn": verb("End the turn", "The turn ends from an effect", ["End your turn"]),
+  "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again", ["Trigger the Cry"]),
+  "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", ["Look at your opponent's hand"]),
 
   // §5.2 Radiant
   Radiant: {
