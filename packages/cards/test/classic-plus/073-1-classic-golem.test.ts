@@ -10,7 +10,7 @@ import { legalActions } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
-import { scenario, type Scenario } from "../_harness";
+import { scenario, type FieldSetup, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/073-1-classic-golem";
 
 const GOLEM = "classicplus-073-1";
@@ -18,7 +18,7 @@ const VANILLA = "core-008"; // (1) Unit 4/4
 const FAUCI = { def: "core-091", radiant: true }; // 2/12: survives a 10-attack First Strike
 const BIG_MENACE = { def: "core-019", radiant: true }; // 18/18 Taunt: kills a 10/10 back
 
-function golem(defender: string | { def: string; radiant: boolean } | null, opts: { radiantFace?: boolean; seed?: string } = {}): Scenario {
+function golem(defender: FieldSetup | null, opts: { radiantFace?: boolean; seed?: string } = {}): Scenario {
   return scenario({
     ...(opts.seed === undefined ? {} : { seed: opts.seed }),
     p1: { hand: [VANILLA], field: [{ def: GOLEM, radiant: opts.radiantFace === true }], library: [VANILLA] },
@@ -140,6 +140,18 @@ describe("C+ #73.1 Classic Golem", () => {
       expect(s.unit("p1", 1)?.defId).toBe(GOLEM);
     });
 
+    it("R23 R424 an Immutable Golem is not transformed, and takes no draw (R129)", () => {
+      const s = golem(VANILLA);
+      s.card(GOLEM).grantedKeywords.push({ kind: "Immutable" });
+      const defender = s.unit("p2", 1);
+      const cursor = s.state.rngCursor;
+      attackWith(s);
+      s.expectInZone(defender ?? "", "graveyard");
+      expect(transformed(s)).toEqual([]);
+      expect(s.unit("p1", 1)?.defId).toBe(GOLEM);
+      expect(s.state.rngCursor).toBe(cursor);
+    });
+
     it("R129 a fixed seed makes the same Unit; the draw is one rng pick", () => {
       const one = attackWith(golem(VANILLA, { seed: "golem-fixed" }));
       const two = attackWith(golem(VANILLA, { seed: "golem-fixed" }));
@@ -148,7 +160,7 @@ describe("C+ #73.1 Classic Golem", () => {
   });
 
   describe("radiant", () => {
-    it("20/20 with Divine Shield: the defender's hit is absorbed, and it transforms on its base face", () => {
+    it("20/20 kills a 2/12 with First Strike, unhurt, and transforms on its base face, ready to attack again", () => {
       const s = attackWith(golem(FAUCI, { radiantFace: true }));
       s.expectInZone("core-091", "graveyard");
       expect(s.events.some((event) => event.type === "divineShieldLost")).toBe(false);
@@ -156,6 +168,16 @@ describe("C+ #73.1 Classic Golem", () => {
       expect(cardDef(event?.toDefId ?? "").set).not.toBe("Core");
       expect(s.unit("p1", 1)?.radiant).toBe(false);
       expect(s.unit("p1", 1)?.summonedTurn).toBeUndefined();
+    });
+
+    it("Divine Shield absorbs the hit of a defender that survives its First Strike; it still transforms, summoning sick", () => {
+      const s = golem({ def: VANILLA, statsOverride: { attack: 5, health: 30 } }, { radiantFace: true });
+      expect(s.stats(GOLEM).keywords.map((keyword) => keyword.kind)).toContain("Divine Shield");
+      attackWith(s);
+      expect(s.unit("p2", 1)?.damage).toBe(20);
+      expect(s.events.some((event) => event.type === "divineShieldLost")).toBe(true);
+      expect(transformed(s)).toHaveLength(1);
+      expect(s.unit("p1", 1)?.summonedTurn).toBe(s.state.turn);
     });
 
     it("R424 attacking the hero transforms nothing", () => {

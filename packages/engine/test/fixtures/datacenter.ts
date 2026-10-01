@@ -43,9 +43,13 @@ export const two = unitDef(948, { id: "fx-dc-two", name: "Fixture (2) Unit", cos
 export const xCost = spellDef(949, { id: "fx-dc-x", name: "Fixture (X) Spell", cost: "X" });
 export const castOnDraw = spellDef(950, { id: "fx-dc-cod", name: "Fixture Cast On Draw", cost: 0 });
 
+/** A Unit whose aura caps each hit on its hero at 1, as C+ #11 Anime Armor's does (E6, `heroGuard`). */
+export const guard = unitDef(952, { id: "fx-dc-guard", name: "Fixture Hero Guard", cost: 2 });
+export const GUARD_CAP = 1;
+
 export function datacenterCatalog(base: CardDefs): CardDefs {
   const defs: Record<string, CardDef> = { ...base };
-  for (const def of [runner, field, animatedField, hardField, dyingField, trap, fieldTrap, free, one, two, xCost, castOnDraw]) defs[def.id] = def;
+  for (const def of [runner, field, animatedField, hardField, dyingField, trap, fieldTrap, free, one, two, xCost, castOnDraw, guard]) defs[def.id] = def;
   return defs;
 }
 
@@ -55,4 +59,5 @@ export const DATACENTER_SCRIPTS: Record<string, CardScripts> = {
     radiant: { death: () => [damage({ to: { of: "enemyHero" }, amount: DYING_FIELD_DAMAGE })] },
   },
   [castOnDraw.id]: { base: { staticFlags: { castOnDraw: true } }, radiant: { staticFlags: { castOnDraw: true } } },
+  [guard.id]: { base: { heroGuard: () => [{ cap: GUARD_CAP }] }, radiant: { heroGuard: () => [{ cap: GUARD_CAP }] } },
 };
