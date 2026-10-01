@@ -5,7 +5,7 @@
 // these rows are checked against the table's rules and not against the shipped lines' content.
 // "Readable" is the design's word: the defId is not the sentinel and the table has an entry for it.
 
-import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId } from "@jackioh/shared";
+import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type UnitView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
