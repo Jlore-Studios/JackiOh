@@ -3,7 +3,7 @@
 // `createGame` as the server does. The engine's own proofs (the reader, the freeze, the fold) are in
 // packages/engine/test/lastBoards.test.ts.
 
-import { beginGame, createGame, fold, hashState, reduce, stepParam, type GameState, type LastBoardInput } from "@jackioh/engine";
+import { AI_TUTORIAL, beginGame, createGame, fold, hashState, reduce, stepParam, type GameState, type LastBoardInput } from "@jackioh/engine";
 import type { Action, ActionInput, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -175,7 +175,9 @@ describe("C+ #29 Portal to the Past", () => {
       const p2Deck = ["core-015", "core-011", "core-004", "core-002", "core-005", "core-006", "core-008", "core-012", "core-013", "core-016",
         "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055"];
       const lastBoards: LastBoardInput = [[...BOARD, { defId: FUSED, radiant: true }], OPPONENT_BOARD];
-      const decks: [string[], string[]] = [p1Deck, p2Deck];
+      // p2 plays under a practice handicap (R180), so every setup input travels together.
+      const handicaps = { p2: AI_TUTORIAL };
+      const decks: [string[], string[]] = [p1Deck, p2Deck.slice(0, AI_TUTORIAL.deckSize)];
       const log: Action[] = [];
       const act = (state: GameState, body: ActionInput): GameState => {
         const action = { ...body, nonce: `portal-fold-${log.length}` } as Action;
@@ -189,7 +191,7 @@ describe("C+ #29 Portal to the Past", () => {
       let state: GameState | null = null;
       for (let at = 0; at < 300 && state === null; at += 1) {
         seed = `portal-fold-${at}`;
-        const begun = beginGame(createGame({ seed, decks, lastBoards })).state;
+        const begun = beginGame(createGame({ seed, decks, handicaps, lastBoards })).state;
         if (begun.pending === null && begun.players.p1.hand.some((card) => card.defId === PORTAL)) state = begun;
       }
       if (state === null) throw new Error("no seed deals p1 the Portal");
@@ -212,11 +214,11 @@ describe("C+ #29 Portal to the Past", () => {
       const done = act(revived, { type: "answer", playerId: "p1", choiceId: revived.pending?.id ?? "", selection: [{ pick: "mode", option }] });
       expect(done.players.p1.hand.some((card) => card.defId === option && card.costOverride === 0)).toBe(true);
 
-      const replayed = fold({ seed, decks, lastBoards, log });
+      const replayed = fold({ seed, decks, handicaps, lastBoards, log });
       expect(replayed.errors).toEqual([]);
       expect(hashState(replayed.state)).toBe(hashState(done));
       // Folded without its last boards it is another game: the boards are part of the match's inputs.
-      expect(hashState(fold({ seed, decks, log }).state)).not.toBe(hashState(done));
+      expect(hashState(fold({ seed, decks, handicaps, log }).state)).not.toBe(hashState(done));
     });
   });
 
