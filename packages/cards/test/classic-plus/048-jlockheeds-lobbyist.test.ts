@@ -126,6 +126,7 @@ describe("C+ #48 Jlockheed's Lobbyist", () => {
     it("§5.2 0/6 with no Defense ban: it may switch to Defense Position", () => {
       const s = board({ radiant: true });
       s.expectStats(s.unit("p1", 1) ?? "", { attack: 0, health: 6 });
+      expect(() => s.attack(s.unit("p1", 1) ?? "", "hero")).toThrow(/0 attack/);
       s.switchPosition(s.unit("p1", 1) ?? "");
       expect(s.stats(s.unit("p1", 1) ?? "").position).toBe("DEF");
     });
