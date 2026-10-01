@@ -26,18 +26,7 @@ import type { FxChaosCue, FxCue } from "./types.ts";
 /** The Core Edition's clauses, as the real engine's `CHAOS_EFFECTS` names them in `chaosRolled`. */
 const CORE_KEYS = subsystems.CHAOS_EFFECTS.map((effect) => effect.label);
 /** The Classic+ Edition's, as `CHAOS_PLUS_EFFECTS` (subsystems/callToChaosPlus.ts) names them. */
-const PLUS_KEYS = [
-  "Add 5 random Fruits to your hand, which cost (0)",
-  "Add 3 random Books to your hand, which cost (0)",
-  "Destroy all enemy permanents",
-  "Add 3 random Classic cards to your hand, which cost (0)",
-  "Upgrade every card in your hand and deck twice",
-  "Fuse a random card into each card in your deck, each keeping its cost",
-  "Degrade every card on your opponent's field and in their hand three times",
-  "Summon a Classic Golem",
-  "Replace your deck with random Call to Chaos cards, which cost (0)",
-  "Cast a random Call to Chaos",
-];
+const PLUS_KEYS = subsystems.CHAOS_PLUS_EFFECTS.map((effect) => effect.label);
 const [UNITS, HEAL, , , , , DISCOUNT, GOLEM, , RECAST] = CORE_KEYS as [string, string, string, string, string, string, string, string, string, string];
 const DESTROY = "Destroy all enemy permanents";
 
