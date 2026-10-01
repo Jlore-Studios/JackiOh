@@ -99,7 +99,8 @@ describe("simulateReply", () => {
       seed: "reply-flood",
       active: AI,
       turn: TURN,
-      p1: { hand: ["core-017"], mana: 3, library: [...LIBRARY] },
+      // Flood costs (4) since patch v0.2.0.
+      p1: { hand: ["core-017"], mana: 4, library: [...LIBRARY] },
       p2: { field: ["core-019"], hand: ["core-008"], library: [...LIBRARY] },
     });
     // The seat's view when the decision began: p2's hand and library are what it cannot see.
