@@ -25,10 +25,13 @@ import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { markWords } from "../cards/marks.ts";
+import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
 import { sideOf, testid } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
+import { CHAOS_TEXT } from "./showcase/constants.ts";
 
 export type LogProps = {
   view: PlayerView;
@@ -298,8 +301,13 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.seat(event.player)} completed quest ${event.quest}`;
     case "rolledBack":
       return `The board went back ${event.turnsAgo} turn${event.turnsAgo === 1 ? "" : "s"}`;
-    case "chaosRolled":
-      return `${name.def(event.defId)} rolled: ${event.effects.join("; ")}`;
+    case "chaosRolled": {
+      // R436: the effects in the words the reveal shows (fx/chaos.ts), never the engine's keys. The
+      // roll is public; a card the viewer may not read is still a Call to Chaos (R97).
+      const roll = chaosRollOf(event);
+      const who = event.defId === HIDDEN_CARD ? CHAOS_TEXT.title : name.def(event.defId);
+      return roll === null ? null : `${who} rolled: ${chaosNames(roll).join("; ")}`;
+    }
     case "flickered":
       return `${name.def(event.defId)} flickered`;
     case "drawLimited":
@@ -307,7 +315,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "marked":
-      return event.added ? `${capitalised(name.instance(event.instanceId))} was marked (${event.mark})` : null;
+      // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
+      // card the viewer may not read (a face-down trap) is "a card".
+      return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
   }
 }
 

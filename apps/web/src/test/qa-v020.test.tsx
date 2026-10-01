@@ -46,7 +46,7 @@ import Clock, { type ClockFrame } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS } from "../game/clockConstants.ts";
 import { testid } from "../game/contract.ts";
 import ManaCurve from "../game/deckbuilder/ManaCurve.tsx";
-import { costWords, poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
+import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import Game from "../game/Game.tsx";
 import { HAND_EMPTY_TEXT, handEmptyTestid } from "../game/Hand.tsx";
 import Log from "../game/Log.tsx";
@@ -340,10 +340,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
   it("item 8: a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb wherever the client writes one (R432)", () => {
     const bigot = CATALOG["core-002"];
     if (bigot === undefined) throw new Error("core-002 is missing");
-    expect(costWords(2)).toBe("(2) Cost");
-    expect(costWords("X")).toBe("(X) Cost");
-    expect(costWords({ base: 2, embiggen: 4 })).toBe("(2) or (4) Cost");
-    expect(poolCardLabel(bigot, null, true)).toBe(`${bigot.name}, (${String(bigot.cost)}) Cost Unit, ${bigot.rarity}. Show details`);
+    expect(poolCardLabel(bigot, null, true)).toBe(`${bigot.name}, Unit, (${String(bigot.cost)}) Cost, ${bigot.rarity}. Show details`);
     expect(faceDownLabel(2)).toBe("Face-down trap, (2) Cost");
     expect(costPhrase(0)).toBe("(0) Cost");
 
@@ -481,6 +478,19 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     const green = root.querySelector(`[data-testid="${marksTestid(mine.instanceId)}"]`) as HTMLElement | null;
     expect(green).toHaveAttribute("data-mark-color", "green");
     expect(green?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.green.rim);
+    cleanup();
+
+    // The log names the mark as its badge does, never by the engine's key; a card it cannot read is "a card".
+    const events: GameEvent[] = [
+      { type: "marked", instanceId: theirs.instanceId, mark: "steal", color: "purple", added: true },
+      { type: "marked", instanceId: "facedown-elsewhere", mark: "doom", color: "ultraviolet", added: true },
+      { type: "marked", instanceId: theirs.instanceId, mark: "steal", color: "purple", added: false },
+    ];
+    render(withCatalog(<Log view={withEvents(marked, events)} revealed />));
+    const lines = Array.from(document.querySelectorAll(".log li")).map((line) => line.textContent ?? "");
+    expect(lines).toContain(`${nameOf(theirs.defId)} was marked (${MARK_WORDS.steal?.name ?? ""})`);
+    expect(lines).toContain("A card was marked (Mark)");
+    expect(lines.join("\n")).not.toMatch(/\((steal|doom)\)/);
   });
 
   it("item 12: Call to Chaos names what it rolled on both seats, and shows it still where the effects draw nothing (R436)", () => {
@@ -496,6 +506,17 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       expect(screen.queryByTestId(showcaseTestid.chaos)).toBeNull();
       cleanup();
     }
+    // The log says the same words: the card's name, or Call to Chaos for one the viewer cannot read.
+    const logged: GameEvent[] = [
+      { type: "chaosRolled", player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects },
+      { type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects: ["heal"] },
+    ];
+    render(withCatalog(<Log view={withEvents(baseView(), logged)} revealed />));
+    const lines = Array.from(document.querySelectorAll(".log li")).map((line) => line.textContent ?? "");
+    expect(lines).toContain(`${nameOf(CHAOS_CORE)} rolled: ${names.join("; ")}`);
+    expect(lines).toContain(`${CHAOS_TEXT.title} rolled: Heal the caster's hero 30`);
+    cleanup();
+
     writeSettings({ reduceMotion: true });
     showcase([{ type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects }]);
     const banner = screen.getByTestId(showcaseTestid.chaos);

@@ -21,10 +21,11 @@
 
 import { useMemo, type DragEvent, type ReactElement } from "react";
 
-import type { CardCost, CardDef } from "@jackioh/shared";
+import type { CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { costText } from "../../patches/diff.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -64,22 +65,15 @@ type PoolItemProps = {
   onDragEnd: () => void;
 };
 
-/** R432's noun: "(2) Cost", "(X) Cost", "(2) or (4) Cost" (embiggen). */
-export function costWords(cost: CardCost): string {
-  if (typeof cost === "number") return `(${String(cost)}) Cost`;
-  if (cost === "X") return "(X) Cost";
-  return `(${String(cost.base)}) or (${String(cost.embiggen)}) Cost`;
-}
-
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
   if (place === null) return null;
   return place === "deck" ? "In deck" : `In ${place.name}`;
 }
 
-/** The pool card's accessible name: "Bigot, (2) Cost Unit, Common, in Control, unavailable. Show details". */
+/** The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432). */
 export function poolCardLabel(def: CardDef, place: PoolPlace, owned: boolean | null): string {
-  const parts = [def.name, `${costWords(def.cost)} ${def.type}`, def.rarity];
+  const parts = [def.name, def.type, costText(def.cost), def.rarity];
   if (place === "deck") parts.push("in this deck");
   else if (place !== null) parts.push(`in ${place.name}, unavailable`);
   if (owned === false) parts.push("not in your collection");
