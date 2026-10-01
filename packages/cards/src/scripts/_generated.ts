@@ -169,6 +169,14 @@ import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-to
 import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
 import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
 import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
+import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
+import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
+import * as mclassic_plus_036_1_bone_storm from "./classic-plus/036-1-bone-storm";
+import * as mclassic_plus_037_wardrum from "./classic-plus/037-wardrum";
+import * as mclassic_plus_038_solarius from "./classic-plus/038-solarius";
+import * as mclassic_plus_038_1_solarius_prime from "./classic-plus/038-1-solarius-prime";
+import * as mclassic_plus_039_book_worm from "./classic-plus/039-book-worm";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -327,4 +335,12 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_043_plague_nuke,
   mclassic_044_back_from_the_gy,
   mclassic_045_nature_titan,
+  mclassic_plus_033_ivory_tower,
+  mclassic_plus_034_memory_leak,
+  mclassic_plus_036_conjure_bones,
+  mclassic_plus_036_1_bone_storm,
+  mclassic_plus_037_wardrum,
+  mclassic_plus_038_solarius,
+  mclassic_plus_038_1_solarius_prime,
+  mclassic_plus_039_book_worm,
 ];
