@@ -3042,6 +3042,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R601 judges a neverPlayed or selfHarm ban on pass 2's numbers alone", () => {
     provenIn(601, AI_SHADOW_BAN_TEST);
   });
+
+  // Proved by packages/ai redact-live-face-down.test.ts "R602 …" (a face-down Siphon Squad: the AI's
+  // view keeps its units' shown Attack and Health, the card stays a placeholder, and every move its
+  // determinizations offer is legal on the true board).
+  it("R602 keeps in the AI's view what a live face-down card visibly does", () => {
+    provenIn(602, "../../ai/test/redact-live-face-down.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

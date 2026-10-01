@@ -14,13 +14,17 @@ import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
   ANSWER_KEY,
   SETUP_WORK,
+  activeUnitsOf,
   announcedFaceDownTo,
   cloneState,
   effectiveCost,
   findDef,
+  findInstance,
   handicapOf,
   mulliganPromptFor,
   subsystems,
+  unclampedAttack,
+  unitView,
   type CardInstance,
   type GameState,
 } from "@jackioh/engine";
@@ -300,6 +304,19 @@ export function redact(state: GameState, seat: PlayerId): GameState {
       .filter((defId) => transient[defId] !== undefined)
       .map((defId) => [defId, transient[defId] as (typeof next.transientDefs)[string]]),
   );
+
+  // R602: what a hidden card visibly does stays. A face-down trap's aura is live (R403), and a unit's
+  // Attack and Health are on the board for both players to read, so every unit keeps the stats it
+  // shows: the difference its placeholder made goes on the unit's buffs.
+  for (const player of PLAYER_IDS) {
+    for (const unit of activeUnitsOf(next, player)) {
+      const shown = findInstance(state, unit.id);
+      if (shown === undefined) continue;
+      const truth = unitView(state, shown);
+      unit.buffs.attack += truth.attack - unclampedAttack(next, unit);
+      unit.buffs.health += truth.maxHealth - unitView(next, unit).maxHealth;
+    }
+  }
 
   // Step 7: the opponent's prompt shows that it is open and whose it is, nothing more (R81). The
   // same goes for its mulligan while both are open (R265, R266): that it has answered is public,
