@@ -219,6 +219,7 @@ import * as mclassic_plus_032_2_brawl from "./classic-plus/032-2-brawl";
 import * as mclassic_plus_032_3_blade_storm from "./classic-plus/032-3-blade-storm";
 import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
 import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
+import * as mclassic_plus_035_rollback from "./classic-plus/035-rollback";
 import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
 import * as mclassic_plus_036_1_bone_storm from "./classic-plus/036-1-bone-storm";
 import * as mclassic_plus_037_wardrum from "./classic-plus/037-wardrum";
@@ -433,6 +434,7 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_032_3_blade_storm,
   mclassic_plus_033_ivory_tower,
   mclassic_plus_034_memory_leak,
+  mclassic_plus_035_rollback,
   mclassic_plus_036_conjure_bones,
   mclassic_plus_036_1_bone_storm,
   mclassic_plus_037_wardrum,

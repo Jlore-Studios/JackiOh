@@ -16,3 +16,5 @@ export * from "./activate";
 export * from "./lastBoards";
 // B5 E34, R416: R29's scorer choosing a whole hand (Classic+ #27 Zephrys Zealotism).
 export * from "./perfectHand";
+// B5 E29, R419: the board snapshots C+ #35 Rollback returns the field to.
+export * from "./boardHistory";

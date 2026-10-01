@@ -331,3 +331,5 @@ export {
 export { replaceHandWithPerfect } from "../subsystems/perfectHand";
 // R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm).
 export { damageRoundsUntilDeath } from "./rounds";
+// B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
+export { rollBack } from "../subsystems/boardHistory";

@@ -539,6 +539,11 @@ export type GameState = {
    * it hashes as it did before. `viewFor` never sends it.
    */
   lastBoards?: Partial<Record<PlayerId, LastBoardEntry[]>>;
+  /**
+   * C+ #35 Rollback, R419: the field as each of the last BOARD_HISTORY_DEPTH turns began, oldest first
+   * (`subsystems/boardHistory.ts`). Never in a view (§10.8). Absent until the first turn starts.
+   */
+  boardHistory?: BoardSnapshot[];
 };
 
 /** R417: one card of a last board — the card and its face, never stats, buffs or damage. */
@@ -549,6 +554,32 @@ export type LastBoardInput = readonly [readonly LastBoardEntry[], readonly LastB
 
 /** R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.ts`). */
 export type MarkRecord = { instanceId: string; mark: string; color: string; delayedId: string };
+
+/** R419: one side of the field as a turn began — its zones' cards whole, its Locks, the homes held then. */
+export type SideSnapshot = Pick<PlayerState, "units" | "backrow" | "backrowPiles" | "carried" | "locks"> & { homes?: HomeZone[] };
+
+/** R419: the field at the start of player-turn `turn` (`subsystems/boardHistory.ts`). */
+export type BoardSnapshot = { turn: number; sides: Record<PlayerId, SideSnapshot> };
+
+/** R419: every card one side of a snapshot holds. */
+export function sideSnapshotInstances(side: SideSnapshot): CardInstance[] {
+  return [
+    ...side.units.flatMap((pile) => pile ?? []),
+    ...side.backrow.flatMap((card) => (card === null ? [] : [card])),
+    ...(side.backrowPiles ?? []).flat(),
+    ...(side.carried ?? []).flatMap((card) => (card === null ? [] : [card])),
+  ];
+}
+
+/** R227, R419: a card that took a fresh id is still the card the history recorded, so the history follows it. */
+export function renameInBoardHistory(state: GameState, from: string, to: string): void {
+  for (const snapshot of state.boardHistory ?? []) {
+    for (const player of PLAYER_IDS) {
+      for (const card of sideSnapshotInstances(snapshot.sides[player])) if (card.id === from) card.id = to;
+      for (const home of snapshot.sides[player].homes ?? []) if (home.instanceId === from) home.instanceId = to;
+    }
+  }
+}
 
 /**
  * R174: `count` departures so far; `last` maps a card to the departure that was its latest.
