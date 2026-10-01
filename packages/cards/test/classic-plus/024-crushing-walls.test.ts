@@ -4,6 +4,8 @@
 // resumes; a destroyed backrow card that prints Death fires it (§4.5); lanes 2 to 4 are untouched; a
 // Unit topping an Ivory Tower is passed by (R418); radiant only the enemy's four zones".
 
+import { newInstance, placeOnField, registerScripts, registeredScripts } from "@jackioh/engine";
+import { draw } from "@jackioh/engine/effects";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/024-crushing-walls";
@@ -16,6 +18,7 @@ const TRAP = "core-060";
 const FIENDER = "core-092"; // Stack
 const TOP = "classicplus-019-1"; // Radiant: Immune to Spells
 const FROST = "classicplus-012-8"; // Field Spell, Animated on your turn
+const TOWER = "classicplus-033"; // Ivory Tower: a Unit may be played on top of it
 const FILLER = "core-005";
 
 function walls(radiantFace = false): Scenario {
@@ -55,10 +58,50 @@ describe("C+ #24 Crushing Walls", () => {
       expect(occupied(s, "p2")).toEqual({ units: [false, true, false, false, false], backrow: [false, false, false, true, false] });
     });
 
-    it("R59 every mark is collected in the one state check after the Spell", () => {
+    it("R59 all eight cards are destroyed at once, in one pass", () => {
       const s = walls();
       s.play(WALLS);
-      expect(s.lastEvents.filter((event) => event.type === "destroyed").length + 0).toBeGreaterThanOrEqual(4);
+      const types = s.lastEvents.map((event) => event.type);
+      expect(types.filter((type) => type === "destroyed")).toHaveLength(8);
+      // One pass: the eight deaths are reported together, before anything else happens.
+      const first = types.indexOf("destroyed");
+      expect(types.slice(first, first + 8)).toEqual(Array.from({ length: 8 }, () => "destroyed"));
+    });
+
+    it("§4.5 a destroyed backrow card that prints Death fires it", () => {
+      const s = scenario({ p1: { hand: [WALLS, FILLER], library: [FILLER, FILLER] }, p2: { hand: [FILLER] } });
+      // A test-only Field Spell whose Death draws its controller a card (the real ones, C+ #12.8 and #61,
+      // are other units' cards).
+      const id = "test-backrow-death";
+      const face = { keywords: [], text: "Death: Draw 1." };
+      s.state.transientDefs[id] = { id, index: id, name: id, set: "Core", type: "Field Spell", tags: [], rarity: "Common", token: false, cost: 0, base: face, radiant: face };
+      registerScripts({ ...registeredScripts(), [id]: { base: { death: () => [draw({ count: 1 })] }, radiant: { death: () => [draw({ count: 1 })] } } });
+      const card = newInstance(s.state, id, "p1", { z: "hand", player: "p1" });
+      if (!placeOnField(s.state, card, { player: "p1", row: "backrow", lane: 5 })) throw new Error("setup");
+      const handBefore = s.hand("p1").length;
+      s.play(WALLS);
+      s.expectInZone(card, "graveyard");
+      // Walls left the hand, the Death drew one.
+      expect(s.hand("p1")).toHaveLength(handBefore);
+      expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(true);
+    });
+
+    it("R418 a Unit topping an Ivory Tower is passed by, while the Tower beneath is destroyed and the Unit steps down", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { hand: [WALLS, FILLER], library: [FILLER, FILLER] },
+        p2: { hand: [BODY, FILLER], backrow: [{ def: TOWER, lane: 1 }], library: [FILLER, FILLER] },
+      });
+      const tower = s.backrow("p2", 1);
+      const rider = s.card(BODY);
+      if (tower === null) throw new Error("setup");
+      s.play(BODY, { zone: 1, row: "backrow" });
+      expect(s.card(rider).zone).toMatchObject({ z: "field", row: "backrow", lane: 1 });
+      s.endTurn();
+      s.play(WALLS);
+      s.expectInZone(tower, "graveyard");
+      expect(s.lastEvents.some((event) => event.type === "destroyed" && event.instanceId === rider.id)).toBe(false);
+      expect(s.card(rider).zone).toMatchObject({ z: "field", player: "p2", row: "units", lane: 1 });
     });
 
     it("R46 an Indestructible one stays, knocked to Attack Position", () => {

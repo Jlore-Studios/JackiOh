@@ -4,7 +4,7 @@
 // better destroyed, better being the higher attack plus current health, then the higher cost, then the
 // lower lane (R414)".
 
-import { addStep, tuningOf } from "@jackioh/engine";
+import { addStep, createRng, tuningOf } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/025-soul-shot";
@@ -14,6 +14,9 @@ const SMALL = "core-012"; // 3/4, (2)
 const BIG = "core-019"; // 9/9, (3)
 const ROCK = "core-066"; // 10/10 Indestructible
 const TOP_LOSER = "classicplus-019-1"; // Radiant: Immune to Spells
+const MOTHS = "core-009"; // Moths to the Flame, (2) 1/14
+const VANILLA = "core-008"; // Mr. Vanilla, (1) 4/4
+const SILAS = "core-052"; // Silly Silas, (3) 4/4
 const FILLER = "core-005";
 
 function shot(p2: SideSetup, radiantFace = false, seed = "soul-shot"): Scenario {
@@ -106,16 +109,39 @@ describe("C+ #25 Soul Shot", () => {
       expect(twice.state.rngCursor - c2).toBe(2 * (once.state.rngCursor - c1));
     });
 
-    it("R414 ties on attack plus health go to the higher cost, then the lower lane", () => {
-      // Two copies of the 3/4 tie on everything but their lane: whichever two picks land, lane 1 dies
-      // whenever lane 1 was picked at all.
-      for (let seed = 1; seed <= 16; seed += 1) {
-        const s = shot({ field: [{ def: SMALL, lane: 1 }, { def: SMALL, lane: 4 }] }, true, `tie-${seed}`);
+    /**
+     * R414 by the rng itself: the two picks are the next two draws of the match rng over the enemy Units
+     * in lane order, so a test can name them. Of two different picks `winner` must die; of one Unit
+     * picked twice, that one. Both cases must come up across the seeds.
+     */
+    function expectLuckyKeeps(p2: SideSetup, lanes: readonly number[], winnerLane: number): void {
+      const seen = { split: 0, same: 0 };
+      for (let seed = 1; seed <= 24; seed += 1) {
+        const s = shot(p2, true, `r414-${seed}`);
+        const pool = lanes.map((lane) => s.unit("p2", lane)?.id ?? "");
+        const winner = s.unit("p2", winnerLane)?.id ?? "";
+        const rng = createRng(s.state.seed, s.state.rngCursor);
+        const first = rng.pick(pool);
+        const second = rng.pick(pool);
         s.play(SHOT);
-        const left = s.unit("p2", 1);
-        const right = s.unit("p2", 4);
-        expect([left, right].filter((unit) => unit === null)).toHaveLength(1);
+        if (first === second) seen.same += 1;
+        else seen.split += 1;
+        expect(destroyedIds(s)).toEqual([first === second ? first : winner]);
       }
+      expect(seen.split).toBeGreaterThan(0);
+      expect(seen.same).toBeGreaterThan(0);
+    }
+
+    it("R414 the better is the higher attack plus current health: a 1/14 damaged to 1/4 loses to a 4/4", () => {
+      expectLuckyKeeps({ field: [{ def: MOTHS, lane: 1, damage: 10 }, { def: VANILLA, lane: 2 }] }, [1, 2], 2);
+    });
+
+    it("R414 a tie on attack plus health goes to the higher cost: a (3) 4/4 over a (1) 4/4", () => {
+      expectLuckyKeeps({ field: [{ def: VANILLA, lane: 1 }, { def: SILAS, lane: 3 }] }, [1, 3], 3);
+    });
+
+    it("R414 then to the lower lane: of two (1) 4/4s, the one in lane 2 over lane 4", () => {
+      expectLuckyKeeps({ field: [{ def: VANILLA, lane: 2 }, { def: VANILLA, lane: 4 }] }, [2, 4], 2);
     });
 
     it("R386 Lucky is tuned like any numbered keyword: Lucky 2 makes three picks", () => {
