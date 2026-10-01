@@ -309,6 +309,7 @@ const PLUS_002_TEST = PLUS("002-groom-shroom");
 const PLUS_007_TEST = PLUS("007-the-house");
 const PLUS_008_TEST = PLUS("008-withering-storm");
 const PLUS_009_TEST = PLUS("009-silence");
+const PLUS_010_TEST = PLUS("010-new-wraps");
 const PLUS_012_6_TEST = PLUS("012-6-frozen-wastes");
 const PLUS_012_7_TEST = PLUS("012-7-legion-of-the-hungry");
 const PLUS_012_8_TEST = PLUS("012-8-frostspatula");
@@ -3053,6 +3054,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by cards classic-plus/008-withering-storm.test.ts "R569 …".
   it("R569 draws C+ #8 Withering Storm's 4 among the cards a Degrade can change", () => {
     provenIn(569, PLUS_008_TEST);
+  });
+
+  // Proved by cards classic-plus/010-new-wraps.test.ts "R570 …" (the grant recorded; a later Vanilla keeps it).
+  it("R570 records C+ #10 New Wraps' Reborn on a Unit that already has Reborn", () => {
+    provenIn(570, PLUS_010_TEST);
   });
 
   // Proved by cards classic-plus/012-8-frostspatula.test.ts "R409 R572 …" (a mutual kill counts).
