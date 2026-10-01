@@ -152,6 +152,25 @@ describe("C+ #47 Jogg's Box", () => {
       }
     });
 
+    it("R452 R471 a cast Book of Plague (C #70) places its tokens at random: its caster is never asked", () => {
+      const PLAGUE_BOOK = "classic-070"; // (1) Spell: "Place {tokens} Plague Tokens."
+      const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === PLAGUE_BOOK);
+      try {
+        registerCatalog(Object.fromEntries(spells), CATALOG_VERSION);
+        const s = scenario({
+          seed: "jogg-only-plague",
+          p1: { hand: [BOX, VANILLA], field: [VANILLA], library: [VANILLA] },
+          p2: { hand: [VANILLA], field: [VANILLA], library: [VANILLA] },
+        });
+        s.play(BOX);
+        expect(s.state.pending).toBeNull();
+        const placed = [s.unit("p1", 1), s.unit("p2", 1)].reduce((sum, unit) => sum + (unit?.counters.plague ?? 0), 0);
+        expect(placed).toBeGreaterThanOrEqual(10);
+      } finally {
+        registerCatalog(CATALOG, CATALOG_VERSION);
+      }
+    });
+
     it("§6.2 R452 every choice is random: its caster is never asked", () => {
       for (let i = 0; i < 25; i += 1) {
         const s = box({ seed: `jogg-ask-${i}` });
