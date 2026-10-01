@@ -23,10 +23,6 @@ const MOTHS = "core-009"; // Moths to the Flame: start of turn, every enemy Unit
 const NOSE = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-function types(events: readonly GameEvent[]): string[] {
-  return events.map((event) => event.type);
-}
-
 /** p2 is active; p1's library has Tommy on top, so p2 ending the turn makes p1 draw it at its start. */
 function drawnAtStart(radiantFace = false, p1: SideSetup = {}): Scenario {
   return scenario({

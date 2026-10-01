@@ -22,7 +22,7 @@ function tokens(s: Scenario): ReturnType<Scenario["card"]>[] {
 }
 
 /** The keywords a token gained beyond its printed Rush: all from R21's pool, all different, never Rush. */
-function gained(s: Scenario, token: ReturnType<Scenario["card"]>): string[] {
+function gained(s: Scenario, token: Parameters<Scenario["stats"]>[0]): string[] {
   const keys = s.stats(token).keywords.map(keywordKey).filter((key) => key !== "Rush");
   for (const key of keys) expect(RANDOM_KEYWORD_POOL as readonly string[]).toContain(key);
   expect(new Set(keys).size).toBe(keys.length);
