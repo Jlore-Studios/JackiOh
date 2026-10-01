@@ -201,6 +201,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "queued_at": "2026-10-01T13:39:51Z",
       "requested_by": "jgoetzmann",
