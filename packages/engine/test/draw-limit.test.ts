@@ -18,6 +18,7 @@ import { beginGame, reduce } from "../src/reduce";
 import { fold, hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { registerScripts, registeredScripts } from "../src/scripts";
+import { drawFromLibraryOf } from "../src/ownership";
 import { createGame, type CardInstance, type GameState } from "../src/state";
 import { HIDDEN_ID, viewFor } from "../src/viewFor";
 import { vanillaDeck } from "./fixtures/catalog";
@@ -135,6 +136,21 @@ describe("B5 E4: draws counted per player per turn (R457)", () => {
 });
 
 describe("B5 E3: draw limits (R457)", () => {
+  it("R457 a draw from the other player's deck is the drawer's draw, so the drawer's limit stops it before any card moves (E16)", () => {
+    const state = playing("limit-opponent-deck");
+    // Palantir in p2's backrow limits p2's opponent, p1, to one draw a turn.
+    put(state, palantir.id, slot("p2", "backrow", 1));
+    expect(drawLimitOf(state, "p1")).toBe(1);
+    // p1's turn's own draw has been made: the one draw the limit allows.
+    expect(drawsThisTurn(state, "p1")).toBe(1);
+    const theirs = setLibrary(state, "p2", ["fx-26", "fx-27"]);
+    const sink = sinkFor(state);
+    expect(drawFromLibraryOf(sink, "p1", "p2")).toBe("limited");
+    expect(ids(state.players.p2.library)).toEqual(ids(theirs));
+    expect(eventsOfType(sink.events, "stolen")).toEqual([]);
+    expect(eventsOfType(sink.events, "drawLimited")).toEqual([{ type: "drawLimited", player: "p1" }]);
+  });
+
   it("R457 a draw past the limit does not happen: no card moves, nothing is cast, no fatigue, and drawLimited says so", () => {
     const state = playing("limit");
     put(state, palantir.id, slot("p1", "backrow", 1));

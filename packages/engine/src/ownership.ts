@@ -21,7 +21,7 @@
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
-import { addToHand, completeDraw, type DrawOutcome } from "./draw";
+import { addToHand, completeDraw, drawBlocked, type DrawOutcome } from "./draw";
 import { hideFromOwner } from "./ownLibrary";
 import { isFaceDown } from "./preview";
 import type { EngineSink } from "./resolve";
@@ -98,6 +98,8 @@ export function drawFromLibraryOf(
 ): DrawOutcome | null {
   const library = sink.state.players[from].library;
   if (library.length === 0) return null;
+  // B5 E3, R457: it is the drawer's draw, so the drawer's draw limit stops it before any card moves.
+  if (drawBlocked(sink, drawer)) return "limited";
   const card = library[end === "top" ? 0 : library.length - 1];
   if (card === undefined) return null;
   // The owner changes while the card still lies where it was taken from, so `stolen` names that pile;

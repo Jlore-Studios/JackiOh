@@ -215,7 +215,7 @@ describe("E16: a draw from the other player's deck (Classic #58)", () => {
     expect(state.players.p2.library.map((card) => card.id)).toEqual([library[0]?.id, library[1]?.id]);
     expect(state.counters.drawn).toBe(drawnBefore + 1);
     expect(eventsOfType(events, "drawn")).toEqual([
-      { type: "drawn", player: "p1", instanceId: bottom.id, defId: plain.id },
+      { type: "drawn", player: "p1", instanceId: bottom.id, defId: plain.id, turnDraw: 1 },
     ]);
     // The drawer reads it; the deck's owner reads that p1 drew, never what (R466).
     expect(eventsOfType(viewFor(state, "p2").events, "drawn")[0]?.instanceId).toBe(HIDDEN_ID);
