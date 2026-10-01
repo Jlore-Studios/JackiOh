@@ -52,13 +52,13 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-09-29");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-01");
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
-    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/]) {
+    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);

@@ -39,6 +39,7 @@ pnpm test:coverage     # 90% line floor, engine + cards
 pnpm fuzz              # the CI gate: seeds 1–1000 of random-policy games with replay hashing, one seat handicapped in fuzz-handicap, ~100 s
 pnpm ai:gate           # the AI's quality gates at full size (random 100, greedy 50, Hard vs Easy 50); minutes, CI's ai-gate job
 pnpm ai:sweep          # the shadow-ban sweep (R186); prints SHADOW_BAN rows to copy into packages/ai/src/shadowBan.ts by hand
+pnpm ai:stats          # an AI development run for the card statistics (R378): AI-vs-AI All Random games filed under a patch, --out writes them
 pnpm validate:catalog  # catalog.json data checks (100 cards, 11 tokens, rarity counts)
 pnpm rulings:coverage  # SPEC §11 rows vs named tests vs R-ids cited in code (rule 3)
 pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, and the path each one expects
@@ -50,7 +51,7 @@ pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines with macO
 
 Replay one failing fuzz seed: `JACKIOH_FUZZ_FROM=<seed> JACKIOH_FUZZ_SEEDS=1 pnpm fuzz`.
 
-Server against a real Supabase project (copy `apps/server/.env.example` to `.env` first; the client's half is `apps/web/.env.example`): `pnpm --filter @jackioh/server db:migrate`, then `db:seed-catalog`, then `codes:mint` for an invite code (or `db:seed-accounts` for active test accounts that skip the invite gate; it refuses under `NODE_ENV=production`), then `dev`.
+Server against a real Supabase project (copy `apps/server/.env.example` to `.env` first; the client's half is `apps/web/.env.example`): `pnpm --filter @jackioh/server db:migrate`, then `db:seed-catalog`, then `codes:mint` for an invite code (or `db:seed-accounts` for active test accounts that skip the invite gate; it refuses under `NODE_ENV=production`), then `dev`. Card win rates off the game records every finished match leaves: `stats:cards` (live games unless `--source=dev` or `all`; `--mode`, `--patch`, `--pilot`, `--card`, `--json`), and `stats:import <file>` loads an `ai:stats` run (SPEC §9.11).
 
 Running a subset:
 
@@ -84,7 +85,7 @@ CI (`.github/workflows/ci.yml`) runs five parallel jobs:
 
 Workspace packages, from pure to impure:
 
-- `packages/shared` holds the types every layer shares: `Action`, `GameEvent`, `PlayerId`, and the event list in `events.ts`.
+- `packages/shared` holds the types every layer shares: `Action`, `GameEvent`, `PlayerId`, and the event list in `events.ts`. `stats.ts` is the card statistics' game record and the win rates read off a set of them (SPEC §9.11, R376–R378), which the server's scripts and the AI's development run share.
 - `packages/engine` is the rules. Its entry points are `reduce(state, action, rng)`, `legalActions` and `viewFor(state, playerId)`. `reduce` clones state, applies the action and returns new state plus events. An illegal action comes back as an error with the state unchanged. Each rule has one owning module (`combat.ts`, `playSteps.ts`, `turn.ts`, `traps.ts`, `layers.ts`, `subsystems/*`, …), and `legalActions` and the reducer's refusals call the same function, so the two can't disagree. `reduce.ts`'s header maps each action to its owning module.
 - The resolution loop (`triggers.settle`, SPEC §10.3) runs after every action. It dispatches events, drains `state.work`, runs the state check (`stateCheck.ts`) and pops the trigger queue until everything is empty or a prompt stops it.
 - Prompts end the action (`state.pending`). The one exception is the mulligan: both seats' mulligan prompts are open at once in `state.mulligan`, each answer sealed until both are in, and they resolve together in seat order (R265–R268); code that plays both seats asks `seatToAct(state)` who acts next. Any sequence that can pause mid-way parks its remainder on `state.work` (`work.ts`) as plain-data `Resume` records, never closures. That lets a paused state survive `JSON.parse(JSON.stringify(...))` and replay exactly. Resume order follows R113 (a cursor, not a queue or a stack). Read `work.ts`'s header before touching anything that can open a prompt.

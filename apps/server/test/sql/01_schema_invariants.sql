@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 17 tables of migrations 0001-0011 ==='
+\echo '=== CHECK 2: the 18 tables of migrations 0001-0014 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -55,12 +55,12 @@ declare
   -- BUILD M6-T1..T4: profiles/invite_codes/code_attempts (0001), cards/collection/
   -- collection_grants (0002), loadouts/loadout_decks/loadout_deck_cards (0003),
   -- matches/match_actions/tickets/results (0004); then decks/trios (0007, R250, R252),
-  -- series (0009, R263) and tutorial_progress (0011, R320). 0005, 0006, 0008 and 0010 add no
-  -- table. The three loadout tables stay after 0007, unread and unwritten (R254), so they are
-  -- still expected here.
+  -- series (0009, R263), tutorial_progress (0011, R320) and game_records (0014, R376). 0005,
+  -- 0006, 0008, 0010, 0012 and 0013 add no table. The three loadout tables stay after 0007,
+  -- unread and unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'invite_codes',
-    'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions', 'matches',
+    'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'game_records',
+    'invite_codes', 'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions', 'matches',
     'profiles', 'results', 'series', 'tickets', 'trios', 'tutorial_progress'];
   actual  text[];
   missing text[];

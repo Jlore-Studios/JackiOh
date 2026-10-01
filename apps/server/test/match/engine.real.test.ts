@@ -27,6 +27,7 @@ import { describe, expect, it } from "vitest";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
 import { loadCatalog } from "../../src/api/catalog";
+import type { EnginePort, EngineState } from "../../src/match/engine";
 import { enginePort } from "../../src/match/engine.real.ts";
 import { decksTheEngineAccepts } from "../fakes/engine";
 
@@ -151,3 +152,47 @@ describe("All Random's deal (R258, src/match/engine.real.ts)", () => {
     expect(p2).not.toEqual(p1);
   });
 });
+
+/**
+ * R376's record, through the real port: a real match played to a concede and summarized off its
+ * log, as `api/game-records.ts` summarizes every live match. What each field means is proved in
+ * `packages/engine` and `packages/cards`; this proves the adapter hands the engine's answer over.
+ */
+describe("a finished match's record (R376, src/match/engine.real.ts)", () => {
+  it("R376 summarizes a real match off its log, and makes nothing of an unfinished one", async () => {
+    const catalog = await loadCatalog();
+    const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
+    const port = enginePort();
+    const { state: created, decks } = decksTheEngineAccepts(port, pool, "r376-real");
+    let state = port.beginGame(created).state;
+
+    const log: Action[] = [];
+    const act = (player: PlayerId, body: ActionBody): void => {
+      const action = { ...body, playerId: player, nonce: `r376-${String(log.length)}` } as Action;
+      const result = port.reduce(state, action);
+      expect(result.error, `${action.type} refused`).toBeUndefined();
+      log.push(action);
+      state = result.state;
+    };
+    // Both keep their hands (R265), p1 ends its first turn, p2 concedes on its own.
+    act("p1", { type: "mulligan", keep: handIds(port, state, "p1") });
+    act("p2", { type: "mulligan", keep: handIds(port, state, "p2") });
+    expect(port.summarizeGame({ seed: "r376-real", decks, log })).toBeNull();
+    act("p1", { type: "endTurn" });
+    act("p2", { type: "concede" });
+
+    const summary = port.summarizeGame({ seed: "r376-real", decks, log });
+    expect(summary).toMatchObject({ first: "p1", winner: "p1", reason: "concede", turns: 2 });
+    expect(summary?.seats.p1.deck).toEqual(decks[0]);
+    expect(summary?.seats.p1.opening).toHaveLength(3);
+    // §2.1, R244: the seat going second opens with its four cards and The Coin.
+    expect(summary?.seats.p2.opening).toHaveLength(5);
+    expect(summary?.seats.p2.drawn).toHaveLength(1);
+  });
+});
+
+/** The instance ids of a seat's hand, read through its own view (§10.8). */
+function handIds(port: EnginePort, state: EngineState, player: PlayerId): string[] {
+  const hand = port.viewFor(state, player).you.hand;
+  return Array.isArray(hand) ? hand.map((card) => card.instanceId) : [];
+}

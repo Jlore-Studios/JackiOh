@@ -388,7 +388,7 @@ declare
   t text;
   missing text := '';
 begin
-  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series'] loop
+  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -401,8 +401,9 @@ select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111
 do $$
 declare
   -- `series` (0009, R263): both sides' frozen trios and both current picks, which R259 keeps
-  -- hidden until both have picked — the same reason `matches` is here.
-  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series'];
+  -- hidden until both have picked — the same reason `matches` is here. `game_records` (0014,
+  -- R376): both hands and both decklists of every recorded game.
+  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;
