@@ -72,7 +72,7 @@ describe("C+ #28 Nuestro hogar, nuestras tumbas", () => {
     });
 
     it("§4.5 a bounce is no death: Flood returns it and nothing is healed", () => {
-      const s = scenario({ p1: { hand: [FLOOD, FILLER], mana: 4 }, p2: { hand: [FILLER], field: [HOGAR], health: 20 } });
+      const s = scenario({ p1: { hand: [FLOOD, FILLER], mana: 5 }, p2: { hand: [FILLER], field: [HOGAR], health: 20 } });
       s.play(FLOOD);
       s.expectInZone(HOGAR, "hand");
       s.expectHealth("p2", 20);

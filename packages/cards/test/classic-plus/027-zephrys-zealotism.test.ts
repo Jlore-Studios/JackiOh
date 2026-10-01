@@ -149,7 +149,7 @@ describe("C+ #27 Zephrys Zealotism", () => {
         expect(event.defId).toBe(HIDDEN);
         expect(event.instanceId).toBe(HIDDEN);
       }
-      expect(theirs.players.p1.graveyard.map((card) => card.defId)).toEqual(expect.arrayContaining([STOCKPILE, MENACE]));
+      expect(theirs.opponent.graveyard.map((card) => card.defId)).toEqual(expect.arrayContaining([STOCKPILE, MENACE]));
       expect(JSON.stringify(theirs)).not.toContain(s.hand("p1")[0]?.id ?? "no card");
     });
 

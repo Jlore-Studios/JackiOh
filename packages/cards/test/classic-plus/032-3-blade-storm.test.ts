@@ -7,8 +7,8 @@
 // only Armor 1 or Indestructible Units runs exactly 30 rounds and stops; radiant hits enemy Units only, a
 // death on either side still stopping it".
 //
-// The engine proves the rounds against fixture cards too (`packages/engine/test/effects-rounds.test.ts`):
-// a question a round opens, and a death on the side an enemy-only storm does not hit.
+// The engine proves the rounds against fixture cards too (`packages/engine/test/effects-plus-c.test.ts`),
+// a Death hook that asks inside a round's check among them.
 
 import { BLADE_STORM_ROUNDS, paramDeclOf, stepParam } from "@jackioh/engine";
 import type { CardInstance } from "@jackioh/engine";
@@ -26,6 +26,8 @@ const UNBREAKABLE = "classic-041"; // 3/3, Indestructible
 const SOLARIUS = "classicplus-038"; // 3/2, Spell Damage +2
 const HOGAR = "classicplus-028"; // 3/4 Taunt, Reborn; Death: heal your hero 3
 const FILLER = "core-005";
+/** A 3/50 Tempo Timmy: it outlives any storm, so its hits count the rounds. */
+const COUNTER = { def: TIMMY, statsOverride: { attack: 3, health: 50 } };
 
 function storm(p1: SideSetup, p2: SideSetup, options: { radiant?: boolean; tune?: number } = {}): Scenario {
   const s = scenario({
@@ -92,11 +94,19 @@ describe("C+ #32.3 Blade Storm", () => {
       expect(hits(s, s.unit("p2", 2))).toEqual([3]);
     });
 
-    it("R59 a board of only Armor or Indestructible Units runs exactly 30 rounds and stops", () => {
+    it("R59 a board of only Armor or Indestructible Units: no hit lands, nothing dies, and the storm ends", () => {
       const s = storm({ field: [SEVEN] }, { field: [UNBREAKABLE] });
-      expect(hits(s, s.unit("p2", 1))).toHaveLength(BLADE_STORM_ROUNDS);
+      expect(s.events.filter((event) => event.type === "damage")).toEqual([]);
       expect(deaths(s)).toEqual([]);
+      expect(s.state.pending).toBeNull();
       s.expectInZone(STORM, "graveyard");
+    });
+
+    it("R59 with no death it runs exactly 30 rounds, BLADE_STORM_ROUNDS, and stops", () => {
+      const s = storm({ field: [SEVEN, COUNTER] }, { field: [UNBREAKABLE] });
+      expect(hits(s, s.unit("p1", 2))).toHaveLength(BLADE_STORM_ROUNDS);
+      expect(deaths(s)).toEqual([]);
+      s.expectStats(s.unit("p1", 2) ?? TIMMY, { health: 50 - BLADE_STORM_ROUNDS });
     });
 
     it("§8.7 with no Unit to hit it does nothing", () => {
@@ -106,13 +116,13 @@ describe("C+ #32.3 Blade Storm", () => {
     });
 
     it("R386 a Degrade moves the cap by its step of 8: 22 rounds", () => {
-      const s = storm({}, { field: [UNBREAKABLE] }, { tune: -1 });
-      expect(hits(s, s.unit("p2", 1))).toHaveLength(BLADE_STORM_ROUNDS - 8);
+      const s = storm({}, { field: [UNBREAKABLE, COUNTER] }, { tune: -1 });
+      expect(hits(s, s.unit("p2", 2))).toHaveLength(BLADE_STORM_ROUNDS - 8);
     });
 
     it("R386 an Upgrade moves it the other way: 38 rounds", () => {
-      const s = storm({}, { field: [UNBREAKABLE] }, { tune: 1 });
-      expect(hits(s, s.unit("p2", 1))).toHaveLength(BLADE_STORM_ROUNDS + 8);
+      const s = storm({}, { field: [UNBREAKABLE, COUNTER] }, { tune: 1 });
+      expect(hits(s, s.unit("p2", 2))).toHaveLength(BLADE_STORM_ROUNDS + 8);
       expect(paramDeclOf(s.state, STORM, "rounds")?.step).toBe(8);
     });
   });
@@ -133,9 +143,10 @@ describe("C+ #32.3 Blade Storm", () => {
       s.expectInZone(SOLARIUS, "field");
     });
 
-    it("R59 an enemy board of only Indestructible Units runs the 30 rounds too", () => {
-      const s = storm({ field: [TIMMY] }, { field: [UNBREAKABLE] }, { radiant: true });
-      expect(hits(s, s.unit("p2", 1))).toHaveLength(BLADE_STORM_ROUNDS);
+    it("R59 an enemy board nothing kills runs the 30 rounds too, your own Units untouched", () => {
+      const s = storm({ field: [TIMMY] }, { field: [UNBREAKABLE, COUNTER] }, { radiant: true });
+      expect(hits(s, s.unit("p2", 2))).toHaveLength(BLADE_STORM_ROUNDS);
+      expect(hits(s, s.unit("p1", 1))).toEqual([]);
     });
   });
 });
