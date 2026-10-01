@@ -200,16 +200,16 @@ describe("E29 the restore (R419)", () => {
     expect(findInstance(state, card.id)?.brittle).toEqual({ count: 3, since: 1 });
   });
 
-  it("R566 R386 a restored card takes the snapshot's tuning and cost change: a Degrade made since, off the field, is undone", () => {
+  it("R566 R386 a restored card takes the snapshot's tuning, cost change, face and memory: a Degrade or a Make Radiant made since, off the field, is undone", () => {
     const state = board("bh-tuning");
     const card = put(state, plainUnit, slot("p1", "units", 1));
-    card.tuning = { attack: 1 };
+    Object.assign(card, { tuning: { attack: 1 }, memory: { meal: "kept" } });
     recordBoardSnapshot(state);
     moveToZone(state, card, "hand");
-    // A Degrade in the hand since (B3.4): what R78 leaves alone on the way out, the restore still takes back.
-    Object.assign(card, { tuning: { attack: -1, health: -1 }, costMod: 1 });
+    // Since, in the hand (B3.4, §6.3): what R78 leaves alone on the way out, the restore still takes back.
+    Object.assign(card, { tuning: { attack: -1, health: -1 }, costMod: 1, radiant: true, memory: {} });
     restoreBoard(sinkFor(state), "p1", 1, ["p1"]);
-    expect(findInstance(state, card.id)).toMatchObject({ zone: { z: "field" }, tuning: { attack: 1 }, costMod: 0 });
+    expect(findInstance(state, card.id)).toMatchObject({ zone: { z: "field" }, tuning: { attack: 1 }, costMod: 0, radiant: false, memory: { meal: "kept" } });
   });
 
   it("R566 a card mid-play stays its play's and its place stays empty; a Unit it carried, left with no carrier, goes to its owner's hand", () => {
