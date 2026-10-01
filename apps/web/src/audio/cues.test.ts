@@ -287,14 +287,11 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "turnAutoEnded",
   "stolen",
   "unlocked",
-  "animated",
   "deanimated",
-  "crumbled",
   "degraded",
   "upgraded",
   "numberChanged",
   "redirected",
-  "healthSet",
   "questProgressed",
   "rolledBack",
   "chaosRolled",
@@ -1056,5 +1053,27 @@ describe("R506 Call to Chaos's roll (R436) and a mark (R437)", () => {
     expect(cuesFor(mark(true, HIDDEN_DEF_ID), ctx())).toEqual(cuesFor(mark(true), ctx()));
     const recoloured: GameEvent = { type: "marked", instanceId: "u6", mark: "curse", color: "green", added: true };
     expect(cuesFor(recoloured, ctx())).toEqual(cuesFor(mark(true), ctx()));
+  });
+});
+
+describe("R506 patch v0.2.0's moments sound the way they went", () => {
+  it("R506 a hero's health set is a heal of the gain or a drain of the loss, and a notice when nothing changed", () => {
+    const view = baseView();
+    const health = view.opponent.hero.health;
+    const set = (to: number): GameEvent => ({ type: "healthSet", player: view.opponent.player, health: to, sourceId: null });
+    expect(cuesFor(set(health + 4), ctx({ view }))).toEqual([{ kind: "sfx", id: "heal", params: { amount: 4 }, delayMs: 0 }]);
+    expect(cuesFor(set(health - 9), ctx({ view }))).toEqual([{ kind: "sfx", id: "drain", params: { amount: 9 }, delayMs: 0 }]);
+    expect(shape(set(health), ctx({ view }))).toEqual([sfx("notify")]);
+  });
+
+  it("R506 a crumbling card shatters like glass, then falls, and never speaks", () => {
+    expect(shape(SAMPLES.crumbled)).toEqual(["sfx:death@70", "sfx:shieldShatter@0"]);
+  });
+
+  it("R203 R506 an Animated card lands with a summon sized by the Unit it is now, and no family accent", () => {
+    const unit = { attack: 4, health: 4 } as unknown as UnitView;
+    const cues = cuesFor(SAMPLES.animated, ctx({ unitNow: () => unit, card: () => ({ type: "Field Trap", tags: ["Human"] }) }));
+    expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 8 }, delayMs: 0 }]);
+    expect(cuesFor(SAMPLES.animated, ctx())).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
   });
 });
