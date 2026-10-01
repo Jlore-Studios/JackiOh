@@ -5,6 +5,12 @@
 // face whose text names other cards has their faces in a column of their own beyond it
 // (References.tsx, R279), since a reference inside a preview that takes no pointer events cannot
 // be hovered itself.
+//
+// Patch v0.2.0 (SPEC §10.8): a face in play whose view gives it states — tuned (R386), Brittle (R385),
+// enchantments (E39), standing as a Unit (R383) — has them in words at the top of that column
+// (StateNotes.tsx), since the badges' tooltips cannot be hovered here, and a printed text beside a
+// tuned face whose numbers moved. Whenever the column is drawn it ends with the card's lines of code
+// (E36): a meta line fits there, and a face with nothing beside it stays alone.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
@@ -24,6 +30,7 @@ import { Glossary } from "./Glossary.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
+import { LocLine, StateNotes, hasStateNotes } from "./StateNotes.tsx";
 import { namedCards, References } from "./References.tsx";
 import { useDefResolver } from "../refContext.tsx";
 import { OVERLAY_ROOT_PROPS } from "./store.ts";
@@ -50,7 +57,9 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
-  const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || face.printed !== null, named > 0), prefer);
+  const notes = hasStateNotes(face);
+  const side = notes || face.printed !== null;
+  const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0), prefer);
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.
   useLayoutEffect(() => {
@@ -79,14 +88,14 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
         <CardFace face={face} layout="full" />
         <InspectNote note={note} />
       </div>
-      {face.printed === null ? (
-        <Glossary entries={entries} />
-      ) : (
+      {entries.length > 0 || side ? (
         <div className="inspect-side">
+          {notes ? <StateNotes face={face} /> : null}
           <Printed face={face} />
           <Glossary entries={entries} />
+          <LocLine face={face} />
         </div>
-      )}
+      ) : null}
       <References face={face} />
     </div>,
     document.body,

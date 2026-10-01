@@ -181,8 +181,8 @@ describe("R502 a cast on draw is held up on both seats", () => {
 
 describe("R436 the rolls a Call to Chaos names", () => {
   it("R436 finds each roll among the fresh events, with its event, and skips an empty one", () => {
-    const roll: GameEvent = { type: "chaosRolled", player: "p2", instanceId: "c95", defId: "core-095", effects: ["heal", "units"] };
+    const roll: GameEvent = { type: "chaosRolled", player: "p2", instanceId: "c95", defId: "core-095", effects: ["Heal your hero 30", "Summon 3 random (3) Cost Units"] };
     const empty: GameEvent = { type: "chaosRolled", player: "p1", instanceId: "c96", defId: "core-095", effects: [] };
-    expect(chaosRollsIn([TURN, roll, empty])).toEqual([{ roll: { player: "p2", instanceId: "c95", defId: "core-095", effects: ["heal", "units"] }, event: roll }]);
+    expect(chaosRollsIn([TURN, roll, empty])).toEqual([{ roll: { player: "p2", instanceId: "c95", defId: "core-095", effects: ["Heal your hero 30", "Summon 3 random (3) Cost Units"] }, event: roll }]);
   });
 });

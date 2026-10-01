@@ -490,10 +490,13 @@
   /* The touch sheet the same way: stacked, the card shrank to 56% of the screen's height to leave
      Close a row of its own. Here the card takes the sheet's full height, and the glossary and
      Close stand beside it. */
+  /* The right column holds, top down, whichever the face has of its states (StateNotes.tsx), its
+     printed text, its glossary, its lines of code and Close: each is placed in column 2 and flows
+     into the next free row, the face spans every row, and the last row takes the slack. */
   .inspect-sheet {
     display: grid;
     grid-template-columns: auto minmax(0, 420px);
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto repeat(6, auto) 1fr;
     justify-content: center;
     align-items: start;
     gap: 12px 16px;
@@ -510,44 +513,23 @@
 
   .inspect-face--sheet {
     grid-column: 1;
-    grid-row: 2 / span 2;
+    grid-row: 2 / -1;
     height: min(380px, calc(92vh - 44px));
     height: min(380px, calc(92dvh - 44px));
   }
 
-  .inspect-sheet .inspect-glossary {
+  .inspect-sheet .inspect-tuned,
+  .inspect-sheet .inspect-states,
+  .inspect-sheet .inspect-printed,
+  .inspect-sheet .inspect-glossary,
+  .inspect-sheet .inspect-loc {
     grid-column: 2;
-    grid-row: 2;
     max-width: none;
   }
 
   .inspect-sheet .inspect-close {
     grid-column: 2;
-    grid-row: 3;
     justify-self: start;
-  }
-
-  /* A face in play whose printed text differs: that text over the glossary, one more row. */
-  .inspect-sheet:has(.inspect-printed) {
-    grid-template-rows: auto auto auto 1fr;
-  }
-
-  .inspect-sheet:has(.inspect-printed) .inspect-face--sheet {
-    grid-row: 2 / span 3;
-  }
-
-  .inspect-sheet .inspect-printed {
-    grid-column: 2;
-    grid-row: 2;
-    max-width: none;
-  }
-
-  .inspect-sheet:has(.inspect-printed) .inspect-glossary {
-    grid-row: 3;
-  }
-
-  .inspect-sheet:has(.inspect-printed) .inspect-close {
-    grid-row: 4;
   }
 }
 
@@ -620,6 +602,149 @@
   .inspect-detail {
     animation: none;
   }
+}
+
+/* ---- Patch v0.2.0: a face in play's states in words (StateNotes.tsx) ---------------------------- */
+
+/* R386: the tuned ribbon, its verdict by glyph and word, and each change with ▲ or ▼. */
+.inspect-tuned,
+.inspect-states {
+  flex: none;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(11, 13, 19, 0.94);
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 10px;
+  color: var(--text, #e8eaf2);
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.inspect-tuned {
+  border-left-width: 4px;
+}
+
+.inspect-tuned[data-tuned="upgraded"] {
+  border-left-color: #7dff9a;
+}
+
+.inspect-tuned[data-tuned="degraded"] {
+  border-left-color: #ff6b6b;
+}
+
+.inspect-tuned[data-tuned="tuned"] {
+  border-left-color: var(--radiant, #ffd24a);
+  border-left-style: double;
+}
+
+.inspect-tuned-ribbon {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.inspect-tuned-changes,
+.inspect-states {
+  list-style: none;
+}
+
+.inspect-tuned-changes {
+  margin: 0;
+  padding: 0;
+}
+
+.inspect-tuned-glyph {
+  display: inline-block;
+  min-width: 1.2em;
+  font-weight: 900;
+}
+
+.inspect-tuned[data-tuned="upgraded"] .inspect-tuned-ribbon .inspect-tuned-glyph,
+.inspect-tuned-change[data-way="better"] .inspect-tuned-glyph {
+  color: #7dff9a;
+}
+
+.inspect-tuned[data-tuned="degraded"] .inspect-tuned-ribbon .inspect-tuned-glyph,
+.inspect-tuned-change[data-way="worse"] .inspect-tuned-glyph {
+  color: #ff8a8a;
+}
+
+.inspect-tuned[data-tuned="tuned"] .inspect-tuned-ribbon .inspect-tuned-glyph,
+.inspect-tuned-change:not([data-way]) .inspect-tuned-glyph {
+  color: var(--radiant, #ffd24a);
+}
+
+/* Brittle, the enchantments, the animated mark: each glyph as the face draws it, then its words. */
+.inspect-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspect-state + .inspect-state {
+  margin-top: 6px;
+}
+
+.inspect-state-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  font-weight: 900;
+}
+
+.inspect-state-glyph > .cf-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Words a screen reader reads that the glyph already says to the eye. */
+.inspect-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* E36: lines of code, a meta line under the glossary. */
+.inspect-loc {
+  flex: none;
+}
+
+/* Over the board, a panel of its own as the glossary has, so the line reads on any background. */
+.inspect-hover .inspect-loc,
+.inspect-sheet .inspect-loc {
+  box-sizing: border-box;
+  padding: 6px 12px;
+  background: rgba(11, 13, 19, 0.94);
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 10px;
+  font-size: 12px;
+  text-align: left;
+}
+
+/* The tuned ribbon and the states list cast the glossary's shadow in the hover preview. */
+.inspect-hover .inspect-tuned,
+.inspect-hover .inspect-states {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+.inspect-sheet .inspect-tuned,
+.inspect-sheet .inspect-states,
+.inspect-sheet .inspect-loc {
+  flex: 1 1 220px;
+  max-width: 420px;
+  box-shadow: none;
 }
 
 /* ---- A list of cards: a graveyard, an exile pile or your library (CardList.tsx) ---------------- */
@@ -950,4 +1075,27 @@
 
 .inspect-facedown-hint {
   color: var(--text-dim, #9aa1b8);
+}
+
+/* R404: a quest's text, its progress and the rewards it offers, under it (StateNotes.tsx). */
+.inspect-quest {
+  align-items: flex-start;
+}
+
+.inspect-quest-progress {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspect-quest-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.inspect-quest-rewards {
+  margin: 2px 0 0;
+  padding-left: 16px;
 }

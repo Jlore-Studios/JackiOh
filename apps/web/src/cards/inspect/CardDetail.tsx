@@ -1,5 +1,5 @@
 // The deck builder's detail view (B29): both printed faces side by side at every width, a meta
-// line, the glossary of both faces, and the caller's meta and actions above Close. It is a centred
+// line (its lines of code last, E36), the glossary of both faces, and the caller's meta and actions above Close. It is a centred
 // modal dialog over a scrim, closed by Close, the scrim or Escape (B25), and it takes the one
 // inspect slot: opening it closes any hover preview or sheet, and closeInspect() closes it.
 //
@@ -26,7 +26,7 @@ import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
-import { faceModel, type FaceModel } from "../model.ts";
+import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
@@ -51,10 +51,17 @@ export type CardDetailProps = {
   historyOpen?: boolean;
 };
 
-/** `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any. */
-function detailMetaLine(def: CardDef): string {
-  const parts = [`#${def.index}`, def.set, def.rarity, def.type];
+/**
+ * `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any, then ` · N lines of
+ * code` (E36) when the card's script was counted. A face with a type of its own (B2.7, Classic+ #22
+ * Blood Moon's Radiant Field Trap) says so after the type: "Trap (Radiant: Field Trap)".
+ */
+export function detailMetaLine(def: CardDef): string {
+  const radiantType = def.radiant.type;
+  const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
+  const parts = [`#${def.index}`, def.set, def.rarity, type];
   if (def.tags.length > 0) parts.push(def.tags.join(", "));
+  if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }
 
@@ -143,7 +150,9 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
                 them on a wide, short one such as a 1280x720 desktop (inspect.css). */}
             <div className="inspect-detail-info">
-              <p className="inspect-meta">{detailMetaLine(def)}</p>
+              <p className="inspect-meta" data-loc={def.loc}>
+                {detailMetaLine(def)}
+              </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}

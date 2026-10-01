@@ -1,0 +1,126 @@
+/* The Activate control (ActivateControl.tsx, R384, R510): a lightning glyph and a uses badge on the
+   left edge of a card the viewer controls, clear of the switch (top right), the Stack depth badge
+   (top left) and the counters and stats (bottom). Live: the board's green glow (highlights.css
+   paints [data-glow]); not live: greyed, its tooltip saying why. */
+
+.board .activate-controls {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  translate: 0 -50%;
+}
+
+.board .activate-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 4px 0 2px;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4c3a0c, #2a1f05);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.board .activate-glyph {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.board .activate-uses {
+  min-width: 7px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .activate-control[data-legal="false"] {
+  border-color: #6b7280;
+  background: #1f2937;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.board .activate-control[data-selected="true"] {
+  border-color: var(--selected);
+  box-shadow: 0 0 0 2px var(--selected);
+}
+
+.board .activate-control:focus-visible {
+  outline: 2px solid #fde68a;
+  outline-offset: 2px;
+}
+
+/* The `activated` row (animations.ts): the control, or a Heroic Power's button (Hero.tsx), flares as
+   the ability is used. Under reduced motion nothing moves; a static ring marks it while the row plays. */
+.board .activate-control[data-flash="activated"],
+.board .power-button[data-flash="activated"] {
+  animation: jk-activate-flash calc(300ms * var(--anim-scale, 1)) ease-out;
+}
+
+@keyframes jk-activate-flash {
+  40% {
+    scale: 1.35;
+    filter: brightness(1.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board .activate-control[data-flash="activated"],
+  .board .power-button[data-flash="activated"] {
+    animation: none;
+    outline: 2px solid #fde68a;
+  }
+}
+
+:root[data-reduce-motion="true"] .board .activate-control[data-flash="activated"],
+:root[data-reduce-motion="true"] .board .power-button[data-flash="activated"] {
+  animation: none;
+  outline: 2px solid #fde68a;
+}
+
+/* Touch sizing (B29, as the switch's): the glyph stays small on the card's edge, and a finger gets a
+   hit area round it, up to 44x44 px where the tile has room, stopping short of the card's centre
+   line, so the middle of the tile is always the card's own tap (attack, target) and drag. */
+@media (max-width: 1024px), (pointer: coarse) {
+  .board .zone > .card:has(> .activate-controls) {
+    container-type: size;
+  }
+
+  .board .activate-control::before {
+    --activate-clear: 6px;
+    --activate-reach: 22px;
+    content: "";
+    position: absolute;
+    top: -12px;
+    bottom: -12px;
+    left: -2px;
+    right: calc(-1 * clamp(0px, 50cqw - 100% - 3px - var(--activate-clear), var(--activate-reach)));
+  }
+}
+
+/* A phone's tile is small: a smaller badge, the same hit area rule. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .board .activate-control {
+    min-width: 18px;
+    height: 16px;
+    padding: 0 3px 0 1px;
+    font-size: 9px;
+  }
+
+  .board .activate-glyph {
+    width: 10px;
+    height: 10px;
+  }
+}

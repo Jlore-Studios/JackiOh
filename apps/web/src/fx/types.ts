@@ -151,7 +151,8 @@ export type FxRecipe =
   | "fatigue"
   | "overflow"
   | "chaos"
-  | "brand";
+  | "brand"
+  | "rewind";
 
 /** The optional `fx` field of an `ANIMATIONS` row: which recipe decorates the event. Data only. */
 export type FxDescriptor = { readonly recipe: FxRecipe };

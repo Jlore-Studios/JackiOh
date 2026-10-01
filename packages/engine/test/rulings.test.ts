@@ -214,6 +214,7 @@ const SERVER_ACTOR_TEST = "../../../apps/server/test/match/actor.test.ts";
 const SERVER_CLOCK_TEST = "../../../apps/server/test/match/clock.test.ts";
 const SERVER_RECOVERY_TEST = "../../../apps/server/test/match/recovery.test.ts";
 const AI_SHADOW_BAN_TEST = "../../ai/test/shadowBan.test.ts";
+const AI_DECK_TEST = "../../ai/test/deck.test.ts";
 const AI_DECIDE_TEST = "../../ai/test/decide.test.ts";
 const WEB_PRACTICE_CORE_TEST = "../../../apps/web/src/practice/core.test.ts";
 /** R203's and R204's proofs (SPEC §10.11): the client's sound cue table, and the director that plays it. */
@@ -2766,9 +2767,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Patch v0.2.0's catalog rows (docs/classic-sets.md B2, B4.2, B4.3; issue #40).
 
   // Proved by cards query.test.ts "R380 …" (a pool that names no set reaches all three, one that
-  // names a set keeps to it).
+  // names a set keeps to it), and packages/ai deck.test.ts and observe.test.ts "R380 …" (the AI's
+  // decks and determinizations draw from every set).
   it("R380 makes one format of every set: a pool that names no set draws from all of them", () => {
-    provenIn(380, CARDS_QUERY_TEST);
+    provenIn(380, CARDS_QUERY_TEST, AI_DECK_TEST, AI_OBSERVE_TEST);
   });
 
   // Proved by cards references.test.ts "R381 …" (rules words name no card unless refs list it) and
@@ -2795,6 +2797,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
     expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
     provenIn(389, SERVER_CLOCK_TEST, "turn-cap.test.ts");
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 …" (pass 2's numbers, at risk at half strength, the
+  // at-risk list a pure function of pass 1 and the two tables, the filler's keep-out and lifted ban,
+  // pass-2 evidence for a judgement ban, suspects, and one real pass-2 game on its named seed).
+  it("R390 sweeps the shadow ban in two passes, leaning toward the cards at risk", () => {
+    provenIn(390, AI_SHADOW_BAN_TEST);
   });
 
   // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's
@@ -3115,6 +3124,39 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web game/ActivateControl.test.tsx and game/activate.test.ts "R510 …" (the control, its
+  // count and reason, a press built from legalActions only, drag to target, Heroic Power).
+  it("R510 puts an Activate control on every card that has an ability", () => {
+    provenIn(510, "../../../apps/web/src/game/ActivateControl.test.tsx", "../../../apps/web/src/game/activate.test.ts");
+  });
+
+  // Proved by apps/web cards/copies.test.tsx "R511 …" (the copied text on every face Echo shows, filled with
+  // the view's numbers, the Radiant line kept, the inspect note, and a real game's Echo after Book of Knowledge).
+  it("R511 prints the Spell text a copier has on its face", () => {
+    provenIn(511, "../../../apps/web/src/cards/copies.test.tsx");
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R512 …" (the new rows in players' words, Degrade and Upgrade split).
+  it("R512 gives the glossary a row for every term v0.2.0's cards print", () => {
+    provenIn(512, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web cards/cardState.test.tsx "R513 …" (tuned numbers, stats and keywords marked, the
+  // overall mark, Brittle, enchantments, piles and lines of code on every surface).
+  it("R513 marks what Degrade, Upgrade and KY's Constant changed on a card", () => {
+    provenIn(513, "../../../apps/web/src/cards/cardState.test.tsx");
+  });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R514 …" (the offered zones glow and answer on the board).
+  it("R514 answers a cell prompt on the board", () => {
+    provenIn(514, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R515 …" (the running total, greying, Confirm).
+  it("R515 shows a budgeted pick's total and greys what would go over", () => {
+    provenIn(515, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
+
   // Proved by cards classic/007-infiniscepter.test.ts "R520 …" (an X Spell's copy is cast with the X its
   // caster picks, 1 to their current mana, unpaid).
   it("R520 casts C #7 InfiniScepter's copy of an X-cost Spell with the X its caster chooses", () => {
@@ -3126,6 +3168,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R521 counts every draw that happened toward C #9 Income Tax", () => {
     provenIn(521, CLASSIC_009_TEST);
   });
+
   // Classic #46–#90's own rows (cards-classic-b, docs/v0.2.0-rulings/cards-classic-b.md).
 
   // Proved by cards classic/090-in-too-deep.test.ts "R540 …" (reward J's 100 mana on the next turn).
@@ -3300,6 +3343,27 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // cast on draw, and the card its chain then brings, take no price).
   it("R596 reads \"it\" after a draw as the card that draw itself put in the hand", () => {
     provenIn(596, CLASSIC_PLUS_065_2_TEST, CLASSIC_PLUS_065_3_TEST, "effects-fruit.test.ts");
+  });
+
+  // The AI workstream's rows (R600–R609, docs/v0.2.0-rulings/ai.md).
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R600 …" (watched when its own numbers put it at
+  // risk and it was not banned; off the list when it was at risk only by the old tables and is clean).
+  it("R600 keeps a card on SHADOW_WATCH only while its own numbers keep it at risk", () => {
+    provenIn(600, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R601 …" (6 affordable turns and no play, or 8 plays,
+  // over pass 2's games at that tier, forced and filler summed; pass 1's numbers never added in).
+  it("R601 judges a neverPlayed or selfHarm ban on pass 2's numbers alone", () => {
+    provenIn(601, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by packages/ai redact-live-face-down.test.ts "R602 …" (a face-down Siphon Squad: the AI's
+  // view keeps its units' shown Attack and Health, the card stays a placeholder, and every move its
+  // determinizations offer is legal on the true board).
+  it("R602 keeps in the AI's view what a live face-down card visibly does", () => {
+    provenIn(602, "../../ai/test/redact-live-face-down.test.ts");
   });
 });
 

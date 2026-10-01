@@ -26,7 +26,7 @@
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
-import { animTestid, locateInstance, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, animTestid, locateInstance, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import {
@@ -46,7 +46,6 @@ import {
 import { lostCrystals } from "./manaMarks.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxPlay, FxProjectileCue } from "./types.ts";
 
-const HIDDEN_ID = "hidden";
 
 /** Every particle count the recipes here throw, at intensity "normal" (rule 9). */
 const CARD_TUNING = {

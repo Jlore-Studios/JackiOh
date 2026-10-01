@@ -17,9 +17,12 @@ const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
+/** The readout rounds the speed to hundredths: "0.25×", never "0.2500000001×". */
+const SPEED_LABEL_SCALE = 100;
+
 /** "1.5×", "0.25×": the speed as the slider's readout and its value text say it (R435). */
 export function speedLabel(speed: number): string {
-  return `${String(Math.round(speed * 100) / 100)}×`;
+  return `${String(Math.round(speed * SPEED_LABEL_SCALE) / SPEED_LABEL_SCALE)}×`;
 }
 
 /** Where on the track `speed` sits, 0 to 1, for the filled part of the slider. */

@@ -18,6 +18,7 @@
 import type { CardMark, CardView, GameEvent } from "@jackioh/shared";
 
 import type { FxPreset } from "../fx/types.ts";
+import { BERSERK_WORDS } from "./cardState.ts";
 
 /** The colours one mark is drawn in: a bright rim, a pale core, a deep glow; and its particles. */
 export type MarkPalette = {
@@ -35,6 +36,8 @@ export const MARK_PALETTES = {
   purple: { rim: "#b46bff", core: "#f2e2ff", glow: "#7a2cff", preset: "arcane" },
   green: { rim: "#5fe08a", core: "#e4ffec", glow: "#1f9e4f", preset: "poison" },
   crimson: { rim: "#ff4a5f", core: "#ffe1e5", glow: "#b3122e", preset: "blood" },
+  // B5 E35: the engine's Berserk mark (`BERSERK_MARK`) is "red", drawn as crimson.
+  red: { rim: "#ff4a5f", core: "#ffe1e5", glow: "#b3122e", preset: "blood" },
   gold: { rim: "#ffd24a", core: "#fff7d6", glow: "#d19a00", preset: "gold" },
   cyan: { rim: "#4fe3ff", core: "#e0fbff", glow: "#0fa3c4", preset: "frost" },
   blue: { rim: "#6b94ff", core: "#e3eaff", glow: "#2349c9", preset: "frost" },
@@ -65,6 +68,8 @@ export type MarkWords = { name: string; text: string };
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // #50 K-Pop Fanatic: "At the start of your next turn, steal it" (your: the Fanatic's controller).
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
+  // B5 E35: the mark a unit going Berserk is announced with (C+ #19.2, C+ #19.5).
+  berserk: { name: "Berserk", text: BERSERK_WORDS },
 };
 
 /** The words for a mark the table does not know. */

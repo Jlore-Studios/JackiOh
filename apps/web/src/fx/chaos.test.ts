@@ -1,6 +1,7 @@
 // R436: Call to Chaos names the effects it rolled, to both players: the words table and its one
 // adapter (chaos.ts), and the slot-machine reveal the effects layer plans for a `chaosRolled` entry.
 
+import { subsystems } from "@jackioh/engine";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +11,6 @@ import {
   CHAOS_CLASSIC_PLUS,
   CHAOS_CORE,
   CHAOS_EFFECT_NAMES,
-  CHAOS_GENERIC_NAMES,
   chaosCues,
   chaosEffectName,
   chaosLandAt,
@@ -23,9 +23,12 @@ import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxChaosCue, FxCue } from "./types.ts";
 
-/** The Core Edition's keys, as the engine's `CHAOS_EFFECTS` names them (subsystems/callToChaos.ts). */
-const CORE_KEYS = ["units", "heal", "draw", "add", "radiant", "tokens", "discount", "golem", "backrow", "recast"];
-const PLUS_KEYS = ["fruits", "books", "destroy", "classics", "upgrade", "fuse", "degrade", "golem", "replace", "recast"];
+/** The Core Edition's clauses, as the real engine's `CHAOS_EFFECTS` names them in `chaosRolled`. */
+const CORE_KEYS = subsystems.CHAOS_EFFECTS.map((effect) => effect.label);
+/** The Classic+ Edition's, as `CHAOS_PLUS_EFFECTS` (subsystems/callToChaosPlus.ts) names them. */
+const PLUS_KEYS = subsystems.CHAOS_PLUS_EFFECTS.map((effect) => effect.label);
+const [UNITS, HEAL, , , , , DISCOUNT, GOLEM, , RECAST] = CORE_KEYS as [string, string, string, string, string, string, string, string, string, string];
+const DESTROY = "Destroy all enemy permanents";
 
 function rolled(effects: string[], defId = CHAOS_CORE, player: "p1" | "p2" = "p2"): GameEvent {
   return { type: "chaosRolled", player, instanceId: "c95", defId, effects };
@@ -46,7 +49,7 @@ function planRoll(event: GameEvent, view: PlayerView, D = ANIMATIONS.chaosRolled
 }
 
 describe("R436 the words for each rolled effect", () => {
-  it("R436 every Core key the engine rolls, and every Classic+ key, has its own short words", () => {
+  it("R436 every Core clause the engine rolls, and every Classic+ clause, has its own short words", () => {
     expect(Object.keys(CHAOS_EFFECT_NAMES[CHAOS_CORE] ?? {})).toEqual(CORE_KEYS);
     expect(Object.keys(CHAOS_EFFECT_NAMES[CHAOS_CLASSIC_PLUS] ?? {})).toEqual(PLUS_KEYS);
     for (const table of Object.values(CHAOS_EFFECT_NAMES)) {
@@ -57,29 +60,29 @@ describe("R436 the words for each rolled effect", () => {
         expect(name, name).not.toMatch(/\bCost \(\d/);
       }
     }
-    expect(chaosEffectName(CHAOS_CORE, "units")).toBe("Summon 3 random (3) Cost Units");
-    expect(chaosEffectName(CHAOS_CORE, "discount")).toBe("Hand and Deck cost (2) less");
+    expect(chaosEffectName(CHAOS_CORE, UNITS)).toBe("Summon 3 random (3) Cost Units");
+    expect(chaosEffectName(CHAOS_CORE, DISCOUNT)).toBe("Hand and Deck cost (2) less");
   });
 
-  it("R436 a key both editions share reads per edition, and neutrally when the edition is hidden", () => {
-    expect(chaosEffectName(CHAOS_CORE, "golem")).toBe("Summon a Chaos Golem");
-    expect(chaosEffectName(CHAOS_CLASSIC_PLUS, "golem")).toBe("Summon a Classic Golem");
-    expect(chaosEffectName("hidden", "golem")).toBe(CHAOS_GENERIC_NAMES.golem);
-    // Spelled the same in both, so it reads the same whoever cast it.
-    expect(chaosEffectName("hidden", "recast")).toBe("Cast a random Call to Chaos");
-    expect(chaosEffectName("hidden", "fruits")).toBe("Add 5 Fruits costing (0)");
+  it("R436 a clause reads per edition, and as the edition that prints it when the card is hidden", () => {
+    expect(chaosEffectName(CHAOS_CORE, GOLEM)).toBe("Summon a Chaos Golem");
+    expect(chaosEffectName(CHAOS_CLASSIC_PLUS, "Summon a Classic Golem")).toBe("Summon a Classic Golem");
+    expect(chaosEffectName("hidden", GOLEM)).toBe("Summon a Chaos Golem");
+    // Printed by both, and spelled the same, so it reads the same whoever cast it.
+    expect(chaosEffectName("hidden", RECAST)).toBe("Cast a random Call to Chaos");
+    expect(chaosEffectName("hidden", "Add 5 random Fruits to your hand, which cost (0)")).toBe("Add 5 Fruits costing (0)");
   });
 
-  it("R436 an unknown key still reads: words stay words, one word is capitalised", () => {
-    expect(chaosEffectName(CHAOS_CORE, "Destroy all enemy permanents")).toBe("Destroy all enemy permanents");
+  it("R436 an unknown clause still reads: words stay words, one word is capitalised", () => {
+    expect(chaosEffectName(CHAOS_CORE, DESTROY)).toBe("Destroy all enemy permanents");
     expect(chaosEffectName(CHAOS_CORE, "meteors")).toBe("Meteors");
     expect(chaosEffectName(CHAOS_CORE, " ")).toBe("Unknown effect");
   });
 
   it("R436 the one adapter reads the event, and nothing else", () => {
-    expect(chaosRollOf(rolled(["heal", "units", "golem"]))).toEqual({ player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects: ["heal", "units", "golem"] });
+    expect(chaosRollOf(rolled([HEAL, UNITS, GOLEM]))).toEqual({ player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects: [HEAL, UNITS, GOLEM] });
     expect(chaosRollOf({ type: "turnStarted", player: "p1", turn: 2 })).toBeNull();
-    expect(chaosNames({ player: "p1", instanceId: "c1", defId: CHAOS_CORE, effects: ["heal", "recast"] })).toEqual([
+    expect(chaosNames({ player: "p1", instanceId: "c1", defId: CHAOS_CORE, effects: [HEAL, RECAST] })).toEqual([
       "Heal the caster's hero 30",
       "Cast a random Call to Chaos",
     ]);
@@ -100,13 +103,13 @@ describe("R436 the words for each rolled effect", () => {
         expect(new Set(decoys).size, `${defId} ${key}`).toBe(decoys.length);
       }
     }
-    expect(chaosReel(CHAOS_CORE, "heal", 0)).toEqual(chaosReel(CHAOS_CORE, "heal", 0));
+    expect(chaosReel(CHAOS_CORE, HEAL, 0)).toEqual(chaosReel(CHAOS_CORE, HEAL, 0));
   });
 });
 
 describe("R436 the reveal the effects layer plans", () => {
   it("R436 one line per effect, in the order they resolve, stacked for three, under the Call to Chaos title", () => {
-    const panel = panelOf(planRoll(rolled(["units", "heal", "golem"]), fullBoardView()));
+    const panel = panelOf(planRoll(rolled([UNITS, HEAL, GOLEM]), fullBoardView()));
     expect(panel.title).toBe(FX_TEXT.chaosRolled);
     expect(panel.lines.map((line) => line.text)).toEqual(["Summon 3 random (3) Cost Units", "Heal the caster's hero 30", "Summon a Chaos Golem"]);
     const lands = panel.lines.map((line) => line.landMs);
@@ -115,9 +118,9 @@ describe("R436 the reveal the effects layer plans", () => {
   });
 
   it("R436 both seats plan the same reveal: the roll is public, whoever cast it", () => {
-    const mine = planRoll(rolled(["destroy"], CHAOS_CLASSIC_PLUS, "p1"), fullBoardView());
+    const mine = planRoll(rolled([DESTROY], CHAOS_CLASSIC_PLUS, "p1"), fullBoardView());
     const asP2 = baseView({ viewer: "p2", you: fullBoardView().opponent, opponent: fullBoardView().you });
-    const theirs = planRoll(rolled(["destroy"], CHAOS_CLASSIC_PLUS, "p1"), asP2);
+    const theirs = planRoll(rolled([DESTROY], CHAOS_CLASSIC_PLUS, "p1"), asP2);
     expect(panelOf(theirs)).toEqual(panelOf(mine));
   });
 
@@ -144,7 +147,7 @@ describe("R436 the reveal the effects layer plans", () => {
   it("R436 an empty roll or another event plans nothing, and intensity 0 plans nothing at all", () => {
     expect(chaosCues(rolled([]), 900, 1)).toEqual([]);
     expect(chaosCues({ type: "turnStarted", player: "p1", turn: 1 }, 900, 1)).toEqual([]);
-    const [entry] = planEntries([rolled(["heal"])], fullBoardView(), false);
+    const [entry] = planEntries([rolled([HEAL])], fullBoardView(), false);
     if (entry === undefined) throw new Error("no entry");
     expect(planFx(entry, fullBoardView(), { intensity: 0, card: () => undefined, memory: createFxMemory() })).toEqual([]);
   });

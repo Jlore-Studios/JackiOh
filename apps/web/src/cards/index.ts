@@ -32,7 +32,7 @@ export {
 export type { RolledPower } from "./inPlay.ts";
 
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
-export type { GlossaryEntry, GlossaryTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
+export type { GlossaryEntry, GlossaryTermId, StatusTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
 
 export { glossaryFor, termsIn, tokenizeRules } from "./rules.ts";
 export type { RulesToken } from "./rules.ts";
@@ -52,6 +52,9 @@ export {
   TEXT_TIER_MAX,
   TIER_SCALE,
 } from "./constants.ts";
+
+// E21: a backrow pile's depth, which game/Backrow.tsx draws beside the card.
+export { PileDepth } from "./CardStates.tsx";
 
 export { CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";

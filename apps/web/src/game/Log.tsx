@@ -22,13 +22,41 @@
 
 import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
-import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { markWords } from "../cards/marks.ts";
+import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
 import { sideOf, testid } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
+import { CHAOS_TEXT } from "./showcase/constants.ts";
+
+
+/** What a player is asked for, by prompt kind, in the log's words. */
+const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
+  discover: "a card to Discover",
+  target: "a target",
+  mode: "a mode",
+  mulligan: "cards to keep",
+  hand: "a card from hand",
+  zone: "a zone",
+  tribute: "a Tribute",
+  direction: "a direction",
+  x: "X",
+  embiggen: "a price",
+  number: "a number",
+  answer: "an answer",
+  cell: "a cell",
+  reward: "a reward",
+  pick: "cards to take",
+};
+
+/** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */
+function keyWords(key: string): string {
+  return key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+}
 
 export type LogProps = {
   view: PlayerView;
@@ -136,6 +164,11 @@ function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): numbe
   const entry = seat.backrow[lane - 1];
   if (entry === null || entry === undefined || !entry.faceDown) return undefined;
   return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
+}
+
+/** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
+function questText(view: PlayerView, instanceId: string, quest: string): string | null {
+  return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
 }
 
 /** What became of a card a full deck turned away (R316), as a line ends. */
@@ -253,7 +286,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnAutoEnded":
       return `${name.seat(event.player)} had no moves left, so turn ${event.turn} ended`;
     case "promptOpened":
-      return `${name.seat(event.player)} must choose (${event.kind})`;
+      return `${name.seat(event.player)} must choose ${PROMPT_WORDS[event.kind]}`;
     case "promptAnswered":
       return `${name.seat(event.player)} chose`;
     case "drawOffered":
@@ -287,19 +320,33 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "upgraded":
       return `${named(event.defId)} was upgraded`;
     case "numberChanged":
-      return event.key === HIDDEN_CARD ? `${named(event.defId)} changed` : `${named(event.defId)}'s ${event.key} became ${event.value}`;
+      if (event.key === HIDDEN_CARD) return `${named(event.defId)} changed`;
+      // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").
+      return event.key === "cost"
+        ? `${named(event.defId)} now costs (${String(event.value)})`
+        : `${named(event.defId)}'s ${keyWords(event.key)} became ${String(event.value)}`;
     case "redirected":
       return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
     case "healthSet":
       return `${capitalised(name.whose(event.player))} hero's health was set to ${event.health}`;
-    case "questProgressed":
-      return `${name.seat(event.player)} quest ${event.quest}: ${event.progress}/${event.goal}`;
+    case "questProgressed": {
+      // R404: the event names the quest by its id; its words are the card's view's while it is open.
+      const text = questText(view, event.instanceId, event.quest);
+      const where = `${name.whose(event.player)} ${name.instance(event.instanceId, "card")} quest`;
+      return capitalised(`${where}: ${text === null ? "" : `${text}, `}${String(event.progress)}/${String(event.goal)}`);
+    }
     case "questCompleted":
-      return `${name.seat(event.player)} completed quest ${event.quest}`;
+      // A completed quest has left the view's open quests, so its words are gone with it.
+      return capitalised(`${name.whose(event.player)} ${name.instance(event.instanceId, "card")} completed a quest`);
     case "rolledBack":
       return `The board went back ${event.turnsAgo} turn${event.turnsAgo === 1 ? "" : "s"}`;
-    case "chaosRolled":
-      return `${name.def(event.defId)} rolled: ${event.effects.join("; ")}`;
+    case "chaosRolled": {
+      // R436: the effects in the words the reveal shows (fx/chaos.ts), never the engine's keys. The
+      // roll is public; a card the viewer may not read is still a Call to Chaos (R97).
+      const roll = chaosRollOf(event);
+      const who = event.defId === HIDDEN_CARD ? CHAOS_TEXT.title : name.def(event.defId);
+      return roll === null ? null : `${who} rolled: ${chaosNames(roll).join("; ")}`;
+    }
     case "flickered":
       return `${name.def(event.defId)} flickered`;
     case "drawLimited":
@@ -307,7 +354,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "marked":
-      return event.added ? `${capitalised(name.instance(event.instanceId))} was marked (${event.mark})` : null;
+      // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
+      // card the viewer may not read (a face-down trap) is "a card".
+      return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
   }
 }
 
@@ -379,6 +428,8 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
     case "costChanged":
     case "positionSwitched":
     case "controlChanged":
+    case "questProgressed":
+    case "questCompleted":
       return byInstance(event.instanceId);
     case "attackDeclared":
     case "attackCancelled":

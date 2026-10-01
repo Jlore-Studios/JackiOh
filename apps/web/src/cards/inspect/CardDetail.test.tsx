@@ -1,9 +1,9 @@
 // Polish 6, slice C: the detail view (docs/polish/6-cards.md, B29).
 //
 // `<CardDetail def onClose actions? meta?>` is a centred dialog: both faces side by side, a meta
-// line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>`, the glossary of both faces, then
-// the caller's meta and actions, then inspect-close. Its close paths and focus return are B25, in
-// inspect.test.tsx. Real catalog throughout.
+// line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` and ` · N lines of code` (E36), the
+// glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
+// focus return are B25, in inspect.test.tsx. Real catalog throughout.
 
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,7 +11,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
+import { detailMetaLine } from "./CardDetail.tsx";
 import { CardDetail, closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
@@ -91,13 +93,45 @@ describe("CardDetail (B29)", () => {
     expect(screen.getByTestId(INSPECT_DETAIL)).toHaveTextContent(`${metaOf(def)}${SEP}Felinor`);
   });
 
-  it("B29 a card with no tags ends its meta line at the type", () => {
+  it("B29 E36 a card with no tags goes from its type straight to its lines of code, which end the line", () => {
     const def = defOf("core-019");
     expect(def.tags, "the fixture card is untagged").toEqual([]);
+    expect(def.loc, "the fixture card's script is counted").toBeGreaterThan(0);
     render(<CardDetail def={def} onClose={() => undefined} />);
     const text = screen.getByTestId(INSPECT_DETAIL).textContent ?? "";
-    expect(text).toContain(metaOf(def));
-    expect(text).not.toContain(`${metaOf(def)}${SEP}`);
+    const line = `${metaOf(def)}${SEP}${locWords(def.loc ?? 0)}`;
+    expect(text).toContain(line);
+    expect(text).not.toContain(`${line}${SEP}`);
+  });
+
+  it("B29 a card whose script nobody counted ends its meta line at the type", () => {
+    const { loc: _loc, ...uncounted } = defOf("core-019");
+    render(<CardDetail def={uncounted} onClose={() => undefined} />);
+    const text = screen.getByTestId(INSPECT_DETAIL).textContent ?? "";
+    expect(text).toContain(metaOf(uncounted));
+    expect(text).not.toContain(`${metaOf(uncounted)}${SEP}`);
+    expect(text).not.toContain("lines of code");
+  });
+
+  it("E36 the meta line ends with the card's lines of code, every catalog card that has a count", () => {
+    for (const def of Object.values(CATALOG)) {
+      if (def.loc === undefined) continue;
+      expect(detailMetaLine(def), def.id).toMatch(new RegExp(`${SEP}${String(def.loc)} lines? of code$`));
+    }
+    expect(locWords(1)).toBe("1 line of code");
+    expect(locWords(27)).toBe("27 lines of code");
+  });
+
+  it("B2.7 a card whose Radiant face has a type of its own says so after the type (Classic+ #22 Blood Moon)", () => {
+    const def = defOf("classicplus-022");
+    expect(def.type).toBe("Trap");
+    expect(def.radiant.type).toBe("Field Trap");
+    render(<CardDetail def={def} onClose={() => undefined} />);
+    expect(screen.getByTestId(INSPECT_DETAIL).textContent).toContain(`${SEP}Trap (Radiant: Field Trap)`);
+    const radiantFace = faceRoot(INSPECT_FACE_RADIANT);
+    expect(radiantFace.getAttribute("data-card-type")).toBe("Field Trap");
+    expect(radiantFace.querySelector(".card-type")?.textContent).toBe("Field Trap");
+    expect(faceRoot(INSPECT_FACE_BASE).getAttribute("data-card-type")).toBe("Trap");
   });
 
   it("B29 a card with two tags names both after the type", () => {

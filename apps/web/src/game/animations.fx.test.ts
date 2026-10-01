@@ -246,7 +246,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   drawOffered: null,
   drawAnswered: null,
   gameOver: null,
-  // Patch v0.2.0: the new events ride the existing recipes; `rolledBack` moves the whole board.
+  // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
+  // and `rolledBack` rewinds the whole board.
   cardAnnounced: "cast",
   countered: "fizzle",
   stolen: "mindControl",
@@ -262,7 +263,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   healthSet: "drain",
   questProgressed: "counter",
   questCompleted: "radiant",
-  rolledBack: null,
+  rolledBack: "rewind",
   chaosRolled: "chaos",
   flickered: "void",
   drawLimited: "fizzle",
@@ -304,6 +305,7 @@ const FX_RECIPES = [
   "overflow",
   "chaos",
   "brand",
+  "rewind",
 ];
 
 /** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */
@@ -377,10 +379,10 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 52 rows of S4 and patch v0.2.0 carry fx with the listed recipe and the other 12 carry none", () => {
+  it("B1 exactly the 53 rows of S4 and patch v0.2.0 carry fx with the listed recipe and the other 11 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(52);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(53);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {
@@ -392,9 +394,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 12 rows without an effect have no fx value at all", () => {
+  it("B1 the 11 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(12);
+    expect(bare).toHaveLength(11);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

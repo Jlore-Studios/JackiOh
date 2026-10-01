@@ -18,19 +18,39 @@
 // stretches its base face does not have marked (`text.marks`, radiantDiff.ts, R277); the names its
 // `refs` link are references (refs.ts, R279), which the renderer finds in the text; and in play the
 // numbers the view's `preview` carries are printed after their formulas (`values`, R280).
+//
+// Patch v0.2.0's per-card states ride on a face in play as the view gives them (cardState.ts draws
+// them): the Brittle count (B3.3, R385), the enchantments (B5 E39), the card standing in a unit zone
+// as a Unit (B3.1, R383), and what Degrade and Upgrade changed (B3.4, R386, tuning.ts), whose numbers
+// that moved are marked where the text prints them (`text.tuned`). The collection shows none of
+// them. Every face carries its definition's lines of code (`loc`, E36) for the inspect overlays.
+//
+// An Animated Field Spell or Trap prints the attack and health of the Unit it becomes (B3.1 rule 1),
+// so its face carries them as a Unit's does, wherever it is.
+//
+// A face in play carries a quest line as the view gives it (`quest`, B5 E33, R404: In Too Deep's open
+// quests, their progress and rewards, its auras), which cardState.ts draws as badges. A copier (Classic
+// #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
+// with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
+// cost, type and art, and `copying` names the card it copies for the inspect notes.
 
 import {
   fillParams,
   keywordKey,
   type CardDef,
+  type CardMark,
   type CardFace as PrintedFace,
   type CardType,
+  type Enchantment,
   type Keyword,
+  type Param,
+  type QuestView,
   type Rarity,
   type PreviewValue,
   type PrintedRarity,
   type SetName,
   type Tag,
+  type Tuning,
 } from "@jackioh/shared";
 
 import {
@@ -42,6 +62,7 @@ import {
   type RolledPower,
 } from "./inPlay.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
+import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
 
 export type FaceLayout = "full" | "compact" | "minion";
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
@@ -78,7 +99,15 @@ export type FaceStats = {
  * face's text does not have (R277). `marks` is empty on a base face and wherever play prints
  * something else (a Vanilla unit, "???", a Heroic Power's power on its base face).
  */
-export type FaceText = { full: string; marks: readonly TextRange[] };
+export type FaceText = {
+  full: string;
+  marks: readonly TextRange[];
+  /**
+   * B3.4, R386: in play, the numbers in `full` the view moved off their printed values, each marked
+   * better or worse (tuning.ts). Absent or empty everywhere else.
+   */
+  tuned?: readonly TunedRange[];
+};
 export type FaceModel = {
   defId: string;
   /** False when no catalog def was available (the `unknownCard` fallback). */
@@ -134,6 +163,27 @@ export type FaceModel = {
    * agree, outside play, and for a card whose text play keeps a mystery ("???").
    */
   printed: FaceText | null;
+  /**
+   * B3.3, R385: in play, the card's Brittle count as the view gives it (`CardView.brittle`). Absent or
+   * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
+   */
+  brittle?: number | null;
+  /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
+  tuning?: FaceTuning | null;
+  /** B5 E39: in play, the enchantments riding the card (`CardView.enchantments`). */
+  enchantments?: readonly Enchantment[];
+  /** B3.1, R383: a backrow card standing in a unit zone as a Unit (`UnitView.animated`); null otherwise. */
+  animated?: { home?: number } | null;
+  /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
+  berserk?: boolean;
+  /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
+  loc?: number | null;
+  /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
+  marks?: readonly CardMark[];
+  /** B5 E33, R404: in play, the card's quest line (`CardView.quest`); null for a card with none. */
+  quest?: QuestView | null;
+  /** B5 E14, R511: in play, the Spell a copier's text is now (`CardView.copies`); null when it copies none. */
+  copying?: { defId: string; name: string; radiant: boolean } | null;
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -153,6 +203,22 @@ export type InPlay = {
    * text's `{key}`s in place of the printed values.
    */
   params?: Readonly<Record<string, number>>;
+  /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
+  brittle?: number;
+  /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
+  tuning?: Tuning;
+  /** B5 E39: the enchantments riding the card (`CardView.enchantments`). */
+  enchantments?: readonly Enchantment[];
+  /** B3.1, R383: the card stands in a unit zone as a Unit (`UnitView.animated`). */
+  animated?: { home?: number };
+  /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
+  berserk?: true;
+  /** R437: the marks on the card (`CardView.marks`). */
+  marks?: readonly CardMark[];
+  /** B5 E33, R404: the card's quest line (`CardView.quest`). */
+  quest?: QuestView;
+  /** B5 E14, R399: the Spell a copier has the text of (`CardView.copies`), with its definition. */
+  copies?: { def: CardDef; radiant: boolean; params?: Readonly<Record<string, number>> };
 };
 export type FaceSource = {
   defId: string;
@@ -176,7 +242,9 @@ const UNKNOWN_COST = "?";
 const UNKNOWN_TYPE: CardType = "Unit";
 
 export function faceModel(source: FaceSource): FaceModel {
-  const def = source.def;
+  // R102, B3.4: a fused definition declares no numbers of its own, and its text still writes its
+  // ingredients' `{key}`s; in play the view's numbers fill them (and are, for it, the printed ones).
+  const def = withViewParams(source.def, source.inPlay?.params);
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
   // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
   // the card's type is its face's (§5.2); in play the view's word for it comes first.
@@ -186,11 +254,19 @@ export function faceModel(source: FaceSource): FaceModel {
   const vanilla = inPlay?.vanilla === true;
   const printedText = textOf(def, source.radiant);
   // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
-  const liveText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
+  const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
+  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads.
+  const copies = inPlay?.copies;
+  const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
   const keywords = source.live?.keywords ?? printed?.keywords ?? [];
-  // The values belong to the printed words: a formula play does not print has no value to show.
-  const printsItsText = text.full === printedText.full;
+  // The values belong to the card's own words, its numbers as they stand included: a formula play
+  // does not print (Vanilla, "???", a rolled power) has no value to show.
+  const printsItsText = text.full === liveText.full;
+  // B3.4, R386: what Degrade and Upgrade changed; the keywords they added are marked as such, so the
+  // line of keywords gained since printing leaves them out.
+  const tuning = inPlay === undefined ? null : faceTuning(def, source.radiant, inPlay.tuning, inPlay.params);
+  const tunedKeys = new Set((tuning?.added ?? []).map(keywordKey));
 
   return {
     defId: source.defId,
@@ -207,7 +283,7 @@ export function faceModel(source: FaceSource): FaceModel {
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
-    refs: def?.refs ?? [],
+    refs: [...(copies?.def.refs ?? []), ...(def?.refs ?? [])],
     values: printsItsText ? (inPlay?.preview ?? []) : [],
     keywords,
     inPlay: inPlay !== undefined,
@@ -216,9 +292,58 @@ export function faceModel(source: FaceSource): FaceModel {
     gained:
       inPlay === undefined || source.live === undefined
         ? []
-        : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])),
+        : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
+    brittle: inPlay?.brittle ?? null,
+    tuning,
+    enchantments: inPlay?.enchantments ?? [],
+    animated: inPlay?.animated ?? null,
+    berserk: inPlay?.berserk === true,
+    loc: def?.loc ?? null,
+    marks: inPlay?.marks ?? [],
+    quest: inPlay?.quest ?? null,
+    copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
   };
+}
+
+/**
+ * B5 E14, R511: a copier's text in play — the copied text where its own face prints its copying
+ * sentence (its base text), so whatever else its face prints stays: a Radiant Echo still reads "Echo 1"
+ * over the text it copies, marked as its Radiant face marks it. A face that does not print that
+ * sentence prints the copied text alone.
+ */
+function copiedText(own: FaceText, def: CardDef | undefined, copied: FaceText): FaceText {
+  const sentence = def === undefined ? "" : fillParams(def, "base");
+  const at = sentence === "" ? -1 : own.full.indexOf(sentence);
+  if (at < 0) return copied;
+  const after = at + sentence.length;
+  const by = (offset: number) => (range: TextRange): TextRange => ({ start: range.start + offset, end: range.end + offset });
+  const tuned = (copied.tuned ?? []).map((range) => ({ ...range, ...by(at)(range) }));
+  return {
+    full: own.full.slice(0, at) + copied.full + own.full.slice(after),
+    marks: [
+      ...own.marks.filter((range) => range.end <= at),
+      ...copied.marks.map(by(at)),
+      ...own.marks.filter((range) => range.start >= after).map(by(copied.full.length - sentence.length)),
+    ],
+    ...(tuned.length === 0 ? {} : { tuned }),
+  };
+}
+
+/**
+ * A fused definition (R77, R102) carries no `params`, though its text writes its ingredients'
+ * `{key}`s; the view gives their values (`CardView.params`), so in play each value fills its key and
+ * counts as printed (no number of a fused card is marked as moved). Any other definition is as given.
+ */
+function withViewParams(def: CardDef | undefined, values: Readonly<Record<string, number>> | undefined): CardDef | undefined {
+  if (def === undefined || def.params !== undefined || values === undefined) return def;
+  const params: Param[] = Object.entries(values).map(([key, value]) => ({ key, base: value, radiant: value, better: "up" }));
+  return params.length === 0 ? def : { ...def, params };
+}
+
+/** E36: "27 lines of code", "1 line of code". */
+export function locWords(loc: number): string {
+  return `${String(loc)} ${loc === 1 ? "line" : "lines"} of code`;
 }
 
 /** R243: a hand card's stats are its face plus what it gained in hand, with nothing on the field's layers. */
@@ -370,11 +495,18 @@ function statsOf(
     };
   }
 
-  if (type !== "Unit") return null;
+  // B3.1 rule 1: an Animated Field Spell or Trap prints the stats of the Unit it becomes; no other
+  // card that is not a Unit prints any.
   const attack = printed?.attack;
   const health = printed?.health;
   if (attack === undefined || health === undefined) return null;
+  if (type !== "Unit" && !printsUnitStats(printed)) return null;
   return { attack, health, maxHealth: health, attackTone: "base", healthTone: "base", ...(grew === undefined ? {} : { grew }) };
+}
+
+/** B3.1: an Animated face (either kind) prints a Unit's attack and health. */
+function printsUnitStats(printed: PrintedFace | undefined): boolean {
+  return (printed?.keywords ?? []).some((keyword) => keyword.kind === "Animated" || keyword.kind === "Animated on your turn");
 }
 
 /**
@@ -393,7 +525,9 @@ function textOf(
   values?: Readonly<Record<string, number>>,
 ): FaceText {
   if (def === undefined) return { full: "", marks: [] };
-  if (!radiant) return { full: fillParams(def, "base", values), marks: [] };
-  const full = fillParams(def, "radiant", values);
-  return { full, marks: radiantMarks(fillParams(def, "base"), full) };
+  // B3.4, R386: in play, the numbers that moved off their printed values are marked where they stand.
+  const { text: full, tuned } = filledText(def, radiant ? "radiant" : "base", values);
+  const moved = tuned.length === 0 ? {} : { tuned };
+  if (!radiant) return { full, marks: [], ...moved };
+  return { full, marks: radiantMarks(fillParams(def, "base"), full), ...moved };
 }

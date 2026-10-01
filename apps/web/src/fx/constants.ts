@@ -92,6 +92,11 @@ export const FX_BRAND_TAIL_MS = 700;
 // stagger shrinking so the last line lands by FX_CHAOS_LAND_LAST; each reel runs past
 // FX_CHAOS_REEL_DECOYS other names first. The reveal lasts D + FX_BANNER_TAIL_MS.
 export const FX_CHAOS_LAND_AT = 0.4;
+// Patch v0.2.0's events (docs/classic-sets.md B3, B5), each a fraction of its entry (R200).
+export const FX_FLICKER_RETURN_AT = 0.5;       // a flickered card comes back through the void halfway in
+export const FX_REDIRECT_FLIGHT_FRACTION = 0.6; // a redirected hit flies from its old target to its new one
+export const FX_COUNTER_TRAUMA = 0.25;         // a countered card shatters with a small shake
+export const FX_REWIND_TRAUMA = 0.35;          // the board rewinding (Classic+ #35 Rollback)
 export const FX_CHAOS_STAGGER = 0.2;
 export const FX_CHAOS_LAND_LAST = 0.85;
 export const FX_CHAOS_REEL_DECOYS = 6;

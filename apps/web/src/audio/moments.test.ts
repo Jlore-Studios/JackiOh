@@ -11,6 +11,7 @@ import { BLOOD_BEAN_DEF_ID, GOLD_BURST_DELAY_MS, HIDDEN_DEF_ID, HINDER_DEF_ID, N
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { answerPrompts, devDeck, realGame, type RealGame } from "./test/realGame.ts";
 import type { SfxId, SfxParams, SoundSink } from "./types.ts";
+import { castOnDrawAt } from "../fx/castOnDraw.ts";
 import { newEventsSince, planEntries } from "../game/animations.ts";
 import { baseView, emptySide, withEvents } from "../test/fixtures.ts";
 
@@ -156,6 +157,28 @@ describe("R506 the director follows the plays in progress", () => {
     expect(ids(sink)).not.toContain("manaCrack");
   });
 
+  it("R506 R203 a cast on draw paused by its own prompt still stings, on the seat that could not read the draw", () => {
+    const sink = recorder();
+    const director = createSoundDirector(sink);
+    const first = baseView();
+    director.onView(first);
+    const asked: GameEvent = { type: "promptOpened", player: "p2", choiceId: "q1", kind: "hand" };
+    const view1 = withEvents(first, [drawn(HIDDEN_DEF_ID, HIDDEN_DEF_ID), asked]);
+    playLikeGame(director, first, view1);
+    const announced: GameEvent = {
+      type: "cardAnnounced",
+      player: "p2",
+      instanceId: "c7",
+      defId: HINDER_DEF_ID,
+      cardType: "Spell",
+      costPaid: 0,
+      targets: [],
+    };
+    const view2 = withEvents(view1, [{ type: "promptAnswered", player: "p2", choiceId: "q1" }, announced, played("c7", HINDER_DEF_ID)]);
+    playLikeGame(director, view1, view2);
+    expect(ids(sink)).toContain("castOnDraw");
+  });
+
   it("R506 a reduced-motion burst, flushed at idle, follows the plays the same way", () => {
     const sink = recorder();
     const director = createSoundDirector(sink);
@@ -188,29 +211,35 @@ type Seats = { p1: Recorder; p2: Recorder };
 type Heard = { seats: Seats; events: GameEvent[]; fresh: { p1: GameEvent[]; p2: GameEvent[] } };
 
 /** Both seats' directors, fed `before` then `after` the way Game feeds them; returns what each heard. */
-function hearAction(game: RealGame, player: PlayerId, body: ActionBody): Heard {
+function hearAction(game: RealGame, player: PlayerId, body: ActionBody, settle = false): Heard {
   const seats: Seats = { p1: recorder(), p2: recorder() };
-  const before = { p1: game.view("p1"), p2: game.view("p2") };
+  const first = { p1: game.view("p1"), p2: game.view("p2") };
   const directors = { p1: createSoundDirector(seats.p1), p2: createSoundDirector(seats.p2) };
-  directors.p1.onView(before.p1);
-  directors.p2.onView(before.p2);
-  const events = game.act(player, body);
-  const after = { p1: game.view("p1"), p2: game.view("p2") };
-  playLikeGame(directors.p1, before.p1, after.p1);
-  playLikeGame(directors.p2, before.p2, after.p2);
-  const fresh = {
-    p1: newEventsSince(before.p1.events, after.p1.events),
-    p2: newEventsSince(before.p2.events, after.p2.events),
-  };
+  directors.p1.onView(first.p1);
+  directors.p2.onView(first.p2);
+  const events: GameEvent[] = [];
+  const fresh: { p1: GameEvent[]; p2: GameEvent[] } = { p1: [], p2: [] };
+  let next: [PlayerId, ActionBody] | null = [player, body];
+  // `settle`: then answer whatever the action asked (the cast's own prompts, #21's discard) with the
+  // first listed answer, each answer a view of its own, as Game feeds the same directors.
+  while (next !== null) {
+    const before = { p1: game.view("p1"), p2: game.view("p2") };
+    events.push(...game.act(next[0], next[1]));
+    const after = { p1: game.view("p1"), p2: game.view("p2") };
+    playLikeGame(directors.p1, before.p1, after.p1);
+    playLikeGame(directors.p2, before.p2, after.p2);
+    fresh.p1.push(...newEventsSince(before.p1.events, after.p1.events));
+    fresh.p2.push(...newEventsSince(before.p2.events, after.p2.events));
+    const who = settle ? game.actor() : null;
+    const answer = who === null ? undefined : game.legal(who).find((a) => a.type === "answer");
+    next = who === null || answer === undefined ? null : [who, answer];
+  }
   return { seats, events, fresh };
 }
 
 /** Whether `events` hold a draw of `defId` by p2 that is cast at once. */
 function castOnDrawOf(events: readonly GameEvent[], defId: string): boolean {
-  return events.some((event, i) => {
-    const next = events[i + 1];
-    return event.type === "drawn" && event.defId === defId && next?.type === "cardPlayed" && next.instanceId === event.instanceId;
-  });
+  return events.some((event, i) => event.type === "cardPlayed" && event.defId === defId && castOnDrawAt(events, i));
 }
 
 /**
@@ -228,7 +257,7 @@ function castOnDrawGame(defId: string, also: (events: readonly GameEvent[]) => b
       const who = game.actor();
       if (who === null) break;
       if (who === "p1") {
-        const heard = hearAction(game, "p1", { type: "endTurn" });
+        const heard = hearAction(game, "p1", { type: "endTurn" }, true);
         if (castOnDrawOf(heard.events, defId) && also(heard.events)) return heard;
         continue;
       }

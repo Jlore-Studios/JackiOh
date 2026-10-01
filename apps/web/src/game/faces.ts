@@ -4,7 +4,10 @@
 // A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
 // card's stats in its owner's hand, a unit's numbers, keywords and Vanilla mark on the field, the
 // power a Heroic Power rolled, a match-made definition's own name and text, and what the card's
-// formula comes to now (`CardView.preview`, R280). Everything is read
+// formula comes to now (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle
+// count (R385), what Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow
+// card standing as a Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell
+// text a copier has (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
 // off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
 // faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`).
 //
@@ -13,8 +16,9 @@
 // drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
 // card, so it has no face, and the callers draw a back instead.
 
-import type { CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
+import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
+import { marksOf } from "../cards/marks.ts";
 import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
@@ -40,6 +44,8 @@ export type LiveFacts = {
   type?: CardType;
   /** The power a Heroic Power on the field rolled (`HeroView.powers`); a hand card carries its own. */
   fieldPower?: RolledPower;
+  /** B5 E14: the definition of the Spell a copier's `copies` names (`useCopiedDef`, `copiedDefOf`). */
+  copied?: CardDef;
 };
 
 /**
@@ -59,8 +65,25 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.vanilla === true) inPlay.vanilla = true;
   // R280: what the card's formula comes to now, where the view says (never in the collection).
   if (card.preview !== undefined && card.preview.length > 0) inPlay.preview = card.preview;
-  // B3.4, R386: the numbers the card has now fill its text's `{key}`s.
+  // B3.4, R386: the numbers the card has now fill its text's `{key}`s, and what changed is marked.
   if (card.params !== undefined) inPlay.params = card.params;
+  if (card.tuning !== undefined) inPlay.tuning = card.tuning;
+  // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
+  if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
+  // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
+  const marks = marksOf(card);
+  if (marks.length > 0) inPlay.marks = marks;
+  // B3.1, R383: a Field Spell, Trap or Field Trap standing in a unit zone as a Unit.
+  if (unit?.animated !== undefined) inPlay.animated = unit.animated;
+  // B5 E35: a Berserk unit.
+  if (unit?.berserk === true) inPlay.berserk = true;
+  // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
+  if (card.quest !== undefined) inPlay.quest = card.quest;
+  const copies = card.copies;
+  if (copies !== undefined && facts.copied !== undefined) {
+    inPlay.copies = { def: facts.copied, radiant: copies.radiant, ...(copies.params === undefined ? {} : { params: copies.params }) };
+  }
   // B2.7: the type the card has now, where it differs from its definition's (Blood Moon's Radiant face).
   const type = card.type ?? facts.type;
   return faceModel({
@@ -88,10 +111,18 @@ export function listedFace(lookup: CardLookup | null, view: PlayerView, card: Ca
   const info = infoFor(lookup, view, card.defId, card.radiant);
   const type = backrowType(card);
   const fieldPower = matchCardsOf(view).powers.get(card.instanceId);
+  const copied = copiedDefOf(lookup, view, card);
   return liveFace(info, card, {
     ...(type === undefined ? {} : { type }),
     ...(fieldPower === undefined ? {} : { fieldPower }),
+    ...(copied === undefined ? {} : { copied }),
   });
+}
+
+/** B5 E14: the definition of the Spell a copier has the text of, where the view says it copies one. */
+function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView): CardDef | undefined {
+  const copies = card.copies;
+  return copies === undefined ? undefined : infoFor(lookup, view, copies.defId, copies.radiant).def;
 }
 
 /** A card named by an event or a log line: the definition, the face, and the instance when there is one. */

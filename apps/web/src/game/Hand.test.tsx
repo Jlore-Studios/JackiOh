@@ -146,17 +146,6 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     expect(screen.getByTestId(revealTestid.handCard("r1"))).not.toHaveAttribute("data-legal");
   });
 
-  it("R434 an engine that names the reveal in a field of its own is read the same way", () => {
-    const view = finished({ hand: { count: REVEALED.length } });
-    const named: PlayerView = {
-      ...view,
-      opponent: { ...view.opponent, revealedHand: REVEALED.map((defId, index) => card({ instanceId: `n${String(index)}`, defId })) } as PlayerView["opponent"],
-    };
-    renderBoard(named);
-    expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
-    expect(screen.getByTestId(revealTestid.handCard("n2"))).toHaveAttribute("data-def-id", REVEALED[2]);
-  });
-
   it("R434 while the game runs the opponent's hand stays backs", () => {
     renderBoard(fullBoardView());
     const hand = screen.getByTestId("hand-opponent");

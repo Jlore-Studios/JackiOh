@@ -89,13 +89,32 @@ export const AI_EVAL = {
     Immutable: 0.3,
     Stack: 0,
     Lucky: 0.2,
+    /** E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs. */
+    "Immune to Spells": 1,
   },
+  /** E6: per point of Spell Damage a unit has (a Spell its controller casts deals that much more). */
+  spellDamage: 0.5,
+  /**
+   * B3.3: a card with a Brittle count n is worth (1 − brittleDiscount / n) of itself — half at
+   * Brittle 1, the next tick away from crumbling — on the board, in the backrow and in the own hand.
+   */
+  brittleDiscount: 0.5,
+  /**
+   * B3.1: a readable backrow card with Animated is a Unit in waiting, worth this share of its unit
+   * face's `unitWorth` on top of its backrow value. Animated, it stands in a unit zone and is a unit.
+   */
+  animatedShare: 0.5,
   /** Own hand card: handCard + handPerCost × min(queryCost(def), handCostCap). */
   handCard: 1,
   handPerCost: 0.3,
   handCostCap: 6,
   /** Added per own Radiant hand card. */
   radiantInHand: 0.5,
+  /**
+   * B3.4, R65: taken off an own hand card per crystal its `costMod` (a Degrade's +1, an Upgrade's −1)
+   * moves its cost; a cheaper card gains it.
+   */
+  handCostDelta: 0.5,
   /** An unseen hand card is valued as if it cost this. */
   opponentHandCost: 2,
   /** A readable backrow card: backrowBase + backrowPerCost × queryCost(def). */
@@ -161,11 +180,18 @@ export const GREEDY_EVAL: EvalWeights = {
     Immutable: 0.3,
     Stack: 0,
     Lucky: 0.2,
+    // E35, E6, B3.1, B3.3 and B3.4 (patch v0.2.0) came after the gates were fixed, so the frozen
+    // baseline gives each of these terms nothing, as it did.
+    "Immune to Spells": 0,
   },
+  spellDamage: 0,
+  brittleDiscount: 0,
+  animatedShare: 0,
   handCard: 1,
   handPerCost: 0.3,
   handCostCap: 6,
   radiantInHand: 0.5,
+  handCostDelta: 0,
   opponentHandCost: 2,
   backrowBase: 1.5,
   backrowPerCost: 0.8,

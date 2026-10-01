@@ -1,21 +1,20 @@
 // R436: Call to Chaos names the effects it rolled, to both players.
 //
-// The engine reports the roll as `chaosRolled { player, instanceId, defId, effects }`, the effects as
-// keys in the order they resolve, on both seats (R97 redacts only the card, never the roll). This
-// module is the client's whole reading of it:
+// The engine reports the roll as `chaosRolled { player, instanceId, defId, effects }`, each effect as
+// the clause its card prints (the engine's `label`: `CHAOS_EFFECTS` in subsystems/callToChaos.ts,
+// `CHAOS_PLUS_EFFECTS` in callToChaosPlus.ts), in the order they resolve, on both seats (R97 redacts
+// only the card, never the roll). This module is the client's whole reading of it:
 // - `chaosRollOf` is the one adapter onto the event, so a rename is one line;
-// - `CHAOS_EFFECT_NAMES` turns a key into the short words a player reads, per edition (the Core
-//   Edition's keys are the engine's `CHAOS_EFFECTS` names, callToChaos.ts; the Classic+ Edition's,
-//   docs/classic-sets.md B7 #73, are this table's, easy to rename), in v0.2.0's words: "Deck" (R373),
-//   "(3) Cost" as the noun and "cost (2) less" as the verb (R432);
+// - `CHAOS_EFFECT_NAMES` turns a clause into the short words a reel shows, per edition, in v0.2.0's
+//   words: "Deck" (R373), "(3) Cost" as the noun and "cost (2) less" as the verb (R432);
 // - `chaosCues` plans the reveal the effects layer draws: a slot-machine panel over the board, one
 //   line per effect (stacked for three), each reel spinning through the edition's other effects and
 //   landing on the one rolled, inside the entry (R200). The same names feed the showcase's live
 //   region and its static banner under reduced motion (game/showcase/ChaosBanner.tsx).
 //
 // Nothing here is a rule: the roll is the event's, and the names are presentation (CLAUDE.md rule 7).
-// An unknown key still reads: a key the table lacks is shown as words (R202 is not at stake: the
-// roll is public).
+// An unknown clause still reads: one the table lacks is shown as the engine wrote it (R202 is not at
+// stake: the roll is public).
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
@@ -36,40 +35,32 @@ import type { FxAnchor, FxChaosCue, FxChaosLine, FxCue } from "./types.ts";
 export const CHAOS_CORE = "core-095";
 export const CHAOS_CLASSIC_PLUS = "classicplus-073";
 
-/** Each edition's effects, key → the words a player reads, in the order its card text lists them. */
+/** Each edition's effects, the clause the engine names → the words a reel shows, in the card's order. */
 export const CHAOS_EFFECT_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   [CHAOS_CORE]: {
-    units: "Summon 3 random (3) Cost Units",
-    heal: "Heal the caster's hero 30",
-    draw: "Draw the whole Deck, gain 4 mana",
-    add: "Add 3 random cards costing (0)",
-    radiant: "The caster's hand becomes Radiant",
-    tokens: "Summon 5 Radiant Rush Tokens",
-    discount: "Hand and Deck cost (2) less",
-    golem: "Summon a Chaos Golem",
-    backrow: "Fill the backrow with Field Spells and Traps",
-    recast: "Cast a random Call to Chaos",
+    "Summon 3 random (3) Cost Units": "Summon 3 random (3) Cost Units",
+    "Heal your hero 30": "Heal the caster's hero 30",
+    "Draw your whole deck and gain 4 mana": "Draw the whole Deck, gain 4 mana",
+    "Add 3 random cards to your hand, which cost (0)": "Add 3 random cards costing (0)",
+    "Make your hand Radiant": "The caster's hand becomes Radiant",
+    "Summon 5 Radiant Rush Tokens": "Summon 5 Radiant Rush Tokens",
+    "Cards in your hand and deck cost (2) less": "Hand and Deck cost (2) less",
+    "Summon a Chaos Golem": "Summon a Chaos Golem",
+    "Summon 5 random Field Spells or Traps into your backrow, Traps face-down": "Fill the backrow with Field Spells and Traps",
+    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
   },
   [CHAOS_CLASSIC_PLUS]: {
-    fruits: "Add 5 Fruits costing (0)",
-    books: "Add 3 Books costing (0)",
-    destroy: "Destroy all enemy permanents",
-    classics: "Add 3 Classic cards costing (0)",
-    upgrade: "Upgrade hand and Deck twice",
-    fuse: "Fuse a card into every Deck card",
-    degrade: "Degrade the enemy's field and hand 3 times",
-    golem: "Summon a Classic Golem",
-    replace: "Replace the Deck with Calls to Chaos",
-    recast: "Cast a random Call to Chaos",
+    "Add 5 random Fruits to your hand, which cost (0)": "Add 5 Fruits costing (0)",
+    "Add 3 random Books to your hand, which cost (0)": "Add 3 Books costing (0)",
+    "Destroy all enemy permanents": "Destroy all enemy permanents",
+    "Add 3 random Classic cards to your hand, which cost (0)": "Add 3 Classic cards costing (0)",
+    "Upgrade every card in your hand and deck twice": "Upgrade hand and Deck twice",
+    "Fuse a random card into each card in your deck, each keeping its cost": "Fuse a card into every Deck card",
+    "Degrade every card on your opponent's field and in their hand three times": "Degrade the enemy's field and hand 3 times",
+    "Summon a Classic Golem": "Summon a Classic Golem",
+    "Replace your deck with random Call to Chaos cards, which cost (0)": "Replace the Deck with Calls to Chaos",
+    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
   },
-};
-
-/**
- * Words for a key the editions spell differently, when the event does not say which edition rolled
- * (a card the viewer may not read, R97).
- */
-export const CHAOS_GENERIC_NAMES: Readonly<Record<string, string>> = {
-  golem: "Summon a Golem",
 };
 
 /** The roll as the client reads it. */
@@ -105,8 +96,7 @@ export function chaosEffectName(defId: string, key: string): string {
       return name === undefined ? [] : [name];
     }),
   );
-  if (spellings.size === 1) return [...spellings][0] ?? asWords(key);
-  return own(CHAOS_GENERIC_NAMES, key) ?? asWords(key);
+  return spellings.size === 1 ? ([...spellings][0] ?? asWords(key)) : asWords(key);
 }
 
 /** The rolled effects' words, in the order they resolve. */

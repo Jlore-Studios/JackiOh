@@ -44,6 +44,14 @@ describe("R502 which cardPlayed is a cast on draw", () => {
     expect(castOnDrawAt([drawn("p2", "c21"), announced, played("p2", "c21")], 2)).toBe(true);
   });
 
+  it("R502 the prompts the cast asks its caster (#21 Hinder's discard) do not break it, another seat's do", () => {
+    const asked: GameEvent = { type: "promptOpened", player: "p2", choiceId: "q1", kind: "hand" };
+    const answered: GameEvent = { type: "promptAnswered", player: "p2", choiceId: "q1" };
+    expect(castOnDrawAt([drawn("p2", "c1"), asked, answered, played("p2", "c1")], 3)).toBe(true);
+    const theirs: GameEvent = { type: "promptOpened", player: "p1", choiceId: "q2", kind: "target" };
+    expect(castOnDrawAt([drawn("p2", "c1"), theirs, played("p2", "c1")], 2)).toBe(false);
+  });
+
   it("R502 anything else is a play: a card from hand, a draw that reached the hand first, another seat's draw, another card", () => {
     expect(castOnDrawAt([MANA, played("p2", "c21")], 1)).toBe(false);
     expect(castOnDrawAt([drawn("p2", "c21"), added("p2", "c21"), played("p2", "c21")], 2)).toBe(false);

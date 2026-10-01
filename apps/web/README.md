@@ -62,6 +62,8 @@ src/
                         eye (R371, facedown.css, cards/faceDown.ts for the words); a grade badge prints the
                         letter the view names (R372)
     actions.ts Prompt.tsx                                               M5-T2
+    ActivateControl.tsx activate.css   R384, R510: the Activate control on a card the viewer controls (see
+                        "Patch v0.2.0 at the table")
     hotseat.ts decks.ts                                                 M5-T3
     animations.ts                                                       M5-T4
     Game.tsx            board + prompts + animation runner + effects layer + audio + drag layer + showcase, wired together
@@ -191,6 +193,35 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
   the players pass the device back unanswered with the seat switch, the offerer plays on and the
   offer lapses with the turn (R269). Practice hides the Offer draw
   control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
+
+## Patch v0.2.0 at the table
+
+**Activate** (SPEC §6.2, R384, R510). A card whose view lists `activations` (the engine gives them to
+its controller's own view of a card acting on the field) wears one control per ability on the card
+itself (`ActivateControl.tsx`): a lightning glyph and a badge with the uses left this turn ("∞" for
+Activate ♾️), the ability's words (its `{key}`s filled from the card's `params`) as tooltip and
+accessible name. It is `activate-<instanceId>` with its badge `activate-uses-<instanceId>`, the
+ability named after the id (`activate-<instanceId>-<ability>`) only on a card listing several
+(`namedAbility`, `contract.ts`). It is live exactly when `legal` lists that card's `activate`;
+otherwise it is greyed and its tooltip gives the view's `reason`. A press reports
+`{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
+listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
+control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
+in the inline picker. Heroic Power is built the same way: `power` (the first power) and
+`power-<instanceId>` (any further one) report the power's activation, whichever of `activatePower`
+or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
+reduced motion) while the `activated` row plays on its card.
+
+**A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting
+cost) ask for them after the target, in the `hand` picker; plays that differ by `plague` (Classic
+#74) ask how many Plague Tokens pay, in a `number` picker of chips with "Pay in mana only" first. A
+Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
+zone is picked by clicking the unit or its zone.
+
+**Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
+graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Play"
+(`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
+play is built as a hand card's.
 
 ## Commands
 

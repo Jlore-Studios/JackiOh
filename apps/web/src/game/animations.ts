@@ -668,6 +668,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     animation: "jk-swap-cross",
     durationMs: 600,
     testid: "board",
+    fx: { recipe: "rewind" },
     target: () => testid.board,
   },
   // R436: a slot-machine reveal over the board names each effect Call to Chaos rolled, one line per

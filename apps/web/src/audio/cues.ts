@@ -158,6 +158,8 @@ function readable(ctx: CueContext, defId: string): CueCard | undefined {
 
 /** A spell's shimmer lands just after the card whoosh, under its cast line (the cast beat). */
 const SPELL_SHIMMER_DELAY_MS = 60;
+/** A crumbling card falls this long after it shatters (B3.3). */
+const CRUMBLE_FALL_DELAY_MS = 70;
 /** A Radiant unit's golden glint lands on top of its summon thud. */
 const RADIANT_GLINT_DELAY_MS = 90;
 
@@ -229,6 +231,15 @@ export function markCues(event: Extract<GameEvent, { type: "marked" }>): readonl
 
 function silent(because: string): { sfx: null; silentBecause: string; cues: () => readonly SoundCue[] } {
   return { sfx: null, silentBecause: because, cues: () => NONE };
+}
+
+/** B5 E7: the difference from the health the view showed, as a heal or a drain; no change is a notice. */
+function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, ctx: CueContext): readonly SoundCue[] {
+  const side = event.player === ctx.view.viewer ? ctx.view.you : ctx.view.opponent;
+  const change = event.health - side.hero.health;
+  if (change > 0) return [sfx("heal", { amount: change })];
+  if (change < 0) return [sfx("drain", { amount: -change })];
+  return [sfx("notify")];
 }
 
 export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
@@ -391,16 +402,24 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       return [sfx("spell", timbre === undefined ? undefined : { timbre })];
     },
   },
-  // B3.1: the card lands in its unit zone with a summon's thud.
-  animated: { sfx: "summon", cues: () => [sfx("summon")] },
+  // B3.1: the card lands in its unit zone with a summon's thud, sized by the Unit it now is. It keeps no
+  // family accent: an Animated Trap must arrive like every Trap (R203).
+  animated: {
+    sfx: "summon",
+    cues: (event, ctx) => {
+      const unit = ctx.unitNow?.(event.instanceId) ?? null;
+      return [sfx("summon", unit === null ? undefined : { amount: unit.attack + unit.health })];
+    },
+  },
   deanimated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  // B3.3: a crumbling card dies quietly: no death line, since nothing killed it.
-  crumbled: { sfx: "death", cues: () => [sfx("death")] },
+  // B3.3: a crumbling card shatters like glass, then falls: no death line, since nothing killed it.
+  crumbled: { sfx: "death", cues: () => [sfx("shieldShatter"), sfx("death", undefined, CRUMBLE_FALL_DELAY_MS)] },
   degraded: { sfx: "debuff", cues: () => [sfx("debuff")] },
   upgraded: { sfx: "buff", cues: () => [sfx("buff")] },
   numberChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   redirected: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  healthSet: { sfx: "drain", cues: () => [sfx("drain")] },
+  // B5 E7: a hero's health set outright sounds the way it went, a heal or a drain of the difference.
+  healthSet: { sfx: "drain", cues: healthSetCues },
   questProgressed: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   questCompleted: { sfx: "radiant", cues: () => [sfx("radiant"), sfx("notify")] },
   rolledBack: { sfx: "whoosh", cues: () => [sfx("whoosh")] },

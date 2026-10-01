@@ -1,20 +1,29 @@
 // The AI's static evaluation (SPEC §9.9): hero health (concave, so the last points weigh most),
 // hero armor, board stats and keywords through §10.4's layers (a Defense-Position unit's attack at
 // a discount), cards in hand, library, the enemy's face damage next turn against our health and the
-// reverse, and, late in the game, the turn cap. It reads only what the seat may know or what a
-// determinization sampled, and nothing here reads a handicap or a difficulty (R180).
+// reverse, and, late in the game, the turn cap. Patch v0.2.0's mechanics through the engine's own
+// readers: a unit the engine bars from attacking (E35) counts no attack, Spell Damage (E6) and Immune
+// to Spells are worth something, a Brittle count (B3.3) discounts its card, an Animated backrow card
+// (B3.1) is partly a unit already, and an own hand card's `costMod` (B3.4, R65) moves its worth. It
+// reads only what the seat may know or what a determinization sampled, and nothing here reads a
+// handicap or a difficulty (R180).
 
 import type { PlayerId } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
 import {
+  activeBrittleCount,
   activeUnitsOf,
+  animatedKindOf,
+  cannotAttack,
   findDef,
   heroArmorOf,
+  ownCost,
   queryCost,
   subsystems,
   unitView,
   type CardInstance,
   type GameState,
+  type UnitView,
 } from "@jackioh/engine";
 import { HERO_HEALTH, TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 import { AI_EVAL, type EvalWeights } from "./config";
@@ -34,12 +43,26 @@ function readableBy(state: GameState, card: CardInstance, seat: PlayerId): boole
   return card.controller === seat;
 }
 
-/** One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL). */
+/** B3.3: the share of itself a card keeps under its Brittle count (`activeBrittleCount`), 1 with none. */
+function brittleShare(card: CardInstance, w: EvalWeights): number {
+  const count = activeBrittleCount(card);
+  return count === null ? 1 : 1 - w.brittleDiscount / Math.max(1, count);
+}
+
+/** Whether the unit may attack at all: no "Can't attack" keyword, and no E35 status bars it. */
+function canSwing(state: GameState, unit: CardInstance, view: UnitView): boolean {
+  return !hasKeyword(view.keywords, "Can't attack") && !cannotAttack(state, unit);
+}
+
+/**
+ * One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
+ * Damage per point, all discounted by its Brittle count.
+ */
 export function unitWorth(state: GameState, unit: CardInstance, w: EvalWeights = AI_EVAL): number {
   const view = unitView(state, unit);
   const weights = w.keyword as Readonly<Record<string, number>>;
   let value = w.health * view.health + w.armorPoint * view.armor;
-  if (!hasKeyword(view.keywords, "Can't attack")) {
+  if (canSwing(state, unit, view)) {
     // §4.1: a Defense-Position unit cannot attack until it spends a turn's exertion switching back,
     // though it still strikes back in full, so only part of its attack counts.
     const share = view.position === "DEF" ? w.defenseAttackShare : 1;
@@ -48,6 +71,7 @@ export function unitWorth(state: GameState, unit: CardInstance, w: EvalWeights =
   for (const keyword of view.keywords) {
     const weight = weights[keyword.kind];
     if (weight !== undefined) value += weight;
+    if (keyword.kind === "Spell Damage") value += w.spellDamage * keyword.n;
   }
   // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's. Their worth is
   // the damage they soak, which `faceThreat` and the reply already count, so here they are worth
@@ -55,14 +79,26 @@ export function unitWorth(state: GameState, unit: CardInstance, w: EvalWeights =
   if (view.position === "DEF" && hasKeyword(view.keywords, "Taunt")) {
     value -= (1 - w.positionGrants) * ((weights["Taunt"] ?? 0) + w.armorPoint);
   }
-  return value;
+  return value * brittleShare(unit, w);
 }
 
+/**
+ * B3.4, R65: the crystals the card's own `costMod` moves its cost by (`ownCost`, floored at 0 as a
+ * price is): +1 for a Degrade's dearer card, −1 for an Upgrade's cheaper one, 0 for an X-cost card.
+ */
+function costShift(state: GameState, card: CardInstance): number {
+  if (card.costMod === 0) return 0;
+  const own = ownCost(state, card);
+  return own === null ? 0 : Math.max(0, own) - Math.max(0, own - card.costMod);
+}
+
+/** An own hand card. ponytail: a Degrade or Upgrade of a hand card's stats is not read here. */
 function handCardValue(state: GameState, card: CardInstance, w: EvalWeights): number {
   const def = findDef(state, card.defId);
   const cost = def === undefined ? w.opponentHandCost : queryCost(def);
   const radiant = card.radiant ? w.radiantInHand : 0;
-  return w.handCard + w.handPerCost * Math.min(cost, w.handCostCap) + radiant;
+  const shift = def === undefined ? 0 : w.handCostDelta * costShift(state, card);
+  return (w.handCard + w.handPerCost * Math.min(cost, w.handCostCap) + radiant - shift) * brittleShare(card, w);
 }
 
 /** A hero's side of the ledger: its concave health and its armor. */
@@ -80,7 +116,11 @@ function material(state: GameState, player: PlayerId, seat: PlayerId, w: EvalWei
     if (card === null) continue;
     const def = findDef(state, card.defId);
     if (def !== undefined && readableBy(state, card, seat)) {
-      value += w.backrowBase + w.backrowPerCost * queryCost(def);
+      value += brittleShare(card, w) * (w.backrowBase + w.backrowPerCost * queryCost(def));
+      // B3.1: a Unit in waiting (`unitWorth` brings its own Brittle share).
+      if (w.animatedShare !== 0 && animatedKindOf(state, card) !== null) {
+        value += w.animatedShare * unitWorth(state, card, w);
+      }
     } else {
       value += w.enemyFaceDown;
     }
@@ -98,17 +138,18 @@ function material(state: GameState, player: PlayerId, seat: PlayerId, w: EvalWei
 
 /**
  * The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
- * position ATK and no "Can't attack", sorted ascending by attack. Taunt units on the defending side
- * soak up the smallest attackers first; each Taunt costs health + armor, plus one extra attacker if
- * it has Divine Shield. Each remaining attacker's attack goes through `subsystems.projectedHeroDamage`
- * (armor and the Anti-oneshot cap, per hit), and the results are summed.
+ * position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
+ * Taunt units on the defending side soak up the smallest attackers first; each Taunt costs health +
+ * armor, plus one extra attacker if it has Divine Shield. Each remaining attacker's attack goes
+ * through `subsystems.projectedHeroDamage` (armor and the Anti-oneshot cap, per hit), and the
+ * results are summed.
  */
 export function faceThreat(state: GameState, attacker: PlayerId): number {
   const attacks: number[] = [];
   for (const unit of activeUnitsOf(state, attacker)) {
     const view = unitView(state, unit);
     if (view.attack <= 0 || view.position !== "ATK") continue;
-    if (hasKeyword(view.keywords, "Can't attack")) continue;
+    if (!canSwing(state, unit, view)) continue;
     attacks.push(view.attack);
   }
   return damagePastTaunts(state, opponentOf(attacker), attacks);

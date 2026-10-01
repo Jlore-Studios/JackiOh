@@ -1,0 +1,41 @@
+/* B5 E11: a card the viewer may play from their graveyard carries "Play" under its face in the pile's
+   sheet (CardList.tsx). The face and the button share the grid cell the face alone would take. */
+
+.inspect-list-playable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspect-list-play {
+  min-width: 44px;
+  min-height: 32px;
+  padding: 4px 14px;
+  border: 1px solid #22c55e;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #166534, #14532d);
+  color: #dcfce7;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inspect-list-play[data-glow="ready"] {
+  box-shadow: 0 0 10px color-mix(in srgb, #22c55e 60%, transparent);
+}
+
+.inspect-list-play:hover {
+  filter: brightness(1.12);
+}
+
+.inspect-list-play:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .inspect-list-play {
+    min-height: 44px;
+  }
+}
