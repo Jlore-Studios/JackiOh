@@ -14,7 +14,7 @@
 // copy fixed as the play begins; "this" is Echo) and R547 (its static text: Cast on draw yes, the
 // end-of-turn return no).
 
-import { addStep, lastSpellPlayed, legalActions, reduce, subsystems, tuningOf, type GameState } from "@jackioh/engine";
+import { addStep, lastSpellPlayed, legalActions, playedThisGameWithTag, reduce, subsystems, tuningOf, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
@@ -33,6 +33,7 @@ const DREAM = "core-023"; // (1) Spell: … End of turn: Return this to your han
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
 const MENACE = "core-019"; // (3) Unit 9/9
 const VANILLA = "core-008"; // (1) Unit 4/4
+const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
 
 const AT_P2: Selection[] = [{ pick: "hero", player: "p2" }];
 
@@ -163,6 +164,20 @@ describe("C #57 Echo", () => {
       expect(lastSpellPlayed(s.state)).toEqual({ defId: WILDFIRE, radiant: false });
     });
 
+    it("R546 it keeps its own name, cost, type and tags: copying a Book makes no Book play, and C #4 Palantir does not ask", () => {
+      const s = scenario({ p1: { hand: [WILDFIRE, ECHO, VANILLA] }, p2: { backrow: [PALANTIR], hand: [VANILLA] } });
+      s.play(WILDFIRE, { targets: AT_P2 });
+      expect(s.state.pending?.playerId).toBe("p2");
+      s.answer("pass");
+      expect(ownView(s)).toMatchObject({ defId: ECHO, cost: 1, copies: { defId: WILDFIRE } });
+      s.play(ECHO, { targets: AT_P2 });
+      expect(s.state.pending).toBeNull();
+      expect(s.lastEvents.find((event) => event.type === "cardPlayed")).toMatchObject({ defId: ECHO, costPaid: 1 });
+      expect(hits(s.events, "hero-p2")).toEqual([4, 4]);
+      expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(1);
+      s.expectInZone(PALANTIR, "field");
+    });
+
     it("R545 an X-cost text: X is chosen with the play, from 1 up to the mana left once Echo's (1) is paid", () => {
       const s = scenario({ p1: { hand: [ADAPTIVE, ECHO], library: [VANILLA, VANILLA, VANILLA], mana: 9 } });
       s.play(ADAPTIVE, { x: 1, targets: AT_P2 });
@@ -175,6 +190,15 @@ describe("C #57 Echo", () => {
       // The first Adaptive UI's 1/1 Ghoul holds lane 1; Echo's 3/3 lands beside it (R64).
       const ghost = s.unit("p1", 2);
       expect(ghost === null ? null : s.stats(ghost)).toMatchObject({ attack: 3, health: 3 });
+    });
+
+    it("R545 with nothing left once Echo's (1) is paid, an X-cost text cannot be played: absent and refused", () => {
+      const s = scenario({ p1: { hand: [ADAPTIVE, ECHO], library: [VANILLA, VANILLA, VANILLA], mana: 9 } });
+      s.play(ADAPTIVE, { x: 1, targets: AT_P2 });
+      s.state.players.p1.mana.current = 1;
+      expect(echoPlays(s)).toEqual([]);
+      expect(() => s.play(ECHO, { x: 1, targets: AT_P2 })).toThrow(/X is above/);
+      s.expectInZone(ECHO, "hand");
     });
 
     it("R546 a prompt in the copied text continues the copied script; \"this\" is Echo, exiled where Reminisce says so", () => {

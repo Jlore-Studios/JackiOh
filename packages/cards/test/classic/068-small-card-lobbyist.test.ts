@@ -7,11 +7,11 @@
 // `legalActions`, an X card for X of 3 or more included; casts still happen; your plays are free of
 // it; its tuned numbers (surcharge, threshold) read through `param()` (R386)".
 //
-// A graveyard play needs a permission card (C #28, C #74, C #90), each another workstream's; the
-// engine's cost-rules tests prove the graveyard half of `effectiveCost` through fixtures. A cast of a
-// (3)+ Cost card is shown with a Cast-on-draw card a `costMod` has priced at (3).
+// A graveyard play is shown under C #28 Second Wind's permission (its Radiant face, so a played card
+// lands in the graveyard as usual), sent to `reduce` since the harness's `play` takes a hand card. A
+// cast of a (3)+ Cost card is shown with a Cast-on-draw card a `costMod` has priced at (3).
 
-import { legalActions, stepParam } from "@jackioh/engine";
+import { legalActions, reduce, stepParam } from "@jackioh/engine";
 import type { PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/068-small-card-lobbyist";
@@ -29,6 +29,7 @@ const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw
 const REMINISCE = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
 const VANILLA = "core-008"; // (1) Unit 4/4
 const FILLER = "core-010"; // (0) Spell
+const SECOND_WIND = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
 
 function handCost(s: Scenario, player: PlayerId, defId: string): number | undefined {
   const hand = s.view(player).you.hand;
@@ -69,6 +70,22 @@ describe("C #68 Small Card Lobbyist", () => {
     it("a play pays the surcharge", () => {
       const s = scenario({ p1: { hand: [HIT_JOB, FILLER], field: [LOBBYIST] }, p2: { field: [VANILLA] } });
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.card(VANILLA).id }] }).expectMana("p1", 0);
+    });
+
+    it("R65 legalActions agrees with the refusal: at 3 mana a (3) Cost card, now (4), is not offered and is refused", () => {
+      const s = scenario({ p1: { hand: [HIT_JOB, FILLER], field: [LOBBYIST], mana: 3 }, p2: { field: [VANILLA] } });
+      expect(offered(s, "p1", HIT_JOB)).toBe(false);
+      expect(() => s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.card(VANILLA).id }] })).toThrow(/costs 4/);
+    });
+
+    it("R65 a play from a graveyard C #28 Second Wind permits pays the surcharge too", () => {
+      const s = scenario({ p1: { hand: [FILLER], field: [LOBBYIST], backrow: [{ def: SECOND_WIND, radiant: true }], graveyard: [MENACE] } });
+      const menace = s.card(MENACE);
+      expect(offered(s, "p1", MENACE)).toBe(true);
+      const result = reduce(s.state, { type: "play", playerId: "p1", instanceId: menace.id, nonce: "c68-graveyard" });
+      expect(result.error).toBeUndefined();
+      expect(result.events.find((event) => event.type === "cardPlayed")).toMatchObject({ instanceId: menace.id, from: "graveyard", costPaid: 4 });
+      expect(result.state.players.p1.mana.current).toBe(0);
     });
 
     it("R363 a (2) Cost card is not lifted into range: the threshold reads the cost before its own (1)", () => {
@@ -179,6 +196,18 @@ describe("C #68 Small Card Lobbyist", () => {
       expect(offered(s, "p2", NETHER)).toBe(true);
       s.play(NETHER);
       s.expectInZone(LOBBYIST, "graveyard");
+    });
+
+    it("R65 the ban reaches a graveyard C #28 Second Wind lets the opponent play from: a (3) there is not offered", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], field: [{ def: LOBBYIST, radiant: true }] },
+        p2: { hand: [FILLER], backrow: [{ def: SECOND_WIND, radiant: true }], graveyard: [MENACE, VANILLA] },
+        active: "p2",
+      });
+      expect(offered(s, "p2", VANILLA)).toBe(true);
+      expect(offered(s, "p2", MENACE)).toBe(false);
+      const refused = reduce(s.state, { type: "play", playerId: "p2", instanceId: s.card(MENACE).id, nonce: "c68-banned" });
+      expect(refused.error).toMatch(/can't play \(3\)\+ Cost cards/);
     });
 
     it("your plays are free of it: its controller plays a (3) Cost card at (3)", () => {

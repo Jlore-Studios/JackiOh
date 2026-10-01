@@ -20,6 +20,8 @@ const STOCKPILE = "core-005"; // (1) Spell
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw
 const GRAND = "classic-072"; // Trap: counters the opponent's non-Unit plays.
 const FILLER = "core-010"; // (0) Spell
+const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
+const LOCKDOWN = "classic-084"; // After a permanent is played, Lock its zone.
 
 function summoned(s: Scenario, id: string): GameEvent[] {
   return s.lastEvents.filter((event) => event.type === "summoned" && event.instanceId === id);
@@ -50,11 +52,37 @@ describe("C #66 EU Striker", () => {
       expect(s.lastEvents.some((event) => event.type === "cardPlayed" && event.instanceId === striker.id)).toBe(false);
     });
 
+    it("R64 the leftmost open zone, a gap to the left of the played Unit included", () => {
+      const s = scenario({ p1: { hand: [STRIKER, VANILLA, FILLER], field: [{ def: VANILLA, lane: 2 }] } });
+      const striker = s.card(STRIKER);
+      const played = s.hand("p1").find((card) => card.defId === VANILLA);
+      if (played === undefined) throw new Error("setup");
+      s.play(played, { zone: 4 });
+      expect(s.unit("p1", 1)?.id).toBe(striker.id);
+      expect(s.unit("p1", 4)?.id).toBe(played.id);
+    });
+
+    it("R64 a Locked zone is passed over: C #84 Lockdown's lock on an emptied lane 1 sends it to lane 2", () => {
+      const s = scenario({ p1: { hand: [STRIKER, VANILLA, HIT_JOB, VANILLA], backrow: [LOCKDOWN], mana: 9 } });
+      const striker = s.card(STRIKER);
+      const [first, second] = s.hand("p1").filter((card) => card.defId === VANILLA);
+      if (first === undefined || second === undefined) throw new Error("setup");
+      // The first Vanilla's lane Locks; the Striker it summons is no play and takes lane 2, unlocked.
+      s.play(first, { zone: 1 });
+      expect(s.unit("p1", 2)?.id).toBe(striker.id);
+      // Hit Job clears lane 1 (still Locked) and bounces the Striker; the next Unit summons it again.
+      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: first.id }] });
+      s.expectInZone(striker, "hand");
+      s.play(second, { zone: 4 });
+      expect(s.unit("p1", 1)).toBeNull();
+      expect(s.unit("p1", 2)?.id).toBe(striker.id);
+    });
+
     it("§4.1 it is summoning sick: it cannot attack the turn it arrives", () => {
       const s = scenario({ p1: { hand: [STRIKER, VANILLA, FILLER] }, p2: { field: [VANILLA], hand: [FILLER] } });
       s.play(VANILLA);
       const striker = s.card(STRIKER);
-      expect(() => s.attack(striker, s.unit("p2", 1) ?? "hero")).toThrow();
+      expect(() => s.attack(striker, s.unit("p2", 1) ?? "hero")).toThrow(/summoning sick/);
     });
 
     it("R548 after the Unit resolves: its Cry happens first, so Big Felinor's sweep does not reach it", () => {

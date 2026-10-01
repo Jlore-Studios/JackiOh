@@ -9,8 +9,8 @@
 // turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own draw is the one a
 // limit of 1 stops.
 
-import { drawsThisTurn, stepParam } from "@jackioh/engine";
-import type { GameEvent, PlayerId } from "@jackioh/shared";
+import { drawsThisTurn, reduce, stepParam, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/058-common-resources";
 import { scenario, type Scenario } from "../_harness";
@@ -22,6 +22,8 @@ const MENACE = "core-019"; // (3) Unit 9/9
 const STOCKPILE = "core-005"; // (1) Spell
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
 const FILLER = "core-010"; // (0) Spell
+const HINDER = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1.
+const INCOME_TAX = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
 
 function drawnBy(events: readonly GameEvent[], player: PlayerId): Extract<GameEvent, { type: "drawn" }>[] {
   return events.filter((event): event is Extract<GameEvent, { type: "drawn" }> => event.type === "drawn" && event.player === player);
@@ -105,6 +107,53 @@ describe("C #58 Common Resources", () => {
       expect(cast).toMatchObject({ player: "p1", costPaid: 0 });
       // "Take 1 damage" is its caster's: p1's hero.
       expect(s.lastEvents.some((event) => event.type === "damage" && event.targetId === "hero-p1" && event.amount === 1)).toBe(true);
+    });
+
+    it("R58 §9.3 a cast on draw that asks is yours to answer, and the answer finishes the turn after a JSON round trip", () => {
+      const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE, HINDER] });
+      s.endTurn();
+      const pending = s.state.pending;
+      expect(pending).toMatchObject({ playerId: "p1", kind: "hand" });
+      const discard = s.hand("p1").find((card) => card.defId === VANILLA);
+      const round = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const action: Action = {
+        type: "answer",
+        playerId: "p1",
+        nonce: "c58-round-trip",
+        choiceId: pending?.id ?? "",
+        selection: [{ pick: "instance", instanceId: discard?.id ?? "" }],
+      };
+      const live = reduce(s.state, action);
+      const revived = reduce(round, action);
+      expect(live.error).toBeUndefined();
+      expect(revived.state).toEqual(live.state);
+      // R70, R81: the cast's declared discard was asked as the cast began; answered, it is p1's play.
+      expect(live.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER)).toMatchObject({ player: "p1" });
+      const p1 = live.state.players.p1;
+      expect(p1.graveyard.map((card) => [card.defId, card.owner])).toEqual([
+        [VANILLA, "p1"],
+        [HINDER, "p1"],
+      ]);
+      // §2.4's repeat of the draw and the turn's own draw are p1's own draws, from p1's deck: only the
+      // one bottom card left p2's deck.
+      expect(live.state.players.p2.library.map((card) => card.defId)).toEqual([VANILLA, MENACE]);
+      expect(p1.hand.map((card) => card.defId)).toEqual([FILLER, STOCKPILE, STOCKPILE]);
+      expect(live.state.pending).toBeNull();
+    });
+
+    it("§10.1 it is your draw in your per-turn count: with the turn's own draw it sets off C #9 Income Tax", () => {
+      const s = scenario({
+        p1: { hand: [FILLER, VANILLA], backrow: [{ def: RESOURCES, faceUp: true }], library: [STOCKPILE] },
+        p2: { hand: [FILLER], backrow: [{ def: INCOME_TAX, faceUp: false }], library: [VANILLA, MENACE] },
+        active: "p2",
+      });
+      const taken = s.card(MENACE);
+      s.endTurn();
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+      expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand" });
+      s.answer([{ pick: "instance", instanceId: taken.id }]);
+      expect(s.hand("p1").map((card) => card.id)).toEqual([taken.id]);
+      expect(s.hand("p2").map((card) => card.defId).sort()).toEqual([FILLER, FILLER, STOCKPILE, VANILLA].sort());
     });
 
     it("§2.4 your draw limit: under the opponent's Radiant Anti-Greed Machine it is your one draw, and your turn's own draw is stopped", () => {

@@ -6,9 +6,10 @@
 // the drawn cards are never named in the opponent's view; radiant: each discarding effect draws your
 // whole deck instead (R58); no tuned numbers".
 //
-// The discards of C #15, #26, #37 and #8 are other workstreams' cards; a random discard is shown with
-// Core #80 Zao Gao ("Discard 2 random cards"), a chosen one with Core #21 Hinder's cast-on-draw
-// discard and C #89 Paul Allen's Ghost's targeting cost.
+// Every discard of yours is shown with the cards the row names — C #15 Nose Hunter's random one, C #26
+// Rapid Draw's chosen four, C #37 Last Hurrah's whole hand, C #8 Pickle's played against you — and with
+// Core #80 Zao Gao ("Discard 2 random cards"), Core #21 Hinder's cast-on-draw discard and C #89 Paul
+// Allen's Ghost's targeting cost.
 
 import { reduce, type GameState } from "@jackioh/engine";
 import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
@@ -23,6 +24,11 @@ const STOCKPILE = "core-005"; // (1) Spell: Draw 2.
 const VANILLA = "core-008"; // (1) Unit 4/4
 const MENACE = "core-019"; // (3) Unit 9/9
 const FILLER = "core-010"; // (0) Spell
+const NOSE_HUNTER = "classic-015"; // Activate: Discard a random card. Exile the bottom card of their deck.
+const RAPID_DRAW = "classic-026"; // (0) Spell: Draw 4. Then discard 4 cards.
+const LAST_HURRAH = "classic-037"; // (0) Spell: Draw your deck. At the end of this turn, discard your hand.
+const PICKLE = "classic-008"; // (1) Spell: your opponent chooses 3 times: discard 1, exile 1, or you draw 1.
+const INCOME_TAX = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
 
 function drawnBy(events: readonly GameEvent[], player: PlayerId): GameEvent[] {
   return events.filter((event) => event.type === "drawn" && event.player === player);
@@ -152,6 +158,77 @@ describe("C #64 Malzahar's Recycler", () => {
       });
       expect(result.error).toBeUndefined();
       expect(drawnBy(result.events, "p1")).toHaveLength(2);
+    });
+
+    it("C #15 Nose Hunter's random discard, its Activate's cost, draws 1", () => {
+      const s = scenario({
+        p1: { hand: [MENACE, FILLER], field: [NOSE_HUNTER], backrow: [RECYCLER], library: [VANILLA, VANILLA] },
+        p2: { hand: [FILLER], library: [VANILLA, VANILLA] },
+      });
+      s.activate(NOSE_HUNTER);
+      expect(discardedBy(s.lastEvents, "p1")).toHaveLength(1);
+      expect(drawnBy(s.lastEvents, "p1")).toHaveLength(1);
+      expect(s.hand("p1")).toHaveLength(2);
+    });
+
+    it("C #26 Rapid Draw's chosen four are one effect that discards 4, and draw 4", () => {
+      const library = Array.from({ length: 8 }, () => VANILLA);
+      const s = recycling({ hand: [RAPID_DRAW, FILLER], library });
+      s.play(RAPID_DRAW);
+      expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand", min: 4, max: 4 });
+      s.answer(s.hand("p1").slice(0, 4).map((card) => card.id));
+      expect(discardedBy(s.lastEvents, "p1")).toHaveLength(4);
+      expect(drawnBy(s.lastEvents, "p1")).toHaveLength(4);
+      expect(s.hand("p1")).toHaveLength(5);
+      expect(s.pile("p1", "library")).toHaveLength(0);
+    });
+
+    it("C #37 Last Hurrah's end-of-turn discard of your hand draws that many: from the deck it emptied, fatigue", () => {
+      const s = recycling({ hand: [LAST_HURRAH], library: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] });
+      s.play(LAST_HURRAH);
+      expect(s.hand("p1")).toHaveLength(5);
+      s.endTurn();
+      // The Recycler's own end-of-turn discard comes first (two picks, two fatigue draws) …
+      s.answer(s.hand("p1").slice(0, 2).map((card) => card.id));
+      // … then, after `turnEnded`, Last Hurrah discards the other three, and each is answered (R62).
+      const events = s.lastEvents;
+      const after = events.slice(events.findIndex((event) => event.type === "turnEnded"));
+      const beforeNextTurn = after.slice(0, after.findIndex((event) => event.type === "turnStarted"));
+      expect(discardedBy(beforeNextTurn, "p1")).toHaveLength(3);
+      expect(beforeNextTurn.filter((event) => event.type === "fatigue" && event.player === "p1")).toHaveLength(3);
+      expect(s.state.players.p1.fatigueCount).toBe(5);
+    });
+
+    it("C #8 Pickle played against you: the discard you choose is yours, and draws 1", () => {
+      const s = scenario({
+        p1: { hand: [MENACE, FILLER], backrow: [RECYCLER], library: [VANILLA, VANILLA, VANILLA, VANILLA] },
+        p2: { hand: [PICKLE, FILLER], library: [VANILLA, VANILLA] },
+        active: "p2",
+      });
+      s.play(PICKLE);
+      expect(s.state.pending?.playerId).toBe("p1");
+      s.answer("discard");
+      s.answer(s.card(MENACE).id);
+      expect(discardedBy(s.lastEvents, "p1")).toHaveLength(1);
+      // The answer is a queued trigger (§10.3): it draws once Pickle has finished asking.
+      s.answer("exile").answer("exile");
+      expect(s.state.pending).toBeNull();
+      expect(drawnBy(s.events, "p1")).toHaveLength(1);
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, VANILLA]);
+    });
+
+    it("its draws are your draws: the second sets off the opponent's C #9 Income Tax", () => {
+      const s = scenario({
+        p1: { hand: [MENACE, VANILLA, FILLER], backrow: [RECYCLER], library: [STOCKPILE, STOCKPILE, STOCKPILE] },
+        p2: { hand: [FILLER], backrow: [{ def: INCOME_TAX, faceUp: false }], library: [VANILLA, VANILLA] },
+      });
+      s.endTurn();
+      s.answer(pick(s, MENACE, VANILLA));
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+      expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand" });
+      s.answer(pick(s, FILLER));
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER]);
+      expect(s.hand("p2").filter((card) => card.defId === STOCKPILE && card.owner === "p2")).toHaveLength(2);
     });
 
     it("an opponent's discard does not: their Zao Gao draws you nothing", () => {

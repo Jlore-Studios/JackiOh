@@ -2,14 +2,14 @@
 // a permanent is played, Lock its zone; Activate: Tribute this. Radiant: after your opponent plays a
 // permanent.
 //
-// No card on this branch counters a play (Classic #17 and #72 are written elsewhere) or casts a
-// permanent by its effect, so the two cases that need one use fixture cards of those shapes, as
-// `test/combat-windows.test.ts` does: a Counter trap shaped like Classic #72 (`counterPlay` on the
-// opponent's announce) and a Spell that casts a Mr. Vanilla (`castNew`, R70).
+// A countered card is shown with the real C #72 Grand Counterspell. No card in the catalog casts a
+// permanent by its effect (C #7, #47 and #56 cast Spells only; no Cast-on-draw card with a script is a
+// permanent), so "a cast counts" uses a fixture Spell that casts a Mr. Vanilla (`castNew`, R70), as
+// `test/combat-windows.test.ts` does.
 
 import { describe, expect, it } from "vitest";
-import { isLocked, legalActions, placeOnField, newInstance, registerScripts, registeredScripts, type Script } from "@jackioh/engine";
-import { castNew, counterPlay } from "@jackioh/engine/effects";
+import { isLocked, legalActions, newInstance, registerScripts, registeredScripts, type Script } from "@jackioh/engine";
+import { castNew } from "@jackioh/engine/effects";
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 
@@ -25,6 +25,7 @@ const MANA_WELL = "core-006"; // Field Spell
 const SHEEPISH = "core-041"; // Trap
 const STOCKPILE = "core-005";
 const TIMMY = "core-011";
+const GRAND_COUNTERSPELL = "classic-072"; // Trap: when your opponent plays a non-Unit card, Counter it.
 
 const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA, VANILLA] };
 
@@ -43,23 +44,6 @@ function fixture(s: Scenario, id: string, type: CardType, script: Script): strin
   s.state.transientDefs[id] = def;
   registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } });
   return id;
-}
-
-/** A Counter trap of `player`'s (Classic #72's shape): it counters the opponent's next play as it is announced. */
-function setCounterTrap(s: Scenario, player: PlayerId): void {
-  const id = fixture(s, "fx-counter-trap", "Trap", {
-    triggers: [
-      {
-        id: "counter",
-        on: ["cardAnnounced"],
-        when: (ctx) => ctx.event.type === "cardAnnounced" && ctx.event.player !== ctx.controller,
-        run: (ctx) => (ctx.event.type === "cardAnnounced" ? [counterPlay({ target: { of: "instance", instanceId: ctx.event.instanceId } })] : []),
-      },
-    ],
-  });
-  const trap = newInstance(s.state, id, player, { z: "hand", player });
-  expect(placeOnField(s.state, trap, { player, row: "backrow", lane: 5 })).toBe(true);
-  trap.faceUp = false;
 }
 
 describe("C #84 Lockdown", () => {
@@ -137,14 +121,16 @@ describe("C #84 Lockdown", () => {
       expect(lockEvents(s)).toEqual(["p1 units 1"]);
     });
 
-    it("§8.6 a countered card locks nothing: it never reaches a zone", () => {
-      const s = scenario({ p1: { backrow: [LOCKDOWN], hand: [VANILLA, STOCKPILE], library: SPARE.library }, p2: SPARE });
-      setCounterTrap(s, "p2");
-      s.play(VANILLA, { zone: 3 });
+    it("§8.6 a countered card locks nothing: C #72 Grand Counterspell stops a Field Spell before it reaches a zone", () => {
+      const s = scenario({
+        p1: { backrow: [LOCKDOWN], hand: [MANA_WELL, STOCKPILE], library: SPARE.library },
+        p2: { ...SPARE, backrow: [{ def: GRAND_COUNTERSPELL, faceUp: false }] },
+      });
+      s.play(MANA_WELL, { zone: 3 });
       expect(s.lastEvents.some((e) => e.type === "countered")).toBe(true);
-      s.expectInZone(VANILLA, "graveyard");
+      s.expectInZone(MANA_WELL, "graveyard");
       expect(lockEvents(s)).toEqual([]);
-      expect(locked(s, "p1", "units", 3)).toBe(false);
+      expect(locked(s, "p1", "backrow", 3)).toBe(false);
     });
 
     it("R13 a Lockdown dormant under a backrow pile does not act: a play locks nothing", () => {
