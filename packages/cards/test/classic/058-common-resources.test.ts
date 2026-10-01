@@ -109,7 +109,7 @@ describe("C #58 Common Resources", () => {
       expect(s.lastEvents.some((event) => event.type === "damage" && event.targetId === "hero-p1" && event.amount === 1)).toBe(true);
     });
 
-    it("R58 §9.3 a cast on draw that asks is yours to answer, and the answer finishes the turn after a JSON round trip", () => {
+    it("R58 R549 §9.3 a cast on draw that asks is yours to answer, its repeat draws from your own deck, and the answer finishes the turn after a JSON round trip", () => {
       const s = waiting({ p1Hand: [FILLER, VANILLA], p2Library: [VANILLA, MENACE, HINDER] });
       s.endTurn();
       const pending = s.state.pending;

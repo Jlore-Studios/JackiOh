@@ -307,6 +307,7 @@ const CLASSIC_039_TEST = "../../cards/test/classic/039-outbreak.test.ts";
 const CLASSIC_048_TEST = "../../cards/test/classic/048-hired-shrimp.test.ts";
 const CLASSIC_050_TEST = "../../cards/test/classic/050-voidwalker.test.ts";
 const CLASSIC_057_TEST = "../../cards/test/classic/057-echo.test.ts";
+const CLASSIC_058_TEST = "../../cards/test/classic/058-common-resources.test.ts";
 const CLASSIC_062_TEST = "../../cards/test/classic/062-living-bomb.test.ts";
 const CLASSIC_063_TEST = "../../cards/test/classic/063-crop-dusting.test.ts";
 const CLASSIC_066_TEST = "../../cards/test/classic/066-eu-striker.test.ts";
@@ -3005,6 +3006,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by cards classic/066-eu-striker.test.ts "R548 …" (both triggers answer a resolved play).
   it("R548 has C #66 EU Striker answer its owner's plays once they resolve", () => {
     provenIn(548, CLASSIC_066_TEST);
+  });
+
+  // Proved by cards classic/058-common-resources.test.ts "R549 …" (Hinder off the enemy deck's bottom:
+  // the repeat comes from your own deck).
+  it("R549 repeats a cast on draw taken from the opponent's deck with a draw from your own", () => {
+    provenIn(549, CLASSIC_058_TEST);
   });
 
   // Proved by cards classic/063-crop-dusting.test.ts "R550 …" (the firing trap takes its own placement).
