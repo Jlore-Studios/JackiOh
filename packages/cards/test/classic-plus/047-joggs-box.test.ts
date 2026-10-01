@@ -84,9 +84,13 @@ function quietSeed(make: (seed: string) => Scenario, want: number): { s: Scenari
   for (let i = 0; i < 60; i += 1) {
     const s = make(`jogg-quiet-${i}`);
     const id = s.card(BOX).id;
+    const turn = s.state.turn;
     s.play(BOX);
     const cast = casts(s.lastEvents, id);
-    if (s.state.pending === null && s.state.result === null && cast.length === want) return { s, cast };
+    // R82: a turn left with nothing to do ends itself, which would clear this turn's counts; keep a
+    // seed whose turn is still going.
+    const quiet = s.state.pending === null && s.state.result === null && s.state.turn === turn;
+    if (quiet && cast.length === want) return { s, cast };
   }
   throw new Error("no quiet seed");
 }
@@ -179,17 +183,21 @@ describe("C+ #47 Jogg's Box", () => {
 
     it("R593 R28 a Call to Chaos among them is the first cast of its chain, which stops at CALL_TO_CHAOS_CHAIN_CAP", () => {
       const saved = registeredScripts();
-      const depths: number[] = [];
+      // Each real cast's depth by instance: a Zephyrs-style scorer among the casts runs a Call's Cry on a
+      // simulated state too, and those runs are no cast of this game (R29).
+      const runs: { id: string; depth: number }[] = [];
       const recurse: Hook = (ctx) => {
-        depths.push(subsystems.chaosChainOf(ctx.self));
+        runs.push({ id: ctx.self?.id ?? "", depth: subsystems.chaosChainOf(ctx.self) });
         return [subsystems.castRandomCallToChaos()];
       };
       registerScripts({ ...saved, ...Object.fromEntries(CALLS.map((id) => [id, { base: { cry: recurse }, radiant: { cry: recurse } }])) });
       try {
         for (let i = 0; i < 80; i += 1) {
-          depths.length = 0;
+          runs.length = 0;
           const s = box({ seed: `jogg-chaos-${i}` });
           s.play(BOX);
+          const played = new Set(s.lastEvents.flatMap((event) => (event.type === "cardPlayed" ? [event.instanceId] : [])));
+          const depths = runs.filter((run) => played.has(run.id)).map((run) => run.depth);
           if (depths.length === 0) continue;
           // Links 1 to the cap, then nothing more of that chain (a later Call the Box casts starts at 1).
           expect(depths.slice(0, CALL_TO_CHAOS_CHAIN_CAP)).toEqual(Array.from({ length: CALL_TO_CHAOS_CHAIN_CAP }, (_, n) => n + 1));
@@ -208,7 +216,8 @@ describe("C+ #47 Jogg's Box", () => {
         const id = s.card(BOX).id;
         s.play(BOX);
         const over = s.lastEvents.findIndex((event) => event.type === "gameOver");
-        if (over < 0) continue;
+        // A game ended by the tenth cast has nothing left to stop: look for one that ends sooner.
+        if (over < 0 || casts(s.lastEvents, id).length >= 10) continue;
         expect(s.state.result).not.toBeNull();
         expect(casts(s.lastEvents, id).length).toBeLessThan(10);
         expect(s.lastEvents.slice(over + 1).some((event) => event.type === "cardPlayed" || event.type === "cardAnnounced")).toBe(false);

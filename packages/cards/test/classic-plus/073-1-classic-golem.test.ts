@@ -127,10 +127,11 @@ describe("C+ #73.1 Classic Golem", () => {
     });
 
     it("R53 R424 a forced attack is no attack it declared: it transforms nothing", () => {
-      // Core #9 Moths to the Flame: "Start of turn: Every enemy Unit attacks this."
+      // Core #9 Moths to the Flame (1/14): "Start of turn: Every enemy Unit attacks this." Damaged to 9,
+      // so the Golem's 10 kills it and the forced attack is one that destroyed its target.
       const s = scenario({
         p1: { hand: [VANILLA], field: [GOLEM], library: [VANILLA] },
-        p2: { hand: [VANILLA], field: ["core-009"], library: [VANILLA] },
+        p2: { hand: [VANILLA], field: [{ def: "core-009", damage: 5 }], library: [VANILLA] },
       });
       s.endTurn();
       expect(s.events.some((event) => event.type === "attackDeclared" && event.forced)).toBe(true);
