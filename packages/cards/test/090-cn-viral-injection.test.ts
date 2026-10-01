@@ -393,17 +393,17 @@ describe("#90.1 CN-Virus — base", () => {
   });
 
   it("R350 a virus cast on the opponent's turn shuffles its copies at the end of THAT turn", () => {
-    // p1's #32 Prem Panther (5/4) defends against p2's #4 Gary the Gambler (1/1) and destroys it,
-    // so p1 draws 2 on p2's turn: the CN-Virus on top of p1's library is cast there, and "the end of
-    // the turn" is p2's.
+    // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's #32 Prem Panther
+    // (5/4) attack it; the Panther destroys it and survives, so p1 draws 2 on p2's turn (R426): the
+    // CN-Virus on top of p1's library is cast there, and "the end of the turn" is p2's.
     const s = scenario({
       seed: "core-090-1-their-turn",
-      active: "p2",
       p1: { field: ["core-032"], library: [VIRUS, "core-005", "core-005"], hand: ["core-005"] },
-      p2: { field: ["core-004"], hand: ["core-005"] },
+      p2: { field: [{ def: "core-009", damage: 10 }], hand: ["core-005"] },
     });
 
-    s.attack(s.unit("p2", 1)!, s.unit("p1", 1)!);
+    s.endTurn();
+    expect(s.state.active).toBe("p2");
 
     expect(damageTo(s, "hero-p1")).toEqual([1]);
     expect(defIds(s.pile("p1", "graveyard"))).toContain(VIRUS);

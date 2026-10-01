@@ -171,7 +171,7 @@ describe("T-felinor Felinor Token (SPEC §7)", () => {
       expect(ids(query({ type: "Unit" }))).not.toContain(def.id);
       expect(ids(query({ tags: ["Felinor", "Token"] }))).toContain(def.id);
       expect(ids(query({ token: true }))).toContain(def.id);
-      expect(ids(query({ index: "T-felinor" }))).toEqual([def.id]);
+      expect(ids(query({ defId: "core-t-felinor" }))).toEqual([def.id]);
     });
   });
 

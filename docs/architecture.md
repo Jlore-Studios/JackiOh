@@ -21,7 +21,7 @@ flowchart TD
   PGR["Supabase Data API (PostgREST)<br/>role: authenticated"]
   API["apps/server HTTP routes<br/>codes, collection, decks, trios, queue, rooms, series, tutorial"]
   ACT["apps/server match actor<br/>one per live match"]
-  PG[("Supabase Postgres<br/>18 tables + private app schema")]
+  PG[("Supabase Postgres<br/>19 tables + private app schema")]
   ENG["packages/engine<br/>reduce / viewFor / fold"]
   CAT["packages/cards<br/>catalog.json + scripts"]
 
@@ -519,14 +519,19 @@ step that is not yet implemented says which BUILD task delivers it.
    → `0003_loadouts.sql` → `0004_matches.sql` → `0005` → `0006` → `0007_decks_and_trios.sql` →
    `0008_queue_modes.sql` → `0009_series.sql` → `0010_jlockeed_tag.sql` →
    `0011_tutorial_progress.sql` → `0012_account_deletion.sql` → `0013_retention_purge.sql` →
-   `0014_game_records.sql` — and records them in `app.migrations`. Expected result: 18 tables
+   `0014_game_records.sql` → `0015_classic_sets_tags.sql` → `0016_catalog_growth_grants.sql` →
+   `0017_last_boards.sql` — and records them in `app.migrations`. Expected result: 19 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `db:seed-catalog` can
    write #13 and #14's Jlockeed tag (R278). 0011 adds `tutorial_progress` and its one write path,
    `app.merge_tutorial_progress` (R320); it needs nothing else from the bring-up. 0014 adds
    the server-only `game_records` (R376); `stats:cards` reads it and
-   `stats:import` loads an AI development run into it (R377, R378).
+   `stats:import` loads an AI development run into it (R377, R378). Patch v0.2.0 adds three: 0015
+   widens the `cards` tag check with Book, Pancake and AI (B2.4); 0016 grants every active account
+   the cards a new catalog version adds when `db:seed-catalog` stamps it (R481); and 0017 adds the
+   server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
+   R565).
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -536,8 +541,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `pnpm --filter @jackioh/server db:seed-catalog`. Requires
-   `packages/cards/catalog.json` (BUILD M4-T1). Check `select count(*) from public.cards;` → 111
-   (100 cards + 11 tokens) and `select app.catalog_version();` → your `CATALOG_VERSION`.
+   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 317
+   (268 cards + 49 tokens over Core, Classic and Classic+, patch v0.2.0) and
+   `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `pnpm --filter @jackioh/server codes:mint`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
    only the hash (§9.4). The plaintext goes to stdout **once** — the database cannot give it back —
@@ -619,16 +625,18 @@ The migrations are not taken on faith. `sh apps/server/test/sql/run.sh` needs no
 it starts a throwaway Postgres, applies `apps/server/test/sql/00_supabase_stub.sql` (stand-ins for the
 Supabase-managed pieces the migrations reference — the `anon`, `authenticated` and `service_role`
 roles, `auth.users` and `auth.uid()`; a real project supplies all of it), applies 0001–0006, saves a
-loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0011 over it, and then asserts:
+loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0017 over it, and then asserts:
 
 | File | What it proves |
 | --- | --- |
-| `01_schema_invariants.sql` | 18 tables in `public`, **every one with RLS enabled**; `loadout_card_unique` is on `(profile_id, card_id)` and refuses a cross-deck duplicate inserted by raw SQL (BUILD M6-T3); no `SECURITY DEFINER` function in `public`; no non-SELECT policy and no INSERT/UPDATE/DELETE privilege for `anon` or `authenticated` anywhere; the `auth.users` trigger creates a `pending` profile; the six-step redemption returns `email_unverified`, and one identical `invalid_code` for both a missing and a revoked code; success flips the profile to `active` and the activation trigger grants every non-token card to both `collection` and `collection_grants`; `collection_grants` refuses an UPDATE; a stale catalog version raises `update required`; the `cards` tag check admits all nine catalog tags, Jlockeed included, alone and together, and refuses an unknown one (R278). |
+| `01_schema_invariants.sql` | 19 tables in `public`, **every one with RLS enabled**; `loadout_card_unique` is on `(profile_id, card_id)` and refuses a cross-deck duplicate inserted by raw SQL (BUILD M6-T3); no `SECURITY DEFINER` function in `public`; no non-SELECT policy and no INSERT/UPDATE/DELETE privilege for `anon` or `authenticated` anywhere; the `auth.users` trigger creates a `pending` profile; the six-step redemption returns `email_unverified`, and one identical `invalid_code` for both a missing and a revoked code; success flips the profile to `active` and the activation trigger grants every non-token card to both `collection` and `collection_grants`; `collection_grants` refuses an UPDATE; a stale catalog version raises `update required`; the `cards` tag check admits all nine catalog tags, Jlockeed included, alone and together, and refuses an unknown one (R278). |
 | `02_rls_as_client.sql` | Acting as the `authenticated` role inside a transaction (so `SET LOCAL` really takes effect): a profile sees exactly its own `profiles`, `collection`, `collection_grants`, `loadouts` and `loadout_deck_cards` rows and **zero** of the other profile's; `invite_codes`, `code_attempts`, `matches` and `match_actions` are refused outright; every client write — `collection` insert, `profiles` update, `loadout_deck_cards` insert — is refused, as are `app.redeem_invite_code` and `app.save_loadout`. It also sees exactly its own `decks` and `trios`, none of `series`, and cannot write any of them or call `app.upsert_deck` or `app.upsert_trio`; and exactly its own `tutorial_progress` row, which it cannot insert, update or delete, nor call `app.merge_tutorial_progress` (R320); and none of `game_records` (R376). This is §3's trust boundary, executed. |
 | `03_match_lifecycle.sql` | `save_loadout` naming the rule it failed; `create_room` → `join_room` (own room refused, a live room refused a second joiner, both players marked in-match, the ceiling stamped on join); `append_match_action` assigning `seq` and returning the **original** seq for a replayed nonce without a second row (BUILD M6-T4); a server action with no author; `live_matches()` returning what a restarting server would fold; `end_match` writing one `results` row, moving both ratings, clearing both `current_match_id`, and staying idempotent on a second call; the room code reusable once the match is `over`; one queued ticket per profile; `claim_ticket_pair` returning true once and **false** to the second matcher (BUILD M7-T3's race test); the reaper turning a match past its ceiling into a `match-ceiling` draw and clearing both players. |
 | `04_decks_and_series.sql` | The loadout 03b saved came out of 0007 as three named decks and a trio named "My trio", with the loadout rows untouched (R254); `app.upsert_deck` saves a draft, updates it in place, holds the cap under a lock on the profile and refuses another profile's id (R250); a trio names only its profile's own, distinct decks, and deleting a deck empties its slots (R252); a ticket carries its mode and exactly a Best-of-3 ticket a trio (R257), as a room does (R264); a series is a server-only row written by compare-and-set and found by its next match and by any of its games (R263). |
 | `05_tutorial_progress.sql` | `app.merge_tutorial_progress` makes a profile's row on its first write, sorted in code-point order; unions the lessons, so a stale or empty write removes none; keeps the strictly newer Hide/Show choice (an older one and a tie keep what is stored, a write with no choice leaves it); refuses a union past the caller's cap or `app.settings.tutorial_lessons_max` and writes nothing; refuses a malformed id, a half choice, an unknown profile and a pending one; and the table itself refuses a half choice and a null lesson (R320). |
 | `08_game_records.sql` | `game_records` holds one record per id, refuses a source other than `live` and `dev`, refuses a `source`, `mode` or `patch` column that disagrees with the record it files, so a filter on the columns cannot read a record as something it is not, and keeps `dev:` ids for development records alone (R376, R378). The client's refusal is `02`'s, with the other server-only tables. |
+| `09_catalog_growth.sql` | Stamping a new catalog version grants its new cards to every active account once, through the ledger, and a second stamp or a reseed grants nothing (R481). |
+| `10_last_boards.sql` | `last_boards` holds one board per profile and kind, replaced by the server and gone with its profile, refusing an unknown kind or a malformed entry; a match keeps the boards it started with whatever the profiles' rows do later; and no client role may read or write a last board (R417, R565). |
 
 Each SPEC §11 row this schema implements is proved under a `### Rnnn: … ###` heading, which is how
 REVIEW's B4 check and the §11 index find a row's evidence. **That heading form is the signal; a bare
@@ -704,6 +712,9 @@ apps/server/
         0010_jlockeed_tag.sql           cards_tags_check re-added with the Jlockeed tag (R278)
         0011_tutorial_progress.sql      tutorial_progress, app.merge_tutorial_progress (R320)
         0014_game_records.sql           game_records: the card statistics (R376)
+        0015_classic_sets_tags.sql      cards_tags_check re-added with Book, Pancake and AI (patch v0.2.0)
+        0016_catalog_growth_grants.sql  a new catalog version grants its new cards (R481)
+        0017_last_boards.sql            last_boards, matches.p1_last_board / p2_last_board (R417, R565)
     api/       codes.ts collection.ts decks.ts game-records.ts queue.ts results.ts series.ts series-rules.ts tutorial.ts
     match/     actor.ts protocol.ts                                        M6-T4, M7-T1
     auth/      jwt.ts (JWKS verification, seat resolution)                 M6-T1

@@ -1,50 +1,56 @@
 # `@jackioh/cards` — the card layer
 
-111 card definitions (100 cards + 11 tokens), one script file and one test file per card, and the
-catalog query every random pool in the game goes through.
+317 card definitions in three sets — Core (100 cards and 11 tokens), Classic (90 cards) and
+Classic+ (78 cards and 38 tokens), 268 cards and 49 tokens in all — one script file and one test
+file per card, the catalog query every random pool in the game goes through, and the catalog's
+patch history.
 
-`SPEC.md` is the only source of rules and card text. `BUILD.md` M4-T1…M4-T4 is the work order, and
-its must-pass table is the per-card acceptance list. This file is the contract *between* the card
-files: what a card file looks like, what the harness gives a test, and what order the waves go in.
-When this README and SPEC.md disagree, SPEC.md wins and this file is the bug.
+`SPEC.md` is the only source of rules and card text: §8 has every card (Classic in §8.6, Classic+ in
+§8.7) and §7 every token. `BUILD.md` M4-T1…M4-T4 is Core's work order and M9 the new sets' (patch
+v0.2.0, issue #40), and their must-pass tables are the per-card acceptance lists. The design brief
+`docs/classic-sets.md` is where the new sets came from, not a rule. This file is the contract
+*between* the card files: what a card file looks like, what the harness gives a test, and what order
+the waves go in. When this README and SPEC.md disagree, SPEC.md wins and this file is the bug.
 
 ```
 packages/cards
-├── catalog.json                 card data, proved against SPEC §8 by test/catalog.test.ts (M4-T1)
-├── patches                      the card patch history (R375, §7 below)
-│   ├── patches.json             every patch, oldest first
-│   ├── changes.json             GENERATED: the cards each patch created, changed and removed
-│   └── snapshots/<version>.json catalog.json exactly as that version left it
+├── catalog.json                 card data, proved against SPEC §8 by test/catalog.test.ts (M4-T1, M9)
+├── patches                      the catalog's history (R388, §8 below)
+│   ├── patches.json             every patch in order: { version, date, title, source, notes }
+│   └── <version>.json           the whole catalog as that patch left it, v0.1.0 … v0.2.0
 ├── src
-│   ├── catalog-data.ts          the ONE reader of catalog.json: CATALOG, cardDef(id)
-│   ├── history.ts               a card's history from the patch list and the snapshots (R375)
+│   ├── catalog-data.ts          the ONE reader of catalog.json: CATALOG, CATALOG_VERSION, cardDef(id)
 │   ├── query.ts                 SPEC §5.1's catalog.query — the only random-pool source
 │   ├── index.ts                 CARDS, registerAll() — the registry (M4-T2)
 │   └── scripts
 │       ├── _generated.ts        GENERATED list of the script files present — never edit by hand
-│       └── NNN-slug.ts          one card, one file: { def, base, radiant }
+│       ├── NNN-slug.ts          one Core card, one file: { def, base, radiant }
+│       ├── classic/             one Classic card per file, named the same way
+│       └── classic-plus/        one Classic+ card or token per file (tokens NNN-k-slug.ts, AI cards t-ai-NN-slug.ts)
 ├── scripts                      tooling (node + fs live here, never in src/)
-│   ├── naming.ts                the id <-> filename convention both scripts share
-│   ├── gen-registry.ts          rewrites src/scripts/_generated.ts from the directory
+│   ├── naming.ts                the id <-> filename convention every script shares, set folders included
+│   ├── gen-registry.ts          rewrites src/scripts/_generated.ts from the three folders
 │   ├── missing-tests.ts         prints catalog ids with no test file (M4-T3 acceptance)
-│   ├── patches.ts               writes patches/ from git and catalog.json (R375)
-│   └── validate-catalog.ts      catalog data checks (M4-T1)
+│   ├── validate-catalog.ts      catalog data checks, counted per set (M4-T1)
+│   └── …                        the `patch` script (§8) and the `loc` generator (§1)
 └── test
     ├── _harness.ts              scenario() — the only way a card test builds a game (M4-T3)
     ├── globalSetup.ts           regenerates the script barrel before every test run
-    ├── catalog.test.ts          SPEC §8 as a fixture table (M4-T1)
-    ├── patches.test.ts          patches/ against git and catalog.json (R375)
-    ├── history.test.ts          src/history.ts against the real snapshots and made-up ones (R375)
+    ├── catalog.test.ts          SPEC §8 as a fixture table, counted per set (M4-T1)
     ├── game-summary.test.ts     the engine's summarizeGame over real games (R376)
     ├── query.test.ts            the §5.1 pools (M4-T2)
+    ├── references.test.ts       each entry's `refs` against its texts (R279), and the rules-words list (R381)
     ├── registry.test.ts         every catalog id has a script, every script a catalog entry (M4-T2)
-    └── NNN-slug.test.ts         one card, one test file
+    ├── NNN-slug.test.ts         one Core card, one test file
+    ├── classic/                 one Classic card per test file, named as its script
+    └── classic-plus/            one Classic+ card or token per test file, named as its script
 ```
 
 ## 1. The card-file contract
 
 **One card, one file, one test file.** (CLAUDE.md rule 6.) The file name is the SPEC §5 index,
-three digits, plus a slug:
+three digits, plus a slug, in its set's folder: Core at the top of `src/scripts/` and `test/`,
+Classic in `classic/`, Classic+ in `classic-plus/`.
 
 | card | script | test |
 | --- | --- | --- |
@@ -53,10 +59,20 @@ three digits, plus a slug:
 | #51.1 KY's Empty Notebook (`core-051-1`) | `src/scripts/051-1-kys-empty-notebook.ts` | `test/051-1-kys-empty-notebook.test.ts` |
 | Rush Token (`core-t-rush`) | `src/scripts/t-rush.ts` | `test/t-rush.test.ts` |
 | Ghoul Token (`core-t-ghoul`) | `src/scripts/t-ghoul.ts` | `test/t-ghoul.test.ts` |
+| C #43 Plague Nuke (`classic-043`) | `src/scripts/classic/043-plague-nuke.ts` | `test/classic/043-plague-nuke.test.ts` |
+| C+ #12.1 Devour (`classicplus-012-1`) | `src/scripts/classic-plus/012-1-devour.ts` | `test/classic-plus/012-1-devour.test.ts` |
+| T-AI-1 Helpful Assistant (`classicplus-t-ai-01`) | `src/scripts/classic-plus/t-ai-01-helpful-assistant.ts` | `test/classic-plus/t-ai-01-helpful-assistant.test.ts` |
+
+**Ids and indices** (SPEC §5). A card's id is its set and its index: `core-043`, `classic-043`,
+`classicplus-043`; a token a card defines adds its number (`core-051-1`, `classicplus-012-1`), and a
+shared token is named (`core-t-rush`; the ten AI cards `classicplus-t-ai-01` … `-10`). `classicplus`
+has no hyphen inside the set part, so an id still splits one way. An `index` (`"43"`, `"12.1"`,
+`"T-AI-1"`) is unique only within its set, so nothing looks a card up by index alone: by id, or by
+`(set, index)` — `cardDefByIndex(set, index)` here, `defByIndex(set, index)` in the engine.
 
 `scripts/missing-tests.ts` is the authority on the pairing: for every catalog id whose test file it
 cannot find it prints the id, the card name and the exact path it expected, and it prints nothing
-when all 111 are covered. Run it to learn what to call your files:
+when all 317 are covered. Run it to learn what to call your files:
 
 ```
 pnpm --filter @jackioh/cards run missing-tests | grep core-043
@@ -83,7 +99,10 @@ export const radiant: Script = {
 };
 ```
 
-- **`def` always comes from `cardDef("core-NNN")`.** Never retype stats, cost, tags or rarity in a
+A script in a set folder is one level deeper, so it imports `cardDef` from `"../../catalog-data"`
+and names its own id: `cardDef("classic-043")`, `cardDef("classicplus-012-1")`.
+
+- **`def` always comes from `cardDef(id)`.** Never retype stats, cost, tags or rarity in a
   script file: `catalog.json` is the data and `test/catalog.test.ts` is what proves it against
   SPEC §8. A hand-written `def` is a second source of truth and will be rejected in review.
 - **The catalog entry is the printed card.** `radiant.text` is the Radiant face written out in full
@@ -92,6 +111,45 @@ export const radiant: Script = {
   (`test/radiant-standard.test.ts`, `docs/radiant-audit.md`); and `refs` lists every card or token
   the entry's texts name, by id (R279) — `test/references.test.ts` proves it against the texts both
   ways, so a text that names a card must list it.
+- **The fields patch v0.2.0 added to an entry** (SPEC §5), all of them data:
+  - `printedRarity` — the rarity printed on a token (every Classic+ token but the ten AI cards):
+    display only, for the card frame and the summon sting. A token's `rarity` stays `"Token"`, so no
+    pool ever finds one by rarity.
+  - `params` — the numbers Degrade, Upgrade and KY's Constant may change (R386), per face:
+    `[{ key, base, radiant, better: "up" | "down", step?, min?, max? }]`. A face's text writes each
+    one as `{key}`; the view carries the instance's current value and the client fills it in, as it
+    prints `preview` (R280); R277's diff reads each face with its own values filled in. A script never
+    writes a declared number as a literal: it reads `param(ctx, key)` (§1's read surface). With no
+    `step` the step is 1 for a number up to 5, 2 for 6–12 and a quarter (rounded) above that, and an
+    amount never drops below 1. Every Classic and Classic+ card declares its numbers (SPEC §8.6 and
+    §8.7 end each Engine cell with them, "Tunes: …"); a Core card that declares none simply offers a
+    Degrade fewer options.
+  - `loc` — the lines of code of the card's own script file: its non-blank, non-comment lines,
+    imports excluded. A `scripts/` generator writes it into `catalog.json` and a test holds it
+    current, as `_generated.ts` is held, so a script edit that moves the count fails until the
+    generator runs again. It is public (the inspect overlay prints it), C #48 Hired Shrimp, C+ #44
+    Simplicity Audit and C+ #45 Complexity Audit compare it, and a fused card's `loc` is its
+    ingredients' sum. It is card data, so a refactor that moves a card's `loc` is a balance change and
+    lands in a patch (§8).
+  - A face's own `type` (`CardFace.type`) — C+ #22 Blood Moon's Radiant face is a Field Trap. A card's
+    type is its running face's (§5.2), so a Blood Moon made Radiant in hand is a Field Trap there, to
+    pools and filters too.
+  - `xStats` (`CardFace.xStats`) — stats printed in X, C+ #69 Buff Billy's 3X/3X → 7X/7X: the Unit is
+    summoned with `statsOverride` from its played X, which is at least 1 (R348).
+- **Tags.** Patch v0.2.0 adds `Book` (every "Book of …" card of both new sets), `Pancake` (C+ #12,
+  #13 and the eight Pancake tokens) and `AI` (the ten AI cards), and every tag list is the designer's
+  as written. `Jlockeed` is one tag on five cards, Core #13 and #14 and C+ #48, #51 and #52 (whose
+  names keep the designer's "Jlockheed"), and since C+ #48 and #52 draw "a random Jlockheed card"
+  from it, it is a pool as well as a filter (R278).
+- **Names** (R381). No two cards share a name: Classic #55 is Book of Wildfire and Classic #72 Grand
+  Counterspell, so "Book of Flame" and "Counterspell" each name one card. Cards named like rules words
+  keep their names (C #10 Exile, #30 Recycle, #36 Burn, #57 Echo); `test/references.test.ts` holds a
+  named list of rules words it never reads as a reference to a card unless that entry's `refs` lists
+  the card, so "Exile" in a Core text is the verb and a card's `refs` stays curated.
+- **House style** (R432, over R366). "(N) Cost" is the noun — "a (1) Cost or less card", "(4)+ Cost
+  cards", "Discover a (2) Cost card", "Face-down trap, (2) Cost" — and "costs (N)" the verb — "costs
+  (1) less", "costs (0)"; never "Cost (N)", "N-cost" or "costing N". Players read "Deck" and "Tribute"
+  (R373). Every text in `catalog.json`, Core's included, follows it since patch v0.2.0.
 - **`base` and `radiant` are both required**, even when they are the same object — a card whose
   Radiant face differs only in what the engine reads off the catalog or its config (its stats and
   keywords, or #38's Combo multiple, `QUICKSTRIKER_COMBO_MULTIPLE`) runs the same script on both
@@ -101,7 +159,8 @@ export const radiant: Script = {
   targets?, modes?, conditionMet?, preview? }` (`packages/engine/src/script.ts`, SPEC §10.9). `resume` is the named
   continuation a prompt answer re-enters (R113), `delayed` the hook a scheduled effect lands on
   (R126), and `setStat` layer 2's stat hook (R116) — 13 card files already export one of them. A spell's script hangs off `cry`: that is the
-  on-resolve hook for a Spell as well as the Cry of a permanent.
+  on-resolve hook for a Spell as well as the Cry of a permanent. `activate` is a card's Activate
+  ability (R384), of which #98 Heroic Power's power was the first.
 - `conditionMet` is R195's yellow glow: a pure read of `{ state, self, controller, radiant, zone,
   yourTurn }` that returns whether the card's printed condition holds now (`zone: "hand"` as if
   played now, `"field"` as the card in play reads it), built on the same local predicate the card's
@@ -110,7 +169,7 @@ export const radiant: Script = {
 - `preview` is R280's number a formula comes to now: a pure read of the same context (the card's
   own controller, its running face, the zone, `yourTurn`) that returns `{ label, value }[]`. Each
   `label` is an exact substring of the running face's catalog text — the formula as printed,
-  `"Fib(cost+1)"` — because the client prints `{value}` right after its first occurrence; each
+  `"Fib(times played + 1)"` — because the client prints `{value}` right after its first occurrence; each
   `value` is what the formula comes to if the card resolved now, computed by the same local function
   the card's own hook deals or gains with. `viewFor` shows it wherever the viewer may read the card,
   the other seat's public cards included, so a hook reads only public facts and the card's own face
@@ -119,7 +178,8 @@ export const radiant: Script = {
   no preview. A value the text names by a word carries it as `display` beside the number (#93's
   grade letter, R372). The Core cards with one are #18, #31, #38, #40, #70, #91 and #93 (#93 on the
   field only); a fixed number already on the face (#92's stats, #100's cost, #89's hand stats) and
-  an X chosen at play (#24, #74) have none.
+  an X chosen at play (#24, #74) have none. A declared number (`params`) is not a preview: the view
+  carries its value as `{key}`.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook is `(ctx: EffectContext) => Effect[]`. It reads
 `ctx` and returns effects; it never assigns to `ctx.state`, never calls an engine mutator, never
@@ -127,7 +187,10 @@ calls `Math.random` or `Date`, and never awaits. Every effect comes from
 `@jackioh/engine/effects` — that barrel is the entire vocabulary a card file has
 (`packages/engine/src/effects/index.ts` lists all of it and says which SPEC §6.3 verb each name
 implements). If the verb you need is not there, the effect is missing from the engine: report it,
-do not reach into state.
+do not reach into state. A card-specific system (C #57 Echo's copied text, C #90 In Too Deep's quests,
+C+ #29's last boards, C+ #35 Rollback's snapshots, C+ #42 KY's Test's problems, C+ #62 KY's Papaya's
+curve, C+ #27's perfect hand) is an engine module under `packages/engine/src/subsystems/` with its
+own engine tests through fixture scripts, never logic in the card file.
 
 **The read surface.** §10.9 lets a hook READ state to compute an effect's argument, and BUILD M3-T1
 adds how: `grep -r "state.players[" packages/cards` must come back empty, so a card file names the
@@ -153,6 +216,12 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `instanceOf(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at — a chosen card on the stay its prompt or the play offered it on (R174) — or `null` for a hero, for nothing, or for a card buried under a Stack pile (§3.2, R13) (#22's meal) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write) — on a fused card, its own ingredient's (R102, #22) |
 | `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
+| `afterAttackOf(ctx)` | in an `afterAttack` hook, its combat's facts: `{ targetId, destroyedIds, survived, forced }` — the Units the attacker's own hits destroyed, and whether it is still on the stay it attacked from (#32, R426) |
+| `param(ctx, key)` | the running card's current value of a number its entry declares (`params`, R386): its running face's `base` or `radiant` value as Degrade, Upgrade and KY's Constant have left it on the instance |
+| `ownCost(state, card)` | the card's own cost — `costOverride` or printed, plus `costMod`, no player discount — which a Degrade, an Upgrade or KY's Constant moves; `null` for an X-cost card (R65, R386) |
+| `costNow(state, card)` | what a card costs wherever a rule compares or counts costs: an X card on the field its played X, elsewhere 0; a hand card at its hand cost; a floor holds (R396, R455; C #10, #18, #25, #32, #39) |
+| `maxManaOf(state, player)` | §2.3's max mana, which a refresh fills to (C #36's Radiant face) |
+| `subsystems.activationPaid(ctx)` | in an Activate's effect list, what the activation paid: the ability's id and the Units its Tribute cost took, as they stood (R384, C #21) |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.
 Every one of these but `findInstance`, `instanceOf` and `killerOf` returns a number, a boolean or a
@@ -179,8 +248,10 @@ export const base: Script = {
 ```
 `kind` is `"target" | "hand" | "zone" | "tribute"` for `targets` and `"mode" | "direction"` for
 `modes`; a declared `hand` or `zone` pick arrives in `ctx.targets`, a `direction` in `ctx.modes`
-(R81). Every choice made *during* resolution — Discover, a chained step, an Echo repeat, a trigger
-— is a prompt instead, and prompts are state (SPEC §10.6).
+(R81). An Activate ability declares its targets and modes the same way, and they travel in the
+`activate` action as a play's travel in `play` (R384). Every choice made *during* resolution —
+Discover, a chained step, an Echo repeat, a trigger — is a prompt instead, and prompts are state
+(SPEC §10.6).
 
 **Instance memory.** Anything a card must remember lives on the instance (`ctx.self.memory`, via
 the `remember`/`rememberRandom` effects) so Fuse, copies and replay stay trivial (SPEC §10.1).
@@ -188,10 +259,10 @@ the `remember`/`rememberRandom` effects) so Fuse, copies and replay stay trivial
 ## 2. Registering a card — there is nothing to wire
 
 `src/index.ts` is a contract file shared by every card, the harness and the server. **Do not edit
-it to add a card.** Drop your file in `src/scripts/` and the registry picks it up:
-`src/scripts/_generated.ts` is regenerated from the directory by `scripts/gen-registry.ts`, and the
-cards project runs that automatically before every test run (`test/globalSetup.ts`). To regenerate
-by hand:
+it to add a card.** Drop your file in `src/scripts/`, `src/scripts/classic/` or
+`src/scripts/classic-plus/` and the registry picks it up: `src/scripts/_generated.ts` is regenerated
+from the three folders by `scripts/gen-registry.ts`, and the cards project runs that automatically
+before every test run (`test/globalSetup.ts`). To regenerate by hand:
 
 ```
 pnpm --filter @jackioh/cards run gen            # rewrite src/scripts/_generated.ts
@@ -205,8 +276,8 @@ What the registry exports, for the server, the client and the tests:
 
 | export | meaning |
 | --- | --- |
-| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 111 defs from `catalog.json`, script or no script |
-| `cardDef(id)`, `cardDefByIndex(index)` | one def, throwing rather than returning `undefined` |
+| `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION` | all 317 defs from `catalog.json`, script or no script, and the latest patch's version (R388) |
+| `cardDef(id)`, `cardDefByIndex(set, index)` | one def, throwing rather than returning `undefined` |
 | `CARDS` | `Record<catalogId, { def, base, radiant }>` — one entry per script file present |
 | `registerAll()` | `registerCatalog(CATALOG, CATALOG_VERSION)` then `registerScripts(...)`; idempotent |
 | `query`, `catalog` | SPEC §5.1's pool query, re-exported from `./query` |
@@ -218,55 +289,69 @@ script and every script a catalog entry; it flips to strict when M4-T4 lands the
 ## 3. `catalog.query` — the only random pool (SPEC §5.1)
 
 ```ts
-import { catalog } from "../query";        // or: import { query } from "../query";
-catalog.query({ type, cost, costRange, tags, notTags, rarity, set, excludeIndex })
-catalog.pool("57", { tags: ["KY"] })       // the same, with your own §5 index excluded
+import { catalog } from "../query";        // or: import { query } from "../query"; "../../query" from a set folder
+catalog.query({ type, cost, costRange, tags, notTags, rarity, set, excludeDefId, withTokens })
+catalog.pool("core-057", { tags: ["KY"] }) // the same, with your own catalog id excluded (R387)
 catalog.cost(def)                          // R65's out-of-play cost: X reads 0, embiggen reads base
 catalog.trapTypes                          // ["Trap", "Field Trap"]
 ```
 
 `src/query.ts` is a thin typed wrapper over the engine's one filter
 (`packages/engine/src/catalog.ts`), so there is exactly one filter in the codebase. It also takes
-`index`, `notIndex`, `defId` and `token` for a pool a card names card by card.
+`defId` and `token` for a pool a card names card by card. `set` takes one set or several, and a
+pool that names no set draws from every set: there is one format (R380).
 
 The pools the spec pins down, as the argument object to write:
 
 | pool | write | result |
 | --- | --- | --- |
-| any random card | `catalog.query({})` | the 100 non-token cards |
-| KY (#57 Conjure KY) | `catalog.pool("57", { tags: ["KY"] })` | #31, #51, #82 |
-| a Cost (1) Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | #18, #41, #60, #71, #96 (#85 costs 2 since patch v0.1.1; radiant #67 drops the cost and reaches it) |
-| Transmogulate (#83, R35) | `catalog.pool("83", { rarity: "Legendary" })` | #52, #85, #87, #92, #93, #95 |
-| Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeIndex` | includes #95, the §5.1 exception |
+| any random card | `catalog.query({})` | the 268 non-token cards of every set (R380) |
+| a pool its card limits to sets | `catalog.query({ set: ["Classic", "Classic+"] })` | only those sets: C+ #27 Zephrys Zealotism, #73.1 Classic Golem and #75.1's Pack name Classic and Classic+, C+ #73 names Classic; #82 KY's Trial and #97 Zephyrs name Core (`set: "Core"`) |
+| KY (#57 Conjure KY) | `catalog.pool("core-057", { tags: ["KY"] })` | Core #31, #51, #82 and C+ #41, #42, #62 |
+| a (1) Cost Trap (#67 Zoomerbin Oomen) | `catalog.query({ type: catalog.trapTypes, cost: 1 })` | Core #18, #41, #60, #71, #96 and C+ #22 Blood Moon (#85 costs (2) since patch v0.1.1; radiant #67 drops the cost and reaches it) |
+| Transmogulate (#83, R35) | `catalog.pool("core-083", { rarity: "Legendary" })` | every non-token Legendary but #83: Core's six (#52, #85, #87, #92, #93, #95), Classic's nine and Classic+'s thirteen |
+| Call to Chaos (#95) | `catalog.query({ tags: ["Call to Chaos"] })` — **no** `excludeDefId` | #95 and C+ #73, the Classic+ Edition: the §5.1 exception, a text that names a pool holding itself (R28, R387) |
+| Fruit (C+ #58 Fruit Basket) | `catalog.pool("classicplus-058", { tags: ["Fruit"] })` | the non-token Fruit cards but Fruit Basket, plus the five Grapes (C+ #65.1–#65.5), which no other pool holds but the next one (R382) |
+| every card and token (C+ #23 Dropshipping) | `catalog.pool("classicplus-023", { withTokens: true })` | every card and every token of every set — a Grape, a Loser, an AI card — but Dropshipping (R382) |
 
-**Footgun:** `type: "Trap"` matches the `type` field exactly and so drops the two Field Traps
-(#18, #71). Everywhere SPEC says "Field Trap counts as Trap" — #51's type choice, #85's type match,
-R35's same-type replacement — pass `catalog.trapTypes`.
+**Footgun:** `type: "Trap"` matches the `type` field exactly and so drops the Field Traps (Core
+#18, #71, and the Classic and Classic+ Field Traps, C+ #22's Radiant face among them). Everywhere
+SPEC says "Field Trap counts as Trap" — #51's type choice, #85's type match, R35's same-type
+replacement — pass `catalog.trapTypes`.
 
 Guarantees a card file may rely on, all proved in `test/query.test.ts`:
 
 - **No tokens** unless the query asks for them (`tags: ["Token"]`, `rarity: "Token"`,
-  `token: true`, or naming members through `index`/`defId`). #51.1 is "absent from every random
-  pool" for exactly this reason.
-- **Never the generating card**: pass `excludeIndex` with your own §5 index. A pool that can offer
-  the card that made it is a bug (§5.1).
+  `token: true`, `withTokens: true`, or naming members through `defId`), with R382's one exception:
+  a Fruit pool holds the five Grapes. #51.1 is "absent from every random pool" for exactly this
+  reason.
+- **Never the generating card** (R387): pass your own catalog id, which `pool(ownId, …)` does for
+  you. It is the id, never the index, because an index repeats across sets. It holds on every path a
+  card makes a card from a pool — added to a hand, shuffled in, summoned, Discovered, cast,
+  transformed into, fused in, or replacing another card — and a fused card excludes every one of its
+  ingredients. The one exception is a text that names a pool holding itself (the Call to Chaos
+  family). A copy is not generation: "summon a copy of this", Echo repeats and C+ #14 Forever& are
+  unaffected. A pool that can offer the card that made it is a bug, and a sweep test runs every
+  generating script with a seeded rng and asserts its own id never comes out.
 - **Costs read out of play (R65)**: an X-cost card queries as cost 0 and an embiggen card as its
   base price.
-- **Deterministic order** (§5 index ascending, tokens last), so `ctx.rng.pick`/`shuffle` over the
-  result replays identically (§9.3, R60). Never sort, filter or de-duplicate a pool yourself
-  afterwards: that is how two card files end up disagreeing about what "a random unit" means.
+- **Deterministic order** (set by set, Core first, each by §5 index ascending), so
+  `ctx.rng.pick`/`shuffle` over the result replays identically (§9.3, R60). Never sort, filter or
+  de-duplicate a pool yourself afterwards: that is how two card files end up disagreeing about what
+  "a random unit" means.
 
-`test/query.test.ts` names the four pools the spec pins down — the KY pool (#31/#51/#82), the trap
-pool (#18/#41/#60/#71/#85/#96, Field Trap counting as Trap; the Cost (1) five without #85), the Transmogulate Legendary pool
-(#52/#85/#87/#92/#93/#95, R35) and the cost brackets — with the exact argument object each one
-needs. Copy from there rather than inventing a filter.
+`test/query.test.ts` names the pools the spec pins down — the KY pool, the trap pool (Field Trap
+counting as Trap), the Transmogulate Legendary pool (R35), the pools across sets (R380), the Fruit
+pool (R382) and the cost brackets — with the exact argument object each one needs. Copy from there
+rather than inventing a filter.
 
 ## 4. The test harness
 
 Every card test builds its game with `scenario(...)` from `test/_harness.ts` and with nothing else:
 it places real instances through the engine's own zone functions, so a test can never assert
 against a state the engine could not have produced. Importing the harness also calls
-`registerAll()`, so the real catalog and every registered script are live.
+`registerAll()`, so the real catalog and every registered script are live. A test in a set folder
+imports it as `"../_harness"`.
 
 ```ts
 import { describe, it } from "vitest";
@@ -333,9 +418,11 @@ is how a test puts a Radiant card on top of a library (#21, #23).
 - SPEC §2.5: a turn with nothing meaningful left auto-ends itself, so `endTurn()` can cascade
   several turns forward when both hands are empty. Give each side a card in hand or a unit that
   could switch position when a test crosses a turn boundary.
-- A card reference (`string`) may be a catalog id (`"core-043"`), a §5 index (`"43"`, `"51.1"`,
-  `"T-rush"`), a card name (`"Big Felinor"`) or an instance id (`"c7"`). With several copies of one
-  def in play, hold the `CardInstance` (`s.unit(...)`, `s.hand()[0]`) instead of the string.
+- A card reference (`string`) may be a catalog id (`"core-043"`, `"classic-043"`), a §5 index
+  (`"43"`, `"51.1"`, `"T-rush"`), a card name (`"Big Felinor"`) or an instance id (`"c7"`). An index
+  is unique only within its set, so a bare index is for Core cards: name a Classic or Classic+ card
+  by its id or its name. With several copies of one def in play, hold the `CardInstance`
+  (`s.unit(...)`, `s.hand()[0]`) instead of the string.
 
 ### Steps and assertions
 
@@ -362,9 +449,13 @@ is what makes the fuzz and replay gates meaningful.
 ## 5. What a card's test file must cover
 
 For **base and radiant separately**: one case per behaviour named in the card's SPEC §8 row, plus
-every must-pass case in the BUILD M4-T4 table row for that card. Name a test after the ruling it
-pins down when there is one — `it("R64 the copy lands in the leftmost free zone", …)` — so a
-ruling change has a failing test with its name on it (CLAUDE.md rule 3).
+every must-pass case in its set's BUILD table row for that card (M4-T4 for Core, M9's Classic and
+Classic+ tables for the new sets). A Classic or Classic+ card also covers every reading its §8.6 or
+§8.7 Engine cell makes (targets, timing, what happens at 0, hidden information, caps, what an empty
+pool or board does), and reads each number its entry declares through `param(ctx, key)`, never a
+literal. Name a test after the ruling it pins down when there is one —
+`it("R64 the copy lands in the leftmost free zone", …)` — so a ruling change has a failing test with
+its name on it (CLAUDE.md rule 3).
 
 A card whose script declares `conditionMet` (R195's yellow glow) also proves both answers of its
 hook against the branch its own resolution then takes (SPEC §10.9). Those proofs live together in
@@ -378,12 +469,13 @@ carries is what its own resolution then deals or gains, that each label sits in 
 and what the hook may read. Those proofs live together in `test/preview.test.ts`, which also pins
 the set of cards that declare the hook to R280's six and R372's #93 and fences every library and
 hand off from the hooks; the card's own test file names that file in its header (#93's values are
-proved in its own test file, since its hook answers on the field only).
+proved in its own test file, since its hook answers on the field only). A Classic or Classic+ card
+that declares either hook joins that file's list and the ruling's in the same change.
 
 A card is done when its tests are green, `pnpm lint` and `pnpm typecheck` are clean, and the fuzz
 gate still passes with the card in the pool.
 
-## 6. Wave order (BUILD M4-T4)
+## 6. Wave order (BUILD M4-T4, and M9 for the new sets)
 
 Within a wave, go in index order. A wave is done when every card in it passes its tests and the
 M4 fuzz gate still passes with those cards in the fuzz deck pool; do not start the next wave first.
@@ -404,59 +496,72 @@ which have no §8 row of their own.
 (Felinor Fiender/Stack), #93 (Combo-Index), #95 (Call to Chaos), #96 (My Pawn/lethal), #97
 (Zephyrs/scorer), #98 (Heroic Power), #99 (Craft a Card).
 
-## 7. The patch history (R375)
+**Classic and Classic+ (BUILD M9)** come after the engine's new keywords and systems, each already
+proved by engine tests through fixture scripts, and go in the same three waves: first the
+keyword-only and one-primitive cards (C #3, #12, #16, #24, #26, #41, #73, #82; C+ #6, #10, #15, #16,
+#20, #28, #53–#57, #59, #67, …), then the cards built on one or two of the engine's new systems, and
+last the card-specific subsystems — C #48 Hired Shrimp, C #57 Echo, C #90 In Too Deep; C+ #19 League
+of Losers and its Losers, #27, #29, #35, #42, #44 and #45 (the Audits), #62, #73 and #74 — each with
+its subsystem's own tests.
 
-Every card shows when it was created and each change since (SPEC §10.10). The data is
-`patches/`, and `pnpm --filter @jackioh/cards run patches` writes all of it:
-
-- `patches.json` lists every patch, oldest first: `{ version, date, title, commits, sources,
-  reconstructed, notes }`, `sources` being `{ kind: "issue" | "pr", number }`. Its order is the
-  order of versions; nothing compares version strings (R105's rule for catalog versions, kept here).
-  Only v0.1.1 was named when it shipped; the versions before it are labels given later to states git
-  recorded, so they are `reconstructed`, and the client says so. The script writes those entries
-  from its `BACKFILL` table; every later entry it keeps as patches.json holds it.
-- `snapshots/<version>.json` is catalog.json exactly as the version left it. A shipped version's is
-  `git show <commit>:packages/cards/catalog.json` of its last commit (the script's `SHIPPED` table
-  records the commit and the file's git blob id, which `test/patches.test.ts` holds each snapshot
-  to, so the proof runs on a shallow clone too). The newest is always equal to catalog.json.
-- `changes.json` is `patchCards(patches, snapshots)`: the cards each version created, changed and
-  removed, which the client reads to count a card's versions and list a patch's cards without
-  loading a snapshot. `test/patches.test.ts` holds it to the snapshots.
-
-`src/history.ts` is the logic, pure and sync like the rest of `src/`: `cardHistory(id, patches,
-snapshots)` gives a card's creation entry, then one entry per version in which its entry changed,
-with what changed (name, cost, type, rarity, tags, each face's stats and keywords, the base and
-Radiant texts, `refs`, and any other field by its key). The client imports it as
-`@jackioh/cards/history`, and the data as `@jackioh/cards/patches/*`, loading the snapshots itself
-with a dynamic `import()` so its main bundle never carries them.
-
-**A change to `catalog.json` is a patch.** Once a version has shipped, `test/patches.test.ts` fails
-until the next one is named, so the history can never fall behind the catalog:
-
-```
-pnpm --filter @jackioh/cards run patches v0.2.0 2026-10-10 "Classic and Classic+"   # name it; snapshot catalog.json
-pnpm --filter @jackioh/cards run patches                                           # rerun after each catalog change
-```
-
-Write the new entry's `notes` and `sources` in patches.json by hand; a rerun keeps them. Add its
-snapshot's loader to `SNAPSHOT_LOADERS` in `apps/web/src/cards/patches.ts` in the same change:
-`apps/web/src/cards/patches.test.ts` fails, naming the list, until every patch has one. When the
-patch ships, put its last commit in its `commits` and add `{ version, commit, blob }` to `SHIPPED`
-in `scripts/patches.ts` (`git rev-parse <commit>:packages/cards/catalog.json` prints the blob). The
-tests pin the history up to v0.1.1 and read any later patch off the data, so those two steps are all
-a new patch asks of them. The script refuses to name a patch while the newest has not shipped, and
-to rewrite a shipped one. It reads git, so run it on a full clone (`git fetch --unshallow` first on
-a shallow one). History is presentation only: `CATALOG_VERSION` stays `core-1`, and no game, replay
-or server reads a snapshot.
-
-## 8. Commands
+## 7. Commands
 
 ```
 pnpm exec vitest run --project cards                 # every card test
-pnpm exec vitest run --project cards 043              # one card
+pnpm exec vitest run --project cards 043              # card 043 of every set that has one
+pnpm exec vitest run --project cards test/classic/    # one set's cards (test/classic-plus/ for Classic+)
 pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
-pnpm --filter @jackioh/cards run patches              # rewrite patches/ (see §7)
+pnpm --filter @jackioh/cards patch <version> "<title>"   # record a patch (§8)
 ```
+
+## 8. Patches and the catalog version (R388)
+
+Every change to card data is a patch, and every patch is kept, so an older version of any card can
+still be read.
+
+- **Patches are data.** `patches/patches.json` lists every patch in order as `{ version, date,
+  title, source, notes }`, and `patches/<version>.json` is the whole catalog as that patch left it
+  (snapshots, not diffs). A generated index maps each card id to the versions in which it changed;
+  the client's History section and Patch notes page read these files (`apps/web/README.md`).
+- **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0-r1
+  (2026-09-22: the Core Set balance changes of issue #1); v0.1.0-r2 (2026-09-24: #95's text, and The
+  Coin added); v0.1.0-r3 (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
+  `refs`); v0.1.1 (2026-09-27, issue #27: the Ghoul Token added and 105 entries changed); v0.2.0
+  (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
+  below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
+  full clone (a shallow one stops early).
+- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.0`, and a test
+  holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version. A
+  patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
+  (`apps/server/.env.example`, `render.yaml`); the client's `VITE_CATALOG_VERSION`; and the database,
+  where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
+  version stays opaque (R105): nothing parses or orders one, and the order of patches is
+  `patches.json`'s.
+- **Making one.** `pnpm --filter @jackioh/cards patch <version> "<title>"` (in `scripts/`, where fs
+  is allowed) snapshots `catalog.json`, diffs it against the previous snapshot and writes the
+  patch-notes entry, card by card.
+- **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its
+  script. A patch that changes what a script does is recorded by the card's new text and its ruling,
+  and an old log of that card's games replays exactly only under the code it was played with.
+
+Patch v0.2.0's changes to Core, beside the two new sets:
+
+| Card | v0.2.0 |
+| --- | --- |
+| #65 Masochism Mask | costs (1) |
+| #43 Big Felinor, #88 Twisting Nether, #49 Snom Bunny Mind Control, #17 Flood, #34 Collateral Damage | cost (4) each |
+| #16 Hit Job | costs (3) |
+| #32 Prem Panther | draws only after **it attacks** (a declared or forced attack) **and survives that combat**: 2 for each Unit that attack destroyed, the attacked Unit and, on the Radiant face, its Cleave kills; never while defending and never when it dies in the combat (R426) |
+| #41 Sheepish | fires after the played Unit resolves, so its Cry happens, and then transforms it into a Sheep Token; the Radiant face still adds the (0) Cost Lava Golem (R427, rewriting R17's Sheepish half) |
+| #22 Carnivorous Cube | its Cry tributes one of your other Units, never a backrow card (R428, rewriting R41) |
+| #31 KY's Math Equation | "Deal Fib(times played + 1) damage to a target. End of turn: Return this to your hand with +1 cost (maximum (4))."; Radiant Fib(times played + 3). *Times played* counts this card's plays, the current one included, kept on the instance in every zone as `costMod` is, so the 1st play deals Fib(2) = 1, the 2nd 2, the 3rd 3, the 4th 5, the 5th 8; the return never lifts its cost above (4) (R429, rewriting R25 and R67) |
+| #60 Bear Honeypot | stays face-down, neither firing nor consumed, while its controller has no empty, unlocked, unreserved unit zone (R430) |
+| #21 Hinder | base: "Cast on draw: Your opponent's next mana refresh is 1 lower. Discard 1." — the caster discards a card of their choice (R16), a hand prompt during the draw (R158), and nothing with an empty hand; the Radiant face is unchanged, with no discard (R431) |
+| #95 Call to Chaos | Radiant: "Cast three different random effects" from its list, the shape C+ #73 has (R423) |
+
+The same patch rewrote every text in the house style (R432) and opened every Core pool that names no
+set to all three sets (R380): #7, #54, #57, #59, #67, #83, #95, #98 and #99 draw from every set, while
+#82 KY's Trial and #97 Zephyrs name Core and keep to it.

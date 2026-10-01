@@ -24,6 +24,7 @@ import type {
   PlayerId,
   PlayerView,
 } from "@jackioh/shared";
+import type { LastBoardEntry } from "../api/ports";
 
 declare const engineStateBrand: unique symbol;
 
@@ -31,11 +32,15 @@ export type EngineState = { readonly [engineStateBrand]: never };
 
 export type ReduceResult = { state: EngineState; events: GameEvent[]; error?: string };
 
+/** R417: each seat's last board in seat order, a setup input beside the decks (C+ #29). */
+export type LastBoards = readonly [readonly LastBoardEntry[], readonly LastBoardEntry[]];
+
 export type CreateGameArgs = {
   seed: string;
   /** Two decks of card ids in library order; the engine shuffles them with the match rng. */
   decks: [string[], string[]];
   catalog?: CardDefs;
+  lastBoards?: LastBoards;
 };
 
 export type FoldArgs = {
@@ -43,6 +48,8 @@ export type FoldArgs = {
   decks: [string[], string[]];
   log: readonly Action[];
   catalog?: CardDefs;
+  /** R417: the boards the match was created with, so the fold is the same game. */
+  lastBoards?: LastBoards;
 };
 
 /**
@@ -84,6 +91,11 @@ export type EnginePort = {
    */
   dealRandomDeck: (seed: string) => string[];
   /**
+   * R417, R565: each seat's last board from a finished game, seat order — every card on the field,
+   * both sides, minus what that seat could not read (the other side's face-down cards, R33).
+   */
+  lastBoards: (state: EngineState) => [LastBoardEntry[], LastBoardEntry[]];
+  /**
    * SPEC §11 R376: a finished game's record for the card statistics — each seat's opening hand,
    * draws and plays, and the ending — read off `(seed, decks, log)`; null when the log leaves the
    * game without a result. The composition root binds `ServerDeps.games.summarize` to it.
@@ -102,6 +114,7 @@ export const REQUIRED_ENGINE_EXPORTS = [
   "hashState",
   "mulliganOwed",
   "createRng",
+  "lastBoardFor",
   "summarizeGame",
 ] as const;
 

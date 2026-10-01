@@ -406,7 +406,7 @@ describe("replay with scripted decks (§9.2, §9.3)", () => {
     for (const seed of runs) expect(seed.replayPeaks, seed.seed).toEqual(seed.livePeaks);
   });
 
-  it("§9.3 a different seed gives a different hash, with the same scripted decks", () => {
+  it("§9.3 a different seed gives a different hash, with the same scripted decks", { timeout: 60_000 }, () => {
     const a = playScriptedGame("scripted-hash-a");
     const b = playScriptedGame("scripted-hash-b");
     expect(hashState(a.state)).not.toBe(hashState(b.state));

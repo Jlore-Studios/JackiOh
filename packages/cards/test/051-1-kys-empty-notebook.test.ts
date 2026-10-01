@@ -108,12 +108,16 @@ describe("#51.1 KY's Empty Notebook — §5.1 absent from every random pool", ()
     expect(ids).toContain("core-051");
   });
 
-  it("§5.1 the KY pool is #31, #51 and #82 — the Token-tagged KY card is never offered", () => {
-    // The pool #57 Conjure KY generates from: the KY tag, minus tokens, minus the generator.
-    expect(pool("57", { tags: ["KY"] }).map((card) => card.id)).toEqual([
+  it("§5.1 the KY pool is Core #31, #51, #82 and Classic+ #41, #42, #62 — the Token-tagged KY cards are never offered", () => {
+    // The pool #57 Conjure KY generates from: the KY tag of every set (R380), minus tokens, minus
+    // the generator.
+    expect(pool("core-057", { tags: ["KY"] }).map((card) => card.id)).toEqual([
       "core-031",
       "core-051",
       "core-082",
+      "classicplus-041",
+      "classicplus-042",
+      "classicplus-062",
     ]);
     expect(query({ tags: ["KY"] }).map((card) => card.id)).not.toContain("core-051-1");
   });

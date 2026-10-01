@@ -3,10 +3,10 @@
 // animation runner reads the effects speed at every enqueue (R201), the effects layer re-renders on
 // the intensity, and every card face on the foil switch.
 
-import { useId, type ReactElement } from "react";
+import { useId, type CSSProperties, type ReactElement } from "react";
 
 import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings } from "../cards/settings.ts";
-import { FX_SPEED_STEPS } from "../fx/constants.ts";
+import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 
 /** Every intensity the effects layer knows, in the order the picker lists them. */
@@ -17,8 +17,69 @@ const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
-function speedLabel(speed: number): string {
-  return `${String(speed)}×`;
+/** The readout rounds the speed to hundredths: "0.25×", never "0.2500000001×". */
+const SPEED_LABEL_SCALE = 100;
+
+/** "1.5×", "0.25×": the speed as the slider's readout and its value text say it (R435). */
+export function speedLabel(speed: number): string {
+  return `${String(Math.round(speed * SPEED_LABEL_SCALE) / SPEED_LABEL_SCALE)}×`;
+}
+
+/** Where on the track `speed` sits, 0 to 1, for the filled part of the slider. */
+function trackFill(speed: number): number {
+  return (speed - FX_SPEED_MIN) / (FX_SPEED_MAX - FX_SPEED_MIN);
+}
+
+/**
+ * R435: the effects speed as a slider from FX_SPEED_MIN to FX_SPEED_MAX in FX_SPEED_STEP steps, with
+ * its value beside it. A native range input, so the arrow keys, Page Up/Down, Home and End move it and
+ * assistive tech reads it; the row is the 44px touch target. Ticks mark the slowest, the default and
+ * the fastest.
+ */
+function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }): ReactElement {
+  const id = useId();
+  const style = { "--fx-speed-fill": String(trackFill(props.speed)) } as CSSProperties;
+  return (
+    <div className="settings-row settings-row--slider">
+      <div className="settings-control settings-control--slider">
+        <label className="settings-label" htmlFor={`${id}-range`}>
+          Effects speed
+        </label>
+        <output className="settings-slider-value" htmlFor={`${id}-range`} data-testid="setting-fxSpeed-value" aria-live="off">
+          {speedLabel(props.speed)}
+        </output>
+      </div>
+      <input
+        id={`${id}-range`}
+        type="range"
+        className="settings-slider"
+        data-testid="setting-fxSpeed"
+        min={FX_SPEED_MIN}
+        max={FX_SPEED_MAX}
+        step={FX_SPEED_STEP}
+        value={props.speed}
+        aria-valuetext={speedLabel(props.speed)}
+        aria-describedby={`${id}-hint`}
+        style={style}
+        list={`${id}-ticks`}
+        onChange={(event) => {
+          props.onChange(Number(event.currentTarget.value));
+        }}
+      />
+      <datalist id={`${id}-ticks`}>
+        <option value={FX_SPEED_MIN} label={speedLabel(FX_SPEED_MIN)} />
+        <option value={FX_SPEED_DEFAULT} label={speedLabel(FX_SPEED_DEFAULT)} />
+        <option value={FX_SPEED_MAX} label={speedLabel(FX_SPEED_MAX)} />
+      </datalist>
+      <div className="settings-slider-scale" aria-hidden="true">
+        <span>{speedLabel(FX_SPEED_MIN)}</span>
+        <span>{speedLabel(FX_SPEED_MAX)}</span>
+      </div>
+      <p className="settings-hint" id={`${id}-hint`}>
+        How fast cards move, hit and die. Faster also shortens the pauses between them.
+      </p>
+    </div>
+  );
 }
 
 /** A labelled native select: the platform's own picker on a phone, a 44 px row everywhere. */
@@ -59,24 +120,15 @@ function SelectRow(props: {
   );
 }
 
-/** Task 1's effects speed (R201) and intensity. */
+/** Task 1's effects speed (R201, R435) and intensity. */
 export function FxControls(): ReactElement {
   const [settings, set] = useFxSettings();
-  // A stored speed off the steps (a hand-edited value, still inside R201's range) is listed too,
-  // so the select never shows a value it does not hold.
-  const steps: readonly number[] = FX_SPEED_STEPS.includes(settings.speed as (typeof FX_SPEED_STEPS)[number])
-    ? FX_SPEED_STEPS
-    : [...FX_SPEED_STEPS, settings.speed].sort((a, b) => a - b);
   return (
     <>
-      <SelectRow
-        label="Effects speed"
-        hint="How fast cards move, hit and die. Faster also shortens the pauses between them."
-        testId="setting-fxSpeed"
-        value={String(settings.speed)}
-        options={steps.map((speed) => ({ value: String(speed), label: speedLabel(speed) }))}
-        onChange={(value) => {
-          set({ speed: Number(value) });
+      <SpeedSlider
+        speed={settings.speed}
+        onChange={(speed) => {
+          set({ speed });
         }}
       />
       <SelectRow

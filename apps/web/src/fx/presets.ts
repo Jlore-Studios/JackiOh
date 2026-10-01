@@ -1,8 +1,10 @@
 /**
  * Particle physics per preset (docs/polish/1-animations.md, S5). CLAUDE.md rule 9: this table is
  * where every particle number lives. Glowing presets (fire, holy, arcane, sparkle, gold, prismatic,
- * spark, confetti) add light with `lighter`; the rest (ember, poison, smoke, dust, shard, void) paint
- * over with `source-over`. Every `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so nothing a
+ * spark, confetti) add light with `lighter`; the rest (ember, poison, smoke, dust, shard, void, blood,
+ * frost) paint over with `source-over`. Blood (crimson droplets that fall) and frost (ice shards that
+ * scatter) are R502's: #27 Blood Ridden's price and #21 Hinder's cracked crystals, and any card's
+ * mark drawn in crimson or cyan (R437). Every `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so nothing a
  * burst leaves behind outlives the tail the runner allows (R200).
  *
  * Two optional looks ride on a preset. `stretch` draws a fast particle as a streak along its
@@ -211,6 +213,32 @@ export const PARTICLE_PRESETS: { readonly [P in FxPreset]: ParticlePresetSpec } 
     shrink: false,
     twirl: true,
   },
+  blood: {
+    life: [420, 850],
+    speed: [60, 230],
+    size: [4, 10],
+    gravity: 520,
+    drag: 0.5,
+    spin: 0,
+    blend: "source-over",
+    colors: ["#ff4a5f", "#d4142f", "#8f0a1f", "#ff8a96"],
+    shrink: true,
+    stretch: 1.4,
+    flash: { core: "#ffe1e5", color: "#d4142f", scale: 0.8, ms: 220 },
+  },
+  frost: {
+    life: [380, 820],
+    speed: [110, 300],
+    size: [3, 8],
+    gravity: 260,
+    drag: 0.45,
+    spin: 10,
+    blend: "source-over",
+    colors: ["#e8fbff", "#9be8ff", "#4fc3f7", "#c9d8ff"],
+    shrink: true,
+    stretch: 2,
+    flash: { core: "#f2fdff", color: "#6fd6ff", scale: 0.7, ms: 200 },
+  },
 };
 
 /** Every preset in a fixed order: the particle pool stores a preset as its index here. */
@@ -229,4 +257,6 @@ export const PRESET_ORDER: readonly FxPreset[] = [
   "prismatic",
   "void",
   "confetti",
+  "blood",
+  "frost",
 ];

@@ -1,0 +1,27 @@
+{
+  "id": "08-reserves-a",
+  "spec": "08-turn-cap-draw.cy.ts",
+  "description": "Player 1's deck for spec 08 at R389's 60-turn cap: 08-do-nothing-a with #100 Ceaseless Void swapped for #75 Infinite Reserves, a (0) Field Spell (\"Drawing from an empty deck gives you a Rush Token card instead of fatigue.\"). Since patch v0.2.0 doubled the cap, two do-nothing 20-card decks fatigue out at player-turn 48 (R389's engine test), so each seat now holds Infinite Reserves and plays it, the only card the spec plays. Everything else is 08-do-nothing-a's reasoning: no Cast-on-draw, no Quickdraw, no hand trigger, no X-cost or embiggen card, every other cost 3 or more, so nothing resolves by itself and no hero loses health. The spec's seed (08-turn-cap-26) deals Infinite Reserves into this seat's opening hand.",
+  "cards": [
+    "core-006",
+    "core-013",
+    "core-014",
+    "core-017",
+    "core-019",
+    "core-022",
+    "core-025",
+    "core-026",
+    "core-029",
+    "core-034",
+    "core-038",
+    "core-043",
+    "core-047",
+    "core-049",
+    "core-052",
+    "core-053",
+    "core-054",
+    "core-055",
+    "core-066",
+    "core-075"
+  ]
+}

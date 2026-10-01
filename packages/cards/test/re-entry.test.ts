@@ -59,6 +59,8 @@ const HEROIC_POWER = "core-098";
 const VANILLA = "core-008";
 const HIT_JOB = "core-016";
 const FLOOD = "core-017";
+/** The Coin (§2.1): one more mana this turn, where a test's turn now needs it. */
+const COIN = "core-t-coin";
 const BREAD_AND_BUTTER = "core-018";
 const CUBE = "core-022";
 const SEVEN_SEVEN = "core-025";
@@ -127,13 +129,15 @@ describe("R174: #50 K-Pop Fanatic's delayed steal and a target that left the fie
   it("R174 the steal fizzles on a target that was bounced and replayed before it fired (R76, R78)", () => {
     const g = scenario({
       p1: { hand: [KPOP, VANILLA], field: [{ def: VANILLA, lane: 1 }], library: [...LIBRARY] },
-      p2: { hand: [FLOOD, SEVEN_SEVEN], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
+      // The Coin pays for the replay: Flood costs (4) since patch v0.2.0 (issue #40).
+      p2: { hand: [FLOOD, SEVEN_SEVEN, COIN], field: [{ def: VANILLA, lane: 2 }], library: [...LIBRARY] },
     });
     const prey = unitAt(g, "p2", 2);
     g.play(KPOP, { targets: at(prey) });
     g.endTurn();
 
     // p2 bounces every unit, the prey included, and plays the prey again.
+    g.play(COIN);
     g.play(FLOOD);
     g.expectInZone(prey, "hand");
     g.play(prey, { zone: 2 });
@@ -269,7 +273,8 @@ describe("§7, R41, R57: what a copy keeps", () => {
         library: [...LIBRARY],
         mana: 3,
       },
-      p2: { hand: [HIT_JOB, JILLIAX, HIT_JOB], library: [...LIBRARY] },
+      // The Coin pays for Jilliax beside Hit Job, (3) since patch v0.2.0 (issue #40).
+      p2: { hand: [HIT_JOB, JILLIAX, HIT_JOB, COIN], library: [...LIBRARY] },
     });
     const saintess = g.card(SAINTESS);
 
@@ -280,6 +285,7 @@ describe("§7, R41, R57: what a copy keeps", () => {
     g.expectStats(bread, { attack: 3, health: 3 });
 
     // p2 kills the Saintess: her Death makes every other p1 unit Radiant, so the Bread is Armor 3.
+    g.play(COIN);
     g.play(HIT_JOB, { targets: at(saintess) });
     g.play(JILLIAX);
     expect(g.card(bread).radiant).toBe(true);
@@ -495,7 +501,8 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
         library: [...LIBRARY],
       },
       p2: {
-        hand: [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA],
+        // The Coin pays for Flood beside Magic Jammed: Flood costs (4) since patch v0.2.0 (issue #40).
+        hand: [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA, COIN],
         field: [{ def: KPOP, lane: 3 }],
         backrow: [{ def: EXPERIMENTATION, lane: 3 }],
         library: [...LIBRARY],
@@ -513,6 +520,7 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
     expect(g.backrow("p1", 2)?.id).toBe(jammed.id);
     g.endTurn();
     // Turn 10, p2: Magic Jammed locks p1's backrow lane 2, and Flood returns the fused unit to hand.
+    g.play(COIN);
     g.play(MAGIC_JAMMED, { targets: at(jammed) });
     g.play(FLOOD);
     g.expectInZone(fused, "hand");
@@ -533,7 +541,6 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
   });
 });
 
-const CRAFT_A_CARD = "core-099";
 const SCARAB = "core-007";
 const RENO = "core-053";
 
@@ -545,9 +552,9 @@ function must<T>(value: T | null | undefined, what: string): T {
 describe("R174: a later part of one effect list meets the stay the play chose, across a prompt too", () => {
   it("R174 a crafted Cube + Scarab + Sorcerer that eats a Reborn unit does not hit its Reborn body after the Discover (R113, R83, R102)", () => {
     const g = scenario({
-      seed: "r6craft-1057", // radiant Craft a Card's Discovers offer Cube, then Scarab, then Sorcerer
+      seed: "r6craft-1057",
       p1: {
-        hand: [{ def: CRAFT_A_CARD, radiant: true }, STOCKPILE],
+        hand: [STOCKPILE],
         mana: 4,
         field: [{ def: TIMMY, lane: 1 }],
       },
@@ -555,11 +562,10 @@ describe("R174: a later part of one effect list meets the stay the play chose, a
     });
     // Granted Reborn (Plastic Surgery's pool, R21): no shield or Armor hides whether a hit lands.
     must(g.unit("p1", 1), "Tempo Timmy").grantedKeywords = [{ kind: "Reborn" }];
-    g.play(CRAFT_A_CARD);
-    g.answer(CUBE);
-    g.answer(SCARAB);
-    g.answer(SORCERER);
-    const card = must(g.hand("p1").find((held) => held.defId.startsWith("t-")), "the crafted card");
+    // Radiant Craft a Card's three-ingredient card, made as the card makes it (R77): its Discovers
+    // draw from every set's Units since patch v0.2.0 (R380), so the test builds the card directly
+    // rather than hunting a seed that offers these three.
+    const card = craft(g, "p1", [CUBE, SCARAB, SORCERER]);
     const saintess = must(g.unit("p1", 1), "the Reborn Timmy");
     const at = { pick: "instance" as const, instanceId: saintess.id };
 
@@ -821,6 +827,9 @@ describe("§3.2, R13, R174: a card the play's own Stack buried is not on the fie
   });
 });
 
+/** What p2's Cube eats in the cases below: one of p2's own Units (R428), no Timmy and no Mr. Vanilla. */
+const P2_MEAL = "core-019";
+
 describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", () => {
   /** p1's unit row as def ids, lane 1 to 5. */
   function unitRow(s: Scenario): (string | null)[] {
@@ -840,22 +849,22 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p1", 1), "Tempo Timmy").id }] });
     const kept = must(s.unit("p1", 2), "p1's Cube");
 
-    // p2's Cube eats p2's Mana Well; after its Cry, #85 fuses it onto p1's Cube, the only unit p1 has
-    // (R61). The kept instance is p1's Cube, and its memory is the Timmy it ate (R77).
+    // p2's Cube eats p2's Midrange Menace (a Unit: R428); after its Cry, #85 fuses it onto p1's Cube,
+    // the only unit p1 has (R61). The kept instance is p1's Cube, and its memory is the Timmy it ate (R77).
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     expect(s.card(kept).defId).toMatch(/core-022\+core-022/);
 
     s.endTurn();
     s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: kept.id }] });
 
     // The kept Cube's text copies its meal twice ("each Death copies its own", R102). The played
-    // Cube's text ate a Mana Well on another instance, never a Timmy. The engine hands the kept
+    // Cube's text ate a Midrange Menace on another instance, never a Timmy. The engine hands the kept
     // card's one meal to both texts and summons four Timmies.
     expect(count(unitRow(s), TIMMY)).toBe(2);
   });
@@ -870,7 +879,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     // p1's Cube eats Tempo Timmy: its text remembers the meal through `remember`, under "eaten".
     s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p1", 1), "Tempo Timmy").id }] });
@@ -881,7 +890,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
     // p2's Cube, after its Cry, is fused onto p1's Cube by #85 (R61): the kept instance's texts are
     // one ingredient of the new fusion now, and the meal goes with them to that ingredient's path.
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     const after = s.card(kept).memory;
     expect(s.card(kept).defId).toMatch(/core-022\+core-022/);
     expect(after).not.toHaveProperty("eaten");
@@ -904,7 +913,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     const cubes = s.hand("p1").filter((card) => card.defId === CUBE);
     const crafted = must(subsystems.fuse(sinkFor(s), { ingredients: cubes, toHand: "p1" }), "Cube + Cube");
@@ -919,7 +928,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
     expect(unitRow(s)).toEqual([null, null, crafted.defId, null, null]);
 
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     s.endTurn();
     s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: crafted.id }] });
 

@@ -27,12 +27,14 @@ import {
 import {
   createMemoryDeckStores,
   createMemoryGameRecordStore,
+  createMemoryLastBoardStore,
   createMemoryTutorialStore,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
   type GameRecordTables,
+  type LastBoardTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
 import type {
@@ -65,6 +67,7 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
+  LastBoardTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -83,6 +86,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
     gameRecords: [],
   };
 }
@@ -314,6 +318,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.series = deckStores.series;
   // R320: tutorial progress, the same in-memory store the end-to-end server runs.
   store.tutorial = createMemoryTutorialStore(() => tables, call);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables, call);
   // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables, call);
 

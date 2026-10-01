@@ -160,7 +160,7 @@ describe("T-sheep Sheep Token (SPEC §7)", () => {
       expect(ids(query({ type: "Unit" }))).not.toContain(def.id);
       expect(ids(query({ cost: 1 }))).not.toContain(def.id);
       expect(ids(query({ token: true }))).toContain(def.id);
-      expect(ids(query({ index: "T-sheep" }))).toEqual([def.id]);
+      expect(ids(query({ defId: "core-t-sheep" }))).toEqual([def.id]);
     });
   });
 

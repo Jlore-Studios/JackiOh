@@ -14,14 +14,14 @@ import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView
 
 import { newEventsSince } from "../../game/animations.ts";
 import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
-import { playLesson, type LessonRun } from "../harness.ts";
+import { LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./basics.ts";
 
 const LESSON = "basics";
 /** The coach's line wins on the player's 6th turn; the lesson is meant to take 6 to 8. */
 const COACH_TURNS_MAX = 8;
-/** The autopilot's line wins on its 6th turn too. */
+/** The autopilot's line wins on its 7th turn. */
 const AUTOPILOT_TURNS_MAX = 8;
 /**
  * A beginner who plays only what the coach names (and otherwise only attacks and ends the turn)
@@ -32,13 +32,9 @@ const PASSIVE_TURNS_MAX = 8;
 const GOT_IT_RUN_MAX = 2;
 /**
  * Policy seeds for the player who ignores the coach. The harness gives the AI a small budget under
- * the random policy, so each of these games costs a second or three.
+ * the random policy, so each of these games costs less than a lesson game (harness.ts).
  */
-const RANDOM_RUNS = 15;
-/** One lesson game through the real core takes a few seconds; generous, for a loaded machine. */
-const LESSON_TIMEOUT_MS = 60_000;
-/** The random policy's allowance, for all of its runs. */
-const RANDOM_TIMEOUT_MS = 240_000;
+const RANDOM_RUNS = 8;
 
 const VANILLA = "core-008";
 const COIN = "core-t-coin";
@@ -126,7 +122,7 @@ describe("R293 lesson basics", () => {
   beforeAll(() => {
     coach = playLesson(LESSON, { policy: "coach" });
     steps = stepsOf(coach);
-  }, LESSON_TIMEOUT_MS);
+  }, LESSON_GAME_TIMEOUT_MS);
 
   it("R293 basics: following the coach wins the lesson, and every step shows and is done", () => {
     expect(coach.winner, "the human wins").toBe(human);
@@ -268,7 +264,7 @@ describe("R293 lesson basics", () => {
       expect(run.humanActions.filter((entry) => entry.action.type === "play" && !entry.byCoach)).toEqual([]);
       expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -279,7 +275,7 @@ describe("R293 lesson basics", () => {
       expect(run.humanTurns).toBeLessThanOrEqual(AUTOPILOT_TURNS_MAX);
       expect(run.coach.finished).toBe(true);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -295,7 +291,7 @@ describe("R293 lesson basics", () => {
         }
       }
     },
-    RANDOM_TIMEOUT_MS,
+    RANDOM_RUNS * RANDOM_GAME_MS,
   );
 
   it(
@@ -313,6 +309,6 @@ describe("R293 lesson basics", () => {
       expect(again.shown).toEqual(coach.shown);
       expect(again.tips).toEqual(coach.tips);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 });

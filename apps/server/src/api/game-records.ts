@@ -8,7 +8,7 @@
  *
  *  - the match's mode (R257), read off what made it: its series, its room or its queue tickets
  *    (`matches.modeOf`), so the match row and the path that starts a match are unchanged;
- *  - the patch the build's cards are (R375's newest patch, `deps.games.patch`);
+ *  - the patch the build's cards are (R388's newest patch, `deps.games.patch`);
  *  - two human pilots: a live match is two players, and a prompt the clock answered for one of them
  *    (R79's `timeout`) is still their game;
  *  - `source: "live"`, which is what keeps it apart from the AI's development runs (R378).

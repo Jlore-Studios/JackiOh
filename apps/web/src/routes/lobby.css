@@ -80,8 +80,7 @@
   max-width: 100%;
 }
 
-.lobby .lobby-note,
-.lobby .lobby-population {
+.lobby .lobby-note {
   margin: 4px 0 0;
   color: var(--text-dim);
   font-size: 13px;
@@ -449,8 +448,7 @@
   color: var(--tavern-text-dim);
 }
 
-.tavern.play-screen .lobby-note,
-.tavern.play-screen .lobby-population {
+.tavern.play-screen .lobby-note {
   margin: 0;
   color: var(--tavern-text-dim);
   font-size: 13px;
@@ -548,11 +546,17 @@
   }
 }
 
+/* Reduced motion, the media query's or the settings panel's: the rings hold still and stay drawn. */
 @media (prefers-reduced-motion: reduce) {
   .tavern.play-screen .play-search__ring {
     animation: none;
     opacity: 0.6;
   }
+}
+
+:root[data-reduce-motion="true"] .tavern.play-screen .play-search__ring {
+  animation: none;
+  opacity: 0.6;
 }
 
 .tavern.play-screen .play-search__text {

@@ -6,7 +6,7 @@
 //     cardDef("core-043")` is the contract, see README), and
 //   - every `def` in the package is identical to the catalog the client and the engine see.
 
-import type { CardDef, CardDefs } from "@jackioh/shared";
+import type { CardDef, CardDefs, SetName } from "@jackioh/shared";
 import catalogJson from "../catalog.json";
 
 /**
@@ -17,7 +17,7 @@ import catalogJson from "../catalog.json";
 export const CATALOG: CardDefs = catalogJson as unknown as CardDefs;
 
 /** §9.4: the catalog version the engine registers, bumped when card data changes. */
-export const CATALOG_VERSION = "core-1";
+export const CATALOG_VERSION = "v0.2.0";
 
 /** Every catalog id, in catalog.json order (`core-001` … `core-t-bread`). */
 export const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);
@@ -31,11 +31,14 @@ export function cardDef(id: string): CardDef {
   return def;
 }
 
-/** A def by its SPEC §5 index ("43", "51.1", "T-rush"), for tests and pools named by index. */
-export function cardDefByIndex(index: string): CardDef {
-  const def = Object.values(CATALOG).find((entry) => entry.index === index);
+/**
+ * A def by its SPEC §5 index ("43", "51.1", "T-rush") within its set — an index is unique only
+ * there (B2.2) — for tests and pools named by index.
+ */
+export function cardDefByIndex(set: SetName, index: string): CardDef {
+  const def = Object.values(CATALOG).find((entry) => entry.set === set && entry.index === index);
   if (def === undefined) {
-    throw new Error(`no catalog entry with index "${index}" (packages/cards/catalog.json)`);
+    throw new Error(`no ${set} catalog entry with index "${index}" (packages/cards/catalog.json)`);
   }
   return def;
 }

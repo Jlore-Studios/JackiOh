@@ -488,6 +488,7 @@ export function App(): ReactElement {
 
     if (path === paths.practice) return <PracticeRoute />;
     if (path === paths.privacy) return <PrivacyRoute />;
+    // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) return <PatchNotesRoute />;
 
     const matchId = matchIdOf(path);

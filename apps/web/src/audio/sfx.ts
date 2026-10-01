@@ -24,7 +24,7 @@
 // the UI ticks quieter still but plainly audible. The component spec (audio-recipes.cy.tsx)
 // renders every recipe through the real mix and holds these bands, so a retune cannot drift.
 
-import { IMPACT_AMOUNT_CAP } from "./constants.ts";
+import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
@@ -32,11 +32,13 @@ export const SFX_IDS: readonly SfxId[] = [
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
+  "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
 export const SFX_TIMBRES: readonly SfxTimbre[] = [
   "human", "felinor", "ky", "cn", "fruit", "chaos", "quickdraw", "token", "field",
+  "book", "pancake", "ai",
 ];
 
 /** Schedules one sound starting at `at` (context seconds) into `out`; returns its length in seconds. */
@@ -70,6 +72,36 @@ export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   const data = buffer.getChannelData(0);
   for (let i = 0; i < length; i += 1) data[i] = random() * 2 - 1;
   noiseCache.set(ctx, buffer);
+  return buffer;
+}
+
+/* ------------------------------------------------------------------------------------------- *
+ * The bit-crushed wavetable (the AI family, R506)
+ * ------------------------------------------------------------------------------------------- */
+
+/** Samples in one cycle of the crushed wave; a looped buffer source plays it at any pitch. */
+const CRUSH_CYCLE = 32;
+/** Each value is held this many samples: the sample-rate reduction half of a bit crusher. */
+const CRUSH_HOLD = 4;
+/** Amplitude steps on each side of 0 (about three bits): the bit-depth half. */
+const CRUSH_LEVELS = 3;
+const crushCache = new WeakMap<BaseAudioContext, AudioBuffer>();
+
+/**
+ * One cycle of a sine held in coarse steps and rounded to a few levels, cached per context: the
+ * gritty, aliased blip of an old sound chip, built from a buffer since the permitted subset has no
+ * wave shaper.
+ */
+function crushedBuffer(ctx: BaseAudioContext): AudioBuffer {
+  const cached = crushCache.get(ctx);
+  if (cached !== undefined) return cached;
+  const buffer = ctx.createBuffer(1, CRUSH_CYCLE, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < CRUSH_CYCLE; i += 1) {
+    const held = i - (i % CRUSH_HOLD);
+    data[i] = Math.round(Math.sin((2 * Math.PI * held) / CRUSH_CYCLE) * CRUSH_LEVELS) / CRUSH_LEVELS;
+  }
+  crushCache.set(ctx, buffer);
   return buffer;
 }
 
@@ -239,6 +271,34 @@ function tone(
   return osc;
 }
 
+/** A bit-crushed blip at `hz` into `into`: the crushed wavetable looped at that pitch, enveloped. */
+function crushedBlip(k: Kit, into: AudioNode, hz: number, start: number, stop: number, peak: number): void {
+  const source = k.ctx.createBufferSource();
+  source.buffer = crushedBuffer(k.ctx);
+  source.loop = true;
+  source.playbackRate.setValueAtTime((hz * CRUSH_CYCLE) / k.ctx.sampleRate, time(k, start));
+  chain(source, envelope(k, start, 0.002, peak, stop), into);
+  run(k, source, start, stop);
+}
+
+/**
+ * Short clicks on one filtered noise band, at `times` (a reel's ratchet, a clock's escapement):
+ * one gain whose envelope strikes and falls again at each time.
+ */
+function clickTrain(k: Kit, into: AudioNode, times: readonly number[], hz: number, q: number, peak: number, decay: number): void {
+  const noise = noiseSource(k);
+  const gain = k.ctx.createGain();
+  gain.gain.setValueAtTime(0, k.at);
+  for (const start of times) {
+    const top = time(k, start + 0.001);
+    gain.gain.setValueAtTime(0, time(k, start));
+    gain.gain.linearRampToValueAtTime(peak, top);
+    gain.gain.exponentialRampToValueAtTime(FLOOR, Math.max(top, time(k, start + decay)));
+  }
+  chain(noise, biquad(k, "bandpass", hz, q), gain, into);
+  run(k, noise, 0, (times[times.length - 1] ?? 0) + decay);
+}
+
 /** amount → t in [0, 1]: 1 (or none) is 0, IMPACT_AMOUNT_CAP and above is 1. */
 function amountT(params: SfxParams): number {
   const clamped = Math.min(IMPACT_AMOUNT_CAP, Math.max(1, params.amount ?? 1));
@@ -326,6 +386,34 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
     case "token": {
       const pop = tone(k, k.out, "sine", 900, t0 - 0.02, 0.003, 0.14, t0 + 0.04);
       glide(k, pop.frequency, 500, t0 + 0.04);
+      return;
+    }
+    // Patch v0.2.0's tags (R506): a page riffled over a low bell for a Book, a soft plop into a
+    // sizzling pan for a Pancake, bit-crushed blips and a servo's whirr for an AI.
+    case "book": {
+      const noise = noiseSource(k);
+      const riffle = modulatedGain(k, "square", 40, 0.5, 0.5);
+      chain(noise, biquad(k, "bandpass", 3200, 1.2), riffle, envelope(k, t0, 0.01, 0.45, t0 + 0.09), k.out);
+      run(k, noise, t0, t0 + 0.09);
+      fmBell(k, k.out, 392, 1.4, 120, t0 + 0.04, 0.004, 0.13, t0 + 0.19);
+      return;
+    }
+    case "pancake": {
+      const plop = tone(k, k.out, "sine", 340, t0, 0.004, 0.16, t0 + 0.09);
+      glide(k, plop.frequency, 150, t0 + 0.07);
+      const noise = noiseSource(k);
+      const sizzle = modulatedGain(k, "square", 29, 0.5, 0.5);
+      chain(noise, biquad(k, "highpass", 5000, 0), sizzle, envelope(k, t0 + 0.05, 0.02, 0.28, t0 + 0.19), k.out);
+      run(k, noise, t0 + 0.05, t0 + 0.19);
+      return;
+    }
+    case "ai": {
+      crushedBlip(k, k.out, 1760, t0, t0 + 0.03, 0.1);
+      crushedBlip(k, k.out, 2349, t0 + 0.045, t0 + 0.075, 0.1);
+      const servo = oscillator(k, "sawtooth", 180, t0 + 0.08);
+      glide(k, servo.frequency, 420, t0 + 0.18);
+      chain(servo, biquad(k, "bandpass", 900, 2), envelope(k, t0 + 0.08, 0.02, 0.14, t0 + 0.19), k.out);
+      run(k, servo, t0 + 0.08, t0 + 0.19);
       return;
     }
     case "field":
@@ -492,8 +580,10 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
 /**
  * Each family's four chimes, their FM ratio and their spacing (the default is the plain spell): a
  * Field Spell rings an octave lower and warmer, Call to Chaos clashes in semitones, KY climbs a
- * major arpeggio, CN sours on a tritone, a Quickdraw spell runs its notes twice as fast. The peak
- * and the span are the plain spell's, so a family changes the colour and never the level.
+ * major arpeggio, CN sours on a tritone, a Quickdraw spell runs its notes twice as fast; a Book
+ * tolls lower on bell-like partials, a Pancake rings warm and pure, an AI chirps inharmonic data
+ * notes in a quick scatter. The peak and the span are the plain spell's, so a family changes the
+ * colour and never the level.
  */
 const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]; ratio: number; step: number }>> = {
   plain: { hz: [1319, 1760, 2093, 2637], ratio: 3.5, step: 0.06 },
@@ -506,7 +596,51 @@ const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]
   fruit: { hz: [1175, 1480, 1760, 2349], ratio: 3.5, step: 0.06 },
   human: { hz: [1047, 1568, 2093, 2637], ratio: 2, step: 0.06 },
   token: { hz: [1319, 1760, 2093, 2637], ratio: 3.5, step: 0.06 },
+  book: { hz: [784, 988, 1175, 1568], ratio: 1.4, step: 0.07 },
+  pancake: { hz: [880, 1109, 1319, 1760], ratio: 1, step: 0.07 },
+  ai: { hz: [1568, 2349, 1976, 3136], ratio: 4.5, step: 0.035 },
 };
+
+/**
+ * What a family lays under its chimes, quietly (R506): a Book's page turning as it opens, a
+ * Pancake's sizzle under a syrupy glide, an AI's bit-crushed data blips and a servo settling.
+ */
+function spellTexture(k: Kit, timbre: SfxTimbre | undefined): void {
+  switch (timbre) {
+    case "book": {
+      const noise = noiseSource(k);
+      const riffle = modulatedGain(k, "square", 38, 0.5, 0.5);
+      chain(noise, biquad(k, "bandpass", 3200, 1.2), riffle, envelope(k, 0, 0.02, 0.5, 0.14), k.out);
+      run(k, noise, 0, 0.14);
+      return;
+    }
+    case "pancake": {
+      const noise = noiseSource(k);
+      const sizzle = modulatedGain(k, "square", 27, 0.5, 0.5);
+      chain(noise, biquad(k, "highpass", 5000, 0), sizzle, envelope(k, 0, 0.03, 0.2, 0.5), k.out);
+      run(k, noise, 0, 0.5);
+      const syrup = oscillator(k, "triangle", 660, 0.1);
+      glide(k, syrup.frequency, 392, 0.6);
+      vibrato(k, syrup.frequency, 5, 8, 0.1, 0.62);
+      chain(syrup, biquad(k, "lowpass", 1400, 0), envelope(k, 0.1, 0.08, 0.1, 0.62), k.out);
+      run(k, syrup, 0.1, 0.62);
+      return;
+    }
+    case "ai": {
+      [2093, 3136, 2637].forEach((hz, i) => {
+        crushedBlip(k, k.out, hz, 0.03 * i, 0.03 * i + 0.025, 0.08);
+      });
+      const servo = oscillator(k, "sawtooth", 220, 0.12);
+      glide(k, servo.frequency, 520, 0.3);
+      glide(k, servo.frequency, 330, 0.5);
+      chain(servo, biquad(k, "bandpass", 1100, 2), envelope(k, 0.12, 0.04, 0.12, 0.52), k.out);
+      run(k, servo, 0.12, 0.52);
+      return;
+    }
+    default:
+      return;
+  }
+}
 
 /** A spell is cast: four FM chimes with a shimmering tremolo, in its family's colour. */
 const spell: SfxRecipe = (ctx, out, at, params) => {
@@ -519,6 +653,7 @@ const spell: SfxRecipe = (ctx, out, at, params) => {
     const start = chimes.step * i;
     fmBell(k, shimmer, hz, chimes.ratio, 200, start, 0.004, 0.22, 0.6 + start);
   });
+  spellTexture(k, params.timbre);
   return len;
 };
 
@@ -775,6 +910,213 @@ const refuse: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the clock (R439)
+ * ------------------------------------------------------------------------------------------- */
+
+/**
+ * #21 Hinder lands on the victim's next refresh: a mana crystal cracks, sharp and glassy, its shards
+ * tinkle down, and what is left drops away hollow.
+ */
+const manaCrack: SfxRecipe = (ctx, out, at) => {
+  const len = 0.88;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  // The crack, and a splinter right behind it.
+  chain(noise, biquad(k, "highpass", 1800, 0), envelope(k, 0, 0.002, 0.22, 0.06), out);
+  chain(noise, biquad(k, "bandpass", 4200, 2), envelope(k, 0.028, 0.002, 0.5, 0.09), out);
+  run(k, noise, 0, 0.09);
+  tone(k, out, "sine", 3730, 0, 0.002, 0.16, 0.25);
+  // The shards: short glassy pings, falling and spreading out.
+  const shards: readonly (readonly [number, number])[] = [
+    [0.05, 5274], [0.09, 4435], [0.12, 6272], [0.17, 3951], [0.23, 4978], [0.3, 3322], [0.38, 4186],
+  ];
+  for (const [start, hz] of shards) tone(k, out, "sine", hz, start, 0.002, 0.14, start + 0.12);
+  // The hollow drop: a tube-like tone sinking away, over a falling sub.
+  const drop = oscillator(k, "triangle", 440, 0.2);
+  glide(k, drop.frequency, 110, 0.75);
+  const hollow = biquad(k, "bandpass", 700, 3);
+  glide(k, hollow.frequency, 260, 0.75);
+  chain(drop, hollow, heldEnvelope(k, 0.2, 0.03, 0.9, 0.55, 0.5, len), out);
+  run(k, drop, 0.2, len);
+  const sub = tone(k, out, "sine", 220, 0.2, 0.03, 0.3, len);
+  glide(k, sub.frequency, 55, 0.75);
+  return len;
+};
+
+/** #27's blood price: a wet, low whoosh draining downward, gurgling as it goes. */
+const bloodDrain: SfxRecipe = (ctx, out, at) => {
+  const len = 0.55;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const wet = biquad(k, "bandpass", 900, 4);
+  glide(k, wet.frequency, 160, 0.5);
+  const gurgle = modulatedGain(k, "sine", 11, 0.6, 0.4);
+  chain(noise, wet, gurgle, envelope(k, 0, 0.06, 2.2, len), out);
+  const body = biquad(k, "lowpass", 1400, 0);
+  glide(k, body.frequency, 220, 0.5);
+  chain(noise, body, envelope(k, 0, 0.08, 0.8, len), out);
+  run(k, noise, 0, len);
+  const down = tone(k, out, "sine", 190, 0.02, 0.05, 0.35, len);
+  glide(k, down.frequency, 55, 0.5);
+  return len;
+};
+
+/** #27's reward: gold bursting from the card, a chord of bright chimes struck at once, and sparkle. */
+const goldBurst: SfxRecipe = (ctx, out, at) => {
+  const len = 0.82;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 6000, 0), envelope(k, 0, 0.003, 0.7, 0.07), out);
+  run(k, noise, 0, 0.07);
+  const shimmer = tremolo(k, 13, 0.18);
+  chain(shimmer, out);
+  [1568, 1976, 2349, 3136].forEach((hz, i) => {
+    fmBell(k, shimmer, hz, 3.5, 260, 0.01 * i, 0.003, 0.2, 0.7);
+  });
+  [4186, 4699, 5274].forEach((hz, i) => {
+    const start = 0.18 + 0.07 * i;
+    tone(k, shimmer, "sine", hz, start, 0.003, 0.12, start + 0.22);
+  });
+  return len;
+};
+
+/** A card cast as it is drawn: it snaps off the deck, flares and pops open, in one quick sting. */
+const castOnDraw: SfxRecipe = (ctx, out, at) => {
+  const len = 0.36;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 1500, 1.4);
+  glide(k, band.frequency, 6500, 0.12);
+  chain(noise, band, envelope(k, 0, 0.01, 1.5, 0.13), out);
+  run(k, noise, 0, 0.13);
+  const zing = oscillator(k, "triangle", 988, 0.06);
+  glide(k, zing.frequency, 1976, 0.2);
+  chain(zing, biquad(k, "lowpass", 3500, 0), envelope(k, 0.06, 0.01, 0.5, 0.26), out);
+  run(k, zing, 0.06, 0.26);
+  tone(k, out, "sine", 2637, 0.18, 0.003, 0.3, len);
+  return len;
+};
+
+/** Call to Chaos's reveal dings, one per effect named, climbing. */
+const CHAOS_DINGS: readonly number[] = [1568, 2093, 2637];
+
+/**
+ * Call to Chaos rolls (R436): a slot machine's reels spin, ratcheting and slowing under a jangling
+ * jingle, and clunk to a stop; then one bright ding for each effect the roll names (`amount`, up to
+ * CHAOS_REVEAL_MAX), so the player hears how many it picked as the board shows which.
+ */
+const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
+  const reveals = Math.min(CHAOS_REVEAL_MAX, Math.max(0, Math.round(params.amount ?? 1)));
+  const landAt = 0.78;
+  const dingGap = 0.2;
+  const ring = 0.42;
+  const len = reveals === 0 ? landAt + 0.1 : landAt + dingGap * (reveals - 1) + ring;
+  const k = kit(ctx, out, at, len);
+  // The reels: clicks whose gaps grow as they slow.
+  const clicks: number[] = [];
+  for (let t = 0, gap = 0.035; t < landAt - 0.04; gap *= 1.16) {
+    clicks.push(t);
+    t += gap;
+  }
+  clickTrain(k, out, clicks, 2600, 5, 2.4, 0.025);
+  // The jingle, stepping round an arpeggio until the reels land.
+  const notes = [1047, 1319, 1568, 2093];
+  const jingle = oscillator(k, "square", notes[0] ?? 1047);
+  for (let i = 1; 0.05 * i < landAt; i += 1) {
+    jingle.frequency.setValueAtTime(notes[i % notes.length] ?? 1047, time(k, 0.05 * i));
+  }
+  chain(jingle, biquad(k, "lowpass", 2400, 0), heldEnvelope(k, 0, 0.02, 0.14, 0.5, 0.1, landAt), out);
+  run(k, jingle, 0, landAt);
+  // The clunk as they stop.
+  tone(k, out, "sine", 150, landAt - 0.03, 0.003, 0.6, landAt + 0.1);
+  CHAOS_DINGS.slice(0, reveals).forEach((hz, i) => {
+    const start = landAt + dingGap * i;
+    fmBell(k, out, hz, 3.5, 350, start, 0.002, 0.5, start + ring);
+  });
+  return len;
+};
+
+/**
+ * A mark settles on a card (R437; #50 K-Pop Fanatic's pending steal): a dark brand sears in, a low
+ * beating drone swelling under a hiss, with a cold shimmer of clashing partials on top. With
+ * `release` the mark lifts instead: the shimmer alone, rising softly away.
+ */
+const brand: SfxRecipe = (ctx, out, at, params) => {
+  if (params.release === true) {
+    const len = 0.45;
+    const k = kit(ctx, out, at, len);
+    const shimmer = tremolo(k, 9, 0.2);
+    chain(shimmer, out);
+    const partials: readonly (readonly [number, number])[] = [
+      [1245, 1661],
+      [1661, 2217],
+    ];
+    for (const [from, to] of partials) {
+      const partial = tone(k, shimmer, "sine", from, 0, 0.12, 0.1, len);
+      glide(k, partial.frequency, to, len);
+    }
+    return len;
+  }
+  const len = 0.76;
+  const k = kit(ctx, out, at, len);
+  const drone = biquad(k, "lowpass", 300, 4);
+  glide(k, drone.frequency, 1400, 0.25);
+  glide(k, drone.frequency, 400, len);
+  chain(drone, heldEnvelope(k, 0, 0.06, 0.26, 0.4, 0.19, len), out);
+  for (const hz of [110, 116.5]) {
+    const saw = oscillator(k, "sawtooth", hz);
+    chain(saw, drone);
+    run(k, saw, 0, len);
+  }
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 3500, 0), envelope(k, 0.01, 0.01, 0.5, 0.22), out);
+  run(k, noise, 0.01, 0.22);
+  const shimmer = tremolo(k, 13, 0.25);
+  chain(shimmer, out);
+  [1661, 1760, 2489].forEach((hz, i) => {
+    const start = 0.08 + 0.05 * i;
+    tone(k, shimmer, "sine", hz, start, 0.02, 0.09, start + 0.5);
+  });
+  return len;
+};
+
+/** R439: a tense heartbeat, lub-dub, once a second while the viewer's own turn clock runs down. */
+const heartbeat: SfxRecipe = (ctx, out, at) => {
+  const len = 0.42;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const beats: readonly (readonly [number, number, number])[] = [
+    [0, 72, 0.9],
+    [0.17, 60, 0.7],
+  ];
+  for (const [start, hz, peak] of beats) {
+    const thump = tone(k, out, "sine", hz, start, 0.006, peak, start + 0.2);
+    glide(k, thump.frequency, hz * 0.6, start + 0.15);
+    chain(noise, biquad(k, "lowpass", 180, 0), envelope(k, start, 0.004, peak, start + 0.05), out);
+  }
+  run(k, noise, 0, 0.22);
+  return len;
+};
+
+/**
+ * R439: the last ten seconds of the viewer's own turn clock: a sharp tick over a tight heartbeat
+ * thump, each second (`amount` 1 at ten left to 10 at one left) higher, louder and shorter.
+ */
+const clockTick: SfxRecipe = (ctx, out, at, params) => {
+  const t = amountT(params);
+  const len = 0.3 - 0.08 * t;
+  const k = kit(ctx, out, at, len);
+  tone(k, out, "sine", 1600 + 1400 * t, 0, 0.001, 0.26 + 0.14 * t, 0.06 - 0.03 * t);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 3000, 0), envelope(k, 0, 0.001, 0.3 + 0.2 * t, 0.012), out);
+  run(k, noise, 0, 0.012);
+  // The thump lands just behind the click, so their peaks do not stack.
+  const thump = tone(k, out, "sine", 90, 0.012, 0.004, 0.38 + 0.2 * t, len);
+  glide(k, thump.frequency, 50, len);
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -806,4 +1148,12 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   entrance: { recipe: entrance, durationMs: 1400, gain: 0.6 },
   fatigue: { recipe: fatigue, durationMs: 650, gain: 0.45 },
   refuse: { recipe: refuse, durationMs: 400, gain: 0.27 },
+  manaCrack: { recipe: manaCrack, durationMs: 900, gain: 0.63 },
+  bloodDrain: { recipe: bloodDrain, durationMs: 600, gain: 0.46 },
+  goldBurst: { recipe: goldBurst, durationMs: 850, gain: 0.95 },
+  castOnDraw: { recipe: castOnDraw, durationMs: 400, gain: 0.62 },
+  chaosRoll: { recipe: chaosRoll, durationMs: 1650, gain: 0.5 },
+  brand: { recipe: brand, durationMs: 800, gain: 0.39 },
+  heartbeat: { recipe: heartbeat, durationMs: 450, gain: 0.34 },
+  clockTick: { recipe: clockTick, durationMs: 350, gain: 1 },
 };

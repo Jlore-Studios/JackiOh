@@ -46,7 +46,7 @@ import {
   act,
   cardById,
   clone,
-  corePool,
+  aiPool,
   dealtGame,
   everyCard,
   isLegal,
@@ -119,14 +119,15 @@ function isHiddenBackrow(state: GameState, card: CardInstance, seat: PlayerId): 
  * B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
  * library get new identities (and Radiant flags) and a new order, every backrow card the seat
  * cannot read gets another Trap that shows the same cost (R351: the seat reads that much, since patch
- * v0.1.1 gave #85 a cost of its own), the seat's own library is reordered, and seed, cursor and the
+ * v0.1.1 gave #85 a cost of its own) and leaves the seat's view unchanged (R403, R602: a live
+ * face-down aura shows on the board), the seat's own library is reordered, and seed, cursor and the
  * nonce log are replaced.
  */
 function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState {
   const out = clone(state);
   const rng = createRng(`observe-mutate:${seed}`);
   const opp = opponentOf(seat);
-  const pool = corePool();
+  const pool = aiPool();
   const traps = trapPool();
   for (const card of [...out.players[opp].hand, ...out.players[opp].library]) {
     card.defId = rng.pick(pool) as string;
@@ -135,9 +136,21 @@ function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState
   for (const player of PLAYER_IDS) {
     for (const card of out.players[player].backrow) {
       if (card === null || !isHiddenBackrow(state, card, seat)) continue;
+      // R403, R602: a face-down trap with no activation condition is live, so a trap of the same cost
+      // can still change what the seat reads off the board (C #88 Siphon Squad shrinks its units'
+      // Attack). That is not hidden from it, so the swap must leave the seat's view as it was. The
+      // card's own def always does, so there is always a trap to pick.
       const shown = effectiveCost(out, card);
-      const sameCost = traps.filter((id) => effectiveCost(out, { ...card, defId: id }) === shown);
-      card.defId = rng.pick(sameCost) as string;
+      const original = card.defId;
+      const seen = JSON.stringify(viewWithoutEvents(out, seat));
+      const unseen = traps.filter((id) => {
+        if (effectiveCost(out, { ...card, defId: id }) !== shown) return false;
+        card.defId = id;
+        const same = JSON.stringify(viewWithoutEvents(out, seat)) === seen;
+        card.defId = original;
+        return same;
+      });
+      card.defId = rng.pick(unseen) as string;
     }
   }
   out.players[opp].hand = rng.shuffle(out.players[opp].hand);
@@ -502,10 +515,10 @@ describe("determinize (B12)", () => {
     });
   });
 
-  it("B12: every hidden card gets a real non-token Core def; opponent samples are distinct and unseen; face-down ones are traps", () => {
+  it("R380 B12: every hidden card gets a real non-token def of any set; opponent samples are distinct and unseen; face-down ones are traps", () => {
     const { a } = pair();
     const hidden = hiddenInstanceIds(a, AI);
-    const pool = new Set(corePool());
+    const pool = new Set(aiPool());
     const traps = new Set(trapPool());
     const opponentPublic = new Set(
       everyCard(a)
@@ -533,7 +546,8 @@ describe("determinize (B12)", () => {
 
   it("B12: with more face-down cards than unseen traps, the sampler falls back to the whole trap pool", () => {
     const faceDown = ["core-018", "core-041", "core-060", "core-071", "core-085"];
-    const shown = ["core-096", "core-041"];
+    // Every trap of every set is shown but four, so four unseen traps are left for five lanes.
+    const shown = trapPool().filter((id) => !["core-018", "core-060", "core-071", "core-085"].includes(id));
     const state = build("observe-trap-exhaust", {
       backrow: faceDown.map((def) => ({ def, faceUp: false })),
       graveyard: shown,
@@ -554,12 +568,12 @@ describe("determinize (B12)", () => {
     }
   });
 
-  it("B12: with more hidden cards than the Core pool, every card is used before any repeat, and nothing throws", () => {
-    const pool = corePool();
+  it("B12: with more hidden cards than the pool, every card is used before any repeat, and nothing throws", () => {
+    const pool = aiPool();
     const state = build("observe-pool-exhaust", { library: [...pool, "core-008", "core-011", "core-019"] }, {});
     const excluded = new Set(
-      query({ set: "Core" })
-        .filter((def) => (AI_DETERMINIZE.excludeIndexes as readonly string[]).includes(def.index))
+      query()
+        .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );
     const det = determinize(redact(state, AI), AI, createRng("observe-pool-exhaust"));
@@ -620,12 +634,12 @@ describe("determinize (B12)", () => {
     expect(hands.size).toBeGreaterThan(1);
   });
 
-  it("B12: a hidden hand or library slot never samples an excluded index (#98's memory, R43)", () => {
+  it("B12: a hidden hand or library slot never samples an excluded card (#98's memory, R43)", () => {
     // Freshly dealt: p2's four-card hand and sixteen-card library are all hidden from p1.
     const state = dealtGame("observe-b12-exclude");
     const excluded = new Set(
-      query({ set: "Core" })
-        .filter((def) => (AI_DETERMINIZE.excludeIndexes as readonly string[]).includes(def.index))
+      query()
+        .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );
     expect(excluded.size).toBeGreaterThan(0);

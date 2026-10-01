@@ -4,6 +4,7 @@
 
 import type { CardDef, GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { beginAnnounce } from "../src/announce";
 import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { HAND_CAP, HERO_HEALTH } from "../src/config";
 import { damage } from "../src/effects";
@@ -361,28 +362,39 @@ describe("discard (§6.3, R16, M3-T1)", () => {
 // counter
 // ---------------------------------------------------------------------------
 
-describe("counter (§6.3, M3-T1)", () => {
-  it("§6.3 sends the card to the graveyard with no Cry and no Death", () => {
+/**
+ * B5 E1, R448: what §10.5's announce leaves for a Counter to answer — the card moved out of its
+ * player's hand into the resolving zone and its announce open. The pipeline's own announce is proved
+ * in `announce.test.ts`; these pin the verb.
+ */
+function announced(state: GameState, card: CardInstance | undefined): CardInstance {
+  if (card === undefined) throw new Error("no card to announce");
+  const side = state.players[card.controller];
+  side.hand = side.hand.filter((held) => held.id !== card.id);
+  card.zone = { z: "resolving", player: card.controller };
+  side.resolving.push(card);
+  beginAnnounce(state, { instanceId: card.id, player: card.controller });
+  return card;
+}
+
+describe("counter (§6.3, M3-T1; B5 E1, R448)", () => {
+  it("§6.3 sends the announced card to the graveyard with no Cry and no Death", () => {
     const state = game();
-    const [card] = inHand(state, noisy.id, "p1");
+    const card = announced(state, inHand(state, noisy.id, "p1")[0]);
 
     const events = run(state, counter({ target: chosen }), card);
 
-    expect(state.players.p1.hand).toHaveLength(0);
-    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card?.id]);
+    expect(state.players.p1.resolving).toHaveLength(0);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH);
-    expect(events.map((e) => e.type)).toEqual(["enteredGraveyard"]);
+    expect(events.map((e) => e.type)).toEqual(["countered", "enteredGraveyard"]);
     expect(eventsOfType(events, "destroyed")).toEqual([]);
   });
 
-  it("§6.3 treats the card as never played, so the play counters roll back", () => {
+  it("R448 a Counter counts nothing back: the play it cancels was never counted", () => {
     const state = game();
-    const [card] = inHand(state, noisy.id, "p1");
-    // What §10.5 records when the play starts, before a Counter cancels it.
+    const card = announced(state, inHand(state, noisy.id, "p1")[0]);
     const side = state.players.p1;
-    side.turnLog.playedIds.push(card?.id ?? "");
-    side.turnLog.cardsPlayed = 1;
-    state.counters.played = 1;
 
     run(state, counter({ target: chosen }), card);
 
@@ -391,19 +403,17 @@ describe("counter (§6.3, M3-T1)", () => {
     expect(state.counters.played).toBe(0);
   });
 
-  it("R213 a countered play takes back what it paid, so the next cheap card is still Gifted Program's first", () => {
+  it("R213 a countered play leaves the turn's costs as they were, so the next cheap card is still Gifted Program's first", () => {
     const state = game();
     put(state, gifted.id, slot("p1", "units", 1));
     const [earlier] = inHand(state, noisy.id, "p1");
-    const [card] = inHand(state, noisy.id, "p1");
-    // What §10.5 step 4 logs for a 3-cost play and then a 1-cost one, before a Counter cancels the
-    // second: the turn log keeps what each play paid beside its id (R213).
+    const card = announced(state, inHand(state, noisy.id, "p1")[0]);
+    // An earlier 3-cost play this turn; the announced 1-cost one has not reached step 4's log.
     const side = state.players.p1;
-    side.turnLog.playedIds.push(earlier?.id ?? "", card?.id ?? "");
-    side.turnLog.costsPaid = [3, 1];
-    side.turnLog.cardsPlayed = 2;
-    state.counters.played = 2;
-    expect(giftedMakesRadiant(state, "p1", 1)).toBe(false);
+    side.turnLog.playedIds.push(earlier?.id ?? "");
+    side.turnLog.costsPaid = [3];
+    side.turnLog.cardsPlayed = 1;
+    state.counters.played = 1;
 
     run(state, counter({ target: chosen }), card);
 
@@ -412,35 +422,48 @@ describe("counter (§6.3, M3-T1)", () => {
     expect(giftedMakesRadiant(state, "p1", 1)).toBe(true);
   });
 
-  it("§6.3 counters a card that is already resolving", () => {
+  it("R448 with no target it counters the innermost announce still live", () => {
     const state = game();
-    const card = newInstance(state, noisy.id, "p1", { z: "resolving", player: "p1" });
+    const outer = announced(state, inHand(state, noisy.id, "p1")[0]);
+    const inner = announced(state, inHand(state, noisy.id, "p1")[0]);
 
-    const events = run(state, counter({ target: { of: "self" } }), undefined, { self: card });
+    run(state, counter(), undefined);
 
-    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
-    expect(card.zone).toEqual({ z: "graveyard", player: "p1" });
-    expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toEqual([card.id]);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([inner.id]);
+    expect(outer.zone.z).toBe("resolving");
+  });
+
+  it("R448 a card that is not announced, or already countered, is not countered again", () => {
+    const state = game();
+    const [inHandCard] = inHand(state, noisy.id, "p1");
+    const card = announced(state, inHand(state, noisy.id, "p1")[0]);
+
+    expect(run(state, counter({ target: chosen }), inHandCard)).toEqual([]);
+    expect(state.players.p1.hand.map((c) => c.id)).toEqual([inHandCard?.id]);
+    run(state, counter({ target: chosen }), card);
+    expect(run(state, counter({ target: chosen }), card)).toEqual([]);
   });
 
   it("R11 a countered unit-token card vanishes and reaches no graveyard", () => {
     const state = game();
-    const [token] = inHand(state, handToken.id, "p1");
+    const token = announced(state, inHand(state, handToken.id, "p1")[0]);
 
     const events = run(state, counter({ target: chosen }), token);
 
-    expect(state.players.p1.hand).toHaveLength(0);
+    expect(state.players.p1.resolving).toHaveLength(0);
     expect(state.players.p1.graveyard).toHaveLength(0);
-    expect(events).toEqual([]);
+    expect(events).toEqual([
+      { type: "countered", player: "p1", instanceId: token.id, defId: handToken.id, byInstanceId: null, to: "gone" },
+    ]);
   });
 
   it("R12 a countered card goes to its owner's graveyard", () => {
     const state = game();
-    const [theirs] = inHand(state, "fx-4", "p2");
+    const theirs = announced(state, inHand(state, "fx-4", "p2")[0]);
 
     run(state, counter({ target: chosen }), theirs, { controller: "p1" });
 
-    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs?.id]);
+    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
     expect(state.players.p1.graveyard).toHaveLength(0);
   });
 });

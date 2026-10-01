@@ -36,10 +36,11 @@ src/
                         differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). The detail
-                        view ends with the card's History (inspect/History.tsx, R375): its versions newest
-                        first, each text word-diffed both ways (radiantDiff.ts's `wordDiff`), from the catalog
-                        snapshots cards/patches.ts loads on demand, never in the main bundle
+                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
+                        (R437, #50's pending steal) are read through marks.ts (`marksOf`, `markEventOf`, the
+                        colour key → palette and mark → words tables) and drawn by CardMarks.tsx (marks.css):
+                        a corruption aura in the mark's colours and a badge with its words, still under
+                        reduced motion; the board's Card.tsx mounts it on units and face-up backrow cards
   game/
     engine.ts           the EnginePort: the only seam onto packages/engine
     engine.real.ts      the real binding (see "Blocked on the engine" below)
@@ -61,6 +62,8 @@ src/
                         eye (R371, facedown.css, cards/faceDown.ts for the words); a grade badge prints the
                         letter the view names (R372)
     actions.ts Prompt.tsx                                               M5-T2
+    ActivateControl.tsx activate.css   R384, R510: the Activate control on a card the viewer controls (see
+                        "Patch v0.2.0 at the table")
     hotseat.ts decks.ts                                                 M5-T3
     animations.ts                                                       M5-T4
     Game.tsx            board + prompts + animation runner + effects layer + audio + drag layer + showcase, wired together
@@ -70,6 +73,9 @@ src/
     showcase/           the opponent's play held up beside the field for about a second (SHOWCASE_HOLD_MS over the
                         effects speed): plan.ts picks the opponent's `cardPlayed` out of the redacted events,
                         per viewer, and a card the view hides (R97, R227) is a back with "Opponent set a card".
+                        A cast on draw is held up on both seats, longer, under a "Cast on draw!" ribbon, out of
+                        its Deck pile, as the runner reaches it (R502); a Call to Chaos roll is said in words and,
+                        where the effects layer draws nothing, shown still (ChaosBanner.tsx, R436).
                         Click-through, never on `data-animating`; `data-showcase` holds practice's AI while it is up
     OverflowNotices.tsx overflow.css   §2.4's overflows on the board's own elements (R318): "Fatigue N" and
                         "Deck full" (with the refused card) inside the deck pile, "Hand full" (with the burned
@@ -108,15 +114,22 @@ src/
     anchors.ts          anchor → viewport box at fire time (a hand: its cards); the board shake sink
     director.ts         one frame loop: fires cues, steps and draws, expires DOM and stage effects
     dom.ts fx.css       DOM flourishes (splats, rays, banners, ghosts, stand-ins) and their keyframes
-    FxLayer.tsx         the overlay Game mounts after the board; listens to the runner's signals
-    index.ts            FxLayer, settings and types
+    castOnDraw.ts       R502: which cardPlayed is a cast on draw, read off the order of the redacted events
+    cardFx.ts           R502: the cast on draw's burst out of the Deck pile, and CARD_FX, one table from a card
+                        to its signature recipe (#21 Hinder's mana crack, #27 Blood Ridden's blood drain)
+    manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
+                        marked on the board's trays (drawn in every mode: it is information)
+    chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand
+    build.ts            the small cue builders the v0.2.0 recipes share
+    FxLayer.tsx         the overlay Game mounts after the board; listens to the runner's signals, and reads
+                        the newest view (`latest`) for a number no event carries
   settings/             the settings store (localStorage, in try/catch) and the panel the
                         gear opens from the game's control bar and the nav
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and
                         intensity, animated foil, the audio panel), each with its reset
   routes/dev/hotseat.tsx  the dev hotseat route
-  routes/patch-notes.tsx  /patch-notes: every card patch, newest first, with its sources and cards (R375); the
-                        site footer (routes/SiteFooter.tsx) links it beside the current version
+  routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
+                        R388, R507); the site footer (routes/SiteFooter.tsx) links it
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
@@ -183,6 +196,35 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
   offer lapses with the turn (R269). Practice hides the Offer draw
   control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
 
+## Patch v0.2.0 at the table
+
+**Activate** (SPEC §6.2, R384, R510). A card whose view lists `activations` (the engine gives them to
+its controller's own view of a card acting on the field) wears one control per ability on the card
+itself (`ActivateControl.tsx`): a lightning glyph and a badge with the uses left this turn ("∞" for
+Activate ♾️), the ability's words (its `{key}`s filled from the card's `params`) as tooltip and
+accessible name. It is `activate-<instanceId>` with its badge `activate-uses-<instanceId>`, the
+ability named after the id (`activate-<instanceId>-<ability>`) only on a card listing several
+(`namedAbility`, `contract.ts`). It is live exactly when `legal` lists that card's `activate`;
+otherwise it is greyed and its tooltip gives the view's `reason`. A press reports
+`{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
+listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
+control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
+in the inline picker. Heroic Power is built the same way: `power` (the first power) and
+`power-<instanceId>` (any further one) report the power's activation, whichever of `activatePower`
+or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
+reduced motion) while the `activated` row plays on its card.
+
+**A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting
+cost) ask for them after the target, in the `hand` picker; plays that differ by `plague` (Classic
+#74) ask how many Plague Tokens pay, in a `number` picker of chips with "Pay in mana only" first. A
+Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
+zone is picked by clicking the unit or its zone.
+
+**Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
+graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Play"
+(`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
+play is built as a hand card's.
+
 ## Commands
 
 ```
@@ -242,6 +284,8 @@ src/practice/
                       visible action at a time (think indicator, gaps from config.ts)
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
+  lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
+                      `jackioh.practice.lastBoard`, try/catch
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
@@ -249,11 +293,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 - The page holds snapshots, never a state: `{ view, legal, aiToAct, error }`, where `view` is
   `viewFor(state, human)` and `legal` is `legalActions(state, human)`. The AI seat's hand and
-  library never cross the worker boundary.
+  library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
+  engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
+  next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
 - The one exception is `debug`, which carries the raw state, the log, the decks and the handicaps
   for spec 13's replay check. The core answers it only when `MODE !== "production"`, and the route
   sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
 - URL params (all optional): `?seed=`, `?difficulty=easy|medium|hard`, `?deck=random|preset:<id>`
@@ -326,16 +372,25 @@ src/tutorial/
 
 ## Regenerating the voice lines
 
-The voice files are generated from `src/audio/voice-lines.json` and committed, so CI never runs
-`say`. After editing a line or a persona, run `pnpm --filter @jackioh/web gen:voice` on a Mac (it
-needs macOS `say` and `afconvert`, and exits 2 anywhere else). It renders only the keys whose input
-hash changed, deletes orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set
-passes 3 MiB or a line runs past 4 s. `--only <defId>` limits it to one card and `--force` renders
-everything again (legacy voices such as Fred are not byte-deterministic, so expect a large diff).
-Commit the manifest together with `public/audio/voice/`. `node apps/web/scripts/gen-voice.mjs
---check` needs no `say`, runs on any OS and is what the asset test calls. A line must stay flavour
-text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file missing
-from the manifest falls back to the browser's `speechSynthesis`.
+The voice files are generated from `src/audio/voice-lines.json` and committed, so CI never runs a
+synthesizer. Each persona names its backend (R501): Core's personas are macOS `say` (the default),
+and the Classic and Classic+ personas are `"backend": "sapi"`, Windows SAPI (`System.Speech`, the
+"Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by `ffmpeg`: trimmed, pitched
+by the persona's `semitones`, coloured by its `filter` chain, peak-normalised and encoded to the same
+mono AAC at 22050 Hz and about 32 kbps. After editing a line or a persona, run
+`pnpm --filter @jackioh/web gen:voice` on a Mac for `say` personas, or on Windows or WSL (it finds
+`/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`) with `ffmpeg` and `ffprobe` on the
+`PATH` for SAPI personas; with neither it exits 2. It renders only the keys whose input hash changed
+and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
+orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
+`VOICE_BUDGET_BYTES` (6 MiB, R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
+byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
+`node apps/web/scripts/gen-voice.mjs --check` needs no synthesizer, runs on any OS and is what the
+asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
+flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
+missing from the manifest falls back to the browser's `speechSynthesis`, with the persona's `web`
+pitch and rate.
 
 ## Blocked on the engine
 

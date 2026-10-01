@@ -24,12 +24,25 @@ export function conditionAttr(card: Pick<CardView, "conditionActive"> | null | u
   return card?.conditionActive === true ? "true" : undefined;
 }
 
-/** True when `glow` holds a playable card, an attacker or the power: any testid starting `hand-card-` or `card-`, or `power`. */
+/** Prefixes of the glowing testids that are a move: a play from the graveyard (B5 E11), an Activate control or a further Heroic Power (R384). */
+const MOVE_PREFIXES: readonly string[] = [
+  "hand-card-",
+  "card-",
+  testid.pilePlay(""),
+  testid.activate(""),
+  testid.powerOf(""),
+];
+
+/**
+ * True when `glow` holds a playable card (in the hand, or "Play" in the graveyard pile), an attacker,
+ * an Activate control or a Heroic Power: any testid starting `hand-card-`, `card-`, `pile-play-`,
+ * `activate-` or `power-`, or `power`.
+ */
 export function hasMovesLeft(highlight: Highlight | undefined): boolean {
   const glow = highlight?.glow;
   if (glow === undefined) return false;
   for (const id of glow) {
-    if (id.startsWith("hand-card-") || id.startsWith("card-") || id === testid.power) return true;
+    if (id === testid.power || MOVE_PREFIXES.some((prefix) => id.startsWith(prefix))) return true;
   }
   return false;
 }

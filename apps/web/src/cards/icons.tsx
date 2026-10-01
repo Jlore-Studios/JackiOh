@@ -10,7 +10,17 @@
 
 import type { ReactElement } from "react";
 
-export type IconName = "sword" | "drop" | "gem" | "crest" | "eyeOff";
+export type IconName =
+  | "sword"
+  | "drop"
+  | "gem"
+  | "crest"
+  | "eyeOff"
+  | "brittle"
+  | "returnHand"
+  | "castOnDraw"
+  | "target"
+  | "cog";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -65,6 +75,46 @@ const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M14 50 L50 14' stroke='#e8ecf8' stroke-width='4.5' stroke-linecap='round'/>
 </svg>`;
 
+// Patch v0.2.0's state badges (cardState.ts). Each is a pale outline on a dark plate, so it reads by
+// shape on any frame and to a colour-blind player alike, as the struck eye does.
+
+// B3.3, R385: a pane of glass with a crack running through it (Brittle); the count sits over it.
+const BRITTLE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<path d='M8 6 H56 V58 H8 Z' fill='#16303a' stroke='#d8f3ff' stroke-width='4' stroke-linejoin='round'/>
+<path d='M8 6 H56 V58 H8 Z' fill='#9fe6ff' fill-opacity='.18'/>
+<path d='M30 6 L26 22 L36 30 L24 42 L30 58 M26 22 L12 26 M36 30 L52 24 M24 42 L10 46 M36 30 L46 48' fill='none' stroke='#eafaff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/>
+</svg>`;
+
+// B5 E39: an arrow curling back down onto a tray (Forever&'s return to hand).
+const RETURN_HAND = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M44 40 C50 30 46 16 32 16 C22 16 16 22 16 30' fill='none' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>
+<path d='M8 26 L16 36 L24 26 Z' fill='#e8ecf8'/>
+<path d='M18 46 H46' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>
+</svg>`;
+
+// B5 E39: a card with a four-point spark at its corner (Cast on draw).
+const CAST_ON_DRAW = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M18 18 H38 V50 H18 Z' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linejoin='round'/>
+<path d='M44 10 L47 19 L56 22 L47 25 L44 34 L41 25 L32 22 L41 19 Z' fill='#e8ecf8'/>
+</svg>`;
+
+// B5 E39: crosshairs (targets enemies when it can).
+const TARGET = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<circle cx='32' cy='32' r='14' fill='none' stroke='#e8ecf8' stroke-width='4'/>
+<path d='M32 8 V22 M32 42 V56 M8 32 H22 M42 32 H56' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
+<circle cx='32' cy='32' r='3.5' fill='#e8ecf8'/>
+</svg>`;
+
+// B3.1, R383: a cog (a card standing as a Unit), as the minion's Animated treatment draws one.
+const COG = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M29 10 H35 L36 17 L41 19 L46 14 L50 18 L45 23 L47 28 L54 29 V35 L47 36 L45 41 L50 46 L46 50 L41 45 L36 47 L35 54 H29 L28 47 L23 45 L18 50 L14 46 L19 41 L17 36 L10 35 V29 L17 28 L19 23 L14 18 L18 14 L23 19 L28 17 Z' fill='none' stroke='#e8ecf8' stroke-width='3' stroke-linejoin='round'/>
+<circle cx='32' cy='32' r='6' fill='none' stroke='#e8ecf8' stroke-width='3.5'/>
+</svg>`;
+
 function dataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\n/g, ""))}`;
 }
@@ -75,6 +125,11 @@ const ICON_URI: Readonly<Record<IconName, string>> = {
   gem: dataUri(GEM),
   crest: dataUri(CREST),
   eyeOff: dataUri(EYE_OFF),
+  brittle: dataUri(BRITTLE),
+  returnHand: dataUri(RETURN_HAND),
+  castOnDraw: dataUri(CAST_ON_DRAW),
+  target: dataUri(TARGET),
+  cog: dataUri(COG),
 };
 
 export function Icon({ name }: { name: IconName }): ReactElement {

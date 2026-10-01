@@ -528,6 +528,192 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "result-overlay",
     target: () => testid.result,
   },
+
+  // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+
+  // B5 E1: the card lifts and hangs at its hand edge while the window for a Counter is open. A card
+  // set face-down is announced by its zone only (R97), so the other seat's hand region lifts.
+  cardAnnounced: {
+    animation: "jk-card-played",
+    durationMs: 300,
+    testid: "hand-card-<instanceId> | hand-<side>",
+    fx: { recipe: "cast" },
+    target: (e, view) =>
+      sideOf(view, e.player) === "you"
+        ? (locateInstance(view, e.instanceId) ?? animTestid.hand("you"))
+        : animTestid.hand("opponent"),
+  },
+  // B5 E1: the announced card fizzles out where it hung, then drops to the pile it went to.
+  countered: {
+    animation: "jk-exile-fade",
+    durationMs: 450,
+    testid: "hand-card-<instanceId> | graveyard-<side> | exile-<side> | hand-<side>",
+    fx: { recipe: "fizzle" },
+    target: (e, view) => {
+      const side = sideOf(view, e.player);
+      const pile =
+        e.to === "exile" ? animTestid.exile(side) : e.to === "hand" ? animTestid.hand(side) : animTestid.graveyard(side);
+      return instanceOrPile(view, e.instanceId, pile);
+    },
+  },
+  // B5 E2, E16: the card slides across the centre line into the thief's hand.
+  stolen: {
+    animation: "jk-cross-centre",
+    durationMs: 450,
+    testid: "hand-<side>",
+    fx: { recipe: "mindControl" },
+    target: (e, view) => animTestid.hand(sideOf(view, e.to)),
+  },
+  // B5 E20: the chain over the zone opens.
+  unlocked: {
+    animation: "jk-chain-close",
+    durationMs: 250,
+    testid: "zone-<side>-<row>-<lane>",
+    fx: { recipe: "lock" },
+    target: (e, view) => zoneTestid(view, e.player, e.row, e.lane),
+  },
+  // B3.2, R384: the card flares as its ability is used.
+  activated: {
+    animation: "jk-icon-pop",
+    durationMs: 300,
+    testid: "card-<instanceId>",
+    fx: { recipe: "cast" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // B3.1, R383: the backrow card rises into its unit zone and scales in there as a Unit.
+  animated: {
+    animation: "jk-summon-scale",
+    durationMs: 350,
+    testid: "zone-<side>-units-<unitLane>",
+    fx: { recipe: "summon" },
+    target: (e, view) => zoneTestid(view, e.player, "units", e.unitLane),
+  },
+  // B3.1, R383: the Unit sinks back into its backrow zone.
+  deanimated: {
+    animation: "jk-summon-scale",
+    durationMs: 300,
+    testid: "zone-<side>-backrow-<backrowLane>",
+    fx: { recipe: "glint" },
+    target: (e, view) => zoneTestid(view, e.player, "backrow", e.backrowLane),
+  },
+  // B3.3, R385: the card cracks and crumbles where it stands (a pile stands in off the board).
+  crumbled: {
+    animation: "jk-dissolve",
+    durationMs: 400,
+    testid: "card-<instanceId> | hand-card-<instanceId> | graveyard-<side>",
+    fx: { recipe: "death" },
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.graveyard(sideOf(view, e.owner))),
+  },
+  // B3.4, R386: the changed numbers flash down.
+  degraded: {
+    animation: "jk-stat-tick",
+    durationMs: 300,
+    testid: "card-<instanceId> | hand-card-<instanceId>",
+    fx: { recipe: "buff" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // B3.4, R386: the changed numbers flash up.
+  upgraded: {
+    animation: "jk-stat-tick",
+    durationMs: 300,
+    testid: "card-<instanceId> | hand-card-<instanceId>",
+    fx: { recipe: "buff" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // Classic+ #41: the number KY's Constant set flashes on the card.
+  numberChanged: {
+    animation: "jk-stat-tick",
+    durationMs: 300,
+    testid: "card-<instanceId> | hand-card-<instanceId>",
+    fx: { recipe: "glint" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // B5 E9: the new target shakes as the hit, the attack or the pick swings onto it.
+  redirected: {
+    animation: "jk-snap-back",
+    durationMs: 350,
+    testid: "card-<toId> | hero-<side>",
+    fx: { recipe: "lunge" },
+    target: (e, view) => {
+      const side = heroSide(view, e.toId);
+      return side !== null ? testid.hero(side) : locateInstance(view, e.toId);
+    },
+  },
+  // B5 E7: the hero's health number is struck and rewritten.
+  healthSet: {
+    animation: "jk-loss-pop",
+    durationMs: 400,
+    testid: "hero-<side>",
+    fx: { recipe: "drain" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // Classic #90: the quest badge ticks.
+  questProgressed: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "card-<instanceId> | backrow-<side>",
+    fx: { recipe: "counter" },
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
+  },
+  // Classic #90: the quest card pulses gold as a quest completes.
+  questCompleted: {
+    animation: "jk-radiant-pulse",
+    durationMs: 500,
+    testid: "card-<instanceId> | backrow-<side>",
+    fx: { recipe: "radiant" },
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
+  },
+  // Classic+ #35: the whole board rewinds.
+  rolledBack: {
+    animation: "jk-swap-cross",
+    durationMs: 600,
+    testid: "board",
+    fx: { recipe: "rewind" },
+    target: () => testid.board,
+  },
+  // R436: a slot-machine reveal over the board names each effect Call to Chaos rolled, one line per
+  // effect, on both seats (fx/chaos.ts); the showcase's live region says it in words, and draws it
+  // still where the effects layer draws nothing (game/showcase/ChaosBanner.tsx).
+  chaosRolled: {
+    animation: "jk-banner",
+    durationMs: 900,
+    testid: "turn-banner",
+    fx: { recipe: "chaos" },
+    target: () => testid.banner,
+  },
+  // B5 E22: the card blinks out and back in its zone.
+  flickered: {
+    animation: "jk-summon-scale",
+    durationMs: 300,
+    testid: "zone-<side>-<row>-<lane>",
+    fx: { recipe: "void" },
+    target: (e, view) => zoneTestid(view, e.player, e.row, e.lane),
+  },
+  // B5 E3: the deck shakes and gives nothing.
+  drawLimited: {
+    animation: "jk-fatigue",
+    durationMs: 300,
+    testid: "library-<side>",
+    fx: { recipe: "fizzle" },
+    target: (e, view) => animTestid.library(sideOf(view, e.player)),
+  },
+  // B5 E10: a banner says the turn was cut short.
+  turnCutShort: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
+  // R437: the mark's sigil brands the card in the mark's colours (fx/brand.ts), and its aura stays
+  // on the card while the view lists the mark (cards/CardMarks.tsx).
+  marked: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

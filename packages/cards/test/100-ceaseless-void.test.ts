@@ -232,7 +232,8 @@ describe("#100 Ceaseless Void — the cost (R55, R65)", () => {
     // reacts to plays … (Ceaseless Void)".
     const s = scenario({
       seed: "void-cast",
-      p1: { hand: [VOID, SPARE], library: [HINDER, SPARE, SPARE], mana: 4 },
+      // The Radiant face discards nothing (R431), so the cast asks no question.
+      p1: { hand: [VOID, SPARE], library: [{ def: HINDER, radiant: true }, SPARE, SPARE], mana: 4 },
       p2: { hand: [SPARE] },
     });
     s.startTurn();

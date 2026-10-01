@@ -2,14 +2,22 @@
 // tags, then its Token tag, then its type, and sets the palette, the emblem and the motes. The
 // composition comes from the type alone and sets the geometry. Both are presentation only: no
 // rule reads them (CLAUDE.md rule 7).
+//
+// v0.2.0 (R503) adds three families: Book (a leather tome under candlelight, ink drops, pages in the
+// air), Pancake (a warm griddle morning: stacks, butter, syrup and steam) and AI (cold neon: a chip,
+// circuit traces, scanlines, square pixels). Each is a tag theme, so an AI or Pancake token reads
+// as its family and not as a plain Token.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
 import type { EmblemGlyph } from "./emblems.ts";
 
 export type ArtThemeId =
-  | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token"
+  | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "book" | "pancake" | "ai" | "token"
   | "unit" | "spell" | "field-spell" | "trap" | "field-trap";
+
+/** How a theme's motes are drawn: round dust, ink drops (Book), square pixels (AI). */
+export type MoteShape = "dot" | "drop" | "pixel";
 
 export type Composition = "figure" | "burst" | "landscape" | "sigil";
 
@@ -23,12 +31,20 @@ export type ThemePalette = {
   mote: string;
 };
 
-/** First match wins; Token and the type themes come after every tag here. */
-const TAG_THEMES: readonly (readonly [Tag, ArtThemeId])[] = [
+/**
+ * First match wins; Token and the type themes come after every tag here. AI comes straight after
+ * Call to Chaos (an AI generated card is that before it is anything else), Book after KY (a KY card
+ * is KY's first, and KY's own emblem is already a book), and Pancake before Fruit, Quickdraw and
+ * Human, so Classic+ #13 Mommy Barker (Human, Pancake) wears the Pancake family's picture.
+ */
+export const TAG_THEMES: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
+  ["AI", "ai"],
   ["CN", "cn"],
   ["KY", "ky"],
+  ["Book", "book"],
   ["Felinor", "felinor"],
+  ["Pancake", "pancake"],
   ["Fruit", "fruit"],
   ["Quickdraw", "quickdraw"],
   ["Human", "human"],
@@ -112,6 +128,27 @@ export const THEME_PALETTES: Readonly<Record<ArtThemeId, ThemePalette>> = {
     emblem: { glyph: "bolt", fill: "#b4f3ff", stroke: "#10343d" },
     mote: "#d2f8ff",
   },
+  book: {
+    sky: ["#33285c", "#0c0818"],
+    ridges: ["#6b4a2e", "#3e2716", "#140b05"],
+    glow: "#ffd98f",
+    emblem: { glyph: "tome", fill: "#f4e4bf", stroke: "#3b2412" },
+    mote: "#d4c2ff",
+  },
+  pancake: {
+    sky: ["#c9772c", "#3a1a07"],
+    ridges: ["#b9763a", "#7a4418", "#2a1206"],
+    glow: "#ffe29a",
+    emblem: { glyph: "pancakes", fill: "#f5c77e", stroke: "#5a2c0a" },
+    mote: "#fff3d6",
+  },
+  ai: {
+    sky: ["#0d3050", "#02060f"],
+    ridges: ["#15496a", "#0a2438", "#02070d"],
+    glow: "#39f3ff",
+    emblem: { glyph: "chip", fill: "#bafbff", stroke: "#06303a" },
+    mote: "#7dfcff",
+  },
   token: {
     sky: ["#626876", "#1b1d23"],
     ridges: ["#6a707d", "#3e424c", "#131418"],
@@ -169,9 +206,12 @@ export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> 
   fruit: ["fruit", "fruit", "fruit", "crystal"],
   chaos: ["vortex", "vortex", "eye", "flame", "moon"],
   quickdraw: ["bolt", "bolt", "hourglass", "sword", "star"],
+  book: ["tome", "tome", "book", "quill", "rune", "crystal"],
+  pancake: ["pancakes", "pancakes", "pancakes", "spatula", "drop"],
+  ai: ["chip", "chip", "neural", "eye", "hourglass"],
   token: ["coin", "coin", "crystal", "star"],
   // The type themes draw only from glyphs no tribe signs with (no cat, book, virus, fruit, vortex,
-  // bolt or coin), so an untagged card never passes for a tribe's.
+  // bolt, coin, tome, pancakes or chip), so an untagged card never passes for a tribe's.
   unit: ["sword", "tower", "eye", "crown", "flame", "shield", "moon"],
   spell: ["star", "flame", "moon", "crystal", "hourglass", "rune", "eye"],
   "field-spell": ["tower", "star", "moon", "crystal", "crown"],
@@ -192,12 +232,35 @@ export const HUE_DRIFT: Readonly<Record<ArtThemeId, number>> = {
   fruit: 24,
   chaos: 28,
   quickdraw: 26,
+  book: 24,
+  pancake: 16,
+  ai: 22,
   token: 0,
   unit: 34,
   spell: 38,
   "field-spell": 34,
   trap: 26,
   "field-trap": 32,
+};
+
+/** The motes' shape per theme: dust everywhere, but ink drops in a Book and pixels in an AI card. */
+export const THEME_MOTES: Readonly<Record<ArtThemeId, MoteShape>> = {
+  human: "dot",
+  felinor: "dot",
+  ky: "dot",
+  cn: "dot",
+  fruit: "dot",
+  chaos: "dot",
+  quickdraw: "dot",
+  book: "drop",
+  pancake: "dot",
+  ai: "pixel",
+  token: "dot",
+  unit: "dot",
+  spell: "dot",
+  "field-spell": "dot",
+  trap: "dot",
+  "field-trap": "dot",
 };
 
 const HEX_CHANNEL_MAX = 255;

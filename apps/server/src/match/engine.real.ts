@@ -50,7 +50,7 @@ export function enginePort(): EnginePort {
   registerAll();
 
   const api = engine as unknown as {
-    createGame: (args: { seed: string; decks: [string[], string[]]; catalog?: unknown }) => unknown;
+    createGame: (args: { seed: string; decks: [string[], string[]]; catalog?: unknown; lastBoards?: unknown }) => unknown;
     beginGame: (state: unknown) => { state: unknown; events: unknown[]; error?: string };
     reduce: (state: unknown, action: unknown) => { state: unknown; events: unknown[]; error?: string };
     legalActions: (state: unknown, player: unknown) => unknown[];
@@ -58,6 +58,7 @@ export function enginePort(): EnginePort {
     fold: (args: unknown) => { state: unknown; errors: { nonce: string; error: string }[] };
     hashState: (state: unknown) => string;
     mulliganOwed: (state: unknown) => MatchSnapshot["mulliganOwed"];
+    lastBoardFor: (state: unknown, player: "p1" | "p2") => ReturnType<EnginePort["lastBoards"]>[number];
     summarizeGame: (args: unknown) => ReturnType<EnginePort["summarizeGame"]>;
   };
 
@@ -85,6 +86,7 @@ export function enginePort(): EnginePort {
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
     dealRandomDeck: (seed) => buildAiDeck(engine.createRng(seed), DECK_SIZE, { banned: [] }),
+    lastBoards: (state) => [api.lastBoardFor(state, "p1"), api.lastBoardFor(state, "p2")],
     // R376: the record a finished match leaves for the card statistics, folded like `fold`.
     summarizeGame: (args) => api.summarizeGame(args),
   };

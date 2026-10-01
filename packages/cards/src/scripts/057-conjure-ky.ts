@@ -1,12 +1,12 @@
 // #57 Conjure KY (SPEC §8.3): Spell, cost 2, tag KY. "Add 3 random KY cards to your hand" /
 // radiant "2 random plus 2 random Radiant KY cards". Engine cell: "KY pool = #31, #51, #82 (no
-// tokens, not #57); repeats allowed".
+// tokens, not #57); repeats allowed" — and since patch v0.2.0 every set's KY cards (R380).
 //
 // The pool is §5.1's one query and nothing else: `{ tags: ["KY"] }` already leaves out the Token-
 // tagged KY card (#51.1 KY's Empty Notebook), because "random pools never include Token-tagged
-// cards", and `excludeIndex: "57"` is §5.1's other half — "never include the generating card's own
-// definition". That leaves #31 KY's Math Equation, #51 KY's Private Tutor and #82 KY's Trial, which
-// is the Engine cell verbatim and BUILD M4-T4's must-pass row.
+// cards", and `excludeDefId: def.id` is §5.1's other half — "never include the generating card's own
+// definition" (R387). In Core that leaves #31 KY's Math Equation, #51 KY's Private Tutor and #82
+// KY's Trial, which is the Engine cell verbatim and BUILD M4-T4's must-pass row.
 //
 // R60: "Cards generated from the catalog may repeat unless the card says 'different'". This card
 // does not say different, so three picks may land on one def — that is `count`, not a shuffle.
@@ -27,11 +27,11 @@ import { cardDef } from "../catalog-data";
 export const def = cardDef("core-057");
 
 /**
- * §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeIndex`).
- * `addRandomFromCatalog` already excludes the running card's own index, as `discoverFromCatalog`
- * does (`catalog.excludingIndex`), so naming "57" here repeats it and the pool comes out the same.
+ * §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeDefId`, R387).
+ * `addRandomFromCatalog` already excludes the running card's own id, as `discoverFromCatalog` does
+ * (`catalog.excludingDefId`), so naming it here repeats it and the pool comes out the same.
  */
-const KY_POOL: CatalogQueryArgs = { tags: ["KY"], excludeIndex: "57" };
+const KY_POOL: CatalogQueryArgs = { tags: ["KY"], excludeDefId: def.id };
 
 /** A spell's script is its `cry` hook (§10.9; `runHook` in engine/src/resolve.ts). */
 export const base: Script = {

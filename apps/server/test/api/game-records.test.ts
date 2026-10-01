@@ -189,14 +189,14 @@ describe("live game records (§9.11)", () => {
     expect(events(h, "game.record.unfinished")).toHaveLength(1);
   });
 
-  it("R376 files a live game under the newest patch of R375's list", async () => {
-    const list = JSON.parse(await readFile(patchesUrl(), "utf8")) as { version: string }[];
+  it("R376 files a live game under the newest patch of R388's list", async () => {
+    const list = JSON.parse(await readFile(new URL("patches.json", patchesUrl()), "utf8")) as { version: string }[];
     expect(await loadCurrentPatch()).toBe(list[list.length - 1]?.version);
 
     const dir = await mkdtemp(join(tmpdir(), "jackioh-patches-"));
     const at = (name: string): URL => pathToFileURL(join(dir, name));
     await writeFile(at("two.json"), JSON.stringify([{ version: "v1" }, { version: "v0.9" }]));
-    // The list's order is the order of versions, never a comparison of the strings (R375).
+    // The list's order is the order of versions, never a comparison of the strings (R388).
     expect(await loadCurrentPatch(at("two.json"))).toBe("v0.9");
     await writeFile(at("empty.json"), "[]");
     await expect(loadCurrentPatch(at("empty.json"))).rejects.toThrow(/names no newest version/);

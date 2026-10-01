@@ -10,7 +10,7 @@
 // nothing else:
 //   * no tokens — automatic: "Random pools never include Token-tagged cards", so `{ type: "Unit" }`
 //     already leaves out the Sheep, Rush, Felinor and Spikey Pillow token units;
-//   * not #54 — `excludeIndex: def.index`, §5.1's "never include the generating card's own
+//   * not #54 — `excludeDefId: def.id`, §5.1's "never include the generating card's own
 //     definition", passed explicitly rather than trusted to the verb;
 //   * costing 3 or 4 — `costRange: { min: 3, max: 4 }`, read out of play per R65, so an X-cost card
 //     counts as 0 (never in this bracket) and an embiggen card at its base price (#59, base 2, also
@@ -44,13 +44,13 @@ export const def = cardDef("core-054");
 const COUNT = 2;
 
 /**
- * §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `def.index` is
- * "54" straight from the catalog, so the exclusion cannot drift from the card's own index.
+ * §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `def.id` is
+ * "core-054" straight from the catalog, so the exclusion cannot drift from the card's own id (R387).
  */
 const UNIT_POOL: CatalogQueryArgs = {
   type: "Unit",
   costRange: { min: 3, max: 4 },
-  excludeIndex: def.index,
+  excludeDefId: def.id,
 };
 
 /** Base: "they cost 1". */

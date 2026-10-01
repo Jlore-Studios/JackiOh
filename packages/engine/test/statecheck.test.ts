@@ -580,6 +580,7 @@ describe("what a death reports (R89, M3)", () => {
         instanceId: victim.id,
         defId: spawn.id,
         owner: "p2",
+        controller: "p2",
         // R89: the stats the layers computed at the moment it died, not the printed 1/1.
         attack: 4,
         maxHealth: 5,
@@ -607,6 +608,7 @@ describe("what a death reports (R89, M3)", () => {
         instanceId: victim.id,
         defId: spawn.id,
         owner: "p1",
+        controller: "p1",
         attack: 1,
         maxHealth: 1,
         killerId: null,

@@ -20,10 +20,20 @@
 // Unit's grown stats (#89), a unit's numbers and keywords, the Vanilla mark, a Heroic Power's rolled
 // power — and a match-made card (a Fuse's) reads its definition from the view (`MatchCardsContext`,
 // R243) where the catalog has none.
+//
+// R384, R510: a card whose view lists `activations` (its controller's own view of a card acting on
+// the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
+// the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
+//
+// R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
+// on a face-up backrow card of either seat: the corruption aura and a badge per mark
+// (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
+// carries the marks its view entry lists (R33: the player who cannot read the card still sees it is
+// marked); the opponent's hand of backs carries none.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
-import type { CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
+import type { CardMark, CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
 
 import {
   CardBack,
@@ -42,7 +52,10 @@ import {
   type InspectRenderSubject,
   type InspectSubject,
 } from "../cards/index.ts";
-import { useCardInfo, useFieldPower } from "./catalog.ts";
+import CardMarks from "../cards/CardMarks.tsx";
+import { marksOf } from "../cards/marks.ts";
+import ActivateControls from "./ActivateControl.tsx";
+import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { conditionAttr, glowAttr } from "./glow.ts";
@@ -162,9 +175,10 @@ export type CardProps = {
   /**
    * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
    * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
-   * back has no instance id. Absent for every other back (the opponent's hand).
+   * back has no instance id. Absent for every other back (the opponent's hand). R437: `marks` are
+   * the marks the view puts on the face-down card, which its back carries (R33).
    */
-  faceDown?: { cost?: number; at: string };
+  faceDown?: { cost?: number; at: string; marks?: readonly CardMark[] };
   /**
    * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
    * "Face down" tag, because the other player sees only its back.
@@ -196,6 +210,7 @@ export default function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
   const fieldPower = useFieldPower(card?.instanceId);
+  const copied = useCopiedDef(card);
   const settings = useCardSettings();
   // The preview opens only while the panel's "Hover previews" is on too (useInspectTrigger.tsx).
   const panelHover = useSetting("hoverPreviews");
@@ -210,6 +225,7 @@ export default function Card(props: CardProps): ReactElement {
       : liveFace(info, shown, {
           ...(props.type === undefined ? {} : { type: props.type }),
           ...(fieldPower === undefined ? {} : { fieldPower }),
+          ...(copied === undefined ? {} : { copied }),
         });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
@@ -291,6 +307,7 @@ export default function Card(props: CardProps): ReactElement {
           className={cx("card", "card-back", "card-facedown", props.className)}
           data-face-down="true"
           data-facedown-cost={faceDown.cost}
+          data-marks={faceDown.marks !== undefined && faceDown.marks.length > 0 ? faceDown.marks.map((entry) => entry.mark).join(" ") : undefined}
           role="img"
           aria-label={label}
           title={settings.hoverPreviews && panelHover ? undefined : label}
@@ -301,6 +318,7 @@ export default function Card(props: CardProps): ReactElement {
               {faceDown.cost}
             </span>
           )}
+          <CardMarks marks={faceDown.marks ?? []} instanceId={`facedown-${faceDown.at}`} />
         </div>
         {inspect.overlay}
       </>
@@ -308,6 +326,7 @@ export default function Card(props: CardProps): ReactElement {
   }
 
   const position = unit?.position;
+  const marks = marksOf(unit ?? card);
   const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
@@ -335,6 +354,8 @@ export default function Card(props: CardProps): ReactElement {
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}
+      // R437: the marks the view lists on the card, by name.
+      data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       // R371: your own face-down trap, which the other player sees only as a back.
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
@@ -355,6 +376,7 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
+      <CardMarks marks={marks} instanceId={card.instanceId} />
       {position !== undefined && <span className="position-tag">{position}</span>}
 
       {counters?.plague !== undefined && (
@@ -396,6 +418,10 @@ export default function Card(props: CardProps): ReactElement {
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
       )}
+
+      {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
+          view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
+      <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
 
       <PopLayer pops={props.pops} />
     </div>

@@ -20,13 +20,16 @@ concurrency:
 env:
   # Card data and rules only. No secret belongs in this file: SUPABASE_SECRET_KEY and CODE_PEPPER
   # are the two that must never be committed, which is why .gitignore carries `.env`.
-  CATALOG_VERSION: core-1
+  CATALOG_VERSION: v0.2.0
 
 jobs:
   checks:
     name: lint, typecheck, unit, fuzz, coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Patch v0.2.0 nearly tripled the catalog (100 cards to 268) and slowed each action, so the card
+    # suites and the fuzz gate take longer; 30 minutes left no headroom. Back to 30 once the engine
+    # wins its time back (#40's performance sub-issue).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -42,7 +45,7 @@ jobs:
         run: pnpm typecheck
 
       # BUILD §5 names these four by hand, so they run by hand rather than hiding inside `test`.
-      - name: catalog data (100 cards, 9 tokens, rarity counts)
+      - name: catalog data (268 cards, 49 tokens, rarity counts per set)
         run: pnpm validate:catalog
       - name: every card has a test file
         run: pnpm exec tsx packages/cards/scripts/missing-tests.ts
@@ -70,7 +73,8 @@ jobs:
   ai-gate:
     name: ai quality gates (full)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 25 until patch v0.2.0, whose games run about 2.5 times longer (#40's performance sub-issue).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

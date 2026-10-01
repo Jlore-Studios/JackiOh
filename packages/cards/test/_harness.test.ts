@@ -18,7 +18,7 @@
 // that cross a turn boundary give both sides something to do. See `_harness.ts`'s header.
 
 import { describe, expect, it } from "vitest";
-import { HAND_CAP, MAX_MANA, effectiveCost, type CardInstance } from "@jackioh/engine";
+import { HAND_CAP, MAX_MANA, beneathAt, effectiveCost, type CardInstance } from "@jackioh/engine";
 import { DEFAULT_TURN, scenario, type PileName, type Scenario } from "./_harness";
 
 /** A unit each side can always act with, so `reduce` never auto-ends a turn under a test. */
@@ -271,7 +271,7 @@ describe("harness setup", () => {
     s.expectInZone(buried, "field");
   });
 
-  it("refuses a repeated lane without `stack`, a stack over nothing, and a stack in the backrow", () => {
+  it("refuses a repeated lane without `stack`, and a stack over nothing", () => {
     // The refusal names the fix: the only legal way to repeat a lane is a §3.2 pile.
     expect(() =>
       scenario({ p1: { field: [{ def: "core-025", lane: 2 }, { def: "core-056", lane: 2 }] } }),
@@ -285,11 +285,15 @@ describe("harness setup", () => {
     expect(() =>
       scenario({ p1: { field: [{ def: "core-025", lane: 1 }, { def: "core-056", stack: true, lane: 3 }] } }),
     ).toThrow(/`stack: true` but lane 3 holds nothing yet/);
+  });
 
-    // §3.2: the backrow holds one card per zone, so there is no pile to build there.
-    expect(() => scenario({ p1: { backrow: ["core-041", { def: "core-073", stack: true }] } })).toThrow(
-      /`stack: true` is a unit-zone pile/,
-    );
+  it("B5 E21 builds a backrow pile: the later entry on top, the one beneath dormant and still found (R13)", () => {
+    const s = scenario({ p1: { backrow: ["core-084", { def: "core-006", stack: true }] } });
+    expect(s.backrow("p1", 1)?.defId).toBe("core-006");
+    expect(s.backrow("p1", 2)).toBeNull();
+    const beneath = s.card("core-084");
+    expect(beneathAt(s.state, { player: "p1", row: "backrow", lane: 1 }).map((c) => c.id)).toEqual([beneath.id]);
+    s.expectInZone(beneath, "field");
   });
 
   it("seeds §10.1's instance counters, and leaves them empty when the entry says nothing", () => {

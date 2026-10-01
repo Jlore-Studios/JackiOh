@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Selection, GameEvent } from "@jackioh/shared";
-import { legalActions, reduce, tributeValueOf, type CardInstance } from "@jackioh/engine";
+import { createRng, legalActions, reduce, subsystems, tributeValueOf, type CardInstance } from "@jackioh/engine";
 import { scenario, type Scenario } from "./_harness";
 
 const STOCKPILE = "core-005"; // keeps a hand non-empty, so no turn auto-ends (§2.5)
@@ -81,7 +81,7 @@ describe("R68: a Tribute's Deaths resolve in lane order, whatever order the play
 describe("R174: a target the play's own Tribute sacrificed is no longer a target", () => {
   it("R174 a crafted Lava Golem + Twisted Sorcerer that tributes its own target leaves that card in the graveyard undamaged (§8 Conventions, R78)", () => {
     const g = scenario({
-      seed: "r3craft-36", // the first Discover offers Lava Golem, the second Twisted Sorcerer
+      seed: "r3craft-1990", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380)
       p1: {
         hand: [CRAFT_A_CARD, RENO],
         mana: 4,
@@ -255,10 +255,21 @@ function quickstrikersOf(s: Scenario, player: "p1" | "p2"): string[] {
   return s.state.players[player].backrow.flatMap((card) => (card?.defId === QUICKSTRIKER ? [card.id] : []));
 }
 
+/**
+ * R428: Carnivorous Cube eats Units only, so a backrow card reaches its Death's copies as the text of
+ * a Unit it was fused onto (R77: the target keeps its instance and its type, and carries the text).
+ */
+function unitCarrying(s: Scenario, player: "p1" | "p2", unitLane: number, backrowLane: number): CardInstance {
+  const unit = must(s.unit(player, unitLane), `${player}'s lane-${unitLane} unit`);
+  const carried = must(s.backrow(player, backrowLane), `${player}'s backrow card in lane ${backrowLane}`);
+  const sink = { state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) };
+  return must(subsystems.fuse(sink, { ingredients: [unit, carried], target: unit }), "the Unit carrying the text");
+}
+
 describe("R119, R210: what a Tribute's Death puts on the field does not answer the play that paid it (§10.5 step 2)", () => {
-  it("R119 a Sheepish a tributed Carnivorous Cube's Death copies at step 2 does not turn the Lava Golem being played into a Sheep (R210)", () => {
-    // p2's Cube eats p2's own face-down Sheepish (§8 #22: "any of your other permanents, backrow
-    // included", R41), so its Death summons two Sheepish copies into p2's backrow.
+  it("R119 a Sheepish text a tributed Carnivorous Cube's Death copies at step 2 does not turn the Lava Golem being played into a Sheep (R210)", () => {
+    // p2's Cube eats p2's own Midrange Menace carrying Sheepish's text (R428: a Unit), so its Death
+    // summons two copies of it into p2's unit row, each answering an opponent's resolved Unit play.
     const s = scenario({
       active: "p2",
       p1: {
@@ -279,12 +290,12 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
         library: [...R119_LIBRARY],
       },
     });
-    const sheepish = must(s.backrow("p2", 1), "p2's face-down Sheepish");
-    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: sheepish.id }] });
+    const carrier = unitCarrying(s, "p2", 5, 1);
+    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: carrier.id }] });
     const cube = must(s.unit("p2", 1), "p2's Carnivorous Cube");
     s.endTurn();
     expect(s.state.active).toBe("p1");
-    expect(backrowDefs(s, "p2")).toEqual([null, null, null, null, null]);
+    expect(s.state.players.p2.units.filter((pile) => pile !== null)).toHaveLength(1);
 
     // §8 #55: Lava Golem "can use opposing Units as Tributes", so the Cube is one of its three.
     const golem = must(s.hand("p1").find((card) => card.defId === LAVA_GOLEM), "p1's Lava Golem");
@@ -292,17 +303,16 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
     const second = must(s.unit("p1", 2), "p1's lane-2 Mr. Vanilla");
     s.play(golem, { zone: 4, tributes: [cube.id, first.id, second.id] });
 
-    // Step 2 paid the Tribute and the Cube's Death summoned its two Sheepish copies (R41, R210).
-    expect(backrowDefs(s, "p2").filter((defId) => defId === SHEEPISH).length).toBeGreaterThanOrEqual(1);
-    expect(ofType(s.lastEvents, "summoned").filter((event) => event.defId === SHEEPISH)).toHaveLength(2);
+    // Step 2 paid the Tribute and the Cube's Death summoned its two copies (R41, R210).
+    expect(ofType(s.lastEvents, "summoned").filter((event) => event.defId === carrier.defId)).toHaveLength(2);
     // R119: those copies arrived while this play resolved, so they start counting from the next play:
-    // no trap fires on the Golem's `cardPlayed`, and the Golem lands as itself.
-    expect(ofType(s.lastEvents, "trapFired")).toEqual([]);
+    // nothing answers the Golem's resolution, and the Golem lands as itself.
+    expect(ofType(s.lastEvents, "transformed")).toEqual([]);
     expect(s.unit("p1", 4)?.defId).toBe(LAVA_GOLEM);
     expect(s.unit("p1", 4)?.defId).not.toBe(SHEEP_TOKEN);
   });
 
-  it("R119 an Unstable Clone Machine a tributed Cube's Death copies at step 2 does not shuffle copies of the card that paid the Tribute (R210)", () => {
+  it("R119 an Unstable Clone Machine text a tributed Cube's Death copies at step 2 does not shuffle copies of the card that paid the Tribute (R210)", () => {
     const s = scenario({
       p1: {
         hand: [CARNIVOROUS_CUBE, THE_ROCK],
@@ -313,23 +323,24 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
       },
       p2: { hand: [STOCKPILE], field: [MIDRANGE_MENACE], library: [...R119_LIBRARY] },
     });
-    const machine = must(s.backrow("p1", 1), "p1's Unstable Clone Machine");
-    // The Cube eats the Clone Machine (R41), so none is on the field when The Rock is played.
-    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: machine.id }] });
+    // The Cube eats the Mr. Vanilla carrying the Clone Machine's text (R428), so none is on the field
+    // when The Rock is played.
+    const carrier = unitCarrying(s, "p1", 3, 1);
+    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: carrier.id }] });
     const cube = must(s.unit("p1", 1), "p1's Carnivorous Cube");
     expect(backrowDefs(s, "p1")).toEqual([null, null, null, null, null]);
     const library = s.pile("p1", "library").length;
 
-    // §8 #66: The Rock's Tribute 1 is the Cube, whose Death summons two Clone Machine copies.
+    // §8 #66: The Rock's Tribute 1 is the Cube, whose Death summons two copies of its meal.
     s.play(THE_ROCK, { zone: 4, tributes: [cube.id] });
 
-    expect(backrowDefs(s, "p1").filter((defId) => defId === UNSTABLE_CLONE_MACHINE)).toHaveLength(2);
+    expect(ofType(s.lastEvents, "summoned").filter((event) => event.defId === carrier.defId)).toHaveLength(2);
     // R119: "After you play a card" — both copies arrived during this play, so neither answers it.
     expect(ofType(s.lastEvents, "shuffledIn")).toEqual([]);
     expect(s.pile("p1", "library")).toHaveLength(library);
   });
 
-  it("R119 a Quickstriker a tributed Cube's Death copies at step 2 grants the card that paid the Tribute no Combo damage (R210)", () => {
+  it("R119 a Quickstriker text a tributed Cube's Death copies at step 2 grants the card that paid the Tribute no Combo damage (R210)", () => {
     const s = scenario({
       p1: {
         hand: [CARNIVOROUS_CUBE, TEMPO_TIMMY, THE_ROCK],
@@ -340,8 +351,8 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
       },
       p2: { hand: [STOCKPILE], field: [MIDRANGE_MENACE], library: [...R119_LIBRARY] },
     });
-    const quickstriker = must(s.backrow("p1", 1), "p1's Quickstriker");
-    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: quickstriker.id }] });
+    const carrier = unitCarrying(s, "p1", 3, 1);
+    s.play(CARNIVOROUS_CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: carrier.id }] });
     const cube = must(s.unit("p1", 1), "p1's Carnivorous Cube");
     s.play(TEMPO_TIMMY, { zone: 2 });
     expect(quickstrikersOf(s, "p1")).toEqual([]);
@@ -349,8 +360,9 @@ describe("R119, R210: what a Tribute's Death puts on the field does not answer t
 
     s.play(THE_ROCK, { zone: 4, tributes: [cube.id] });
 
-    // Two Quickstrikers arrived at step 2; The Rock is the third card played this turn (X = 2).
-    expect(quickstrikersOf(s, "p1")).toHaveLength(2);
+    // Two Units carrying Quickstriker's text arrived at step 2; The Rock is the third card played this
+    // turn (X = 2).
+    expect(ofType(s.lastEvents, "summoned").filter((event) => event.defId === carrier.defId)).toHaveLength(2);
     // R119: they start counting from the next play, so The Rock's step 5 deals no Combo damage.
     const hits = ofType(s.lastEvents, "damage").filter((hit) => hit.sourceId === rock.id && hit.targetId === "hero-p2");
     expect(hits).toEqual([]);

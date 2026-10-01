@@ -12,6 +12,8 @@ describe("config constants (BUILD §2)", () => {
     expect(config.COIN_DEF_ID).toBe("core-t-coin");
     expect(config.UNIT_ZONES).toBe(5);
     expect(config.BACKROW_ZONES).toBe(5);
+    expect(config.MID_LANE).toBe(3); // §3.1 "midlane", C #22 Mid Runner
+    expect(config.GLITCH_NUMBERS).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); // C #18 Glitch in the System
     expect(config.DRAW_OFFERS_PER_TURN).toBe(1);
     expect(config.DRAW_OFFER_BLOCK_TURNS).toBe(3);
     expect(config.CALL_TO_CHAOS_CHAIN_CAP).toBe(20);
@@ -25,7 +27,7 @@ describe("config constants (BUILD §2)", () => {
 
   it("holds the SPEC §11 'decide' rows at their recommended values", () => {
     expect(config.CRY_ON_PLAY_ONLY).toBe(true); // R1
-    expect(config.TURN_CAP_PLAYER_TURNS).toBe(30); // R2
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60); // R2, R389 (patch v0.2.0 doubled it)
     expect(config.HAND_CAP).toBe(10); // R4
     expect(config.LANE_RESTRICTED_ATTACKS).toBe(false); // R5
     expect(config.ROTATION_RING).toBe("two-rings"); // R14

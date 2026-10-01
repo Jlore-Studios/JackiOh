@@ -63,10 +63,48 @@ export const FX_ADAPT_MIN_INTERVAL_MS = 4;    // shorter raw intervals are not a
 export const FX_ADAPT_RECOVER_WINDOWS = 3;    // healthy windows in a row that double a lowered cap back up
 export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
-export const FX_SPEED_MIN = 0.5;
-export const FX_SPEED_MAX = 2;
+export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)
+export const FX_MEMORY_RESOLVING = 8;         // R502: the plays still resolving it keeps, innermost last
+
+// R502: a cast on draw. The card bursts out of its drawer's Deck pile as its `cardPlayed` starts.
+export const FX_CAST_ON_DRAW_TRAUMA = 0.25;
+// R502: #21 Hinder's refresh loss. A frost bolt flies from the caster's hero to the victim's crystal
+// tray, lands at FX_CRACK_HIT_AT of the entry, and each crystal the next refresh loses fractures from
+// there, FX_CRACK_STAGGER_MS apart but never past the entry's end (R200).
+export const FX_CRACK_HIT_AT = 0.45;
+export const FX_CRACK_STAGGER_MS = 50;
+export const FX_FRACTURE_TAIL_MS = 800;       // a fracture lasts (D − delay) + this, inside FX_MAX_TAIL_MS
+export const FX_CRACK_TRAUMA = 0.3;
+/** The id the engine gives the next refresh's rider (`NEXT_REFRESH_MODIFIER_ID`, R169): #21 Hinder's badge. */
+export const FX_NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";
+// R502: #27 Blood Ridden Glowy Jelly Bean. A crimson stream leaves the caster's hero, reaches the card
+// made Radiant at FX_BLOOD_FLIGHT_FRACTION of the entry and bursts gold there; on the other seat it
+// lands on a back chosen by a counter of the planner's own (R202), never the hidden card's place.
+export const FX_BLOOD_FLIGHT_FRACTION = 0.6;
+export const FX_BLOOD_PICK_BASE = 1;          // the first back a hidden pick lands on (modulo the hand)
+export const FX_BLOOD_PICK_STRIDE = 2;        // how far each later pick of the same play moves on
+export const FX_BLOOD_TRAUMA = 0.2;
+// R437: a mark branded onto a card. The sigil slams on at FX_BRAND_SLAM_AT of the entry and fades
+// over FX_BRAND_TAIL_MS after it.
+export const FX_BRAND_SLAM_AT = 0.35;
+export const FX_BRAND_TAIL_MS = 700;
+// R436: Call to Chaos's reveal. Line i lands at (FX_CHAOS_LAND_AT + i × stagger) of the entry, the
+// stagger shrinking so the last line lands by FX_CHAOS_LAND_LAST; each reel runs past
+// FX_CHAOS_REEL_DECOYS other names first. The reveal lasts D + FX_BANNER_TAIL_MS.
+export const FX_CHAOS_LAND_AT = 0.4;
+// Patch v0.2.0's events (docs/classic-sets.md B3, B5), each a fraction of its entry (R200).
+export const FX_FLICKER_RETURN_AT = 0.5;       // a flickered card comes back through the void halfway in
+export const FX_REDIRECT_FLIGHT_FRACTION = 0.6; // a redirected hit flies from its old target to its new one
+export const FX_COUNTER_TRAUMA = 0.25;         // a countered card shatters with a small shake
+export const FX_REWIND_TRAUMA = 0.35;          // the board rewinding (Classic+ #35 Rollback)
+export const FX_CHAOS_STAGGER = 0.2;
+export const FX_CHAOS_LAND_LAST = 0.85;
+export const FX_CHAOS_REEL_DECOYS = 6;
+export const FX_CHAOS_DECOY_STEP = 3;          // how far apart in the names table a reel's decoys are
+export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
+export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;
-export const FX_SPEED_STEPS = [0.5, 1, 1.5, 2] as const;   // for task 7's panel
+export const FX_SPEED_STEP = 0.25;             // the settings panel's slider moves by this
 export const FX_INTENSITY_SCALE = { off: 0, low: 0.45, normal: 1, high: 1.6 } as const;
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
 export const FX_CENTER = { x: 0.5, y: 0.45 } as const;     // viewport anchor for banners and shuffles
@@ -74,6 +112,10 @@ export const FX_TEXT = {
   yourTurn: "Your turn",
   opponentTurn: "Opponent's turn",
   autoEnded: "No moves left",
+  /** R436: the title over the effects Call to Chaos rolled. */
+  chaosRolled: "Call to Chaos:",
+  /** B5 E10: an effect ended the turn. */
+  turnCutShort: "Turn cut short",
   victory: "Victory",
   defeat: "Defeat",
   draw: "Draw",

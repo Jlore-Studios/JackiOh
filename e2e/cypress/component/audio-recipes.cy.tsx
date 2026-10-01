@@ -57,12 +57,13 @@ const SILENT = 0.001;
 /** B16's tolerance. */
 const RMS_TOLERANCE = 0.01;
 
-/** The SfxId union from types.ts, in its order: SFX_IDS is "all 30, in the order of the union". */
+/** The SfxId union from types.ts, in its order: SFX_IDS is "all 38, in the order of the union". */
 const EXPECTED_IDS = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
+  "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
 ] as const;
 
 /** The Surface's recipe table, `durationMs` column: the window each recipe must fall silent in. */
@@ -97,6 +98,15 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   entrance: 1400,
   fatigue: 650,
   refuse: 400,
+  // Patch v0.2.0 (R506).
+  manaCrack: 900,
+  bloodDrain: 600,
+  goldBurst: 850,
+  castOnDraw: 400,
+  chaosRoll: 1650,
+  brand: 800,
+  heartbeat: 450,
+  clockTick: 350,
 };
 
 /** B14's params sets, reused so the browser checks the same inputs the fake context does. */
@@ -146,7 +156,7 @@ function rms(samples: Float32Array): number {
 }
 
 describe("polish 2 — SFX recipes rendered by a real browser", () => {
-  it("B15 renders all 30 SfxIds, each with a recipe and the Surface's durationMs", () => {
+  it("B15 renders all 38 SfxIds, each with a recipe and the Surface's durationMs", () => {
     expect([...SFX_IDS], "SFX_IDS, in the order of the SfxId union").to.deep.eq([...EXPECTED_IDS]);
     for (const id of EXPECTED_IDS) {
       const spec = SFX[id];
@@ -179,8 +189,8 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
     });
   }
 
-  // Integration: every card family's summon and spell, and the Mythic entrance, keep B15's bounds.
-  it("B15 every card family's summon and spell, and the Mythic entrance: finite, unclipped, silent after durationMs", () => {
+  // Integration: every card family's summon and spell, the Mythic entrance and R506's variants keep B15's bounds.
+  it("B15 every card family's summon and spell, the Mythic entrance and R506's variants: finite, unclipped, silent after durationMs", () => {
     const cases: { id: SfxId; params: SfxParams }[] = [
       ...SFX_TIMBRES.flatMap((timbre): { id: SfxId; params: SfxParams }[] => [
         { id: "summon", params: { timbre } },
@@ -188,6 +198,10 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
         { id: "spell", params: { timbre } },
       ]),
       { id: "entrance", params: { mythic: true } },
+      // R506: the variants the four standard params sets do not reach.
+      { id: "chaosRoll", params: { amount: 3 } },
+      { id: "brand", params: { release: true } },
+      { id: "clockTick", params: { amount: 10 } },
     ];
     const renders = Promise.all(cases.map(async ({ id, params }) => ({ id, params, samples: await render(id, params) })));
     cy.wrap(renders, { timeout: RENDER_TIMEOUT_MS, log: false }).then((results) => {
@@ -314,6 +328,8 @@ const LOUD: readonly Cue[] = [
   // Integration: a Legendary or Mythic unit's entrance is one of the big moments.
   { id: "entrance", params: {} },
   { id: "entrance", params: { mythic: true } },
+  // R506: #21 Hinder's mana crack is a big moment, made to be noticed by the player it hits.
+  { id: "manaCrack", params: {} },
 ];
 const LOUD_BAND = [-5, 1] as const;
 const ROUTINE: readonly Cue[] = [
@@ -323,6 +339,12 @@ const ROUTINE: readonly Cue[] = [
   { id: "mana", params: { mine: true } },
   { id: "impact", params: { amount: 1 } },
   { id: "drain", params: { amount: 1 } },
+  // R506: #27's blood drain and gold burst, a cast on draw, Call to Chaos's roll, a mark, and the
+  // turn clock's heartbeat and ticks.
+  ...(["bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat"] as const).map((id): Cue => ({ id, params: {} })),
+  { id: "chaosRoll", params: { amount: 3 } },
+  { id: "clockTick", params: { amount: 1 } },
+  { id: "clockTick", params: { amount: 10 } },
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };
@@ -363,11 +385,13 @@ describe("polish 2 — B57 the mix at the default settings", () => {
           relDb: Number((l.activeDb - reference).toFixed(1)),
           peak: Number(l.peak.toFixed(3)),
         }));
-        cy.task("layout:report", { b57: label, rows }, { log: false });
-        for (const row of rows) {
-          expect(row.relDb, `${row.sfx} against the voice lines`).to.be.within(band[0], band[1]);
-          expect(row.peak, `${row.sfx} peak through the mix`).to.be.at.most(EFFECT_PEAK_MAX);
-        }
+        // Reported before the checks, so a failing row's neighbours are measured too.
+        cy.task("layout:report", { b57: label, rows }, { log: false }).then(() => {
+          for (const row of rows) {
+            expect(row.relDb, `${row.sfx} against the voice lines`).to.be.within(band[0], band[1]);
+            expect(row.peak, `${row.sfx} peak through the mix`).to.be.at.most(EFFECT_PEAK_MAX);
+          }
+        });
       });
     });
   };

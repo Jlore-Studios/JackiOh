@@ -19,7 +19,8 @@ const SEEDS = Array.from({ length: 200 }, (_, i) => i + 1);
 
 describe("R374 the landing fan is dealt at random", () => {
   it("R374 the pool is every non-token Core card, exactly as the catalog holds it", () => {
-    const expected = Object.values(CATALOG).filter((def) => !def.token);
+    // R374 deals from Core; Classic and Classic+ (R380) share the catalog but not the landing hand.
+    const expected = Object.values(CATALOG).filter((def) => !def.token && def.set === "Core");
     expect(FAN_POOL).toHaveLength(100);
     expect(FAN_POOL).toEqual(expected);
   });

@@ -70,8 +70,9 @@ function handBox(hand: Element): FxBox | null {
 
 /**
  * testid → the element's rect (a hand: its cards and the next card's slot, see the header); crystal → the index-th `.mana-crystal` in `mana-<side>` (falling back
- * to the tray's box); viewport → a zero-size box at (innerWidth·at.x, innerHeight·at.y). An element
- * with a 0×0 rect (not laid out, or jsdom) resolves to null.
+ * to the tray's box); handCard → the `pick`-th card of `hand-<side>`, counted modulo the cards it
+ * holds (falling back to the hand's box); viewport → a zero-size box at (innerWidth·at.x,
+ * innerHeight·at.y). An element with a 0×0 rect (not laid out, or jsdom) resolves to null.
  */
 export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): FxBox | null {
   if (anchor.kind === "viewport") {
@@ -85,6 +86,15 @@ export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): F
     const element = page.querySelector(`[data-testid="${attrValue(anchor.testid)}"]`);
     if (element !== null && HAND_TESTIDS.has(anchor.testid)) return handBox(element);
     return boxOf(element);
+  }
+
+  if (anchor.kind === "handCard") {
+    const hand = page.querySelector(`[data-testid="hand-${anchor.side}"]`);
+    if (hand === null) return null;
+    const cards = hand.querySelectorAll(".card");
+    if (cards.length === 0) return handBox(hand);
+    const at = ((Math.trunc(anchor.pick) % cards.length) + cards.length) % cards.length;
+    return boxOf(cards[at]) ?? handBox(hand);
   }
 
   const tray = page.querySelector(`[data-testid="mana-${anchor.side}"]`);
