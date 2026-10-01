@@ -22,7 +22,7 @@
 
 import { useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
-import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { markWords } from "../cards/marks.ts";
@@ -32,6 +32,31 @@ import { sideOf, testid } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
 import { CHAOS_TEXT } from "./showcase/constants.ts";
+
+
+/** What a player is asked for, by prompt kind, in the log's words. */
+const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
+  discover: "a card to Discover",
+  target: "a target",
+  mode: "a mode",
+  mulligan: "cards to keep",
+  hand: "a card from hand",
+  zone: "a zone",
+  tribute: "a Tribute",
+  direction: "a direction",
+  x: "X",
+  embiggen: "a price",
+  number: "a number",
+  answer: "an answer",
+  cell: "a cell",
+  reward: "a reward",
+  pick: "cards to take",
+};
+
+/** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */
+function keyWords(key: string): string {
+  return key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+}
 
 export type LogProps = {
   view: PlayerView;
@@ -256,7 +281,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnAutoEnded":
       return `${name.seat(event.player)} had no moves left, so turn ${event.turn} ended`;
     case "promptOpened":
-      return `${name.seat(event.player)} must choose (${event.kind})`;
+      return `${name.seat(event.player)} must choose ${PROMPT_WORDS[event.kind]}`;
     case "promptAnswered":
       return `${name.seat(event.player)} chose`;
     case "drawOffered":
@@ -290,7 +315,11 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "upgraded":
       return `${named(event.defId)} was upgraded`;
     case "numberChanged":
-      return event.key === HIDDEN_CARD ? `${named(event.defId)} changed` : `${named(event.defId)}'s ${event.key} became ${event.value}`;
+      if (event.key === HIDDEN_CARD) return `${named(event.defId)} changed`;
+      // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").
+      return event.key === "cost"
+        ? `${named(event.defId)} now costs (${String(event.value)})`
+        : `${named(event.defId)}'s ${keyWords(event.key)} became ${String(event.value)}`;
     case "redirected":
       return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
     case "healthSet":

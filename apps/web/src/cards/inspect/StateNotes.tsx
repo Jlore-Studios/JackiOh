@@ -16,6 +16,7 @@
 import type { ReactElement } from "react";
 
 import { stateBadges } from "../cardState.ts";
+import { MARK_GLYPH, markWords } from "../marks.ts";
 import { Icon } from "../icons.tsx";
 import { locWords, type FaceModel } from "../model.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, WAY_GLYPH, changeWords } from "../tuning.ts";
@@ -23,7 +24,7 @@ import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** Whether a face has anything for StateNotes to print. */
 export function hasStateNotes(face: FaceModel): boolean {
-  return stateBadges(face).length > 0;
+  return stateBadges(face).length > 0 || (face.marks ?? []).length > 0;
 }
 
 function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
@@ -59,12 +60,22 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
 export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   const others = stateBadges(face).filter((badge) => badge.kind !== "tuned");
   const tuned = face.tuning !== undefined && face.tuning !== null;
-  if (others.length === 0 && !tuned) return null;
+  // R437: a mark's words, which on the board live only in its badge's tooltip (no hover on touch).
+  const marks = face.marks ?? [];
+  if (others.length === 0 && !tuned && marks.length === 0) return null;
   return (
     <>
       <TunedRibbon face={face} />
-      {others.length === 0 ? null : (
+      {others.length === 0 && marks.length === 0 ? null : (
         <ul className="inspect-states" data-testid={INSPECT_STATES}>
+          {marks.map((mark) => (
+            <li key={`mark:${mark.mark}`} className="inspect-state" data-state="mark" data-mark={mark.mark} data-mark-color={mark.color}>
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {MARK_GLYPH}
+              </span>
+              <span className="inspect-state-words">{markWords(mark.mark).text}</span>
+            </li>
+          ))}
           {others.map((badge) => (
             <li key={`${badge.kind}:${badge.words}`} className="inspect-state" data-state={badge.kind}>
               <span className="inspect-state-glyph" aria-hidden="true">

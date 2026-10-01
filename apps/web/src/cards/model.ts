@@ -32,6 +32,7 @@ import {
   fillParams,
   keywordKey,
   type CardDef,
+  type CardMark,
   type CardFace as PrintedFace,
   type CardType,
   type Enchantment,
@@ -168,6 +169,8 @@ export type FaceModel = {
   animated?: { home?: number } | null;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
+  /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
+  marks?: readonly CardMark[];
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -195,6 +198,8 @@ export type InPlay = {
   enchantments?: readonly Enchantment[];
   /** B3.1, R383: the card stands in a unit zone as a Unit (`UnitView.animated`). */
   animated?: { home?: number };
+  /** R437: the marks on the card (`CardView.marks`). */
+  marks?: readonly CardMark[];
 };
 export type FaceSource = {
   defId: string;
@@ -272,6 +277,7 @@ export function faceModel(source: FaceSource): FaceModel {
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     loc: def?.loc ?? null,
+    marks: inPlay?.marks ?? [],
   };
 }
 

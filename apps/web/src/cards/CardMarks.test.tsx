@@ -14,8 +14,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import Board from "../game/Board.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
+import { liveFace } from "../game/faces.ts";
 import { fullBoardView } from "../test/fixtures.ts";
 import { marksTestid } from "./CardMarks.tsx";
+import { StateNotes, hasStateNotes } from "./inspect/StateNotes.tsx";
 import {
   DEFAULT_MARK_COLOR,
   MARK_PALETTES,
@@ -204,5 +206,23 @@ describe("R437 reduced motion", () => {
     for (const body of bodies) {
       for (const decl of body.matchAll(/([a-z-]+):/g)) expect(["transform", "opacity"]).toContain(decl[1]);
     }
+  });
+});
+
+describe("R437 a mark in words, where no tooltip can be read", () => {
+  it("R437 the inspect overlays spell out a marked card's mark (a touch sheet has no hover)", () => {
+    const view = fullBoardView();
+    const unit = view.opponent.units[0];
+    if (unit === null || unit === undefined) throw new Error("the fixture has an enemy unit in lane 1");
+    const face = liveFace(lookup(unit.defId, unit.radiant) ?? { name: unit.defId, type: "Unit", text: "", tags: [] }, { ...unit, marks: [STEAL] });
+    expect(face.marks).toEqual([STEAL]);
+    expect(hasStateNotes(face)).toBe(true);
+    const { container } = render(<StateNotes face={face} />);
+    const note = container.querySelector('[data-state="mark"]');
+    expect(note).toHaveAttribute("data-mark", "steal");
+    expect(note).toHaveAttribute("data-mark-color", "purple");
+    expect(note).toHaveTextContent(MARK_WORDS.steal?.text ?? "");
+    // An unmarked card has no mark note.
+    expect(liveFace(lookup(unit.defId, unit.radiant) ?? { name: unit.defId, type: "Unit", text: "", tags: [] }, unit).marks).toEqual([]);
   });
 });

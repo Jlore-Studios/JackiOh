@@ -17,6 +17,7 @@
 
 import type { CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
+import { marksOf } from "../cards/marks.ts";
 import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
@@ -67,6 +68,9 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
   if (card.brittle !== undefined) inPlay.brittle = card.brittle;
   if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
+  // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
+  const marks = marksOf(card);
+  if (marks.length > 0) inPlay.marks = marks;
   // B3.1, R383: a Field Spell, Trap or Field Trap standing in a unit zone as a Unit.
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B2.7: the type the card has now, where it differs from its definition's (Blood Moon's Radiant face).

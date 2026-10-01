@@ -66,6 +66,26 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(lines().join("\n")).not.toContain("hidden");
   });
 
+  it("R432 a prompt names what it asks for, and a number a card's text changed names its key in words", () => {
+    const view = fullBoardView();
+    const unit = view.you.units[0];
+    if (unit === null || unit === undefined) throw new Error("the fixture has a unit in lane 1");
+    render(
+      <Log
+        view={withEvents(view, [
+          { type: "promptOpened", player: "p2", choiceId: "c1", kind: "pick" },
+          { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "drawLimit", value: 2 },
+          { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "cost", value: 1 },
+        ])}
+      />,
+    );
+    const text = lines().join("\n");
+    expect(text).toContain("must choose cards to take");
+    expect(text).toContain("draw limit became 2");
+    expect(text).toContain("now costs (1)");
+    expect(text).not.toMatch(/\(pick\)|drawLimit/);
+  });
+
   it("names a unit that has left the board from the window's own public events, and never prints its id", () => {
     const view = fullBoardView();
     render(
