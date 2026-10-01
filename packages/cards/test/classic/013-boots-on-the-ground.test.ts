@@ -5,8 +5,8 @@
 // or its row full, → nothing; a recruited trap lands face-down, never named in the opponent's view
 // (R33); its tuned numbers (draw, radiant recruits) read through `param()` (R386)".
 //
-// Every "after this attacks" case waits for the engine to run `Script.afterAttack` (after the check
-// that closes each combat the card attacked in, on its last-known snapshot); see the script's header.
+// "After this attacks" is the card's `Script.afterAttack` hook, which the engine runs after the check
+// that closes each combat the card attacked in, on its last-known snapshot; see the script's header.
 //
 // Forced attacks come from #9 Moths to the Flame (1/14, "Start of turn: every enemy Unit attacks
 // this") on the opponent's side: ending p1's turn starts p2's, and p1's units attack it.
@@ -122,7 +122,8 @@ describe("C #13 Boots on the Ground", () => {
 
       s.attack(BOOTS, MENACE);
       expect(drawsBy(s, "p1")).toBe(1);
-      s.attack(VANILLA, "hero");
+      s.expectInZone(BOOTS, "graveyard");
+      s.attack(VANILLA, MENACE);
 
       expect(drawsBy(s, "p1")).toBe(1);
     });

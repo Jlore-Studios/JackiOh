@@ -167,6 +167,11 @@ const TESTED_BY: Readonly<Record<string, string>> = {
   fuse: "effects-random.test.ts",
   rotate: "effects-random.test.ts",
   playerMods: "effects-delay.test.ts",
+  // The Classic #1–#45 workstream's card-specific verbs, each with its own test file named in kebab case.
+  afterCheck: "effects-after-check.test.ts",
+  chooseWhere: "effects-choose-where.test.ts",
+  handExile: "effects-hand-exile.test.ts",
+  shuffleCard: "effects-shuffle-card.test.ts",
 };
 
 describe("M3-T1 structural acceptance (BUILD M3-T1)", () => {

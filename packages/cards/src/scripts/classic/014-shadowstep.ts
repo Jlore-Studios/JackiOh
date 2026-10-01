@@ -21,8 +21,8 @@
 // owner's hand (§3.2, R12) through §2.4's pipeline (a full hand burns it, R4, R317), costing the
 // card's number (`costOverride`, `param(ctx, "setCost")`, which R78 keeps in every zone).
 //
-// "Your Units" are read off the event's `owner`: `destroyed` names the card's owner, not the player
-// who controlled it as it died, which is the same card but for a unit stolen across sides.
+// "Your Units" are the Units you controlled as they died — the event's `controller` (R172: a stolen
+// unit dies as its controller's) — while each card still goes back to its owner's hand (§3.2).
 //
 // THE RADIANT FACE is a replacement at "would die" (B5 E5, `Script.replacements`): §4.5 step 1 offers
 // it the units the check collected, and it takes its controller's among them — one firing for all —
@@ -71,12 +71,12 @@ export const base: Script = {
     {
       id: "shadowstep",
       on: ["destroyed"],
-      when: (ctx) => ctx.event.type === "destroyed" && ctx.event.owner === ctx.controller,
+      when: (ctx) => ctx.event.type === "destroyed" && ctx.event.controller === ctx.controller,
       run: (ctx) => {
         if (ctx.event.type !== "destroyed") return [];
         const cost = param(ctx, "setCost");
         return passOf(ctx, ctx.event)
-          .filter((event) => event.owner === ctx.controller)
+          .filter((event) => event.controller === ctx.controller)
           .filter((event) => findInstance(ctx.state, event.instanceId)?.zone.z === "graveyard")
           .map((event) => addToHand({ instance: { of: "instance", instanceId: event.instanceId }, costOverride: cost }));
       },
