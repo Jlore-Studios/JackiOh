@@ -158,10 +158,12 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
       sink.events.push(...entered);
     }
   }
-  // R563: the snapshot's own holds come back for the cards standing there again.
-  const homes = sides.flatMap((player) => snapshot.sides[player].homes ?? []).filter((home) => findInstance(state, home.instanceId)?.zone.z === "field");
-  state.homes.push(...homes);
-  if (state.homes.length === 0) delete state.homes;
+  // R563: the snapshot's own holds come back for the cards standing there again. Read `state.homes`
+  // afresh: the hand bounce above releases homes, which deletes the field when none is left.
+  const regained = sides.flatMap((player) => snapshot.sides[player].homes ?? []).filter((home) => findInstance(state, home.instanceId)?.zone.z === "field");
+  const homes = [...(state.homes ?? []), ...regained];
+  if (homes.length === 0) delete state.homes;
+  else state.homes = homes;
 
   // Step 3.
   sides.forEach((player, at) => {
