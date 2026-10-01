@@ -150,6 +150,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "queued_at": "2026-10-01T02:07:14Z",
       "requested_by": "MaxGoetzmann",
