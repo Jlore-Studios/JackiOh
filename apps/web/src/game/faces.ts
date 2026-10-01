@@ -118,7 +118,7 @@ export function listedFace(lookup: CardLookup | null, view: PlayerView, card: Ca
 }
 
 /** B5 E14: the definition of the Spell a copier has the text of, where the view says it copies one. */
-export function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView): CardDef | undefined {
+function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView): CardDef | undefined {
   const copies = card.copies;
   return copies === undefined ? undefined : infoFor(lookup, view, copies.defId, copies.radiant).def;
 }
