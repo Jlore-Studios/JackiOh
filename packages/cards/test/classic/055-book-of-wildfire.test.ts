@@ -4,8 +4,8 @@
 // `param()` (R386)".
 //
 // The hit is one §4.4 damage instance from the Spell, so Divine Shield, Armor and Spell Damage meet it
-// as they meet any Spell's. C #4 Palantir's answer to a Book is proved in C #4's own test file; here
-// the play is shown to be a Book play, which is what Palantir reads (`playedThisGameWithTag`).
+// as they meet any Spell's. C #4 Palantir's base face answers it as a Book (its steal prompt), and
+// C #29's Radiant face makes a Book of Flame, never this card (R381).
 
 import { legalActions, playedThisGameWithTag, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Action, PlayerId, Selection } from "@jackioh/shared";
@@ -21,6 +21,9 @@ const DEFENDER = "core-003"; // 1/1 Taunt, Divine Shield, Reborn
 const TOP_LOSER = "classicplus-019-1"; // Radiant: Immune to Spells
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const FILLER = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
+const PALANTIR = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
+const VITAL_KILL = "classic-029"; // Radiant: … Add a Book of Flame to your hand.
+const BOOK_OF_FLAME = "classic-016";
 
 function hero(player: PlayerId): Selection {
   return { pick: "hero", player };
@@ -124,6 +127,24 @@ describe("C #55 Book of Wildfire", () => {
       const s = scenario({ p1: { hand: [WILDFIRE, FILLER] } });
       s.play(WILDFIRE, { targets: [hero("p2")] });
       expect(playedThisGameWithTag(s.state, "p1", "Book")).toBe(1);
+    });
+
+    it("C #4 Palantir's base face answers it as a Book: its controller may Tribute it and steal this", () => {
+      const s = scenario({ p1: { hand: [WILDFIRE, FILLER] }, p2: { backrow: [PALANTIR], hand: [FILLER] } });
+      const wildfire = s.card(WILDFIRE);
+      s.play(wildfire, { targets: [hero("p2")] });
+      expect(s.state.pending).toMatchObject({ playerId: "p2", kind: "mode" });
+      s.answer("steal");
+      s.expectInZone(PALANTIR, "graveyard");
+      expect(s.card(wildfire.id)).toMatchObject({ owner: "p2", zone: { z: "hand", player: "p2" } });
+      s.expectHealth("p2", 30);
+    });
+
+    it("R381 C #29's Radiant face adds a Book of Flame, never this card", () => {
+      const s = scenario({ p1: { hand: [{ def: VITAL_KILL, radiant: true }, FILLER] } });
+      s.play(VITAL_KILL, { targets: [hero("p2")] });
+      const added = s.hand("p1").map((card) => card.defId).filter((defId) => defId !== FILLER);
+      expect(added).toEqual([BOOK_OF_FLAME]);
     });
 
     it("R386 its damage is the declared number: an Upgrade's step makes it 5, a Degrade's 3", () => {
