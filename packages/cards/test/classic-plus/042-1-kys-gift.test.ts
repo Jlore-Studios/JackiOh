@@ -149,8 +149,11 @@ describe("C+ #42.1 KY's Gift", () => {
     it("§2.4 a full hand burns what does not fit", () => {
       const s = gift({ p1: { hand: Array.from({ length: 8 }, () => FILLER), library: [FILLER] } }).endTurn();
       s.answer(s.card(TIMMY).id);
-      // 8 + the turn's draw = 9: one Gift card fits, three are burned.
+      // Start-of-turn triggers come before the draw (§2): two of the four fit beside the 8, two are
+      // burned, and then the turn's draw is burned too.
       expect(s.hand("p1")).toHaveLength(10);
+      expect(added(s)).toHaveLength(2);
+      expect(s.pile("p1", "library")).toHaveLength(0);
       expect(s.events.filter((event) => event.type === "burned")).toHaveLength(3);
     });
 

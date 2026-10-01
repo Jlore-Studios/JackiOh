@@ -1,6 +1,6 @@
 // T-AI-1 Helpful Assistant — SPEC §8.7 row T-AI-1, §10.8, R60, R97, R177, BUILD M9 row T-AI-1.
 
-import { effectiveCost, hashState, reduce, type GameState } from "@jackioh/engine";
+import { drawsThisTurn, effectiveCost, hashState, reduce, type GameState } from "@jackioh/engine";
 import type { Action } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { def } from "../../src/scripts/classic-plus/t-ai-01-helpful-assistant";
@@ -63,9 +63,20 @@ describe("T-AI-1 Helpful Assistant", () => {
       expect(empty.events.some((event) => event.type === "fatigue")).toBe(false);
     });
 
-    it("§2.4 it is not a draw: a Cast on draw card reaches the hand uncast", () => {
+    it("R177 the options come in a shuffled order, never the deck's", () => {
+      const orders = new Set<string>();
+      for (let n = 0; n < 12; n += 1) {
+        const s = scenario({ seed: `assistant-order-${n}`, p1: { hand: [ASSISTANT], library: [MENACE, TIMMY, RENO] } }).play(ASSISTANT);
+        orders.add(offered(s).join(","));
+      }
+      expect(orders.size).toBeGreaterThan(1);
+    });
+
+    it("§2.4 it is not a draw: a Cast on draw card reaches the hand uncast, and no draw is counted", () => {
       const s = assistant({ library: [HINDER] }).play(ASSISTANT);
+      const draws = drawsThisTurn(s.state, "p1");
       s.answer(s.card(HINDER).id);
+      expect(drawsThisTurn(s.state, "p1")).toBe(draws);
       s.expectInZone(HINDER, "hand");
       expect(s.events.some((event) => event.type === "cardPlayed" && event.defId === HINDER)).toBe(false);
     });

@@ -47,16 +47,20 @@ describe("C+ #43 AI Slop", () => {
     });
 
     it("R102 a Token with the AI tag, of the shared type else the first's, its texts joined", () => {
-      for (let n = 0; n < 6; n += 1) {
+      const shapes = new Set<string>();
+      for (let n = 0; n < 12; n += 1) {
         const s = slop(`slop-shape-${n}`).play(SLOP);
         const fused = defOf(s.state, made(s).defId);
         const parts = specs(s).map((spec) => cardDef(spec.defId));
         expect(fused.token).toBe(true);
         expect(fused.tags).toContain("AI");
         const types = new Set(parts.map((part) => part.type));
-        if (types.size === 1) expect(fused.type).toBe(parts[0]?.type);
+        shapes.add(types.size === 1 ? "shared" : "mixed");
+        // No AI generated card is a Field Trap, so R102's promotion never applies.
+        expect(fused.type).toBe(types.size === 1 ? [...types][0] : parts[0]?.type);
         for (const part of parts) expect(fused.base.text).toContain(part.base.text);
       }
+      expect(shapes.has("mixed")).toBe(true);
     });
 
     it("R60 picks are independent: a card may come up twice", () => {
@@ -77,16 +81,19 @@ describe("C+ #43 AI Slop", () => {
     });
 
     it("§2.4 R11 a full hand burns it: a fused Unit token ceases to exist, anything else is in the graveyard", () => {
-      for (let n = 0; n < 4; n += 1) {
+      const seen = new Set<string>();
+      for (let n = 0; n < 40 && seen.size < 2; n += 1) {
         const s = slop(`slop-burn-${n}`, { hand: Array.from({ length: 10 }, () => FILLER) }).play(SLOP);
         const burned = s.events.find((event) => event.type === "burned");
         expect(burned).toBeDefined();
         expect(s.hand("p1")).toHaveLength(10);
         const id = burned?.type === "burned" ? burned.instanceId : "";
         const fused = defOf(s.state, burned?.type === "burned" ? burned.defId : "");
+        seen.add(fused.type === "Unit" ? "Unit" : "other");
         if (fused.type === "Unit") s.expectInZone(id, "gone");
         else s.expectInZone(id, "graveyard");
       }
+      expect([...seen].sort()).toEqual(["Unit", "other"]);
     });
 
     it("played, it counts once toward the AI generated cards played this game (Scaling Law's count)", () => {

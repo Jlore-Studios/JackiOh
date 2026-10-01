@@ -85,6 +85,19 @@ describe("C+ #77 Anti-Softlock", () => {
       expect(beneathAt(s.state, { player: "p1", row: "backrow", lane: 1 }).map((card) => card.id)).toEqual([under.id]);
     });
 
+    it("R13 E21 in a backrow pile only the top acts: two Mana Wells piled give 1 mana at the start of turn, not 2", () => {
+      const s = softlock({ p1: { hand: [{ def: SOFTLOCK }, MANA_WELL], backrow: [MANA_WELL], mana: 5 } });
+      s.play(SOFTLOCK);
+      s.play(MANA_WELL, { zone: 1 });
+      expect(beneathAt(s.state, { player: "p1", row: "backrow", lane: 1 })).toHaveLength(1);
+      // Spending the last mana ends the turn by itself; then the opponent's turn passes back.
+      if (s.state.active === "p1") s.endTurn();
+      s.endTurn();
+      expect(s.state.active).toBe("p1");
+      const { current, max } = s.state.players.p1.mana;
+      expect(current).toBe(max + 1);
+    });
+
     it("R346 a Spell's Pierce skips Armor, and its Stack does nothing", () => {
       const s = softlock({ p1: { hand: [{ def: SOFTLOCK }, ECLIPSE] }, p2: { field: [ARMORED] } }).play(SOFTLOCK);
       s.play(ECLIPSE, { targets: [{ pick: "instance", instanceId: s.unit("p2", 1)?.id ?? "" }] });
@@ -116,9 +129,10 @@ describe("C+ #77 Anti-Softlock", () => {
     it("R97 R440 the grants in the opponent's hand and deck name no card", () => {
       const s = softlock().play(SOFTLOCK);
       const hidden = [...s.hand("p2"), ...s.pile("p2", "library"), ...s.pile("p1", "library")].map((card) => card.id);
-      for (const event of s.view("p1").events) {
-        if (event.type === "keywordGranted") expect(hidden).not.toContain(event.instanceId);
-      }
+      const grants = s.view("p1").events.filter((event) => event.type === "keywordGranted");
+      // The public grants are reported (p2's unit's two); the hidden ones name no card.
+      expect(grants.some((event) => event.type === "keywordGranted" && event.instanceId === s.unit("p2", 1)?.id)).toBe(true);
+      for (const event of grants) if (event.type === "keywordGranted") expect(hidden).not.toContain(event.instanceId);
       expect(JSON.stringify(s.view("p1"))).not.toContain(s.hand("p2")[0]?.id ?? "-");
     });
 

@@ -18,6 +18,7 @@ const LOW_TRAP = "core-071"; // Intern Stimmy, a Field Trap
 const REBORN = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
 const RUSH = "core-t-rush";
 const FIENDER = "core-092"; // Felinor Fiender, Stack
+const INDESTRUCTIBLE = "classic-041"; // State of the Game: Indestructible
 const FILLER = "core-005";
 const ALL = "All permanents";
 const THEIRS = "Only your opponent's";
@@ -60,7 +61,7 @@ describe("C+ #44 Simplicity Audit", () => {
   it("the catalog's loc guards: the cards below are below, above and summed to the Audit's", () => {
     expect(def.id).toBe(AUDIT);
     expect(LOC).toBeGreaterThan(0);
-    for (const id of [LOW, LOW_TRAP, REBORN, RUSH, FIENDER]) expect(cardDef(id).loc ?? 0).toBeLessThan(LOC);
+    for (const id of [LOW, LOW_TRAP, REBORN, RUSH, FIENDER, INDESTRUCTIBLE]) expect(cardDef(id).loc ?? 0).toBeLessThan(LOC);
     expect(cardDef(HIGH).loc ?? 0).toBeGreaterThan(LOC);
   });
 
@@ -100,6 +101,12 @@ describe("C+ #44 Simplicity Audit", () => {
       expect(s.events.some((event) => event.type === "destroyed")).toBe(false);
       // The token never reached an exile pile (R11), so only the defender counts.
       expect(s.state.counters.exiled).toBe(exiled + 1);
+    });
+
+    it("§6.1 an exile is no destroy: an Indestructible permanent is exiled too", () => {
+      const s = audit({ p2: { field: [INDESTRUCTIBLE] } });
+      s.play(AUDIT);
+      s.expectInZone(INDESTRUCTIBLE, "exile");
     });
 
     it("R13 a card dormant under a Stack is not on the field: the top goes, and the card beneath resumes", () => {

@@ -16,6 +16,7 @@ const MENACE = "core-019"; // (3) 9/9 Taunt
 const ARMORED = "core-025"; // (4) 7/7 Armor 7
 const ECLIPSE = "core-035"; // a Spell
 const FILLER = "core-005";
+const FIENDER = "core-092"; // Felinor Fiender, Stack
 
 function appropriations(opts: { radiant?: boolean; p1?: SideSetup; p2?: SideSetup } = {}): Scenario {
   return scenario({
@@ -66,6 +67,16 @@ describe("C+ #40 Appropriations", () => {
       s.expectStats(s.unit("p2", 1) as CardInstance, { attack: 3 });
     });
 
+    it("R13 a Unit dormant under a Stack is not on the field: only the pile's top is buffed", () => {
+      const s = appropriations({ p1: { field: [VANILLA, { def: FIENDER, stack: true }] } });
+      const buried = s.state.players.p1.units[0]?.[1] as CardInstance;
+      s.play(APPROPRIATIONS, { x: 1, modes: ["Military"] });
+      expect(buried.defId).toBe(VANILLA);
+      expect(s.card(buried).buffs.attack).toBe(0);
+      expect(s.card(buried).grantedKeywords).toEqual([]);
+      expect(s.card(FIENDER).buffs.attack).toBe(2);
+    });
+
     it("E38 a hand Unit carries the buff and Rush onto the field as it enters", () => {
       const s = appropriations().play(APPROPRIATIONS, { x: 1, modes: ["Military"] });
       s.play(VANILLA, { zone: 2 });
@@ -113,6 +124,23 @@ describe("C+ #40 Appropriations", () => {
       for (const entry of listed) expect(entry.radiant).toBe(true);
       expect(s.view("p2").opponent.libraryCount).toBe(2);
       expect(s.view("p2").opponent.ownLibrary).toBeUndefined();
+      // R97: which Books went in is the owner's to know, not the opponent's.
+      const theirs = JSON.stringify(s.view("p2"));
+      for (const card of s.pile("p1", "library")) expect(theirs).not.toContain(card.defId);
+    });
+
+    it("E39 R58 a Book it made is cast as it is drawn, its enchantment riding it from the deck", () => {
+      const s = appropriations({ p1: { library: [] }, p2: { library: [FILLER, FILLER] } }).play(APPROPRIATIONS, { x: 1, modes: ["Education"] });
+      const books = s.pile("p1", "library").map((card) => card.id);
+      s.endTurn().endTurn();
+      // A Book that asks for a target asks its caster; any answer will do here.
+      for (let n = 0; n < 6 && s.state.pending !== null; n += 1) s.answer(s.state.pending.options[0]?.key ?? "");
+      const cast = s.events.filter((event) => event.type === "cardPlayed" && books.includes(event.instanceId));
+      // The turn's draw casts one; a Book that draws casts the next as it comes (R58's chain).
+      const drawn = books.filter((id) => !s.pile("p1", "library").some((card) => card.id === id));
+      expect(drawn.length).toBeGreaterThanOrEqual(1);
+      expect(cast.map((event) => (event.type === "cardPlayed" ? event.instanceId : "")).sort()).toEqual(drawn.sort());
+      expect(s.hand("p1").some((card) => books.includes(card.id))).toBe(false);
     });
 
     it("R80 a full deck turns the rest away", () => {
@@ -165,11 +193,25 @@ describe("C+ #40 Appropriations", () => {
       const s = appropriations({ radiant: true }).play(APPROPRIATIONS, { x: 4, modes: ["Culture"] });
       for (const card of [...s.hand("p1"), ...s.pile("p1", "library")]) expect(card.radiant).toBe(true);
       s.expectStats(s.unit("p1", 1) as CardInstance, { attack: 6, health: 6 });
-      for (const entry of s.view("p1").you.ownLibrary?.cards ?? []) expect(entry.radiant).toBe(false);
+      const listed = s.view("p1").you.ownLibrary?.cards ?? [];
+      expect(listed.reduce((sum, entry) => sum + entry.count, 0)).toBe(2);
+      for (const entry of listed) expect(entry.radiant).toBe(false);
       const handIds = s.hand("p1").map((card) => card.id);
-      for (const event of s.view("p2").events) {
-        if (event.type === "radiantSet") expect(handIds).not.toContain(event.instanceId);
-      }
+      const cues = s.view("p2").events.filter((event) => event.type === "radiantSet");
+      // Field 1 + hand 2 + deck 2: every card is cued, the hand's and the deck's under the sentinel.
+      expect(cues).toHaveLength(5);
+      for (const event of cues) if (event.type === "radiantSet") expect(handIds).not.toContain(event.instanceId);
+    });
+
+    it("R581 R177 a hand card already Radiant is cued like the rest, so the opponent's cues never count it", () => {
+      const cues = (handRadiant: boolean): number => {
+        const s = appropriations({
+          radiant: true,
+          p1: { hand: [{ def: APPROPRIATIONS, radiant: true }, { def: VANILLA, radiant: handRadiant }, ECLIPSE], field: [TIMMY], library: [MENACE, FILLER] },
+        }).play(APPROPRIATIONS, { x: 4, modes: ["Culture"] });
+        return s.view("p2").events.filter((event) => event.type === "radiantSet").length;
+      };
+      expect(cues(true)).toBe(cues(false));
     });
   });
 

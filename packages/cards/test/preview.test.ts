@@ -932,6 +932,7 @@ describe("R280 R583 C+ #44 and #45 preview the permanents they would exile", () 
         const hook = must(CARDS[audit]?.radiant.preview, `${audit}'s hook`);
         const answer = hook({ state, self, controller: "p1", radiant: true, zone: "hand", yourTurn: active === "p1" });
         expect(shown(handCard(s.view("p1"), card.id)), `${audit} ${active}`).toEqual(answer);
+        expect(answer.map((entry) => entry.label)).toEqual(["all permanents", "only your opponent's"]);
         // Each label sits in the Radiant text, and each value counts its ids.
         for (const entry of answer) {
           expect(cardDef(audit).radiant.text).toContain(entry.label);
@@ -947,6 +948,7 @@ describe("R280 R583 C+ #44 and #45 preview the permanents they would exile", () 
       const low = board(audit, "core-071");
       const high = board(audit, "core-060");
       const of = (s: Scenario): PreviewValue[] | null => shown(handCard(s.view("p1"), must(s.hand("p1")[0], audit).id));
+      expect(of(low)).not.toBeNull();
       expect(of(low)).toEqual(of(high));
     }
   });

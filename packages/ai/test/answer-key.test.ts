@@ -19,7 +19,7 @@ import {
   type Script,
 } from "@jackioh/engine";
 import { decide, redact } from "../src/index";
-import { act, clone, dealtGame } from "./_support";
+import { act, clone, dealtGame, scenario } from "./_support";
 
 /** A test-only continuation: the right answer deals 10 to the enemy hero, a wrong one nothing. */
 const QUIZ_DEF = "ai-test-quiz";
@@ -72,5 +72,19 @@ describe("R465: the AI never reads a problem's key", () => {
       return JSON.stringify(decision?.action);
     });
     expect(new Set(decisions).size).toBe(1);
+  });
+
+  it("R465 the real KY's Test (C+ #42): at either prompt neither seat's redaction holds the key", () => {
+    const s = scenario({ seed: "r465-kys-test", p1: { hand: ["classicplus-042", "core-005"] }, p2: { hand: ["core-005"] } });
+    s.play("classicplus-042");
+    for (const difficulty of ["Easy", "Medium", "Hard"]) {
+      const offer = clone(s.state);
+      const answered = act(offer, "p1", { type: "answer", choiceId: offer.pending?.id ?? "", selection: [{ pick: "mode", option: difficulty }] });
+      expect(answered.pending?.kind).toBe("answer");
+      expect(answerKeyOf(answered.pending?.resume.data ?? {})).not.toBeNull();
+      for (const state of [offer, answered]) {
+        for (const seat of ["p1", "p2"] as const) expect(JSON.stringify(redact(state, seat))).not.toContain(ANSWER_KEY);
+      }
+    }
   });
 });

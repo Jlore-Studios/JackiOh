@@ -43,11 +43,11 @@ function labelOf(s: Scenario, difficulty: Difficulty): string {
   return s.state.pending?.options.find((option) => option.key === `mode:${difficulty}`)?.label ?? "";
 }
 
-/** The first seed whose roll for `difficulty` is `rewardId`. */
-function rolled(difficulty: Difficulty, rewardId: string, radiantFace = false, hand: readonly string[] = [FILLER]): Scenario {
+/** The first seed whose roll for `difficulty` is `rewardId`; `salt` picks another run of seeds. */
+function rolled(difficulty: Difficulty, rewardId: string, radiantFace = false, hand: readonly string[] = [FILLER], salt = ""): Scenario {
   const reward = KY_TEST_REWARDS[difficulty].find((entry) => entry.id === rewardId);
   for (let n = 0; n < 200; n += 1) {
-    const s = cast(`kys-test-${difficulty}-${rewardId}-${n}`, radiantFace, hand);
+    const s = cast(`kys-test-${difficulty}-${rewardId}-${salt}${n}`, radiantFace, hand);
     if (labelOf(s, difficulty) === `${difficulty}: ${reward?.label}`) return s;
   }
   throw new Error(`no seed rolls ${rewardId}`);
@@ -132,6 +132,12 @@ describe("C+ #42 KY's Test", () => {
       expect(pending?.options.find((option) => option.key === `mode:${key(s)}`)?.label).toBe(problem?.answer);
     });
 
+    it("R420 the options come in an rng-shuffled order: the right letter is not always the same", () => {
+      const letters = new Set<string>();
+      for (let n = 0; n < 12; n += 1) letters.add(key(cast(`kys-test-order-${n}`).answer("Medium")));
+      expect(letters.size).toBeGreaterThan(1);
+    });
+
     it("R420 a Hard choice asks a Hard problem of the bank", () => {
       const s = cast("kys-test-hard").answer("Hard");
       expect(KY_TEST_BANK.find((entry) => entry.statement === s.state.pending?.prompt)?.difficulty).toBe("Hard");
@@ -202,14 +208,18 @@ describe("C+ #42 KY's Test", () => {
     });
 
     it("R420 R387 Easy: a random Legendary card, which costs (0), never KY's Test", () => {
-      for (let n = 0; n < 4; n += 1) {
-        const s = take(rolled("Easy", "legendary", false, [FILLER, ...Array.from({ length: n }, () => FILLER)]), "Easy");
+      const seen = new Set<string>();
+      for (let n = 0; n < 8; n += 1) {
+        const s = take(rolled("Easy", "legendary", false, [FILLER], `run${n}-`), "Easy");
         const [card] = gained(s);
+        seen.add(card?.defId ?? "");
         expect(cardDef(card?.defId ?? "").rarity).toBe("Legendary");
         expect(cardDef(card?.defId ?? "").token).toBe(false);
         expect(card?.defId).not.toBe(TEST);
         expect(card?.costOverride).toBe(0);
       }
+      // Not one card eight times over: the seeds differ, so the pool is really sampled.
+      expect(seen.size).toBeGreaterThan(1);
     });
 
     it("R420 Easy: 2 random Books", () => {
@@ -237,12 +247,15 @@ describe("C+ #42 KY's Test", () => {
     });
 
     it("R420 R387 Medium: 5 random KY cards, never KY's Test and never a token", () => {
-      const cards = gained(take(rolled("Medium", "ky"), "Medium"));
-      expect(cards).toHaveLength(5);
-      for (const card of cards) {
-        expect(cardDef(card.defId).tags).toContain("KY");
-        expect(cardDef(card.defId).token).toBe(false);
-        expect(card.defId).not.toBe(TEST);
+      // Four runs: twenty picks from the six other KY cards, so a pool that held KY's Test would show it.
+      for (const salt of ["a-", "b-", "c-", "d-"]) {
+        const cards = gained(take(rolled("Medium", "ky", false, [FILLER], salt), "Medium"));
+        expect(cards).toHaveLength(5);
+        for (const card of cards) {
+          expect(cardDef(card.defId).tags).toContain("KY");
+          expect(cardDef(card.defId).token).toBe(false);
+          expect(card.defId).not.toBe(TEST);
+        }
       }
     });
 

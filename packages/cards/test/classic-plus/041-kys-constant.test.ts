@@ -136,7 +136,12 @@ describe("C+ #41 KY's Constant", () => {
       const mine = s.view("p1").events.find((event) => event.type === "numberChanged");
       const theirs = s.view("p2").events.find((event) => event.type === "numberChanged");
       expect(mine?.type === "numberChanged" ? [mine.defId, mine.key, mine.value] : []).toEqual([TIMMY, "cost", 3]);
-      expect(theirs?.type === "numberChanged" ? theirs.defId : "").toBe("hidden");
+      expect(theirs?.type === "numberChanged" ? [theirs.instanceId, theirs.defId, theirs.key, theirs.value] : []).toEqual([
+        "hidden",
+        "hidden",
+        "hidden",
+        0,
+      ]);
       expect(JSON.stringify(s.view("p2"))).not.toContain(TIMMY);
     });
   });
@@ -177,7 +182,12 @@ describe("C+ #41 KY's Constant", () => {
         selection: [s.state.pending?.options[0]?.selection],
         nonce: "constant-json",
       } as Action;
-      expect(hashState(reduce(thawed, action).state)).toBe(hashState(reduce(s.state, action).state));
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(live.state.pending).toBeNull();
+      const armored = live.state.players.p1.hand.find((card) => card.defId === ARMORED);
+      expect(numbersOn(live.state, armored ?? s.card(ARMORED)).filter((entry) => entry.value === 3)).toHaveLength(1);
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
 
     it("with no such hand card it fizzles, asking nothing", () => {

@@ -102,7 +102,7 @@ export const KY_TEST_BANK: readonly Problem[] = [
   // Hard: proofs.
   hard("h37", "To prove √2 irrational, suppose √2 = p/q in lowest terms. The contradiction is that?", "p and q are both even", "p = q", "q = 0", "p² = q"),
   hard("h38", "Inducting 1 + 2 + ⋯ + n = n(n + 1)/2, the step shows n(n + 1)/2 + (n + 1) equals?", "(n + 1)(n + 2)/2", "n(n + 2)/2", "(n + 1)²/2", "(n² + 1)/2"),
-  hard("h39", "Euclid: given primes p₁, …, pₖ, which number has a prime factor outside the list?", "p₁p₂⋯pₖ + 1", "p₁ + p₂ + ⋯ + pₖ", "pₖ²", "2pₖ"),
+  hard("h39", "Euclid: given primes p₁, …, pₖ, which number always has a prime factor outside the list?", "p₁p₂⋯pₖ + 1", "p₁ + p₂ + ⋯ + pₖ", "pₖ²", "2pₖ"),
   hard("h40", "By the pigeonhole principle, the fewest people certain to include two born in the same month is?", "13", "12", "7", "24"),
-  hard("h41", "Cantor's diagonal argument proves that?", "ℝ is uncountable", "ℚ is countable", "√2 is irrational", "there are infinitely many primes"),
+  hard("h41", "Cantor's diagonal argument proves that?", "ℝ is uncountable", "ℚ is uncountable", "√2 is irrational", "there are infinitely many primes"),
 ];
