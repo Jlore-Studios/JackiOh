@@ -7,8 +7,7 @@
 // from then on (R33); a face-down option, and the placement on it, never name it to you (R177);
 // radiant: 2 tokens; its tuned number (tokens) reads through `param()` (R386)".
 //
-// The R396 cases read `costNow`, eng-play-b's reader (R396); this preview runs them against the lead's
-// stand-in of it, and they are re-run once eng-play-b is integrated.
+// The R396 cases read costs through the engine's `costNow`.
 
 import { stepParam } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";

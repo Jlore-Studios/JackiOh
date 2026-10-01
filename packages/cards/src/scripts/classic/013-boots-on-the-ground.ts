@@ -14,32 +14,26 @@
 // face and its tuned numbers are the ones it attacked with, and the controller is the attack's. An
 // attack on this card is not one it attacked in, so defending does nothing.
 //
-// The engine does not run `afterAttack` yet (it is requested of the combat module: a trigger on
-// `attackDeclared` could not serve, since an entry a card queued on the field is dropped when it
-// leaves the field, R174, and a forced attack's event reaches no card that died in its combat, R212).
-// `Script` does not declare the key yet either, so the faces are typed with it added below; once the
-// engine declares it, that local type is `Script` itself. Until then its test waits.
+// (A trigger on `attackDeclared` could not serve: an entry a card queued on the field is dropped when
+// it leaves the field, R174, and a forced attack's event reaches no card that died in its combat, R212.)
 //
 // Radiant: §6.3 Recruit, one top-down scan per recruit for the first permanent, summoned into its
 // row per R64 with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full.
 //
 // The numbers are the declared `draw` and `recruits` (R386), read through `param`.
 
-import { param, type Hook, type Script } from "@jackioh/engine";
+import { param, type Script } from "@jackioh/engine";
 import { draw, recruit } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-013");
 
-/** `Script` with the requested hook: run after each combat this card attacked in, on its last-known state. */
-type AfterAttackScript = Script & { afterAttack?: Hook };
-
 /** "After this attacks, draw {draw}." */
-export const base: AfterAttackScript = {
+export const base: Script = {
   afterAttack: (ctx) => [draw({ count: param(ctx, "draw") })],
 };
 
 /** "After this attacks, Recruit {recruits|card|cards}.": one top-down scan per recruit. */
-export const radiant: AfterAttackScript = {
+export const radiant: Script = {
   afterAttack: (ctx) => Array.from({ length: param(ctx, "recruits") }, () => recruit({ player: "self" })),
 };

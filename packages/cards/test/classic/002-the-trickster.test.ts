@@ -4,8 +4,7 @@
 // cast never uses it (R70); the opponent's view of your changed hand costs shows −1 (R177); radiant
 // 4/2: the next one costs (0); its tuned number (discount) reads through `param()` (R386)".
 //
-// The cast case needs a card that casts a Trap: Classic+ #37 Wardrum's end-of-turn copy (its script
-// is the Classic+ workstream's), so that one test waits for integration.
+// The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
 
 import { describe, expect, it } from "vitest";
 import { effectiveCost, stepParam } from "@jackioh/engine";

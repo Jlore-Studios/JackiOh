@@ -8,10 +8,6 @@
 // radiant: no exile replacement, and only cards whose price as it would be paid is (1) or more are
 // offered, so a (0) Cost card never loops; its tuned number (radiant minimum price) reads through
 // `param()` (R386)".
-//
-// The base face's replacement is B5 E5 (`Script.replacements`, the damage workstream's engine), not in
-// this worktree's engine: the tests that watch a card of yours go to exile instead of your graveyard
-// wait for its integration. Everything else runs here.
 
 import { describe, expect, it } from "vitest";
 import {

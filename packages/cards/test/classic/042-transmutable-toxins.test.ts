@@ -5,10 +5,6 @@
 // leaves; Activate, once per turn (R384): one token on each of two different random Units on the field,
 // either side (R60: one Unit → one token; none → nothing); C #27 doubles its share; not a play;
 // radiant: +2/+2 and −2/−2; its tuned numbers (tokens, stats per token) read through `param()` (R386)".
-//
-// The Activate half needs the `activate` action (B3.2, R384, the activate-and-turn workstream's
-// `subsystems/activate.ts`), which this worktree's engine does not have: the Activate tests wait for
-// its integration. The aura runs here.
 
 import { describe, expect, it } from "vitest";
 import { stepParam } from "@jackioh/engine";
