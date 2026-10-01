@@ -40,7 +40,6 @@ function played(radiant: boolean, lane: number, p1: SideSetup = {}, p2: SideSetu
 }
 
 const spatulaId = (s: Scenario): string => s.card(SPATULA).id;
-const where = (s: Scenario): string => JSON.stringify(s.card(SPATULA).zone);
 const eventsOf = <T extends GameEvent["type"]>(s: Scenario, type: T): Extract<GameEvent, { type: T }>[] =>
   s.events.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
 
