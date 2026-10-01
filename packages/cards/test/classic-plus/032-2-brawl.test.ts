@@ -18,6 +18,8 @@ const UNBREAKABLE = "classic-041";
 /** #3 Right-house defender: Taunt, Divine Shield, Reborn. */
 const DEFENDER = "core-003";
 const FILLER = "core-005";
+/** C+ #19.1 Top Loser, whose Radiant face is Immune to Spells. */
+const TOP_LOSER = "classicplus-019-1";
 
 const units = (s: Scenario): string[] =>
   (["p1", "p2"] as const).flatMap((player) =>
@@ -83,6 +85,21 @@ describe("C+ #32.2 Brawl", () => {
       expect(left.length).toBeLessThanOrEqual(3);
     });
 
+    it("§6.1 an Immune to Spells Unit is not among the candidates and stays anyway", () => {
+      for (const seed of ["immune-a", "immune-b", "immune-c", "immune-d"]) {
+        const s = scenario({
+          seed,
+          p1: { hand: [BRAWL, FILLER], field: [TIMMY, MENACE] },
+          p2: { field: [{ def: TOP_LOSER, radiant: true }] },
+        });
+        s.play(BRAWL);
+        const left = units(s).map((id) => s.card(id).defId);
+        expect(left).toContain(TOP_LOSER);
+        expect(left).toHaveLength(2);
+        expect(destroyed(s)).toHaveLength(1);
+      }
+    });
+
     it("R129 with no Unit there is nothing to destroy and nothing is drawn", () => {
       const s = scenario({ p1: { hand: [BRAWL, FILLER] } });
       const cursor = s.state.rngCursor;
@@ -105,6 +122,17 @@ describe("C+ #32.2 Brawl", () => {
       const { s, before } = brawl("brawl-radiant", true, (at) => [{ pick: "instance", instanceId: at.unit("p2", 2)?.id ?? "" }]);
       expect(units(s).map((id) => s.card(id).defId)).toEqual([JILLIAX]);
       expect(destroyed(s)).toHaveLength(before.length - 1);
+    });
+
+    it("R81 an Immune to Spells Unit can't be the chosen survivor, and stays all the same", () => {
+      const s = scenario({
+        p1: { hand: [{ def: BRAWL, radiant: true }, FILLER], field: [TIMMY] },
+        p2: { field: [{ def: TOP_LOSER, radiant: true }, MENACE] },
+      });
+      const loser = s.card(TOP_LOSER).id;
+      expect(() => s.play(BRAWL, { targets: [{ pick: "instance", instanceId: loser }] })).toThrow(/not a legal target/);
+      s.play(BRAWL, { targets: [{ pick: "instance", instanceId: s.card(TIMMY).id }] });
+      expect(units(s).map((id) => s.card(id).defId).sort()).toEqual([TIMMY, TOP_LOSER].sort());
     });
 
     it("R81 or one of your own", () => {

@@ -77,25 +77,33 @@ describe("C+ #30 Felinor Fuser", () => {
       expect(fusedIdParts(fuser.defId)).toEqual([...picks, FUSER]);
     });
 
-    it("R77 it keeps its instance, zone, damage and position; stats sum and texts join", () => {
+    it("R77 it keeps its instance, zone, damage and position; stats sum, keywords union and texts join", () => {
       const s = scenario({ p1: { hand: [FUSER, FILLER] }, p2: { hand: [FILLER] } });
       const card = s.card(FUSER);
       s.play(FUSER, { zone: 2 });
       const picks: string[] = [];
-      for (let step = 0; step < 2; step += 1) {
-        picks.push(offered(open(s))[0] ?? "");
-        s.answer(picks[step] ?? "");
-      }
+      picks.push(offered(open(s))[0] ?? "");
+      s.answer(picks[0] ?? "");
+      // Between the two Discovers the Fuser stands hurt and in defence, which the Fuse keeps.
+      Object.assign(s.card(card.id), { damage: 1, position: "DEF" });
+      picks.push(offered(open(s))[0] ?? "");
+      s.answer(picks[1] ?? "");
       const kept = s.unit("p1", 2);
       if (kept === null) throw new Error("the Fuser left its zone");
       expect(kept.id).toBe(card.id);
+      expect(kept.damage).toBe(1);
+      expect(kept.position).toBe("DEF");
       const fusedDef = defOf(s.state, kept.defId);
       const ingredients = [...picks, FUSER].map((id) => defOf(s.state, id));
       const attack = ingredients.reduce((sum, entry) => sum + (entry.base.attack ?? 0), 0);
       const health = ingredients.reduce((sum, entry) => sum + (entry.base.health ?? 0), 0);
-      s.expectStats(kept, { attack, health, maxHealth: health });
+      s.expectStats(kept, { attack, health: health - 1, maxHealth: health });
       expect(fusedDef.type).toBe("Unit");
-      for (const entry of ingredients) expect(fusedDef.base.text).toContain(entry.base.text.split("\n")[0] ?? "");
+      const kinds = fusedDef.base.keywords.map((keyword) => keyword.kind);
+      for (const entry of ingredients) {
+        expect(fusedDef.base.text).toContain(entry.base.text.split("\n")[0] ?? "");
+        for (const keyword of entry.base.keywords) expect(kinds).toContain(keyword.kind);
+      }
       // R77: min(sum of printed costs, 4) — the Fuser's 3 alone with any Felinor reaches the cap.
       expect(fusedDef.cost).toBe(4);
     });

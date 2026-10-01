@@ -7326,7 +7326,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 2,
-    "loc": 20,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
@@ -7374,7 +7374,7 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
-    "loc": 22,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Destroy a damaged Unit."

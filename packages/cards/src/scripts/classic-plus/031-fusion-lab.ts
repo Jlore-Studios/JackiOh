@@ -17,7 +17,7 @@
 // forms, so its text and stats show whether or not the hand card is Radiant (R561). The opponent's
 // view names neither the hand card, the ingredient nor the fused id (R97, R179).
 
-import { unitHas, type Script } from "@jackioh/engine";
+import { unitHas, type CardInstance, type GameState, type Script } from "@jackioh/engine";
 import { chooseFromHand, fuseRandomInto } from "@jackioh/engine/effects";
 import type { TargetDecl } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
@@ -30,6 +30,9 @@ const FUSABLE = "fusable";
 /** The resume step the end of turn's hand prompt re-enters (§10.6). */
 const CHOSEN = "chosen";
 
+/** R23: a card a Fuse may keep is not Immutable. */
+const fusable = (state: GameState, card: CardInstance): boolean => !unitHas(state, card, "Immutable");
+
 /** R81: one card of the controller's own hand, chosen with the play. */
 const HAND_PICK: TargetDecl[] = [{ kind: "hand", min: 1, max: 1, filter: { check: FUSABLE } }];
 
@@ -39,10 +42,10 @@ function fusionLab(radiant: boolean): Script {
   return {
     targets: HAND_PICK,
     targetChecks: {
-      [FUSABLE]: ({ state, candidate }) => candidate !== null && !unitHas(state, candidate, "Immutable"),
+      [FUSABLE]: ({ state, candidate }) => candidate !== null && fusable(state, candidate),
     },
     cry: () => [fuseIntoChosen()],
-    endOfTurn: () => [chooseFromHand({ step: CHOSEN, where: (ctx, card) => !unitHas(ctx.state, card, "Immutable") })],
+    endOfTurn: () => [chooseFromHand({ step: CHOSEN, where: (ctx, card) => fusable(ctx.state, card) })],
     resume: {
       [CHOSEN]: () => [fuseIntoChosen()],
     },
