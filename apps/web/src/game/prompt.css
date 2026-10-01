@@ -1,4 +1,4 @@
-/* The choice pickers (BUILD M5-T2, SPEC §10.6). One modal, ten pickers.
+/* The choice pickers (BUILD M5-T2, SPEC §10.6). One modal, a picker for every prompt kind.
    Tokens come from src/index.css. M5-T4's promptOpened / promptAnswered animations key off
    [data-prompt-kind] on .prompt, so that attribute is the contract, not these classes. */
 
@@ -376,6 +376,143 @@
   border-left-width: 0;
 }
 
+/* --- B5 E18: number, answer, reward and pick ------------------------------------------------- */
+
+/* `number` (C #18): a pad of big keys, `--pad-columns` wide (Prompt.tsx's NUMBER_PAD_COLUMNS, which
+   the arrow keys move by). */
+.prompt .prompt-numbers {
+  display: grid;
+  grid-template-columns: repeat(var(--pad-columns), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.prompt .prompt-numbers > button {
+  min-height: 52px;
+  padding: 4px;
+  border-radius: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* `answer` (C+ #42): the problem is the title, on a sheet of exam paper with its line breaks kept
+   (plain text with Unicode maths), and the answers are big lettered buttons. */
+.prompt-answer > .prompt-title {
+  padding: 12px 14px;
+  border: 1px solid #c9a36a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f4e7c8 0%, #ead8b0 100%);
+  color: #2b1800;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-answers {
+  display: grid;
+  gap: 6px;
+}
+
+.prompt .prompt-answers > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-answer-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #d4af37;
+  border-radius: 50%;
+  color: #ffd24a;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+/* `reward` (C #90): "Quest complete!" in gold over the quest, and each reward a small gilt card. */
+.prompt > .prompt-quest-banner {
+  max-width: none;
+  margin: 0;
+  color: #ffd24a;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 0 12px rgb(255 210 74 / 45%), 0 2px 0 rgb(0 0 0 / 60%);
+}
+
+.prompt-reward > .prompt-title,
+.prompt-reward > .prompt-count {
+  text-align: center;
+}
+
+.prompt-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.prompt .prompt-rewards > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 150px;
+  min-height: 150px;
+  padding: 12px 10px;
+  border: 2px solid #b8892f;
+  border-radius: 12px;
+  background: linear-gradient(170deg, #3a2414 0%, #20120a 100%);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.prompt .prompt-rewards > button::before {
+  content: "Reward";
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: #7a5520;
+  color: #fff0bf;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* `pick` (R515): the running total over the cards; a card over the budget is greyed by index.css's
+   `button[aria-disabled="true"]`. */
+.prompt > .prompt-budget {
+  max-width: none;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (width <= 480px) {
+  .prompt .prompt-rewards > button {
+    width: calc(50% - 5px);
+    min-height: 120px;
+  }
+}
+
 /* --- state -------------------------------------------------------------------------------- */
 
 .prompt [aria-pressed="true"],
@@ -510,7 +647,9 @@
     > [data-prompt-kind="direction"],
     > [data-prompt-kind="mode"],
     > [data-prompt-kind="x"],
-    > [data-prompt-kind="embiggen"]
+    > [data-prompt-kind="embiggen"],
+    > [data-prompt-kind="number"],
+    > [data-prompt-kind="cell"]
   ) {
   background: transparent;
 }
@@ -518,7 +657,8 @@
 /* The board picks wear the green of the cells they are asking about. */
 .prompt[data-prompt-kind="zone"],
 .prompt[data-prompt-kind="target"],
-.prompt[data-prompt-kind="tribute"] {
+.prompt[data-prompt-kind="tribute"],
+.prompt[data-prompt-kind="cell"] {
   border-color: color-mix(in srgb, var(--glow-ready, #4ade80) 45%, var(--line-bright));
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--glow-ready, #4ade80) 20%, transparent),
@@ -533,10 +673,22 @@
       > [data-prompt-kind="direction"],
       > [data-prompt-kind="mode"],
       > [data-prompt-kind="x"],
-      > [data-prompt-kind="embiggen"]
+      > [data-prompt-kind="embiggen"],
+      > [data-prompt-kind="number"],
+      > [data-prompt-kind="cell"]
     ) {
     place-items: center end;
     padding: 16px;
+  }
+
+  /* E18's board-facing pickers are wider than a zone list: the pad's six keys and the cell grid's
+     row names and five lanes keep their touch size beside the board. */
+  .prompt[data-prompt-kind="number"] {
+    width: min(340px, 100%);
+  }
+
+  .prompt[data-prompt-kind="cell"] {
+    width: min(320px, 100%);
   }
 
   .prompt[data-prompt-kind="zone"],
@@ -563,7 +715,9 @@
       > [data-prompt-kind="direction"],
       > [data-prompt-kind="mode"],
       > [data-prompt-kind="x"],
-      > [data-prompt-kind="embiggen"]
+      > [data-prompt-kind="embiggen"],
+      > [data-prompt-kind="number"],
+      > [data-prompt-kind="cell"]
     ) {
     place-items: end center;
     /* Docked above the turn plate and the control bar (about 120 px at the foot of a tablet), not
@@ -738,6 +892,26 @@
   .prompt:has(> .prompt-cards) > .prompt-actions button {
     flex: 0 1 180px;
   }
+}
+
+/* R514: while a cell prompt is open (C+ #62), the zones it offers glow green as a zone pick's do
+   (`highlightFor` lights every open prompt's options) and wear a crosshair over it, so they read as
+   points to pick rather than places to play. Static: nothing moves, under reduced motion or not. */
+.game:has([data-prompt-kind="cell"]) .zone[data-glow="ready"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  margin: auto;
+  border: 2px solid var(--glow-ready, #4ade80);
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--glow-ready, #4ade80), var(--glow-ready, #4ade80)) center / 2px 100% no-repeat,
+    linear-gradient(var(--glow-ready, #4ade80), var(--glow-ready, #4ade80)) center / 100% 2px no-repeat;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 55%);
+  pointer-events: none;
 }
 
 /* Touch sizing (task 7's 44 px floor): Confirm and Cancel on every picker, the mulligan's included. */
