@@ -1,6 +1,7 @@
 // Replay: (seed, decks, action log) rebuilds a match exactly, and a state hash makes two folds
-// comparable (SPEC §9.2, §9.3). A practice game adds its handicaps to that tuple (§9.9, R180, R187):
-// they are setup, not actions, so the fold hands them to `createGame` exactly as the live game did.
+// comparable (SPEC §9.2, §9.3). A practice game adds its handicaps to that tuple (§9.9, R180, R187),
+// and a game with a dealt deck the seats that were dealt one (R433): they are setup, not actions, so
+// the fold hands them to `createGame` exactly as the live game did.
 
 import type { Action, CardDefs, PlayerId } from "@jackioh/shared";
 import type { Handicap } from "./config";
@@ -37,6 +38,8 @@ export type ReplayInput = {
   catalog?: CardDefs;
   /** R180, R187: the same handicaps the live createGame had. */
   handicaps?: Partial<Record<PlayerId, Handicap>>;
+  /** R433: the same dealt seats the live createGame had. */
+  dealt?: readonly PlayerId[];
 };
 
 export type ReplayResult = { state: GameState; errors: { nonce: string; error: string }[] };
@@ -52,6 +55,7 @@ export function fold(input: ReplayInput): ReplayResult {
     decks: input.decks,
     ...(input.catalog === undefined ? {} : { catalog: input.catalog }),
     ...(input.handicaps === undefined ? {} : { handicaps: input.handicaps }),
+    ...(input.dealt === undefined ? {} : { dealt: input.dealt }),
   });
   let state = beginGame(start).state;
   const errors: { nonce: string; error: string }[] = [];

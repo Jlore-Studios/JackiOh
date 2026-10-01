@@ -6,8 +6,9 @@
 // sick. It keeps a shadow built only from the event stream:
 //   - `turn`, from `turnStarted`;
 //   - `entered`, the turn of each instance's latest entry, and `stint`, how many entries it has had.
-//     An entry event is `cardPlayed`, `summoned`, `controlChanged`, or a `transformed` whose new
-//     instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
+//     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
+//     stepping from its backrow zone into a unit zone enters it on that turn, R383), or a
+//     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //     side or a Stack card resuming emits nothing and changes nothing;
 //   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack.
 //
@@ -138,6 +139,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
           case "cardPlayed":
           case "summoned":
           case "controlChanged":
+          case "animated": // R383: moving into the unit row is entering it on that turn.
             enter(event.instanceId);
             break;
           case "transformed":

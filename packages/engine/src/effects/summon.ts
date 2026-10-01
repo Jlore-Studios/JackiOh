@@ -7,13 +7,18 @@
 // `randomKeywords` on `summon` is R21's roll (#80). Placement, the `summoned` event, the face-down
 // Trap and every fizzle stay in `zoneFor`/`summonOnto` for all of them.
 
-import type { CardDef, CardType, PlayerId, Row, Tag } from "@jackioh/shared";
+import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
+import { animateOnEntry } from "../animated";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { unitedEnchantments } from "../enchantments";
+import { cardTypeOf } from "../faces";
 import { effectiveCost } from "../mana";
 import { runStartOfGame } from "../prompts";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
+import { lazyPart } from "../resolve";
 import { exitMark } from "../stays";
+import { copyTuning } from "../tuning";
 import {
   fillBoardZones,
   firstFreeZone,
@@ -62,10 +67,13 @@ export type SummonArgs = SummonPlacement & {
   randomKeywords?: number;
 };
 
-/** §5.1: the row a card type lives in, or null for a Spell, which is never summoned. */
-function rowOf(def: CardDef): Row | null {
-  if (def.type === "Unit") return "units";
-  if (def.type === "Spell") return null;
+/**
+ * §5.1: the row a card type lives in, or null for a Spell, which is never summoned. B2.7: a card's
+ * type is its running face's (`faces.cardTypeOf`), a pool's definition its base face's.
+ */
+function rowOf(type: CardType): Row | null {
+  if (type === "Unit") return "units";
+  if (type === "Spell") return null;
   return "backrow";
 }
 
@@ -106,7 +114,7 @@ function summonOnto(
   if (at.statsOverride !== undefined) {
     card.statsOverride = { attack: at.statsOverride.attack, health: at.statsOverride.health };
   }
-  if (defOf(ctx.state, card.defId).type === "Field Spell") card.faceUp = true;
+  if (cardTypeOf(ctx.state, card) === "Field Spell") card.faceUp = true;
 
   ctx.events.push({
     type: "summoned",
@@ -117,6 +125,9 @@ function summonOnto(
     lane: ref.lane,
     ...(formerId === undefined ? {} : { formerId }),
   });
+  // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
+  // turn, animates as it enters the field.
+  animateOnEntry(ctx, card);
   // R43, R151: "one created later rolls when it is created", as it arrives anywhere a card can be
   // looked at, and the field is such a place. A #98 Heroic Power that #22's Death summons as a copy
   // or #95 summons into the backrow reaches neither a hand nor a library, the two arrivals
@@ -135,7 +146,7 @@ function summonFresh(
   player: PlayerId,
   at: SummonPlacement,
 ): CardInstance | null {
-  const row = rowOf(defOf(ctx.state, defId));
+  const row = rowOf(cardTypeOf(ctx.state, { defId, radiant: at.radiant === true }));
   if (row === null) return null;
   const ref = zoneFor(ctx, player, row, at);
   if (ref === null) return null;
@@ -154,7 +165,7 @@ function summonExisting(
   at: SummonPlacement,
 ): CardInstance | null {
   if (card.zone.z === "field") return null;
-  const row = rowOf(defOf(ctx.state, card.defId));
+  const row = rowOf(cardTypeOf(ctx.state, { defId: card.defId, radiant: card.radiant || at.radiant === true }));
   if (row === null) return null;
   const ref = zoneFor(ctx, player, row, at);
   if (ref === null) return null;
@@ -234,7 +245,7 @@ export type SummonCopyArgs = {
  * nothing of its own (`memory`). Auras are layer 5 of §10.4 and computed on read, so they apply to
  * the copy afresh with no work here (§8.3 #61).
  */
-function cloneOf(
+export function cloneOf(
   ctx: EffectContext,
   source: CardInstance,
   player: PlayerId,
@@ -252,6 +263,12 @@ function cloneOf(
   }
   // §7: a Bread Token's "Armor X" is carried beside its X/X, so a copy keeps both halves (R57).
   if (source.armorOverride !== undefined) copy.armorOverride = source.armorOverride;
+  // B3.4 rule 4, R443: a copy keeps the source's tuning and enchantments too — never its Brittle
+  // count, which a copy never inherits (R57's counters).
+  const tuning = copyTuning(source.tuning);
+  if (tuning !== undefined) copy.tuning = tuning;
+  const enchantments = unitedEnchantments([source]);
+  if (enchantments !== undefined) copy.enchantments = enchantments;
   return copy;
 }
 
@@ -271,7 +288,7 @@ export function summonCopy(args: SummonCopyArgs): Effect {
       // effect (R174), and a copy is never made of a card in a graveyard.
       if (source === null || source.zone.z !== "field") return;
       const player = playerOf(ctx, args.player ?? "self");
-      const row = rowOf(defOf(ctx.state, source.defId));
+      const row = rowOf(cardTypeOf(ctx.state, source));
       if (row === null) return;
 
       // The zone is found before the clone exists, so a fizzle creates nothing and takes no id.
@@ -319,7 +336,7 @@ export function summonRandom(
       );
       const player = playerOf(ctx, args.player ?? "self");
       const rows = new Set(pool.flatMap((def) => {
-        const row = rowOf(def);
+        const row = rowOf(def.type);
         return row === null ? [] : [row];
       }));
       if (![...rows].some((row) => zoneFor(ctx, player, row, args) !== null)) return;
@@ -357,7 +374,7 @@ function asList<T>(value: T | T[] | undefined): T[] {
 function matchesFilter(ctx: EffectContext, card: CardInstance, filter: RecruitFilter): boolean {
   const def = defOf(ctx.state, card.defId);
   const types = asList(filter.type);
-  if (types.length > 0 && !types.includes(def.type)) return false;
+  if (types.length > 0 && !types.includes(cardTypeOf(ctx.state, card))) return false;
   const defIds = asList(filter.defId);
   if (defIds.length > 0 && !defIds.includes(def.id)) return false;
   if (filter.tags !== undefined && !filter.tags.every((tag) => def.tags.includes(tag))) return false;
@@ -371,41 +388,121 @@ function matchesFilter(ctx: EffectContext, card: CardInstance, filter: RecruitFi
 }
 
 /**
+ * Where a Recruit scans (B5 E25): a player's library, top down (§6.3), or a player's exile, newest
+ * first — exile is chronological (§3), so its "top" is the card exiled last (Classic #1 Radiant).
+ */
+export type RecruitSource = "library" | "exile";
+
+/** The pile a Recruit scans, in scan order: a library top down, an exile newest first. */
+function recruitPile(ctx: EffectContext, from: RecruitSource, whose: PlayerId): CardInstance[] {
+  const side = ctx.state.players[whose];
+  return from === "exile" ? [...side.exile].reverse() : [...side.library];
+}
+
+/**
+ * A card a Recruit may take: a permanent (§6.3, R43's "recruits a permanent") that matches the
+ * filter — and never a unit-token card, which leaves a library only by being drawn (R11, R218).
+ */
+function recruitable(ctx: EffectContext, card: CardInstance, filter: RecruitFilter): boolean {
+  return (
+    isPermanentType(cardTypeOf(ctx.state, card)) &&
+    !isUnitToken(ctx.state, card) &&
+    matchesFilter(ctx, card, filter)
+  );
+}
+
+/**
+ * #98 radiant, "Recruit and make it Radiant": the second half is §6.3's Make Radiant, and every
+ * visible change is announced (§10.3) — `radiantSet` is what §10.10 animates the glow from. The flag
+ * went on as the card left the pile, so it lands on its Radiant face; the cue follows the summon, and
+ * goes out whether or not the card was Radiant already, as R177 has a Make Radiant on a card someone
+ * may not read (a face-down Trap) do.
+ */
+function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, radiant: boolean | undefined): void {
+  if (recruited !== null && radiant === true) {
+    ctx.events.push({ type: "radiantSet", instanceId: recruited.id, defId: recruited.defId, zone: recruited.zone });
+  }
+}
+
+/**
  * §6.3 Recruit: scan the library top down for the first permanent that matches, summon it per R64
  * (a Trap face-down), and leave the rest of the library in its order.
+ *
+ * B5 E25 extends where and how often: `from: "exile"` scans an exile newest first, and `whose` names
+ * whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
+ * Radiant) summons the opponent's card on the recruiting side, under its control, its owner unchanged,
+ * so it goes back to its owner's piles when it leaves the field (§3.2, R12). `count` is "Recruit N"
+ * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
+ * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
+ * "three top-down scans; stops when the board is full").
  */
 export function recruit(
-  args: { filter?: RecruitFilter; player?: PlayerSpec; lane?: number; radiant?: boolean } = {},
+  args: {
+    filter?: RecruitFilter;
+    player?: PlayerSpec;
+    lane?: number;
+    radiant?: boolean;
+    // ---- v0.2.0, generation (E25) ----
+    from?: RecruitSource;
+    whose?: PlayerSpec;
+    count?: number;
+  } = {},
 ): Effect {
   return {
     kind: "recruit",
     apply(ctx): void {
       const player = playerOf(ctx, args.player ?? "self");
+      const whose = args.whose === undefined ? player : playerOf(ctx, args.whose);
       const filter = args.filter ?? {};
-      const found = ctx.state.players[player].library.find(
-        (card) =>
-          isPermanentType(defOf(ctx.state, card.defId).type) &&
-          // R218: a unit-token card leaves a library only by being drawn (R11), so it is never
-          // recruited — the scan passes over it to the next card that matches.
-          !isUnitToken(ctx.state, card) &&
-          matchesFilter(ctx, card, filter),
-      );
-      if (found === undefined) return;
+      const scans = Math.max(1, Math.trunc(args.count ?? 1));
+      for (let scan = 0; scan < scans; scan += 1) {
+        const found = recruitPile(ctx, args.from ?? "library", whose).find((card) => recruitable(ctx, card, filter));
+        if (found === undefined) return;
 
-      const recruited = summonExisting(ctx, found, player, {
-        ...(args.lane === undefined ? {} : { lane: args.lane }),
-        ...(args.radiant === undefined ? {} : { radiant: args.radiant }),
-      });
-      // #98 radiant, "Recruit and make it Radiant": the second half is §6.3's Make Radiant, and
-      // every visible change is announced (§10.3) — `radiantSet` is what §10.10 animates the glow
-      // from. The flag went on as the card left the library, so it lands on its Radiant face; the
-      // cue follows the summon, and goes out whether or not the card was Radiant already, as R177
-      // has a Make Radiant on a card someone may not read (a face-down Trap) do.
-      if (recruited !== null && args.radiant === true) {
-        ctx.events.push({ type: "radiantSet", instanceId: recruited.id, defId: recruited.defId, zone: recruited.zone });
+        const recruited = summonExisting(ctx, found, player, {
+          ...(args.lane === undefined ? {} : { lane: args.lane }),
+          ...(args.radiant === undefined ? {} : { radiant: args.radiant }),
+        });
+        announceRadiant(ctx, recruited, args.radiant);
       }
     },
   };
+}
+
+/**
+ * B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once, top
+ * down (a library) or newest first (an exile), as the effect reaches it, and each matching permanent
+ * is summoned in turn while its row has an open zone — a Unit to the unit row, the rest to the backrow,
+ * a Trap face-down (§3.2) — and passed over, staying where it is, once that row is full; a Spell or a
+ * unit-token card stays (§6.3, R218). Each summon is its own step of a part (`resolve.lazyPart`) whose
+ * card list is kept as its memo, so a question a summoned card asks as it arrives (R151) pauses the
+ * rest, which resumes over the same cards in the same order (R113).
+ */
+export function recruitAll(
+  args: { filter?: RecruitFilter; player?: PlayerSpec; from?: RecruitSource; whose?: PlayerSpec } = {},
+): Effect {
+  return lazyPart("recruitAll", (ctx, memo) => {
+    const player = playerOf(ctx, args.player ?? "self");
+    const whose = args.whose === undefined ? player : playerOf(ctx, args.whose);
+    const filter = args.filter ?? {};
+    const ids = Array.isArray(memo)
+      ? memo.filter((id): id is string => typeof id === "string")
+      : recruitPile(ctx, args.from ?? "library", whose)
+          .filter((card) => recruitable(ctx, card, filter))
+          .map((card) => card.id);
+    const pile = args.from ?? "library";
+    const effects: Effect[] = ids.map((id) => ({
+      kind: "recruitOne",
+      apply(at): void {
+        const card = recruitPile(at, pile, whose).find((candidate) => candidate.id === id);
+        if (card === undefined) return;
+        const row = rowOf(cardTypeOf(at.state, card));
+        if (row === null || firstFreeZone(at.state, player, row) === null) return;
+        summonExisting(at, card, player, {});
+      },
+    }));
+    return { effects, memo: ids };
+  });
 }
 
 /**
@@ -424,7 +521,7 @@ export function fillBoard(args: {
     kind: "fillBoard",
     apply(ctx): void {
       const player = playerOf(ctx, args.player ?? "self");
-      if (rowOf(defOf(ctx.state, args.defId)) !== "units") return;
+      if (rowOf(cardTypeOf(ctx.state, { defId: args.defId, radiant: args.radiant === true })) !== "units") return;
 
       for (const ref of fillBoardZones(ctx.state, player)) {
         summonFresh(ctx, args.defId, player, {

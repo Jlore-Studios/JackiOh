@@ -79,6 +79,7 @@ import {
   ringOrder,
 } from "../src/zones";
 import { eventsOfType, inHand, newGame, put, setLibrary, sinkFor, slot } from "./fixtures/harness";
+import { infiniteReserves } from "./fixtures/scripts";
 
 // ---------------------------------------------------------------------------
 // Fixture definitions. Every id is prefixed `ra-`; the §8 card each one stands in for is named.
@@ -281,15 +282,20 @@ const SCRIPTS: Record<string, CardScripts> = {
     cry: () => [chooseFromHand({ step: "discard" })],
     resume: { discard: () => [discard()] },
   }),
-  // #41 Sheepish: when the opponent plays a unit, transform it into a Sheep Token (R17).
+  // #41 Sheepish: when the opponent plays a unit and it resolves, transform it into a Sheep Token
+  // (R17, R427: after its Cry).
   [sheepish.id]: both({
     triggers: [
       {
         id: "sheepish",
-        on: ["summoned"],
+        on: ["cardResolved"],
+        when: (ctx) => {
+          const event = ctx.event;
+          return event.type === "cardResolved" && event.player !== ctx.controller && defOf(ctx.state, event.defId).type === "Unit";
+        },
         run: (ctx) => {
           const event = ctx.event;
-          if (event.type !== "summoned" || event.player === ctx.controller) return [];
+          if (event.type !== "cardResolved" || !event.permanent) return [];
           return [transform({ instanceId: event.instanceId, defId: sheep.id })];
         },
       },
@@ -444,10 +450,15 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(state.players.p2.hero.health).toBe(HERO_HEALTH - 2);
   });
 
-  it("R2 counts the cap in player-turns: 30 turns, 15 each, then the game is a draw", () => {
-    expect(TURN_CAP_PLAYER_TURNS).toBe(30);
+  it("R2 counts the cap in player-turns: 60 turns, 30 each (R389), then the game is a draw", () => {
+    expect(TURN_CAP_PLAYER_TURNS).toBe(60);
 
     let state = playing("r2");
+    // R389: two 20-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
+    // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
+    // ends the game.
+    put(state, infiniteReserves.id, slot("p1", "backrow", 1));
+    put(state, infiniteReserves.id, slot("p2", "backrow", 1));
     for (let step = 0; step < 100 && state.result === null; step += 1) {
       const result = reduce(state, { type: "endTurn", playerId: state.active, nonce: `r2-${step}` });
       expect(result.error).toBeUndefined();
@@ -782,26 +793,28 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(cards.map((card) => card.id)).toContain(at(random.players.p1.graveyard, 0).id);
   });
 
-  it("R17 fires a trap on the play before the Cry, and an Immutable target still consumes it", () => {
+  it("R17 R427 fires a trap after the played card resolves, its Cry included, and an Immutable target still consumes it", () => {
     const state = playing("r17");
     const armed = put(state, sheepish.id, slot("p2", "backrow", 1));
     const card = at(inHand(state, crier.id, "p1"), 0);
+    const health = state.players.p2.hero.health;
 
     const result = play(state, card.id, "r17-play");
     expect(result.error).toBeUndefined();
-    // The trap answered the summon before anything the Cry could do: the played unit is a Sheep.
+    // The Cry ran first — the crier's 3 reached p2's hero — and then the trap answered the play's
+    // resolution: the played unit is a Sheep.
+    expect(result.state.players.p2.hero.health).toBe(health - 3);
     expect(must(cardAt(result.state, slot("p1", "units", 1)), "sheep").defId).toBe(sheep.id);
     expect(findInstance(result.state, card.id)).toBeUndefined();
-    const summoned = result.events.findIndex((e) => e.type === "summoned" && e.instanceId === card.id);
+    const cried = result.events.findIndex((e) => e.type === "damage" && e.targetId === "hero-p2");
+    const resolved = result.events.findIndex((e) => e.type === "cardResolved" && e.instanceId === card.id);
     const fired = result.events.findIndex((e) => e.type === "trapFired" && e.instanceId === armed.id);
     const transformed = result.events.findIndex((e) => e.type === "transformed");
-    expect(summoned).toBeGreaterThanOrEqual(0);
-    expect(fired).toBeGreaterThan(summoned);
+    expect(cried).toBeGreaterThanOrEqual(0);
+    expect(resolved).toBeGreaterThan(cried);
+    expect(fired).toBeGreaterThan(resolved);
     expect(transformed).toBeGreaterThan(fired);
-    // R17's other half — "the Cry is lost" — is deliberately not asserted here: the engine still
-    // runs the played card's Cry after the trap has taken it off the field (reduce.ts, playCard).
-    // Locking either reading into a test would hide the disagreement, so it is reported instead.
-    // The trap is consumed either way (§5.1).
+    // The trap is consumed (§5.1).
     expect(result.state.players.p2.graveyard.some((c) => c.id === armed.id)).toBe(true);
 
     // R23: an Immutable target refuses the Transform, and the trap still fires and is consumed.
@@ -1304,16 +1317,19 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(state.players.p1.graveyard.some((card) => card.id === spell.id)).toBe(true);
   });
 
-  it("R41 gives Carnivorous Cube a meal it never takes from itself, and a Death that can do nothing", () => {
+  it("R41 R428 gives Carnivorous Cube a Unit meal it never takes from itself, and a Death that can do nothing", () => {
     const state = game("r41");
     const hungry = put(state, cube.id, slot("p1", "units", 1));
     const other = put(state, body.id, slot("p1", "units", 2));
 
-    // The Tribute choice never offers the Cube itself.
+    // The Tribute choice never offers the Cube itself, and since R428 offers Units only: a backrow
+    // card beside it is no meal.
+    const beside = put(state, trap.id, slot("p1", "backrow", 2));
     const ctx = makeContext(sinkFor(state), hungry, { controller: "p1" });
-    const options = targetsInScope(ctx, { side: "ally", of: ["unit", "backrow"], excludeSelf: true });
+    const options = targetsInScope(ctx, { side: "ally", of: ["unit"], excludeSelf: true });
     expect(options).toContainEqual({ pick: "instance", instanceId: other.id });
     expect(options).not.toContainEqual({ pick: "instance", instanceId: hungry.id });
+    expect(options).not.toContainEqual({ pick: "instance", instanceId: beside.id });
 
     // What it ate lives on its own instance and drives the Death copies, read from the last-known
     // state of the instance as it left the field (R78).
@@ -1321,7 +1337,8 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(hungry.memory.eaten).toBe(trap.id);
     const death = killAndCheck(state, hungry);
     expect(eventsOfType(death, "summoned").map((e) => e.defId)).toEqual([trap.id]);
-    // A copy of an eaten backrow card goes to the backrow, not the unit row.
+    // R41: a copy is summoned as the card it copies, into that card's own row — an animated card's
+    // copies (a Unit when it was eaten, R383) go to the backrow, not the unit row.
     expect(must(cardAt(state, slot("p1", "backrow", 1)), "backrow copy").defId).toBe(trap.id);
 
     // A copy keeps the eaten card's radiant flag and its `statsOverride`.

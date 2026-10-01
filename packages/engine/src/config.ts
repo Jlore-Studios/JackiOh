@@ -18,8 +18,12 @@ export const HERO_HEALTH = 30;
  * belongs to a turn of its controller's (R155, R241).
  */
 export const SETUP_TURN = 0;
-/** §2.5, R2 (decide): the cap counts player-turns, so 30 means 15 each. */
-export const TURN_CAP_PLAYER_TURNS = 30;
+/**
+ * §2.5, R2, R389 (patch v0.2.0, docs/classic-sets.md B4.3): the cap counts player-turns, so 60 means
+ * 30 each. Two 20-card decks that do nothing fatigue out at player-turn 48 (§2.4, R3), so the cap is a
+ * backstop for games that heal, gain Armor or refill a deck, and fatigue is a long game's usual end.
+ */
+export const TURN_CAP_PLAYER_TURNS = 60;
 /** §2.4, R4 (decide): a card drawn or added to a full hand is burned. */
 export const HAND_CAP = 10;
 
@@ -45,6 +49,13 @@ export const POOL_TOKEN_TAGS: readonly Tag[] = ["Fruit"];
 export const UNIT_ZONES = 5;
 /** §3 */
 export const BACKROW_ZONES = 5;
+/** §3.1: "midlane", the middle lane of UNIT_ZONES — Classic #22 Mid Runner's lane 3 (SPEC §8.6 row 22, BUILD §2). */
+export const MID_LANE = 3;
+/**
+ * Classic #18 Glitch in the System's number choice (SPEC §8.6 row 18, BUILD §2): the numbers 0 to 10,
+ * the same eleven options every time, so the options reveal nothing about any hand or deck.
+ */
+export const GLITCH_NUMBERS: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /** R5 (decide): any unit may attack any enemy unit or hero, subject to Taunt. */
 export const LANE_RESTRICTED_ATTACKS: boolean = false;
@@ -220,14 +231,119 @@ export const AI_TUTORIAL: Handicap = {
 
 // ---- v0.2.0 constants: instance data (B3.3 Brittle, B3.4 Degrade and Upgrade) ----
 
+/**
+ * B3.3, R385 (the designer's B9 #41: t + 2): a Brittle count started on player-turn t first ticks at
+ * the first start of its controller's turn numbered t + this or later, so the card lives through the
+ * rest of the turn it got the count on and a whole turn of the other player's first.
+ */
+export const BRITTLE_FIRST_TICK_TURNS = 2;
+/** B3.3 rule 2: how much one start-of-turn tick takes off a Brittle count. */
+export const BRITTLE_TICK = 1;
+/**
+ * B3.3 rule 5, B3.4: how far one Degrade or Upgrade moves a numbered keyword, a Brittle count or an
+ * X-cost card's X — one step of "one X on the card gets 1 worse / better".
+ */
+export const TUNE_X_STEP = 1;
+/** B3.4 rule 3: how far one Degrade or Upgrade moves a card's cost (`costMod`). */
+export const TUNE_COST_STEP = 1;
+/** B3.4 rule 3, the designer's "Increase cost by (1) (up to 4)": a Degrade never lifts a cost above this. */
+export const TUNE_COST_CAP = 4;
+/** B3.4 rule 3: an Upgrade never takes a cost below this. */
+export const TUNE_COST_FLOOR = 0;
+/**
+ * B3.4 rule 3, the designer's "reduces the stats … by a total of 4": the split one stats change
+ * rolls, k in 0 to this to attack and the rest to health.
+ */
+export const TUNE_STAT_TOTAL = 4;
+/** B3.4 rule 3: "attack floors at 0". */
+export const TUNE_ATTACK_FLOOR = 0;
+/** B3.4 rule 3, the designer's "not below 1 health": a Degrade never takes current health below this. */
+export const TUNE_HEALTH_FLOOR = 1;
+/**
+ * B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card —
+ * "Cannot be in Defense Position" is a static flag (§8 #65.1), not a keyword, so it is never offered.
+ */
+export const TUNE_HARMFUL_KEYWORDS = ["Can't attack", "Brittle"] as const;
+/**
+ * B3.4 rule 5: a declared number's default step — 1 for a number up to `small.upTo`, 2 up to
+ * `medium.upTo`, and above that a quarter of it, rounded (`largeDivisor`), never less than 1.
+ */
+export const PARAM_DEFAULT_STEP = {
+  small: { upTo: 5, step: 1 },
+  medium: { upTo: 12, step: 2 },
+  largeDivisor: 4,
+} as const;
+/**
+ * B3.4 rule 5, R386: "an amount never drops below 1" — a tuned number's floor: a declared number that
+ * names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
+ * Degrade lowers.
+ */
+export const TUNE_MIN_AMOUNT = 1;
+
 // ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
 
 // ---- v0.2.0 constants: play pipeline (E1, E11, E12, E15) ----
 
+// play pipeline B (E11, E12, E15; R452–R455). A cast's X is its caster's current mana, at least
+// MIN_CHOSEN_X (R348, R453); the other numbers of these rules are cards' own (`params`).
+
+/**
+ * B5 E11, R454: the fewest Plague Tokens a play from the graveyard that pays with tokens spends
+ * (Classic #74 Corpse Plantation: "each such play spends at least 1 token").
+ */
+export const MIN_PLAGUE_PAYMENT = 1;
+/** B5 E11, R454: what one Plague Token spent as mana pays of a price ("each token pays (1)"). */
+export const PLAGUE_TOKEN_MANA = 1;
+/**
+ * B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in
+ * all (Classic+ #47 Jogg's Box, #38.1 Solarius-Prime), as R28 caps a Call to Chaos chain and R58 a
+ * cast-on-draw chain: a random cast whose casts cast at random cannot multiply without end.
+ */
+export const RANDOM_CAST_CHAIN_CAP = 20;
+
+/**
+ * B5 E4, R451: the tags whose cards a player's "last face-up card played" record passes over — the
+ * AI generated cards (B8), so two Autocompletes can't copy each other for ever.
+ */
+export const LAST_FACE_UP_SKIPPED_TAGS: readonly Tag[] = ["AI"];
+
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
+
+/**
+ * B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
+ * still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
+ * by a resource too (units to Tribute, Plague Tokens to consume).
+ */
+export const ACTIVATE_UNLIMITED_CAP = 100;
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
 
+/**
+ * B5 E5, E9, R460: how many times one hit may be redirected before it lands where it stands. Each
+ * Trap that redirects is spent as it fires, so two players' backrows bound a chain of Traps by
+ * themselves; the cap is for a Field Trap, which stays and could send a hit back and forth for ever.
+ */
+export const DAMAGE_REDIRECT_CAP = 2 * BACKROW_ZONES;
+
+/** B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its colour key. */
+export const BERSERK_MARK = { mark: "berserk", color: "red" } as const;
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
+// generation (E19, E23–E25), below A6a's prompts constants:
+/**
+ * R468: the longest ingredient list a fused id spells out (`t-<n>:<a>+<b>`, R179), in characters of
+ * the part after `t-<n>:`. A longer one — a card fused onto again and again, Classic+ #74 — is named
+ * by a digest of that list instead (`t-<n>:#<hex>`), and its definition keeps the whole list.
+ */
+export const FUSED_ID_CAP = 120;
+/** R471: the placement multiplier of a card that doubles nothing (the Plague Tokens placed as written). */
+export const PLAGUE_MULTIPLIER_NONE = 1;
+
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----
+/**
+ * R423: how many different effects a Radiant Call to Chaos rolls from its list — "Three different
+ * random effects, resolved in the order listed" (Core #95's Radiant face since patch v0.2.0, and
+ * Classic+ #73's). The base face rolls one.
+ */
+export const CALL_TO_CHAOS_RADIANT_EFFECTS = 3;

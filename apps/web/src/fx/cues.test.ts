@@ -281,8 +281,8 @@ function samples(): Sample[] {
     { name: "health lost", events: [{ type: "healthLost", player: "p1", amount: 3 }] },
     { name: "a hero is healed", events: [{ type: "healed", targetId: "hero-p1", amount: 5 }] },
     { name: "divine shield lost", events: [{ type: "divineShieldLost", instanceId: ENEMY }] },
-    { name: "a unit is destroyed", events: [{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", attack: 1, maxHealth: 6, killerId: null }] },
-    { name: "a card is destroyed off the board", events: [{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", attack: 1, maxHealth: 1, killerId: null }] },
+    { name: "a unit is destroyed", events: [{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: null }] },
+    { name: "a card is destroyed off the board", events: [{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", controller: "p2", attack: 1, maxHealth: 1, killerId: null }] },
     { name: "a unit is exiled", events: [{ type: "exiled", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }] },
     { name: "a unit is bounced", events: [{ type: "bounced", instanceId: MINE_3, defId: "core-017", owner: "p1" }] },
     { name: "a card is burned", events: [{ type: "burned", instanceId: "hidden", defId: "hidden", owner: "p2" }] },
@@ -950,7 +950,7 @@ describe("B16 the recipe table, row by row", () => {
   it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D", () => {
     forDs("destroyed", (D) => {
       expectCues(
-        plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
+        plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
         [
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
@@ -963,7 +963,7 @@ describe("B16 the recipe table, row by row", () => {
   it("B16 destroyed off the board: one smoke puff at the graveyard pile and no crack", () => {
     forDs("destroyed", (D) => {
       expectCues(
-        plan([{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", attack: 1, maxHealth: 1, killerId: null }], D),
+        plan([{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", controller: "p2", attack: 1, maxHealth: 1, killerId: null }], D),
         [burst("smoke", tid("graveyard-opponent"), "point", 0)],
       );
     });

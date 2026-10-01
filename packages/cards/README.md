@@ -215,6 +215,7 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `instanceOf(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at — a chosen card on the stay its prompt or the play offered it on (R174) — or `null` for a hero, for nothing, or for a card buried under a Stack pile (§3.2, R13) (#22's meal) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write) — on a fused card, its own ingredient's (R102, #22) |
 | `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
+| `afterAttackOf(ctx)` | in an `afterAttack` hook, its combat's facts: `{ targetId, destroyedIds, survived, forced }` — the Units the attacker's own hits destroyed, and whether it is still on the stay it attacked from (#32, R426) |
 | `param(ctx, key)` | the running card's current value of a number its entry declares (`params`, R386): its running face's `base` or `radiant` value as Degrade, Upgrade and KY's Constant have left it on the instance |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.

@@ -410,8 +410,8 @@ function askingTrapOnPlay(s: Scenario, id: string): void {
   });
 }
 
-describe("R17, R118: the traps an event is still owed answer it before the interrupted play goes on", () => {
-  it("R17 Sheepish, owed the play's cardPlayed behind a trap that asked, still fires before the Cry (R118, §10.3)", () => {
+describe("R17, R118, R427: the traps an event is still owed answer it before the interrupted play goes on", () => {
+  it("R17 R427 a trap that asked at the play's cardPlayed holds the play until answered, and Sheepish then answers its resolution, after the Cry (R118, §10.3)", () => {
     const s = scenario({
       p1: { hand: [ME_AND_MR_TOKEN, RENO], mana: 4 },
       p2: { backrow: [{ def: SHEEPISH, lane: 2 }], hand: [RENO] },
@@ -421,14 +421,16 @@ describe("R17, R118: the traps an event is still owed answer it before the inter
 
     s.play(ME_AND_MR_TOKEN);
     expect(must(s.state.pending, "the first trap's question").playerId).toBe("p2");
+    // §10.3, R118: the trap answering `cardPlayed` resolves before the play goes on, so the Cry waits.
+    const rushTokens = (): number[] => [1, 2, 3, 4, 5].filter((lane) => s.unit("p1", lane)?.defId === RUSH_TOKEN);
+    expect(rushTokens()).toEqual([]);
     s.answer("ok");
 
-    // §10.3: both traps answer the play's `cardPlayed` before the play goes on, and R17 puts
-    // Sheepish before the Cry: Me and Mr Token is a Sheep before its Cry can summon anything.
+    // The play went on: the Cry summoned its Rush Token, the play resolved, and only then did
+    // Sheepish answer it (R427): Me and Mr Token is a Sheep, and the token its Cry made stands.
     expect(s.state.pending).toBeNull();
     expect(s.unit("p1", 1)?.defId).toBe(SHEEP_TOKEN);
-    const rushTokens = [1, 2, 3, 4, 5].filter((lane) => s.unit("p1", lane)?.defId === RUSH_TOKEN);
-    expect(rushTokens, "the Cry of a unit Sheepish transformed first is lost (R17)").toEqual([]);
+    expect(rushTokens(), "the Cry of a unit Sheepish transforms has already resolved (R427)").toHaveLength(1);
   });
 });
 
@@ -518,8 +520,8 @@ describe("R70, R81: a cast asks for the choices its card declares", () => {
   });
 });
 
-describe("R87, R113: Call to Chaos's recursion finishes before its partner resolves", () => {
-  it("R87 radiant Call to Chaos's partner effect waits for the cast its recursion is still asking about (R113)", () => {
+describe("R87, R113, R423: Call to Chaos's play waits for the cast its recursion is still asking about", () => {
+  it("R87 R423 a radiant Call to Chaos whose three include the recursion resolves it last, and nothing after it happens while its cast asks (R113)", () => {
     const s = scenario({
       p1: {
         hand: [{ def: CALL_TO_CHAOS, radiant: true }, RENO, RENO],
@@ -535,19 +537,35 @@ describe("R87, R113: Call to Chaos's recursion finishes before its partner resol
       resume: { answered: () => [] },
     });
     placeFixture(s, "edge-r6-l7-asks-on-every-play", "p1", "backrow", 1);
+    const played = s.card(CALL_TO_CHAOS);
 
     s.play(CALL_TO_CHAOS);
     // The play's own step 3 asks first.
     must(s.state.pending, "the hook's question for the play of Call to Chaos");
+    // R423: pin the roll the answer's Cry makes to three that include the recursion (its first rng
+    // draw is the roll).
+    let cursor = -1;
+    for (let at = 0; at < 5000 && cursor < 0; at += 1) {
+      const names = subsystems.rollChaosEffects(createRng(s.state.seed, at), true).map((effect) => effect.name);
+      if (names.includes("recast") && !names.includes("draw")) cursor = at;
+    }
+    expect(cursor).toBeGreaterThanOrEqual(0);
+    s.state.rngCursor = cursor;
     s.answer("ok");
-    // The Cry rolls "cast a random Call to Chaos" plus a partner (R28). The cast's step 3 asks.
+
+    // The Cry rolled three; the recursion is the list's last, so it resolved last, and its cast's
+    // step 3 asks.
     must(s.state.pending, "the hook's question for the cast Call to Chaos");
     const events = s.lastEvents;
     const opened = events.map((event) => event.type).lastIndexOf("promptOpened");
     const after = events.slice(opened + 1).map((event) => event.type);
-    // R87: the recursion resolves first and its whole chain is done before the partner reads the
-    // board; a cast that is asking has not resolved, so nothing may have happened after the prompt.
+    // R87, R113: a cast that is asking has not resolved, so nothing may have happened after the prompt —
+    // not the cast's resolution, and not the played card's own landing.
     expect(after, `events after the cast's prompt opened: ${after.join(", ")}`).toEqual([]);
+    expect(events.some((event) => event.type === "cardResolved" && event.instanceId === played.id)).toBe(false);
+
+    s.answer("ok");
+    expect(s.events.some((event) => event.type === "cardResolved" && event.instanceId === played.id)).toBe(true);
   });
 });
 
@@ -1008,16 +1026,18 @@ describe("R122, §2.4: the answer to a cast's own choice goes on with the draw c
     // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
     // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
     // not with the resolution loop. The traps meet the first cast's resolution at the sweep's own
-    // step 4, which is a window as a play's is (R70, R17): every event so far reaches the traps
-    // there, before the sweep resolves. So Bear Honeypot's tokens arrive before the sweep's 1
-    // damage to each enemy unit, and it hits them.
+    // announce (§10.5 step 3a), the first window a cast opens, as a play's does (R70, R448): every
+    // event so far reaches the traps there, before the sweep moves or resolves. So Bear Honeypot's
+    // tokens arrive before the sweep's 1 damage to each enemy unit, and it hits them.
     const types = s.lastEvents.map((event) => event.type);
     const sweepDrawn = s.lastEvents.findIndex((event) => event.type === "drawn" && event.instanceId === second.id);
+    const sweepAnnounced = s.lastEvents.findIndex((event) => event.type === "cardAnnounced" && event.instanceId === second.id);
     const sweepCast = s.lastEvents.findIndex((event) => event.type === "cardPlayed" && event.instanceId === second.id);
     const trapFired = types.indexOf("trapFired");
     expect(sweepDrawn, `events: ${types.join(", ")}`).toBeGreaterThanOrEqual(0);
-    expect(sweepCast, `events: ${types.join(", ")}`).toBeGreaterThan(sweepDrawn);
-    expect(trapFired, `events: ${types.join(", ")}`).toBeGreaterThan(sweepCast);
+    expect(sweepAnnounced, `events: ${types.join(", ")}`).toBeGreaterThan(sweepDrawn);
+    expect(trapFired, `events: ${types.join(", ")}`).toBeGreaterThan(sweepAnnounced);
+    expect(sweepCast, `events: ${types.join(", ")}`).toBeGreaterThan(trapFired);
     const tokens = [1, 2, 3, 4, 5].flatMap((lane) => {
       const unit = s.unit("p2", lane);
       return unit !== null && unit.defId === RUSH_TOKEN ? [unit] : [];
@@ -1841,8 +1861,8 @@ describe("R66, R113: a card's list resumed after a prompt keeps the effects it b
 });
 
 
-describe("R70, R17: a cast Unit and the step-4 trap", () => {
-  it("R70 a cast-on-draw Unit the opponent's Sheepish answers is a Sheep before its Cry resolves (R17, §10.5 step 4)", () => {
+describe("R70, R17, R427: a cast Unit and Sheepish", () => {
+  it("R70 R427 a cast-on-draw Unit the opponent's Sheepish answers is a Sheep once its Cry has resolved (R17, §10.5 step 7)", () => {
     const g = scenario({
       p1: { hand: [RENO], library: [RENO, RENO] },
       p2: { backrow: [{ def: SHEEPISH, lane: 1 }], hand: [RENO], health: 30 },
@@ -1861,8 +1881,10 @@ describe("R70, R17: a cast Unit and the step-4 trap", () => {
     // Sheepish answered the cast Unit: a Sheep Token stands where it was.
     expect(g.unit("p1", 1)?.defId).toBe("core-t-sheep");
     expect(g.events.some((event) => event.type === "transformed" && event.instanceId === cod.id)).toBe(true);
-    // R17: Sheepish fires at step 4, before the Cry, so the Cry is lost.
-    g.expectHealth("p2", 30);
+    // R427: a cast is a play (R70), and Sheepish answers its resolution, after the Cry: the 5 landed.
+    g.expectHealth("p2", 25);
+    const types = g.events.map((event) => event.type);
+    expect(types.indexOf("transformed")).toBeGreaterThan(types.findIndex((type) => type === "damage"));
   });
 });
 

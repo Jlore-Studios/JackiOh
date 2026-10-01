@@ -109,6 +109,7 @@ const destroyed = (defId: string, instanceId: string, owner: PlayerId = "p1"): G
   instanceId,
   defId,
   owner,
+  controller: owner,
   attack: 2,
   maxHealth: 2,
   killerId: null,

@@ -104,7 +104,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   healthLost: { type: "healthLost", player: "p1", amount: 3 },
   healed: { type: "healed", targetId: "hero-p1", amount: 2 },
   divineShieldLost: { type: "divineShieldLost", instanceId: "u6" },
-  destroyed: { type: "destroyed", instanceId: "u1", defId: "core-004", owner: "p1", attack: 2, maxHealth: 3, killerId: "u6" },
+  destroyed: { type: "destroyed", instanceId: "u1", defId: "core-004", owner: "p1", controller: "p1", attack: 2, maxHealth: 3, killerId: "u6" },
   enteredGraveyard: { type: "enteredGraveyard", instanceId: "u1", defId: "core-004", owner: "p1" },
   exiled: { type: "exiled", instanceId: "u2", defId: "core-011", owner: "p1" },
   bounced: { type: "bounced", instanceId: "u3", defId: "core-017", owner: "p1" },

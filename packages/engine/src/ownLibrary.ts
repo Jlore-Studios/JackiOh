@@ -25,6 +25,12 @@
 // The record is written where a card goes in openly: the starting deck (`state.createGame`), a
 // mulligan's returns (`setup.finishMulligan`) and a shuffle-in (`draw.shuffleIntoLibrary`, which
 // every Core shuffle goes through). A path that forgets to write it shows a card back, never a card.
+//
+// R433 (rewrites R310's dealt decks): a deck its player was DEALT rather than built — All Random's
+// (R258), practice's fresh random deck — was never shown to them, so `createGame` writes no record
+// for the seats it is told were dealt one (`CreateGameOptions.dealt`). Every card of that library
+// counts as unknown until it leaves; what goes in openly afterwards (a mulligan's returns, a
+// shuffle-in) is recorded as for any deck, so the list shows only what its owner has been shown.
 
 import type { LibraryEntryView, LibraryView, PlayerId } from "@jackioh/shared";
 import { defOf, queryCost } from "./catalog";

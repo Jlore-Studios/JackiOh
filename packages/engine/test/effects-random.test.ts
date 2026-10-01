@@ -64,6 +64,12 @@ function unitDefOf(name: string, overrides: Partial<CardDef> = {}): CardDef {
 const gary = unitDefOf("gary");
 /** Plain bodies for the library pool and the rotation ring. */
 const body = unitDefOf("body");
+/** A backrow card for the rotation's second ring: a Unit never stands in a backrow zone (§3.2, R446). */
+const backdrop = unitDefOf("backdrop", {
+  type: "Field Spell",
+  base: { keywords: [], text: "backdrop" },
+  radiant: { keywords: [], text: "backdrop radiant" },
+});
 
 /** #99's two Discover picks: distinct costs, stats, keywords and tags, so every R77 sum shows. */
 const alpha = unitDefOf("alpha", {
@@ -80,7 +86,7 @@ const beta = unitDefOf("beta", {
   radiant: { attack: 2, health: 2, keywords: [{ kind: "Rush" }], text: "beta radiant" },
 });
 
-const RN_DEFS: CardDef[] = [gary, body, alpha, beta];
+const RN_DEFS: CardDef[] = [gary, body, backdrop, alpha, beta];
 
 function game(seed: string): GameState {
   const state = newGame(seed);
@@ -585,7 +591,7 @@ describe("rotate (§6.3 Rotate, §3.1's rotation topology, §8.3 #52, R14, R88)"
     const state = game("rotate-verb");
     const lane1 = put(state, body.id, slot("p1", "units", 1));
     const lane5 = put(state, body.id, slot("p1", "units", 5));
-    const trap = put(state, body.id, slot("p1", "backrow", 5));
+    const trap = put(state, backdrop.id, slot("p1", "backrow", 5));
 
     const sink = run(state, [rotate({ direction: "right" })], { controller: "p1" });
 

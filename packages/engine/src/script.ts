@@ -1,9 +1,11 @@
 // The card-script contract (SPEC §10.9). A card file returns Effect[] from the effects library and
 // never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
 
-import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, TargetDecl } from "@jackioh/shared";
+import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag, TargetDecl } from "@jackioh/shared";
+import type { CostAura, CostAuraArgs } from "./costRules";
+import type { GraveyardPlayPermission } from "./graveyardPlay";
 import type { Rng } from "./rng";
-import type { CardInstance, GameState } from "./state";
+import type { CardInstance, GameState, PlayRecord } from "./state";
 import type { EventStay } from "./stays";
 
 export type EffectContext = {
@@ -83,6 +85,13 @@ export type EffectContext = {
   embiggened: boolean;
   /** Captured data from a Resume, for chained steps (§10.6). */
   data: Record<string, unknown>;
+  /**
+   * play pipeline B (Classic #22 Mid Runner: "If you had 4 or more mana when you played this"): the
+   * current mana of the player who played or cast the card as the play began — at §10.5 step 1, before
+   * step 2 paid, or as a cast began — on the played card's own Cry and every continuation of it
+   * (`resolve.MANA_BEFORE_PLAY_KEY`, which rides the card's data across a pause). Absent anywhere else.
+   */
+  manaBeforePlay?: number;
 };
 
 /**
@@ -193,11 +202,46 @@ export type StaticFlags = {
    * two carries both grants (R102), so a fused face may hold a count.
    */
   heroArmor?: boolean | number;
+  /**
+   * R429 (Core patches, v0.2.0): §10.5 step 4 counts each play of this card on its instance
+   * (`CardInstance.timesPlayed`, `timesPlayed.ts`) — #31 KY's Math Equation's "times played".
+   */
+  countsPlays?: boolean;
   // ---- v0.2.0 static flags, by workstream: instance data (B2.7, B3.3, B3.4, E38, E39) ----
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
+  /**
+   * B5 E21, R446: "A Unit may be played on top of this" (Classic+ #33 Ivory Tower). While this backrow
+   * card acts in its zone, a Unit its controller plays may name that zone and stand on it: a Unit for
+   * every rule that can neither attack nor be attacked, with this card still acting beneath it
+   * (`zones.carrierZonesFor`, `zones.isCarried`).
+   */
+  carrier?: boolean;
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
+  /**
+   * Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of
+   * these tags becomes Radiant as it is played (§10.5 step 3) — R213's Gifted Program rule by tag, on
+   * every such play rather than the first cheap one (`playChoices.playMadeRadiant`).
+   */
+  radiantPlaysTagged?: Tag[];
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
+  /** B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter). */
+  cantBeAttacked?: boolean;
+  /**
+   * B5 E35: only a unit standing in this unit's lane may attack it, declared or forced (Classic+
+   * #19.1 Top Loser); a Taunt on it binds only the attackers that may reach it (§4.2 step 3).
+   */
+  attackedOnlyFromLane?: boolean;
+  /** B5 E35: this unit neither attacks nor is attacked, declared or forced. */
+  cantAttackOrBeAttacked?: boolean;
+  /** B5 E35: "This can't go Berserk" (Classic+ #19.5's Radiant face). */
+  neverBerserk?: boolean;
+  /**
+   * B5 E8: while this card acts on the field — face-up, when it is a Trap or Field Trap — a heal of X
+   * on one of its controller's enemies deals X Pierce damage to it instead, from this card (Classic+
+   * #22 Blood Moon's Radiant Field Trap, "From now on").
+   */
+  healToDamage?: boolean;
   // ---- v0.2.0 static flags, by workstream: prompts and generation (E19, E26) ----
 };
 
@@ -289,9 +333,89 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: instance data (B3.3, B3.4) ----
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
+  // play pipeline B (E11, E15). Both are pure reads, like `aura`, asked of a card acting on the field
+  // (the top of its pile, or its backrow card), and both return lists so a fused card carries each
+  // ingredient's (R102). A hook rather than a static flag, so a Degrade or Upgrade of the card's
+  // declared numbers moves what it grants (B3.4), and so a grant can hang on the card's state (Classic
+  // #90 In Too Deep's reward L).
+  /** E15, R455: the price rules this card lays on cards while it acts (`costRules.ts`). */
+  costAura?: (args: CostAuraArgs) => CostAura[];
+  /** E11, R454: the permissions this card gives its controller to play cards from their graveyard. */
+  graveyardPlay?: (args: CostAuraArgs) => GraveyardPlayPermission[];
+  /**
+   * B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
+   * also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
+   * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. A declared
+   * target naming it carries the discards in the action; a prompt answer naming it asks for them next
+   * (`targeting.ts`, `targetingPoint.ts`).
+   */
+  targetingDiscards?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
+  /**
+   * B5 E4, R451: what this card's play records as the card played — the last Spell played (Classic
+   * #57) and its player's last face-up play. Absent records the card itself; Classic #57 Echo
+   * returns the Spell it copied, and null records nothing (an Echo with nothing to copy).
+   */
+  recordsPlayAs?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => PlayRecord | null;
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
+  /**
+   * B5 E3, R457: the draw limits this card sets while it acts on the field ("Your opponent can't draw
+   * more than 1 card each turn": Classic #4, #49). A pure read like an aura, so a card computes its
+   * number (a declared, tunable one included) from its own instance. The lowest limit on a player holds.
+   */
+  drawLimit?: DrawLimitHook;
   // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
+  /**
+   * B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
+   * on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
+   * opponent (`replacements.ts`). Declared as data and decided synchronously, never an effect list.
+   * The "targeted" entry (`TargetedReplacement`) covers every targeting: attack, play, cast,
+   * activation and prompt pick.
+   */
+  replacements?: import("./replacements").ReplacementDef[];
+  /**
+   * B5 E6: what this card does to hits on its controller's hero while it acts on the field — a
+   * per-hit cap (the lowest of every cap wins, Classic+ #11 Anime Armor) and a divisor applied after
+   * Armor (several multiply, rounded up once, Classic #75 Argusland). A PURE READ, like `aura`; a
+   * list, so a fused card carries each ingredient's.
+   */
+  heroGuard?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => { cap?: number; divisor?: number }[];
+  /**
+   * B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
+   * Strike "while it has a Plague Token"), read in the layers with its printed keywords (§10.4), so a
+   * Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
+   * back into `unitView`, or the layers would recurse.
+   */
+  conditionalKeywords?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => Keyword[];
+  /**
+   * "After this attacks" (Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem, Core #32
+   * Prem Panther): run for the attacker once the state check that closes each of its combats has run,
+   * a declared attack's or a forced one's, also when it died there — then on the snapshot it fought
+   * with, as a Death hook reads its card (R78, R89). Not for an attack called off before it fought
+   * (R44). `ctx.data` holds the combat's facts, read with `combat.afterAttackOf`: `{ targetId,
+   * destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
+   */
+  afterAttack?: Hook;
   // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
+  /**
+   * B5 E19, R471: "Plague Tokens placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
+   * its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
+   * receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
+   * A fused card's multipliers multiply (`subsystems/fuse`).
+   */
+  plagueMultiplier?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
+  /**
+   * B5 E26, R464: triggers this card answers while it lies in its owner's library ("While this is in
+   * your deck: …", Classic+ #37 Wardrum). A library card is hidden (§9.1), so its queue entries take
+   * no number (R177), and within a side they come after the hand's and before the graveyard's, in the
+   * order the instances were created — never by library position (`triggers.triggerHoldersOf`).
+   */
+  deckTriggers?: TriggerDef[];
+  /**
+   * B5 E26: triggers this card answers while it lies in a graveyard ("While this is in your
+   * graveyard: when one of your Traps activates, return this", Classic #47). R153's other graveyard
+   * answer, the end-of-turn return, stays the `endOfTurn` hook's.
+   */
+  graveyardTriggers?: TriggerDef[];
 };
 
 /**
@@ -307,6 +431,12 @@ export type ActivationDecl = {
   id: string;
   label: string;
   uses: number | "unlimited";
+  /**
+   * R384: `tribute` counts units, one each — "Tribute a Unit" is one unit, so a Sheep Token's "worth
+   * 2" does not stretch it (that worth counts only toward a play's Tribute X, §6.3). The card itself
+   * may be one of them when it is a Unit. `tributeSelf` is "Tribute this", which bypasses
+   * Indestructible as every Sacrifice does (§6.3).
+   */
   cost?: {
     mana?: number;
     discardRandom?: number;
@@ -316,8 +446,48 @@ export type ActivationDecl = {
   targets?: TargetDecl[];
   modes?: ModeDecl[];
   canActivate?: ConditionHook;
+  /**
+   * Whether the card has this ability now, when that depends on the instance — an ability it lacks is
+   * neither listed, shown nor accepted. Patch v0.2.1's Heroic Power declares one ability per power and
+   * has only the one it rolled (B3.2 rule 10). Absent: always.
+   */
+  has?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
   run: Hook;
 };
+
+/**
+ * R384: the `Resume.hook` an ability's own effect list runs under, `activation:<id>`, so a tail a
+ * prompt parks comes back to the same ability (`work.scriptStepFor`), as a trigger's comes back by its
+ * id. Distinct from every `Script` key.
+ */
+export const ACTIVATION_HOOK_PREFIX = "activation:";
+
+export function activationHook(id: string): string {
+  return `${ACTIVATION_HOOK_PREFIX}${id}`;
+}
+
+/**
+ * R384, R102: a face's abilities with ids made unique — a card fused from two Activate cards has both
+ * abilities, and the second of two that share an id is `<id>#2` — so the `activate` action, the view
+ * and a resumed tail all name the same one. Order is the face's own.
+ */
+export function activationDecls(script: Script): ActivationDecl[] {
+  const seen = new Map<string, number>();
+  return (script.activations ?? []).map((decl) => {
+    const count = (seen.get(decl.id) ?? 0) + 1;
+    seen.set(decl.id, count);
+    return count === 1 ? decl : { ...decl, id: `${decl.id}#${count}` };
+  });
+}
+
+/**
+ * B5 E3, R457: one draw limit a card sets. `player` is relative to the card's controller: "enemy" is
+ * the opponent (Classic #4), "both" every player (Classic #49); `count` is how many draws that player
+ * may make each turn, whoever's turn it is.
+ */
+export type DrawLimit = { player: "self" | "enemy" | "both"; count: number };
+
+export type DrawLimitHook = (args: { state: GameState; self: CardInstance; radiant: boolean }) => DrawLimit[];
 
 /**
  * §10.6: a card-specific target predicate (`TargetFilter.check`). `candidate` is the card a
@@ -332,6 +502,18 @@ export type TargetCheck = (args: {
   candidate: CardInstance | null;
   selection: Selection;
 }) => boolean;
+
+// B5 E5, E9 (damage and combat): what `Script.replacements` holds, re-exported beside `Script` — above
+// all `TargetedReplacement`, the one declaration of "a friendly unit is targeted" that an attack, a
+// play, a cast, an activation and a prompt pick all answer through (`replacements.answerTargeting`).
+export type {
+  ReplacedEvent,
+  ReplacementContext,
+  ReplacementDef,
+  ReplacementMoment,
+  ReplacementWhere,
+  TargetedReplacement,
+} from "./replacements";
 
 export type CardScripts = { base: Script; radiant: Script };
 

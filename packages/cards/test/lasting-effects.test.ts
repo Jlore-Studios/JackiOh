@@ -12,6 +12,7 @@
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { createRng, subsystems, type CardInstance } from "@jackioh/engine";
 import { scenario, type Scenario } from "./_harness";
 
 const STOCKPILE = "core-005";
@@ -33,6 +34,17 @@ function echoRiders(g: Scenario, player: "p1" | "p2"): unknown[] {
 /** Stockpile heals its hero once per resolution (§8 #5), so its `healed` events count them. */
 function stockpileResolutions(events: readonly GameEvent[]): number {
   return events.filter((event) => event.type === "healed").length;
+}
+
+/** R428: p1's Unit in `unitLane` fused with the backrow card in `backrowLane`, carrying its text (R77). */
+function unitCarrying(g: Scenario, unitLane: number, backrowLane: number): CardInstance {
+  const unit = g.unit("p1", unitLane);
+  const carried = g.backrow("p1", backrowLane);
+  if (unit === null || carried === null) throw new Error("setup: the Unit and the card it carries");
+  const sink = { state: g.state, events: [], rng: createRng(g.state.seed, g.state.rngCursor) };
+  const fused = subsystems.fuse(sink, { ingredients: [unit, carried], target: unit });
+  if (fused === null) throw new Error("setup: the fusion");
+  return fused;
 }
 
 describe("R209: Twinspell's grant ends when Twinspell leaves the field", () => {
@@ -157,25 +169,25 @@ describe("R209: Twinspell's grant follows its current face", () => {
 describe("R209: Twinspell's grant is the permanent's, however it came to stand on the field", () => {
   it("R209 Twinspells summoned by #22's Death grant their Echo like played ones, so the next Spell resolves three times (§6.2, R41, R169)", () => {
     const g = scenario({
-      p1: { hand: [TWINSPELL, CUBE, HIT_JOB, STOCKPILE, VANILLA], mana: 10, library: [...LIBRARY] },
+      p1: { hand: [TWINSPELL, CUBE, HIT_JOB, STOCKPILE, VANILLA], field: [{ def: VANILLA, lane: 2 }], mana: 10, library: [...LIBRARY] },
       p2: { hand: [VANILLA], field: [{ def: VANILLA, lane: 3 }], library: [...LIBRARY] },
     });
     g.play(TWINSPELL, { zone: 1 });
-    const eaten = g.backrow("p1", 1);
-    if (eaten === null) throw new Error("setup: p1's Twinspell");
+    // R428: the Cube eats Units only, so its meal is a Mr. Vanilla carrying Twinspell's text (R77).
+    const eaten = unitCarrying(g, 2, 1);
     g.play(CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: eaten.id }] });
     const cube = g.unit("p1", 1);
     if (cube === null) throw new Error("setup: p1's Cube");
     g.expectInZone(eaten, "graveyard");
 
-    // Hit Job kills the Cube, whose Death summons two copies of the Twinspell it ate into p1's
-    // backrow (R41, R64). A summon fires no Cry (§6.2).
+    // Hit Job kills the Cube, whose Death summons two copies of the Unit it ate, Twinspell's text
+    // and all, into p1's unit row (R41, R64). A summon fires no Cry (§6.2).
     g.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: cube.id }] });
-    expect([g.backrow("p1", 1)?.defId, g.backrow("p1", 2)?.defId]).toEqual([TWINSPELL, TWINSPELL]);
+    expect(g.lastEvents.filter((event) => event.type === "summoned" && event.defId === eaten.defId)).toHaveLength(2);
     expect(echoRiders(g, "p1")).toHaveLength(2);
 
-    // Each Twinspell standing on p1's side says "the next Spell you play gains Echo +1", and that
-    // text is no Cry: Stockpile gains Echo +2 and resolves three times.
+    // Each copy standing on p1's side says "the next Spell you play gains Echo +1", and that text is
+    // no Cry: Stockpile gains Echo +2 and resolves three times.
     g.play(STOCKPILE);
     expect(stockpileResolutions(g.lastEvents)).toBe(3);
   });
