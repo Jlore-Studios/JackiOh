@@ -24,13 +24,15 @@
 // which the reference proof never reads as this card unless `refs` lists it (R381).
 
 import type { GameEvent } from "@jackioh/shared";
-import { opponentOf } from "@jackioh/shared";
 import type { CardInstance, Effect, EffectContext, Script, TrapTrigger } from "@jackioh/engine";
-import { activeUnitsOf, cardAt, costNow, param, slotsOf } from "@jackioh/engine";
-import { counterPlay, exile, forEachCard } from "@jackioh/engine/effects";
+import { costNow, param } from "@jackioh/engine";
+import { cardsInScope, counterPlay, exile, forEachCard, type BoardScope } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-010");
+
+/** The enemy permanents on the field: the top of each unit pile, then each backrow card (§3.2, R13). */
+const ENEMY_PERMANENTS: BoardScope = { side: "enemy", rows: ["units", "backrow"] };
 
 type Announced = Extract<GameEvent, { type: "cardAnnounced" }>;
 
@@ -41,16 +43,6 @@ function cheapPlay(ctx: EffectContext & { event: GameEvent }): Announced | null 
   return event.costPaid <= param(ctx, "threshold") ? event : null;
 }
 
-/** The enemy permanents on the field: the top of each unit pile, then each backrow card (§3.2, R13). */
-function enemyPermanents(ctx: EffectContext): CardInstance[] {
-  const enemy = opponentOf(ctx.controller);
-  const backrow = slotsOf(enemy, "backrow").flatMap((slot) => {
-    const card = cardAt(ctx.state, slot);
-    return card === null ? [] : [card];
-  });
-  return [...activeUnitsOf(ctx.state, enemy), ...backrow];
-}
-
 /**
  * The Radiant face's picks, drawn as the clause resolves: random enemy permanents, each costing no
  * more than the budget left (R396), until the budget is spent or nothing fits.
@@ -59,7 +51,7 @@ function budgetPicks(ctx: EffectContext, budget: number): CardInstance[] {
   const picked: CardInstance[] = [];
   let left = budget;
   while (left > 0) {
-    const fits = enemyPermanents(ctx).filter(
+    const fits = cardsInScope(ctx, ENEMY_PERMANENTS).filter(
       (card) => !picked.includes(card) && costNow(ctx.state, card) <= left,
     );
     const card = ctx.rng.pick(fits);

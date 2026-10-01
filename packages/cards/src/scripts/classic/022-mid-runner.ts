@@ -30,11 +30,8 @@
 
 import {
   MID_LANE,
-  activeUnitsOf,
-  cardAt,
   param,
   slotOf,
-  slotsOf,
   unspentManaOf,
   type CardInstance,
   type ConditionContext,
@@ -42,8 +39,7 @@ import {
   type Effect,
   type Script,
 } from "@jackioh/engine";
-import { bounce, forEachCard, sacrifice } from "@jackioh/engine/effects";
-import { opponentOf } from "@jackioh/shared";
+import { bounce, cardsInScope, forEachCard, sacrifice } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-022");
@@ -58,16 +54,6 @@ function manaWhenPlayed(ctx: EffectContext): number {
   return ctx.manaBeforePlay ?? unspentManaOf(ctx.state, ctx.controller);
 }
 
-/** Every permanent the opponent controls: the tops of their unit piles, then their backrow, lane order. */
-function enemyPermanents(ctx: EffectContext): CardInstance[] {
-  const enemy = opponentOf(ctx.controller);
-  const backrow = slotsOf(enemy, "backrow").flatMap((ref) => {
-    const card = cardAt(ctx.state, ref);
-    return card === null ? [] : [card];
-  });
-  return [...activeUnitsOf(ctx.state, enemy), ...backrow];
-}
-
 const cry = (ctx: EffectContext): Effect[] => {
   const self = ctx.self;
   if (self === null) return [];
@@ -79,7 +65,7 @@ const cry = (ctx: EffectContext): Effect[] => {
       ? [
           forEachCard({
             // R60: different cards, drawn as the Cry reaches this clause.
-            cards: (c) => c.rng.shuffle(enemyPermanents(c)).slice(0, bounces),
+            cards: (c) => c.rng.shuffle(cardsInScope(c, { side: "enemy", rows: ["units", "backrow"] })).slice(0, bounces),
             each: (instanceId) => bounce({ target: { of: "instance", instanceId } }),
           }),
         ]
