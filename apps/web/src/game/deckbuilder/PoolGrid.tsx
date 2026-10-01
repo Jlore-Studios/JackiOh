@@ -64,11 +64,11 @@ type PoolItemProps = {
   onDragEnd: () => void;
 };
 
-/** "2 mana", "X mana", "2 or 4 mana" (embiggen). */
-function costWords(cost: CardCost): string {
-  if (typeof cost === "number") return `${String(cost)} mana`;
-  if (cost === "X") return "X mana";
-  return `${String(cost.base)} or ${String(cost.embiggen)} mana`;
+/** R432's noun: "(2) Cost", "(X) Cost", "(2) or (4) Cost" (embiggen). */
+export function costWords(cost: CardCost): string {
+  if (typeof cost === "number") return `(${String(cost)}) Cost`;
+  if (cost === "X") return "(X) Cost";
+  return `(${String(cost.base)}) or (${String(cost.embiggen)}) Cost`;
 }
 
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
@@ -77,7 +77,7 @@ export function placeWords(place: PoolPlace): string | null {
   return place === "deck" ? "In deck" : `In ${place.name}`;
 }
 
-/** The pool card's accessible name: "Bigot, 2 mana Unit, Common, in Control, unavailable. Show details". */
+/** The pool card's accessible name: "Bigot, (2) Cost Unit, Common, in Control, unavailable. Show details". */
 export function poolCardLabel(def: CardDef, place: PoolPlace, owned: boolean | null): string {
   const parts = [def.name, `${costWords(def.cost)} ${def.type}`, def.rarity];
   if (place === "deck") parts.push("in this deck");
