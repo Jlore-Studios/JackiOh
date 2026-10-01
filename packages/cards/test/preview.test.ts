@@ -45,7 +45,9 @@ const PREVIEWED = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEF
 const CURSE = "classic-001"; // C #1 Curse of the Forgotten Classic
 const PLAGUE_NUKE = "classic-043"; // C #43 Plague Nuke
 const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
-const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
+const PLAGUE_DOCTOR = "classic-059"; // C #59 Plague Doctor
+const SIPHON_SQUAD = "classic-088"; // C #88 Siphon Squad
+const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE, PLAGUE_DOCTOR, SIPHON_SQUAD];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -768,8 +770,7 @@ describe("R280 each Core hook is a pure read of public facts", () => {
 
 // =============================================================================================
 // C #1 Curse of the Forgotten Classic: the damage per card times the opponent's exile size
-// =============================================================================================
-
+// ======================================================================================
 describe("C #1 Curse of the Forgotten Classic previews N, its one hit (R280)", () => {
   function curse(face: Face, theirExile: number): Scenario {
     return scenario({
@@ -899,6 +900,201 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
       const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
       expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
       expect(answer).toEqual([{ label: LABEL, value: 4 }]);
+=======
+// C #59 Plague Doctor: N, every Plague Token on the field (and the Radiant face's own placement)
+// =============================================================================================
+
+describe("C #59 Plague Doctor previews N, the hit its Cry deals (R280)", () => {
+  const DOCTOR_LABEL = "the number of Plague Tokens on the field";
+  const PAWN = "core-096";
+
+  /** Tokens on both sides, a face-down trap's included: 2 + 1 + 3 = 6 on the field. */
+  function plagued(face: Face, active: PlayerId = "p1"): Scenario {
+    return scenario({
+      active,
+      p1: {
+        hand: [{ def: PLAGUE_DOCTOR, radiant: face === "radiant" }, RAPID_REPLENISH],
+        field: [{ def: TEMPO_TIMMY, counters: { plague: 2 } }],
+        library: [MENACE],
+      },
+      p2: {
+        hand: [STOCKPILE],
+        field: [{ def: MENACE, counters: { plague: 1 } }],
+        backrow: [{ def: PAWN, faceUp: false, counters: { plague: 3 } }],
+        health: 30,
+      },
+    });
+  }
+
+  it("R280 the label is the phrase both faces print, with no placeholder in it", () => {
+    for (const face of FACES) {
+      const s = plagued(face);
+      const list = must(shown(handCard(s.view("p1"), s.card(PLAGUE_DOCTOR).id)), `${face} preview`);
+      expect(list.map((entry) => entry.label)).toEqual([DOCTOR_LABEL]);
+      expect(cardDef(PLAGUE_DOCTOR)[face].text).toContain(DOCTOR_LABEL);
+      expect(DOCTOR_LABEL).not.toMatch(/[{}]/);
+    }
+  });
+
+  for (const [face, expected] of [
+    ["base", 6],
+    ["radiant", 8],
+  ] as const) {
+    it(`R280 ${face}: in hand it previews ${expected}, and its Cry then deals exactly that`, () => {
+      const s = plagued(face);
+      const value = valueOf(handCard(s.view("p1"), s.card(PLAGUE_DOCTOR).id));
+      expect(value).toBe(expected);
+
+      s.play(PLAGUE_DOCTOR, { targets: AT_ENEMY_HERO });
+
+      expect(hitsOn(s, "p2")).toEqual([value]);
+    });
+  }
+
+  it("R280 radiant: on the field the preview counts its own tokens, plus the 2 another Cry would place", () => {
+    const s = plagued("radiant");
+    s.play(PLAGUE_DOCTOR, { targets: AT_ENEMY_HERO });
+    // 6 on the field, 2 more on the Doctor: 8 tokens now, and a Cry now would add 2 more.
+    const doctor = s.card(PLAGUE_DOCTOR);
+    const lane = must(doctor.zone.z === "field" ? doctor.zone.lane : null, "the Doctor's lane");
+    expect(valueOf(s.view("p1").you.units[lane - 1])).toBe(10);
+    // A unit is public: the other seat sees the same number.
+    expect(valueOf(s.view("p2").opponent.units[lane - 1])).toBe(10);
+  });
+
+  it("R280 base: on the field it previews the tokens there now, for both seats", () => {
+    const s = scenario({
+      p1: { field: [{ def: PLAGUE_DOCTOR, counters: { plague: 1 } }], hand: [RAPID_REPLENISH] },
+      p2: { field: [{ def: MENACE, counters: { plague: 2 } }], hand: [STOCKPILE] },
+    });
+    expect(valueOf(s.view("p1").you.units[0])).toBe(3);
+    expect(valueOf(s.view("p2").opponent.units[0])).toBe(3);
+  });
+
+  it("R280 an empty field previews 0 on the base face, and the Cry then deals nothing (R63)", () => {
+    const s = scenario({ p1: { hand: [PLAGUE_DOCTOR, RAPID_REPLENISH] }, p2: { hand: [STOCKPILE] } });
+    expect(valueOf(handCard(s.view("p1"), s.card(PLAGUE_DOCTOR).id))).toBe(0);
+
+    s.play(PLAGUE_DOCTOR, { targets: AT_ENEMY_HERO });
+
+    expect(hitsOn(s, "p2")).toEqual([]);
+  });
+
+  it("R280 R386 radiant: an Upgrade of its tokens moves the preview with the hit", () => {
+    const s = plagued("radiant");
+    stepParam(s.card(PLAGUE_DOCTOR), "tokens", 1);
+    const value = valueOf(handCard(s.view("p1"), s.card(PLAGUE_DOCTOR).id));
+    expect(value).toBe(9);
+
+    s.play(PLAGUE_DOCTOR, { targets: AT_ENEMY_HERO });
+
+    expect(hitsOn(s, "p2")).toEqual([9]);
+  });
+
+  it("R280 the hook writes nothing and reads no library, no hand and not state.active", () => {
+    for (const face of FACES) {
+      for (const active of ["p1", "p2"] as const) {
+        const s = plagued(face, active);
+        const card = s.card(PLAGUE_DOCTOR);
+        const scripts = must(CARDS[PLAGUE_DOCTOR], PLAGUE_DOCTOR);
+        const hook = must((face === "radiant" ? scripts.radiant : scripts.base).preview, "the Doctor's hook");
+        const { state, self } = guarded(s.state, card.id);
+        const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: active === "p1" });
+        expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      }
+    }
+  });
+
+  it("R280 the opponent's Doctor in hand carries no preview for you (§10.8)", () => {
+    const s = plagued("base");
+    const theirs = s.view("p2").opponent.hand;
+    expect(JSON.stringify(theirs)).not.toContain(DOCTOR_LABEL);
+  });
+});
+
+// =============================================================================================
+// C #88 Siphon Squad: X, twice the Units its controller's opponent controls (base face only)
+// =============================================================================================
+
+describe("C #88 Siphon Squad previews X, the attack its aura takes off each enemy Unit (R280)", () => {
+  const SIPHON_LABEL = "−X Attack";
+
+  function siphonBoard(opts: { faceUp?: boolean; radiant?: boolean; enemies?: number } = {}): Scenario {
+    const enemies = Array.from({ length: opts.enemies ?? 2 }, (_, at) => ({ def: MENACE, lane: at + 1 }));
+    return scenario({
+      p1: {
+        hand: [RAPID_REPLENISH],
+        backrow: [{ def: SIPHON_SQUAD, radiant: opts.radiant === true, ...(opts.faceUp === undefined ? {} : { faceUp: opts.faceUp }) }],
+      },
+      p2: { hand: [STOCKPILE], field: enemies },
+    });
+  }
+
+  it("R280 the label is in the base face's text, with no placeholder in it", () => {
+    const s = siphonBoard({ faceUp: false });
+    const list = must(shown(s.view("p1").you.backrow[0]), "the controller's preview");
+    expect(list.map((entry) => entry.label)).toEqual([SIPHON_LABEL]);
+    expect(cardDef(SIPHON_SQUAD).base.text).toContain(SIPHON_LABEL);
+    expect(SIPHON_LABEL).not.toMatch(/[{}]/);
+  });
+
+  it("R280 face-down, its controller sees X, and it is what the aura takes off each enemy Unit", () => {
+    const s = siphonBoard({ faceUp: false });
+    const value = valueOf(s.view("p1").you.backrow[0]);
+
+    expect(value).toBe(4);
+    const menace = must(s.unit("p2", 1), "p2's Menace");
+    expect(s.stats(menace).attack).toBe(9 - value);
+  });
+
+  it("R280 §10.8 face-down, the other player's view of it carries no preview", () => {
+    const s = siphonBoard({ faceUp: false });
+    const theirs = s.view("p2").opponent.backrow[0];
+
+    expect(theirs).toMatchObject({ faceDown: true });
+    expect(JSON.stringify(theirs)).not.toContain(SIPHON_LABEL);
+    expect(JSON.stringify(s.view("p2"))).not.toContain("preview");
+  });
+
+  it("R280 face-up, both players see X", () => {
+    const s = siphonBoard({ faceUp: true, enemies: 3 });
+
+    expect(valueOf(s.view("p1").you.backrow[0])).toBe(6);
+    expect(valueOf(s.view("p2").opponent.backrow[0])).toBe(6);
+  });
+
+  it("R280 in hand it previews the X it would take now", () => {
+    const s = scenario({ p1: { hand: [SIPHON_SQUAD, RAPID_REPLENISH] }, p2: { field: [MENACE], hand: [STOCKPILE] } });
+    expect(valueOf(handCard(s.view("p1"), s.card(SIPHON_SQUAD).id))).toBe(2);
+  });
+
+  it("R280 R386 an Upgrade of its multiplier moves the preview with the aura", () => {
+    const s = siphonBoard({ faceUp: false });
+    stepParam(must(s.backrow("p1", 1), "the Siphon"), "multiplier", 1);
+
+    const value = valueOf(s.view("p1").you.backrow[0]);
+    expect(value).toBe(6);
+    expect(s.stats(must(s.unit("p2", 1), "p2's Menace")).attack).toBe(9 - value);
+  });
+
+  it("R280 the Radiant face has no X, and no preview", () => {
+    const s = siphonBoard({ radiant: true, faceUp: true });
+    expect(shown(s.view("p1").you.backrow[0])).toBeNull();
+    expect(shown(s.view("p2").opponent.backrow[0])).toBeNull();
+  });
+
+  it("R280 the hook writes nothing and reads no library, no hand and not state.active", () => {
+    for (const active of ["p1", "p2"] as const) {
+      const s = scenario({
+        active,
+        p1: { hand: [RAPID_REPLENISH], backrow: [{ def: SIPHON_SQUAD, faceUp: false }], library: [MENACE] },
+        p2: { hand: [STOCKPILE], field: [MENACE], library: [MENACE] },
+      });
+      const card = must(s.backrow("p1", 1), "the Siphon");
+      const hook = must(must(CARDS[SIPHON_SQUAD], SIPHON_SQUAD).base.preview, "its hook");
+      const { state, self } = guarded(s.state, card.id);
+      const answer = hook({ state, self, controller: "p1", radiant: false, zone: "field", yourTurn: active === "p1" });
+      expect(shown(s.view("p1").you.backrow[0])).toEqual(answer);
     }
   });
 });

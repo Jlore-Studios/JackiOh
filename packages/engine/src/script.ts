@@ -7,6 +7,7 @@ import type { GraveyardPlayPermission } from "./graveyardPlay";
 import type { Rng } from "./rng";
 import type { CardInstance, GameState, PlayRecord } from "./state";
 import type { EventStay } from "./stays";
+import type { QuestBook } from "./subsystems/quests";
 
 export type EffectContext = {
   state: GameState;
@@ -139,6 +140,11 @@ export type StatMod = {
   attack?: number;
   maxHealth?: number;
   keywords?: Keyword[];
+  /**
+   * §10.4 layer 5: an aura that SETS attack to a value (Classic #88 Siphon Squad's Radiant "Enemy Units
+   * have 0 Attack"), applied after every other layer; with several, the last in aura order holds.
+   */
+  setAttack?: number;
 };
 
 /** An aura contributes stat and keyword layers while its card is in play (§10.4 layer 5). */
@@ -416,6 +422,20 @@ export type Script = {
    * answer, the end-of-turn return, stays the `endOfTurn` hook's.
    */
   graveyardTriggers?: TriggerDef[];
+  /**
+   * B5 E33, R404: the card's quest tree (Classic #90 In Too Deep) — its quests, what completes each and
+   * the rewards each offers, as data. `subsystems/quests.ts` keeps the count on the instance
+   * (`memory.quest`), opens the first quest as the card enters the field and reports each completion
+   * (`questCompleted`), which the card's own trigger answers with its rewards.
+   */
+  quests?: QuestBook;
+  // ---- v0.2.0 script hooks, by workstream: Classic #46–#90 (card-specific, cards-classic-b) ----
+  /**
+   * Classic #88 Siphon Squad, R403: "When …, Tribute this" — a condition on the card's own text that
+   * every state check reads (§4.5), the one right after the card arrives included; while it holds, the
+   * card acting on the field (face-down too) is sacrificed (`selfTribute.ts`). A PURE READ, like `aura`.
+   */
+  tributeWhen?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
 };
 
 /**

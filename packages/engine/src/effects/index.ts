@@ -314,3 +314,9 @@ export { chooseTargetWhere } from "./chooseWhere";
 // §4.5's check at this point of a list, then the rest on a stay that begins after it (C #43 Plague
 // Nuke, R59, R113, R174).
 export { afterStateCheck } from "./afterCheck";
+
+// ---- v0.2.0 verbs: Classic cards #46–#90 (card-specific, the cards-classic-b workstream) ----
+
+// R60's random picks of existing cards: a random Unit of yours buffed, N random graveyard cards to
+// your hand (C #90 In Too Deep's rewards E and C).
+export { buffRandomUnit, returnRandomFromGraveyard } from "./randomPicks";

@@ -158,7 +158,19 @@ export type GameEvent =
    * the fatigue count already say as much. Absent during setup, which is no player's turn (§2.1), so
    * the opening deal says nothing of which draw a Quickdraw card replaced (R225).
    */
-  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string; turnDraw?: number }
+  | {
+      type: "drawn";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      turnDraw?: number;
+      /**
+       * B5 E33: this draw took the last card of the drawer's own library — Classic #90's quest 9, "a
+       * draw of yours takes the last card of your deck". Present, and `true`, only then. Public: the
+       * library count already says as much.
+       */
+      emptied?: true;
+    }
   | { type: "addedToHand"; player: PlayerId; instanceId: string; defId: string }
   | { type: "shuffledIn"; player: PlayerId; instanceId: string; defId: string; position: number }
   | { type: "buffed"; instanceId: string; attack: number; health: number }

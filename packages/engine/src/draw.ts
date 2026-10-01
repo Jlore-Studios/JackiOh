@@ -445,7 +445,19 @@ export function completeDraw(
   // B5 E4, R457: the draw's number this turn rides the event, so a trap answering "the 2nd card they
   // draw in a turn" (Classic #9) reads it however much later the loop hands it the event.
   const counted = countDraw(state, player);
-  sink.events.push({ type: "drawn", player, instanceId: card.id, defId: card.defId, ...counted });
+  // B5 E33: the draw that took the last card of the drawer's own library (Classic #90's quest 9). The
+  // card still says where it lay (the caller spliced it out and has not moved it), so a draw out of
+  // the other player's library (E16) empties nothing of the drawer's.
+  const emptied =
+    card.zone.z === "library" && card.zone.player === player && state.players[player].library.length === 0;
+  sink.events.push({
+    type: "drawn",
+    player,
+    instanceId: card.id,
+    defId: card.defId,
+    ...counted,
+    ...(emptied ? { emptied: true as const } : {}),
+  });
 
   const at = linkFor(state, link);
   if (castsOnDraw(card) && at.chain < CAST_ON_DRAW_CHAIN_CAP && roomToCast(state, player, card)) {

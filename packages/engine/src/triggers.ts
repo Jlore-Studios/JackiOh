@@ -49,12 +49,14 @@ import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "
 import { isAnnounceLive } from "./announce";
 import { heldBack } from "./drawComplete";
 import { sweepMarks } from "./marks";
+import { isFaceDown } from "./preview";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
 import type { Script, TriggerDef } from "./script";
 import { scriptOf } from "./scripts";
 import { stateCheck } from "./stateCheck";
+import { observeQuestEvent } from "./subsystems/quests";
 import { eventStayOf, exitMark, movesIn, noteReported, uncoveredBy, type LaterMoves } from "./stays";
 import {
   findInstance,
@@ -395,9 +397,13 @@ export function queueTrigger(
  * Append one of a card's hooks to the queue. §6.2 and R62 resolve start-of-turn and end-of-turn
  * hooks "in queue order", so queueing them gives them what an event trigger gets for free: a state
  * check between each two (R59), and a pause that keeps the rest of them in state.
+ *
+ * R177: a face-down trap's hook (Classic #65 Ace in the Hole's end-of-turn coin) is a hidden card's
+ * entry too, so it borrows the counter like a hand card's: a number it took would tell the other seat
+ * the face-down card carries that hook.
  */
 export function queueHook(sink: EngineSink, holder: TriggerHolder, hook: HookName): QueuedTrigger {
-  const { id, seq } = nextEntryId(sink.state);
+  const { id, seq } = nextEntryId(sink.state, holder.zone === "backrow" && isFaceDown(sink.state, holder.card));
   const entry: QueuedTrigger = {
     id,
     seq,
@@ -550,6 +556,9 @@ export function dispatchEvent(sink: EngineSink, event: GameEvent): QueuedTrigger
   // R240, R63: a hit of 0 is a report (an absorbed fatigue draw), not a damage instance, and nothing
   // — no trap, no trigger — answers it.
   if (event.type === "damage" && event.amount <= 0) return [];
+  // B5 E33, R404: a quest counts the events the loop reaches, in the order they happened, before
+  // anything answers this one — so a quest that opened later in the stream never counts it.
+  observeQuestEvent(sink, event, () => eventsAfterDispatched(sink, event));
   const queued: QueuedTrigger[] = [];
   const owed = offerToTraps(sink, event);
   if (owed !== null) queued.push(owed);

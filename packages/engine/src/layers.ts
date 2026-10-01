@@ -240,6 +240,9 @@ function computeLayers(
     attack += mod.attack ?? 0;
     maxHealth += mod.maxHealth ?? 0;
   }
+  // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
+  // other layer, so nothing above lifts it; with several, the last in aura order holds.
+  for (const mod of auras) if (mod.setAttack !== undefined) attack = mod.setAttack;
 
   // B3.3 rule 5: a Brittle count in force is the unit's Brittle (`withBrittleCount`).
   const keywords: Keyword[] = withBrittleCount(

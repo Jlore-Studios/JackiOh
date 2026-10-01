@@ -64,6 +64,21 @@ export type CardView = {
   marks?: CardMark[];
   /** B3.2, R384: the card's Activate abilities, on its controller's own view of it on the field. */
   activations?: ActivationView[];
+  /**
+   * B5 E33, R404: Classic #90 In Too Deep's open quests with their progress and the rewards on offer,
+   * and the auras its quest line holds — on every view of the card on the field (a face-up Field Spell).
+   */
+  quest?: QuestView;
+};
+
+/**
+ * B5 E33, R404, §10.8: a quest line as the board shows it. Each open quest carries its text, its
+ * progress against its goal ("1/2") and the rewards it offers; `auras` are the rewards held while the
+ * card stays on the field (In Too Deep's L and M).
+ */
+export type QuestView = {
+  open: { id: string; text: string; progress: number; goal: number; rewards: { id: string; text: string }[] }[];
+  auras: { id: string; text: string }[];
 };
 
 /**

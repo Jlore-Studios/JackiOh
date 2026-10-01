@@ -167,6 +167,8 @@ const TESTED_BY: Readonly<Record<string, string>> = {
   fuse: "effects-random.test.ts",
   rotate: "effects-random.test.ts",
   playerMods: "effects-delay.test.ts",
+  // C #90 In Too Deep's two random picks (rewards C and E) are proved with the quests subsystem.
+  randomPicks: "quests.test.ts",
 };
 
 describe("M3-T1 structural acceptance (BUILD M3-T1)", () => {

@@ -37,6 +37,8 @@ import type { EngineSink } from "./resolve";
 import { makeContext } from "./resolve";
 import { wouldDieWindow } from "./replacements";
 import { scriptOf } from "./scripts";
+import { noticeQuests } from "./subsystems/quests";
+import { tributesDue } from "./selfTribute";
 import { findInstance, type CardInstance, type Resume, type WorkItem } from "./state";
 import { PAUSE_KEY, owe, pausedOf, registerWorkHandler, type PausedStep } from "./work";
 import {
@@ -605,6 +607,13 @@ export function stateCheck(sink: EngineSink): void {
     resolveIndestructibleMarks(sink);
     endOrphanedModifiers(sink);
     installLastingModifiers(sink);
+    // R403: a card whose "When …, Tribute this" holds now is sacrificed before anything is collected.
+    const tributes = tributesDue(sink.state);
+    if (tributes.length > 0) {
+      sacrificeTogether(sink, tributes);
+      if (sink.state.result !== null || sink.state.pending !== null) return;
+      continue;
+    }
 
     const order: PlayerId[] = sink.state.active === "p1" ? ["p1", "p2"] : ["p2", "p1"];
     const units = order.flatMap((player) => unitsOf(sink, player));
@@ -620,6 +629,8 @@ export function stateCheck(sink: EngineSink): void {
 
     if (dying.length === 0) {
       if (heroCheck(sink)) return;
+      // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.
+      noticeQuests(sink);
       return;
     }
 

@@ -89,6 +89,7 @@ import { gradeName } from "./subsystems/comboIndex";
 import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { questViewOf } from "./subsystems/quests";
 import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
 import { plagueOn } from "./plague";
@@ -226,6 +227,8 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
  * the viewer may read where it is.
  */
 function cardView(state: GameState, card: CardInstance): CardView {
+  // B5 E33, R404: a quest line on the field, public as the card is.
+  const quest = questViewOf(state, card);
   return {
     instanceId: card.id,
     defId: card.defId,
@@ -233,6 +236,7 @@ function cardView(state: GameState, card: CardInstance): CardView {
     cost: effectiveCost(state, card),
     ...instanceDataView(state, card),
     ...withMarks(state, card.id),
+    ...(quest === null ? {} : { quest }),
   };
 }
 
