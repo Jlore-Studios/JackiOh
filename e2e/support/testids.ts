@@ -949,3 +949,34 @@ export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
 /** R371: the line over your own face-down trap's face in its preview and its sheet. */
 export const INSPECT_NOTE = "inspect-note";
+
+// ---------------------------------------------------------------------------------------------
+// A20: patch v0.2.0's Activate control (R384, R510) and plays from the graveyard (B5 E11). Mirrors,
+// name for name, `testid.activate`, `testid.activateUses`, `testid.powerOf` and `testid.pilePlay` in
+// `apps/web/src/game/contract.ts`. Keep the files identical. A card the viewer controls whose view
+// lists `activations` carries one control per ability; `ability` is named only when it lists
+// several. A control is live (`data-legal="true"`) exactly when `legal` lists that card's
+// `activate`; its badge's text is the uses left this turn ("∞" for Activate ♾️), and a control that
+// is not live keeps the engine's reason in its `title`. It flashes (`data-flash="activated"`) while
+// the `activated` row plays on its card. Heroic Power's first power stays `POWER`.
+// ---------------------------------------------------------------------------------------------
+
+/** A20: a card's Activate control (R384). */
+export function activateId(instanceId: string, ability?: string): string {
+  return ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`;
+}
+
+/** A20: that control's uses-left badge (`data-uses`: a number, or "unlimited"). */
+export function activateUsesId(instanceId: string, ability?: string): string {
+  return ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`;
+}
+
+/** A20: a Heroic Power after the first on the hero panel (the first is `POWER`). */
+export function powerOfId(instanceId: string): string {
+  return `power-${instanceId}`;
+}
+
+/** A20: "Play" on a card in your graveyard pile's sheet, present only while `legal` lists that play (B5 E11). */
+export function pilePlayId(instanceId: string): string {
+  return `pile-play-${instanceId}`;
+}

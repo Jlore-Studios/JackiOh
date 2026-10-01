@@ -13,7 +13,10 @@
 //     pickers therefore have to work with NO `view.pending` at all: nothing is paused, nothing is
 //     waiting on an answer, and what they submit is a `play`, never an `answer`. §10.6 keeps the
 //     `x`, `embiggen`, `zone`, `tribute` and `direction` prompt kinds for later sets, so both
-//     routes render the same picker with the same `data-prompt-kind`.
+//     routes render the same picker with the same `data-prompt-kind`. An activation (R384) is
+//     built on this route too — its targets, modes and Tribute — and submits an `activate`; so are
+//     a play's payments: the cards a targeting cost discards (Classic #89, the `hand` picker) and
+//     the Plague Tokens paying a graveyard play (Classic #74, a `number` picker of chips).
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
@@ -51,14 +54,17 @@ import type {
 import {
   IDLE,
   highlightFor,
+  isBuilding,
   outstandingNeed,
   pickInPlay,
   answerAction,
+  plagueKey,
   selectionKey,
   zoneKey,
   zonesInBoardOrder,
   parseZoneKey,
   type Interaction,
+  type PlagueChoice,
   type PlayBuild,
   type PlayNeed,
 } from "./actions.ts";
@@ -71,7 +77,7 @@ import "./prompt.css";
 
 export type PromptProps = {
   view: PlayerView;
-  /** The in-flight play, for the inline R81 pickers (x, embiggen, zone, tribute, direction). */
+  /** The play or activation in flight, for the inline R81 pickers (x, embiggen, zone, tribute, direction, …). */
   interaction?: Interaction;
   legal?: readonly ActionBody[];
   onAction: (body: ActionBody) => void;
@@ -116,6 +122,11 @@ type Submitted = { action?: ActionBody; interaction?: Interaction };
 type Picker = {
   /** Which picker to draw, and the `data-prompt-kind` value M5-T4 animates on. */
   chrome: PromptKind;
+  /**
+   * A play's payment drawn its own way whatever its chrome: `plague` is the Plague Token count of a
+   * graveyard play (Classic #74), a `number` prompt to the DOM and a row of chips to the eye.
+   */
+  variant?: "plague";
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
@@ -257,7 +268,8 @@ function pickerForPending(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Route 2: an R81 play choice. Submits a `play`, never an `answer`.
+// Route 2: an R81 choice of a play or an activation. Submits a `play` or an `activate`, never an
+// `answer`.
 // ---------------------------------------------------------------------------------------------
 
 function isDirection(options: readonly string[]): boolean {
@@ -281,6 +293,18 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
       selection.pick === "instance" &&
       hand.some((card) => card.instanceId === selection.instanceId),
   );
+}
+
+function cardsWord(count: number): string {
+  return count === 1 ? "1 card" : `${String(count)} cards`;
+}
+
+/** "Pay in mana only", "Spend 2 Plague Tokens", and where they come from when several cards pay. */
+function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
+  if (option === "none") return "Pay in mana only";
+  const tokens = `Spend ${String(option.tokens)} Plague ${option.tokens === 1 ? "Token" : "Tokens"}`;
+  const where = nameSource ? whereOf(view, option.from) : null;
+  return where === null ? tokens : `${tokens} (${where})`;
 }
 
 function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerView): Picker {
@@ -365,10 +389,40 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         },
       };
     }
+    case "plague": {
+      // B5 E11, E19 (Classic #74): how much of the price Plague Tokens pay, one option per way the
+      // engine listed; the rest is mana. Several paying cards are told apart by where they stand.
+      const sources = new Set(need.options.flatMap((option) => (option === "none" ? [] : [option.from])));
+      const byKey = new Map(need.options.map((option) => [plagueKey(option), option]));
+      return {
+        ...common,
+        chrome: "number",
+        variant: "plague",
+        title: "Pay with Plague Tokens?",
+        items: need.options.map((option) => ({
+          key: plagueKey(option),
+          label: plagueLabel(view, option, sources.size > 1),
+        })),
+        submit: (keys) => {
+          const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
+          return choice === undefined ? {} : play({ plague: choice });
+        },
+      };
+    }
+    case "discard":
+      // B5 E5 (Classic #89 Paul Allen's Ghost): the hand cards a targeting cost discards, picked from
+      // the sets the engine listed; the discarding player picks them (R16).
+      return {
+        ...common,
+        chrome: "hand",
+        title: need.min === need.max ? `Discard ${cardsWord(need.min)} to target it` : "Choose cards to discard",
+        items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
+        submit: (keys) => play({ discards: [...keys] }),
+      };
     case "mode": {
-      // The card being played is the one asking; its options read as that card's words, on the face
-      // it is played with (#24's radiant 2X, 4X and X).
-      const played = interaction.stage === "playing" ? cardRefFor(view, interaction.instanceId) : null;
+      // The card being played (or activated, R384) is the one asking; its options read as that
+      // card's words, on the face it is played with (#24's radiant 2X, 4X and X).
+      const played = isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
       const source = played?.defId ?? undefined;
       const radiant = played?.radiant === true;
       const picker: Picker = {
@@ -592,6 +646,16 @@ function PromptModal(props: {
 
   function body(): ReactNode {
     const items = picker.items;
+
+    if (picker.variant === "plague") {
+      return (
+        <div className="prompt-chips prompt-plague" role="group" aria-label="Plague Tokens">
+          {items.map((item) => (
+            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+          ))}
+        </div>
+      );
+    }
 
     if (picker.chrome === "direction") {
       return (

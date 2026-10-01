@@ -21,6 +21,10 @@
 // power — and a match-made card (a Fuse's) reads its definition from the view (`MatchCardsContext`,
 // R243) where the catalog has none.
 //
+// R384, R510: a card whose view lists `activations` (its controller's own view of a card acting on
+// the field) wears an Activate control per ability (ActivateControl.tsx), a sibling of the face like
+// the switch, which reports `{ on: "activate" }` and stops its click reaching the card.
+//
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
 // on a face-up backrow card of either seat: the corruption aura and a badge per mark
 // (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
@@ -50,6 +54,7 @@ import {
 } from "../cards/index.ts";
 import CardMarks from "../cards/CardMarks.tsx";
 import { marksOf } from "../cards/marks.ts";
+import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
@@ -411,6 +416,10 @@ export default function Card(props: CardProps): ReactElement {
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
       )}
+
+      {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
+          view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
+      <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
 
       <PopLayer pops={props.pops} />
     </div>

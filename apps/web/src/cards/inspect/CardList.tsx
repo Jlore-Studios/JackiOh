@@ -15,6 +15,13 @@
 //   face in a scrolling grid; a face opens large with its glossary, and Back returns to the grid.
 //   Focus moves to Close on open and back on close, Tab stays inside, and Escape, the scrim and
 //   Close all close it (useModalOverlay).
+//
+// B5 E11: while a permission lets the viewer play cards from their graveyard, `legalActions` lists
+// a `play` for each such card, and the board hands this list an entry's `play` for exactly those
+// (game/Board.tsx reads `Highlight.legal`; this file decides nothing, CLAUDE.md rule 7). Such a
+// face carries a "Play" button under it, in the grid and in the face opened large; pressing it
+// reports the play to the board, which builds it as it builds a hand card's (zone, targets, the
+// Plague Tokens paying it), and closes the sheet so the board can be seen.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -49,13 +56,24 @@ import {
   INSPECT_SCRIM,
 } from "./testids.ts";
 import "./inspect.css";
+import "./list-play.css";
 
 /**
  * One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows (a
  * pile card's instance id, a library entry's definition and face). `count` is how many cards it
  * stands for, 1 when absent.
  */
-export type CardListEntry = { key: string; face: FaceModel | null; count?: number };
+export type CardListEntry = { key: string; face: FaceModel | null; count?: number; play?: CardListPlay };
+
+/**
+ * B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`,
+ * game/contract.ts), `glow` whether the board's green glow is on it, and `onPlay` what pressing it
+ * reports. The caller hands one over only for a card `legalActions` lists a play for.
+ */
+export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void };
+
+/** The word on the button, and what a screen reader hears before the card's name. */
+const PLAY_WORD = "Play";
 
 export type CardListProps = {
   /** What the list is, in words: "Your graveyard". */
@@ -106,6 +124,26 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
         </span>
       ) : null}
     </>
+  );
+}
+
+/** B5 E11: "Play" under a face the viewer may play from the pile; the sheet closes as it reports. */
+function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: CardListPlay; onClose: () => void }): ReactElement {
+  return (
+    <button
+      type="button"
+      className="inspect-list-play"
+      data-testid={play.testId}
+      data-legal="true"
+      data-glow={play.glow ? "ready" : undefined}
+      aria-label={`${PLAY_WORD} ${nameOf(entry)}`}
+      onClick={() => {
+        play.onPlay();
+        onClose();
+      }}
+    >
+      {PLAY_WORD}
+    </button>
   );
 }
 
@@ -195,6 +233,44 @@ export function CardListPreview({
   );
 }
 
+/**
+ * One face in the sheet's grid: a button that opens it large, and, for a card the viewer may play
+ * from the pile (B5 E11), the "Play" under it. Without a play it is exactly the face button.
+ */
+function FaceTile({
+  entry,
+  face,
+  onOpen,
+  onClose,
+}: {
+  entry: CardListEntry;
+  face: FaceModel;
+  onOpen: () => void;
+  onClose: () => void;
+}): ReactElement {
+  const button = (
+    <button
+      type="button"
+      className="inspect-list-face inspect-list-face--button"
+      data-testid={INSPECT_LIST_CARD}
+      data-def-name={face.name}
+      data-count={countOf(entry)}
+      data-entry-key={entry.key}
+      aria-label={`${entryLabel(entry)}: show it large`}
+      onClick={onOpen}
+    >
+      <EntryFace entry={entry} />
+    </button>
+  );
+  if (entry.play === undefined) return button;
+  return (
+    <span className="inspect-list-playable" data-playable="true">
+      {button}
+      <PlayButton entry={entry} play={entry.play} onClose={onClose} />
+    </span>
+  );
+}
+
 export function CardListSheet({
   title,
   entries,
@@ -208,8 +284,10 @@ export function CardListSheet({
   /** The face opened large, by its key; null shows the grid. */
   const [open, setOpen] = useState<string | null>(null);
   // A back opens nothing: it has no face to show large.
-  const opened: FaceModel | undefined =
-    (open === null ? undefined : entries.find((entry) => entry.key === open))?.face ?? undefined;
+  const openedEntry = open === null ? undefined : entries.find((entry) => entry.key === open);
+  const opened: FaceModel | undefined = openedEntry?.face ?? undefined;
+  // B5 E11: the face opened large keeps its "Play" while it is listed.
+  const openedPlay = opened === undefined ? undefined : openedEntry?.play;
   const total = totalOf(entries);
   /** The face last opened, so Back puts focus on it again rather than dropping it on <body>. */
   const returnTo = useRef<string | null>(null);
@@ -259,18 +337,7 @@ export function CardListSheet({
                     <EntryFace entry={entry} />
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    className="inspect-list-face inspect-list-face--button"
-                    data-testid={INSPECT_LIST_CARD}
-                    data-def-name={entry.face.name}
-                    data-count={countOf(entry)}
-                    data-entry-key={entry.key}
-                    aria-label={`${entryLabel(entry)}: show it large`}
-                    onClick={() => setOpen(entry.key)}
-                  >
-                    <EntryFace entry={entry} />
-                  </button>
+                  <FaceTile entry={entry} face={entry.face} onOpen={() => setOpen(entry.key)} onClose={onClose} />
                 )}
               </li>
             ))}
@@ -286,6 +353,9 @@ export function CardListSheet({
         )}
 
         <div className="inspect-list-actions">
+          {openedPlay !== undefined && openedEntry !== undefined ? (
+            <PlayButton entry={openedEntry} play={openedPlay} onClose={onClose} />
+          ) : null}
           {opened !== undefined ? (
             <button
               ref={backButton}
