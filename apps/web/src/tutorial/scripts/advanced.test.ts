@@ -16,20 +16,20 @@ import { opponentOf, type Action, type CardView, type GameEvent, type PlayerId, 
 
 import { newEventsSince } from "../../game/animations.ts";
 import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
-import { playLesson, type LessonRun } from "../harness.ts";
+import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./advanced.ts";
 
 const LESSON = "advanced";
-/** The coach's line wins on the player's 6th turn; the lesson is meant to take 6 to 8. */
+/** The coach's line wins on the player's 7th turn; the lesson is meant to take 6 to 8. */
 const COACH_TURNS_MAX = 8;
-/** A beginner who plays only what the coach names plays the coach's line: the 6th turn too. */
+/** A beginner who plays only what the coach names plays the coach's line: the 7th turn too. */
 const PASSIVE_TURNS_MAX = 8;
-/** The autopilot wins on its 7th turn. */
+/** The autopilot wins on its 7th turn too. */
 const AUTOPILOT_TURNS_MAX = 9;
 /**
  * "Comfortably": the lowest the player's hero goes on the lesson's seed, whoever plays it. The
- * coach's line bottoms out at 28 and the autopilot's at 24, so half the hero's health is margin.
+ * coach's line bottoms out at 22 and the autopilot's at 23, so half the hero's health is margin.
  */
 const HEALTH_FLOOR = HERO_HEALTH / 2;
 /** The most "Got it" bubbles the coach shows in a row, with no move of the player's between them. */
@@ -37,21 +37,19 @@ const GOT_IT_RUN_MAX = 2;
 /**
  * Other deals of the same two decks (seeds `<lesson seed>:deal:<n>`), for how forgiving the lesson's
  * decks are to a player whose game goes some other way: the autopilot, who reads nothing the coach
- * says, wins at least ALT_WINS_MIN of ALT_DEALS. Measured: 15 of 20. Most of the deals it loses are
- * ones where it plays Friend of Felinors on its first turn, and the Felinor Tokens filling its board
- * keep its real units in hand for turns.
+ * says, wins at least ALT_WINS_MIN of ALT_DEALS. Measured: 6 of the first 10, and 15 of the first
+ * 20, as on the engine before patch v0.2.0. Ten deals, not twenty, since that patch nearly doubled
+ * what a game costs (harness.ts); the share asked for is the same. Most of the deals it loses are ones
+ * where it plays Friend of Felinors on its first turn, and the Felinor Tokens filling its board keep
+ * its real units in hand for turns.
  */
-const ALT_DEALS = 20;
-const ALT_WINS_MIN = 12;
+const ALT_DEALS = 10;
+const ALT_WINS_MIN = 6;
 /**
  * Policy seeds for the player who ignores the coach. The harness gives the AI a small budget under
- * the random policy, so each of these games costs a second or two.
+ * the random policy, so each of these games costs less than a lesson game (harness.ts).
  */
-const RANDOM_RUNS = 12;
-/** One lesson game through the real core takes about a second; generous, for a loaded machine. */
-const LESSON_TIMEOUT_MS = 60_000;
-/** The random policy's and the other deals' allowance, for all of their runs. */
-const MANY_TIMEOUT_MS = 240_000;
+const RANDOM_RUNS = 6;
 
 const COIN = "core-t-coin";
 const FELINOR_TOKEN = "core-t-felinor";
@@ -163,7 +161,7 @@ describe("R293 lesson advanced", () => {
   beforeAll(() => {
     coach = playLesson(LESSON, { policy: "coach" });
     steps = stepsOf(coach);
-  }, LESSON_TIMEOUT_MS);
+  }, LESSON_GAME_TIMEOUT_MS);
 
   it("R293 advanced: following the coach wins the lesson, and every step shows and is done", () => {
     expect(coach.winner, "the human wins").toBe(human);
@@ -311,7 +309,7 @@ describe("R293 lesson advanced", () => {
       expect(run.humanActions.filter((entry) => entry.action.type === "play" && !entry.byCoach)).toEqual([]);
       expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -323,7 +321,7 @@ describe("R293 lesson advanced", () => {
       expect(lowestHealth(run), "comfortably").toBeGreaterThanOrEqual(HEALTH_FLOOR);
       expect(run.coach.finished).toBe(true);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -336,7 +334,7 @@ describe("R293 lesson advanced", () => {
       }
       expect(results.filter((result) => result === "win").length, results.join(" ")).toBeGreaterThanOrEqual(ALT_WINS_MIN);
     },
-    MANY_TIMEOUT_MS,
+    ALT_DEALS * LESSON_GAME_MS,
   );
 
   it(
@@ -352,7 +350,7 @@ describe("R293 lesson advanced", () => {
         }
       }
     },
-    MANY_TIMEOUT_MS,
+    RANDOM_RUNS * RANDOM_GAME_MS,
   );
 
   it(
@@ -370,6 +368,6 @@ describe("R293 lesson advanced", () => {
       expect(again.shown).toEqual(coach.shown);
       expect(again.tips).toEqual(coach.tips);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 });
