@@ -5926,6 +5926,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Activates when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
@@ -5947,6 +5948,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Activates when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
@@ -5984,6 +5986,7 @@
         "min": 1
       }
     ],
+    "loc": 14,
     "base": {
       "attack": 1,
       "health": 6,
@@ -6009,6 +6012,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "loc": 3,
     "base": {
       "attack": 9,
       "health": 6,
@@ -6045,6 +6049,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 3,
     "base": {
       "attack": 6,
       "health": 8,
@@ -6070,6 +6075,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "loc": 3,
     "base": {
       "attack": 1,
       "health": 1,
@@ -6120,6 +6126,7 @@
       "core-003",
       "classicplus-006"
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Cry and start of turn: Summon a Right-house defender (2 in 3) or a Wrong-House Attacker (1 in 3)."
@@ -6157,6 +6164,7 @@
         "min": 1
       }
     ],
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Degrade {cards|random card|random cards} in your opponent's deck. Draw {draw}."
@@ -6176,6 +6184,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Vanilla a Unit."
@@ -6195,6 +6204,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Give a Unit Reborn."
@@ -6224,6 +6234,7 @@
         "min": 1
       }
     ],
+    "loc": 3,
     "base": {
       "attack": 4,
       "health": 4,
