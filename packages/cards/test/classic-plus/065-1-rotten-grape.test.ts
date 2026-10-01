@@ -2,6 +2,8 @@
 // (R18): no Armor, no cap, no Blood Moon, no on-damage effect, and at 0 you lose at the state check;
 // radiant loses 1".
 
+import { applyEffects, createRng, makeContext, type EngineSink } from "@jackioh/engine";
+import { convertHealing } from "@jackioh/engine/effects";
 import { describe, expect, it } from "vitest";
 import { scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/065-1-rotten-grape";
@@ -9,7 +11,8 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/065-1-rotten-
 const ROTTEN = "classicplus-065-1";
 const FILLER = "core-005";
 const GOING_LONG = "core-084"; // Field Spell: "Your hero has Armor 2."
-const ANTI_ONESHOT = "core-073"; // Field Spell: "Your hero can't take more than 5 damage at once."
+const ANTI_ONESHOT = "core-073"; // Field Spell: "Your hero can't take more than 5 damage at once." (Radiant 3)
+const MENACE = "core-019";
 
 describe("C+ #65.1 Rotten Grape", () => {
   it("is a (1) Fruit Spell token with the printed rarity Common", () => {
@@ -41,8 +44,29 @@ describe("C+ #65.1 Rotten Grape", () => {
       s.expectHealth("p1", 25);
     });
 
-    it("R18 it is no hit, so no per-hit cap or damage rule sees it (Anti-oneshot Armor answers nothing)", () => {
-      const s = scenario({ p1: { hand: [ROTTEN, FILLER], backrow: [{ def: ANTI_ONESHOT, faceUp: true }] }, p2: { hand: [FILLER] } });
+    it("R18 no cap: a Radiant Anti-oneshot Armor (at most 3 at once) leaves the 5 whole", () => {
+      const s = scenario({
+        p1: { hand: [ROTTEN, FILLER], backrow: [{ def: ANTI_ONESHOT, faceUp: true, radiant: true }] },
+        p2: { hand: [FILLER] },
+      });
+      s.play(ROTTEN);
+      s.expectHealth("p1", 25);
+    });
+
+    it("R18 no on-damage effect: no damage event goes out, so nothing that answers a hit fires", () => {
+      const s = scenario({ p1: { hand: [ROTTEN, FILLER] }, p2: { hand: [FILLER] } });
+      s.play(ROTTEN);
+      expect(s.lastEvents.map((event) => event.type)).not.toContain("damage");
+      expect(s.lastEvents.filter((event) => event.type === "healthLost")).toHaveLength(1);
+    });
+
+    it("R18 no Blood Moon: with the enemy's heal-to-damage conversion (B5 E8) up, the loss is still 5 health and no hit", () => {
+      const s = scenario({ p1: { hand: [ROTTEN, FILLER] }, p2: { hand: [FILLER], field: [MENACE] } });
+      const state = s.state;
+      const sink: EngineSink = { state, events: [], rng: createRng(state.seed, state.rngCursor) };
+      applyEffects([convertHealing()], makeContext(sink, s.unit("p2", 1), { controller: "p2" }));
+      state.rngCursor = sink.rng.cursor;
+      expect(state.players.p2.mods.some((mod) => mod.kind === "healToDamage")).toBe(true);
       s.play(ROTTEN);
       s.expectHealth("p1", 25);
       expect(s.lastEvents.some((event) => event.type === "damage")).toBe(false);

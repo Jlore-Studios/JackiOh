@@ -4,6 +4,7 @@
 // `param()`; radiant the Units are Radiant".
 
 import { activeUnitsOf, defOf, query, stepParam } from "@jackioh/engine";
+import { fillParams } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/067-pear";
@@ -35,6 +36,13 @@ describe("C+ #67 Pear", () => {
     expect(def.tags).toContain("Fruit");
     expect(typeof base.cry).toBe("function");
     expect(typeof radiant.cry).toBe("function");
+  });
+
+  it("R482 the text agrees with its count at every value: one Unit, two Units", () => {
+    expect(fillParams(def, "base", { units: 1 })).toBe("Summon 1 random (1) Cost Common Unit.");
+    expect(fillParams(def, "base")).toBe("Summon 2 random (1) Cost Common Units.");
+    expect(fillParams(def, "radiant", { units: 1 })).toBe("Summon 1 random Radiant (1) Cost Common Unit.");
+    expect(fillParams(def, "radiant", { units: 3 })).toBe("Summon 3 random Radiant (1) Cost Common Units.");
   });
 
   describe("base", () => {

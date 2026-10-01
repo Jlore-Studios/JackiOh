@@ -5,7 +5,7 @@
 // cost (0)".
 
 import { defOf, stepParam } from "@jackioh/engine";
-import type { GameEvent } from "@jackioh/shared";
+import { fillParams, type GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/075-1-j-lease-j-jungle-ex-plorer-pack";
@@ -29,6 +29,14 @@ describe("C+ #75.1 J-lease J-Jungle EX-plorer Pack", () => {
     expect(def.printedRarity).toBe("Legendary");
     expect(base.staticFlags?.castOnDraw).toBe(true);
     expect(radiant.staticFlags?.castOnDraw).toBe(true);
+  });
+
+  it("R482 the text agrees with its count at every value, and the Radiant price reads for one card or five", () => {
+    expect(fillParams(def, "base")).toBe("Cast on draw: Add 5 random Radiant Classic or Classic+ cards to your hand.");
+    expect(fillParams(def, "base", { cards: 1 })).toBe("Cast on draw: Add 1 random Radiant Classic or Classic+ card to your hand.");
+    expect(fillParams(def, "radiant", { cards: 1 })).toBe(
+      "Cast on draw: Add 1 random Radiant Classic or Classic+ card to your hand. Each costs (0).",
+    );
   });
 
   describe("base", () => {

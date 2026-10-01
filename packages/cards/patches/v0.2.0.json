@@ -8858,11 +8858,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Summon {units} random (1) Cost Common Units."
+      "text": "Summon {units|random (1) Cost Common Unit|random (1) Cost Common Units}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {units} random Radiant (1) Cost Common Units."
+      "text": "Summon {units|random Radiant (1) Cost Common Unit|random Radiant (1) Cost Common Units}."
     }
   },
   "classicplus-068": {
@@ -9211,11 +9211,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Add {cards} random Radiant Classic or Classic+ cards to your hand."
+      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Add {cards} random Radiant Classic or Classic+ cards to your hand. They cost (0)."
+      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand. Each costs (0)."
     }
   },
   "classicplus-076": {

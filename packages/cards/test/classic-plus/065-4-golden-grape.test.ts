@@ -66,6 +66,14 @@ describe("C+ #65.4 Golden Grape", () => {
       expect(() => s.play(GOLDEN, { targets: pick(s, TIMMY) })).toThrow();
     });
 
+    it("§6.1 Immutable never blocks it: Radiant is the card's own text", () => {
+      const s = scenario({ p1: { hand: [GOLDEN, FILLER], field: [FELINORS] }, p2: { hand: [FILLER] } });
+      s.card(FELINORS).grantedKeywords = [{ kind: "Immutable" }];
+      s.play(GOLDEN, { targets: pick(s, FELINORS) });
+      expect(s.card(FELINORS).radiant).toBe(true);
+      s.expectStats(FELINORS, { attack: 6, maxHealth: 9 });
+    });
+
     it("§6.3 a card that is already Radiant is left as it is", () => {
       const s = scenario({ p1: { hand: [GOLDEN], field: [{ def: TIMMY, radiant: true }] }, p2: { hand: [FILLER] } });
       s.play(GOLDEN, { targets: pick(s, TIMMY) });

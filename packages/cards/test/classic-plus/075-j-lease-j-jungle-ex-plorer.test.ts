@@ -3,11 +3,11 @@
 // your library list; no Cry from a copy (R1); the count reads through `param()`; radiant the Pack is
 // Radiant".
 //
-// "No Cry from a copy": R1 is the engine's — a summoned card never fires its Cry — and no card in the
-// preview pool can summon a copy of a non-Human 2-Cost Unit; R1 itself is proved in the engine's summon
-// tests and through C+ #67 Pear (067-pear.test.ts), which summons a Cry Unit.
+// "No Cry from a copy" is driven through the engine's own Summon a copy (§6.3, R57), since no card in
+// the preview pool can copy a non-Human 2-Cost Unit.
 
-import { LIBRARY_CAP, stepParam } from "@jackioh/engine";
+import { LIBRARY_CAP, applyEffects, createRng, makeContext, settle, stepParam, type EngineSink } from "@jackioh/engine";
+import { summonCopy } from "@jackioh/engine/effects";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/075-j-lease-j-jungle-ex-plorer";
@@ -68,6 +68,19 @@ describe("C+ #75 J-lease J-Jungle EX-plorer", () => {
         positions.add(s.pile("p1", "library").findIndex((card) => card.defId === PACK));
       }
       expect(positions.size).toBeGreaterThan(1);
+    });
+
+    it("R1 a copy summoned of it fires no Cry: no Pack", () => {
+      const s = scenario({ p1: { hand: [FILLER], field: [EXPLORER], library: [FILLER] }, p2: { hand: [FILLER] } });
+      const original = s.unit("p1", 1)!;
+      const state = s.state;
+      const sink: EngineSink = { state, events: [], rng: createRng(state.seed, state.rngCursor) };
+      applyEffects([summonCopy({ of: { of: "instance", instanceId: original.id }, lane: 2 })], makeContext(sink, null, { controller: "p1" }));
+      settle(sink);
+      state.rngCursor = sink.rng.cursor;
+      expect(s.unit("p1", 2)?.defId).toBe(EXPLORER);
+      expect(packs(s)).toEqual([]);
+      expect(sink.events.some((event) => event.type === "shuffledIn")).toBe(false);
     });
 
     it("R80 a full library turns the Pack away: no Pack is made", () => {

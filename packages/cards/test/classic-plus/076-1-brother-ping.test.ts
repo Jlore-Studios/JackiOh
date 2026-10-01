@@ -73,6 +73,9 @@ describe("C+ #76.1 Brother Ping", () => {
       s.endTurn().endTurn();
       s.activate(PING, { targets: [{ pick: "hero", player: "p1" }] });
       s.expectHealth("p1", 29);
+      s.endTurn().endTurn();
+      s.activate(PING, { targets: [{ pick: "instance", instanceId: s.card(MENACE).id }] });
+      s.expectStats(MENACE, { health: 8 });
     });
 
     it("R346 the hit has Pierce: Armor 7 takes none of it", () => {
@@ -123,6 +126,19 @@ describe("C+ #76.1 Brother Ping", () => {
       s.endTurn().endTurn();
       expect(listed(s, "p1", ping.id).length).toBeGreaterThan(0);
       s.activate(ping, { targets: ENEMY_HERO });
+      s.expectHealth("p2", 28);
+    });
+
+    it("R78 its count resets on leaving the field: used, destroyed and back by a granted Reborn, it may activate again that turn", () => {
+      const s = scenario({ p1: { hand: [HIT_JOB, FILLER], field: [PING], library: [FILLER] }, p2: { hand: [FILLER] } });
+      s.card(PING).grantedKeywords = [{ kind: "Reborn" }];
+      s.activate(PING, { targets: ENEMY_HERO });
+      expect(listed(s, "p1", s.card(PING).id)).toHaveLength(0);
+      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.unit("p1", 1)!.id }] });
+      const back = s.unit("p1", 1);
+      expect(back?.defId).toBe(PING);
+      expect(listed(s, "p1", back!.id).length).toBeGreaterThan(0);
+      s.activate(back!, { targets: ENEMY_HERO });
       s.expectHealth("p2", 28);
     });
 

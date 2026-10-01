@@ -15,6 +15,7 @@ const HINDER = "core-021"; // Cast on draw; base face asks its caster to discard
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
 const DECK_A = "core-043"; // (4) Unit, Big Felinor
 const DECK_B = "core-025"; // (4) Unit
+const BILLY = "classicplus-069"; // Buff Billy, an (X) Unit
 
 function unitAt(s: Scenario, player: "p1" | "p2"): Selection[] {
   const unit = s.unit(player, 1);
@@ -79,6 +80,16 @@ describe("C+ #65.3 Large Grape", () => {
       cast.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
       expect(cast.card(HINDER).zone.z).toBe("graveyard");
       expect(cast.card(DECK_B).costOverride).toBeUndefined();
+    });
+
+    it("R65 an X-cost card it draws is free to play, its X still chosen: Buff Billy played for 1 with 1 mana left costs nothing", () => {
+      const s = scenario({ p1: { hand: [GRAPE, FILLER], library: [BILLY] }, p2: { hand: [FILLER] } });
+      s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
+      expect(s.card(BILLY).costOverride).toBe(0);
+      s.expectMana("p1", 1);
+      s.play(BILLY, { zone: 1, x: 1 });
+      s.expectMana("p1", 1);
+      expect(s.card(BILLY).x).toBe(1);
     });
 
     it("R386 an Upgrade makes it 6 and 2 draws; a Degrade 4", () => {

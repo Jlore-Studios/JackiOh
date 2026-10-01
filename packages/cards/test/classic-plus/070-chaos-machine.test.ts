@@ -23,6 +23,7 @@ const MACHINE = "classicplus-070";
 const UNIT = "core-008"; // Mr. Vanilla 4/4.
 const MENACE = "core-019"; // Midrange Menace; Radiant it is Immutable.
 const FILLER = "core-005";
+const NETHER = "core-088"; // Twisting Nether: a (4) Spell with no keywords and no declared numbers.
 
 type Tune = Extract<GameEvent, { type: "upgraded" | "degraded" }>;
 
@@ -97,6 +98,34 @@ describe("C+ #70 Chaos Machine", () => {
       expect(tunes(s.lastEvents, "degraded")).toEqual([]);
       expect(s.card(menace).tuning).toBeUndefined();
       expect(s.card(menace).costMod).toBe(0);
+    });
+
+    it("R386 R440 a pick on a card nothing fits changes nothing: their (4) Spell with no numbers is cued none, unchanged", () => {
+      const s = machine({ hand: [FILLER], library: [FILLER] }, { hand: [NETHER] });
+      const nether = s.hand("p2")[0]!;
+      s.startTurn();
+      const down = tunes(s.lastEvents, "degraded");
+      expect(down).toHaveLength(1);
+      expect(down[0]).toMatchObject({ instanceId: nether.id, change: { kind: "none" } });
+      expect(s.card(nether).costMod).toBe(0);
+      expect(s.card(nether).tuning).toBeUndefined();
+    });
+
+    it("§3.2 R13 a Stack pile offers only its top: the card dormant beneath is never picked", () => {
+      for (let n = 0; n < 12; n += 1) {
+        const s = machine(
+          { hand: [FILLER], library: [FILLER] },
+          { hand: [], field: [{ def: "core-043", lane: 1 }, { def: "core-092", stack: true }, { def: UNIT, lane: 2 }] },
+          { seed: `chaos-stack-${n}` },
+        );
+        const dormant = s.state.players.p2.units[0]?.[1];
+        if (dormant === undefined) throw new Error("a dormant card under the pile");
+        s.startTurn();
+        const [down] = tunes(s.lastEvents, "degraded");
+        expect([s.unit("p2", 1)!.id, s.unit("p2", 2)!.id]).toContain(down?.instanceId);
+        expect(s.card(dormant).tuning).toBeUndefined();
+        expect(s.card(dormant).costMod).toBe(0);
+      }
     });
 
     it("R242 a pick over a hand and a field takes either, by the piles' sizes alone", () => {

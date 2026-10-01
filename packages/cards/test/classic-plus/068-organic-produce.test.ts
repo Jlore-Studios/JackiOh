@@ -8,13 +8,17 @@ import { describe, expect, it } from "vitest";
 import {
   HAND_CAP,
   HIDDEN_ID,
+  applyEffects,
   createRng,
   effectiveCost,
+  makeContext,
   query,
+  settle,
   stepParam,
   subsystems,
   type EngineSink,
 } from "@jackioh/engine";
+import { castNew } from "@jackioh/engine/effects";
 import { base, def, radiant } from "../../src/scripts/classic-plus/068-organic-produce";
 import { scenario, type Scenario } from "../_harness";
 
@@ -95,6 +99,18 @@ describe("C+ #68 Organic Produce", () => {
       s.expectHealth("p1", 60);
       expect(s.card(FIG).radiant).toBe(true);
       s.expectEvents("radiantSet", "cardPlayed");
+    });
+
+    it("R70 R213 a Fruit you cast is made Radiant too", () => {
+      const s = scenario({ p1: { hand: [FILLER], backrow: [PRODUCE] }, p2: { hand: [FILLER] } });
+      const state = s.state;
+      const sink: EngineSink = { state, events: [], rng: createRng(state.seed, state.rngCursor) };
+      applyEffects([castNew({ def: FIG, random: true })], makeContext(sink, null, { controller: "p1" }));
+      settle(sink);
+      state.rngCursor = sink.rng.cursor;
+      const fig = s.pile("p1", "graveyard").find((card) => card.defId === FIG);
+      expect(fig?.radiant).toBe(true);
+      expect(sink.events.some((event) => event.type === "radiantSet" && event.instanceId === fig?.id)).toBe(true);
     });
 
     it("R213 a non-Fruit you play is untouched, and so are the opponent's Fruits", () => {

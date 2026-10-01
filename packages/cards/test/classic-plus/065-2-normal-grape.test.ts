@@ -17,6 +17,7 @@ const HINDER = "core-021"; // Cast on draw; base face asks its caster to discard
 const SOLARIUS = "classicplus-038"; // Unit printing Spell Damage +2
 const DECK_A = "core-011"; // Tempo Timmy, (1) Unit
 const DECK_B = "core-001"; // Big D-fender, (2) Unit
+const BILLY = "classicplus-069"; // Buff Billy, an (X) Unit
 
 function unitAt(s: Scenario, player: "p1" | "p2", lane = 1): Selection[] {
   const unit = s.unit(player, lane);
@@ -91,6 +92,14 @@ describe("C+ #65.2 Normal Grape", () => {
       const drawn = s.card(DECK_B);
       expect(drawn.zone.z).toBe("graveyard");
       expect(drawn.costMod).toBe(0);
+    });
+
+    it("R65 an X-cost card it draws gets no discount: Buff Billy played for 2 still costs 2", () => {
+      const s = scenario({ p1: { hand: [GRAPE, FILLER], library: [BILLY] }, p2: { hand: [FILLER] } });
+      s.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
+      s.expectMana("p1", 3);
+      s.play(BILLY, { zone: 1, x: 2 });
+      s.expectMana("p1", 1);
     });
 
     it("§2.4 a fatigue draw brings no card, so nothing is discounted", () => {

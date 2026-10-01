@@ -1,6 +1,6 @@
 // C+ #67 Pear (SPEC §8.7 row 67). (2) Spell, Fruit, Rare.
-//   Base:    "Summon {units} random (1) Cost Common Units."
-//   Radiant: "Summon {units} random Radiant (1) Cost Common Units."
+//   Base:    "Summon {units|random (1) Cost Common Unit|random (1) Cost Common Units}."
+//   Radiant: "Summon {units|random Radiant (1) Cost Common Unit|random Radiant (1) Cost Common Units}."
 //   Engine:  "Non-token Units printed at (1) Cost (R65) with rarity Common, every set (R380); repeats
 //            allowed (R60); summoned, so no Cry (R1), placed per R64; a full board takes fewer.
 //            Tunes: units 2 ↑."
