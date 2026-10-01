@@ -7,7 +7,9 @@
 // from then on (R33); a face-down option, and the placement on it, never name it to you (R177);
 // radiant: 2 tokens; its tuned number (tokens) reads through `param()` (R386)".
 //
-// The R396 cases read costs through the engine's `costNow`.
+// The R396 cases read costs through the engine's `costNow`. A Plague Chalice played for X enters with
+// X Plague Tokens (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
+// played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.
 
 import { stepParam } from "@jackioh/engine";
 import type { Selection } from "@jackioh/shared";
@@ -18,6 +20,7 @@ import { base, def, radiant } from "../../src/scripts/classic/039-outbreak";
 const OUTBREAK = "classic-039";
 const SLIME = "classic-027"; // (0) Unit 1/1: placements on it doubled.
 const CHALICE = "classic-087"; // (X) Field Spell.
+const BILLY = "classicplus-069"; // (X) Unit 3X/3X; its Cry Upgrades it, never its cost (R396).
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9.
 const PAWN = "core-096"; // (1) Trap, answers only a lethal attack.
@@ -160,17 +163,30 @@ describe("C #39 Outbreak", () => {
       expect(JSON.stringify(s.view("p1"))).not.toContain(UNLICENSED);
     });
 
-    it("R396 an X card on the field costs the X it was played for: a Plague Chalice played for 3 is not stolen by 1 token", () => {
-      const s = scenario({ active: "p2", p1: { hand: [OUTBREAK, ANCHOR], library: lib(4) }, p2: { hand: [CHALICE, ANCHOR], library: lib(2) } });
-      s.play(CHALICE, { x: 3 });
+    it("R396 an X card on the field costs the X it was played for: a Buff Billy played for 3 is not stolen by 1 token", () => {
+      const s = scenario({ active: "p2", p1: { hand: [OUTBREAK, ANCHOR], library: lib(4) }, p2: { hand: [BILLY, ANCHOR], library: lib(2) } });
+      s.play(BILLY, { x: 3 });
       s.endTurn();
       expect(s.state.active).toBe("p1");
 
+      s.play(OUTBREAK, { targets: at(s, BILLY) });
+
+      expect(s.card(BILLY).counters.plague).toBe(1);
+      expect(stolenIds(s)).toEqual([]);
+      expect(s.card(BILLY).controller).toBe("p2");
+      expect(s.lastEvents.filter((event) => event.type === "drawn")).toHaveLength(1);
+    });
+
+    it("R396 C #87 a Plague Chalice played for 3 enters with 3 Plague Tokens, so 1 more reaches its X and steals it", () => {
+      const s = scenario({ active: "p2", p1: { hand: [OUTBREAK, ANCHOR], library: lib(4) }, p2: { hand: [CHALICE, ANCHOR], library: lib(2) } });
+      s.play(CHALICE, { x: 3 });
+      s.endTurn();
+
       s.play(OUTBREAK, { targets: at(s, CHALICE) });
 
-      expect(stolenIds(s)).toEqual([]);
-      expect(s.card(CHALICE).controller).toBe("p2");
-      expect(s.lastEvents.filter((event) => event.type === "drawn")).toHaveLength(1);
+      expect(s.card(CHALICE).counters.plague).toBe(4);
+      expect(stolenIds(s)).toEqual([s.card(CHALICE).id]);
+      expect(s.lastEvents.filter((event) => event.type === "drawn")).toHaveLength(0);
     });
 
     it("R396 an X card that arrived with no X chosen costs 0 on the field, so it is stolen", () => {
@@ -212,26 +228,26 @@ describe("C #39 Outbreak", () => {
       expect(drawn(s)).toBe(0);
     });
 
-    it("R396 a Plague Chalice played for 3 is not stolen by 2 tokens; it draws 2", () => {
-      const s = scenario({ active: "p2", p1: { hand: [{ def: OUTBREAK, radiant: true }, ANCHOR], library: lib(4) }, p2: { hand: [CHALICE, ANCHOR], library: lib(2) } });
-      s.play(CHALICE, { x: 3 });
+    it("R396 a Buff Billy played for 3 is not stolen by 2 tokens; it draws 2", () => {
+      const s = scenario({ active: "p2", p1: { hand: [{ def: OUTBREAK, radiant: true }, ANCHOR], library: lib(4) }, p2: { hand: [BILLY, ANCHOR], library: lib(2) } });
+      s.play(BILLY, { x: 3 });
       s.endTurn();
 
-      s.play(OUTBREAK, { targets: at(s, CHALICE) });
+      s.play(OUTBREAK, { targets: at(s, BILLY) });
 
       expect(stolenIds(s)).toEqual([]);
       expect(s.lastEvents.filter((event) => event.type === "drawn")).toHaveLength(2);
     });
 
-    it("R386 an Upgrade places 3: a Plague Chalice played for 3 is stolen", () => {
-      const s = scenario({ active: "p2", p1: { hand: [{ def: OUTBREAK, radiant: true }, ANCHOR], library: lib(4) }, p2: { hand: [CHALICE, ANCHOR], library: lib(2) } });
-      s.play(CHALICE, { x: 3 });
+    it("R386 an Upgrade places 3: a Buff Billy played for 3 reaches its X and is stolen", () => {
+      const s = scenario({ active: "p2", p1: { hand: [{ def: OUTBREAK, radiant: true }, ANCHOR], library: lib(4) }, p2: { hand: [BILLY, ANCHOR], library: lib(2) } });
+      s.play(BILLY, { x: 3 });
       s.endTurn();
       stepParam(s.card(OUTBREAK), "tokens", 1);
 
-      s.play(OUTBREAK, { targets: at(s, CHALICE) });
+      s.play(OUTBREAK, { targets: at(s, BILLY) });
 
-      expect(stolenIds(s)).toEqual([s.card(CHALICE).id]);
+      expect(stolenIds(s)).toEqual([s.card(BILLY).id]);
     });
   });
 });

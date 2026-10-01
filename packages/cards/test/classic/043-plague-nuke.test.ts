@@ -7,8 +7,9 @@
 // leaves the rest; a Unit exiled instead of dying into a graveyard (C #50) is not summoned; its tuned
 // number (mana per token) reads through `param()` (R386)".
 //
-// The preview's proofs (R280) are in `../preview.test.ts`, with the other cards'. The C #50 case waits
-// for C #50 Voidwalker's script (cards-classic-b), whose Aura exiles what would go to a graveyard.
+// The preview's proofs (R280) are in `../preview.test.ts`, with the other cards'. The C #50 cases use
+// C #50 Voidwalker's real script, whose Aura exiles what would go to a graveyard while it is on the
+// field; a Voidwalker the Nuke kills leaves the field with the others and exiles none of them (R398, R463).
 
 import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -215,8 +216,24 @@ describe("C #43 Plague Nuke", () => {
     });
 
     it("C #50 a Unit exiled instead of dying into a graveyard is not summoned", () => {
-      // C #50 Voidwalker's base Aura: "Cards that would go to a graveyard are exiled instead" — every
-      // card, so the Voidwalker's own death and the Vanilla's both go to exile.
+      // C #50 Voidwalker's base Aura: "Cards that would go to a graveyard are exiled instead", live while
+      // it is on the field (SPEC §8.6 row 50). An Indestructible Voidwalker survives the Nuke (R46), so
+      // the plagued Vanilla dying beside it goes to exile instead (R461: it has not died).
+      const s = scenario({
+        p1: { hand: [{ def: NUKE, radiant: true }, ANCHOR] },
+        p2: { hand: [ANCHOR], field: [plagued(VANILLA, 1), VOIDWALKER] },
+      });
+      s.card(VOIDWALKER).grantedKeywords.push({ kind: "Indestructible" });
+
+      s.play(NUKE);
+
+      expect(s.pile("p2", "exile").map((card) => card.defId)).toContain(VANILLA);
+      expect(s.pile("p2", "graveyard")).toEqual([]);
+      expect(unitDefs(s, "p1")).toEqual([null, null, null, null, null]);
+      expect(unitDefs(s, "p2")).toEqual([null, VOIDWALKER, null, null, null]);
+    });
+
+    it("R398 R463 a Voidwalker the Nuke kills leaves with the others and exiles none: the Unit is summoned", () => {
       const s = scenario({
         p1: { hand: [{ def: NUKE, radiant: true }, ANCHOR] },
         p2: { hand: [ANCHOR], field: [plagued(VANILLA, 1), VOIDWALKER] },
@@ -224,8 +241,10 @@ describe("C #43 Plague Nuke", () => {
 
       s.play(NUKE);
 
-      expect(s.pile("p2", "exile").map((card) => card.defId)).toContain(VANILLA);
-      expect(unitDefs(s, "p1")).toEqual([null, null, null, null, null]);
+      expect(s.pile("p2", "exile")).toEqual([]);
+      expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([VOIDWALKER]);
+      expect(unitDefs(s, "p1")).toEqual([VANILLA, null, null, null, null]);
+      expect(s.card(VANILLA).owner).toBe("p2");
     });
   });
 });
