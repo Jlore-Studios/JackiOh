@@ -127,7 +127,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
         expect(f.text.full, where).toBe(fillParams(card, radiant ? "radiant" : "base"));
         if (!radiant) expect(f.text.marks, where).toEqual([]);
 
-        if (card.type === "Unit") {
+        // B3.1 rule 1: an Animated Field Spell or Trap prints the stats of the Unit it becomes.
+        const animated = shown.keywords.some((keyword) => keyword.kind === "Animated" || keyword.kind === "Animated on your turn");
+        if (card.type === "Unit" || animated) {
           expect(f.stats, where).toEqual({
             attack: shown.attack,
             health: shown.health,

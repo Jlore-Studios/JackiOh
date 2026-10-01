@@ -4,7 +4,9 @@
 // A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
 // card's stats in its owner's hand, a unit's numbers, keywords and Vanilla mark on the field, the
 // power a Heroic Power rolled, a match-made definition's own name and text, and what the card's
-// formula comes to now (`CardView.preview`, R280). Everything is read
+// formula comes to now (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle
+// count (R385), what Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow
+// card standing as a Unit (R383) and a face's own type (B2.7). Everything is read
 // off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
 // faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`).
 //
@@ -59,8 +61,14 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.vanilla === true) inPlay.vanilla = true;
   // R280: what the card's formula comes to now, where the view says (never in the collection).
   if (card.preview !== undefined && card.preview.length > 0) inPlay.preview = card.preview;
-  // B3.4, R386: the numbers the card has now fill its text's `{key}`s.
+  // B3.4, R386: the numbers the card has now fill its text's `{key}`s, and what changed is marked.
   if (card.params !== undefined) inPlay.params = card.params;
+  if (card.tuning !== undefined) inPlay.tuning = card.tuning;
+  // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
+  if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
+  // B3.1, R383: a Field Spell, Trap or Field Trap standing in a unit zone as a Unit.
+  if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B2.7: the type the card has now, where it differs from its definition's (Blood Moon's Radiant face).
   const type = card.type ?? facts.type;
   return faceModel({

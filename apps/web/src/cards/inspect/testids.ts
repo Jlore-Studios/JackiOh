@@ -30,3 +30,10 @@ export const INSPECT_LIST_BACK = "inspect-list-back";
 export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
 export const INSPECT_NOTE = "inspect-note";
+
+// Patch v0.2.0 (SPEC §10.8): a face in play's states spelled out beside it (StateNotes.tsx) — the
+// tuned ribbon (R386), the list of the other states (Brittle R385, enchantments E39, animated R383) —
+// and the lines-of-code meta line (E36).
+export const INSPECT_TUNED = "inspect-tuned";
+export const INSPECT_STATES = "inspect-states";
+export const INSPECT_LOC = "inspect-loc";
