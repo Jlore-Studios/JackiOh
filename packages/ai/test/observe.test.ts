@@ -46,7 +46,7 @@ import {
   act,
   cardById,
   clone,
-  corePool,
+  aiPool,
   dealtGame,
   everyCard,
   isLegal,
@@ -126,7 +126,7 @@ function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState
   const out = clone(state);
   const rng = createRng(`observe-mutate:${seed}`);
   const opp = opponentOf(seat);
-  const pool = corePool();
+  const pool = aiPool();
   const traps = trapPool();
   for (const card of [...out.players[opp].hand, ...out.players[opp].library]) {
     card.defId = rng.pick(pool) as string;
@@ -502,10 +502,10 @@ describe("determinize (B12)", () => {
     });
   });
 
-  it("B12: every hidden card gets a real non-token Core def; opponent samples are distinct and unseen; face-down ones are traps", () => {
+  it("R380 B12: every hidden card gets a real non-token def of any set; opponent samples are distinct and unseen; face-down ones are traps", () => {
     const { a } = pair();
     const hidden = hiddenInstanceIds(a, AI);
-    const pool = new Set(corePool());
+    const pool = new Set(aiPool());
     const traps = new Set(trapPool());
     const opponentPublic = new Set(
       everyCard(a)
@@ -533,7 +533,8 @@ describe("determinize (B12)", () => {
 
   it("B12: with more face-down cards than unseen traps, the sampler falls back to the whole trap pool", () => {
     const faceDown = ["core-018", "core-041", "core-060", "core-071", "core-085"];
-    const shown = ["core-096", "core-041"];
+    // Every trap of every set is shown but four, so four unseen traps are left for five lanes.
+    const shown = trapPool().filter((id) => !["core-018", "core-060", "core-071", "core-085"].includes(id));
     const state = build("observe-trap-exhaust", {
       backrow: faceDown.map((def) => ({ def, faceUp: false })),
       graveyard: shown,
@@ -554,11 +555,11 @@ describe("determinize (B12)", () => {
     }
   });
 
-  it("B12: with more hidden cards than the Core pool, every card is used before any repeat, and nothing throws", () => {
-    const pool = corePool();
+  it("B12: with more hidden cards than the pool, every card is used before any repeat, and nothing throws", () => {
+    const pool = aiPool();
     const state = build("observe-pool-exhaust", { library: [...pool, "core-008", "core-011", "core-019"] }, {});
     const excluded = new Set(
-      query({ set: "Core" })
+      query()
         .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );
@@ -624,7 +625,7 @@ describe("determinize (B12)", () => {
     // Freshly dealt: p2's four-card hand and sixteen-card library are all hidden from p1.
     const state = dealtGame("observe-b12-exclude");
     const excluded = new Set(
-      query({ set: "Core" })
+      query()
         .filter((def) => (AI_DETERMINIZE.excludeDefIds as readonly string[]).includes(def.id))
         .map((def) => def.id),
     );

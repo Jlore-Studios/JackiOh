@@ -1,20 +1,25 @@
-// `pnpm ai:sweep` (R186): the run that decides the AI's shadow ban.
+// `pnpm ai:sweep` (R186, R390): the run that decides the AI's shadow ban, in two passes.
 //
-// For every non-token Core card and every tier in AI_SWEEP.tiers, `sweepCard` forces the card into
-// AI decks on that tier's handicap against the greedy baseline (AI_SWEEP.seedsPerCard games each,
-// at AI_GATE_BUDGET) and flags errors, slow decisions, a card that sat affordable in hand and was
-// never played, and plays that lowered the AI's own evaluation. `sweepVerdict` joins a card's tiers:
-// a flag at any tier bans it, and a card never once affordable at any tier is listed as unswept.
-// This prints the flagged rows, the unswept cards, then the ready-made SHADOW_BAN entries and the
-// header line for packages/ai/src/shadowBan.ts. It always exits 0: the ban is copied in by hand
-// from this output, never edited to taste.
+// Pass 1: for every non-token card of every set and every tier in AI_SWEEP.tiers, `sweepCard`
+// forces the card into AI decks on that tier's handicap against the greedy baseline
+// (AI_SWEEP.seedsPerCard games each, at AI_GATE_BUDGET). `atRiskIds` reads the at-risk cards off
+// pass 1 (plus today's SHADOW_BAN and SHADOW_WATCH). Pass 2: `sweepAtRisk` forces each at-risk card
+// into AI_SWEEP.seedsPerCardAtRisk more games per tier, with every at-risk card dealt more often as
+// filler. `sweepVerdict` joins a card's tiers and passes. This prints the flagged rows of both
+// passes, the at-risk cards, the suspects, the unswept cards, then the ready-made SHADOW_BAN and
+// SHADOW_WATCH entries and the header line for packages/ai/src/shadowBan.ts. It always exits 0: the
+// tables are copied in by hand from this output, never edited to taste.
 //
-//   pnpm ai:sweep                          every non-token Core card, every tier
-//   pnpm ai:sweep core-011 core-020        only these ids
-//   pnpm ai:sweep --json core-011 …        one JSON SweepResult per line instead of the report
-//                                          (run slices of the id list in parallel this way)
-//   pnpm ai:sweep --report a.jsonl b.jsonl the report from those lines
+//   pnpm ai:sweep                              both passes over every card, then the report
+//   pnpm ai:sweep core-011 classic-020         only these ids (pass 2: those of them at risk)
+//   pnpm ai:sweep --json core-011 …            pass 1 only: one JSON SweepResult per line (a slice)
+//   pnpm ai:sweep --pass2 a.jsonl,b.jsonl …    pass 2 from every slice's pass-1 lines: one JSON
+//                                              SweepPass2 per line, for the at-risk ids listed after
+//                                              the files (default every at-risk id); slice it too
+//   pnpm ai:sweep --report a.jsonl p2.jsonl …  the report from pass-1 and pass-2 lines
 //
+// Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
+// A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
 // Node tooling, so it may read the clock (`performance.now` for decision timing), read files and
 // write to the console; src/ stays pure and receives the clock as `now`.
 
@@ -24,14 +29,19 @@ import { query } from "@jackioh/engine";
 import {
   AI_GATE_BUDGET,
   AI_SWEEP,
+  atRiskIds,
+  pass2KeepOut,
+  pass2Stats,
+  sweepAtRisk,
   sweepCard,
   sweepVerdict,
+  type SweepPass2,
   type SweepResult,
-  type SweepVerdict,
+  type SweepStats,
 } from "../src/index";
 
 /** The mean evaluate change per play, and each card's seconds, printed to this many decimals. */
-const DELTA_DECIMALS = 1;
+const DECIMALS = 1;
 
 const MS_PER_SECOND = 1000;
 
@@ -39,74 +49,151 @@ function nameOf(defId: string): string {
   return CATALOG[defId]?.name ?? defId;
 }
 
-function meanDelta(result: SweepResult): string {
-  if (result.evalDeltaCount === 0) return "n/a";
-  return (result.evalDeltaSum / result.evalDeltaCount).toFixed(DELTA_DECIMALS);
+function meanDelta(stats: SweepStats): string {
+  if (stats.evalDeltaCount === 0) return "n/a";
+  return (stats.evalDeltaSum / stats.evalDeltaCount).toFixed(DECIMALS);
 }
 
-function row(result: SweepResult): string {
+function row(stats: SweepStats, tier: string, flags: string): string {
   const cells = [
-    result.defId,
-    nameOf(result.defId),
-    result.tier,
-    result.flags.join(", "),
-    `${result.drawnGames}/${result.games}`,
-    String(result.affordableTurns),
-    String(result.plays),
-    String(result.errors),
-    String(result.timeouts),
-    meanDelta(result),
+    stats.defId,
+    nameOf(stats.defId),
+    tier,
+    flags,
+    `${stats.drawnGames}/${stats.games}`,
+    String(stats.affordableTurns),
+    String(stats.plays),
+    String(stats.errors),
+    String(stats.timeouts),
+    meanDelta(stats),
   ].map((cell) => ` ${cell.replace(/\|/g, "\\|")} `);
   return `|${cells.join("|")}|`;
 }
 
-function sweepIds(ids: readonly string[], log: (line: string) => void): SweepResult[] {
+const TABLE_HEAD = [
+  "| id | name | tier | flags | drawn/games | affordable turns | plays | errors | timeouts | mean eval delta |",
+  "|---|---|---|---|---|---|---|---|---|---|",
+];
+
+function timed<T>(label: string, run: () => T, describe: (result: T) => string): T {
+  const started = performance.now();
+  const result = run();
+  const seconds = ((performance.now() - started) / MS_PER_SECOND).toFixed(DECIMALS);
+  process.stderr.write(`[ai:sweep] ${label}: ${describe(result)} (${seconds}s)\n`);
+  return result;
+}
+
+/** Each result is also handed to `emit` as it lands, so a slice cut short keeps what it finished. */
+function pass1(ids: readonly string[], emit: (result: SweepResult) => void = () => undefined): SweepResult[] {
   const results: SweepResult[] = [];
   ids.forEach((id, index) => {
     for (const tier of AI_SWEEP.tiers) {
-      const cardStarted = performance.now();
-      const result = sweepCard(id, { now: () => performance.now(), tier });
-      const seconds = ((performance.now() - cardStarted) / MS_PER_SECOND).toFixed(DELTA_DECIMALS);
-      log(
-        `[ai:sweep] ${index + 1}/${ids.length} ${id} ${nameOf(id)} @${tier}: ` +
-          `${result.flags.length > 0 ? result.flags.join(", ") : result.unswept ? "unswept" : "clean"} (${seconds}s)`,
+      const result = timed(
+        `pass 1 ${index + 1}/${ids.length} ${id} ${nameOf(id)} @${tier}`,
+        () => sweepCard(id, { now: () => performance.now(), tier }),
+        (r) => (r.flags.length > 0 ? r.flags.join(", ") : r.unswept ? "unswept" : "clean"),
       );
+      emit(result);
       results.push(result);
     }
   });
   return results;
 }
 
-function report(results: readonly SweepResult[], cards: number, elapsed: number | null): string {
-  const byCard = new Map<string, SweepResult[]>();
-  for (const result of results) byCard.set(result.defId, [...(byCard.get(result.defId) ?? []), result]);
-  const verdicts: SweepVerdict[] = [...byCard.values()].map((list) => sweepVerdict(list));
-  const banned = verdicts.filter((verdict) => verdict.reason !== null).sort((a, b) => (a.defId < b.defId ? -1 : 1));
-  const unswept = verdicts.filter((verdict) => verdict.unswept).sort((a, b) => (a.defId < b.defId ? -1 : 1));
+function pass2(
+  ids: readonly string[],
+  atRisk: readonly string[],
+  keepOut: readonly string[],
+  emit: (result: SweepPass2) => void = () => undefined,
+): SweepPass2[] {
+  const results: SweepPass2[] = [];
+  ids.forEach((id, index) => {
+    for (const tier of AI_SWEEP.tiers) {
+      const result = timed(
+        `pass 2 ${index + 1}/${ids.length} ${id} ${nameOf(id)} @${tier}`,
+        () => sweepAtRisk(id, atRisk, keepOut, { now: () => performance.now(), tier }),
+        (r) => `${r.cards.length} at-risk card(s) dealt, ${r.suspects.length} suspect line(s)`,
+      );
+      emit(result);
+      results.push(result);
+    }
+  });
+  return results;
+}
+
+function report(first: readonly SweepResult[], second: readonly SweepPass2[], elapsed: number | null): string {
+  const ids = [...new Set(first.map((result) => result.defId))].sort();
+  const atRisk = atRiskIds(first);
+  const forced = [...new Set(second.map((result) => result.forced))].sort();
+  const verdicts = [...new Set([...ids, ...forced])].sort().map((id) =>
+    sweepVerdict(
+      first.filter((result) => result.defId === id),
+      second,
+    ),
+  );
+  const banned = verdicts.filter((verdict) => verdict.reason !== null);
+  const watched = verdicts.filter((verdict) => verdict.watch !== null);
+  const unswept = verdicts.filter((verdict) => verdict.unswept);
+  const suspects = second.flatMap((result) => result.suspects);
 
   // The run's date for shadowBan.ts's header. Intl formats "today" without a Date expression, which
   // this package's lint bans everywhere, tooling included.
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format();
   const budget = JSON.stringify(AI_GATE_BUDGET);
   const tiers = AI_SWEEP.tiers.join(" and ");
+  const passes =
+    `pass 1 over ${ids.length} card(s) at ${tiers}, ${AI_SWEEP.seedsPerCard} seeds each (\`sweep:<tier>:<id>:<n>\`), ` +
+    `pass 2 over ${forced.length} at-risk card(s), ${AI_SWEEP.seedsPerCardAtRisk} seeds each (\`sweep2:<tier>:<id>:<n>\`, ` +
+    `at-risk filler ×${AI_SWEEP.atRiskBoost}), budget AI_GATE_BUDGET ${budget}`;
 
   const out: string[] = [];
   out.push("# AI shadow-ban sweep");
   out.push("");
   out.push(
-    `Run ${date} (UTC): ${cards} card(s) at ${tiers}, ${AI_SWEEP.seedsPerCard} seeds each ` +
-      `(\`sweep:<tier>:<id>:1..${AI_SWEEP.seedsPerCard}\`), budget AI_GATE_BUDGET ${budget}, ` +
-      `${banned.length} flagged, ${unswept.length} unswept${elapsed === null ? "" : `, ${elapsed}s`}.`,
+    `Run ${date} (UTC): ${passes}; ${banned.length} banned, ${watched.length} watched, ${unswept.length} unswept, ` +
+      `${suspects.length} suspect line(s)${elapsed === null ? "" : `, ${elapsed}s`}.`,
   );
   out.push("");
-  const flaggedRows = results.filter((result) => result.flags.length > 0);
-  if (flaggedRows.length === 0) {
-    out.push("No card was flagged at any tier.");
+  out.push("## Pass 1 flags (a `neverPlayed` or `selfHarm` here only puts a card at risk)");
+  out.push("");
+  const flaggedRows = first.filter((result) => result.flags.length > 0);
+  if (flaggedRows.length === 0) out.push("No card was flagged at any tier.");
+  else out.push(...TABLE_HEAD, ...flaggedRows.map((result) => row(result, result.tier, result.flags.join(", "))));
+  out.push("");
+  out.push(`## At risk (${atRisk.length}): pass 1 at half strength, SHADOW_BAN and SHADOW_WATCH`);
+  out.push("");
+  out.push(atRisk.length === 0 ? "None." : atRisk.map((id) => `${id} ${nameOf(id)}`).join(", "));
+  const missing = atRisk.filter((id) => ids.includes(id) && !forced.includes(id));
+  if (missing.length > 0) out.push("", `Not swept in pass 2 (no evidence, no ban for neverPlayed or selfHarm): ${missing.join(", ")}`);
+  out.push("");
+  out.push("## Pass 2: every at-risk card over every game it was dealt in, forced or filler");
+  out.push("");
+  if (second.length === 0) {
+    out.push("Pass 2 did not run.");
   } else {
-    out.push("| id | name | tier | flags | drawn/games | affordable turns | plays | errors | timeouts | mean eval delta |");
-    out.push("|---|---|---|---|---|---|---|---|---|---|");
-    for (const result of flaggedRows) out.push(row(result));
+    out.push(...TABLE_HEAD);
+    for (const id of [...new Set(second.flatMap((result) => result.cards.map((card) => card.defId)))].sort()) {
+      const verdict = verdicts.find((entry) => entry.defId === id);
+      for (const tier of AI_SWEEP.tiers) {
+        const total = pass2Stats(second, id, tier);
+        if (total.games > 0) out.push(row(total, tier, verdict?.reason === null || verdict === undefined ? "cleared" : verdict.flags.join(", ")));
+      }
+    }
   }
+  out.push("");
+  out.push("## Suspects (an error or timeout in a pass-2 game that also dealt this at-risk card as filler)");
+  out.push("");
+  out.push(
+    suspects.length === 0
+      ? "None."
+      : suspects
+          .map(
+            (s) =>
+              `- suspect: ${s.defId} ${nameOf(s.defId)}: ${s.errors} error(s), ${s.timeouts} timeout(s) in ${s.seed} ` +
+              `(forced ${s.forced} ${nameOf(s.forced)}); banned only if its own games repeat it`,
+          )
+          .join("\n"),
+  );
   out.push("");
   out.push("## Unswept (never affordable at any tier: no evidence either way)");
   out.push("");
@@ -116,17 +203,31 @@ function report(results: readonly SweepResult[], cards: number, elapsed: number 
   out.push("");
   out.push("Header line:");
   out.push("");
-  out.push(
-    `// Sweep of record: ${date} (UTC), \`pnpm ai:sweep\` over ${cards} non-token Core cards at ${tiers}, ` +
-      `${AI_SWEEP.seedsPerCard} seeds per card and tier (\`sweep:<tier>:<id>:<n>\`), budget AI_GATE_BUDGET ${budget}.`,
-  );
+  out.push(`// Sweep of record: ${date} (UTC), \`pnpm ai:sweep\`, ${passes}.`);
   out.push("");
-  out.push("Entries:");
+  out.push("SHADOW_BAN entries:");
   out.push("");
   out.push("```ts");
   for (const verdict of banned) out.push(`  ${JSON.stringify(verdict.defId)}: ${JSON.stringify(verdict.reason)},`);
   out.push("```");
+  out.push("");
+  out.push("SHADOW_WATCH entries:");
+  out.push("");
+  out.push("```ts");
+  for (const verdict of watched) out.push(`  ${JSON.stringify(verdict.defId)}: ${JSON.stringify(verdict.watch)},`);
+  out.push("```");
   return `${out.join("\n")}\n`;
+}
+
+function readLines(files: readonly string[]): unknown[] {
+  return files
+    .flatMap((file) => readFileSync(file, "utf8").split("\n"))
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as unknown);
+}
+
+function isPass2(line: unknown): line is SweepPass2 {
+  return typeof line === "object" && line !== null && "forced" in line;
 }
 
 function main(): void {
@@ -134,34 +235,38 @@ function main(): void {
 
   const args = process.argv.slice(2).filter((arg) => arg !== "--");
   if (args[0] === "--report") {
-    const results = args
-      .slice(1)
-      .flatMap((file) => readFileSync(file, "utf8").split("\n"))
-      .filter((line) => line.trim() !== "")
-      .map((line) => JSON.parse(line) as SweepResult);
-    const cards = new Set(results.map((result) => result.defId)).size;
-    process.stdout.write(report(results, cards, null));
+    const lines = readLines(args.slice(1));
+    process.stdout.write(report(lines.filter((line): line is SweepResult => !isPass2(line)), lines.filter(isPass2), null));
+    return;
+  }
+
+  const pool = query().map((def) => def.id);
+  const pickIds = (requested: readonly string[]): string[] => {
+    const unknown = requested.filter((id) => !pool.includes(id));
+    if (unknown.length > 0) process.stderr.write(`[ai:sweep] not non-token card ids, skipped: ${unknown.join(", ")}\n`);
+    return requested.length > 0 ? pool.filter((id) => requested.includes(id)) : pool;
+  };
+
+  if (args[0] === "--pass2") {
+    const first = readLines((args[1] ?? "").split(",").filter((file) => file !== "")) as SweepResult[];
+    const atRisk = atRiskIds(first);
+    const ids = pickIds(args.slice(2)).filter((id) => atRisk.includes(id));
+    pass2(ids, atRisk, pass2KeepOut(first), (result) => process.stdout.write(`${JSON.stringify(result)}\n`));
     return;
   }
 
   const json = args[0] === "--json";
-  const requested = json ? args.slice(1) : args;
-  const pool = query({ set: "Core" }).map((def) => def.id);
-  const unknown = requested.filter((id) => !pool.includes(id));
-  if (unknown.length > 0) {
-    process.stderr.write(`[ai:sweep] not non-token Core ids, skipped: ${unknown.join(", ")}\n`);
-  }
-  const ids = requested.length > 0 ? pool.filter((id) => requested.includes(id)) : pool;
-
+  const ids = pickIds(json ? args.slice(1) : args);
   const started = performance.now();
-  const results = sweepIds(ids, (line) => process.stderr.write(`${line}\n`));
-  const elapsed = Math.round((performance.now() - started) / MS_PER_SECOND);
-
-  if (json) {
-    for (const result of results) process.stdout.write(`${JSON.stringify(result)}\n`);
-    return;
-  }
-  process.stdout.write(report(results, ids.length, elapsed));
+  const first = pass1(ids, json ? (result) => process.stdout.write(`${JSON.stringify(result)}\n`) : undefined);
+  if (json) return;
+  const atRisk = atRiskIds(first);
+  const second = pass2(
+    ids.filter((id) => atRisk.includes(id)),
+    atRisk,
+    pass2KeepOut(first),
+  );
+  process.stdout.write(report(first, second, Math.round((performance.now() - started) / MS_PER_SECOND)));
 }
 
 main();

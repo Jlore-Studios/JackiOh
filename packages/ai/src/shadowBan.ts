@@ -3,11 +3,13 @@
 // a banned card stays legal for every player, a human may play it against the AI, and the AI still
 // has to answer it. It is not §9.4 L6's ban, which is server state (R164).
 //
-// How an entry gets here: `pnpm ai:sweep` (scripts/sweep.ts) forces each non-token Core card into
-// AI decks at every tier in AI_SWEEP.tiers (Easy and Hard) against the greedy baseline and prints
-// one row per flagged card and tier, together with a ready-made entry. A flag at either tier bans
+// How an entry gets here: `pnpm ai:sweep` (scripts/sweep.ts) forces each non-token card of every set
+// into AI decks at every tier in AI_SWEEP.tiers (Easy and Hard) against the greedy baseline, in two
+// passes (R390): the second sweeps the cards at risk again with more games and deals them more often
+// as filler, and a `neverPlayed` or `selfHarm` ban needs its numbers. It prints one row per flagged
+// card and tier, together with ready-made entries for both tables below. A flag at either tier bans
 // the card at every tier, and the reason names the tier after the flags ("neverPlayed: hard: …").
-// No card is listed without a flag, and the ban is not tuned by hand.
+// No card is listed without a flag, and neither table is tuned by hand.
 //
 // Sweep of record: 2026-09-27 (UTC), `pnpm ai:sweep` over 100 non-token Core cards at easy and hard,
 // 8 seeds per card and tier (`sweep:<tier>:<id>:<n>`), budget AI_GATE_BUDGET {"nodes":600,
@@ -42,3 +44,10 @@ export const SHADOW_BAN: Readonly<Record<string, string>> = {
 
 /** Object.keys(SHADOW_BAN), sorted. */
 export const SHADOW_BAN_IDS: readonly string[] = Object.keys(SHADOW_BAN).sort();
+
+/**
+ * R390, R600: the cards the last sweep of record found at risk by their own numbers and did not ban,
+ * each with those numbers. The next sweep counts them at risk from the start (`atRiskIds`), so a card
+ * on track to be banned stays watched from one sweep to the next. It changes no deck.
+ */
+export const SHADOW_WATCH: Readonly<Record<string, string>> = {};

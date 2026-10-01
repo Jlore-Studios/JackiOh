@@ -1,5 +1,5 @@
-// AI decks (SPEC §9.9, R184, R186): a curve-aware, tag-aware random draw of distinct non-token Core
-// cards, minus the shadow ban.
+// AI decks (SPEC §9.9, R184, R186, R380): a curve-aware, tag-aware random draw of distinct non-token
+// cards of every set, minus the shadow ban.
 //
 // The draw is weighted sampling without replacement. Every remaining card gets a weight that is the
 // product of the boosts in AI_DECK: its cost bucket is under or over its curve target, the deck is
@@ -24,6 +24,8 @@ export type AiDeckOptions = {
   theme?: string | null;
   /** The seat's handicap manaCap; default MAX_MANA. Shifts the curve and the uncastable test. */
   manaCap?: number;
+  /** R390: these ids' weights are multiplied by `by` (the sweep's pass 2, as `themeBoost` leans a theme). */
+  boost?: { ids: readonly string[]; by: number };
 };
 
 export const AI_DECK = {
@@ -35,7 +37,7 @@ export const AI_DECK = {
   minUnitShare: 0.45,
   /** Chance of rolling a theme when `theme` is undefined. */
   themeChance: 0.35,
-  /** A tag needs this many cards in the pool to be a theme (Core: only Human qualifies). */
+  /** A tag needs this many cards in the pool to be a theme. */
   minThemeSize: 6,
   themeBoost: 4,
   themeMinShare: 0.3,
@@ -142,21 +144,22 @@ function isUnit(def: CardDef): boolean {
   return def.type === "Unit";
 }
 
-/** Distinct non-token Core ids, exactly `size`, deterministic for the rng. Throws if the pool is too small. */
+/** Distinct non-token ids of every set, exactly `size`, deterministic for the rng. Throws if the pool is too small. */
 export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {}): string[] {
   const banned = new Set(options.banned ?? SHADOW_BAN_IDS);
   const include = options.include ?? [];
   const manaCap = options.manaCap ?? MAX_MANA;
 
-  // `query` never returns tokens unless asked, so this is §2.6 L3's deck-legal Core pool (R184).
-  const core = query({ set: "Core" });
-  const byId = new Map(core.map((def) => [def.id, def]));
+  // `query` never returns tokens unless asked, so this is §2.6 L3's deck-legal pool of every set
+  // (R184, R380).
+  const every = query();
+  const byId = new Map(every.map((def) => [def.id, def]));
 
   const includeDefs: CardDef[] = [];
   const includeIds = new Set<string>();
   for (const id of include) {
     const def = byId.get(id);
-    if (def === undefined) throw new Error(`buildAiDeck: include "${id}" is not a non-token Core card`);
+    if (def === undefined) throw new Error(`buildAiDeck: include "${id}" is not a non-token card`);
     if (banned.has(id)) throw new Error(`buildAiDeck: include "${id}" is banned`);
     if (includeIds.has(id)) throw new Error(`buildAiDeck: include "${id}" is listed twice`);
     includeIds.add(id);
@@ -166,11 +169,11 @@ export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {})
     throw new Error(`buildAiDeck: ${includeDefs.length} included cards do not fit a ${size}-card deck`);
   }
 
-  const pool = core.filter((def) => !banned.has(def.id) && !includeIds.has(def.id));
+  const pool = every.filter((def) => !banned.has(def.id) && !includeIds.has(def.id));
   if (includeDefs.length + pool.length < size) {
     throw new Error(
       `buildAiDeck: a ${size}-card deck needs ${size} distinct cards, but only ` +
-        `${includeDefs.length + pool.length} non-token Core cards are unbanned`,
+        `${includeDefs.length + pool.length} non-token cards are unbanned`,
     );
   }
 
@@ -188,6 +191,7 @@ export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {})
   const unitsNeeded = Math.ceil(size * AI_DECK.minUnitShare);
   const themeNeeded = theme === null ? 0 : Math.ceil(size * AI_DECK.themeMinShare);
   const castableCeiling = manaCap + AI_DECK.costSlack;
+  const boosted = new Set(options.boost?.ids ?? []);
 
   const deck: CardDef[] = [...includeDefs];
   const counts: Record<CostBucket, number> = { "0-1": 0, "2": 0, "3": 0, "4+": 0 };
@@ -221,6 +225,7 @@ export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {})
       if (isUnit(def) && units < unitsNeeded) weight *= AI_DECK.unitBoost;
       if (theme !== null && hasTag(def, theme)) weight *= AI_DECK.themeBoost;
       if (queryCost(def) > castableCeiling) weight *= AI_DECK.uncastable;
+      if (boosted.has(def.id)) weight *= options.boost?.by ?? 1;
       return weight;
     });
 

@@ -163,7 +163,8 @@ describe("tactics (B18)", () => {
 
   it("B18 P13: Hit Job goes on Midrange Menace, the biggest threat", { timeout: PUZZLE_TIMEOUT }, () => {
     const run = runPuzzle("P13", {
-      p1: { hand: ["core-016"], mana: 2, field: ["core-011"] },
+      // Hit Job costs (3) since patch v0.2.0.
+      p1: { hand: ["core-016"], mana: 3, field: ["core-011"] },
       p2: { field: ["core-019", "core-008"] },
     });
     expect(inGraveyard(run.end, HUMAN, "core-019"), trace(run.turn)).toBe(true);

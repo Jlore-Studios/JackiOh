@@ -1,6 +1,6 @@
 // R185: one concrete world consistent with what the seat knows. `redact` has already turned every
-// hidden card into a placeholder; this fills each one with a real non-token Core definition drawn
-// from what the opponent has not shown, shuffles the seat's own library, and gives the world a seed
+// hidden card into a placeholder; this fills each one with a real non-token definition of any set
+// (R380) drawn from what the opponent has not shown, shuffles the seat's own library, and gives the world a seed
 // of its own, so no simulation can foresee a real draw or a real coin flip.
 //
 // docs/polish/3-ai.md's six steps, in order. `rng` is the AI's own stream and every draw below comes
@@ -66,7 +66,7 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   const sampled = new Set<string>();
 
   // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool.
-  const trapPool = query({ set: "Core", type: ["Trap", "Field Trap"] }).map((def) => def.id);
+  const trapPool = query({ type: ["Trap", "Field Trap"] }).map((def) => def.id);
   for (const side of [opp, seat] as const) {
     // B5 E21: then the face-down cards dormant under each backrow pile, lane by lane.
     const backrow = [...next.players[side].backrow, ...(next.players[side].backrowPiles ?? []).flat()];
@@ -79,8 +79,9 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
     }
   }
 
-  // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token Core pool.
-  const pool = query({ set: "Core", excludeDefId: [...AI_DETERMINIZE.excludeDefIds] }).map((def) => def.id);
+  // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token pool of
+  // every set.
+  const pool = query({ excludeDefId: [...AI_DETERMINIZE.excludeDefIds] }).map((def) => def.id);
   for (const card of next.players[opp].hand) {
     if (isPlaceholder(card)) card.defId = sampleDef(pool, seen, sampled, rng);
   }
