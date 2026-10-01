@@ -6,7 +6,16 @@
 import { describe, expect, it } from "vitest";
 import { DECK_SIZE, createRng, summarizeGame } from "@jackioh/engine";
 import { cardStats, DEFAULT_CARD_STATS_FILTER } from "@jackioh/shared";
-import { AI_BUDGET, AI_DEV_RUN, buildAiDeck, devGameConfig, devGameRecord, playMatch, type SearchBudget } from "../src/index";
+import {
+  AI_BUDGET,
+  AI_DEV_RUN,
+  buildAiDeck,
+  devGameConfig,
+  devGameRecord,
+  devRecordId,
+  playMatch,
+  type SearchBudget,
+} from "../src/index";
 import { parseDevRunArgs } from "../scripts/stats";
 
 const QUICK: SearchBudget = {
@@ -43,7 +52,7 @@ describe("the AI's development run (§9.11)", () => {
       if (record === null) throw new Error(`dev-test:${String(n)} did not finish`);
       const config = devGameConfig(n, options);
       expect(record).toMatchObject({
-        id: `dev:dev-test:${String(n)}`,
+        id: `dev:v0.2.5:dev-test:${String(n)}`,
         source: "dev",
         mode: "random",
         patch: "v0.2.5",
@@ -57,6 +66,12 @@ describe("the AI's development run (§9.11)", () => {
     });
     // Seeded: the same game is the same record.
     expect(devGameRecord(1, options)).toEqual(records[0]);
+    // The next patch's run on the same seeds files other records, so an import adds them rather
+    // than skipping them as games it has already loaded.
+    const nextPatch = devGameRecord(1, { ...options, patch: "v0.2.6" });
+    expect(nextPatch).toMatchObject({ id: "dev:v0.2.6:dev-test:1", patch: "v0.2.6" });
+    expect(nextPatch?.id).not.toBe(records[0]?.id);
+    expect(devRecordId("v0.2.5", "dev-test:1")).toBe(records[0]?.id);
 
     // R378: a live query reads none of them; a development query reads both.
     const finished = records.filter((record): record is NonNullable<typeof record> => record !== null);

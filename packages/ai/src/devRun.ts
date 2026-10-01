@@ -51,6 +51,15 @@ export function devGameConfig(n: number, options: Pick<DevRunOptions, "series" |
 }
 
 /**
+ * R378: a development record's id, `dev:<patch>:<seed>`. The patch is part of it, so the same seeds
+ * played again for another patch are other records, which `stats:import` adds rather than skipping
+ * as a run it has already loaded.
+ */
+export function devRecordId(patch: string, seed: string): string {
+  return `${DEV_RECORD_ID_PREFIX}${patch}:${seed}`;
+}
+
+/**
  * R376, R378: plays game n and files it. Null when the game did not finish — it hit the match's
  * action limit or an AI threw — since only a finished game is a record.
  */
@@ -61,7 +70,7 @@ export function devGameRecord(n: number, options: DevRunOptions): GameRecord | n
   const game = summarizeGame({ seed: config.seed, decks: config.decks, log: played.log });
   if (game === null) return null;
   return {
-    id: `${DEV_RECORD_ID_PREFIX}${config.seed}`,
+    id: devRecordId(options.patch, config.seed),
     source: "dev",
     mode: "random",
     patch: options.patch,

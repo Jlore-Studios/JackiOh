@@ -181,7 +181,8 @@ run tests. `devGameConfig(n, { series })` deals game n as All Random deals a liv
 handicap) at `AI_BUDGET`, and `devGameRecord(n, options)` plays it and reads its record off the log
 with the engine's `summarizeGame`; a game with no result is no record. Seeds are
 `${series}:${n}`, the series `AI_DEV_RUN.series` unless the run names another, and no gate or tuning
-run plays them. The shadow ban does not apply, since All Random bans nothing, so a banned card's
+run plays them. A record's id is `dev:<patch>:<seed>` (`devRecordId`), so the next patch's run on the
+same seeds files new records, which `stats:import` adds rather than skipping. The shadow ban does not apply, since All Random bans nothing, so a banned card's
 figures are the figures of a card the AI is known to misplay.
 
 ```

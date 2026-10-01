@@ -78,7 +78,7 @@ export const DEV_RECORD_ID_PREFIX = "dev:";
 
 /** R376: one game, filed by where, how and by whom it was played. */
 export type GameRecord = {
-  /** Unique among records: a live game's match id, a development game's `dev:<series>:<n>`. */
+  /** Unique among records: a live game's match id, a development game's `dev:<patch>:<series>:<n>`. */
   id: string;
   source: GameSource;
   mode: GameMode;

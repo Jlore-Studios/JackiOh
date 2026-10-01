@@ -71,8 +71,10 @@ comment on table public.game_records is
   or writes it.$$;
 
 comment on column public.game_records.id is
-  $$R376: a live record's match id; a development record's dev:<series>:<n>.
-  One record per id: a second write of the same game is refused.$$;
+  $$R376: a live record's match id; a development record's
+  dev:<patch>:<series>:<n>, so the same seeds run for another patch are
+  other records. One record per id: a second write of the same game is
+  refused.$$;
 
 comment on column public.game_records.source is
   $$R378: 'live' for a match the server ran, 'dev' for an internal AI
