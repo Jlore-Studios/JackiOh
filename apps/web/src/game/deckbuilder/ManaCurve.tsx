@@ -19,14 +19,15 @@ const FULL_PERCENT = 100;
 export default function ManaCurve({ cardIds, catalog }: ManaCurveProps): ReactElement {
   const counts = manaCurve(cardIds, catalog);
   const tallest = Math.max(1, ...COST_BUCKETS.map((bucket) => counts[bucket]));
-  const summary = COST_BUCKETS.map((bucket) => `${bucket}: ${String(counts[bucket])}`).join(", ");
+  // R432's noun: "(2) Cost: 3".
+  const summary = COST_BUCKETS.map((bucket) => `(${bucket}) Cost: ${String(counts[bucket])}`).join(", ");
 
   return (
     <div
       className="db-curve"
       data-testid={DECK_CURVE}
       role="img"
-      aria-label={`Mana curve, cost: count. ${summary}`}
+      aria-label={`Mana curve. ${summary}`}
     >
       {COST_BUCKETS.map((bucket) => {
         const count = counts[bucket];

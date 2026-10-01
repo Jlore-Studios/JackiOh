@@ -546,11 +546,17 @@
   }
 }
 
+/* Reduced motion, the media query's or the settings panel's: the rings hold still and stay drawn. */
 @media (prefers-reduced-motion: reduce) {
   .tavern.play-screen .play-search__ring {
     animation: none;
     opacity: 0.6;
   }
+}
+
+:root[data-reduce-motion="true"] .tavern.play-screen .play-search__ring {
+  animation: none;
+  opacity: 0.6;
 }
 
 .tavern.play-screen .play-search__text {
