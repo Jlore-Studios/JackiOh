@@ -7,8 +7,8 @@
 // credited to your Bot Loser instead: its "Whenever this destroys a Unit" trigger fires and the
 // `destroyed` event names it as the killer".
 
-import { createRng, setParam, stepParam } from "@jackioh/engine";
-import type { GameEvent } from "@jackioh/shared";
+import { createRng, hashState, reduce, setParam, stepParam, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/019-2-jungle-loser";
@@ -17,6 +17,7 @@ const JUNGLE = "classicplus-019-2";
 const BOT = "classicplus-019-5";
 const TOP = "classicplus-019-1";
 const VANILLA = "core-008"; // 4/4
+const TOWER = "classicplus-033"; // Ivory Tower: the Unit it carries can't attack or be attacked
 const MROW = "core-086"; // 1/1, Can't attack; Death: take control of the Unit that destroyed this
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
@@ -101,6 +102,26 @@ describe("C+ #19.2 Jungle Loser", () => {
       }
     });
 
+    it("§4.2 step 2 a Unit that can't be attacked is never drawn: the one an Ivory Tower carries", () => {
+      for (let seed = 1; seed <= 6; seed += 1) {
+        const s = scenario({
+          seed: `jungle-carried-${seed}`,
+          active: "p2",
+          p1: { hand: [FILLER], library: DECK, field: [{ def: JUNGLE, lane: 2 }] },
+          p2: { hand: [VANILLA, FILLER], library: DECK, backrow: [{ def: TOWER, lane: 1 }], field: [{ def: VANILLA, lane: 5 }] },
+        });
+        const carried = s.card(VANILLA);
+        s.play(carried, { zone: 1, row: "backrow" });
+        expect(s.card(carried).zone).toMatchObject({ z: "field", row: "backrow", lane: 1 });
+        s.endTurn();
+        always(s).endTurn();
+        const targets = attacksBy(s, loser(s).id).map((attack) => attack.targetId);
+        expect(targets).toHaveLength(1);
+        expect(targets).not.toContain(carried.id);
+        expect(s.card(carried).damage).toBe(0);
+      }
+    });
+
     it("§4.2 step 2 with only a Unit it may not attack, nothing is rolled or attacked", () => {
       const s = jungle([], false, { field: [{ def: TOP, lane: 1 }] });
       const cursor = s.state.rngCursor;
@@ -156,10 +177,15 @@ describe("C+ #19.2 Jungle Loser", () => {
       }
     });
 
-    it("§9.3 the state after its attack is plain JSON", () => {
-      const s = always(jungle([{ def: BOT, lane: 4 }], false, { field: [{ def: VANILLA, lane: 4 }] }));
-      s.endTurn();
-      expect(JSON.parse(JSON.stringify(s.state))).toEqual(s.state);
+    it("§9.3 the roll and the random target replay from a JSON copy to the same hash", () => {
+      const s = always(jungle([{ def: BOT, lane: 4 }], false, { field: [{ def: VANILLA, lane: 4 }, { def: VANILLA, lane: 1 }] }, "jungle-replay"));
+      const action = { type: "endTurn", playerId: "p1", nonce: "jungle-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(live.events.some((event) => event.type === "attackDeclared")).toBe(true);
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
+      expect(JSON.parse(JSON.stringify(live.state))).toEqual(live.state);
     });
   });
 
