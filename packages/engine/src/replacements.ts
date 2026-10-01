@@ -129,7 +129,7 @@ type ReplacementOf<M extends ReplacementMoment, Instead> = {
  *  - `toGraveyard`: `to` — exile, or the bottom of the owner's library.
  *  - `targeted`: `interpose: true` — summon this from its controller's hand (leftmost open unit
  *    zone; with none it does nothing), no Cry, summoning sick, and the attack or pick moves to it.
- *    Answers only its controller's unit targeted by the other player.
+ *    Answers only its controller's unit targeted by the other player (`TargetedReplacement`).
  */
 export type ReplacementDef =
   | ReplacementOf<"lethalHit", { redirect: "enemyHero" }>
@@ -137,6 +137,15 @@ export type ReplacementDef =
   | ReplacementOf<"wouldDie", { flicker: "yours" }>
   | ReplacementOf<"toGraveyard", { to: "exile" | "bottomOfLibrary" }>
   | ReplacementOf<"targeted", { interpose: true }>;
+
+/**
+ * B5 E5, E9: THE declaration of "a friendly unit is targeted" (Classic #33 Joro), for every targeting
+ * there is — an attack declared at the unit (§4.2 step 2, `combat.declareAttack`), and a play's, a
+ * cast's or an activation's declared target or a prompt answer's pick (§10.5 step 1, the play
+ * pipeline's half). Both halves read this one entry, `{ on: "targeted", where: "hand", instead: {
+ * interpose: true } }`, through `answerTargeting`, so a card declares it once.
+ */
+export type TargetedReplacement = Extract<ReplacementDef, { on: "targeted" }>;
 
 /** One unit a `wouldDie` replacement flickered, as its follow-up reads it. */
 export type FlickeredCard = { instanceId: string; defId: string; radiant: boolean };

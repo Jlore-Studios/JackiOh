@@ -86,7 +86,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     healthLost: { type: "healthLost", player: "p1", amount: 3 },
     healed: { type: "healed", targetId: unit, amount: 2 },
     divineShieldLost: { type: "divineShieldLost", instanceId: enemy },
-    destroyed: { type: "destroyed", instanceId: unit, defId: "core-004", owner: "p1", attack: 2, maxHealth: 3, killerId: enemy },
+    destroyed: { type: "destroyed", instanceId: unit, defId: "core-004", owner: "p1", controller: "p1", attack: 2, maxHealth: 3, killerId: enemy },
     enteredGraveyard: { type: "enteredGraveyard", instanceId: unit, defId: "core-004", owner: "p1" },
     exiled: { type: "exiled", instanceId: unit, defId: "core-004", owner: "p1" },
     bounced: { type: "bounced", instanceId: unit, defId: "core-004", owner: "p1" },

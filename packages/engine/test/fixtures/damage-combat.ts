@@ -111,6 +111,8 @@ function both(script: Script, radiant: Script = script): CardScripts {
 
 /** Classic #52's shape: redirect a lethal hit on its hero to the enemy hero, then heal 10 and draw 3. */
 export const gambit = def("gambit", "Trap");
+/** A Field Trap that redirects every lethal hit on its hero and stays: two of them could ping-pong for ever. */
+export const echoGambit = def("echo-gambit", "Field Trap");
 /** The same, whose follow-up asks its controller before it heals: a pause inside the follow-up. */
 export const gambitAsker = def("gambit-asker", "Trap");
 /** Classic #50's shape: a Unit whose aura exiles every card that would go to a graveyard (Radiant: the enemy's). */
@@ -215,6 +217,7 @@ export const pawn = def("pawn", "Trap");
 export const DC_DEFS: CardDef[] = [
   logCard,
   gambit,
+  echoGambit,
   gambitAsker,
   voidwalker,
   secondWind,
@@ -273,6 +276,7 @@ function gambitScript(heal_: number): Script {
 
 export const DC_SCRIPTS: Record<string, CardScripts> = {
   [gambit.id]: both(gambitScript(10), gambitScript(20)),
+  [echoGambit.id]: both({ replacements: [{ id: "echo", on: "lethalHit", instead: { redirect: "enemyHero" } }] }),
   [gambitAsker.id]: both({
     replacements: [{ id: "gambit", on: "lethalHit", instead: { redirect: "enemyHero" }, then: "after" }],
     resume: {

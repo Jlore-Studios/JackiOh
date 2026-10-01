@@ -529,6 +529,8 @@ function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathC
       instanceId: unit.id,
       defId: unit.defId,
       owner: unit.owner,
+      // Read off the snapshot: the move above has reset the instance's controller to its owner (R78).
+      controller: snapshot.controller,
       attack: view.attack,
       maxHealth: view.maxHealth,
       // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it

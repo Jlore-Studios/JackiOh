@@ -50,7 +50,7 @@ describe("Script.afterAttack", () => {
 
   it("a forced attack runs it too, flagged forced; an attack called off before it fought does not", () => {
     const state = playing("dc-after-forced");
-    const striker = put(state, veteran.id, slot("p1", "units", 1));
+    put(state, veteran.id, slot("p1", "units", 1));
     const sink = sinkFor(state);
     applyEffects([forcedAttacksOn({ target: { of: "enemyHero" }, attackers: "self" })], makeContext(sink, null, { controller: "p1" }));
     expect(notes(state)).toEqual(["after:hero-p2::true:true:field"]);

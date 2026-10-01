@@ -9,6 +9,7 @@
 // view (R97, R177): a replacement that declines leaves that view exactly as a card without one would.
 
 import { describe, expect, it } from "vitest";
+import { DAMAGE_REDIRECT_CAP } from "../src/config";
 import { discard, heal } from "../src/effects";
 import { dealDamage, healHero, loseHealth } from "../src/damage";
 import { drawOne } from "../src/draw";
@@ -24,6 +25,7 @@ import {
   answer,
   argus,
   bloodMoon,
+  echoGambit,
   eventTypes,
   gambit,
   gambitAsker,
@@ -119,6 +121,21 @@ describe("E5 would take lethal damage, E9 damage redirect", () => {
     // The game ended at the check after the combat, so neither follow-up resolved.
     expect(notes(after)).toEqual([]);
     expect(replaysTo(game.start, game.log, after)).toBe(true);
+  });
+
+  it("two Field Traps that redirect for ever stop at DAMAGE_REDIRECT_CAP, and the hit lands where it stands", () => {
+    const state = playing("dc-gambit-loop");
+    put(state, echoGambit.id, slot("p1", "backrow", 1));
+    put(state, echoGambit.id, slot("p2", "backrow", 1));
+    state.players.p1.hero.health = 1;
+    state.players.p2.hero.health = 1;
+    const sink = sinkFor(state);
+    dealDamage(sink, { source: null, target: { kind: "hero", player: "p2" }, amount: 5 });
+    expect(eventsOfType(sink.events, "redirected")).toHaveLength(DAMAGE_REDIRECT_CAP);
+    // An even number of moves brings it back to p2, where it lands.
+    expect(DAMAGE_REDIRECT_CAP % 2).toBe(0);
+    expect(hero(state, "p2")).toBe(-4);
+    expect(hero(state, "p1")).toBe(1);
   });
 
   it("a hit that is not lethal, and losing health, leave a Final Gambit set", () => {

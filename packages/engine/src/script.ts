@@ -312,6 +312,8 @@ export type Script = {
    * B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
    * on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
    * opponent (`replacements.ts`). Declared as data and decided synchronously, never an effect list.
+   * The "targeted" entry (`TargetedReplacement`) covers every targeting: attack, play, cast,
+   * activation and prompt pick.
    */
   replacements?: import("./replacements").ReplacementDef[];
   /**
@@ -378,6 +380,18 @@ export type TargetCheck = (args: {
   candidate: CardInstance | null;
   selection: Selection;
 }) => boolean;
+
+// B5 E5, E9 (damage and combat): what `Script.replacements` holds, re-exported beside `Script` — above
+// all `TargetedReplacement`, the one declaration of "a friendly unit is targeted" that an attack, a
+// play, a cast, an activation and a prompt pick all answer through (`replacements.answerTargeting`).
+export type {
+  ReplacedEvent,
+  ReplacementContext,
+  ReplacementDef,
+  ReplacementMoment,
+  ReplacementWhere,
+  TargetedReplacement,
+} from "./replacements";
 
 export type CardScripts = { base: Script; radiant: Script };
 
