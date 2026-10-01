@@ -169,6 +169,17 @@ import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-to
 import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
 import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
 import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_plus_012_the_mother_pancake from "./classic-plus/012-the-mother-pancake";
+import * as mclassic_plus_012_1_devour from "./classic-plus/012-1-devour";
+import * as mclassic_plus_012_2_death_boil from "./classic-plus/012-2-death-boil";
+import * as mclassic_plus_012_3_fluffy_grip from "./classic-plus/012-3-fluffy-grip";
+import * as mclassic_plus_012_4_powder_spray from "./classic-plus/012-4-powder-spray";
+import * as mclassic_plus_012_5_anti_waffle_shell from "./classic-plus/012-5-anti-waffle-shell";
+import * as mclassic_plus_012_6_frozen_wastes from "./classic-plus/012-6-frozen-wastes";
+import * as mclassic_plus_012_7_legion_of_the_hungry from "./classic-plus/012-7-legion-of-the-hungry";
+import * as mclassic_plus_012_8_frostspatula from "./classic-plus/012-8-frostspatula";
+import * as mclassic_plus_013_mommy_barker from "./classic-plus/013-mommy-barker";
+import * as mclassic_plus_014_forever from "./classic-plus/014-forever";
 import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
 import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
 import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
@@ -335,6 +346,17 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_043_plague_nuke,
   mclassic_044_back_from_the_gy,
   mclassic_045_nature_titan,
+  mclassic_plus_012_the_mother_pancake,
+  mclassic_plus_012_1_devour,
+  mclassic_plus_012_2_death_boil,
+  mclassic_plus_012_3_fluffy_grip,
+  mclassic_plus_012_4_powder_spray,
+  mclassic_plus_012_5_anti_waffle_shell,
+  mclassic_plus_012_6_frozen_wastes,
+  mclassic_plus_012_7_legion_of_the_hungry,
+  mclassic_plus_012_8_frostspatula,
+  mclassic_plus_013_mommy_barker,
+  mclassic_plus_014_forever,
   mclassic_plus_033_ivory_tower,
   mclassic_plus_034_memory_leak,
   mclassic_plus_036_conjure_bones,

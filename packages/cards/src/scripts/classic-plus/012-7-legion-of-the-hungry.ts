@@ -6,8 +6,8 @@
 // the rest staying exiled; a unit-token card exiled from a deck has ceased to exist (R11).
 
 import type { CardInstance, EffectContext, Effect, Script } from "@jackioh/engine";
-import { cardTypeOf, findInstance, param, zoneCards } from "@jackioh/engine";
-import { exile, forEachCard, setRadiant, summon } from "@jackioh/engine/effects";
+import { cardTypeOf, param, zoneCards } from "@jackioh/engine";
+import { exile, forEachCard, summon } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classicplus-012-7");
@@ -18,11 +18,10 @@ function legion(radiant: boolean): Script {
       // ponytail: the picks are drawn as the Cry resolves; nothing in this list can pause between them.
       const picks: CardInstance[] = ctx.rng.shuffle(zoneCards(ctx.state, ctx.controller, "library")).slice(0, param(ctx, "cards"));
       const units = picks.filter((card) => cardTypeOf(ctx.state, card) === "Unit").map((card) => card.id);
-      const onField = (at: EffectContext): string[] => units.filter((id) => findInstance(at.state, id)?.zone.z === "field");
       return [
         forEachCard({ cards: () => picks, each: (instanceId) => exile({ target: { of: "instance", instanceId } }) }),
-        forEachCard({ cards: () => units, each: (instanceId) => summon({ instance: { of: "instance", instanceId } }) }),
-        ...(radiant ? [forEachCard({ cards: onField, each: (instanceId) => setRadiant({ instanceId }) })] : []),
+        // A summon that finds no zone leaves the card in exile, and on its old face.
+        forEachCard({ cards: () => units, each: (instanceId) => summon({ instance: { of: "instance", instanceId }, radiant }) }),
       ];
     },
   };
