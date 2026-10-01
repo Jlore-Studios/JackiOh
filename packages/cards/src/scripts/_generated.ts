@@ -186,6 +186,14 @@ import * as mclassic_plus_023_dropshipping from "./classic-plus/023-dropshipping
 import * as mclassic_plus_024_crushing_walls from "./classic-plus/024-crushing-walls";
 import * as mclassic_plus_025_soul_shot from "./classic-plus/025-soul-shot";
 import * as mclassic_plus_026_tommy_tempo from "./classic-plus/026-tommy-tempo";
+import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
+import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
+import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
+import * as mclassic_plus_036_1_bone_storm from "./classic-plus/036-1-bone-storm";
+import * as mclassic_plus_037_wardrum from "./classic-plus/037-wardrum";
+import * as mclassic_plus_038_solarius from "./classic-plus/038-solarius";
+import * as mclassic_plus_038_1_solarius_prime from "./classic-plus/038-1-solarius-prime";
+import * as mclassic_plus_039_book_worm from "./classic-plus/039-book-worm";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -361,4 +369,12 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_024_crushing_walls,
   mclassic_plus_025_soul_shot,
   mclassic_plus_026_tommy_tempo,
+  mclassic_plus_033_ivory_tower,
+  mclassic_plus_034_memory_leak,
+  mclassic_plus_036_conjure_bones,
+  mclassic_plus_036_1_bone_storm,
+  mclassic_plus_037_wardrum,
+  mclassic_plus_038_solarius,
+  mclassic_plus_038_1_solarius_prime,
+  mclassic_plus_039_book_worm,
 ];

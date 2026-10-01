@@ -6957,7 +6957,7 @@
         "min": 1
       }
     ],
-    "loc": 20,
+    "loc": 22,
     "base": {
       "attack": 5,
       "health": 5,
@@ -7459,6 +7459,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Aura: Your cards have Stack.\nA Unit may be played on top of this. That Unit can't attack or be attacked."
@@ -7478,6 +7479,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Choose one: \"At the end of your turn, Lock a random zone on your opponent's side\"; or \"After your opponent plays a Unit or Field Spell, Lock its zone.\""
@@ -7540,6 +7542,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nPaid (4): {paidCount} instead."
@@ -7572,6 +7575,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Deal {damage} damage to each enemy."
@@ -7603,6 +7607,7 @@
         "min": 2
       }
     ],
+    "loc": 54,
     "base": {
       "attack": 5,
       "health": 5,
@@ -7639,6 +7644,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "attack": 3,
       "health": 2,
@@ -7685,6 +7691,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "attack": 9,
       "health": 5,
@@ -7728,6 +7735,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "attack": 1,
       "health": 4,
