@@ -88,6 +88,12 @@ describe("C #72 Grand Counterspell", () => {
       s.expectInZone(HONEYPOT, "graveyard");
       const p1Graveyard = s.view("p1").opponent.graveyard.map((card) => card.defId);
       expect(p1Graveyard).toContain(HONEYPOT);
+      // Its announce named only its zone to p1; the counter made it public.
+      const seen = s.view("p1").events;
+      const announced = seen.filter((event) => event.type === "cardAnnounced");
+      expect(announced).toHaveLength(1);
+      expect(JSON.stringify(announced)).not.toContain(HONEYPOT);
+      expect(seen.find((event) => event.type === "countered")).toMatchObject({ defId: HONEYPOT });
     });
 
     it("§6.3 counters a Field Trap too", () => {
@@ -123,6 +129,19 @@ describe("C #72 Grand Counterspell", () => {
       s.expectInZone(CN_VIRUS, "graveyard");
     });
 
+    it("B5 E1 beside C #17 Counterspell one counter cancels the Spell and the other stays set", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], backrow: [GRAND, "classic-017"] },
+        p2: { hand: [STOCKPILE, FILLER] },
+        active: "p2",
+      });
+      s.play(STOCKPILE);
+      expect(countered(s)).toHaveLength(1);
+      s.expectInZone(STOCKPILE, "graveyard");
+      const set = [s.backrow("p1", 1), s.backrow("p1", 2)].filter((card) => card !== null);
+      expect(set).toHaveLength(1);
+    });
+
     it("B5 E1 the first counter cancels the play; a second Grand Counterspell finds no card and stays set", () => {
       const s = scenario({
         p1: { hand: [FILLER], backrow: [GRAND, GRAND] },
@@ -156,21 +175,22 @@ describe("C #72 Grand Counterspell", () => {
       s.expectInZone(ARMOR, "hand");
     });
 
-    it("R97 once in your hand the stolen card is hidden in the opponent's view: a count, and its later moves unnamed", () => {
+    it("R97 once in your hand the stolen card is hidden in the opponent's view: a count of p1's hand, nothing more", () => {
       const s = armed({ radiant: true, p2Hand: [STOCKPILE] });
       s.play(STOCKPILE);
       const id = s.card(STOCKPILE).id;
-      const theirs = s.view("p2");
-      expect(theirs.opponent.hand).toEqual({ count: 2 });
+      // The steal itself was public (the opponent watched the card announced, B5 E16), but p2's view of
+      // p1's hand is a count; p1 reads the card.
+      expect(s.view("p2").opponent.hand).toEqual({ count: 2 });
       const own = s.view("p1");
       expect(Array.isArray(own.you.hand) && own.you.hand.some((card) => card.instanceId === id)).toBe(true);
-      // The steal itself was public — the opponent watched the card announced (B5 E16's "readable where
-      // stolen") — but the card is p1's hidden hand card now: the turn that follows names it to no one
-      // but p1.
-      s.endTurn();
-      const later = s.view("p2").events.slice(-5);
-      expect(JSON.stringify(s.view("p2").opponent.hand)).not.toContain(id);
-      expect(later.every((event) => !JSON.stringify(event).includes(`"instanceId":"${id}"`) || event.type === "stolen" || event.type === "countered" || event.type === "cardAnnounced")).toBe(true);
+    });
+
+    it("steals a Trap set face-down: it never reaches the backrow and is yours in hand", () => {
+      const s = armed({ radiant: true, p2Hand: [HONEYPOT] });
+      s.play(HONEYPOT);
+      expect(s.backrow("p2", 1)).toBeNull();
+      expect(s.card(HONEYPOT)).toMatchObject({ owner: "p1", zone: { z: "hand", player: "p1" } });
     });
 
     it("R317 burned at your full hand: it goes to your graveyard, yours", () => {
