@@ -16,7 +16,7 @@ import { viewFor } from "../src/viewFor";
 import { cardAt, freshFaceDownId, isLocked, lockZone, moveToZone, placeOnField, zoneContents } from "../src/zones";
 import { vanillaDeck } from "./fixtures/catalog";
 import { phoenix, registerBoardHistoryFixtures, rewind } from "./fixtures/boardHistory";
-import { act, playing, spatula, tower, watcher } from "./fixtures/field";
+import { act, banner, playing, spatula, tower, watcher } from "./fixtures/field";
 import { eventsOfType, put, sinkFor, slot } from "./fixtures/harness";
 
 /** p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied. */
@@ -78,6 +78,10 @@ describe("E29 the restore (R419)", () => {
     const carried = newInstance(state, "fx-6", "p1", { z: "hand", player: "p1" });
     placeOnField(state, carried, slot("p1", "backrow", 1));
     const trap = put(state, watcher.id, slot("p2", "backrow", 3));
+    // A backrow pile (B5 E21): a face-up Field Spell over a face-down trap.
+    const under = put(state, watcher.id, slot("p1", "backrow", 2));
+    const over = newInstance(state, banner.id, "p1", { z: "hand", player: "p1" });
+    placeOnField(state, over, slot("p1", "backrow", 2), { stack: true });
     lockZone(state, slot("p2", "units", 5));
     recordBoardSnapshot(state);
 
@@ -86,6 +90,8 @@ describe("E29 the restore (R419)", () => {
     moveToZone(state, fromGraveyard, "graveyard");
     moveToZone(state, fromExile, "exile");
     moveToZone(state, carried, "hand");
+    moveToZone(state, over, "hand");
+    expect(cardAt(state, slot("p1", "backrow", 2))?.id).toBe(under.id);
     const newcomer = put(state, "fx-7", slot("p2", "units", 4));
     lockZone(state, slot("p1", "units", 3));
     state.players.p2.locks.units[4] = false;
@@ -98,6 +104,8 @@ describe("E29 the restore (R419)", () => {
     expect(cardAt(state, slot("p2", "units", 2))?.id).toBe(fromExile.id);
     expect(zoneContents(state, slot("p1", "backrow", 1)).map((card) => card.id)).toEqual([carried.id, carrier.id]);
     expect(cardAt(state, slot("p2", "backrow", 3))?.id).toBe(trap.id);
+    // The pile is rebuilt; the trap beneath never left the field face-down, so it keeps its id (R227).
+    expect(zoneContents(state, slot("p1", "backrow", 2)).map((card) => card.id)).toEqual([over.id, under.id]);
     expect(findInstance(state, newcomer.id)?.zone.z).toBe("hand");
     expect(isLocked(state, slot("p1", "units", 3))).toBe(false);
     expect(isLocked(state, slot("p2", "units", 5))).toBe(true);
@@ -146,6 +154,25 @@ describe("E29 the restore (R419)", () => {
     const seen = eventsOfType(viewFor(state, "p1").events, "controlChanged");
     expect(seen).toEqual([{ type: "controlChanged", instanceId: "hidden", controller: "p2", row: "backrow", lane: 1 }]);
     expect(eventsOfType(viewFor(state, "p2").events, "controlChanged")[0]?.formerId).toBe(old);
+  });
+
+  it("R566 R227 a face-up trap going back face-down on its own side takes a fresh id: it has entered, and controlChanged names it", () => {
+    const state = board("bh-face-up");
+    const trap = put(state, watcher.id, slot("p1", "backrow", 2));
+    trap.summonedTurn = state.turn - 2;
+    recordBoardSnapshot(state);
+    trap.faceUp = true;
+    const old = trap.id;
+    const events: GameEvent[] = [];
+    restoreBoard(sinkFor(state, events), "p1", 1, ["p1"]);
+    const back = cardAt(state, slot("p1", "backrow", 2));
+    expect(back?.id).not.toBe(old);
+    expect(back?.faceUp).toBeUndefined();
+    expect(back?.summonedTurn).toBe(state.turn);
+    expect(findInstance(state, old)).toBeUndefined();
+    expect(eventsOfType(events, "controlChanged")).toEqual([
+      { type: "controlChanged", instanceId: back?.id, controller: "p1", row: "backrow", lane: 2, formerId: old },
+    ]);
   });
 
   it("R566 a card that stayed on its side keeps its exertion and sickness; one put back from elsewhere entered on this turn", () => {

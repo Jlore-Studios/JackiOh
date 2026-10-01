@@ -107,8 +107,12 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * Prem Panther (R426) made the Panther's text its attack's own hook rather than a trigger on every
  * death, so the deaths it watched queue no entries numbered from `nextSeq`. The same 37 actions fold
  * with no refusal to the same end, won by p1 by hero death.
+ *
+ * C+ #35 Rollback's history (R419) moved it once more and not the game: every turn's start now records
+ * the field in `state.boardHistory`. The same fold with that field deleted hashes to "2d6aab2a", the
+ * value before it.
  */
-const EXPECTED_HASH = "2d6aab2a";
+const EXPECTED_HASH = "a798906b";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;
