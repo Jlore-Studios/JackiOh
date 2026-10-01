@@ -770,7 +770,8 @@ describe("R280 each Core hook is a pure read of public facts", () => {
 
 // =============================================================================================
 // C #1 Curse of the Forgotten Classic: the damage per card times the opponent's exile size
-// ======================================================================================
+// =============================================================================================
+
 describe("C #1 Curse of the Forgotten Classic previews N, its one hit (R280)", () => {
   function curse(face: Face, theirExile: number): Scenario {
     return scenario({
@@ -900,7 +901,11 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
       const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
       expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
       expect(answer).toEqual([{ label: LABEL, value: 4 }]);
-=======
+    }
+  });
+});
+
+// =============================================================================================
 // C #59 Plague Doctor: N, every Plague Token on the field (and the Radiant face's own placement)
 // =============================================================================================
 
