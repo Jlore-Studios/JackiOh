@@ -10,7 +10,9 @@
 // for a cast alike (§2.4's cast on draw, R70), and only the first is the player's play. So each
 // seat's hand is followed through the events: the hand the state holds as an action begins, plus
 // every `addedToHand`, minus every card that leaves it. A `cardPlayed` naming a card in that hand is
-// a play from hand; a cast names a card that never entered it.
+// a play from hand; a cast names a card that never entered it. A play countered in its announce
+// window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
+// by its `transformed` to the card it resolves as, the one its `cardPlayed` names.
 
 import { PLAYER_IDS, type GameEvent, type GameSummary, type PlayerId, type SeatSummary } from "@jackioh/shared";
 import { beginGame, reduce } from "./reduce";
@@ -29,9 +31,20 @@ type Reading = {
   played: Record<PlayerId, string[]>;
 };
 
-function handsOf(state: GameState): Hands {
-  const hand = (player: PlayerId): Map<string, string> =>
-    new Map(state.players[player].hand.map((card) => [card.id, card.defId]));
+/**
+ * Each seat's hand as an action begins: the cards the state holds there, and those of `following`
+ * (the hands the last action ended with) that a play has taken to the resolving zone and not yet
+ * placed. A prompt can hold a play there past its action (§10.5: the choices of the card step 3 put
+ * in its place, R449, or the announce window, C #4 Palantir), and its `cardPlayed` comes in a later one.
+ */
+function handsOf(state: GameState, following?: Hands): Hands {
+  const hand = (player: PlayerId): Map<string, string> => {
+    const cards = new Map(state.players[player].hand.map((card) => [card.id, card.defId]));
+    for (const card of state.players[player].resolving) {
+      if (following?.[player].has(card.id) === true) cards.set(card.id, card.defId);
+    }
+    return cards;
+  };
   return { p1: hand("p1"), p2: hand("p2") };
 }
 
@@ -131,8 +144,8 @@ export function summarizeGame(input: ReplayInput): GameSummary | null {
 
   for (const action of input.log) {
     // The state's own hands as the action begins, so nothing the events do not spell out (a card
-    // whose control changed, say) carries from one action into the next.
-    reading.hands = handsOf(state);
+    // whose control changed, say) carries from one action into the next, but a play still in flight.
+    reading.hands = handsOf(state, reading.hands);
     const result = reduce(state, action);
     if (result.error !== undefined) continue;
     read(reading, result.events);
