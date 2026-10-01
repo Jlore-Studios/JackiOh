@@ -146,7 +146,8 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
   if (cards.length === 0) return false;
   const data = placementData(resume.data);
   const tokens = data?.amount ?? 1;
-  // B5 E12, R452: under a random cast of the placer's every placement is random too, with no prompt —
+  // B5 E12, R452: a random cast's caster is never asked, so under one every placement goes on a random
+  // permanent (R60, repeats allowed; an enemy one when the cast targets enemies) and nothing pauses —
   // this hook answers its own prompts (`registerPromptAnswerer`), so `openPrompt` would ask instead.
   const mode = castModeForPrompt(sink.state, player, resume.instanceId);
   if (mode?.random === true) {
