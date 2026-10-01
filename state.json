@@ -153,9 +153,9 @@
   "usage": {
     "five_hour": {
       "resets_at": "2026-10-01T07:00:00Z",
-      "utilization": 0.01
+      "utilization": 0.02
     },
-    "observed_at": "2026-10-01T02:22:13Z",
+    "observed_at": "2026-10-01T02:34:38Z",
     "status": "allowed"
   },
   "version": 1
