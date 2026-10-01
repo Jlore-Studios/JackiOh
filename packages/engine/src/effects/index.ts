@@ -190,3 +190,25 @@ export { forEachCard } from "./each";
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
 
 // ---- v0.2.0 verbs: Core patches (R426–R437) ----
+
+// ---- v0.2.0 verbs: Classic+ cards #40–#78 and the AI cards (card-specific, the cards-plus-d workstream) ----
+
+// Classic+ #40–#45, #77, T-AI-1 (KY's Test's question bank, E31, and its neighbours):
+
+// Classic+ #62 KY's Papaya's curve (E32), the Degrade and Upgrade cards, T-AI-2, T-AI-3, T-AI-10:
+
+// Classic+ #73 Call to Chaos (Classic+ Edition), #73.1, #74, #78, T-AI-4 to T-AI-9:
+
+// Classic+ #46–#61:
+
+// Classic+ #63–#67, #75, #76 and their tokens:
+// the Grapes a Grape card rolls (GRAPE_ODDS, R382), a hit on an enemy or a heal on a friend, a draw whose
+// card takes a price, and a hand replaced card for card (C+ #65, #65.2, #65.3, #65.5, #66).
+export {
+  addRolledGrapes,
+  cardThisDrawPutInHand,
+  damageEnemyOrHealFriend,
+  drawPriced,
+  replaceHandWithRandom,
+  rollGrape,
+} from "./fruit";

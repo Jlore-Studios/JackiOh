@@ -11,3 +11,15 @@ export * from "./lethal";
 export * from "./heroPower";
 export * from "./comboIndex";
 export * from "./callToChaos";
+
+// ---- v0.2.0 subsystems: Classic+ cards #40–#78 (the cards-plus-d workstream) ----
+
+// C+ #42 KY's Test's question bank (E31, R420):
+
+// C+ #62 KY's Papaya's curve targeting (E32, R422):
+
+// C+ #73 Call to Chaos (Classic+ Edition)'s table (R423) and #74's fusing Field Trap (R425):
+
+// C+ #46–#61:
+
+// C+ #63–#76:

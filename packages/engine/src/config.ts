@@ -231,3 +231,40 @@ export const AI_TUTORIAL: Handicap = {
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----
+
+// ---- v0.2.0 constants: Classic+ cards #40–#78 and the AI cards (the cards-plus-d workstream) ----
+
+// Classic+ #42 KY's Test (SPEC §8.7, R420, BUILD §2).
+/** R420: the three difficulties, in the order the first prompt offers them. */
+export const KY_TEST_DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+/** R420: the options every problem shows, exactly one of them its answer. */
+export const KY_TEST_OPTIONS = 4;
+/** R420: the floor of bank problems per difficulty (the bank test's floor, in `packages/cards`). */
+export const KY_TEST_MIN_PROBLEMS = 30;
+/** R420: an Easy problem is a + b with each addend in this range, inclusive. */
+export const KY_TEST_EASY_ADDENDS = { min: 10, max: 99 } as const;
+/** R420: an Easy problem's three wrong sums are a + b moved by three different ones of these. */
+export const KY_TEST_EASY_MISSES: readonly number[] = [1, -1, 2, -2, 10, -10];
+
+// Classic+ #62 KY's Papaya (SPEC §8.7, R422, BUILD §2).
+/** R422: the rows of the curve's grid, y 0 (your backrow) to 3 (their backrow). */
+export const PAPAYA_ROWS = 4;
+/** R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have. */
+export const PAPAYA_MAX_CELLS = 4;
+
+// Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
+/**
+ * R382: each Grape's chance in percent, in Lucky's order from worst to best (Rotten < Normal < Large <
+ * Golden < Mythic): a roll with Lucky keeps the later of its two.
+ */
+export const GRAPE_ODDS: readonly { readonly defId: string; readonly percent: number }[] = [
+  { defId: "classicplus-065-1", percent: 12 },
+  { defId: "classicplus-065-2", percent: 60 },
+  { defId: "classicplus-065-3", percent: 20 },
+  { defId: "classicplus-065-4", percent: 7 },
+  { defId: "classicplus-065-5", percent: 1 },
+];
+
+// T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
+/** T-AI-4: the repeats after the first draw, a termination bound: five draws at most. */
+export const CHAIN_OF_THOUGHT_REPEATS = 4;

@@ -8679,11 +8679,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. It costs (1) less."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. They cost (1) less."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     }
   },
   "classicplus-065-3": {
@@ -8720,11 +8720,11 @@
     ],
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. It costs (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. They cost (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     }
   },
   "classicplus-065-4": {
