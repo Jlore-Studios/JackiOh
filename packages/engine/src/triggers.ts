@@ -46,6 +46,8 @@
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
+import { isAnnounceLive } from "./announce";
+import { heldBack } from "./drawComplete";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
@@ -616,6 +618,9 @@ export function runQueuedTrigger(sink: EngineSink, entry: QueuedTrigger): void {
 
   const def = queuedTriggerDef(holder, entry);
   if (def === undefined || !def.on.includes(event.type)) return;
+  // B5 E1, R448: a response to an announce whose play a Counter has already cancelled, or that step 4
+  // has already moved, finds no card and fizzles (`playSteps.runAnnounceWindow` pops these itself).
+  if (event.type === "cardAnnounced" && !isAnnounceLive(sink.state, event.instanceId)) return;
   // R212: an event trigger answers for the player who controlled its card when the event happened,
   // which is what its entry captured — a change of control since does not hand the answer over.
   const queuedFor: unknown = entry.resume.data.controller;
@@ -760,7 +765,11 @@ function dispatchNewEvents(sink: SettleSink): void {
   while (sink.state.dispatch.length > 0) {
     if (sink.state.pending !== null || sink.state.result !== null) return;
     if (trapsStillOwed(sink.state)) return;
-    const next = sink.state.dispatch.shift();
+    // R58: a cast-on-draw draw's `drawn` waits, in its place, until the draw is complete — its cast
+    // resolved (`drawComplete.ts`) — and the events after it go on meanwhile.
+    const at = sink.state.dispatch.findIndex((item) => !heldBack(sink.state, item.event));
+    if (at < 0) return;
+    const [next] = sink.state.dispatch.splice(at, 1);
     if (next !== undefined) dispatchEvent(sink, next.event);
     collectEvents(sink);
   }

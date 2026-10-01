@@ -18,6 +18,14 @@
 // stopped instead of at the top: step 3 over the `onPlayHook` holders, step 5 over its named parts,
 // step 6 over the echo queue and the repeat's fresh picks.
 //
+// Patch v0.2.0 adds a step between 3 and 4, the announce (B5 E1, R448): the paid-for card moves into
+// its player's resolving zone, `cardAnnounced` goes out, and a window runs in which Counters answer
+// it — traps first, then the other triggers the announce woke (§10.3). A countered play stops there:
+// step 4 never places it, so it is never counted, and step 8 settles. Step 1 is the targeting point
+// of the play's declared targets (B5 E5, E9, R450): an interception (Classic #33) moves a pick, and
+// step 2 pays the discards a costly target carries (Classic #89). Step 3 may replace the card being
+// played (Classic #23 Devil's Pact, R449), and step 4 counts what the play leaves for E4 (R451).
+//
 // What is *not* here: which choices are legal (that is `playChoices.ts`, R90), what a cost is
 // (`mana.ts`, R65), what a card's text does (the card's script, which is a pure builder the engine
 // applies — CLAUDE.md rule 5) and R43's power mechanics (`subsystems/heroPower.ts`).
@@ -39,6 +47,8 @@ import {
   queueEchoRepeats,
   takeEchoRepeat,
 } from "./echo";
+import { beginAnnounce, endAnnounce, isAnnounceLive } from "./announce";
+import { CAST_ON_DRAW_KEY, releaseDraw } from "./drawComplete";
 import { hasEnchantment } from "./enchantments";
 import { cardTypeOf } from "./faces";
 import { inOwnGraveyard, manaDue, spendPlagueTokens, whyGraveyardPlayRefused } from "./graveyardPlay";
@@ -52,14 +62,17 @@ import {
   declaredModes,
   declaredTargets,
   defaultZoneFor,
-  giftedMakesRadiant,
   inDeclaredOrder,
+  interceptorFitsDecl,
   legalSelectionsFor,
+  playMadeRadiant,
   playsOnStack,
   resolvingFace,
+  targetingDeclsOf,
   targetsFollowModes,
   whyChoicesRefused,
 } from "./playChoices";
+import { recordPlay } from "./playCounts";
 import {
   closePrompt,
   inOfferedOrder,
@@ -80,6 +93,7 @@ import {
 } from "./resolve";
 import {
   findInstance,
+  newInstance,
   type CardInstance,
   type CastMode,
   type GameState,
@@ -89,12 +103,20 @@ import {
 import { playedEarlier } from "./query";
 import { flagsOf } from "./scripts";
 import { sacrificeTogether, stateCheck } from "./stateCheck";
-import { dispatchPending, settle } from "./triggers";
+import { OWED_TO_TRAPS, SETTLE_PASS_CAP, dispatchPending, eventOfQueued, runQueuedTrigger, settle } from "./triggers";
 import { triggerHolderFor, triggerHoldersWithHook, type TriggerHolder } from "./triggers";
+import {
+  interceptTargeting,
+  payTargetingDiscards,
+  registerTargetedContinuation,
+  targetAnswer,
+  whyTargetAnswerRefused,
+} from "./targetingPoint";
 import { exitMark, leftFieldAfter } from "./stays";
 import { beginWorkCascade, drainWork, dropWork, paused, pausedOf, pushWork, registerWorkHandler } from "./work";
 import {
   cardAt,
+  ceaseToExist,
   firstFreeZone,
   freshFaceDownId,
   isOpen,
@@ -109,7 +131,7 @@ import {
 
 export type PlayAction = Extract<ActionBody, { type: "play" }>;
 
-/** The eight steps of §10.5, in the order that section lists them. */
+/** The eight steps of §10.5, in the order that section lists them, and E1's announce between 3 and 4. */
 export const PLAY_STEPS = [
   "validate",
   "pay",
@@ -118,6 +140,7 @@ export const PLAY_STEPS = [
   // the card moves — so an announce that follows (E1, between steps 3 and 4) names them. A play made
   // its choices at step 1, and this step does nothing for it.
   "castChoices",
+  "announce",
   "place",
   "resolve",
   "echo",
@@ -289,6 +312,29 @@ export type PlayRun = {
   manaBefore?: number;
   /** R453: the X its caster chose for a cast X card (the `number` prompt's answer), until it is set. */
   castX?: number;
+  // ---- v0.2.0 play pipeline A (E1, E5, Devil's Pact) ----
+  /**
+   * B5 E5, R450: the cards the play's declared targets cost to target (Classic #89), carried in the
+   * action and discarded at step 2 with the rest of the price.
+   */
+  discards?: string[];
+  /**
+   * B5 E1, R448: the announce has gone out and the card waits in the resolving zone; what is left of
+   * the step is its window, which a response's question can pause, so the step is re-entered there.
+   */
+  announced?: boolean;
+  /** R448: a Counter cancelled the play in its announce window: nothing after it happens but step 8. */
+  countered?: boolean;
+  /**
+   * R449: step 3 replaced the card played by a new card (Classic #23 Devil's Pact). The new card makes
+   * its choices as a cast does (R70), before the announce, and takes its zone at step 4 by R64.
+   */
+  replaced?: boolean;
+  /**
+   * R58: the id the card was drawn under, for a cast-on-draw cast. The draw is complete once this
+   * cast has resolved, and its held `drawn` is released then (`drawComplete.ts`).
+   */
+  drawnAs?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -423,8 +469,9 @@ export function validatePlay(
       echoQueued: false,
       repeat: null,
       awaiting: null,
-      gifted: giftedMakesRadiant(state, player, cost),
+      gifted: playMadeRadiant(state, player, card, cost),
       ...slicesFor(state, player, card, cost, targets, modes),
+      ...((action.discards ?? []).length === 0 ? {} : { discards: [...(action.discards ?? [])] }),
       exitsFrom: exitMark(state),
       ...playBegins(state, player),
       manaBefore: state.players[player].mana.current,
@@ -544,6 +591,8 @@ function payStep(sink: EngineSink, run: PlayRun): void {
     const holder = findInstance(sink.state, run.plague.from);
     if (holder !== undefined) spendPlagueTokens(sink, holder, run.plague.tokens);
   }
+  // B5 E5, R450: a targeting cost is part of the price, paid with it (Classic #89).
+  if (run.discards !== undefined) payTargetingDiscards(sink, run.player, run.discards);
   // R210: the zone step 1 accepted is the play's until step 4 puts the card in it. A Tribute is
   // paid here, and a tributed unit's Death — #3 radiant's summon, #22's copies, #86's steals — lands
   // cards by R64 and R15 in the very row the play is going to; held like a Reborn zone (R64), the
@@ -574,6 +623,8 @@ function giftedHookStep(sink: EngineSink, run: PlayRun): void {
   // choices answer (R214), so the two cannot disagree. Once, before the hooks: the cursor is 0 only
   // on the first entry.
   if (run.hookIds === undefined) {
+    // R449: a replacement comes first, so what step 3 makes Radiant is the card that is played.
+    replacePlayedCard(sink, run);
     giftedProgramStep(sink, run);
     run.hookIds = triggerHoldersWithHook(sink.state, "onPlayHook").map((holder) => holder.card.id);
     run.hooksFrom = exitMark(sink.state);
@@ -620,7 +671,7 @@ function holderWithOnPlayHook(state: GameState, id: string | undefined, from: nu
 function giftedProgramStep(sink: EngineSink, run: PlayRun): void {
   const card = findInstance(sink.state, run.instanceId);
   if (card === undefined) return;
-  const gifted = run.gifted ?? giftedMakesRadiant(sink.state, run.player, run.costPaid);
+  const gifted = run.gifted ?? playMadeRadiant(sink.state, run.player, card, run.costPaid);
   if (!gifted) return;
   // R177: reported whether or not the card was Radiant already. A face-down trap stays hidden from
   // the other seat, whose stream keeps its events redacted but present (R97, R33), so a cue only for
@@ -628,6 +679,181 @@ function giftedProgramStep(sink: EngineSink, run: PlayRun): void {
   // is public — the cost paid and the Field Spell are — so the cue says nothing more than that.
   card.radiant = true;
   sink.events.push({ type: "radiantSet", instanceId: card.id, defId: card.defId, zone: card.zone });
+}
+
+/**
+ * Classic #23 Devil's Pact, R449: "this turn, each card you play is replaced by a Book of Flame". A live
+ * `replacePlays` modifier of the playing player replaces the card played, here at §10.5 step 3, by a
+ * new instance of its definition (Radiant per the modifier) that is played in its place: it waits in
+ * the resolving zone, makes its own choices as a cast does (R70) at the announce, and takes its zone
+ * by R64 at step 4. The old card ceases to exist (R35), in its hand or in the resolving zone a cast
+ * waited in, and the price paid was the old card's (its mana, Tribute and targeting cost stay paid).
+ * Several modifiers replace in turn, in creation order, each re-reading the card; a card that already
+ * is the named card on the named face is not replaced by itself.
+ */
+function replacePlayedCard(sink: EngineSink, run: PlayRun): void {
+  const state = sink.state;
+  for (const mod of [...state.players[run.player].mods]) {
+    if (mod.kind !== "replacePlays" || !modifierIsLive(state, mod)) continue;
+    const old = findInstance(state, run.instanceId);
+    if (old === undefined) return;
+    if (old.defId === mod.defId && old.radiant === mod.radiant) continue;
+    // R226: a card already taken out of the hand (or the resolving zone) is not played at all.
+    const zone = old.zone;
+    if (zone.z !== "hand" && zone.z !== "resolving") return;
+    if (zone.z === "hand" && zone.player !== run.player) return;
+    // R177: a card replaced in a hand was never the other player's to read.
+    const hiddenFrom = zone.z === "hand" ? [opponentOf(zone.player)] : [];
+
+    const fresh = newInstance(state, mod.defId, run.player, { z: "resolving", player: run.player });
+    fresh.radiant = mod.radiant;
+    ceaseToExist(state, old);
+    state.players[run.player].resolving.push(fresh);
+    sink.events.push({
+      type: "transformed",
+      instanceId: old.id,
+      fromDefId: old.defId,
+      toDefId: fresh.defId,
+      newInstanceId: fresh.id,
+      ...(hiddenFrom.length === 0 ? {} : { hiddenFrom }),
+    });
+
+    run.instanceId = fresh.id;
+    run.defId = fresh.defId;
+    run.targets = [];
+    run.modes = [];
+    run.replaced = true;
+    delete run.targetSlices;
+    delete run.castChosen;
+    // R214: whether step 3 makes it Radiant is read for the card that is played, off the board now.
+    delete run.gifted;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The announce (B5 E1, R448): between §10.5 steps 3 and 4
+// ---------------------------------------------------------------------------
+
+/** B5 E1: how an announce names what the play declared — a card by its id, a hero as `hero-<player>`. */
+function announcedTargets(targets: readonly Selection[]): string[] {
+  return targets.flatMap((selection) => {
+    if (selection.pick === "instance") return [selection.instanceId];
+    if (selection.pick === "hero") return [`hero-${selection.player}`];
+    return [];
+  });
+}
+
+/**
+ * The zone the announce names: the one step 1 accepted for a play, and for a cast or a replacement
+ * the one R64 would give it now (step 4 reads it again, as the window may have changed the row).
+ */
+function announcedZone(state: GameState, run: PlayRun, card: CardInstance): ZoneSlot | null {
+  if (run.cast !== true && run.replaced !== true) return run.zone;
+  const type = defOf(state, card.defId).type;
+  if (type === "Spell") return null;
+  return firstFreeZone(state, run.player, type === "Unit" ? "units" : "backrow");
+}
+
+/**
+ * R448: the card leaves its player's hand (or graveyard, R454) for the resolving zone (a cast's, or a replacement's,
+ * waits there already), its announce opens, and `cardAnnounced` goes out — what `cardPlayed` would
+ * show: a card to be set face-down shows the other player only its zone (`viewFor`). False when the
+ * card is no longer where the play takes it from (R226): the play is lost.
+ */
+function announcePlay(sink: EngineSink, run: PlayRun): boolean {
+  const state = sink.state;
+  const card = findInstance(state, run.instanceId);
+  if (card === undefined) return false;
+  const side = state.players[run.player];
+  if (run.cast === true || run.replaced === true) {
+    if (card.zone.z !== "resolving") return false;
+  } else {
+    // E11, R454: from the hand, or from the graveyard for a play under a permission.
+    if (!takeFromPlaySource(state, run, card)) return false;
+    card.zone = { z: "resolving", player: run.player };
+    side.resolving.push(card);
+  }
+
+  const type = cardTypeOf(state, card);
+  const faceDown = type === "Trap" || type === "Field Trap";
+  beginAnnounce(state, { instanceId: card.id, player: run.player, ...(faceDown ? { faceDown: true as const } : {}) });
+  const zone = announcedZone(state, run, card);
+  sink.events.push({
+    type: "cardAnnounced",
+    player: run.player,
+    instanceId: card.id,
+    defId: card.defId,
+    cardType: type,
+    costPaid: run.costPaid,
+    targets: announcedTargets(run.targets),
+    ...(zone === null ? {} : { row: zone.row, lane: zone.lane }),
+    ...(faceDown ? { faceDown: true as const } : {}),
+  });
+  return true;
+}
+
+/** Whether a queue entry is a trigger answering this card's announce (not an owed trap dispatch). */
+function answersAnnounce(entry: GameState["triggerQueue"][number], instanceId: string): boolean {
+  if (entry.hook === OWED_TO_TRAPS) return false;
+  const event = eventOfQueued(entry);
+  return event !== null && event.type === "cardAnnounced" && event.instanceId === instanceId;
+}
+
+/**
+ * B5 E1, R448: the announce window. Traps see every event so far first, the announce among them, and
+ * fire at once as responses (`triggers.dispatchPending`); then every other trigger the announce woke
+ * resolves, one at a time in queue order (R68), each followed by the state check (R59). Triggers that
+ * answer anything else wait for the step-4 loop, or for a cast the loop of the effect that cast it
+ * (R70, R117), exactly as they did before the announce existed. A Counter among them cancels the play:
+ * the triggers still to come on it find no card (`isAnnounceLive`) and are dropped, and a trap on it is
+ * not offered it (`traps.standingEvent`). Stops at a prompt, leaving the rest owed in state.
+ */
+function runAnnounceWindow(sink: EngineSink, run: PlayRun): void {
+  for (let pass = 0; pass < SETTLE_PASS_CAP; pass += 1) {
+    dispatchPending(sink);
+    if (paused(sink)) return;
+    const queue = sink.state.triggerQueue;
+    const at = queue.findIndex((entry) => answersAnnounce(entry, run.instanceId));
+    if (at < 0) return;
+    const [entry] = queue.splice(at, 1);
+    if (entry === undefined || !isAnnounceLive(sink.state, run.instanceId)) continue;
+    runQueuedTrigger(sink, entry);
+    if (paused(sink)) return;
+    stateCheck(sink);
+    if (paused(sink)) return;
+  }
+  throw new Error(`the announce window did not close in ${SETTLE_PASS_CAP} passes (§10.3)`);
+}
+
+/**
+ * B5 E1, R448: the step between §10.5 steps 3 and 4. A cast's choices, and a replacement's (R449), are
+ * made first, so the announce names them (R70, R90). Then the card is announced and its window runs;
+ * a question in it pauses the step, which is re-entered at its window (`PlayRun.announced`) after the
+ * check the answer is owed (R59). Once the window is over the announce closes: a countered play stops
+ * here (`PlayRun.countered`), and one whose card something else took out of the resolving zone is lost
+ * (R226).
+ */
+function announceStep(sink: EngineSink, run: PlayRun): void {
+  if (run.announced !== true) {
+    if ((run.cast === true || run.replaced === true) && !castChoicesMade(sink, run, "announce")) return;
+    if (!announcePlay(sink, run)) {
+      run.lost = true;
+      return;
+    }
+    run.announced = true;
+  } else {
+    stateCheck(sink);
+    if (paused(sink)) return;
+  }
+  runAnnounceWindow(sink, run);
+  if (paused(sink)) return;
+  const record = endAnnounce(sink.state, run.instanceId);
+  if (record?.countered === true) {
+    run.countered = true;
+    return;
+  }
+  const card = findInstance(sink.state, run.instanceId);
+  if (card === undefined || card.zone.z !== "resolving") run.lost = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -774,24 +1000,19 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   if (card === undefined) return false;
   const side = state.players[run.player];
 
-  if (run.cast === true) {
-    // R70, R226: a cast card waits in the resolving zone from the start of its cast
-    // (`castThroughPipeline`), as a played card waits in its owner's hand until step 4. One that has
-    // left it by now — a step-3 `onPlayHook`, or its answer, exiled it — is where that move put it, in
-    // one zone (§10.1), and is not played: pulling it back out of exile would undo a move §6.3 makes
-    // final. Otherwise it leaves the resolving zone, and a permanent takes the leftmost empty,
-    // unlocked zone of its row (R64), as a play that names none does. Not `moveToZone`: that resets
-    // the instance (R78), and a cast is a play, which does not.
-    if (card.zone.z !== "resolving") return false;
-    removeFromAnyZone(state, card);
+  // R448, R70, R226: the card waits in the resolving zone from its announce — a played card moved
+  // there out of its owner's hand, a cast's or a replacement's was made there. One that has left it
+  // by now is where that move put it, in one zone (§10.1), and is not played: pulling it back out of
+  // exile would undo a move §6.3 makes final. Not `moveToZone`: that resets the instance (R78), and a
+  // play does not.
+  if (card.zone.z !== "resolving") return false;
+  removeFromAnyZone(state, card);
+  if (run.cast === true || run.replaced === true) {
+    // R70, R449: a permanent takes the leftmost empty, unlocked zone of its row (R64), as a play that
+    // names none does.
     const type = cardTypeOf(state, card);
     run.zone = type === "Spell" ? null : firstFreeZone(state, run.player, type === "Unit" ? "units" : "backrow");
   } else {
-    // §10.1, §10.5 step 4: the card leaves the hand for the field or the resolving zone. One that is
-    // no longer in its owner's hand — a Tribute's Death had it discarded at step 2 — is where that
-    // move put it, in one zone, and is not played (R226): placing it too would leave it in two. R454:
-    // a card played from the graveyard leaves the graveyard the same way, and the same holds for it.
-    if (!takeFromPlaySource(state, run, card)) return false;
     // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent. It is
     // still this player's play (`cardPlayed`), and its owner does not change (§3.2); the zone, and
     // so its controller, is the opponent's (`placeOnField`).
@@ -839,6 +1060,8 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   side.turnLog.costsPaid = [...(side.turnLog.costsPaid ?? []), run.costPaid];
   state.counters.played += 1;
   run.radiant = card.radiant;
+  // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.
+  recordPlay(state, run.player, card);
 
   playedEvents(sink, run, card, formerId);
   // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
@@ -1192,8 +1415,10 @@ function askRepeatChoices(sink: EngineSink, run: PlayRun, card: CardInstance, st
 }
 
 /** What a prompt the pipeline opens calls itself: an Echo repeat's picks, or a cast's (R70). */
-function askLabel(step: PlayStepName, name: string): string {
-  return step === "echo" ? `Echo: ${name}` : `Cast: ${name}`;
+function askLabel(step: PlayStepName, name: string, run?: PlayRun): string {
+  if (step === "echo") return `Echo: ${name}`;
+  // R449: a replacement is played, not cast, and asks its choices as a cast does.
+  return run?.cast !== true && run?.replaced === true ? `Play: ${name}` : `Cast: ${name}`;
 }
 
 /**
@@ -1243,7 +1468,7 @@ function askRepeatTargets(
     const opened = openPrompt(sink, {
       player: run.player,
       kind: decl.kind,
-      prompt: askLabel(step, name),
+      prompt: askLabel(step, name, run),
       options: options.map((selection) => ({
         key: `${selection.pick}:${labelOf(selection)}`,
         label: labelOf(selection),
@@ -1283,7 +1508,7 @@ function askRepeatModes(
     const opened = openPrompt(sink, {
       player: run.player,
       kind: decl.kind,
-      prompt: askLabel(step, name),
+      prompt: askLabel(step, name, run),
       options: decl.options.map((option) => ({
         key: `mode:${option}`,
         label: option,
@@ -1469,6 +1694,7 @@ const STEP_TABLE: readonly Step[] = [
   { name: "pay", run: payStep },
   { name: "giftedHook", run: giftedHookStep, repeats: true },
   { name: "castChoices", run: castChoicesStep, repeats: true },
+  { name: "announce", run: announceStep, repeats: true },
   { name: "place", run: placeStep, repeats: true },
   { name: "resolve", run: resolveStep, repeats: true },
   { name: "echo", run: echoStep, repeats: true },
@@ -1501,7 +1727,10 @@ const STEP_TABLE: readonly Step[] = [
 function drive(sink: EngineSink, run: PlayRun): boolean {
   // R452: a random cast, or one that targets enemies, is in force while its steps run, however often
   // they are driven — the first time, and each time an answer brings the owed rest back.
-  return withCastMode(sink.state, castModeOf(run), () => driveSteps(sink, run));
+  const finished = withCastMode(sink.state, castModeOf(run), () => driveSteps(sink, run));
+  // R58: a cast-on-draw cast has resolved, so the draw that cast it is complete.
+  if (finished && run.drawnAs !== undefined) releaseDraw(sink.state, run.drawnAs);
+  return finished;
 }
 
 /** R452: the mode a run's steps run under, or null for a play and an ordinary cast. */
@@ -1516,6 +1745,7 @@ function castModeOf(run: PlayRun): CastMode | null {
   };
 }
 
+/** `drive`'s loop over the steps from `run.at`; true when the pipeline is finished with. */
 function driveSteps(sink: EngineSink, run: PlayRun): boolean {
   for (let at = Math.max(0, run.at); at < STEP_TABLE.length; at += 1) {
     const step = STEP_TABLE[at];
@@ -1527,7 +1757,8 @@ function driveSteps(sink: EngineSink, run: PlayRun): boolean {
     const next = step.repeats === true ? at : at + 1;
     // A card lost at step 4 is not played (R226): nothing resolves, and step 8 settles what steps 2
     // and 3 did (`PlayRun.lost`).
-    if (run.lost === true && step.name !== "settle") continue;
+    // R448: a countered play is the same — nothing after its announce but step 8.
+    if ((run.lost === true || run.countered === true) && step.name !== "settle") continue;
     step.run(sink, run);
 
     if (sink.state.result !== null) return true;
@@ -1638,7 +1869,9 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
 
   const targets = [...(options.targets ?? [])];
   const modes = [...(options.modes ?? [])];
+  const drawnAs: unknown = options.data?.[CAST_ON_DRAW_KEY];
   drive(sink, {
+    ...(typeof drawnAs === "string" ? { drawnAs } : {}),
     instanceId: instance.id,
     defId: instance.defId,
     player,
@@ -1676,8 +1909,35 @@ registerCastDriver(castThroughPipeline);
 export function runPlaySteps(sink: EngineSink, player: PlayerId, action: PlayAction): string | null {
   const checked = validatePlay(sink, player, action);
   if ("error" in checked) return checked.error;
+  interceptDeclaredTargets(sink, checked.run);
   drive(sink, checked.run);
   return null;
+}
+
+/**
+ * B5 E5, E9, R450: the targeting point of a play's declared targets, at §10.5 step 1 once the play is
+ * legal. An interceptor in the targeted player's hand (Classic #33) answers the first declared
+ * `target` pick naming one of that player's units, if it would itself be a legal pick of that
+ * declaration, and the pick moves to it. The costs the picks carry were checked at step 1 and are paid
+ * at step 2, whatever the interception did (the targeting happened).
+ */
+function interceptDeclaredTargets(sink: EngineSink, run: PlayRun): void {
+  if (run.targets.length === 0) return;
+  const state = sink.state;
+  const card = findInstance(state, run.instanceId);
+  if (card === undefined) return;
+  // R214: the face whose declarations the picks answer.
+  const face = resolvingFace(state, run.player, card, run.costPaid);
+  const decls = targetingDeclsOf(state, run.player, face, run.targets, run.modes);
+  run.targets = interceptTargeting(sink, {
+    chooser: run.player,
+    picks: run.targets,
+    targeting: (index) => decls[index] !== null && decls[index] !== undefined,
+    accepts: (interceptor, index) => {
+      const decl = decls[index];
+      return decl !== null && decl !== undefined && interceptorFitsDecl(state, run.player, face, decl, interceptor);
+    },
+  });
 }
 
 /**
@@ -1699,12 +1959,26 @@ export function answerPlayPrompt(sink: EngineSink, answer: AnswerInput): string 
 
   const run = runOf(resumeOf(pending));
   if (run === null) return "that prompt is not a play's own";
+  const picks = inOfferedOrder(pending, answer.selection);
+  // B5 E5, R450: picks that cost more discards than the chooser holds are no answer.
+  const unpaid = whyTargetAnswerRefused(sink.state, pending, picks);
+  if (unpaid !== null) return unpaid;
 
   closePrompt(sink);
 
   // The answered prompt is this run's, so any tail owed for it earlier would repeat this step.
   dropWork(sink.state, (item) => isPlayResume(item.resume) && runOf(item.resume)?.instanceId === run.instanceId);
-  fileSelection(run, inOfferedOrder(pending, answer.selection));
+  // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a cost it asks
+  // for first (its answer comes back through `continuePlayAnswer`), and an interception.
+  const targeted = targetAnswer(sink, pending, picks);
+  if (targeted === null) return null;
+  continuePlayAnswer(sink, run, targeted);
+  return null;
+}
+
+/** File an answered pick and drive the play on, finishing what the prompt interrupted (R113, R122). */
+function continuePlayAnswer(sink: EngineSink, run: PlayRun, picks: readonly Selection[]): void {
+  fileSelection(run, picks);
   // R113: taking the paused step up again resets the cursor, as `prompts.answerPrompt` does.
   beginWorkCascade(sink);
   drive(sink, run);
@@ -1713,7 +1987,14 @@ export function answerPlayPrompt(sink: EngineSink, answer: AnswerInput): string 
   // `prompts.answerPrompt` does; otherwise the traps answered the cast's events before the draw
   // repeated into the card beneath it.
   drainWork(sink);
-  return null;
 }
 
 registerPromptAnswerer(PLAY_WORK_KIND, answerPlayPrompt);
+
+// R450: a pick whose targeting cost was asked for first goes on here once the cost is paid.
+registerTargetedContinuation(PLAY_WORK_KIND, (sink, prompt, picks) => {
+  const run = runOf(resumeOf(prompt));
+  if (run === null) return;
+  dropWork(sink.state, (item) => isPlayResume(item.resume) && runOf(item.resume)?.instanceId === run.instanceId);
+  continuePlayAnswer(sink, run, picks);
+});

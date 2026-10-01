@@ -1,11 +1,11 @@
 // The card-script contract (SPEC §10.9). A card file returns Effect[] from the effects library and
 // never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
 
-import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, TargetDecl } from "@jackioh/shared";
+import type { GameEvent, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag, TargetDecl } from "@jackioh/shared";
 import type { CostAura, CostAuraArgs } from "./costRules";
 import type { GraveyardPlayPermission } from "./graveyardPlay";
 import type { Rng } from "./rng";
-import type { CardInstance, GameState } from "./state";
+import type { CardInstance, GameState, PlayRecord } from "./state";
 import type { EventStay } from "./stays";
 
 export type EffectContext = {
@@ -212,6 +212,12 @@ export type StaticFlags = {
    */
   carrier?: boolean;
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
+  /**
+   * Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of
+   * these tags becomes Radiant as it is played (§10.5 step 3) — R213's Gifted Program rule by tag, on
+   * every such play rather than the first cheap one (`playChoices.playMadeRadiant`).
+   */
+  radiantPlaysTagged?: Tag[];
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
   /** B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter). */
@@ -331,6 +337,20 @@ export type Script = {
   costAura?: (args: CostAuraArgs) => CostAura[];
   /** E11, R454: the permissions this card gives its controller to play cards from their graveyard. */
   graveyardPlay?: (args: CostAuraArgs) => GraveyardPlayPermission[];
+  /**
+   * B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
+   * also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
+   * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. A declared
+   * target naming it carries the discards in the action; a prompt answer naming it asks for them next
+   * (`targeting.ts`, `targetingPoint.ts`).
+   */
+  targetingDiscards?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => number;
+  /**
+   * B5 E4, R451: what this card's play records as the card played — the last Spell played (Classic
+   * #57) and its player's last face-up play. Absent records the card itself; Classic #57 Echo
+   * returns the Spell it copied, and null records nothing (an Echo with nothing to copy).
+   */
+  recordsPlayAs?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => PlayRecord | null;
   // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
   /**
    * B5 E3, R457: the draw limits this card sets while it acts on the field ("Your opponent can't draw

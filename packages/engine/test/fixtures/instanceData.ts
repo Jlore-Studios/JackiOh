@@ -309,7 +309,7 @@ export const INSTANCE_SCRIPTS: Record<string, CardScripts> = {
 /** The fixture catalog with these cards, registered on top of the shared one; returns the whole catalog. */
 export function registerInstanceFixtures(): CardDefs {
   setupCatalog();
-  const catalog: CardDefs = { ...registeredCatalog() };
+  const catalog: Record<string, CardDef> = { ...registeredCatalog() };
   for (const card of INSTANCE_DEFS) catalog[card.id] = card;
   registerCatalog(catalog);
   registerScripts({ ...registeredScripts(), ...INSTANCE_SCRIPTS });

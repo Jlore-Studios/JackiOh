@@ -294,6 +294,12 @@ export const PLAGUE_TOKEN_MANA = 1;
  */
 export const RANDOM_CAST_CHAIN_CAP = 20;
 
+/**
+ * B5 E4, R451: the tags whose cards a player's "last face-up card played" record passes over — the
+ * AI generated cards (B8), so two Autocompletes can't copy each other for ever.
+ */
+export const LAST_FACE_UP_SKIPPED_TAGS: readonly Tag[] = ["AI"];
+
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
 
 /**

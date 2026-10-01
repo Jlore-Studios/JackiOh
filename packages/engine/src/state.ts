@@ -4,12 +4,14 @@
 import type {
   CardDef,
   CardDefs,
+  CardType,
   Enchantment,
   Keyword,
   PlayerId,
   PromptKind,
   Row,
   Selection,
+  Tag,
   Tuning,
   Zone,
   ZoneRef,
@@ -161,6 +163,12 @@ export type PlayerModifier = {
   | { kind: "costRule"; rule: CostRule }
   /** Classic+ #14 Forever&: the next Spell its player plays gains this enchantment (E39), until used. */
   | { kind: "enchantNextSpell"; enchantment: Enchantment }
+  /**
+   * Classic #23 Devil's Pact, R449: each card this player plays (a cast included, R70) is replaced at
+   * §10.5 step 3 by a new instance of `defId`, Radiant when `radiant` says so, which resolves as that
+   * play (`playSteps.replacePlayedCard`).
+   */
+  | { kind: "replacePlays"; defId: string; radiant: boolean }
   // ---- v0.2.0 modifier kinds, by workstream: activate and turn (E28 rest of the game) ----
   /**
    * B5 E10, R456: this player's turn ends once `actionsLeft` more main-phase actions of theirs have
@@ -338,6 +346,12 @@ export type TurnLog = {
    * plays; `startTurn` rebuilds the log, which clears it.
    */
   costsPaid?: number[];
+  /**
+   * B5 E4: this turn's plays by the type each was played as (B2.7), casts included (R70), countered
+   * plays never — Classic+ #37 Wardrum counts Spells, Field Spells and Traps. `startTurn` rebuilds
+   * the log for both players, which clears it as it clears the rest of "this turn".
+   */
+  playedByType?: Partial<Record<CardType, number>>;
 };
 
 export type PlayerState = {
@@ -387,6 +401,14 @@ export type PlayerState = {
    */
   carried?: (CardInstance | null)[];
   // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
+  /**
+   * B5 E4, R451: what this player's plays leave for the rest of the game, never reset
+   * (`playCounts.ts`): `playedByTag`, their plays by tag (Classic+ #64's Fruit, AI Scaling Law's AI),
+   * casts included (R70) and countered plays never; `lastFaceUpPlay`, the last face-up card they
+   * played (AI Autocomplete). Absent until their first play, so a game without one hashes as it did
+   * before this field existed.
+   */
+  gameLog?: GameLog;
   // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
   /**
    * B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
@@ -475,6 +497,19 @@ export type GameState = {
    * (`randomCast.withCastMode`), so a state at rest, a paused one included, never carries it.
    */
   castsResolving?: CastMode[];
+  /**
+   * B5 E1, R448: the plays whose announce window is open, innermost last (a cast a responder makes
+   * announces inside the window it answers). Present only while one is open (`announce.ts`).
+   */
+  announcing?: AnnounceRecord[];
+  /** B5 E4: the last Spell anyone played (Classic #57 Echo), overwritten by the next, never cleared. */
+  lastSpell?: PlayRecord;
+  /**
+   * R58: the cards a cast-on-draw draw is casting, by the id each was drawn under, whose `drawn` is
+   * held from every dispatch until that cast has resolved — the draw's "complete" point
+   * (`drawComplete.ts`). Present only while one is held.
+   */
+  heldDraws?: string[];
   // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
   // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----
@@ -495,6 +530,29 @@ export type FieldExits = { count: number; last: Record<string, number>; uncovere
  * card that left has moved zones again since (`stays.noteMoved`). The note goes once both are true.
  */
 export type UncoveredNote = { resumed: string; reported?: boolean; movedOn?: boolean };
+
+// ---- v0.2.0 play pipeline A (E1 announce, E4 records) ----
+
+/**
+ * B5 E1, R448: one play or cast between its announce and §10.5 step 4. `faceDown` is a card that
+ * will be set face-down (a Trap or Field Trap): while it waits in the resolving zone only `player`
+ * reads it (`viewFor`). `countered` is set by the Counter that cancelled it (`effects/move.counterPlay`).
+ */
+export type AnnounceRecord = {
+  instanceId: string;
+  player: PlayerId;
+  faceDown?: true;
+  countered?: true;
+};
+
+/** B5 E4: a card as a play record names it — the definition and the face it was played with. */
+export type PlayRecord = { defId: string; radiant: boolean };
+
+/** B5 E4: a face-up play's record, with the type it was played as (B2.7). */
+export type FaceUpRecord = PlayRecord & { type: CardType };
+
+/** B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`). */
+export type GameLog = { playedByTag: Partial<Record<Tag, number>>; lastFaceUpPlay?: FaceUpRecord };
 
 function emptyRow<T>(size: number): (T | null)[] {
   return Array.from({ length: size }, () => null);

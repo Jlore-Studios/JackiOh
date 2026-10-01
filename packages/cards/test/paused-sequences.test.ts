@@ -1008,16 +1008,18 @@ describe("R122, §2.4: the answer to a cast's own choice goes on with the draw c
     // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
     // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
     // not with the resolution loop. The traps meet the first cast's resolution at the sweep's own
-    // step 4, which is a window as a play's is (R70, R17): every event so far reaches the traps
-    // there, before the sweep resolves. So Bear Honeypot's tokens arrive before the sweep's 1
-    // damage to each enemy unit, and it hits them.
+    // announce (§10.5 step 3a), the first window a cast opens, as a play's does (R70, R448): every
+    // event so far reaches the traps there, before the sweep moves or resolves. So Bear Honeypot's
+    // tokens arrive before the sweep's 1 damage to each enemy unit, and it hits them.
     const types = s.lastEvents.map((event) => event.type);
     const sweepDrawn = s.lastEvents.findIndex((event) => event.type === "drawn" && event.instanceId === second.id);
+    const sweepAnnounced = s.lastEvents.findIndex((event) => event.type === "cardAnnounced" && event.instanceId === second.id);
     const sweepCast = s.lastEvents.findIndex((event) => event.type === "cardPlayed" && event.instanceId === second.id);
     const trapFired = types.indexOf("trapFired");
     expect(sweepDrawn, `events: ${types.join(", ")}`).toBeGreaterThanOrEqual(0);
-    expect(sweepCast, `events: ${types.join(", ")}`).toBeGreaterThan(sweepDrawn);
-    expect(trapFired, `events: ${types.join(", ")}`).toBeGreaterThan(sweepCast);
+    expect(sweepAnnounced, `events: ${types.join(", ")}`).toBeGreaterThan(sweepDrawn);
+    expect(trapFired, `events: ${types.join(", ")}`).toBeGreaterThan(sweepAnnounced);
+    expect(sweepCast, `events: ${types.join(", ")}`).toBeGreaterThan(trapFired);
     const tokens = [1, 2, 3, 4, 5].flatMap((lane) => {
       const unit = s.unit("p2", lane);
       return unit !== null && unit.defId === RUSH_TOKEN ? [unit] : [];

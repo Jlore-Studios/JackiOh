@@ -14,6 +14,7 @@ import { hasEnchantment } from "./enchantments";
 import { cardTypeOf } from "./faces";
 import { runStartOfGame } from "./prompts";
 import { castCard, type EngineSink } from "./resolve";
+import { CAST_ON_DRAW_KEY, holdDraw } from "./drawComplete";
 import type { DrawLimit } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import {
@@ -451,8 +452,10 @@ export function completeDraw(
     // R58, R217: counted before the cast resolves, so a draw the cast makes continues from here.
     state.castChain = at.chain + 1;
     card.zone = { z: "resolving", player };
+    // R58: the draw is complete once this cast has resolved, and its `drawn` is answered then.
+    holdDraw(state, card.id);
     const before = state.pending;
-    castCard(sink, card);
+    castCard(sink, card, { data: { [CAST_ON_DRAW_KEY]: card.id } });
 
     // §9.3 and R122: the cast is a whole play and a play can ask, so the repeat of the draw belongs
     // to the action that answers, not to this one. Drawing on here would put cards in the hand — and

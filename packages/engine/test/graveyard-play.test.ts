@@ -106,7 +106,7 @@ describe("E11 play from the graveyard (R454)", () => {
     // (3) is more than 2 mana: not offered.
     expect(playsOf(state, spell.id)).toEqual([]);
 
-    addModifier({ state, events: [], rng: undefined as never }, "p1", {
+    addModifier({ state, events: [] }, "p1", {
       kind: "costDiscount",
       amount: 1,
       onlyType: "Spell",
@@ -151,7 +151,7 @@ describe("E11 play from the graveyard (R454)", () => {
     expect(playsOf(state, one.id)).toHaveLength(1);
 
     // A discount that takes the (1) Spell to (0) takes it below the floor: the price as it would be paid.
-    addModifier({ state, events: [], rng: undefined as never }, "p1", {
+    addModifier({ state, events: [] }, "p1", {
       kind: "costDiscount",
       amount: 1,
       expiry: { until: "thisTurn", turn: state.turn },

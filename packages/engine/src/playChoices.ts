@@ -46,10 +46,17 @@ import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
 import { whyPlayBanned } from "./costRules";
 import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
 import { unitHas } from "./layers";
-import { isXCost, playCost } from "./mana";
+import { effectiveCost, isXCost, playCost } from "./mana";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
-import type { CardInstance, GameState } from "./state";
+import { findInstance, type CardInstance, type GameState } from "./state";
+import { spellCannotReach } from "./restrictions";
+import {
+  canPayToTarget,
+  targetingDiscardSets,
+  targetingDiscardsOf,
+  whyTargetingDiscardsRefused,
+} from "./targeting";
 import {
   acceptsStackCard,
   activeUnitsOf,
@@ -88,7 +95,7 @@ const ROWS: readonly Row[] = ["units", "backrow"];
 
 /** The pick kinds a `TargetFilter.of` may name, in the order selections are offered in. */
 type PickKind = NonNullable<TargetFilter["of"]>[number];
-const PICK_KIND_ORDER: readonly PickKind[] = ["unit", "backrow", "hand", "zone", "hero"];
+const PICK_KIND_ORDER: readonly PickKind[] = ["unit", "backrow", "hand", "graveyard", "zone", "hero"];
 
 // ---------------------------------------------------------------------------
 // What the card asked for
@@ -167,8 +174,33 @@ export function giftedMakesRadiant(state: GameState, player: PlayerId, costPaid:
  * face step 5 will run, which is known at step 1: the cost it pays is.
  */
 export function resolvingFace(state: GameState, player: PlayerId, card: CardInstance, costPaid: number): CardInstance {
-  if (card.radiant || !giftedMakesRadiant(state, player, costPaid)) return card;
+  if (card.radiant || !playMadeRadiant(state, player, card, costPaid)) return card;
   return { ...card, radiant: true };
+}
+
+/**
+ * Classic+ #68 Organic Produce, R449: whether a permanent on this player's side makes every card carrying
+ * one of its tags Radiant as the player plays it (`radiantPlaysTagged`) — R213's rule by tag, on every
+ * such play (a cast included, R70) rather than the first cheap one. The card's text is its
+ * controller's (§8 Conventions), a Vanilla one has none (`flagsOf`), and it never catches its own
+ * play: step 3 runs before step 4 puts it on the field (R119).
+ */
+export function taggedPlayRadiant(state: GameState, player: PlayerId, card: CardInstance): boolean {
+  const tags = defOf(state, card.defId).tags;
+  if (tags.length === 0) return false;
+  return permanentsOf(state, player).some((held) => {
+    const wanted = flagsOf(held).radiantPlaysTagged;
+    return wanted !== undefined && wanted.some((tag) => tags.includes(tag));
+  });
+}
+
+/**
+ * §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
+ * card (R213) or a tag rule's (Classic+ #68). Step 1 reads it to know the face the play's choices
+ * answer (R214), and step 3 applies it.
+ */
+export function playMadeRadiant(state: GameState, player: PlayerId, card: CardInstance, costPaid: number): boolean {
+  return giftedMakesRadiant(state, player, costPaid) || taggedPlayRadiant(state, player, card);
 }
 
 /**
@@ -479,15 +511,69 @@ function cardAllowed(
   filter: TargetFilter | undefined,
   held: CardInstance,
   self: CardInstance,
+  player: PlayerId,
 ): boolean {
   if (filter?.excludeSelf === true && held.id === self.id) return false;
   const def = defOf(state, held.defId);
-  return typeAllows(filter, cardTypeOf(state, held)) && tagsAllow(filter, def.tags);
+  if (!typeAllows(filter, cardTypeOf(state, held)) || !tagsAllow(filter, def.tags)) return false;
+  // §10.6, B5: the v0.2.0 filter fields. The cost is R65's where the card is now (a hand card at its
+  // hand cost; an X card on the field at the X it was played for, which it keeps there).
+  const range = filter?.costRange;
+  if (range !== undefined) {
+    const cost = effectiveCost(state, held);
+    if (range.min !== undefined && cost < range.min) return false;
+    if (range.max !== undefined && cost > range.max) return false;
+  }
+  if (filter?.damaged === true && held.damage <= 0) return false;
+  if (filter?.plague === true && (held.counters.plague ?? 0) <= 0) return false;
+  return checkAllows(state, filter, self, player, held, { pick: "instance", instanceId: held.id });
 }
 
-/** A hero has no card type and no tags, so a filter that names either cannot reach one. */
-function heroAllowed(filter: TargetFilter | undefined): boolean {
-  return filter?.type === undefined && filter?.tags === undefined;
+/**
+ * §10.6: a filter's named predicate (`TargetFilter.check`), the declaring card's own `targetChecks`
+ * entry, asked with the candidate — null for a hero or a zone. A name the script does not hold admits
+ * nothing, so a misspelt check never widens a declaration.
+ */
+function checkAllows(
+  state: GameState,
+  filter: TargetFilter | undefined,
+  self: CardInstance,
+  player: PlayerId,
+  candidate: CardInstance | null,
+  selection: Selection,
+): boolean {
+  const name = filter?.check;
+  if (name === undefined) return true;
+  const check = scriptOf(self).targetChecks?.[name];
+  if (check === undefined) return false;
+  return check({ state, self, player, radiant: self.radiant, candidate, selection });
+}
+
+/**
+ * A hero has no card type, no tags, no cost, no damage count and no Plague Tokens, so a filter that
+ * names any of them cannot reach one; a named predicate is asked.
+ */
+function heroAllowed(
+  state: GameState,
+  filter: TargetFilter | undefined,
+  self: CardInstance,
+  player: PlayerId,
+  selection: Selection,
+): boolean {
+  if (filter?.type !== undefined || filter?.tags !== undefined) return false;
+  if (filter?.costRange !== undefined || filter?.damaged === true || filter?.plague === true) return false;
+  return checkAllows(state, filter, self, player, null, selection);
+}
+
+/**
+ * B5 E5, E35, R450: whether a declaration may pick a card acting on the field on top of its filter —
+ * a Spell's declarations never offer a card Immune to Spells, and a `target` declaration never offers
+ * a card whose targeting cost (Classic #89) its chooser cannot pay from the rest of their hand.
+ */
+function reachable(state: GameState, player: PlayerId, card: CardInstance, decl: TargetDecl, candidate: CardInstance): boolean {
+  if (decl.kind === "tribute") return true;
+  if (spellCannotReach(state, card, candidate)) return false;
+  return decl.kind !== "target" || canPayToTarget(state, player, candidate, card.id);
 }
 
 /**
@@ -516,19 +602,23 @@ export function legalSelectionsFor(
     out.push(selection);
   };
 
+  // B5 E5, E35, R450: a card on the field is offered only where the declaring card may reach it.
+  const onField = (held: CardInstance): boolean =>
+    cardAllowed(state, filter, held, card, player) && reachable(state, player, card, decl, held);
+
   for (const side of sidesFor(player, decl)) {
     for (const kind of kinds) {
       switch (kind) {
         case "unit":
           for (const unit of activeUnitsOf(state, side)) {
-            if (cardAllowed(state, filter, unit, card)) offer({ pick: "instance", instanceId: unit.id });
+            if (onField(unit)) offer({ pick: "instance", instanceId: unit.id });
           }
           break;
         case "backrow":
           for (const ref of slotsOf(side, "backrow")) {
             const held = cardAt(state, ref);
             if (held === null) continue;
-            if (cardAllowed(state, filter, held, card)) offer({ pick: "instance", instanceId: held.id });
+            if (onField(held)) offer({ pick: "instance", instanceId: held.id });
           }
           break;
         case "hand":
@@ -536,24 +626,103 @@ export function legalSelectionsFor(
           if (side !== player) break;
           for (const held of state.players[player].hand) {
             if (held.id === card.id) continue;
-            if (cardAllowed(state, filter, held, card)) offer({ pick: "instance", instanceId: held.id });
+            if (cardAllowed(state, filter, held, card, player)) offer({ pick: "instance", instanceId: held.id });
+          }
+          break;
+        case "graveyard":
+          // B5 (Classic #54's "on the field or in your graveyard"): a graveyard is public (§3), so
+          // either side's may be named; the card being played is never in one.
+          for (const held of state.players[side].graveyard) {
+            if (held.id === card.id) continue;
+            if (cardAllowed(state, filter, held, card, player)) offer({ pick: "instance", instanceId: held.id });
           }
           break;
         case "zone":
           for (const row of ROWS) {
             for (const ref of slotsOf(side, row)) {
-              if (isOpen(state, ref)) offer({ pick: "zone", player: ref.player, row: ref.row, lane: ref.lane });
+              if (!isOpen(state, ref)) continue;
+              const selection: Selection = { pick: "zone", player: ref.player, row: ref.row, lane: ref.lane };
+              if (checkAllows(state, filter, card, player, null, selection)) offer(selection);
             }
           }
           break;
-        case "hero":
-          if (heroAllowed(filter)) offer({ pick: "hero", player: side });
+        case "hero": {
+          const selection: Selection = { pick: "hero", player: side };
+          if (heroAllowed(state, filter, card, player, selection)) offer(selection);
           break;
+        }
       }
     }
   }
 
   return out;
+}
+
+/**
+ * B5 E5, R450: which of a play's flat `targets` are targetings — each pick's declaration when it is a
+ * `target` declaration, null for a Tribute, hand or zone pick (R90's reading of the list). The
+ * targeting point reads it: a cost is owed, and an interception answers, only for these. `declared`
+ * is the card's own declarations by default; an activation passes its ability's (B3.2, R384).
+ */
+export function targetingDeclsOf(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  selections: readonly Selection[],
+  modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
+): (TargetDecl | null)[] {
+  const decls = activeTargetDecls(declared, modes);
+  if (decls.length === 0) return selections.map(() => null);
+  const offered = decls.map((decl) => legalSelectionsFor(state, player, card, decl));
+  const slices = splitSelections(decls, offered, selections);
+  return slices.flatMap((slice, index) => {
+    const decl = decls[index];
+    return slice.map(() => (decl !== undefined && decl.kind === "target" ? decl : null));
+  });
+}
+
+/**
+ * B5 E5, R450: the discards a play's declared targets cost it (Classic #89), read against the face
+ * the play resolves (R214) — or an activation's, against its ability's declarations. 0 for choices
+ * that target nothing costly.
+ */
+export function targetingDiscardsRequired(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  selections: readonly Selection[],
+  modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
+): number {
+  const decls = targetingDeclsOf(state, player, card, selections, modes, declared);
+  let total = 0;
+  selections.forEach((selection, index) => {
+    if (decls[index] === null || decls[index] === undefined || selection.pick !== "instance") return;
+    const candidate = findInstance(state, selection.instanceId);
+    if (candidate !== undefined) total += targetingDiscardsOf(state, candidate);
+  });
+  return total;
+}
+
+/**
+ * Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
+ * zone, would be a legal pick of `decl` — a declared pick moves to it only then (Hearthstone's
+ * Spellbender). Read with the card as it would stand there: its cost on the field, undamaged.
+ */
+export function interceptorFitsDecl(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  decl: TargetDecl,
+  interceptor: CardInstance,
+): boolean {
+  const defender = interceptor.controller;
+  if (!sidesFor(player, decl).includes(defender) || !pickKindsFor(decl).includes("unit")) return false;
+  const zone = firstFreeZone(state, defender, "units");
+  if (zone === null) return false;
+  const probe: CardInstance = { ...interceptor, zone: { z: "field", player: defender, row: "units", lane: zone.lane } };
+  return cardAllowed(state, decl.filter, probe, card, player) && !spellCannotReach(state, card, probe);
 }
 
 // ---------------------------------------------------------------------------
@@ -903,17 +1072,23 @@ export function pricedPlayActions(
             if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
               continue;
             }
-            for (const payment of paid) {
-              out.push({
-                type: "play",
-                instanceId: card.id,
-                ...(zone === undefined ? {} : { zone }),
-                ...(x === undefined ? {} : { x }),
-                ...(embiggen === undefined ? {} : { embiggen }),
-                ...(tributes.length === 0 ? {} : { tributes }),
-                ...choices,
-                ...payment,
-              });
+            // B5 E5, R450: each set of cards that pays the targets' discard cost, listed whole like a
+            // Tribute's paying sets (a price left off the list could never be paid).
+            const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
+            for (const discards of targetingDiscardSets(state, player, owed, playUses(card, choices.targets ?? []))) {
+              for (const payment of paid) {
+                out.push({
+                  type: "play",
+                  instanceId: card.id,
+                  ...(zone === undefined ? {} : { zone }),
+                  ...(x === undefined ? {} : { x }),
+                  ...(embiggen === undefined ? {} : { embiggen }),
+                  ...(tributes.length === 0 ? {} : { tributes }),
+                  ...choices,
+                  ...payment,
+                  ...(discards.length === 0 ? {} : { discards }),
+                });
+              }
             }
           }
         }
@@ -1118,7 +1293,15 @@ export function whyChoicesRefused(
   if (!tributePicksAgree(state, player, face, action.targets ?? [], action.modes ?? [], action.tributes ?? [])) {
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
-  return null;
+  // B5 E5, R450: a declared target that costs discards carries them (Classic #89), as a Tribute
+  // carries its paying set (R101) — never the card being played.
+  const required = targetingDiscardsRequired(state, player, face, action.targets ?? [], action.modes ?? []);
+  return whyTargetingDiscardsRefused(state, player, required, action.discards ?? [], playUses(card, action.targets ?? []));
+}
+
+/** R450: the hand cards a play itself uses — the card played and any hand card it picks — which pay no cost. */
+function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
+  return [card.id, ...targets.flatMap((selection) => (selection.pick === "instance" ? [selection.instanceId] : []))];
 }
 
 // ---------------------------------------------------------------------------

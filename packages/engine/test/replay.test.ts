@@ -12,7 +12,8 @@ const SEEDS = Array.from({ length: 100 }, (_, i) => `smoke-${i + 1}`);
 
 /** M1 gate: folding a recorded log reaches exactly the same state. */
 describe("replay (M1 gate)", () => {
-  it("folds 100 recorded games to the same state hash", { timeout: 180_000 }, () => {
+  // R389: the 60-turn cap doubles the length of a game that reaches it, which most random ones do.
+  it("folds 100 recorded games to the same state hash", { timeout: 400_000 }, () => {
     for (const seed of SEEDS) {
       const live = playRandomGame(seed);
       setupCatalog();

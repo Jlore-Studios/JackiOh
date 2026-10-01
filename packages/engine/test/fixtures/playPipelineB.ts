@@ -5,7 +5,7 @@
 //
 // Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture file (BUILD §0).
 
-import type { Action, ActionBody, ActionInput, CardDef, CardDefs, Keyword, PlayerId } from "@jackioh/shared";
+import type { Action, ActionBody, ActionInput, CardDef, Keyword, PlayerId } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { defOf, registerCatalog, registeredCatalog } from "../../src/catalog";
 import {
@@ -323,7 +323,7 @@ export const PB_SCRIPTS: Record<string, CardScripts> = {
 
 /** Merge this file's cards into whatever catalog and scripts the test registered first. */
 export function registerPipelineB(): void {
-  const defs: CardDefs = { ...registeredCatalog() };
+  const defs: Record<string, CardDef> = { ...registeredCatalog() };
   for (const entry of PB_DEFS) defs[entry.id] = entry;
   registerCatalog(defs);
   registerScripts({ ...registeredScripts(), ...PB_SCRIPTS });

@@ -59,6 +59,7 @@ import type {
   Zone,
 } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
+import { announcedFaceDownTo } from "./announce";
 import { findDef } from "./catalog";
 import { hasExertion } from "./combat";
 import { conditionActive } from "./condition";
@@ -203,6 +204,8 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
   if (zone.z === "library") return false;
   if (zone.z === "hand") return zone.player === viewer;
   if (zone.z === "field" && zone.row === "backrow") return backrowIsPublic(state, card, viewer);
+  // R448: a card waiting in the resolving zone to be set face-down is its player's alone (R33, R227).
+  if (announcedFaceDownTo(state, card, viewer)) return false;
   // Units, graveyard, exile, `resolving` (R98) and `gone` (R11, R86) are all public.
   return true;
 }
@@ -441,7 +444,7 @@ function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): 
  * must not hand either seat an identity through a badge. `echo` is the grant as it stands
  * (`echo.echoGrantOf`), a number read off the permanent's current face (R209, §5.2).
  */
-function modifierLabel(mod: PlayerModifier, echo: number): string {
+function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): string {
   switch (mod.kind) {
     case "costDiscount":
       return discountLabel(mod);
@@ -469,6 +472,9 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
     // B5 E8: Classic+ #22 Blood Moon's base face, read off the modifier alone.
     case "healToDamage":
       return "Healing on your enemies deals Pierce damage instead";
+    // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
+    case "replacePlays":
+      return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
   }
 }
 
@@ -487,7 +493,7 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
  */
 function modifierViews(state: GameState, player: PlayerId): ModifierView[] {
   const views = state.players[player].mods.map((mod) => {
-    const label = modifierLabel(mod, echoGrantOf(state, player, mod));
+    const label = modifierLabel(state, mod, echoGrantOf(state, player, mod));
     return { id: mod.id, label: modifierIsLive(state, mod) ? label : `${label} (next turn)` };
   });
   // §6.3 Mana: the next refresh's rider (#21 Hinder, #24 Efficiency Dividend) is a modifier too, one
@@ -547,8 +553,13 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     ...(player === viewer ? { ownLibrary: ownLibraryView(state, player) } : {}),
     graveyard: side.graveyard.map((card) => cardView(state, card)),
     exile: side.exile.map((card) => cardView(state, card)),
-    // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public.
-    resolving: side.resolving.map((card) => cardView(state, card)),
+    // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
+    // card announced to be set face-down waits here too, and the other player sees a card back.
+    resolving: side.resolving.map((card) =>
+      announcedFaceDownTo(state, card, viewer)
+        ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID, radiant: false, cost: HIDDEN_COST }
+        : cardView(state, card),
+    ),
     units: side.units.map((pile) => (pile === null ? null : unitViewOf(state, pile, viewer))),
     backrow: side.backrow.map((card) => backrowView(state, card, viewer)),
     ...carriedView(state, player, viewer),
@@ -891,7 +902,10 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     case "cardAnnounced": {
       const unread = (event.faceDown === true && event.player !== viewer) || hidden(event.instanceId);
       if (!unread) return { ...event, targets: event.targets.map((id) => (hidden(id) ? HIDDEN_ID : id)) };
-      return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID, targets: event.targets.map(() => HIDDEN_ID) };
+      // R448: whether a face-down card is a Trap or a Field Trap is the card's too (R33), so the
+      // other player reads every one as a Trap, as its backrow will show it.
+      const cardType = event.faceDown === true ? "Trap" : event.cardType;
+      return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID, cardType, targets: event.targets.map(() => HIDDEN_ID) };
     }
 
     // B5 E1, E2, B3.3: judged by where the card is now (R97) — a countered card in a public pile reads,

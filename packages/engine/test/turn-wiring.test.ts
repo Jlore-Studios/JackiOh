@@ -71,9 +71,12 @@ function register(): void {
   registerScripts({ ...registeredScripts(), ...TURN_SCRIPTS, [logCard.id]: LOG_SCRIPTS });
 }
 
-/** A test double's prompt for `player`, whose answer re-enters the log card's `step`. */
-function ask(sink: EngineSink, player: PlayerId, step: string): void {
-  openPrompt(sink, {
+/**
+ * A test double's prompt for `player`, whose answer re-enters the log card's `step`. The turn hands
+ * every stage its whole sink; the Animated stages declare only the narrower `FieldSink` they use.
+ */
+function ask(sink: Pick<EngineSink, "state" | "events">, player: PlayerId, step: string): void {
+  openPrompt(sink as EngineSink, {
     player,
     kind: "target",
     prompt: "a stage asks",

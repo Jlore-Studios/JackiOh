@@ -233,6 +233,11 @@ export type { LaneSpec, ZoneScope } from "./locks";
 export { addCostRule, cast, castEach, castNew, castRandom, enchantNextSpell } from "./cast";
 export type { CastDef, CastHow, CostRuleSpan } from "./cast";
 
+// B5 E1, E2, R448: Counter the play an announce window answers — to its owner's graveyard, to exile,
+// or to the countering player's hand as theirs ("thief"). `counter` above is its §6.3 name.
+export { counterPlay } from "./move";
+export type { CounterDestination } from "./move";
+
 // ---- v0.2.0 verbs: activate and turn (end the turn, delayed kinds, rest of the game) ----
 
 // B5 E10, R456: end the turn from an effect, now or after N more actions.

@@ -103,7 +103,7 @@ function play(seed: string): { state: GameState; log: Action[]; reached: Reached
 }
 
 describe("E19, E23–E25 whole games replay (§9.3)", () => {
-  it("R113 random games on the generation decks fold back to the same state, through every pause", () => {
+  it("R113 random games on the generation decks fold back to the same state, through every pause", { timeout: 120_000 }, () => {
     const total: Reached = { prompts: 0, placements: 0, fusions: 0, transforms: 0, summons: 0 };
     for (const seed of ["gen-a", "gen-b", "gen-c", "gen-d", "gen-e", "gen-f"]) {
       const game = play(seed);

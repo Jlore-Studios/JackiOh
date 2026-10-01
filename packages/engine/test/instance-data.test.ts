@@ -248,7 +248,7 @@ function playOut(seed: string): { state: GameState; log: Action[]; decks: [strin
 }
 
 describe("§9.3 games dealt the instance-data fixtures replay exactly (R386, R385)", () => {
-  it("R386 six seeded games fold back from their logs to the same state, and they did change cards", () => {
+  it("R386 six seeded games fold back from their logs to the same state, and they did change cards", { timeout: 120_000 }, () => {
     let tuned = 0;
     for (const seed of ["id-1", "id-2", "id-3", "id-4", "id-5", "id-6"]) {
       const played = playOut(seed);

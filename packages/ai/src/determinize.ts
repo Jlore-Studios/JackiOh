@@ -73,6 +73,10 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
     for (const card of backrow) {
       if (card !== null && isPlaceholder(card)) card.defId = sampleDef(trapPool, seen, sampled, rng);
     }
+    // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
+    for (const card of next.players[side].resolving) {
+      if (isPlaceholder(card)) card.defId = sampleDef(trapPool, seen, sampled, rng);
+    }
   }
 
   // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token Core pool.

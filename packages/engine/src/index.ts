@@ -47,5 +47,10 @@ export * from "./enchantments";
 // windows and their declarations, and the restriction and status readers a card script asks with.
 export * from "./replacements";
 export * from "./restrictions";
+// Patch v0.2.0, play pipeline A: the announce window's record (B5 E1, R448) and the targeting point's
+// rules (B5 E5, E9, R450), which the AI's redaction and the combat module read.
+export * from "./announce";
+export * from "./targeting";
+export * from "./targetingPoint";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";
