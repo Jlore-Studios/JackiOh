@@ -52,10 +52,12 @@ import {
 import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
   createMemoryDeckStores,
+  createMemoryLastBoardStore,
   createMemoryTutorialStore,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type LastBoardTables,
   type TutorialTables,
 } from "./memory-stores";
 import type {
@@ -91,7 +93,8 @@ type Tables = {
   tickets: Ticket[];
   results: ResultRow[];
 } & DeckTables &
-  TutorialTables;
+  TutorialTables &
+  LastBoardTables;
 
 function emptyTables(): Tables {
   return {
@@ -109,6 +112,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
   };
 }
 
@@ -542,6 +546,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
 
   // R320: tutorial progress on the account, shared with the unit-test fake like the decks.
   store.tutorial = createMemoryTutorialStore(() => tables);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables);
 
   // -------------------------------------------------------------------------
   // Matches (§9.3, §9.5)

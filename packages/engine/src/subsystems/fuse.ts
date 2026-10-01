@@ -52,6 +52,8 @@ import {
   FUSED_DIGEST_MARK,
   RADIANT_INGREDIENT_MARK,
   defOf,
+  findDef,
+  isDigestId,
   fusedIdParts,
   fusedIdSpecs,
   registerFusedIngredients,
@@ -389,12 +391,13 @@ function buildDef(
   targetDef: CardDef | null,
   forced: readonly boolean[],
   keptCost: KeptCost | null,
+  fixedId?: string,
 ): CardDef {
   const specs: FusedIngredient[] = defs.map((def, at) => ({
     defId: def.id,
     ...(forced[at] === true ? { radiant: true as const } : {}),
   }));
-  const id = nextTransientId(state, specs);
+  const id = fixedId ?? nextTransientId(state, specs);
   const refs = unionRefs(defs);
   const loc = summedLoc(defs);
   return {
@@ -853,6 +856,34 @@ export function syncFusedScripts(state: GameState): void {
     if (def.ingredients !== undefined) registerFusedIngredients(def.id, def.ingredients);
   }
   for (const def of defs) ensureFused(def.id);
+}
+
+/**
+ * R179, R417, R564: the definition `defId` names in this state — a catalog card's, one the state
+ * already holds, or a fused one rebuilt from the id alone into `transientDefs` (its fused
+ * ingredients first), as `syncFusedScripts` rebuilds the scripts. No instance stands behind it, so
+ * each ingredient is worn as printed and priced as R65 reads it out of play, with no target on the
+ * field (R77's shared type). Null for an id that cannot be rebuilt: a digest
+ * (R468), a bare `t-<n>`, an ingredient the catalog lacks. C+ #29 brings fused cards back this way.
+ */
+export function rebuildFusedDef(state: GameState, defId: string, owner: PlayerId): CardDef | null {
+  const known = findDef(state, defId);
+  if (known !== undefined) return known;
+  const specs = isDigestId(defId) ? null : fusedIngredientSpecs(defId);
+  if (specs === null) return null;
+  const defs: CardDef[] = [];
+  for (const spec of specs) {
+    const def = rebuildFusedDef(state, spec.defId, owner);
+    if (def === null) return null;
+    defs.push(def);
+  }
+  // Instances in no pile, numbered off a scratch counter so the state's ids are untouched.
+  const scratch = { nextId: 0 };
+  const ingredients = defs.map((def) => newInstance(scratch, def.id, owner, { z: "gone", player: owner }));
+  const def = buildDef(state, ingredients, defs, null, specs.map((spec) => spec.radiant === true), null, defId);
+  state.transientDefs[defId] = def;
+  ensureFused(defId);
+  return def;
 }
 
 // ---------------------------------------------------------------------------

@@ -38,6 +38,7 @@
  */
 
 import type { Action, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
+import type { LastBoardEntry } from "../../src/api/ports";
 import type { EnginePort, EngineState, MatchSnapshot } from "../../src/match/engine";
 
 export const FAKE_HAND_SIZE = 3;
@@ -59,6 +60,8 @@ type FakeState = {
   mulligan: Record<PlayerId, { id: string; keep: string[] | null }> | null;
   applied: { nonce: string; events: GameEvent[] }[];
   nextChoice: number;
+  /** R417: the last boards it was created with, kept so a fold is the same game. */
+  lastBoards: [LastBoardEntry[], LastBoardEntry[]];
 };
 
 export type FakeEngineOptions = {
@@ -155,7 +158,7 @@ function emptySide(player: PlayerId, fake: FakeState, viewer: PlayerId): SideVie
 
 export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
   const port: EnginePort = {
-    createGame: ({ seed, decks }) => {
+    createGame: ({ seed, decks, lastBoards }) => {
       const state: FakeState = {
         seed,
         decks: [[...decks[0]], [...decks[1]]],
@@ -170,6 +173,7 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         mulligan: null,
         applied: [],
         nextChoice: 1,
+        lastBoards: [[...(lastBoards?.[0] ?? [])], [...(lastBoards?.[1] ?? [])]],
       };
       return asEngine(state);
     },
@@ -442,8 +446,8 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
       };
     },
 
-    fold: ({ seed, decks, log }) => {
-      let state = port.beginGame(port.createGame({ seed, decks })).state;
+    fold: ({ seed, decks, log, lastBoards }) => {
+      let state = port.beginGame(port.createGame({ seed, decks, ...(lastBoards === undefined ? {} : { lastBoards }) })).state;
       const errors: { nonce: string; error: string }[] = [];
       for (const action of log) {
         const result = port.reduce(state, action);
@@ -479,6 +483,13 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
       const deck = fakeDeck();
       const offset = seedHash(seed) % deck.length;
       return [...deck.slice(offset), ...deck.slice(0, offset)];
+    },
+
+    // R417: the scripted cards are all face-up, so both seats read every card played as the field.
+    lastBoards: (state) => {
+      const fake = asFake(state);
+      const field = [...fake.played.p1, ...fake.played.p2].map((defId) => ({ defId, radiant: false }));
+      return [field, field.map((entry) => ({ ...entry }))];
     },
   };
 
