@@ -244,7 +244,7 @@ describe("drawPriced (C+ #65.2, #65.3)", () => {
     expect(eventsOfType(events, "costChanged")).toEqual([]);
   });
 
-  it("R58 a card cast on draw never reaches the hand, so neither it nor the card the draw then brings is priced", () => {
+  it("R596 a card cast on draw never reaches the hand, so neither it nor the card the draw then brings is priced", () => {
     const state = game("priced-cod");
     const [cast, next] = setLibrary(state, "p1", [castOnDraw.id, "fx-3"]);
     run(state, drawPriced({ costMod: -1 }), resolving(state, pricedDraw.id));

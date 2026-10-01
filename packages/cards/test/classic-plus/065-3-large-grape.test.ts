@@ -65,7 +65,7 @@ describe("C+ #65.3 Large Grape", () => {
       hero.expectHealth("p1", 35);
     });
 
-    it("§2.4 R58 a burned card, a fatigue draw and a card cast on draw get no price", () => {
+    it("R596 a burned card, a fatigue draw and a card cast on draw — nor the card its draw then brings — get no price", () => {
       const burned = scenario({ p1: { hand: [GRAPE, ...Array.from({ length: 10 }, () => FILLER)], library: [DECK_B] }, p2: { hand: [FILLER] } });
       burned.play(GRAPE, { targets: [{ pick: "hero", player: "p2" }] });
       expect(burned.card(DECK_B).zone.z).toBe("graveyard");

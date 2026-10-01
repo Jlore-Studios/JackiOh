@@ -101,7 +101,7 @@ describe("C+ #65.2 Normal Grape", () => {
       expect(s.hand("p1").every((card) => card.costMod === 0)).toBe(true);
     });
 
-    it("R58 a card cast on draw never reaches the hand: neither it nor the card its draw then brings is discounted", () => {
+    it("R596 a card cast on draw never reaches the hand: neither it nor the card its draw then brings is discounted", () => {
       const s = scenario({
         p1: { hand: [GRAPE, FILLER], library: [{ def: HINDER, radiant: true }, DECK_B] },
         p2: { hand: [FILLER] },

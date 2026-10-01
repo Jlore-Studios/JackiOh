@@ -121,11 +121,12 @@ export function damageEnemyOrHealFriend(args: { amount: number }): Effect {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The card one draw put in a hand, by the `drawn` event that draw made: the first `drawn` of that
- * player after `from` — a draw's own event comes before anything its card's cast draws (R58) — and only
- * when the draw ended with the card in a hand (`drawn`, or Infinite Reserves' Rush Token). A card cast
- * on draw never reaches the hand, a burned one is in the graveyard, a fatigue draw brings none and a
- * limited draw none either (§2.4, R4, R58, R457), so each of those has no card.
+ * R596: the card one draw put in a hand, by the `drawn` event that draw made: the first `drawn` of
+ * that player after `from` — a draw's own event comes before anything its card's cast draws (R58) —
+ * and only when the draw ended with the card in a hand (`drawn`, or Infinite Reserves' Rush Token). A
+ * card cast on draw never reaches the hand, and the card its chain's repeat then brings is that repeat's
+ * card, not this draw's; a burned one is in the graveyard, a fatigue draw brings none and a limited
+ * draw none either (§2.4, R4, R58, R457), so each of those has no card.
  */
 export function cardThisDrawPutInHand(
   ctx: Pick<EffectContext, "state" | "events">,
