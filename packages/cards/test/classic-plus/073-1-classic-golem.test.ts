@@ -11,6 +11,7 @@ import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
 import { scenario, type Scenario } from "../_harness";
+import { createInvariantMonitor } from "../_invariants";
 import { base, def, radiant } from "../../src/scripts/classic-plus/073-1-classic-golem";
 
 const GOLEM = "classicplus-073-1";
@@ -99,6 +100,19 @@ describe("C+ #73.1 Classic Golem", () => {
       expect(attacks.length).toBeGreaterThan(0);
       s.attack(made ?? "", "hero");
       expect(s.events.filter((event) => event.type === "attackDeclared")).toHaveLength(2);
+    });
+
+    it("R424 the fuzz monitor agrees: the readied new Unit is no sick attack (I1) and its missing summonedTurn no I4 mismatch", () => {
+      // The cards-plus-d simulation found the monitor reading R424's lifted sickness as a lost entry.
+      const s = golem(VANILLA);
+      const monitor = createInvariantMonitor(s.state);
+      const from = s.events.length;
+      attackWith(s);
+      expect(monitor.after(s.events.slice(from), s.state)).toEqual([]);
+      const made = s.unit("p1", 1)?.id ?? "";
+      const again = monitor.before(s.state, "p1", { type: "attack", attackerId: made, targetId: "hero-p2" });
+      // I3 names the cards the scenario placed without an entry event; nothing else may be found.
+      expect(again.filter((finding) => !finding.startsWith("I3"))).toEqual([]);
     });
 
     it("R424 a defender that survives: it still transforms, but the new Unit is summoning sick", () => {
