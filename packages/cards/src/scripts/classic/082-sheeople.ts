@@ -5,13 +5,9 @@
 //            (R101); a Tribute that takes one unit (C #21 Turtinator's) counts it once. A Tribute is a
 //            death (§6.2), so the draw happens when it is tributed. Tunes: draw 2 ↑; worth 2 ↑."
 //
-// The worth is the Sheep Token's static flag, read off the face that is up (`playChoices.tributeValueOf`)
-// toward a play's Tribute X only; a script's Tribute counts units. The Death draw is read through
-// `param` (R386).
-//
-// ponytail: `staticFlags.tributeWorth` is a number the engine reads off the face, never off the instance,
-// so it is the declared `worth` as printed on each face: a Degrade or Upgrade of `worth` is not felt
-// until the engine reads the flag through `param` (reported; the R386 worth test waits on it).
+// The worth is the Sheep Token's static flag, which `playChoices.tributeValueOf` reads through the
+// declared `worth` (R386), toward a play's Tribute X only; a script's Tribute counts units. The Death
+// draw is read through `param` (R386).
 
 import { param, type Script } from "@jackioh/engine";
 import { draw } from "@jackioh/engine/effects";

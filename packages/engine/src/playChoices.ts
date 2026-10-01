@@ -47,6 +47,7 @@ import { whyPlayBanned } from "./costRules";
 import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
 import { unitHas } from "./layers";
 import { effectiveCost, isXCost, playCost } from "./mana";
+import { paramDeclOf, paramValue } from "./params";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
@@ -390,8 +391,12 @@ export const SHEEP_TRIBUTE_VALUE = 2;
  * an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
  * take the larger worth, as they take the larger Tribute.
  */
-export function tributeValueOf(_state: GameState, unit: CardInstance): number {
-  const worth = flagsOf(unit).tributeWorth;
+export function tributeValueOf(state: GameState, unit: CardInstance): number {
+  const flag = flagsOf(unit).tributeWorth;
+  // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
+  // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
+  const worth =
+    typeof flag === "number" && paramDeclOf(state, unit.defId, "worth") !== undefined ? paramValue(state, unit, "worth") : flag;
   return typeof worth === "number" && worth > 1 ? worth : 1;
 }
 

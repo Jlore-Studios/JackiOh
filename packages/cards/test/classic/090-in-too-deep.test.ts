@@ -267,8 +267,7 @@ describe("C #90 In Too Deep", () => {
       expect(line(s)?.progress).toEqual({ "2": 0 });
       const timmy = must(s.unit("p2", 2), "Timmy");
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: timmy.id }] });
-      const died = must(s.lastEvents.find((e) => e.type === "destroyed"), "Timmy's death");
-      expect(died.type === "destroyed" && died.controller).toBeUndefined();
+      expect(s.lastEvents.find((e) => e.type === "destroyed")).toMatchObject({ owner: "p2", controller: "p2" });
       expect(line(s)?.progress).toEqual({ "2": 1 });
     });
 
