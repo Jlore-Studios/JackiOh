@@ -215,6 +215,133 @@ describe("radiant frames keep their type and rarity", () => {
   });
 });
 
+/* ---------------------------------------------------------------------------------------- R503 */
+
+// R503: every face shows its set as a small mark on the frame, clear of everything else the frame
+// carries, legible at the inspect and hand sizes and gone on the smallest faces; a token that prints
+// a rarity wears that rarity's frame; and the Book, Pancake and AI families draw pictures of their own.
+describe("R503: the set mark, printed rarity and the new families on real faces", () => {
+  /** One card per set, and the frames that crowd the band the mark sits in. */
+  const MARKED = [
+    { id: "core-020", why: "a Core Unit (stats in the bottom corners)" },
+    { id: "classic-043", why: "a Classic Spell" },
+    { id: "classicplus-043", why: "a Classic+ Legendary Spell (crest)" },
+    { id: "classicplus-019-1", why: "a Classic+ token printed Legendary" },
+    { id: "classic-038", why: "a Classic Field Trap" },
+    { id: "core-093", why: "the long layout (a dense rules box)" },
+  ] as const;
+
+  /** What the mark must never cover. */
+  const CLEAR_OF = [".cost-gem", ".card-name", ".cf-gem", ".card-text", ".cf-atk", ".cf-hp", ".cf-crest"] as const;
+
+  function overlaps(a: DOMRect, b: DOMRect): boolean {
+    const SLACK = 0.5;
+    return a.left < b.right - SLACK && b.left < a.right - SLACK && a.top < b.bottom - SLACK && b.top < a.bottom - SLACK;
+  }
+
+  function Faces({ width, radiant = false }: { width: number; radiant?: boolean }) {
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8 }}>
+        {MARKED.map(({ id }) => {
+          const def = CATALOG[id] as CardDef;
+          return (
+            <div key={id} data-marked={id} style={{ width, height: heightFor(width), flex: "none" }}>
+              <CardFace face={faceModel({ defId: id, def, radiant })} layout="full" />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  for (const { width, radiant, least } of [
+    { width: 270, radiant: false, least: 14 },
+    { width: 170, radiant: true, least: 10 },
+    { width: 100, radiant: false, least: 8 },
+  ] as const) {
+    it(`R503 the mark is on the face, at least ${least}px, and clear of the gems, name, text, stats and crest at ${width}px`, () => {
+      cy.mount(<Faces width={width} radiant={radiant} />);
+      cy.document().should((doc) => {
+        for (const { id, why } of MARKED) {
+          const cf = doc.querySelector<HTMLElement>(`[data-marked="${id}"] > .cf`);
+          const mark = cf?.querySelector<HTMLElement>(".cf-set") ?? null;
+          expect(mark, `${id}: ${why}`).to.not.eq(null);
+          if (cf === null || mark === null) continue;
+          const face = cf.getBoundingClientRect();
+          const own = mark.getBoundingClientRect();
+          expect(own.width, `${id} mark width`).to.be.at.least(least);
+          expect(own.left, `${id} inside`).to.be.at.least(face.left);
+          expect(own.right, `${id} inside`).to.be.at.most(face.right);
+          expect(own.top, `${id} inside`).to.be.at.least(face.top);
+          expect(own.bottom, `${id} inside`).to.be.at.most(face.bottom);
+          for (const selector of CLEAR_OF) {
+            for (const other of cf.querySelectorAll<HTMLElement>(selector)) {
+              if (getComputedStyle(other).display === "none") continue;
+              expect(overlaps(own, other.getBoundingClientRect()), `${id} (${why}) at ${width}px: the mark covers ${selector}`).to.eq(false);
+            }
+          }
+        }
+      });
+    });
+  }
+
+  it("R503 the smallest faces drop the mark", () => {
+    cy.mount(<Faces width={60} />);
+    cy.document().should((doc) => {
+      const marks = [...doc.querySelectorAll<HTMLElement>(".cf-set")];
+      expect(marks, "every face still carries it in the DOM").to.have.length(MARKED.length);
+      for (const mark of marks) expect(getComputedStyle(mark).display).to.eq("none");
+    });
+  });
+
+  it("R503 a Legendary-printed token's frame and gem are Legendary's, not Token's grey", () => {
+    cy.mount(<Faces width={170} />);
+    cy.document().should((doc) => {
+      const token = doc.querySelector<HTMLElement>('[data-marked="classicplus-019-1"] .cf-gem');
+      const legendary = doc.querySelector<HTMLElement>('[data-marked="classicplus-043"] .cf-gem');
+      expect(token, "the token has a gem").to.not.eq(null);
+      if (token === null || legendary === null) return;
+      expect(getComputedStyle(token).backgroundImage).to.eq(getComputedStyle(legendary).backgroundImage);
+    });
+  });
+
+  it("R503 the Book, Pancake and AI families draw their own pictures, each with its motif", () => {
+    const FAMILY = [
+      { id: "classic-016", theme: "book", motif: "flames" },
+      { id: "classicplus-012-6", theme: "pancake", motif: "frost" },
+      { id: "classicplus-t-ai-06", theme: "ai", motif: "flames" },
+      { id: "classicplus-t-ai-05", theme: "ai", motif: null },
+    ] as const;
+    cy.mount(
+      <div style={{ display: "flex", gap: 8, padding: 8 }}>
+        {FAMILY.map(({ id }) => {
+          const def = CATALOG[id] as CardDef;
+          return (
+            <div key={id} data-family={id} style={{ width: 200, height: heightFor(200) }}>
+              <CardFace face={faceModel({ defId: id, def, radiant: false })} layout="full" />
+            </div>
+          );
+        })}
+      </div>,
+    );
+    cy.document().should((doc) => {
+      const pictures = new Set<string>();
+      for (const { id, theme, motif } of FAMILY) {
+        const art = doc.querySelector<HTMLElement>(`[data-family="${id}"] .cf-art`);
+        expect(art, id).to.not.eq(null);
+        if (art === null) continue;
+        expect(art.getAttribute("data-art-theme"), id).to.eq(theme);
+        expect(art.getAttribute("data-art-motif"), id).to.eq(motif);
+        const picture = getComputedStyle(art).backgroundImage;
+        expect(picture, id).to.contain("data:image/svg+xml");
+        pictures.add(picture);
+        expect(art.getBoundingClientRect().height, `${id} art has a box`).to.be.greaterThan(40);
+      }
+      expect(pictures.size).to.eq(FAMILY.length);
+    });
+  });
+});
+
 /* ----------------------------------------------------------------------------------------- B21 */
 
 /** BUILD M5-T1's two viewports. */

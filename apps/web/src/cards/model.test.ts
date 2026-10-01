@@ -11,7 +11,7 @@ import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
-import { faceModel, type FaceModel, type FaceSource } from "./model.ts";
+import { faceModel, frameRarity, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
 import { termsIn } from "./rules.ts";
 
@@ -549,5 +549,28 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(face("core-090", true).refs).toEqual(["core-090-1"]);
     expect(face("core-041", false, { inPlay: {} }).refs).toEqual(["core-t-sheep", "core-055"]);
     expect(face("core-002", false).refs).toEqual([]);
+  });
+});
+
+describe("R503: a token's printed rarity", () => {
+  it("R503 faceModel carries a token's printedRarity and frameRarity prefers it; rarity stays Token", () => {
+    const top = face("classicplus-019-1", false);
+    expect(top.rarity).toBe("Token");
+    expect(top.printedRarity).toBe("Legendary");
+    expect(frameRarity(top)).toBe("Legendary");
+    expect(face("classicplus-065-5", true).printedRarity).toBe("Mythic");
+  });
+
+  it("R503 a card that prints no rarity of its own has none, and its frame is its rarity", () => {
+    for (const id of ["core-002", "core-t-rush", "classicplus-t-ai-01"]) {
+      const f = face(id, false);
+      expect(f.printedRarity, id).toBeNull();
+      expect(frameRarity(f), id).toBe(f.rarity);
+    }
+    const unknown = faceModel({ defId: "core-999", radiant: false });
+    expect(unknown.printedRarity).toBeNull();
+    expect(frameRarity(unknown)).toBeNull();
+    // A face built by hand without the field reads as none.
+    expect(frameRarity({ rarity: "Epic" })).toBe("Epic");
   });
 });

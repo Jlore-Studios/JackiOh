@@ -45,6 +45,7 @@ import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./Ove
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
 import { glowAttr, hasMovesLeft } from "./glow.ts";
+import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
@@ -489,7 +490,8 @@ export default function Board({
           pops={pops}
           notices={notices}
         />
-        <Hand side="opponent" hand={view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
+        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label="Field">
           {LANES.map((lane) => (

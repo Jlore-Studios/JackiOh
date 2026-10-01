@@ -1045,6 +1045,312 @@
   visibility: hidden;
 }
 
+/* ---------------------------------------- fracture: a mana crystal cracks and goes dark (R502) --- */
+
+/* #21 Hinder's refresh loss, on each crystal the next refresh will not fill: a dark, frosted diamond
+   twice the crystal's size slams onto it with crack lines through it, holds, and gives way to the
+   board's own lasting mark below. */
+
+@keyframes fx-fracture-crack {
+  0% {
+    transform: rotate(45deg) scale(1.6);
+    opacity: 0;
+  }
+  12% {
+    transform: rotate(45deg) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: rotate(45deg) scale(1.08);
+    opacity: 1;
+  }
+  32% {
+    transform: rotate(45deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: rotate(45deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(45deg) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.fx-fracture {
+  left: calc(var(--fx-x) - var(--fx-w) / 2);
+  top: calc(var(--fx-y) - var(--fx-h) / 2);
+  width: calc(var(--fx-w) * 2);
+  height: calc(var(--fx-h) * 2);
+  z-index: 3;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--fx-frost) 60%, white);
+  background:
+    linear-gradient(115deg, transparent 43%, rgb(236 252 255 / 95%) 45%, transparent 48%),
+    linear-gradient(28deg, transparent 50%, rgb(210 244 255 / 85%) 52%, transparent 55%),
+    linear-gradient(165deg, transparent 60%, rgb(210 244 255 / 70%) 62%, transparent 64%),
+    radial-gradient(circle at 45% 40%, rgb(16 22 40 / 94%) 0 50%, color-mix(in srgb, var(--fx-frost) 55%, transparent) 78%);
+  box-shadow:
+    0 0 12px 3px color-mix(in srgb, var(--fx-frost) 70%, transparent),
+    inset 0 0 6px rgb(236 252 255 / 60%);
+  animation: fx-fracture-crack var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* The lasting mark (fx/manaMarks.ts): each crystal the view says the next refresh will not fill is
+   frosted over and cracked for as long as the rider stands. It is information, not an effect, so it
+   is drawn whether or not the layer is on; only its glint moves, and under reduced motion it holds
+   still. A shape as well as a colour: the crack lines and the frost read without the tint. */
+
+@keyframes fx-hindered-glint {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+.mana-crystal[data-fx-hindered] {
+  position: relative;
+  border-color: color-mix(in srgb, var(--grade, #38bdf8) 55%, white);
+}
+
+.mana-crystal[data-fx-hindered]::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent 44%, rgb(236 252 255 / 95%) 46%, transparent 52%),
+    linear-gradient(0deg, transparent 56%, rgb(210 244 255 / 80%) 58%, transparent 63%),
+    rgb(12 18 34 / 72%);
+  pointer-events: none;
+}
+
+.mana-crystal[data-fx-hindered]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 3px;
+  background: radial-gradient(circle, rgb(190 238 255 / 55%), transparent 70%);
+  pointer-events: none;
+  animation: fx-hindered-glint 1.6s ease-in-out infinite alternate;
+}
+
+/* ------------------------------------------------------------ brand: a mark lands (R437) --- */
+
+/* A sigil in the mark's own colours (`--fx-mark-*`, from cards/marks.ts's palette) slams onto the
+   card, its ring turning, then fades into the aura the card keeps (cards/marks.css). */
+
+@keyframes fx-brand-slam {
+  0% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(0.88);
+    opacity: 1;
+  }
+  32% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  42% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-brand-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(120deg);
+  }
+}
+
+.fx-brand {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: max(64px, calc(min(var(--fx-w, 0px), var(--fx-h, 0px)) * 0.95));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--fx-mark-glow) 55%, transparent) 0%, transparent 68%);
+  animation: fx-brand-slam var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fx-brand::before {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 3px dashed var(--fx-mark-rim);
+  box-shadow:
+    0 0 14px 3px color-mix(in srgb, var(--fx-mark-glow) 80%, transparent),
+    inset 0 0 12px 2px color-mix(in srgb, var(--fx-mark-rim) 60%, transparent);
+  animation: fx-brand-turn var(--fx-ms) linear both;
+}
+
+.fx-brand::after {
+  content: "\2726";
+  position: relative;
+  color: var(--fx-mark-core);
+  font: 900 calc(max(64px, calc(min(var(--fx-w, 0px), var(--fx-h, 0px)) * 0.95)) * 0.5) / 1 ui-sans-serif, system-ui, sans-serif;
+  text-shadow:
+    0 0 8px var(--fx-mark-rim),
+    0 0 18px var(--fx-mark-glow);
+}
+
+/* ------------------------------------------------ chaos: what Call to Chaos rolled (R436) --- */
+
+/* A slot machine over the board: a dark panel with a prismatic rim, "Call to Chaos:" over one line
+   per rolled effect. Each line is a window one name tall over a reel of the edition's effects, which
+   spins and lands on the one rolled at its own `--fx-land-ms`, and the landed name flares gold. The
+   words ride in `data-text` (fx/dom.ts). Sized so the longest name fits a 360 px phone. */
+
+@keyframes fx-chaos-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  8% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.02);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-chaos-spin {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(var(--fx-steps, 0) * -1.3em));
+  }
+}
+
+@keyframes fx-chaos-land {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+}
+
+.fx-chaos {
+  left: 50%;
+  top: 45%;
+  translate: -50% -50%;
+  z-index: 5;
+  display: grid;
+  justify-items: center;
+  gap: 0.3em;
+  width: max-content;
+  max-width: 94vw;
+  padding: 0.45em 1em 0.6em;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
+    linear-gradient(120deg, #ff7aa8, #ffd36b, #7dffb2, #6bc7ff, #c28bff) border-box;
+  box-shadow:
+    0 12px 40px rgb(0 0 0 / 65%),
+    0 0 26px color-mix(in srgb, var(--fx-arcane) 55%, transparent);
+  font:
+    800 clamp(13px, min(3.4vw, 5vh), 28px) / 1.3 ui-serif,
+    Georgia,
+    "Times New Roman",
+    serif;
+  animation: fx-chaos-in var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fx-chaos::before {
+  content: attr(data-text);
+  color: var(--fx-gold);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fx-chaos-line {
+  position: relative;
+  width: 100%;
+  min-width: min(22em, 90vw);
+  height: 1.3em;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 55%), rgb(255 255 255 / 6%) 50%, rgb(0 0 0 / 55%));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fx-gold) 45%, transparent);
+  text-align: center;
+}
+
+.fx-chaos-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 2px var(--fx-gold),
+    inset 0 0 14px color-mix(in srgb, var(--fx-gold) 60%, transparent);
+  opacity: 0;
+  animation: fx-chaos-land 600ms ease-out var(--fx-land-ms, 0ms) both;
+}
+
+.fx-chaos-reel {
+  animation: fx-chaos-spin var(--fx-land-ms, 0ms) cubic-bezier(0.12, 0.62, 0.22, 1) both;
+}
+
+.fx-chaos-cell {
+  display: block;
+  height: 1.3em;
+  padding: 0 0.6em;
+  overflow: hidden;
+  color: var(--fx-steel);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fx-chaos-cell::after {
+  content: attr(data-text);
+}
+
+.fx-chaos-cell[data-landed] {
+  color: var(--fx-white);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--fx-gold) 70%, transparent);
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all. FxLayer already renders
@@ -1054,6 +1360,7 @@
   .fx-layer *,
   .fx-layer *::before,
   .fx-layer *::after,
+  .mana-crystal[data-fx-hindered]::after,
   [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after,
   [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after {
     animation: none !important;
@@ -1062,4 +1369,9 @@
   .fx-dom > * {
     visibility: hidden;
   }
+}
+
+/* The settings panel's "Reduce motion" holds the lasting crystal mark still too (R200). */
+:root[data-reduce-motion="true"] .mana-crystal[data-fx-hindered]::after {
+  animation: none;
 }

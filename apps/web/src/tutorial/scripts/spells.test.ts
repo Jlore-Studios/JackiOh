@@ -207,6 +207,9 @@ describe("R293 lesson spells", () => {
     const hitTarget = targetOf(hitJob);
     expect(hitTarget, "removal: Hit Job is cast at an enemy unit").toBeDefined();
     expect(hitJob?.events.some((event) => event.type === "destroyed" && event.instanceId === hitTarget), "removal: Hit Job destroys it").toBe(true);
+    // The coach aims it at the Taunt in the way, so the units behind it can reach the hero.
+    const hitSeen = hitJob === undefined || hitTarget === undefined ? undefined : unitSeen(hitJob.before, human, hitTarget);
+    expect(hasKeyword(hitSeen, "Taunt"), "removal: Hit Job takes out a Taunt").toBe(true);
 
     // Cry with a target: Twisted Sorcerer's 4 damage lands as it is played, on the unit the play picked.
     const sorcerer = playOf(mine, human, SORCERER);

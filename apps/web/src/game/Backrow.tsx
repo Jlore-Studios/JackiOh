@@ -14,6 +14,7 @@ import type { ReactElement } from "react";
 
 import type { BackrowView } from "@jackioh/shared";
 
+import { marksOf } from "../cards/marks.ts";
 import Card, { type Pops } from "./Card.tsx";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 
@@ -35,11 +36,17 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   if (entry.faceDown) {
     // R370: read defensively, so a view without the cost draws the back as it always did.
     const cost = "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
+    // R437, R33: a marked face-down card's back carries its mark (read through marks.ts, as defensively).
+    const marks = marksOf(entry);
     return (
       <Card
         card={null}
         className="card-backrow"
-        faceDown={{ at: `${props.side}-${String(props.lane)}`, ...(cost === undefined ? {} : { cost }) }}
+        faceDown={{
+          at: `${props.side}-${String(props.lane)}`,
+          ...(cost === undefined ? {} : { cost }),
+          ...(marks.length === 0 ? {} : { marks }),
+        }}
       />
     );
   }

@@ -4,6 +4,8 @@
 
 export type { ArtThemeId, Composition } from "./themes.ts";
 export { compositionFor, themeFor } from "./themes.ts";
+export type { MotifId } from "./motifs.ts";
+export { motifFor } from "./motifs.ts";
 export type { EmblemGlyph } from "./emblems.ts";
 export type { ArtSpec } from "./procedural.ts";
 export { artSpec } from "./procedural.ts";
