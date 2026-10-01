@@ -174,6 +174,8 @@ export type FaceModel = {
   enchantments?: readonly Enchantment[];
   /** B3.1, R383: a backrow card standing in a unit zone as a Unit (`UnitView.animated`); null otherwise. */
   animated?: { home?: number } | null;
+  /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
+  berserk?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
   /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
@@ -209,6 +211,8 @@ export type InPlay = {
   enchantments?: readonly Enchantment[];
   /** B3.1, R383: the card stands in a unit zone as a Unit (`UnitView.animated`). */
   animated?: { home?: number };
+  /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
+  berserk?: true;
   /** R437: the marks on the card (`CardView.marks`). */
   marks?: readonly CardMark[];
   /** B5 E33, R404: the card's quest line (`CardView.quest`). */
@@ -294,6 +298,7 @@ export function faceModel(source: FaceSource): FaceModel {
     tuning,
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
+    berserk: inPlay?.berserk === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,

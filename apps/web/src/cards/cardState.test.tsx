@@ -23,7 +23,8 @@ import { liveFace } from "../game/faces.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
-import { PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
+import { BERSERK_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
+import { markColorOf, markWords } from "./marks.ts";
 import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
@@ -523,6 +524,29 @@ describe("R383 Animated: its face prints the Unit it becomes, and a card standin
     );
     expect(animatedWords({}, "Field Trap")).toBe("Animated: this Field Trap stands in a unit zone as a Unit");
     expect(preview.querySelector('[data-glossary-term="Animated on your turn"]')).not.toBeNull();
+  });
+});
+
+/* ----------------------------------------------------------------------------- B5 E35 Berserk */
+
+describe("B5 E35 Berserk: a sword badge on the unit, in its glossary row's words", () => {
+  it("E35 a Berserk unit wears the badge on the board and says why in its preview; a calm one wears none", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", defId: "classicplus-019-5", berserk: true }), unit("p1", { instanceId: "u2", defId: "classicplus-019-5" }), null, null, null],
+        }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("u1"));
+    expect(root.querySelector('.cf-state[data-state="berserk"]')?.getAttribute("aria-label")).toBe(BERSERK_WORDS);
+    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="berserk"]')).toBeNull();
+    const preview = hover(root);
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(BERSERK_WORDS);
+    // The same words announce it (`marked`, "berserk"), in the crimson the engine's "red" names.
+    expect(markWords("berserk").text).toBe(BERSERK_WORDS);
+    expect(markColorOf("red")).toBe("red");
   });
 });
 

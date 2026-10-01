@@ -18,7 +18,7 @@ import type { IconName } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated";
+export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -61,6 +61,9 @@ export function enchantmentWords(enchantment: Enchantment): string {
       return "Targets enemies";
   }
 }
+
+/** B5 E35, §6.1: what a Berserk unit's badge says. */
+export const BERSERK_WORDS = "Berserk: at the start and end of its controller's turn it attacks its own hero";
 
 const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
   returnAfterResolve: "returnHand",
@@ -143,6 +146,10 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       words: animatedWords(animated, face.type),
       data: { "data-animated": animated.home === undefined ? "true" : String(animated.home) },
     });
+  }
+  // B5 E35: a Berserk unit, in its glossary row's words (§6.1).
+  if (face.berserk === true) {
+    badges.push({ kind: "berserk", text: null, icon: "sword", words: BERSERK_WORDS, data: { "data-berserk": "true" } });
   }
   return badges;
 }

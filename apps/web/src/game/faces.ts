@@ -76,6 +76,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (marks.length > 0) inPlay.marks = marks;
   // B3.1, R383: a Field Spell, Trap or Field Trap standing in a unit zone as a Unit.
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
+  // B5 E35: a Berserk unit.
+  if (unit?.berserk === true) inPlay.berserk = true;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;

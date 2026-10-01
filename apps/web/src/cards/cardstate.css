@@ -75,6 +75,11 @@
   box-shadow: 0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
 }
 
+/* B5 E35: Berserk, the sword on a blood-red disc. */
+.cf .cf-state[data-state="berserk"] {
+  background: radial-gradient(circle, #b3122e 0%, #5a0716 100%);
+}
+
 /* R386: the card's tuned mark, ▲ Upgraded, ▼ Degraded, ◆ Tuned. */
 .cf .cf-state[data-state="tuned"][data-tuned="upgraded"] .cf-state-text {
   color: var(--cf-state-better);
