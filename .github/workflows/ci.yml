@@ -54,21 +54,31 @@ jobs:
   # same games: the AI gates' smoke size (seeds 1-20 of each matchup and the perf gate's first game)
   # is a prefix of what the ai-gate shards play, and the engine and cards projects, the 100-seed
   # fuzz wave included, run whole in the coverage shards.
+  # web is split by file as well: alone it took 4 minutes, too near the budget.
   unit:
-    name: unit (${{ matrix.projects }})
+    name: unit (${{ matrix.projects }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        projects: [ai, web, server shared validator]
+        include:
+          - projects: ai
+          - projects: web
+            shard: 1/2
+          - projects: web
+            shard: 2/2
+          - projects: server shared validator
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: vitest
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
           args=()
           for project in ${{ matrix.projects }}; do args+=(--project "$project"); done
+          if [ -n "$SHARD" ]; then args+=("--shard=$SHARD"); fi
           pnpm exec vitest run "${args[@]}" --exclude '**/gate-*.test.ts'
 
   # The fuzz gate, seeds 1-1000 over the full card pool, in equal runs of seeds
