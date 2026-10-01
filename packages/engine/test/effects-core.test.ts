@@ -172,6 +172,10 @@ const TESTED_BY: Readonly<Record<string, string>> = {
   chooseWhere: "effects-choose-where.test.ts",
   handExile: "effects-hand-exile.test.ts",
   shuffleCard: "effects-shuffle-card.test.ts",
+  // The Classic+ #1–#39 workstream's card-specific verbs: C+ #29's last-board verbs beside their
+  // subsystem (E30), and C+ #32.3's damage rounds with the workstream's other effect tests.
+  lastBoard: "lastBoards.test.ts",
+  rounds: "effects-plus-c.test.ts",
 };
 
 describe("M3-T1 structural acceptance (BUILD M3-T1)", () => {
