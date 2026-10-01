@@ -16,16 +16,24 @@
  *    composite foreign key) and one deck in two slots (the check constraint);
  *  - `decks.remove` empties every trio slot that named the deck (`on delete set null`);
  *  - `series.update` is compare-and-set on `version`;
- *  - `tutorial.merge` only ever grows the lessons and keeps the newest choice (0011, R320).
+ *  - `tutorial.merge` only ever grows the lessons and keeps the newest choice (0011, R320);
+ *  - `ranked.createSeason` refuses an id that exists, `ranked.recordGame` a second row for one game,
+ *    and `ranked.notePeakJlorious` only ever lowers a peak (0014, R381, R382, R384).
  */
 
+import type { SeasonRank } from "../ranked/ladder";
 import type {
+  BotRating,
   DeckStore,
   MatchActionRow,
   MatchRow,
+  Profile,
+  RankedStore,
+  RatedGameRow,
   RetentionPurgeInput,
   RetentionPurgeResult,
   Room,
+  Season,
   SavedDeck,
   SavedTrio,
   SeriesRow,
@@ -283,7 +291,8 @@ export function createMemoryTutorialStore(
 
 /** The rows `ProfileStore.remove` and `Store.purgeExpired` reach, as both in-memory stores hold them. */
 export type AccountTables = DeckTables &
-  TutorialTables & {
+  TutorialTables &
+  RankedTables & {
     profiles: { id: string }[];
     attempts: { profileId: string | null; at: number }[];
     collection: { profileId: string }[];
@@ -326,6 +335,12 @@ export function removeProfileRows(tables: AccountTables, profileId: string): boo
   keepOnly(tables.tutorial, (row) => row.profileId !== profileId);
   keepOnly(tables.tickets, (row) => row.profileId !== profileId);
   keepOnly(tables.rooms, (row) => !(row.hostProfileId === profileId && row.guestProfileId === null));
+  // 0014: a profile's season rows go with it; the record of its rated games stays for the other
+  // player with this side's profile emptied, as Postgres's `on delete set null` does.
+  keepOnly(tables.seasonRanks, (row) => row.profileId !== profileId);
+  for (const game of tables.ratedGames) {
+    for (const side of game.sides) if (side.profileId === profileId) side.profileId = null;
+  }
   return true;
 }
 
@@ -344,4 +359,130 @@ export function purgeExpiredRows(tables: AccountTables, input: RetentionPurgeInp
   );
   const matchActions = keepOnly(tables.matchActions, (row) => !expired.has(row.matchId));
   return { codeAttempts, matchActions };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The ranked ladder (SPEC §9.11, migration 0014), for both in-memory stores.
+// ---------------------------------------------------------------------------------------------
+
+export type RankedTables = {
+  seasons: Season[];
+  seasonRanks: SeasonRank[];
+  bots: BotRating[];
+  ratedGames: RatedGameRow[];
+};
+
+export function emptyRankedTables(): RankedTables {
+  return { seasons: [], seasonRanks: [], bots: [], ratedGames: [] };
+}
+
+const byProfileId = <T extends { profileId: string }>(a: T, b: T): number =>
+  a.profileId < b.profileId ? -1 : a.profileId > b.profileId ? 1 : 0;
+
+/**
+ * The in-memory `RankedStore`, shared by both in-memory stores. It reads `profiles` for the ratings
+ * a standing carries and the soft reset writes, as Postgres joins `public.profiles`.
+ */
+export function createMemoryRankedStore(
+  tables: () => RankedTables & { profiles: Profile[] },
+  call: (method: string) => void = () => undefined,
+): RankedStore {
+  const profileOf = (profileId: string): Profile | undefined => tables().profiles.find((row) => row.id === profileId);
+  return {
+    seasons: async () => {
+      call("ranked.seasons");
+      return [...tables().seasons].sort((a, b) => a.startedAt - b.startedAt || (a.id < b.id ? -1 : 1)).map(clone);
+    },
+    createSeason: async (season) => {
+      call("ranked.createSeason");
+      if (tables().seasons.some((row) => row.id === season.id)) return false;
+      tables().seasons.push(clone(season));
+      return true;
+    },
+    ratedPlayers: async () => {
+      call("ranked.ratedPlayers");
+      const ids = new Set<string>();
+      for (const game of tables().ratedGames) {
+        for (const side of game.sides) if (side.profileId !== null && side.botId === null) ids.add(side.profileId);
+      }
+      return [...ids]
+        .flatMap((profileId) => {
+          const profile = profileOf(profileId);
+          return profile === undefined
+            ? []
+            : [{ profileId, glicko: { rating: profile.rating, deviation: profile.ratingDeviation, volatility: profile.ratingVolatility } }];
+        })
+        .sort(byProfileId);
+    },
+    resetRatings: async (changes) => {
+      call("ranked.resetRatings");
+      for (const change of changes) {
+        const profile = profileOf(change.profileId);
+        if (profile === undefined) continue;
+        profile.rating = change.after.rating;
+        profile.ratingDeviation = change.after.deviation;
+        profile.ratingVolatility = change.after.volatility;
+      }
+    },
+    standings: async (seasonId) => {
+      call("ranked.standings");
+      return tables()
+        .seasonRanks.filter((row) => row.seasonId === seasonId)
+        .flatMap((row) => {
+          const profile = profileOf(row.profileId);
+          return profile === undefined ? [] : [{ ...clone(row), rating: profile.rating }];
+        })
+        .sort(byProfileId);
+    },
+    rank: async (seasonId, profileId) => {
+      call("ranked.rank");
+      const row = tables().seasonRanks.find((rank) => rank.seasonId === seasonId && rank.profileId === profileId);
+      return row === undefined ? null : clone(row);
+    },
+    ranksOf: async (profileId) => {
+      call("ranked.ranksOf");
+      const order = new Map(tables().seasons.map((season) => [season.id, season.startedAt]));
+      return tables()
+        .seasonRanks.filter((row) => row.profileId === profileId)
+        .sort((a, b) => (order.get(a.seasonId) ?? 0) - (order.get(b.seasonId) ?? 0))
+        .map(clone);
+    },
+    putRank: async (row) => {
+      call("ranked.putRank");
+      const rows = tables().seasonRanks;
+      const at = rows.findIndex((rank) => rank.seasonId === row.seasonId && rank.profileId === row.profileId);
+      if (at < 0) rows.push(clone(row));
+      else rows[at] = clone(row);
+    },
+    notePeakJlorious: async (seasonId, profileId, position) => {
+      call("ranked.notePeakJlorious");
+      const row = tables().seasonRanks.find((rank) => rank.seasonId === seasonId && rank.profileId === profileId);
+      if (row === undefined) return;
+      row.peakJlorious = row.peakJlorious === null ? position : Math.min(row.peakJlorious, position);
+    },
+    bot: async (botId) => {
+      call("ranked.bot");
+      const row = tables().bots.find((bot) => bot.botId === botId);
+      return row === undefined ? null : clone(row);
+    },
+    putBot: async (bot) => {
+      call("ranked.putBot");
+      const rows = tables().bots;
+      const at = rows.findIndex((row) => row.botId === bot.botId);
+      if (at < 0) rows.push(clone(bot));
+      else rows[at] = clone(bot);
+    },
+    recordGame: async (row) => {
+      call("ranked.recordGame");
+      if (tables().ratedGames.some((game) => game.id === row.id)) {
+        throw new Error(`rated_games already holds a row for ${row.id}`);
+      }
+      tables().ratedGames.push(clone(row));
+    },
+    game: async (id) => {
+      call("ranked.game");
+      const row = tables().ratedGames.find((game) => game.id === id);
+      return row === undefined ? null : clone(row);
+    },
+  };
 }

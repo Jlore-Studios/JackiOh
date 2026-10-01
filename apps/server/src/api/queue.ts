@@ -242,6 +242,8 @@ async function startPairedSeries(
     ],
     seedBase,
     catalogVersion: deps.catalog.version,
+    // R377: a series the queue pairs is ranked.
+    ranked: true,
   });
   deps.log.info("queue.paired", {
     mode: "bo3",
@@ -300,7 +302,8 @@ async function startPairedMatch(
     await t.profiles.setInMatch(b.profileId, matchId);
   });
 
-  await deps.matches.start({ matchId, seed, catalogVersion: deps.catalog.version, seats });
+  // R377: a match the queue pairs is ranked.
+  await deps.matches.start({ matchId, seed, catalogVersion: deps.catalog.version, ranked: true, seats });
   deps.log.info("queue.paired", {
     mode: a.mode,
     matchId,

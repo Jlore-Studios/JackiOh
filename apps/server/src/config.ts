@@ -37,10 +37,6 @@ export const DISCONNECT_GRACE_SECONDS = 60;
 export const MATCH_CEILING_MINUTES = 60;
 /** R79, §9.5: room codes are 6 characters from the invite-code alphabet. */
 export const ROOM_CODE_LENGTH = 6;
-/** R79, §9.5: Elo K-factor. */
-export const ELO_K = 32;
-/** R79, §9.5: starting Elo rating for a new profile. */
-export const ELO_START = 1000;
 
 // ---------------------------------------------------------------------------------------------
 // The code alphabet (§9.4, §9.5).
@@ -291,30 +287,101 @@ export function ratingWindow(waitedSeconds: number): number {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Elo (R79, BUILD M7-T2).
+// The hidden rating: Glicko-2 (SPEC §9.11, R376). The maths is `src/ranked/glicko2.ts`.
 // ---------------------------------------------------------------------------------------------
 
 /**
- * R79: the standard Elo rating update, using `ELO_K`. `scoreA` is player A's result against
- * player B: 1 for a win, 0 for a loss, 0.5 for a draw (`ceilingReached`).
- *
- * Both outputs are rounded to the nearest integer (`Math.round`, ties away from zero) since
- * `profiles.rating` is an integer column; the two players' deltas are computed independently
- * from the same pre-match ratings, so they need not sum to zero after rounding.
+ * SPEC §11 R376: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
+ * depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
+ * ratings and only the deviation and volatility are new (migration 0014).
  */
-export function eloUpdate(
-  ratingA: number,
-  ratingB: number,
-  scoreA: 0 | 0.5 | 1,
-): { a: number; b: number } {
-  const expectedA = 1 / (1 + 10 ** ((ratingB - ratingA) / 400));
-  const expectedB = 1 - expectedA;
-  const scoreB = 1 - scoreA;
-  return {
-    a: Math.round(ratingA + ELO_K * (scoreA - expectedA)),
-    b: Math.round(ratingB + ELO_K * (scoreB - expectedB)),
-  };
-}
+export const RATING_START = 1000;
+/** R376: a new profile's rating deviation: Glickman's starting value, the most uncertain rating. */
+export const RATING_DEVIATION_START = 350;
+/** R376: a new profile's rating volatility: Glickman's starting value. */
+export const RATING_VOLATILITY_START = 0.06;
+/** R376: Glicko-2's system constant τ, which bounds how fast volatility moves. Glickman's 0.3–1.2. */
+export const GLICKO_TAU = 0.5;
+/**
+ * R376: the factor between a displayed rating and Glicko-2's internal scale, 400 / ln 10. Glickman
+ * writes it 173.7178; this is the same number to double precision.
+ */
+export const GLICKO_SCALE = 400 / Math.LN10;
+/** R376: the volatility iteration stops once its bracket is narrower than this (Glickman's ε). */
+export const GLICKO_CONVERGENCE = 0.000001;
+/**
+ * R376: the most volatility iterations one update runs. The Illinois iteration converges in a
+ * handful of steps on any real input; the cap only makes a non-finite input end rather than spin.
+ */
+export const GLICKO_MAX_ITERATIONS = 100;
+
+// ---------------------------------------------------------------------------------------------
+// The visible ladder (SPEC §9.11, R378–R381). The rules are `src/ranked/ladder.ts`. PUBLIC: the
+// client reads the shape (divisions, pips, placements) to draw a rank it is handed.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * SPEC §11 R379: the share of active players each Grape tier is meant to hold, in whole percents,
+ * lowest first: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%. A player's hidden rating is
+ * placed at its percentile among the season's placed players and read off these shares, so retuning
+ * a boundary is a change here and nowhere else. Whole numbers, so a boundary is exact; they sum to 100.
+ */
+export const RANK_TIER_PERCENTS = {
+  rotten: 12,
+  normal: 60,
+  large: 20,
+  golden: 7,
+  mythic: 1,
+} as const;
+/** R378: divisions per Grape tier, III up to I. */
+export const RANK_DIVISIONS_PER_TIER = 3;
+/** R378: pips per division. A division is climbed one pip at a time; a full division promotes. */
+export const RANK_PIPS_PER_DIVISION = 3;
+/** R378: rated games a season's placements take. Until they are played the player is a Raisin. */
+export const RANK_PLACEMENT_GAMES = 5;
+/** R379: pips a win gives before any bonus. */
+export const RANK_WIN_PIPS = 1;
+/** R379: pips a loss takes before any adjustment. A draw moves no pip. */
+export const RANK_LOSS_PIPS = 1;
+/** R379: the win that makes a streak this long, and every win after it, earns the streak bonus. */
+export const RANK_STREAK_LENGTH = 3;
+/** R379: the streak bonus, in pips, earned below Mythic Grape only. */
+export const RANK_STREAK_BONUS_PIPS = 1;
+/**
+ * R379: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
+ * before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
+ */
+export const RANK_CONVERGENCE_GAP_PIPS = 3;
+/**
+ * R379: how many pips the lean adds — to a win when the rating is above the visible rank, to a loss
+ * when it is below. Gentle by design: never more than this, and a win never gives fewer pips than a
+ * plain win, nor a loss take fewer than a plain loss.
+ */
+export const RANK_CONVERGENCE_PIPS = 1;
+/** R381: Jlorious is the top this-many Mythic Grape players by hidden rating. */
+export const JLORIOUS_SIZE = 100;
+/**
+ * R385: the most players the leaderboard lists in each Grape tier below Jlorious. The tier's full
+ * count is always given, and the viewer's own row is always listed.
+ */
+export const LEADERBOARD_TIER_ROWS_MAX = 50;
+/** R385: characters in a player's public tag, from the invite-code alphabet (30 bits). */
+export const PLAYER_TAG_LENGTH = 6;
+
+// ---------------------------------------------------------------------------------------------
+// Seasons (SPEC §9.11, R382). The reset is `src/ranked/season.ts`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * SPEC §11 R382: how far a season's soft reset pulls each rating toward the players' mean: 0 keeps
+ * every rating, 1 puts everyone on the mean. Half way.
+ */
+export const SEASON_RESET_STRENGTH = 0.5;
+/**
+ * R382: the deviation a season's reset adds, combined in quadrature as Glicko adds uncertainty for
+ * time away: `min(√(RD² + this²), RATING_DEVIATION_START)`. A settled 60 becomes about 160.
+ */
+export const SEASON_RESET_DEVIATION_BOOST = 150;
 
 // ---------------------------------------------------------------------------------------------
 // Action flooding (§9.8).
@@ -480,8 +547,28 @@ export const SERVER_CONFIG = Object.freeze({
   DISCONNECT_GRACE_SECONDS,
   MATCH_CEILING_MINUTES,
   ROOM_CODE_LENGTH,
-  ELO_K,
-  ELO_START,
+  RATING_START,
+  RATING_DEVIATION_START,
+  RATING_VOLATILITY_START,
+  GLICKO_TAU,
+  GLICKO_SCALE,
+  GLICKO_CONVERGENCE,
+  GLICKO_MAX_ITERATIONS,
+  RANK_TIER_PERCENTS,
+  RANK_DIVISIONS_PER_TIER,
+  RANK_PIPS_PER_DIVISION,
+  RANK_PLACEMENT_GAMES,
+  RANK_WIN_PIPS,
+  RANK_LOSS_PIPS,
+  RANK_STREAK_LENGTH,
+  RANK_STREAK_BONUS_PIPS,
+  RANK_CONVERGENCE_GAP_PIPS,
+  RANK_CONVERGENCE_PIPS,
+  JLORIOUS_SIZE,
+  LEADERBOARD_TIER_ROWS_MAX,
+  PLAYER_TAG_LENGTH,
+  SEASON_RESET_STRENGTH,
+  SEASON_RESET_DEVIATION_BOOST,
   CODE_ALPHABET,
   INVITE_CODE_LENGTH,
   INVITE_CODE_GROUP_SIZE,

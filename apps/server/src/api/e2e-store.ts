@@ -48,14 +48,19 @@ import {
   CODE_ATTEMPTS_PER_IP_PER_HOUR,
   CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
   CODE_ATTEMPT_WINDOW_SECONDS,
+  RATING_DEVIATION_START,
+  RATING_VOLATILITY_START,
 } from "../config";
 import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
   createMemoryDeckStores,
+  createMemoryRankedStore,
   createMemoryTutorialStore,
+  emptyRankedTables,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
 import type {
@@ -91,7 +96,8 @@ type Tables = {
   tickets: Ticket[];
   results: ResultRow[];
 } & DeckTables &
-  TutorialTables;
+  TutorialTables &
+  RankedTables;
 
 function emptyTables(): Tables {
   return {
@@ -109,6 +115,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    ...emptyRankedTables(),
   };
 }
 
@@ -433,6 +440,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
         email,
         status: "pending",
         rating,
+        ratingDeviation: RATING_DEVIATION_START,
+        ratingVolatility: RATING_VOLATILITY_START,
         inMatchId: null,
         createdAt: at,
       };
@@ -448,10 +457,12 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       // R111: the trigger fires on the `pending → active` transition only.
       if (wasPending && status === "active") applyLaunchGrant(profileId);
     },
-    setRating: async (profileId, rating) => {
+    setGlicko: async (profileId, glicko) => {
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
-      row.rating = rating;
+      row.rating = glicko.rating;
+      row.ratingDeviation = glicko.deviation;
+      row.ratingVolatility = glicko.volatility;
     },
     setInMatch: async (profileId, matchId) => {
       const row = profileOf(profileId);
@@ -542,6 +553,9 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
 
   // R320: tutorial progress on the account, shared with the unit-test fake like the decks.
   store.tutorial = createMemoryTutorialStore(() => tables);
+
+  // SPEC §9.11: the ranked ladder, shared with the unit-test fake like the decks.
+  store.ranked = createMemoryRankedStore(() => tables);
 
   // -------------------------------------------------------------------------
   // Matches (§9.3, §9.5)

@@ -651,6 +651,7 @@ function seriesWith(target: TestDeps, p1: string, p2: string, status: SeriesRow[
       { profileId: p2, trio: trioNamed(p2), wins: 0, pick: null },
     ],
     catalogVersion: target.catalog.version,
+    ranked: true,
     seedBase: "seed-base",
     status,
     games: [],

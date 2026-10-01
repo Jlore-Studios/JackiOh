@@ -520,6 +520,7 @@ describe("R264 — rooms carry a mode (§9.5, R257)", () => {
         { profileId: "someone", trio, wins: 0, pick: null },
       ],
       catalogVersion: h.deps.catalog.version,
+      ranked: false,
       seedBase: "s",
       status: "picking",
       games: [],

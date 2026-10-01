@@ -26,12 +26,16 @@ import {
 } from "../../src/api/e2e-store";
 import {
   createMemoryDeckStores,
+  createMemoryRankedStore,
   createMemoryTutorialStore,
+  emptyRankedTables,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type RankedTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
+import { RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START } from "../../src/config";
 import type {
   CodeAttempt,
   CollectionEntry,
@@ -61,7 +65,8 @@ type Tables = {
   tickets: Ticket[];
   results: ResultRow[];
 } & DeckTables &
-  TutorialTables;
+  TutorialTables &
+  RankedTables;
 
 function emptyTables(): Tables {
   return {
@@ -79,6 +84,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    ...emptyRankedTables(),
   };
 }
 
@@ -127,7 +133,9 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       userId: input.userId ?? `user-${input.id}`,
       email: input.email ?? `${input.id}@example.test`,
       status: input.status ?? "active",
-      rating: input.rating ?? 1000,
+      rating: input.rating ?? RATING_START,
+      ratingDeviation: input.ratingDeviation ?? RATING_DEVIATION_START,
+      ratingVolatility: input.ratingVolatility ?? RATING_VOLATILITY_START,
       inMatchId: input.inMatchId ?? null,
       createdAt: input.createdAt ?? 0,
     };
@@ -197,6 +205,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         email,
         status: "pending",
         rating,
+        ratingDeviation: RATING_DEVIATION_START,
+        ratingVolatility: RATING_VOLATILITY_START,
         inMatchId: null,
         createdAt: at,
       };
@@ -210,11 +220,13 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.status = status;
     },
-    setRating: async (profileId, rating) => {
-      call("profiles.setRating");
+    setGlicko: async (profileId, glicko) => {
+      call("profiles.setGlicko");
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
-      row.rating = rating;
+      row.rating = glicko.rating;
+      row.ratingDeviation = glicko.deviation;
+      row.ratingVolatility = glicko.volatility;
     },
     // Migration 0012's account deletion, shared with `src/api/e2e-store.ts`.
     remove: async (profileId) => {
@@ -475,6 +487,9 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       return row === undefined ? null : clone(row);
     },
   };
+
+  // Migration 0014's ranked ladder, shared with `src/api/e2e-store.ts`.
+  store.ranked = createMemoryRankedStore(() => tables, call);
 
   return store;
 }
