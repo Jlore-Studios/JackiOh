@@ -125,17 +125,29 @@ describe("C+ #19 League of Losers", () => {
     });
 
     it("R1 a Loser summoned by any other effect fires no Cry: Carnivorous Cube's copies of a Mid Loser", () => {
-      const s = league({ hand: [CUBE, HIT_JOB], mana: 20 });
+      const s = league({ hand: [CUBE, HIT_JOB, HIT_JOB], mana: 20 });
       s.play(LEAGUE);
-      const first = s.unit("p1", 3);
-      if (first === null) throw new Error("no Mid");
-      // The Cube eats the Support Loser's neighbour... Free a zone for the Cube first: eat the Mid Loser.
-      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.unit("p1", 1)?.id ?? "" }] });
-      s.play(CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: first.id }] });
+      const mid = s.unit("p1", 3);
+      const top = s.unit("p1", 1);
+      if (mid === null || top === null) throw new Error("setup");
+      // Free lane 1 for the Cube, which eats the Mid Loser; then destroy the Cube, whose Death summons
+      // two copies of it.
+      s.play(s.hand("p1").find((card) => card.defId === HIT_JOB) ?? HIT_JOB, { targets: [{ pick: "instance", instanceId: top.id }] });
+      s.play(CUBE, { zone: 1, targets: [{ pick: "instance", instanceId: mid.id }] });
       const cube = s.unit("p1", 1);
+      if (cube === null) throw new Error("no Cube");
       const cursor = s.state.rngCursor;
-      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: cube?.id ?? "" }] });
+      const refresh = s.state.players.p2.mana.nextTurnMod;
+      s.play(s.hand("p1").find((card) => card.defId === HIT_JOB) ?? HIT_JOB, { targets: [{ pick: "instance", instanceId: cube.id }] });
+      const copies = [1, 2, 3, 4, 5].flatMap((lane) => {
+        const unit = s.unit("p1", lane);
+        return unit !== null && unit.defId === MID ? [unit] : [];
+      });
+      expect(copies).toHaveLength(2);
+      // No coin was flipped, nothing was buffed, and the opponent's refresh is as it was.
       expect(s.state.rngCursor).toBe(cursor);
+      for (const copy of copies) expect(s.card(copy).buffs).toEqual({ attack: 0, health: 0 });
+      expect(s.state.players.p2.mana.nextTurnMod).toBe(refresh);
     });
 
     it("R11 the Losers are tokens: one that leaves the field ceases to exist", () => {

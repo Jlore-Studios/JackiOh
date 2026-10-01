@@ -96,10 +96,16 @@ describe("C+ #19.4 Support Loser", () => {
         false,
         { backrow: [{ def: MOON, lane: 1, faceUp: false }] },
       );
+      const vanilla = s.unit("p1", 1);
+      if (vanilla === null) throw new Error("setup");
       s.endTurn();
-      // The hero heal fires the trap and is converted, and so is each Unit's heal that turn.
+      // The hero heal fires the trap and is converted, and so is each Unit's heal that turn: the damaged
+      // 4/4 (2 health left) takes 3 and dies, and the Support Loser's own Divine Shield takes its 3.
       s.expectHealth("p1", 17);
-      s.expectStats(s.unit("p1", 1) ?? "", { health: 0 + 4 - 2 - 3 > 0 ? 4 - 2 - 3 : 0 });
+      s.expectInZone(vanilla, "graveyard");
+      s.expectStats(loser(s), { health: 5 });
+      expect(s.stats(loser(s)).keywords.some((keyword) => keyword.kind === "Divine Shield")).toBe(false);
+      expect(s.events.filter((event) => event.type === "healed")).toEqual([]);
     });
 
     it("R386 the heal reads through param: an Upgrade heals 4", () => {

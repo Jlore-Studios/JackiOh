@@ -112,10 +112,11 @@ describe("C+ #19.1 Top Loser", () => {
         p2: { hand: [TOP, FILLER], library: DECK },
       });
       s.play(TOP, { zone: 3 });
-      const attacks = s.events.filter((event) => event.type === "attackDeclared");
-      expect(attacks).toHaveLength(1);
-      const attacker = attacks[0]?.type === "attackDeclared" ? s.card(attacks[0].attackerId) : null;
-      expect(attacker?.zone).toMatchObject({ z: "field", player: "p1", row: "units", lane: 3 });
+      // The board filled with five Rush Tokens; only the one in lane 3 attacked (and died to the strike back).
+      const tokens = s.events.flatMap((event) => (event.type === "summoned" && event.player === "p1" ? [event] : []));
+      expect(tokens.map((event) => event.lane)).toEqual([1, 2, 3, 4, 5]);
+      const attackers = s.events.flatMap((event) => (event.type === "attackDeclared" ? [event.attackerId] : []));
+      expect(attackers).toEqual([tokens[2]?.instanceId]);
     });
 
     it("§4.2 step 2 a random-enemy forced attack from another lane never draws it", () => {
@@ -178,9 +179,10 @@ describe("C+ #19.1 Top Loser", () => {
     });
 
     it("§6.1 a Unit still reaches it: a Cry targets it and a Unit's sweep destroys it", () => {
-      const s = topLoser({ hand: [SORCERER, FILLER] }, true);
+      // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 6 leaves 2.
+      const s = topLoser({ hand: [{ def: SORCERER, radiant: true }, FILLER] }, true);
       s.play(SORCERER, { zone: 1, targets: [{ pick: "instance", instanceId: top(s).id }] });
-      s.expectStats(top(s), { health: 10 - 4 + 0 });
+      s.expectStats(top(s), { health: 8 });
       const felinor = topLoser({ hand: [BIG_FELINOR, FILLER] }, true);
       const loser = top(felinor);
       felinor.play(BIG_FELINOR, { zone: 1 });
