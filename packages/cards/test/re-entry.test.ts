@@ -827,6 +827,9 @@ describe("§3.2, R13, R174: a card the play's own Stack buried is not on the fie
   });
 });
 
+/** What p2's Cube eats in the cases below: one of p2's own Units (R428), no Timmy and no Mr. Vanilla. */
+const P2_MEAL = "core-019";
+
 describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", () => {
   /** p1's unit row as def ids, lane 1 to 5. */
   function unitRow(s: Scenario): (string | null)[] {
@@ -846,22 +849,22 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p1", 1), "Tempo Timmy").id }] });
     const kept = must(s.unit("p1", 2), "p1's Cube");
 
-    // p2's Cube eats p2's Mana Well; after its Cry, #85 fuses it onto p1's Cube, the only unit p1 has
-    // (R61). The kept instance is p1's Cube, and its memory is the Timmy it ate (R77).
+    // p2's Cube eats p2's Midrange Menace (a Unit: R428); after its Cry, #85 fuses it onto p1's Cube,
+    // the only unit p1 has (R61). The kept instance is p1's Cube, and its memory is the Timmy it ate (R77).
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     expect(s.card(kept).defId).toMatch(/core-022\+core-022/);
 
     s.endTurn();
     s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: kept.id }] });
 
     // The kept Cube's text copies its meal twice ("each Death copies its own", R102). The played
-    // Cube's text ate a Mana Well on another instance, never a Timmy. The engine hands the kept
+    // Cube's text ate a Midrange Menace on another instance, never a Timmy. The engine hands the kept
     // card's one meal to both texts and summons four Timmies.
     expect(count(unitRow(s), TIMMY)).toBe(2);
   });
@@ -876,7 +879,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     // p1's Cube eats Tempo Timmy: its text remembers the meal through `remember`, under "eaten".
     s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p1", 1), "Tempo Timmy").id }] });
@@ -887,7 +890,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
     // p2's Cube, after its Cry, is fused onto p1's Cube by #85 (R61): the kept instance's texts are
     // one ingredient of the new fusion now, and the meal goes with them to that ingredient's path.
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     const after = s.card(kept).memory;
     expect(s.card(kept).defId).toMatch(/core-022\+core-022/);
     expect(after).not.toHaveProperty("eaten");
@@ -910,7 +913,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
         backrow: [UNLICENSED],
         library: [...LIBRARY],
       },
-      p2: { hand: [CUBE, STOCKPILE], backrow: [MANA_WELL], library: [...LIBRARY] },
+      p2: { hand: [CUBE, STOCKPILE], field: [{ def: P2_MEAL, lane: 1 }], library: [...LIBRARY] },
     });
     const cubes = s.hand("p1").filter((card) => card.defId === CUBE);
     const crafted = must(subsystems.fuse(sinkFor(s), { ingredients: cubes, toHand: "p1" }), "Cube + Cube");
@@ -925,7 +928,7 @@ describe("R102, R77, R41: a card #85 keeps reads its meals with its own text", (
     expect(unitRow(s)).toEqual([null, null, crafted.defId, null, null]);
 
     s.endTurn();
-    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.backrow("p2", 1), "Mana Well").id }] });
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: must(s.unit("p2", 1), "p2's Midrange Menace").id }] });
     s.endTurn();
     s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: crafted.id }] });
 

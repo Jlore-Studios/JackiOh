@@ -1,7 +1,7 @@
 // Draw: takes the top card, with cast-on-draw, fatigue, the hand cap and R58's chain cap (§2.4),
 // and the named-card form a script computes for itself (#30 Archivist, #94 Genn's Greed).
 
-import { completeDraw, draw as drawCards } from "../draw";
+import { completeDraw, drawBlocked, draw as drawCards } from "../draw";
 import type { Effect } from "../script";
 import { playerOf, type PlayerSpec } from "./targets";
 
@@ -46,6 +46,8 @@ export function drawFromLibrary(args: {
         args.instanceId === undefined ? card.defId === args.defId : card.id === args.instanceId,
       );
       if (at < 0) return;
+      // B5 E3, R457: a draw past the player's limit this turn does not happen, and leaves the card.
+      if (drawBlocked(ctx, player)) return;
 
       // Out of the pile first, exactly as `drawOne` does it, so a cast-on-draw card resolves against
       // a library that no longer holds it (§2.4, R58).

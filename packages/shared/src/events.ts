@@ -18,6 +18,8 @@ export type GameEvent =
       x?: number;
       embiggened?: boolean;
       formerId?: string;
+      /** B5 E11, R454: the card was played from its player's graveyard, not the hand. Public. */
+      from?: "graveyard";
       /**
        * R119: the permanents that arrived on the field during this play before §10.5 step 4
        * announced it — a tributed unit's Death at step 2 (#22's copies) — which do not answer it, as
@@ -98,6 +100,11 @@ export type GameEvent =
       instanceId: string;
       defId: string;
       owner: PlayerId;
+      /**
+       * The player who controlled it as it died. R172: a stolen unit dies as its controller's, though
+       * it goes to its owner's graveyard — Classic #14 Shadowstep's "your Units" reads this.
+       */
+      controller: PlayerId;
       attack: number;
       maxHealth: number;
       killerId: string | null;
@@ -145,7 +152,13 @@ export type GameEvent =
       copyOf?: string;
     }
   | { type: "discarded"; instanceId: string; defId: string; owner: PlayerId }
-  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string }
+  /**
+   * `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
+   * is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
+   * the fatigue count already say as much. Absent during setup, which is no player's turn (§2.1), so
+   * the opening deal says nothing of which draw a Quickdraw card replaced (R225).
+   */
+  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string; turnDraw?: number }
   | { type: "addedToHand"; player: PlayerId; instanceId: string; defId: string }
   | { type: "shuffledIn"; player: PlayerId; instanceId: string; defId: string; position: number }
   | { type: "buffed"; instanceId: string; attack: number; health: number }
@@ -258,9 +271,11 @@ export type GameEvent =
       to: "graveyard" | "exile" | "hand" | "gone";
     }
   /**
-   * B5 E2, E16: a card changed owner as it moved to the thief's hand. `zone` is where it was taken
-   * from. Hidden per zone: a card out of a hand or a library is the sentinel to whoever could not
-   * read it there, and the thief reads it from then on.
+   * B5 E2, E16, R466: a card changed owner as it moved to the thief's hand. `zone` is where it was
+   * taken from. A viewer reads the card if they could read it where it was taken from — the hand's
+   * holder, everyone for a public pile or a face-up zone, the controller of a face-down zone, nobody
+   * for a library — or can read it where it is now (R97). `readableFrom` names the first set, written
+   * as the card is taken; the view uses it and never forwards it.
    */
   | {
       type: "stolen";
@@ -269,13 +284,26 @@ export type GameEvent =
       from: PlayerId;
       to: PlayerId;
       zone: "hand" | "library" | "resolving" | "graveyard" | "exile" | "field";
+      readableFrom?: PlayerId[];
     }
   /** B5 E20: a Locked zone opened again. */
   | { type: "unlocked"; player: PlayerId; row: Row; lane: number }
   /** B3.2, R384: a card's Activate ability was used. `ability` names it (`"activate"` when it has one). */
   | { type: "activated"; player: PlayerId; instanceId: string; defId: string; ability: string }
-  /** B3.1, R383: a backrow card stepped into a unit zone as a Unit. */
-  | { type: "animated"; player: PlayerId; instanceId: string; defId: string; backrowLane: number; unitLane: number }
+  /**
+   * B3.1, R383: a backrow card stepped into a unit zone as a Unit. `carried` (R446): it was a Unit a
+   * carrier held (Classic+ #33 Ivory Tower), stepping down because its zone no longer carries it — the
+   * same move, from a backrow zone to a unit zone without leaving the field.
+   */
+  | {
+      type: "animated";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      backrowLane: number;
+      unitLane: number;
+      carried?: true;
+    }
   /** B3.1, R383: an "Animated on your turn" card went back to its backrow zone. */
   | { type: "deanimated"; player: PlayerId; instanceId: string; defId: string; unitLane: number; backrowLane: number }
   /** B3.3, R385: a Brittle count reached 0 and the card was destroyed (on the field) or went to its graveyard. */
@@ -326,14 +354,17 @@ export type GameEvent =
  * B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
  * the attack and health it moved (negative for a Degrade); `keyword` one keyword added or removed;
  * `x` a numbered keyword's or an X's step (`key` names it: "Armor", "Echo", "Activate", "X", …);
- * `number` a declared number's step (`key` is the catalog `params` key).
+ * `number` a declared number's step (`key` is the catalog `params` key). `delta` is how far the value
+ * moved. `none` is R440's cue on a card someone may not read that nothing could change (Immutable, or
+ * no change applies), so the events over a hidden pile number the applications, never the changes.
  */
 export type TuningChange =
   | { kind: "cost"; delta: number }
   | { kind: "stats"; attack: number; health: number }
   | { kind: "keyword"; keyword: Keyword; added: boolean }
   | { kind: "x"; key: string; delta: number }
-  | { kind: "number"; key: string; delta: number };
+  | { kind: "number"; key: string; delta: number }
+  | { kind: "none" };
 
 export type GameEventType = GameEvent["type"];
 

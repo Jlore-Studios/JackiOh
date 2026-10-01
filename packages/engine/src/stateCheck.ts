@@ -28,12 +28,14 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, hasKeyword } from "@jackioh/shared";
+import { settleCarried } from "./carriers";
 import { endGame } from "./gameOver";
 import { unitView } from "./layers";
 import { endOrphanedModifiers, installLastingModifiers } from "./modifiers";
 import { SELF_KEY, runResumableList, type ResumePlan } from "./prompts";
 import type { EngineSink } from "./resolve";
 import { makeContext } from "./resolve";
+import { wouldDieWindow } from "./replacements";
 import { scriptOf } from "./scripts";
 import { findInstance, type CardInstance, type Resume, type WorkItem } from "./state";
 import { PAUSE_KEY, owe, pausedOf, registerWorkHandler, type PausedStep } from "./work";
@@ -44,6 +46,8 @@ import {
   moveToZone,
   placeOnField,
   releaseZone,
+  removeFromField,
+  reportGraveyardLanding,
   reserveZone,
   resetInstance,
   slotOf,
@@ -496,14 +500,27 @@ function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathC
     };
   });
 
+  // R463: the cards collected together leave the field together — every one of them is off the field
+  // before any lands — so a "would go to a graveyard" replacement (B5 E5) is read with all of them
+  // gone: a Voidwalker dying in this pass has taken its aura with it for the cards beside it too.
+  for (const { unit } of read) removeFromField(sink.state, unit);
+
   for (const { unit, view, at, token, snapshot } of read) {
+    const landed = moveToZone(sink.state, unit, "graveyard");
+    if (landed === "replaced") {
+      // R461: a card exiled (or sent to its library) instead of reaching a graveyard has not died: no
+      // Death hook, no Reborn, no `destroyed` for "destroys a Unit" (R42) or the destroyed count (R55).
+      reportGraveyardLanding(sink, unit, landed);
+      continue;
+    }
     pass.owed.push(snapshot);
     pass.collected.push({ id: unit.id, defId: unit.defId, owner: unit.owner });
     if (hasKeyword(view.keywords, "Reborn") && at !== null) {
       reserveZone(sink.state, at);
       // R175: a unit token ceases to exist below and no pile will hold it, so its return is
       // carried by the pass itself, with the X/X it was summoned as.
-      const face = rebornFaceOf(unit);
+      // Read off the snapshot: the move above has already reset the instance (R78).
+      const face = rebornFaceOf(snapshot);
       pass.reborn.push({ id: unit.id, at, ...(token ? { token: snapshot } : {}), ...(face === undefined ? {} : { face }) });
     }
     sink.state.counters.destroyed += 1;
@@ -513,15 +530,16 @@ function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathC
       instanceId: unit.id,
       defId: unit.defId,
       owner: unit.owner,
+      // Read off the snapshot: the move above has reset the instance's controller to its owner (R78).
+      controller: snapshot.controller,
       attack: view.attack,
       maxHealth: view.maxHealth,
       // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it
       // takes the unit from above 0 health to 0 or less (or Poisonous marks it), and a destroy
       // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
       // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
-      killerId: cause === "sacrificed" ? null : (unit.lastDamagedBy ?? null),
+      killerId: cause === "sacrificed" ? null : (snapshot.lastDamagedBy ?? null),
     });
-    moveToZone(sink.state, unit, "graveyard");
   }
 
   return pass;
@@ -581,6 +599,9 @@ function forgetSpentKillers(sink: EngineSink, survivors: readonly CardInstance[]
 export function stateCheck(sink: EngineSink): void {
   for (let pass = 0; pass < STATE_CHECK_PASS_CAP; pass += 1) {
     if (sink.state.result !== null) return;
+    // R446: a Unit whose carrier is gone steps down, or is marked destroyed for want of a unit zone,
+    // before anything is collected.
+    settleCarried(sink);
     resolveIndestructibleMarks(sink);
     endOrphanedModifiers(sink);
     installLastingModifiers(sink);
@@ -589,19 +610,22 @@ export function stateCheck(sink: EngineSink): void {
     const units = order.flatMap((player) => unitsOf(sink, player));
     const dyingUnits = units.filter((unit) => isDying(sink, unit));
     forgetSpentKillers(sink, units.filter((unit) => !dyingUnits.includes(unit)));
-    const dying = [
-      ...dyingUnits,
-      ...order.flatMap((player) =>
-        backrowOf(sink, player).filter((card) => card.markedDestroyed === true),
-      ),
-    ];
+    // R68's order, which §4.5 step 3's Death hooks keep: side by side, the active player's first, and
+    // within a side the units by lane and then the backrow by lane — a backrow card with a Death
+    // (Classic+ #61, #12.8) fires in its side's place, not after every unit of both sides.
+    const dying = order.flatMap((player) => [
+      ...unitsOf(sink, player).filter((unit) => dyingUnits.includes(unit)),
+      ...backrowOf(sink, player).filter((card) => card.markedDestroyed === true),
+    ]);
 
     if (dying.length === 0) {
       if (heroCheck(sink)) return;
       return;
     }
 
-    const collected = collect(sink, dying);
+    // B5 E5: before any card moves, the units that would die meet the "would die" replacements
+    // (Classic #14's Radiant flicker), which take some of them out of the collection (R462).
+    const collected = collect(sink, wouldDieWindow(sink, dying));
 
     // Step 2: heroes.
     if (heroCheck(sink)) return;

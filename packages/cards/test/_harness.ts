@@ -280,7 +280,19 @@ export type PlayOptions = {
   tributes?: readonly string[];
 };
 
-export type ActivateOptions = { targets?: readonly Selection[] };
+/**
+ * B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
+ * names one when a card has several, `modes` and `targets` are its declared choices, and `tributes`
+ * pays a Tribute its cost names (card references on the field, as `play`'s). With none of `ability`,
+ * `modes` or `tributes` the harness sends `activatePower`, the alias every old log carries, which
+ * the engine routes exactly as `activate` (R43, R384).
+ */
+export type ActivateOptions = {
+  targets?: readonly Selection[];
+  ability?: string;
+  modes?: readonly string[];
+  tributes?: readonly string[];
+};
 
 export type ScenarioOptions = {
   seed?: string;
@@ -940,6 +952,23 @@ class Harness implements Scenario {
   activate(card: CardRef, opts: ActivateOptions = {}): Scenario {
     const source = this.resolve(card, "field", "activate");
     const who = source.controller;
+    if (opts.ability !== undefined || opts.modes !== undefined || opts.tributes !== undefined) {
+      const what = `activate ${describeInstance(this.current, source)}`;
+      const tributes = opts.tributes?.map((ref) => this.resolve(ref, "field", `${what} (tribute)`).id);
+      this.action(
+        {
+          type: "activate",
+          playerId: who,
+          instanceId: source.id,
+          ...(opts.ability === undefined ? {} : { ability: opts.ability }),
+          ...(opts.targets === undefined ? {} : { targets: [...opts.targets] }),
+          ...(opts.modes === undefined ? {} : { modes: [...opts.modes] }),
+          ...(tributes === undefined ? {} : { tributes }),
+        },
+        what,
+      );
+      return this;
+    }
     this.actionOrEngine(
       {
         type: "activatePower",
