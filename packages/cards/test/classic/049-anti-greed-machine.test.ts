@@ -5,9 +5,9 @@
 // opponent only, your draws free; its tuned number (radiant limit, never below 1) reads through
 // `param()` (R386)".
 //
-// The aura is B5 E3's draw limit (B5 E3). C #4 Palantir sets the other limit in the set and is another
-// workstream's card, so "the lowest holds" is shown with two Machines whose limits differ (a Radiant
-// one tuned to 2 beside a base one). Stockpile (core-005, "Draw 2. Heal your hero 2.") makes the draws.
+// The aura is B5 E3's draw limit. "The lowest holds" is shown with C #4 Palantir, which sets the other
+// limit in the set, and with two Machines whose limits differ (a Radiant one tuned to 2 beside a base
+// one). Stockpile (core-005, "Draw 2. Heal your hero 2.") makes the draws.
 
 import { legalActions, stepParam } from "@jackioh/engine";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
@@ -22,6 +22,7 @@ const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const FIENDER = "core-092"; // Stack Unit
 const CN_VIRUS = "core-090-1"; // Cast on draw: take 1 damage
 const FILLER = "core-010"; // (0) Spell, Combo 3 — a card to keep in hand
+const PALANTIR = "classic-004"; // Aura: your opponent can't draw more than 1 card each turn.
 
 function drawn(s: Scenario, player: PlayerId): GameEvent[] {
   return s.lastEvents.filter((event) => event.type === "drawn" && event.player === player);
@@ -147,6 +148,29 @@ describe("C #49 Anti-Greed Machine", () => {
       stepParam(alone.card(MACHINE), "limit", 1);
       alone.play(STOCKPILE);
       expect(drawn(alone, "p2")).toHaveLength(2);
+    });
+
+    it("B5 E3 with C #4 Palantir's limit the lowest holds, whichever card sets it", () => {
+      // Palantir (p1's) limits p2 to 1; a Radiant Machine tuned to 2 beside it still lets only 1 through.
+      const palantirLower = scenario({
+        p1: { hand: [FILLER], field: [{ def: MACHINE, radiant: true }], backrow: [PALANTIR] },
+        p2: { hand: [STOCKPILE, FILLER], library: [VANILLA, VANILLA, VANILLA] },
+        active: "p2",
+      });
+      stepParam(palantirLower.card(MACHINE), "limit", 1);
+      palantirLower.play(STOCKPILE);
+      expect(drawn(palantirLower, "p2")).toHaveLength(1);
+      expect(limited(palantirLower, "p2")).toHaveLength(1);
+      // A Palantir tuned to 2 beside a base Machine: the Machine's 1 holds.
+      const machineLower = scenario({
+        p1: { hand: [FILLER], field: [MACHINE], backrow: [PALANTIR] },
+        p2: { hand: [STOCKPILE, FILLER], library: [VANILLA, VANILLA, VANILLA] },
+        active: "p2",
+      });
+      stepParam(machineLower.card(PALANTIR), "drawLimit", 1);
+      machineLower.play(STOCKPILE);
+      expect(drawn(machineLower, "p2")).toHaveLength(1);
+      expect(limited(machineLower, "p2")).toHaveLength(1);
     });
 
     it("R97 the stopped draw names no card in either view", () => {
