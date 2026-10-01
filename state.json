@@ -189,10 +189,12 @@
       "stop_requested": false
     },
     "56": {
+      "closed_at": "2026-10-01T12:34:03Z",
       "failures": 0,
       "feedback_since": "2026-10-01T09:06:25Z",
       "issue": 48,
-      "kind": "revise"
+      "kind": "revise",
+      "merged": true
     }
   },
   "last_infra": {
