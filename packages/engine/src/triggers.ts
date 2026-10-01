@@ -45,6 +45,7 @@ import { PLAYER_IDS } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
 import { isAnnounceLive } from "./announce";
+import { heldBack } from "./drawComplete";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
@@ -721,7 +722,11 @@ function dispatchNewEvents(sink: SettleSink): void {
   while (sink.state.dispatch.length > 0) {
     if (sink.state.pending !== null || sink.state.result !== null) return;
     if (trapsStillOwed(sink.state)) return;
-    const next = sink.state.dispatch.shift();
+    // R58: a cast-on-draw draw's `drawn` waits, in its place, until the draw is complete — its cast
+    // resolved (`drawComplete.ts`) — and the events after it go on meanwhile.
+    const at = sink.state.dispatch.findIndex((item) => !heldBack(sink.state, item.event));
+    if (at < 0) return;
+    const [next] = sink.state.dispatch.splice(at, 1);
     if (next !== undefined) dispatchEvent(sink, next.event);
     collectEvents(sink);
   }

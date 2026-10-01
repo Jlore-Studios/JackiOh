@@ -11,9 +11,9 @@
 //      offered.
 //   2. An interception (Classic #33 Joro: "While this is in your hand: when your opponent targets one
 //      of your Units, summon this and make it the new target"). The first card in the targeted
-//      unit's controller's hand that carries `interceptsTargeting` is summoned (R64's leftmost open
-//      unit zone; with none, nothing happens), with no Cry and summoning sick, and the pick moves to
-//      it — `redirected` "target". One interceptor answers one targeting: a play naming several of
+//      unit's controller's hand whose `replacements` declare `{ on: "targeted", where: "hand" }` is
+//      summoned (R64's leftmost open unit zone; with none, nothing happens), with no Cry and
+//      summoning sick, and the pick moves to it — `redirected` "target". One interceptor answers one targeting: a play naming several of
 //      that player's units redirects the first. A declared pick moves only when the interceptor is
 //      itself a legal pick of that declaration (Hearthstone's Spellbender); a cost already paid for
 //      the first pick stays paid.

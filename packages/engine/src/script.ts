@@ -197,13 +197,6 @@ export type StaticFlags = {
   // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
   // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
   /**
-   * Classic #33 Joro, R450: "While this is in your hand: when your opponent targets one of your
-   * Units, summon this and make it the new target". Read off a card in its controller's hand at the
-   * targeting point (`targetingPoint.interceptTargeting`); the attack half (§4.2 step 2) calls the
-   * same function.
-   */
-  interceptsTargeting?: boolean;
-  /**
    * Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of
    * these tags becomes Radiant as it is played (§10.5 step 3) — R213's Gifted Program rule by tag, on
    * every such play rather than the first cheap one (`playChoices.playMadeRadiant`).
@@ -303,6 +296,16 @@ export type Script = {
   // ---- v0.2.0 script hooks, by workstream: field (B3.1, E21, E22) ----
   // ---- v0.2.0 script hooks, by workstream: play pipeline (E1, E5 targeting, E11, E12, E15) ----
   /**
+   * B5 E5, §6.2 Replacement: the replacements a card declares. One declaration drives both halves of
+   * Classic #33 Joro, R450 — "While this is in your hand: when your opponent targets one of your
+   * Units, summon this and make it the new target" — `{ on: "targeted", where: "hand", instead: {
+   * interpose: true } }`: the attack half at §4.2 step 2 (`combat.ts`) and the play, cast, activation
+   * and prompt-pick half at the targeting point (`targeting.interceptorFor`). The damage-and-combat
+   * workstream declares the full union of replacement kinds; this is the entry the targeting point
+   * reads, written as that workstream writes it.
+   */
+  replacements?: TargetedReplacement[];
+  /**
    * B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
    * also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
    * Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. A declared
@@ -359,6 +362,12 @@ export type TargetCheck = (args: {
   candidate: CardInstance | null;
   selection: Selection;
 }) => boolean;
+
+/**
+ * R450: the "a friendly unit is targeted" replacement a card answers from its owner's hand
+ * (`Script.replacements`; Classic #33 Joro).
+ */
+export type TargetedReplacement = { on: "targeted"; where: "hand"; instead: { interpose: true } };
 
 export type CardScripts = { base: Script; radiant: Script };
 

@@ -399,6 +399,12 @@ export type GameState = {
   announcing?: AnnounceRecord[];
   /** B5 E4: the last Spell anyone played (Classic #57 Echo), overwritten by the next, never cleared. */
   lastSpell?: PlayRecord;
+  /**
+   * R58: the cards a cast-on-draw draw is casting, by the id each was drawn under, whose `drawn` is
+   * held from every dispatch until that cast has resolved — the draw's "complete" point
+   * (`drawComplete.ts`). Present only while one is held.
+   */
+  heldDraws?: string[];
   // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
   // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----

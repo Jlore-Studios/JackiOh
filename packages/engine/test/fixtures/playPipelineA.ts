@@ -241,7 +241,7 @@ const SCRIPTS: Record<string, CardScripts> = {
   }),
   // Its Cry would hit the enemy hero for 5: an interception summons it, so the Cry never fires.
   [PA.joro.id]: both({
-    staticFlags: { interceptsTargeting: true },
+    replacements: [{ on: "targeted", where: "hand", instead: { interpose: true } }],
     cry: () => [damage({ to: { of: "enemyHero" }, amount: 5 })],
   }),
   [PA.ghost.id]: both({ targetingDiscards: () => 2 }),

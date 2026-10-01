@@ -44,6 +44,7 @@ import {
   takeEchoRepeat,
 } from "./echo";
 import { beginAnnounce, endAnnounce, isAnnounceLive } from "./announce";
+import { CAST_ON_DRAW_KEY, releaseDraw } from "./drawComplete";
 import { cardTypeOf } from "./faces";
 import { effectiveCost, isXCost, manaEvent, modifierIsLive, spendMana } from "./mana";
 import { removeModifier } from "./modifiers";
@@ -297,6 +298,11 @@ export type PlayRun = {
    * its choices as a cast does (R70), before the announce, and takes its zone at step 4 by R64.
    */
   replaced?: boolean;
+  /**
+   * R58: the id the card was drawn under, for a cast-on-draw cast. The draw is complete once this
+   * cast has resolved, and its held `drawn` is released then (`drawComplete.ts`).
+   */
+  drawnAs?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -1489,6 +1495,14 @@ const STEP_TABLE: readonly Step[] = [
  * Returns true when the pipeline is finished with (a game that ended under it included).
  */
 function drive(sink: EngineSink, run: PlayRun): boolean {
+  const finished = driveSteps(sink, run);
+  // R58: a cast-on-draw cast has resolved, so the draw that cast it is complete.
+  if (finished && run.drawnAs !== undefined) releaseDraw(sink.state, run.drawnAs);
+  return finished;
+}
+
+/** `drive`'s loop over the steps from `run.at`; true when the pipeline is finished with. */
+function driveSteps(sink: EngineSink, run: PlayRun): boolean {
   for (let at = Math.max(0, run.at); at < STEP_TABLE.length; at += 1) {
     const step = STEP_TABLE[at];
     if (step === undefined) break;
@@ -1590,7 +1604,9 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
 
   const targets = [...(options.targets ?? [])];
   const modes = [...(options.modes ?? [])];
+  const drawnAs: unknown = options.data?.[CAST_ON_DRAW_KEY];
   drive(sink, {
+    ...(typeof drawnAs === "string" ? { drawnAs } : {}),
     instanceId: instance.id,
     defId: instance.defId,
     player,

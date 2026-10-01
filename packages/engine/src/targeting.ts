@@ -14,7 +14,7 @@ import { opponentOf } from "@jackioh/shared";
 import { fusedIdParts } from "./catalog";
 import { spellCannotReach } from "./restrictions";
 import type { Script } from "./script";
-import { flagsOf, scriptOf, scriptsFor } from "./scripts";
+import { scriptOf, scriptsFor } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { firstFreeZone, isBuried } from "./zones";
 
@@ -79,8 +79,17 @@ export function mayTarget(
 }
 
 /**
+ * Classic #33 Joro, R450: whether a card answers the targeting of a friendly unit from its owner's
+ * hand — its script declares the replacement `{ on: "targeted", where: "hand" }` (`Script.replacements`),
+ * the one declaration the attack half (§4.2 step 2) reads too. A Vanilla card has no text (`scriptOf`).
+ */
+export function interposesFromHand(card: CardInstance): boolean {
+  return (scriptOf(card).replacements ?? []).some((entry) => entry.on === "targeted" && entry.where === "hand");
+}
+
+/**
  * Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted` — the first card in
- * the targeted unit's controller's hand with `interceptsTargeting`, when the targeted card is a unit
+ * the targeted unit's controller's hand that `interposesFromHand`, when the targeted card is a unit
  * of the chooser's opponent acting on the field and that player has an open unit zone to summon it
  * into (with none, nothing happens). Null when nothing answers.
  */
@@ -89,7 +98,7 @@ export function interceptorFor(state: GameState, chooser: PlayerId, targeted: Ca
   const defender = targeted.controller;
   if (defender !== opponentOf(chooser)) return null;
   if (firstFreeZone(state, defender, "units") === null) return null;
-  return state.players[defender].hand.find((held) => flagsOf(held).interceptsTargeting === true) ?? null;
+  return state.players[defender].hand.find(interposesFromHand) ?? null;
 }
 
 /**
