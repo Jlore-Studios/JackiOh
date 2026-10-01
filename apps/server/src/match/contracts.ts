@@ -8,6 +8,7 @@
 
 import type { GameOverReason, PlayerId } from "@jackioh/shared";
 import type {
+  LastBoardEntry,
   Logger,
   MatchClocks,
   MatchSeat,
@@ -109,6 +110,11 @@ export type RecordResultInput = {
   outcome: TerminalOutcome;
   turns: number;
   at: number;
+  /**
+   * R417, R565: each seat's board as this game ended, read from that seat's own side (seat order).
+   * Absent when the writer could not read the game: the reaper (R112).
+   */
+  lastBoards?: readonly [readonly LastBoardEntry[], readonly LastBoardEntry[]];
 };
 
 /**

@@ -173,6 +173,7 @@ import {
   type CardInstance,
   type EngineSink,
   type GameState,
+  type LastBoardInput,
   type PendingChoice,
   type UnitView,
 } from "@jackioh/engine";
@@ -302,6 +303,8 @@ export type ScenarioOptions = {
   p2?: SideSetup;
   turn?: number;
   active?: PlayerId;
+  /** R417: each seat's last board, the `createGame` input C+ #29 reads (seat order). */
+  lastBoards?: LastBoardInput;
 };
 
 export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "gone";
@@ -653,7 +656,7 @@ function placeSide(sink: EngineSink, player: PlayerId, setup: SideSetup): void {
 function buildState(opts: ScenarioOptions): GameState {
   const seed = opts.seed ?? DEFAULT_SEED;
   const deck = fillerDeck();
-  const state = createGame({ seed, decks: [deck, deck] });
+  const state = createGame({ seed, decks: [deck, deck], ...(opts.lastBoards === undefined ? {} : { lastBoards: opts.lastBoards }) });
 
   // The filler libraries exist only to satisfy §2.6's deck validation.
   for (const player of PLAYER_IDS) {

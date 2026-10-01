@@ -3322,7 +3322,7 @@
         "min": 1
       }
     ],
-    "loc": 8,
+    "loc": 7,
     "base": {
       "attack": 2,
       "health": 1,
@@ -6263,6 +6263,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 8,
       "health": 8,
@@ -6298,6 +6299,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 0,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Destroy a Unit. Your hero takes damage equal to its health."
@@ -6331,6 +6333,7 @@
         "min": 1
       }
     ],
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours, heal it {amount}."
@@ -6354,6 +6357,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 1,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs (0)."
@@ -6387,6 +6391,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to each enemy."
@@ -6420,6 +6425,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Cry: Give your Units Divine Shield.\nAura: Your Units have +{aura}/+{aura}."
@@ -6443,6 +6449,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 2,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Cry: Destroy all Units. Exile the top card of your deck for each one destroyed."
@@ -6476,6 +6483,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Cry: Exile {cards|random card|random cards} from your deck. Summon the Units among them."
@@ -6499,6 +6507,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 2,
+    "loc": 35,
     "base": {
       "attack": 10,
       "health": 3,
@@ -6549,6 +6558,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 2,
       "health": 2,
@@ -6594,6 +6604,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\""
@@ -7217,6 +7228,7 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 4,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Replace your hand with the perfect hand of Classic and Classic+ cards. Refresh your mana."
@@ -7246,6 +7258,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 3,
       "health": 4,
@@ -7296,6 +7309,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Discover a card from the board your last game ended with. It costs (0)."
@@ -7317,6 +7331,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 3,
@@ -7340,6 +7355,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 2,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
@@ -7364,6 +7380,7 @@
       "classicplus-032-2",
       "classicplus-032-3"
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Add an Execute, a Brawl and a Blade Storm to your hand."
@@ -7386,6 +7403,7 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Destroy a damaged Unit."
@@ -7408,6 +7426,7 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 2,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Destroy all Units but one chosen at random."
@@ -7440,6 +7459,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Deal 1 damage to all Units. Repeat until a Unit dies, up to {rounds|time|times}."

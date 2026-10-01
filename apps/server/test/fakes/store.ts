@@ -26,10 +26,12 @@ import {
 } from "../../src/api/e2e-store";
 import {
   createMemoryDeckStores,
+  createMemoryLastBoardStore,
   createMemoryTutorialStore,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type LastBoardTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
 import type {
@@ -61,7 +63,8 @@ type Tables = {
   tickets: Ticket[];
   results: ResultRow[];
 } & DeckTables &
-  TutorialTables;
+  TutorialTables &
+  LastBoardTables;
 
 function emptyTables(): Tables {
   return {
@@ -79,6 +82,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
   };
 }
 
@@ -309,6 +313,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.series = deckStores.series;
   // R320: tutorial progress, the same in-memory store the end-to-end server runs.
   store.tutorial = createMemoryTutorialStore(() => tables, call);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables, call);
 
   store.matches = {
     create: async (match) => {

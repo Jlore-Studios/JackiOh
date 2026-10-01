@@ -747,7 +747,8 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     // like the #31 KY's Math Equation that returns to its owner's hand at the end of the turn.
     case "destroyed": {
       const killerHidden = event.killerId !== null && hidden(event.killerId);
-      const redacted = hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+      const { radiant: _face, ...faceless } = event;
+      const redacted = hidden(event.instanceId) ? { ...faceless, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
       return killerHidden ? { ...redacted, killerId: HIDDEN_ID } : redacted;
     }
 

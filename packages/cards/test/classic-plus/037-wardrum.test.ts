@@ -111,6 +111,22 @@ describe("C+ #37 Wardrum", () => {
       expect(wardrumIn(s)).toBe("field");
     });
 
+    it("R578 a cast inside the 3rd play is the 4th: it fires on the 3rd's resolution, after the cast's", () => {
+      const s = scenario({
+        p1: { hand: [WARDRUM, REPLENISH, REPLENISH, STOCKPILE], library: [BONE_STORM, FILLER, FILLER, FILLER], mana: 4 },
+        p2: { hand: [FILLER] },
+      });
+      s.play(hand(s, REPLENISH));
+      s.play(hand(s, REPLENISH));
+      const stockpile = hand(s, STOCKPILE);
+      s.play(stockpile); // its draw casts the Bone Storm (the 4th) before the Stockpile (the 3rd) resolves
+      expect(wardrumIn(s)).toBe("field");
+      const order = s.events.flatMap((event) =>
+        event.type === "cardResolved" ? [event.instanceId] : event.type === "summoned" && event.defId === WARDRUM ? ["wardrum"] : [],
+      );
+      expect(order.indexOf("wardrum")).toBeGreaterThan(order.indexOf(stockpile));
+    });
+
     it("the 4th doesn't: a zone that opens only for the 4th play leaves it in hand", () => {
       const s = scenario({
         p1: {

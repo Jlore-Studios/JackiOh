@@ -48,8 +48,9 @@ const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
 const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
 
 /** Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file. */
+const FROZEN_WASTES = "classicplus-012-6"; // C+ #12.6's exiles: test/classic-plus/012-6-frozen-wastes.test.ts
 const BOOK_WORM = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
-const CLASSIC_PLUS_C_PREVIEWED = [BOOK_WORM];
+const CLASSIC_PLUS_C_PREVIEWED = [FROZEN_WASTES, BOOK_WORM];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit

@@ -316,3 +316,18 @@ export { chooseTargetWhere } from "./chooseWhere";
 // §4.5's check at this point of a list, then the rest on a stay that begins after it (C #43 Plague
 // Nuke, R59, R113, R174).
 export { afterStateCheck } from "./afterCheck";
+
+// ---- v0.2.0 verbs: cards-plus-c (B5 E30, R417): C+ #29's verbs over a last board ----
+export {
+  LAST_BOARD_CARD_COST,
+  LAST_BOARD_DISCOVER_OPTIONS,
+  addFromLastBoard,
+  addRandomFromLastBoard,
+  discoverFromLastBoard,
+} from "./lastBoard";
+// ---- v0.2.0 verbs: Classic+ cards #1–#39 (card-specific, the cards-plus-c workstream) ----
+
+// B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).
+export { replaceHandWithPerfect } from "../subsystems/perfectHand";
+// R59: rounds of damage, each with its own state check, until a Unit dies (C+ #32.3 Blade Storm).
+export { damageRoundsUntilDeath } from "./rounds";

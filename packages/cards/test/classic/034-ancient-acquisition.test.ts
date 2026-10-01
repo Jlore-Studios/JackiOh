@@ -5,8 +5,7 @@
 // your pick too; radiant: up to 4 from your graveyard or your exile; its tuned number (cards) reads
 // through `param()` (R386)".
 //
-// The C #47 case needs C #47 Recurring Felinor's script (cards-classic-b) and the cast verb (B5 E12,
-// play pipeline B), neither in this worktree: it waits for integration.
+// The C #47 case casts this card from C #47 Recurring Felinor's Cry (B5 E12).
 
 import { describe, expect, it } from "vitest";
 import { reduce, stepParam, type GameState, type PendingChoice } from "@jackioh/engine";
