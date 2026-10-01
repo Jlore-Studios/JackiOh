@@ -18,6 +18,7 @@ import { TRAP_TYPES, catalog } from "../src/query";
 
 const OOMEN = "core-067"; // Unit 1/2 → 2/4, cost 1, Human.
 const MANA_WELL = "core-006"; // A Field Spell: something to occupy a backrow zone with.
+const SIPHON_SQUAD = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
 
 /**
  * The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
@@ -208,12 +209,18 @@ describe("#67 Zoomerbin Oomen", () => {
     for (let seed = 0; seed < 40; seed += 1) {
       const s = board({ seed: `oomen-radiant-${seed}`, p1: { hand: [{ def: OOMEN, radiant: true }] } });
       s.play(OOMEN, { zone: LANE });
-      const trap = s.backrow("p1", LANE);
-      expect(trap?.radiant).toBe(true);
-      if (trap !== null) {
-        expect(RADIANT_TRAP_POOL).toContain(trap.defId);
-        seen.add(trap.defId);
-      }
+      // The pick is read off its `summoned` event, not off lane 3's zone: R403 makes C #88 Siphon
+      // Squad live from the moment it is set, its self-Tribute included, and p2 controls no Units
+      // here, so the state check right after the summon Tributes it. It still came, Radiant.
+      const picks = s.events.flatMap((e) => (e.type === "summoned" && e.row === "backrow" ? [e.instanceId] : []));
+      expect(picks).toHaveLength(1);
+      const trap = s.card(picks[0] ?? "");
+      expect(trap.radiant).toBe(true);
+      expect(RADIANT_TRAP_POOL).toContain(trap.defId);
+      // Every other pick stays where §3.1 put it.
+      if (trap.defId === SIPHON_SQUAD) s.expectInZone(trap.id, "graveyard");
+      else expect(s.backrow("p1", LANE)?.id).toBe(trap.id);
+      seen.add(trap.defId);
     }
     // Forty seeds over a pool of every set's traps reach beyond the Cost (1) ones.
     expect([...seen].some((id) => !TRAP_POOL.includes(id))).toBe(true);
