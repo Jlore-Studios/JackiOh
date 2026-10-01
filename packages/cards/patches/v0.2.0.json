@@ -6626,6 +6626,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
@@ -6658,6 +6659,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
@@ -6690,6 +6692,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
@@ -6711,6 +6714,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 21,
     "base": {
       "attack": 8,
       "health": 9,
@@ -6741,6 +6745,7 @@
       "classicplus-019-4",
       "classicplus-019-5"
     ],
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
@@ -6763,6 +6768,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 2,
+    "loc": 5,
     "base": {
       "attack": 5,
       "health": 5,
@@ -6816,6 +6822,7 @@
         "max": 100
       }
     ],
+    "loc": 37,
     "base": {
       "attack": 5,
       "health": 5,
@@ -6860,6 +6867,7 @@
         "min": 1
       }
     ],
+    "loc": 18,
     "base": {
       "attack": 5,
       "health": 5,
@@ -6901,6 +6909,7 @@
         "min": 1
       }
     ],
+    "loc": 14,
     "base": {
       "attack": 0,
       "health": 5,
@@ -6948,6 +6957,7 @@
         "min": 1
       }
     ],
+    "loc": 20,
     "base": {
       "attack": 5,
       "health": 5,
@@ -6995,6 +7005,7 @@
         "min": 1
       }
     ],
+    "loc": 13,
     "base": {
       "attack": 2,
       "health": 2,
@@ -7028,6 +7039,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [
         {
@@ -7055,6 +7067,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Activates when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
@@ -7095,6 +7108,7 @@
         "min": 1
       }
     ],
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}."
@@ -7114,6 +7128,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Destroy every card in lanes 1 and 5."
@@ -7133,6 +7148,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Destroy a random enemy Unit."
@@ -7169,6 +7185,7 @@
         "min": 1
       }
     ],
+    "loc": 12,
     "base": {
       "attack": 9,
       "health": 9,

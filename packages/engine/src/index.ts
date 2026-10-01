@@ -51,6 +51,9 @@ export * from "./enchantments";
 // windows and their declarations, and the restriction and status readers a card script asks with.
 export * from "./replacements";
 export * from "./restrictions";
+// R42, R412: a kill credited to another unit (Classic+ #19.2); R58: whether a card is being cast on draw (Classic+ #26).
+export * from "./killCredit";
+export * from "./castOnDrawNow";
 // Patch v0.2.0, play pipeline A: the announce window's record (B5 E1, R448) and the targeting point's
 // rules (B5 E5, E9, R450), which the AI's redaction and the combat module read.
 export * from "./announce";

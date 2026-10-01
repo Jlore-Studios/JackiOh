@@ -255,6 +255,8 @@ export { convertHealing, setHealth } from "./health";
 export { damageSplit } from "./split";
 // Berserk and "may attack again" (E35).
 export { goBerserk, mayAttackAgain } from "./statuses";
+// R42, R412: kills an effect watches, and a kill credited to another unit (Classic+ #19.2).
+export { withKillCredit } from "./killCredit";
 
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
 // Prompts and movement: the new prompt kinds and the opponent's hand as options (E17, E18, R465),
