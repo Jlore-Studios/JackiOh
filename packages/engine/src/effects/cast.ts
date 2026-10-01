@@ -24,6 +24,7 @@ import type { CostRule } from "../costRules";
 import { addModifier } from "../modifiers";
 import { mayCastNow } from "../randomCast";
 import { castCard, lazyPart, type CastOptions, type EngineSink } from "../resolve";
+import { CHAOS_CHAIN_KEY, CHAOS_TAG, chaosChainOf } from "../subsystems/callToChaos";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance, type ModifierExpiry } from "../state";
 import { forEachCard } from "./each";
@@ -128,6 +129,9 @@ function castOneRandom(
       if (def === undefined) return;
       const card = newInstance(ctx.state, def.id, ctx.controller, { z: "resolving", player: ctx.controller });
       card.radiant = radiant;
+      // R28: a Call to Chaos a random cast makes is a cast of the chain (Classic+ #47 Jogg's Box), one
+      // deeper than the card casting it, so it counts against CALL_TO_CHAOS_CHAIN_CAP.
+      if (def.tags.includes(CHAOS_TAG)) card.memory[CHAOS_CHAIN_KEY] = chaosChainOf(ctx.self) + 1;
       castCard(sinkOf(ctx), card, { ...optionsOf(how), random: true });
     },
   };
