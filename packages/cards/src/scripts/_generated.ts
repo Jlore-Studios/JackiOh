@@ -169,6 +169,7 @@ import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-to
 import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
 import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
 import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_plus_035_rollback from "./classic-plus/035-rollback";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -327,4 +328,5 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_043_plague_nuke,
   mclassic_044_back_from_the_gy,
   mclassic_045_nature_titan,
+  mclassic_plus_035_rollback,
 ];

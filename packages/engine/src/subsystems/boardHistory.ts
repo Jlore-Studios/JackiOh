@@ -20,23 +20,12 @@ import type { GameEvent, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { enterNewSide } from "../combat";
 import { BOARD_HISTORY_DEPTH } from "../config";
-import { addToHand } from "../draw";
+import { bounceCard } from "../effects/move";
 import { isFaceDown } from "../preview";
 import type { EngineSink } from "../resolve";
 import type { Effect } from "../script";
 import { findInstance, sideSnapshotInstances, type BoardSnapshot, type CardInstance, type GameState, type SideSnapshot } from "../state";
-import {
-  freshFaceDownId,
-  isUnitToken,
-  moveToZone,
-  placeOnField,
-  releaseHome,
-  removeFromAnyZone,
-  removeFromField,
-  slotsOf,
-  zoneContents,
-  type ZoneSlot,
-} from "../zones";
+import { freshFaceDownId, placeOnField, releaseHome, removeFromAnyZone, removeFromField, slotsOf, zoneContents, type ZoneSlot } from "../zones";
 
 const ROWS: readonly Row[] = ["units", "backrow"];
 
@@ -45,16 +34,9 @@ const copyOf = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 /** R419, §2.2: the field as the turn that has just begun finds it; the last BOARD_HISTORY_DEPTH are kept, oldest first. */
 export function recordBoardSnapshot(state: GameState): void {
   const side = (player: PlayerId): SideSnapshot => {
-    const { units, backrow, backrowPiles, carried, locks } = copyOf(state.players[player]);
+    const { units, backrow, backrowPiles, carried, locks } = state.players[player];
     const homes = (state.homes ?? []).filter((home) => home.zone.player === player);
-    return {
-      units,
-      backrow,
-      locks,
-      ...(backrowPiles === undefined ? {} : { backrowPiles }),
-      ...(carried === undefined ? {} : { carried }),
-      ...(homes.length === 0 ? {} : { homes: copyOf(homes) }),
-    };
+    return copyOf({ units, backrow, locks, backrowPiles, carried, ...(homes.length === 0 ? {} : { homes }) });
   };
   const snapshot: BoardSnapshot = { turn: state.turn, sides: { p1: side("p1"), p2: side("p2") } };
   state.boardHistory = [...(state.boardHistory ?? []), snapshot].slice(-BOARD_HISTORY_DEPTH);
@@ -79,47 +61,29 @@ function snapshotZone(side: SideSnapshot, ref: ZoneSlot): CardInstance[] {
 
 const zonesOf = (player: PlayerId): ZoneSlot[] => ROWS.flatMap((row) => slotsOf(player, row));
 
-/** Step 1, a Bounce (§6.3): R78's reset, a full hand burns it (§2.4), a unit token ceases to exist (R11). */
-function leaveForHand(sink: EngineSink, card: CardInstance): void {
-  const event: GameEvent = { type: "bounced", instanceId: card.id, defId: card.defId, owner: card.owner };
-  if (isUnitToken(sink.state, card)) {
-    moveToZone(sink.state, card, "hand");
-    sink.events.push(event);
-    return;
-  }
-  sink.events.push(event);
-  addToHand(sink, card);
-}
-
 /** A card the snapshot holds (`card`, a copy, becomes the card on the field) and where it stood just before. */
 type Placement = { card: CardInstance; ref: ZoneSlot; live: CardInstance | undefined; from: PlayerId | null; wasFaceDown: boolean };
 
 /**
- * R566: a card that stood on the same side of the field just before entered nothing (R171) and keeps
- * its sickness and exertion; any other entered the field on this turn (R83), crossing sides with what
- * it installed (`combat.enterNewSide`). Returns whether it entered.
+ * R566: a card that stood on the same side of the field just before, under the same id, entered nothing
+ * (R171) and keeps its sickness and exertion; any other — a fresh id included — entered the field on
+ * this turn (R83), crossing sides with what it installed (`combat.enterNewSide`). Returns whether it entered.
  */
-function stampTurnState(sink: EngineSink, { card, ref, live, from }: Placement): boolean {
-  if (live !== undefined && from === ref.player) {
+function stampTurnState(sink: EngineSink, { card, ref, live, from }: Placement, renamed: boolean): boolean {
+  delete card.summonedTurn;
+  delete card.tauntSuppressedTurn;
+  if (live !== undefined && from === ref.player && !renamed) {
     const { summonedTurn, exertion, tauntSuppressedTurn } = live;
     Object.assign(card, { exertion }, summonedTurn === undefined ? {} : { summonedTurn }, tauntSuppressedTurn === undefined ? {} : { tauntSuppressedTurn });
-    if (summonedTurn === undefined) delete card.summonedTurn;
-    if (tauntSuppressedTurn === undefined) delete card.tauntSuppressedTurn;
     return false;
   }
-  delete card.tauntSuppressedTurn;
-  if (from !== null) {
-    enterNewSide(sink, card, from);
-  } else {
-    card.summonedTurn = sink.state.turn;
-    card.exertion = { attacked: false, switched: false };
-  }
+  enterNewSide(sink, card, from ?? ref.player);
   return true;
 }
 
 /**
- * R419: return `sides` of the field to the snapshot `turnsAgo` names (R562). Returns how many turns it
- * went back, or null with no history, when nothing happens.
+ * R419: return `only`'s sides of the field to the snapshot `turnsAgo` names (R562). Returns how many
+ * turns it went back, or null with no history, when nothing happens.
  */
 export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, only: readonly PlayerId[]): number | null {
   const state = sink.state;
@@ -128,13 +92,14 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
   if (found === null || sides.length === 0) return null;
   // A copy: the fresh ids handed out below rename the stored history's cards (R227), not these.
   const snapshot = copyOf(found);
-  sink.events.push({ type: "rolledBack", player: by, turnsAgo: state.turn - snapshot.turn, sides });
+  const back = state.turn - snapshot.turn;
+  sink.events.push({ type: "rolledBack", player: by, turnsAgo: back, sides });
 
   // Step 1.
   const held = new Set(sides.flatMap((player) => sideSnapshotInstances(snapshot.sides[player]).map((card) => card.id)));
   for (const player of sides) {
     for (const card of zonesOf(player).flatMap((ref) => zoneContents(state, ref))) {
-      if (!held.has(card.id)) leaveForHand(sink, card);
+      if (!held.has(card.id)) bounceCard(sink, card);
     }
   }
 
@@ -151,25 +116,25 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
       }
     }
   }
-  for (const { live } of placements) {
+  for (const { live, from } of placements) {
     if (live === undefined) continue;
-    if (live.zone.z !== "field") {
+    if (from === null) {
       removeFromAnyZone(state, live);
       continue;
     }
-    // A move along the field is no departure (R174); a moved card's own home goes (R563).
-    removeFromField(state, live, { withPile: true });
+    // A restored side's piles are rebuilt whole, so nothing there resumes; on the other side the card
+    // beneath does (§3.2). A move along the field is no departure (R174); a moved card's own home goes (R563).
+    removeFromField(state, live, { withPile: sides.includes(from) });
     releaseHome(state, live.id);
   }
   // R563: what is held now on a restored side is let go; the cards go back whatever is Locked now.
   state.reserved = state.reserved.filter((zone) => !sides.includes(zone.player));
-  const homes = (state.homes ?? []).filter((home) => !sides.includes(home.zone.player));
-  const locksBefore = sides.map((player) => state.players[player].locks);
+  state.homes = (state.homes ?? []).filter((home) => !sides.includes(home.zone.player));
+  const locksBefore = copyOf(sides.map((player) => state.players[player].locks));
   for (const player of sides) {
     const { units, backrow } = state.players[player].locks;
     state.players[player].locks = { units: units.map(() => false), backrow: backrow.map(() => false) };
   }
-  state.homes = [];
   for (const player of sides) {
     for (const ref of zonesOf(player)) {
       const zone = placements.filter((p) => p.ref.player === ref.player && p.ref.row === ref.row && p.ref.lane === ref.lane);
@@ -179,19 +144,23 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
         const brittle = card.brittle;
         // R227: going face-down from anywhere but a face-down zone, it takes a fresh id as it goes.
         const formerId = ref.row === "backrow" && isFaceDown(state, card) && !placement.wasFaceDown ? freshFaceDownId(state, card) : undefined;
-        // Every restored zone is empty and unlocked now, so a refusal is a broken invariant (as in `swap.ts`).
-        if (!placeOnField(state, card, ref, { stack: at > 0 })) throw new Error(`rollback could not put ${card.id} back`);
+        // Every restored zone is empty and open now; only a carried Unit whose carrier is mid-play
+        // (left out above) can find no place, and it goes to its owner's hand as step 1's cards do.
+        if (!placeOnField(state, card, ref, { stack: at > 0 })) {
+          bounceCard(sink, card);
+          return;
+        }
         // The snapshot's Brittle count exactly: placement starts a printed one on a card with none (R385).
         if (brittle === undefined) delete card.brittle;
-        if (!stampTurnState(sink, placement)) return;
+        if (!stampTurnState(sink, placement, formerId !== undefined)) return;
         entered.unshift({ type: "controlChanged", instanceId: card.id, controller: ref.player, row: ref.row, lane: ref.lane, ...(formerId === undefined ? {} : { formerId }) });
       });
       sink.events.push(...entered);
     }
   }
   // R563: the snapshot's own holds come back for the cards standing there again.
-  const back = sides.flatMap((player) => snapshot.sides[player].homes ?? []).filter((home) => findInstance(state, home.instanceId)?.zone.z === "field");
-  state.homes = [...homes, ...back];
+  const homes = sides.flatMap((player) => snapshot.sides[player].homes ?? []).filter((home) => findInstance(state, home.instanceId)?.zone.z === "field");
+  state.homes.push(...homes);
   if (state.homes.length === 0) delete state.homes;
 
   // Step 3.
@@ -205,7 +174,7 @@ export function restoreBoard(sink: EngineSink, by: PlayerId, turnsAgo: number, o
       }
     }
   });
-  return state.turn - snapshot.turn;
+  return back;
 }
 
 /**
@@ -216,9 +185,7 @@ export function rollBack(args: { turnsAgo: number; sides: "self" | "enemy" | "bo
   return {
     kind: "rollBack",
     apply(ctx): void {
-      const sides = PLAYER_IDS.filter((player) =>
-        args.sides === "both" ? true : (player === ctx.controller) === (args.sides === "self"),
-      );
+      const sides = PLAYER_IDS.filter((player) => args.sides === "both" || (player === ctx.controller) === (args.sides === "self"));
       restoreBoard(ctx, ctx.controller, args.turnsAgo, sides);
     },
   };

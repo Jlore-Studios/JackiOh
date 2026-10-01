@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { Action, ActionInput, GameEvent } from "@jackioh/shared";
 import { BOARD_HISTORY_DEPTH, DECK_SIZE } from "../src/config";
-import { beginGame, reduce } from "../src/reduce";
+import { beginGame, legalActions, reduce } from "../src/reduce";
 import { fold, hashState } from "../src/replay";
 import { stateCheck } from "../src/stateCheck";
 import { createGame, findInstance, newInstance, type GameState } from "../src/state";
@@ -200,10 +200,8 @@ describe("E29 through reduce (§9.3)", () => {
     step({ type: "mulligan", keep: state.players.p2.hand.map((c) => c.id), playerId: "p2" });
     while (state.turn < 5 || state.active !== "p1" || !state.players.p1.hand.some((c) => c.defId === rewind.id)) {
       const player = state.active;
-      const unit = state.players[player].hand.find((c) => c.defId !== rewind.id);
-      if (unit !== undefined && state.players[player].mana.current >= 1) {
-        step({ type: "play", playerId: player, instanceId: unit.id, zone: { row: "units", lane: 1 + state.players[player].units.filter((p) => p !== null).length } } as ActionInput);
-      }
+      const play = legalActions(state, player).find((action) => action.type === "play" && findInstance(state, action.instanceId)?.defId !== rewind.id);
+      if (play !== undefined) step({ ...play, playerId: player });
       step({ type: "endTurn", playerId: player });
       if (state.turn > 20) throw new Error("p1 never held the fixture");
     }

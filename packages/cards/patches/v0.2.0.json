@@ -7480,6 +7480,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Choose 1, 2 or 3. Return the board to how it was that many turns ago."

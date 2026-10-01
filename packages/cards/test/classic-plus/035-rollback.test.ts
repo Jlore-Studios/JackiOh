@@ -17,10 +17,12 @@ import {
   BOARD_HISTORY_DEPTH,
   beginGame,
   createGame,
+  createRng,
   fold,
   hashState,
   legalActions,
   reduce,
+  seatToAct,
   subsystems,
   type GameState,
 } from "@jackioh/engine";
@@ -245,24 +247,24 @@ describe("C+ #35 Rollback — base: both sides", () => {
 
   it("R419 step 2: from a hand, a graveyard and exile — no Cry for a card that comes back (R1)", () => {
     const s = onTurn11({
-      p1: { hand: [ROLLBACK, HIT_JOB], field: [TOKEN_MAKER, VANILLA] },
+      p1: { hand: [ROLLBACK, HIT_JOB], field: [TOKEN_MAKER, { def: VANILLA, lane: 4 }] },
       p2: { hand: [COLLATERAL, FLOOD], field: [TIMMY, VANILLA] },
     });
     const maker = s.unit("p1", 1)!;
-    const vanilla = s.unit("p1", 2)!;
+    const vanilla = s.unit("p1", 4)!;
     const timmy = s.unit("p2", 1)!;
     const theirs = s.unit("p2", 2)!;
     s.play(HIT_JOB, { targets: target(timmy.id) }); // to p2's graveyard
     s.endTurn();
-    s.play(COLLATERAL, { targets: target(vanilla.id) }); // to p1's exile
+    s.play(COLLATERAL, { targets: target(vanilla.id) }); // to p1's exile, nothing beside it
     s.endTurn().endTurn();
-    s.play(FLOOD); // p2's turn 14: every Unit to its owner's hand
-    s.endTurn();
+    s.play(FLOOD); // p2's turn 14: every Unit to its owner's hand, and the turn has nothing left (R82)
+    expect(s.state.turn).toBe(15);
     s.expectInZone(maker, "hand").expectInZone(timmy, "graveyard").expectInZone(vanilla, "exile").expectInZone(theirs, "hand");
 
     s.play(ROLLBACK, { modes: ["3"] }); // turn 15 → the start of turn 12, before the exile and the Flood
     expect(s.unit("p1", 1)?.id).toBe(maker.id);
-    expect(s.unit("p1", 2)?.id).toBe(vanilla.id);
+    expect(s.unit("p1", 4)?.id).toBe(vanilla.id);
     expect(s.unit("p2", 2)?.id).toBe(theirs.id);
     // Timmy died on turn 11, before the snapshot of turn 12: it stays where it is.
     s.expectInZone(timmy, "graveyard");
@@ -289,17 +291,18 @@ describe("C+ #35 Rollback — base: both sides", () => {
 
   it("R419 step 2: a card that left for the opponent's hand comes back out of it", () => {
     const s = onTurn11({ p1: { hand: [ROLLBACK, MIND_CONTROL], field: [VANILLA] }, p2: { hand: [FLOOD], field: [TIMMY] } });
+    const vanilla = s.unit("p1", 1)!;
     const timmy = s.unit("p2", 1)!;
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     s.endTurn(); // turn 12's snapshot holds Timmy on p1's side
-    s.play(FLOOD); // back to its owner, p2
+    s.play(FLOOD); // back to its owner, p2; the turn has nothing left (R82)
     s.expectInZone(timmy, "hand");
     expect(s.hand("p2").map((card) => card.id)).toContain(timmy.id);
-    s.endTurn();
+    expect(s.state.turn).toBe(13);
 
     s.play(ROLLBACK, { modes: ["1"] });
-    expect(s.unit("p1", 1)?.id).toBe(s.card(s.unit("p1", 1)!).id);
-    expect(s.state.players.p1.units.flat().map((card) => card?.id)).toContain(timmy.id);
+    expect(s.unit("p1", 1)?.id).toBe(vanilla.id);
+    expect(s.unit("p1", 2)?.id).toBe(timmy.id);
     expect(s.hand("p2").map((card) => card.id)).not.toContain(timmy.id);
     expect(s.card(timmy)).toMatchObject({ controller: "p1", owner: "p2" });
     // It is public on the field again, so both views name it.
@@ -408,7 +411,7 @@ describe("C+ #35 Rollback — base: both sides", () => {
     const s = onTurn11({ p1: { hand: [ROLLBACK], field: [VANILLA] }, p2: { hand: [{ def: ROCK, radiant: true }], field: [TIMMY] } });
     const timmy = s.unit("p2", 1)!;
     s.endTurn();
-    s.play(ROCK, { zone: 2, tributes: [timmy] });
+    s.play(ROCK, { zone: 2, tributes: [timmy.id] });
     const rock = s.unit("p2", 2)!;
     s.endTurn();
 
@@ -455,12 +458,17 @@ describe("C+ #35 Rollback — what a put-back card keeps (R566)", () => {
 
 describe("C+ #35 Rollback — too little history (R562)", () => {
   it("R562 with fewer turns recorded than N it goes back as far as the history goes", () => {
-    const s = onTurn11({ p1: { hand: [ROLLBACK, TIMMY], field: [VANILLA] }, p2: { field: [VANILLA] } });
-    s.play(TIMMY, { zone: 2 });
+    const s = scenario({
+      p1: { hand: [ROLLBACK], field: [VANILLA], library: FILLER },
+      p2: { hand: [TIMMY], field: [VANILLA], library: FILLER },
+    });
+    s.endTurn(); // turn 10, p2's: the first snapshot, then p2 plays a Tempo Timmy
+    const timmy = s.play(TIMMY, { zone: 2 }).unit("p2", 2)!;
+    s.endTurn();
     s.play(ROLLBACK, { modes: ["3"] });
     // Turn 8 was never recorded; the oldest snapshot, turn 10's, is where it goes.
     expect(ofType(s.lastEvents, "rolledBack")).toEqual([{ type: "rolledBack", player: "p1", turnsAgo: 1, sides: ["p1", "p2"] }]);
-    expect(s.unit("p1", 2)).toBeNull();
+    s.expectInZone(timmy, "hand");
   });
 
   it("R562 a game's first turns: the oldest snapshot is the start of turn 1, the empty board", () => {
@@ -594,21 +602,16 @@ describe("C+ #35 Rollback — a whole game (§9.3)", () => {
     const deck = (offset: number): string[] => [ROLLBACK, ...["core-008", "core-011", "core-015", "core-002", "core-012", "core-016", "core-017",
       "core-019", "core-020", "core-025", "core-026", "core-036", "core-041", "core-043", "core-049", "core-053", "core-055", "core-060", "core-092",
       "core-003", "core-018", "core-071"].slice(offset, offset + 19)];
-    for (let seed = 1; seed <= 6; seed += 1) {
+    let rolledBack = 0;
+    for (let seed = 1; seed <= 8; seed += 1) {
       const decks: [string[], string[]] = [deck(0), deck(3)];
       let state = beginGame(createGame({ seed: `rollback-fuzz-${seed}`, decks })).state;
-      const policy = subsystems.chooseAction;
-      const rng = (globalThis as never as { _: never })._;
-      void rng;
+      const policy = createRng(`rollback-policy-${seed}`);
       const monitor = createInvariantMonitor(state);
       const log: Action[] = [];
-      const choices = createPolicyRng(seed);
-      let rolledBack = 0;
       for (let step = 0; state.result === null && step < 5000; step += 1) {
-        const player = subsystems.seatToActOf ? state.active : state.active;
-        void player;
-        const seat = seatOf(state);
-        const chosen = policy(state, seat, choices);
+        const seat = seatToAct(state);
+        const chosen = subsystems.chooseAction(state, seat, policy);
         if (chosen === null) throw new Error(`no action for ${seat}`);
         expect(monitor.before(state, seat, chosen)).toEqual([]);
         const action = { ...chosen, playerId: seat, nonce: `rf-${seed}-${step}` } as Action;
@@ -619,10 +622,12 @@ describe("C+ #35 Rollback — a whole game (§9.3)", () => {
         expect(monitor.after(result.events, state)).toEqual([]);
         rolledBack += result.events.filter((event) => event.type === "rolledBack").length;
       }
+      expect(state.result).not.toBeNull();
       const replayed = fold({ seed: `rollback-fuzz-${seed}`, decks, log });
       expect(replayed.errors).toEqual([]);
       expect(hashState(replayed.state)).toBe(hashState(state));
-      void rolledBack;
     }
+    // The games did cast it: the property is about Rollback, not about games that never drew it.
+    expect(rolledBack).toBeGreaterThan(0);
   });
 });
