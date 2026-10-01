@@ -119,7 +119,8 @@ function isHiddenBackrow(state: GameState, card: CardInstance, seat: PlayerId): 
  * B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
  * library get new identities (and Radiant flags) and a new order, every backrow card the seat
  * cannot read gets another Trap that shows the same cost (R351: the seat reads that much, since patch
- * v0.1.1 gave #85 a cost of its own), the seat's own library is reordered, and seed, cursor and the
+ * v0.1.1 gave #85 a cost of its own) and leaves the seat's view unchanged (R403, R602: a live
+ * face-down aura shows on the board), the seat's own library is reordered, and seed, cursor and the
  * nonce log are replaced.
  */
 function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState {
@@ -135,9 +136,21 @@ function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState
   for (const player of PLAYER_IDS) {
     for (const card of out.players[player].backrow) {
       if (card === null || !isHiddenBackrow(state, card, seat)) continue;
+      // R403, R602: a face-down trap with no activation condition is live, so a trap of the same cost
+      // can still change what the seat reads off the board (C #88 Siphon Squad shrinks its units'
+      // Attack). That is not hidden from it, so the swap must leave the seat's view as it was. The
+      // card's own def always does, so there is always a trap to pick.
       const shown = effectiveCost(out, card);
-      const sameCost = traps.filter((id) => effectiveCost(out, { ...card, defId: id }) === shown);
-      card.defId = rng.pick(sameCost) as string;
+      const original = card.defId;
+      const seen = JSON.stringify(viewWithoutEvents(out, seat));
+      const unseen = traps.filter((id) => {
+        if (effectiveCost(out, { ...card, defId: id }) !== shown) return false;
+        card.defId = id;
+        const same = JSON.stringify(viewWithoutEvents(out, seat)) === seen;
+        card.defId = original;
+        return same;
+      });
+      card.defId = rng.pick(unseen) as string;
     }
   }
   out.players[opp].hand = rng.shuffle(out.players[opp].hand);
