@@ -16,8 +16,9 @@
 //      controller's units (the card itself allowed) or the card itself — and an ability whose cost
 //      cannot be paid cannot be activated (`whyCannotActivateAbility`).
 //   5. The targets and modes the ability declares travel in the action, as a play's do (R81), checked
-//      by `playChoices` against the ability's declarations (R90). Choices made during resolution are
-//      ordinary prompts, which the card's `resume` table answers.
+//      by `playChoices` against the ability's declarations (R90), and so do the discards a declared
+//      target costs (B5 E5, R450, Classic #89), paid with the costs. Choices made during resolution
+//      are ordinary prompts, which the card's `resume` table answers.
 //   6. Not a play: nothing that counts plays sees it (no turn log, no `counters.played`, no
 //      `cardPlayed`). What the effect plays or casts counts as usual (R70).
 //   8. `legalActions` lists `activate` exactly as it lists a Heroic Power's `activatePower`: the
@@ -42,6 +43,7 @@ import { manaEvent, spendMana } from "../mana";
 import {
   inDeclaredOrder,
   playChoiceCombinations,
+  targetingDiscardsRequired,
   whyDeclaredChoicesRefused,
   type DeclaredChoices,
 } from "../playChoices";
@@ -53,6 +55,8 @@ import { scriptOf } from "../scripts";
 import { sacrificeTogether, stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState, type Resume, type WorkItem } from "../state";
 import { exitMark } from "../stays";
+import { targetingDiscardSets, whyTargetingDiscardsRefused } from "../targeting";
+import { payTargetingDiscards } from "../targetingPoint";
 import { tunedCount } from "../tuning";
 import { paused, pushWork, registerWorkHandler } from "../work";
 import { actsOnField, activeUnitsOf, slotOf } from "../zones";
@@ -105,6 +109,16 @@ function findAbility(state: GameState, card: CardInstance, ability: string | und
 
 function declaredOf(decl: ActivationDecl): DeclaredChoices {
   return { targets: decl.targets ?? [], modes: decl.modes ?? [] };
+}
+
+/** B5 E5, R450: the discards the ability's declared targets cost (Classic #89). */
+function discardsOwed(state: GameState, player: PlayerId, card: CardInstance, decl: ActivationDecl, targets: readonly Selection[], modes: readonly string[]): number {
+  return targetingDiscardsRequired(state, player, card, targets, modes, decl.targets ?? []);
+}
+
+/** R450: the hand cards the activation's own picks use, which cannot pay its targeting cost. */
+function handPicks(targets: readonly Selection[]): string[] {
+  return targets.flatMap((selection) => (selection.pick === "instance" ? [selection.instanceId] : []));
 }
 
 // ---------------------------------------------------------------------------
@@ -242,9 +256,12 @@ export function whyActivateRefused(state: GameState, player: PlayerId, action: A
   if (why !== null) return why;
   const card = findInstance(state, action.instanceId) as CardInstance;
   const decl = findAbility(state, card, action.ability) as ActivationDecl;
+  const targets = action.targets ?? [];
+  const modes = action.modes ?? [];
   return (
-    whyDeclaredChoicesRefused(state, player, card, declaredOf(decl), action.targets ?? [], action.modes ?? []) ??
-    refuseTributes(state, player, card, decl, action.tributes ?? [])
+    whyDeclaredChoicesRefused(state, player, card, declaredOf(decl), targets, modes) ??
+    refuseTributes(state, player, card, decl, action.tributes ?? []) ??
+    whyTargetingDiscardsRefused(state, player, discardsOwed(state, player, card, decl, targets, modes), action.discards ?? [], handPicks(targets))
   );
 }
 
@@ -283,13 +300,18 @@ export function activateActionsFor(state: GameState, player: PlayerId, card: Car
     const choices = playChoiceCombinations(state, player, card, declaredOf(decl));
     for (const tributes of tributeSets) {
       for (const choice of choices) {
-        out.push({
-          type: "activate",
-          instanceId: card.id,
-          ability: decl.id,
-          ...(tributes.length === 0 ? {} : { tributes }),
-          ...choice,
-        });
+        // B5 E5, R450: each set of hand cards that pays the targets' discard cost, listed whole.
+        const owed = discardsOwed(state, player, card, decl, choice.targets ?? [], choice.modes ?? []);
+        for (const discards of targetingDiscardSets(state, player, owed, handPicks(choice.targets ?? []))) {
+          out.push({
+            type: "activate",
+            instanceId: card.id,
+            ability: decl.id,
+            ...(tributes.length === 0 ? {} : { tributes }),
+            ...choice,
+            ...(discards.length === 0 ? {} : { discards }),
+          });
+        }
       }
     }
   }
@@ -366,11 +388,19 @@ function snapshotOf(state: GameState, unit: CardInstance): TributedUnit {
 }
 
 /**
- * B3.2 rule 4: the costs, in the order the ability names them — mana, then a random discard, then the
- * Tribute (the tributed units and "Tribute this" die together as one payment, §6.3, R101). A Tribute
- * is a Sacrifice, so it is a death in full: Death hooks, Reborn, the destroyed counter (§4.5).
+ * B3.2 rule 4: the costs, in the order the ability names them — mana, then the discards its declared
+ * targets cost (B5 E5, R450), then a random discard, then the Tribute (the tributed units and "Tribute
+ * this" die together as one payment, §6.3, R101). A Tribute is a Sacrifice, so it is a death in full:
+ * Death hooks, Reborn, the destroyed counter (§4.5).
  */
-function payCosts(sink: EngineSink, run: ActivationRun, card: CardInstance, decl: ActivationDecl, tributes: readonly string[]): void {
+function payCosts(
+  sink: EngineSink,
+  run: ActivationRun,
+  card: CardInstance,
+  decl: ActivationDecl,
+  tributes: readonly string[],
+  discards: readonly string[],
+): void {
   const state = sink.state;
   const side = state.players[run.player];
 
@@ -380,8 +410,10 @@ function payCosts(sink: EngineSink, run: ActivationRun, card: CardInstance, decl
     sink.events.push(manaEvent(run.player, side));
   }
 
-  const discards = Math.max(0, decl.cost?.discardRandom ?? 0);
-  if (discards > 0) discardRandom({ count: discards }).apply(makeContext(sink, card, { controller: run.player }));
+  payTargetingDiscards(sink, run.player, discards);
+
+  const random = Math.max(0, decl.cost?.discardRandom ?? 0);
+  if (random > 0) discardRandom({ count: random }).apply(makeContext(sink, card, { controller: run.player }));
 
   const units = tributes.flatMap((id) => {
     const unit = findInstance(state, id);
@@ -492,7 +524,7 @@ export function activateAbility(sink: EngineSink, player: PlayerId, action: Acti
 
   markUse(state, card);
   sink.events.push({ type: "activated", player, instanceId: card.id, defId: card.defId, ability: decl.id });
-  payCosts(sink, run, card, decl, action.tributes ?? []);
+  payCosts(sink, run, card, decl, action.tributes ?? [], action.discards ?? []);
   if (paused(sink)) {
     if (state.result === null) oweEffect(sink, run);
     return null;

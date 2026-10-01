@@ -25,6 +25,7 @@ import { installLastingModifiers, removeModifier } from "./modifiers";
 import type { EngineSink } from "./resolve";
 import { flagsOf } from "./scripts";
 import { exitMark, leftFieldAfter } from "./stays";
+import { copiedEcho } from "./subsystems/copiedText";
 import {
   findInstance,
   type CardInstance,
@@ -101,10 +102,14 @@ export function dropEchoRepeats(state: GameState, instanceId: string): void {
 // What a resolution owes (§6.3, R30)
 // ---------------------------------------------------------------------------
 
-/** §6.1: the card's own printed Echo X (`staticFlags.echo`). */
-export function printedEcho(card: CardInstance): number {
+/**
+ * §6.1: the card's own printed Echo X (`staticFlags.echo`), plus, given the state, for a card that has
+ * a copied Spell's text (B5 E14, Classic #57 Echo, R546), the Echo X that text prints.
+ */
+export function printedEcho(card: CardInstance, state?: GameState): number {
   // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
-  return Math.max(0, tunedCount(card, "Echo", Math.trunc(flagsOf(card).echo ?? 0)));
+  const own = Math.max(0, tunedCount(card, "Echo", Math.trunc(flagsOf(card).echo ?? 0)));
+  return state === undefined ? own : own + copiedEcho(state, card);
 }
 
 /**
@@ -174,7 +179,7 @@ export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstan
  * it is played) — because it *consumes* the grant.
  */
 export function queueEchoRepeats(sink: EngineSink, card: CardInstance, player: PlayerId): number {
-  return addEchoRepeats(sink, card, player, printedEcho(card) + grantedEcho(sink, player, card));
+  return addEchoRepeats(sink, card, player, printedEcho(card, sink.state) + grantedEcho(sink, player, card));
 }
 
 // ---------------------------------------------------------------------------

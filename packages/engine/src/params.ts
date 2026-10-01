@@ -107,6 +107,10 @@ export function paramValue(
  * that is running (`ctx.radiant`), read off the declaration of the text that is running: on a fused
  * card, the running ingredient's (`work.PART_KEY`). A script whose card has ceased to exist (R127,
  * `ctx.self` null) reads the printed value of its definition (`ctx.defId`).
+ *
+ * B5 E14, R546: the text that is running is named by `ctx.defId` where the run set it — a copier
+ * (Classic #57 Echo) running a copied Spell's text reads that Spell's declared numbers, on its own
+ * instance — and by the instance otherwise.
  */
 export function param(
   ctx: {
@@ -118,7 +122,7 @@ export function param(
   },
   key: string,
 ): number {
-  let defId = ctx.self?.defId ?? ctx.defId;
+  let defId = ctx.defId ?? ctx.self?.defId;
   if (defId === undefined) throw new Error(`param "${key}": no card to read it on (B3.4 rule 5)`);
   const path = ctx.data === undefined ? null : partPathOf(ctx.data);
   for (const index of path ?? []) {
