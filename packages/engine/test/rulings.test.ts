@@ -325,6 +325,7 @@ const PLUS_029_TEST = PLUS("029-portal-to-the-past");
 const PLUS_030_TEST = PLUS("030-felinor-fuser");
 const PLUS_031_TEST = PLUS("031-fusion-lab");
 const PLUS_033_TEST = PLUS("033-ivory-tower");
+const PLUS_035_TEST = PLUS("035-rollback");
 const PLUS_037_TEST = PLUS("037-wardrum");
 const SERVER_LAST_BOARDS_TEST = "../../../apps/server/test/match/last-boards.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
@@ -2868,6 +2869,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
   });
 
+  // Proved by cards classic-plus/035-rollback.test.ts "R419 …" (the three steps, hidden information, JSON
+  // and a whole game replayed) and engine boardHistory.test.ts "R419 …" (the snapshots and the restore).
+  it("R419 returns the board to a snapshot taken at the start of an earlier turn", () => {
+    provenIn(419, PLUS_035_TEST, "boardHistory.test.ts");
+  });
+
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
   // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
@@ -3017,6 +3024,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(561, PLUS_031_TEST);
   });
 
+  // Proved by cards classic-plus/035-rollback.test.ts "R562 …" and engine boardHistory.test.ts "R562 …".
+  it("R562 rolls back as far as the history goes", () => {
+    provenIn(562, PLUS_035_TEST, "boardHistory.test.ts");
+  });
+
+  // Proved by engine boardHistory.test.ts "R563 …" (a Reborn return let go) and the card test "R563 …".
+  it("R563 releases the zones a Rollback restores", () => {
+    provenIn(563, "boardHistory.test.ts", PLUS_035_TEST);
+  });
+
   // Proved by engine lastBoards.test.ts "R564 …" and cards classic-plus/029-portal-to-the-past.test.ts "R564 …".
   it("R564 keeps a last board as card and face, dropping what the match cannot rebuild", () => {
     provenIn(564, "lastBoards.test.ts", PLUS_029_TEST);
@@ -3026,6 +3043,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // on the match row, never the opponent's face-down cards).
   it("R565 stores each profile's last board on the server", () => {
     provenIn(565, SERVER_LAST_BOARDS_TEST);
+  });
+
+  // Proved by engine boardHistory.test.ts "R566 …" and cards classic-plus/035-rollback.test.ts "R566 …".
+  it("R566 keeps a put-back card's instance whole but its turn state", () => {
+    provenIn(566, "boardHistory.test.ts", PLUS_035_TEST);
   });
 
   // Proved by cards classic-plus/008-withering-storm.test.ts "R569 …".
