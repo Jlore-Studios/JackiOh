@@ -839,8 +839,8 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
   }
 
   function gained(s: Scenario): number {
-    // The Spell paid 3 of 4.
-    return s.state.players.p1.mana.current - 1;
+    // The Spell paid 3 of 4; read off p1's own view (§10.8).
+    return s.view("p1").you.mana.current - 1;
   }
 
   for (const face of FACES) {
