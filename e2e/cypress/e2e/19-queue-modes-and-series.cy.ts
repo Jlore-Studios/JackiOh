@@ -411,7 +411,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
           const hand = socketHand(result.view);
           expect(hand.length, "seat two was dealt a deck and drew from it").to.be.at.least(constants.OPENING_DRAW[0]);
           for (const card of hand) {
-            expect(card, "a catalog id").to.match(/^core-/);
+            // R258 deals from every set (R380), so the id may be Core's, Classic's or Classic+'s.
+            expect(card, "a catalog id").to.match(/^(core|classic|classicplus)-\d{3}$/);
           }
         },
       );
@@ -427,7 +428,10 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
   });
 
   it("a Conquest series: sealed picks, the picked decks, won decks locked, the last deck picked for you, three wins end it and rate it once (R330–R338, R262)", () => {
-    const seed = seedFor("19-series");
+    // The series' games are seeded `${seed}:1`..`:3` (R335). This seed deals no #21 Hinder into an
+    // opening hand in any of the three games: its base face asks for a discard before the
+    // mulligans open (R431), so the hand this test reads would not be on the board yet.
+    const seed = seedFor("19-series-0");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
     let mine: InstalledLoadout | null = null;

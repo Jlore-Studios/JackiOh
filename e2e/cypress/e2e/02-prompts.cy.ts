@@ -314,7 +314,8 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
     cy.instanceAt("p1", "units", 1).then((victim) => {
       cy.instanceAt("p1", "units", 2).should("not.eq", "");
-      toP1Turn(2);
+      // #16 costs (3) since patch v0.2.0, so player 1's third turn is the first that can pay for it.
+      toP1Turn(3);
       select("Hit Job");
       pickerOpensOnce("target");
       cy.gameState().should((state) => {
@@ -420,6 +421,12 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
           cy.answerPrompt("tribute", { cards: [mrToken, timmy, vanilla], submit: true });
           pickerAnswered("tribute");
 
+          // R391: a Tribute may pay for its own zone, so the lanes these three empty (1, 3 and 4)
+          // are offered beside lane 5, the one that was open already, and the zone picker asks.
+          pickerOpensOnce("zone");
+          cy.answerPrompt("zone", { zones: [{ side: "you", row: "units", lane: 5 }] });
+          pickerAnswered("zone");
+
           for (const id of [mrToken, timmy, vanilla]) {
             cy.get(ts(cardId(id))).should("not.exist");
           }
@@ -430,8 +437,8 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
           cy.instanceAt("p1", "units", 2).then((token) => {
             cy.get(ts(cardId(token))).should("exist");
           });
-          // #55 is a 10/5 with Taunt. Lane 5 is the only zone that was open when the play was built,
-          // and every unit that paid was p1's own, so that is where the golem stands (R360).
+          // #55 is a 10/5 with Taunt. Lane 5 is the zone the play named, and every unit that paid
+          // was p1's own, so that is where the golem stands (R360).
           cy.instanceAt("p1", "units", 5).then((golem) => {
             cy.get(ts(cardId(golem))).find(attackIs(10)).should("exist");
             cy.get(ts(cardId(golem))).find(healthIs(5)).should("exist");

@@ -12,10 +12,10 @@
 //
 // So one play here shows both halves of that sentence:
 //
-//   * #15 Me and Mr Token is the unit that springs the trap. Sheepish "fires on the play, before
-//     the Cry resolves" (R17), and the Transform takes the card off the field, so the Rush Token
-//     its Cry would have summoned never arrives — the exception R118 points at. It also has to be
-//     a unit that is not Immutable: R17 and R23 let an Immutable target refuse the Transform and
+//   * #15 Me and Mr Token is the unit that springs the trap. Since patch v0.2.0 Sheepish fires
+//     "after the card resolves, its Cry included" (R17, R427), so the Rush Token its Cry summons
+//     arrives first and only then does the Transform turn #15 into a Sheep: the Cry is no longer
+//     lost. It also has to be a unit that is not Immutable: R17 and R23 let an Immutable target refuse the Transform and
 //     the trap is merely spent, which would be a different test (a Radiant #19 is that card).
 //   * #81 Radiant Saintess is played straight afterwards, on the same turn. That is "P1 can
 //     continue": the turn is still player 1's, the client is not locked, and the next play
@@ -179,18 +179,18 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           cy.get(ts(cardId(sheep))).find(attackIs(1)).should("exist");
           cy.get(ts(cardId(sheep))).find(healthIs(1)).should("exist");
 
-          // R17: Sheepish fires BEFORE the Cry and takes the card off the field, so the Rush Token
-          // #15 would have summoned never arrives — a second unit here would mean the Cry resolved
-          // first. Counted off the state rather than the DOM because "nothing was summoned" is a
-          // claim about every zone at once, and a token would have gone to the leftmost free one
-          // (R64) rather than to a lane this spec could name.
+          // R17, R427: Sheepish waits until #15 has resolved, its Cry included, so the Rush Token
+          // the Cry summons stands beside the Sheep. Counted off the state rather than the DOM
+          // because the token goes to the leftmost free zone (R64) rather than to a lane this spec
+          // could name.
           cy.gameState().should((state) => {
             const side = state.players.p1 as { units?: ({ id: string }[] | null)[] };
             const occupied = (side.units ?? []).filter((pile) => pile !== null && pile.length > 0);
-            expect(occupied, "R17: the Cry went with the card, so no Rush Token was summoned").to.have.length(
-              1,
+            expect(occupied, "R427: the Cry resolved before the Transform, so a Rush Token was summoned").to.have.length(
+              2,
             );
           });
+          cy.fieldCardByName("Rush Token").should("exist");
 
           // The trap is spent: it is face-up nowhere, and a Trap (not a Field Trap) goes to its
           // owner's graveyard once it has fired (§3.2, §5.1).
@@ -200,7 +200,8 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           // "P1 can continue" (R118): the turn is still player 1's, the controls are live, and
           // the next play resolves — it reaches the field and the board is not stuck.
           cy.get(ts(END_TURN)).should("not.be.disabled");
-          cy.playByName("Radiant Saintess", { zone: { side: "you", row: "units", lane: 2 } });
+          // Lane 3: the Sheep holds lane 1 and the Rush Token lane 2.
+          cy.playByName("Radiant Saintess", { zone: { side: "you", row: "units", lane: 3 } });
           cy.fieldCardByName("Radiant Saintess").should("exist");
 
           // And she radiates NOTHING on arrival: issue #1 cut her Cry, leaving Death alone. This
