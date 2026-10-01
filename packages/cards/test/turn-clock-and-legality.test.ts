@@ -217,23 +217,19 @@ describe("§6.2: 'this turn' on the opponent's turn", () => {
   it("§6.2 a card cast on the opponent's turn counts only the plays of that turn, so Quickstriker's X is 0 (R40, R70)", () => {
     const g = scenario({
       seed: "hunt-l8-stale-log",
-      p1: { hand: [QUICKSTRIKER, VANILLA], field: [PANTHER], library: [HINDER, VANILLA, VANILLA, VANILLA, VANILLA] },
-      p2: { hand: [VANILLA], field: ["core-011"], library: LIBRARY },
+      p1: { hand: [QUICKSTRIKER, VANILLA], field: [PANTHER], library: [{ def: HINDER, radiant: true }, VANILLA, VANILLA, VANILLA, VANILLA] },
+      // p2's #9 Moths to the Flame, worn to 4 health: at p2's start of turn p1's Panther attacks it.
+      p2: { hand: [VANILLA], field: [{ def: "core-009", damage: 10 }], library: LIBRARY },
     });
     // p1's own turn: Quickstriker, then a second card (X = 1 on p2's hero).
     g.play(QUICKSTRIKER);
     g.play(VANILLA);
     expect(g.state.players.p2.hero.health).toBe(29);
+    // p2's turn begins: Moths makes the 5/4 Panther attack it, the Panther destroys it and survives,
+    // so it draws 2 for p1 on p2's turn (R426) — Hinder first, which casts itself and counts as a card
+    // p1 played this turn.
     g.endTurn();
     expect(g.state.active).toBe("p2");
-    const turn = g.state.turn;
-
-    // p2's 3/3 Tempo Timmy attacks the 5/4 Panther and dies, so the Panther draws 2 for p1 — Hinder first,
-    // which casts itself and counts as a card p1 played this turn.
-    const attacker = must(g.unit("p2", 1), "p2's unit");
-    const panther = must(g.unit("p1", 1), "the Panther");
-    g.attack(attacker, panther);
-    expect(g.state.turn).toBe(turn);
     expect(g.events.some((e) => e.type === "cardPlayed" && e.defId === HINDER)).toBe(true);
 
     // p1 played nothing earlier on this turn, so the cast deals 0.

@@ -113,10 +113,10 @@ describe("#41 Sheepish — base", () => {
     s.expectHealth("p2", 30);
   });
 
-  it("R427, R174 a Unit that left the field before Sheepish is offered its play: it still fires and is consumed, transforming nothing", () => {
+  it("R427, R174 a Unit an earlier trap answering the same play has taken off the field is no play left to answer: Sheepish stays set", () => {
     // p2's backrow: Bear Honeypot in lane 1, Sheepish in lane 2. Both answer the same `cardResolved`
     // in lane order (R68): the Honeypot's two Rush Tokens attack the played 1/1 and kill it, so by the
-    // time Sheepish fires there is no Unit in play from that play to transform (R174).
+    // time Sheepish is offered the play its Unit has been taken off the field after it resolved.
     const s = scenario({
       seed: "sheepish-honeypot",
       p1: { hand: ["core-086", "core-016"], mana: 10 },
@@ -131,14 +131,33 @@ describe("#41 Sheepish — base", () => {
     s.play(mrow, { zone: 1 });
 
     const fired = s.events.flatMap((event) => (event.type === "trapFired" ? [event.defId] : []));
-    expect(fired).toEqual(["core-060", "core-041"]);
+    expect(fired).toEqual(["core-060"]);
     expect(transformed(s.events)).toBe(false);
     s.expectInZone(mrow, "graveyard");
+    // Still face-down in its zone, armed for the next Unit, and no Lava Golem came of it.
+    expect(s.backrow("p2", 2)?.defId).toBe("core-041");
+    expect(s.backrow("p2", 2)?.faceUp).toBeUndefined();
+    expect(s.hand("p2").some((card) => card.defId === "core-055")).toBe(false);
+  });
+
+  it("R427 a Unit that left the field in its own resolution still fires Sheepish, which is consumed and transforms nothing", () => {
+    // A Radiant #52 Silly Silas played into lane 5 and rotating right crosses to the other side in
+    // its own Cry, and its Radiant face bounces what crosses: it is in p1's hand as the play resolves.
+    const s = scenario({
+      seed: "sheepish-silas",
+      p1: { hand: [{ def: "core-052", radiant: true }, "core-016"], mana: 10 },
+      // Lane 3: the rotation moves the trap a step along p2's own row, and it stays p2's.
+      p2: { backrow: [{ def: "core-041", radiant: true, lane: 3 }] },
+    });
+    const silas = s.card("core-052");
+    s.play(silas, { zone: 5, modes: ["right"] });
+
+    s.expectInZone(silas, "hand");
+    expect(firedTrap(s.events)).toBe(true);
+    expect(transformed(s.events)).toBe(false);
     s.expectInZone("core-041", "graveyard");
     // R120: the Radiant face's Lava Golem is its own clause, and still lands.
     expect(s.hand("p2").some((card) => card.defId === "core-055" && card.costOverride === 0)).toBe(true);
-    // No Sheep anywhere: the Transform never reached the card in the graveyard.
-    expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain("core-086");
   });
 
   it("R427, R113 a Cry that asks: the Unit becomes a Sheep only once the answer has resolved the Cry, across a round trip", () => {

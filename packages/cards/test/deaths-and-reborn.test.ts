@@ -36,8 +36,9 @@ import {
   type CardInstance,
   type GameState,
   type Script,
+  type TriggerDef,
 } from "@jackioh/engine";
-import { exileMatching, damage, destroy } from "@jackioh/engine/effects";
+import { exileMatching, damage, destroy, draw } from "@jackioh/engine/effects";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
 
@@ -398,20 +399,29 @@ function hitsVanilla(vanilla: CardInstance, amount: number): Script {
 }
 
 describe("R42, R89: a unit already killed is not killed again", () => {
-  it("R42 a destroy that lands after this unit's lethal hit leaves the kill with this unit, so its Prem Panther text draws 2 (R89)", () => {
+  it("R42 a destroy that lands after this unit's lethal hit leaves the kill with this unit, so its 'destroys a Unit' text draws 2 (R89)", () => {
     const s = scenario({
       p1: { hand: [RENO], library: [...LIBRARY] },
       p2: { field: [{ def: VANILLA, lane: 1 }], hand: [RENO], library: [...LIBRARY] },
     });
-    // "Cry: deal 5 damage to a target unit; destroy it", carrying #32's "whenever this destroys a
-    // unit, draw 2" — a #99 Craft a Card of #68 and #2 with #32's text, as one card.
-    const panther = must(registeredScripts()[PANTHER], "#32's script");
+    // "Cry: deal 5 damage to a target unit; destroy it", carrying a "whenever this destroys a Unit,
+    // draw 2" text that reads R42's killer off the death — what #32's text was before R426 tied it to
+    // the Panther's own attacks.
+    const killDraws: TriggerDef = {
+      id: "edge-r9-maul-kill-draws",
+      on: ["destroyed"],
+      run(ctx) {
+        const event = ctx.event;
+        if (ctx.self === null || event.type !== "destroyed" || event.killerId !== ctx.self.id) return [];
+        return [draw({ count: 2 })];
+      },
+    };
     fixtureUnit(
       s,
       "edge-r9-maul",
       {
         targets: ONE_UNIT,
-        triggers: panther.base.triggers ?? [],
+        triggers: [killDraws],
         cry: () => [damage({ to: { of: "chosen" }, amount: 5 }), destroy({ target: { of: "chosen" } })],
       },
       { attack: 2, health: 2 },

@@ -20,11 +20,14 @@
 // Trap, or the controller's own Unit therefore leaves Sheepish set.
 //
 // A UNIT THAT HAS LEFT (R427, R174). The play of a Unit is what Sheepish answers, so it fires on it
-// even when the Unit is no longer on the field by then — its own Cry took it off, or an earlier trap
-// answering the same play did: `cardResolved.permanent` says so (`traps.standingEvent` reads it again
-// for each trap), the Transform then has no Unit in play to land on and finds nothing — it never
-// reaches into a graveyard or a hand, or onto a Reborn body, a new arrival (R83) — and the trap is
-// consumed, the Radiant face's Lava Golem still added (R120).
+// even when the Unit left the field in its own resolution — its own Cry took it off (a Radiant #52
+// Silly Silas rotating itself across) — `cardResolved.permanent` is false from the start, the
+// Transform has no Unit in play to land on and finds nothing (it never reaches into a hand or a
+// graveyard, or onto a Reborn body, a new arrival, R83), and the trap is consumed, the Radiant face's
+// Lava Golem still added (R120). A Unit that something answering the same play took off the field
+// after it resolved — an earlier trap of the same dispatch: a first Sheepish, #60 Bear Honeypot's
+// tokens — is no play left to answer (R174, `traps.standingEvent`): this one stays set, as a trap is
+// never offered a step-4 arrival an earlier trap has taken (`query.leftFieldSinceResolved`).
 //
 // IMMUTABLE (R17, R23). `transform` already refuses an Immutable target, which is exactly R17's
 // "Sheepish on an Immutable unit still fires and is consumed with no effect". This card neither
@@ -32,7 +35,7 @@
 // consumes the trap "whatever its effects achieved". R33's face-down identity is the view's.
 
 import type { Effect, Script, TrapTrigger } from "@jackioh/engine";
-import { defOf } from "@jackioh/engine";
+import { defOf, leftFieldSinceResolved } from "@jackioh/engine";
 import { addToHand, transform } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
@@ -54,7 +57,9 @@ function sheepish(lavaGolem: boolean): TrapTrigger {
       // §8: "your opponent". A trap never answers its own controller's play.
       if (event.player === ctx.controller) return false;
       // §5.1: a Unit, so a Spell or a backrow card leaves the trap armed (R61).
-      return defOf(ctx.state, event.defId).type === "Unit";
+      if (defOf(ctx.state, event.defId).type !== "Unit") return false;
+      // R174, R427: not a Unit an earlier answer to this play has already taken off the field.
+      return event.permanent || !leftFieldSinceResolved(ctx.state, event);
     },
     run: (ctx) => {
       const event = ctx.event;
