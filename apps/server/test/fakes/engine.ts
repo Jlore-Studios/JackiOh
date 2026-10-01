@@ -602,3 +602,32 @@ export function decksTheEngineAccepts(
     `the real engine refused every deck size built from the catalog:\n  ${[...refusals].join("\n  ")}`,
   );
 }
+
+/**
+ * `decksTheEngineAccepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
+ * onto both mulligans (§2.1, R265) — what a test about the window both seats share needs from its
+ * very first frame.
+ *
+ * A card the deal casts on draw (§2.4) may ask its caster something, and setup waits for that answer
+ * before it opens the mulligans (R224): #21 Hinder's base face asks for a discard since patch v0.2.0
+ * (R431). Which cards the deal draws is the seed's to say, so whether a deal asks is read off the
+ * real engine, not off card text. The first deck stays the pool's first slice; the second slides
+ * along the pool a card at a time until the deal asks nothing, so a seed whose deal already opened
+ * on the mulligans keeps exactly the decks `decksTheEngineAccepts` gives it.
+ */
+export function decksThatOpenOnTheMulligans(
+  port: EnginePort,
+  pool: readonly string[],
+  seed: string,
+): { decks: [string[], string[]] } {
+  const [first] = decksTheEngineAccepts(port, pool, seed).decks;
+  const size = first.length;
+  for (let from = size; from + size <= pool.length; from += 1) {
+    const decks: [string[], string[]] = [first, pool.slice(from, from + size)];
+    const { phase, mulliganOwed } = port.snapshot(port.beginGame(port.createGame({ seed, decks })).state);
+    if (phase === "mulligan" && mulliganOwed.length === 2) return { decks };
+  }
+  throw new Error(
+    `under seed ${seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)`,
+  );
+}
