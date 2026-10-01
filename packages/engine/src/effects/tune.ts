@@ -515,9 +515,10 @@ export const NUMBER_CARD_KEY = "numberOf";
  * on the card that are not `value` already, drawn uniformly (R60; all of them, with no draw, when
  * there are no more than `count`, R129), offered to the card's controller in a `discover` prompt whose
  * options are the numbers' ids (`numberRefId`) labelled with what each is now. The answer re-enters
- * the card's own step `step`, whose data carries the card's id under `NUMBER_CARD_KEY`; the step reads
- * the pick with `chosenNumber` and sets it with `setNumber`. The options name the caster's own card's
- * numbers and go to the caster alone (R81). No number to offer: nothing opens, and the list goes on.
+ * the card's own step `step`, whose data carries the card's id under `NUMBER_CARD_KEY`; the step
+ * reads the pick with `chosenTuningNumber` (not E18's `number` prompt reader: this answer names a
+ * number on a card) and sets it with `setNumber`. The options name the caster's own card's numbers
+ * and go to the caster alone (R81). No number to offer: nothing opens, and the list goes on.
  */
 export function discoverNumber(args: {
   target?: TargetSpec;
@@ -558,7 +559,7 @@ export function discoverNumber(args: {
 }
 
 /** The number a `discoverNumber` answer picked and the card it is on, for the step it re-enters. */
-export function chosenNumber(ctx: EffectContext): { instanceId: string; which: NumberRef } | null {
+export function chosenTuningNumber(ctx: EffectContext): { instanceId: string; which: NumberRef } | null {
   const pick = ctx.targets[0];
   const instanceId = ctx.data[NUMBER_CARD_KEY];
   if (pick?.pick !== "mode" || typeof instanceId !== "string") return null;

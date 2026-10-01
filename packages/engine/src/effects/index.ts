@@ -188,7 +188,7 @@ export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
 export {
   NUMBER_CARD_KEY,
   applicableChanges,
-  chosenNumber,
+  chosenTuningNumber,
   degrade,
   discoverNumber,
   reachedCards,

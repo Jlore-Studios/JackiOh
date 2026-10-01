@@ -11,7 +11,7 @@ import {
   buffCards,
   chooseMode,
   chooseTarget,
-  chosenNumber,
+  chosenTuningNumber,
   damage,
   degrade,
   discoverNumber,
@@ -274,7 +274,7 @@ export const INSTANCE_SCRIPTS: Record<string, CardScripts> = {
       cry: () => [discoverNumber({ target: { of: "chosen" }, value: 3, count: 3, step: CONSTANT_STEP })],
       resume: {
         [CONSTANT_STEP]: (ctx) => {
-          const chosen = chosenNumber(ctx);
+          const chosen = chosenTuningNumber(ctx);
           return chosen === null ? [] : [setNumber({ instanceId: chosen.instanceId, which: chosen.which, value: 3 })];
         },
       },
