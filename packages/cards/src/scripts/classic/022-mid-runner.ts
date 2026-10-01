@@ -33,7 +33,6 @@ import {
   param,
   slotOf,
   unspentManaOf,
-  type CardInstance,
   type ConditionContext,
   type EffectContext,
   type Effect,

@@ -139,8 +139,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
           case "cardPlayed":
           case "summoned":
           case "controlChanged":
-          // R383: moving into the unit row is entering it on that turn, so it is summoning sick.
-          case "animated":
+          case "animated": // R383: moving into the unit row is entering it on that turn.
             enter(event.instanceId);
             break;
           case "transformed":
