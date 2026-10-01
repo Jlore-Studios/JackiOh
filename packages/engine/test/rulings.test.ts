@@ -2837,6 +2837,31 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(382, CARDS_QUERY_TEST);
   });
 
+  // Proved by animated.test.ts, effects-animate.test.ts "R383 …".
+  it("R383 makes an Animated card a Unit while it is animated, and sends it home", () => {
+    provenIn(383, "animated.test.ts", "effects-animate.test.ts");
+  });
+
+  // Proved by activate.test.ts "R384 …".
+  it("R384 gives cards Activate abilities their controller uses as an action", () => {
+    provenIn(384, "activate.test.ts");
+  });
+
+  // Proved by brittle.test.ts, effects-brittle.test.ts "R385 …".
+  it("R385 counts Brittle down at its controller's turn start and crumbles the card at 0", () => {
+    provenIn(385, "brittle.test.ts", "effects-brittle.test.ts");
+  });
+
+  // Proved by effects-tune.test.ts, instance-data.test.ts, params.test.ts "R386 …".
+  it("R386 tunes a card's numbers with Degrade and Upgrade, on the instance", () => {
+    provenIn(386, "effects-tune.test.ts", "instance-data.test.ts", "params.test.ts");
+  });
+
+  // Proved by pools.test.ts, query.test.ts, self-generation.test.ts "R387 …".
+  it("R387 never lets a card generate itself, keyed by definition id", () => {
+    provenIn(387, "pools.test.ts", "../../cards/test/query.test.ts", "../../cards/test/self-generation.test.ts");
+  });
+
   // Proved by cards patches.test.ts "R388 …" (the history, the snapshots, the version everywhere),
   // loc.test.ts's patch snapshot, the server's catalog.test.ts "R388 …" (GET /api/catalog/:version) and
   // apps/web patches/diff.test.ts "R388 …" (the History section and Patch notes page diff every field).
@@ -2857,6 +2882,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // pass-2 evidence for a judgement ban, suspects, and one real pass-2 game on its named seed).
   it("R390 sweeps the shadow ban in two passes, leaning toward the cards at risk", () => {
     provenIn(390, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by tribute-zones.test.ts "R391 …".
+  it("R391 lets a Tribute pay for the zone its card takes", () => {
+    provenIn(391, "tribute-zones.test.ts");
   });
 
   // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's
@@ -3050,6 +3080,36 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(425, CLASSIC_PLUS_074_TEST, "twiceForward.test.ts");
   });
 
+  // Proved by after-attack.test.ts, 032-prem-panther.test.ts "R426 …".
+  it("R426 draws for Prem Panther only after it attacks and survives", () => {
+    provenIn(426, "after-attack.test.ts", "../../cards/test/032-prem-panther.test.ts");
+  });
+
+  // Proved by corePatches.test.ts, 041-sheepish.test.ts "R427 …".
+  it("R427 fires Sheepish after the Cry of the Unit it answers", () => {
+    provenIn(427, "corePatches.test.ts", "../../cards/test/041-sheepish.test.ts");
+  });
+
+  // Proved by 022-carnivorous-cube.test.ts "R428 …".
+  it("R428 lets Carnivorous Cube eat only Units", () => {
+    provenIn(428, "../../cards/test/022-carnivorous-cube.test.ts");
+  });
+
+  // Proved by corePatches.test.ts, 031-kys-math-equation.test.ts "R429 …".
+  it("R429 counts KY's Math Equation's plays and stops its cost at (4)", () => {
+    provenIn(429, "corePatches.test.ts", "../../cards/test/031-kys-math-equation.test.ts");
+  });
+
+  // Proved by 060-bear-honeypot.test.ts "R430 …".
+  it("R430 holds Bear Honeypot while its controller's unit row is full", () => {
+    provenIn(430, "../../cards/test/060-bear-honeypot.test.ts");
+  });
+
+  // Proved by 021-hinder.test.ts "R431 …".
+  it("R431 makes Hinder's base face discard 1 card of its caster's choice", () => {
+    provenIn(431, "../../cards/test/021-hinder.test.ts");
+  });
+
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
   // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
@@ -3103,6 +3163,179 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
   it("R439 marks the last 30 seconds of a turn clock", () => {
     provenIn(439, "../../../apps/web/src/game/Clock.test.tsx", "../../../apps/web/src/routes/match.test.tsx");
+  });
+
+  // Proved by effects-tune.test.ts, effects-brittle.test.ts, effects-cardScope.test.ts,
+  // instance-data.test.ts "R440 …".
+  it("R440 never tells a player how many hidden cards a change reached", () => {
+    provenIn(
+      440,
+      "effects-tune.test.ts",
+      "effects-brittle.test.ts",
+      "effects-cardScope.test.ts",
+      "instance-data.test.ts",
+    );
+  });
+
+  // Proved by brittle.test.ts "R441 …".
+  it("R441 spends a crumbled Brittle count and starts a given one from the print", () => {
+    provenIn(441, "brittle.test.ts");
+  });
+
+  // Proved by effects-tune.test.ts "R442 …".
+  it("R442 draws a Degrade or Upgrade's row, then its item, uniformly", () => {
+    provenIn(442, "effects-tune.test.ts");
+  });
+
+  // Proved by effects-enchant.test.ts "R443 …".
+  it("R443 carries enchantments onto copies and fusions, each once", () => {
+    provenIn(443, "effects-enchant.test.ts");
+  });
+
+  // Proved by effects-flicker.test.ts "R444 …".
+  it("R444 flickers a card out and back into its zone as a fresh, summoning-sick entry", () => {
+    provenIn(444, "effects-flicker.test.ts");
+  });
+
+  // Proved by animated.test.ts "R445 …".
+  it("R445 does not count animating as summoning", () => {
+    provenIn(445, "animated.test.ts");
+  });
+
+  // Proved by backrow-piles.test.ts "R446 …".
+  it("R446 makes a carried Unit a Unit that neither attacks nor is attacked", () => {
+    provenIn(446, "backrow-piles.test.ts");
+  });
+
+  // Proved by backrow-piles.test.ts, redact-backrow-piles.test.ts "R447 …".
+  it("R447 lets only the top of a backrow pile act, and shows the pile as a count", () => {
+    provenIn(447, "backrow-piles.test.ts", "../../ai/test/redact-backrow-piles.test.ts");
+  });
+
+  // Proved by announce.test.ts, effects-move.test.ts, redact-announce.test.ts "R448
+  // …".
+  it("R448 announces a play before it moves, in a window traps and Counters answer", () => {
+    provenIn(
+      448,
+      "announce.test.ts",
+      "effects-move.test.ts",
+      "../../ai/test/redact-announce.test.ts",
+    );
+  });
+
+  // Proved by play-step3.test.ts "R449 …".
+  it("R449 applies step 3's replacement and tag rules to a play", () => {
+    provenIn(449, "play-step3.test.ts");
+  });
+
+  // Proved by targeting.test.ts "R450 …".
+  it("R450 makes targeting one point, where target costs are paid and interceptors answer", () => {
+    provenIn(450, "targeting.test.ts");
+  });
+
+  // Proved by playCounts.test.ts "R451 …".
+  it("R451 records plays by type, by tag, the last Spell and each player's last face-up card", () => {
+    provenIn(451, "playCounts.test.ts");
+  });
+
+  // Proved by effects-cast.test.ts, play-pipeline-b-replay.test.ts "R452 …".
+  it("R452 makes every choice of a random cast at random", () => {
+    provenIn(452, "effects-cast.test.ts", "play-pipeline-b-replay.test.ts");
+  });
+
+  // Proved by effects-cast.test.ts "R453 …".
+  it("R453 casts a card from anywhere but the field, or a new card of a named definition", () => {
+    provenIn(453, "effects-cast.test.ts");
+  });
+
+  // Proved by graveyard-play.test.ts "R454 …".
+  it("R454 plays a card from its player's graveyard under a permission", () => {
+    provenIn(454, "graveyard-play.test.ts");
+  });
+
+  // Proved by cost-rules.test.ts "R455 …".
+  it("R455 applies price rules after R65's discounts, in a fixed order", () => {
+    provenIn(455, "cost-rules.test.ts");
+  });
+
+  // Proved by effects-turnEnd.test.ts "R456 …".
+  it("R456 ends the turn from an effect once the action has resolved", () => {
+    provenIn(456, "effects-turnEnd.test.ts");
+  });
+
+  // Proved by draw-limit.test.ts "R457 …".
+  it("R457 counts every draw on its turn for its player, and limits draws from the field", () => {
+    provenIn(457, "draw-limit.test.ts");
+  });
+
+  // Proved by delayed-kinds.test.ts "R458 …".
+  it("R458 times next-turn and rest-of-game effects", () => {
+    provenIn(458, "delayed-kinds.test.ts");
+  });
+
+  // Proved by draw-limit.test.ts "R459 …".
+  it("R459 casts a card enchanted to cast on draw as it is drawn", () => {
+    provenIn(459, "draw-limit.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R460 …".
+  it("R460 applies several replacements of one event one at a time, in R68 order", () => {
+    provenIn(460, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R461 …".
+  it("R461 does not count a card exiled instead of dying as a death", () => {
+    provenIn(461, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R462 …".
+  it("R462 reads each replacement moment as it is written", () => {
+    provenIn(462, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts, damage-pipeline.test.ts "R463 …".
+  it("R463 lets collected cards leave together, and keeps a hidden text from guarding", () => {
+    provenIn(463, "replacements.test.ts", "damage-pipeline.test.ts");
+  });
+
+  // Proved by effects-summonThis.test.ts "R464 …".
+  it("R464 orders deck triggers after hand triggers and before graveyard ones", () => {
+    provenIn(464, "effects-summonThis.test.ts");
+  });
+
+  // Proved by prompt-kinds.test.ts, answer-key.test.ts "R465 …".
+  it("R465 keeps an answer prompt's key inside the engine", () => {
+    provenIn(465, "prompt-kinds.test.ts", "../../ai/test/answer-key.test.ts");
+  });
+
+  // Proved by effects-give.test.ts "R466 …".
+  it("R466 makes a card taken from another player's pile the taker's", () => {
+    provenIn(466, "effects-give.test.ts");
+  });
+
+  // Proved by effects-cry.test.ts "R467 …".
+  it("R467 runs a Unit's Cry when an effect triggers it", () => {
+    provenIn(467, "effects-cry.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R468 …".
+  it("R468 bounds a fused id, past the cap a digest of its ingredients", () => {
+    provenIn(468, "fuse-variants.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R469 …".
+  it("R469 gives a Radiant ingredient's face to the fused card", () => {
+    provenIn(469, "fuse-variants.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R470 …".
+  it("R470 fuses into a hand or deck card, whose cost does not change", () => {
+    provenIn(470, "fuse-variants.test.ts");
+  });
+
+  // Proved by effects-plague.test.ts "R471 …".
+  it("R471 places Plague Tokens one placement at a time, on cards that act", () => {
+    provenIn(471, "effects-plague.test.ts");
   });
 
   // Proved by cards references.test.ts "R480 …".
@@ -3234,7 +3467,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(521, CLASSIC_009_TEST);
   });
 
-  // Classic #46–#90's own rows (cards-classic-b, docs/v0.2.0-rulings/cards-classic-b.md).
+  // Classic #46–#90's own rows (the cards-classic-b workstream's block).
 
   // Proved by cards classic/090-in-too-deep.test.ts "R540 …" (reward J's 100 mana on the next turn).
   it("R540 grants C #90's reward J as next-turn mana", () => {
@@ -3410,7 +3643,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(596, CLASSIC_PLUS_065_2_TEST, CLASSIC_PLUS_065_3_TEST, "effects-fruit.test.ts");
   });
 
-  // The AI workstream's rows (R600–R609, docs/v0.2.0-rulings/ai.md).
+  // The AI workstream's rows (from R600).
 
   // Proved by packages/ai shadowBan.test.ts "R390 R600 …" (watched when its own numbers put it at
   // risk and it was not banned; off the list when it was at risk only by the old tables and is clean).
