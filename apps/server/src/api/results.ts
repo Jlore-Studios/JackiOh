@@ -36,6 +36,7 @@ import type {
   Store,
 } from "./ports";
 import type { RecordResult, RecordResultInput, TerminalOutcome } from "../match/contracts";
+import { recordLiveGame } from "./game-records";
 import { advanceSeriesInTx, resumeSeries } from "./series";
 
 /** How a terminal outcome rates. R79 ties the numbers; §2.5's table ties the draws. */
@@ -170,6 +171,7 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
 /**
  * The `RecordResult` port the actor holds (`ActorDeps.recordResult`). Every terminal reason comes
  * through here, and the rating move is the ordinary Elo one (R79, R112's "live match actor" half).
+ * Once the result is in, the game is filed for the card statistics (R376, `game-records.ts`).
  */
 export function createRecordResult(deps: ServerDeps): RecordResult {
   return async (input: RecordResultInput) => {
@@ -177,6 +179,9 @@ export function createRecordResult(deps: ServerDeps): RecordResult {
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
     await resumeSeries(deps, written.series);
+    // R376: after the commit too, and never at the result's expense — it logs and swallows its
+    // own failures, and a second write of the same match files nothing.
+    await recordLiveGame(deps, input.matchId);
     return written.row;
   };
 }

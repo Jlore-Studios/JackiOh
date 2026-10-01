@@ -2703,6 +2703,52 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/routes/patch-notes.test.tsx",
     );
   });
+
+  // Proved by game-summary.test.ts "R376 …" (the record read off a hand-written game and off random
+  // fixture games, a cast never a play, no record without a result, empty opening hands before a
+  // turn), packages/cards game-summary.test.ts "R376 …" (the same oracles over real cards, The Coin
+  // in the second seat's opening hand), packages/shared stats.test.ts "R376 …" (a record read back),
+  // and apps/server game-records.test.ts "R376 …" (a live match filed once after its result, under
+  // its mode, the patch and two human pilots; never at the result's expense; bound at the
+  // composition root), engine.real.test.ts "R376 …" (the real port), db/contract.ts "R376 …" (both
+  // stores: a match's mode read off its room, its tickets or its series; one record per id) and
+  // sql/08_game_records.sql (the table's checks).
+  it("R376 files every finished game's record: mode, patch, pilots, first seat, decks, hands, draws and plays", () => {
+    provenIn(
+      376,
+      "game-summary.test.ts",
+      "../../cards/test/game-summary.test.ts",
+      "../../shared/test/stats.test.ts",
+      "../../../apps/server/test/api/game-records.test.ts",
+      "../../../apps/server/test/match/engine.real.test.ts",
+      "../../../apps/server/test/db/contract.ts",
+      "../../../apps/server/test/sql/08_game_records.sql",
+    );
+  });
+
+  // Proved by packages/shared stats.test.ts "R377 …" (each breakdown counted by hand, a mirror once
+  // per deck, the played delta and its baseline, any combination of mode, patch and pilot, the table
+  // with the games beside every rate) and apps/server db/card-stats.test.ts "R377 …" (stats:cards's
+  // options and one card's row).
+  it("R377 reads each card's four breakdowns, with the games beside every rate, by mode, patch and pilot", () => {
+    provenIn(377, "../../shared/test/stats.test.ts", "../../../apps/server/test/db/card-stats.test.ts");
+  });
+
+  // Proved by packages/ai dev-run.test.ts "R378 …" (All Random's deal to two AI seats, each game a
+  // development record of the patch it tests), packages/shared stats.test.ts "R378 …" (live unless
+  // asked), apps/server db/card-stats.test.ts "R378 …" (stats:cards reads a run only when asked and
+  // beside the same patch's live games; stats:import adds development records and nothing else) and
+  // db/contract.ts "R378 …" (both stores filter by source, mode and patch, and keep `dev:` ids to
+  // development records).
+  it("R378 keeps the AI's development runs apart from live data unless they are asked for", () => {
+    provenIn(
+      378,
+      "../../ai/test/dev-run.test.ts",
+      "../../shared/test/stats.test.ts",
+      "../../../apps/server/test/db/card-stats.test.ts",
+      "../../../apps/server/test/db/contract.ts",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

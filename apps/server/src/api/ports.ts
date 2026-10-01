@@ -8,7 +8,15 @@
  * `Store` and supply `ServerConfig`, and nothing here imports them.
  */
 
-import type { Action, CardDef, GameOverReason, PlayerId } from "@jackioh/shared";
+import type {
+  Action,
+  CardDef,
+  CardStatsFilter,
+  GameOverReason,
+  GameRecord,
+  GameSummary,
+  PlayerId,
+} from "@jackioh/shared";
 
 // ---------------------------------------------------------------------------
 // Time
@@ -509,6 +517,12 @@ export type MatchStore = {
   /** For the reaper (§9.5). */
   live: () => Promise<MatchRow[]>;
   /**
+   * R257, R376: the mode a match was made in, read off what made it: `bo3` for a game of a Conquest
+   * series (`series.withGame`), else the room's mode, else the mode of the queue tickets it paired.
+   * Null for a match none of them made. The match row itself does not record it.
+   */
+  modeOf: (matchId: string) => Promise<QueueMode | null>;
+  /**
    * R263: forget a match id that was reserved and never started — the first game of a Conquest
    * series that ended (forfeit, abandoned) before it was played. In Postgres the reservation is an
    * `open` row (`tickets.claimPair`'s skeleton, or a claimed room), and dropping it releases a room
@@ -611,6 +625,20 @@ export type ResultStore = {
   getByMatch: (matchId: string) => Promise<ResultRow | null>;
   /** Every finished match this profile played, as wins/losses/draws. */
   recordFor: (profileId: string) => Promise<ProfileRecord>;
+};
+
+// ---------------------------------------------------------------------------
+// Game records for the card statistics (SPEC §9.11, R376–R378). Server-only (migration 0014).
+// ---------------------------------------------------------------------------
+
+/** R377, R378: which records a read returns. Pilots are per seat, so `cardStats` applies those. */
+export type GameRecordQuery = Pick<CardStatsFilter, "source" | "mode" | "patch">;
+
+export type GameRecordStore = {
+  /** R376: one record per id. False, and nothing written, when a record with this id exists. */
+  insert: (record: GameRecord) => Promise<boolean>;
+  /** The records of the query's sources, mode and patch, in id order (code points). */
+  list: (query: GameRecordQuery) => Promise<GameRecord[]>;
 };
 
 // ---------------------------------------------------------------------------
@@ -814,6 +842,8 @@ export type Store = {
   series: SeriesStore;
   /** R320: tutorial progress kept on the account. */
   tutorial: TutorialStore;
+  /** R376: the card statistics' game records. */
+  gameRecords: GameRecordStore;
 };
 
 // ---------------------------------------------------------------------------
@@ -828,6 +858,17 @@ export type StartMatchInput = {
   seed: string;
   catalogVersion: string;
   seats: [MatchSeat, MatchSeat];
+};
+
+/**
+ * R376: what the server needs to file a finished live match for the card statistics. Bound at the
+ * composition root (`src/index.ts`); absent, as in most tests, no record is written.
+ */
+export type GameRecorder = {
+  /** R375's newest patch (`packages/cards/patches/patches.json`): every live record's `patch`. */
+  patch: string;
+  /** The engine port's `summarizeGame`: the record's game half, read off `(seed, decks, log)`. */
+  summarize: (args: { seed: string; decks: [string[], string[]]; log: readonly Action[] }) => GameSummary | null;
 };
 
 export type MatchDirectory = {
@@ -878,6 +919,8 @@ export type ServerDeps = {
    * composition root from `src/match/engine.real.ts`, the one file that reaches the engine.
    */
   dealRandomDeck: (seed: string) => string[];
+  /** R376: the live game recorder `api/game-records.ts` files each finished match with. */
+  games?: GameRecorder;
   matches: MatchDirectory;
   log: Logger;
   /**

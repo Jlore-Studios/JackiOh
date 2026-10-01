@@ -171,3 +171,28 @@ controller that threw) is `aborted`, never a draw. `oracle.ts <matchup> <from> <
 replays the games the AI did not win and runs the lethal solver on the true state, which `decide`
 may never read, at each of the AI's late turn starts, to tell a missed kill from a board with no
 kill on it; its header says what that search cannot see.
+
+## Development runs for the card statistics (R378)
+
+`pnpm ai:stats` (`scripts/stats.ts`) is the pre-release half of SPEC §9.11: AI-against-AI games played
+on the build in the checkout, each filed as a game record (R376) of source `dev`, under the patch the
+run tests. `devGameConfig(n, { series })` deals game n as All Random deals a live game (R258,
+`${seed}:p1-deck` and `${seed}:p2-deck`, nothing banned) to two AI seats on SPEC's resources (no
+handicap) at `AI_BUDGET`, and `devGameRecord(n, options)` plays it and reads its record off the log
+with the engine's `summarizeGame`; a game with no result is no record. Seeds are
+`${series}:${n}`, the series `AI_DEV_RUN.series` unless the run names another, and no gate or tuning
+run plays them. The shadow ban does not apply, since All Random bans nothing, so a banned card's
+figures are the figures of a card the AI is known to misplay.
+
+```
+pnpm ai:stats                                      AI_DEV_RUN.games games, tagged with the newest patch
+pnpm ai:stats --games=50 --from=51                 games 51–100, so slices of a run go in parallel
+pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl   a pre-release run of v0.2.5, kept in a file
+```
+
+It prints the run's card win rates when it ends (progress goes to stderr). A game takes seconds at
+the browser's budget, so a run of a few hundred takes the better part of an hour on one core. The
+file, written a line per game as the run goes, is what `pnpm --filter @jackioh/server stats:import`
+loads, so that `stats:cards --source=dev --patch=<version>` sets the run beside that patch's live games
+(apps/server/README.md, "Card statistics"). This is the one script here that writes a file, and only
+the one `--out` names.

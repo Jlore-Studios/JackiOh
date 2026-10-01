@@ -20,7 +20,7 @@ import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 
 import { createAuthRoutes, createSupabaseAuth } from "./api/auth";
-import { createCatalogRoutes, loadCatalog } from "./api/catalog";
+import { createCatalogRoutes, loadCatalog, loadCurrentPatch } from "./api/catalog";
 import { createCodesRoutes } from "./api/codes";
 import { createCollectionRoutes } from "./api/collection";
 import { VITE_DEV_ORIGINS, withCors } from "./api/cors";
@@ -212,6 +212,9 @@ export async function createRuntime(
     validateLoadout: overrides.validateLoadout ?? sharedLoadoutValidator,
     // R258: All Random's decks come from the engine port, the one path to the card catalog.
     dealRandomDeck: overrides.dealRandomDeck ?? engine.dealRandomDeck,
+    // R376: every finished match is filed for the card statistics under this build's patch (R375),
+    // its record read off the log by the engine port.
+    games: overrides.games ?? { patch: await loadCurrentPatch(), summarize: engine.summarizeGame },
     // Replaced two lines down; a placeholder rather than a lie, so a mistake is loud.
     matches: {
       start: async () => {

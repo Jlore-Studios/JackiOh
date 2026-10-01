@@ -325,6 +325,9 @@ describe("R259 — the series through the API", () => {
     const game2 = await pickBoth(h, [2, 0]);
     const game2Id = game2.currentMatchId ?? "";
     expect(game2Id).not.toBe(FIRST_MATCH);
+    // R376: a game of the series is filed as Conquest's, whatever made the series.
+    expect(await h.deps.store.matches.modeOf(game2Id)).toBe("bo3");
+    expect(await h.deps.store.matches.modeOf(FIRST_MATCH)).toBe("bo3");
     expect(h.deps.matches.started[1]).toEqual({
       matchId: game2Id,
       seed: "seed-base:2",

@@ -125,6 +125,35 @@ export async function loadCatalog(
 }
 
 // ---------------------------------------------------------------------------
+// The patch (R375, R376)
+// ---------------------------------------------------------------------------
+
+/** Where R375's patch list lives: `packages/cards/patches/patches.json`, beside `catalog.json`. */
+export function patchesUrl(): URL {
+  return new URL("../patches/patches.json", import.meta.resolve("@jackioh/cards"));
+}
+
+/**
+ * R376: the version every live game record is filed under — the newest patch of R375's list, which
+ * is the cards this build plays (the newest snapshot always equals `catalog.json`). Read as data,
+ * like the catalog above: the list's order is the order of versions, never a comparison of strings.
+ */
+export async function loadCurrentPatch(url: URL = patchesUrl()): Promise<string> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(url, "utf8"));
+  } catch (cause) {
+    throw new Error(`the patch list could not be read from ${url.pathname}: ${String(cause)}`, { cause });
+  }
+  const newest: unknown = Array.isArray(parsed) ? parsed[parsed.length - 1] : undefined;
+  const version = typeof newest === "object" && newest !== null ? (newest as { version?: unknown }).version : undefined;
+  if (typeof version !== "string" || version.length === 0) {
+    throw new Error(`the patch list at ${url.pathname} names no newest version (R375)`);
+  }
+  return version;
+}
+
+// ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 

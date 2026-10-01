@@ -26,10 +26,13 @@ import {
 } from "../../src/api/e2e-store";
 import {
   createMemoryDeckStores,
+  createMemoryGameRecordStore,
   createMemoryTutorialStore,
+  matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type GameRecordTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
 import type {
@@ -61,7 +64,8 @@ type Tables = {
   tickets: Ticket[];
   results: ResultRow[];
 } & DeckTables &
-  TutorialTables;
+  TutorialTables &
+  GameRecordTables;
 
 function emptyTables(): Tables {
   return {
@@ -79,6 +83,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    gameRecords: [],
   };
 }
 
@@ -309,6 +314,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.series = deckStores.series;
   // R320: tutorial progress, the same in-memory store the end-to-end server runs.
   store.tutorial = createMemoryTutorialStore(() => tables, call);
+  // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
+  store.gameRecords = createMemoryGameRecordStore(() => tables, call);
 
   store.matches = {
     create: async (match) => {
@@ -354,6 +361,10 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     live: async () => {
       call("matches.live");
       return tables.matches.filter((match) => match.status === "live").map(clone);
+    },
+    modeOf: async (matchId) => {
+      call("matches.modeOf");
+      return matchModeIn(tables, matchId);
     },
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {

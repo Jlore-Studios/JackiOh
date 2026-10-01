@@ -20,6 +20,7 @@ import type {
   CardDefs,
   GameEvent,
   GameOverReason,
+  GameSummary,
   PlayerId,
   PlayerView,
 } from "@jackioh/shared";
@@ -82,6 +83,12 @@ export type EnginePort = {
    * because the deck-builder needs the registered catalog, and this port is the one path to it.
    */
   dealRandomDeck: (seed: string) => string[];
+  /**
+   * SPEC §11 R376: a finished game's record for the card statistics — each seat's opening hand,
+   * draws and plays, and the ending — read off `(seed, decks, log)`; null when the log leaves the
+   * game without a result. The composition root binds `ServerDeps.games.summarize` to it.
+   */
+  summarizeGame: (args: FoldArgs) => GameSummary | null;
 };
 
 /** The exports `engine.real.ts` needs from `@jackioh/engine`, for the missing-export report. */
@@ -95,6 +102,7 @@ export const REQUIRED_ENGINE_EXPORTS = [
   "hashState",
   "mulliganOwed",
   "createRng",
+  "summarizeGame",
 ] as const;
 
 export class EngineUnavailableError extends Error {

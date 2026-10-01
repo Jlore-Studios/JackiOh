@@ -35,6 +35,7 @@ packages/cards
     ├── catalog.test.ts          SPEC §8 as a fixture table (M4-T1)
     ├── patches.test.ts          patches/ against git and catalog.json (R375)
     ├── history.test.ts          src/history.ts against the real snapshots and made-up ones (R375)
+    ├── game-summary.test.ts     the engine's summarizeGame over real games (R376)
     ├── query.test.ts            the §5.1 pools (M4-T2)
     ├── registry.test.ts         every catalog id has a script, every script a catalog entry (M4-T2)
     └── NNN-slug.test.ts         one card, one test file
