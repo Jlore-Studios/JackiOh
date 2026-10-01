@@ -44,6 +44,7 @@ import { unspentManaOf } from "./query";
 import type { EngineSink, HookName } from "./resolve";
 import { scriptOf } from "./scripts";
 import { stateCheck } from "./stateCheck";
+import { recordBoardSnapshot } from "./subsystems/boardHistory";
 import {
   findInstance,
   handicapOf,
@@ -274,6 +275,8 @@ export function startTurn(sink: EngineSink, player: PlayerId): void {
   state.active = player;
   state.turn += 1;
   state.phase = "start";
+  // R419, R62: the field as this turn begins, before anything else happens (C+ #35 Rollback's history).
+  recordBoardSnapshot(state);
   const side = state.players[player];
   side.turnsStarted += 1;
   side.turnLog = { playedIds: [], cardsPlayed: 0 };

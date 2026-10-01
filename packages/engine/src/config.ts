@@ -347,3 +347,9 @@ export const PLAGUE_MULTIPLIER_NONE = 1;
  * Classic+ #73's). The base face rolls one.
  */
 export const CALL_TO_CHAOS_RADIANT_EFFECTS = 3;
+
+// ---- v0.2.0 constants: card systems (E29) ----
+/** C+ #35 Rollback (R419): the most player-turns it goes back ("Choose 1, 2 or 3"). */
+export const ROLLBACK_MAX_TURNS = 3;
+/** R419: the board snapshots the history keeps — this turn's and the ROLLBACK_MAX_TURNS before it. */
+export const BOARD_HISTORY_DEPTH = ROLLBACK_MAX_TURNS + 1;

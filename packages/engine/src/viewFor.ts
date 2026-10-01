@@ -170,7 +170,7 @@ function replacementsOf(events: readonly GameEvent[], state?: GameState): Replac
     // by its old id are judged by where it is now, exactly as they were before it moved: its draw
     // stays hidden while the trap is face-down and reads once the trap is public (R97). No
     // `hiddenFrom` is kept, since nothing ceased to exist.
-    if ((event.type === "cardPlayed" || event.type === "summoned") && event.formerId !== undefined) {
+    if ((event.type === "cardPlayed" || event.type === "summoned" || event.type === "controlChanged") && event.formerId !== undefined) {
       replacedBy.set(event.formerId, event.instanceId);
     }
   }
@@ -856,8 +856,13 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     case "divineShieldLost":
     case "keywordGranted":
     case "positionSwitched":
-    case "controlChanged":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+    // R227: as on `summoned`, a fresh id's `formerId` goes with the card's identity (C+ #35, R419).
+    case "controlChanged": {
+      if (!hidden(event.instanceId)) return event;
+      const { formerId: _former, ...rest } = event;
+      return { ...rest, instanceId: HIDDEN_ID };
+    }
 
     // R385: a Brittle count is its card's, read only where the card is (a face-down card's by its
     // controller alone), so on a card this viewer may not read the number goes with the id.

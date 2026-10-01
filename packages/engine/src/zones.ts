@@ -9,7 +9,7 @@ import { defOf } from "./catalog";
 import { cardTypeOf } from "./faces";
 import { showToOwner } from "./ownLibrary";
 import { flagsOf } from "./scripts";
-import type { CardInstance, GameState, HomeZone, Pile, PlayerState } from "./state";
+import { renameInBoardHistory, type CardInstance, type GameState, type HomeZone, type Pile, type PlayerState } from "./state";
 import { noteFieldExit, noteMoved, noteUncovered } from "./stays";
 
 export type ZoneSlot = { player: PlayerId; row: Row; lane: number };
@@ -332,6 +332,8 @@ export function freshFaceDownId(state: GameState, instance: CardInstance): strin
   const former = instance.id;
   instance.id = `c${state.nextId}`;
   state.nextId += 1;
+  // R419: C+ #35's history names the card by the id it has now.
+  renameInBoardHistory(state, former, instance.id);
   return former;
 }
 

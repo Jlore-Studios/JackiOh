@@ -236,6 +236,10 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   next.seed = "redacted";
   next.rngCursor = 0;
   next.applied = [];
+  // R419: C+ #35 Rollback's history holds whole instances — face-down traps, cards since gone to a hand.
+  // ponytail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
+  // hidden cards instead if the AI should ever plan around one.
+  delete next.boardHistory;
 
   // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
   // to both players, so its placeholder keeps that number as its price, and whatever trap

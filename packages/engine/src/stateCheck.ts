@@ -42,6 +42,7 @@ import { PAUSE_KEY, owe, pausedOf, registerWorkHandler, type PausedStep } from "
 import {
   activeUnitsOf,
   cardAt,
+  isReserved,
   isUnitToken,
   moveToZone,
   placeOnField,
@@ -293,6 +294,8 @@ function rebornStep(sink: EngineSink, pass: DeathPass): void {
   // whichever lane comes first (R89's "read before any of them moves", from the other side).
   const back: { copy: CardInstance; entry: (typeof pass.reborn)[number] }[] = [];
   for (const entry of pass.reborn) {
+    // R563: a C+ #35 Rollback that let the zone go has given it to the snapshot's card; no return.
+    if (!isReserved(sink.state, entry.at)) continue;
     releaseZone(sink.state, entry.at);
     // R127's shape at the level of a unit: the pass names it by id, so a Death hook that exiled or
     // unmade it in between leaves nothing to bring back rather than a stale object to resurrect.

@@ -209,7 +209,11 @@ export type GameEvent =
     }
   | { type: "fused"; instanceIds: string[]; resultInstanceId: string; defId: string }
   | { type: "positionSwitched"; instanceId: string; position: "ATK" | "DEF" }
-  | { type: "controlChanged"; instanceId: string; controller: PlayerId; row: Row; lane: number }
+  /**
+   * `formerId` (R227): set when the move put the card face-down with a fresh id (C+ #35's restore,
+   * R419), as on `summoned`; a view that hides the card hides this too (R97).
+   */
+  | { type: "controlChanged"; instanceId: string; controller: PlayerId; row: Row; lane: number; formerId?: string }
   | { type: "rotated"; direction: "left" | "right" }
   | { type: "swapped"; what: "health" | "board" | "library" }
   | { type: "locked"; player: PlayerId; row: Row; lane: number }

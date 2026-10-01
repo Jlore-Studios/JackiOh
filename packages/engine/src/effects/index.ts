@@ -314,3 +314,8 @@ export { chooseTargetWhere } from "./chooseWhere";
 // §4.5's check at this point of a list, then the rest on a stay that begins after it (C #43 Plague
 // Nuke, R59, R113, R174).
 export { afterStateCheck } from "./afterCheck";
+
+// ---- v0.2.0 verbs: Classic+ cards #1–#39 (card-specific, the cards-plus-c workstream) ----
+
+// B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
+export { rollBack } from "../subsystems/boardHistory";

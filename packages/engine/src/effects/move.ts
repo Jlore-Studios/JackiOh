@@ -57,7 +57,7 @@ function exileCard(ctx: EffectContext, card: CardInstance): void {
  * `bounce` and `bounceAll`. A unit token vanishes (R11), the hand cap applies so a full hand burns
  * it (§2.4), and the instance resets on the way out (R78).
  */
-function bounceCard(ctx: EffectContext, card: CardInstance): void {
+export function bounceCard(ctx: EngineSink, card: CardInstance): void {
   if (card.zone.z === "hand") return;
 
   const token = isUnitToken(ctx.state, card);
