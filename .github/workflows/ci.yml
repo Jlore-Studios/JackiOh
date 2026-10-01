@@ -94,8 +94,8 @@ jobs:
           pnpm fuzz
 
   # BUILD §5's 90% line floor over engine and cards: `pnpm test:coverage`, split by file. Each shard
-  # leaves a blob report, and the summary job merges them, so the threshold in vitest.config.ts is
-  # held against the merged total, never a shard's.
+  # leaves a blob report (Vitest writes it to .vitest/blob/) and the summary job merges them, so the
+  # threshold in vitest.config.ts is held against the merged total, never a shard's.
   coverage:
     name: coverage (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-blob-${{ matrix.shard }}
-          path: .vitest-reports/
+          path: .vitest/blob/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -140,7 +140,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: coverage-blob-*
-          path: .vitest-reports
+          path: .vitest/blob
           merge-multiple: true
       - name: coverage floor, over every shard
         run: pnpm exec vitest run --merge-reports --coverage --project engine --project cards
