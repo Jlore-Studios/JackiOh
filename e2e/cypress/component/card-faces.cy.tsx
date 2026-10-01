@@ -145,7 +145,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 the premise: the clamp allowance covers exactly the three longest cards (core-093, 095, 098)", () => {
+  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98 and five Classic and Classic+ faces)", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
@@ -157,6 +157,13 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-095 radiant",
       "core-098 base",
       "core-098 radiant",
+      "classic-078 radiant",
+      "classicplus-040 base",
+      "classicplus-040 radiant",
+      "classicplus-042 base",
+      "classicplus-042 radiant",
+      "classicplus-073 base",
+      "classicplus-073 radiant",
     ]);
   });
 
