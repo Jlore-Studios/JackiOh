@@ -272,6 +272,8 @@ export type SideSetup = {
 export type PlayOptions = {
   /** 1-based lane; the row comes from the def's type. Omitted means R64's leftmost free zone. */
   zone?: number;
+  /** The row `zone` names when it is not the def's own: a Unit topping a carrier (C+ #33, R446). */
+  row?: Row;
   x?: number;
   embiggen?: boolean;
   targets?: readonly Selection[];
@@ -379,7 +381,12 @@ function defIdsFor(state: GameState, ref: string): string[] {
 function sideOrder(state: GameState, player: PlayerId, where: Where): CardInstance[] {
   const side = state.players[player];
   const units = side.units.flatMap((pile) => pile ?? []);
-  const backrow = side.backrow.flatMap((card) => (card === null ? [] : [card]));
+  // B5 E21, R446: a carrier's Unit and the cards dormant in a backrow pile are on the field too.
+  const backrow = [
+    ...side.backrow.flatMap((card) => (card === null ? [] : [card])),
+    ...(side.carried ?? []).flatMap((card) => (card === null ? [] : [card])),
+    ...(side.backrowPiles ?? []).flatMap((pile) => pile ?? []),
+  ];
   if (where === "hand") return [...side.hand];
   if (where === "field") return [...units, ...backrow];
   return [
@@ -848,7 +855,7 @@ class Harness implements Scenario {
       if (def.type === "Spell") {
         throw new Error(`${what}: a Spell takes no zone, and zone ${opts.zone} was given`);
       }
-      const row: Row = def.type === "Unit" ? "units" : "backrow";
+      const row: Row = opts.row ?? (def.type === "Unit" ? "units" : "backrow");
       const size = row === "units" ? UNIT_ZONES : BACKROW_ZONES;
       if (!Number.isInteger(opts.zone) || opts.zone < 1 || opts.zone > size) {
         throw new Error(`${what}: zone ${opts.zone} is out of range; ${row} lanes are 1..${size}`);
