@@ -303,6 +303,30 @@ const CLASSIC_032_TEST = "../../cards/test/classic/032-felinor-feelings.test.ts"
 const CLASSIC_033_TEST = "../../cards/test/classic/033-joro.test.ts";
 const CLASSIC_038_TEST = "../../cards/test/classic/038-jackiestan-auctioneer.test.ts";
 const CLASSIC_039_TEST = "../../cards/test/classic/039-outbreak.test.ts";
+/** The Classic+ #1–#39 cards' own tests (patch v0.2.0, the cards-plus-c workstream). */
+const PLUS = (file: string): string => `../../cards/test/classic-plus/${file}.test.ts`;
+const PLUS_002_TEST = PLUS("002-groom-shroom");
+const PLUS_007_TEST = PLUS("007-the-house");
+const PLUS_008_TEST = PLUS("008-withering-storm");
+const PLUS_009_TEST = PLUS("009-silence");
+const PLUS_012_6_TEST = PLUS("012-6-frozen-wastes");
+const PLUS_012_7_TEST = PLUS("012-7-legion-of-the-hungry");
+const PLUS_012_8_TEST = PLUS("012-8-frostspatula");
+const PLUS_014_TEST = PLUS("014-forever");
+const PLUS_019_TEST = PLUS("019-league-of-losers");
+const PLUS_019_2_TEST = PLUS("019-2-jungle-loser");
+const PLUS_019_3_TEST = PLUS("019-3-mid-loser");
+const PLUS_019_5_TEST = PLUS("019-5-bot-loser");
+const PLUS_022_TEST = PLUS("022-blood-moon");
+const PLUS_025_TEST = PLUS("025-soul-shot");
+const PLUS_026_TEST = PLUS("026-tommy-tempo");
+const PLUS_027_TEST = PLUS("027-zephrys-zealotism");
+const PLUS_029_TEST = PLUS("029-portal-to-the-past");
+const PLUS_030_TEST = PLUS("030-felinor-fuser");
+const PLUS_031_TEST = PLUS("031-fusion-lab");
+const PLUS_033_TEST = PLUS("033-ivory-tower");
+const PLUS_037_TEST = PLUS("037-wardrum");
+const SERVER_LAST_BOARDS_TEST = "../../../apps/server/test/match/last-boards.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -2770,6 +2794,80 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(396, CLASSIC_010_TEST, CLASSIC_018_TEST, CLASSIC_025_TEST, CLASSIC_032_TEST, CLASSIC_039_TEST);
   });
 
+  // Proved by cards classic-plus/002-groom-shroom.test.ts "R405 …" (a board filled with Felinor Units given
+  // Taunt; the declared attack still hits the hero) and classic-plus/030-felinor-fuser.test.ts "R405 …".
+  it("R405 reads C+ #2's Felinors as Felinor-tagged Units, the attack that set it off still hitting the hero", () => {
+    provenIn(405, PLUS_002_TEST, PLUS_030_TEST);
+  });
+
+  // Proved by cards classic-plus/007-the-house.test.ts "R406 …" (one of the twins, 2 in 3 the defender).
+  it("R406 has C+ #7 The House summon #3 Right-house defender 2 in 3, else a Wrong-House Attacker", () => {
+    provenIn(406, PLUS_007_TEST);
+  });
+
+  // Proved by cards classic-plus/009-silence.test.ts "R407 …" (an aura stops, a face-down trap sits inert,
+  // an Animated card loses Animated where it stands).
+  it("R407 leaves a Vanilla backrow card with no text", () => {
+    provenIn(407, PLUS_009_TEST);
+  });
+
+  // Proved by cards classic-plus/012-6-frozen-wastes.test.ts and 012-7-legion-of-the-hungry.test.ts "R408 …".
+  it("R408 reads a Field Spell's unlabelled one-time text as its Cry", () => {
+    provenIn(408, PLUS_012_6_TEST, PLUS_012_7_TEST);
+  });
+
+  // Proved by cards classic-plus/012-8-frostspatula.test.ts "R409 …" (copies, the originals staying put).
+  it("R409 has C+ #12.8 Frostspatula's resummon make copies", () => {
+    provenIn(409, PLUS_012_8_TEST);
+  });
+
+  // Proved by cards classic-plus/014-forever.test.ts "R410 …" (returns after it resolves; a discarded or
+  // countered Spell does not come back).
+  it("R410 reads C+ #14 Forever&'s \"leaves your hand\" as \"is played and resolves\"", () => {
+    provenIn(410, PLUS_014_TEST);
+  });
+
+  // Proved by cards classic-plus/019-league-of-losers.test.ts and 019-3-mid-loser.test.ts "R411 …".
+  it("R411 fires C+ #19.3 Mid Loser's Cry when League of Losers summons it", () => {
+    provenIn(411, PLUS_019_TEST, PLUS_019_3_TEST);
+  });
+
+  // Proved by cards classic-plus/019-2-jungle-loser.test.ts and 019-5-bot-loser.test.ts "R412 …".
+  it("R412 reads Tranquility as \"can't go Berserk\" and credits Jungle Loser's kill to Bot Loser", () => {
+    provenIn(412, PLUS_019_2_TEST, PLUS_019_5_TEST);
+  });
+
+  // Proved by cards classic-plus/022-blood-moon.test.ts "R413 …" (the heal that sets it off is converted).
+  it("R413 reads C+ #22 Blood Moon's \"is healed\" as \"would be healed\"", () => {
+    provenIn(413, PLUS_022_TEST);
+  });
+
+  // Proved by cards classic-plus/025-soul-shot.test.ts "R414 …" (attack plus health, then cost, then lane).
+  it("R414 gives C+ #25 Soul Shot's Lucky its comparator", () => {
+    provenIn(414, PLUS_025_TEST);
+  });
+
+  // Proved by cards classic-plus/026-tommy-tempo.test.ts "R415 …" (a play, an attack, a switch, an
+  // activation or ending the turn by hand is the one more action).
+  it("R415 reads C+ #26 Tommy Tempo's \"one more action\" as one main-phase action", () => {
+    provenIn(415, PLUS_026_TEST);
+  });
+
+  // Proved by cards classic-plus/027-zephrys-zealotism.test.ts "R416 …" and engine perfectHand.test.ts "R416 …".
+  it("R416 keeps C+ #27 Zephrys Zealotism's hand size and its pool to Classic and Classic+", () => {
+    provenIn(416, PLUS_027_TEST, "perfectHand.test.ts");
+  });
+
+  // Proved by cards classic-plus/029-portal-to-the-past.test.ts "R417 …" and engine lastBoards.test.ts "R417 …".
+  it("R417 makes each seat's last board a setup input of the match", () => {
+    provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
+  });
+
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" and engine carried-damage.test.ts "R418 …".
+  it("R418 lets a Unit top C+ #33 Ivory Tower's backrow pile, the Tower acting beneath it", () => {
+    provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
+  });
+
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
   // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
@@ -2907,6 +3005,42 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // limited draw never happened; an empty-deck draw counts but gives nothing).
   it("R521 counts every draw that happened toward C #9 Income Tax", () => {
     provenIn(521, CLASSIC_009_TEST);
+  });
+
+  // Proved by cards classic-plus/026-tommy-tempo.test.ts "R560 …" (the hand uncast, a full hand burning it).
+  it("R560 sends C+ #26 Tommy Tempo with no zone to the hand uncast", () => {
+    provenIn(560, PLUS_026_TEST);
+  });
+
+  // Proved by cards classic-plus/031-fusion-lab.test.ts "R561 …" (the Radiant ingredient in both forms).
+  it("R561 lends C+ #31 Fusion Lab's Radiant ingredient to both of the fusion's forms", () => {
+    provenIn(561, PLUS_031_TEST);
+  });
+
+  // Proved by engine lastBoards.test.ts "R564 …" and cards classic-plus/029-portal-to-the-past.test.ts "R564 …".
+  it("R564 keeps a last board as card and face, dropping what the match cannot rebuild", () => {
+    provenIn(564, "lastBoards.test.ts", PLUS_029_TEST);
+  });
+
+  // Proved by apps/server match/last-boards.test.ts "R565 …" (written in the result's transaction, frozen
+  // on the match row, never the opponent's face-down cards).
+  it("R565 stores each profile's last board on the server", () => {
+    provenIn(565, SERVER_LAST_BOARDS_TEST);
+  });
+
+  // Proved by cards classic-plus/008-withering-storm.test.ts "R569 …".
+  it("R569 draws C+ #8 Withering Storm's 4 among the cards a Degrade can change", () => {
+    provenIn(569, PLUS_008_TEST);
+  });
+
+  // Proved by cards classic-plus/012-8-frostspatula.test.ts "R409 R572 …" (a mutual kill counts).
+  it("R572 counts C+ #12.8 Frostspatula's kill in its own last combat", () => {
+    provenIn(572, PLUS_012_8_TEST);
+  });
+
+  // Proved by cards classic-plus/037-wardrum.test.ts "R578 …" (a cast inside the 3rd play is the 4th).
+  it("R578 counts C+ #37 Wardrum's plays in play order", () => {
+    provenIn(578, PLUS_037_TEST);
   });
 });
 
