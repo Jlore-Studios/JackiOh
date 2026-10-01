@@ -133,6 +133,7 @@ describe("§2.3: a one-shot refresh rider moves current mana, not max mana", () 
     });
     hinder.endTurn(); // p2's turn.
     hinder.endTurn(); // p1's turn: the draw casts Hinder.
+    hinder.answer(hinder.card(HIT_JOB).id); // R431: the base face's "Discard 1".
     hinder.endTurn(); // p2's turn: the lowered refresh.
 
     expect(hinder.state.active).toBe("p2");

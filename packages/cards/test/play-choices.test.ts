@@ -22,14 +22,13 @@ import {
   type CardInstance,
   type GameState,
   createRng,
+  query,
   type EngineSink,
 } from "@jackioh/engine";
 import { scenario, type Scenario } from "./_harness";
 
 const MR_VANILLA = "core-008";
-const HIT_JOB = "core-016";
 const MIDRANGE_MENACE = "core-019";
-const CARNIVOROUS_CUBE = "core-022";
 const EFFICIENCY_DIVIDEND = "core-024";
 const ARCHIVIST = "core-030";
 const PREM_PANTHER = "core-032";
@@ -38,6 +37,7 @@ const SILLY_SILAS = "core-052";
 const BIGOT = "core-002";
 const TWISTED_SORCERER = "core-068";
 const HEROIC_POWER = "core-098";
+const CALL_TO_CHAOS = "core-095";
 const CRAFT_A_CARD = "core-099";
 const KYS_TUTOR = "core-051";
 
@@ -61,34 +61,52 @@ function playsOf(state: GameState, card: CardInstance): PlayAction[] {
 }
 
 describe("R43, R151: a Heroic Power created on the field rolls its power", () => {
-  it("R151 Heroic Power copies Carnivorous Cube's Death summons roll a power, so activatePower is offered and accepted for them (R43)", () => {
+  it("R151 a Heroic Power #95 Call to Chaos summons straight into the backrow rolls a power, so activatePower is offered and accepted for it (R43)", () => {
     // R43: "one created later rolls when it is created"; R151: it rolls "as it arrives anywhere a
-    // card can be looked at". The Cube eats a Heroic Power and its Death summons two fresh copies
-    // straight into the backrow — never through a hand or a library, the only arrivals that roll.
+    // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
+    // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
+    // that roll. (Carnivorous Cube's copies were this test's route until R428 took backrow meals
+    // away from the Cube.) The roll is pinned: the play's first rng draw is #95's roll, and the first
+    // backrow pick follows it, from the pool of every set (R380).
+    const seed = "r151-chaos";
+    const pool = query({ type: ["Field Spell", "Trap", "Field Trap"] });
+    const backrow = subsystems.CHAOS_EFFECTS.findIndex((effect) => effect.name === "backrow");
+    let cursor = -1;
+    for (let at = 0; at < 200_000 && cursor < 0; at += 1) {
+      const rng = createRng(seed, at);
+      if (rng.int(subsystems.CHAOS_EFFECTS.length) !== backrow) continue;
+      if (pool[rng.int(pool.length)]?.id === HEROIC_POWER) cursor = at;
+    }
+    expect(cursor).toBeGreaterThanOrEqual(0);
+
     const g = scenario({
-      p1: { hand: [CARNIVOROUS_CUBE, HIT_JOB, RENO], backrow: [HEROIC_POWER], mana: 10 },
+      seed,
+      p1: { hand: [CALL_TO_CHAOS, RENO], mana: 10 },
       p2: { hand: [RENO] },
     });
-    const eaten = must(g.backrow("p1", 1), "p1's Heroic Power");
-    // Every Heroic Power in a real game has rolled by the time it is on the field (R43).
-    eaten.memory[subsystems.POWER_KEY] = "burn";
+    g.state.rngCursor = cursor;
+    g.play(CALL_TO_CHAOS);
+    while (g.state.pending !== null && g.state.pending.playerId === "p1") {
+      const first = g.state.pending.options[0];
+      if (first === undefined) break;
+      g.answer(first.key);
+    }
 
-    g.play(CARNIVOROUS_CUBE, { targets: [{ pick: "instance", instanceId: eaten.id }] });
-    const cube = must(g.unit("p1", 1), "the Cube");
-    g.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: cube.id }] });
-
-    const copies = [1, 2, 3, 4, 5]
+    const powers = [1, 2, 3, 4, 5]
       .map((lane) => g.backrow("p1", lane))
       .filter((card): card is CardInstance => card !== null && card.defId === HEROIC_POWER);
-    expect(copies).toHaveLength(2);
-    expect(g.state.players.p1.mana.current).toBe(4); // 10 − 3 (Cube) − 3 (Hit Job, v0.2.0): any power's X fits
+    expect(powers.length).toBeGreaterThanOrEqual(1);
+    // Each one rolled its power as it arrived (R151).
+    for (const power of powers) expect(typeof power.memory[subsystems.POWER_KEY]).toBe("string");
 
     const offered = legalActions(g.state, "p1")
       .filter((action) => action.type === "activatePower")
       .map((action) => (action.type === "activatePower" ? action.instanceId : ""));
-    expect(offered.sort()).toEqual(copies.map((copy) => copy.id).sort());
+    const affordable = powers.filter((power) => subsystems.powerCostOf(power) <= g.state.players.p1.mana.current);
+    expect(affordable.length).toBeGreaterThanOrEqual(1);
+    expect(offered.sort()).toEqual(expect.arrayContaining(affordable.map((power) => power.id)));
 
-    const first = must(copies[0], "the first copy");
+    const first = must(affordable[0], "an affordable power");
     const used = act(g.state, { type: "activatePower", playerId: "p1", instanceId: first.id });
     expect(used.error).toBeUndefined();
   });

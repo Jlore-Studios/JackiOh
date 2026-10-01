@@ -1,4 +1,4 @@
-// #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282).
+// #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282, R437).
 // Unit, cost 1, 1/1 → 2/2.
 //   Base:    "Cry: choose an enemy permanent; at the start of your next turn, steal it"
 //   Radiant: "Divine Shield; Cry: choose an enemy permanent; at the start of your next turn, steal
@@ -57,6 +57,12 @@
 // made Radiant after its Cry steals without the rider, and a Radiant one that has died since still
 // applies it.
 //
+// THE MARK (R437). While the steal waits, its target carries the mark `{ mark: "steal", color:
+// "purple" }` in both players' views — the client draws it as a purple corruption sparkle. The mark
+// is the delayed effect's own (`delay`'s `mark`, engine/src/marks.ts), so it lasts exactly as long as
+// the steal waits: it goes when the steal resolves or fizzles at the start of the next turn, and the
+// moment the target leaves the field (R174), each with a `marked` event.
+//
 // THE VERB AND WHERE ITS CONTINUATION LIVES (R126, R127). `delay` stores a `Resume` naming this
 // script, the hook key, the step and the captured data, and `turn.runDelayed` re-enters it through
 // the one reader — `prompts.runResume`, which resolves `resume.hook` against either a `Hook` on the
@@ -78,6 +84,9 @@ const STEAL_STEP = "steal";
 
 /** The one thing the continuation captures: which permanent was chosen (§8.2 Engine cell). */
 const TARGET_KEY = "targetId";
+
+/** R437: the pending steal, as the mark its target carries while it waits — purple. */
+const STEAL_MARK = { mark: "steal", color: "purple" } as const;
 
 /** The play-time pick (R81), read straight off the context — reading state is not mutating it. */
 function chosenInstanceId(ctx: EffectContext): string | null {
@@ -160,6 +169,8 @@ function kpopFanatic(step: Hook): Script {
           // R174: a target that leaves the field before the steal fires is gone for good, even if the
           // same card is back by then (bounced and replayed, or a Reborn body) — R76's fizzle.
           watch: targetId,
+          // R437: and it carries the steal's mark in both views while it waits.
+          mark: STEAL_MARK,
         }),
       ];
     },

@@ -1,28 +1,28 @@
-// #22 Carnivorous Cube (SPEC §8.2, R41, R57, R64, R81).
+// #22 Carnivorous Cube (SPEC §8.2, R41, R57, R64, R81, R428).
 //
-// Base: "Cry: Tribute one of your other permanents and remember it. Death: summon 2 copies of the
-// remembered card". Radiant restates the Death clause only ("Death: fill your board with copies"),
-// so the Cry — the tribute and the remembering — is kept unchanged (§8 Conventions).
+// Base: "Cry: Tribute one of your other Units and remember it. Death: Summon 2 copies of it."
+// Radiant: "Cry: Tribute one of your other Units and remember it. Death: Fill your board with copies
+// of it." The Radiant face changes the Death clause only, so the Cry — the tribute and the
+// remembering — is the same on both (§8 Conventions).
 //
-// §6.3 Tribute: "a card whose own text tributes (Carnivorous Cube) sacrifices what that text names
-// instead, which may be any of your other permanents, backrow included (R41) … A tribute written
-// into a card's script is an ordinary Sacrifice of the permanent that script names, where the Sheep
-// Token's 2 never applies." So the meal is picked with the play (R81, a `tribute` target the play
-// action carries, never a prompt) and eaten with `sacrifice`, which bypasses Indestructible and
+// R428 (patch v0.2.0, rewrites R41's "any other permanent, backrow included"): the Cry eats one of
+// your other UNITS only — a Unit acting in a unit zone, never a backrow card. §6.3 Tribute: "a card
+// whose own text tributes (Carnivorous Cube) sacrifices what that text names instead … A tribute
+// written into a card's script is an ordinary Sacrifice of the permanent that script names, where the
+// Sheep Token's 2 never applies." So the meal is picked with the play (R81, a `tribute` target the
+// play action carries, never a prompt) and eaten with `sacrifice`, which bypasses Indestructible and
 // counts as a death.
 //
-// What is remembered is `memory.eaten = { defId, radiant, row, statsOverride?, armorOverride? }`
-// (§10.1): R41 keeps the eaten card's radiant flag and `statsOverride` (with §7's `armorOverride`
-// beside it) on every copy, and copies of a backrow card go
-// to the backrow — which the remembered `row` records, so Death needs no catalog lookup. R41's two
-// fizzles are one condition each: nothing to tribute → the Cry does nothing and remembers nothing;
-// nothing eaten → Death does nothing. It can never eat itself: the declared target excludes it and
-// the hook re-checks.
+// What is remembered is `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1):
+// R41 keeps the eaten card's radiant flag and `statsOverride` (with §7's `armorOverride` beside it)
+// on every copy. R41's two fizzles are one condition each: nothing to tribute → the Cry does nothing
+// and remembers nothing; nothing eaten → Death does nothing. It can never eat itself: the declared
+// target excludes it and the hook re-checks.
 
 import type { Effect, EffectContext, Script } from "@jackioh/engine";
-import { BACKROW_ZONES, recalled } from "@jackioh/engine";
+import { UNIT_ZONES, defOf, recalled } from "@jackioh/engine";
 import { fillBoard, instanceOf, remember, sacrifice, summon } from "@jackioh/engine/effects";
-import type { Row, TargetDecl } from "@jackioh/shared";
+import type { TargetDecl } from "@jackioh/shared";
 import { cardDef } from "../catalog-data";
 
 export const def = cardDef("core-022");
@@ -32,8 +32,6 @@ type Eaten = {
   defId: string;
   /** R41, R57: a copy of a Radiant meal is Radiant. */
   radiant: boolean;
-  /** R41: copies of an eaten backrow card go to the backrow. */
-  row: Row;
   /** R41, R57: a token eaten with §7 stats copies with those stats. */
   statsOverride?: { attack: number; health: number };
   /** §7: a Bread Token's "Armor X" is the other half of its X/X, so a copy keeps it beside them. */
@@ -43,7 +41,8 @@ type Eaten = {
 const EATEN = "eaten";
 
 /**
- * R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one.
+ * R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one. R428: one
+ * of your other Units — the unit row only.
  *
  * `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a declaration the board
  * cannot satisfy "does not refuse the play — the play is legal with the answers that exist and the
@@ -51,18 +50,17 @@ const EATEN = "eaten";
  *
  * Deliberately no `amount`: `playChoices.tributeCostOf` reads a `tribute` declaration's `amount` as
  * §6.3's Tribute *cost*, which is paid with the play action's `tributes` list, counts Sheep Tokens
- * as 2, reaches units only and refuses the play when the board cannot pay it (#66). §6.3 says the
- * opposite for this card — "a card whose own text tributes (Carnivorous Cube) sacrifices what that
- * text names instead, which may be any of your other permanents, backrow included (R41) … where the
- * Sheep Token's 2 never applies" — so the meal is a declared target the script sacrifices itself,
- * and the play carries no Tribute cost.
+ * as 2 and refuses the play when the board cannot pay it (#66). §6.3 says the opposite for this card
+ * — "a card whose own text tributes (Carnivorous Cube) sacrifices what that text names instead …
+ * where the Sheep Token's 2 never applies" — so the meal is a declared target the script sacrifices
+ * itself, and the play carries no Tribute cost.
  */
 const targets: TargetDecl[] = [
   {
     kind: "tribute",
     min: 1,
     max: 1,
-    filter: { side: "ally", of: ["unit", "backrow"], excludeSelf: true },
+    filter: { side: "ally", of: ["unit"], excludeSelf: true },
   },
 ];
 
@@ -78,15 +76,15 @@ function mealOf(ctx: EffectContext): Eaten | null {
   if (selection === undefined || selection.pick !== "instance") return null;
 
   const card = instanceOf(ctx, { of: "chosen" });
-  if (card === null || card.zone.z !== "field") return null;
-  // "One of your other permanents": ally only, and R41's "cannot eat itself".
+  // R428: a Unit, acting in a unit zone — never a backrow card.
+  if (card === null || card.zone.z !== "field" || card.zone.row !== "units") return null;
+  // "One of your other Units": ally only, and R41's "cannot eat itself".
   if (card.controller !== ctx.controller) return null;
   if (ctx.self !== null && card.id === ctx.self.id) return null;
 
   return {
     defId: card.defId,
     radiant: card.radiant,
-    row: card.zone.row,
     ...(card.statsOverride === undefined
       ? {}
       : { statsOverride: { attack: card.statsOverride.attack, health: card.statsOverride.health } }),
@@ -100,11 +98,9 @@ function eatenOf(ctx: EffectContext): Eaten | null {
   if (typeof stored !== "object" || stored === null) return null;
   const value = stored as Partial<Eaten>;
   if (typeof value.defId !== "string") return null;
-  const row: Row = value.row === "backrow" ? "backrow" : "units";
   return {
     defId: value.defId,
     radiant: value.radiant === true,
-    row,
     ...(value.statsOverride === undefined ? {} : { statsOverride: value.statsOverride }),
     ...(typeof value.armorOverride === "number" ? { armorOverride: value.armorOverride } : {}),
   };
@@ -144,7 +140,7 @@ export const radiant: Script = {
     const eaten = eatenOf(ctx);
     if (eaten === null) return [];
     // R64: "fill your board" summons into every empty, unlocked unit zone left to right.
-    if (eaten.row === "units") {
+    if (defOf(ctx.state, eaten.defId).type === "Unit") {
       return [
         fillBoard({
           defId: eaten.defId,
@@ -154,8 +150,10 @@ export const radiant: Script = {
         }),
       ];
     }
-    // `fillBoard` refuses a non-unit row, so an eaten backrow card fills the backrow as one
-    // laneless `summon` per zone: each takes the leftmost free zone and the extras fizzle (R64).
-    return Array.from({ length: BACKROW_ZONES }, () => copyOf(eaten));
+    // A meal that stood in a unit zone without being a Unit card — a Field Spell or Trap standing
+    // there animated (B3.1, R383) — is copied as its own card: `fillBoard` makes Units only, so the
+    // board is filled with one laneless `summon` per unit zone, each placed where its own type goes
+    // (R64), and the ones with no zone left fizzle.
+    return Array.from({ length: UNIT_ZONES }, () => copyOf(eaten));
   },
 };

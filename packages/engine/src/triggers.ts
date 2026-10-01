@@ -5,9 +5,11 @@
 //     sits in. R153 is the whole of that second key: a card registers only the triggers its zone
 //     allows. On the field or in the backrow it answers `script.triggers` plus its `startOfTurn`,
 //     `endOfTurn`, `aura`, `setStat` and `onPlayHook` hooks; in a hand only `script.handTriggers`
-//     (#89 Corpse Eater); in a graveyard only the end-of-turn return of a `returnToHandAtEndOfTurn`
-//     spell of §5.1, which is how #23, #24 and #31 come back at the end of the turn (R68); and in a
-//     library, in exile, in the resolving zone or dormant under a Stack, nothing at all (§3.2, R13).
+//     (#89 Corpse Eater); in a graveyard its `script.graveyardTriggers` (Classic #47, B5 E26) and the
+//     end-of-turn return of a `returnToHandAtEndOfTurn` spell of §5.1, which is how #23, #24 and #31
+//     come back at the end of the turn (R68); in a library only `script.deckTriggers` (Classic+ #37,
+//     B5 E26, R464); and in exile, in the resolving zone or dormant under a Stack, nothing at all
+//     (§3.2, R13).
 //     `aura` and `setStat` are not queued here at all — `layers.ts` reads them off the field
 //     directly — but they are field-only for the same reason the hooks are.
 //  2. The two queues in state. `state.dispatch` is §10.3's frontier: every event emitted but not
@@ -17,7 +19,8 @@
 //     all plain JSON, so it survives an open prompt, a save and a replay — and R89 falls out of it,
 //     since every trigger but the Death hook runs after R78 has reset the instance, off the event it
 //     captured. Queue order is R68's: the active player's cards, then the opponent's; within a side
-//     unit lanes 1–5, then backrow 1–5, then hand, then graveyard. Traps are not queued at all —
+//     unit lanes 1–5, then backrow 1–5, then hand, then library (R464: in the order the instances were
+//     created, never by library position, which is hidden), then graveyard. Traps are not queued at all —
 //     `traps.ts` fires them the moment the event is dispatched, which is what "a trap fires before a
 //     queued trigger" means (§10.3, BUILD M3-T2), and R100 keeps the end-of-turn window's events out
 //     of that immediate check so a `turnEnded` trap fires once per turn end. Either dispatch owes
@@ -42,8 +45,10 @@
 
 import type { GameEvent, GameEventType, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
-import { defOf } from "./catalog";
 import { BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES } from "./config";
+import { isAnnounceLive } from "./announce";
+import { heldBack } from "./drawComplete";
+import { sweepMarks } from "./marks";
 import { applyResumable, runHookResumable } from "./prompts";
 import type { EngineSink, HookName } from "./resolve";
 import { makeContext } from "./resolve";
@@ -66,12 +71,16 @@ import {
   trapControllersOf,
   type ImmediateDispatch,
   type TrapControllers,
+  isTrapType,
 } from "./traps";
 import { RUN_MARKS_KEY, cardData, drainWork, runMarksOf, type RunMarks } from "./work";
-import { activeUnitsOf, cardAt, slotsOf } from "./zones";
+import { activeUnitsOf, cardAt, isBuried, isCarried, slotsOf } from "./zones";
+// B5 E13: the triggered-Cry sequence registers its prompt answerer at module scope (R122), and this
+// module is on every path that settles an action, so a paused trigger always finds its answerer.
+import "./cryTrigger";
 
-/** The zones a card can hold a trigger from (§10.3). */
-export type TriggerZone = "field" | "backrow" | "hand" | "graveyard";
+/** The zones a card can hold a trigger from (§10.3). `library`: B5 E26's deck triggers (R464). */
+export type TriggerZone = "field" | "backrow" | "hand" | "library" | "graveyard";
 
 /** One card that can answer, with the triggers its current zone registers. */
 export type TriggerHolder = {
@@ -119,15 +128,22 @@ const NO_TRIGGERS: readonly TriggerDef[] = [];
 // 1. The registry.
 // ---------------------------------------------------------------------------
 
+/**
+ * A Trap or Field Trap by its face (B2.7) — never by `faces.cardTypeOf`, which answers "Unit" for an
+ * animated one standing in a unit zone, where it still fires as a trap (R383, `traps.isTrapType`).
+ */
 function isTrapCard(state: GameState, card: CardInstance): boolean {
-  const type = defOf(state, card.defId).type;
-  return type === "Trap" || type === "Field Trap";
+  return isTrapType(state, card);
 }
 
-/** §10.3: which list a card's zone registers. A graveyard card answers hooks only (R68). */
+/**
+ * §10.3: which list a card's zone registers. A hand answers `handTriggers`, a library `deckTriggers`
+ * and a graveyard `graveyardTriggers` (B5 E26); the field and the backrow answer `triggers`.
+ */
 function registeredTriggers(script: Script, zone: TriggerZone): readonly TriggerDef[] {
   if (zone === "hand") return script.handTriggers ?? NO_TRIGGERS;
-  if (zone === "graveyard") return NO_TRIGGERS;
+  if (zone === "library") return script.deckTriggers ?? NO_TRIGGERS;
+  if (zone === "graveyard") return script.graveyardTriggers ?? NO_TRIGGERS;
   return script.triggers ?? NO_TRIGGERS;
 }
 
@@ -165,7 +181,7 @@ function flaggedForReturn(card: CardInstance): boolean {
  * neither an error, both a different game.
  */
 function zoneRegistersHook(state: GameState, holder: TriggerHolder, hook: HookName): boolean {
-  if (holder.zone === "hand") return false;
+  if (holder.zone === "hand" || holder.zone === "library") return false;
   if (holder.zone === "graveyard") {
     return hook === GRAVEYARD_HOOK && flaggedForReturn(holder.card);
   }
@@ -183,13 +199,37 @@ function holderOf(
     card,
     controller,
     zone,
-    isTrap: zone === "backrow" && isTrapCard(state, card),
+    // R383: an animated Field Trap in a unit zone is a trap too — `traps.ts` fires it, and it is never
+    // also queued (§10.3).
+    isTrap: (zone === "backrow" || zone === "field") && isTrapCard(state, card),
     triggers: registeredTriggers(script, zone),
     script,
   };
 }
 
-/** One side's holders in R68's within-a-side order: unit lanes, backrow lanes, hand, graveyard. */
+/** `c17` → 17: an instance's place in creation order (`state.newInstance` numbers ids from `nextId`). */
+function creationNumber(id: string): number {
+  const match = /^c(\d+)$/.exec(id);
+  return match === null ? Number.MAX_SAFE_INTEGER : Number.parseInt(match[1] ?? "", 10);
+}
+
+/**
+ * B5 E26, R464: a library's holders — the cards whose running face declares `deckTriggers`, and only
+ * those, since a library card registers nothing else — in the order the instances were created. Never
+ * library order: that is hidden from both players (§9.1, R223), and a trigger order that followed it
+ * would act on it.
+ */
+function libraryHolders(state: GameState, player: PlayerId): TriggerHolder[] {
+  return state.players[player].library
+    .filter((card) => (scriptOf(card).deckTriggers ?? NO_TRIGGERS).length > 0)
+    .sort((a, b) => creationNumber(a.id) - creationNumber(b.id) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((card) => holderOf(state, card, "library", player));
+}
+
+/**
+ * One side's holders in R68's within-a-side order: unit lanes, backrow lanes, hand, library (R464),
+ * graveyard. A library card is a holder only while it declares deck triggers (`libraryHolders`).
+ */
 export function triggerHoldersOf(state: GameState, player: PlayerId): TriggerHolder[] {
   const side = state.players[player];
   const units = activeUnitsOf(state, player).map((card) => holderOf(state, card, "field", player));
@@ -198,8 +238,9 @@ export function triggerHoldersOf(state: GameState, player: PlayerId): TriggerHol
     return card === null ? [] : [holderOf(state, card, "backrow", player)];
   });
   const hand = side.hand.map((card) => holderOf(state, card, "hand", player));
+  const library = libraryHolders(state, player);
   const graveyard = side.graveyard.map((card) => holderOf(state, card, "graveyard", player));
-  return [...units, ...backrow, ...hand, ...graveyard];
+  return [...units, ...backrow, ...hand, ...library, ...graveyard];
 }
 
 /**
@@ -213,15 +254,20 @@ export function cardsInTriggerOrder(state: GameState): TriggerHolder[] {
 }
 
 /**
- * The holder a card is right now, or null when its zone registers nothing: a library, exile or
- * resolving card, and a card dormant under a Stack, which does not act (§3.2, R13).
+ * The holder a card is right now, or null when its zone registers nothing: an exile or resolving
+ * card, and a card dormant under a Stack, which does not act (§3.2, R13). A library card holds its
+ * deck triggers (B5 E26).
  */
 export function triggerHolderFor(state: GameState, card: CardInstance): TriggerHolder | null {
   const zone = card.zone;
   if (zone.z === "hand") return holderOf(state, card, "hand", zone.player);
+  if (zone.z === "library") return holderOf(state, card, "library", zone.player);
   if (zone.z === "graveyard") return holderOf(state, card, "graveyard", zone.player);
   if (zone.z !== "field") return null;
-  if (zone.row === "backrow") return holderOf(state, card, "backrow", zone.player);
+  // B5 E21: a card dormant under a backrow pile registers nothing, as one under a unit pile does
+  // (§3.2, R13, R447); a Unit a carrier holds is a unit on the field (R446).
+  if (zone.row === "backrow" && isCarried(state, card)) return holderOf(state, card, "field", zone.player);
+  if (zone.row === "backrow") return isBuried(state, card) ? null : holderOf(state, card, "backrow", zone.player);
   const top = cardAt(state, { player: zone.player, row: zone.row, lane: zone.lane });
   if (top === null || top.id !== card.id) return null;
   return holderOf(state, card, "field", zone.player);
@@ -274,12 +320,12 @@ const TRIGGER_STEP = "trigger" as unknown as Resume["step"];
  * work item, so R68's creation order is one counter and ids stay deterministic under replay. The
  * `t` prefix keeps them apart from `prompts.ts`'s `q…` choice ids, which count on `nextId`.
  *
- * R177: except the entry of a card in a hand. The counter also numbers the modifiers, whose ids both
- * seats read (R169), so a number a hidden card took would show in them: #89 Corpse Eater answers
- * every death from its owner's hand, even one it gains nothing from (a token's, R11), and the next
- * modifier's id would then tell the opponent the hand holds one. Nothing orders or finds a queue
- * entry by its number, so a hand card's entry borrows the counter's current value without moving it,
- * told apart by the queue's length.
+ * R177: except the entry of a card in a hand or a library (B5 E26, R464). The counter also numbers
+ * the modifiers, whose ids both seats read (R169), so a number a hidden card took would show in them:
+ * #89 Corpse Eater answers every death from its owner's hand, even one it gains nothing from (a
+ * token's, R11), and the next modifier's id would then tell the opponent the hand holds one. Nothing
+ * orders or finds a queue entry by its number, so a hidden card's entry borrows the counter's current
+ * value without moving it, told apart by the queue's length.
  */
 function nextEntryId(state: GameState, hidden = false, prefix = "h"): { id: string; seq: number } {
   const seq = state.nextSeq;
@@ -325,7 +371,7 @@ export function queueTrigger(
   def: TriggerDef,
   event: GameEvent,
 ): QueuedTrigger {
-  const { id, seq } = nextEntryId(sink.state, holder.zone === "hand");
+  const { id, seq } = nextEntryId(sink.state, holder.zone === "hand" || holder.zone === "library");
   const marks: RunMarks = { eventStay: eventStayOf(sink.state, event) };
   const entry: QueuedTrigger = {
     id,
@@ -573,6 +619,9 @@ export function runQueuedTrigger(sink: EngineSink, entry: QueuedTrigger): void {
 
   const def = queuedTriggerDef(holder, entry);
   if (def === undefined || !def.on.includes(event.type)) return;
+  // B5 E1, R448: a response to an announce whose play a Counter has already cancelled, or that step 4
+  // has already moved, finds no card and fizzles (`playSteps.runAnnounceWindow` pops these itself).
+  if (event.type === "cardAnnounced" && !isAnnounceLive(sink.state, event.instanceId)) return;
   // R212: an event trigger answers for the player who controlled its card when the event happened,
   // which is what its entry captured — a change of control since does not hand the answer over.
   const queuedFor: unknown = entry.resume.data.controller;
@@ -684,6 +733,8 @@ const collected = new WeakSet<GameEvent>();
  */
 function collectEvents(sink: SettleSink): void {
   const state = sink.state;
+  // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves.
+  sweepMarks(sink);
   for (let at = sink.dispatched ?? 0; at < sink.events.length; at += 1) {
     sink.dispatched = at + 1;
     const event = sink.events[at];
@@ -717,7 +768,11 @@ function dispatchNewEvents(sink: SettleSink): void {
   while (sink.state.dispatch.length > 0) {
     if (sink.state.pending !== null || sink.state.result !== null) return;
     if (trapsStillOwed(sink.state)) return;
-    const next = sink.state.dispatch.shift();
+    // R58: a cast-on-draw draw's `drawn` waits, in its place, until the draw is complete — its cast
+    // resolved (`drawComplete.ts`) — and the events after it go on meanwhile.
+    const at = sink.state.dispatch.findIndex((item) => !heldBack(sink.state, item.event));
+    if (at < 0) return;
+    const [next] = sink.state.dispatch.splice(at, 1);
     if (next !== undefined) dispatchEvent(sink, next.event);
     collectEvents(sink);
   }

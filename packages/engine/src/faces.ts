@@ -14,7 +14,18 @@ export function runningFace(state: GameState, instance: Pick<CardInstance, "defI
   return instance.radiant ? def.radiant : def.base;
 }
 
-/** B2.7: the card's type now — its running face's own type, else its definition's. */
-export function cardTypeOf(state: GameState, instance: Pick<CardInstance, "defId" | "radiant">): CardType {
+/**
+ * B2.7: the card's type now — its running face's own type, else its definition's.
+ *
+ * R383 (B3.1 rule 3): a card standing in a unit zone is a Unit for every rule, so an animated Field
+ * Spell, Trap or Field Trap answers "Unit" while it stands there. Its trigger text still works the
+ * way its face's type says — an animated Field Trap keeps firing as a trap — which is why the trap
+ * machinery reads the face's own type (`animated.faceTypeOf`), never this.
+ */
+export function cardTypeOf(
+  state: GameState,
+  instance: Pick<CardInstance, "defId" | "radiant"> & { zone?: CardInstance["zone"] },
+): CardType {
+  if (instance.zone?.z === "field" && instance.zone.row === "units") return "Unit";
   return runningFace(state, instance).type ?? defOf(state, instance.defId).type;
 }

@@ -329,11 +329,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(1, "rulings-a.test.ts", "effects-summon.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R2 counts the cap in player-turns: 30 turns, 15 each, then the game is a
-  // draw".
-  it("R2 counts the turn cap in player-turns: 30, so 15 each", () => {
-    expect(config.TURN_CAP_PLAYER_TURNS).toBe(30);
-    expect(config.TURN_CAP_PLAYER_TURNS / 2).toBe(15);
+  // Proved by rulings-a.test.ts "R2 counts the cap in player-turns: 60 turns, 30 each (R389), then the
+  // game is a draw" — patch v0.2.0 doubled the cap (R389).
+  it("R2 counts the turn cap in player-turns: 60, so 30 each (R389)", () => {
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
+    expect(config.TURN_CAP_PLAYER_TURNS / 2).toBe(30);
     provenIn(2, "rulings-a.test.ts");
   });
 
@@ -2734,11 +2734,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(388, CARDS_PATCHES_TEST, SERVER_CATALOG_TEST, "../../../apps/web/src/patches/diff.test.ts");
   });
 
-  // Proved by the server's clock.test.ts "R389 …" (the 120-minute ceiling); the turn cap's own
-  // proofs are the engine's.
+  // Proved by the server's clock.test.ts "R389 …" (the 120-minute ceiling), and turn-cap.test.ts
+  // "R389 …" (60 player-turns, fatigue ending two idle decks first) and rulings-a.test.ts "R2 …".
   it("R389 doubles the turn cap and the match ceiling with it", () => {
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
     expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
-    provenIn(389, SERVER_CLOCK_TEST);
+    provenIn(389, SERVER_CLOCK_TEST, "turn-cap.test.ts");
   });
 
   // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's

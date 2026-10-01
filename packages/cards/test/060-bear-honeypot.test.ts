@@ -1,22 +1,19 @@
 // #60 Bear Honeypot (SPEC §8.3, BUILD M4-T4 row 60: "Fires after the opponent's ≤1-cost play
 // resolves (R17, R56); a unit is attacked by each token in order until dead, one combat each (R53);
-// radiant any card and fills the board").
+// radiant any card and fills the board"), and patch v0.2.0's condition (R430): "if you have an empty
+// unit zone" — while its controller's unit row has no empty, unlocked, unreserved zone the trap does
+// not fire and is not consumed.
 //
 // Every test here puts the trap face-down in p1's backrow and makes p2 the active player, which is
 // the whole point of a Trap: it fires on the OPPONENT's turn and resolves to completion before their
 // action continues (§10.3). Bear Honeypot opens no prompt, so the "a trap may prompt its own
 // controller" path of §10.3 has nothing to exercise here.
 //
-// Rulings proved here: R17 (this trap fires after the played card has resolved, unlike #41
-// Sheepish), R56 (the threshold reads the cost actually paid), R70 (a cast pays 0, so it is
-// "costing 1 or less"), R53 (forced attacks in full), R64 ("fill your board" is every empty
-// unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), §5.1 (a Trap is
-// consumed when it fires).
-//
-// TWO OF THESE TESTS CANNOT PASS YET, and the script file says why in full: (1) §10.5's play
-// pipeline emits no post-resolution event to key on — the proposal is `cardResolved` — and (2)
-// `reduce`'s `playCard` never calls `fireTrapsFor`, so no trap fires from a play at all. They are
-// written against the engine the spec describes, not the engine of today.
+// Rulings proved here: R17 (this trap fires after the played card has resolved, the moment #41
+// Sheepish shares since R427), R56 (the threshold reads the cost actually paid), R70 (a cast pays 0,
+// so it is "costing 1 or less"), R53 (forced attacks in full), R64 ("fill your board" is every empty
+// unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), R430 (no empty unit
+// zone: the trap waits), §5.1 (a Trap is consumed when it fires).
 
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
@@ -74,8 +71,9 @@ describe("#60 Bear Honeypot — base, when it fires", () => {
     const g = scenario({
       active: "p2",
       p1: { backrow: [armed()] },
-      // #21 Hinder is cost 0 and cast on draw: drawing it casts it (§2.4, R58).
-      p2: { hand: ["core-005"], library: ["core-021", "core-011"] },
+      // #21 Hinder is cost 0 and cast on draw: drawing it casts it (§2.4, R58). Its Radiant face
+      // discards nothing (R431), so the cast asks no question.
+      p2: { hand: ["core-005"], library: [{ def: "core-021", radiant: true }, "core-011"] },
     });
 
     g.startTurn();
@@ -107,6 +105,112 @@ describe("#60 Bear Honeypot — base, when it fires", () => {
 
     g.expectEvents("trapFired", "enteredGraveyard").expectInZone("core-060", "graveyard");
     expect(countOf(g, "trapFired")).toBe(1);
+  });
+});
+
+describe("#60 Bear Honeypot — R430, only with an empty unit zone", () => {
+  /** p1's unit row, lanes 1–5, filled with #19s except the lanes given. */
+  function row(except: readonly number[] = []): { def: string; lane: number }[] {
+    return [1, 2, 3, 4, 5].filter((lane) => !except.includes(lane)).map((lane) => ({ def: "core-019", lane }));
+  }
+
+  it("R430 a full unit row: the 1-cost play resolves, and the trap neither fires nor is consumed", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed()], field: row() },
+      p2: { ...SPARE, hand: ["core-015", "core-005"] },
+    });
+
+    g.play("core-015", { zone: 1 });
+
+    expect(countOf(g, "trapFired")).toBe(0);
+    expect(countOf(g, "attackDeclared")).toBe(0);
+    g.expectInZone("core-060", "field");
+    expect(g.backrow("p1", 3)?.faceUp).toBe(false);
+    expect(unitsOf(g, "p2")).toEqual(["core-015", "core-t-rush"]);
+  });
+
+  it("R430 a Locked zone is not an empty unit zone: the trap waits", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed()], field: row([5]) },
+      p2: { ...SPARE, hand: ["core-015", "core-005"] },
+    });
+    g.state.players.p1.locks.units[4] = true;
+
+    g.play("core-015", { zone: 1 });
+
+    expect(countOf(g, "trapFired")).toBe(0);
+    g.expectInZone("core-060", "field");
+  });
+
+  it("R430, R64 a zone a dying Reborn unit holds is not an empty unit zone either", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed()], field: row([5]) },
+      p2: { ...SPARE, hand: ["core-015", "core-005"] },
+    });
+    g.state.reserved.push({ player: "p1", row: "units", lane: 5 });
+
+    g.play("core-015", { zone: 1 });
+
+    expect(countOf(g, "trapFired")).toBe(0);
+    g.expectInZone("core-060", "field");
+  });
+
+  it("R430, R64 one empty zone is enough: it fires, the one token that fits arrives and attacks, the other fizzles", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed()], field: row([4]) },
+      p2: { ...SPARE, hand: ["core-015", "core-005"] },
+    });
+
+    g.play("core-015", { zone: 1 });
+
+    expect(countOf(g, "trapFired")).toBe(1);
+    expect(g.unit("p1", 4)?.defId).toBe("core-t-rush");
+    expect(unitsOf(g, "p1").filter((defId) => defId === "core-t-rush")).toHaveLength(1);
+    g.expectInZone("core-060", "graveyard");
+    // The played 1/1 met the one token and died to it.
+    expect(g.unit("p2", 1)?.defId).not.toBe("core-015");
+  });
+
+  it("R430 a trap that waited fires on a later play once a zone is free", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed()], field: row() },
+      p2: { ...SPARE, hand: ["core-015", "core-016", "core-005", "core-011"], mana: 10 },
+    });
+    g.play("core-015", { zone: 1 });
+    expect(countOf(g, "trapFired")).toBe(0);
+
+    // #16 Hit Job (3) opens p1's lane 2; it costs too much to set the trap off itself.
+    const menace = g.unit("p1", 2);
+    expect(menace).not.toBeNull();
+    g.play("core-016", { targets: [{ pick: "instance", instanceId: menace?.id ?? "" }] });
+    expect(countOf(g, "trapFired")).toBe(0);
+
+    // #5 Stockpile (1) now finds the room: the trap fires, one token fits, and a Spell is attacked by nothing.
+    g.play("core-005");
+
+    expect(countOf(g, "trapFired")).toBe(1);
+    expect(g.unit("p1", 2)?.defId).toBe("core-t-rush");
+    expect(countOf(g, "attackDeclared")).toBe(0);
+    g.expectInZone("core-060", "graveyard");
+  });
+
+  it("R430 the radiant face waits on a full row too", () => {
+    const g = scenario({
+      active: "p2",
+      p1: { backrow: [armed(true)], field: row() },
+      p2: { ...SPARE, hand: ["core-020", "core-005"] },
+    });
+
+    g.play("core-020", { zone: 1 });
+
+    expect(countOf(g, "trapFired")).toBe(0);
+    g.expectInZone("core-060", "field");
+    expect(g.backrow("p1", 3)?.faceUp).toBe(false);
   });
 });
 

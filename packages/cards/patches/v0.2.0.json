@@ -553,7 +553,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 9,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Your opponent has 1 less mana next turn. Discard 1."
@@ -573,7 +573,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
-    "loc": 89,
+    "loc": 85,
     "base": {
       "attack": 4,
       "health": 6,
@@ -787,7 +787,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "loc": 38,
+    "loc": 56,
     "base": {
       "keywords": [],
       "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to your hand. It costs (1) more, to a maximum of (4)."
@@ -807,7 +807,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 16,
+    "loc": 9,
     "base": {
       "attack": 5,
       "health": 4,
@@ -1010,7 +1010,7 @@
       "core-t-sheep",
       "core-055"
     ],
-    "loc": 26,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token."
@@ -1234,7 +1234,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 1,
-    "loc": 63,
+    "loc": 65,
     "base": {
       "attack": 1,
       "health": 1,
@@ -1542,7 +1542,7 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 36,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "When your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."

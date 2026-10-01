@@ -53,6 +53,13 @@ export type CardView = {
   tuning?: Tuning;
   /** B5 E39: the enchantments riding the card (Classic+ #14's return, #40's cast on draw). */
   enchantments?: Enchantment[];
+  /**
+   * B5 E38, R243: a card in the viewer's own hand, its keywords as it will carry them onto the field
+   * — printed as Degrade and Upgrade left them, and those it was granted in the hand or the deck —
+   * set only where they differ from its face's printed keywords. A unit on the field reads its
+   * keywords off `UnitView`.
+   */
+  keywords?: Keyword[];
   /** R437: the marks on the card — an effect aimed at it and waiting (K-Pop Fanatic's steal). Both views. */
   marks?: CardMark[];
   /** B3.2, R384: the card's Activate abilities, on its controller's own view of it on the field. */
@@ -109,8 +116,13 @@ export type ActivationView = {
  * `display` is how the value prints when the text names it by a word rather than a numeral: #93
  * Combo-Index's grade 3 prints as its letter, "C" (R372). A client prints `display` when present and
  * the number otherwise, and never works one out from the other.
+ *
+ * `ids` is the set of cards the value counts, by instance id, when the formula is a set of cards
+ * rather than a number alone: Classic+ #44 Simplicity Audit's and #45 Complexity Audit's Radiant
+ * "highlight targets", the permanents the card would exile now (docs/classic-sets.md C+ #44). A
+ * client marks those cards on the board; the hook never names a card its controller may not read.
  */
-export type PreviewValue = { label: string; value: number; display?: string };
+export type PreviewValue = { label: string; value: number; display?: string; ids?: string[] };
 
 export type UnitView = CardView & {
   owner: PlayerId;
@@ -136,6 +148,8 @@ export type UnitView = CardView & {
    * one (that zone is reserved for it meanwhile, `SideView.reserved`).
    */
   animated?: { home?: number };
+  /** B5 E35: the unit has gone Berserk (a status, lost when it leaves the field). Absent otherwise. */
+  berserk?: true;
 };
 
 /**
@@ -153,8 +167,9 @@ export type BackrowView =
       /**
        * `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the letter that number is,
        * E..S, which the engine names so a client prints it rather than working it out (R372).
+       * `plague` is the card's Plague Tokens (§6.3, B5 E19), absent at none.
        */
-      counters: { grade?: number; gradeLetter?: string };
+      counters: { grade?: number; gradeLetter?: string; plague?: number };
       owner: PlayerId;
       controller: PlayerId;
       /**
@@ -174,6 +189,18 @@ export type BackrowView =
        * or without it (a view built before the patch, a test fixture).
        */
       cost?: number;
+      /**
+       * B5 E19, R471: the Plague Tokens on the face-down card. Tokens are public wherever they sit, so
+       * both players see the count on the card's back; the card stays hidden. Absent at none.
+       */
+      plague?: number;
+      /** B5 E21: how many dormant cards lie beneath it in a backrow pile — a count, never an identity. */
+      buried?: number;
+      /**
+       * R437: the marks the face-down card carries — an effect aimed at it that waits (#50's
+       * pending steal) — which the player who may not read it sees on its back (R33).
+       */
+      marks?: CardMark[];
     }
   | null;
 
@@ -268,10 +295,17 @@ export type SideView = {
   resolving: CardView[];
   units: (UnitView | null)[];
   backrow: BackrowView[];
+  /**
+   * B5 E21, R446: the Unit standing on each backrow zone's carrier (Classic+ #33 Ivory Tower), by lane —
+   * a Unit on the field, public like any, that can neither attack nor be attacked. Absent when no
+   * carrier on this side holds one.
+   */
+  carried?: (UnitView | null)[];
   locks: { units: boolean[]; backrow: boolean[] };
   /**
    * R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
-   * Locked zone takes none, so a client that reads only `locks` would draw it open.
+   * Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the
+   * backrow zone an animated "Animated on your turn" card will return to is held the same way.
    */
   reserved: { units: boolean[]; backrow: boolean[] };
   fatigueCount: number;

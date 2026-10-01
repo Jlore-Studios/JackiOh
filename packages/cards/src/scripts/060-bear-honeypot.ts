@@ -1,11 +1,18 @@
-// #60 Bear Honeypot (SPEC §8.3): Trap, cost 1, Epic. "When the opponent plays a card costing 1 or
-// less: summon 2 Rush Tokens; if it was a Unit, they attack it" / radiant "Any card; fill your board
-// with Rush Tokens; same". Engine cell: "Fires after the played card resolves (ruling), so the unit
-// is on the field; forced attacks per 4.2 during the opponent's turn; cost = cost paid".
+// #60 Bear Honeypot (SPEC §8.3): Trap, cost 1, Epic. "When your opponent plays a (1) Cost or less
+// card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it." /
+// radiant "When your opponent plays a card, if you have an empty unit zone: Fill your board with Rush
+// Tokens. If it's a Unit, they attack it." Engine cell: "Fires after the played card resolves
+// (ruling), so the unit is on the field; forced attacks per 4.2 during the opponent's turn; cost =
+// cost paid".
 //
-// §8 Conventions on the radiant cell: "Any card" restates the condition (so the cost threshold is
-// gone), "fill your board with Rush Tokens" restates the summon (so it replaces the two tokens),
-// and "same" keeps the unrestated clause — the tokens still attack a played Unit.
+// The Radiant face drops the cost threshold, fills the board in place of the two tokens, and keeps
+// the rest — the empty-zone condition and the attack on a played Unit (§8 Conventions, R277).
+//
+// R430 (patch v0.2.0): "if you have an empty unit zone" is part of the condition. While its
+// controller has no empty, unlocked, unreserved unit zone — R64's zones a summon may take, the same
+// `openZones` a summon places into — the trap does not fire and is not consumed: it stays face-down
+// and armed for a play that comes when there is room. So it can never be spent on a board that
+// cannot take a single token.
 //
 // What this card does NOT do, because §5.1, §10.3 and traps.ts own it: emit `trapFired`, run the
 // post-trap state check, or send itself to the graveyard. `fireTrap` does all three, and because
@@ -27,10 +34,10 @@
 // attacks only if the target is still on the field. `forceAttacksOn` (engine/src/combat.ts) is
 // exactly that, and `forcedAttacks` in the effects barrel is its Effect wrapper.
 //
-// WHICH EVENT, AND WHY NOT `cardPlayed` (R17, §10.5 steps 4 and 7). R17 gives one play two trap
-// moments: #41 Sheepish at step 4, on the `cardPlayed`/`summoned` pair, before the Cry — and this
-// card at step 7, "after the card resolves", which is `cardResolved` (`echo.landAfterResolution`
-// emits it once per play or cast, after step 6 has drained every Echo repeat). Watching `cardPlayed`
+// WHICH EVENT, AND WHY NOT `cardPlayed` (R17, §10.5 steps 4 and 7). This card fires at step 7,
+// "after the card resolves", which is `cardResolved` (`echo.landAfterResolution` emits it once per
+// play or cast, after step 6 has drained every Echo repeat) — the moment #41 Sheepish shares since
+// patch v0.2.0 (R427), the two answering in lane order (R68). Watching `cardPlayed`
 // would be wrong and not merely early: the Engine cell requires the played unit to be on the field
 // with its Cry already resolved, which is what makes "they attack it" reach anything.
 //
@@ -43,7 +50,7 @@
 
 import type { GameEvent } from "@jackioh/shared";
 import type { Effect, EffectContext, Script, TrapTrigger } from "@jackioh/engine";
-import { defOf } from "@jackioh/engine";
+import { defOf, openZones } from "@jackioh/engine";
 import { fillBoard, forcedAttacks, summon } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 
@@ -56,8 +63,8 @@ const RUSH_TOKEN = "core-t-rush";
 type ResolvedPlay = Extract<GameEvent, { type: "cardResolved" }>;
 
 /**
- * "When the opponent plays a card costing 1 or less" (radiant: any card). Returns the play when the
- * trap answers this event and null when it must stay armed.
+ * "When your opponent plays a (1) Cost or less card, if you have an empty unit zone" (radiant: any
+ * card). Returns the play when the trap answers this event and null when it must stay armed.
  */
 function match(ctx: EffectContext & { event: GameEvent }, anyCost: boolean): ResolvedPlay | null {
   const played = ctx.event;
@@ -66,6 +73,8 @@ function match(ctx: EffectContext & { event: GameEvent }, anyCost: boolean): Res
   if (played.player === ctx.controller) return null;
   // R56 and R70: the cost actually paid, so a cast (0) is always "1 or less".
   if (!anyCost && played.costPaid > 1) return null;
+  // R430: "if you have an empty unit zone" — an empty, unlocked, unreserved one (R64).
+  if (openZones(ctx.state, ctx.controller, "units").length === 0) return null;
   return played;
 }
 
