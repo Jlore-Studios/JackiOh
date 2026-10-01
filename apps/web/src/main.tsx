@@ -90,6 +90,8 @@ const MatchRoute = lazy(() => import("./routes/match.tsx"));
 const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
+const TermsRoute = lazy(() => import("./routes/terms.tsx"));
+const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 
 /**
@@ -398,6 +400,10 @@ function screenNameFor(path: string): string | null {
       return "Practice";
     case paths.privacy:
       return "Privacy";
+    case paths.terms:
+      return "Terms";
+    case paths.accessibility:
+      return "Accessibility";
     case paths.patchNotes:
       return "Patch notes";
     case paths.hotseat:
@@ -488,6 +494,8 @@ export function App(): ReactElement {
 
     if (path === paths.practice) return <PracticeRoute />;
     if (path === paths.privacy) return <PrivacyRoute />;
+    if (path === paths.terms) return <TermsRoute />;
+    if (path === paths.accessibility) return <AccessibilityRoute />;
     if (path === paths.patchNotes) return <PatchNotesRoute />;
 
     const matchId = matchIdOf(path);

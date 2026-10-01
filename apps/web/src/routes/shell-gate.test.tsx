@@ -148,8 +148,10 @@ describe("B40 one gate per screen", () => {
       expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     }, SLOW);
 
-    // localStorage is shared between tabs: the other tab's sign-out cleared it here too.
+    // Sign-out in another tab clears shared storage and signals this tab to clear its tab-scoped
+    // session too.
     window.localStorage.clear();
+    window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY, newValue: null }));
     window.history.pushState(null, "", paths.account);
     window.dispatchEvent(new PopStateEvent("popstate"));
 

@@ -10,10 +10,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
+import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
 import LandingRoute from "./landing.tsx";
 import LoginRoute, { signUpPrivacyTestid } from "./login.tsx";
 import PrivacyRoute, { PRIVACY_LAST_UPDATED, privacyTestid } from "./privacy.tsx";
 import { CONTACT_URL, siteFooterTestid } from "./SiteFooter.tsx";
+import TermsRoute, { TERMS_LAST_UPDATED, termsTestid } from "./terms.tsx";
 
 const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
 
@@ -71,11 +73,41 @@ describe("the privacy policy", () => {
   });
 });
 
+describe("the legal pages", () => {
+  it("serves terms and accessibility with their updated dates", () => {
+    render(
+      <>
+        <TermsRoute />
+        <AccessibilityRoute />
+      </>,
+    );
+    expect(screen.getByTestId(termsTestid.updated)).toHaveTextContent(`Last updated ${TERMS_LAST_UPDATED}`);
+    expect(screen.getByTestId(accessibilityTestid.updated)).toHaveTextContent(
+      `Last updated ${ACCESSIBILITY_LAST_UPDATED}`,
+    );
+  });
+
+  it("serves /terms and /accessibility with no account needed", async () => {
+    at(paths.terms);
+    render(<App />);
+    expect(await screen.findByTestId(termsTestid.screen, undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+    at(paths.accessibility);
+    render(<App />);
+    expect(await screen.findByTestId(accessibilityTestid.screen, undefined, SLOW)).toBeInTheDocument();
+  });
+});
+
 describe("the site footer", () => {
   it("is on the landing page, with the privacy policy and a contact", () => {
     render(<LandingRoute />);
     const footer = screen.getByTestId(siteFooterTestid.root);
     expect(within(footer).getByTestId(siteFooterTestid.privacy)).toHaveAttribute("href", paths.privacy);
+    expect(within(footer).getByTestId(siteFooterTestid.terms)).toHaveAttribute("href", paths.terms);
+    expect(within(footer).getByTestId(siteFooterTestid.accessibility)).toHaveAttribute(
+      "href",
+      paths.accessibility,
+    );
     expect(within(footer).getByTestId(siteFooterTestid.contact)).toHaveAttribute("href", CONTACT_URL);
   });
 
@@ -101,7 +133,8 @@ describe("under Create account", () => {
     expect(screen.queryByTestId(signUpPrivacyTestid)).toBeNull();
     await userEvent.click(screen.getByTestId("login-mode"));
     const line = screen.getByTestId(signUpPrivacyTestid);
-    expect(line).toHaveTextContent("By creating an account you agree to the Privacy Policy.");
+    expect(line).toHaveTextContent("By creating an account you agree to the Terms and Privacy Policy.");
+    expect(within(line).getByRole("link", { name: "Terms" })).toHaveAttribute("href", paths.terms);
     expect(within(line).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
   });
 });
@@ -116,6 +149,8 @@ describe("the tab title and the canonical link", () => {
     expect(documentTitleFor(paths.account)).toBe("Account · JackiOh");
     expect(documentTitleFor(paths.invite)).toBe("Invite code · JackiOh");
     expect(documentTitleFor(paths.privacy)).toBe("Privacy · JackiOh");
+    expect(documentTitleFor(paths.terms)).toBe("Terms · JackiOh");
+    expect(documentTitleFor(paths.accessibility)).toBe("Accessibility · JackiOh");
     expect(documentTitleFor(paths.match("m-1"))).toBe("Match · JackiOh");
     expect(documentTitleFor("/nope")).toBe("Page not found · JackiOh");
   });
@@ -123,6 +158,7 @@ describe("the tab title and the canonical link", () => {
   it("points the canonical link at the site's own address for the path, and at nothing for a 404", () => {
     expect(canonicalUrlFor(paths.landing)).toBe(`${SITE_ORIGIN}/`);
     expect(canonicalUrlFor(paths.practice)).toBe(`${SITE_ORIGIN}/practice`);
+    expect(canonicalUrlFor(paths.terms)).toBe(`${SITE_ORIGIN}/terms`);
     expect(canonicalUrlFor("/nope")).toBeNull();
   });
 

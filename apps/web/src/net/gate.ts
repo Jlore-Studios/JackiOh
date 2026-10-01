@@ -445,6 +445,15 @@ export function useAccount(): Account {
     // stays until the new answer arrives, so a renewal elsewhere does not flash "Checking…".
     const onStorage = (event: StorageEvent): void => {
       if (event.key !== null && event.key !== SESSION_STORAGE_KEY && event.key !== E2E_SESSION_STORAGE_KEY) return;
+      // The main session now lives in sessionStorage (S15), so another tab's sign-out can arrive as a
+      // removal signal on the legacy key with no token payload.
+      if (
+        event.key === SESSION_STORAGE_KEY &&
+        event.newValue === null &&
+        window.localStorage.getItem(SESSION_STORAGE_KEY) === null
+      ) {
+        clearSession();
+      }
       setAttempt((count) => count + 1);
     };
     const onChanged = (): void => {

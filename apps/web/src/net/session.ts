@@ -5,12 +5,13 @@
 // knows how to read it, write it and clear it, and no screen reaches into `localStorage` itself.
 //
 // STORAGE, NOT IN-PAGE STATE. `e2e/cypress/e2e/05-reconnect.cy.ts` calls `cy.reload()` mid-match
-// and requires the session to survive it, so the token is read from `localStorage` on every boot.
+// and requires the session to survive it, so the token is read from browser storage on every boot.
 //
 // THE KEY IS A CONTRACT. The M8 specs seed a session by writing
 // `localStorage["jackioh.e2e.session"] = JSON.stringify({ accessToken })` in `onBeforeLoad`
 // (`visitAs` in specs 05, 06, 09 and 10). The specs are fixed, so that key is read here verbatim;
-// `jackioh.session` is the name a real sign-in writes and is preferred when both are present.
+// `jackioh.session` is the name a real sign-in writes (in sessionStorage) and is preferred when both
+// are present.
 // This is an ASSUMPTION beyond BUILD (e2e/README.md A6), made in exactly one place.
 //
 // Two more keys live here, `jackioh.auth.pendingEmail` and `jackioh.auth.pendingReset`: the address
@@ -26,7 +27,25 @@ export const SESSION_STORAGE_KEY = "jackioh.session";
 /** What the M8 specs write in `onBeforeLoad`. Read-only as far as the client is concerned. */
 export const E2E_SESSION_STORAGE_KEY = "jackioh.e2e.session";
 
-const KEYS: readonly string[] = [SESSION_STORAGE_KEY, E2E_SESSION_STORAGE_KEY];
+const LEGACY_KEYS: readonly string[] = [SESSION_STORAGE_KEY, E2E_SESSION_STORAGE_KEY];
+
+function localStorageOrNull(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function sessionStorageOrNull(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 export type Session = {
   accessToken: string;
@@ -61,24 +80,34 @@ function parse(raw: string | null): Session | null {
 /** The current session, or null when nobody is signed in. Never throws. */
 export function readSession(): Session | null {
   if (typeof window === "undefined") return null;
-  for (const key of KEYS) {
-    let raw: string | null;
+  const tab = sessionStorageOrNull();
+  const local = localStorageOrNull();
+  // A session from older builds can still be in localStorage: move it to this tab and clear it.
+  const legacy = parse(local?.getItem(SESSION_STORAGE_KEY) ?? null);
+  if (legacy !== null) {
     try {
-      raw = window.localStorage.getItem(key);
+      tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(legacy));
+      local?.removeItem(SESSION_STORAGE_KEY);
     } catch {
-      // A private window or blocked site data: there is simply no session.
-      return null;
+      // If moving fails, keep using the parsed value in memory.
     }
-    const session = parse(raw);
-    if (session !== null) return session;
+    return legacy;
   }
-  return null;
+
+  const current = parse(tab?.getItem(SESSION_STORAGE_KEY) ?? null);
+  if (current !== null) return current;
+
+  return parse(local?.getItem(E2E_SESSION_STORAGE_KEY) ?? null);
 }
 
 export function writeSession(session: Session): void {
   if (typeof window === "undefined") return;
+  const tab = sessionStorageOrNull();
+  const local = localStorageOrNull();
   try {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    // S15: keep auth sessions out of localStorage.
+    local?.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // Nothing to do: the caller gets a session that lasts until the tab closes.
   }
@@ -86,9 +115,16 @@ export function writeSession(session: Session): void {
 
 export function clearSession(): void {
   if (typeof window === "undefined") return;
-  for (const key of KEYS) {
+  const tab = sessionStorageOrNull();
+  const local = localStorageOrNull();
+  try {
+    tab?.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // As above.
+  }
+  for (const key of LEGACY_KEYS) {
     try {
-      window.localStorage.removeItem(key);
+      local?.removeItem(key);
     } catch {
       // As above.
     }
