@@ -16,7 +16,8 @@
 // must be able to outlive its card, which is why a card carries what it needs in `data` rather
 // than reaching back through `ctx.self`.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { CardMark, PlayerId } from "@jackioh/shared";
+import { markDelayed } from "../marks";
 import { addStartOfTurnEffect, scheduleDelayed } from "../modifiers";
 import { SELF_KEY, resumeSelf } from "../prompts";
 import { makeContext, type EngineSink } from "../resolve";
@@ -83,6 +84,11 @@ export function delay(args: {
    * Radiant). R241 does not drop one made on the other player's turn: that player's next turn exists.
    */
   next?: boolean;
+  /**
+   * R437: the mark the watched card carries in both views while this effect waits (#50's pending
+   * steal, `{ mark: "steal", color: "purple" }`). Ignored without `watch`.
+   */
+  mark?: CardMark;
 }): Effect {
   return {
     kind: "delay",
@@ -101,7 +107,7 @@ export function delay(args: {
       // `resumeSelf` is the one builder for the def id, the face and the instance id, so a delay
       // and a prompt store the same shape; only the hook differs, and only when a card says so.
       const resume = delayedResume(ctx, args.step, args.data ?? {}, args.hook ?? DELAYED_HOOK);
-      scheduleDelayed(
+      const entry = scheduleDelayed(
         ctx,
         ctx.controller,
         { phase: args.at.phase, player: delayPlayer(ctx, args.at) },
@@ -109,6 +115,8 @@ export function delay(args: {
         args.watch,
         args.next === true ? nextTurnMark(ctx) : undefined,
       );
+      // R437: the card it waits for carries the mark until it resolves, fizzles or is forgotten.
+      if (args.mark !== undefined) markDelayed(ctx, entry, args.mark);
     },
   };
 }

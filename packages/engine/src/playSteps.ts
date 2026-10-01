@@ -102,6 +102,7 @@ import {
 } from "./state";
 import { playedEarlier } from "./query";
 import { flagsOf } from "./scripts";
+import { countPlay } from "./timesPlayed";
 import { sacrificeTogether, stateCheck } from "./stateCheck";
 import { OWED_TO_TRAPS, SETTLE_PASS_CAP, dispatchPending, eventOfQueued, runQueuedTrigger, settle } from "./triggers";
 import { triggerHolderFor, triggerHoldersWithHook, type TriggerHolder } from "./triggers";
@@ -1059,6 +1060,8 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
   side.turnLog.costsPaid = [...(side.turnLog.costsPaid ?? []), run.costPaid];
   state.counters.played += 1;
+  // R429: a card that counts its own plays counts this one here, with every other count of it.
+  countPlay(card);
   run.radiant = card.radiant;
   // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.
   recordPlay(state, run.player, card);

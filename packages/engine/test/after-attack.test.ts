@@ -11,14 +11,17 @@ import { applyEffects, makeContext } from "../src/resolve";
 import { owedWork } from "../src/work";
 import {
   answer,
+  cleaveVeteran,
   deathAsker,
   grunt,
   notes,
   pawn,
   playing,
+  rebornVeteran,
   recorder,
   replaysTo,
   roundTrip,
+  turncoat,
   veteran,
   veteranAsker,
   wall,
@@ -80,6 +83,39 @@ describe("Script.afterAttack", () => {
     if (pending === null) throw new Error("expected a prompt");
     game.play({ type: "answer", choiceId: pending.id, selection: [{ pick: "none" }], playerId: "p1" });
     expect(replaysTo(game.start, game.log, game.state())).toBe(true);
+  });
+
+  it("R426 Cleave: the hook lists every Unit the attack destroyed, the Cleave's kills with the defender's", () => {
+    const state = playing("dc-after-cleave");
+    const striker = put(state, cleaveVeteran.id, slot("p1", "units", 2));
+    const [left, middle, right] = [1, 2, 3].map((lane) => put(state, grunt.id, slot("p2", "units", lane)));
+    const game = recorder(state);
+    game.play({ type: "attack", attackerId: striker.id, targetId: middle?.id ?? "", playerId: "p1" });
+    const [entry] = notes(game.state());
+    expect(entry?.split(":")[1]?.split("+").sort()).toEqual([left?.id, middle?.id, right?.id].sort());
+    expect(entry?.endsWith(":true:p1")).toBe(true);
+  });
+
+  it("R426 the hook acts for the player who attacked: a Death in the check that takes the attacker leaves it theirs", () => {
+    const state = playing("dc-after-stolen");
+    const striker = put(state, cleaveVeteran.id, slot("p1", "units", 1));
+    const victim = put(state, turncoat.id, slot("p2", "units", 1));
+    const game = recorder(state);
+    game.play({ type: "attack", attackerId: striker.id, targetId: victim.id, playerId: "p1" });
+    // The turncoat's Death took the attacker; it survived on the stay it attacked from, and p1 attacked.
+    expect(game.state().players.p2.units.some((pile) => pile?.[0]?.id === striker.id)).toBe(true);
+    expect(notes(game.state())).toEqual([`after:${victim.id}:true:p1`]);
+    expect(replaysTo(game.start, game.log, game.state())).toBe(true);
+  });
+
+  it("R426 a Reborn body is a new arrival: the attacker that died in the combat did not survive it", () => {
+    const state = playing("dc-after-reborn");
+    const striker = put(state, rebornVeteran.id, slot("p1", "units", 1));
+    const victim = put(state, grunt.id, slot("p2", "units", 1));
+    const game = recorder(state);
+    game.play({ type: "attack", attackerId: striker.id, targetId: victim.id, playerId: "p1" });
+    expect(game.state().players.p1.units[0]?.[0]?.defId).toBe(rebornVeteran.id);
+    expect(notes(game.state())).toEqual([`after:${victim.id}:false:p1`]);
   });
 
   it("R113 a Death's question in the check before it owes the hook behind the Death", () => {

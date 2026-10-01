@@ -973,7 +973,8 @@ function runAfterAttack(sink: EngineSink, owed: OwedAfterAttack, paused: PausedS
   const facts: AfterAttackFacts = { targetId: owed.targetId, destroyedIds: owed.destroyedIds, survived, forced: owed.forced };
   const ctx = {
     ...makeContext(sink, self, {
-      controller: self.controller,
+      // R426: the player who controlled it in that combat, though a Death in the check took it since.
+      controller: owed.snapshot.controller,
       data: { ...facts, ...(survived ? {} : { [SELF_KEY]: owed.snapshot }) },
     }),
     ...(paused?.exitsFrom === undefined ? {} : { exitsFrom: paused.exitsFrom }),

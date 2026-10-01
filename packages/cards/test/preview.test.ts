@@ -7,7 +7,7 @@
 // the end, which makes every library and every hand throw on access:
 //
 //   #18 Bread and Butter        the active player's current mana (public, §10.8)
-//   #31 KY's Math Equation      its own printed cost and costMod (the card's own face, R67)
+//   #31 KY's Math Equation      its own count of plays (the card's own instance, R429)
 //   #38 Quickstriker            its controller's count of plays this turn (public)
 //   #40 Echoes of the Forgotten its controller's exile count (public, §3)
 //   #70 Spiteful Stab           its controller's hero health and exile count (public)
@@ -130,8 +130,8 @@ describe("R280 the Core cards that declare preview", () => {
     };
     expect(labels(BREAD_AND_BUTTER, "base")).toEqual(["X = that player's unspent mana"]);
     expect(labels(BREAD_AND_BUTTER, "radiant")).toEqual(["X = 3 × that player's unspent mana"]);
-    expect(labels(MATH_EQUATION, "base")).toEqual(["Fib(cost+1)"]);
-    expect(labels(MATH_EQUATION, "radiant")).toEqual(["Fib(cost+3)"]);
+    expect(labels(MATH_EQUATION, "base")).toEqual(["Fib(times played + 1)"]);
+    expect(labels(MATH_EQUATION, "radiant")).toEqual(["Fib(times played + 3)"]);
     expect(labels(QUICKSTRIKER, "base")).toEqual(["X = cards you played earlier this turn"]);
     expect(labels(QUICKSTRIKER, "radiant")).toEqual(["X = cards you played earlier this turn"]);
     expect(labels(ECHOES, "base")).toEqual(["the cards in your exile"]);
@@ -213,31 +213,34 @@ describe("#18 Bread and Butter previews the Bread Token's X (R280)", () => {
 });
 
 // =============================================================================================
-// #31 KY's Math Equation: its own cost
+// #31 KY's Math Equation: its own count of plays (R429)
 // =============================================================================================
 
 describe("#31 KY's Math Equation previews its damage (R280)", () => {
-  function equation(face: Face, costMod: number): Scenario {
-    return scenario({
+  function equation(face: Face, timesPlayed: number, costMod = 0): Scenario {
+    const s = scenario({
       p1: {
         hand: [{ def: MATH_EQUATION, radiant: face === "radiant", costMod }, RAPID_REPLENISH],
         mana: 10,
       },
       p2: { field: [MENACE], hand: [MATH_EQUATION] },
     });
+    // R429: the plays it has had before, which the harness cannot seed.
+    must(s.hand("p1").find((c) => c.defId === MATH_EQUATION), "p1's Equation").timesPlayed = timesPlayed;
+    return s;
   }
 
-  const CASES: readonly [Face, number, number][] = [
-    ["base", 0, 1], // Fib(1 + 1)
-    ["base", 2, 3], // Fib(3 + 1)
-    ["radiant", 0, 3], // Fib(1 + 3)
-    ["radiant", 1, 5], // Fib(2 + 3)
-    ["radiant", -3, 2], // R67: the cost floors at 0, Fib(0 + 3)
+  const CASES: readonly [Face, number, number, number][] = [
+    ["base", 0, 0, 1], // its 1st play: Fib(1 + 1)
+    ["base", 2, 0, 3], // its 3rd play: Fib(3 + 1)
+    ["base", 0, 3, 1], // R67: a (4) Equation's 1st play still deals Fib(1 + 1)
+    ["radiant", 0, 0, 3], // Fib(1 + 3)
+    ["radiant", 1, 0, 5], // Fib(2 + 3)
   ];
 
-  for (const [face, costMod, damage] of CASES) {
-    it(`R280 ${face} with costMod ${costMod} previews ${damage}, and deals exactly that`, () => {
-      const s = equation(face, costMod);
+  for (const [face, timesPlayed, costMod, damage] of CASES) {
+    it(`R280 R429 ${face}, played ${timesPlayed} times before, costMod ${costMod}: previews ${damage}, and deals exactly that`, () => {
+      const s = equation(face, timesPlayed, costMod);
       const card = must(s.hand("p1").find((c) => c.defId === MATH_EQUATION), "p1's Equation");
       expect(valueOf(handCard(s.view("p1"), card.id))).toBe(damage);
 
@@ -434,10 +437,10 @@ describe("R280 a fused Core card lists its ingredients' previews in order", () =
     );
 
     const list = must(shown(handCard(s.view("p1"), fused.id)), "the fused card's preview");
-    // #31's half reads the fused card's own cost, min(1 + 3, 4) = 4 (R77): Fib(4 + 1) = 5. #70's half
-    // reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
+    // #31's half reads the fused card's own count of plays, none yet (R429): its 1st play, Fib(0 + 1 +
+    // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
     expect(list).toEqual([
-      { label: "Fib(cost+1)", value: 5 },
+      { label: "Fib(times played + 1)", value: 1 },
       { label: cardDef(SPITEFUL_STAB).base.text, value: 5 },
     ]);
     const text = must(s.state.transientDefs[fused.defId], "the fused def").base.text;

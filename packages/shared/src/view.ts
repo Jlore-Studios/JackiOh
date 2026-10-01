@@ -191,6 +191,11 @@ export type BackrowView =
       plague?: number;
       /** B5 E21: how many dormant cards lie beneath it in a backrow pile — a count, never an identity. */
       buried?: number;
+      /**
+       * R437: the marks the face-down card carries — an effect aimed at it that waits (#50's
+       * pending steal) — which the player who may not read it sees on its back (R33).
+       */
+      marks?: CardMark[];
     }
   | null;
 

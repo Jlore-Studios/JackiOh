@@ -26,11 +26,12 @@
 // `packages/cards/src/query.ts`). This module queries the BOARD. Two different questions; the
 // names below say which is which, and neither exports a bare `query`.
 
-import type { CardType, PlayerId, Tag } from "@jackioh/shared";
+import type { CardType, GameEvent, PlayerId, Tag } from "@jackioh/shared";
 import { isAnnounceLive } from "./announce";
 import { cardTypeOf } from "./faces";
 import type { EffectContext } from "./script";
 import { findInstance, type CardInstance, type FaceUpRecord, type GameState, type PlayRecord } from "./state";
+import { leftFieldAfter } from "./stays";
 import { partMemoryKey } from "./work";
 import { cardAt, slotOf, type OffFieldZone } from "./zones";
 
@@ -149,6 +150,17 @@ export function wasPlayedThisTurn(
 ): boolean {
   const id = typeof card === "string" ? card : card.id;
   return state.players[player].turnLog.playedIds.includes(id);
+}
+
+/**
+ * R427, R174: whether the card a play's `cardResolved` names has left the field since the play
+ * resolved — taken off it by something answering the play, an earlier trap of the same dispatch —
+ * rather than during its own resolution, before the event (its `permanent` was already false then).
+ * #41 Sheepish answers a Unit that left in its own resolution, and is not offered one a trap before
+ * it already took (the stays `traps.standingEvent` judges, §10.3).
+ */
+export function leftFieldSinceResolved(state: GameState, event: Extract<GameEvent, { type: "cardResolved" }>): boolean {
+  return event.exitsFrom !== undefined && leftFieldAfter(state, event.exitsFrom, event.instanceId);
 }
 
 /**

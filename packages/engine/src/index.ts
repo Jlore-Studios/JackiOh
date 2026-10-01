@@ -33,6 +33,10 @@ export * from "./traps";
 export * from "./viewFor";
 // R310–R312: what a player may know of their own library, and the record behind it.
 export * from "./ownLibrary";
+// R437: the marks a card carries while an effect aimed at it waits.
+export * from "./marks";
+// R429: the times a card has been played, which #31 KY's Math Equation reads.
+export * from "./timesPlayed";
 export * from "./replay";
 // Patch v0.2.0, instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E39): what a card is now — its
 // face's type, its tuning, its declared numbers (`param`), the numbers on it, its Brittle count and

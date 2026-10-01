@@ -118,6 +118,14 @@ export type CardInstance = {
   berserk?: true;
   // ---- v0.2.0 instance fields, by workstream: prompts and generation (E13, E16–E19, E23–E26) ----
   // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
+  /**
+   * R429: how many times this card has been played, the play under way included — counted at §10.5
+   * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
+   * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
+   * zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
+   * Transform is a new card with a count of its own (R57).
+   */
+  timesPlayed?: number;
 };
 
 /**
@@ -514,7 +522,19 @@ export type GameState = {
   // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
   // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----
   // ---- v0.2.0 game fields, by workstream: Core patches and cosmetics (R433) ----
+  /**
+   * R437: the marks cards carry for an effect aimed at them that is still to come — #50 K-Pop
+   * Fanatic's pending steal on its target — one entry per mark, tied to the delayed effect that
+   * made it (`marks.ts`). `viewFor` puts them on the card in both views; the mark goes when its
+   * effect resolves or fizzles, or is dropped because its card left the field (R174), and a
+   * `marked` event says so each way. Absent when no card is marked, so a game without marks hashes
+   * as it did before the field existed.
+   */
+  marks?: MarkRecord[];
 };
+
+/** R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.ts`). */
+export type MarkRecord = { instanceId: string; mark: string; color: string; delayedId: string };
 
 /**
  * R174: `count` departures so far; `last` maps a card to the departure that was its latest.
@@ -590,6 +610,13 @@ export type CreateGameOptions = {
   catalog?: CardDefs;
   /** R180: per-seat handicaps. An omitted seat, or one equal to HUMAN_HANDICAP, stores nothing. */
   handicaps?: Partial<Record<PlayerId, Handicap>>;
+  /**
+   * R433: the seats whose deck their player was dealt rather than built — All Random's (R258),
+   * practice's fresh random deck. Their starting library is written no record of what its owner
+   * was shown (R311), so its cards list as unknown until they leave it (R312). Setup, not an
+   * action: a replay passes the same list (`replay.ReplayInput.dealt`). Omitted, every deck was built.
+   */
+  dealt?: readonly PlayerId[];
 };
 
 /** The five fields of a handicap, in §9.9's order, so every reader walks the same list. */
@@ -760,10 +787,12 @@ export function createGame(options: CreateGameOptions): GameState {
     const side = state.players[player];
     side.library = deck.map((defId) => newInstance(state, defId, player, { z: "library", player }));
     const ids = numbering.shuffle(side.library.map((card) => card.id));
+    // R433: a dealt deck is not one its player built, so they know none of it yet.
+    const built = options.dealt?.includes(player) !== true;
     side.library.forEach((card, at) => {
       card.id = ids[at] ?? card.id;
       // R311: a player's own deck is the first thing they know of their library.
-      showToOwner(card);
+      if (built) showToOwner(card);
     });
 
     // R180: a copy of the five fields and nothing else, so no stray key reaches the state or its hash.

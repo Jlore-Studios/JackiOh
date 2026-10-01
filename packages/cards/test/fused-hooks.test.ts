@@ -395,25 +395,26 @@ describe("R102: what a fused card's ingredients leave behind is each their own",
     const crafted = must(subsystems.fuse(sinkFor(s), { ingredients: cubes, toHand: "p1" }), "the crafted card");
     expect(crafted.defId).toMatch(/core-022\+core-022$/);
 
-    // Each Cube's Cry tributes one of p1's other permanents and remembers it: Pointmaster (a unit)
-    // for the first, Mana Well (a Field Spell) for the second (R81, R90: one pick per declaration).
+    // Each Cube's Cry tributes one of p1's other Units (R428) and remembers it: Pointmaster for the
+    // first, Midrange Menace for the second (R81, R90: one pick per declaration).
     const pointmaster = unitAt(s, "p1", 2);
-    const manaWell = must(s.backrow("p1", 1), "p1's Mana Well");
+    const menace = unitAt(s, "p1", 1);
     s.play(crafted, {
       zone: 3,
       targets: [
         { pick: "instance", instanceId: pointmaster.id },
-        { pick: "instance", instanceId: manaWell.id },
+        { pick: "instance", instanceId: menace.id },
       ],
     });
-    s.expectInZone(pointmaster, "graveyard").expectInZone(manaWell, "graveyard");
+    s.expectInZone(pointmaster, "graveyard").expectInZone(menace, "graveyard");
+    // The Mana Well beside them is no meal (R428): it stays where it is.
+    expect(s.backrow("p1", 1)?.defId).toBe(MANA_WELL);
 
     // Hit Job destroys the crafted card: each Cube's Death summons 2 copies of ITS remembered card.
     s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: crafted.id }] });
     const units = [1, 2, 3, 4, 5].map((lane) => s.unit("p1", lane)?.defId);
-    const backrow = [1, 2, 3, 4, 5].map((lane) => s.backrow("p1", lane)?.defId);
     expect(units.filter((id) => id === POINTMASTER)).toHaveLength(2);
-    expect(backrow.filter((id) => id === MANA_WELL)).toHaveLength(2);
+    expect(units.filter((id) => id === MIDRANGE_MENACE)).toHaveLength(2);
   });
 
   it("R102 a Twinspell fused onto a Twinspell gives the next Spell both Echo +1s (§8 #79, R77, R209)", () => {

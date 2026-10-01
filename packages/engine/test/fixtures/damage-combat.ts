@@ -15,8 +15,10 @@ import {
   forcedAttackOwnHero,
   heal,
   setHealth,
+  steal,
 } from "../../src/effects";
 import { openPrompt, resumeSelf } from "../../src/prompts";
+import { killerOf } from "../../src/query";
 import { beginGame, reduce } from "../../src/reduce";
 import { replacementOf } from "../../src/replacements";
 import { isBerserk } from "../../src/restrictions";
@@ -99,6 +101,12 @@ export function askController(step: string): Effect {
       });
     },
   };
+}
+
+/** R426: the units the attack destroyed, whether its attacker survived it, and the player the hook acts for. */
+function attackFacts(ctx: Parameters<Effect["apply"]>[0]): string {
+  const facts = afterAttackOf(ctx);
+  return `after:${(facts?.destroyedIds ?? []).join("+")}:${String(facts?.survived)}:${ctx.controller}`;
 }
 
 function both(script: Script, radiant: Script = script): CardScripts {
@@ -207,6 +215,12 @@ export const wall = unit("wall", 1, 8);
 export const watcher = def("watcher", "Field Trap");
 /** "After this attacks": notes the combat's facts (Classic #13's shape). */
 export const veteran = unit("veteran", 2, 2);
+/** R426: "After this attacks" with Cleave: notes the units destroyed, whether it survived, and for whom it acts. */
+export const cleaveVeteran = unit("cleave-veteran", 3, 6, [{ kind: "Cleave" }]);
+/** R426: the same with Reborn, 2/2, so a combat can kill it and bring a new body back. */
+export const rebornVeteran = unit("reborn-veteran", 2, 2, [{ kind: "Reborn" }]);
+/** #86 Mrow's shape: "Death: Take control of the Unit that destroyed this." */
+export const turncoat = unit("turncoat", 1, 1);
 /** The same, whose hook asks its controller before it finishes. */
 export const veteranAsker = unit("veteran-asker", 2, 2);
 /** A 1/1 whose Death asks its controller something (a pause inside §4.5 step 3). */
@@ -248,6 +262,9 @@ export const DC_DEFS: CardDef[] = [
   rattle,
   phoenix,
   leech,
+  cleaveVeteran,
+  rebornVeteran,
+  turncoat,
   grunt,
   wall,
   watcher,
@@ -352,6 +369,14 @@ export const DC_SCRIPTS: Record<string, CardScripts> = {
           `after:${facts?.targetId ?? "?"}:${(facts?.destroyedIds ?? []).join("+")}:${String(facts?.survived)}:${String(facts?.forced)}:${ctx.self?.zone.z ?? "none"}`,
         ),
       ];
+    },
+  }),
+  [cleaveVeteran.id]: both({ afterAttack: (ctx) => [note(attackFacts(ctx))] }),
+  [rebornVeteran.id]: both({ afterAttack: (ctx) => [note(attackFacts(ctx))] }),
+  [turncoat.id]: both({
+    death: (ctx) => {
+      const killer = killerOf(ctx.state, ctx.self);
+      return killer === null ? [] : [steal({ instanceId: killer.id })];
     },
   }),
   [veteranAsker.id]: both({
