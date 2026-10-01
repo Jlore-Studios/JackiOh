@@ -5,13 +5,16 @@
 // no `cost <= mana`, no `keywords.includes("Taunt")`, no "a zone is open when it is null" and no
 // summoning-sickness check anywhere below:
 //
-//   * a hand card is playable because a `play` naming it is in the array;
+//   * a hand card is playable because a `play` naming it is in the array, and so is a card in the
+//     viewer's graveyard (B5 E11: a permission lets `legalActions` list it; its pile's "Play");
 //   * a zone is legal because some candidate `play` names that row and lane;
 //   * a unit may attack because an `attack` names it as `attackerId`, and it may hit a target
 //     because a candidate names that `targetId`;
 //   * a unit may switch because a `switchPosition` names it;
-//   * `end-turn`, `offer-draw`, `power` and `concede` light up because the matching action type is
-//     in the array;
+//   * a card's Activate control is live because an `activate` names the card (and its ability),
+//     and a Heroic Power's because an `activatePower` (or an `activate`) names it (R384, R43);
+//   * `end-turn`, `offer-draw` and `concede` light up because the matching action type is in the
+//     array;
 //   * the green glow (`Highlight.glow`) is a subset of those testids, chosen by action type and
 //     interaction stage alone (see `highlightFor`). The yellow glow is not decided here at all: it
 //     is `CardView.conditionActive`, which the engine computes (R195).
@@ -20,23 +23,30 @@
 // this module narrows a list it was given.
 //
 // R81: zone, X, embiggen, Tribute and a card's declared targets and modes are NOT prompts. They
-// travel inside the `play` action, and `legalActions` enumerates them (today only zone and X; see
-// CARRY_THROUGH below). Everything chosen during resolution — Discover, chained steps, Echo
-// repeats, casts, triggers, the mulligan — arrives as a `PendingChoice` and is answered with an
-// `answer` action (or, for the mulligan, its own `mulligan` action).
+// travel inside the `play` action, and `legalActions` enumerates them; so do a play's new payments,
+// the cards a targeting cost discards (`discards`, Classic #89) and the Plague Tokens that pay part
+// of a graveyard play's price (`plague`, Classic #74). R384: an activation is built the same way —
+// its targets, modes and Tribute travel in the `activate` action — so a play and an activation are
+// one "build" here (`BuildBody`), narrowed by one set of functions. Everything chosen during
+// resolution — Discover, chained steps, Echo repeats, casts, triggers, the mulligan — arrives as a
+// `PendingChoice` and is answered with an `answer` action (or, for the mulligan, its own `mulligan`
+// action).
 //
-// CARRY_THROUGH: `legalActions` lists one `play` per zone choice and per X value and nothing else
-// (see its own comment: "Other prompt kinds arrive with M3-T3"). Until it enumerates `tributes`,
-// `targets` and `modes` as well, a candidate leaves those fields unset. A *board click* is never
-// carried through — a click no candidate accounts for changes nothing, so the board can never be
-// clicked into an illegal play. A choice made in a *picker* (`pickInPlay`) is carried into the
-// emitted `play` verbatim and validated by the engine per R90: the client reports the player's
-// pick, it does not rule on it. The day `legalActions` fixes those fields, the same narrowing
-// code picks them up and the carry-through path goes quiet on its own.
+// R391 (B4.5): a Tribute may pay for its own zone, and `legalActions` pairs each zone with the
+// Tribute sets that leave it open. Narrowing keeps whole candidates, never a field on its own, so a
+// zone and a Tribute picked in either order only ever finish a pair the engine listed.
+//
+// CARRY_THROUGH: a candidate that leaves `tributes`, `targets` or `modes` unset accepts what a
+// *picker* chose for it (`pickInPlay`), carried into the emitted action verbatim and validated by
+// the engine per R90: the client reports the player's pick, it does not rule on it. A *board
+// click* is never carried through — a click no candidate accounts for changes nothing, so the board
+// can never be clicked into an illegal play. The payments (`discards`, `plague`) are never carried:
+// a candidate without them pays none, which is what the engine listed it to mean.
 
 import type {
   Action,
   ActionBody,
+  ActivationView,
   PendingOption,
   PendingView,
   PlayerId,
@@ -49,6 +59,7 @@ import type {
 import {
   LANES,
   NO_HIGHLIGHT,
+  namedAbility,
   playerOf,
   sideOf,
   testid,
@@ -59,8 +70,19 @@ import {
 
 type PlayBody = Extract<ActionBody, { type: "play" }>;
 type AttackBody = Extract<ActionBody, { type: "attack" }>;
+type ActivateBody = Extract<ActionBody, { type: "activate" }>;
+type PowerBody = Extract<ActionBody, { type: "activatePower" }>;
+/** R384: an activation, of a card's Activate ability or (its alias) of a Heroic Power. */
+export type ActivationBody = ActivateBody | PowerBody;
+/** An action the client builds choice by choice from its candidates (R81, R384). */
+export type BuildBody = PlayBody | ActivationBody;
 
-/** The R81 play-time choices, as the client accumulates them. */
+/** B5 E11, E19: Plague Tokens paying part of a graveyard play's price (Classic #74). */
+export type PlagueSpend = NonNullable<PlayBody["plague"]>;
+/** A plague payment as the player picks it: tokens off a card, or none (the whole price in mana). */
+export type PlagueChoice = PlagueSpend | "none";
+
+/** The R81 play-time choices (and an activation's), as the client accumulates them. */
 export type PlayBuild = {
   zone?: ZoneChoice;
   x?: number;
@@ -68,23 +90,46 @@ export type PlayBuild = {
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
+  /** B5 E5: the hand cards a targeting cost discards (Classic #89 Paul Allen's Ghost). */
+  discards?: string[];
+  /** B5 E11, E19: how a graveyard play's price is paid in Plague Tokens. */
+  plague?: PlagueChoice;
 };
+
+type Playing = { stage: "playing"; instanceId: string; candidates: ActionBody[]; picked: Partial<PlayBuild> };
+/** R384: an Activate ability (or a Heroic Power) being built; `ability` as the control named it. */
+type Activating = {
+  stage: "activating";
+  instanceId: string;
+  ability?: string;
+  candidates: ActionBody[];
+  picked: Partial<PlayBuild>;
+};
+type Building = Playing | Activating;
 
 /** The client's in-progress selection. Not state the engine knows or cares about. */
 export type Interaction =
   | { stage: "idle" }
-  | { stage: "playing"; instanceId: string; candidates: ActionBody[]; picked: Partial<PlayBuild> }
+  | Playing
+  | Activating
   | { stage: "attacking"; attackerId: string; candidates: ActionBody[] };
 
 export const IDLE: Interaction = { stage: "idle" };
+
+/** A play or an activation is being built: the stages whose choices `outstandingNeed` reads. */
+export function isBuilding(interaction: Interaction): interaction is Building {
+  return interaction.stage === "playing" || interaction.stage === "activating";
+}
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
   | { kind: "embiggen"; min: number; max: number; values: boolean[] }
+  | { kind: "plague"; min: number; max: number; options: PlagueChoice[] }
   | { kind: "tribute"; min: number; max: number; instanceIds: string[] }
   | { kind: "target"; min: number; max: number; selections: Selection[] }
+  | { kind: "discard"; min: number; max: number; instanceIds: string[] }
   | { kind: "mode"; min: number; max: number; options: string[] };
 
 export type ClickResult = { interaction: Interaction; action?: ActionBody };
@@ -120,6 +165,11 @@ export function selectionKey(selection: Selection): string {
   }
 }
 
+/** A plague payment's identity: "none", or the card and the count (JSON, so no id can collide). */
+export function plagueKey(choice: PlagueChoice | undefined): string {
+  return choice === undefined || choice === "none" ? "none" : JSON.stringify([choice.from, choice.tokens]);
+}
+
 function listKey(values: readonly string[]): string {
   return JSON.stringify([...values].sort());
 }
@@ -140,12 +190,33 @@ function isAttack(body: ActionBody): body is AttackBody {
   return body.type === "attack";
 }
 
+export function isActivation(body: ActionBody): body is ActivationBody {
+  return body.type === "activate" || body.type === "activatePower";
+}
+
+function isBuildBody(body: ActionBody): body is BuildBody {
+  return isPlay(body) || isActivation(body);
+}
+
 function playsFor(legal: readonly ActionBody[], instanceId: string): PlayBody[] {
   return legal.filter(isPlay).filter((body) => body.instanceId === instanceId);
 }
 
 function attacksBy(legal: readonly ActionBody[], attackerId: string): AttackBody[] {
   return legal.filter(isAttack).filter((body) => body.attackerId === attackerId);
+}
+
+/**
+ * R384: the activations an Activate control stands for. A control that names an ability (a card
+ * listing several) takes that ability's `activate`s; one that names none takes every `activate` of
+ * the card and, for a Heroic Power, its `activatePower` (R43's alias, B3.2 rule 10).
+ */
+export function activationsFor(legal: readonly ActionBody[], instanceId: string, ability?: string): ActivationBody[] {
+  return legal.filter(isActivation).filter((body) => {
+    if (body.instanceId !== instanceId) return false;
+    if (body.type === "activatePower") return ability === undefined;
+    return ability === undefined || body.ability === ability;
+  });
 }
 
 /**
@@ -193,9 +264,76 @@ export function selectionTestid(view: PlayerView, selection: Selection): string 
   }
 }
 
+/** B5 E11: is this card in the viewer's own graveyard (where a permission may let it be played)? */
+function inOwnGraveyard(view: PlayerView, instanceId: string): boolean {
+  return view.you.graveyard.some((card) => card.instanceId === instanceId);
+}
+
+/**
+ * The element a `play` is started from: the hand card, or the "Play" on a card in the viewer's
+ * graveyard pile (B5 E11). A card the view places nowhere is taken for a hand card.
+ */
+export function playSourceTestid(view: PlayerView, instanceId: string): string {
+  return inOwnGraveyard(view, instanceId) ? testid.pilePlay(instanceId) : testid.handCard(instanceId);
+}
+
+/**
+ * R384: the abilities the view lists on a card, wherever on the field it stands (a stolen card
+ * may sit in the other seat's backrow, R33), or null when the view names no such card.
+ */
+export function activationsOnField(view: PlayerView, instanceId: string): readonly ActivationView[] | null {
+  for (const side of [view.you, view.opponent]) {
+    for (const pile of side.units) {
+      if (pile !== null && pile.instanceId === instanceId) return pile.activations ?? null;
+    }
+    for (const slot of side.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.activations ?? null;
+    }
+  }
+  return null;
+}
+
+/**
+ * R384, R510: every control an activation lights. A Heroic Power the viewer controls is its hero
+ * panel button (`power` for the first, `power-<id>` for the rest); a card listing `activations` is
+ * its own Activate control. A body the view places nowhere lights the control its type has always
+ * meant: `power` for `activatePower`, `activate-<id>` for `activate`.
+ */
+export function activationControlTestids(view: PlayerView, body: ActivationBody): string[] {
+  const out: string[] = [];
+  const powers = view.you.hero.powers ?? [];
+  if (view.you.hero.power?.instanceId === body.instanceId) out.push(testid.power);
+  else if (powers.some((power) => power.instanceId === body.instanceId)) out.push(testid.powerOf(body.instanceId));
+  if (body.type === "activate") {
+    const listed = activationsOnField(view, body.instanceId);
+    if (listed !== null && listed.length > 0) {
+      const ability = body.ability === undefined ? undefined : namedAbility(listed.length, body.ability);
+      out.push(testid.activate(body.instanceId, ability));
+    }
+  }
+  if (out.length === 0) out.push(body.type === "activatePower" ? testid.power : testid.activate(body.instanceId));
+  return out;
+}
+
 // ---------------------------------------------------------------------------------------------
-// Narrowing a play. `picked` is what the player has said; candidates are what the engine allows.
+// Narrowing a build. `picked` is what the player has said; candidates are what the engine allows.
 // ---------------------------------------------------------------------------------------------
+
+/** Every choice field a build body can carry, read the same way off a play or an activation. */
+type BuildFields = {
+  zone?: ZoneChoice;
+  x?: number;
+  embiggen?: boolean;
+  tributes?: string[];
+  targets?: Selection[];
+  modes?: string[];
+  discards?: string[];
+  plague?: PlagueSpend;
+};
+
+function fieldsOf(body: BuildBody): BuildFields {
+  return body;
+}
 
 function containsAll(fixed: readonly string[], wanted: readonly string[]): boolean {
   const have = new Set(fixed);
@@ -204,48 +342,81 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
 
 /**
  * A candidate still matches when every field it fixes equals what the player picked. A field the
- * candidate leaves unset is carried through (CARRY_THROUGH) rather than treated as a refusal.
+ * candidate leaves unset is carried through (CARRY_THROUGH) rather than treated as a refusal — except
+ * the payments, which a candidate without them pays none of.
  */
-function matches(candidate: PlayBody, picked: Partial<PlayBuild>): boolean {
-  if (picked.zone !== undefined && candidate.zone !== undefined) {
-    if (zoneKey(candidate.zone) !== zoneKey(picked.zone)) return false;
+function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
+  const fixed = fieldsOf(candidate);
+  if (picked.zone !== undefined && fixed.zone !== undefined) {
+    if (zoneKey(fixed.zone) !== zoneKey(picked.zone)) return false;
   }
-  if (picked.x !== undefined && candidate.x !== undefined && candidate.x !== picked.x) return false;
-  if (picked.embiggen !== undefined && candidate.embiggen !== undefined && candidate.embiggen !== picked.embiggen) {
+  if (picked.x !== undefined && fixed.x !== undefined && fixed.x !== picked.x) return false;
+  if (picked.embiggen !== undefined && fixed.embiggen !== undefined && fixed.embiggen !== picked.embiggen) {
     return false;
   }
-  if (picked.tributes !== undefined && candidate.tributes !== undefined) {
-    if (!containsAll(candidate.tributes, picked.tributes)) return false;
+  if (picked.tributes !== undefined && fixed.tributes !== undefined) {
+    if (!containsAll(fixed.tributes, picked.tributes)) return false;
   }
-  if (picked.targets !== undefined && candidate.targets !== undefined) {
-    if (!containsAll(candidate.targets.map(selectionKey), picked.targets.map(selectionKey))) return false;
+  if (picked.targets !== undefined && fixed.targets !== undefined) {
+    if (!containsAll(fixed.targets.map(selectionKey), picked.targets.map(selectionKey))) return false;
   }
-  if (picked.modes !== undefined && candidate.modes !== undefined) {
-    if (!containsAll(candidate.modes, picked.modes)) return false;
+  if (picked.modes !== undefined && fixed.modes !== undefined) {
+    if (!containsAll(fixed.modes, picked.modes)) return false;
   }
+  if (picked.discards !== undefined && listKey(fixed.discards ?? []) !== listKey(picked.discards)) return false;
+  if (picked.plague !== undefined && plagueKey(fixed.plague) !== plagueKey(picked.plague)) return false;
   return true;
 }
 
-/** The emitted body is the candidate the engine listed, plus only the fields it left unset. */
-function mergePicked(candidate: PlayBody, picked: Partial<PlayBuild>): PlayBody {
-  const body: PlayBody = { type: "play", instanceId: candidate.instanceId };
-  const zone = candidate.zone ?? picked.zone;
-  const x = candidate.x ?? picked.x;
-  const embiggen = candidate.embiggen ?? picked.embiggen;
-  const tributes = candidate.tributes ?? picked.tributes;
-  const targets = candidate.targets ?? picked.targets;
-  const modes = candidate.modes ?? picked.modes;
-  if (zone !== undefined) body.zone = zone;
-  if (x !== undefined) body.x = x;
-  if (embiggen !== undefined) body.embiggen = embiggen;
-  if (tributes !== undefined && tributes.length > 0) body.tributes = [...tributes];
-  if (targets !== undefined && targets.length > 0) body.targets = [...targets];
-  if (modes !== undefined && modes.length > 0) body.modes = [...modes];
-  return body;
+/** A list that is empty is no list at all: the engine never lists one, and neither does the client. */
+function nonEmpty<T>(values: readonly T[] | undefined): T[] | undefined {
+  return values === undefined || values.length === 0 ? undefined : [...values];
 }
 
-function remainingCandidates(interaction: Extract<Interaction, { stage: "playing" }>): PlayBody[] {
-  return interaction.candidates.filter(isPlay).filter((candidate) => matches(candidate, interaction.picked));
+/**
+ * The emitted body is the candidate the engine listed, every field it carries kept, plus only the
+ * choices it left unset (CARRY_THROUGH): never a field its action type does not have.
+ */
+function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBody {
+  const tributes = nonEmpty(candidate.type === "activatePower" ? undefined : (candidate.tributes ?? picked.tributes));
+  const targets = nonEmpty(candidate.targets ?? picked.targets);
+  const modes = nonEmpty(candidate.type === "activatePower" ? undefined : (candidate.modes ?? picked.modes));
+  switch (candidate.type) {
+    case "play": {
+      const { tributes: _t, targets: _g, modes: _m, discards, ...rest } = candidate;
+      const body: PlayBody = { ...rest };
+      const zone = candidate.zone ?? picked.zone;
+      const x = candidate.x ?? picked.x;
+      const embiggen = candidate.embiggen ?? picked.embiggen;
+      if (zone !== undefined) body.zone = zone;
+      if (x !== undefined) body.x = x;
+      if (embiggen !== undefined) body.embiggen = embiggen;
+      if (tributes !== undefined) body.tributes = tributes;
+      if (targets !== undefined) body.targets = targets;
+      if (modes !== undefined) body.modes = modes;
+      const paidWith = nonEmpty(discards);
+      if (paidWith !== undefined) body.discards = paidWith;
+      return body;
+    }
+    case "activate": {
+      const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
+      const body: ActivateBody = { ...rest };
+      if (tributes !== undefined) body.tributes = tributes;
+      if (targets !== undefined) body.targets = targets;
+      if (modes !== undefined) body.modes = modes;
+      return body;
+    }
+    case "activatePower": {
+      const { targets: _g, ...rest } = candidate;
+      const body: PowerBody = { ...rest };
+      if (targets !== undefined) body.targets = targets;
+      return body;
+    }
+  }
+}
+
+function remainingCandidates(interaction: Building): BuildBody[] {
+  return interaction.candidates.filter(isBuildBody).filter((candidate) => matches(candidate, interaction.picked));
 }
 
 function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
@@ -254,31 +425,47 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
   return [...out.values()];
 }
 
+/** "None" first, then each card's counts from fewest tokens up. */
+function plagueOrder(a: PlagueChoice, b: PlagueChoice): number {
+  if (a === "none" || b === "none") return a === b ? 0 : a === "none" ? -1 : 1;
+  return a.from === b.from ? a.tokens - b.tokens : a.from < b.from ? -1 : 1;
+}
+
 /**
- * The next choice the play still needs, or null when the candidates agree on everything. Derived
+ * The next choice the build still needs, or null when the candidates agree on everything. Derived
  * purely from the candidate array: two candidates that differ only in `x` mean the player must
- * pick an X, and nothing else. Asked in cost order (X and embiggen change the cost), with the
- * board-driven zone last so a zone click finishes the play.
+ * pick an X, and nothing else. Asked in cost order (X, embiggen and the Plague Tokens change what
+ * is paid), then the Tribute, the targets and the discards a target costs (Classic #89), the
+ * modes, and the board-driven zone last so a zone click finishes the play.
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
-  if (interaction.stage !== "playing") return null;
+  if (!isBuilding(interaction)) return null;
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
+  const fields = remaining.map(fieldsOf);
 
   if (interaction.picked.x === undefined) {
-    const values = [...new Set(remaining.flatMap((c) => (c.x === undefined ? [] : [c.x])))].sort((a, b) => a - b);
+    const values = [...new Set(fields.flatMap((c) => (c.x === undefined ? [] : [c.x])))].sort((a, b) => a - b);
     if (values.length > 1) return { kind: "x", min: 1, max: 1, values };
   }
 
   if (interaction.picked.embiggen === undefined) {
-    const values = [...new Set(remaining.flatMap((c) => (c.embiggen === undefined ? [] : [c.embiggen])))].sort(
+    const values = [...new Set(fields.flatMap((c) => (c.embiggen === undefined ? [] : [c.embiggen])))].sort(
       (a, b) => Number(a) - Number(b),
     );
     if (values.length > 1) return { kind: "embiggen", min: 1, max: 1, values };
   }
 
+  if (interaction.picked.plague === undefined) {
+    const options = distinctBy(
+      fields.map((c): PlagueChoice => c.plague ?? "none"),
+      plagueKey,
+    ).sort(plagueOrder);
+    if (options.length > 1) return { kind: "plague", min: 1, max: 1, options };
+  }
+
   const tributeSets = distinctBy(
-    remaining.flatMap((c) => (c.tributes === undefined ? [] : [c.tributes])),
+    fields.flatMap((c) => (c.tributes === undefined ? [] : [c.tributes])),
     listKey,
   );
   if (tributeSets.length > 1) {
@@ -292,7 +479,7 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   }
 
   const targetLists = distinctBy(
-    remaining.flatMap((c) => (c.targets === undefined ? [] : [c.targets])),
+    fields.flatMap((c) => (c.targets === undefined ? [] : [c.targets])),
     targetsKey,
   );
   if (targetLists.length > 1) {
@@ -305,8 +492,24 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
     };
   }
 
+  if (interaction.picked.discards === undefined) {
+    const discardSets = distinctBy(
+      fields.map((c) => c.discards ?? []),
+      listKey,
+    );
+    if (discardSets.length > 1) {
+      const lengths = discardSets.map((set) => set.length);
+      return {
+        kind: "discard",
+        min: Math.min(...lengths),
+        max: Math.max(...lengths),
+        instanceIds: [...new Set(discardSets.flat())],
+      };
+    }
+  }
+
   const modeLists = distinctBy(
-    remaining.flatMap((c) => (c.modes === undefined ? [] : [c.modes])),
+    fields.flatMap((c) => (c.modes === undefined ? [] : [c.modes])),
     listKey,
   );
   if (modeLists.length > 1) {
@@ -320,7 +523,7 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   }
 
   const zones = distinctBy(
-    remaining.flatMap((c) => (c.zone === undefined ? [] : [c.zone])),
+    fields.flatMap((c) => (c.zone === undefined ? [] : [c.zone])),
     zoneKey,
   );
   if (zones.length > 1) return { kind: "zone", min: 1, max: 1, zones };
@@ -328,9 +531,9 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   return null;
 }
 
-/** One legal candidate left and nothing outstanding: the play is ready to send. */
+/** One legal candidate left and nothing outstanding: the build is ready to send. */
 function readyAction(interaction: Interaction): ActionBody | undefined {
-  if (interaction.stage !== "playing") return undefined;
+  if (!isBuilding(interaction)) return undefined;
   if (outstandingNeed(interaction) !== null) return undefined;
   const first = remainingCandidates(interaction)[0];
   return first === undefined ? undefined : mergePicked(first, interaction.picked);
@@ -341,45 +544,36 @@ function settle(next: Interaction): ClickResult {
   return action === undefined ? { interaction: next } : { interaction: IDLE, action };
 }
 
-function narrowedBy(
-  interaction: Extract<Interaction, { stage: "playing" }>,
-  picked: Partial<PlayBuild>,
-): Interaction | null {
-  const next: Extract<Interaction, { stage: "playing" }> = {
-    stage: "playing",
-    instanceId: interaction.instanceId,
-    candidates: interaction.candidates,
-    picked: { ...interaction.picked, ...picked },
-  };
+function narrowedBy(interaction: Building, picked: Partial<PlayBuild>): Interaction | null {
+  const next: Building = { ...interaction, picked: { ...interaction.picked, ...picked } };
   const remaining = remainingCandidates(next);
   if (remaining.length === 0) return null;
   return { ...next, candidates: remaining };
 }
 
 /** Does any candidate actually fix this zone? A board click is only accepted when one does. */
-function someCandidateFixesZone(interaction: Extract<Interaction, { stage: "playing" }>, zone: ZoneChoice): boolean {
-  return remainingCandidates(interaction).some((c) => c.zone !== undefined && zoneKey(c.zone) === zoneKey(zone));
+function someCandidateFixesZone(interaction: Building, zone: ZoneChoice): boolean {
+  return remainingCandidates(interaction).some((c) => {
+    const fixed = fieldsOf(c).zone;
+    return fixed !== undefined && zoneKey(fixed) === zoneKey(zone);
+  });
 }
 
 /** Does any candidate name this selection as one of its declared targets (R81)? */
-function someCandidateFixesTarget(
-  interaction: Extract<Interaction, { stage: "playing" }>,
-  selection: Selection,
-): boolean {
+function someCandidateFixesTarget(interaction: Building, selection: Selection): boolean {
   const key = selectionKey(selection);
-  return remainingCandidates(interaction).some(
-    (c) => c.targets !== undefined && c.targets.some((s) => selectionKey(s) === key),
-  );
+  return remainingCandidates(interaction).some((c) => {
+    const targets = fieldsOf(c).targets;
+    return targets !== undefined && targets.some((s) => selectionKey(s) === key);
+  });
 }
 
-/** Does any candidate sacrifice this unit as one of its Tributes (§6.3, R81)? */
-function someCandidateFixesTribute(
-  interaction: Extract<Interaction, { stage: "playing" }>,
-  instanceId: string,
-): boolean {
-  return remainingCandidates(interaction).some(
-    (c) => c.tributes !== undefined && c.tributes.includes(instanceId),
-  );
+/** Does any candidate sacrifice this unit as one of its Tributes (§6.3, R81, R384)? */
+function someCandidateFixesTribute(interaction: Building, instanceId: string): boolean {
+  return remainingCandidates(interaction).some((c) => {
+    const tributes = fieldsOf(c).tributes;
+    return tributes !== undefined && tributes.includes(instanceId);
+  });
 }
 
 function appended<T>(existing: readonly T[] | undefined, value: T): T[] {
@@ -387,18 +581,12 @@ function appended<T>(existing: readonly T[] | undefined, value: T): T[] {
 }
 
 /** Records one more declared target (R81: a declared `hand` or `zone` pick travels in `targets`). */
-function narrowByTarget(
-  interaction: Extract<Interaction, { stage: "playing" }>,
-  selection: Selection,
-): Interaction | null {
+function narrowByTarget(interaction: Building, selection: Selection): Interaction | null {
   if (!someCandidateFixesTarget(interaction, selection)) return null;
   return narrowedBy(interaction, { targets: appended(interaction.picked.targets, selection) });
 }
 
-function narrowByTribute(
-  interaction: Extract<Interaction, { stage: "playing" }>,
-  instanceId: string,
-): Interaction | null {
+function narrowByTribute(interaction: Building, instanceId: string): Interaction | null {
   if (!someCandidateFixesTribute(interaction, instanceId)) return null;
   return narrowedBy(interaction, { tributes: appended(interaction.picked.tributes, instanceId) });
 }
@@ -407,10 +595,10 @@ function narrowByTribute(
 // Highlighting: the set of testids the engine has already blessed.
 // ---------------------------------------------------------------------------------------------
 
+/** The board controls a listed action type lights. A Heroic Power's is lit by its own instance. */
 const CONTROL_FOR_TYPE: Partial<Record<ActionBody["type"], BoardControl>> = {
   endTurn: "end-turn",
   offerDraw: "offer-draw",
-  activatePower: "power",
   concede: "concede",
 };
 
@@ -437,16 +625,24 @@ function withinLegal(glow: ReadonlySet<string>, legalIds: ReadonlySet<string>): 
   return new Set([...glow].filter((id) => legalIds.has(id)));
 }
 
+/** The controls the activation being built stands on: what reads as "selected" while it is built. */
+function buildingSources(view: PlayerView, interaction: Building): string[] {
+  if (interaction.stage === "playing") return [playSourceTestid(view, interaction.instanceId)];
+  const bodies = interaction.candidates.filter(isActivation);
+  return [...new Set(bodies.flatMap((body) => activationControlTestids(view, body)))];
+}
+
 /**
  * Every `data-testid` the board may light up, plus the selected set. Everything in `legal` got
  * there because an `ActionBody` (or an open prompt's own option list) named it.
  *
- * `glow` is the green (Hearthstone's "can act") and is narrower than `legal`: in idle, the hand
- * cards a `play` names, the units an `attack` names, `power` when `activatePower` is listed and
- * the open prompt's cells; `end-turn` only once none of those three action types is listed and
- * no prompt is open. While playing, the remaining candidates' zones, tributes and declared
- * targets; while attacking, the selected attacker's targets. `switchPosition`, `offerDraw` and
- * `concede` stay clickable but never glow.
+ * `glow` is the green (Hearthstone's "can act") and is narrower than `legal`: in idle, the cards a
+ * `play` names (in the hand, or "Play" in the graveyard pile, which glows as well), the units an
+ * `attack` names, the Activate controls an activation names, and the open prompt's cells;
+ * `end-turn` only once none of those is listed and no prompt is open. While a play or an
+ * activation is built, the remaining candidates' zones, Tributes and declared targets; while
+ * attacking, the selected attacker's targets. `switchPosition`, `offerDraw` and `concede` stay
+ * clickable but never glow.
  */
 export function highlightFor(
   view: PlayerView,
@@ -472,26 +668,33 @@ export function highlightFor(
     if (control !== undefined) legalIds.add(CONTROL_TESTID[control]);
   }
 
-  if (interaction.stage === "playing") {
-    selected.add(testid.handCard(interaction.instanceId));
-    // Every playable card stays clickable: a second click on this one puts it back down, and a
-    // click on another picks that one up instead.
-    for (const body of legal) if (body.type === "play") legalIds.add(testid.handCard(body.instanceId));
-    legalIds.add(testid.handCard(interaction.instanceId));
+  if (isBuilding(interaction)) {
+    const sources = buildingSources(view, interaction);
+    for (const id of sources) selected.add(id);
+    // R384: the card whose ability is being built reads as selected too (never as clickable).
+    if (interaction.stage === "activating") selected.add(testid.card(interaction.instanceId));
+    // Every playable card and every listed activation stays clickable: a second click on the one in
+    // flight puts it back down, and a click on another picks that one up instead.
+    for (const body of legal) {
+      if (isPlay(body)) legalIds.add(playSourceTestid(view, body.instanceId));
+      else if (isActivation(body)) for (const id of activationControlTestids(view, body)) legalIds.add(id);
+    }
+    for (const id of sources) legalIds.add(id);
     const remaining = remainingCandidates(interaction);
-    // The glow is where the card in flight can go next: a zone, a Tribute or a declared target.
-    // The other playable hand cards stay clickable (above) but do not glow.
+    // The glow is where the build can go next: a zone, a Tribute or a declared target. The other
+    // playable cards and activations stay clickable (above) but do not glow.
     for (const candidate of remaining) {
-      if (candidate.zone !== undefined) {
-        const zone = testid.zone("you", candidate.zone.row, candidate.zone.lane);
+      const fixed = fieldsOf(candidate);
+      if (fixed.zone !== undefined) {
+        const zone = testid.zone("you", fixed.zone.row, fixed.zone.lane);
         legalIds.add(zone);
         glow.add(zone);
       }
-      for (const id of candidate.tributes ?? []) {
+      for (const id of fixed.tributes ?? []) {
         legalIds.add(testid.card(id));
         glow.add(testid.card(id));
       }
-      for (const selection of candidate.targets ?? []) {
+      for (const selection of fixed.targets ?? []) {
         const where = selectionTestid(view, selection);
         if (where !== null) {
           legalIds.add(where);
@@ -499,7 +702,7 @@ export function highlightFor(
         }
       }
     }
-    glow.delete(testid.handCard(interaction.instanceId));
+    for (const id of sources) glow.delete(id);
     const picked = interaction.picked;
     if (picked.zone !== undefined) selected.add(testid.zone("you", picked.zone.row, picked.zone.lane));
     for (const id of picked.tributes ?? []) selected.add(testid.card(id));
@@ -528,19 +731,29 @@ export function highlightFor(
   let canAct = false;
   for (const body of legal) {
     switch (body.type) {
-      case "play":
-        legalIds.add(testid.handCard(body.instanceId));
-        glow.add(testid.handCard(body.instanceId));
+      case "play": {
+        const source = playSourceTestid(view, body.instanceId);
+        legalIds.add(source);
+        glow.add(source);
+        // B5 E11: the graveyard pile itself glows while a card in it may be played.
+        if (inOwnGraveyard(view, body.instanceId)) {
+          legalIds.add(testid.graveyard("you"));
+          glow.add(testid.graveyard("you"));
+        }
         canAct = true;
         break;
+      }
       case "attack":
         legalIds.add(testid.card(body.attackerId));
         glow.add(testid.card(body.attackerId));
         canAct = true;
         break;
+      case "activate":
       case "activatePower":
-        // The control itself was added to `legalIds` above, before the stage split.
-        glow.add(testid.power);
+        for (const id of activationControlTestids(view, body)) {
+          legalIds.add(id);
+          glow.add(id);
+        }
         canAct = true;
         break;
       case "switchPosition":
@@ -572,6 +785,41 @@ export function highlightFor(
 // The click reducer.
 // ---------------------------------------------------------------------------------------------
 
+/** Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11). */
+function startPlay(legal: readonly ActionBody[], interaction: Interaction, instanceId: string): ClickResult {
+  const candidates = playsFor(legal, instanceId);
+  if (candidates.length === 0) return { interaction };
+  return settle({ stage: "playing", instanceId, candidates, picked: {} });
+}
+
+/**
+ * R384: an Activate control pressed. Its activations become the candidates, built exactly as a
+ * play's: one candidate is sent at once; several wait for a target on the board, a Tribute, or a
+ * mode in the inline picker. Pressing the control of the build in flight puts it back down.
+ */
+function startActivation(
+  legal: readonly ActionBody[],
+  interaction: Interaction,
+  target: Extract<ClickTarget, { on: "activate" }>,
+): ClickResult {
+  if (
+    interaction.stage === "activating" &&
+    interaction.instanceId === target.instanceId &&
+    interaction.ability === target.ability
+  ) {
+    return { interaction: IDLE };
+  }
+  const candidates = activationsFor(legal, target.instanceId, target.ability);
+  if (candidates.length === 0) return { interaction };
+  return settle({
+    stage: "activating",
+    instanceId: target.instanceId,
+    ...(target.ability === undefined ? {} : { ability: target.ability }),
+    candidates,
+    picked: {},
+  });
+}
+
 /**
  * One click. A click that no candidate can account for returns the interaction unchanged and no
  * action: an illegal click is simply not a move.
@@ -584,20 +832,26 @@ export function onClickTarget(
 ): ClickResult {
   switch (target.on) {
     case "hand": {
-      if (interaction.stage === "playing") {
-        if (interaction.instanceId === target.instanceId) return { interaction: IDLE };
+      if (isBuilding(interaction)) {
+        if (interaction.stage === "playing" && interaction.instanceId === target.instanceId) return { interaction: IDLE };
         // R81: a declared hand pick (Glowy Jelly Bean) travels in `targets`, not as a prompt. It
         // wins over re-selecting only when a candidate actually names this card as a target.
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
         if (asTarget !== null) return settle(asTarget);
       }
-      const candidates = playsFor(legal, target.instanceId);
-      if (candidates.length === 0) return { interaction };
-      return settle({ stage: "playing", instanceId: target.instanceId, candidates, picked: {} });
+      return startPlay(legal, interaction, target.instanceId);
     }
 
+    case "graveyard": {
+      if (interaction.stage === "playing" && interaction.instanceId === target.instanceId) return { interaction: IDLE };
+      return startPlay(legal, interaction, target.instanceId);
+    }
+
+    case "activate":
+      return startActivation(legal, interaction, target);
+
     case "zone": {
-      if (interaction.stage !== "playing") return { interaction };
+      if (!isBuilding(interaction)) return { interaction };
       const zone: ZoneChoice = { row: target.row, lane: target.lane };
       if (target.side === "you" && someCandidateFixesZone(interaction, zone)) {
         const next = narrowedBy(interaction, { zone });
@@ -626,7 +880,7 @@ export function onClickTarget(
           );
         return action === undefined ? { interaction } : { interaction: IDLE, action };
       }
-      if (interaction.stage === "playing") {
+      if (isBuilding(interaction)) {
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
         if (asTribute !== null) return settle(asTribute);
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
@@ -649,7 +903,7 @@ export function onClickTarget(
           );
         return action === undefined ? { interaction } : { interaction: IDLE, action };
       }
-      if (interaction.stage === "playing") {
+      if (isBuilding(interaction)) {
         const asTarget = narrowByTarget(interaction, { pick: "hero", player });
         return asTarget === null ? { interaction } : settle(asTarget);
       }
@@ -667,12 +921,18 @@ export function onClickTarget(
 
 /** A choice made in a picker rather than on the board: the X stepper, the embiggen toggle, … */
 export function pickInPlay(interaction: Interaction, patch: Partial<PlayBuild>): ClickResult {
-  if (interaction.stage !== "playing") return { interaction };
+  if (!isBuilding(interaction)) return { interaction };
   const next = narrowedBy(interaction, patch);
   return next === null ? { interaction } : settle(next);
 }
 
+/**
+ * The listed action a board control sends. `power` is the first `activatePower` listed, kept for a
+ * caller with no view; the board's power button builds its activation through `onClickTarget`
+ * (`{ on: "activate" }`), so a power with targets to choose is built like any activation.
+ */
 export function onControl(legal: readonly ActionBody[], control: BoardControl): ActionBody | undefined {
+  if (control === "power") return legal.find((body) => body.type === "activatePower");
   return legal.find((body) => CONTROL_FOR_TYPE[body.type] === control);
 }
 
