@@ -7,6 +7,12 @@
       "lines": [
         "/harness run"
       ]
+    },
+    "c:5924232595": {
+      "at": "2026-10-01T03:38:30Z",
+      "lines": [
+        "@jgoetzmann-bot review copilots work when its done. This is not blocked by v0.2.0"
+      ]
     }
   },
   "items": {
