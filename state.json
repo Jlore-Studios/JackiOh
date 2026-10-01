@@ -73,6 +73,7 @@
       "merged": true
     },
     "44": {
+      "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
