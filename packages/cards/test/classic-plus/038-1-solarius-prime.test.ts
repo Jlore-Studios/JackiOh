@@ -164,8 +164,9 @@ describe("C+ #38.1 Solarius-Prime", () => {
         // A cast is public: its announce names it, unless the card now lies where p2 may not read it.
         const hand = s.hand("p1").map((card) => card.id);
         const unread = new Set([...hand, ...s.pile("p1", "library").map((card) => card.id)]);
+        const casts = new Set(castsDuring(s, prime).map((cast) => cast.event.instanceId));
         for (const event of theirs.events) {
-          if (event.type === "cardAnnounced" && !unread.has(event.instanceId) && event.instanceId !== "hidden") {
+          if (event.type === "cardAnnounced" && casts.has(event.instanceId) && !unread.has(event.instanceId)) {
             expect(event.defId, seed).not.toBe("hidden");
           }
         }
