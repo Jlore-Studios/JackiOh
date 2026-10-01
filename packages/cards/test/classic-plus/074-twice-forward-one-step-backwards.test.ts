@@ -166,7 +166,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       const s = setThenTheirTurn({ p2: { hand: [STOCKPILE, VANILLA], library: [TIMMY, { def: HINDER, radiant: true }, ...deck(6)] } });
       expect(playsOf(s)).toBe(0);
       s.play(STOCKPILE);
-      const played = s.events.filter((event) => event.type === "cardPlayed" && event.player === "p2").map((event) => event.defId);
+      const played = s.events.flatMap((event) => (event.type === "cardPlayed" && event.player === "p2" ? [event.defId] : []));
       expect(played).toEqual([STOCKPILE, HINDER]);
       expect(playsOf(s)).toBe(2);
       expect(defOf(s.state, trapOf(s).defId).ingredients?.map((part) => part.defId)).toEqual([HINDER, FORWARD]);
