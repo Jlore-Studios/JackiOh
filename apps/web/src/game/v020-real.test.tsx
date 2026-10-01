@@ -118,3 +118,25 @@ describe("the E18 pickers on real views", () => {
     expect(sent(s, legal, onAction)).toEqual(expect.objectContaining({ type: "answer", selection: [{ pick: "instance", instanceId: cheapest.instanceId }] }));
   });
 });
+
+describe("Animated on real views", () => {
+  it("C #5 Tesla: once it animates into a unit zone, both seats see it there, wearing the Animated treatment", () => {
+    const s = scenario({
+      active: "p2",
+      p1: { hand: ["core-010"], backrow: [{ def: "classic-005", faceUp: false, lane: 3 }], health: 20, library: ["core-008", "core-008"] },
+      p2: { hand: ["core-008", "core-010"], library: ["core-008", "core-008"] },
+    });
+    const vanilla = s.hand("p2")[0];
+    if (vanilla === undefined) throw new Error("p2 holds nothing to play");
+    s.play(vanilla, { zone: 2 });
+    const tesla = s.unit("p1", 3);
+    if (tesla === null || tesla.defId !== "classic-005") throw new Error("Tesla did not animate");
+
+    for (const seat of ["p1", "p2"] as const) {
+      renderReal(s, seat);
+      const card = el(testid.card(tesla.id));
+      expect(card.querySelector('[data-keyword-fx="Animated"]'), `${seat} sees the Animated cog`).not.toBeNull();
+      cleanup();
+    }
+  });
+});
