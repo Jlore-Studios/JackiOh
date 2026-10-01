@@ -108,6 +108,8 @@ export type GameEvent =
       attack: number;
       maxHealth: number;
       killerId: string | null;
+      /** R89: set when the unit died on its Radiant face (C+ #12.8 Frostspatula's memory, R409). */
+      radiant?: true;
     }
   | { type: "enteredGraveyard"; instanceId: string; defId: string; owner: PlayerId }
   | { type: "exiled"; instanceId: string; defId: string; owner: PlayerId }

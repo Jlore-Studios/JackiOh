@@ -24,7 +24,7 @@ import { healingReplaced, lethalHitWindow } from "./replacements";
 import { isSpellSource } from "./restrictions";
 import { flagsOf, scriptOf, textsOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
-import { activeUnitsOf, cardAt, slotsOf } from "./zones";
+import { activeUnitsOf, actsOnField, cardAt, slotsOf } from "./zones";
 
 export type DamageTarget = { kind: "unit"; instance: CardInstance } | { kind: "hero"; player: PlayerId };
 
@@ -165,13 +165,6 @@ function spellDamageFor(state: GameState, source: CardInstance | null): number {
   if (source === null || !isSpellSource(state, source)) return 0;
   const controller = source.zone.z === "resolving" ? source.zone.player : source.controller;
   return spellDamageOf(state, controller);
-}
-
-/** The card that acts in its unit zone: on the field, and the top of its pile (§3.2). */
-function actsOnField(state: GameState, unit: CardInstance): boolean {
-  const zone = unit.zone;
-  if (zone.z !== "field") return false;
-  return cardAt(state, { player: zone.player, row: zone.row, lane: zone.lane })?.id === unit.id;
 }
 
 /**

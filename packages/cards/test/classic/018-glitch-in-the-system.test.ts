@@ -7,9 +7,9 @@
 // and spared; a number nothing costs exiles nothing; the exiled cards are public and no event carries
 // a deck position; radiant: the opponent's field, hand and deck only; no tuned numbers".
 //
-// An X card on the field "played for X": C+ #69 Buff Billy's X stats are E40's (`xStats`), which this
-// worktree's engine does not have yet, so the test stands one on the field with its stats given and
-// records the X it was played for on the instance, as a play would (`CardInstance.x`, §2.3).
+// An X card on the field "played for X": the test stands a C+ #69 Buff Billy on the field with its
+// stats given and records the X it was played for on the instance, as a play would (`CardInstance.x`,
+// §2.3).
 
 import { describe, expect, it } from "vitest";
 import { legalActions } from "@jackioh/engine";

@@ -217,6 +217,10 @@ from `@jackioh/engine`, except `instanceOf`, which the effects barrel exports be
 | `killerOf(state, card)` | the Unit that destroyed a card, read off the card as its Death hook sees it (R42's killer), while that Unit still acts on the field; else `null` (#86, R361) |
 | `afterAttackOf(ctx)` | in an `afterAttack` hook, its combat's facts: `{ targetId, destroyedIds, survived, forced }` — the Units the attacker's own hits destroyed, and whether it is still on the stay it attacked from (#32, R426) |
 | `param(ctx, key)` | the running card's current value of a number its entry declares (`params`, R386): its running face's `base` or `radiant` value as Degrade, Upgrade and KY's Constant have left it on the instance |
+| `ownCost(state, card)` | the card's own cost — `costOverride` or printed, plus `costMod`, no player discount — which a Degrade, an Upgrade or KY's Constant moves; `null` for an X-cost card (R65, R386) |
+| `costNow(state, card)` | what a card costs wherever a rule compares or counts costs: an X card on the field its played X, elsewhere 0; a hand card at its hand cost; a floor holds (R396, R455; C #10, #18, #25, #32, #39) |
+| `maxManaOf(state, player)` | §2.3's max mana, which a refresh fills to (C #36's Radiant face) |
+| `subsystems.activationPaid(ctx)` | in an Activate's effect list, what the activation paid: the ability's id and the Units its Tribute cost took, as they stood (R384, C #21) |
 
 `zone` is `"hand" | "library" | "graveyard" | "exile"`; the field is not a pile, so read it by lane.
 Every one of these but `findInstance`, `instanceOf` and `killerOf` returns a number, a boolean or a
