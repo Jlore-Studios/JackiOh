@@ -32,15 +32,24 @@ function nonUnitPlays(state: GameState, player: PlayerId): CardInstance[] {
 }
 
 /**
- * Whether the play this event resolves is the controller's threshold-th non-Unit play of the turn: its
- * place among those plays, so a 4th cast inside the 3rd's resolution answers neither as the 3rd.
+ * R578: whether the play this event resolves is the controller's threshold-th non-Unit play of the turn.
+ * Its place is the turn's count of such plays (which keeps a play whose card has since ceased to exist)
+ * less those logged after its latest play — the casts its own resolution made — so a 4th cast inside the
+ * 3rd's resolution answers neither as the 3rd, and a card played again this turn is placed by this play.
  */
 function reachesThreshold(ctx: EffectContext & { event: GameEvent }): boolean {
   const event = ctx.event;
   if (event.type !== "cardResolved" || event.player !== ctx.controller) return false;
-  // ponytail: a played card that has since ceased to exist is not counted; no Spell, Field Spell or Trap does.
-  const plays = nonUnitPlays(ctx.state, ctx.controller).map((card) => card.id);
-  return plays.indexOf(event.instanceId) + 1 === param(ctx, "threshold");
+  if (!NON_UNIT.includes(cardTypeOf(ctx.state, { defId: event.defId, radiant: event.radiant }))) return false;
+  const log = playedIdsThisTurn(ctx.state, ctx.controller);
+  const at = log.lastIndexOf(event.instanceId);
+  if (at < 0) return false;
+  // ponytail: a cast inside this resolution whose card has ceased to exist since is not taken off.
+  const later = log.slice(at + 1).filter((id) => {
+    const card = findInstance(ctx.state, id);
+    return card !== undefined && nonUnit(ctx.state, card);
+  }).length;
+  return playedThisTurnOfType(ctx.state, ctx.controller, NON_UNIT) - later === param(ctx, "threshold");
 }
 
 const summonAtThreshold: TriggerDef = {

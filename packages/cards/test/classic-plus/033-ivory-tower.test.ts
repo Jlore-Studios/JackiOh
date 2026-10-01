@@ -194,6 +194,15 @@ describe("C+ #33 Ivory Tower", () => {
       s.expectStats(MENACE, { attack: 18, health: 18 });
     });
 
+    it("it becomes Radiant as it arrives, so its Cry runs on the Radiant face", () => {
+      const s = towerWith(TOKENS, { radiant: true });
+      expect(s.card(TOKENS).radiant).toBe(true);
+      const types = s.events.map((event) => event.type);
+      expect(types.indexOf("radiantSet")).toBeLessThan(types.indexOf("cardResolved"));
+      // Me and Mr Token's Radiant Cry summons 3 Rush Tokens, its base Cry 1.
+      expect(s.events.filter((event) => event.type === "summoned" && event.defId === RUSH)).toHaveLength(3);
+    });
+
     it("a Unit played into a unit zone is not made Radiant", () => {
       const s = scenario({
         p1: { hand: [MENACE, FILLER], backrow: [{ def: TOWER, radiant: true }], mana: 8 },

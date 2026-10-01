@@ -121,8 +121,11 @@ describe("C+ #27 Zephrys Zealotism", () => {
     });
 
     it("R11 a unit-token card in the replaced hand ceases to exist", () => {
-      const s = play({ p1: { hand: [RUSH_TOKEN, STOCKPILE] } });
+      const s = scenario({ p1: { hand: [ZEALOTISM, RUSH_TOKEN, STOCKPILE] } });
+      const token = s.card(RUSH_TOKEN).id;
+      s.play(ZEALOTISM);
       expect(s.hand("p1")).toHaveLength(2);
+      s.expectInZone(token, "gone");
       expect(s.pile("p1", "graveyard").map((card) => card.defId)).not.toContain(RUSH_TOKEN);
       expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain(STOCKPILE);
     });
@@ -150,7 +153,10 @@ describe("C+ #27 Zephrys Zealotism", () => {
         expect(event.instanceId).toBe(HIDDEN);
       }
       expect(theirs.opponent.graveyard.map((card) => card.defId)).toEqual(expect.arrayContaining([STOCKPILE, MENACE]));
-      expect(JSON.stringify(theirs)).not.toContain(s.hand("p1")[0]?.id ?? "no card");
+      for (const card of s.hand("p1")) {
+        expect(JSON.stringify(theirs)).not.toContain(card.id);
+        expect(JSON.stringify(theirs)).not.toContain(card.defId);
+      }
     });
 
     it("§9.3 the state survives JSON and the play replays to the same hash", () => {
