@@ -116,8 +116,13 @@ export type ActivationView = {
  * `display` is how the value prints when the text names it by a word rather than a numeral: #93
  * Combo-Index's grade 3 prints as its letter, "C" (R372). A client prints `display` when present and
  * the number otherwise, and never works one out from the other.
+ *
+ * `ids` is the set of cards the value counts, by instance id, when the formula is a set of cards
+ * rather than a number alone: Classic+ #44 Simplicity Audit's and #45 Complexity Audit's Radiant
+ * "highlight targets", the permanents the card would exile now (docs/classic-sets.md C+ #44). A
+ * client marks those cards on the board; the hook never names a card its controller may not read.
  */
-export type PreviewValue = { label: string; value: number; display?: string };
+export type PreviewValue = { label: string; value: number; display?: string; ids?: string[] };
 
 export type UnitView = CardView & {
   owner: PlayerId;

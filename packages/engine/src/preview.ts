@@ -80,13 +80,18 @@ export function previewOf(
     zone,
     yourTurn: state.active === card.controller,
   });
-  // R372: a value the text names by a word (#93's grade letter) carries it as `display`.
+  // R372: a value the text names by a word (#93's grade letter) carries it as `display`; a value that
+  // counts a set of cards (Classic+ #44, #45's Radiant "highlight targets") carries their ids.
   const copied = values
     .filter((entry) => typeof entry.label === "string" && entry.label.length > 0 && Number.isFinite(entry.value))
-    .map((entry) =>
-      typeof entry.display === "string" && entry.display.length > 0
-        ? { label: entry.label, value: entry.value, display: entry.display }
-        : { label: entry.label, value: entry.value },
-    );
+    .map((entry): PreviewValue => {
+      const ids = Array.isArray(entry.ids) ? entry.ids.filter((id): id is string => typeof id === "string") : null;
+      return {
+        label: entry.label,
+        value: entry.value,
+        ...(typeof entry.display === "string" && entry.display.length > 0 ? { display: entry.display } : {}),
+        ...(ids === null ? {} : { ids: [...ids] }),
+      };
+    });
   return copied.length === 0 ? null : copied;
 }
