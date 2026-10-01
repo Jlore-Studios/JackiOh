@@ -11,7 +11,7 @@
 // announced while only the Prime itself is still resolving (a Spell that casts more, a Call to Chaos,
 // opens a deeper level until its own `cardResolved`).
 
-import { HERO_HEALTH, defOf, stepParam } from "@jackioh/engine";
+import { defOf, stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -40,6 +40,25 @@ function castsDuring(s: Scenario, primeId: string): { event: Announce; depth: nu
     }
   }
   return out;
+}
+
+/**
+ * What each of the Prime's casts dealt the enemy hero in all, by cast: a Spell's damage is raised by
+ * the Spell Damage on its side, a split's total once (each of its hits is 1) and a single hit whole.
+ */
+function heroDamageByCast(s: Scenario, prime: string): number[] {
+  const casts = new Set(castsDuring(s, prime).map((cast) => cast.event.instanceId));
+  const totals = new Map<string, number>();
+  // Only while the Prime stands as it was played: the first event that names it after its own play
+  // (a destroy, a bounce, a Transform, a Vanilla, a keyword change …) ends what its Spell Damage covers.
+  const own = new Set(["cardAnnounced", "cardPlayed", "summoned", "cardResolved"]);
+  const changed = s.events.findIndex((event) => "instanceId" in event && event.instanceId === prime && !own.has(event.type));
+  for (const event of changed < 0 ? s.events : s.events.slice(0, changed)) {
+    if (event.type !== "damage" || event.sourceId === null || !casts.has(event.sourceId)) continue;
+    if (event.targetId !== "hero-p2") continue;
+    totals.set(event.sourceId, (totals.get(event.sourceId) ?? 0) + event.amount);
+  }
+  return [...totals.values()];
 }
 
 /** Play a Prime; returns the game and the Prime's id (a token: a Flood it casts can end it, R11). */
@@ -129,15 +148,12 @@ describe("C+ #38.1 Solarius-Prime", () => {
       for (const { event } of casts) expect(played).toContain(event.instanceId);
     });
 
-    it("its own Spell Damage raises the casts' hits: every Spell hit on the enemy hero is at least 4", () => {
+    it("its own Spell Damage raises the casts' hits: each cast deals the enemy hero at least 4 in all", () => {
       let checked = 0;
       for (const seed of SEEDS) {
         const { s, prime } = playPrime(seed);
-        const casts = new Set(castsDuring(s, prime).map((cast) => cast.event.instanceId));
-        for (const event of s.events) {
-          if (event.type !== "damage" || event.sourceId === null || !casts.has(event.sourceId)) continue;
-          if (event.targetId !== "hero-p2") continue;
-          expect(event.amount, `${seed}`).toBeGreaterThanOrEqual(4);
+        for (const total of heroDamageByCast(s, prime)) {
+          expect(total, seed).toBeGreaterThanOrEqual(4);
           checked += 1;
         }
       }
@@ -204,20 +220,16 @@ describe("C+ #38.1 Solarius-Prime", () => {
       }
     });
 
-    it("its Spell Damage +7 raises the casts' hits on the enemy hero to at least 8", () => {
+    it("its Spell Damage +7 raises the casts: each deals the enemy hero at least 8 in all", () => {
       let checked = 0;
       for (const seed of SEEDS) {
         const { s, prime } = playPrime(seed, { radiant: true });
-        const casts = new Set(castsDuring(s, prime).map((cast) => cast.event.instanceId));
-        for (const event of s.events) {
-          if (event.type !== "damage" || event.sourceId === null || !casts.has(event.sourceId)) continue;
-          if (event.targetId !== "hero-p2") continue;
-          expect(event.amount).toBeGreaterThanOrEqual(8);
+        for (const total of heroDamageByCast(s, prime)) {
+          expect(total, seed).toBeGreaterThanOrEqual(8);
           checked += 1;
         }
       }
       expect(checked).toBeGreaterThan(0);
-      expect(HERO_HEALTH).toBe(30);
     });
   });
 });

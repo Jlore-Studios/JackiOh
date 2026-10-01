@@ -137,7 +137,8 @@ describe("C+ #27 Zephrys Zealotism", () => {
     });
 
     it("R364 and never past max: a player still above max after paying gains nothing", () => {
-      const s = play({ p1: { hand: [STOCKPILE], mana: 9 } });
+      // A unit on the field keeps the turn alive (§2.5), whatever the perfect hand turns out to hold.
+      const s = play({ p1: { hand: [STOCKPILE], field: [MENACE], mana: 9 } });
       s.expectMana("p1", 5);
       expect(s.events.filter((event) => event.type === "manaChanged")).toHaveLength(1);
     });

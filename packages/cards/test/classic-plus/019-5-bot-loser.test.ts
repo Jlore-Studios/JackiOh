@@ -193,5 +193,14 @@ describe("C+ #19.5 Bot Loser", () => {
       sendBerserk(s, bot(s));
       expect(s.view("p2").opponent.units[2]?.conditionActive).toBeUndefined();
     });
+
+    it("the Radiant face prints no condition: it never glows, Berserk sent or not, and attacks nothing", () => {
+      const s = withBot({}, true);
+      expect(glows(s)).toBe(false);
+      sendBerserk(s, bot(s));
+      expect(glows(s)).toBe(false);
+      s.endTurn();
+      s.expectHealth("p1", 30);
+    });
   });
 });

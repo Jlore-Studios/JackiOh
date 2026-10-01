@@ -33,4 +33,6 @@ export const base: Script = {
 export const radiant: Script = {
   triggers: [onKill],
   staticFlags: { neverBerserk: true },
+  // R195: this face prints no condition, so it never glows; R195's list pins the hook on both faces.
+  conditionMet: () => false,
 };
