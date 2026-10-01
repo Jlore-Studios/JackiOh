@@ -19,6 +19,7 @@ const OUTBREAK = "classic-039"; // (1) Spell: place {tokens} on a permanent; own
 const BOOK_OF_PLAGUE = "classic-070"; // (1) Spell: Place 5 Plague Tokens (5 placements).
 const FLOOD = "core-017"; // (4) Spell: Bounce all Units.
 const VANILLA = "core-008";
+const POSTDOC = "core-061"; // Radiant: Cry: choose any Unit on the field, summon a Vanilla copy of it.
 const ANCHOR = "core-010";
 const X = "core-020";
 
@@ -100,6 +101,21 @@ describe("C #27 Pestilent Slime", () => {
       expect(s.card(slime.id).counters.plague).toBe(6);
       expect(placements(s, slime.id).map((event) => event.placed)).toEqual([2, 2, 2]);
       expect(s.card(vanilla.id).counters.plague).toBe(2);
+    });
+
+    it("§6.3 Vanilla: a Vanilla copy has no text, so a placement of 1 on it puts 1", () => {
+      const s = scenario({
+        p1: { hand: [{ def: POSTDOC, radiant: true }, OUTBREAK, ANCHOR], field: [SLIME], library: [X, X, X] },
+        p2: { hand: [ANCHOR] },
+      });
+      s.play(POSTDOC, { zone: 3, targets: [{ pick: "instance", instanceId: s.card(SLIME).id }] });
+      const copy = s.unit("p1", 2);
+      if (copy === null || copy.defId !== SLIME || copy.vanilla !== true) throw new Error("a Vanilla Slime in lane 2");
+
+      outbreakOn(s, copy.id);
+
+      expect(s.card(copy.id).counters.plague).toBe(1);
+      expect(placements(s, copy.id).map((event) => event.placed)).toEqual([1]);
     });
 
     it("R78 its tokens reset when it leaves the field", () => {

@@ -663,6 +663,12 @@ describe("C #22 Mid Runner lights up in hand while your mana reaches its thresho
     expect(glows(s.view("p1").you.units[0])).toBe(false);
     expect(JSON.stringify(s.view("p2"))).not.toContain("conditionActive");
   });
+
+  it("R195 on the opponent's turn it never glows, whatever its owner's mana", () => {
+    const s = scenario({ active: "p2", p1: { hand: [RUNNER, ANCHOR] }, p2: { hand: [ANCHOR], field: TARGETS } });
+
+    expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(false);
+  });
 });
 
 // =============================================================================================
@@ -788,6 +794,12 @@ describe("C #40 MC Tech lights up in hand while the opponent controls enough per
     const s = scenario({ p1: { hand: [ANCHOR], field: [TECH] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011", "core-001"] } });
 
     expect(glows(s.view("p1").you.units[0])).toBe(false);
+  });
+
+  it("R195 on the opponent's turn it never glows, however many permanents they control", () => {
+    const s = scenario({ active: "p2", p1: { hand: [TECH, ANCHOR] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011", "core-001"] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(false);
   });
 });
 

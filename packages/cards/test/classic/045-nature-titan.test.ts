@@ -77,6 +77,13 @@ describe("C #45 Nature Titan", () => {
       expect(unitDefs(s).filter((id) => id === SHEEP)).toHaveLength(0);
     });
 
+    it("R101 only a card that says so tributes the opponent's Units: an enemy Unit can't pay it", () => {
+      const s = scenario({ p1: { hand: [TITAN, ANCHOR], field: [VANILLA], library: [A] }, p2: { hand: [ANCHOR], field: [TEMPO] } });
+
+      expect(() => s.play(TITAN, { tributes: [TEMPO] })).toThrow(/tribute/i);
+      s.expectInZone(TITAN, "hand").expectInZone(TEMPO, "field");
+    });
+
     it("R391 on a full board it may take the zone its Tribute empties", () => {
       const s = scenario({
         p1: { hand: [TITAN, ANCHOR], field: [MENACE, MENACE, VANILLA, MENACE, MENACE], library: [A] },
@@ -108,6 +115,18 @@ describe("C #45 Nature Titan", () => {
       s.expectInZone(TITAN, "hand");
     });
 
+    it("R391 on a full board it can't take a Locked zone, even the one its Tribute empties", () => {
+      const s = scenario({
+        p1: { hand: [TITAN, ANCHOR], field: [MENACE, MENACE, VANILLA, MENACE, MENACE], library: [A] },
+        p2: { hand: [ANCHOR] },
+      });
+      // Lane 3 is Locked with its Vanilla in it (no card in this worktree locks a unit zone).
+      s.state.players.p1.locks.units[2] = true;
+
+      expect(() => s.play(TITAN, { tributes: [VANILLA], zone: 3 })).toThrow();
+      s.expectInZone(TITAN, "hand").expectInZone(VANILLA, "field");
+    });
+
     it("whenever it attacks: draw 1 and heal your hero 3, after the attack", () => {
       const s = scenario({ p1: { hand: [ANCHOR], field: [TITAN], library: [A, B], health: 20 }, p2: { hand: [ANCHOR] } });
 
@@ -130,6 +149,16 @@ describe("C #45 Nature Titan", () => {
       expect(s.events.some((event) => event.type === "attackDeclared" && event.forced)).toBe(true);
       expect(handDefs(s)).toEqual([ANCHOR, A]);
       s.expectHealth("p1", 23);
+    });
+
+    it("R212 the attack trigger is answered after that combat's state check, so a Titan that died in it draws and heals nothing", () => {
+      const s = scenario({ p1: { hand: [ANCHOR], field: [TITAN], library: [A, B], health: 20 }, p2: { hand: [ANCHOR], field: [MENACE] } });
+
+      s.attack(TITAN, MENACE);
+
+      s.expectInZone(TITAN, "graveyard");
+      expect(handDefs(s)).toEqual([ANCHOR]);
+      s.expectHealth("p1", 20);
     });
 
     it("defending does nothing: an attack on it draws and heals nothing", () => {

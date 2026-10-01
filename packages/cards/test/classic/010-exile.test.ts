@@ -29,6 +29,7 @@ const BEAR = "core-060"; // (1) Trap.
 const HINDER = "core-021"; // (0) Spell, cast on draw.
 const SLIME = "classic-027"; // (0) Unit 1/1.
 const HEROIC = "core-098"; // (X) Field Spell.
+const ROCK = "core-066"; // (4) Unit 10/10, Tribute 1, Indestructible.
 
 function armed(radiantFace = false, lane = 2): { def: string; radiant: boolean; faceUp: boolean; lane: number } {
   return { def: EXILE, radiant: radiantFace, faceUp: false, lane };
@@ -282,6 +283,20 @@ describe("C #10 Exile", () => {
       delete none.x;
       t.play(TIMMY, { zone: 2 });
       t.expectInZone(none, "exile");
+    });
+
+    it("R448 a countered Tribute card's Tribute stays spent (an Upgrade to (4) reaches The Rock)", () => {
+      const s = setup({ hand: [ROCK, VANILLA], field: [{ def: TIMMY, lane: 1 }] }, true);
+      stepParam(s.card(EXILE), "threshold", 1);
+      const timmy = s.unit("p2", 1);
+      if (timmy === null) throw new Error("fixture");
+
+      s.play(ROCK, { zone: 2, tributes: [timmy.id] });
+
+      s.expectInZone(ROCK, "exile");
+      s.expectInZone(timmy, "graveyard");
+      s.expectMana("p2", 0);
+      expect(s.unit("p2", 2)).toBeNull();
     });
 
     it("R386 a Degrade of its threshold makes it answer (2) or less, with a budget of 2 minus the cost", () => {

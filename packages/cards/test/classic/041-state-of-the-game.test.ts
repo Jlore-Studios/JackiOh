@@ -22,6 +22,7 @@ const CUBE = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and r
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const VANILLA = "core-008"; // (1) Unit 4/4, no text.
 const FILLER = "core-005"; // (1) Spell, a card to keep a hand from auto-ending the turn (§2.5).
+const FLAME = "classic-016"; // (1) Spell, Book: Deal 4 damage.
 
 function keywordKinds(s: Scenario, player: PlayerId, lane: number): string[] {
   const unit = s.unit(player, lane);
@@ -61,6 +62,21 @@ describe("C #41 State of the Game", () => {
       s.expectStats(menace, { health: 6 });
       // R63: the strike back is reduced to nothing, so no damage event names it.
       const state = s.card(STATE);
+      expect(s.events.filter((event) => event.type === "damage" && event.targetId === state.id)).toHaveLength(0);
+    });
+
+    it("§4.4 step 4: a damage effect never removes it — Book of Flame's 4 deals it nothing", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], field: [STATE] },
+        p2: { hand: [FLAME, FILLER] },
+        active: "p2",
+      });
+      const state = s.card(STATE);
+
+      s.play(FLAME, { targets: [{ pick: "instance", instanceId: state.id }] });
+
+      s.expectInZone(state, "field");
+      s.expectStats(state, { health: 3, maxHealth: 3 });
       expect(s.events.filter((event) => event.type === "damage" && event.targetId === state.id)).toHaveLength(0);
     });
 

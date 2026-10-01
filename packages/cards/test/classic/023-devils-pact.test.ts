@@ -23,6 +23,7 @@ const BEAR = "core-060"; // (1) Trap.
 const PANTHER = "core-032"; // Unit 5/4 Rush: after it attacks and survives, draw 2 per Unit it destroyed.
 const HINDER = "core-021"; // (0) Spell, cast on draw.
 const FILLER = "core-010"; // (0) Spell Rapid Replenish.
+const MENACE = "core-019"; // (3) Unit 9/9.
 
 const AT_P2: readonly Selection[] = [{ pick: "hero", player: "p2" }];
 
@@ -106,6 +107,18 @@ describe("C #23 Devil's Pact", () => {
       expect(result.state.pending).toBeNull();
       expect(result.state.work).toEqual([]);
       expect(heroOf(result.state, "p2").health).toBe(26);
+    });
+
+    it("R449 the price paid is the old card's, not the Book's: a (3) Cost Unit replaced costs 3", () => {
+      const s = onField({ hand: [MENACE, FILLER] });
+
+      s.activate(PACT);
+      s.play(MENACE, { zone: 2 }).answer(AT_P2);
+
+      const played = s.events.find((event) => event.type === "cardPlayed");
+      expect(played).toMatchObject({ defId: BOOK, costPaid: 3 });
+      s.expectMana("p1", 1);
+      s.expectHealth("p2", 26);
     });
 
     it("R449 the replacement is played as a Book of Flame, counted as one play; the price was the old card's", () => {

@@ -15,7 +15,6 @@ import { loseHealth } from "../src/damage";
 import { drawOne } from "../src/draw";
 import {
   cardsPlayedThisTurn,
-  costPaidThisTurn,
   heroOf,
   killerOf,
   maxManaOf,
@@ -362,28 +361,12 @@ describe("R361 killerOf: the Unit that destroyed a card, as its Death hook reads
 });
 
 
-describe("the Classic #1–#45 reads: max mana and a play's price (C #36 Burn, C #22 Mid Runner)", () => {
+describe("the Classic #1–#45 reads: max mana (C #36 Burn)", () => {
   it("maxManaOf is §2.3's max mana, which temporary mana above it does not move", () => {
     const state = playing("max-mana");
     expect(maxManaOf(state, "p1")).toBe(state.players.p1.mana.max);
     state.players.p1.mana.current = 9;
     expect(maxManaOf(state, "p1")).toBe(1);
     expect(maxManaOf(state, "p2")).toBe(0);
-  });
-
-  it("costPaidThisTurn is what the card's latest play this turn paid, and null for a card not played", () => {
-    let state = playing("cost-paid");
-    const card = must(inHand(state, "fx-1", "p1")[0], "a card");
-    const cheap = must(inHand(state, "fx-2", "p1")[0], "a discounted card");
-    const unplayed = must(inHand(state, "fx-3", "p1")[0], "a card left in hand");
-    cheap.costMod = -1;
-
-    state = act(state, { type: "play", instanceId: card.id, zone: { row: "units", lane: 1 }, playerId: "p1" });
-    state = act(state, { type: "play", instanceId: cheap.id, zone: { row: "units", lane: 2 }, playerId: "p1" });
-
-    expect(costPaidThisTurn(state, "p1", card)).toBe(1);
-    expect(costPaidThisTurn(state, "p1", cheap.id)).toBe(0);
-    expect(costPaidThisTurn(state, "p1", unplayed)).toBeNull();
-    expect(costPaidThisTurn(state, "p2", card)).toBeNull();
   });
 });

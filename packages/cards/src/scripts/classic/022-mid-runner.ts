@@ -13,11 +13,9 @@
 // Indestructible. Anywhere else it stays.
 //
 // "If you had N or more mana when you played this" is the mana its controller held as the play began
-// (§10.5 step 1), before paying. `manaWhenPlayed` below is the one place that reads it. The engine
-// keeps no record of that number yet (requested: "mana before paying, recorded at §10.5 step 1"), so
-// until it does the read is the mana its controller holds now plus what this play paid for it
-// (`costPaidThisTurn`, the turn log's price, a cast's 0 included, R70): the price is the only change
-// to its controller's mana between §10.5 step 1 and the Cry. Swapping in the record is one line.
+// (§10.5 step 1), before paying — the engine's record of it, `ctx.manaBeforePlay`, which the played
+// card's own Cry carries (a cast's too, R70, read as the cast began). A Cry run any other way (another
+// card triggering it, E13) was not played now, so it reads its controller's mana as it runs.
 //
 // The bounce: that many DIFFERENT enemy permanents (R60), fewer if fewer exist — the tops of their
 // unit piles (R13) and their backrow cards, face-down ones included — drawn from the match rng as the
@@ -34,7 +32,6 @@ import {
   MID_LANE,
   activeUnitsOf,
   cardAt,
-  costPaidThisTurn,
   param,
   slotOf,
   slotsOf,
@@ -56,12 +53,9 @@ function enoughMana(ctx: EffectContext | ConditionContext, mana: number): boolea
   return mana >= param(ctx, "threshold");
 }
 
-/**
- * The mana its controller had as the play of `self` began (§10.5 step 1). Requested engine record:
- * "mana before paying, recorded at §10.5 step 1". Until then: the mana held now plus this play's price.
- */
-function manaWhenPlayed(ctx: EffectContext, self: CardInstance): number {
-  return unspentManaOf(ctx.state, ctx.controller) + (costPaidThisTurn(ctx.state, ctx.controller, self) ?? 0);
+/** The mana its controller had as the play began (§10.5 step 1), or, for a Cry not played now, now. */
+function manaWhenPlayed(ctx: EffectContext): number {
+  return ctx.manaBeforePlay ?? unspentManaOf(ctx.state, ctx.controller);
 }
 
 /** Every permanent the opponent controls: the tops of their unit piles, then their backrow, lane order. */
@@ -81,7 +75,7 @@ const cry = (ctx: EffectContext): Effect[] => {
   const bounces = param(ctx, "bounces");
   return [
     ...(inMidlane ? [sacrifice({ target: { of: "self" } })] : []),
-    ...(enoughMana(ctx, manaWhenPlayed(ctx, self))
+    ...(enoughMana(ctx, manaWhenPlayed(ctx))
       ? [
           forEachCard({
             // R60: different cards, drawn as the Cry reaches this clause.

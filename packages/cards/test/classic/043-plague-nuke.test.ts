@@ -23,6 +23,8 @@ const MENACE = "core-019"; // (3) Unit 9/9.
 const FELINORS = "core-012"; // Cry: summon a copy of this.
 const DEFENDER = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn.
 const RUSH_TOKEN = "core-t-rush";
+const BIG_FELINOR = "core-043"; // (4) Unit 3/10, under the Stack pile below.
+const FIENDER = "core-092"; // Felinor Fiender: Stack.
 const ANCHOR = "core-010";
 
 function plagued(defId: string, n: number, extra: Record<string, unknown> = {}): { def: string; counters: { plague: number } } {
@@ -30,8 +32,8 @@ function plagued(defId: string, n: number, extra: Record<string, unknown> = {}):
 }
 
 function manaGained(s: Scenario): number {
-  // The cast paid 3 from 4; anything above 1 is the Spell's gain.
-  return s.state.players.p1.mana.current - 1;
+  // The cast paid 3 from 4; anything above 1 is the Spell's gain (read off p1's own view, §10.8).
+  return s.view("p1").you.mana.current - 1;
 }
 
 function unitDefs(s: Scenario, player: "p1" | "p2"): (string | null)[] {
@@ -90,6 +92,19 @@ describe("C #43 Plague Nuke", () => {
 
       s.expectInZone(STATE, "field").expectInZone(VANILLA, "graveyard");
       expect(manaGained(s)).toBe(3);
+    });
+
+    it("R13 a card dormant under a Stack pile is not a Unit on the field: its tokens don't count, and it resumes and survives", () => {
+      const s = scenario({
+        p1: { hand: [NUKE, ANCHOR] },
+        p2: { hand: [ANCHOR], field: [plagued(BIG_FELINOR, 2), { def: FIENDER, stack: true, counters: { plague: 1 } }] },
+      });
+
+      s.play(NUKE);
+
+      s.expectInZone(FIENDER, "graveyard");
+      expect(s.unit("p2", 1)?.defId).toBe(BIG_FELINOR);
+      expect(manaGained(s)).toBe(1);
     });
 
     it("the base face summons nothing back", () => {
@@ -172,6 +187,19 @@ describe("C #43 Plague Nuke", () => {
 
       expect(s.card(STATE).controller).toBe("p2");
       expect(unitDefs(s, "p1")).toEqual([null, null, null, null, null]);
+    });
+
+    it("R13 only the pile's top was hit: the Stack top that had a token is summoned, and the card beneath stays with its owner", () => {
+      const s = scenario({
+        p1: { hand: [{ def: NUKE, radiant: true }, ANCHOR] },
+        p2: { hand: [ANCHOR], field: [plagued(BIG_FELINOR, 2), { def: FIENDER, stack: true, counters: { plague: 1 } }] },
+      });
+
+      s.play(NUKE);
+
+      expect(unitDefs(s, "p1")).toEqual([FIENDER, null, null, null, null]);
+      expect(s.card(FIENDER).owner).toBe("p2");
+      expect(unitDefs(s, "p2")).toEqual([BIG_FELINOR, null, null, null, null]);
     });
 
     it("a full board leaves the rest in the graveyard", () => {
