@@ -195,7 +195,7 @@ describe("R502 with Game's runner, it appears as the runner reaches its cardPlay
 });
 
 describe("R436 a Call to Chaos roll, in words on both seats", () => {
-  const roll = (player: "p1" | "p2"): GameEvent => ({ type: "chaosRolled", player, instanceId: "c95", defId: "core-095", effects: ["units", "heal", "golem"] });
+  const roll = (player: "p1" | "p2"): GameEvent => ({ type: "chaosRolled", player, instanceId: "c95", defId: "core-095", effects: ["Summon 3 random (3) Cost Units", "Heal your hero 30", "Summon a Chaos Golem"] });
   const SAID = "Call to Chaos rolled: Summon 3 random (3) Cost Units, Heal the caster's hero 30, Summon a Chaos Golem";
 
   it("R436 the live region says every effect in order, on the caster's seat and the other's alike", () => {

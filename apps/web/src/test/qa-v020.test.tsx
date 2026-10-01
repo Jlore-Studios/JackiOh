@@ -495,7 +495,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
 
   it("item 12: Call to Chaos names what it rolled on both seats, and shows it still where the effects draw nothing (R436)", () => {
     vi.useFakeTimers();
-    const effects = ["units", "golem", "recast"];
+    const effects = ["Summon 3 random (3) Cost Units", "Summon a Chaos Golem", "Cast a random Call to Chaos"];
     const names = chaosNames({ player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects });
     expect(names).toEqual(["Summon 3 random (3) Cost Units", "Summon a Chaos Golem", "Cast a random Call to Chaos"]);
     for (const player of ["p2", "p1"] as const) {
@@ -509,7 +509,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     // The log says the same words: the card's name, or Call to Chaos for one the viewer cannot read.
     const logged: GameEvent[] = [
       { type: "chaosRolled", player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects },
-      { type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects: ["heal"] },
+      { type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects: ["Heal your hero 30"] },
     ];
     render(withCatalog(<Log view={withEvents(baseView(), logged)} revealed />));
     const lines = Array.from(document.querySelectorAll(".log li")).map((line) => line.textContent ?? "");
@@ -524,7 +524,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     // A hidden card's roll is still named: the roll is public (R97 redacts the card, never the roll).
     expect(within(banner).getAllByTestId(showcaseTestid.chaosLine).map((line) => line.textContent)).toEqual([
       "Summon 3 random (3) Cost Units",
-      "Summon a Golem",
+      "Summon a Chaos Golem",
       "Cast a random Call to Chaos",
     ]);
   });
