@@ -102,6 +102,8 @@ export function drawFromLibraryOf(
   if (drawBlocked(sink, drawer)) return "limited";
   const card = library[end === "top" ? 0 : library.length - 1];
   if (card === undefined) return null;
+  // B5 E3: it is the drawer's draw, so the drawer's draw limit stops it before the card moves (§2.4).
+  if (drawBlocked(sink, drawer)) return "limited";
   // The owner changes while the card still lies where it was taken from, so `stolen` names that pile;
   // then it leaves the library, as `draw.drawOne` takes its card, before §2.4 finishes the draw.
   changeOwner(sink, card, drawer);

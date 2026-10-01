@@ -16,27 +16,16 @@
 // Reborn unit comes back, Death hooks run. A card's tokens are counters, which R78 clears when it leaves
 // the field, so a card bounced and played again carries none. The set is read as the trigger resolves.
 //
-// Where each turn's half sits:
-//   - its controller's own turn (the base face only): the card's `startOfTurn` hook, which the engine
-//     queues with the active player's start-of-turn triggers at R62's point, in R68's order;
-//   - the opponent's turn (both faces): `startOfTurn` hooks are queued for the active player's cards
-//     alone, so this half answers the opponent's `turnStarted` instead — an ordinary trigger, queued in
-//     R68's order with whatever else answers that event. The engine dispatches `turnStarted` at the
-//     first settle of the turn (after the Brittle tick), ahead of R62's start-of-turn trigger point.
+// Each turn's half is a start-of-turn hook queued at R62's start-of-turn trigger point in R68's order:
+// its controller's own turn is its `startOfTurn` (the base face only), the opponent's its
+// `startOfOpponentTurn`, which the engine queues right after the active player's own hooks — so a
+// plagued Fed Fauci of the turn player's still gains its mana before it is destroyed.
 //
 // No declared numbers: the text has none.
 
-import {
-  permanentsOnField,
-  plagueOn,
-  type EffectContext,
-  type Effect,
-  type Hook,
-  type Script,
-  type TriggerDef,
-} from "@jackioh/engine";
+import { permanentsOnField, plagueOn, type EffectContext, type Effect, type Hook, type Script } from "@jackioh/engine";
 import { destroy } from "@jackioh/engine/effects";
-import { opponentOf, type GameEvent, type PlayerId } from "@jackioh/shared";
+import { opponentOf, type PlayerId } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-062");
@@ -48,26 +37,9 @@ function destroyPlagued(ctx: EffectContext, player: PlayerId): Effect[] {
     .map((card) => destroy({ target: { of: "instance", instanceId: card.id } }));
 }
 
-/** The opponent's turn beginning: `turnStarted` for the player who is not this card's controller. */
-function opponentsTurnStarted(ctx: EffectContext & { event: GameEvent }): PlayerId | null {
-  const event = ctx.event;
-  if (event.type !== "turnStarted" || event.player !== opponentOf(ctx.controller)) return null;
-  return event.player;
-}
-
-const atOpponentsTurn: TriggerDef = {
-  id: "living-bomb-opponent",
-  on: ["turnStarted"],
-  when: (ctx) => opponentsTurnStarted(ctx) !== null,
-  run: (ctx) => {
-    const player = opponentsTurnStarted(ctx);
-    return player === null ? [] : destroyPlagued(ctx, player);
-  },
-};
-
-/** Its controller's own turn: the start-of-turn hook runs on that turn only (§2.2, R62). */
 const atYourTurn: Hook = (ctx) => destroyPlagued(ctx, ctx.controller);
+const atOpponentsTurn: Hook = (ctx) => destroyPlagued(ctx, opponentOf(ctx.controller));
 
-export const base: Script = { startOfTurn: atYourTurn, triggers: [atOpponentsTurn] };
+export const base: Script = { startOfTurn: atYourTurn, startOfOpponentTurn: atOpponentsTurn };
 
-export const radiant: Script = { triggers: [atOpponentsTurn] };
+export const radiant: Script = { startOfOpponentTurn: atOpponentsTurn };

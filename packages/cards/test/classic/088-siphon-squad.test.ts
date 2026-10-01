@@ -18,7 +18,8 @@ const SIPHON = "classic-088";
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const TIMMY = "core-011"; // (1) Unit 3/3 Rush, First Strike.
-const D_FENDER = "core-001"; // (2) Unit 0/7: Aura: your Units in Defense Position have +2 Armor.
+const WEAPONS = "core-014"; // (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
+const FIENDER = "core-092"; // (2) Unit 5/7 Stack.
 const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const ANCHOR = "core-010"; // (0) Spell (§2.5).
 
@@ -109,6 +110,16 @@ describe("C #88 Siphon Squad", () => {
       expect(menace).toMatchObject({ defId: MENACE, attack: 5 });
     });
 
+    it("§3.2 R13 a Stack pile is one Unit: only its top counts toward X and takes the −X", () => {
+      const s = scenario({
+        p1: { hand: [SIPHON, ANCHOR] },
+        p2: { hand: [ANCHOR], field: [VANILLA, { def: FIENDER, stack: true }] },
+      });
+      s.play(SIPHON);
+
+      expect(attackOf(s, "p2", 1)).toBe(5 - 2);
+    });
+
     it("its own controller's Units never count toward X", () => {
       const s = setAgainst([MENACE], false, [VANILLA, TIMMY]);
       expect(attackOf(s, "p2", 1)).toBe(7);
@@ -132,12 +143,14 @@ describe("C #88 Siphon Squad", () => {
       expect(attackOf(s, "p2", 2)).toBe(0);
     });
 
-    it("§10.4 the 0 is set after every other layer: a buffed Unit under an attack aura still reads 0", () => {
+    it("§10.4 the 0 is set after every other layer: a buffed Unit under a +4 attack aura still reads 0", () => {
       const s = scenario({
         p1: { hand: [{ def: SIPHON, radiant: true }, ANCHOR] },
-        p2: { hand: [ANCHOR], field: [{ def: MENACE, position: "DEF" }, { def: D_FENDER, lane: 2 }] },
+        p2: { hand: [ANCHOR], field: [MENACE], backrow: [WEAPONS] },
       });
       s.card(MENACE).buffs.attack += 5;
+      expect(attackOf(s, "p2", 1)).toBe(9 + 5 + 4);
+
       s.play(SIPHON);
 
       expect(attackOf(s, "p2", 1)).toBe(0);

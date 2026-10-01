@@ -134,6 +134,20 @@ describe("C #63 Crop Dusting", () => {
       expect(JSON.stringify(s.view("p1"))).not.toContain("My Pawn");
     });
 
+    it("R97 nor the placement on your own face-down trap to the opponent", () => {
+      const s = scenario({
+        p1: { hand: [DUSTING, FILLER], backrow: [{ def: PAWN, faceUp: false, lane: 2 }], library: lib(4) },
+        p2: { hand: [FILLER], library: lib(4) },
+      });
+      s.play(DUSTING);
+      s.endTurn();
+      s.endTurn();
+
+      expect(s.card(PAWN).counters.plague).toBe(1);
+      expect(JSON.stringify(s.view("p2"))).not.toContain(PAWN);
+      expect(JSON.stringify(s.view("p2"))).not.toContain("My Pawn");
+    });
+
     it("§3.2 R13 a card dormant under a Stack pile takes none; the top of the pile does", () => {
       const s = scenario({
         p1: { hand: [DUSTING, FILLER], library: lib(4) },

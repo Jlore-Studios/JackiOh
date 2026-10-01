@@ -2,7 +2,7 @@
 //   - §10.4 layer 5's "an aura that sets attack to a value applies after every other layer"
 //     (`StatMod.setAttack`, the Radiant face's "Enemy Units have 0 Attack");
 //   - "When …, Tribute this", a condition every state check reads, the one right after the card arrives
-//     included (`Script.tributeWhen`, `selfTribute.ts`), which reaches a face-down card too.
+//     included (`Script.tributeWhen`, read in `stateCheck.ts`), which reaches a face-down card too.
 
 import type { CardDef } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";

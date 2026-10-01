@@ -205,6 +205,17 @@ describe("C #74 Corpse Plantation", () => {
       expect(graveyardPlays(s.state, s.card(MENACE))).toEqual([]);
     });
 
+    it("§3 with your unit row full nothing is offered, and the play is refused", () => {
+      const s = scenario({
+        p1: { hand: [ANCHOR], field: [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], backrow: [{ def: PLANTATION, counters: { plague: 2 } }], graveyard: [MR_TOKEN] },
+        p2: { hand: [ANCHOR] },
+      });
+      const mrToken = s.card(MR_TOKEN);
+
+      expect(graveyardPlays(s.state, mrToken)).toEqual([]);
+      expect(send(s.state, { instanceId: mrToken.id, plague: { from: s.card(PLANTATION).id, tokens: 1 } }).error).toBeDefined();
+    });
+
     it("only your own graveyard: the opponent's Units are not offered", () => {
       const s = scenario({
         p1: { hand: [ANCHOR], backrow: [{ def: PLANTATION, counters: { plague: 2 } }] },

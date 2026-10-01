@@ -47,7 +47,8 @@ const PLAGUE_NUKE = "classic-043"; // C #43 Plague Nuke
 const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
 const PLAGUE_DOCTOR = "classic-059"; // C #59 Plague Doctor
 const SIPHON_SQUAD = "classic-088"; // C #88 Siphon Squad
-const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE, PLAGUE_DOCTOR, SIPHON_SQUAD];
+const DIVINE_FAVOR = "classic-046"; // C #46 Divine Favor
+const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE, DIVINE_FAVOR, PLAGUE_DOCTOR, SIPHON_SQUAD];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -1101,5 +1102,101 @@ describe("C #88 Siphon Squad previews X, the attack its aura takes off each enem
       const answer = hook({ state, self, controller: "p1", radiant: false, zone: "field", yourTurn: active === "p1" });
       expect(shown(s.view("p1").you.backrow[0])).toEqual(answer);
     }
+  });
+});
+
+// =============================================================================================
+// C #46 Divine Favor: the draws it asks for now (SPEC §8.6 row 46)
+// =============================================================================================
+
+describe("C #46 Divine Favor previews how many cards it would draw now (R280)", () => {
+  // "Draw until you have {multiplier}× as many cards in hand as your opponent": the preview is the
+  // draws it asks for, the opponent's hand times the multiplier less yours — without this card in
+  // hand, which will have left it when it resolves. It reads both hands' sizes, which are public
+  // (§10.8), and nothing of what is in them.
+  const LABEL = "Draw";
+
+  it("R280 the label is printed on both faces", () => {
+    for (const face of FACES) expect(cardDef(DIVINE_FAVOR)[face].text).toContain(LABEL);
+  });
+
+  for (const [face, opponentHand, yours, expected] of [
+    ["base", 5, 2, 3],
+    ["radiant", 3, 1, 5],
+  ] as const) {
+    it(`R280 ${face}: ${yours} other cards against ${opponentHand} previews ${expected}, and it draws exactly that`, () => {
+      const s = scenario({
+        p1: {
+          hand: [{ def: DIVINE_FAVOR, radiant: face === "radiant" }, ...Array.from({ length: yours }, () => RAPID_REPLENISH)],
+          library: Array.from({ length: 8 }, () => MENACE),
+        },
+        p2: { hand: Array.from({ length: opponentHand }, () => STOCKPILE) },
+      });
+      const card = s.card(DIVINE_FAVOR);
+      expect(shown(handCard(s.view("p1"), card.id))).toEqual([{ label: LABEL, value: expected }]);
+      s.play(card);
+      expect(s.lastEvents.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(expected);
+    });
+  }
+
+  it("R280 at or past the mark it previews 0, and draws nothing", () => {
+    const s = scenario({
+      p1: { hand: [DIVINE_FAVOR, RAPID_REPLENISH, RAPID_REPLENISH], library: [MENACE] },
+      p2: { hand: [STOCKPILE] },
+    });
+    const card = s.card(DIVINE_FAVOR);
+    expect(valueOf(handCard(s.view("p1"), card.id))).toBe(0);
+    s.play(card);
+    expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(false);
+  });
+
+  it("R280 in the opponent's hand it is hidden: p2's view carries no preview of it", () => {
+    const s = scenario({ p1: { hand: [DIVINE_FAVOR] }, p2: { hand: [STOCKPILE, STOCKPILE] } });
+    expect(s.view("p2").opponent.hand).toEqual({ count: 1 });
+    expect(shown(handCard(s.view("p1"), s.card(DIVINE_FAVOR).id))).toEqual([{ label: LABEL, value: 2 }]);
+  });
+
+  it("R280 its hook reads the hands' sizes and nothing in them: a hand whose cards throw on access still answers", () => {
+    const s = scenario({ p1: { hand: [DIVINE_FAVOR, RAPID_REPLENISH] }, p2: { hand: [STOCKPILE, STOCKPILE, STOCKPILE] } });
+    const card = s.card(DIVINE_FAVOR);
+    const copy = structuredClone(s.state);
+    const self = must(copy.players.p1.hand.find((held) => held.id === card.id), "the card in the copy");
+    for (const player of ["p1", "p2"] as const) {
+      const size = copy.players[player].hand.length;
+      const sealed = new Proxy([] as CardInstance[], {
+        get: (target, key) => {
+          if (key === "length") return size;
+          throw new Error(`a preview read a card of ${player}'s hand`);
+        },
+      });
+      Object.defineProperty(copy.players[player], "hand", { get: () => sealed });
+      Object.defineProperty(copy.players[player], "library", {
+        get: () => {
+          throw new Error(`a preview read ${player}'s library`);
+        },
+      });
+    }
+    const hook = must(CARDS[DIVINE_FAVOR]?.base.preview, "Divine Favor's hook");
+    const ctx: ConditionContext = { state: copy, self, controller: "p1", radiant: false, zone: "hand", yourTurn: true };
+    expect(hook(ctx)).toEqual([{ label: LABEL, value: 2 }]);
+  });
+
+  it("R280 two games that differ only in the cards hidden from a viewer show the same preview", () => {
+    const one = scenario({ p1: { hand: [DIVINE_FAVOR, RAPID_REPLENISH] }, p2: { hand: [STOCKPILE, MENACE, MENACE] } });
+    const two = scenario({ p1: { hand: [DIVINE_FAVOR, RAPID_REPLENISH] }, p2: { hand: [MATH_EQUATION, STOCKPILE, BIG_D_FENDER] } });
+    const of = (s: Scenario): PreviewValue[] | null => shown(handCard(s.view("p1"), s.card(DIVINE_FAVOR).id));
+    expect(of(one)).toEqual(of(two));
+  });
+
+  it("R280 a C #57 Echo copying it previews the same formula on the copied face", () => {
+    const s = scenario({
+      p1: { hand: [{ def: DIVINE_FAVOR, radiant: true }, "classic-057", RAPID_REPLENISH], library: [MENACE, MENACE, MENACE, MENACE] },
+      p2: { hand: [STOCKPILE, STOCKPILE] },
+    });
+    s.play(DIVINE_FAVOR);
+    const echo = s.card("classic-057");
+    // Radiant (2×): the opponent's 2 cards make a mark of 4; p1 holds the drawn cards and the Filler.
+    const yours = s.hand("p1").length - 1;
+    expect(shown(handCard(s.view("p1"), echo.id))).toEqual([{ label: LABEL, value: Math.max(0, 4 - yours) }]);
   });
 });

@@ -27,6 +27,7 @@ import {
 } from "./state";
 import { stateCheck } from "./stateCheck";
 import { showToOwner } from "./ownLibrary";
+import { copiedCastsOnDraw } from "./subsystems/copiedText";
 import { owe, paused, registerWorkHandler } from "./work";
 import { activeUnitsOf, cardAt, firstFreeZone, isUnitToken, moveToZone, reportGraveyardLanding, slotsOf } from "./zones";
 
@@ -244,10 +245,11 @@ export function drawBlocked(sink: EngineSink, player: PlayerId): boolean {
 
 /**
  * §2.4, R58, B5 E39: whether the drawn card casts itself — printed Cast on draw, or the `castOnDraw`
- * enchantment riding it (Classic+ #40 Appropriations).
+ * enchantment riding it (Classic+ #40 Appropriations), or, for a card that has the last Spell's text
+ * (B5 E14, Classic #57 Echo, R547), that Spell's Cast on draw.
  */
-export function castsOnDraw(card: CardInstance): boolean {
-  return flagsOf(card).castOnDraw === true || hasEnchantment(card, "castOnDraw");
+export function castsOnDraw(state: GameState, card: CardInstance): boolean {
+  return flagsOf(card).castOnDraw === true || hasEnchantment(card, "castOnDraw") || copiedCastsOnDraw(state, card);
 }
 
 /**
@@ -460,7 +462,7 @@ export function completeDraw(
   });
 
   const at = linkFor(state, link);
-  if (castsOnDraw(card) && at.chain < CAST_ON_DRAW_CHAIN_CAP && roomToCast(state, player, card)) {
+  if (castsOnDraw(state, card) && at.chain < CAST_ON_DRAW_CHAIN_CAP && roomToCast(state, player, card)) {
     // R58, R217: counted before the cast resolves, so a draw the cast makes continues from here.
     state.castChain = at.chain + 1;
     card.zone = { z: "resolving", player };

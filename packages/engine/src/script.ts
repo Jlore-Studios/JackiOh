@@ -229,6 +229,13 @@ export type StaticFlags = {
    * every such play rather than the first cheap one (`playChoices.playMadeRadiant`).
    */
   radiantPlaysTagged?: Tag[];
+  /**
+   * B5 E14, Classic #57 Echo, R399, R545–R547: "This has the text of the last Spell either player
+   * played". The card's text is the copied Spell's face (`subsystems/copiedText.ts`): its declared
+   * choices, its resolution and prompt continuations, its Echo X and Cast on draw, its `preview` and
+   * `conditionMet`. The card keeps its own name, cost, type and tags, and its own other flags (Echo).
+   */
+  copiesLastSpell?: boolean;
   // ---- v0.2.0 static flags, by workstream: activate and turn (E3 draw limit, E10) ----
   // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
   /** B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter). */
@@ -433,9 +440,15 @@ export type Script = {
   /**
    * Classic #88 Siphon Squad, R403: "When …, Tribute this" — a condition on the card's own text that
    * every state check reads (§4.5), the one right after the card arrives included; while it holds, the
-   * card acting on the field (face-down too) is sacrificed (`selfTribute.ts`). A PURE READ, like `aura`.
+   * card acting on the field (face-down too) is sacrificed (`stateCheck.ts`). A PURE READ, like `aura`.
    */
   tributeWhen?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;
+  /**
+   * Classic #62 Living Bomb, R400: "At the start of your opponent's turn" — the `startOfTurn` hook of
+   * the other side, queued right after the active player's at R62's start-of-turn trigger point, so
+   * R68's order (the active player's cards, then the opponent's) holds.
+   */
+  startOfOpponentTurn?: Hook;
 };
 
 /**

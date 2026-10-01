@@ -69,6 +69,13 @@ export type CardView = {
    * and the auras its quest line holds — on every view of the card on the field (a face-up Field Spell).
    */
   quest?: QuestView;
+  /**
+   * B5 E14, R399, R243: the Spell whose text a copier (Classic #57 Echo) has now, on the face it was
+   * played on, with that definition's declared numbers as they read on this card (`params`, R386) —
+   * on its owner's view of it in hand, and on both views while it resolves (its play is public). The
+   * card keeps its own name, cost and type; absent when it copies nothing.
+   */
+  copies?: CopiedTextView;
 };
 
 /**
@@ -80,6 +87,9 @@ export type QuestView = {
   open: { id: string; text: string; progress: number; goal: number; rewards: { id: string; text: string }[] }[];
   auras: { id: string; text: string }[];
 };
+
+/** B5 E14, R399: what a copier's text is now (`CardView.copies`). */
+export type CopiedTextView = { defId: string; radiant: boolean; params?: Record<string, number> };
 
 /**
  * B3.4, R386: the lasting changes Degrade, Upgrade and KY's Constant made to one card, kept in every

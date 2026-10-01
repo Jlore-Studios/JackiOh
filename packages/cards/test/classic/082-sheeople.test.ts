@@ -6,6 +6,7 @@
 //
 // A Tribute 2 is #66 The Rock with its Tribute X upgraded once (R101: "printed, or as a Degrade or
 // Upgrade left it"). The R386 worth case waits on the engine reading `tributeWorth` through `param`.
+// The C #21 Turtinator case needs C #21's script (cards-classic-a) registered.
 
 import { addStep, legalActions, stepParam, tuningOf, type CardInstance } from "@jackioh/engine";
 import type { ActionBody, GameEvent, PlayerId } from "@jackioh/shared";
@@ -17,6 +18,7 @@ const SHEEOPLE = "classic-082";
 const ROCK = "core-066"; // (4) Unit 10/10: Tribute 1, Indestructible.
 const GOLEM = "core-055"; // (3) Unit 10/5: Taunt, Tribute 3.
 const CUBE = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and remember it.
+const TURTINATOR = "classic-021"; // (2) Unit 5/4: Activate ♾️: Tribute a Unit; deal damage equal to its attack.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const FLOOD = "core-017"; // (4) Spell: Bounce all Units.
@@ -109,6 +111,17 @@ describe("C #82 Sheeople", () => {
       s.play(CUBE, { targets: [{ pick: "instance", instanceId: sheeople.id }] });
 
       s.expectInZone(sheeople, "graveyard");
+      expect(drawsBy(s.events, "p1")).toBe(2);
+    });
+
+    it("§6.3 C #21 Turtinator's Tribute takes it as one Unit: 1 damage, its own attack, and it draws 2", () => {
+      const s = scenario({ p1: { hand: [ANCHOR], field: [TURTINATOR, SHEEOPLE], library: lib(3) }, p2: { hand: [ANCHOR], health: 20 } });
+      const sheeople = s.card(SHEEOPLE);
+
+      s.activate(TURTINATOR, { tributes: [sheeople.id], targets: [{ pick: "hero", player: "p2" }] });
+
+      s.expectInZone(sheeople, "graveyard");
+      s.expectHealth("p2", 19);
       expect(drawsBy(s.events, "p1")).toBe(2);
     });
 

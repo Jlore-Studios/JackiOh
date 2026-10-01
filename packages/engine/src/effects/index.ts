@@ -320,3 +320,7 @@ export { afterStateCheck } from "./afterCheck";
 // R60's random picks of existing cards: a random Unit of yours buffed, N random graveyard cards to
 // your hand (C #90 In Too Deep's rewards E and C).
 export { buffRandomUnit, returnRandomFromGraveyard } from "./randomPicks";
+
+// "Draw until …": one draw at a time while a condition holds, stopping at a draw that adds no card
+// (C #46 Divine Favor, §2.4, R58).
+export { drawWhile } from "./drawWhile";

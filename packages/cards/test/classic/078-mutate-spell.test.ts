@@ -321,6 +321,9 @@ describe("C #78 Mutate Spell", () => {
 
       s.expectInZone(sheepish, "gone");
       expect(s.hand("p1").some((card) => card.id === pawn.id && card.defId !== PAWN)).toBe(true);
+      // §10.8 the hand card it went onto is never named to the opponent.
+      expect(JSON.stringify(s.view("p2"))).not.toContain(PAWN);
+      expect(JSON.stringify(s.view("p2"))).not.toContain("My Pawn");
     });
 
     it("with no card of its type, it is exiled with no prompt", () => {

@@ -32,13 +32,13 @@ import { settleCarried } from "./carriers";
 import { endGame } from "./gameOver";
 import { unitView } from "./layers";
 import { endOrphanedModifiers, installLastingModifiers } from "./modifiers";
+import { permanentsOnField } from "./plague";
 import { SELF_KEY, runResumableList, type ResumePlan } from "./prompts";
 import type { EngineSink } from "./resolve";
 import { makeContext } from "./resolve";
 import { wouldDieWindow } from "./replacements";
 import { scriptOf } from "./scripts";
 import { noticeQuests } from "./subsystems/quests";
-import { tributesDue } from "./selfTribute";
 import { findInstance, type CardInstance, type Resume, type WorkItem } from "./state";
 import { PAUSE_KEY, owe, pausedOf, registerWorkHandler, type PausedStep } from "./work";
 import {
@@ -607,8 +607,12 @@ export function stateCheck(sink: EngineSink): void {
     resolveIndestructibleMarks(sink);
     endOrphanedModifiers(sink);
     installLastingModifiers(sink);
-    // R403: a card whose "When …, Tribute this" holds now is sacrificed before anything is collected.
-    const tributes = tributesDue(sink.state);
+    // R403: a permanent whose "When …, Tribute this" (`Script.tributeWhen`) holds now — face-down ones
+    // included — is sacrificed before anything is collected; a Vanilla one has no text (`scriptOf`).
+    const state = sink.state;
+    const tributes = permanentsOnField(state).filter(
+      (card) => scriptOf(card).tributeWhen?.({ state, self: card, radiant: card.radiant }) === true,
+    );
     if (tributes.length > 0) {
       sacrificeTogether(sink, tributes);
       if (sink.state.result !== null || sink.state.pending !== null) return;

@@ -4,9 +4,8 @@
 // (R46); a card's tokens are gone once it leaves (R78); radiant: only at the start of your opponent's
 // turn, and only their permanents; no tuned numbers".
 //
-// The opponent's turn is answered on `turnStarted`, which the engine dispatches ahead of R62's
-// start-of-turn trigger point; its own turn is its `startOfTurn` hook, queued at that point in R68's
-// order (the script's header says why).
+// Both halves are start-of-turn hooks queued at R62's start-of-turn trigger point in R68's order: its own
+// turn's `startOfTurn`, and the opponent's turn's `startOfOpponentTurn`, after the turn player's hooks.
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -17,6 +16,8 @@ const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
 const ROCK = "core-066"; // (4) Unit 10/10 Indestructible, Tribute 1.
 const FAUCI = "core-091"; // (2) Unit 1/6 Rush; Start of turn: +1 mana per Plague Token.
+const FIENDER = "core-092"; // (2) Unit 5/7 Stack.
+const REBORN = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.
 const MANA_WELL = "core-006"; // (3) Field Spell.
 const FLOOD = "core-017"; // (4) Spell: Bounce all Units.
@@ -54,9 +55,9 @@ describe("C #62 Living Bomb", () => {
     expect(def.id).toBe(BOMB);
     expect(def.params).toBeUndefined();
     expect(base.startOfTurn).toBeTypeOf("function");
-    expect(base.triggers?.map((trigger) => trigger.on)).toEqual([["turnStarted"]]);
+    expect(base.startOfOpponentTurn).toBeTypeOf("function");
     expect(radiant.startOfTurn).toBeUndefined();
-    expect(radiant.triggers).toEqual(base.triggers);
+    expect(radiant.startOfOpponentTurn).toBe(base.startOfOpponentTurn);
   });
 
   describe("base", () => {
@@ -163,6 +164,52 @@ describe("C #62 Living Bomb", () => {
       expect(s.state.active).toBe("p1");
       s.expectMana("p1", 4 + 2);
       s.expectInZone(fauci, "graveyard");
+    });
+
+    it("R68 on the opponent's turn it comes after their own start-of-turn triggers: their plagued Fed Fauci gains its mana, then dies", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], backrow: [BOMB], library: lib(2) },
+        p2: { hand: [FILLER], field: [{ def: FAUCI, counters: { plague: 2 } }], library: lib(2) },
+      });
+      const fauci = s.card(FAUCI);
+
+      s.endTurn();
+
+      expect(s.state.active).toBe("p2");
+      s.expectMana("p2", 4 + 2);
+      s.expectInZone(fauci, "graveyard");
+    });
+
+    it("§3.2 R13 a card dormant under a Stack pile is not on the field: the plagued top goes, the plagued card beneath resumes", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], backrow: [BOMB], library: lib(2) },
+        p2: { hand: [FILLER], field: [{ def: VANILLA, counters: { plague: 1 } }, { def: FIENDER, stack: true, counters: { plague: 1 } }], library: lib(2) },
+      });
+      const top = s.card(FIENDER);
+      const beneath = s.card(VANILLA);
+
+      s.endTurn();
+
+      expect(destroyedIds(s)).toEqual([top.id]);
+      expect(s.unit("p2", 1)?.id).toBe(beneath.id);
+      expect(s.card(beneath).counters.plague).toBe(1);
+    });
+
+    it("§6.1 R78 a plagued Reborn unit comes back without its token, and the next turn start leaves it", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], backrow: [BOMB], library: lib(3) },
+        p2: { hand: [FILLER], field: [{ def: REBORN, counters: { plague: 1 } }], library: lib(3) },
+      });
+      const unit = s.card(REBORN);
+
+      s.endTurn();
+
+      expect(destroyedIds(s)).toEqual([unit.id]);
+      expect(s.unit("p2", 1)?.defId).toBe(REBORN);
+      expect(s.unit("p2", 1)?.counters.plague).toBeUndefined();
+      s.endTurn();
+      s.endTurn();
+      expect(destroyedIds(s)).toEqual([unit.id]);
     });
 
     it("with no plagued permanent it destroys nothing", () => {

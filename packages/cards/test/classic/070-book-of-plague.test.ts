@@ -19,6 +19,7 @@ const SLIME = "classic-027"; // (0) Unit: Plague Tokens placed on this are doubl
 const PALANTIR = "classic-004"; // (1) Field Spell: when your opponent plays a Book, you may Tribute this to steal it.
 const VANILLA = "core-008"; // (1) Unit 4/4.
 const MENACE = "core-019"; // (3) Unit 9/9 Taunt.
+const FIENDER = "core-092"; // (2) Unit 5/7 Stack.
 const PAWN = "core-096"; // (1) Trap: answers only an attack that would be lethal.
 const MANA_WELL = "core-006"; // (3) Field Spell.
 const ANCHOR = "core-010"; // (0) Spell (§2.5).
@@ -96,6 +97,13 @@ describe("C #70 Book of Plague", () => {
       placeAll(s, s.card(MENACE), 5);
 
       expect(s.card(MENACE).counters.plague).toBe(5);
+    });
+
+    it("§3.2 R13 a card dormant under a Stack pile is no option; the top of the pile is", () => {
+      const s = scenario({ p1: { hand: [BOOK, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA, { def: FIENDER, stack: true }] } });
+      s.play(BOOK);
+
+      expect(optionIds(s)).toEqual([s.card(FIENDER).id]);
     });
 
     it("with no permanent on the field it places nothing, asks nothing, and still resolves", () => {

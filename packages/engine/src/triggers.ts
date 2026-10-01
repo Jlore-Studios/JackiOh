@@ -104,6 +104,7 @@ export const TRIGGER_HOOKS = [
   "death",
   "startOfGame",
   "startOfTurn",
+  "startOfOpponentTurn",
   "endOfTurn",
   "activate",
   "onPlayHook",

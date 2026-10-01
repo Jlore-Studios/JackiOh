@@ -794,10 +794,6 @@ function fusedConditionMet(scripts: readonly Script[]): Script["conditionMet"] |
   return (ctx) => hooks.some((hook) => hook(ctx) === true);
 }
 
-/**
- * One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
- * whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
- */
 /** R403, R102: a fusion carries every ingredient's "When …, Tribute this", so any one that holds takes it. */
 function fusedTributeWhen(scripts: readonly Script[]): Script["tributeWhen"] | undefined {
   const hooks = scripts.flatMap((script) => (script.tributeWhen === undefined ? [] : [script.tributeWhen]));
@@ -805,6 +801,10 @@ function fusedTributeWhen(scripts: readonly Script[]): Script["tributeWhen"] | u
   return (args) => hooks.some((hook) => hook(args));
 }
 
+/**
+ * One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
+ * whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
+ */
 function fusedScript(specs: readonly FusedIngredient[], radiant: boolean): Script {
   const faces: Face[] = specs.map((spec) => {
     const pair = scriptsFor(spec.defId);
