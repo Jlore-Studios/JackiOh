@@ -7,7 +7,7 @@ import type { GameEvent, ModifierView, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { realGame } from "../audio/test/realGame.ts";
+import { castOnDrawViews } from "../audio/test/realGame.ts";
 import Board from "../game/Board.tsx";
 import { createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { baseView, emptySide, fullBoardView } from "../test/fixtures.ts";
@@ -54,15 +54,12 @@ describe("R502 the rider as the view states it", () => {
       "core-021", "core-027", "core-030", "core-032", "core-033", "core-034", "core-035", "core-036", "core-037", "core-038",
       "core-040", "core-042", "core-043", "core-044", "core-045", "core-046", "core-047", "core-048", "core-051", "core-052",
     ];
-    for (let seed = 0; seed < 400; seed += 1) {
-      const game = realGame(`r502-${String(seed)}`, [deckA, deckB]);
-      const mine = game.view("p1");
-      if (!mine.you.modifiers.some((modifier) => modifier.id === "nextTurnMana")) continue;
-      expect(nextRefreshRider(mine.you)).toBe(-1);
-      expect(nextRefreshRider(game.view("p2").opponent)).toBe(-1);
-      return;
-    }
-    throw new Error("no seed lowered p1's next refresh in its opening turns");
+    const seats = castOnDrawViews("r502", [deckA, deckB], "core-021", ({ p1 }) =>
+      p1.you.modifiers.some((modifier) => modifier.id === "nextTurnMana"),
+    );
+    if (seats === null) throw new Error("no seed lowered p1's next refresh in its opening turns");
+    expect(nextRefreshRider(seats.p1.you)).toBe(-1);
+    expect(nextRefreshRider(seats.p2.opponent)).toBe(-1);
   });
 
   it("R502 the crystals lost are the last ones the tray draws, never more than it draws, and none for a rider that raises or is absent", () => {

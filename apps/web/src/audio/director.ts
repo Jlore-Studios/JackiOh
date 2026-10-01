@@ -61,13 +61,19 @@ function findUnit(view: PlayerView | null, instanceId: string): UnitView | null 
   return null;
 }
 
-/** Events of the drawn card that may come between its `drawn` and its cast's `cardPlayed` (R506). */
-function keepsDrawnCard(event: GameEvent, instanceId: string): boolean {
+/**
+ * Events that may come between a card's `drawn` and its cast's `cardPlayed` (R506): the card's own
+ * announce, Radiance or cost, and the prompts its cast asks the drawer (#21 Hinder's discard).
+ */
+function keepsDrawnCard(event: GameEvent, drawn: { instanceId: string; player: PlayerId }): boolean {
   switch (event.type) {
     case "cardAnnounced":
     case "radiantSet":
     case "costChanged":
-      return event.instanceId === instanceId;
+      return event.instanceId === drawn.instanceId || drawn.instanceId === HIDDEN_DEF_ID;
+    case "promptOpened":
+    case "promptAnswered":
+      return event.player === drawn.player;
     default:
       return false;
   }
@@ -98,7 +104,11 @@ export function createSoundDirector(
   const played = new Set<string>();
   /** R506: the plays in progress, innermost last. */
   let plays: PlayFrame[] = [];
-  /** R506: the readable card the last event drew, while nothing else has happened since. */
+  /**
+   * R506: the card the last event drew, while nothing else has happened since. A draw behind the
+   * sentinel counts too: what it drew is named only by its own public cast, as the effects layer
+   * reads it (fx/castOnDraw.ts), and the sting it gets names nothing (R203).
+   */
   let drawnLast: { instanceId: string; player: PlayerId } | null = null;
 
   function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
@@ -117,7 +127,8 @@ export function createSoundDirector(
   /** R506: a `cardPlayed` of the card a readable `drawn` has just drawn, by the same player. */
   function castAsDrawn(event: GameEvent): string | null {
     if (event.type !== "cardPlayed" || drawnLast === null) return null;
-    return event.instanceId === drawnLast.instanceId && event.player === drawnLast.player ? event.instanceId : null;
+    const same = event.instanceId === drawnLast.instanceId || drawnLast.instanceId === HIDDEN_DEF_ID;
+    return same && event.player === drawnLast.player ? event.instanceId : null;
   }
 
   /** R506: the plays in progress and the card just drawn, moved on past `event`. */
@@ -128,7 +139,7 @@ export function createSoundDirector(
         drawnLast = null;
         return;
       case "drawn":
-        drawnLast = event.instanceId === HIDDEN_DEF_ID ? null : { instanceId: event.instanceId, player: event.player };
+        drawnLast = { instanceId: event.instanceId, player: event.player };
         return;
       case "cardPlayed":
         drawnLast = null;
@@ -145,7 +156,7 @@ export function createSoundDirector(
         return;
       }
       default:
-        if (drawnLast !== null && !keepsDrawnCard(event, drawnLast.instanceId)) drawnLast = null;
+        if (drawnLast !== null && !keepsDrawnCard(event, drawnLast)) drawnLast = null;
     }
   }
 

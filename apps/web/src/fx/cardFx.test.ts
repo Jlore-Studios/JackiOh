@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
-import { realGame } from "../audio/test/realGame.ts";
+import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CARD_FX, CARD_RECIPES } from "./cardFx.ts";
 import {
   FX_BLOOD_FLIGHT_FRACTION,
@@ -285,14 +285,9 @@ type Seats = { p1: PlayerView; p2: PlayerView };
  * `settled` wants them (the rider still standing, the Radiant pick made).
  */
 function castOnDrawGame(defId: string, settled: (seats: Seats) => boolean): Seats {
-  for (let seed = 0; seed < 400; seed += 1) {
-    const game = realGame(`r502-${String(seed)}`, [DECK_A, DECK_B]);
-    const p1 = game.view("p1");
-    const at = p1.events.findIndex((event) => event.type === "cardPlayed" && event.defId === defId && event.player === "p2");
-    const seats = { p1, p2: game.view("p2") };
-    if (at > 0 && p1.events[at - 1]?.type === "drawn" && settled(seats)) return seats;
-  }
-  throw new Error(`no seed casts ${defId} on draw in its opening turns`);
+  const seats = castOnDrawViews("r502", [DECK_A, DECK_B], defId, settled);
+  if (seats === null) throw new Error(`no seed casts ${defId} on draw in its opening turns`);
+  return seats;
 }
 
 /** Plans a whole window, each event against the view (the board both seats show then). */

@@ -3,7 +3,8 @@
 // SPEC §2.4 and R58: a card with "Cast on draw" (#21 Hinder, #27 Blood Ridden Glowy Jelly Bean, and
 // anything a Classic+ card gives the keyword) is cast the moment it is drawn, and never enters the
 // hand. The engine says so only by the order of its events: `drawn` for the card, then (after any
-// `cardAnnounced` of the same card, B5 E1) its `cardPlayed`. Every other draw is followed by the
+// `cardAnnounced` of the same card, B5 E1, and the prompts its cast asks its caster, as #21 Hinder's
+// base face asks which card to discard) its `cardPlayed`. Every other draw is followed by the
 // card arriving somewhere, `addedToHand` or `burned`, so a `cardPlayed` right after its own `drawn` is
 // the one reliable signal, and it needs no card's definition to read.
 //
@@ -17,7 +18,6 @@
 import type { GameEvent } from "@jackioh/shared";
 
 import { HIDDEN_ID } from "../game/animations.ts";
-
 
 function sameCard(a: string, b: string): boolean {
   return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
@@ -33,6 +33,8 @@ export function castOnDrawAt(events: readonly GameEvent[], at: number): boolean 
     const before = events[i];
     if (before === undefined) return false;
     if (before.type === "cardAnnounced" && before.player === played.player && same(before.instanceId)) continue;
+    // The cast's own choices, asked of its caster before it is announced (#21's discard).
+    if ((before.type === "promptOpened" || before.type === "promptAnswered") && before.player === played.player) continue;
     return before.type === "drawn" && before.player === played.player && same(before.instanceId);
   }
   return false;

@@ -582,8 +582,15 @@ describe("E36 a card's lines of code in the inspect overlays", () => {
 
   it("E36 a card nobody counted has no line", () => {
     vi.useFakeTimers();
-    expect(def("classic-012").loc).toBeUndefined();
-    renderBoard(handView({ defId: "classic-012", cost: 1 }));
+    // A match-made definition the engine wrote no count on.
+    const uncounted = { ...fusedDef([def("core-004"), def("core-019")], 4) };
+    delete uncounted.loc;
+    renderBoard(
+      baseView({
+        you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: uncounted.id, cost: 4, attack: 2, health: 2 })] }),
+        defs: { [uncounted.id]: uncounted },
+      }),
+    );
     expect(within(hover(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
   });
 });
