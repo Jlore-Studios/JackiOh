@@ -3212,7 +3212,7 @@
         "min": 1
       }
     ],
-    "loc": 52,
+    "loc": 45,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and exile it."
@@ -3648,7 +3648,7 @@
         "min": 1
       }
     ],
-    "loc": 37,
+    "loc": 29,
     "base": {
       "attack": 2,
       "health": 1,
@@ -4392,7 +4392,7 @@
         "min": 1
       }
     ],
-    "loc": 32,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Summon Units from your graveyard that cost ({budget}) or less in total. Exile this."

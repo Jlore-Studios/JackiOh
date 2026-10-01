@@ -71,8 +71,27 @@ function zoneOf(state: GameState, card: CardInstance): string | undefined {
   return findInstance(state, card.id)?.zone.z;
 }
 
-/** Second Wind already standing, with a graveyard to play from (its Cry not run). */
+/**
+ * Second Wind standing, with a graveyard to play from. The Radiant face is set up standing (its Cry
+ * not run). The base face's "would go to your graveyard" replacement would exile any card a setup put
+ * in the graveyard once it stands, so there the graveyard comes the way the card makes it: Second Wind
+ * is played and its Cry discards the hand, which lands before the Aura starts (R393).
+ */
 function standing(radiantFace: boolean, graveyard: readonly string[], extra: { hand?: readonly string[]; field?: readonly string[]; mana?: number } = {}): Scenario {
+  const p2 = { hand: [STOCKPILE, HIT_JOB, COLLATERAL], field: [MENACE], library: [STOCKPILE, STOCKPILE] };
+  if (!radiantFace && graveyard.length > 0) {
+    const s = scenario({
+      p1: {
+        hand: [WIND, ...graveyard],
+        field: [...(extra.field ?? [])],
+        library: [VANILLA, VANILLA, VANILLA],
+        ...(extra.mana === undefined ? {} : { mana: extra.mana }),
+      },
+      p2,
+    });
+    s.play(WIND, { zone: 1 });
+    return s;
+  }
   return scenario({
     p1: {
       hand: [...(extra.hand ?? [STOCKPILE])],
@@ -82,7 +101,7 @@ function standing(radiantFace: boolean, graveyard: readonly string[], extra: { h
       library: [VANILLA, VANILLA, VANILLA],
       ...(extra.mana === undefined ? {} : { mana: extra.mana }),
     },
-    p2: { hand: [STOCKPILE, HIT_JOB, COLLATERAL], field: [MENACE], library: [STOCKPILE, STOCKPILE] },
+    p2,
   });
 }
 

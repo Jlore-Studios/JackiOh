@@ -236,10 +236,12 @@ describe("C #7 InfiniScepter", () => {
         [1, 2, 3].map((n) => ({ pick: "mode", option: String(n) })),
       );
       s.answer("3");
-      s.answer("mana");
+      s.answer("damage");
+      s.answer([{ pick: "hero", player: "p2" }]);
 
-      // Efficiency Dividend's mana mode gains floor(2X/2) = X = 3; the cast paid nothing for it.
-      s.expectMana("p1", 6);
+      // Efficiency Dividend's damage mode deals X = 3, and the cast paid nothing for its X.
+      s.expectHealth("p2", 27);
+      s.expectMana("p1", 3);
     });
   });
 

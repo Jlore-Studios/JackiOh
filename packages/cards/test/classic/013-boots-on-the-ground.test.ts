@@ -122,7 +122,8 @@ describe("C #13 Boots on the Ground", () => {
 
       s.attack(BOOTS, MENACE);
       expect(drawsBy(s, "p1")).toBe(1);
-      s.attack(VANILLA, "hero");
+      s.expectInZone(BOOTS, "graveyard");
+      s.attack(VANILLA, MENACE);
 
       expect(drawsBy(s, "p1")).toBe(1);
     });
