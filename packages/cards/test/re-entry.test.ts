@@ -541,7 +541,6 @@ describe("R174: a later part of one Cry meets the stay the play chose", () => {
   });
 });
 
-const CRAFT_A_CARD = "core-099";
 const SCARAB = "core-007";
 const RENO = "core-053";
 
@@ -553,9 +552,9 @@ function must<T>(value: T | null | undefined, what: string): T {
 describe("R174: a later part of one effect list meets the stay the play chose, across a prompt too", () => {
   it("R174 a crafted Cube + Scarab + Sorcerer that eats a Reborn unit does not hit its Reborn body after the Discover (R113, R83, R102)", () => {
     const g = scenario({
-      seed: "r6craft-1057", // radiant Craft a Card's Discovers offer Cube, then Scarab, then Sorcerer
+      seed: "r6craft-1057",
       p1: {
-        hand: [{ def: CRAFT_A_CARD, radiant: true }, STOCKPILE],
+        hand: [STOCKPILE],
         mana: 4,
         field: [{ def: TIMMY, lane: 1 }],
       },
@@ -563,11 +562,10 @@ describe("R174: a later part of one effect list meets the stay the play chose, a
     });
     // Granted Reborn (Plastic Surgery's pool, R21): no shield or Armor hides whether a hit lands.
     must(g.unit("p1", 1), "Tempo Timmy").grantedKeywords = [{ kind: "Reborn" }];
-    g.play(CRAFT_A_CARD);
-    g.answer(CUBE);
-    g.answer(SCARAB);
-    g.answer(SORCERER);
-    const card = must(g.hand("p1").find((held) => held.defId.startsWith("t-")), "the crafted card");
+    // Radiant Craft a Card's three-ingredient card, made as the card makes it (R77): its Discovers
+    // draw from every set's Units since patch v0.2.0 (R380), so the test builds the card directly
+    // rather than hunting a seed that offers these three.
+    const card = craft(g, "p1", [CUBE, SCARAB, SORCERER]);
     const saintess = must(g.unit("p1", 1), "the Reborn Timmy");
     const at = { pick: "instance" as const, instanceId: saintess.id };
 

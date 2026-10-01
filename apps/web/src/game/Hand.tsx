@@ -16,6 +16,16 @@
 // drag source any more; drag to play is pointer events in game/drag/DragLayer.tsx, and the card a
 // drop has just played is marked `data-landing` (drag/landing.ts), which board.css takes out of
 // the fan while the board catches up with the play.
+//
+// R504: an empty hand keeps its place. Either seat's hand with no cards holds one card-sized
+// outline (`hand-empty-<side>`, "Hand empty") and says `data-empty="true"`, so its row keeps the
+// height a card gives it on every layout and the board does not jump when the last card leaves.
+//
+// R434: the game's end reveals both hands. Once the view shows the opponent's hand as cards (a
+// finished game, `reveal.ts`), each back turns face up where it lay, one after another
+// (`data-revealed="true"`; board.css flips it, and under reduced motion it is simply face up). A
+// revealed card is read, never played: it has its own testid (`revealed-hand-card-<id>`), no click
+// and no drag, and a resting mouse or a long-press opens it as any face does.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -24,6 +34,7 @@ import type { CardView } from "@jackioh/shared";
 import Card, { isSelected } from "./Card.tsx";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 import { useLanding } from "./drag/landing.ts";
+import { revealTestid } from "./reveal.ts";
 import { useSetting } from "../settings/index.ts";
 
 export type HandProps = {
@@ -40,10 +51,51 @@ export function handCount(hand: CardView[] | { count: number }): number {
   return Array.isArray(hand) ? hand.length : hand.count;
 }
 
+/** R504: what an empty hand's outline says. */
+export const HAND_EMPTY_TEXT = "Hand empty";
+
+/** R504: the testid of a seat's empty-hand outline. */
+export function handEmptyTestid(side: Side): string {
+  return `hand-empty-${side}`;
+}
+
+/**
+ * R504: the outline an empty hand holds in place of its cards: one card's size (board.css, per
+ * layout), dashed, with the words for a reader.
+ */
+function EmptyHand({ side }: { side: Side }): ReactElement {
+  return (
+    <div className="hand-empty" data-testid={handEmptyTestid(side)}>
+      <span className="hand-empty-text">{HAND_EMPTY_TEXT}</span>
+    </div>
+  );
+}
+
+/**
+ * R434: one of the opponent's cards at the game's end, a back turning over to its face. Both are
+ * drawn; board.css shows the back first and flips to the face, and a reduced motion shows the face.
+ */
+function RevealedSlot({ card, index }: { card: CardView; index: number }): ReactElement {
+  return (
+    <div className="hand-slot hand-slot--revealed" style={{ "--i": index } as CSSProperties}>
+      <div className="hand-flip">
+        <div className="hand-flip-back" aria-hidden="true">
+          <Card card={null} className="card-hand" />
+        </div>
+        <div className="hand-flip-face">
+          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Hand(props: HandProps): ReactElement {
   const { hand, side } = props;
   const count = handCount(hand);
   const yours = side === "you";
+  // R434: the opponent's hand is cards only once the game is over; it is read, never played.
+  const revealed = !yours && Array.isArray(hand);
   const hoverPreviews = useSetting("hoverPreviews");
   const landing = useLanding();
 
@@ -76,6 +128,42 @@ export default function Hand(props: HandProps): ReactElement {
     setTapped((current) => (current === instanceId ? null : instanceId));
   }
 
+  let cards: ReactNode;
+  if (!Array.isArray(hand)) {
+    cards = Array.from({ length: hand.count }, (_unused, index) => (
+      <div key={`back-${index}`} className="hand-slot" style={{ "--i": index } as CSSProperties}>
+        <Card card={null} className="card-hand" />
+      </div>
+    ));
+  } else if (revealed) {
+    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} />);
+  } else {
+    cards = hand.map((card, index) => {
+      const handTestid = testid.handCard(card.instanceId);
+      const lifted = yours && ((tappedInHand && tapped === card.instanceId) || isSelected(props.highlight, handTestid));
+      return (
+        <div
+          key={card.instanceId}
+          className="hand-slot"
+          style={{ "--i": index } as CSSProperties}
+          data-lifted={lifted ? "true" : undefined}
+          data-landing={yours && landing === card.instanceId ? "true" : undefined}
+          onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
+        >
+          <Card
+            testId={handTestid}
+            card={card}
+            className="card-hand"
+            target={{ on: "hand", instanceId: card.instanceId }}
+            highlight={props.highlight}
+            animating={props.animating}
+            onClick={props.onClick}
+          />
+        </div>
+      );
+    });
+  }
+
   return (
     <div
       ref={rootRef}
@@ -83,6 +171,8 @@ export default function Hand(props: HandProps): ReactElement {
       data-testid={`hand-${side}`}
       data-side={side}
       data-count={count}
+      data-empty={count === 0 ? "true" : undefined}
+      data-revealed={revealed && count > 0 ? "true" : undefined}
       data-hover-preview={yours ? (hoverPreviews ? "on" : "off") : undefined}
       aria-label={`${side} hand`}
     >
@@ -93,37 +183,8 @@ export default function Hand(props: HandProps): ReactElement {
         </span>
       </span>
       <div className="hand-cards" style={{ "--n": count } as CSSProperties}>
-        {Array.isArray(hand)
-          ? hand.map((card, index) => {
-              const handTestid = testid.handCard(card.instanceId);
-              const lifted =
-                yours && ((tappedInHand && tapped === card.instanceId) || isSelected(props.highlight, handTestid));
-              return (
-                <div
-                  key={card.instanceId}
-                  className="hand-slot"
-                  style={{ "--i": index } as CSSProperties}
-                  data-lifted={lifted ? "true" : undefined}
-                  data-landing={yours && landing === card.instanceId ? "true" : undefined}
-                  onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
-                >
-                  <Card
-                    testId={handTestid}
-                    card={card}
-                    className="card-hand"
-                    target={{ on: "hand", instanceId: card.instanceId }}
-                    highlight={props.highlight}
-                    animating={props.animating}
-                    onClick={props.onClick}
-                  />
-                </div>
-              );
-            })
-          : Array.from({ length: hand.count }, (_unused, index) => (
-              <div key={`back-${index}`} className="hand-slot" style={{ "--i": index } as CSSProperties}>
-                <Card card={null} className="card-hand" />
-              </div>
-            ))}
+        {count === 0 ? <EmptyHand side={side} /> : null}
+        {cards}
       </div>
       {props.notice}
     </div>

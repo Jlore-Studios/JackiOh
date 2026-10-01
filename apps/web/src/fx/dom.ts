@@ -1,6 +1,7 @@
 // DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
 //
-// The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result) to
+// The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, and R502's
+// fracture, R437's brand and R436's chaos reveal) to
 // `mountDomEffect` at the moment the cue fires, with the anchor boxes it measured then. This module
 // appends exactly one element per cue and writes only data: its kind, its tone, its text as an
 // attribute, and its geometry and timing as `--fx-*` custom properties. Everything visual lives in
@@ -17,7 +18,7 @@
 //
 // Nothing here reads a card identity: a ghost is a card BACK only (R202).
 
-import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxTint } from "./types.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
 export type DomEffect = { readonly el: HTMLElement; remove(): void };
@@ -46,6 +47,41 @@ function cover(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-y", px(box.y));
   el.style.setProperty("--fx-w", px(box.width));
   el.style.setProperty("--fx-h", px(box.height));
+}
+
+/** R437: the brand's colours, as `--fx-mark-*` custom properties fx.css paints with. */
+function tint(el: HTMLElement, colours: FxTint): void {
+  el.style.setProperty("--fx-mark-rim", colours.rim);
+  el.style.setProperty("--fx-mark-core", colours.core);
+  el.style.setProperty("--fx-mark-glow", colours.glow);
+}
+
+/**
+ * R436: the reveal's lines. Each is a window one name tall over a reel of names that spins up to
+ * the one rolled (the reel's last), landing at its own `--fx-land-ms`. Every name rides in
+ * `data-text`, as every other effect's words do, so no text node is made.
+ */
+function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
+  el.style.setProperty("--fx-lines", String(lines.length));
+  lines.forEach((line, index) => {
+    const row = doc.createElement("div");
+    row.className = "fx-chaos-line";
+    row.setAttribute("data-landed-text", line.text);
+    row.style.setProperty("--fx-line", String(index));
+    row.style.setProperty("--fx-land-ms", `${Math.max(0, line.landMs)}ms`);
+    row.style.setProperty("--fx-steps", String(Math.max(0, line.reel.length - 1)));
+    const reel = doc.createElement("div");
+    reel.className = "fx-chaos-reel";
+    line.reel.forEach((name, at) => {
+      const cell = doc.createElement("span");
+      cell.className = "fx-chaos-cell";
+      cell.setAttribute("data-text", name);
+      if (at === line.reel.length - 1) cell.setAttribute("data-landed", "true");
+      reel.appendChild(cell);
+    });
+    row.appendChild(reel);
+    el.appendChild(row);
+  });
 }
 
 /** The splat's signed amount: ASCII hyphen-minus for damage and loss, plus for heal (S10). */
@@ -107,6 +143,24 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "result": {
       el.setAttribute("data-outcome", cue.outcome);
       el.setAttribute("data-text", cue.text);
+      break;
+    }
+    case "fracture": {
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
+      break;
+    }
+    case "brand": {
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCentre(el, at);
+      tint(el, cue.tint);
+      break;
+    }
+    case "chaos": {
+      el.setAttribute("data-text", cue.title);
+      chaosLines(doc, el, cue.lines);
       break;
     }
   }

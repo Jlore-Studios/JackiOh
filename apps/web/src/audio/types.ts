@@ -5,17 +5,26 @@ export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
   | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
-  | "cancel" | "entrance" | "fatigue" | "refuse";
+  | "cancel" | "entrance" | "fatigue" | "refuse"
+  // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
+  | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
  * card art's theme order): the summon thud gains the family's accent and the spell shimmer its
  * chimes. Absent: the plain recipe, which is all a card the viewer cannot name ever gets (R203).
+ * Patch v0.2.0 adds the Book, Pancake and AI tags' families.
  */
-export type SfxTimbre = "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field";
+export type SfxTimbre =
+  | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field"
+  | "book" | "pancake" | "ai";
 
 export type SfxParams = {
-  /** damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP]. */
+  /**
+   * damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP].
+   * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
+   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
+   */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */
   mine?: boolean;
@@ -28,6 +37,8 @@ export type SfxParams = {
    * like a doorbell rather than the routine two blips, inside the same durationMs.
    */
   urgent?: boolean;
+  /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
+  release?: boolean;
 };
 
 export type VoiceLineKind = "play" | "death" | "cast";

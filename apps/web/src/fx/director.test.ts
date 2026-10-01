@@ -223,6 +223,7 @@ function fakeMeasure(clock: { now: () => number }) {
     calls.push({ anchor, at: clock.now() });
     if (anchor.kind === "testid") return boxes.get(anchor.testid) ?? null;
     if (anchor.kind === "viewport") return { x: 1280 * anchor.at.x, y: 720 * anchor.at.y, width: 0, height: 0 };
+    if (anchor.kind === "handCard") return { x: 400 + anchor.pick * 30, y: 640, width: 50, height: 70 };
     return { x: 40 + anchor.index * 20, y: 690, width: 16, height: 16 };
   };
   return { measure, boxes, calls };

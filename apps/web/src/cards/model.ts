@@ -28,6 +28,7 @@ import {
   type Keyword,
   type Rarity,
   type PreviewValue,
+  type PrintedRarity,
   type SetName,
   type Tag,
 } from "@jackioh/shared";
@@ -86,6 +87,12 @@ export type FaceModel = {
   type: CardType;
   tags: readonly Tag[];
   rarity: Rarity | null;
+  /**
+   * B2.5, R503: the rarity a token prints (`CardDef.printedRarity`), which its frame shows in place
+   * of Token's; null (or absent, on a face built by hand) for every other card. Display only:
+   * `rarity` stays "Token" for everything else.
+   */
+  printedRarity?: PrintedRarity | null;
   index: string | null;
   set: SetName | null;
   radiant: boolean;
@@ -141,6 +148,11 @@ export type InPlay = {
   power?: RolledPower;
   /** R280: what the card's formula comes to now (`CardView.preview`). */
   preview?: readonly PreviewValue[];
+  /**
+   * B3.4, R386: the card's declared numbers as they stand now (`CardView.params`), which fill its
+   * text's `{key}`s in place of the printed values.
+   */
+  params?: Readonly<Record<string, number>>;
 };
 export type FaceSource = {
   defId: string;
@@ -167,12 +179,15 @@ export function faceModel(source: FaceSource): FaceModel {
   const def = source.def;
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
   // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
-  // the card's type is its face's (§5.2).
-  const type: CardType = printed?.type ?? def?.type ?? source.type ?? UNKNOWN_TYPE;
+  // the card's type is its face's (§5.2); in play the view's word for it comes first.
+  const viewType = source.inPlay === undefined ? undefined : source.type;
+  const type: CardType = viewType ?? printed?.type ?? def?.type ?? source.type ?? UNKNOWN_TYPE;
   const inPlay = source.inPlay;
   const vanilla = inPlay?.vanilla === true;
   const printedText = textOf(def, source.radiant);
-  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, printedText, inPlay);
+  // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
+  const liveText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
+  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
   const keywords = source.live?.keywords ?? printed?.keywords ?? [];
   // The values belong to the printed words: a formula play does not print has no value to show.
   const printsItsText = text.full === printedText.full;
@@ -184,6 +199,7 @@ export function faceModel(source: FaceSource): FaceModel {
     type,
     tags: def?.tags ?? [],
     rarity: def?.rarity ?? null,
+    printedRarity: def?.printedRarity ?? null,
     index: def?.index ?? null,
     set: def?.set ?? null,
     radiant: source.radiant,
@@ -263,6 +279,14 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
     }
   }
   return printedText;
+}
+
+/**
+ * The rarity a face's frame is drawn in (R503): a token's printed rarity when it has one, else the
+ * card's own. Display only; nothing reads it as the card's rarity.
+ */
+export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
+  return face.printedRarity ?? face.rarity;
 }
 
 /**
@@ -359,13 +383,17 @@ function statsOf(
  * lines are marked line by line against the base lines of the same ingredients (radiantDiff.ts).
  */
 /**
- * A face's printed text, its `{key}` numbers filled in with the face's own printed values
- * (`fillParams`, B3.4 rule 5), so R277's diff compares each face as it prints.
+ * A face's text with its `{key}` numbers filled in (`fillParams`, B3.4 rule 5): the face's own printed
+ * values, or `values` for a card in play whose numbers have moved. R277's diff compares the Radiant
+ * face so filled with the base face as printed.
  */
-function textOf(def: CardDef | undefined, radiant: boolean): FaceText {
+function textOf(
+  def: CardDef | undefined,
+  radiant: boolean,
+  values?: Readonly<Record<string, number>>,
+): FaceText {
   if (def === undefined) return { full: "", marks: [] };
-  const base = fillParams(def, "base");
-  if (!radiant) return { full: base, marks: [] };
-  const full = fillParams(def, "radiant");
-  return { full, marks: radiantMarks(base, full) };
+  if (!radiant) return { full: fillParams(def, "base", values), marks: [] };
+  const full = fillParams(def, "radiant", values);
+  return { full, marks: radiantMarks(fillParams(def, "base"), full) };
 }

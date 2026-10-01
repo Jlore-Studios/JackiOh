@@ -7,6 +7,7 @@
 
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
+import type { MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -26,6 +27,8 @@ const ART_CACHE_MAX = 512;
 
 /** The accent glyph is quieter than the emblem. */
 const ACCENT_OPACITY = 0.8;
+/** An ink-drop mote (Book): its tail rises this many radii above its centre. */
+const DROP_TAIL = 2.2;
 
 /** One glyph from EMBLEMS, placed, turned and scaled into the box. */
 function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): string {
@@ -39,6 +42,22 @@ function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): s
     `<path d="${glyph.d}" fill="${placed.fill}" stroke="${placed.stroke}" stroke-width="${EMBLEM_STROKE_WIDTH}" ` +
     `stroke-linejoin="round" fill-rule="${glyph.rule}"/></g>`
   );
+}
+
+/** One mote: a round dot, an ink drop (Book) or a square pixel (AI). */
+function moteMarkup(mote: ArtSpec["motes"][number], shape: ArtSpec["moteShape"]): string {
+  const paint = `fill="${mote.fill}" opacity="${fmt(mote.opacity)}"`;
+  switch (shape) {
+    case "dot":
+      return `<circle cx="${fmt(mote.x)}" cy="${fmt(mote.y)}" r="${fmt(mote.r)}" ${paint}/>`;
+    case "pixel":
+      return `<rect x="${fmt(mote.x - mote.r)}" y="${fmt(mote.y - mote.r)}" width="${fmt(mote.r * 2)}" height="${fmt(mote.r * 2)}" ${paint}/>`;
+    case "drop":
+      return (
+        `<path d="M${fmt(mote.x)} ${fmt(mote.y - mote.r * DROP_TAIL)}L${fmt(mote.x + mote.r)} ${fmt(mote.y)}` +
+        `A${fmt(mote.r)} ${fmt(mote.r)} 0 1 1 ${fmt(mote.x - mote.r)} ${fmt(mote.y)}Z" ${paint}/>`
+      );
+  }
 }
 
 function rayPath(cx: number, cy: number, angle: number, width: number): string {
@@ -98,14 +117,13 @@ function artSvg(spec: ArtSpec): string {
     parts.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
   }
 
+  // R503: the motif's glyphs sit over the composition and under the emblem.
+  for (const placed of spec.motifGlyphs) parts.push(glyphMarkup(placed, placed.opacity));
+
   parts.push(glyphMarkup(emblem, 1));
   if (spec.accent !== null) parts.push(glyphMarkup(spec.accent, ACCENT_OPACITY));
 
-  for (const mote of spec.motes) {
-    parts.push(
-      `<circle cx="${fmt(mote.x)}" cy="${fmt(mote.y)}" r="${fmt(mote.r)}" fill="${mote.fill}" opacity="${fmt(mote.opacity)}"/>`,
-    );
-  }
+  for (const mote of spec.motes) parts.push(moteMarkup(mote, spec.moteShape));
 
   parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
@@ -122,16 +140,23 @@ export function artDataUri(spec: ArtSpec): string {
   return `${DATA_PREFIX}${encodeSvg(artSvg(spec))}`;
 }
 
-// The memo behind `CardArt`: keyed `${defId}|${radiant}|${composition}`, as the Surface fixes.
-// Transient `t-<n>` defs can be minted without bound, so the map is cleared rather than grown.
+// The memo behind `CardArt`: keyed `${defId}|${radiant}|${composition}`, as the Surface fixes, plus
+// the motif (R503), which a card's name fixes as its id fixes the rest. Transient `t-<n>` defs can
+// be minted without bound, so the map is cleared rather than grown.
 const proceduralCache = new Map<string, string>();
 
-export function proceduralArtUri(defId: string, theme: ArtThemeId, composition: Composition, radiant: boolean): string {
-  const key = `${defId}|${radiant}|${composition}`;
+export function proceduralArtUri(
+  defId: string,
+  theme: ArtThemeId,
+  composition: Composition,
+  radiant: boolean,
+  motif: MotifId | null = null,
+): string {
+  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = artDataUri(artSpec(defId, theme, composition, radiant));
+  const uri = artDataUri(artSpec(defId, theme, composition, radiant, motif));
   proceduralCache.set(key, uri);
   return uri;
 }

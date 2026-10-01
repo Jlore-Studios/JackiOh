@@ -432,8 +432,9 @@ function CardOption(props: {
   const testId = `prompt-option-${props.item.key}`;
   const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above" });
   const verdict = props.verdicts === true ? (props.pressed ? "keep" : "redraw") : undefined;
-  // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads.
-  const label = face === null ? (number === null ? undefined : `Number ${number}`) : `${name}, costs ${face.cost.text}`;
+  // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads, in
+  // R432's words ("costs (3)").
+  const label = face === null ? (number === null ? undefined : `Number ${number}`) : `${name}, costs (${face.cost.text})`;
   return (
     <>
       <button

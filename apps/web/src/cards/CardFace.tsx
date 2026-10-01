@@ -18,20 +18,26 @@
 // link as references (R279), and in play the values its formula comes to, "{7}" (R280) — all
 // drawn by RulesText. A printed Radiant unit's attack and health that the Radiant face raised are
 // marked too (`data-grew`).
+//
+// R503: every face with a set shows it as a small mark on the frame (`.cf-set[data-set]`, setMark.ts),
+// and a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem, crest and
+// foil rather than Token's, for display only. The art gets the card's name, which picks its motif.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType } from "@jackioh/shared";
+import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
-import { foilFor, type FaceModel } from "./model.ts";
+import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
+import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
+import "./setmark.css";
 
 export type CardFaceProps = { face: FaceModel; layout?: "full" | "compact"; className?: string };
 
@@ -61,9 +67,27 @@ function printedText(face: FaceModel): string {
   return gained === "" ? text : `${text} ${gained}`;
 }
 
-/** Hearthstone draws no gem on Free and Core cards; tokens and unknown cards get none here. */
-function hasRarityGem(face: FaceModel): boolean {
-  return face.rarity !== null && face.rarity !== "Token";
+/**
+ * Hearthstone draws no gem on Free and Core cards; tokens and unknown cards get none here, except a
+ * token that prints a rarity (R503), whose frame shows that rarity.
+ */
+function hasRarityGem(rarity: Rarity | null): boolean {
+  return rarity !== null && rarity !== "Token";
+}
+
+function crested(rarity: Rarity | null): boolean {
+  return rarity === "Legendary" || rarity === "Mythic";
+}
+
+/** R503: the set mark, on every face whose set is known; nothing is guessed for an unknown card. */
+function SetMarkBadge({ set }: { set: string | null }): ReactElement | null {
+  if (set === null) return null;
+  const mark = setMarkOf(set);
+  return (
+    <span className="cf-set" data-set={set} data-set-mark={mark.kind} role="img" aria-label={mark.label} title={mark.label}>
+      <img className="cf-set-glyph" src={mark.src} alt="" aria-hidden="true" draggable={false} />
+    </span>
+  );
 }
 
 /** Longer than two characters (Ceaseless Void's 100): cards.css steps the gem's number down. */
@@ -73,8 +97,9 @@ export function costDigits(text: string): string | undefined {
   return text.length >= LONG_COST_CHARS ? String(LONG_COST_CHARS) : undefined;
 }
 
+/** The board minion's crest (MinionFace), by the rarity its frame shows (a token's printed one, B2.5). */
 export function hasCrest(face: FaceModel): boolean {
-  return face.rarity === "Legendary" || face.rarity === "Mythic";
+  return crested(frameRarity(face));
 }
 
 export function CardFace({ face, layout = "full", className }: CardFaceProps): ReactElement {
@@ -92,16 +117,19 @@ export function CardFace({ face, layout = "full", className }: CardFaceProps): R
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX });
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
+  // R503: the frame's rarity, a token's printed one included.
+  const rarity = frameRarity(face);
 
   return (
     <span
       className={join("cf", `cf--${layout}`, className)}
       data-layout={layout}
       data-card-type={face.type}
-      data-rarity={face.rarity ?? undefined}
+      data-rarity={rarity ?? undefined}
+      data-printed-rarity={face.printedRarity ?? undefined}
       data-name-tier={names}
       data-text-tier={texts}
-      data-foil={foilFor(face, settings.animatedFoil)}
+      data-foil={foilFor({ ...face, rarity }, settings.animatedFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-in-play={face.inPlay ? "true" : undefined}
       data-vanilla={face.vanilla ? "true" : undefined}
@@ -113,25 +141,34 @@ export function CardFace({ face, layout = "full", className }: CardFaceProps): R
           {face.cost.alt !== null && <span className="cf-cost-alt">{face.cost.alt}</span>}
         </span>
 
-        {hasCrest(face) && (
+        {crested(rarity) && (
           <span className="cf-crest">
             <Icon name="crest" />
           </span>
         )}
 
         <span className="cf-art-frame">
-          <CardArt defId={face.defId} radiant={face.radiant} tags={face.tags} type={face.type} shape={ART_SHAPE[face.type]} />
+          <CardArt
+            defId={face.defId}
+            radiant={face.radiant}
+            tags={face.tags}
+            type={face.type}
+            name={face.name}
+            shape={ART_SHAPE[face.type]}
+          />
         </span>
 
         <span className="card-name" ref={nameRef}>
           {face.name}
         </span>
 
-        {hasRarityGem(face) && (
-          <span className="cf-gem" data-rarity={face.rarity ?? undefined}>
+        {hasRarityGem(rarity) && (
+          <span className="cf-gem" data-rarity={rarity ?? undefined}>
             <Icon name="gem" />
           </span>
         )}
+
+        <SetMarkBadge set={face.set} />
 
         <span className="card-type">{face.type}</span>
 

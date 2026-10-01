@@ -759,6 +759,11 @@ export function filterTagId(tag: string): string {
   return `db-filter-tag-${slugOf(tag)}`;
 }
 
+/** A set chip: `db-filter-set-core`, `db-filter-set-classic`, `db-filter-set-classic-plus`. */
+export function filterSetId(set: string): string {
+  return `db-filter-set-${slugOf(set.replace(/\+/g, " plus"))}`;
+}
+
 /** A14: a rarity chip (`db-filter-rarity-legendary`). */
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
@@ -797,7 +802,10 @@ export const DB_SIDEBAR = "db-sidebar";
 // `hand-card-`, so `cy.fieldCardByName` and `cy.handCardByName` never resolve to one of them.
 // ---------------------------------------------------------------------------------------------
 
-/** A15: the opponent's play, held up for about a second. `data-showcase="played|set|hidden"`; click-through. */
+/**
+ * A15: the opponent's play, held up for about a second, and a cast on draw on both seats (R502).
+ * `data-showcase="played|set|hidden|cast"`; click-through.
+ */
 export const SHOWCASE = "showcase";
 /** A15: its caption ("Opponent played", "Opponent set a card"). */
 export const SHOWCASE_CAPTION = "showcase-caption";
