@@ -10,8 +10,8 @@
 // A play's discards travel in the `play` action (`discards`), which the harness's `play` does not
 // send, so those plays go through `reduce` on the scenario's state. The prompt half uses a Radiant
 // C #57 Echo copying C #55 Book of Wildfire, whose Echo repeat asks a fresh target pick (R81). An
-// activation's declared target is the same targeting point (`targeting.ts`); no Activate card in this
-// branch declares a target, and the engine's B5 E5 tests prove it through a fixture.
+// activation's declared target is shown with C #78 Mutate Spell's Activate (a tokened permanent), sent
+// to `reduce` for the same reason, and a random pick with C #22 Mid Runner's random bounces.
 
 import { legalActions, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Action, ActionBody, GameEvent, PlayerId, Selection } from "@jackioh/shared";
@@ -28,6 +28,8 @@ const VANILLA = "core-008"; // (1) Unit 4/4
 const MENACE = "core-019"; // (3) Unit 9/9
 const FILLER = "core-005"; // (1) Spell
 const SPARE = "core-010"; // (0) Spell, a card to discard
+const MUTATE = "classic-078"; // Activate: remove a Plague Token from a permanent; an enemy one is exiled.
+const MID_RUNNER = "classic-022"; // Cry: with 4 or more mana as it was played, bounce 2 random enemy permanents.
 
 let nonce = 0;
 
@@ -164,6 +166,51 @@ describe("C #89 Paul Allen's Ghost", () => {
       const picks = s.state.pending?.options.map((option) => option.selection) ?? [];
       expect(picks).toContainEqual(at(s.card(MENACE)));
       expect(picks).not.toContainEqual(at(s.card(GHOST)));
+    });
+
+    it("B5 E5 an activation's declared target naming it carries the 2 discards too: C #78 Mutate Spell", () => {
+      const s = scenario({
+        p1: { hand: [SPARE, SPARE, SPARE], backrow: [MUTATE] },
+        p2: { hand: [FILLER], field: [{ def: GHOST, counters: { plague: 1 } }] },
+      });
+      const ghost = s.card(GHOST);
+      const mutate = s.card(MUTATE).id;
+      const offered = legalActions(s.state, "p1").filter(
+        (action): action is Extract<ActionBody, { type: "activate" }> => action.type === "activate" && action.instanceId === mutate,
+      );
+      expect(offered).toHaveLength(3);
+      expect(offered.every((action) => action.discards?.length === 2)).toBe(true);
+      const [a, b, c] = spares(s, "p1");
+      expect(send(s.state, "p1", { type: "activate", instanceId: mutate, targets: [at(ghost)] }).error).toBeDefined();
+      const result = send(s.state, "p1", { type: "activate", instanceId: mutate, targets: [at(ghost)], discards: [a ?? "", b ?? ""] });
+      expect(result.error).toBeUndefined();
+      expect(result.events.filter((event) => event.type === "discarded")).toHaveLength(2);
+      expect(result.state.players.p1.hand.map((card) => card.id)).toEqual([c]);
+      expect(result.state.players.p2.exile.map((card) => card.id)).toEqual([ghost.id]);
+    });
+
+    it("B5 E5 with fewer than 2 other cards an activation can't name it", () => {
+      const s = scenario({
+        p1: { hand: [SPARE], backrow: [MUTATE] },
+        p2: { hand: [FILLER], field: [{ def: GHOST, counters: { plague: 1 } }] },
+      });
+      const mutate = s.card(MUTATE).id;
+      const ghost = s.card(GHOST);
+      const named = legalActions(s.state, "p1").filter(
+        (action) => action.type === "activate" && action.instanceId === mutate && (action.targets ?? []).some((pick) => pick.pick === "instance" && pick.instanceId === ghost.id),
+      );
+      expect(named).toEqual([]);
+      const [a] = spares(s, "p1");
+      expect(send(s.state, "p1", { type: "activate", instanceId: mutate, targets: [at(ghost)], discards: [a ?? ""] }).error).toBeDefined();
+      expect(send(s.state, "p1", { type: "activate", instanceId: mutate, targets: [at(ghost)] }).error).toBeDefined();
+    });
+
+    it("R394 a random pick targets nothing: C #22 Mid Runner's random bounce returns it with no discard", () => {
+      const s = scenario({ p1: { hand: [MID_RUNNER, FILLER] }, p2: { field: [GHOST], hand: [FILLER] } });
+      s.play(MID_RUNNER, { zone: 1 });
+      s.expectInZone(GHOST, "hand");
+      expect(s.events.some((event) => event.type === "discarded")).toBe(false);
+      expect(s.state.pending).toBeNull();
     });
 
     it("R394 an attack is no targeting: it is attacked with no discard", () => {
