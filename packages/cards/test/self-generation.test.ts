@@ -23,6 +23,7 @@ const NAMES_ITS_OWN_POOL: Readonly<Record<string, string>> = {
   "core-087": "Pocket Chaos names itself: \"add a Pocket Chaos to your opponent's hand\" (rule 3)",
   "core-090": "CN-Viral Injection shuffles copies of itself (rule 4)",
   "core-095": "Call to Chaos casts a random Call to Chaos, a pool it names (R28, rule 3)",
+  "classicplus-004": "Juhan Biggest Bat makes the cards beneath it copies of this (rule 4)",
   "classicplus-046-1": "Felinor Flagbearer Prime fills the board with copies of this (rule 4)",
   "classicplus-073": "Call to Chaos (Classic+ Edition) names the Call to Chaos pool (R28, rule 3)",
 };

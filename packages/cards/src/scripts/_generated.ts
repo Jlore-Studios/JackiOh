@@ -169,6 +169,17 @@ import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-to
 import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
 import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
 import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_plus_001_doom_shroom from "./classic-plus/001-doom-shroom";
+import * as mclassic_plus_002_groom_shroom from "./classic-plus/002-groom-shroom";
+import * as mclassic_plus_003_second_amendment_snake from "./classic-plus/003-second-amendment-snake";
+import * as mclassic_plus_004_juhan_biggest_bat from "./classic-plus/004-juhan-biggest-bat";
+import * as mclassic_plus_005_guy_att from "./classic-plus/005-guy-att";
+import * as mclassic_plus_006_wrong_house_attacker from "./classic-plus/006-wrong-house-attacker";
+import * as mclassic_plus_007_the_house from "./classic-plus/007-the-house";
+import * as mclassic_plus_008_withering_storm from "./classic-plus/008-withering-storm";
+import * as mclassic_plus_009_silence from "./classic-plus/009-silence";
+import * as mclassic_plus_010_new_wraps from "./classic-plus/010-new-wraps";
+import * as mclassic_plus_011_anime_armor from "./classic-plus/011-anime-armor";
 import * as mclassic_plus_012_the_mother_pancake from "./classic-plus/012-the-mother-pancake";
 import * as mclassic_plus_012_1_devour from "./classic-plus/012-1-devour";
 import * as mclassic_plus_012_2_death_boil from "./classic-plus/012-2-death-boil";
@@ -355,6 +366,17 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_043_plague_nuke,
   mclassic_044_back_from_the_gy,
   mclassic_045_nature_titan,
+  mclassic_plus_001_doom_shroom,
+  mclassic_plus_002_groom_shroom,
+  mclassic_plus_003_second_amendment_snake,
+  mclassic_plus_004_juhan_biggest_bat,
+  mclassic_plus_005_guy_att,
+  mclassic_plus_006_wrong_house_attacker,
+  mclassic_plus_007_the_house,
+  mclassic_plus_008_withering_storm,
+  mclassic_plus_009_silence,
+  mclassic_plus_010_new_wraps,
+  mclassic_plus_011_anime_armor,
   mclassic_plus_012_the_mother_pancake,
   mclassic_plus_012_1_devour,
   mclassic_plus_012_2_death_boil,
