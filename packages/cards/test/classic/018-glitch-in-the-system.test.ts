@@ -142,6 +142,39 @@ describe("C #18 Glitch in the System", () => {
       s.expectInZone(MENACE, "hand");
     });
 
+    it("R65 a deck or field card at its own cost: under Toe Cracker a (2) Trap in the deck or set costs (2)", () => {
+      // The aura prices a play, which takes a card from the hand: the deck's Trap and the set one
+      // are read at their own (2), so a 0 leaves them and a 2 takes them.
+      const board = () =>
+        scenario({
+          p1: {
+            hand: [GLITCH, EXPERIMENT, STOCKPILE],
+            field: [TOE_CRACKER],
+            backrow: [{ def: EXPERIMENT, faceUp: false }],
+            library: [EXPERIMENT],
+          },
+          p2: { hand: [STOCKPILE] },
+        });
+      const zero = board();
+      const [inHand] = zero.hand("p1").filter((card) => card.defId === EXPERIMENT);
+      const set = zero.backrow("p1", 1);
+      const [inDeck] = zero.pile("p1", "library");
+      zero.play(GLITCH, { modes: ["0"] });
+      zero.expectInZone(inHand ?? "missing", "exile");
+      zero.expectInZone(set ?? "missing", "field");
+      zero.expectInZone(inDeck ?? "missing", "library");
+
+      const two = board();
+      const setTwo = two.backrow("p1", 1);
+      const [deckTwo] = two.pile("p1", "library");
+      const [handTwo] = two.hand("p1").filter((card) => card.defId === EXPERIMENT);
+      two.play(GLITCH, { modes: ["2"] });
+      two.expectInZone(setTwo ?? "missing", "exile");
+      two.expectInZone(deckTwo ?? "missing", "exile");
+      two.expectInZone(handTwo ?? "missing", "hand");
+      two.expectInZone(TOE_CRACKER, "exile");
+    });
+
     it("R65 a costMod counts wherever the card is: the Menace at (2) goes with a 2", () => {
       const s = scenario({
         p1: { hand: [GLITCH, { def: MENACE, costMod: -1 }, STOCKPILE] },

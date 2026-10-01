@@ -126,6 +126,26 @@ describe("C #44 Back from the GY", () => {
       s.expectInZone(timmy, "graveyard");
     });
 
+    it("only your own graveyard: the opponent's Units are neither offered nor summoned", () => {
+      const s = scenario({
+        p1: { hand: [BACK, FILLER], graveyard: [VANILLA] },
+        p2: { hand: [FILLER], graveyard: [MENACE, SEVEN] },
+      });
+      s.play(BACK);
+      const offered = open(s).options.map((option) =>
+        option.selection.pick === "instance" ? s.card(option.selection.instanceId).defId : "?",
+      );
+      expect(offered).toEqual([VANILLA]);
+
+      const r = scenario({
+        p1: { hand: [{ def: BACK, radiant: true }, FILLER], graveyard: [VANILLA] },
+        p2: { hand: [FILLER], graveyard: [MENACE, SEVEN] },
+      });
+      r.play(BACK);
+      expect([1, 2, 3, 4, 5].map((lane) => r.unit("p1", lane)?.defId ?? null)).toEqual([VANILLA, null, null, null, null]);
+      expect(r.pile("p2", "graveyard").map((card) => card.defId)).toEqual([MENACE, SEVEN]);
+    });
+
     it("no Unit in your graveyard: no prompt, nothing summoned", () => {
       const s = back(false, [FILLER]);
       s.play(BACK);

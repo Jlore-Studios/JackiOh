@@ -93,6 +93,19 @@ describe("C #6 Cloaked Toe Cracker", () => {
         if (event.type === "costChanged") expect(event.cost).toBe(-1);
       }
       expect(JSON.stringify(theirs)).not.toContain(EXPERIMENT);
+      // The change is real in your own view: the Trap reads (0) there.
+      const yourHand = s.view("p1").you.hand;
+      if (!Array.isArray(yourHand)) throw new Error("your own hand travels in full (§10.8)");
+      expect(yourHand.find((card) => card.defId === EXPERIMENT)?.cost).toBe(0);
+    });
+
+    it("R13 dormant under a Stack pile its Aura is off: your Traps cost their own price", () => {
+      const s = scenario({
+        p1: { hand: [EXPERIMENT, STOCKPILE], field: [CRACKER, { def: "core-092", stack: true }] },
+        p2: { hand: [STOCKPILE] },
+      });
+      expect(s.unit("p1", 1)?.defId).toBe("core-092");
+      expect(costOf(s, EXPERIMENT)).toBe(2);
     });
   });
 
@@ -183,6 +196,25 @@ describe("C #6 Cloaked Toe Cracker", () => {
       s.endTurn(); // Wardrum casts a copy of the Sheepish at the end of p1's turn
       const gains = s.events.filter((event) => event.type === "manaChanged" && event.player === "p1" && event.current === 6);
       expect(gains).toHaveLength(1);
+    });
+
+    it("R386 a Degrade of mana never goes below 1", () => {
+      const s = scenario({
+        p1: { hand: [EXPERIMENT, STOCKPILE], field: [{ def: CRACKER, radiant: true }] },
+        p2: { hand: [STOCKPILE] },
+      });
+      stepParam(s.card(CRACKER), "mana", -1);
+      s.play(EXPERIMENT, { zone: 1 });
+      s.expectMana("p1", 5);
+    });
+
+    it("R13 dormant under a Stack pile it gains nothing", () => {
+      const s = scenario({
+        p1: { hand: [SHEEPISH, STOCKPILE], field: [{ def: CRACKER, radiant: true }, { def: "core-092", stack: true }] },
+        p2: { hand: [STOCKPILE] },
+      });
+      s.play(SHEEPISH, { zone: 1 });
+      s.expectMana("p1", 3);
     });
 
     it("R386 an Upgrade of mana gains 2", () => {

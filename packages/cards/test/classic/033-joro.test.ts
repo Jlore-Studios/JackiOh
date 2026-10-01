@@ -82,6 +82,10 @@ describe("C #33 Joro", () => {
       expect(summonedAt).toBeGreaterThan(-1);
       expect(summonedAt).toBeLessThan(s.events.findIndex((event) => event.type === "damage"));
       expect(declaredAt).toBeGreaterThan(-1);
+      // The attack is announced (what the trap window answers) already moved to Joro.
+      const redirectedAt = s.events.findIndex((event) => event.type === "redirected");
+      expect(redirectedAt).toBeLessThan(declaredAt);
+      expect(s.events[declaredAt]).toMatchObject({ type: "attackDeclared", targetId: joro.id });
     });
 
     it("R64 the leftmost open zone", () => {
@@ -239,6 +243,8 @@ describe("C #33 Joro", () => {
       s.expectInZone(joro, "field");
       s.expectStats(joro, { attack: 1, health: 1, maxHealth: 1 });
       expect(s.stats(joro).keywords.map((keyword) => keyword.kind)).toContain("Indestructible");
+      // Summoned this turn: summoning sick.
+      expect(s.card(joro).summonedTurn).toBe(s.state.turn);
     });
 
     it("R347 no Taunt, even in Defense Position", () => {

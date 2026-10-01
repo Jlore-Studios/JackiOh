@@ -209,6 +209,19 @@ describe("C #28 Second Wind", () => {
       expect(s.pile("p1", "graveyard")).toEqual([]);
     });
 
+    it("E5 the replacement ends when it leaves the field: your destroyed Unit goes to your graveyard again", () => {
+      const s = standing(false, [], { field: [VANILLA] });
+      const vanilla = s.card(VANILLA);
+      s.endTurn();
+      s.play(COLLATERAL, { targets: [{ pick: "instance", instanceId: s.card(WIND).id }] });
+      s.expectInZone(WIND, "exile");
+      s.endTurn();
+      s.endTurn();
+      expect(s.state.active).toBe("p2");
+      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
+      s.expectInZone(vanilla, "graveyard");
+    });
+
     it("E5 the opponent's cards go to their graveyard as usual", () => {
       const s = standing(false, [], { field: [VANILLA] });
       s.endTurn();

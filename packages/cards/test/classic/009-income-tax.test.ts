@@ -127,15 +127,56 @@ describe("C #9 Income Tax", () => {
       expect(open(s).playerId).toBe("p1");
     });
 
-    it("a count is per turn: a draw last turn does not add to this turn's", () => {
+    it("on your turn too: their second draw of your turn sets it off (C #38 Jackiestan Auctioneer draws for them)", () => {
+      // p1's Radiant Auctioneer animates on p2's 2nd play and from then on draws p1 a card on each
+      // play, so p2's 3rd and 4th plays are p1's 1st and 2nd draws of this, p2's, turn.
+      const RECYCLING = "core-039"; // (0) Spell
       const s = scenario({
-        p1: { hand: [STOCKPILE, MENACE], library: [FELINORS, SEVEN, TIMMY, VANILLA] },
-        p2: { hand: [VANILLA, VANILLA], backrow: [{ def: TAX, faceUp: false }], library: [VANILLA, VANILLA] },
         active: "p2",
+        p1: { hand: [VANILLA, MENACE], backrow: [{ def: "classic-038", radiant: true, faceUp: false }], library: [FELINORS, SEVEN, TIMMY] },
+        p2: { hand: [RECYCLING, RECYCLING, RECYCLING, RECYCLING, VANILLA], backrow: [{ def: TAX, faceUp: false }], library: [VANILLA, VANILLA] },
       });
+      for (let play = 0; play < 3; play += 1) s.play(must(s.hand("p2").find((card) => card.defId === RECYCLING), "a filler"));
+      expect(s.events.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(1);
+      // The Auctioneer's own firing is a trap's too; the Tax is still set.
+      expect(s.backrow("p2", 1)?.defId).toBe(TAX);
+      s.play(must(s.hand("p2").find((card) => card.defId === RECYCLING), "a filler"));
+      expect(s.state.active).toBe("p2");
+      const keep = open(s);
+      expect(keep.playerId).toBe("p1");
+      expect(keep.resume.defId).toBe(TAX);
+      s.answer(s.card(MENACE).id);
+      s.expectInZone(TAX, "graveyard");
+      expect(handDefs(s, "p1")).toEqual([MENACE]);
+    });
+
+    it("a count is per turn: a draw last turn does not add to this turn's", () => {
+      // p1 draws one with Anti-oneshot Armor's Cry, then two turn changes later draws at the start
+      // of their turn: the first of that turn, not the second of the game.
+      const s = scenario({
+        p1: { hand: ["core-073", MENACE], library: [FELINORS, SEVEN, TIMMY, VANILLA] },
+        p2: { hand: [VANILLA, VANILLA], backrow: [{ def: TAX, faceUp: false }], library: [VANILLA, VANILLA] },
+      });
+      s.play("core-073");
+      expect(s.events.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(1);
+      s.endTurn(); // p2's turn
       s.endTurn(); // p1's turn starts: one draw (their first this turn)
       expect(s.state.active).toBe("p1");
+      expect(s.events.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(2);
       expect(fired(s)).toBe(false);
+      expect(s.backrow("p2", 1)?.defId).toBe(TAX);
+    });
+
+    it("your own draws never set it off", () => {
+      const s = scenario({
+        p1: { hand: [MENACE], library: [VANILLA, VANILLA] },
+        p2: { hand: [STOCKPILE, VANILLA], backrow: [{ def: TAX, faceUp: false }], library: [FELINORS, SEVEN, TIMMY] },
+        active: "p2",
+      });
+      s.play(STOCKPILE);
+      expect(s.events.filter((event) => event.type === "drawn" && event.player === "p2")).toHaveLength(2);
+      expect(fired(s)).toBe(false);
+      expect(s.backrow("p2", 1)?.defId).toBe(TAX);
     });
 
     it("R58 a cast-on-draw card that draw finds is cast first, then the trap fires", () => {
@@ -203,6 +244,25 @@ describe("C #9 Income Tax", () => {
       expect(fired(s)).toBe(true);
     });
 
+    it("R521 a draw from an empty deck counts toward the number: the next real draw is the 2nd and fires it", () => {
+      // Their start-of-turn draw finds an empty deck (fatigue, draw 1); Unstable Clone Machine then
+      // shuffles three Mr. Vanillas in, and Stockpile's first draw is their 2nd of the turn.
+      const s = scenario({
+        p1: { hand: [VANILLA, STOCKPILE, MENACE], backrow: ["core-033"], library: [] },
+        p2: { hand: [VANILLA], backrow: [{ def: TAX, faceUp: false }], library: [VANILLA, VANILLA] },
+      });
+      s.startTurn();
+      expect(s.events.filter((event) => event.type === "fatigue")).toHaveLength(1);
+      expect(fired(s)).toBe(false);
+      s.play(VANILLA);
+      expect(s.pile("p1", "library")).toHaveLength(3);
+      s.play(STOCKPILE);
+      const drawn = s.events.filter((event) => event.type === "drawn");
+      expect(drawn.map((event) => (event.type === "drawn" ? event.turnDraw : 0))).toEqual([2, 3]);
+      expect(fired(s)).toBe(true);
+      expect(open(s).playerId).toBe("p1");
+    });
+
     it("R521 a draw from an empty deck draws no card and fires nothing", () => {
       const s = taxBoard({ p1Library: [] });
       s.play(STOCKPILE);
@@ -221,15 +281,24 @@ describe("C #9 Income Tax", () => {
       expect(handDefs(s, "p2")).toEqual([VANILLA]);
     });
 
-    it("R97 once in your hand the moved cards are named in none of the opponent's view", () => {
+    it("R97 once in your hand the moved cards are named in none of the opponent's view but the steal itself", () => {
+      // The `stolen` event is read by a player who could read the card where it was taken from or
+      // where it is now (R97 extended to E2), so the opponent reads the steal of their own hand
+      // cards; every other event and their view of your hand name none of them.
       const s = taxBoard();
       s.play(STOCKPILE);
       const moved = [SEVEN, FELINORS].map((defId) => must(s.hand("p1").find((card) => card.defId === defId), defId));
       s.answer(s.card(MENACE).id);
-      const theirs = JSON.stringify(s.view("p1"));
+      const theirView = s.view("p1");
+      expect(theirView.opponent.hand).toEqual({ count: 3 });
+      const notSteals = JSON.stringify({ ...theirView, events: theirView.events.filter((event) => event.type !== "stolen") });
       for (const card of moved) {
-        expect(theirs).not.toContain(`"${card.id}"`);
-        expect(theirs).not.toContain(card.defId);
+        expect(notSteals).not.toContain(`"${card.id}"`);
+        expect(notSteals).not.toContain(card.defId);
+      }
+      for (const viewer of ["p1", "p2"] as const) {
+        const steals = s.view(viewer).events.filter((event) => event.type === "stolen");
+        expect(steals.map((event) => (event.type === "stolen" ? event.instanceId : "?")).sort()).toEqual(moved.map((card) => card.id).sort());
       }
     });
 

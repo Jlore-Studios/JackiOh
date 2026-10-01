@@ -159,6 +159,15 @@ describe("C #34 Ancient Acquisition", () => {
       expect(mine).toContain(`"${menace.id}"`);
     });
 
+    it("only your own graveyard: the opponent's graveyard and your exile are not offered", () => {
+      const s = scenario({
+        p1: { hand: [ACQUIRE, FILLER], graveyard: [MENACE], exile: [VANILLA] },
+        p2: { hand: [FILLER], graveyard: [SEVEN, FELINORS] },
+      });
+      s.play(ACQUIRE);
+      expect(offeredDefs(s)).toEqual([MENACE]);
+    });
+
     it("R177 the opponent reads only that a prompt is open for you", () => {
       const s = acquire(false);
       s.play(ACQUIRE);
@@ -241,6 +250,15 @@ describe("C #34 Ancient Acquisition", () => {
       expect(offeredDefs(s)).toEqual([ECLIPSE]);
       s.answer([s.card(ECLIPSE).id]);
       s.expectInZone(ECLIPSE, "hand");
+    });
+
+    it("only your own piles: the opponent's graveyard and exile are not offered", () => {
+      const s = scenario({
+        p1: { hand: [{ def: ACQUIRE, radiant: true }, FILLER], graveyard: [MENACE], exile: [VANILLA] },
+        p2: { hand: [FILLER], graveyard: [SEVEN], exile: [FELINORS] },
+      });
+      s.play(ACQUIRE);
+      expect(offeredDefs(s)).toEqual([MENACE, VANILLA]);
     });
 
     it("both piles empty asks nothing", () => {

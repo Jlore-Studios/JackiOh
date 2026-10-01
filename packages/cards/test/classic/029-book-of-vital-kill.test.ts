@@ -17,6 +17,7 @@ const GAMBIT = "classic-052"; // C #52 Final Gambit, (2) Trap: a hit that would 
 const TWINSPELL = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
 const FAUCI = "core-091"; // (2) Unit: "Whenever this takes damage, it gets a Plague Token."
 const VANILLA = "core-008"; // (1) Unit 4/4, no text.
+const ANTI_ONESHOT = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at once."
 const FILLER = "core-005"; // (1) Spell, a spare card so a hand never runs out (§2.5).
 
 function eventsOf<T extends GameEvent["type"]>(s: Scenario, type: T): Extract<GameEvent, { type: T }>[] {
@@ -100,6 +101,13 @@ describe("C #29 Book of Vital Kill", () => {
       expect(eventsOf(s, "trapFired")).toEqual([]);
       const fauci = s.unit("p2", 1);
       expect(fauci?.counters.plague ?? 0).toBe(0);
+    });
+
+    it("E7 a hit cap never sees it: Anti-oneshot Armor's 5 does not stop 30 → 13", () => {
+      const s = scenario({ p1: { hand: [VITAL, FILLER] }, p2: { hand: [FILLER], backrow: [ANTI_ONESHOT], health: 30 } });
+      playAt(s, "p2");
+      s.expectHealth("p2", 13);
+      expect(eventsOf(s, "damage")).toEqual([]);
     });
 
     it("R97 healthSet is public: both players read it, naming the Book as its source", () => {

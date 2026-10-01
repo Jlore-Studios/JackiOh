@@ -236,6 +236,30 @@ describe("C #8 Pickle", () => {
       expect(picked.state.work).toEqual([]);
     });
 
+    it("§9.3 the paused discard pick survives a JSON round trip and resumes through reduce", () => {
+      const s = pickle();
+      s.play(PICKLE);
+      s.answer("discard");
+      const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
+      expect(revived).toEqual(s.state);
+      const pick = must(revived.pending, "the discard pick");
+      expect(pick.kind).toBe("hand");
+      const vanilla = s.card("core-008");
+      const answered = reduce(revived, {
+        type: "answer",
+        playerId: "p2",
+        choiceId: pick.id,
+        selection: [{ pick: "instance", instanceId: vanilla.id }],
+        nonce: "pickle-round-trip-discard",
+      });
+      expect(answered.error).toBeUndefined();
+      expect(answered.events.some((event) => event.type === "discarded" && event.instanceId === vanilla.id)).toBe(true);
+      // The second question follows, still the opponent's.
+      const second = must(answered.state.pending, "the second question");
+      expect(second.kind).toBe("mode");
+      expect(second.playerId).toBe("p2");
+    });
+
     it("R386 an Upgrade of choices asks a fourth question", () => {
       const s = pickle();
       stepParam(s.card(PICKLE), "choices", 1);

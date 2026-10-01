@@ -30,6 +30,7 @@ const MR_TOKEN = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
 const RUSH_TOKEN = "core-t-rush"; // (1) Unit token 3/3
 const FELINORS = "core-012"; // (2) Unit 3/4, a Felinor Big Felinor spares
 const STOCKPILE = "core-005"; // (1) Spell, a spare card (§2.5)
+const SUPPRESSIVE_AURA = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
 
 /** p1 sets the trap; p2, active, plays Big Felinor and destroys every non-Felinor Unit in one pass. */
 function wipe(
@@ -125,6 +126,43 @@ describe("C #14 Shadowstep", () => {
       s.play(BIG_FELINOR);
       s.expectInZone(STATE_OF_GAME, "field");
       expect(fired(s)).toBe(0);
+    });
+
+    it("R69 an Indestructible Unit whose max health falls to 0 is collected, fires it and comes back", () => {
+      // A State of the Game standing as a 1/1 meets Suppressive Aura's −1/−1: max health 0.
+      const s = scenario({
+        active: "p2",
+        p1: {
+          hand: [STOCKPILE],
+          field: [{ def: STATE_OF_GAME, statsOverride: { attack: 1, health: 1 } }, VANILLA],
+          backrow: [{ def: SHADOWSTEP, faceUp: false }],
+        },
+        p2: { hand: [SUPPRESSIVE_AURA, STOCKPILE] },
+      });
+      const state = s.card(STATE_OF_GAME);
+      s.play(SUPPRESSIVE_AURA, { zone: 1 });
+      expect(fired(s)).toBe(1);
+      s.expectInZone(state, "hand");
+      expect(s.card(state).costOverride).toBe(0);
+      s.expectInZone(VANILLA, "field");
+    });
+
+    it("your Unit the opponent controls is theirs while it is on the field: its death leaves it set", () => {
+      // "Your Units" on the field are the ones you control (§3.2, R12): a Menace of yours they stole
+      // dies under their control, so it is not one of your Units dying.
+      const s = scenario({
+        active: "p2",
+        p1: { hand: [BIG_FELINOR, STOCKPILE], field: [MENACE], backrow: [{ def: SHADOWSTEP, faceUp: false }], library: [STOCKPILE] },
+        p2: { hand: [MIND_CONTROL, STOCKPILE], library: [STOCKPILE, STOCKPILE] },
+      });
+      const menace = s.card(MENACE);
+      s.play(MIND_CONTROL, { targets: [{ pick: "instance", instanceId: menace.id }] });
+      expect(s.card(menace).controller).toBe("p2");
+      s.endTurn();
+      s.play(BIG_FELINOR);
+      expect(fired(s)).toBe(0);
+      s.expectInZone(menace, "graveyard");
+      expect(s.backrow("p1", 1)?.defId).toBe(SHADOWSTEP);
     });
 
     it("R317 a full hand burns the overflow into your graveyard", () => {

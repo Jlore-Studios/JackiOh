@@ -214,6 +214,15 @@ describe("C #25 Lag in the System", () => {
       expect(s.events.some((event) => event.type === "exiled")).toBe(false);
     });
 
+    it("R386 a Degrade of the threshold never goes below (1)", () => {
+      const s = lagBoard();
+      stepParam(s.card(LAG), "threshold", -1);
+      s.play(LAG);
+      // A (1) Cost card still goes: the Vanilla in your hand and the Timmy on your field.
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FELINORS]);
+      expect(s.unit("p1", 1)).toBeNull();
+    });
+
     it("R386 an Upgrade of the threshold reaches (2) Cost cards", () => {
       const s = lagBoard();
       stepParam(s.card(LAG), "threshold", 1);

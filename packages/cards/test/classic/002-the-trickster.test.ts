@@ -68,6 +68,18 @@ describe("C #2 The Trickster", () => {
       expect(modifierLabels(s, "p1", "you")).toEqual([]);
     });
 
+    it("the first such play consumes it even when that card already costs (0): under Cloaked Toe Cracker", () => {
+      const s = scenario({
+        p1: { hand: [TRICKSTER, EXPERIMENT, MANA_WELL, STOCKPILE], field: ["classic-006"] },
+        p2: { hand: [STOCKPILE] },
+      });
+      s.play(TRICKSTER);
+      expect(costOf(s, EXPERIMENT)).toBe(0);
+      s.play(EXPERIMENT, { zone: 1 });
+      expect(modifierLabels(s, "p1", "you")).toEqual([]);
+      expect(costOf(s, MANA_WELL)).toBe(3);
+    });
+
     it("R65 the price floors at (0): a (1) Cost Trap costs (0), not less", () => {
       const s = scenario({ p1: { hand: [TRICKSTER, SHEEPISH, STOCKPILE] }, p2: { hand: [STOCKPILE] } });
       s.play(TRICKSTER);
@@ -121,6 +133,10 @@ describe("C #2 The Trickster", () => {
       }
       expect(JSON.stringify(theirs)).not.toContain(EXPERIMENT);
       expect(modifierLabels(s, "p2", "opponent")).toEqual(["Your next Trap or Field Spell costs (2) less"]);
+      // The change is real in your own view: the Trap reads (0) there.
+      const yourHand = s.view("p1").you.hand;
+      if (!Array.isArray(yourHand)) throw new Error("your own hand travels in full (§10.8)");
+      expect(yourHand.find((card) => card.defId === EXPERIMENT)?.cost).toBe(0);
     });
 
     it("R70 a cast never uses it: a Trap Wardrum casts leaves the discount waiting", () => {

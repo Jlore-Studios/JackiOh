@@ -209,6 +209,27 @@ describe("C #1 Curse of the Forgotten Classic", () => {
       expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
       expect(s.view("p1").you.backrow[0]).toMatchObject({ defId: SHEEPISH });
       expect(hitsOn(s, "p2")).toEqual([2]);
+      // Its owner's event stream names it nowhere once it is set (R97: judged where it is now).
+      const theirs = JSON.stringify(s.view("p2"));
+      expect(theirs).not.toContain(`"${trap?.id ?? "missing"}"`);
+      expect(theirs).not.toContain(SHEEPISH);
+    });
+
+    it("the newest permanent with no open zone for it: nothing is recruited, not an older one", () => {
+      // The Trap is the newest permanent and your backrow is full, so nothing comes, though the older
+      // Vanilla would fit a unit zone; and nothing attacks.
+      const s = scenario({
+        p1: {
+          hand: [{ def: CURSE, radiant: true }, STOCKPILE],
+          library: [VANILLA],
+          backrow: [MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL],
+        },
+        p2: { hand: [STOCKPILE], exile: [VANILLA, SHEEPISH], library: [STOCKPILE] },
+      });
+      s.play(CURSE);
+      expect([1, 2, 3, 4, 5].map((lane) => s.unit("p1", lane))).toEqual([null, null, null, null, null]);
+      expect(s.pile("p2", "exile").map((card) => card.defId)).toEqual([VANILLA, SHEEPISH]);
+      expect(hitsOn(s, "p2")).toEqual([2]);
     });
 
     it("a recruited Field Spell comes face-up to your backrow", () => {
