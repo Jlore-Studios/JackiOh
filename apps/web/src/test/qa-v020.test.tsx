@@ -14,6 +14,10 @@
 // its text, its aria-labels, its titles or its value texts. The items' own suites hold the detail;
 // this file only proves each item is there.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { CATALOG } from "@jackioh/cards";
 import type { CardView, GameEvent, LibraryView, ModifierView, PlayerView, UnitView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -85,6 +89,7 @@ vi.mock("../net/navigate.ts", async (importOriginal) => {
   return { ...actual, navigate: vi.fn() };
 });
 
+const HERE = dirname(fileURLToPath(import.meta.url));
 const lookup = lookupFromDefs(CATALOG);
 const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
 
@@ -394,6 +399,12 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(within(box).getByTestId(playTestid.searching)).toHaveTextContent(`Looking for a ${MODE_LABEL.bo1} opponent`);
     expect(box).not.toHaveTextContent(COUNTS);
     vi.mocked(getMe).mockReset();
+
+    // The searching beacon's rings hold still, and stay drawn, under either reduced motion.
+    const lobbyCss = readFileSync(join(HERE, "../routes/lobby.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const still = /\{\s*animation: none;\s*opacity: 0\.6;\s*\}/;
+    expect(lobbyCss).toMatch(new RegExp(`@media \\(prefers-reduced-motion: reduce\\) \\{\\s*\\.tavern\\.play-screen \\.play-search__ring \\s*${still.source}`));
+    expect(lobbyCss).toMatch(new RegExp(`:root\\[data-reduce-motion="true"\\] \\.tavern\\.play-screen \\.play-search__ring \\s*${still.source}`));
   });
 });
 
