@@ -74,16 +74,6 @@ describe("R434 the adapter: the opponent's hand once the view reveals it", () =>
     const view = baseView({ opponent: emptySide("p2", { hand: theirCards() }) });
     expect(revealedOpponentHand(view)).toBeNull();
   });
-
-  it("R434 a field of the engine's own, `revealedHand`, is read as the reveal", () => {
-    const hand = theirCards();
-    const view = finished();
-    const named: PlayerView = {
-      ...view,
-      opponent: { ...view.opponent, hand: { count: hand.length }, revealedHand: hand } as PlayerView["opponent"],
-    };
-    expect(revealedOpponentHand(named)).toBe(hand);
-  });
 });
 
 describe("R434 the game-over screen lists 'Their hand'", () => {

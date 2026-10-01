@@ -3,22 +3,16 @@
 // While a game runs, `SideView.hand` is the privacy boundary (§10.8): the viewer's own hand is full
 // cards, the opponent's is `{ count }`. Once the game is over the engine shows the opponent's hand
 // too. This is the one place the client reads that: `revealedOpponentHand` accepts the opponent's
-// `hand` arriving as cards once the view says the game is over (`phase: "over"`, or a `result`), and
-// a `revealedHand` list on the opponent's side should the engine name the reveal in a field of its
-// own. Everything that shows the revealed hand — the board's hand row turning its backs face up
+// `hand` arriving as cards once the view says the game is over (`phase: "over"`, or a `result`).
+// Everything that shows the revealed hand — the board's hand row turning its backs face up
 // (Hand.tsx) and the result's "Their hand" (TheirHand.tsx) — asks here.
 
-import type { CardView, PlayerView, SideView } from "@jackioh/shared";
-
-/** The opponent's side, with the field the engine may name the reveal by. */
-type RevealingSide = SideView & { revealedHand?: CardView[] };
+import type { CardView, PlayerView } from "@jackioh/shared";
 
 /** R434: the opponent's hand as the finished game shows it, or null while it is hidden. */
 export function revealedOpponentHand(view: PlayerView): CardView[] | null {
-  const side: RevealingSide = view.opponent;
-  if (Array.isArray(side.revealedHand)) return side.revealedHand;
   const over = view.phase === "over" || view.result !== null;
-  return over && Array.isArray(side.hand) ? side.hand : null;
+  return over && Array.isArray(view.opponent.hand) ? view.opponent.hand : null;
 }
 
 /** The testids of what R434 shows. `e2e/support/testids.ts` may mirror them; nothing clicks them. */

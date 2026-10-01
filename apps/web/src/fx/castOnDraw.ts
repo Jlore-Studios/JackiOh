@@ -16,7 +16,8 @@
 
 import type { GameEvent } from "@jackioh/shared";
 
-const HIDDEN_ID = "hidden";
+import { HIDDEN_ID } from "../game/animations.ts";
+
 
 function sameCard(a: string, b: string): boolean {
   return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
