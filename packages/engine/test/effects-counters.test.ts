@@ -51,10 +51,11 @@ describe("plague (§6.3 Plague Token, M3-T1)", () => {
     run(sink, plague({ target: { of: "self" }, amount: 5 }), { self: unit });
 
     expect(unit.counters.plague).toBe(7);
+    // R471: every gain is a placement, reported with how many tokens it put there.
     expect(eventsOfType(sink.events, "counterChanged")).toEqual([
-      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 1 },
-      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 2 },
-      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 7 },
+      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 1, placed: 1 },
+      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 2, placed: 1 },
+      { type: "counterChanged", instanceId: unit.id, counter: "plague", value: 7, placed: 5 },
     ]);
   });
 

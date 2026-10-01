@@ -134,7 +134,7 @@ describe("fuzz: handicapped games (R180–R184, R187)", () => {
 
   it(
     `R180 seeds ${from}–${from + size - 1} with one seat on Medium or Hard: no throw, a real ending, and a replay that matches`,
-    { timeout: 600_000 },
+    { timeout: 1_200_000 },
     () => {
       const outcomes: Outcome[] = [];
       for (let seed = from; seed < from + size; seed += 1) outcomes.push(playSeed(seed));

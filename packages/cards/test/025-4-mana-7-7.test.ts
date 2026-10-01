@@ -4,8 +4,8 @@
 //
 // The §8.2 Engine cell is "Keywords only", so both scripts are empty and these fixtures prove the
 // keywords printed on the catalog faces do the work through §4.4 and §4.5. The removals need a
-// source: the Tribute is #22 Carnivorous Cube, whose Cry tributes one of your other permanents
-// (§6.3 Tribute), and the exile is #34 Collateral Damage, the Core card that exiles a target
+// source: the Tribute is #22 Carnivorous Cube, whose Cry tributes one of your other Units (§6.3
+// Tribute, R428), and the exile is #34 Collateral Damage, the Core card that exiles a target
 // permanent — so those two fixtures depend on those cards' scripts as well as on these keywords.
 
 import { describe, expect, it } from "vitest";
@@ -13,7 +13,7 @@ import { scenario, type Scenario } from "./_harness";
 import { base, def, radiant } from "../src/scripts/025-4-mana-7-7";
 
 const BIG = "core-025";
-const CUBE = "core-022"; // Cry: Tribute one of your other permanents.
+const CUBE = "core-022"; // Cry: Tribute one of your other Units (R428).
 const EXILER = "core-034"; // Collateral Damage: exile target permanent, cost 3.
 const FILLER = "core-005";
 

@@ -2,12 +2,13 @@
 // The full play pipeline of §10.5 arrives with M3; this is the part M1's draw and turn loop need.
 
 import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { Rng } from "./rng";
 import type { Effect, EffectContext, EffectPart, Hook, Script } from "./script";
 import { scriptOf } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { exitMark } from "./stays";
+import { xOf } from "./tuning";
 
 export type EngineSink = { state: GameState; events: GameEvent[]; rng: Rng };
 
@@ -18,8 +19,17 @@ export type HookOptions = {
   data?: Record<string, unknown>;
 };
 
+/**
+ * Where a played card's Cry keeps its player's mana as the play began (`EffectContext.manaBeforePlay`):
+ * in the card's own data, which every continuation of the Cry carries (`prompts.resumeSelf`,
+ * `work.parkWork`), so the number survives a pause and a JSON round trip as the rest of the data does.
+ */
+export const MANA_BEFORE_PLAY_KEY = "__manaBeforePlay";
+
 export function makeContext(sink: EngineSink, self: CardInstance | null, options: HookOptions = {}): EffectContext {
+  const manaBeforePlay = options.data?.[MANA_BEFORE_PLAY_KEY];
   return {
+    ...(typeof manaBeforePlay === "number" ? { manaBeforePlay } : {}),
     state: sink.state,
     rng: sink.rng,
     events: sink.events,
@@ -37,7 +47,8 @@ export function makeContext(sink: EngineSink, self: CardInstance | null, options
     radiant: self?.radiant ?? false,
     targets: options.targets ?? [],
     modes: options.modes ?? [],
-    x: self?.x ?? 0,
+    // B2.7, B3.4: the X it was played for, as Degrade and Upgrade have tuned it (`tuning.xOf`).
+    x: self === null ? 0 : xOf(self),
     embiggened: self?.embiggened ?? false,
     data: options.data ?? {},
   };
@@ -105,12 +116,27 @@ export function runHook(
 }
 
 /**
+ * How a cast is made, beyond R70's defaults (B5 E12; R452, R453):
+ *
+ * - `random`: every choice its caster would make is made at random (`randomCast.ts`, R452).
+ * - `targetEnemies`: each target pick narrows to enemies when one is legal (R452); a card carrying the
+ *   `targetEnemies` enchantment (E39) is cast so whoever casts it.
+ * - `afterward: "exile"`: a Spell goes to exile rather than its graveyard once it has resolved
+ *   (Classic #56 Spell Tyrant's "then exile them", R453) — §10.5 step 7's landing (`echo.exileOnLanding`).
+ */
+export type CastOptions = HookOptions & {
+  random?: boolean;
+  targetEnemies?: boolean;
+  afterward?: "exile";
+};
+
+/**
  * The play pipeline, as a cast enters it (R70). `playSteps.ts` owns §10.5 and registers this at
  * module scope, like a work handler (`work.registerWorkHandler`) or a card script
  * (`scripts.registerScripts`): it sits above `prompts.ts`, which imports this file, so the layering
  * forbids calling it directly.
  */
-export type CastDriver = (sink: EngineSink, instance: CardInstance, options: HookOptions) => void;
+export type CastDriver = (sink: EngineSink, instance: CardInstance, options: CastOptions) => void;
 
 let castDriver: CastDriver | undefined;
 
@@ -139,9 +165,10 @@ export function registerCastDriver(driver: CastDriver | undefined): CastDriver |
  * triggers they wake wait for that effect's loop; and §2.4's chain runs the state check after each
  * cast-on-draw cast (§4.5, R59).
  *
- * Used by Cast on draw (§2.4) and by Call to Chaos.
+ * Used by Cast on draw (§2.4), by Call to Chaos, and by the cast verbs of B5 E12 (`effects/cast.ts`):
+ * a card from a graveyard or any pile, a new card of a named definition, a random catalog card.
  */
-export function castCard(sink: EngineSink, instance: CardInstance, options: HookOptions = {}): void {
+export function castCard(sink: EngineSink, instance: CardInstance, options: CastOptions = {}): void {
   if (castDriver === undefined) {
     throw new Error("no cast driver is registered: import the play pipeline (§10.5, R70)");
   }
@@ -171,7 +198,7 @@ export function flagReturnToHandAtEndOfTurn(state: GameState, instanceId: string
   const card = findInstance(state, instanceId);
   if (card === undefined) return;
   if (card.zone.z !== "graveyard") return;
-  if (defOf(state, card.defId).type !== "Spell") return;
+  if (cardTypeOf(state, card) !== "Spell") return;
   if (scriptOf(card).endOfTurn === undefined) return;
   card.returnToHandAtEndOfTurn = true;
 }

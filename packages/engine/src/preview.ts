@@ -22,7 +22,7 @@
 // nothing. An empty answer, or no hook, is no preview: the key is absent rather than `[]`.
 
 import type { PlayerId, PreviewValue } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { ConditionZone } from "./script";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
@@ -45,7 +45,7 @@ export function backrowIsPublic(state: GameState, card: CardInstance, viewer: Pl
  * and the back the other player sees cannot disagree.
  */
 export function isFaceDown(state: GameState, card: CardInstance): boolean {
-  const type = defOf(state, card.defId).type;
+  const type = cardTypeOf(state, card);
   if (type !== "Trap" && type !== "Field Trap") return false;
   return card.faceUp !== true;
 }

@@ -2,7 +2,7 @@
 // registry rather than carrying it in GameState, which stays serializable. Fused and crafted
 // definitions live in `state.transientDefs` and win over the registry.
 
-import type { CardDef, CardDefs, CardType, CatalogQuery, Rarity, SetName, Tag } from "@jackioh/shared";
+import type { CardDef, CardDefs, CardType, CatalogQuery, FusedIngredient, Rarity, SetName, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { POOL_TOKEN_TAGS } from "./config";
 
@@ -146,12 +146,61 @@ export function selfDefIds(defId: string): string[] {
 /**
  * R179: the ingredient ids a fused id (`t-<n>:<a>+<b>`, a fused ingredient in parentheses) names,
  * split at the top-level `+` signs; null for any other id. `fuse.fusedIngredients` is its reader
- * with R77's two-ingredient minimum.
+ * with R77's two-ingredient minimum. R469's Radiant mark (`<a>*`) is dropped here, since what a
+ * card stands for is the definition, whichever face went in; R468's digest id (`t-<n>:#<hex>`)
+ * reads its list from the definitions this process has seen minted or entered
+ * (`registerFusedIngredients`).
  */
 export function fusedIdParts(defId: string): string[] | null {
+  const specs = fusedIdSpecs(defId);
+  return specs === null ? null : specs.map((spec) => spec.defId);
+}
+
+/** R468: what follows `t-<n>:` in a digest id, which names its ingredients by a hash of them alone. */
+export const FUSED_DIGEST_MARK = "#";
+
+/** R469: the mark an ingredient that went in on its Radiant face carries in a readable fused id. */
+export const RADIANT_INGREDIENT_MARK = "*";
+
+/**
+ * R468: the ingredient lists of the digest ids this process knows — a process-wide table like the
+ * script registry (`scripts.ts`), and right for every match in it for the same reason: a digest
+ * names one list (R179), so an entry is true whoever wrote it. `subsystems/fuse` writes it as it
+ * mints a definition and again for every transient definition of a state it enters, so a state
+ * that came through JSON into a fresh process reads its own digest ids.
+ */
+const digestIngredients = new Map<string, FusedIngredient[]>();
+
+/** R468: record what a digest-named fused definition was made of (see `digestIngredients`). */
+export function registerFusedIngredients(defId: string, ingredients: readonly FusedIngredient[]): void {
+  if (!isDigestId(defId) || digestIngredients.has(defId)) return;
+  digestIngredients.set(defId, ingredients.map(copySpec));
+}
+
+/** R468: whether a fused id is a digest of its ingredients rather than their names. */
+export function isDigestId(defId: string): boolean {
+  const head = /^t-\d+:/.exec(defId);
+  return head !== null && defId[head[0].length] === FUSED_DIGEST_MARK;
+}
+
+function copySpec(entry: FusedIngredient): FusedIngredient {
+  return { defId: entry.defId, ...(entry.radiant === true ? { radiant: true as const } : {}) };
+}
+
+/**
+ * R179, R468, R469: the ingredients a fused id names, in order, each with its Radiant mark; null for
+ * an id no Fuse minted, or a digest this process has not been told. A readable id is split at its
+ * top-level `+` signs (a fused ingredient in parentheses, a Radiant one followed by `*`); a digest
+ * id is looked up.
+ */
+export function fusedIdSpecs(defId: string): FusedIngredient[] | null {
   const head = /^t-\d+:/.exec(defId);
   if (head === null) return null;
-  const parts: string[] = [];
+  if (isDigestId(defId)) {
+    const known = digestIngredients.get(defId);
+    return known === undefined ? null : known.map(copySpec);
+  }
+  const specs: FusedIngredient[] = [];
   let depth = 0;
   let start = head[0].length;
   for (let at = start; at <= defId.length; at += 1) {
@@ -159,12 +208,15 @@ export function fusedIdParts(defId: string): string[] | null {
     if (char === "(") depth += 1;
     else if (char === ")") depth -= 1;
     else if ((char === "+" && depth === 0) || at === defId.length) {
-      const part = defId.slice(start, at);
-      parts.push(part.startsWith("(") && part.endsWith(")") ? part.slice(1, -1) : part);
+      let part = defId.slice(start, at);
+      const radiant = part.endsWith(RADIANT_INGREDIENT_MARK);
+      if (radiant) part = part.slice(0, -RADIANT_INGREDIENT_MARK.length);
+      const name = part.startsWith("(") && part.endsWith(")") ? part.slice(1, -1) : part;
+      specs.push({ defId: name, ...(radiant ? { radiant: true as const } : {}) });
       start = at + 1;
     }
   }
-  return parts.every((part) => part.length > 0) ? parts : null;
+  return specs.every((spec) => spec.defId.length > 0) ? specs : null;
 }
 
 /**

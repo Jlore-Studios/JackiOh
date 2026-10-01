@@ -1,7 +1,7 @@
-// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22: "The Tribute choice travels in the play
-// action (R81) and excludes itself, chosen permanent sacrificed and remembered; Death → 2 copies
-// (radiant fills board), backrow permanents copy to backrow, copies keep `statsOverride` (R41);
-// nothing eaten → Death does nothing (R41)".
+// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22, as patch v0.2.0 rewrites it (R428): "The
+// Tribute choice travels in the play action (R81), one of your other Units only, excluding itself;
+// chosen Unit sacrificed and remembered; Death → 2 copies (radiant fills board), copies keep
+// `statsOverride` (R41); nothing eaten → Death does nothing (R41)". A backrow permanent is no meal.
 //
 // The base Cube is 4/6, so one 7-attack hit kills it. The radiant Cube is 8/12, so it takes a 7 and
 // a 6 in the same turn; Bigot (6/1) dies to the strike-back, which is not what any assertion reads.
@@ -42,9 +42,9 @@ describe("#22 Carnivorous Cube", () => {
     expect(decl?.min).toBe(1);
     expect(decl?.max).toBe(1);
     expect(decl?.filter?.side).toBe("ally");
-    // R41: "cannot eat itself", and a backrow permanent is an eligible meal.
+    // R41: "cannot eat itself"; R428: "one of your other Units", so the unit row only.
     expect(decl?.filter?.excludeSelf).toBe(true);
-    expect(decl?.filter?.of).toEqual(["unit", "backrow"]);
+    expect(decl?.filter?.of).toEqual(["unit"]);
     // §6.3: this card's tribute is a Sacrifice its own script performs, not a Tribute *cost*, so
     // the declaration carries no `amount` — `playChoices.tributeCostOf` would read that as a cost
     // paid from the play's `tributes` list, which reaches units only and refuses an unpayable play.
@@ -92,20 +92,37 @@ describe("#22 Carnivorous Cube", () => {
       expect(copy.radiant).toBe(false);
     });
 
-    it("R41 copies of an eaten backrow card go to the backrow", () => {
+    it("R428 a backrow permanent is no meal: naming one refuses the play", () => {
       const s = scenario({
         seed: "cube-backrow",
+        p1: { hand: [CUBE, FILLER], backrow: [MANA_WELL], field: [TIMMY] },
+        p2: { hand: [FILLER] },
+      });
+
+      expect(() => s.play(CUBE, { targets: [{ pick: "instance", instanceId: s.card(MANA_WELL).id }] })).toThrow();
+      // Nothing moved: the Cube is still in hand and the Field Spell still in its zone.
+      s.expectInZone(CUBE, "hand");
+      expect(backrow(s, "p1")).toEqual([MANA_WELL, null, null, null, null]);
+    });
+
+    it("R428 with only a backrow permanent beside it, the Cube has nothing to eat: the Cry fizzles and Death does nothing", () => {
+      const s = scenario({
+        seed: "cube-backrow-only",
         p1: { hand: [CUBE, FILLER], backrow: [MANA_WELL] },
         p2: { hand: [FILLER], field: [HITTER] },
       });
-      s.play(CUBE, { targets: [{ pick: "instance", instanceId: s.card(MANA_WELL).id }] });
+      s.play(CUBE);
       const cube = s.card(CUBE);
+
+      expect(backrow(s, "p1")).toEqual([MANA_WELL, null, null, null, null]);
+      expect(s.card(CUBE).memory).toEqual({});
 
       s.endTurn();
       s.attack(HITTER, cube);
 
-      expect(backrow(s, "p1")).toEqual([MANA_WELL, MANA_WELL, null, null, null]);
+      s.expectInZone(cube, "graveyard");
       expect(row(s, "p1")).toEqual([null, null, null, null, null]);
+      expect(backrow(s, "p1")).toEqual([MANA_WELL, null, null, null, null]);
     });
 
     it("R41, R57 copies keep the eaten card's radiant flag and statsOverride", () => {
@@ -184,22 +201,15 @@ describe("#22 Carnivorous Cube", () => {
       expect(row(s, "p1")).toEqual([TIMMY, TIMMY, TIMMY, TIMMY, TIMMY]);
     });
 
-    it("R41 an eaten backrow card fills the backrow instead", () => {
+    it("R428 the radiant Cube cannot eat a backrow permanent either", () => {
       const s = scenario({
         seed: "cube-radiant-backrow",
-        p1: { hand: [{ def: CUBE, radiant: true }, FILLER], backrow: [MANA_WELL] },
-        p2: { hand: [FILLER], field: [HITTER, BIGOT] },
+        p1: { hand: [{ def: CUBE, radiant: true }, FILLER], backrow: [MANA_WELL], field: [TIMMY] },
+        p2: { hand: [FILLER] },
       });
-      s.play(CUBE, { targets: [{ pick: "instance", instanceId: s.card(MANA_WELL).id }] });
-      const cube = s.card(CUBE);
 
-      s.endTurn();
-      s.attack(HITTER, cube);
-      s.attack(BIGOT, cube);
-
-      s.expectInZone(cube, "graveyard");
-      expect(backrow(s, "p1")).toEqual([MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL, MANA_WELL]);
-      expect(row(s, "p1")).toEqual([null, null, null, null, null]);
+      expect(() => s.play(CUBE, { targets: [{ pick: "instance", instanceId: s.card(MANA_WELL).id }] })).toThrow();
+      expect(radiant.targets?.[0]?.filter?.of).toEqual(["unit"]);
     });
 
     it("R41 nothing eaten → Death does nothing", () => {
@@ -230,7 +240,7 @@ describe("#22 Carnivorous Cube", () => {
       s.play(CUBE, { targets: [{ pick: "instance", instanceId: meal.id }] });
 
       s.expectInZone(meal, "graveyard");
-      expect(s.card(CUBE).memory).toMatchObject({ eaten: { defId: TIMMY, row: "units" } });
+      expect(s.card(CUBE).memory).toMatchObject({ eaten: { defId: TIMMY, radiant: false } });
     });
   });
 });

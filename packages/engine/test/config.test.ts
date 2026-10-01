@@ -25,7 +25,7 @@ describe("config constants (BUILD §2)", () => {
 
   it("holds the SPEC §11 'decide' rows at their recommended values", () => {
     expect(config.CRY_ON_PLAY_ONLY).toBe(true); // R1
-    expect(config.TURN_CAP_PLAYER_TURNS).toBe(30); // R2
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60); // R2, R389 (patch v0.2.0 doubled it)
     expect(config.HAND_CAP).toBe(10); // R4
     expect(config.LANE_RESTRICTED_ATTACKS).toBe(false); // R5
     expect(config.ROTATION_RING).toBe("two-rings"); // R14

@@ -26,10 +26,12 @@
 // `packages/cards/src/query.ts`). This module queries the BOARD. Two different questions; the
 // names below say which is which, and neither exports a bare `query`.
 
-import type { PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import type { CardType, GameEvent, PlayerId, Tag } from "@jackioh/shared";
+import { isAnnounceLive } from "./announce";
+import { cardTypeOf } from "./faces";
 import type { EffectContext } from "./script";
-import { findInstance, type CardInstance, type GameState } from "./state";
+import { findInstance, type CardInstance, type FaceUpRecord, type GameState, type PlayRecord } from "./state";
+import { leftFieldAfter } from "./stays";
 import { partMemoryKey } from "./work";
 import { cardAt, slotOf, type OffFieldZone } from "./zones";
 
@@ -151,6 +153,17 @@ export function wasPlayedThisTurn(
 }
 
 /**
+ * R427, R174: whether the card a play's `cardResolved` names has left the field since the play
+ * resolved — taken off it by something answering the play, an earlier trap of the same dispatch —
+ * rather than during its own resolution, before the event (its `permanent` was already false then).
+ * #41 Sheepish answers a Unit that left in its own resolution, and is not offered one a trap before
+ * it already took (the stays `traps.standingEvent` judges, §10.3).
+ */
+export function leftFieldSinceResolved(state: GameState, event: Extract<GameEvent, { type: "cardResolved" }>): boolean {
+  return event.exitsFrom !== undefined && leftFieldAfter(state, event.exitsFrom, event.instanceId);
+}
+
+/**
  * What the card running a script remembers under `key` (§10.1: #22 Carnivorous Cube's meal), read
  * the way `effects/memory.remember` wrote it. On a fused card each ingredient remembers apart (R102),
  * so an ingredient reads its own and nothing else — two Cubes crafted into one card copy two meals —
@@ -177,8 +190,72 @@ export function killerOf(state: GameState, card: CardInstance | null): CardInsta
   if (id === undefined) return null;
   const killer = findInstance(state, id);
   if (killer === undefined || killer.zone.z !== "field" || killer.zone.row !== "units") return null;
-  if (defOf(state, killer.defId).type !== "Unit") return null;
+  if (cardTypeOf(state, killer) !== "Unit") return null;
   const at = slotOf(state, killer);
   if (at === null || cardAt(state, at)?.id !== killer.id) return null;
   return killer;
+}
+
+// ---- v0.2.0 board facts, by workstream: generation (B5 E19, R471) ----
+// Plague Tokens are read here like every other board fact; the counter's rules are `plague.ts`'s.
+//   `plagueOn(card)`             the tokens on one permanent (Classic #39, #43, #69, #87; C+ #3)
+//   `plagueOnField(state, p?)`   every token on the field, or one side's (Classic #59)
+//   `permanentsOnField(state)`   every permanent on the field in R68's order, face-down included
+//   `plagueMultiplierOf(s, c)`   what a placement onto that card is multiplied by (Classic #27)
+export { permanentsOnField, plagueMultiplierOf, plagueOn, plagueOnField } from "./plague";
+
+// ---------------------------------------------------------------------------
+// v0.2.0 readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
+// ---------------------------------------------------------------------------
+
+/**
+ * B5 E4: how many cards this player has played this turn of the given types — the type each was
+ * played as (B2.7) — casts included (R70), countered plays never (R448). Counted on both players'
+ * turns and cleared with the rest of "this turn" at every start of turn (Classic+ #37 Wardrum's
+ * Spells, Field Spells and Traps, a Field Trap being a Trap, §5.1).
+ */
+export function playedThisTurnOfType(
+  state: GameState,
+  player: PlayerId,
+  types: CardType | readonly CardType[],
+): number {
+  const counts = state.players[player].turnLog.playedByType ?? {};
+  const wanted: readonly CardType[] = typeof types === "string" ? [types] : types;
+  return [...new Set(wanted)].reduce((sum, type) => sum + (counts[type] ?? 0), 0);
+}
+
+/**
+ * B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
+ * countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
+ */
+export function playedThisGameWithTag(state: GameState, player: PlayerId, tag: Tag): number {
+  return state.players[player].gameLog?.playedByTag[tag] ?? 0;
+}
+
+/**
+ * B5 E4, R451: the last Spell either player played (Classic #57 Echo) — as its play recorded it, so a
+ * played Echo is the Spell it copied — or null before any. A copy, so a script cannot write it.
+ */
+export function lastSpellPlayed(state: GameState): PlayRecord | null {
+  const last = state.lastSpell;
+  return last === undefined ? null : { ...last };
+}
+
+/**
+ * B5 E4, R451: the last face-up card this player played (AI Autocomplete), with the type it was played
+ * as, or null before any. Traps and Field Traps are set face-down and never count, and the AI
+ * generated cards are passed over (`LAST_FACE_UP_SKIPPED_TAGS`). A copy.
+ */
+export function lastFaceUpPlayed(state: GameState, player: PlayerId): FaceUpRecord | null {
+  const last = state.players[player].gameLog?.lastFaceUpPlay;
+  return last === undefined ? null : { ...last };
+}
+
+/**
+ * B5 E1, R448: whether the play a `cardAnnounced` names can still be countered — its window is open
+ * and no Counter has cancelled it yet. A response that asks before it counters (Classic #4 Palantir)
+ * reads this; the engine already offers a cancelled announce to no trap and runs no trigger on it.
+ */
+export function playStillAnnounced(state: GameState, instanceId: string): boolean {
+  return isAnnounceLive(state, instanceId);
 }
