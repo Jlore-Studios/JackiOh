@@ -13,7 +13,18 @@ import { stateCheck } from "../src/stateCheck";
 import { createGame, findInstance, newInstance, type GameState } from "../src/state";
 import { recordBoardSnapshot, restoreBoard, snapshotFor } from "../src/subsystems/boardHistory";
 import { viewFor } from "../src/viewFor";
-import { cardAt, freshFaceDownId, isLocked, lockZone, moveToZone, placeOnField, zoneContents } from "../src/zones";
+import {
+  cardAt,
+  freshFaceDownId,
+  isLocked,
+  lockZone,
+  moveToZone,
+  placeOnField,
+  removeFromAnyZone,
+  reserveHome,
+  reserveZone,
+  zoneContents,
+} from "../src/zones";
 import { vanillaDeck } from "./fixtures/catalog";
 import { phoenix, registerBoardHistoryFixtures, rewind } from "./fixtures/boardHistory";
 import { act, banner, playing, spatula, tower, watcher } from "./fixtures/field";
@@ -175,6 +186,53 @@ describe("E29 the restore (R419)", () => {
     ]);
   });
 
+  it("R566 R385 the snapshot holds a Brittle count as the turn began, before its tick, and a restored card takes that count", () => {
+    let state = playing("bh-brittle");
+    const card = put(state, plainUnit, slot("p1", "units", 1));
+    card.brittle = { count: 3, since: state.turn };
+    state = act(state, { type: "endTurn", playerId: "p1" });
+    state = act(state, { type: "endTurn", playerId: "p2" });
+    // Turn 3, p1's: recorded first, then the tick (R62) took the live count down.
+    expect(findInstance(state, card.id)?.brittle?.count).toBe(2);
+    expect(state.boardHistory?.at(-1)?.sides.p1.units[0]?.[0]?.brittle).toEqual({ count: 3, since: 1 });
+
+    restoreBoard(sinkFor(state), "p1", 1, ["p1"]);
+    expect(findInstance(state, card.id)?.brittle).toEqual({ count: 3, since: 1 });
+  });
+
+  it("R566 R386 a restored card takes the snapshot's tuning and cost change: a Degrade made since, off the field, is undone", () => {
+    const state = board("bh-tuning");
+    const card = put(state, plainUnit, slot("p1", "units", 1));
+    card.tuning = { attack: 1 };
+    recordBoardSnapshot(state);
+    moveToZone(state, card, "hand");
+    // A Degrade in the hand since (B3.4): what R78 leaves alone on the way out, the restore still takes back.
+    Object.assign(card, { tuning: { attack: -1, health: -1 }, costMod: 1 });
+    restoreBoard(sinkFor(state), "p1", 1, ["p1"]);
+    expect(findInstance(state, card.id)).toMatchObject({ zone: { z: "field" }, tuning: { attack: 1 }, costMod: 0 });
+  });
+
+  it("R566 a card mid-play stays its play's and its place stays empty; a Unit it carried, left with no carrier, goes to its owner's hand", () => {
+    const state = board("bh-resolving");
+    const carrier = put(state, tower.id, slot("p1", "backrow", 1));
+    const rider = newInstance(state, "fx-6", "p1", { z: "hand", player: "p1" });
+    placeOnField(state, rider, slot("p1", "backrow", 1));
+    recordBoardSnapshot(state);
+    // Since: both went back to the hand, and the carrier is being played again (§10.5's resolving zone).
+    moveToZone(state, rider, "hand");
+    removeFromAnyZone(state, carrier);
+    carrier.zone = { z: "resolving", player: "p1" };
+    state.players.p1.resolving.push(carrier);
+
+    const events: GameEvent[] = [];
+    restoreBoard(sinkFor(state, events), "p1", 1, ["p1"]);
+    expect(findInstance(state, carrier.id)?.zone.z).toBe("resolving");
+    expect(zoneContents(state, slot("p1", "backrow", 1))).toEqual([]);
+    expect(findInstance(state, rider.id)?.zone.z).toBe("hand");
+    expect(state.players.p1.hand.filter((card) => card.id === rider.id)).toHaveLength(1);
+    expect(eventsOfType(events, "bounced").map((event) => event.instanceId)).toEqual([rider.id]);
+  });
+
   it("R566 a card that stayed on its side keeps its exertion and sickness; one put back from elsewhere entered on this turn", () => {
     const state = board("bh-turn-state");
     const stayed = put(state, plainUnit, slot("p1", "units", 1));
@@ -207,6 +265,19 @@ describe("E29 held zones (R563)", () => {
     expect(zoneContents(state, slot("p1", "units", 1)).map((card) => card.id)).toEqual([occupant.id]);
     expect(findInstance(state, bird.id)?.zone.z).toBe("graveyard");
     expect(state.reserved).toEqual([]);
+  });
+
+  it("R563 only a restored side's holds are let go: the other side's Reborn zone and animated card's home stay held", () => {
+    const state = board("bh-holds");
+    const animated = put(state, spatula.id, slot("p1", "units", 2));
+    recordBoardSnapshot(state);
+    reserveHome(state, slot("p1", "backrow", 2), animated.id);
+    reserveZone(state, slot("p1", "units", 3));
+    reserveZone(state, slot("p2", "units", 3));
+
+    restoreBoard(sinkFor(state), "p2", 1, ["p2"]);
+    expect(state.reserved).toEqual([slot("p1", "units", 3)]);
+    expect(state.homes).toEqual([{ instanceId: animated.id, zone: slot("p1", "backrow", 2) }]);
   });
 });
 
