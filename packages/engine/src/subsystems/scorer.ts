@@ -21,7 +21,7 @@ import type { CardDef, CardFace, CardType, PlayerId } from "@jackioh/shared";
 import { hasKeyword, opponentOf } from "@jackioh/shared";
 import { defByIndex, query, queryCost } from "../catalog";
 import { canAttack } from "../combat";
-import { heroArmorOf, heroDamageCap, pierces } from "../damage";
+import { heroHitAmount, pierces } from "../damage";
 import { cardTypeOf } from "../faces";
 import { unitView } from "../layers";
 import { playActionsFor } from "../playChoices";
@@ -97,10 +97,8 @@ function faceFor(def: CardDef, radiant: boolean): CardFace {
  * summed per R124 — so the score and the hit never disagree.
  */
 function heroHit(state: GameState, player: PlayerId, amount: number, pierce = false): number {
-  // R346: a Pierce unit's hit skips step 2.
-  const after = pierce ? amount : Math.max(0, amount - heroArmorOf(state, player));
-  const cap = heroDamageCap(state, player);
-  return cap === null ? after : Math.min(after, cap);
+  // R346: a Pierce unit's hit skips step 2; B5 E6: the pipeline's own reading, divisors included.
+  return heroHitAmount(state, player, amount, pierce);
 }
 
 /**

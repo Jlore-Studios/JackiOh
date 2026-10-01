@@ -303,7 +303,7 @@ function place(state: GameState, item: WorkItem): WorkItem {
  * `state.nextSeq` (R68's creation order), which is in state, so the queue a replay builds is the
  * queue the live game had; `owner` defaults to the active player.
  */
-export function pushWork(sink: EngineSink, resume: Resume, owner?: PlayerId): WorkItem {
+export function pushWork(sink: Pick<EngineSink, "state">, resume: Resume, owner?: PlayerId): WorkItem {
   const state = sink.state;
   const item: WorkItem = {
     id: `w${state.nextSeq}`,

@@ -309,6 +309,8 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
     // R243, §6.3 Vanilla: the text is gone, which the definition the client reads does not say.
     ...(top.vanilla === true ? { vanilla: true as const } : {}),
     ...animated,
+    // B5 E35: a status, public on the field like the unit itself.
+    ...(top.berserk === true ? { berserk: true as const } : {}),
   };
 }
 
@@ -464,6 +466,9 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
       return costRuleModifierLabel(mod);
     case "enchantNextSpell":
       return enchantNextSpellLabel(mod.enchantment);
+    // B5 E8: Classic+ #22 Blood Moon's base face, read off the modifier alone.
+    case "healToDamage":
+      return "Healing on your enemies deals Pierce damage instead";
   }
 }
 

@@ -305,6 +305,16 @@ export const ACTIVATE_UNLIMITED_CAP = 100;
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
 
+/**
+ * B5 E5, E9, R460: how many times one hit may be redirected before it lands where it stands. Each
+ * Trap that redirects is spent as it fires, so two players' backrows bound a chain of Traps by
+ * themselves; the cap is for a Field Trap, which stays and could send a hit back and forth for ever.
+ */
+export const DAMAGE_REDIRECT_CAP = 2 * BACKROW_ZONES;
+
+/** B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its colour key. */
+export const BERSERK_MARK = { mark: "berserk", color: "red" } as const;
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // generation (E19, E23–E25), below A6a's prompts constants:

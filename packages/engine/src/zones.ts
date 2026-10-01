@@ -1,12 +1,13 @@
 // Zones, lanes, adjacency, the two rotation rings, locks and Stack piles (SPEC §3).
 // These are the only places a card changes zone; effects (M3-T1) call them and emit the events.
 
-import type { PlayerId, Row, Zone } from "@jackioh/shared";
+import type { GameEvent, PlayerId, Row, Zone } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { BACKROW_ZONES, UNIT_ZONES } from "./config";
 import { dropSpentBrittle, startPrintedBrittle } from "./brittleCount";
 import { defOf } from "./catalog";
 import { cardTypeOf } from "./faces";
+import { showToOwner } from "./ownLibrary";
 import { flagsOf } from "./scripts";
 import type { CardInstance, GameState, HomeZone, Pile, PlayerState } from "./state";
 import { noteFieldExit, noteMoved, noteUncovered } from "./stays";
@@ -491,6 +492,8 @@ export function resetInstance(instance: CardInstance): void {
   delete instance.divineShieldSpent;
   delete instance.markedDestroyed;
   delete instance.rebornSpent;
+  // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
+  delete instance.berserk;
 }
 
 /**
@@ -560,7 +563,54 @@ function endPlayChoices(instance: CardInstance): void {
   delete instance.embiggened;
 }
 
-export type MoveResult = "moved" | "vanished";
+/**
+ * `replaced` (B5 E5, R460): the card was on its way to a graveyard and a replacement sent it
+ * elsewhere — its exile pile, or the bottom of its library — so it is not in the graveyard, and
+ * `reportGraveyardLanding` names where it went.
+ */
+export type MoveResult = "moved" | "vanished" | "replaced";
+
+// ---- B5 E5: "would go to a graveyard" (damage and combat) ----
+
+/** Where a replacement sends a card that would go to a graveyard (B5 E5; Classic #28, #50, #60). */
+export type GraveyardRedirect = { to: "exile" } | { to: "library"; position: "bottom" };
+
+/**
+ * B5 E5: the replacement check for a move into a graveyard, registered at module scope by
+ * `replacements.ts`, which reads the board's replacements (R460) — this module sits under it, so the
+ * layering forbids the call. Asked once the card has left the zone it was in, so a card whose own
+ * aura it was has taken the aura with it (Classic #50 Voidwalker's own card). Unregistered, nothing is replaced.
+ */
+export type GraveyardRedirectCheck = (state: GameState, instance: CardInstance) => GraveyardRedirect | null;
+
+let graveyardRedirect: GraveyardRedirectCheck = () => null;
+
+/** Registered by `replacements.ts` at module scope. Returns the check it replaced. */
+export function registerGraveyardRedirect(check: GraveyardRedirectCheck): GraveyardRedirectCheck {
+  const previous = graveyardRedirect;
+  graveyardRedirect = check;
+  return previous;
+}
+
+/**
+ * B5 E5: the event a move toward a graveyard reports once the card has landed, wherever that was —
+ * `enteredGraveyard` in the graveyard, `exiled` when a replacement exiled it, `shuffledIn` at the
+ * bottom of its library — and nothing for a unit token that ceased to exist (R11). Every engine path
+ * that sends a card to a graveyard reports its landing here rather than assuming the graveyard.
+ */
+export function reportGraveyardLanding(sink: { events: GameEvent[]; state: GameState }, instance: CardInstance, result: MoveResult): void {
+  if (result === "vanished") return;
+  const base = { instanceId: instance.id, defId: instance.defId, owner: instance.owner };
+  const zone = instance.zone.z;
+  if (zone === "graveyard") {
+    sink.events.push({ type: "enteredGraveyard", ...base });
+  } else if (zone === "exile") {
+    sink.events.push({ type: "exiled", ...base });
+  } else if (zone === "library") {
+    const position = sink.state.players[instance.owner].library.findIndex((card) => card.id === instance.id);
+    sink.events.push({ type: "shuffledIn", player: instance.owner, instanceId: instance.id, defId: instance.defId, position });
+  }
+}
 
 /**
  * Move a card to one of its owner's off-field zones. Unit tokens cease to exist instead (R11),
@@ -617,6 +667,23 @@ export function moveToZone(
   if ((wasOnField || pileToPile || landed) && options.keepState !== true) resetInstance(instance);
 
   const side = state.players[instance.owner];
+  // B5 E5, R460: a card that would go to a graveyard may be sent elsewhere instead — asked now that it
+  // has left the zone it was in. It lands the way the graveyard would have had it land (the reset
+  // above), and an exile counts like any other (R55). A unit token never gets here (R11).
+  const redirect = zone === "graveyard" ? graveyardRedirect(state, instance) : null;
+  if (redirect !== null) {
+    if (redirect.to === "exile") {
+      side.exile.push(instance);
+      instance.zone = { z: "exile", player: instance.owner };
+      state.counters.exiled += 1;
+    } else {
+      side.library.push(instance);
+      instance.zone = { z: "library", player: instance.owner };
+      // R311: it goes in openly, on its way to a pile both players read.
+      showToOwner(instance);
+    }
+    return "replaced";
+  }
   const pile = pileFor(side, zone);
   const at = options.position;
   if (zone === "library" && at !== undefined && at !== "top") {

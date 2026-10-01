@@ -9,7 +9,7 @@ import { flagsOf } from "./scripts";
 import { cardAt, slotsOf } from "./zones";
 
 export function addModifier(
-  sink: EngineSink,
+  sink: Pick<EngineSink, "state" | "events">,
   player: PlayerId,
   mod: DistributiveOmit<PlayerModifier, "id">,
 ): PlayerModifier {

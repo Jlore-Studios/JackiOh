@@ -47,7 +47,7 @@ import { eventMark, exitMark, leftFieldAfter, type LaterMoves } from "./stays";
 import { findInstance, type CardInstance, type DeclaredAttack, type GameState, type Resume, type WorkItem } from "./state";
 import { EVENT_KEY, owe, oweUnnumbered, paused as isPaused, registerWorkHandler } from "./work";
 import { slotOf } from "./zones";
-import { actsOnField, cardAt, moveToZone, slotsOf } from "./zones";
+import { actsOnField, cardAt, moveToZone, reportGraveyardLanding, slotsOf } from "./zones";
 
 /**
  * A trap trigger, and the two rows that settle what firing means.
@@ -262,14 +262,8 @@ export function consumeTrap(sink: EngineSink, instance: CardInstance): void {
   // does — either way it does not go to the graveyard. Spent all the same (`isSpent`): a Trap fires once.
   if (isAnimated(sink.state, instance) || animatedKindOf(sink.state, instance) !== null) return;
 
-  const moved = moveToZone(sink.state, instance, "graveyard");
-  if (moved !== "moved") return;
-  sink.events.push({
-    type: "enteredGraveyard",
-    instanceId: instance.id,
-    defId: instance.defId,
-    owner: instance.owner,
-  });
+  // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50 Voidwalker's exile).
+  reportGraveyardLanding(sink, instance, moveToZone(sink.state, instance, "graveyard"));
 }
 
 /**

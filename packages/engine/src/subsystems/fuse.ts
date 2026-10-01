@@ -457,6 +457,8 @@ type ListFn = (...args: unknown[]) => unknown[];
  * `drawLimit` (B5 E3, R457) is a third: the limits a card sets while it acts, read on every draw, so a
  * fusion sets every ingredient's limit and the lowest holds.
  */
+// B5 E6, E35: `heroGuard` and `conditionalKeywords` are pure reads returning lists too, so a fusion
+// guards its hero with every ingredient's guard and has every ingredient's conditional keywords.
 const EAGER_KEYS: readonly string[] = [
   "aura",
   "preview",
@@ -465,6 +467,8 @@ const EAGER_KEYS: readonly string[] = [
   // B5 E15, E11 (R455, R454): a price rule and a graveyard permission are pure reads of the field too.
   "costAura",
   "graveyardPlay",
+  "heroGuard",
+  "conditionalKeywords",
 ];
 
 /**

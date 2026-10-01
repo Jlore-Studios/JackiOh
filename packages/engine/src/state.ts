@@ -108,6 +108,12 @@ export type CardInstance = {
   // ---- v0.2.0 instance fields, by workstream: play pipeline (E1, E2, E4, E5, E11, E12, E15) ----
   // ---- v0.2.0 instance fields, by workstream: activate and turn (B3.2, E3, E10, E27, E28) ----
   // ---- v0.2.0 instance fields, by workstream: damage and combat (E5, E6, E9, E35, E37) ----
+  /**
+   * B5 E35: this unit has gone Berserk (Classic+ #19.2 sends Classic+ #19.5 there) — a status an
+   * effect sets (`effects/statuses.goBerserk`), never text, so a Vanilla keeps it; R78's reset takes
+   * it off with the card leaving the field. Its own card makes the forced attacks it owes.
+   */
+  berserk?: true;
   // ---- v0.2.0 instance fields, by workstream: prompts and generation (E13, E16–E19, E23–E26) ----
   // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
 };
@@ -173,6 +179,13 @@ export type PlayerModifier = {
    */
   | { kind: "startOfTurnEffect"; seq: number; resume: Resume; label: string; ranTurn?: number }
   // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
+  /**
+   * B5 E8: a heal of X on one of this player's enemies — the enemy hero or an enemy unit — deals X
+   * Pierce damage to it instead, from the converting card (Classic+ #22 Blood Moon's base face, "for
+   * the rest of this turn"). `converterId` rather than `sourceId`: the converter is a Trap already in
+   * its graveyard, and `endOrphanedModifiers` ends a `sourceId` modifier whose card left the field.
+   */
+  | { kind: "healToDamage"; converterId: string }
 );
 
 export type DelayedEffect = {

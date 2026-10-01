@@ -143,6 +143,8 @@ export type UnitView = CardView & {
    * one (that zone is reserved for it meanwhile, `SideView.reserved`).
    */
   animated?: { home?: number };
+  /** B5 E35: the unit has gone Berserk (a status, lost when it leaves the field). Absent otherwise. */
+  berserk?: true;
 };
 
 /**

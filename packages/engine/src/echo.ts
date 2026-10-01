@@ -32,7 +32,7 @@ import {
   type GameState,
   type PlayerModifier,
 } from "./state";
-import { moveToZone } from "./zones";
+import { moveToZone, reportGraveyardLanding } from "./zones";
 
 // ---------------------------------------------------------------------------
 // The queue (§10.1 `echoQueue`)
@@ -158,13 +158,8 @@ export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstan
 
     const source = findInstance(state, mod.sourceId);
     if (source === undefined || source.zone.z !== "field") continue;
-    if (moveToZone(state, source, "graveyard") !== "moved") continue;
-    sink.events.push({
-      type: "enteredGraveyard",
-      instanceId: source.id,
-      defId: source.defId,
-      owner: source.owner,
-    });
+    // B5 E5: to its graveyard, or wherever a replacement sends it.
+    reportGraveyardLanding(sink, source, moveToZone(state, source, "graveyard"));
   }
   return granted;
 }
@@ -269,13 +264,9 @@ export function landAfterResolution(sink: EngineSink, resolved: ResolvedCard): v
     delete card.memory[EXILE_ON_LANDING];
     if (moveToZone(state, card, "exile") === "moved") state.counters.exiled += 1;
     sink.events.push({ type: "exiled", instanceId: card.id, defId: card.defId, owner: card.owner });
-  } else if (card !== undefined && card.zone.z === "resolving" && moveToZone(state, card, "graveyard") === "moved") {
-    sink.events.push({
-      type: "enteredGraveyard",
-      instanceId: card.id,
-      defId: card.defId,
-      owner: card.owner,
-    });
+  } else if (card !== undefined && card.zone.z === "resolving") {
+    // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
+    reportGraveyardLanding(sink, card, moveToZone(state, card, "graveyard"));
   }
 
   sink.events.push({

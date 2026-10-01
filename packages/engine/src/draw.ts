@@ -27,7 +27,7 @@ import {
 import { stateCheck } from "./stateCheck";
 import { showToOwner } from "./ownLibrary";
 import { owe, paused, registerWorkHandler } from "./work";
-import { activeUnitsOf, cardAt, firstFreeZone, isUnitToken, moveToZone, slotsOf } from "./zones";
+import { activeUnitsOf, cardAt, firstFreeZone, isUnitToken, moveToZone, reportGraveyardLanding, slotsOf } from "./zones";
 
 /**
  * R151: a card whose script has a start-of-game hook runs it when it ARRIVES in a hand or a
@@ -70,22 +70,15 @@ function infiniteReservesSource(sink: EngineSink, player: PlayerId): CardInstanc
 export function addToHand(sink: EngineSink, instance: CardInstance): "hand" | "burned" {
   const side = sink.state.players[instance.owner];
   if (side.hand.length >= HAND_CAP) {
-    const token = isUnitToken(sink.state, instance);
-    moveToZone(sink.state, instance, "graveyard");
+    const landed = moveToZone(sink.state, instance, "graveyard");
     sink.events.push({
       type: "burned",
       instanceId: instance.id,
       defId: instance.defId,
       owner: instance.owner,
     });
-    if (!token) {
-      sink.events.push({
-        type: "enteredGraveyard",
-        instanceId: instance.id,
-        defId: instance.defId,
-        owner: instance.owner,
-      });
-    }
+    // B5 E5: where it landed — its graveyard, or wherever a replacement sent it; a unit token none (R11).
+    reportGraveyardLanding(sink, instance, landed);
     return "burned";
   }
   moveToZone(sink.state, instance, "hand");
@@ -139,14 +132,9 @@ export function shuffleIntoLibrary(
       refused("ceased");
       return "dropped";
     }
-    moveToZone(sink.state, instance, "graveyard");
+    const landed = moveToZone(sink.state, instance, "graveyard");
     refused("graveyard");
-    sink.events.push({
-      type: "enteredGraveyard",
-      instanceId: instance.id,
-      defId: instance.defId,
-      owner: instance.owner,
-    });
+    reportGraveyardLanding(sink, instance, landed);
     return "dropped";
   }
   const position = sink.rng.int(side.library.length + 1);

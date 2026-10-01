@@ -12,7 +12,7 @@ import { effectiveCost, isXCost } from "../mana";
 import { zoneCards } from "../query";
 import type { Effect, EffectContext } from "../script";
 import type { CardInstance } from "../state";
-import { isUnitToken, moveToZone } from "../zones";
+import { isUnitToken, moveToZone, reportGraveyardLanding } from "../zones";
 import {
   adjacentTo,
   cardsInScope,
@@ -222,15 +222,9 @@ function discardCard(ctx: EffectContext, card: CardInstance): void {
     defId: card.defId,
     owner: card.owner,
   });
-  // R11: a unit-token card leaving a hand ceases to exist and reaches no graveyard.
-  if (moved === "moved") {
-    ctx.events.push({
-      type: "enteredGraveyard",
-      instanceId: card.id,
-      defId: card.defId,
-      owner: card.owner,
-    });
-  }
+  // R11: a unit-token card leaving a hand ceases to exist and reaches no graveyard; B5 E5: a card a
+  // replacement sent elsewhere is reported where it went.
+  reportGraveyardLanding(ctx, card, moved);
 }
 
 /**
@@ -329,15 +323,8 @@ export function counter(args: { target?: TargetSpec } = {}): Effect {
         ctx.state.counters.played = Math.max(0, ctx.state.counters.played - 1);
       }
 
-      const moved = moveToZone(ctx.state, card, "graveyard");
-      if (moved === "moved") {
-        ctx.events.push({
-          type: "enteredGraveyard",
-          instanceId: card.id,
-          defId: card.defId,
-          owner: card.owner,
-        });
-      }
+      // B5 E5: its graveyard, or wherever a replacement sends it.
+      reportGraveyardLanding(ctx, card, moveToZone(ctx.state, card, "graveyard"));
     },
   };
 }

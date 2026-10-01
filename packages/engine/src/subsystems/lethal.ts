@@ -9,7 +9,7 @@
 import type { PlayerId } from "@jackioh/shared";
 import { armorOf, hasKeyword } from "@jackioh/shared";
 import type { AttackTarget } from "../combat";
-import { heroArmorOf, heroDamageCap, pierces } from "../damage";
+import { heroHitAmount, pierces } from "../damage";
 import { unitView } from "../layers";
 import type { CardInstance, GameState } from "../state";
 import { adjacent, cardAt, slotOf } from "../zones";
@@ -33,10 +33,8 @@ export function defendingHero(target: AttackTarget): PlayerId {
  * attack lethal that Going Long is about to blunt.
  */
 export function projectedHeroDamage(state: GameState, player: PlayerId, amount: number, pierce = false): number {
-  if (amount <= 0) return 0;
-  const afterArmor = pierce ? amount : Math.max(0, amount - heroArmorOf(state, player));
-  const cap = heroDamageCap(state, player);
-  return cap === null ? afterArmor : Math.min(afterArmor, cap);
+  // B5 E6: the pipeline's own reading of steps 2 and 3, the divisors between them included.
+  return heroHitAmount(state, player, amount, pierce);
 }
 
 /** R346: a striking unit with Pierce skips §4.4 step 2 on every hit it makes, the pipeline's own reading. */
