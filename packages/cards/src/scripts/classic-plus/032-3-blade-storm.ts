@@ -3,8 +3,8 @@
 //   Radiant: "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
 //
 // Each round is one effect list followed by its own state check — one of the two effect lists R59 lets
-// check inside themselves, beside R283's — so its Death hooks and the triggers it woke resolve before
-// the next round. The storm stops after a round in which any Unit died (a Reborn death counts), after
+// check inside themselves, beside R283's — so the Units a round killed die, and their Death hooks
+// resolve, before the next round. The storm stops after a round in which any Unit died (a Reborn death counts), after
 // its round cap, or when no Unit it hits is left (`damageRoundsUntilDeath`). The cap is the declared
 // number `rounds` (R386), read through `param`: printed `BLADE_STORM_ROUNDS` (30) on both faces, which
 // only a Degrade or an Upgrade of this card moves. Each hit goes through §4.4, so Divine Shield, Armor,

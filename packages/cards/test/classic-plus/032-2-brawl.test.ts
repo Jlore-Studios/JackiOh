@@ -3,7 +3,8 @@
 // Reborn units come back; no Units, nothing; radiant the survivor is a Unit you choose with the play
 // (R81)".
 
-import type { Selection } from "@jackioh/shared";
+import type { Action, Selection } from "@jackioh/shared";
+import { hashState, reduce, type GameState } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/032-2-brawl";
@@ -68,6 +69,15 @@ describe("C+ #32.2 Brawl", () => {
         }),
       );
       expect(spared.size).toBeGreaterThan(1);
+    });
+
+    it("§9.3 the random survivor replays from a JSON copy to the same hash", () => {
+      const s = scenario({ seed: "brawl-replay", p1: { hand: [BRAWL, FILLER], field: [TIMMY, MENACE] }, p2: { field: [TIMMY, JILLIAX] } });
+      const action = { type: "play", instanceId: s.card(BRAWL).id, playerId: "p1", nonce: "brawl-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
 
     it("R46 an Indestructible Unit stays as well; a Reborn Unit comes back", () => {

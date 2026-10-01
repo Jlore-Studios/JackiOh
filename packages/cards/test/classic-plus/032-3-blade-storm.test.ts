@@ -10,7 +10,8 @@
 // The engine proves the rounds against fixture cards too (`packages/engine/test/effects-plus-c.test.ts`),
 // a Death hook that asks inside a round's check among them.
 
-import { BLADE_STORM_ROUNDS, paramDeclOf, stepParam } from "@jackioh/engine";
+import { BLADE_STORM_ROUNDS, hashState, paramDeclOf, reduce, stepParam, type GameState } from "@jackioh/engine";
+import type { Action } from "@jackioh/shared";
 import type { CardInstance } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
@@ -107,6 +108,17 @@ describe("C+ #32.3 Blade Storm", () => {
       expect(hits(s, s.unit("p1", 2))).toHaveLength(BLADE_STORM_ROUNDS);
       expect(deaths(s)).toEqual([]);
       s.expectStats(s.unit("p1", 2) ?? TIMMY, { health: 50 - BLADE_STORM_ROUNDS });
+    });
+
+    it("§9.3 the storm replays from a JSON copy to the same hash and events", () => {
+      const s = scenario({ p1: { hand: [STORM, FILLER], field: [TIMMY, COUNTER] }, p2: { hand: [FILLER], field: [HOGAR] } });
+      const action = { type: "play", instanceId: s.card(STORM).id, playerId: "p1", nonce: "storm-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      const again = reduce(thawed, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(again.state)).toBe(hashState(live.state));
+      expect(again.events).toEqual(live.events);
     });
 
     it("§8.7 with no Unit to hit it does nothing", () => {
