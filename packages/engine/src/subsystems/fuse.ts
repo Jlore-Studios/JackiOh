@@ -58,6 +58,7 @@ import {
 } from "../catalog";
 import { FUSED_ID_CAP, FUSE_COST_CAP } from "../config";
 import { addToHand } from "../draw";
+import { unitedEnchantments } from "../enchantments";
 import { unitHas, wornStatsOverride } from "../layers";
 import { printedCost } from "../mana";
 import type { EngineSink } from "../resolve";
@@ -76,6 +77,7 @@ import {
   scriptsFor,
 } from "../scripts";
 import { newInstance, type CardInstance, type GameState } from "../state";
+import { sumTunings } from "../tuning";
 import { PART_DEPTH_KEY, PART_KEY, partPathOf, rerootRemembered } from "../work";
 import { ceaseToExist } from "../zones";
 
@@ -885,6 +887,9 @@ function keepInstance(
   kept.defId = def.id;
   kept.buffs = { attack, health };
   kept.grantedKeywords = granted;
+  // R102, B3.4 rule 4, R443: the fused card sums its ingredients' tuning and carries all their
+  // enchantments.
+  carryInstanceData(kept, ingredients);
   if (record === null) delete kept.memory[INGREDIENTS_KEY];
   else kept.memory[INGREDIENTS_KEY] = record;
   delete kept.statsOverride;
@@ -916,6 +921,20 @@ function gainPrintedKeywords(kept: CardInstance, before: CardDef, after: CardDef
 }
 
 /**
+ * R102, B3.4 rule 4, R443: what a fusion's card carries of its ingredients' instance data — their
+ * tuning summed (`tuning.sumTunings`) and their enchantments united. A Brittle count is a counter,
+ * which a Fuse keeps only on the kept card as it keeps its other counters (R77).
+ */
+function carryInstanceData(card: CardInstance, ingredients: readonly CardInstance[]): void {
+  const tuning = sumTunings(ingredients.map((ingredient) => ingredient.tuning));
+  if (tuning === undefined) delete card.tuning;
+  else card.tuning = tuning;
+  const enchantments = unitedEnchantments(ingredients);
+  if (enchantments === undefined) delete card.enchantments;
+  else card.enchantments = enchantments;
+}
+
+/**
  * R77's Craft a Card path: "a fresh, non-Radiant hand card with `costOverride` 0". The ingredients
  * went into it, so they cease to exist here too — #99's are Discovered definitions that were never
  * cards on a board, and for anything else a consumed ingredient is what a fusion means.
@@ -934,6 +953,8 @@ function craftInHand(
   const card = newInstance(sink.state, def.id, player, { z: "hand", player });
   // R352: radiant Stitching's result is Radiant as it is made, so it reaches the hand on that face.
   if (terms.radiant) card.radiant = true;
+  // R102, B3.4 rule 4, R443: as `keepInstance`'s.
+  carryInstanceData(card, ingredients);
   for (const ingredient of ingredients) ceaseToExist(sink.state, ingredient);
   if (addToHand(sink, card) === "hand" && terms.handPrice === "free") card.costOverride = CRAFTED_CARD_COST;
   return card;

@@ -18,7 +18,8 @@
 // the one side that may import `prompts.ts`.
 
 import type { PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
+import { tunedCount } from "./tuning";
 import { modifierIsLive } from "./mana";
 import { installLastingModifiers, removeModifier } from "./modifiers";
 import type { EngineSink } from "./resolve";
@@ -102,7 +103,8 @@ export function dropEchoRepeats(state: GameState, instanceId: string): void {
 
 /** §6.1: the card's own printed Echo X (`staticFlags.echo`). */
 export function printedEcho(card: CardInstance): number {
-  return Math.max(0, Math.trunc(flagsOf(card).echo ?? 0));
+  // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
+  return Math.max(0, tunedCount(card, "Echo", Math.trunc(flagsOf(card).echo ?? 0)));
 }
 
 /**
@@ -134,7 +136,7 @@ export function echoGrantOf(state: GameState, player: PlayerId, mod: PlayerModif
  */
 export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstance): number {
   const state = sink.state;
-  if (defOf(state, card.defId).type !== "Spell") return 0;
+  if (cardTypeOf(state, card) !== "Spell") return 0;
   // R209: a Twinspell that arrived since the last state check — summoned mid-effect ahead of a cast
   // on draw — already stands on the field, so its rider is installed before the Spell reads them.
   installLastingModifiers(sink);

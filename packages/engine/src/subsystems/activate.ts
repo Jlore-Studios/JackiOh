@@ -55,7 +55,7 @@ import { findInstance, type CardInstance, type GameState, type Resume, type Work
 import { exitMark } from "../stays";
 import { tunedCount } from "../tuning";
 import { paused, pushWork, registerWorkHandler } from "../work";
-import { actsOnField, activeUnitsOf, cardAt, slotOf } from "../zones";
+import { actsOnField, activeUnitsOf, slotOf } from "../zones";
 
 /** The `activate` member of the action union, without the `playerId` and `nonce` the caller adds. */
 export type ActivateAction = Extract<ActionBody, { type: "activate" }>;

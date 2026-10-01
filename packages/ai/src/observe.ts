@@ -131,6 +131,11 @@ function toPlaceholder(card: CardInstance): void {
   delete card.returnToHandAtEndOfTurn;
   // R311: what the card's owner was shown of it going into their library names it too.
   delete card.knownAs;
+  // R385, R386, B5 E39 (patch v0.2.0): its Brittle count, what Degrade, Upgrade and KY's Constant
+  // changed on it and the enchantments riding it are the card's as much as its face is.
+  delete card.tuning;
+  delete card.brittle;
+  delete card.enchantments;
 }
 
 type Loose = Record<string, unknown>;

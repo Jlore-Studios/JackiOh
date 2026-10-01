@@ -27,7 +27,7 @@
 // names below say which is which, and neither exports a bare `query`.
 
 import type { PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { EffectContext } from "./script";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { partMemoryKey } from "./work";
@@ -177,7 +177,7 @@ export function killerOf(state: GameState, card: CardInstance | null): CardInsta
   if (id === undefined) return null;
   const killer = findInstance(state, id);
   if (killer === undefined || killer.zone.z !== "field" || killer.zone.row !== "units") return null;
-  if (defOf(state, killer.defId).type !== "Unit") return null;
+  if (cardTypeOf(state, killer) !== "Unit") return null;
   const at = slotOf(state, killer);
   if (at === null || cardAt(state, at)?.id !== killer.id) return null;
   return killer;

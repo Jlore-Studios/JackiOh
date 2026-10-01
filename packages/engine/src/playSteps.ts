@@ -346,7 +346,7 @@ function playSourceOf(
 }
 
 export function isPermanent(state: GameState, card: CardInstance): boolean {
-  return defOf(state, card.defId).type !== "Spell";
+  return cardTypeOf(state, card) !== "Spell";
 }
 
 /**
@@ -514,7 +514,7 @@ function handedOverZone(state: GameState, run: PlayRun, card: CardInstance): Zon
 function consumeUsedDiscounts(sink: EngineSink, run: PlayRun, card: CardInstance): void {
   const state = sink.state;
   if (isXCost(state, card)) return;
-  const type = defOf(state, card.defId).type;
+  const type = cardTypeOf(state, card);
   for (const mod of [...state.players[run.player].mods]) {
     if (mod.kind !== "costDiscount") continue;
     // §2.2 names the Lunar Eclipse discount as both "consumed on use" AND expired at cleanup, so
@@ -784,7 +784,7 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
     // the instance (R78), and a cast is a play, which does not.
     if (card.zone.z !== "resolving") return false;
     removeFromAnyZone(state, card);
-    const type = defOf(state, card.defId).type;
+    const type = cardTypeOf(state, card);
     run.zone = type === "Spell" ? null : firstFreeZone(state, run.player, type === "Unit" ? "units" : "backrow");
   } else {
     // §10.1, §10.5 step 4: the card leaves the hand for the field or the resolving zone. One that is

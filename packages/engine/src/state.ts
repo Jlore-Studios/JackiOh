@@ -96,9 +96,12 @@ export type CardInstance = {
   tuning?: Tuning;
   /**
    * B3.3, R385: the card's Brittle count and the turn it started, which the first tick waits two
-   * player-turns behind (`brittle.ts`). Kept in every zone; a copy never inherits it (R57).
+   * player-turns behind (`brittle.ts`). Kept in every zone; a copy never inherits it (R57), and a
+   * count that has crumbled its card (0) is spent and goes with R78's reset (R441). `printed` marks a
+   * count its printed Brittle started as the card entered the field, which a Vanilla switches off
+   * while a given one stays (B3.3 rule 5).
    */
-  brittle?: { count: number; since: number };
+  brittle?: { count: number; since: number; printed?: true };
   /** B5 E39: lasting instructions riding the card through every zone (`enchantments.ts`). */
   enchantments?: Enchantment[];
   // ---- v0.2.0 instance fields, by workstream: field (B3.1, E21, E22) ----

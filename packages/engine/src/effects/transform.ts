@@ -7,6 +7,7 @@
 import type { CardDef, CardType, PlayerId, Row } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf, excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { cardTypeOf } from "../faces";
 import { unitHas } from "../layers";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
@@ -148,7 +149,7 @@ function unreadableBy(ctx: EffectContext, card: CardInstance): PlayerId[] {
   if (zone.z === "library") return [...PLAYER_IDS];
   if (zone.z === "hand") return [opponentOf(zone.player)];
   if (zone.z !== "field" || zone.row !== "backrow" || card.faceUp === true) return [];
-  const type = defOf(ctx.state, card.defId).type;
+  const type = cardTypeOf(ctx.state, card);
   return type === "Trap" || type === "Field Trap" ? [opponentOf(card.controller)] : [];
 }
 

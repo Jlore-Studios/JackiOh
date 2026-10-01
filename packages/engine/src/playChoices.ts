@@ -41,11 +41,12 @@ import type {
 } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
 import { whyPlayBanned } from "./costRules";
 import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
-import { faceOf, unitHas } from "./layers";
-import { effectiveCost, isXCost, playCost } from "./mana";
+import { unitHas } from "./layers";
+import { isXCost, playCost } from "./mana";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
@@ -58,7 +59,6 @@ import {
   isOpen,
   isLocked,
   isReserved,
-  openZones,
   pileAt,
   rowSize,
   slotsOf,
@@ -190,12 +190,12 @@ function costWith(state: GameState, card: CardInstance, x: number | undefined, e
 
 /** §5.1: a Unit goes in the unit row, every other permanent in the backrow. */
 export function rowForCard(state: GameState, card: CardInstance): Row {
-  return defOf(state, card.defId).type === "Unit" ? "units" : "backrow";
+  return cardTypeOf(state, card) === "Unit" ? "units" : "backrow";
 }
 
 /** §10.5 step 4: permanents take a zone, a Spell resolves without one. */
 export function needsZone(state: GameState, card: CardInstance): boolean {
-  return defOf(state, card.defId).type !== "Spell";
+  return cardTypeOf(state, card) !== "Spell";
 }
 
 /**
@@ -482,7 +482,7 @@ function cardAllowed(
 ): boolean {
   if (filter?.excludeSelf === true && held.id === self.id) return false;
   const def = defOf(state, held.defId);
-  return typeAllows(filter, def.type) && tagsAllow(filter, def.tags);
+  return typeAllows(filter, cardTypeOf(state, held)) && tagsAllow(filter, def.tags);
 }
 
 /** A hero has no card type and no tags, so a filter that names either cannot reach one. */

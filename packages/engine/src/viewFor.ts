@@ -59,10 +59,12 @@ import type {
   Zone,
 } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, findDef } from "./catalog";
+import { findDef } from "./catalog";
 import { hasExertion } from "./combat";
 import { conditionActive } from "./condition";
 import { heroArmorOf } from "./damage";
+import { cardTypeOf } from "./faces";
+import { handKeywordsView, instanceDataView } from "./instanceView";
 import { echoGrantOf } from "./echo";
 import { statsWithBuffs, unitView as unitLayers } from "./layers";
 import { costRuleModifierLabel, enchantNextSpellLabel } from "./costRules";
@@ -108,6 +110,9 @@ const HIDDEN_POSITION = -1;
  * a sequence of costs over a library would spell out its order (§9.1).
  */
 const HIDDEN_COST = -1;
+
+/** R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read. */
+const HIDDEN_COUNT = -1;
 
 /** R177: what a prompt option names when it offers a card the chooser may not read (§10.8, R33). */
 export const HIDDEN_OPTION_LABEL = "Face-down card";
@@ -206,13 +211,18 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
 // Cards, units and the backrow
 // ---------------------------------------------------------------------------
 
-/** R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. */
+/**
+ * R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
+ * v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
+ * the viewer may read where it is.
+ */
 function cardView(state: GameState, card: CardInstance): CardView {
   return {
     instanceId: card.id,
     defId: card.defId,
     radiant: card.radiant,
     cost: effectiveCost(state, card),
+    ...instanceDataView(state, card),
   };
 }
 
@@ -225,13 +235,15 @@ function cardView(state: GameState, card: CardInstance): CardView {
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
   const view = cardView(state, card);
-  const stats =
-    defOf(state, card.defId).type === "Unit" ? statsWithBuffs(state, card) : null;
+  const stats = cardTypeOf(state, card) === "Unit" ? statsWithBuffs(state, card) : null;
   const power = powerOf(card);
+  // B5 E38: the keywords it gained in the hand or the deck, which it carries onto the field.
+  const keywords = handKeywordsView(state, card);
   return {
     ...view,
     ...(stats === null ? {} : { attack: Math.max(0, stats.attack), health: stats.maxHealth }),
     ...(power === null ? {} : { power: power.name }),
+    ...(keywords === null ? {} : { keywords }),
   };
 }
 
@@ -345,7 +357,7 @@ function backrowView(state: GameState, card: CardInstance | null, viewer: Player
       viewer,
     ),
     faceDown: false,
-    type: defOf(state, card.defId).type,
+    type: cardTypeOf(state, card),
     // R372: the engine names the grade's letter, so no client works out which letter 3 is.
     counters: {
       ...(grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) }),
@@ -801,10 +813,17 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     // One instance, no definition: the id alone would still name a card in a hidden zone.
     case "divineShieldLost":
     case "keywordGranted":
-    case "counterChanged":
     case "positionSwitched":
     case "controlChanged":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+
+    // R385: a Brittle count is its card's, read only where the card is (a face-down card's by its
+    // controller alone), so on a card this viewer may not read the number goes with the id.
+    case "counterChanged":
+      if (!hidden(event.instanceId)) return event;
+      return event.counter === "brittle"
+        ? { ...event, instanceId: HIDDEN_ID, value: HIDDEN_COUNT }
+        : { ...event, instanceId: HIDDEN_ID };
 
     // R177: the new cost is the card's too, and over a library it would give the order away — so a
     // change made in a library stays unread for good (`hiddenFrom`), whatever became of the card.
