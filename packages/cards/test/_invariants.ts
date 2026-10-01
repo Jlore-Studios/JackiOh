@@ -139,8 +139,12 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
           case "cardPlayed":
           case "summoned":
           case "controlChanged":
-          case "animated": // R383: moving into the unit row is entering it on that turn.
             enter(event.instanceId);
+            break;
+          case "animated":
+            // R383: moving into the unit row is entering it on that turn; a carried Unit stepping
+            // down off its carrier (C+ #33, carriers.ts) was a Unit on the field all along and enters nothing.
+            if (event.carried !== true) enter(event.instanceId);
             break;
           case "transformed":
             if (event.newInstanceId !== event.instanceId) enter(event.newInstanceId);
