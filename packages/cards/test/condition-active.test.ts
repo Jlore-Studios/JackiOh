@@ -808,8 +808,9 @@ describe("C #40 MC Tech lights up in hand while the opponent controls enough per
 // =============================================================================================
 
 describe("R195 the cards that declare conditionMet", () => {
-  // Classic+ #37 Wardrum's proofs are in its own test file (test/classic-plus/037-wardrum.test.ts).
-  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36 and #40, and Classic+ #37, on both faces, so a new hook cannot land untested", () => {
+  // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
+  // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum).
+  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36 and #40, and Classic+ #18, #19.5 and #37, on both faces, so a new hook cannot land untested", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.conditionMet !== undefined || card.radiant.conditionMet !== undefined)
       .map(([id]) => id)
@@ -818,6 +819,8 @@ describe("R195 the cards that declare conditionMet", () => {
       "classic-022",
       "classic-036",
       "classic-040",
+      "classicplus-018",
+      "classicplus-019-5",
       "classicplus-037",
       "core-010",
       "core-053",
