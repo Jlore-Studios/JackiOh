@@ -73,8 +73,9 @@ people on the trust list, `CLAUDE.md` and `SPEC.md`. Comments from anyone else a
 Every way of asking either gets an answer at once, or is found again later:
 
 - **Commands** in a comment, a line comment on a pull request's diff, or an edit that adds a
-  command. The bot puts 👀 on the comment, replies, and adds 🚀. If a command fails, the reply says
-  so; the other commands in the same comment still run.
+  command. The bot puts 👀 on the comment, replies, and adds 🚀; a request for model work also gets
+  👍, and later reactions follow it to its answer ([what the reactions mean](#what-the-reactions-mean)).
+  If a command fails, the reply says so; the other commands in the same comment still run.
 - **Naming the bot mid-sentence** ("thanks @jgoetzmann-bot, could you…") gets a reply explaining
   how to phrase a request. The bot does not guess a build from it, and does not ignore it.
 - **The sweep** runs every half hour (`harness sweep`, and on demand from the Actions tab). It
@@ -98,7 +99,9 @@ Every way of asking either gets an answer at once, or is found again later:
   runs, so the event handler and the sweep never both act on it. An edit runs only the lines it
   added, and only when the comment's author made the edit.
 - **Commands are read the way people write them**: in a list, in backticks, in bold. A control
-  word in plain words ("@jgoetzmann-bot start with option A") is a request, not a command.
+  word in plain words ("@jgoetzmann-bot start with option A") is a request, not a command, unless
+  a colon follows it ("@jgoetzmann-bot halt: away this week"). One word that is a near miss of a
+  verb ("stauts") runs nothing and gets a "did you mean", rather than a build of the typo.
 - **A run that dies without a result** goes to the back of the queue and is blocked after two
   in a row. A failure outside any item (the CLI refusing to start, a broken install on `main`)
   charges nothing and pauses runs for 50 minutes.
@@ -114,8 +117,8 @@ Every way of asking either gets an answer at once, or is found again later:
 ## Commands
 
 Put one command per line in any issue or PR comment, as `/harness <verb>`, `/harness-<verb>` or
-`@jgoetzmann-bot <verb>`. Quoted lines and fenced code blocks are ignored, so quoting the bot back
-at it runs nothing. It puts 👀 on your comment at once and 🚀 when it has answered.
+`@jgoetzmann-bot <verb>`; the three read the rest of the line the same way. Quoted lines and fenced
+code blocks are ignored, so quoting the bot back at it runs nothing.
 
 | Verb | What it does | Where | Level |
 |---|---|---|---|
@@ -124,13 +127,43 @@ at it runs nothing. It puts 👀 on your comment at once and 🚀 when it has an
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
 | `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
 | `status` | halt state, window, usage, what is running and queued | anywhere | 1 |
+| `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
 | `start` | lift a halt (`start --force` also starts a run) | anywhere | 3 |
 | `run [#n]` | start a night run now, outside the window if need be | anywhere | 3 |
 
-Aliases: `work` (build), `fix` and `update` (revise), `help` (status), `resume` and `unhalt`
-(start), `go` (run). Any other words after `@jgoetzmann-bot` are a request: a build on an issue,
-a revision on a PR.
+Aliases: `work` (build), `fix` and `update` (revise), `resume` and `unhalt` (start), `go` (run).
+
+- **Anything else is a request**, after either prefix: a build on an issue, a revision on a PR,
+  with your words as the notes. `/harness make the Coin spin` and `@jgoetzmann-bot make the Coin
+  spin` are the same request.
+- **A misspelt verb runs nothing.** One word that is a letter or two off a verb or alias
+  (`stauts`, `biuld --force`, `rnu #5`) gets "did you mean `status`?" instead of a build of the typo.
+- **Plain English after the bot's name.** After `@jgoetzmann-bot`, a control verb (`stop`,
+  `status`, `start`, `suggest`, `halt`, `run`, `help`) followed by words that do not fit it is read
+  as a request: `@jgoetzmann-bot stop using the old sprite` asks for a change, it does not stop
+  anything. Write the verb alone for the command, or put a colon after it to make the words its
+  own: `@jgoetzmann-bot halt: away this week`. After `/harness` the verb always wins.
+
+### What the reactions mean
+
+The bot reacts to your comment as your request moves along, so you can see that a model has it
+without reading the thread:
+
+| Reaction | Meaning |
+|---|---|
+| 👀 | seen; the bot is answering |
+| 👍 | a model will read it: it is queued, or noted for the next pass of a run already going |
+| 🚀 | answered: the bot replied (the sweep reads this as "handled") |
+| ❤️ | a run has it: a model is reading it now |
+| 🎉 | done: the run that read it finished with an answer (a pull request opened or updated, a revision pushed, a survey done) |
+| 😕 | it ended without an answer: blocked, stopped, or given up on after too many failures |
+
+A command that needs no model (`status`, `help`, `halt`, `start`, `run`, `stop`) gets 👀 and 🚀
+only. When a run is interrupted (the time budget, the usage limit, a halt), its requests go back to
+waiting and get ❤️ again from the next run. A request left on an issue while it is being built
+moves to the pull request the build opens. A review cannot take a reaction, so a request made in a
+review's body gets the reply but not the reactions.
 
 **Who may do what** comes from [`.harness/trust.txt`](../.harness/trust.txt): 3 operator,
 2 maintainer, 1 asker. A command from anyone else is ignored without a reply. A line with
@@ -322,6 +355,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `
 | `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
 | `trust.py`, `commands.py` | who may command it, and how a comment is read |
 | `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |
+| `asks.py` | the reactions that follow a request from its comment to its answer |
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
 | `quiet.py` | the gate's second question: is anyone else spending the subscription |
 | `runner.py` | `claude -p` with stream-json usage readings, plus the test fake |

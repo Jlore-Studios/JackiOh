@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from harness import asks
+from harness.asks import Ask
 from harness.clock import human_delta, iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_WORKING)
@@ -55,25 +57,26 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
 
 
 def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
-                label_present: bool = False) -> str:
-    """Queue an issue for building. Returns the reply line."""
+                label_present: bool = False, ask: Ask | None = None) -> str:
+    """Queue an issue for building. Returns the reply line. `ask` is the comment that asked, kept
+    on the record that ends up queued so later stages can react to it (`asks`)."""
     issue = ctx.gh.get_issue(number)
     if "pull_request" in issue:
-        return queue_revise(ctx, number, by=by, force=force, label_present=label_present)
+        return queue_revise(ctx, number, by=by, force=force, label_present=label_present, ask=ask)
     if issue.get("state") != "open":
         return f"#{number} is closed, so there is nothing to build. Reopen it first."
     names = label_names(issue)
     if LABEL_WORKING in names:
-        _pending(ctx, number, by)
+        _pending(ctx, number, by, ask)
         return (f"I am working on #{number} right now. When this run ends I go round once more "
                 "with your comment.")
     if LABEL_PR_OPEN in names:
         pull = open_pull_for_branch(ctx, branch_for_issue(number))
         if pull is not None:
             set_state_label(ctx, number, names, None)
-            return queue_revise(ctx, int(pull["number"]), by=by, force=force)
+            return queue_revise(ctx, int(pull["number"]), by=by, force=force, ask=ask)
     set_state_label(ctx, number, names, LABEL_BUILD)
-    state = ctx.store.update(lambda s: _queued(s, number, "build", by, force, ctx),
+    state = ctx.store.update(lambda s: _queued(s, number, "build", by, force, ctx, ask),
                              f"queue #{number}")
     if force:
         return _start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
@@ -81,7 +84,8 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
 
 
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
-                 label_present: bool = False, extra: dict[str, Any] | None = None) -> str:
+                 label_present: bool = False, extra: dict[str, Any] | None = None,
+                 ask: Ask | None = None) -> str:
     """Queue a pull request for a revision. Returns the reply line."""
     pull = ctx.gh.get_pull(number)
     if pull.get("state") != "open":
@@ -91,7 +95,7 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
         return f"#{number} comes from a fork; I can only push to branches in {ctx.cfg.repo}."
     names = label_names(pull)
     if LABEL_WORKING in names:
-        _pending(ctx, number, by)
+        _pending(ctx, number, by, ask)
         return (f"I am revising #{number} right now. When this run ends I go round once more "
                 "with your comment.")
     set_state_label(ctx, number, names, LABEL_REVISE)
@@ -101,7 +105,7 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
         except GitHubError:
             pass
     def change(state: dict[str, Any]) -> None:
-        _queued(state, number, "revise", by, force, ctx)
+        _queued(state, number, "revise", by, force, ctx, ask)
         record = state_item(state, number)
         record["source"] = source
         record.update(extra or {})
@@ -124,18 +128,23 @@ def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
     return f"{queued} and started a run now (`--force`)."
 
 
-def _queued(state: dict[str, Any], number: int, kind: str, by: str, force: bool, ctx: Context) -> None:
+def _queued(state: dict[str, Any], number: int, kind: str, by: str, force: bool, ctx: Context,
+            ask: Ask | None = None) -> None:
     """A fresh request: it clears a stop, the failure and interruption counts and any pending
     note, and keeps `ci_fixes`, which only a person's `forget` clears."""
     record = state_item(state, number)
     record.update(kind=kind, queued_at=iso(ctx.now()), requested_by=by, forced=bool(force),
                   stop_requested=False, failures=0, interruptions=0, pending_request=False)
+    asks.note(record, ask)
 
 
-def _pending(ctx: Context, number: int, by: str) -> None:
+def _pending(ctx: Context, number: int, by: str, ask: Ask | None = None) -> None:
     """Remember a request that arrived while a run held the thread; deliver requeues it."""
-    ctx.store.update(lambda s: state_item(s, number).update(
-        pending_request=True, pending_by=by, pending_at=iso(ctx.now())), f"pending #{number}")
+    def change(state: dict[str, Any]) -> None:
+        record = state_item(state, number)
+        record.update(pending_request=True, pending_by=by, pending_at=iso(ctx.now()))
+        asks.note(record, ask)
+    ctx.store.update(change, f"pending #{number}")
 
 
 def stop(ctx: Context, number: int, *, by: str) -> str:
@@ -152,11 +161,15 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
                 ctx.gh.disable_auto_merge(pull["node_id"])
         except GitHubError:
             pass
+    dropped: list[str] = []
     def change(state: dict[str, Any]) -> None:
         record = state_item(state, number)
         record.update(stop_requested=True, stopped_by=by, stopped_at=iso(ctx.now()), forced=False,
                       pending_request=False)
+        # Asks still waiting will never be answered; a run's own are settled when it stops.
+        dropped[:] = asks.pop_waiting(record)
     ctx.store.update(change, f"stop #{number}")
+    asks.react(ctx.gh, dropped, asks.NO_ANSWER)
     if working:
         return f"Stopping work on #{number}; the run gives up at its next checkpoint."
     return f"#{number} is out of the queue."

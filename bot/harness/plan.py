@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from harness import threads
+from harness import asks, threads
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING)
@@ -201,6 +201,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
             continue
         wanted = LABEL_REVISE if "pull_request" in thread else LABEL_BUILD
         set_state_label(ctx, number, label_names(thread), wanted)
+        ctx.store.update(lambda s, n=number: asks.give_back(state_item(s, n)), f"asks #{number}")
         ctx.gh.create_comment(number, "The run that was working on this ended without "
                               "finishing; it is back in the queue.")
         notes.append(f"requeued #{number} from a dead run")
@@ -287,13 +288,16 @@ def claim(ctx: Context, number: int, kind: str) -> dict[str, Any] | None:
         message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. It "
                    "goes through the same checks and adversarial review before I push it.")
     set_state_label(ctx, number, names, LABEL_WORKING)
+    taken: list[str] = []
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, number)
         entry.update(run_id=cfg.run_id, started_at=iso(ctx.now()), kind=kind,
                      stop_requested=False, pending_request=False)
+        taken[:] = asks.take(entry)
         state["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url, "what": f"{kind} #{number}"}
     ctx.store.update(change, f"claim #{number}")
     ctx.gh.create_comment(number, message)
+    asks.react(ctx.gh, taken, asks.WORKING)
     return planned
 
 
@@ -347,10 +351,13 @@ def suggestion_plan(ctx: Context, *, force: bool) -> dict[str, Any] | None:
     previous = ctx.store.load().get("suggest") or {}
     was_requested = bool(previous.get("requested"))
 
+    taken: list[str] = []
     def change(s: dict[str, Any]) -> None:
-        s["suggest"] = {"last_run": iso(ctx.now()), "requested": False}
+        s["suggest"].update(last_run=iso(ctx.now()), requested=False)
+        taken[:] = asks.take(s["suggest"])
         s["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url, "what": "suggestions"}
     ctx.store.update(change, "claim suggestions")
+    asks.react(ctx.gh, taken, asks.WORKING)
     return {
         "action": "suggest",
         "count": count,

@@ -454,5 +454,108 @@ class FlowTests(unittest.TestCase):
         self.assertIn("bot:build", made[0]["body"])
 
 
+def ask(h: Harness, number: int, body: str, cid: int) -> None:
+    """A comment from the operator, through the event handler."""
+    from harness import events
+    events.handle(h.ctx, "issue_comment", {
+        "action": "created", "sender": OPERATOR, "issue": {"number": number},
+        "comment": {"id": cid, "body": body, "user": OPERATOR, "author_association": "OWNER"}})
+
+
+def reacted(h: Harness, cid: int) -> list[str]:
+    return [content for i, content in h.gh.reacted if i == cid]
+
+
+class ReactionTests(unittest.TestCase):
+    """The reactions on a person's comment follow their request to its answer (`asks`)."""
+
+    def test_a_build_request_is_answered_with_its_pull_request(self):
+        h = Harness(self)
+        h.gh.add_issue(12, "Make the rules v2")
+        ask(h, 12, "/harness build", 31)
+        self.assertEqual(reacted(h, 31), ["eyes", "+1", "rocket"])
+        h.night(FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
+                            "review": reviewer(APPROVE)}))
+        self.assertEqual(reacted(h, 31), ["eyes", "+1", "rocket", "heart", "hooray"])
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual((record["asks"], record["taken_asks"]), ([], []))
+
+    def test_a_build_the_reviewer_will_not_pass_ends_without_an_answer(self):
+        h = Harness(self)
+        h.gh.add_issue(12)
+        ask(h, 12, "@jgoetzmann-bot make the rules v2", 32)
+        h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                            "fix": builder({"src/game.txt": "v3\n"}),
+                            "review": reviewer(changes("It breaks replay."))}))
+        self.assertEqual(reacted(h, 32)[-2:], ["heart", "confused"])
+
+    def test_an_interrupted_run_gives_its_asks_back_for_the_next(self):
+        h = Harness(self)
+        h.gh.add_issue(12)
+        ask(h, 12, "/harness build", 33)
+
+        def limited(request):
+            from harness.runner import RunResult
+            return RunResult(False, "", 1, error="hit your limit", reset_at="2026-09-30T04:00:00Z")
+
+        h.night(FakeRunner({"build": builder({"src/game.txt": "half\n"}), "review": limited}))
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual((record["asks"], record["taken_asks"]), (["c:33"], []))
+        self.assertEqual(reacted(h, 33)[-1], "heart")
+        h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=5)
+        h.night(FakeRunner({"build": builder({"src/game.txt": "whole\n"}),
+                            "review": reviewer(APPROVE)}))
+        self.assertEqual(reacted(h, 33)[-2:], ["heart", "hooray"])
+
+    def test_a_note_left_during_a_build_waits_on_its_pull_request(self):
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(h.ctx)
+        ask(h, 12, "@jgoetzmann-bot also add a test for the Coin", 34)
+        self.assertEqual(reacted(h, 34), ["eyes", "+1", "rocket"])
+        out = h.root / "out-note"
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
+        Worker(h.cfg, planned, runner, h.clone, h.root / "work", out).run()
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
+        items = h.ctx.store.load()["items"]
+        self.assertEqual((items["12"]["asks"], items[str(pr)]["asks"]), ([], ["c:34"]))
+        self.assertNotIn("hooray", reacted(h, 34))  # this run never read it
+        self.assertEqual((plan_mod.make(h.ctx)["number"], reacted(h, 34)[-1]), (pr, "heart"))
+
+    def test_a_suggest_request_is_answered_by_the_survey(self):
+        h = Harness(self)
+        h.gh.add_issue(20, labels=(LABEL_SUGGESTION,))
+        ask(h, 20, "/harness suggest", 35)
+        text = '<!-- suggestions: [' + json.dumps({"title": "Idea", "body": "## Why\nx"}) + '] -->'
+        planned, _ = h.night(FakeRunner({"suggest": reviewer(text)}))
+        self.assertEqual(planned["action"], "suggest")
+        self.assertEqual(reacted(h, 35), ["eyes", "+1", "rocket", "heart", "hooray"])
+        self.assertEqual(h.ctx.store.load()["suggest"]["taken_asks"], [])
+
+    def test_a_stopped_run_ends_without_an_answer(self):
+        h = Harness(self)
+        h.gh.add_issue(12)
+        ask(h, 12, "/harness build", 36)
+        planned = plan_mod.make(h.ctx)
+        ask(h, 12, "/harness stop", 37)
+        out = h.root / "out-stopped"
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)})
+        Worker(h.cfg, planned, runner, h.clone, h.root / "work", out).run()
+        Deliverer(h.ctx, planned, out, h.deliver_repo).run()
+        self.assertEqual(reacted(h, 36)[-2:], ["heart", "confused"])
+        self.assertEqual(reacted(h, 37), ["eyes", "rocket"])
+
+    def test_a_dead_runs_asks_are_taken_again_by_the_next(self):
+        gh = FakeGitHub()
+        ctx = make_ctx(gh)
+        gh.add_issue(3, labels=(LABEL_WORKING,))
+        gh.runs["555"] = {"status": "completed"}
+        ctx.store.update(lambda s: state_item(s, 3).update(run_id="555", taken_asks=["c:40"]))
+        self.assertEqual(plan_mod.make(ctx)["number"], 3)
+        self.assertEqual(gh.reacted, [(40, "heart")])
+        self.assertEqual(ctx.store.load()["items"]["3"]["taken_asks"], ["c:40"])
+
+
 if __name__ == "__main__":
     unittest.main()
