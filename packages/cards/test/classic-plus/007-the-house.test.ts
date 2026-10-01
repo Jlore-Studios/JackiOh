@@ -131,6 +131,11 @@ describe("C+ #7 The House", () => {
 
       expect(summoned(s)).toEqual([RIGHT, WRONG]);
       expect([s.unit("p1", 1)?.defId, s.unit("p1", 2)?.defId]).toEqual([RIGHT, WRONG]);
+      // Generated on their base faces, yours.
+      expect([1, 2].map((lane) => [s.unit("p1", lane)?.radiant, s.unit("p1", lane)?.owner])).toEqual([
+        [false, "p1"],
+        [false, "p1"],
+      ]);
       expect(s.state.rngCursor).toBe(cursor);
     });
 

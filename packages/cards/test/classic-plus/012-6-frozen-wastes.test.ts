@@ -9,6 +9,7 @@
 import type { CardView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
+import { def } from "../../src/scripts/classic-plus/012-6-frozen-wastes";
 
 const WASTES = "classicplus-012-6";
 const MENACE = "core-019"; // 9/9
@@ -99,13 +100,14 @@ describe("C+ #12.6 Frozen Wastes", () => {
       expect(previewOf(empty)).toBe(0);
     });
 
-    it("R280 the preview label sits in the face's text", () => {
+    it("R280 the preview label sits in each face's text", () => {
       const s = wastes(false);
       const hand = s.view("p1").you.hand;
       if (!Array.isArray(hand)) throw new Error("own hand in full");
       const label = hand.find((card: CardView) => card.defId === WASTES)?.preview?.[0]?.label ?? "";
-      expect(s.card(WASTES).defId).toBe(WASTES);
-      expect("Cry: Destroy all Units. Exile the top card of your deck for each one destroyed.").toContain(label);
+      expect(label).not.toBe("");
+      expect(def.base.text).toContain(label);
+      expect(def.radiant.text).toContain(label);
     });
   });
 

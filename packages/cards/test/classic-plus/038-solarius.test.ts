@@ -165,6 +165,14 @@ describe("C+ #38 Solarius", () => {
       expect(s.events.some((event) => event.type === "libraryOverflow" && event.defId === PRIME)).toBe(true);
     });
 
+    it("R386 its Spell Damage is a numbered keyword B3.4's X change tunes: one Upgrade step makes it +3", () => {
+      const s = scenario({ p1: { hand: [LUNAR_ECLIPSE, FILLER], field: [SOLARIUS] }, p2: { hand: [FILLER] } });
+      s.card(SOLARIUS).tuning = { x: { "Spell Damage": 1 } };
+      expect(s.stats(SOLARIUS).keywords).toContainEqual({ kind: "Spell Damage", n: 3 });
+      s.play(LUNAR_ECLIPSE, { targets: AT_HERO });
+      s.expectHealth("p2", HERO_HEALTH - 6);
+    });
+
     it("R386 the draw reads through param(): an Upgrade draws 2", () => {
       const s = scenario({ p1: { hand: [SOLARIUS, FILLER], library: [LUNAR_ECLIPSE, FILLER, FILLER] }, p2: { hand: [FILLER] } });
       stepParam(s.card(SOLARIUS), "draw", 1);

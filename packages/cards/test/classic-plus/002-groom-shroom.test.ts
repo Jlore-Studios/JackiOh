@@ -88,12 +88,19 @@ describe("C+ #2 Groom Shroom", () => {
         s.attack(s.unit("p2", 1)!, "hero");
         const defs = summonedIds(s).map((id) => s.card(id).defId);
         expect(defs).toHaveLength(5);
+        // R1: no Cry ran — Big Felinor's would destroy the attacker, Felinor Fuser's would open a
+        // Discover, Felinor Flagbearer's would give armor.
+        expect(s.events.filter((event) => event.type === "destroyed")).toHaveLength(0);
+        expect(s.state.pending).toBeNull();
+        expect(s.state.players.p1.hero.armor).toBe(0);
         if (new Set(defs).size < defs.length) repeated = true;
         for (const id of defs) seen.add(id);
       }
       expect(repeated).toBe(true);
       expect([...seen].every((id) => FELINOR_UNITS.includes(id))).toBe(true);
       expect([...seen].some((id) => !id.startsWith("core-"))).toBe(true);
+      // The no-Cry checks above bit: the Felinors whose Cries would show were among those summoned.
+      expect(["core-043", "classicplus-030", "classicplus-046"].every((id) => seen.has(id))).toBe(true);
       expect(seen.has("core-062")).toBe(false); // Friend of Felinors, a Felinor Spell
       expect(seen.has("core-t-felinor")).toBe(false);
     });

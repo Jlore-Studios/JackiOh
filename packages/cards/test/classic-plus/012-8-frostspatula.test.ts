@@ -10,7 +10,7 @@
 // tokens included, until your board is full, the originals staying in their owners' graveyards (R409);
 // `animated` and `deanimated` are public; radiant 20/6 and the copies are Radiant".
 
-import { HERO_HEALTH } from "@jackioh/engine";
+import { HERO_HEALTH, lockZone } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
@@ -21,6 +21,12 @@ const MENACE = "core-019"; // 9/9
 const RUSH = "core-t-rush"; // 3/3 Rush
 const MAGIC_JAMMED = "core-036"; // (1) destroy target backrow card
 const POWDER = "classicplus-012-4"; // (1) 3 damage to each enemy
+const MOTHER = "classicplus-012"; // End of turn: add a random Pancake token to your hand
+const SURGERY = "core-063"; // (1) +3/+3 and 1 random keyword
+const WASTES = "classicplus-012-6"; // (2) Field Spell, Cry: destroy all Units
+const FIENDER = "core-092"; // (2) 5/7 Stack
+const MROW = "core-086"; // 1/1 Can't attack; Death: take control of the Unit that destroyed this
+const MANA_WELL = "core-006"; // (3) Field Spell
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
@@ -34,7 +40,6 @@ function played(radiant: boolean, lane: number, p1: SideSetup = {}, p2: SideSetu
 }
 
 const spatulaId = (s: Scenario): string => s.card(SPATULA).id;
-const where = (s: Scenario): string => JSON.stringify(s.card(SPATULA).zone);
 const eventsOf = <T extends GameEvent["type"]>(s: Scenario, type: T): Extract<GameEvent, { type: T }>[] =>
   s.events.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
 
@@ -83,7 +88,7 @@ describe("C+ #12.8 Frostspatula", () => {
     it("R383 a home zone Locked meanwhile keeps it a Unit through its cleanup", () => {
       const s = played(false, 2);
       // A Lock on its reserved backrow zone, as Lock effects leave one (§3.2).
-      s.state.players.p1.locks.backrow[1] = true;
+      lockZone(s.state, { player: "p1", row: "backrow", lane: 2 });
       s.endTurn();
       expect(s.unit("p1", 2)?.id).toBe(spatulaId(s));
     });
@@ -135,10 +140,75 @@ describe("C+ #12.8 Frostspatula", () => {
       expect(s.card(SPATULA).memory.kills).toHaveLength(2);
     });
 
-    it("its hero never takes its attack while it is summoning sick", () => {
+    it("R83 R383 summoning sick on every animation: animated again a turn later, its Rush still never reaches the hero", () => {
       const s = played(false, 1);
+      s.endTurn().endTurn();
+      expect(s.unit("p1", 1)?.id).toBe(spatulaId(s));
+      expect(() => s.attack(SPATULA, "hero")).toThrow();
       s.expectHealth("p2", HERO_HEALTH);
-      expect(where(s)).toContain("units");
+      s.attack(SPATULA, TOKENS);
+      s.expectInZone(TOKENS, "graveyard");
+    });
+
+    it("§2.2 R383 it returns after your end-of-turn steps, and animates after your mana refresh, before your draw", () => {
+      const s = played(false, 2, { field: [MOTHER] });
+      s.endTurn();
+      const added = s.events.findIndex((event) => event.type === "addedToHand" && event.player === "p1");
+      const home = s.events.findIndex((event) => event.type === "deanimated");
+      expect(added).toBeGreaterThanOrEqual(0);
+      expect(home).toBeGreaterThan(added);
+      expect(s.view("p2").events.some((event) => event.type === "deanimated")).toBe(true);
+
+      s.endTurn();
+      const start = s.lastEvents;
+      const refresh = start.findIndex((event) => event.type === "manaChanged" && event.player === "p1");
+      const animated = start.findIndex((event) => event.type === "animated");
+      const drawn = start.findIndex((event) => event.type === "drawn");
+      expect(refresh).toBeGreaterThanOrEqual(0);
+      expect(animated).toBeGreaterThan(refresh);
+      expect(drawn).toBeGreaterThan(animated);
+    });
+
+    it("R383 both moves keep its buffs", () => {
+      const s = played(false, 2, { hand: [{ def: SPATULA }, SURGERY, FILLER] });
+      s.play(SURGERY, { targets: [{ pick: "instance", instanceId: spatulaId(s) }] });
+      s.expectStats(SPATULA, { attack: 13, maxHealth: 6 });
+      s.endTurn();
+      expect(s.backrow("p1", 2)?.id).toBe(spatulaId(s));
+      s.endTurn();
+      expect(s.unit("p1", 2)?.id).toBe(spatulaId(s));
+      s.expectStats(SPATULA, { attack: 13, maxHealth: 6 });
+    });
+
+    it("R383 on the opponent's turn an 'all Units' destroy skips it in the backrow", () => {
+      const s = played(false, 2, {}, { hand: [WASTES, FILLER], mana: 8 });
+      s.endTurn();
+      s.play(WASTES);
+      expect(s.card(SPATULA).zone).toMatchObject({ z: "field", row: "backrow", lane: 2 });
+      s.expectInZone(TOKENS, "graveyard");
+    });
+
+    it("R383 a Stack over it keeps it a Unit, dormant, through your cleanup, its backrow zone still held", () => {
+      const s = played(false, 2, { hand: [{ def: SPATULA }, FIENDER, FILLER] });
+      s.play(FIENDER, { zone: 2 });
+      expect(s.unit("p1", 2)?.defId).toBe(FIENDER);
+      s.endTurn();
+      expect(s.card(SPATULA).zone).toMatchObject({ z: "field", row: "units", lane: 2 });
+      expect(s.backrow("p1", 2)).toBeNull();
+      expect(s.view("p1").you.reserved.backrow[1]).toBe(true);
+      expect(s.events.filter((event) => event.type === "deanimated")).toHaveLength(0);
+    });
+
+    it("R383 a new controller keeps it a Unit until its own cleanup, then it goes to their leftmost open backrow zone", () => {
+      // It kills "Miss" Mrow, whose Death hands it to p2 on p1's turn.
+      const s = played(false, 2, {}, { field: [{ def: MROW, lane: 3 }], backrow: [{ def: MANA_WELL, lane: 1 }] });
+      s.attack(SPATULA, MROW);
+      expect(s.card(SPATULA).controller).toBe("p2");
+      s.endTurn(); // p1's cleanup: not its controller's, so it stays a Unit
+      expect(s.card(SPATULA).zone).toMatchObject({ z: "field", player: "p2", row: "units" });
+      s.endTurn(); // p2's cleanup: no home on p2's side, so p2's leftmost open backrow zone
+      expect(s.backrow("p2", 2)?.id).toBe(spatulaId(s));
+      expect(s.view("p1").you.reserved.backrow[1]).toBe(false);
     });
   });
 

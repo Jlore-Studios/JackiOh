@@ -93,7 +93,7 @@ describe("C+ #10 New Wraps", () => {
       expect(s.card(vanilla).grantedKeywords).toEqual([]);
     });
 
-    it("a Unit that has Reborn gains nothing: it still returns once", () => {
+    it("a Unit that has Reborn gains no second one: it still returns once", () => {
       const s = setup({ hand: [WRAPS, HIT_JOB, HIT_JOB, FILLER], field: [DEFENDER] });
       const defender = s.card(DEFENDER);
 
@@ -105,6 +105,24 @@ describe("C+ #10 New Wraps", () => {
       expect(rebornCount(s, back.id)).toBe(0);
       s.play(HIT_JOB, { targets: at(back.id) });
       expect(s.unit("p1", 1)).toBeNull();
+    });
+
+    it("R570 on a Unit that prints Reborn the grant is still recorded: a later Vanilla leaves it the granted Reborn", () => {
+      const s = setup({ hand: [WRAPS, SILENCE, HIT_JOB, FILLER], field: [DEFENDER] });
+      const defender = s.card(DEFENDER);
+      s.play(WRAPS, { targets: at(defender.id) });
+      expect(s.card(defender).grantedKeywords).toContainEqual({ kind: "Reborn" });
+
+      s.play(SILENCE, { targets: at(defender.id) });
+      expect(rebornCount(s, defender.id)).toBe(1);
+      s.play(HIT_JOB, { targets: at(defender.id) });
+      expect(s.unit("p1", 1)?.defId).toBe(DEFENDER);
+
+      // Without New Wraps a Vanilla Right-house defender has no Reborn left, and stays dead.
+      const bare = setup({ hand: [SILENCE, HIT_JOB, FILLER], field: [DEFENDER] });
+      bare.play(SILENCE, { targets: at(bare.card(DEFENDER).id) });
+      bare.play(HIT_JOB, { targets: at(bare.card(DEFENDER).id) });
+      expect(bare.unit("p1", 1)).toBeNull();
     });
 
     it("a Reborn body that spent its Reborn gains it again, and returns once more", () => {

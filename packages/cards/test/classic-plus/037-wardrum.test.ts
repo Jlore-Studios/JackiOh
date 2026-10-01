@@ -27,6 +27,9 @@ const MANA_WELL = "core-006"; // (3) Field Spell.
 const VANILLA = "core-008"; // (1) Unit, no text.
 const MENACE = "core-019";
 const POINTMASTER = "core-020"; // (2) 7/1.
+const TIMMY = "core-011"; // (1) 3/3 Rush, First Strike.
+const FOREVER = "classicplus-014"; // (1) Spell: the next Spell you play returns to your hand after it resolves.
+const SPATULA = "classicplus-012-8"; // (2) Field Spell token: Animated on your turn, Rush, 10/3.
 const FILLER = STOCKPILE;
 
 const LIBRARY = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
@@ -125,6 +128,34 @@ describe("C+ #37 Wardrum", () => {
         event.type === "cardResolved" ? [event.instanceId] : event.type === "summoned" && event.defId === WARDRUM ? ["wardrum"] : [],
       );
       expect(order.indexOf("wardrum")).toBeGreaterThan(order.indexOf(stockpile));
+    });
+
+    it("R578 a Spell played again this turn is counted at each play: Forever&'s returning Spell, played a 2nd time, is the 3rd", () => {
+      const s = scenario({
+        p1: { hand: [WARDRUM, FOREVER, LUNAR, FILLER], library: LIBRARY, mana: 10 },
+        p2: { hand: [FILLER], library: LIBRARY },
+      });
+      s.play(hand(s, FOREVER)); // the 1st
+      const lunar = hand(s, LUNAR);
+      s.play(lunar, { targets: [{ pick: "hero", player: "p2" }] }); // the 2nd; it comes back to hand
+      expect(wardrumIn(s)).toBe("hand");
+      s.play(lunar, { targets: [{ pick: "hero", player: "p2" }] }); // the 3rd
+      expect(s.unit("p1", 1)?.defId).toBe(WARDRUM);
+    });
+
+    it("R578 a play whose card has since ceased to exist still counts: a Frostspatula that died as a Unit is the 1st", () => {
+      const s = scenario({
+        p1: { hand: [WARDRUM, SPATULA, REPLENISH, REPLENISH], library: LIBRARY, mana: 10 },
+        p2: { hand: [FILLER], field: [TIMMY], library: LIBRARY },
+      });
+      const spatula = s.card(SPATULA).id;
+      s.play(spatula, { zone: 5 }); // the 1st: it animates into unit zone 5
+      s.attack(spatula, TIMMY); // Tempo Timmy's First Strike kills it first: a token that dies ceases to exist
+      s.expectInZone(spatula, "gone");
+      s.play(hand(s, REPLENISH)); // the 2nd
+      expect(wardrumIn(s)).toBe("hand");
+      s.play(hand(s, REPLENISH)); // the 3rd
+      expect(wardrumIn(s)).toBe("field");
     });
 
     it("the 4th doesn't: a zone that opens only for the 4th play leaves it in hand", () => {

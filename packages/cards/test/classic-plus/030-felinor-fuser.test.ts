@@ -109,8 +109,21 @@ describe("C+ #30 Felinor Fuser", () => {
     });
 
     it("R77 the fused-in Cries never run: the Fuser is on the field already", () => {
-      const { s } = fused({ seed: "fuser-cries" });
-      // #43 Big Felinor's Cry would destroy the enemy Timmy; #12's would summon a copy.
+      // A seed whose first Discover offers #43 Big Felinor, whose Cry would destroy the enemy Timmy;
+      // the second picks #12 Duplicating Felinors when offered, whose Cry would summon a copy.
+      const BIG_FELINOR = "core-043";
+      const DUPLICATING = "core-012";
+      let s: Scenario | null = null;
+      for (let at = 0; at < 40 && s === null; at += 1) {
+        const tried = scenario({ seed: `fuser-cries-${at}`, p1: { hand: [FUSER, FILLER] }, p2: { hand: [FILLER], field: [TIMMY] } });
+        tried.play(FUSER, { zone: 2 });
+        if (offered(open(tried)).includes(BIG_FELINOR)) s = tried;
+      }
+      if (s === null) throw new Error("no seed offers Big Felinor first");
+      s.answer(BIG_FELINOR);
+      const second = offered(open(s));
+      s.answer(second.includes(DUPLICATING) ? DUPLICATING : (second[0] ?? ""));
+      expect(fusedIdParts(s.unit("p1", 2)?.defId ?? "")).toContain(BIG_FELINOR);
       s.expectInZone(TIMMY, "field");
       expect(s.events.filter((event) => event.type === "summoned")).toHaveLength(1);
     });
@@ -119,7 +132,7 @@ describe("C+ #30 Felinor Fuser", () => {
       const s = scenario({ p1: { hand: [FUSER, FILLER] }, p2: { hand: [FILLER] } });
       s.play(FUSER);
       expect(s.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
-      expect(JSON.stringify(s.view("p2"))).not.toContain(offered(open(s))[0] ?? "no option");
+      for (const option of offered(open(s))) expect(JSON.stringify(s.view("p2"))).not.toContain(option);
       s.answer(offered(open(s))[0] ?? "");
       expect(s.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
     });

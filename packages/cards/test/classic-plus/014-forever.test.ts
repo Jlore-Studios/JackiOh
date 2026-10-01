@@ -19,6 +19,8 @@ const MANA_WELL = "core-006"; // a Field Spell
 const SHEEPISH = "core-041"; // a Trap
 const RAPID_DRAW = "classic-026"; // (0) Spell: draw 4, then discard 4 of your choice
 const COUNTERSPELL = "classic-017"; // Trap: counters the opponent's Spell
+const SOLARIUS = "classicplus-038"; // a Unit, Cry: draw 1
+const JELLY_BEAN = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 5 health
 const FILLER = "core-008"; // Mr. Vanilla: a Unit, inert
 
 const AT_HERO = [{ pick: "hero", player: "p2" }] as const;
@@ -72,6 +74,16 @@ describe("C+ #14 Forever&", () => {
       const id = lunarIn(s);
       s.play(id, { targets: AT_HERO });
       expect(s.card(id).zone.z).toBe("hand");
+    });
+
+    it("R70 a cast is a play: a Spell cast as the next one is stamped and comes back to your hand", () => {
+      // Solarius is a Unit play (the modifier waits); its Cry draws the Jelly Bean, which casts itself.
+      const s = forever(false, [SOLARIUS], { library: [JELLY_BEAN, STOCKPILE, STOCKPILE] });
+      s.play(SOLARIUS, { zone: 1 });
+      const jelly = s.card(JELLY_BEAN);
+      s.expectHealth("p1", HERO_HEALTH - 5);
+      expect(jelly.zone.z).toBe("hand");
+      expect(jelly.enchantments).toContainEqual({ kind: "returnAfterResolve", floor: 2 });
     });
 
     it("a Unit, Field Spell or Trap play leaves the modifier waiting", () => {
@@ -150,6 +162,13 @@ describe("C+ #14 Forever&", () => {
       expect(s.card(id).zone.z).toBe("hand");
       expect(s.card(id).enchantments).toContainEqual({ kind: "returnAfterResolve", floor: 1 });
       expect(effectiveCost(s.state, s.card(id))).toBe(1);
+    });
+
+    it("R386 the draw reads through param(): an Upgrade draws 2", () => {
+      const s = scenario({ p1: { hand: [{ def: FOREVER, radiant: true }, FILLER], library: [STOCKPILE, STOCKPILE, STOCKPILE], mana: 10 }, p2: { hand: [STOCKPILE] } });
+      stepParam(s.card(FOREVER), "draw", 1);
+      s.play(FOREVER);
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, STOCKPILE, STOCKPILE]);
     });
   });
 });
