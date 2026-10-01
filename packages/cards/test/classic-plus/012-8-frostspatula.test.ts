@@ -111,7 +111,7 @@ describe("C+ #12.8 Frostspatula", () => {
       expect(eventsOf(s, "summoned").some((event) => event.defId === RUSH)).toBe(false);
     });
 
-    it("R409 tokens included, and a kill in the same combat as its own death counts", () => {
+    it("R409 R572 tokens included, and a kill in the same pass as its own death counts", () => {
       const s = played(false, 1, {}, { field: [RUSH] });
       const id = spatulaId(s);
       s.attack(SPATULA, RUSH); // 10 kills the 3/3; the 3/3 kills the 10/3
