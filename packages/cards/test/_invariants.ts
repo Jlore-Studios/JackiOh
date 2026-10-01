@@ -10,7 +10,11 @@
 //     stepping from its backrow zone into a unit zone enters it on that turn, R383), or a
 //     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //     side or a Stack card resuming emits nothing and changes nothing;
-//   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack.
+//   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack;
+//   - `readied`, the Transform results R424 lets attack on the turn they entered: an attacker that
+//     destroyed the Unit its declared attack targeted (`destroyed` naming it the killer, R42) and is
+//     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
+//     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //
 // The five checks:
 //   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
@@ -21,8 +25,8 @@
 //      keywords (R83, R171); forced attacks are not declarations and are skipped (R53).
 //   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
 //   I4 the bookkeeping matches the shadow (white-box R171): (a) `summonedTurn` is the turn of the
-//      latest entry; (b) a spent attack exertion belongs to the current stint, so an exertion left
-//      spent across an entry trips it.
+//      latest entry, or absent on a `readied` stint (R424); (b) a spent attack exertion belongs to
+//      the current stint, so an exertion left spent across an entry trips it.
 //   I5 nothing happens after the game is over (§2.5, R216): `gameOver` is the last event an action
 //      emits. Added in the hunt's fourth round, whose engine-invariants lens found the rest of an
 //      effect list, and a trap's consumption, resolving after the check that ended the game.
@@ -63,10 +67,14 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
   const entered = new Map<string, number>();
   const stint = new Map<string, number>();
   const lastAttack = new Map<string, AttackMark>();
+  const readied = new Set<string>();
+  // R424: the latest declared attack, and whether its attacker destroyed its target (R42).
+  let attack: { attackerId: string; targetId: string; killed: boolean } | null = null;
 
   function enter(id: string): void {
     entered.set(id, turn);
     stint.set(id, (stint.get(id) ?? 0) + 1);
+    readied.delete(id);
   }
 
   /** I1 for one unit and one would-be target set. */
@@ -104,7 +112,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
         return found;
       }
       for (const unit of activeUnitsOf(state, player)) {
-        if (entered.get(unit.id) !== state.turn) continue;
+        if (entered.get(unit.id) !== state.turn || readied.has(unit.id)) continue;
         const targets = attackTargets(state, unit).map((target) =>
           target.kind === "hero" ? `hero-${target.player}` : target.instance.id,
         );
@@ -113,7 +121,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
       }
       if (action.type === "attack") {
         const attacker = findInstance(state, action.attackerId);
-        if (attacker !== undefined && entered.get(attacker.id) === state.turn) {
+        if (attacker !== undefined && entered.get(attacker.id) === state.turn && !readied.has(attacker.id)) {
           const violation = sickAttack(state, attacker, [action.targetId], "chosen");
           if (violation !== null) found.push(violation);
         }
@@ -135,6 +143,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
         switch (event.type) {
           case "turnStarted":
             turn = event.turn;
+            attack = null;
             break;
           case "cardPlayed":
           case "summoned":
@@ -144,9 +153,16 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
             break;
           case "transformed":
             if (event.newInstanceId !== event.instanceId) enter(event.newInstanceId);
+            if (attack?.killed === true && attack.attackerId === event.instanceId) readied.add(event.newInstanceId);
+            break;
+          case "destroyed":
+            if (attack !== null && attack.targetId === event.instanceId && attack.attackerId === event.killerId) {
+              attack.killed = true;
+            }
             break;
           case "attackDeclared": {
-            // R53: a forced attack is not a declaration and spends nothing.
+            // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
+            attack = null;
             if (event.forced) break;
             const mark: AttackMark = { turn, stint: stint.get(event.attackerId) ?? 0 };
             const previous = lastAttack.get(event.attackerId);
@@ -159,6 +175,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
               );
             }
             lastAttack.set(event.attackerId, mark);
+            attack = { attackerId: event.attackerId, targetId: event.targetId, killed: false };
             break;
           }
           default:
@@ -170,10 +187,12 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
       for (const card of fieldCards(state)) {
         const at = entered.get(card.id);
         if (at === undefined) continue; // I3 reports it before the next action.
-        if (card.summonedTurn !== at) {
+        const expected = readied.has(card.id) ? undefined : at;
+        if (card.summonedTurn !== expected) {
           found.push(
             `I4 entry mismatch: ${nameOf(card)} has summonedTurn ${String(card.summonedTurn)} on turn ` +
-              `${state.turn}, but its latest entry event was on turn ${at} (§4.1, R83, R171)`,
+              `${state.turn}, but its latest entry event was on turn ${at}` +
+              `${expected === undefined ? ", readied (R424)" : ""} (§4.1, R83, R171)`,
           );
         }
         if (card.exertion.attacked) {
