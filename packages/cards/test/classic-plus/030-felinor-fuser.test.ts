@@ -97,7 +97,10 @@ describe("C+ #30 Felinor Fuser", () => {
       const ingredients = [...picks, FUSER].map((id) => defOf(s.state, id));
       const attack = ingredients.reduce((sum, entry) => sum + (entry.base.attack ?? 0), 0);
       const health = ingredients.reduce((sum, entry) => sum + (entry.base.health ?? 0), 0);
-      s.expectStats(kept, { attack, health: health - 1, maxHealth: health });
+      // R77: the fused definition prints the sums; the kept instance keeps its 1 damage (an ingredient's
+      // own aura, a Felinor Flagbearer's, may raise what the layers show on top of them).
+      expect(fusedDef.base).toMatchObject({ attack, health });
+      expect(s.stats(kept).maxHealth - s.stats(kept).health).toBe(1);
       expect(fusedDef.type).toBe("Unit");
       const kinds = fusedDef.base.keywords.map((keyword) => keyword.kind);
       for (const entry of ingredients) {
@@ -169,7 +172,9 @@ describe("C+ #30 Felinor Fuser", () => {
       const faces = [...picks, FUSER].map((id) => defOf(s.state, id).radiant);
       const attack = faces.reduce((sum, face) => sum + (face.attack ?? 0), 0);
       const health = faces.reduce((sum, face) => sum + (face.health ?? 0), 0);
-      s.expectStats(kept, { attack, health, maxHealth: health });
+      // R77: the fused definition's Radiant form prints the sums (an ingredient's own aura, a Felinor
+      // Flagbearer's, may raise what the layers then show on top of them).
+      expect(defOf(s.state, kept.defId).radiant).toMatchObject({ attack, health });
     });
 
     it("R387 the Radiant Discovers never offer the Fuser either", () => {
