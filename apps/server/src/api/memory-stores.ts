@@ -21,6 +21,9 @@
 
 import type {
   DeckStore,
+  LastBoardEntry,
+  LastBoardKind,
+  LastBoardStore,
   MatchActionRow,
   MatchRow,
   RetentionPurgeInput,
@@ -277,13 +280,43 @@ export function createMemoryTutorialStore(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Last boards (C+ #29 Portal to the Past, R417, R565)
+// ---------------------------------------------------------------------------
+
+/** The table R565 adds (`public.last_boards`, migration 0016): one row per profile and kind. */
+export type LastBoardTables = { lastBoards: { profileId: string; kind: LastBoardKind; board: LastBoardEntry[] }[] };
+
+/** The in-memory `LastBoardStore`, shared by both in-memory stores as the tutorial store is. */
+export function createMemoryLastBoardStore(
+  tables: () => LastBoardTables,
+  call: (method: string) => void = () => undefined,
+): LastBoardStore {
+  const find = (profileId: string, kind: LastBoardKind) =>
+    tables().lastBoards.find((row) => row.profileId === profileId && row.kind === kind);
+  return {
+    get: async (profileId, kind) => {
+      call("lastBoards.get");
+      const row = find(profileId, kind);
+      return row === undefined ? null : clone(row.board);
+    },
+    put: async (profileId, kind, board) => {
+      call("lastBoards.put");
+      const row = find(profileId, kind);
+      if (row === undefined) tables().lastBoards.push({ profileId, kind, board: clone([...board]) });
+      else row.board = clone([...board]);
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------------------------
 // Account deletion and the retention purge (migrations 0012 and 0013), for both in-memory stores.
 // ---------------------------------------------------------------------------------------------
 
 /** The rows `ProfileStore.remove` and `Store.purgeExpired` reach, as both in-memory stores hold them. */
 export type AccountTables = DeckTables &
-  TutorialTables & {
+  TutorialTables &
+  LastBoardTables & {
     profiles: { id: string }[];
     attempts: { profileId: string | null; at: number }[];
     collection: { profileId: string }[];
@@ -324,6 +357,7 @@ export function removeProfileRows(tables: AccountTables, profileId: string): boo
   keepOnly(tables.decks, (row) => row.profileId !== profileId);
   keepOnly(tables.trios, (row) => row.profileId !== profileId);
   keepOnly(tables.tutorial, (row) => row.profileId !== profileId);
+  keepOnly(tables.lastBoards, (row) => row.profileId !== profileId);
   keepOnly(tables.tickets, (row) => row.profileId !== profileId);
   keepOnly(tables.rooms, (row) => !(row.hostProfileId === profileId && row.guestProfileId === null));
   return true;

@@ -31,6 +31,7 @@ import {
 import { registerCatalog, registeredCatalog } from "./catalog";
 import type { CostRule } from "./costRules";
 import { showToOwner } from "./ownLibrary";
+import { freezeLastBoards } from "./subsystems/lastBoards";
 import { createRng } from "./rng";
 
 export type Phase = "setup" | "mulligan" | "start" | "main" | "end" | "over";
@@ -531,7 +532,20 @@ export type GameState = {
    * as it did before the field existed.
    */
   marks?: MarkRecord[];
+  // ---- v0.2.0 game fields, by workstream: cards-plus-c (E30) ----
+  /**
+   * R417: each seat's last board, a `createGame` input frozen into the match and never written again
+   * (`subsystems/lastBoards`). Only a seat with one has a key, and a game with none has no field, so
+   * it hashes as it did before. `viewFor` never sends it.
+   */
+  lastBoards?: Partial<Record<PlayerId, LastBoardEntry[]>>;
 };
+
+/** R417: one card of a last board — the card and its face, never stats, buffs or damage. */
+export type LastBoardEntry = { defId: string; radiant: boolean };
+
+/** R417: each seat's last board in seat order, as `createGame` and `replay.fold` take them. */
+export type LastBoardInput = readonly [readonly LastBoardEntry[], readonly LastBoardEntry[]];
 
 /** R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.ts`). */
 export type MarkRecord = { instanceId: string; mark: string; color: string; delayedId: string };
@@ -617,6 +631,11 @@ export type CreateGameOptions = {
    * action: a replay passes the same list (`replay.ReplayInput.dealt`). Omitted, every deck was built.
    */
   dealt?: readonly PlayerId[];
+  /**
+   * R417: each seat's last board (C+ #29). Setup, not an action: a replay passes the same boards
+   * (`replay.ReplayInput.lastBoards`). Omitted, both are empty (hotseat, practice, a first game).
+   */
+  lastBoards?: LastBoardInput;
 };
 
 /** The five fields of a handicap, in §9.9's order, so every reader walks the same list. */
@@ -812,6 +831,10 @@ export function createGame(options: CreateGameOptions): GameState {
       side.hero.health = heroHealth;
     }
   });
+
+  // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
+  const lastBoards = freezeLastBoards(options.lastBoards, catalog);
+  if (lastBoards !== undefined) state.lastBoards = lastBoards;
 
   return state;
 }

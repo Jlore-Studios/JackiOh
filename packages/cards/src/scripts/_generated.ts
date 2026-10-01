@@ -180,6 +180,7 @@ import * as mclassic_plus_012_7_legion_of_the_hungry from "./classic-plus/012-7-
 import * as mclassic_plus_012_8_frostspatula from "./classic-plus/012-8-frostspatula";
 import * as mclassic_plus_013_mommy_barker from "./classic-plus/013-mommy-barker";
 import * as mclassic_plus_014_forever from "./classic-plus/014-forever";
+import * as mclassic_plus_029_portal_to_the_past from "./classic-plus/029-portal-to-the-past";
 import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
 import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
 import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
@@ -357,6 +358,7 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_012_8_frostspatula,
   mclassic_plus_013_mommy_barker,
   mclassic_plus_014_forever,
+  mclassic_plus_029_portal_to_the_past,
   mclassic_plus_033_ivory_tower,
   mclassic_plus_034_memory_leak,
   mclassic_plus_036_conjure_bones,

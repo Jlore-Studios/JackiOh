@@ -236,6 +236,11 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   next.seed = "redacted";
   next.rngCursor = 0;
   next.applied = [];
+  // R417: a last board is its own seat's alone (§10.8); the other seat's never reaches the AI.
+  if (next.lastBoards !== undefined) {
+    delete next.lastBoards[opp];
+    if (next.lastBoards[seat] === undefined) delete next.lastBoards;
+  }
 
   // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
   // to both players, so its placeholder keeps that number as its price, and whatever trap

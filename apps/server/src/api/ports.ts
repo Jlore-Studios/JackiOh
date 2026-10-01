@@ -477,6 +477,11 @@ export type MatchRow = {
   finishedAt: number | null;
   /** Deadlines the clients render (§9.5: the grace countdown is stored on the match). */
   clocks: MatchClocks;
+  /**
+   * R417: each seat's last board as this match started (seat order, like `decks`), a `createGame`
+   * input frozen on the row so a rebuilt actor folds the same game. Absent when both are empty.
+   */
+  lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
 };
 
 export type MatchClocks = {
@@ -763,6 +768,19 @@ export type TutorialStore = {
   merge: (input: TutorialMergeInput, maxLessons: number) => Promise<TutorialMergeOutcome>;
 };
 
+/** R417: one card of a last board — the card and its face, never its stats (C+ #29). */
+export type LastBoardEntry = { defId: string; radiant: boolean };
+
+/** R417: "your last game" is your last finished game of the same kind; only `server` is written today. */
+export type LastBoardKind = "server" | "practice";
+
+export type LastBoardStore = {
+  /** The profile's last board of this kind, or null before its first finished game of it. */
+  get: (profileId: string, kind: LastBoardKind) => Promise<LastBoardEntry[] | null>;
+  /** R565: replace it, or write the first one, as a game of that kind ends (epoch ms `at`). */
+  put: (profileId: string, kind: LastBoardKind, board: readonly LastBoardEntry[], at: number) => Promise<void>;
+};
+
 export type RetentionPurgeInput = { codeAttemptsBefore: number; matchActionsEndedBefore: number };
 export type RetentionPurgeResult = { codeAttempts: number; matchActions: number };
 
@@ -814,6 +832,8 @@ export type Store = {
   series: SeriesStore;
   /** R320: tutorial progress kept on the account. */
   tutorial: TutorialStore;
+  /** R417, R565: each profile's last finished game's board, per kind (C+ #29). */
+  lastBoards: LastBoardStore;
 };
 
 // ---------------------------------------------------------------------------

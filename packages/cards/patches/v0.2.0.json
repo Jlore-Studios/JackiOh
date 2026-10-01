@@ -7290,6 +7290,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Discover a card from the board your last game ended with. It costs (0)."
