@@ -794,7 +794,7 @@ describe("R195 in SPEC §10.8, §10.9 and §11, and in the rulings index (B10)",
     const row = /^\| R195 \|.*$/m.exec(spec)?.[0] ?? "";
     expect(row).toContain("| When a card glows yellow (`conditionActive`) |");
     const cells = row.split("|").map((cell) => cell.trim());
-    expect(cells.at(-2), "the sections and cards the row cites").toBe("§10.8, §10.9, #10, #53, #68, #71, #93");
+    expect(cells.at(-2), "the sections and cards the row cites").toBe("§10.8, §10.9, #10, #53, #68, #71, #93, C #22, C #36, C #40");
   });
 
   it("R195 B10: §10.8 puts conditionActive on the viewer's own cards, and §10.9 adds conditionMet to Script", () => {
