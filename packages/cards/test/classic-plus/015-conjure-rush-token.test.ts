@@ -3,8 +3,8 @@
 // again); a full board summons nothing and draws nothing (R129); the keyword count reads through
 // `param()`; radiant 3 Rush Tokens, fewer on a nearly full board, each with its own random keyword".
 
-import { RANDOM_KEYWORD_POOL, stepParam } from "@jackioh/engine";
-import { keywordKey } from "@jackioh/shared";
+import { RANDOM_KEYWORD_POOL, hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
+import { keywordKey, type Action } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/015-conjure-rush-token";
@@ -104,6 +104,15 @@ describe("C+ #15 Conjure Rush Token", () => {
       if (downToken === undefined) throw new Error("no token");
       expect(gained(down, downToken)).toHaveLength(1);
     });
+
+    it("§9.3 the rolled keyword replays from a JSON copy to the same hash", () => {
+      const s = scenario({ seed: "c15-replay", p1: { hand: [CARD, FILLER] }, p2: { hand: [FILLER] } });
+      const action = { type: "play", instanceId: s.card(CARD).id, playerId: "p1", nonce: "c15-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
+    });
   });
 
   describe("radiant", () => {
@@ -123,6 +132,18 @@ describe("C+ #15 Conjure Rush Token", () => {
         expect(keys).toHaveLength(1);
         expectFromPool(keys);
       }
+    });
+
+    it("R21 each token rolls its own keyword: across seeds the three do not always share one", () => {
+      let differ = 0;
+      for (let seed = 1; seed <= 8; seed += 1) {
+        const s = scenario({ seed: `c15-own-${seed}`, p1: { hand: [{ def: CARD, radiant: true }, FILLER] }, p2: { hand: [FILLER] } });
+        s.play(CARD);
+        const rolled = tokens(s).map((token) => gained(s, token).join());
+        expect(rolled).toHaveLength(3);
+        if (new Set(rolled).size > 1) differ += 1;
+      }
+      expect(differ).toBeGreaterThan(0);
     });
 
     it("R64 a nearly full board summons fewer: one open zone, one token", () => {

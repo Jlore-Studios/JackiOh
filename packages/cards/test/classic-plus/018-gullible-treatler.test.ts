@@ -17,6 +17,8 @@ const FIELD_SPELL = "core-064"; // Gifted Program
 const TRAP = "core-060"; // Bear Honeypot
 const FIELD_TRAP = "core-018"; // Bread and Butter
 const FROSTSPATULA = "classicplus-012-8"; // a Field Spell, "Animated on your turn"
+const TOWER = "classicplus-033"; // Ivory Tower, a Field Spell a Unit may top
+const VANILLA = "core-008";
 const FILLER = "core-005";
 const DECK = ["core-005", "core-005", "core-005", "core-005"];
 
@@ -92,6 +94,15 @@ describe("C+ #18 Gullible Treatler", () => {
       const animated = [1, 2, 3, 4, 5].some((lane) => s.unit("p1", lane)?.defId === FROSTSPATULA);
       expect(animated).toBe(true);
       s.expectInZone(treatler, "graveyard");
+    });
+
+    it("R418 an Ivory Tower carrying a Unit is still a Field Spell you control: it keeps it", () => {
+      const s = board({ hand: [VANILLA, FILLER], field: [{ def: TREATLER, lane: 1 }], backrow: [{ def: TOWER, lane: 2 }] });
+      s.play(VANILLA, { zone: 2, row: "backrow" });
+      expect(s.card(VANILLA).zone).toMatchObject({ z: "field", row: "backrow", lane: 2 });
+      expect(glows(s)).toBe(false);
+      s.endTurn().endTurn();
+      expect(treatlerAt(s)).not.toBeNull();
     });
 
     it("§6.3 the Tribute is a Sacrifice: Indestructible does not save it", () => {

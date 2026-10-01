@@ -5,7 +5,8 @@
 // amounts read through `param()`; radiant Lucky 1 (two flips, heads kept if either lands) and heads
 // +10/+10".
 
-import { addStep, createRng, stepParam, tuningOf } from "@jackioh/engine";
+import { addStep, createRng, hashState, reduce, stepParam, tuningOf, type GameState } from "@jackioh/engine";
+import type { Action } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/019-3-mid-loser";
@@ -134,6 +135,15 @@ describe("C+ #19.3 Mid Loser", () => {
       stepParam(tails.card(MID), "tails", -1);
       tails.play(MID);
       tails.expectStats(mid(tails), { attack: 3, health: 3 });
+    });
+
+    it("§9.3 the coin replays from a JSON copy to the same hash", () => {
+      const s = fromHand(true)("mid-replay");
+      const action = { type: "play", instanceId: s.card(MID).id, zone: { row: "units", lane: 1 }, playerId: "p1", nonce: "mid-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
 
     it("draws one coin from the match rng", () => {

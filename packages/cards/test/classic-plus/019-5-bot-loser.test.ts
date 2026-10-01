@@ -9,7 +9,7 @@
 // R195's proofs for this card are in its own file (the `describe("R195 conditionMet …")` block).
 
 import { applyEffects, createRng, makeContext, setParam, stepParam } from "@jackioh/engine";
-import { bounce, goBerserk } from "@jackioh/engine/effects";
+import { goBerserk } from "@jackioh/engine/effects";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
@@ -20,6 +20,7 @@ const JUNGLE = "classicplus-019-2";
 const VANILLA = "core-008"; // 4/4
 const MOTHS = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
 const ANTI_ONESHOT = "core-073"; // hits on the hero capped at 5
+const HIT_JOB = "core-016"; // destroy a target Unit
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
@@ -114,13 +115,18 @@ describe("C+ #19.5 Bot Loser", () => {
       s.expectHealth("p1", 30);
     });
 
-    it("R78 Berserk is lost when it leaves the field", () => {
-      const s = withBot({ hand: [FILLER, FILLER] });
-      sendBerserk(s, bot(s));
-      const sink = { state: s.state, events: [] as GameEvent[], rng: createRng(s.state.seed, s.state.rngCursor) };
-      applyEffects([bounce({ target: { of: "instance", instanceId: bot(s).id } })], makeContext(sink, null, { controller: "p1" }));
-      const card = s.hand("p1").find((each) => each.defId === BOT);
-      expect(card?.berserk).toBeUndefined();
+    it("R78 Berserk is lost when it leaves the field: back by Reborn, it is not Berserk and attacks nothing", () => {
+      const s = withBot({ hand: [HIT_JOB, FILLER] });
+      const first = bot(s);
+      s.card(first).grantedKeywords.push({ kind: "Reborn" });
+      sendBerserk(s, first);
+      expect(s.card(first).berserk).toBe(true);
+      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: first.id }] });
+      expect(s.lastEvents.some((event) => event.type === "destroyed" && event.instanceId === first.id)).toBe(true);
+      const back = bot(s);
+      expect(back.berserk).toBeUndefined();
+      s.endTurn();
+      s.expectHealth("p1", 30);
     });
 
     it("R412 Jungle Loser's base face sends it Berserk when it kills the Unit across from it", () => {
