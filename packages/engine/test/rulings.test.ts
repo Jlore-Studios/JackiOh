@@ -2961,6 +2961,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(510, "../../../apps/web/src/game/ActivateControl.test.tsx", "../../../apps/web/src/game/activate.test.ts");
   });
 
+  // Proved by apps/web cards/copies.test.tsx "R511 …" (the copied text on every face Echo shows, filled with
+  // the view's numbers, the Radiant line kept, the inspect note, and a real game's Echo after Book of Knowledge).
+  it("R511 prints the Spell text a copier has on its face", () => {
+    provenIn(511, "../../../apps/web/src/cards/copies.test.tsx");
+  });
+
   // Proved by apps/web cards/rules.test.ts "R512 …" (the new rows in players' words, Degrade and Upgrade split).
   it("R512 gives the glossary a row for every term v0.2.0's cards print", () => {
     provenIn(512, "../../../apps/web/src/cards/rules.test.ts");
