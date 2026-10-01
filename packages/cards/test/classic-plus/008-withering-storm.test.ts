@@ -7,8 +7,9 @@
 // library list does not change; card count and draw read through `param()`; radiant degrades every card
 // in the opponent's deck once".
 //
-// R440: the count of `degraded` cues never says how many of the deck's cards could change — the pick is
-// padded with `none` cues on cards no change reaches, up to {cards} (or the deck's size).
+// R569 (with R440): the pick is drawn among the cards a Degrade can change, and the count of `degraded`
+// cues never says how many of the deck's cards could — it is padded with `none` cues on cards no change
+// reaches, up to {cards} (or the deck's size).
 
 import { reduce, stepParam, type CardInstance, type GameState } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -75,7 +76,7 @@ describe("C+ #8 Withering Storm", () => {
       s.expectEvents("degraded", "drawn");
     });
 
-    it("R60 picks only among cards a Degrade can change: Immutable and unreachable cards are never picked", () => {
+    it("R569 R60 picks only among cards a Degrade can change: Immutable and unreachable cards are never picked", () => {
       for (let seed = 1; seed <= 10; seed += 1) {
         const s = setup([IMMUTABLE, VANILLA, NETHER, VANILLA, VANILLA, IMMUTABLE, VANILLA, NETHER, VANILLA, VANILLA], false, `storm-${seed}`);
 
@@ -88,7 +89,7 @@ describe("C+ #8 Withering Storm", () => {
       }
     });
 
-    it("R60 R440 a deck with 3 changeable cards degrades all 3, and a `none` cue keeps the count at 4", () => {
+    it("R569 R440 a deck with 3 changeable cards degrades all 3, and a `none` cue keeps the count at 4", () => {
       const s = setup([IMMUTABLE, VANILLA, NETHER, VANILLA, VANILLA]);
 
       s.play(STORM);
@@ -98,7 +99,7 @@ describe("C+ #8 Withering Storm", () => {
       expect(s.pile("p2", "library").filter((card) => card.defId === VANILLA).every(wasChanged)).toBe(true);
     });
 
-    it("R129 a deck no Degrade can change is left alone with no random number drawn, and you still draw", () => {
+    it("R569 R129 a deck no Degrade can change is left alone with no random number drawn, and you still draw", () => {
       const s = setup([IMMUTABLE, NETHER, IMMUTABLE]);
       const cursor = s.state.rngCursor;
       const hand = s.hand("p1").length;

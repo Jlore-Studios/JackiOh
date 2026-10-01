@@ -3,9 +3,9 @@
 // cards a Degrade can change (R60; all of them when fewer), then draw {draw}. Radiant: one Degrade on
 // every card of their deck. The changes stay hidden from both players while in the deck (R311).
 //
-// R440: so the count of `degraded` cues never says how many deck cards could change, the pick is padded
-// to {cards} (or the deck's size) with cues on cards no change reaches, which the Degrade leaves alone
-// with the change `none` — the same cue R440 gives every unchangeable card of the Radiant face's sweep.
+// R569: so the count of `degraded` cues never says how many deck cards could change (R440), the pick is
+// padded to {cards} (or the deck's size) with cues on cards no change reaches, which the Degrade leaves
+// alone with the change `none` — the same cue R440 gives every unchangeable card of the Radiant sweep.
 
 import { param, zoneCards, type CardInstance, type EffectContext, type Script } from "@jackioh/engine";
 import { applicableChanges, degrade, draw, forEachCard } from "@jackioh/engine/effects";
