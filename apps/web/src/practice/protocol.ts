@@ -28,7 +28,15 @@ export type PracticeStartConfig = {
    * the lesson's own, and a test may pass others.
    */
   lesson?: string;
+  /**
+   * R417, R508: the human's last board, from the device (`lastBoard.ts`): the seat's `lastBoards`
+   * input to `createGame`. A lesson ignores it; omitted, the human has none.
+   */
+  lastBoard?: LastBoardCard[];
 };
+
+/** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
+export type LastBoardCard = { defId: string; radiant: boolean };
 
 /** Rule 7: everything the main thread ever gets about the game. */
 export type PracticeSnapshot = {
@@ -40,6 +48,11 @@ export type PracticeSnapshot = {
   aiToAct: boolean;
   /** The engine's refusal of the last human action. */
   error: string | null;
+  /**
+   * R508: once a free game is over, the board the human takes from it (`lastBoardFor(state, human)`:
+   * the field as the human saw it, the AI's face-down cards left out). Absent otherwise.
+   */
+  lastBoard?: LastBoardCard[];
 };
 
 /** Dev builds only (MODE !== "production"); the one message that carries the raw state. */
@@ -54,6 +67,8 @@ export type PracticeDebug = {
   humanSeat: PlayerId;
   /** The tutorial lesson this game is, when it is one (§9.10). */
   lesson?: string;
+  /** R417: the last boards `createGame` had, seat ordered, when the human brought one. */
+  lastBoards?: [LastBoardCard[], LastBoardCard[]];
 };
 
 export type PracticeRequest =

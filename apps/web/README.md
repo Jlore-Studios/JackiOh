@@ -282,6 +282,8 @@ src/practice/
                       visible action at a time (think indicator, gaps from config.ts)
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
+  lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
+                      `jackioh.practice.lastBoard`, try/catch
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
@@ -289,11 +291,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 - The page holds snapshots, never a state: `{ view, legal, aiToAct, error }`, where `view` is
   `viewFor(state, human)` and `legal` is `legalActions(state, human)`. The AI seat's hand and
-  library never cross the worker boundary.
+  library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
+  engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
+  next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
 - The one exception is `debug`, which carries the raw state, the log, the decks and the handicaps
   for spec 13's replay check. The core answers it only when `MODE !== "production"`, and the route
   sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
 - URL params (all optional): `?seed=`, `?difficulty=easy|medium|hard`, `?deck=random|preset:<id>`

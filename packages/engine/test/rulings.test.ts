@@ -3124,6 +3124,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
+  // Proved by apps/web practice/core.test.ts "R508 …" (the board a finished free game gives, the next game's
+  // input on the human's seat alone, the fold, a lesson), practice/lastBoard.test.ts and controller.test.ts
+  // "R508 …" (the device's copy, untrusted and blocked storage, the controller carrying it both ways).
+  it("R508 keeps the human's last practice board on the device for the next practice game", () => {
+    provenIn(
+      508,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/lastBoard.test.ts",
+      "../../../apps/web/src/practice/controller.test.ts",
+    );
+  });
+
   // Proved by apps/web game/ActivateControl.test.tsx and game/activate.test.ts "R510 …" (the control, its
   // count and reason, a press built from legalActions only, drag to target, Heroic Power).
   it("R510 puts an Activate control on every card that has an ability", () => {

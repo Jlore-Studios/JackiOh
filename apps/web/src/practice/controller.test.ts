@@ -16,6 +16,7 @@ import type { ActionBody, DistributiveOmit, PlayerView } from "@jackioh/shared";
 import { baseView, pendingFor, waitingPending } from "../test/fixtures.ts";
 import type { PracticePacing } from "./config.ts";
 import { createPracticeController } from "./controller.ts";
+import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
 import type { PracticeController, PracticeTimers } from "./controller.ts";
 import type { PracticeHost } from "./host.ts";
 import type {
@@ -668,5 +669,48 @@ describe("B36 debug() rides the same queue", () => {
     await flush();
     fake.respond({ type: "failed", message: "debug is a dev-build channel" });
     await expect(settled).resolves.toBe("rejected");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R508: the human's last practice board travels through the controller
+// ---------------------------------------------------------------------------------------------
+
+describe("R508 the controller carries the human's last practice board", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("R508 a start brings the stored board, and a finished game's board replaces it", async () => {
+    const before = [{ defId: "core-008", radiant: false }];
+    const after = [{ defId: "classic-090", radiant: true }];
+    writeLastBoard(before);
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    const started = controller.start(CONFIG);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config: { ...CONFIG, lastBoard: before } });
+    fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
+    await started;
+
+    controller.act({ type: "concede" });
+    await flush();
+    const over = snap({ turn: 1, active: "p1", phase: "over", pending: null, result: { winner: "p2", reason: "concede" } }, false);
+    fake.respond({ type: "snapshot", snapshot: { ...over, lastBoard: after } });
+    await flush();
+    expect(controller.getState().phase).toBe("over");
+    expect(readLastBoard()).toEqual(after);
+  });
+
+  it("R508 with no stored board the start config goes as given, and a game over without a board keeps the stored one", async () => {
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    await startWith(fake, controller, humanTurn(1));
+    writeLastBoard([{ defId: "core-008", radiant: false }]);
+    controller.act({ type: "concede" });
+    await flush();
+    fake.respond({ type: "snapshot", snapshot: snap({ turn: 1, active: "p1", phase: "over", pending: null, result: { winner: "p2", reason: "concede" } }, false) });
+    await flush();
+    expect(readLastBoard()).toEqual([{ defId: "core-008", radiant: false }]);
   });
 });
