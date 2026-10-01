@@ -92,6 +92,15 @@ describe("C #79 Risky Die", () => {
       expect(s.card(MENACE).costMod).toBe(0);
     });
 
+    it("§2.4 a fatigue draw puts nothing in your hand: from a deck of one, one card is judged and two hits land", () => {
+      const s = scenario({ p1: { hand: [RISKY, VANILLA], library: [MENACE] } });
+      s.play(RISKY);
+      s.expectInZone(MENACE, "exile");
+      expect(s.state.players.p1.fatigueCount).toBe(2);
+      s.expectHealth("p1", 27);
+      expect(s.hand("p1").map((card) => [card.defId, card.costMod])).toEqual([[VANILLA, 0]]);
+    });
+
     it("B5 E3 a draw a limit stopped draws nothing: under Anti-Greed Machine only the first card is one of them", () => {
       const s = scenario({ p1: { hand: [RISKY, VANILLA], field: [MACHINE], library: [MENACE, STOCKPILE, FILLER] } });
       s.play(RISKY);
