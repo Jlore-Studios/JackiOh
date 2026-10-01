@@ -15,6 +15,9 @@ export * from "./callToChaos";
 // ---- v0.2.0 subsystems: Classic+ cards #40–#78 (the cards-plus-d workstream) ----
 
 // C+ #42 KY's Test's question bank (E31, R420):
+export * from "./kyTest";
+// C+ #44 Simplicity Audit and #45 Complexity Audit's lines-of-code sweep (E36):
+export * from "./audit";
 
 // C+ #62 KY's Papaya's curve targeting (E32, R422):
 export * from "./papaya";

@@ -246,6 +246,40 @@ export const KY_TEST_EASY_ADDENDS = { min: 10, max: 99 } as const;
 /** R420: an Easy problem's three wrong sums are a + b moved by three different ones of these. */
 export const KY_TEST_EASY_MISSES: readonly number[] = [1, -1, 2, -2, 10, -10];
 
+/**
+ * R420: one reward a difficulty may roll (BUILD §2 `KY_TEST_REWARDS`). `label` is the reward as the
+ * card's text prints it, which the first prompt shows beside its difficulty. A reward is cards: the
+ * one card the text names (`defId`: The Coin, KY's Gift), or random cards from a pool of non-token
+ * cards of every set (`pool`, R380; never KY's Test itself, R387; repeats allowed, R60). `count` is
+ * how many, or `"fill"`: as many as the hand has room for under `HAND_CAP`. `costOverride` is the cost
+ * the text sets each card to ("which costs (0)", "which cost (1)").
+ */
+export type KyTestReward = {
+  readonly id: string;
+  readonly label: string;
+  readonly defId?: string;
+  readonly pool?: { readonly tags?: Tag[]; readonly rarity?: "Legendary"; readonly cost?: number };
+  readonly count: number | "fill";
+  readonly costOverride?: number;
+};
+
+/** R420: each difficulty's list of rewards, in the order the text prints them; one is rolled per difficulty. */
+export const KY_TEST_REWARDS: { readonly [D in (typeof KY_TEST_DIFFICULTIES)[number]]: readonly KyTestReward[] } = {
+  Easy: [
+    { id: "coins", label: "3 The Coins", defId: "core-t-coin", count: 3 },
+    { id: "ky", label: "a random (2) Cost KY card", pool: { tags: ["KY"], cost: 2 }, count: 1 },
+    { id: "legendary", label: "a random Legendary card, which costs (0)", pool: { rarity: "Legendary" }, count: 1, costOverride: 0 },
+    { id: "books", label: "2 random Books", pool: { tags: ["Book"] }, count: 2 },
+  ],
+  Medium: [
+    { id: "fours", label: "2 random (4) Cost cards, which cost (1)", pool: { cost: 4 }, count: 2, costOverride: 1 },
+    { id: "books", label: "5 random Books", pool: { tags: ["Book"] }, count: 5 },
+    { id: "ky", label: "5 random KY cards", pool: { tags: ["KY"] }, count: 5 },
+    { id: "fill", label: "fill your hand with random Books", pool: { tags: ["Book"] }, count: "fill" },
+  ],
+  Hard: [{ id: "gift", label: "KY's Gift, which costs (0)", defId: "classicplus-042-1", count: 1, costOverride: 0 }],
+};
+
 // Classic+ #62 KY's Papaya (SPEC §8.7, R422, BUILD §2).
 /** R422: the rows of the curve's grid, y 0 (your backrow) to 3 (their backrow). */
 export const PAPAYA_ROWS = 4;

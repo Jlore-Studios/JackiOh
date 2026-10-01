@@ -194,6 +194,8 @@ export { forEachCard } from "./each";
 // ---- v0.2.0 verbs: Classic+ cards #40–#78 and the AI cards (card-specific, the cards-plus-d workstream) ----
 
 // Classic+ #40–#45, #77, T-AI-1 (KY's Test's question bank, E31, and its neighbours):
+// Random catalog cards shuffled into a library, Radiant and enchanted (C+ #40 Appropriations' Education, E39):
+export { shuffleRandomFromCatalog } from "./shuffleRandom";
 
 // Classic+ #62 KY's Papaya's curve (E32), the Degrade and Upgrade cards, T-AI-2, T-AI-3, T-AI-10:
 // T-AI-3 Hallucination: copies of random deck cards into the caster's hand, given Brittle (R57, R60, R385).

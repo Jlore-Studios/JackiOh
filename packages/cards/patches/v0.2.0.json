@@ -7689,6 +7689,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and target enemies when they can.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
@@ -7710,6 +7711,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Choose a card in your hand. Change a random number on it to 3."
@@ -7735,6 +7737,7 @@
       "core-t-coin",
       "classicplus-042-1"
     ],
+    "loc": 3,
     "base": {
       "keywords": [],
       "text": "Offer an Easy, a Medium and a Hard problem, each showing a random reward from its list. Choose one and answer it. If you're right, gain its reward.\nEasy (addition): 3 The Coins; a random (2) Cost KY card; a random Legendary card, which costs (0); or 2 random Books.\nMedium (double integrals): 2 random (4) Cost cards, which cost (1); 5 random Books; 5 random KY cards; or fill your hand with random Books.\nHard (proofs, Markov chains, statistics, PDEs, linear algebra): KY's Gift, which costs (0)."
@@ -7784,6 +7787,7 @@
         "min": 1
       }
     ],
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost (0)."
@@ -7813,6 +7817,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Fuse {cards|random AI generated card|random AI generated cards} and add the result to your hand. It costs (0)."
@@ -7832,6 +7837,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Exile every permanent whose card has fewer lines of code than this one."
@@ -7851,6 +7857,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Exile every permanent whose card has more lines of code than this one."
@@ -9308,6 +9315,7 @@
         "min": 1
       }
     ],
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Every card on the field, in hands and in decks gains Stack and Pierce. Unlock every zone."
@@ -9359,6 +9367,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "loc": 10,
     "base": {
       "attack": 1,
       "health": 3,

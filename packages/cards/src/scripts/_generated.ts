@@ -124,6 +124,13 @@ import * as mt_felinor from "./t-felinor";
 import * as mt_ghoul from "./t-ghoul";
 import * as mt_rush from "./t-rush";
 import * as mt_sheep from "./t-sheep";
+import * as mclassic_plus_040_appropriations from "./classic-plus/040-appropriations";
+import * as mclassic_plus_041_kys_constant from "./classic-plus/041-kys-constant";
+import * as mclassic_plus_042_kys_test from "./classic-plus/042-kys-test";
+import * as mclassic_plus_042_1_kys_gift from "./classic-plus/042-1-kys-gift";
+import * as mclassic_plus_043_ai_slop from "./classic-plus/043-ai-slop";
+import * as mclassic_plus_044_simplicity_audit from "./classic-plus/044-simplicity-audit";
+import * as mclassic_plus_045_complexity_audit from "./classic-plus/045-complexity-audit";
 import * as mclassic_plus_062_kys_papaya from "./classic-plus/062-kys-papaya";
 import * as mclassic_plus_063_fruit_tree from "./classic-plus/063-fruit-tree";
 import * as mclassic_plus_064_mulch_muncher from "./classic-plus/064-mulch-muncher";
@@ -144,6 +151,8 @@ import * as mclassic_plus_075_j_lease_j_jungle_ex_plorer from "./classic-plus/07
 import * as mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack from "./classic-plus/075-1-j-lease-j-jungle-ex-plorer-pack";
 import * as mclassic_plus_076_brother_lar from "./classic-plus/076-brother-lar";
 import * as mclassic_plus_076_1_brother_ping from "./classic-plus/076-1-brother-ping";
+import * as mclassic_plus_077_anti_softlock from "./classic-plus/077-anti-softlock";
+import * as mclassic_plus_t_ai_01_helpful_assistant from "./classic-plus/t-ai-01-helpful-assistant";
 import * as mclassic_plus_t_ai_02_scaling_law from "./classic-plus/t-ai-02-scaling-law";
 import * as mclassic_plus_t_ai_03_hallucination from "./classic-plus/t-ai-03-hallucination";
 import * as mclassic_plus_t_ai_10_fine_tuning from "./classic-plus/t-ai-10-fine-tuning";
@@ -260,6 +269,13 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mt_ghoul,
   mt_rush,
   mt_sheep,
+  mclassic_plus_040_appropriations,
+  mclassic_plus_041_kys_constant,
+  mclassic_plus_042_kys_test,
+  mclassic_plus_042_1_kys_gift,
+  mclassic_plus_043_ai_slop,
+  mclassic_plus_044_simplicity_audit,
+  mclassic_plus_045_complexity_audit,
   mclassic_plus_062_kys_papaya,
   mclassic_plus_063_fruit_tree,
   mclassic_plus_064_mulch_muncher,
@@ -280,6 +296,8 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack,
   mclassic_plus_076_brother_lar,
   mclassic_plus_076_1_brother_ping,
+  mclassic_plus_077_anti_softlock,
+  mclassic_plus_t_ai_01_helpful_assistant,
   mclassic_plus_t_ai_02_scaling_law,
   mclassic_plus_t_ai_03_hallucination,
   mclassic_plus_t_ai_10_fine_tuning,
