@@ -26,6 +26,7 @@
 import type { Selection } from "@jackioh/shared";
 import { defOf } from "../catalog";
 import { permanentsOnField, placePlagueOn, removePlague } from "../plague";
+import { castModeForPrompt, preferEnemies } from "../randomCast";
 import {
   closePrompt,
   inOfferedOrder,
@@ -145,6 +146,19 @@ function askPlacement(sink: EngineSink, player: PendingChoice["playerId"], resum
   if (cards.length === 0) return false;
   const data = placementData(resume.data);
   const tokens = data?.amount ?? 1;
+  // B5 E12, R452: under a random cast of the placer's every placement is random too, with no prompt —
+  // this hook answers its own prompts (`registerPromptAnswerer`), so `openPrompt` would ask instead.
+  const mode = castModeForPrompt(sink.state, player, resume.instanceId);
+  if (mode?.random === true) {
+    for (let left = data?.left ?? 0; left >= 0 && !paused(sink); left -= 1) {
+      const now = permanentsOnField(sink.state, player);
+      const pool = mode.targetEnemies ? preferEnemies(sink.state, player, now, (card) => ({ pick: "instance", instanceId: card.id }), 1) : now;
+      const card = pool[sink.rng.int(pool.length)];
+      if (card === undefined) break;
+      placePlagueOn(sink, card, tokens);
+    }
+    return false;
+  }
   const asked = openPrompt(sink, {
     player,
     kind: "target",

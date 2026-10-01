@@ -4,11 +4,12 @@
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
-import { consumePlague, placePlague, placePlagueEach, placePlagueRandom, placePlagueTokens, plague } from "../src/effects";
+import { castNew, consumePlague, placePlague, placePlagueEach, placePlagueRandom, placePlagueTokens, plague } from "../src/effects";
 import { fuse } from "../src/subsystems/fuse";
 import { unitView } from "../src/layers";
 import { permanentsOnField, placePlagueOn, plagueMultiplierOf, plagueOn, plagueOnField, removePlague } from "../src/plague";
 import { makeContext, type EngineSink } from "../src/resolve";
+import { settle } from "../src/triggers";
 import { hashState } from "../src/replay";
 import type { Effect } from "../src/script";
 import { newInstance, type CardInstance, type GameState } from "../src/state";
@@ -431,5 +432,30 @@ describe("E19 tokens spent as mana: the removal the play pipeline pays with", ()
     run(sink, placePlagueTokens({ count: 0 }));
     expect(start.state.pending).toBeNull();
     expect(sink.events).toEqual([]);
+  });
+});
+
+describe("E19 placements under a random cast (B5 E12, R452)", () => {
+  it("R452 R471 a random cast places each token on a random permanent itself, and asks nothing", () => {
+    const { run: start } = board("plague-random-cast");
+    const state = start.state;
+    const sink = sinkFor(state);
+    run(sink, castNew({ def: plagueBook.id, random: true }));
+    settle(sink);
+    expect(state.pending).toBeNull();
+    expect(eventsOfType(sink.events, "promptOpened")).toEqual([]);
+    // Its two placements both landed, and the rest of its text ran after them.
+    expect(placements(sink.events)).toHaveLength(2);
+    expect(heroHealth(state, "p2")).toBe(29);
+  });
+
+  it("R452 a cast that targets enemies places on enemy permanents whenever there is one", () => {
+    for (const seed of ["plague-enemies-1", "plague-enemies-2", "plague-enemies-3"]) {
+      const { run: start, theirs, trap } = board(seed);
+      const sink = sinkFor(start.state);
+      run(sink, castNew({ def: plagueBook.id, random: true, targetEnemies: true }));
+      settle(sink);
+      for (const placed of placements(sink.events)) expect([theirs.id, trap.id]).toContain(placed.id);
+    }
   });
 });
