@@ -264,9 +264,9 @@ describe("E33 quests: each goal counted, and not counted", () => {
     const lentStep = play(steal.state, hand(steal.state, slay.id), [lent.id]);
     expect(eventsOfType(lentStep.events, "destroyed")[0]).toMatchObject({ owner: "p1", controller: "p2" });
     expect(progressOf(lentStep.state, card)).toBe(1);
-    // A token is a permanent too; an ordinary death carries no `controller`.
+    // A token is a permanent too, and an ordinary death names its owner's side.
     const tok = play(lentStep.state, hand(lentStep.state, slay.id), [token.id]);
-    expect(eventsOfType(tok.events, "destroyed")[0]?.controller).toBeUndefined();
+    expect(eventsOfType(tok.events, "destroyed")[0]?.controller).toBe("p2");
     expect(completed(tok.events, card)).toEqual([ONLY_QUEST]);
     expect(findInstance(tok.state, theirs.id)?.zone.z).toBe("field");
   });

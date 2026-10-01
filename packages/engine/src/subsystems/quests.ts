@@ -23,7 +23,7 @@
 //     event from before the card's arrival away from it: a card that has moved since an event (its
 //     `cardPlayed`, its `summoned` comes after the event) does not answer it.
 // The side a card stood on when an event happened is read as R212 reads it, off what happened since
-// (`sideWhen`): `destroyed` names the controller a stolen card died under (`destroyed.controller`), a
+// (`sideWhen`): `destroyed` names the controller a card died under (`destroyed.controller`), a
 // draw that took the last card of the drawer's deck says so (`drawn.emptied`).
 //
 // COMPLETION is noticed at the state check (`noticeQuests`, called once at the end of
