@@ -22,7 +22,7 @@
 // "EXILE THIS" names where §10.5 step 7 sends the Spell (R178): it stays itself while it resolves and
 // lands in exile rather than the graveyard, so it never summons or offers itself.
 
-import type { CardInstance, Effect, EffectContext, Script } from "@jackioh/engine";
+import type { CardInstance, EffectContext, Script } from "@jackioh/engine";
 import { defOf, param, zoneCards, zoneCount } from "@jackioh/engine";
 import { choosePick, exile, forEachCard, summon } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
@@ -32,10 +32,6 @@ export const def = cardDef("classic-044");
 /** Your graveyard's Units, oldest first (§3: a graveyard is chronological). */
 function graveyardUnits(ctx: EffectContext): readonly CardInstance[] {
   return zoneCards(ctx.state, ctx.controller, "graveyard").filter((card) => defOf(ctx.state, card.defId).type === "Unit");
-}
-
-function exileThis(): Effect {
-  return exile({ target: { of: "self" } });
 }
 
 export const base: Script = {
@@ -49,7 +45,7 @@ export const base: Script = {
       budget: param(ctx, "budget"),
       prompt: "Summon Units from your graveyard within the budget",
     }),
-    exileThis(),
+    exile({ target: { of: "self" } }),
   ],
   resume: {
     picked: (ctx) => ctx.targets.map((_, index) => summon({ instance: { of: "chosen", index } })),
@@ -62,6 +58,6 @@ export const radiant: Script = {
       cards: graveyardUnits,
       each: (instanceId) => summon({ instance: { of: "instance", instanceId } }),
     }),
-    exileThis(),
+    exile({ target: { of: "self" } }),
   ],
 };
