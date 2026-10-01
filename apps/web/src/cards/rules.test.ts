@@ -347,7 +347,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(KEYWORD_MARK).toEqual(MARKS);
   });
 
-  it("R438 KEYWORD_MARK has a distinct two-letter mark for every keyword kind, patch v0.2.0's included", () => {
+  it("B11 KEYWORD_MARK has a distinct two-letter mark for every keyword kind, patch v0.2.0's included", () => {
     expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...KEYWORD_KINDS].sort());
     const marks = KEYWORD_KINDS.map((kind) => KEYWORD_MARK[kind]);
     for (const [index, mark] of marks.entries()) expect(mark, KEYWORD_KINDS[index]).toMatch(/^[A-Z]{2}$/);

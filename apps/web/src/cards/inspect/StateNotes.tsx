@@ -10,15 +10,14 @@
 //   cost less than (2)", "Cast on draw", "Targets enemies" (E39), and the animated mark (R383).
 //
 // `LocLine` is E36's meta line: "27 lines of code", a fused card's being its ingredients' sum (the
-// view's definition carries it, else its ingredients' definitions are summed). The detail view prints
-// the same words in its own meta line (CardDetail.tsx).
+// view's definition carries it). The detail view prints the same words in its own meta line
+// (CardDetail.tsx).
 
 import type { ReactElement } from "react";
 
 import { stateBadges } from "../cardState.ts";
 import { Icon } from "../icons.tsx";
-import { locOf, locWords, type FaceModel } from "../model.ts";
-import { useDefResolver } from "../refContext.tsx";
+import { locWords, type FaceModel } from "../model.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, WAY_GLYPH, changeWords } from "../tuning.ts";
 import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
@@ -82,9 +81,8 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
 
 /** E36: "N lines of code", or nothing for a card whose script nobody counted. */
 export function LocLine({ face }: { face: FaceModel }): ReactElement | null {
-  const resolve = useDefResolver();
-  const loc = locOf(face, resolve ?? undefined);
-  if (loc === null) return null;
+  const loc = face.loc;
+  if (loc === undefined || loc === null) return null;
   return (
     <p className="inspect-meta inspect-loc" data-testid={INSPECT_LOC} data-loc={loc}>
       {locWords(loc)}

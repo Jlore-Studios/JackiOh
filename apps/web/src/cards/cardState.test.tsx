@@ -565,31 +565,19 @@ describe("E36 a card's lines of code in the inspect overlays", () => {
     expect(within(sheet).getByTestId(INSPECT_LOC).textContent).toBe(locWords(loc));
   });
 
-  it("E36 a fused card's count is its ingredients' sum: the one its definition carries, else the catalog's added up", () => {
+  it("E36 a fused card's count is the sum its definition carries (the engine's Fuse adds its ingredients' up)", () => {
     vi.useFakeTimers();
     const first = def("core-004");
     const second = def("core-019");
     const sum = must(first.loc, "a count") + must(second.loc, "a count");
-    const carried = { ...fusedDef([first, second], 4), loc: sum };
-    const named = { ...fusedDef([first, second], 5), ingredients: [{ defId: first.id }, { defId: second.id }] } as CardDef;
+    const fused = { ...fusedDef([first, second], 4), loc: sum };
     renderBoard(
       baseView({
-        you: emptySide("p1", {
-          hand: [
-            card({ instanceId: "h1", defId: carried.id, cost: 4, attack: 2, health: 2 }),
-            card({ instanceId: "h2", defId: named.id, cost: 4, attack: 2, health: 2 }),
-          ],
-        }),
-        defs: { [carried.id]: carried, [named.id]: named },
+        you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: fused.id, cost: 4, attack: 2, health: 2 })] }),
+        defs: { [fused.id]: fused },
       }),
     );
     expect(within(hover(handRoot())).getByTestId(INSPECT_LOC).textContent).toBe(locWords(sum));
-    fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
-    act(() => {
-      closeInspect();
-    });
-    const other = screen.getByTestId(testid.handCard("h2"));
-    expect(within(hover(other)).getByTestId(INSPECT_LOC).textContent).toBe(locWords(sum));
   });
 
   it("E36 a card nobody counted has no line", () => {

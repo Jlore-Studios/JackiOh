@@ -26,10 +26,10 @@ import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
-import { defLoc, faceModel, locWords, type FaceModel } from "../model.ts";
+import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
-import { RefsInteractive, useDefResolver } from "../refContext.tsx";
+import { RefsInteractive } from "../refContext.tsx";
 import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
@@ -56,12 +56,12 @@ export type CardDetailProps = {
  * code` (E36) when the card's script was counted. A face with a type of its own (B2.7, Classic+ #22
  * Blood Moon's Radiant Field Trap) says so after the type: "Trap (Radiant: Field Trap)".
  */
-export function detailMetaLine(def: CardDef, loc: number | null = def.loc ?? null): string {
+export function detailMetaLine(def: CardDef): string {
   const radiantType = def.radiant.type;
   const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
   const parts = [`#${def.index}`, def.set, def.rarity, type];
   if (def.tags.length > 0) parts.push(def.tags.join(", "));
-  if (loc !== null) parts.push(locWords(loc));
+  if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }
 
@@ -114,8 +114,6 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
     return registerDetail(`inspect-detail:${def.id}`, () => onCloseRef.current());
   }, [def.id]);
 
-  const resolve = useDefResolver();
-  const loc = defLoc(def, resolve ?? undefined);
   const base = faceModel({ defId: def.id, def, radiant: false });
   const radiant = faceModel({ defId: def.id, def, radiant: true });
   const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
@@ -152,8 +150,8 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
                 them on a wide, short one such as a 1280x720 desktop (inspect.css). */}
             <div className="inspect-detail-info">
-              <p className="inspect-meta" data-loc={loc ?? undefined}>
-                {detailMetaLine(def, loc)}
+              <p className="inspect-meta" data-loc={def.loc}>
+                {detailMetaLine(def)}
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />

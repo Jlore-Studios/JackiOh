@@ -48,39 +48,13 @@ export {
   REF_PANEL_FACE_HEIGHT_PX,
   REF_TOOLTIP_HEIGHT_PX,
   FIT_STEPS,
-  STATE_BADGES_SMALL_MAX,
   NAME_TIER_MAX,
   TEXT_TIER_MAX,
   TIER_SCALE,
 } from "./constants.ts";
 
-// Patch v0.2.0's per-card states (SPEC §10.8): Brittle (R385), Degrade and Upgrade (R386), the
-// enchantments (E39), a card standing as a Unit (R383), a backrow pile's depth (E21), lines of code (E36).
-export { CardStates, PileDepth } from "./CardStates.tsx";
-export type { CardStatesProps } from "./CardStates.tsx";
-export {
-  PILE_WORDS,
-  animatedWords,
-  brittleWords,
-  distinctEnchantments,
-  enchantmentWords,
-  stateBadges,
-} from "./cardState.ts";
-export type { StateBadge, StateBadgeKind } from "./cardState.ts";
-export {
-  LESS_IS_BETTER,
-  VERDICT_GLYPH,
-  VERDICT_WORD,
-  WAY_GLYPH,
-  changeWords,
-  faceTuning,
-  filledText,
-  keyWords,
-  tunedRangeWords,
-  tuningSummary,
-} from "./tuning.ts";
-export type { FaceTuning, TuneChange, TuneVerdict, TuneWay, TunedRange } from "./tuning.ts";
-export { defLoc, locOf, locWords } from "./model.ts";
+// E21: a backrow pile's depth, which game/Backrow.tsx draws beside the card.
+export { PileDepth } from "./CardStates.tsx";
 
 export { CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";

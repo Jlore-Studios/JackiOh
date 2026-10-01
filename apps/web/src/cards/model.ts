@@ -166,13 +166,8 @@ export type FaceModel = {
   enchantments?: readonly Enchantment[];
   /** B3.1, R383: a backrow card standing in a unit zone as a Unit (`UnitView.animated`); null otherwise. */
   animated?: { home?: number } | null;
-  /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's is its ingredients' sum. */
+  /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
-  /**
-   * E36, R102: a fused definition's ingredient ids, read defensively off the view's definition, so a
-   * fused card whose definition carries no `loc` can still sum its ingredients'. Empty for any other.
-   */
-  ingredients?: readonly string[];
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -277,7 +272,6 @@ export function faceModel(source: FaceSource): FaceModel {
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     loc: def?.loc ?? null,
-    ingredients: ingredientIds(def),
   };
 }
 
@@ -290,39 +284,6 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
   if (def === undefined || def.params !== undefined || values === undefined) return def;
   const params: Param[] = Object.entries(values).map(([key, value]) => ({ key, base: value, radiant: value, better: "up" }));
   return params.length === 0 ? def : { ...def, params };
-}
-
-/** E36: the ingredient ids a fused definition names (`ingredients`, read defensively); empty for any other. */
-function ingredientIds(def: CardDef | undefined): string[] {
-  if (def === undefined || !("ingredients" in def)) return [];
-  const list: unknown = (def as { ingredients?: unknown }).ingredients;
-  if (!Array.isArray(list)) return [];
-  return list.flatMap((entry: unknown) => {
-    if (typeof entry === "string") return [entry];
-    if (typeof entry === "object" && entry !== null && "defId" in entry) {
-      const id: unknown = (entry as { defId: unknown }).defId;
-      return typeof id === "string" ? [id] : [];
-    }
-    return [];
-  });
-}
-
-/**
- * E36: a card's lines of code: its definition's, else (a fused card whose definition does not carry
- * the sum) its ingredients' summed through `resolve`, each that has one counted; null when none does.
- */
-export function locOf(face: Pick<FaceModel, "loc" | "ingredients">, resolve?: (id: string) => CardDef | undefined): number | null {
-  if (face.loc !== undefined && face.loc !== null) return face.loc;
-  const parts = (face.ingredients ?? []).flatMap((id) => {
-    const loc = resolve?.(id)?.loc;
-    return loc === undefined ? [] : [loc];
-  });
-  return parts.length === 0 ? null : parts.reduce((sum, loc) => sum + loc, 0);
-}
-
-/** E36: a definition's lines of code, as `locOf` reads them (the collection's detail view). */
-export function defLoc(def: CardDef, resolve?: (id: string) => CardDef | undefined): number | null {
-  return locOf({ loc: def.loc ?? null, ingredients: ingredientIds(def) }, resolve);
 }
 
 /** E36: "27 lines of code", "1 line of code". */

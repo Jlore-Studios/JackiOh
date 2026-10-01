@@ -721,9 +721,22 @@
   flex: none;
 }
 
-.inspect-hover .inspect-loc {
-  text-align: left;
+/* Over the board, a panel of its own as the glossary has, so the line reads on any background. */
+.inspect-hover .inspect-loc,
+.inspect-sheet .inspect-loc {
+  box-sizing: border-box;
+  padding: 6px 12px;
+  background: rgba(11, 13, 19, 0.94);
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 10px;
   font-size: 12px;
+  text-align: left;
+}
+
+/* The tuned ribbon and the states list cast the glossary's shadow in the hover preview. */
+.inspect-hover .inspect-tuned,
+.inspect-hover .inspect-states {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
 
 .inspect-sheet .inspect-tuned,

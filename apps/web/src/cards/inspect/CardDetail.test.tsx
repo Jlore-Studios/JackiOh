@@ -11,8 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
-import { defLoc, locWords } from "../model.ts";
-import { CardDefsProvider } from "../refContext.tsx";
+import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
 import { CardDetail, closeInspect } from "./index.ts";
@@ -121,24 +120,6 @@ describe("CardDetail (B29)", () => {
     }
     expect(locWords(1)).toBe("1 line of code");
     expect(locWords(27)).toBe("27 lines of code");
-  });
-
-  it("E36 a fused card's lines of code are its ingredients' sum, when its definition does not carry it", () => {
-    const first = defOf("core-011");
-    const second = defOf("core-089");
-    const fused = { ...first, id: "t-9", index: "t-9", ingredients: [{ defId: first.id }, { defId: second.id }] } as CardDef;
-    delete fused.loc;
-    const sum = (first.loc ?? 0) + (second.loc ?? 0);
-    expect(defLoc(fused, (id) => CATALOG[id])).toBe(sum);
-    expect(defLoc(fused)).toBeNull();
-    // A definition that carries its sum (the engine's Fuse writes one) is read as it is.
-    expect(defLoc({ ...fused, loc: 99 })).toBe(99);
-    render(
-      <CardDefsProvider defs={CATALOG}>
-        <CardDetail def={fused} onClose={() => undefined} />
-      </CardDefsProvider>,
-    );
-    expect(screen.getByTestId(INSPECT_DETAIL).textContent).toContain(locWords(sum));
   });
 
   it("B2.7 a card whose Radiant face has a type of its own says so after the type (Classic+ #22 Blood Moon)", () => {
