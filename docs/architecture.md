@@ -464,9 +464,18 @@ Notes:
   out. Locally, click the link in the captured mail UI. `[auth.email] enable_confirmations` in
   `supabase/config.toml` controls it; leave it **on**, because turning it off locally makes the gate's
   step 1 untestable.
-- **Connection modes.** `db:migrate` takes a `pg_advisory_lock` across statements, so it needs a
-  **session-mode** connection (the direct `:5432` URI, or Supavisor's session port). The runtime
-  server is fine on either; transaction-mode pooling is the cheaper default for it.
+- **Connection modes.** `db:migrate` takes its advisory lock with `pg_advisory_xact_lock` inside
+  each migration's transaction, never as a session lock, so it runs over either a **session-mode**
+  connection (the direct `:5432` URI, or Supavisor's session port) or a transaction-mode pooler.
+  That matters because Render's start command runs `release` (`db:migrate`, then `db:seed-catalog`)
+  before every boot over the server's own `DATABASE_URL` (`render.yaml`), and a session lock taken
+  through a transaction-mode pooler stays held on a pooled backend, where the next deploy's runner
+  could wait on it forever. The runtime server is fine on either; transaction-mode pooling is the
+  cheaper default for it.
+- **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every Render
+  boot, so a deploy that ships new migrations or a new card patch applies them and reseeds at its
+  `CATALOG_VERSION` before the server listens. Both are idempotent, and a failure keeps the new
+  instance from passing its health check, so the previous deploy keeps serving.
 - **Exposed schemas.** Confirm `app` is not in the Data API's exposed schema list — `[api] schemas`
   in `supabase/config.toml` locally, Project Settings → Data API in the dashboard. The default
   (`public`, `graphql_public`) is correct. If `app` is ever exposed, every `SECURITY DEFINER` function

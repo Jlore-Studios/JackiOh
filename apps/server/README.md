@@ -75,6 +75,9 @@ without a dotenv dependency, a missing file is not an error, and a variable set 
 still wins over the file — `DATABASE_URL='postgresql://...' pnpm --filter @jackioh/server
 db:migrate` does what it looks like.
 
+`release` runs steps 1 and 2 together, and Render's start command runs it before every boot
+(`render.yaml`), so a deploy migrates and reseeds the database itself. Both steps are idempotent.
+
 Step 3 mints one code. Every account starts `pending` and a pending account can do nothing but
 look at the code screen (§9.4). `src/db/mint-code.ts` is a thin wrapper over `mintInviteCode` in
 `src/api/codes.ts`, which is the only thing that creates one: the plaintext goes to stdout exactly
