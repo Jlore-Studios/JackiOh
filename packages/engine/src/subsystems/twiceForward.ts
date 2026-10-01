@@ -8,8 +8,11 @@
 // offers a trap each event once (`traps.fireTrap`; one a predicate declined is never owed it again,
 // R99), and the predicate is the only part of a trap that runs without firing it — a fired Field Trap
 // is face-up from then on (R33), and this one must stay face-down until it first fuses. So the
-// predicate counts the play, and admits it — firing the trap — only on a count that fuses; a count
-// with nothing left to fuse gains its Brittle there, face-down.
+// predicate counts each play as it is played (`cardPlayed`, §10.5 step 4), notes the card an even
+// count names (`memory.fuseOn`), and admits that card's `cardResolved` — firing the trap — only when
+// there is a card to fuse; with nothing left to fuse it gains its Brittle there, face-down. Counting
+// plays, not resolutions, keeps "every second card your opponent plays" right when a play casts a card
+// that resolves before it (R70): the cast is the later play.
 // ponytail: a trap predicate that writes its card's own counter; a "watch without firing" trigger kind in
 // traps.ts is the upgrade path if a second card ever needs one.
 
@@ -22,6 +25,8 @@ import { findInstance, type CardInstance, type GameState } from "../state";
 
 /** §10.1: where the card keeps the opponent's plays since it was set (R425). */
 export const TWICE_FORWARD_PLAYS_KEY = "plays";
+/** §10.1: the plays an even count named, still to resolve (a play's cast resolves before it, R70). */
+const FUSE_ON_KEY = "fuseOn";
 
 /** The declared numbers the text reads (`params`, R386): every N plays, and the Brittle each fuse gains. */
 const EVERY = "plays";
@@ -35,9 +40,15 @@ export function twiceForwardPlays(card: Pick<CardInstance, "memory">): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
 }
 
+/** The plays an even count named that have not resolved yet, read back defensively (JSON). */
+function owed(card: Pick<CardInstance, "memory">): string[] {
+  const value = card.memory[FUSE_ON_KEY];
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+}
+
 /**
- * §10.5 step 7: a play or cast of the opponent's has resolved (R70: a cast counts; a countered card
- * never resolves, R448, so it never counts).
+ * §10.5 step 7: a play or cast of the opponent's that an even count named has resolved (R70: a cast
+ * counts; a countered card is never played, R448, so it never counts).
  */
 function opponentsPlay(ctx: EffectContext & { event: GameEvent }): Resolved | null {
   const event = ctx.event;
@@ -61,14 +72,20 @@ function stillThere(state: GameState, play: Resolved): CardInstance | null {
 export function twiceForwardTrigger(args: { radiantCopy: boolean }): TriggerDef {
   return {
     id: "twice-forward",
-    on: ["cardResolved"],
+    on: ["cardPlayed", "cardResolved"],
     when: (ctx) => {
       const self = ctx.self;
+      const event = ctx.event;
+      if (self === null) return false;
+      if (event.type === "cardPlayed" && event.player !== ctx.controller) {
+        const plays = twiceForwardPlays(self) + 1;
+        self.memory[TWICE_FORWARD_PLAYS_KEY] = plays;
+        if (plays % param(ctx, EVERY) === 0) self.memory[FUSE_ON_KEY] = [...owed(self), event.instanceId];
+        return false;
+      }
       const play = opponentsPlay(ctx);
-      if (self === null || play === null) return false;
-      const plays = twiceForwardPlays(self) + 1;
-      self.memory[TWICE_FORWARD_PLAYS_KEY] = plays;
-      if (plays % param(ctx, EVERY) !== 0) return false;
+      if (play === null || !owed(self).includes(play.instanceId)) return false;
+      self.memory[FUSE_ON_KEY] = owed(self).filter((id) => id !== play.instanceId);
       if (args.radiantCopy || stillThere(ctx.state, play) !== null) return true;
       // Nothing left to fuse: the Brittle still comes, and the trap stays as it was (R33).
       gainBrittle({ instanceId: self.id, n: param(ctx, GAIN) }).apply(ctx);
