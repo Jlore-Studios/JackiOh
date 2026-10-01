@@ -46,6 +46,7 @@ import {
   asker,
   chooser,
   endless,
+  ghost,
   heroic,
   lockdown,
   logCard,
@@ -488,6 +489,41 @@ describe("B3.2 rules 5, 8: choices and the list (R384, R81, R90)", () => {
     const merchantCard = put(state, merchant.id, slot("p1", "backrow", 1));
     state.players.p1.mana.current = 0;
     expect(legalActions(state, "p1").some((body) => body.type === "activate" && body.instanceId === merchantCard.id)).toBe(false);
+  });
+
+  it("R450 a declared target that costs discards carries them in the action, listed whole, and they are paid with the costs", () => {
+    const state = playing("ghost");
+    const card = put(state, pinger.id, slot("p1", "backrow", 1));
+    const costly = put(state, ghost.id, slot("p2", "units", 1));
+    state.players.p1.hand = [];
+    const [a, b, c] = inHand(state, sentry.id, "p1", 3);
+    const atGhost = { pick: "instance", instanceId: costly.id } as const;
+
+    const listed = activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "instance" && body.targets[0].instanceId === costly.id);
+    expect(listed.map((body) => body.discards)).toEqual([
+      [a?.id, b?.id],
+      [a?.id, c?.id],
+      [b?.id, c?.id],
+    ]);
+    expect(activateActionsFor(state, "p1", card).filter((body) => body.targets?.[0]?.pick === "hero").every((body) => body.discards === undefined)).toBe(true);
+    // Refused without its discards, with too few, or with discards nothing owes.
+    expect(actResult(state, activate("p1", card.id, { ability: "ping", targets: [atGhost] })).error).toMatch(/discard/);
+    expect(actResult(state, activate("p1", card.id, { ability: "ping", targets: [atGhost], discards: [a?.id ?? ""] })).error).toMatch(/discard/);
+    expect(
+      actResult(state, activate("p1", card.id, { ability: "ping", targets: [{ pick: "hero", player: "p2" }], discards: [a?.id ?? "", b?.id ?? ""] })).error,
+    ).toMatch(/discard/);
+
+    const { state: after, events } = act(state, activate("p1", card.id, { ability: "ping", targets: [atGhost], discards: [a?.id ?? "", b?.id ?? ""] }));
+    const order = events.map((event) => event.type);
+    expect(eventsOfType(events, "discarded").map((event) => event.instanceId)).toEqual([a?.id, b?.id]);
+    expect(order.lastIndexOf("discarded")).toBeLessThan(order.indexOf("damage"));
+    expect(after.players.p1.hand.map((held) => held.id)).toEqual([c?.id]);
+    expect(after.players.p2.units[0]?.[0]?.damage).toBe(1);
+
+    // With fewer than two cards in hand it is no legal target of the ability.
+    state.players.p1.hand = [];
+    inHand(state, sentry.id, "p1", 1);
+    expect(activateActionsFor(state, "p1", card).some((body) => body.targets?.[0]?.pick === "instance" && body.targets[0].instanceId === costly.id)).toBe(false);
   });
 
   it("R384 an ability a card does not have now is neither listed nor accepted (v0.2.1's rolled power)", () => {

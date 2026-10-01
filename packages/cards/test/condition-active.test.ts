@@ -810,7 +810,7 @@ describe("C #40 MC Tech lights up in hand while the opponent controls enough per
 describe("R195 the cards that declare conditionMet", () => {
   // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
   // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum).
-  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36 and #40, and Classic+ #18, #19.5 and #37, on both faces, so a new hook cannot land untested", () => {
+  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36, #40 and #69, and Classic+ #18, #19.5 and #37, on both faces, so a new hook cannot land untested", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.conditionMet !== undefined || card.radiant.conditionMet !== undefined)
       .map(([id]) => id)
@@ -819,6 +819,7 @@ describe("R195 the cards that declare conditionMet", () => {
       "classic-022",
       "classic-036",
       "classic-040",
+      "classic-069",
       "classicplus-018",
       "classicplus-019-5",
       "classicplus-037",
@@ -834,5 +835,55 @@ describe("R195 the cards that declare conditionMet", () => {
       expect(card?.base.conditionMet, `${id} base`).toBeTypeOf("function");
       expect(card?.radiant.conditionMet, `${id} radiant`).toBeTypeOf("function");
     }
+  });
+});
+
+// =============================================================================================
+// C #69 Plague Charger (field only): while it has a Plague Token
+// =============================================================================================
+
+describe("C #69 Plague Charger lights up while it has a Plague Token (R195)", () => {
+  const CHARGER = "classic-069";
+  const VANILLA = "core-008"; // (1) Unit 4/4.
+  const FILLER = "core-005";
+
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R195 ${face}: with a token it glows on the field, and it then strikes first: a 4/4 dies before striking back`, () => {
+      const s = scenario({
+        seed: `r195-c069-${face}-on`,
+        p1: { hand: [FILLER], field: [{ def: CHARGER, radiant, counters: { plague: 1 } }] },
+        p2: { hand: [FILLER], field: [VANILLA] },
+      });
+
+      expect(glows(s.view("p1").you.units[0])).toBe(true);
+      s.attack(CHARGER, s.card(VANILLA));
+      s.expectInZone(VANILLA, "graveyard");
+      expect(s.events.filter((event) => event.type === "damage" && event.targetId === s.card(CHARGER).id)).toHaveLength(0);
+    });
+
+    it(`R195 ${face}: with no token it does not glow, and it then has no First Strike: the 4/4 strikes back`, () => {
+      const s = scenario({
+        seed: `r195-c069-${face}-off`,
+        p1: { hand: [FILLER], field: [{ def: CHARGER, radiant }] },
+        p2: { hand: [FILLER], field: [VANILLA] },
+      });
+
+      expect(glows(s.view("p1").you.units[0])).toBe(false);
+      s.attack(CHARGER, s.card(VANILLA));
+      expect(s.events.filter((event) => event.type === "damage" && event.targetId === s.card(CHARGER).id)).toHaveLength(1);
+    });
+  }
+
+  it("R195 in hand it never glows: a card there holds no tokens (R78)", () => {
+    const s = scenario({ seed: "r195-c069-hand", p1: { hand: [CHARGER, FILLER] } });
+    expect(handGlows(s, s.card(CHARGER))).toBe(false);
+  });
+
+  it("R195 the opponent's plagued Charger carries no flag in your view", () => {
+    const s = scenario({ seed: "r195-c069-theirs", p1: { hand: [FILLER] }, p2: { hand: [FILLER], field: [{ def: CHARGER, counters: { plague: 2 } }] } });
+    expect(glows(s.view("p1").opponent.units[0])).toBe(false);
+    expect(glows(s.view("p2").you.units[0])).toBe(true);
   });
 });

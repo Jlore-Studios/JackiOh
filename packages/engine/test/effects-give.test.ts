@@ -12,7 +12,9 @@ import { HAND_CAP, HERO_HEALTH } from "../src/config";
 import { drawFromOpponent, giveFromHand, takeFromLibrary } from "../src/effects";
 import { changeOwner, drawFromLibraryOf, takeIntoHand } from "../src/ownership";
 import { makeContext } from "../src/resolve";
-import type { Effect } from "../src/script";
+import { registerCatalog, registeredCatalog } from "../src/catalog";
+import type { Effect, Script } from "../src/script";
+import { registerScripts, registeredScripts } from "../src/scripts";
 import { hashState } from "../src/replay";
 import { newInstance, type CardInstance, type GameState } from "../src/state";
 import { draw } from "../src/draw";
@@ -327,5 +329,25 @@ describe("E2, E16: the change of owner itself", () => {
     run(state, takeFromLibrary({ from: "enemy", pick: "top" }), "p2");
     expect(own.owner).toBe("p2");
     expect(viewFor(state, "p1").you.ownLibrary?.unknown).toBe(1);
+  });
+});
+
+describe("E16 and E3: a draw from the other player's deck is the drawer's draw for their draw limit (Classic #58, #49)", () => {
+  it("E3 a draw past the drawer's limit takes no card from the other deck: `drawLimited`, and nothing moves", () => {
+    const state = board("resources-limited");
+    const library = [...setLibrary(state, "p2", [grunt.id, plain.id])];
+    // A permanent of p2's that lets p1 draw 1 card each turn (B5 E3), and p1 has drawn once this turn.
+    const limiterId = "give-limiter";
+    registerCatalog({ ...registeredCatalog(), [limiterId]: { ...plain, id: limiterId, index: limiterId } });
+    const limit: Script = { drawLimit: () => [{ player: "enemy", count: 1 }] };
+    registerScripts({ ...registeredScripts(), [limiterId]: { base: limit, radiant: limit } });
+    put(state, limiterId, slot("p2", "units", 1));
+    state.players.p1.draws = { turn: state.turn, count: 1 };
+
+    const events = run(state, drawFromOpponent());
+    expect(eventsOfType(events, "drawLimited")).toEqual([{ type: "drawLimited", player: "p1" }]);
+    expect(state.players.p2.library.map((card) => card.id)).toEqual(library.map((card) => card.id));
+    expect(library[1]?.owner).toBe("p2");
+    expect(state.players.p1.hand).toHaveLength(0);
   });
 });

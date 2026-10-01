@@ -46,10 +46,10 @@
 // `undefined` (R33: a Trap is face-down until it fires). Every array is `readonly`, so a fixture
 // written `as const` is assignable as it stands.
 //
-// `stack: true` (unit zones only) builds a §3.2 Stack pile: the entry buries the card already in
-// its lane instead of taking a lane of its own, so the `lane` may be repeated, and with no `lane`
-// it lands on the entry before it. Later entries go on top, the way a play would put them, so the
-// pile reads top-first and the list reads bottom-first:
+// `stack: true` builds a §3.2 Stack pile, in a unit zone or a backrow zone (B5 E21): the entry
+// buries the card already in its lane instead of taking a lane of its own, so the `lane` may be
+// repeated, and with no `lane` it lands on the entry before it in its row. Later entries go on top,
+// the way a play would put them, so the pile reads top-first and the list reads bottom-first:
 //   field: ["core-043", { def: "core-092", stack: true }]
 // is a Felinor Fiender on top of a Big Felinor in lane 1, the Big Felinor dormant (R13).
 //
@@ -74,7 +74,8 @@
 // Steps 2-4 give a defId, and the instance is then the first one found scanning
 //   the ACTIVE player first, then the opponent, and within a side:
 //   hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
-//   backrow (lane 1..5) → graveyard → exile → library → resolving.
+//   backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
+//   resolving.
 // A method that needs the card somewhere particular narrows the search to that place first:
 // `play` looks in hands only, `attack`/`switchPosition` on the field only. Nothing matching throws
 // an Error naming the string and listing what was there instead. Holding several copies of one def?
@@ -240,8 +241,8 @@ export type FieldEntry = DefRef &
     /**
      * §3.2 Stack: this entry buries the card already in its lane instead of taking a lane of its
      * own, so the lane may be repeated. Later entries go on top, as a play would put them: the pile
-     * reads top-first, which is the reverse of the list. Unit zones only, and the buried card must
-     * come earlier in the list (or be pinned there with the same `lane`).
+     * reads top-first, which is the reverse of the list. A unit zone or a backrow zone (B5 E21), and
+     * the buried card must come earlier in the list (or be pinned there with the same `lane`).
      */
     stack?: boolean;
     position?: "ATK" | "DEF";
@@ -491,9 +492,6 @@ function normalizePlacement(state: GameState, entry: FieldSetup, fallback: Row, 
   }
   if (row === "backrow" && def.type === "Unit") {
     throw new Error(`${label}: "${def.name}" is a Unit; the backrow holds Field Spells and Traps`);
-  }
-  if (row === "backrow" && fields.stack === true) {
-    throw new Error(`${label}: \`stack: true\` is a unit-zone pile (§3.2); the backrow holds one card per zone`);
   }
 
   return { ...fields, defId, row, label };
@@ -764,6 +762,7 @@ class Harness implements Scenario {
       if (side.resolving.some((card) => card.id === id)) return "resolving";
       if (side.units.some((pile) => (pile ?? []).some((card) => card.id === id))) return "field";
       if (side.backrow.some((card) => card?.id === id)) return "field";
+      if ((side.backrowPiles ?? []).some((pile) => pile.some((card) => card.id === id))) return "field";
     }
     return "gone";
   }

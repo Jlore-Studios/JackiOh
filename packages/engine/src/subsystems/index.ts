@@ -18,3 +18,7 @@ export * from "./lastBoards";
 export * from "./perfectHand";
 // B5 E29, R419: the board snapshots C+ #35 Rollback returns the field to.
 export * from "./boardHistory";
+// B5 E33, R404: quests — Classic #90 In Too Deep's count, completion and view (`Script.quests`).
+export * from "./quests";
+// B5 E14, R399, R545–R547: a card that has the text of the last Spell played (Classic #57 Echo).
+export * from "./copiedText";

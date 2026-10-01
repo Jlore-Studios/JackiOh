@@ -317,6 +317,16 @@ export { chooseTargetWhere } from "./chooseWhere";
 // Nuke, R59, R113, R174).
 export { afterStateCheck } from "./afterCheck";
 
+// ---- v0.2.0 verbs: Classic cards #46–#90 (card-specific, the cards-classic-b workstream) ----
+
+// R60's random picks of existing cards: a random Unit of yours buffed, N random graveyard cards to
+// your hand (C #90 In Too Deep's rewards E and C).
+export { buffRandomUnit, returnRandomFromGraveyard } from "./randomPicks";
+
+// "Draw until …": one draw at a time while a condition holds, stopping at a draw that adds no card
+// (C #46 Divine Favor, §2.4, R58).
+export { drawWhile } from "./drawWhile";
+
 // ---- v0.2.0 verbs: cards-plus-c (B5 E30, R417): C+ #29's verbs over a last board ----
 export {
   LAST_BOARD_CARD_COST,

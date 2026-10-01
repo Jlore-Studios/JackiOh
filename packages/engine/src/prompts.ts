@@ -221,6 +221,10 @@ export function resumeAt(args: {
  * (`ctx.self === null`: its card has ceased to exist, R127) still names its definition's script,
  * which the context it was re-entered with carries (`EffectContext.defId`), so the answer to a
  * prompt it opens comes back to the same script rather than to none (R113).
+ *
+ * B5 E14, R546: the script running is named by `ctx.defId` first, where the run set it, and by the
+ * instance only where it did not — a copier (Classic #57 Echo) runs the copied Spell's text with
+ * itself as `self`, and its continuation must come back to that text, not to the copier's own.
  */
 export function resumeSelf(
   ctx: EffectContext,
@@ -229,7 +233,7 @@ export function resumeSelf(
 ): Resume {
   const self = ctx.self;
   const built = resumeAt({
-    defId: self?.defId ?? ctx.defId ?? "",
+    defId: ctx.defId ?? self?.defId ?? "",
     step,
     radiant: ctx.radiant,
     ...(self === null ? {} : { instanceId: self.id }),

@@ -86,9 +86,12 @@ import {
   type PromptOption,
 } from "./state";
 import { gradeName } from "./subsystems/comboIndex";
+import { copiedTextOf, textFaceOf } from "./subsystems/copiedText";
+import { paramsView } from "./params";
 import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { questViewOf } from "./subsystems/quests";
 import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
 import { plagueOn } from "./plague";
@@ -226,6 +229,8 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
  * the viewer may read where it is.
  */
 function cardView(state: GameState, card: CardInstance): CardView {
+  // B5 E33, R404: a quest line on the field, public as the card is.
+  const quest = questViewOf(state, card);
   return {
     instanceId: card.id,
     defId: card.defId,
@@ -233,6 +238,7 @@ function cardView(state: GameState, card: CardInstance): CardView {
     cost: effectiveCost(state, card),
     ...instanceDataView(state, card),
     ...withMarks(state, card.id),
+    ...(quest === null ? {} : { quest }),
   };
 }
 
@@ -253,7 +259,7 @@ function withMarks(state: GameState, instanceId: string): { marks?: CardMark[] }
  * R151), which its cost alone does not.
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
-  const view = cardView(state, card);
+  const view = withCopies(cardView(state, card), state, card);
   const stats = cardTypeOf(state, card) === "Unit" ? statsWithBuffs(state, card) : null;
   const power = powerOf(card);
   // B5 E38: the keywords it gained in the hand or the deck, which it carries onto the field.
@@ -264,6 +270,18 @@ function handCardView(state: GameState, card: CardInstance): CardView {
     ...(power === null ? {} : { power: power.name }),
     ...(keywords === null ? {} : { keywords }),
   };
+}
+
+/**
+ * B5 E14, R399, R243: a copier's view carries the Spell text it has now (`CardView.copies`), with that
+ * definition's declared numbers as they read on the card — or nothing, when it copies nothing. Asked
+ * only where the viewer may read the card and R399 shows it: the owner's hand, and the resolving zone.
+ */
+function withCopies<T extends CardView>(view: T, state: GameState, card: CardInstance): T {
+  const copy = copiedTextOf(state, card);
+  if (copy === null) return view;
+  const params = paramsView(state, textFaceOf(state, card));
+  return { ...view, copies: { defId: copy.defId, radiant: copy.radiant, ...(params === null ? {} : { params }) } };
 }
 
 /**
@@ -584,7 +602,7 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     resolving: side.resolving.map((card) =>
       announcedFaceDownTo(state, card, viewer)
         ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID, radiant: false, cost: HIDDEN_COST }
-        : cardView(state, card),
+        : withCopies(cardView(state, card), state, card),
     ),
     units: side.units.map((pile) => (pile === null ? null : unitViewOf(state, pile, viewer))),
     backrow: side.backrow.map((card) => backrowView(state, card, viewer)),

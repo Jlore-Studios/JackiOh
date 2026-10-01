@@ -133,6 +133,9 @@ export const nose = def("nose", "Unit", { attack: 3, health: 1 });
 /** Classic #84's shape: Indestructible, "Activate: Tribute this." */
 export const lockdown = def("lockdown", "Field Spell", { keywords: [{ kind: "Indestructible" }] });
 
+/** Classic #89's shape: to target this, a player must also discard 2 cards (B5 E5, R450). */
+export const ghost = def("ghost", "Unit", { attack: 5, health: 6 });
+
 /** A mana price, patch v0.2.1's "Activate: Spend (2): Draw 1". */
 export const merchant = def("merchant", "Field Spell");
 export const MERCHANT_PRICE = 2;
@@ -209,6 +212,7 @@ export const ACTIVATE_DEFS: CardDef[] = [
   turtle,
   nose,
   lockdown,
+  ghost,
   merchant,
   punisher,
   asker,
@@ -223,6 +227,7 @@ export const ACTIVATE_DEFS: CardDef[] = [
 export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
   [logCard.id]: faces({}),
   [pinger.id]: faces({ activations: [ping(1, 1)] }, { activations: [ping(2, 2)] }),
+  [ghost.id]: faces({ targetingDiscards: () => 2 }),
   [sentry.id]: faces({
     activations: [{ id: "surge", label: "Gain 1 mana", uses: 2, run: () => [gainMana({ amount: 1 })] }],
   }),

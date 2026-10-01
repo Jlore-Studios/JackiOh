@@ -47,10 +47,12 @@ import { whyPlayBanned } from "./costRules";
 import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
 import { unitHas } from "./layers";
 import { effectiveCost, isXCost, playCost } from "./mana";
+import { paramDeclOf, paramValue } from "./params";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
 import { findInstance, type CardInstance, type GameState } from "./state";
 import { spellCannotReach } from "./restrictions";
+import { copiedChoosesX, copiesText, textFaceOf } from "./subsystems/copiedText";
 import {
   canPayToTarget,
   targetingDiscardSets,
@@ -174,8 +176,10 @@ export function giftedMakesRadiant(state: GameState, player: PlayerId, costPaid:
  * face step 5 will run, which is known at step 1: the cost it pays is.
  */
 export function resolvingFace(state: GameState, player: PlayerId, card: CardInstance, costPaid: number): CardInstance {
-  if (card.radiant || !playMadeRadiant(state, player, card, costPaid)) return card;
-  return { ...card, radiant: true };
+  const face = card.radiant || !playMadeRadiant(state, player, card, costPaid) ? card : { ...card, radiant: true };
+  // B5 E14, R399: a copier (Classic #57 Echo) declares the choices of the Spell whose text it has, on
+  // the face that Spell was played on — its own face only adds its Echo (`subsystems/copiedText.ts`).
+  return textFaceOf(state, face);
 }
 
 /**
@@ -314,6 +318,8 @@ export function defaultZoneFor(
  * its cost hook answers the X, so there is nothing to choose and no X travels in its play.
  */
 export function choosesX(state: GameState, instance: CardInstance): boolean {
+  // B5 E14, R545: a copier pays its own price and chooses the X of an X-cost text it copies.
+  if (copiesText(instance)) return copiedChoosesX(state, instance);
   return isXCost(state, instance) && scriptOf(instance).cost === undefined;
 }
 
@@ -323,20 +329,35 @@ export function choosesX(state: GameState, instance: CardInstance): boolean {
  * the values this passes and `refuseX` refuses exactly the ones it names, so the picker and the
  * reducer's refusal cannot disagree.
  */
-export function whyXRefused(state: GameState, player: PlayerId, value: number): string | null {
+export function whyXRefused(
+  state: GameState,
+  player: PlayerId,
+  value: number,
+  most: number = state.players[player].mana.current,
+): string | null {
   if (!Number.isInteger(value)) return "X must be a whole number";
   if (value < 0) return "X cannot be negative";
   if (value < MIN_CHOSEN_X) return `X must be at least ${MIN_CHOSEN_X}`;
-  if (value > state.players[player].mana.current) return "X is above your current mana";
+  if (value > most) return most < state.players[player].mana.current ? "X is above your mana after paying" : "X is above your current mana";
   return null;
+}
+
+/**
+ * The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
+ * copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
+ */
+function mostX(state: GameState, player: PlayerId, card: CardInstance): number {
+  const mana = state.players[player].mana.current;
+  if (!copiesText(card)) return mana;
+  return mana - playCost(state, card);
 }
 
 /** §2.3, R348: every X `whyXRefused` passes, lowest first. Not an X-cost card, no X values. */
 export function legalXValues(state: GameState, player: PlayerId, card: CardInstance): number[] {
   if (!choosesX(state, card)) return [];
-  const mana = state.players[player].mana.current;
-  return Array.from({ length: Math.max(0, mana) + 1 }, (_, i) => i).filter(
-    (x) => whyXRefused(state, player, x) === null,
+  const most = mostX(state, player, card);
+  return Array.from({ length: Math.max(0, most) + 1 }, (_, i) => i).filter(
+    (x) => whyXRefused(state, player, x, most) === null,
   );
 }
 
@@ -390,8 +411,12 @@ export const SHEEP_TRIBUTE_VALUE = 2;
  * an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
  * take the larger worth, as they take the larger Tribute.
  */
-export function tributeValueOf(_state: GameState, unit: CardInstance): number {
-  const worth = flagsOf(unit).tributeWorth;
+export function tributeValueOf(state: GameState, unit: CardInstance): number {
+  const flag = flagsOf(unit).tributeWorth;
+  // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
+  // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
+  const worth =
+    typeof flag === "number" && paramDeclOf(state, unit.defId, "worth") !== undefined ? paramValue(state, unit, "worth") : flag;
   return typeof worth === "number" && worth > 1 ? worth : 1;
 }
 
@@ -1152,6 +1177,11 @@ function refuseZone(
 
 function refuseX(state: GameState, player: PlayerId, card: CardInstance, x?: number): string | null {
   const name = defOf(state, card.defId).name;
+  // B5 E14, R545: a copier's X is its copied text's, up to the mana left once its own price is paid.
+  if (copiesText(card)) {
+    if (!choosesX(state, card)) return x === undefined ? null : `${name} has no X to choose now`;
+    return whyXRefused(state, player, x ?? 0, mostX(state, player, card));
+  }
   if (!isXCost(state, card)) return x === undefined ? null : `${name} does not cost X`;
   // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
   // action names is ignored — never recorded on the card, never read by the cost (`playSteps`).
