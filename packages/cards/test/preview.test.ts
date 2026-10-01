@@ -38,6 +38,9 @@ const SPITEFUL_STAB = "core-070";
 const FED_FAUCI = "core-091";
 const COMBO_INDEX = "core-093";
 
+/** R583: C+ #44 Simplicity Audit and #45 Complexity Audit, whose Radiant face previews a set of cards. */
+const AUDITS = ["classicplus-044", "classicplus-045"];
+
 /** R280's six, in index order. */
 const PREVIEWED = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEFUL_STAB, FED_FAUCI];
 
@@ -107,14 +110,16 @@ describe("R280 the Core cards that declare preview", () => {
   // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
   // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
   // proves its values.
-  it("R280 R372 are exactly #18, #31, #38, #40, #70, #91 and #93, and the Classic cards listed, on both faces", () => {
+  it("R280 R372 R583 are exactly #18, #31, #38, #40, #70, #91 and #93 and the Classic cards listed, on both faces, and C+ #44 and #45 on the Radiant face", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED].sort());
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED, ...AUDITS].sort());
     for (const id of hooked) {
-      expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
+      // R583: an Audit's base face marks nothing; its Radiant face "highlights targets".
+      if (AUDITS.includes(id)) expect(CARDS[id]?.base.preview, `${id} base`).toBeUndefined();
+      else expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
       expect(CARDS[id]?.radiant.preview, `${id} radiant`).toBeTypeOf("function");
     }
   });
@@ -899,6 +904,50 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
       const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
       expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
       expect(answer).toEqual([{ label: LABEL, value: 4 }]);
+    }
+  });
+});
+
+describe("R280 R583 C+ #44 and #45 preview the permanents they would exile", () => {
+  /** p1's Radiant Audit in hand over a board of both sides, an enemy face-down card among it. */
+  function board(audit: string, enemyTrap: string, active: PlayerId = "p1"): Scenario {
+    return scenario({
+      active,
+      p1: { hand: [{ def: audit, radiant: true }, STOCKPILE], field: ["core-008", "core-022"], library: [MENACE] },
+      p2: {
+        hand: [STOCKPILE],
+        field: ["core-008", "core-022"],
+        backrow: [{ def: enemyTrap, faceUp: false }],
+        library: [MENACE],
+      },
+    });
+  }
+
+  it("R280 R583 the hook reads no library, hand or state.active, and answers as the view shows, on either turn", () => {
+    for (const audit of AUDITS) {
+      for (const active of ["p1", "p2"] as const) {
+        const s = board(audit, "core-071", active);
+        const card = must(s.hand("p1").find((c) => c.defId === audit), audit);
+        const { state, self } = guarded(s.state, card.id);
+        const hook = must(CARDS[audit]?.radiant.preview, `${audit}'s hook`);
+        const answer = hook({ state, self, controller: "p1", radiant: true, zone: "hand", yourTurn: active === "p1" });
+        expect(shown(handCard(s.view("p1"), card.id)), `${audit} ${active}`).toEqual(answer);
+        // Each label sits in the Radiant text, and each value counts its ids.
+        for (const entry of answer) {
+          expect(cardDef(audit).radiant.text).toContain(entry.label);
+          expect(entry.value).toBe(entry.ids?.length);
+        }
+      }
+    }
+  });
+
+  it("R177 R583 two boards that differ only in an enemy face-down card show the same preview", () => {
+    for (const audit of AUDITS) {
+      // Intern Stimmy's loc is below both Audits', Bear Honeypot's above: one of them is always a target.
+      const low = board(audit, "core-071");
+      const high = board(audit, "core-060");
+      const of = (s: Scenario): PreviewValue[] | null => shown(handCard(s.view("p1"), must(s.hand("p1")[0], audit).id));
+      expect(of(low)).toEqual(of(high));
     }
   });
 });
