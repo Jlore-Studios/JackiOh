@@ -800,12 +800,16 @@ registerWorkHandler(FORCED_RUN_WORK, runOwedForcedRun);
 /**
  * B5 E35: what a forced attack on "a random enemy" draws from — the targets its attacker may attack,
  * enemy units in lane order and then (for "an enemy", not "an enemy Unit") the enemy hero. R53 waives
- * position, sickness and Taunt, so none of those narrows the list; the unit restrictions do.
+ * position, sickness and Taunt, so none of those narrows the list; the unit restrictions do, and so
+ * does a carrier (R446): a carried Unit neither attacks nor is drawn, so no roll is spent on it.
  */
 export function randomAttackTargets(state: GameState, attacker: CardInstance, among: "enemies" | "enemyUnits"): AttackTarget[] {
+  if (carriedOutOfCombat(state, attacker)) return [];
   const enemy = opponentOf(attacker.controller);
   const candidates: AttackTarget[] = [
-    ...activeUnitsOf(state, enemy).map((instance) => ({ kind: "unit" as const, instance })),
+    ...activeUnitsOf(state, enemy)
+      .filter((instance) => !carriedOutOfCombat(state, instance))
+      .map((instance) => ({ kind: "unit" as const, instance })),
     ...(among === "enemies" ? [{ kind: "hero" as const, player: enemy }] : []),
   ];
   return candidates.filter((target) => attackRestriction(state, attacker, target) === null);

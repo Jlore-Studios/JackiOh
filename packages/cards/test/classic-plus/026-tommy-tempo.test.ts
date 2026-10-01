@@ -8,8 +8,8 @@
 // position switch, an activation, or ending the turn yourself) and the turn ends once it resolves
 // (R415); the action count reads through `param()`".
 
-import { stepParam } from "@jackioh/engine";
-import type { GameEvent } from "@jackioh/shared";
+import { hashState, reduce, stepParam, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/026-tommy-tempo";
@@ -21,6 +21,7 @@ const FILLER = "core-008"; // Mr. Vanilla, a (1) 4/4: a plain card to play or ho
 const PANTHER = "core-032"; // Prem Panther: after it attacks and survives, draw 2 for each Unit it destroyed
 const MOTHS = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this
 const NOSE = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
+const SCARAB = "core-007"; // Jewelosco Scarab: Cry: Discover a (2) Cost card (a prompt)
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
 /** p2 is active; p1's library has Tommy on top, so p2 ending the turn makes p1 draw it at its start. */
@@ -138,10 +139,15 @@ describe("C+ #26 Tommy Tempo", () => {
       expect(s.state.active).toBe("p1");
     });
 
-    it("§9.3 the turn it cut short replays from JSON", () => {
+    it("§9.3 the draw that casts it and the turn it cuts short replay from a JSON copy to the same hash", () => {
       const s = drawnAtStart();
-      s.endTurn();
-      expect(JSON.parse(JSON.stringify(s.state))).toEqual(s.state);
+      const action = { type: "endTurn", playerId: "p2", nonce: "tommy-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(live.events.some((event) => event.type === "turnCutShort")).toBe(true);
+      expect(live.state.active).toBe("p2");
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
   });
 
@@ -155,6 +161,39 @@ describe("C+ #26 Tommy Tempo", () => {
       s.play(FILLER);
       expect(s.events.some((event) => event.type === "turnCutShort")).toBe(true);
       expect(s.state.active).toBe("p2");
+    });
+
+    it("R415 drawn on the opponent's turn only the summon happens: no action is counted", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], library: [{ def: TOMMY, radiant: true }, ...DECK], field: [{ def: PANTHER, lane: 1 }] },
+        p2: { hand: [FILLER, FILLER], library: DECK, field: [{ def: MOTHS, lane: 3, damage: 10 }] },
+      });
+      s.endTurn();
+      s.expectStats(tommyOnField(s) ?? "", { attack: 18, health: 18 });
+      expect(s.state.players.p1.mods.some((mod) => mod.kind === "turnEnds")).toBe(false);
+      expect(s.state.players.p2.mods.some((mod) => mod.kind === "turnEnds")).toBe(false);
+      s.play(s.hand("p2")[0] ?? FILLER);
+      expect(s.state.active).toBe("p2");
+    });
+
+    it("R113 R415 the one action asks a question: the turn ends once it is answered, after a JSON round trip", () => {
+      const s = drawnAtStart(true, { hand: [SCARAB, FILLER] });
+      s.endTurn();
+      s.play(SCARAB);
+      const pending = s.state.pending;
+      expect(pending?.playerId).toBe("p1");
+      expect(s.state.active).toBe("p1");
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      expect(thawed).toEqual(s.state);
+      const choice = pending?.options[0]?.selection;
+      if (pending === null || choice === undefined) throw new Error("no Discover");
+      const action = { type: "answer", playerId: "p1", choiceId: pending.id, selection: [choice], nonce: "tommy-answer" } as Action;
+      const live = reduce(s.state, action);
+      const frozen = reduce(thawed, action);
+      expect(live.error).toBeUndefined();
+      expect(live.state.active).toBe("p2");
+      expect(live.events.some((event) => event.type === "turnCutShort")).toBe(true);
+      expect(hashState(frozen.state)).toBe(hashState(live.state));
     });
 
     it("R415 an attack is the action", () => {

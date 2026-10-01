@@ -116,16 +116,21 @@ describe("C+ #19.1 Top Loser", () => {
     });
 
     it("§4.2 step 2 a random-enemy forced attack from another lane never draws it", () => {
+      let made = 0;
       for (let seed = 1; seed <= 10; seed += 1) {
         const s = scenario({
           seed: `top-random-${seed}`,
           p1: { hand: [FILLER], field: [{ def: JUNGLE, lane: 1, radiant: true }], library: DECK },
           p2: { hand: [FILLER], field: [{ def: TOP, lane: 3 }, { def: BODY, lane: 5 }], library: DECK },
         });
+        const loser = top(s);
         s.endTurn();
-        const attacks = s.events.filter((event) => event.type === "attackDeclared");
-        for (const event of attacks) if (event.type === "attackDeclared") expect(event.targetId).not.toBe(s.unit("p2", 3)?.id ?? "-");
+        const attacks = s.events.flatMap((event) => (event.type === "attackDeclared" ? [event.targetId] : []));
+        for (const target of attacks) expect(target).not.toBe(loser.id);
+        made += attacks.length;
       }
+      // The roll came up on some of the seeds, so a forced attack was drawn, and never on it.
+      expect(made).toBeGreaterThan(0);
     });
 
     it("§4.2 step 3 a Taunt on it binds only the attacker in its lane", () => {

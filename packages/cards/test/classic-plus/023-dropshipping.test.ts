@@ -8,8 +8,8 @@
 // opponent sees three cards added and each hand `crumbled` under the sentinel (R97); a full hand burns
 // the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
 
-import { HAND_CAP, query, stepParam } from "@jackioh/engine";
-import type { CardView } from "@jackioh/shared";
+import { HAND_CAP, hashState, query, reduce, stepParam, type GameState } from "@jackioh/engine";
+import type { Action, CardView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/023-dropshipping";
@@ -88,6 +88,15 @@ describe("C+ #23 Dropshipping", () => {
         }
       }
       expect(sawToken).toBe(true);
+    });
+
+    it("§9.3 the three random cards replay from a JSON copy to the same hash", () => {
+      const s = shop("drop-replay");
+      const action = { type: "play", instanceId: s.card(DROP).id, playerId: "p1", nonce: "drop-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
 
     it("R97 the opponent sees three cards added and nothing of which", () => {

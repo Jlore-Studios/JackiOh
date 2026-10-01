@@ -134,6 +134,23 @@ describe("C+ #24 Crushing Walls", () => {
       // A Field Spell in its backrow zone, not a Unit token: R11 sends it to the graveyard.
       s.expectInZone(frost ?? "", "graveyard");
     });
+
+    it("R383 an Animated card is hit where it stands: animated into unit zone 1 from backrow lane 2", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { hand: [WALLS, FILLER], field: [{ def: BODY, lane: 2 }], backrow: [{ def: FROST, lane: 2 }], library: [FILLER, FILLER] },
+        p2: { hand: [FILLER], library: [FILLER, FILLER] },
+      });
+      const frost = s.backrow("p1", 2);
+      if (frost === null) throw new Error("setup");
+      s.endTurn();
+      expect(s.card(frost).zone).toMatchObject({ z: "field", row: "units", lane: 1 });
+      s.play(WALLS);
+      // Destroyed as the Unit it is there (a token, so R11 takes it out of the game).
+      expect(s.lastEvents.some((event) => event.type === "destroyed" && event.instanceId === frost.id)).toBe(true);
+      s.expectInZone(frost, "gone");
+      expect(s.unit("p1", 2)?.defId).toBe(BODY);
+    });
   });
 
   describe("radiant", () => {

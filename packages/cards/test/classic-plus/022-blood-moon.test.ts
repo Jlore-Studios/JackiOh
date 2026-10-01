@@ -22,6 +22,7 @@ const MENACE = "core-019"; // 9/9 Taunt; end of turn: heal this to full.
 const JILLIAX = "core-056"; // 3/2 Rush, Taunt, Lifesteal, Divine Shield
 const ANTI_ONESHOT = "core-073"; // the hero takes at most 5 at once
 const SOLARIUS = "classicplus-038"; // Spell Damage +2
+const NETHER = "core-088"; // Twisting Nether: destroy all permanents
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
@@ -215,6 +216,28 @@ describe("C+ #22 Blood Moon", () => {
       s.play(second, { targets: enemyHero });
       s.expectHealth("p2", 20);
       expect(s.events.filter((event) => event.type === "trapFired")).toHaveLength(1);
+    });
+
+    it("R33 R97 face-down, the opponent learns nothing of it, not even that it is a Field Trap", () => {
+      const s = moonUp(true, { hand: [FIG, FILLER] });
+      expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
+      const seen = JSON.stringify(s.view("p2"));
+      expect(seen).not.toContain(MOON);
+      expect(seen).not.toContain("Field Trap");
+    });
+
+    it("converts only while it is on the field: destroyed, the next enemy heal heals", () => {
+      const s = moonUp(true, { hand: [FIG, FIG, NETHER, FILLER], health: 60, mana: 10 });
+      const [first, second] = s.hand("p2").filter((card) => card.defId === FIG);
+      if (first === undefined || second === undefined) throw new Error("two Figs");
+      s.play(first, { targets: enemyHero });
+      s.expectHealth("p2", 40);
+      const moon = s.backrow("p1", 1);
+      if (moon === null) throw new Error("the Field Trap left");
+      s.play(NETHER);
+      s.expectInZone(moon, "graveyard");
+      s.play(second, { targets: enemyHero });
+      s.expectHealth("p2", 60);
     });
 
     it("a friendly heal is untouched while it stands face-up", () => {
