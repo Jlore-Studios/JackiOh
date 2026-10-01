@@ -4464,6 +4464,7 @@
         "min": 1
       }
     ],
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Draw until you have {multiplier}× as many cards in hand as your opponent."
@@ -4498,6 +4499,7 @@
         "min": 0
       }
     ],
+    "loc": 16,
     "base": {
       "attack": 3,
       "health": 2,
@@ -4521,6 +4523,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 19,
     "base": {
       "attack": 4,
       "health": 3,
@@ -4554,6 +4557,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "attack": 9,
       "health": 9,
@@ -4585,6 +4589,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 16,
     "base": {
       "attack": 6,
       "health": 3,
@@ -4608,6 +4613,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "loc": 7,
     "base": {
       "attack": 3,
       "health": 2,
@@ -4657,6 +4663,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
@@ -4694,6 +4701,7 @@
         "min": 1
       }
     ],
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 2,
@@ -4727,6 +4735,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "Trigger the Cry of one of your Units on the field or in your graveyard, {repeats|time|times}."
@@ -4758,6 +4767,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage."
@@ -4787,6 +4797,7 @@
         "min": 1
       }
     ],
+    "loc": 26,
     "base": {
       "attack": 5,
       "health": 5,
@@ -4810,6 +4821,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 1,
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "This has the text of the last Spell either player played."
@@ -4839,6 +4851,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Start of turn: Draw {cards|card|cards} from the bottom of your opponent's deck."
@@ -4870,6 +4883,7 @@
         "min": 1
       }
     ],
+    "loc": 25,
     "base": {
       "attack": 2,
       "health": 3,
@@ -4893,6 +4907,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 5,
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Recruit every permanent in your deck.\nIf this would go to your graveyard, put it on the bottom of your deck instead."
@@ -4930,6 +4945,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "attack": 7,
       "health": 7,
@@ -4967,6 +4983,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it."
@@ -5004,6 +5021,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Activates at the start of your turn: Place {tokens|Plague Token|Plague Tokens} on each permanent. Draw {draw}."
@@ -5023,6 +5041,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
@@ -5052,6 +5071,7 @@
         "min": 1
       }
     ],
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "End of your turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}."
@@ -5073,6 +5093,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 26,
     "base": {
       "attack": 5,
       "health": 4,
@@ -5102,6 +5123,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "loc": 10,
     "base": {
       "attack": 2,
       "health": 4,
@@ -5154,6 +5176,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "attack": 11,
       "health": 13,
@@ -5187,6 +5210,7 @@
         "min": 1
       }
     ],
+    "loc": 16,
     "base": {
       "attack": 4,
       "health": 2,
@@ -5230,6 +5254,7 @@
         "min": 1
       }
     ],
+    "loc": 3,
     "base": {
       "keywords": [],
       "text": "Place {tokens|Plague Token|Plague Tokens}."
@@ -5249,6 +5274,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "loc": 23,
     "base": {
       "attack": 4,
       "health": 4,
@@ -5272,6 +5298,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
@@ -5291,6 +5318,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "loc": 3,
     "base": {
       "attack": 3,
       "health": 6,
@@ -5344,6 +5372,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
@@ -5373,6 +5402,7 @@
         "min": 2
       }
     ],
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Aura: Damage to your hero is divided by {divisor}, rounded up."
@@ -5410,6 +5440,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 4,
       "health": 4,
@@ -5451,6 +5482,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 5,
       "health": 5,
@@ -5500,6 +5532,7 @@
         "min": 1
       }
     ],
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
@@ -5537,6 +5570,7 @@
         "min": 0
       }
     ],
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. They cost (1) less. Then exile each of them that costs more than ({threshold})."
@@ -5556,6 +5590,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
+    "loc": 4,
     "base": {
       "attack": 26,
       "health": 8,
@@ -5625,6 +5660,7 @@
         "min": 1
       }
     ],
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Activate: Choose one: Heal your hero {heal}; draw {draw}; or gain {mana} mana."
@@ -5662,6 +5698,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "attack": 1,
       "health": 1,
@@ -5695,6 +5732,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [
         {
@@ -5722,6 +5760,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "loc": 22,
     "base": {
       "keywords": [
         {
@@ -5759,6 +5798,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "attack": 5,
       "health": 5,
@@ -5782,6 +5822,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 4,
+    "loc": 3,
     "base": {
       "attack": 14,
       "health": 14,
@@ -5805,6 +5846,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
@@ -5834,6 +5876,7 @@
         "min": 1
       }
     ],
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
@@ -5863,6 +5906,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 5,
       "health": 6,
@@ -5899,6 +5943,7 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 1,
+    "loc": 139,
     "base": {
       "keywords": [
         {

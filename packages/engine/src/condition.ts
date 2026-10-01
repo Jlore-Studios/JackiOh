@@ -19,8 +19,8 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import type { ConditionZone } from "./script";
-import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
+import { runningScriptOf, textFaceOf } from "./subsystems/copiedText";
 
 /** R195: whether `viewer` sees `card` glowing yellow. Pure; calls the hook at most once. */
 export function conditionActive(
@@ -34,14 +34,16 @@ export function conditionActive(
   if (zone === "hand" && !(state.phase === "main" && state.active === viewer && state.pending === null)) {
     return false;
   }
-  const hook = scriptOf(card).conditionMet;
+  // B5 E14, R547: a copier (Classic #57 Echo) glows for the condition of the text it has.
+  const hook = runningScriptOf(state, card).conditionMet;
   if (hook === undefined) return false;
+  const face = textFaceOf(state, card);
   return (
     hook({
       state,
-      self: card,
+      self: face,
       controller: viewer,
-      radiant: card.radiant,
+      radiant: face.radiant,
       zone,
       yourTurn: state.active === viewer,
     }) === true

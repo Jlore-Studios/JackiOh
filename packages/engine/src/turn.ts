@@ -387,6 +387,8 @@ function startOfTurnTriggers(sink: EngineSink, player: PlayerId): void {
   const state = sink.state;
 
   queueHooksInTriggerOrder(sink, "startOfTurn", player);
+  // R68: then the opponent's cards, which answer the start of a turn that is not theirs (Classic #62).
+  queueHooksInTriggerOrder(sink, "startOfOpponentTurn", opponentOf(player));
   settle(sink);
   if (state.result !== null) return;
   if (state.pending !== null) {

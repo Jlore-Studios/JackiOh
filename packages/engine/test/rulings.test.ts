@@ -303,6 +303,17 @@ const CLASSIC_032_TEST = "../../cards/test/classic/032-felinor-feelings.test.ts"
 const CLASSIC_033_TEST = "../../cards/test/classic/033-joro.test.ts";
 const CLASSIC_038_TEST = "../../cards/test/classic/038-jackiestan-auctioneer.test.ts";
 const CLASSIC_039_TEST = "../../cards/test/classic/039-outbreak.test.ts";
+/** Classic #46–#90's card-side proofs (cards-classic-b). */
+const CLASSIC_048_TEST = "../../cards/test/classic/048-hired-shrimp.test.ts";
+const CLASSIC_050_TEST = "../../cards/test/classic/050-voidwalker.test.ts";
+const CLASSIC_057_TEST = "../../cards/test/classic/057-echo.test.ts";
+const CLASSIC_058_TEST = "../../cards/test/classic/058-common-resources.test.ts";
+const CLASSIC_062_TEST = "../../cards/test/classic/062-living-bomb.test.ts";
+const CLASSIC_063_TEST = "../../cards/test/classic/063-crop-dusting.test.ts";
+const CLASSIC_066_TEST = "../../cards/test/classic/066-eu-striker.test.ts";
+const CLASSIC_078_TEST = "../../cards/test/classic/078-mutate-spell.test.ts";
+const CLASSIC_088_TEST = "../../cards/test/classic/088-siphon-squad.test.ts";
+const CLASSIC_090_TEST = "../../cards/test/classic/090-in-too-deep.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -2770,6 +2781,53 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(396, CLASSIC_010_TEST, CLASSIC_018_TEST, CLASSIC_025_TEST, CLASSIC_032_TEST, CLASSIC_039_TEST);
   });
 
+  // Proved by cards classic/048-hired-shrimp.test.ts "R397 …" (the base face's unfiltered guess that
+  // fizzles, the Radiant face's filtered offer with face-down cards always offered and judged at
+  // resolution, and `loc` read from the catalog).
+  it("R397 keeps C #48 Hired Shrimp's guess: its base Cry destroys only a permanent with more lines of code", () => {
+    provenIn(397, CLASSIC_048_TEST);
+  });
+
+  // Proved by cards classic/050-voidwalker.test.ts "R398 …" (its own card reaches the graveyard as it dies).
+  it("R398 exiles what would go to a graveyard while C #50 Voidwalker stands, but not Voidwalker itself", () => {
+    provenIn(398, CLASSIC_050_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R399 …" (fixture copiers) and cards classic/057-echo.test.ts
+  // "R399 …" (the record, the view, nothing before any Spell, two Echoes never loop).
+  it("R399 gives C #57 Echo the text of the last Spell either player played", () => {
+    provenIn(399, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by cards classic/062-living-bomb.test.ts "R400 …" (each player's own plagued permanents, at
+  // the start of their turn; the Radiant face on the opponent's turn only).
+  it("R400 has C #62 Living Bomb destroy the turn player's own plagued permanents", () => {
+    provenIn(400, CLASSIC_062_TEST);
+  });
+
+  // Proved by cards classic/066-eu-striker.test.ts "R401 …" (neither trigger answers the play that moved it).
+  it("R401 never lets C #66 EU Striker's triggers answer the play that moved it", () => {
+    provenIn(401, CLASSIC_066_TEST);
+  });
+
+  // Proved by cards classic/078-mutate-spell.test.ts "R402 …" (a Field Spell with Activate ♾️, the three
+  // branches, and the Radiant fuse onto a card of yours of its type).
+  it("R402 reads C #78 Mutate Spell as a Field Spell with Activate ♾️", () => {
+    provenIn(402, CLASSIC_078_TEST);
+  });
+
+  // Proved by the engine's self-tribute.test.ts "R403 …" and cards classic/088-siphon-squad.test.ts "R403 …"
+  // (live while face-down, the self-Tribute at every state check, the Radiant 0 set last).
+  it("R403 keeps a Trap with no activation condition live while face-down (C #88 Siphon Squad)", () => {
+    provenIn(403, "self-tribute.test.ts", CLASSIC_088_TEST);
+  });
+
+  // Proved by the engine's quests.test.ts "R404 …" (each goal kind, completion at the state check, the
+  // reward prompt, the Radiant paths) and cards classic/090-in-too-deep.test.ts "R404 …" (the tree).
+  it("R404 runs C #90 In Too Deep's quests and rewards", () => {
+    provenIn(404, "quests.test.ts", CLASSIC_090_TEST);
+  });
+
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
   // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
@@ -2934,6 +2992,58 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // limited draw never happened; an empty-deck draw counts but gives nothing).
   it("R521 counts every draw that happened toward C #9 Income Tax", () => {
     provenIn(521, CLASSIC_009_TEST);
+  });
+  // Classic #46–#90's own rows (cards-classic-b, docs/v0.2.0-rulings/cards-classic-b.md).
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R540 …" (reward J's 100 mana on the next turn).
+  it("R540 grants C #90's reward J as next-turn mana", () => {
+    provenIn(540, CLASSIC_090_TEST);
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R541 …" and the engine's quests.test.ts "R541 …".
+  it("R541 counts every draw that took a card toward C #90's quest 1", () => {
+    provenIn(541, CLASSIC_090_TEST, "quests.test.ts");
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R542 …" (the side a card died on, the side a hit landed on).
+  it("R542 counts C #90's deaths and damage by who controlled them as they happened", () => {
+    provenIn(542, CLASSIC_090_TEST);
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R543 …" (every reward in the tree's order, no reward prompt).
+  it("R543 grants C #90's Radiant rewards in the tree's order", () => {
+    provenIn(543, CLASSIC_090_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R545 …" and cards classic/057-echo.test.ts "R545 …".
+  it("R545 has C #57 Echo choose a copied X with its play, after paying its own (1)", () => {
+    provenIn(545, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R546 …" and cards classic/057-echo.test.ts "R546 …".
+  it("R546 fixes C #57 Echo's copied text as its play begins", () => {
+    provenIn(546, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R547 …" and cards classic/057-echo.test.ts "R547 …".
+  it("R547 gives C #57 Echo the copied Spell's static text, but no return from the graveyard", () => {
+    provenIn(547, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by cards classic/066-eu-striker.test.ts "R548 …" (both triggers answer a resolved play).
+  it("R548 has C #66 EU Striker answer its owner's plays once they resolve", () => {
+    provenIn(548, CLASSIC_066_TEST);
+  });
+
+  // Proved by cards classic/058-common-resources.test.ts "R549 …" (Hinder off the enemy deck's bottom:
+  // the repeat comes from your own deck).
+  it("R549 repeats a cast on draw taken from the opponent's deck with a draw from your own", () => {
+    provenIn(549, CLASSIC_058_TEST);
+  });
+
+  // Proved by cards classic/063-crop-dusting.test.ts "R550 …" (the firing trap takes its own placement).
+  it("R550 places C #63 Crop Dusting's tokens on the firing trap too", () => {
+    provenIn(550, CLASSIC_063_TEST);
   });
 });
 

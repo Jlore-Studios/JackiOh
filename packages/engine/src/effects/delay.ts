@@ -162,9 +162,12 @@ function endsOtherPlayersTurn(ctx: EffectContext, at: DelayAt): boolean {
 export const DELAYED_DESTROY_HOOK = "@delayedDestroy";
 export const DELAYED_DISCARD_HAND_HOOK = "@delayedDiscardHand";
 
-/** A card's def id for the record an engine delayed effect keeps: the card that made it, if any. */
+/**
+ * A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
+ * running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546).
+ */
 function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
-  return { defId: ctx.self?.defId ?? ctx.defId ?? "", radiant: ctx.radiant };
+  return { defId: ctx.defId ?? ctx.self?.defId ?? "", radiant: ctx.radiant };
 }
 
 /**
