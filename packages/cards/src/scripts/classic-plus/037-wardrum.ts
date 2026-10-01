@@ -40,7 +40,7 @@ function nonUnitPlays(state: GameState, player: PlayerId): CardInstance[] {
 function reachesThreshold(ctx: EffectContext & { event: GameEvent }): boolean {
   const event = ctx.event;
   if (event.type !== "cardResolved" || event.player !== ctx.controller) return false;
-  if (!NON_UNIT.includes(cardTypeOf(ctx.state, { defId: event.defId, radiant: event.radiant }))) return false;
+  if (!NON_UNIT.includes(cardTypeOf(ctx.state, { defId: event.defId, radiant: event.radiant === true }))) return false;
   const log = playedIdsThisTurn(ctx.state, ctx.controller);
   const at = log.lastIndexOf(event.instanceId);
   if (at < 0) return false;
