@@ -18,8 +18,8 @@
 // fixture pools, Immutable deck cards skipped, the chain cap) is proved in
 // `packages/engine/test/callToChaosPlus.test.ts`; this file proves the card against the real catalog.
 
-import { CALL_TO_CHAOS_CHAIN_CAP, createRng, effectiveCost, hashState, reduce, subsystems, type GameState } from "@jackioh/engine";
-import type { GameEvent } from "@jackioh/shared";
+import { CALL_TO_CHAOS_CHAIN_CAP, HAND_CAP, createRng, effectiveCost, hashState, reduce, subsystems, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
 import { scenario, type PileSetup, type Scenario, type SideSetup } from "../_harness";
@@ -35,6 +35,9 @@ const STOCKPILE = "core-005"; // (1) Spell
 const BEAR = "core-060"; // (1) Trap
 const TWINSPELL = "core-079"; // (2) Field Spell
 const HEROIC_POWER = "core-098"; // Field Spell, Indestructible
+const BIG_FELINOR = "core-043"; // (4) Unit
+const FIENDER = "core-092"; // (2) Unit, Stack
+const HINDER = "core-021"; // (0) Spell, cast on draw; base face: discard 1 (R431)
 
 const SEED = "chaos-plus";
 const TABLE = subsystems.CHAOS_PLUS_EFFECTS;
@@ -147,6 +150,20 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
       expect(s.unit("p1", 1)?.defId).toBe(TIMMY);
     });
 
+    it("§2.4 R4 1/10 into a nearly full hand: what does not fit is burned", () => {
+      const filler = Array.from({ length: HAND_CAP - 3 }, () => VANILLA);
+      const s = chaos("fruits", { p1: { hand: [{ def: CHAOS }, ...filler], mana: 8 } });
+      expect(s.hand("p1")).toHaveLength(HAND_CAP);
+      expect(addedTo(s)).toHaveLength(3);
+      expect(eventsOf(s, "burned")).toHaveLength(2);
+    });
+
+    it("§3.2 R13 3/10 takes the top of an enemy Stack pile; the card dormant beneath it acts again", () => {
+      const s = chaos("destroy", { p2: { field: [BIG_FELINOR, { def: FIENDER, stack: true }] } });
+      s.expectInZone(FIENDER, "graveyard");
+      expect(s.unit("p2", 1)?.defId).toBe(BIG_FELINOR);
+    });
+
     it("R380 4/10 adds 3 random non-token Classic cards that cost (0)", () => {
       const s = chaos("classic");
       const added = addedTo(s);
@@ -190,6 +207,20 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
         expect(fused?.ingredients?.some((part) => part.defId === CHAOS)).toBe(false);
       }
       expect(library.map((card) => s.state.transientDefs[card.defId]?.type)).toEqual(["Unit", "Unit", "Spell"]);
+    });
+
+    it("R311 R177 6/10's deck fusions are hidden from both players", () => {
+      const s = chaos("fuse", { p1: deck([MENACE, TIMMY]) });
+      const library = s.pile("p1", "library");
+      for (const viewer of ["p1", "p2"] as const) {
+        const fused = s.view(viewer).events.filter((event) => event.type === "fused");
+        expect(fused).toHaveLength(2);
+        const text = JSON.stringify(fused);
+        for (const card of library) {
+          expect(text).not.toContain(card.id);
+          expect(text).not.toContain(card.defId);
+        }
+      }
     });
 
     it("R179 6/10's fused deck cards survive JSON, and the game plays on from the round trip exactly as live", () => {
@@ -318,6 +349,46 @@ describe("C+ #73 Call to Chaos (Classic+ Edition)", () => {
       const cast = types.indexOf("cardPlayed", types.indexOf("chaosRolled"));
       expect(firstSummon).toBeGreaterThan(-1);
       expect(firstSummon).toBeLessThan(cast);
+    });
+
+    it("R113 R436 a question inside its recursion pauses it; the answer after a JSON round trip finishes it once", () => {
+      // The recursion, one link short of the cap, casts a base Core #95 that rolls "draw your whole
+      // deck": the deck's Hinder is cast and asks p1 to discard (R431), pausing the chain.
+      let found: Scenario | null = null;
+      for (let cursor = 0; cursor < CURSOR_SEARCH * 4 && found === null; cursor += 1) {
+        const names = subsystems.rollChaosEffects(createRng(SEED, cursor), true, TABLE).map((effect) => effect.name);
+        if (!names.includes("recast") || !names.includes("golem")) continue;
+        const s = chaos(null, {
+          radiantCursor: cursor,
+          chain: CALL_TO_CHAOS_CHAIN_CAP - 1,
+          p1: { hand: [{ def: CHAOS, radiant: true }, VANILLA], library: [HINDER, TIMMY], mana: 8 },
+        });
+        if (s.state.pending?.kind === "hand") found = s;
+      }
+      const s = found;
+      if (s === null) throw new Error("no roll pauses on the Hinder");
+      expect(eventsOf(s, "chaosRolled").filter((event) => event.defId === CHAOS)).toHaveLength(1);
+      expect(eventsOf(s, "summoned").filter((event) => event.defId === GOLEM)).toHaveLength(1);
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      expect(hashState(thawed)).toBe(hashState(s.state));
+      const answer = {
+        type: "answer",
+        choiceId: s.state.pending?.id ?? "",
+        selection: [{ pick: "instance", instanceId: s.card(VANILLA).id }],
+        playerId: "p1",
+        nonce: "plus-pause",
+      } as Action;
+      const live = reduce(s.state, answer);
+      const frozen = reduce(thawed, answer);
+      expect(live.error).toBeUndefined();
+      expect(hashState(frozen.state)).toBe(hashState(live.state));
+      expect(frozen.events).toEqual(live.events);
+      s.answer(s.card(VANILLA).id);
+      expect(s.state.pending).toBeNull();
+      // Nothing of the Radiant's own roll ran twice, and it landed in the graveyard once the chain was done.
+      expect(eventsOf(s, "chaosRolled").filter((event) => event.defId === CHAOS)).toHaveLength(1);
+      expect(eventsOf(s, "summoned").filter((event) => event.defId === GOLEM)).toHaveLength(1);
+      expect(s.pile("p1", "graveyard").filter((card) => card.defId === CHAOS)).toHaveLength(1);
     });
 
     it("R87 at the cap a Radiant runs only its other two", () => {
