@@ -70,8 +70,8 @@ describe("C+ #24 Crushing Walls", () => {
 
     it("§4.5 a destroyed backrow card that prints Death fires it", () => {
       const s = scenario({ p1: { hand: [WALLS, FILLER], library: [FILLER, FILLER] }, p2: { hand: [FILLER] } });
-      // A test-only Field Spell whose Death draws its controller a card (the real ones, C+ #12.8 and #61,
-      // are other units' cards).
+      // A test-only Field Spell whose Death draws its controller a card, so the Death shows (the real
+      // backrow Deaths, C+ #12.8's copies and C+ #61's Stockpiles, need a history or another set's card).
       const id = "test-backrow-death";
       const face = { keywords: [], text: "Death: Draw 1." };
       s.state.transientDefs[id] = { id, index: id, name: id, set: "Core", type: "Field Spell", tags: [], rarity: "Common", token: false, cost: 0, base: face, radiant: face };
