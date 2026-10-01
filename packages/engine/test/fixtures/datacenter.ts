@@ -23,6 +23,15 @@ export const dyingField = spellDef(943, { id: "fx-dc-dying", name: "Fixture Dyin
 /** DYING_FIELD's Death: 3 damage to the enemy hero of its controller. */
 export const DYING_FIELD_DAMAGE = 3;
 
+/** An Animated Field Spell, which prints the attack and health of the Unit it becomes (B3.1 rule 1). */
+export const animatedField = spellDef(951, {
+  id: "fx-dc-animated",
+  name: "Fixture Animated Field Spell",
+  type: "Field Spell",
+  base: { attack: 2, health: 3, keywords: [{ kind: "Animated" }], text: "Animated" },
+  radiant: { attack: 4, health: 6, keywords: [{ kind: "Animated" }], text: "Animated" },
+});
+
 /** The backrow cards that are no Field Spells. */
 export const trap = spellDef(944, { id: "fx-dc-trap", name: "Fixture Trap", type: "Trap" });
 export const fieldTrap = spellDef(945, { id: "fx-dc-ftrap", name: "Fixture Field Trap", type: "Field Trap" });
@@ -36,7 +45,7 @@ export const castOnDraw = spellDef(950, { id: "fx-dc-cod", name: "Fixture Cast O
 
 export function datacenterCatalog(base: CardDefs): CardDefs {
   const defs: Record<string, CardDef> = { ...base };
-  for (const def of [runner, field, hardField, dyingField, trap, fieldTrap, free, one, two, xCost, castOnDraw]) defs[def.id] = def;
+  for (const def of [runner, field, animatedField, hardField, dyingField, trap, fieldTrap, free, one, two, xCost, castOnDraw]) defs[def.id] = def;
   return defs;
 }
 

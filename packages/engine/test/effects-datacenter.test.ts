@@ -20,6 +20,7 @@ import { COMBAT_SCRIPTS, combatCatalog } from "./fixtures/combat";
 import {
   DATACENTER_SCRIPTS,
   DYING_FIELD_DAMAGE,
+  animatedField,
   castOnDraw,
   datacenterCatalog,
   dyingField,
@@ -210,7 +211,7 @@ describe("destroyFieldSpellsAndHit (T-AI-6 Datacenter Fire)", () => {
 
   it("R588 R383 an animated Field Spell standing in a unit zone is a Unit there: neither destroyed nor counted", () => {
     const state = game("fire-animated");
-    const animated = put(state, field.id, slot("p2", "backrow", 1));
+    const animated = put(state, animatedField.id, slot("p2", "backrow", 1));
     expect(animateCard({ state, events: [] }, animated)).toBe(true);
     const backrow = put(state, field.id, slot("p2", "backrow", 2));
     const events = run(state, destroyFieldSpellsAndHit({ side: "any", damagePer: 1 }));
