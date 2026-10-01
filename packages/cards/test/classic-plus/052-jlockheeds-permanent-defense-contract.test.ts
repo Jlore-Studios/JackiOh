@@ -143,6 +143,7 @@ describe("C+ #52 Jlockheed's Permanent Defense Contract", () => {
       const theirs = s.view("p2");
       expect(JSON.stringify(theirs)).not.toContain(`"${id}"`);
       const events = theirs.events.filter((event) => event.type === "addedToHand" && event.player === "p1");
+      expect(events.length).toBeGreaterThan(0);
       for (const event of events) expect(event).toMatchObject({ instanceId: "hidden", defId: "hidden" });
     });
 
@@ -181,6 +182,19 @@ describe("C+ #52 Jlockheed's Permanent Defense Contract", () => {
         expect(card.costMod).toBe(-1);
         expect(card.defId).not.toBe(CONTRACT);
       }
+    });
+
+    it("R97 R177 the opponent sees neither the Radiant card nor its price change", () => {
+      const s = signed({ radiant: true });
+      playAll(s);
+      nextTurn(s);
+      const id = delivered(s)[0]?.instanceId ?? "?";
+      expect(s.card(id).zone.z).toBe("hand");
+      const theirs = s.view("p2");
+      expect(JSON.stringify(theirs)).not.toContain(`"${id}"`);
+      const seen = theirs.events.filter((event) => (event.type === "addedToHand" && event.player === "p1") || event.type === "costChanged");
+      expect(seen.length).toBeGreaterThan(0);
+      for (const event of seen) expect(event).toMatchObject({ instanceId: "hidden" });
     });
 
     it("§2.3 the discount floors at (0): a Lobbyist (1) costs (0)", () => {

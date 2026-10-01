@@ -101,14 +101,16 @@ describe("C+ #46.1 Felinor Flagbearer Prime", () => {
       const s = muster();
       s.play(PRIME);
       const ids = primes(s);
+      expect(ids).toHaveLength(5);
       s.play(FLOOD);
       for (const id of ids) s.expectInZone(id, "gone");
+      expect(s.hand("p1").some((card) => card.defId === PRIME)).toBe(false);
     });
 
     it("R387 copies are not generation: every copy is a Prime", () => {
       const s = muster();
       s.play(PRIME);
-      expect(primes(s).every((id) => s.card(id).defId === PRIME)).toBe(true);
+      expect(primes(s)).toHaveLength(5);
     });
 
     it("R386 an Upgrade makes each aura +2/+2, and the copies keep it", () => {
@@ -135,6 +137,7 @@ describe("C+ #46.1 Felinor Flagbearer Prime", () => {
     it("§10.4 a full Radiant board: each of five has +8/+8", () => {
       const s = muster({ radiant: true });
       s.play(PRIME);
+      expect(primes(s)).toHaveLength(5);
       for (const id of primes(s)) s.expectStats(id, { attack: 18, health: 18 });
     });
   });

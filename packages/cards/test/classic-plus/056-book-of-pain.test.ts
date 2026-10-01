@@ -47,8 +47,11 @@ describe("C+ #56 Book of Pain", () => {
 
     it("§10.6 R81 the options are theirs alone: the caster sees only that a prompt is open", () => {
       const s = pain();
+      const ids = theirHandIds(s);
       s.play(BOOK);
       expect(s.view("p1").pending).toEqual({ forYou: false, pendingFor: "p2" });
+      const mine = JSON.stringify(s.view("p1"));
+      for (const id of ids) expect(mine).not.toContain(`"${id}"`);
       const theirs = s.view("p2").pending;
       expect(theirs?.forYou).toBe(true);
       expect(theirs !== null && "options" in theirs ? theirs.options : []).toHaveLength(3);

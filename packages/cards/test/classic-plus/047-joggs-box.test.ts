@@ -12,6 +12,7 @@ import {
   defOf,
   hashState,
   reduce,
+  registerCatalog,
   registerScripts,
   registeredScripts,
   stepParam,
@@ -21,6 +22,7 @@ import {
 } from "@jackioh/engine";
 import type { GameEvent, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { CATALOG, CATALOG_VERSION } from "../../src/catalog-data";
 import { CARDS } from "../../src/index";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/047-joggs-box";
@@ -129,6 +131,25 @@ describe("C+ #47 Jogg's Box", () => {
       expect(seen.has(BOX)).toBe(false);
       expect(defs.every((entry) => entry.type === "Spell" && !entry.token)).toBe(true);
       expect(new Set(defs.map((entry) => entry.set))).toEqual(new Set(["Core", "Classic", "Classic+"]));
+    });
+
+    it("R387 with Jogg's Box and Fig of Life the only Spells, all ten casts are Fig of Life", () => {
+      const FIG = "core-047"; // (3) Spell: heal a target 20
+      const spells = Object.entries(CATALOG).filter(([id, entry]) => entry.type !== "Spell" || id === BOX || id === FIG);
+      try {
+        registerCatalog(Object.fromEntries(spells), CATALOG_VERSION);
+        const s = scenario({
+          seed: "jogg-only-fig",
+          p1: { hand: [BOX, VANILLA], field: [VANILLA], library: [VANILLA] },
+          p2: { hand: [VANILLA], field: [VANILLA], library: [VANILLA] },
+        });
+        const id = s.card(BOX).id;
+        s.play(BOX);
+        const cast = casts(s.lastEvents, id).map((played) => played.defId);
+        expect(cast).toEqual(Array.from({ length: 10 }, () => FIG));
+      } finally {
+        registerCatalog(CATALOG, CATALOG_VERSION);
+      }
     });
 
     it("§6.2 R452 every choice is random: its caster is never asked", () => {
