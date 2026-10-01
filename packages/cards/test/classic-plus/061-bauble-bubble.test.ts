@@ -71,6 +71,18 @@ describe("C+ #61 Bauble Bubble", () => {
       s.expectEvents("destroyed", "addedToHand");
     });
 
+    it("§4.5 destroyed on the opponent's turn by their Nether, the Stockpiles still go to your hand", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { backrow: [BAUBLE], hand: [FILLER], library: [FILLER] },
+        p2: { hand: [NETHER, FILLER], library: [FILLER] },
+      });
+      s.play(NETHER);
+      s.expectInZone(BAUBLE, "graveyard");
+      expect(stockpiles(s)).toHaveLength(2);
+      expect(s.hand("p2").some((card) => card.defId === STOCKPILE)).toBe(false);
+    });
+
     it("§4.5 a targeted destroy of the backrow card (Magic Jammed) fires it too", () => {
       const s = bubble({ hand: [JAMMED, FILLER] });
       s.play(JAMMED, { targets: [{ pick: "instance", instanceId: s.card(BAUBLE).id }] });
