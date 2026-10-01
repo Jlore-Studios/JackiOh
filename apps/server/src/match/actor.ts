@@ -22,7 +22,7 @@
 
 import type { Action, ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 import { MATCH_ACTIONS_PER_SECOND } from "../config";
-import type { MatchActionRow, MatchClocks, MatchRow, MatchSeat } from "../api/ports";
+import type { LastBoardEntry, MatchActionRow, MatchClocks, MatchRow, MatchSeat } from "../api/ports";
 import type { ActorDeps, ClockExpiry, ClockView, MatchClock, Socket } from "./contracts";
 import type { EngineState, MatchSnapshot } from "./engine";
 import {
@@ -77,6 +77,11 @@ export type MatchActor = {
   stop: () => Promise<void>;
 };
 
+/** R417: the boards a match was created with, as `createGame` and `fold` take them. */
+export function lastBoardsOf(match: MatchRow): { lastBoards?: [LastBoardEntry[], LastBoardEntry[]] } {
+  return match.lastBoards === undefined ? {} : { lastBoards: match.lastBoards };
+}
+
 export function createMatchActor(deps: ActorDeps, input: MatchActorInput): MatchActor {
   const { match } = input;
   const seats: [MatchSeat, MatchSeat] = [
@@ -95,6 +100,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
       seed: match.seed,
       decks: match.decks,
       log: log.map((row) => row.action),
+      ...lastBoardsOf(match),
     }).state;
 
   let nextSeq = log.reduce((highest, row) => Math.max(highest, row.seq), 0) + 1;
@@ -350,6 +356,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
         outcome: snapshot.result,
         turns: snapshot.turn,
         at,
+        // R417, R565: each seat's board as the game ended, from its own side.
+        lastBoards: deps.engine.lastBoards(state),
       });
     } catch (error: unknown) {
       deps.log.alert("match.recordResult.failed", {

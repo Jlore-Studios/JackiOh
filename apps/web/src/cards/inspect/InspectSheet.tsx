@@ -3,6 +3,10 @@
 // A face in play whose printed text differs (SPEC §10.10) has that text beside it as well. A touch
 // sheet is where a reference in the text is a control (R279): tapping a name shows the card it
 // names in a tooltip.
+//
+// Patch v0.2.0 (SPEC §10.8): the face's states in words (StateNotes.tsx: the tuned ribbon R386,
+// Brittle R385, enchantments E39, standing as a Unit R383) and its lines of code (E36) stand with the
+// printed text and the glossary, in the column beside the face (inspect.css).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
@@ -13,6 +17,7 @@ import { glossaryFor } from "../rules.ts";
 import { Glossary } from "./Glossary.tsx";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
+import { LocLine, StateNotes } from "./StateNotes.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
@@ -41,9 +46,11 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
               <CardFace face={face} layout="full" />
               <InspectNote note={note} />
             </div>
+            <StateNotes face={face} />
             <Printed face={face} />
           </RefsInteractive>
           <Glossary entries={glossaryFor(face)} />
+          <LocLine face={face} />
         </div>
         <button
           ref={closeButton}

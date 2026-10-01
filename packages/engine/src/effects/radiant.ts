@@ -5,6 +5,7 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { defOf } from "../catalog";
+import { cardTypeOf } from "../faces";
 import type { Effect, EffectContext } from "../script";
 import type { CardInstance } from "../state";
 import { cardAt, slotsOf } from "../zones";
@@ -36,7 +37,7 @@ function hiddenFromSomeone(ctx: EffectContext, card: CardInstance): boolean {
   const zone = card.zone;
   if (zone.z === "hand" || zone.z === "library") return true;
   if (zone.z !== "field" || zone.row !== "backrow" || card.faceUp === true) return false;
-  const type = defOf(ctx.state, card.defId).type;
+  const type = cardTypeOf(ctx.state, card);
   return type === "Trap" || type === "Field Trap";
 }
 

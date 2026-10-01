@@ -14,7 +14,7 @@ import { scenario, type Scenario } from "./_harness";
 const FULLSEND = "core-078";
 
 const COST_0 = "core-010"; // Rapid Replenish — a discount floors at 0 (R65)
-const COST_3 = "core-017"; // Flood
+const COST_3 = "core-070"; // Spiteful Stab (Flood costs (4) since patch v0.2.0)
 const COST_4 = "core-025"; // 4-mana 7/7
 const X_CARD = "core-074"; // Adaptive UI, printed cost X
 

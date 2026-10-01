@@ -86,7 +86,7 @@ export const paths = {
   practice: "/practice",
   /** The privacy policy (routes/privacy.tsx). Public, like the landing page. */
   privacy: "/privacy",
-  /** R375: every card patch, newest first (routes/patch-notes.tsx). Public, like the privacy policy. */
+  /** R388: every patch and the cards it touched (routes/patch-notes.tsx). Public, like the landing page. */
   patchNotes: "/patch-notes",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,

@@ -45,7 +45,7 @@ import { enginePort } from "../../src/match/engine.real.ts";
 import type { PromptMessage } from "../../src/match/protocol";
 import { createMatchRegistry } from "../../src/match/registry";
 import { createMatchSocketHandler, socketFromWs, WS_CLOSE } from "../../src/match/wsServer";
-import { createFakeEngine, decksTheEngineAccepts, fakeDeck } from "../fakes/engine";
+import { createFakeEngine, decksTheEngineAccepts, decksThatOpenOnTheMulligans, fakeDeck } from "../fakes/engine";
 import { createFakeSocket, type FakeSocket } from "../fakes/socket";
 import { createTestDeps, TEST_CATALOG_VERSION } from "../fakes/deps";
 
@@ -760,7 +760,10 @@ describe("the legal-action array on the view frame (BUILD M5-T2, §10.2)", () =>
  */
 
 describe("M6-T4 acceptance 4 with the real engine (§10.8, CLAUDE.md rule 7)", () => {
-  /** The real port, the real §8 catalog and two disjoint decks of real ids. */
+  /**
+   * The real port, the real §8 catalog and two disjoint decks of real ids, whose deal opens straight
+   * onto both mulligans (R265): no card it casts asks a question first (R224).
+   */
   async function realEngine(): Promise<{
     engine: EnginePort;
     pool: string[];
@@ -769,7 +772,7 @@ describe("M6-T4 acceptance 4 with the real engine (§10.8, CLAUDE.md rule 7)", (
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
-    return { engine, pool, decks: decksTheEngineAccepts(engine, pool, "seed-actor").decks };
+    return { engine, pool, decks: decksThatOpenOnTheMulligans(engine, pool, "seed-actor").decks };
   }
 
   /** Keeps the whole hand, which is what makes the scan below sound: nothing leaves a hand. */
@@ -910,11 +913,12 @@ describe("M6-T4 acceptance 4 with the real engine (§10.8, CLAUDE.md rule 7)", (
  * (`pending`, `mulligan`), and the claims about the deadline are the clock's own.
  */
 describe("the concurrent mulligan through the actor (R265, R266, R268)", () => {
+  /** Decks whose deal opens straight onto both mulligans, so each test starts in the window (R224). */
   async function realDecks(): Promise<{ engine: EnginePort; decks: [string[], string[]] }> {
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
-    return { engine, decks: decksTheEngineAccepts(engine, pool, "seed-actor").decks };
+    return { engine, decks: decksThatOpenOnTheMulligans(engine, pool, "seed-actor").decks };
   }
 
   async function mulliganMatch(): Promise<Harness & { mulliganMs: number; turnMs: number }> {
@@ -998,9 +1002,9 @@ describe("the concurrent mulligan through the actor (R265, R266, R268)", () => {
       ]);
       expect(actor.clocks().promptDeadline).toBe(deadline);
 
-      // The second answer resolves both, in seat order, and the game begins (R265, §2.1). With
-      // these decks p1 has nothing to do on turn 1, so §2.5 ends it by itself inside the same action
-      // and the first turn at rest is p2's — which is why the seats below are read, not assumed.
+      // The second answer resolves both, in seat order, and the game begins (R265, §2.1). A turn with
+      // nothing to do ends itself inside the same action (§2.5, R82), so whose turn is at rest
+      // depends on the hands dealt — which is why the seats below are read, not assumed.
       await send(actor, socket[second], `mull-${second}`, { type: "mulligan", keep: ids(socket[second]) });
       const active = actor.snapshot().active;
       for (const seat of ["p1", "p2"] as const) {
@@ -1276,9 +1280,9 @@ describe("draw offers and concede through the actor (R36, R269, §9.5)", () => {
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
-    const { decks } = decksTheEngineAccepts(engine, pool, "seed-actor");
+    const { decks } = decksThatOpenOnTheMulligans(engine, pool, "seed-actor");
     const h = await harness({ engine, p1Deck: decks[0], p2Deck: decks[1], ...(ratings ? { ratings } : {}) });
-    // Past both mulligans (R265), keeping everything, into p1's first main phase.
+    // Past both mulligans (R265), keeping everything, into the first main phase at rest.
     for (const [player, socket] of [
       ["p1", h.p1],
       ["p2", h.p2],
@@ -1288,8 +1292,8 @@ describe("draw offers and concede through the actor (R36, R269, §9.5)", () => {
         keep: hand(lastView(socket)).map((card) => card.instanceId),
       });
     }
-    // With these decks p1 has nothing to do on turn 1, so §2.5 ends it by itself and the first turn
-    // at rest is p2's. Whose it is does not matter to R36, so it is read rather than assumed.
+    // A turn with nothing to do ends itself (§2.5, R82), so whose turn is at rest depends on the
+    // hands dealt. Whose it is does not matter to R36, so it is read rather than assumed.
     const snapshot = h.actor.snapshot();
     expect(snapshot).toMatchObject({ phase: "main", pendingFor: null, result: null });
     const offererSeat = snapshot.active;
@@ -1492,12 +1496,33 @@ function fakeWs(): FakeWs {
 }
 
 describe("the automatic turn end is each player's to turn off (R82, R345)", () => {
+  function legalTypes(socket: FakeSocket): string[] {
+    const frame = socket.ofType<{ type: "view"; legal: ActionBody[] }>("view").at(-1);
+    if (frame === undefined) throw new Error("no view frame was sent");
+    return frame.legal.map((action) => action.type);
+  }
+
+  /**
+   * The decks `decksTheEngineAccepts` gives "seed-actor". p2's opening deal draws #21 Hinder, cast on
+   * draw (§2.4), whose base face asks p2 for a discard before the mulligans open (R431, R224) and
+   * leaves p1's first refresh 1 lower, at 0 (§2.3) — which is what leaves p1 nothing to do on turn 1
+   * once both keep their hands. The deal's question is answered here, so the tests start, as their
+   * names say, in the mulligan window (R265).
+   */
   async function realMatch(): Promise<Harness> {
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
     const { decks } = decksTheEngineAccepts(engine, pool, "seed-actor");
-    return harness({ engine, p1Deck: decks[0], p2Deck: decks[1] });
+    const h = await harness({ engine, p1Deck: decks[0], p2Deck: decks[1] });
+    // PREMISE: the deal asks p2 first (R224), and answering it opens both mulligans.
+    expect(h.actor.snapshot()).toMatchObject({ phase: "setup", pendingFor: "p2" });
+    const frame = h.p2.ofType<{ type: "view"; legal: ActionBody[] }>("view").at(-1);
+    const answer = frame?.legal.find((action) => action.type === "answer");
+    if (answer === undefined) throw new Error("the deal asked p2 nothing it can answer");
+    await send(h.actor, h.p2, "deal-answer", answer);
+    expect(h.actor.snapshot()).toMatchObject({ phase: "mulligan", pendingFor: null, mulliganOwed: ["p1", "p2"] });
+    return h;
   }
 
   async function keepHands(h: Harness): Promise<void> {
@@ -1513,14 +1538,17 @@ describe("the automatic turn end is each player's to turn off (R82, R345)", () =
   }
 
   it("R345 a seat that turned it off during the mulligan keeps a turn it has nothing to do on, and only its own view says so", async () => {
-    // With these decks p1 has nothing to do on turn 1, so R82 would end that turn by itself (the
-    // draw-offer harness above leans on exactly that).
+    // With these decks p1 has nothing to do on turn 1 (`realMatch`), so R82 would end that turn by
+    // itself.
     const h = await realMatch();
     await send(h.actor, h.p1, "auto-off", { type: "setAutoEndTurn", enabled: false });
     expect(errors(h.p1)).toEqual([]);
     await keepHands(h);
 
     expect(h.actor.snapshot()).toMatchObject({ phase: "main", active: "p1", pendingFor: null, result: null });
+    // PREMISE: nothing to do but what R82 discounts, so it is the preference alone that keeps the turn.
+    expect(legalTypes(h.p1)).toContain("endTurn");
+    expect(legalTypes(h.p1).filter((type) => !["endTurn", "concede", "offerDraw"].includes(type))).toEqual([]);
     expect(lastView(h.p1).autoEndTurn).toBe(false);
     expect(lastView(h.p2)).not.toHaveProperty("autoEndTurn");
 

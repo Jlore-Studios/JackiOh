@@ -82,7 +82,7 @@ export type GameRecord = {
   id: string;
   source: GameSource;
   mode: GameMode;
-  /** R375's version of the cards the game was played with: the newest patch of the build that played it. */
+  /** R388's version of the cards the game was played with: the newest patch of the build that played it. */
   patch: string;
   pilots: Record<PlayerId, Pilot>;
   game: GameSummary;

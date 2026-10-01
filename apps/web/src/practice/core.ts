@@ -10,7 +10,7 @@
 //
 // Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
 // actions the engine accepted, so a refused action spends nothing and the log folds exactly
-// (`fold({ seed, decks, handicaps, log })`, R187). The AI draws from its own stream,
+// (`fold({ seed, decks, handicaps, lastBoards, log })`, R187, R508). The AI draws from its own stream,
 // `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
 
 import { registerAll } from "@jackioh/cards";
@@ -19,6 +19,7 @@ import {
   createGame,
   createRng,
   hashState,
+  lastBoardFor,
   legalActions,
   reduce,
   registeredCatalog,
@@ -34,6 +35,7 @@ import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type {
+  LastBoardCard,
   PracticeDebug,
   PracticeDeckChoice,
   PracticeRequest,
@@ -63,6 +65,8 @@ type PracticeGame = {
   aiSeat: PlayerId;
   decks: [string[], string[]];
   handicaps: Partial<Record<PlayerId, Handicap>>;
+  /** R508: the human's last board as `createGame` had it, seat ordered; absent when none. */
+  lastBoards?: [LastBoardCard[], LastBoardCard[]];
   state: GameState;
   log: Action[];
   /** The AI's own stream, `${seed}:ai`, for the whole game. */
@@ -125,10 +129,14 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   const { humanDeck, aiDeck, handicap } = decksAndHandicap(config);
   const decks: [string[], string[]] = config.humanSeat === "p1" ? [humanDeck, aiDeck] : [aiDeck, humanDeck];
   const handicaps: Partial<Record<PlayerId, Handicap>> = { [aiSeat]: { ...handicap } };
+  // R508: the human's last board, on a free game only; the AI's seat never has one.
+  const board = config.lesson === undefined ? (config.lastBoard ?? []) : [];
+  const lastBoards: [LastBoardCard[], LastBoardCard[]] | undefined =
+    board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
 
   // `createGame` throws on an illegal deck and `beginGame` reports a refusal in `error`; either way
   // there is no game, and `handle` turns the throw into "failed".
-  const created = createGame({ seed: config.seed, decks, handicaps });
+  const created = createGame({ seed: config.seed, decks, handicaps, ...(lastBoards === undefined ? {} : { lastBoards }) });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
 
@@ -137,6 +145,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     aiSeat,
     decks: [[...decks[0]], [...decks[1]]],
     handicaps,
+    ...(lastBoards === undefined ? {} : { lastBoards }),
     state: begun.state,
     log: [],
     rng: createRng(`${config.seed}:ai`),
@@ -174,6 +183,8 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
     legal: legalActions(game.state, human),
     aiToAct: aiToAct(game.state, game.aiSeat),
     error: game.error,
+    // R508: the board the human takes away, once a free game is over.
+    ...(game.state.result !== null && game.config.lesson === undefined ? { lastBoard: lastBoardFor(game.state, human) } : {}),
   };
 }
 
@@ -245,6 +256,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       difficulty: active.config.difficulty,
       humanSeat: active.config.humanSeat,
       ...(active.config.lesson === undefined ? {} : { lesson: active.config.lesson }),
+      ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
     };
   }
 

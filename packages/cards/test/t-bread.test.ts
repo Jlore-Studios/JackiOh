@@ -162,7 +162,7 @@ describe("T-bread Bread Token (SPEC §7, R37)", () => {
       expect(ids(query({ cost: 0 }))).not.toContain(def.id);
       expect(ids(query({ costRange: { min: 0, max: 0 } }))).not.toContain(def.id);
       expect(ids(query({ token: true }))).toContain(def.id);
-      expect(ids(query({ index: "T-bread" }))).toEqual([def.id]);
+      expect(ids(query({ defId: "core-t-bread" }))).toEqual([def.id]);
     });
 
     it.todo(

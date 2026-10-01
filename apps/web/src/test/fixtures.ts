@@ -115,6 +115,12 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Can't attack" },
   { kind: "Armor", n: 2 },
   { kind: "Lucky", n: 3 },
+  // Patch v0.2.0's kinds (R383, R385, E6, E35), so the unit still carries every keyword there is.
+  { kind: "Animated" },
+  { kind: "Animated on your turn" },
+  { kind: "Brittle", n: 2 },
+  { kind: "Spell Damage", n: 1 },
+  { kind: "Immune to Spells" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {
@@ -139,7 +145,7 @@ export function baseView(over: Partial<PlayerView> = {}): PlayerView {
  * drift in `viewFor.modifierLabel` shows up as a fixture that no longer matches the engine's test.
  */
 export const yourModifiers: ModifierView[] = [
-  { id: "m1", label: "Cost (4)+ cards cost (1) less (next turn)" },
+  { id: "m1", label: "(4)+ Cost cards cost (1) less (next turn)" },
   { id: "m2", label: 'Your cards gain "Combo: draw 1"' },
 ];
 

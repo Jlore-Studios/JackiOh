@@ -15,6 +15,10 @@
 // every mount (a reload after being paired must not strand the player) and every
 // `SERIES_POLL_SECONDS` while it is actually waiting. A running game goes to the board; a series
 // between games goes to the series screen, where the next deck is picked.
+//
+// THE QUEUE'S COUNTS (R505) are on the mode tiles and nowhere else: each tile says how many are
+// waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
+// an opponent, the room code) and repeats no count, and neither does the queued notice.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -79,7 +83,7 @@ export const playTestid = {
   trioSelect: "play-trio-select",
   /** The client's verdict on the choice (`data-ready`): UX only, the server's is law (R253). */
   verdict: "play-choice-verdict",
-  /** The queue's population per mode (`data-bo1`, `data-bo3`, `data-random`). */
+  /** The queue's population per mode (`data-bo1`, `data-bo3`, `data-random`), on the mode tiles (R505). */
   population: "play-population",
   /** The way to `/decks` when there is no deck (Best of 1) or no trio (Conquest) to pick. */
   decksLink: "play-decks-link",
@@ -429,35 +433,6 @@ function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | n
   );
 }
 
-function Population({ population }: { population: PopulationResponse | null }): ReactElement | null {
-  if (population === null) return null;
-  const byMode = population.byMode;
-  if (byMode === undefined) {
-    return (
-      <p className="lobby-population" data-testid={playTestid.population}>
-        {String(population.population)} waiting in the queue now.
-      </p>
-    );
-  }
-  return (
-    <p
-      className="lobby-population"
-      data-testid={playTestid.population}
-      data-bo1={byMode.bo1}
-      data-bo3={byMode.bo3}
-      data-random={byMode.random}
-    >
-      Waiting now:{" "}
-      {QUEUE_MODES.map((mode, index) => (
-        <span key={mode}>
-          {index > 0 ? " · " : null}
-          {MODE_LABEL[mode]} {String(byMode[mode])}
-        </span>
-      ))}
-    </p>
-  );
-}
-
 /** Each mode's emblem on its tile: a blade, three shields, a die. Decoration only. */
 function ModeIcon({ mode }: { mode: QueueMode }): ReactElement {
   const common = { viewBox: "0 0 32 32", "aria-hidden": true, className: "play-mode-tile__icon" } as const;
@@ -644,9 +619,9 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       if (follow(result)) return;
       setWaiting(true);
       refreshPopulation();
+      // R505: the tile above says how many are waiting; the notice says only where you are.
       setStatus(
-        `In the ${MODE_LABEL[chosen.mode]} queue · ${String(result.population)} waiting. ` +
-          "You will be taken to the game as soon as someone is found.",
+        `In the ${MODE_LABEL[chosen.mode]} queue. You will be taken to the game as soon as someone is found.`,
       );
     });
   }
@@ -742,7 +717,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             </span>
             How do you want to play?
           </h2>
-          <fieldset className="lobby-modes">
+          <fieldset
+            className="lobby-modes"
+            data-testid={playTestid.population}
+            data-bo1={byMode?.bo1}
+            data-bo3={byMode?.bo3}
+            data-random={byMode?.random}
+          >
             <legend className="lobby-modes__legend">Mode</legend>
             {QUEUE_MODES.map((option) => (
               <label
@@ -881,7 +862,6 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             >
               Leave the queue
             </button>
-            <Population population={population} />
           </section>
 
           <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">

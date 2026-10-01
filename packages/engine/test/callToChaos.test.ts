@@ -6,7 +6,7 @@
 import type { CardDef, GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { defOf, queryCost, registerCatalog, registeredCatalog } from "../src/catalog";
-import { CALL_TO_CHAOS_CHAIN_CAP, HAND_CAP, LIBRARY_CAP } from "../src/config";
+import { CALL_TO_CHAOS_CHAIN_CAP, CALL_TO_CHAOS_RADIANT_EFFECTS, HAND_CAP, LIBRARY_CAP } from "../src/config";
 import { unitView } from "../src/layers";
 import { effectiveCost } from "../src/mana";
 import { applyEffects, makeContext, type EngineSink } from "../src/resolve";
@@ -352,7 +352,7 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
     const cast = state.players.p1.graveyard[0];
     expect(cast).toBeDefined();
     expect(cast?.defId).toBe(chaos.id);
-    // R28: only Core exists, so a Radiant #95 still casts the *base* card.
+    // R28: a Radiant Call still casts the *base* card.
     expect(cast?.radiant).toBe(false);
     // R215: it was the chain's first cast while it resolved, and it has landed (R87) as the printed
     // card again, carrying no link of that chain into whatever brings it back.
@@ -372,26 +372,40 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
     expect(CHAOS_EFFECTS).toHaveLength(10);
   });
 
-  it("R28 the radiant form rolls two effects: the recursion plus one of the other nine", () => {
-    const partners = new Set<string>();
-    for (let seed = 0; seed < 200; seed += 1) {
+  it("R423 the radiant form rolls three different effects, in the order the list writes them", () => {
+    const reached = new Set<string>();
+    let withRecursion = 0;
+    for (let seed = 0; seed < 300; seed += 1) {
       const effects = rollChaosEffects(createRng(`radiant-${seed}`), true);
-      expect(effects).toHaveLength(2);
-      // §8 lists the recursion first, so it is the first of the two to resolve.
-      expect(effects[0]?.name).toBe(CHAOS_RECURSION);
-      const partner = effects[1]?.name;
-      expect(partner).not.toBe(CHAOS_RECURSION);
-      if (partner !== undefined) partners.add(partner);
+      expect(effects).toHaveLength(CALL_TO_CHAOS_RADIANT_EFFECTS);
+      const names = effects.map((effect) => effect.name);
+      // Three different entries: none comes up twice.
+      expect(new Set(names).size).toBe(CALL_TO_CHAOS_RADIANT_EFFECTS);
+      // In list order, whatever order they were drawn in.
+      const order = names.map((name) => CHAOS_EFFECTS.findIndex((effect) => effect.name === name));
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      for (const name of names) reached.add(name);
+      if (names.includes(CHAOS_RECURSION)) withRecursion += 1;
     }
-    // Exactly the other nine are reachable as the partner effect.
-    expect(partners.size).toBe(CHAOS_EFFECTS.length - 1);
+    // Every entry can be rolled, the recursion included — and it is no longer guaranteed (R423
+    // rewrites R28's radiant pair): about three rolls in ten hold it.
+    expect(reached.size).toBe(CHAOS_EFFECTS.length);
+    expect(withRecursion).toBeGreaterThan(0);
+    expect(withRecursion).toBeLessThan(300);
   });
 
-  it("R28 a radiant Call to Chaos runs both rolled effects, the guaranteed recursion included", () => {
-    // A seed whose partner effect is the hero heal, so both halves of the roll are visible at once.
-    const seed = Array.from({ length: 50 }, (_, i) => `chaos-radiant-run-${i}`).find(
-      (candidate) => rollChaosEffects(createRng(candidate), true)[1]?.name === "heal",
-    );
+  it("R423 a list shorter than three rolls all of it, once each", () => {
+    const short = CHAOS_EFFECTS.slice(0, 2);
+    const rolled = rollChaosEffects(createRng("short-list"), true, short);
+    expect(rolled.map((effect) => effect.name)).toEqual(short.map((effect) => effect.name));
+  });
+
+  it("R423 a radiant Call to Chaos runs all three rolled effects, the recursion only when rolled", () => {
+    // A seed whose three are the hero heal, the Chaos Golem and the recursion: all three visible at once.
+    const seed = Array.from({ length: 3000 }, (_, i) => `chaos-radiant-run-${i}`).find((candidate) => {
+      const names = rollChaosEffects(createRng(candidate), true).map((effect) => effect.name);
+      return names.join() === ["heal", "golem", CHAOS_RECURSION].join();
+    });
     expect(seed).toBeDefined();
     if (seed === undefined) return;
 
@@ -403,11 +417,58 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
 
     run(sink, callToChaos(), self);
 
-    // "Cast a random Call to Chaos" always fires …
+    expect(state.players.p1.hero.health).toBe(60);
+    expect(eventsOfType(events, "summoned").map((event) => event.defId)).toEqual([golem.id]);
     expect(eventsOfType(events, "cardPlayed")).toHaveLength(1);
     expect(state.players.p1.graveyard.map((card) => card.defId)).toEqual([chaos.id]);
-    // … and so does the one effect drawn from the other nine.
-    expect(state.players.p1.hero.health).toBe(60);
+    // In list order: the heal, then the Golem, then the recursion's cast (R87's "where it falls").
+    const types = events.map((event) => event.type);
+    expect(types.indexOf("healed")).toBeLessThan(types.indexOf("summoned"));
+    expect(types.indexOf("summoned")).toBeLessThan(types.indexOf("cardPlayed"));
+
+    // A seed whose three leave the recursion out casts nothing at all.
+    const noRecursion = Array.from({ length: 400 }, (_, i) => `chaos-radiant-none-${i}`).find(
+      (candidate) => !rollChaosEffects(createRng(candidate), true).some((effect) => effect.name === CHAOS_RECURSION),
+    );
+    expect(noRecursion).toBeDefined();
+    if (noRecursion === undefined) return;
+    const quiet = game(noRecursion, { chaosCry: () => [] });
+    const quietEvents: GameEvent[] = [];
+    run(sinkFor(quiet, quietEvents), callToChaos(), chaosCard(quiet, { radiant: true }));
+    expect(eventsOfType(quietEvents, "cardPlayed")).toHaveLength(0);
+  });
+
+  it("R436 names what it rolled to both players, by the printed clauses, before any of it resolves", () => {
+    const seed = Array.from({ length: 400 }, (_, i) => `chaos-announce-${i}`).find((candidate) => {
+      const names = rollChaosEffects(createRng(candidate), true).map((effect) => effect.name);
+      return names.includes("heal") && !names.includes(CHAOS_RECURSION);
+    });
+    expect(seed).toBeDefined();
+    if (seed === undefined) return;
+    const state = game(seed);
+    const events: GameEvent[] = [];
+    const self = chaosCard(state, { radiant: true });
+    const expected = rollChaosEffects(createRng(seed), true).map((effect) => effect.label);
+
+    run(sinkFor(state, events), callToChaos(), self);
+
+    const announced = eventsOfType(events, "chaosRolled");
+    expect(announced).toEqual([
+      { type: "chaosRolled", player: "p1", instanceId: self.id, defId: chaos.id, effects: expected },
+    ]);
+    // First, before the first rolled effect lands anything.
+    expect(events[0]?.type).toBe("chaosRolled");
+    // Every label is a clause of the card's printed list, readable as it stands.
+    expect(expected.every((label) => CHAOS_EFFECTS.some((effect) => effect.label === label))).toBe(true);
+    expect(expected).toContain("Heal your hero 30");
+
+    // The base face names its one.
+    const baseState = game("chaos-announce-base");
+    const baseEvents: GameEvent[] = [];
+    run(sinkFor(baseState, baseEvents), callToChaos(), chaosCard(baseState));
+    const one = eventsOfType(baseEvents, "chaosRolled");
+    expect(one).toHaveLength(1);
+    expect(one[0]?.effects).toEqual([rollChaosEffects(createRng("chaos-announce-base"), false)[0]?.label]);
   });
 
   it("R28 caps the recursion at CALL_TO_CHAOS_CHAIN_CAP casts", () => {
@@ -567,11 +628,12 @@ describe("Call to Chaos (§8 #95, R28, M3-T7)", () => {
   });
 });
 
-describe("what R28 leaves open (R87, M3-T7)", () => {
-  it("R87 resolves the radiant pair in written order, leaves a cast card in the graveyard, and rolls no substitute at the cap", () => {
-    // 1. Written order: the recursion is first of the two, so its whole chain resolves first.
-    for (let seed = 0; seed < 25; seed += 1) {
-      expect(rollChaosEffects(createRng(`r87-${seed}`), true)[0]?.name).toBe(CHAOS_RECURSION);
+describe("what R28 leaves open (R87, R423, M3-T7)", () => {
+  it("R87 R423 resolves the rolled effects in written order, leaves a cast card in the graveyard, and rolls no substitute at the cap", () => {
+    // 1. Written order: the recursion is the list's last entry, so when it is rolled it resolves last.
+    for (let seed = 0; seed < 50; seed += 1) {
+      const names = rollChaosEffects(createRng(`r87-${seed}`), true).map((effect) => effect.name);
+      if (names.includes(CHAOS_RECURSION)) expect(names[names.length - 1]).toBe(CHAOS_RECURSION);
     }
 
     // 2. A card cast from no zone ends in the caster's graveyard (§10.5 step 7), so a chain feeds
@@ -582,30 +644,37 @@ describe("what R28 leaves open (R87, M3-T7)", () => {
     expect(state.players.p1.graveyard.map((card) => card.defId)).toEqual([chaos.id]);
 
     // 3. At the cap the recursion does nothing and nothing is rolled in its place: a radiant Call
-    // at the cap runs only its partner effect.
-    const capped = game("r87-cap", { chaosCry: () => [callToChaos({ radiant: true })] });
+    // at the cap runs only its other two effects.
+    const seed = Array.from({ length: 400 }, (_, i) => `r87-cap-${i}`).find((candidate) =>
+      rollChaosEffects(createRng(candidate), true).some((effect) => effect.name === CHAOS_RECURSION),
+    );
+    expect(seed).toBeDefined();
+    if (seed === undefined) return;
+    const capped = game(seed, { chaosCry: () => [callToChaos({ radiant: true })] });
     const cappedSink = sinkFor(capped);
     const self = chaosCard(capped, { radiant: true, chain: CALL_TO_CHAOS_CHAIN_CAP });
     expect(chaosChainCapReached(chaosChainOf(self))).toBe(true);
 
     const rolled = rollChaosEffects(createRng(capped.seed), true);
-    expect(rolled[0]?.name).toBe(CHAOS_RECURSION);
-    const partner = rolled[1]?.name;
+    const others = rolled.filter((effect) => effect.name !== CHAOS_RECURSION);
+    expect(others).toHaveLength(CALL_TO_CHAOS_RADIANT_EFFECTS - 1);
 
     run(cappedSink, callToChaos({ radiant: true }), self);
     expect(eventsOfType(cappedSink.events, "cardPlayed")).toHaveLength(0);
     expect(capped.counters.played).toBe(0);
+    // R436: the announcement still names all three: the recursion was rolled, and resolved into nothing.
+    expect(eventsOfType(cappedSink.events, "chaosRolled")[0]?.effects).toEqual(rolled.map((effect) => effect.label));
 
-    // What is left is exactly the partner effect: the same run on a twin state, with the partner
-    // alone, produces the same events in the same order.
-    const alone = game("r87-cap", { chaosCry: () => [callToChaos({ radiant: true })] });
+    // What is left is exactly the other two: the same run on a twin state, with those two alone,
+    // produces the same events in the same order after the announcement.
+    const alone = game(seed, { chaosCry: () => [callToChaos({ radiant: true })] });
     const aloneSink = sinkFor(alone);
-    const partnerDef = CHAOS_EFFECTS.find((effect) => effect.name === partner);
-    expect(partnerDef).toBeDefined();
-    if (partnerDef === undefined) return;
-    run(aloneSink, partnerDef.build(), chaosCard(alone, { radiant: true, chain: CALL_TO_CHAOS_CHAIN_CAP }));
+    // The twin takes the roll's draws first, so the two effects meet the rng exactly where they did.
+    rollChaosEffects(aloneSink.rng, true);
+    const twin = chaosCard(alone, { radiant: true, chain: CALL_TO_CHAOS_CHAIN_CAP });
+    for (const effect of others) run(aloneSink, effect.build(), twin);
 
-    expect(cappedSink.events.map((event) => event.type)).toEqual(
+    expect(cappedSink.events.slice(1).map((event) => event.type)).toEqual(
       aloneSink.events.map((event) => event.type),
     );
   });

@@ -122,6 +122,14 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
     };
     await t.results.insert(row);
 
+    // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
+    // server board, with the result or not at all. The reaper reads no state, so it writes none.
+    if (input.lastBoards !== undefined) {
+      for (const [at, seat] of input.seats.entries()) {
+        await t.lastBoards.put(seat.profileId, "server", input.lastBoards[at] ?? [], input.at);
+      }
+    }
+
     const rated: readonly (readonly [MatchSeat, number, number])[] = [
       [seatA, before[0], after[0]],
       [seatB, before[1], after[1]],

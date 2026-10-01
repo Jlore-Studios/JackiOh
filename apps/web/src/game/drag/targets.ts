@@ -6,12 +6,31 @@
 
 import type { Row } from "@jackioh/shared";
 
+import { ACTIVATE_ABILITY_ATTRIBUTE, ACTIVATE_FOR_ATTRIBUTE } from "../ActivateControl.tsx";
 import type { ClickTarget, Side } from "../contract.ts";
 import type { DropSpot } from "./model.ts";
 
 const HAND_CARD = /^hand-card-(.+)$/;
 const CARD = /^card-(.+)$/;
 const ZONE = /^zone-(you|opponent)-(units|backrow)-(\d+)$/;
+/** A Heroic Power's button on the hero panel: `power`, or `power-<instanceId>` for a further one. */
+const POWER = /^power(?:-.+)?$/;
+
+/**
+ * R384, R510: an Activate control (ActivateControl.tsx) or a Heroic Power's button reports the
+ * activation it stands for, read off the attributes it carries, never parsed out of its testid.
+ */
+function activationOf(element: Element, id: string): ClickTarget | null {
+  const card = element.getAttribute(ACTIVATE_FOR_ATTRIBUTE);
+  if (card !== null && card !== "") {
+    const ability = element.getAttribute(ACTIVATE_ABILITY_ATTRIBUTE);
+    return ability === null || ability === ""
+      ? { on: "activate", instanceId: card }
+      : { on: "activate", instanceId: card, ability };
+  }
+  const power = POWER.test(id) ? element.getAttribute("data-instance-id") : null;
+  return power === null || power === "" ? null : { on: "activate", instanceId: power };
+}
 
 type Place = { side: Side; row: Row; lane: number };
 
@@ -51,15 +70,21 @@ function isControl(element: Element): boolean {
  *   hand-card-<id>                   -> { on: "hand", instanceId }
  *   card-<id> inside a zone-*        -> { on: "unit" | "backrow", instanceId, side, lane } (from the zone's data-row/data-side/data-lane)
  *   card-<id> outside any zone       -> null (e.g. the resolving strip)
- *   hero-you | hero-opponent         -> { on: "hero", side }   (a press on `power` inside a hero reports the hero)
+ *   hero-you | hero-opponent         -> { on: "hero", side }
  *   zone-<side>-<row>-<lane>         -> { on: "zone", side, row, lane }
- * A press on a <button>, <input> or [role=button] inside a card (the switch button) is NOT a drag source.
+ *   an Activate control, `power`,
+ *   `power-<id>`                     -> { on: "activate", instanceId, ability? } (R384: a press on one is
+ *                                       the activation's own, ahead of the card or hero it sits on)
+ * A press on any other <button>, <input> or [role=button] inside a card (the switch button) is NOT a drag source.
  */
 export function targetFromElement(element: Element): { target: ClickTarget; testid: string } | null {
   let throughControl = false;
   for (let at: Element | null = element; at !== null; at = at.parentElement) {
     const id = at.getAttribute("data-testid");
     if (id !== null) {
+      const activation = activationOf(at, id);
+      if (activation !== null) return { target: activation, testid: id };
+
       const hand = HAND_CARD.exec(id);
       if (hand !== null) {
         if (throughControl) return null;

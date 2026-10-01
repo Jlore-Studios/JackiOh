@@ -31,7 +31,7 @@ export const AI_DEV_RUN = {
 export type DevRunOptions = {
   /** The seed series; a run told another one plays other games. */
   series: string;
-  /** R375's version the run tests: the record's patch. */
+  /** R388's version the run tests: the record's patch. */
   patch: string;
   /** The AI's budget; the browser's (`AI_BUDGET`) unless a test asks for less. */
   budget?: SearchBudget;

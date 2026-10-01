@@ -9,7 +9,15 @@ import { describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { subsystems } from "@jackioh/engine";
 
-import { CONCEALED_TAG, HEROIC_POWER_ID, POWER_WORDS, concealedInPlay, powerText } from "./inPlay.ts";
+import {
+  CONCEALED_TAG,
+  CONCEALED_TEXT_LOUD,
+  HEROIC_POWER_ID,
+  POWER_WORDS,
+  concealedInPlay,
+  concealedText,
+  powerText,
+} from "./inPlay.ts";
 
 describe("#98 Heroic Power's rolled power, in words", () => {
   it("names every power the engine can roll, in the engine's own words, base and radiant", () => {
@@ -43,9 +51,17 @@ describe("#98 Heroic Power's rolled power, in words", () => {
 });
 
 describe("Call to Chaos in play", () => {
-  it("conceals exactly the cards that carry the Call to Chaos tag: #95", () => {
+  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95 and the Classic+ Edition #73", () => {
     const concealed = Object.values(CATALOG).filter((def) => concealedInPlay(def.tags));
-    expect(concealed.map((def) => def.id)).toEqual(["core-095"]);
+    expect(concealed.map((def) => def.id)).toEqual(["core-095", "classicplus-073"]);
     expect(CATALOG["core-095"]?.tags).toContain(CONCEALED_TAG);
+  });
+
+  it("reads ??? in play, and the Classic+ Edition's Radiant face its designer's !!!", () => {
+    expect(concealedText("core-095", false)).toBe("???");
+    expect(concealedText("core-095", true)).toBe("???");
+    expect(concealedText("classicplus-073", false)).toBe("???");
+    expect(concealedText("classicplus-073", true)).toBe(CONCEALED_TEXT_LOUD);
+    expect(CONCEALED_TEXT_LOUD).toBe("!!!");
   });
 });

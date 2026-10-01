@@ -1,4 +1,4 @@
-// Rules text as a face prints it (docs/polish/6-cards.md, B10; SPEC §10.10). Four things ride on the
+// Rules text as a face prints it (docs/polish/6-cards.md, B10; SPEC §10.10). Five things ride on the
 // plain words, and this is the one component that draws them, so every surface that prints a
 // card's text — a face, the detail view's reading-size lines, the printed text beside a face in
 // play — prints them the same way:
@@ -14,6 +14,10 @@
 //   after the label's nth occurrence (a fused card prints its ingredients' texts one after the
 //   other, R102, and each one's value follows its own line), and one the text does not print that
 //   often at the end.
+//
+// - in play, the numbers the view moved off their printed values (`tuned`, tuning.ts, R386): each in a
+//   dotted box with ▲ (better) or ▼ (worse) after it (`.cf-tuned[data-way]`, the glyph drawn by the
+//   stylesheet so the text stays the number), and its printed value in the tooltip.
 //
 // A mark and a reference nest: a mark that holds a whole name holds its reference ("Also add a
 // Lava Golem …"), a mark inside a name sits inside the reference ("Rush Tokens"' marked "Tokens"),
@@ -31,6 +35,7 @@ import type { TextRange } from "./radiantDiff.ts";
 import { useDefResolver } from "./refContext.tsx";
 import { findRefs, type RefMatch } from "./refs.ts";
 import { tokenizeRules } from "./rules.ts";
+import { tunedRangeWords, type TunedRange } from "./tuning.ts";
 
 type RulesTextProps = {
   text: string;
@@ -40,6 +45,8 @@ type RulesTextProps = {
   refs?: readonly string[];
   /** R280: what the card's formula comes to now, in play. */
   values?: readonly PreviewValue[];
+  /** R386: the numbers in `text` the view moved off their printed values, in play. */
+  tuned?: readonly TunedRange[];
 };
 
 type Insert = { at: number; text: string; label: string };
@@ -110,7 +117,7 @@ function contains(outer: { start: number; end: number }, inner: { start: number;
   return outer.start <= inner.start && inner.end <= outer.end;
 }
 
-export function RulesText({ text, marks = NONE, refs = NONE, values = NONE }: RulesTextProps): ReactElement {
+export function RulesText({ text, marks = NONE, refs = NONE, values = NONE, tuned = NONE }: RulesTextProps): ReactElement {
   const resolve = useDefResolver();
   const defs: CardDef[] = resolve === null ? [] : refs.flatMap((id) => resolve(id) ?? []);
   const matches = defs.length === 0 ? [] : findRefs(text, defs);
@@ -144,6 +151,37 @@ export function RulesText({ text, marks = NONE, refs = NONE, values = NONE }: Ru
         );
       });
 
+  /** `from` to `to` as text, the stretches of it a tuned number covers boxed (R386). */
+  const numbers = (from: number, to: number): ReactNode[] => {
+    const cuts = new Set<number>([from, to]);
+    for (const range of tuned) for (const point of [range.start, range.end]) if (point > from && point < to) cuts.add(point);
+    const points = [...cuts].sort((a, b) => a - b);
+    const out: ReactNode[] = [];
+    for (let at = 0; at + 1 < points.length; at += 1) {
+      const start = points[at] ?? from;
+      const end = points[at + 1] ?? start;
+      const words = text.slice(start, end);
+      const range = tuned.find((candidate) => candidate.start <= start && start < candidate.end);
+      out.push(
+        range === undefined ? (
+          <Fragment key={next()}>{words}</Fragment>
+        ) : (
+          <span
+            key={next()}
+            className="cf-tuned"
+            data-way={range.way}
+            data-printed={range.printed}
+            data-key={range.key}
+            title={tunedRangeWords(range)}
+          >
+            {words}
+          </span>
+        ),
+      );
+    }
+    return out;
+  };
+
   /** Plain words from `start` to `end`: terms in bold unless inside a reference, values where owed. */
   const plain = (start: number, end: number, inRef: boolean): ReactNode[] => {
     const cuts = new Set<number>([start, end]);
@@ -154,14 +192,13 @@ export function RulesText({ text, marks = NONE, refs = NONE, values = NONE }: Ru
     for (let at = 0; at + 1 < points.length; at += 1) {
       const from = points[at] ?? start;
       const to = points[at + 1] ?? from;
-      const words = text.slice(from, to);
       const term = inRef ? undefined : terms.find((range) => range.start <= from && from < range.end);
       out.push(
         term === undefined ? (
-          <Fragment key={next()}>{words}</Fragment>
+          <Fragment key={next()}>{numbers(from, to)}</Fragment>
         ) : (
           <strong key={next()} className="cf-term" data-term={term.term}>
-            {words}
+            {numbers(from, to)}
           </strong>
         ),
       );

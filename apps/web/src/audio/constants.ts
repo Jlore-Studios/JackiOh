@@ -36,7 +36,8 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-export const VOICE_BUDGET_BYTES = 3 * 1024 * 1024;
+/** R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+. */
+export const VOICE_BUDGET_BYTES = 6 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 export const VOICE_MAX_WORDS = { play: 8, death: 6, cast: 8 } as const;
 /** R97's sentinel as a redacted event carries it (packages/engine/src/viewFor.ts HIDDEN_ID). */
@@ -47,4 +48,34 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
   "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
+  // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5).
+  "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
+  "Flicker", "Plague Token",
 ];
+
+// ---- Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506) ----
+/** #21 Hinder: its rider on the victim's next refresh is heard as a mana crack (cues.ts, R506). */
+export const HINDER_DEF_ID = "core-021";
+/** #27 Blood Ridden Glowy Jelly Bean: each card it turns Radiant is a blood drain and a gold burst. */
+export const BLOOD_BEAN_DEF_ID = "core-027";
+/**
+ * The id `modifierChanged` names the next refresh's rider by (packages/engine/src/mana.ts
+ * NEXT_REFRESH_MODIFIER_ID, R169): the web reaches no engine module for a string, as HIDDEN_DEF_ID.
+ */
+export const NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";
+/** On #27's `radiantSet`, the gold burst lands this long after the blood drain begins. */
+export const GOLD_BURST_DELAY_MS = 280;
+/** Call to Chaos's roll dings once per effect it names (R436), at most this many: the Radiant face's three. */
+export const CHAOS_REVEAL_MAX = 3;
+/** Plays the director keeps open at once (a cast inside a play inside a play); the oldest is forgotten past it. */
+export const PLAY_STACK_MAX = 8;
+/** R439: the turn clock's alarm beats through the last this-many ms of the viewer's own turn clock. */
+export const CLOCK_ALARM_FROM_MS = 30_000;
+/** Within the last this-many ms each beat is a sharper tick (clockTick), sharper every second. */
+export const CLOCK_ALARM_SHARP_FROM_MS = 10_000;
+/** One beat each time the clock crosses a whole multiple of this. */
+export const CLOCK_ALARM_BEAT_MS = 1_000;
+/** A beat is scheduled once its moment is at most this far ahead (the Clock repaints every 200 ms). */
+export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
+/** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
+export const CLOCK_ALARM_LATE_MS = 250;

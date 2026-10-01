@@ -58,12 +58,32 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     const set: GameEvent = { type: "summoned", player: "p2", instanceId: "hidden", defId: "hidden", row: "backrow", lane: 3 };
     const withCost = baseView({ opponent: { ...baseView().opponent, backrow: [null, null, { faceDown: true, cost: 2 }, null, null] } });
     render(<Log view={withEvents(withCost, [set])} />);
-    expect(lines()).toEqual(["The opponent's backrow lane 3: a face-down trap was set, Cost (2)"]);
+    expect(lines()).toEqual(["The opponent's backrow lane 3: a face-down trap was set, (2) Cost"]);
     cleanup();
     // Gone from the zone (it fired), or a back with no cost: the line claims none.
     render(<Log view={withEvents(baseView(), [set])} />);
     expect(lines()).toEqual(["The opponent's backrow lane 3: a face-down trap was set"]);
     expect(lines().join("\n")).not.toContain("hidden");
+  });
+
+  it("R432 a prompt names what it asks for, and a number a card's text changed names its key in words", () => {
+    const view = fullBoardView();
+    const unit = view.you.units[0];
+    if (unit === null || unit === undefined) throw new Error("the fixture has a unit in lane 1");
+    render(
+      <Log
+        view={withEvents(view, [
+          { type: "promptOpened", player: "p2", choiceId: "c1", kind: "pick" },
+          { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "drawLimit", value: 2 },
+          { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "cost", value: 1 },
+        ])}
+      />,
+    );
+    const text = lines().join("\n");
+    expect(text).toContain("must choose cards to take");
+    expect(text).toContain("draw limit became 2");
+    expect(text).toContain("now costs (1)");
+    expect(text).not.toMatch(/\(pick\)|drawLimit/);
   });
 
   it("names a unit that has left the board from the window's own public events, and never prints its id", () => {

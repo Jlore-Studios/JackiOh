@@ -81,7 +81,7 @@ const SESSION_STORAGE_KEY = "jackioh.e2e.session";
  */
 const TRANSPORT_JITTER_MS = 100;
 
-/** SPEC §8 numbers 100 Core cards, and R111 grants one copy of each non-token one. */
+/** SPEC §8 numbers 100 Core cards; R111 grants each of them, among every other set's. */
 const CORE_CARD_COUNT = Object.keys(CARD_NAMES).length;
 
 function api(path: string): string {
@@ -107,6 +107,8 @@ type RedeemBody = {
   needsInviteCode?: boolean;
   error?: { code: string; message: string; details?: unknown };
 };
+
+type CatalogBody = { version: string; defs: Record<string, { token: boolean }> };
 
 type CollectionBody = {
   catalogVersion: string;
@@ -369,7 +371,19 @@ describe("10 invite gate — a pending account", () => {
     });
 
     // R111: "one copy of every non-token card". §9.1: "Everyone owns every card at launch; keep
-    // the ledger anyway", which is why this is read from the ledger and not assumed.
+    // the ledger anyway", which is why this is read from the ledger and not assumed. Every set's
+    // non-token cards (SPEC §8, §8.6, §8.7), read off the catalog the server runs.
+    let expected = new Set<string>();
+    cy.request<CatalogBody>({ method: "GET", url: api("/api/catalog") }).then((response) => {
+      expected = new Set(
+        Object.entries(response.body.defs)
+          .filter(([, def]) => !def.token)
+          .map(([id]) => id),
+      );
+      for (let index = 1; index <= CORE_CARD_COUNT; index += 1) {
+        expect(expected.has(cardId(index)), `the catalog holds SPEC §8's ${cardId(index)}`).to.eq(true);
+      }
+    });
     cy.request<CollectionBody>({
       method: "GET",
       url: api("/api/collection"),
@@ -378,13 +392,10 @@ describe("10 invite gate — a pending account", () => {
       expect(response.status, "the gate is open now").to.eq(200);
       const entries = response.body.entries;
       const owned = new Set(entries.map((entry) => entry.cardId));
-      const expected = new Set(
-        Array.from({ length: CORE_CARD_COUNT }, (_, index) => cardId(index + 1)),
-      );
 
       expect(
         owned.size,
-        `R111 grants the ${String(CORE_CARD_COUNT)} non-token cards of SPEC §8 and no token`,
+        `R111 grants the catalog's ${String(expected.size)} non-token cards and no token`,
       ).to.eq(expected.size);
       for (const id of expected) {
         expect(owned.has(id), `R111 granted ${id}`).to.eq(true);

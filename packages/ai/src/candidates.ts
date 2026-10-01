@@ -86,23 +86,33 @@ function attackTier(state: GameState, seat: PlayerId, action: Extract<ActionBody
   return 4;
 }
 
-/** What a play or a power costs right now, for tier 2's ordering. */
-function sourceCost(state: GameState, action: ActionBody): number {
-  if (action.type !== "play" && action.type !== "activatePower") return 0;
+type Source = Extract<ActionBody, { type: "play" | "activatePower" | "activate" }>;
+
+/** Tier 2's actions: a play, Heroic Power's power (R43) and any card's Activate ability (B3.2, R384). */
+function isSource(action: ActionBody): action is Source {
+  return action.type === "play" || action.type === "activatePower" || action.type === "activate";
+}
+
+/** What a play, a power or an ability costs right now, for tier 2's ordering (an ability: its mana price). */
+function sourceCost(state: GameState, action: Source): number {
   const card = findInstance(state, action.instanceId);
   if (card === undefined) return 0;
-  return action.type === "play" ? effectiveCost(state, card) : subsystems.powerCostOf(card);
+  if (action.type === "play") return effectiveCost(state, card);
+  if (action.type === "activatePower") return subsystems.powerCostOf(card);
+  return subsystems.abilitiesOf(state, card).find((decl) => decl.id === action.ability)?.cost?.mana ?? 0;
 }
 
 /**
  * Tier 2: round-robin across source instances — every source's first variant, then every source's
- * second, … — each round by current cost, highest first (ties keep legalActions order).
+ * second, … — each round by current cost, highest first (ties keep legalActions order). A card on
+ * the field with an Activate ability is a source like a hand card (B3.2): a ♾️ or Activate N card's
+ * repeated uses need nothing here, since the AI re-plans after every action.
  */
 function roundRobin(state: GameState, actions: readonly ActionBody[]): ActionBody[] {
   const sources: { id: string; cost: number; variants: ActionBody[] }[] = [];
   const byId = new Map<string, { id: string; cost: number; variants: ActionBody[] }>();
   for (const action of actions) {
-    if (action.type !== "play" && action.type !== "activatePower") continue;
+    if (!isSource(action)) continue;
     let source = byId.get(action.instanceId);
     if (source === undefined) {
       source = { id: action.instanceId, cost: sourceCost(state, action), variants: [] };
@@ -157,6 +167,7 @@ export function candidateActions(state: GameState, seat: PlayerId): ActionBody[]
       }
       case "play":
       case "activatePower":
+      case "activate":
         plays.push(action);
         break;
       case "answer":

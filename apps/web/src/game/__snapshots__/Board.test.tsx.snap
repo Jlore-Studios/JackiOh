@@ -744,6 +744,8 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 aria-label="Divine Shield"
                 class="shield-icon"
                 data-icon="shield"
+                data-keyword-fx="Divine Shield"
+                data-kw-layer="frame"
               />
             </span>
           </span>
@@ -808,6 +810,15 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   data-art-theme="unit"
                   data-art-variant="base"
                   style="background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20100%20100%22%20width%3D%22100%22%20height%3D%22100%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20preserveAspectRatio%3D%22xMidYMid%20slice%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22s%22%20gradientUnits%3D%22userSpaceOnUse%22%20x1%3D%2234.99%22%20y1%3D%222.31%22%20x2%3D%2265.01%22%20y2%3D%2297.69%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2316150c%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239a7246%22%2F%3E%3C%2FlinearGradient%3E%3CradialGradient%20id%3D%22g%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fffda0%22%20stop-opacity%3D%220.78%22%2F%3E%3Cstop%20offset%3D%220.45%22%20stop-color%3D%22%23fffda0%22%20stop-opacity%3D%220.35%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23fffda0%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3CradialGradient%20id%3D%22v%22%20gradientUnits%3D%22userSpaceOnUse%22%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2272%22%3E%3Cstop%20offset%3D%220.6%22%20stop-color%3D%22%23000%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23000%22%20stop-opacity%3D%220.5%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22url%28%23s%29%22%2F%3E%3Ccircle%20cx%3D%2249.63%22%20cy%3D%2255.75%22%20r%3D%2225.15%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Cpath%20d%3D%22M14.24%2032.22L22.2%2032.22L22.2%2034.82L14.24%2034.82ZM15.64%2034.82L20.8%2034.82L20.8%20100L15.64%20100ZM46.45%2033.47L53.77%2033.47L53.77%2036.07L46.45%2036.07ZM47.85%2036.07L52.37%2036.07L52.37%20100L47.85%20100ZM77.8%2017.75L85.52%2017.75L85.52%2020.35L77.8%2020.35ZM79.2%2020.35L84.12%2020.35L84.12%20100L79.2%20100Z%22%20fill%3D%22%23615e3d%22%20opacity%3D%220.42%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M0%20100L0%2058.2Q20%2060.64%2030%2060.35Q40%2060.07%2050%2062.89Q60%2065.71%2070%2063.5Q80%2061.29%2090%2059.38L100%2057.48L100%20100Z%22%20fill%3D%22%23615e3d%22%20opacity%3D%220.6%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M0%20100L0%2078.9Q25%2085.39%2037.5%2081.82Q50%2078.24%2062.5%2079.85Q75%2081.45%2087.5%2080.69L100%2079.93L100%20100Z%22%20fill%3D%22%233b3923%22%20opacity%3D%220.85%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M3.68%20100C3.68%2083.09%2016.55%2077.09%2040.44%2075.59L43.94%2069.9A15.25%2015.25%200%201%201%2055.33%2069.9L58.83%2075.59C82.72%2077.09%2095.59%2083.09%2095.59%20100Z%22%20fill%3D%22%23121109%22%20opacity%3D%221%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M2.76%2083.09Q3.68%2072.59%2019.3%2072.09Q34.93%2072.59%2035.85%2083.09Q19.3%2080.09%202.76%2083.09ZM63.42%2083.09Q64.34%2072.59%2079.96%2072.09Q95.59%2072.59%2096.51%2083.09Q79.96%2080.09%2063.42%2083.09Z%22%20fill%3D%22%23121109%22%20opacity%3D%221%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M41.97%2056.97A2.29%201.53%200%201%200%2046.55%2056.97A2.29%201.53%200%201%200%2041.97%2056.97ZM52.95%2056.97A2.29%201.53%200%201%200%2057.53%2056.97A2.29%201.53%200%201%200%2052.95%2056.97Z%22%20fill%3D%22%23fffda0%22%20opacity%3D%220.9%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cg%20transform%3D%22translate%2849.63%2086.68%29%20rotate%28-2.86%29%20scale%280.59%29%20translate%28-12%20-12%29%22%3E%3Cpath%20d%3D%22M12%201.4L14.1%204.9V15.2H9.9V4.9ZM11.6%205.6H12.4V14.4H11.6ZM5.4%2015.2H18.6V17.2H5.4ZM11%2017.2H13V20.6H11ZM10.6%2022A1.4%201.4%200%201%200%2013.4%2022A1.4%201.4%200%201%200%2010.6%2022Z%22%20fill%3D%22%23ccccde%22%20stroke%3D%22%23232213%22%20stroke-width%3D%221.1%22%20stroke-linejoin%3D%22round%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2234.42%22%20cy%3D%2222.94%22%20r%3D%220.61%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.61%22%2F%3E%3Ccircle%20cx%3D%2268.88%22%20cy%3D%2238.59%22%20r%3D%221.03%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.79%22%2F%3E%3Ccircle%20cx%3D%2292.42%22%20cy%3D%2223.56%22%20r%3D%220.62%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.41%22%2F%3E%3Ccircle%20cx%3D%2268.28%22%20cy%3D%2223.35%22%20r%3D%221.01%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%228.15%22%20cy%3D%2252.77%22%20r%3D%221.22%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.48%22%2F%3E%3Ccircle%20cx%3D%2225.93%22%20cy%3D%2240.51%22%20r%3D%220.83%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.43%22%2F%3E%3Ccircle%20cx%3D%2275.11%22%20cy%3D%2238.65%22%20r%3D%221.08%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.64%22%2F%3E%3Ccircle%20cx%3D%2249.43%22%20cy%3D%2245.35%22%20r%3D%221.29%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.9%22%2F%3E%3Ccircle%20cx%3D%2278.3%22%20cy%3D%2233.3%22%20r%3D%220.85%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.84%22%2F%3E%3Ccircle%20cx%3D%2280.84%22%20cy%3D%2232.17%22%20r%3D%220.59%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.69%22%2F%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22url%28%23v%29%22%2F%3E%3C%2Fsvg%3E"); background-size: cover;"
+                />
+              </span>
+              <span
+                class="kw-fx"
+                data-keyword-fx="Taunt"
+                data-kw-layer="frame"
+              >
+                <span
+                  class="kw-part kw-taunt-shield"
                 />
               </span>
               <span
@@ -1180,6 +1191,395 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 />
               </span>
               <span
+                class="kw-fx"
+                data-keyword-fx="Taunt"
+                data-kw-layer="frame"
+              >
+                <span
+                  class="kw-part kw-taunt-shield"
+                />
+              </span>
+              <span
+                class="kw-fx"
+                data-keyword-fx="Can't attack"
+                data-kw-layer="veil"
+                data-kw-motion="on"
+              >
+                <span
+                  class="kw-part kw-anim kw-chains"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <g
+                      transform="rotate(38 50 50)"
+                    >
+                      <path
+                        d="M-8 45 H4 A5 5 0 0 1 4 55 H-8 A5 5 0 0 1 -8 45 Z M6 49 H20 A1 1 0 0 1 20 51 H6 A1 1 0 0 1 6 49 Z M22 45 H34 A5 5 0 0 1 34 55 H22 A5 5 0 0 1 22 45 Z M36 49 H50 A1 1 0 0 1 50 51 H36 A1 1 0 0 1 36 49 Z M52 45 H64 A5 5 0 0 1 64 55 H52 A5 5 0 0 1 52 45 Z M66 49 H80 A1 1 0 0 1 80 51 H66 A1 1 0 0 1 66 49 Z M82 45 H94 A5 5 0 0 1 94 55 H82 A5 5 0 0 1 82 45 Z M96 49 H110 A1 1 0 0 1 110 51 H96 A1 1 0 0 1 96 49 Z M112 45 H124 A5 5 0 0 1 124 55 H112 A5 5 0 0 1 112 45 Z"
+                        fill="none"
+                        stroke="#0b0d12"
+                        stroke-width="5"
+                      />
+                      <path
+                        d="M-8 45 H4 A5 5 0 0 1 4 55 H-8 A5 5 0 0 1 -8 45 Z M6 49 H20 A1 1 0 0 1 20 51 H6 A1 1 0 0 1 6 49 Z M22 45 H34 A5 5 0 0 1 34 55 H22 A5 5 0 0 1 22 45 Z M36 49 H50 A1 1 0 0 1 50 51 H36 A1 1 0 0 1 36 49 Z M52 45 H64 A5 5 0 0 1 64 55 H52 A5 5 0 0 1 52 45 Z M66 49 H80 A1 1 0 0 1 80 51 H66 A1 1 0 0 1 66 49 Z M82 45 H94 A5 5 0 0 1 94 55 H82 A5 5 0 0 1 82 45 Z M96 49 H110 A1 1 0 0 1 110 51 H96 A1 1 0 0 1 96 49 Z M112 45 H124 A5 5 0 0 1 124 55 H112 A5 5 0 0 1 112 45 Z"
+                        fill="none"
+                        stroke="#d5d9e2"
+                        stroke-width="2.6"
+                      />
+                    </g>
+                    <g
+                      transform="rotate(-38 50 50)"
+                    >
+                      <path
+                        d="M-8 45 H4 A5 5 0 0 1 4 55 H-8 A5 5 0 0 1 -8 45 Z M6 49 H20 A1 1 0 0 1 20 51 H6 A1 1 0 0 1 6 49 Z M22 45 H34 A5 5 0 0 1 34 55 H22 A5 5 0 0 1 22 45 Z M36 49 H50 A1 1 0 0 1 50 51 H36 A1 1 0 0 1 36 49 Z M52 45 H64 A5 5 0 0 1 64 55 H52 A5 5 0 0 1 52 45 Z M66 49 H80 A1 1 0 0 1 80 51 H66 A1 1 0 0 1 66 49 Z M82 45 H94 A5 5 0 0 1 94 55 H82 A5 5 0 0 1 82 45 Z M96 49 H110 A1 1 0 0 1 110 51 H96 A1 1 0 0 1 96 49 Z M112 45 H124 A5 5 0 0 1 124 55 H112 A5 5 0 0 1 112 45 Z"
+                        fill="none"
+                        stroke="#0b0d12"
+                        stroke-width="5"
+                      />
+                      <path
+                        d="M-8 45 H4 A5 5 0 0 1 4 55 H-8 A5 5 0 0 1 -8 45 Z M6 49 H20 A1 1 0 0 1 20 51 H6 A1 1 0 0 1 6 49 Z M22 45 H34 A5 5 0 0 1 34 55 H22 A5 5 0 0 1 22 45 Z M36 49 H50 A1 1 0 0 1 50 51 H36 A1 1 0 0 1 36 49 Z M52 45 H64 A5 5 0 0 1 64 55 H52 A5 5 0 0 1 52 45 Z M66 49 H80 A1 1 0 0 1 80 51 H66 A1 1 0 0 1 66 49 Z M82 45 H94 A5 5 0 0 1 94 55 H82 A5 5 0 0 1 82 45 Z M96 49 H110 A1 1 0 0 1 110 51 H96 A1 1 0 0 1 96 49 Z M112 45 H124 A5 5 0 0 1 124 55 H112 A5 5 0 0 1 112 45 Z"
+                        fill="none"
+                        stroke="#d5d9e2"
+                        stroke-width="2.6"
+                      />
+                    </g>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      fill="#3a3f4b"
+                      r="7"
+                      stroke="#0b0d12"
+                      stroke-width="2"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      fill="none"
+                      r="7"
+                      stroke="#d5d9e2"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </span>
+              </span>
+              <span
+                class="kw-fx"
+                data-keyword-fx="Immune to Spells"
+                data-kw-layer="frame"
+                data-kw-motion="on"
+              >
+                <span
+                  class="kw-part kw-ward"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <polygon
+                      fill="none"
+                      points="50,2 97,26 97,74 50,98 3,74 3,26"
+                      stroke="#0b0d12"
+                      stroke-width="6"
+                    />
+                    <polygon
+                      fill="none"
+                      points="50,2 97,26 97,74 50,98 3,74 3,26"
+                      stroke="#c9a6ff"
+                      stroke-width="3"
+                    />
+                    <polygon
+                      fill="none"
+                      points="50,9 90,30 90,70 50,91 10,70 10,30"
+                      stroke="#c9a6ff"
+                      stroke-opacity="0.7"
+                      stroke-width="1.2"
+                    />
+                  </svg>
+                </span>
+                <span
+                  class="kw-part kw-anim kw-ward-sparks"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <path
+                      d="M50 -5 L51.96 0.039999999999999813 L57 2 L51.96 3.96 L50 9 L48.04 3.96 L43 2 L48.04 0.039999999999999813 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                    <path
+                      d="M97 19 L98.96 24.04 L104 26 L98.96 27.96 L97 33 L95.04 27.96 L90 26 L95.04 24.04 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                    <path
+                      d="M97 67 L98.96 72.04 L104 74 L98.96 75.96 L97 81 L95.04 75.96 L90 74 L95.04 72.04 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                    <path
+                      d="M50 91 L51.96 96.04 L57 98 L51.96 99.96 L50 105 L48.04 99.96 L43 98 L48.04 96.04 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                    <path
+                      d="M3 67 L4.96 72.04 L10 74 L4.96 75.96 L3 81 L1.0399999999999998 75.96 L-4 74 L1.0399999999999998 72.04 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                    <path
+                      d="M3 19 L4.96 24.04 L10 26 L4.96 27.96 L3 33 L1.0399999999999998 27.96 L-4 26 L1.0399999999999998 24.04 Z"
+                      fill="#f3e9ff"
+                      stroke="#3b1f6e"
+                      stroke-width="1"
+                    />
+                  </svg>
+                </span>
+              </span>
+              <span
+                class="kw-fx"
+                data-keyword-fx="Poisonous"
+                data-kw-layer="veil"
+                data-kw-motion="off"
+              >
+                <span
+                  class="kw-part kw-venom"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <path
+                      d="M0 0 H100 V9 C94 14 90 8 84 12 C79 16 75 11 70 13 C64 16 60 10 54 13 C48 17 44 10 38 13 C32 16 28 11 22 14 C16 17 12 10 6 13 C3 15 1 12 0 11 Z"
+                      fill="#48d85a"
+                      stroke="#0e4a16"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </span>
+                <span
+                  class="kw-part kw-anim kw-venom-drops"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <path
+                      d="M32 11 C35 18 39 23 39 28 A7 7 0 0 1 25 28 C25 23 29 18 32 11 Z"
+                      fill="#62ef72"
+                      stroke="#0e4a16"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M68 12 C70 17 73 20 73 24 A5 5 0 0 1 63 24 C63 20 66 17 68 12 Z"
+                      fill="#62ef72"
+                      stroke="#0e4a16"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </span>
+              </span>
+              <span
+                class="kw-fx"
+                data-keyword-fx="Reborn"
+                data-kw-layer="frame"
+                data-kw-motion="off"
+              >
+                <span
+                  class="kw-part kw-anim kw-echo"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <ellipse
+                      cx="50"
+                      cy="50"
+                      fill="none"
+                      rx="46"
+                      ry="46"
+                      stroke="#0b0d12"
+                      stroke-opacity="0.5"
+                      stroke-width="5"
+                    />
+                    <ellipse
+                      cx="50"
+                      cy="50"
+                      fill="none"
+                      rx="46"
+                      ry="46"
+                      stroke="#b6f4ff"
+                      stroke-dasharray="10 6"
+                      stroke-width="3"
+                    />
+                  </svg>
+                </span>
+                <span
+                  class="kw-part kw-halo"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <ellipse
+                      cx="50"
+                      cy="50"
+                      fill="none"
+                      rx="44"
+                      ry="26"
+                      stroke="#0b0d12"
+                      stroke-opacity="0.45"
+                      stroke-width="14"
+                    />
+                    <ellipse
+                      cx="50"
+                      cy="50"
+                      fill="none"
+                      rx="44"
+                      ry="26"
+                      stroke="#dffaff"
+                      stroke-width="9"
+                    />
+                  </svg>
+                </span>
+              </span>
+              <span
+                class="kw-glyphs"
+              >
+                <span
+                  class="kw-fx"
+                  data-keyword-fx="First Strike"
+                  data-kw-layer="glyph"
+                  data-kw-motion="off"
+                >
+                  <span
+                    class="kw-part kw-glyph-art"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <path
+                        d="M50 3 L65 22 L65 60 L35 60 L35 22 Z"
+                        fill="#f1f5fb"
+                        stroke="#0b0d12"
+                        stroke-linejoin="round"
+                        stroke-width="4"
+                      />
+                      <path
+                        d="M50 12 V56"
+                        stroke="#8d99af"
+                        stroke-width="4"
+                      />
+                      <path
+                        d="M20 60 H80 V72 H20 Z"
+                        fill="#f0bd4f"
+                        stroke="#0b0d12"
+                        stroke-linejoin="round"
+                        stroke-width="4"
+                      />
+                      <path
+                        d="M43 72 H57 V96 H43 Z"
+                        fill="#8a5220"
+                        stroke="#0b0d12"
+                        stroke-width="4"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="kw-part kw-anim kw-glint"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <path
+                        d="M62 3 L65.64 12.36 L75 16 L65.64 19.64 L62 29 L58.36 19.64 L49 16 L58.36 12.36 Z"
+                        fill="#ffffff"
+                        stroke="#0b0d12"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                </span>
+                <span
+                  class="kw-fx"
+                  data-keyword-fx="Trample"
+                  data-kw-layer="glyph"
+                  data-kw-motion="off"
+                >
+                  <span
+                    class="kw-part kw-anim kw-shock"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        r="44"
+                        stroke="#ffd08a"
+                        stroke-width="5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="kw-part kw-glyph-art"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <path
+                        d="M30 34 C30 16 70 16 70 34 L70 62 C70 71 61 73 57 66 L55 46 C55 39 45 39 45 46 L43 66 C39 73 30 71 30 62 Z"
+                        fill="#c98a45"
+                        stroke="#0b0d12"
+                        stroke-linejoin="round"
+                        stroke-width="3.5"
+                      />
+                      <path
+                        d="M36 30 C40 24 60 24 64 30"
+                        fill="none"
+                        stroke="#f3c690"
+                        stroke-linecap="round"
+                        stroke-width="2.5"
+                      />
+                    </svg>
+                  </span>
+                </span>
+              </span>
+              <span
                 class="cost-gem"
                 data-cost="3"
                 data-tone="base"
@@ -1218,6 +1618,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 <span
                   class="stat stat-armor"
                   data-armor="2"
+                  data-keyword-fx="Armor"
+                  data-kw-layer="stat"
+                  data-n="2"
                 >
                   2
                 </span>
@@ -1364,17 +1767,63 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                    3
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Animated"
+                  title="Animated"
+                >
+                  AN
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Animated on your turn"
+                  title="Animated on your turn"
+                >
+                  AT
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Brittle"
+                  data-n="2"
+                  title="Brittle 2"
+                >
+                  BR
+                   2
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Spell Damage"
+                  data-n="1"
+                  title="Spell Damage 1"
+                >
+                  SD
+                   1
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Immune to Spells"
+                  title="Immune to Spells"
+                >
+                  IS
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells"
                 >
                   +
-                  12
+                  17
                 </span>
               </span>
               <span
                 aria-label="Divine Shield"
                 class="shield-icon"
                 data-icon="shield"
+                data-keyword-fx="Divine Shield"
+                data-kw-layer="frame"
               />
             </span>
           </span>
@@ -2080,6 +2529,19 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 />
               </span>
               <span
+                class="kw-fx"
+                data-keyword-fx="Stack"
+                data-kw-layer="frame"
+                data-kw-motion="on"
+              >
+                <span
+                  class="kw-part kw-anim kw-edge kw-edge--far"
+                />
+                <span
+                  class="kw-part kw-anim kw-edge kw-edge--near"
+                />
+              </span>
+              <span
                 class="cost-gem"
                 data-cost="3"
                 data-tone="base"
@@ -2348,6 +2810,61 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   data-art-variant="base"
                   style="background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20100%20100%22%20width%3D%22100%22%20height%3D%22100%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20preserveAspectRatio%3D%22xMidYMid%20slice%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22s%22%20gradientUnits%3D%22userSpaceOnUse%22%20x1%3D%2264.79%22%20y1%3D%222.24%22%20x2%3D%2235.21%22%20y2%3D%2297.76%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235c593a%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2316150c%22%2F%3E%3C%2FlinearGradient%3E%3CradialGradient%20id%3D%22g%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fffca0%22%20stop-opacity%3D%220.84%22%2F%3E%3Cstop%20offset%3D%220.45%22%20stop-color%3D%22%23fffca0%22%20stop-opacity%3D%220.38%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23fffca0%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3CradialGradient%20id%3D%22v%22%20gradientUnits%3D%22userSpaceOnUse%22%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2272%22%3E%3Cstop%20offset%3D%220.6%22%20stop-color%3D%22%23000%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23000%22%20stop-opacity%3D%220.5%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22url%28%23s%29%22%2F%3E%3Ccircle%20cx%3D%2265.12%22%20cy%3D%2253.82%22%20r%3D%2225.63%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Cpath%20d%3D%22M-6%20-6L146.34%2069.46L141.33%2078.82ZM-6%20-6L129.39%2096.8L121.8%20106.1ZM-6%20-6L107.61%20120.46L97.28%20129.03Z%22%20fill%3D%22%23fffca0%22%20opacity%3D%220.17%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M0%20100L0%2056.82Q20%2060.59%2030%2060.62Q40%2060.66%2050%2061.53Q60%2062.41%2070%2060.63Q80%2058.85%2090%2055.01L100%2051.16L100%20100Z%22%20fill%3D%22%23615d3d%22%20opacity%3D%220.6%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M0%20100L0%2081.84Q25%2081.74%2037.5%2080.22Q50%2078.7%2062.5%2080.55Q75%2082.39%2087.5%2083.27L100%2084.15L100%20100Z%22%20fill%3D%22%233b3823%22%20opacity%3D%220.85%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M32.59%20100C32.59%2076.83%2041.7%2070.83%2057.42%2069.33L60.92%2065.12C50.56%2054.27%2057.08%2040.76%2065.76%2036.76C73.96%2040.76%2079.67%2054.27%2069.31%2065.12L72.81%2069.33C88.54%2070.83%2097.64%2076.83%2097.64%20100ZM58.69%2055.32A6.63%208.44%200%201%200%2071.95%2055.32A6.63%208.44%200%201%200%2058.69%2055.32Z%22%20fill%3D%22%23121109%22%20opacity%3D%221%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M31.94%2076.83Q32.59%2066.33%2043.65%2065.83Q54.71%2066.33%2055.36%2076.83Q43.65%2073.83%2031.94%2076.83ZM74.87%2076.83Q75.53%2066.33%2086.58%2065.83Q97.64%2066.33%2098.29%2076.83Q86.58%2073.83%2074.87%2076.83Z%22%20fill%3D%22%23121109%22%20opacity%3D%221%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cg%20transform%3D%22translate%2824.09%2029.45%29%20rotate%28-0.99%29%20scale%280.73%29%20translate%28-12%20-12%29%22%3E%3Cpath%20d%3D%22M12%201.8C13.6%206%2018.4%208.6%2018.4%2014.4A6.4%206.4%200%200%201%205.6%2014.4C5.6%2010.6%208%208.9%209.2%206.2C10%208.5%2010.9%209.4%2012.2%2010C12.7%207.3%2012.5%204.5%2012%201.8ZM12%2012.8C13.3%2014.5%2014.4%2015.6%2014.4%2017.3A2.4%202.4%200%200%201%209.6%2017.3C9.6%2015.6%2010.7%2014.5%2012%2012.8Z%22%20fill%3D%22%23ccccde%22%20stroke%3D%22%23232213%22%20stroke-width%3D%221.1%22%20stroke-linejoin%3D%22round%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%225.78%22%20cy%3D%2221.61%22%20r%3D%221.17%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%225.28%22%20cy%3D%2254.11%22%20r%3D%220.53%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.79%22%2F%3E%3Ccircle%20cx%3D%2284.03%22%20cy%3D%2227.04%22%20r%3D%220.42%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.81%22%2F%3E%3Ccircle%20cx%3D%227.71%22%20cy%3D%2243.89%22%20r%3D%221.26%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.42%22%2F%3E%3Ccircle%20cx%3D%2266.49%22%20cy%3D%2230.07%22%20r%3D%221.28%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.53%22%2F%3E%3Ccircle%20cx%3D%2251.05%22%20cy%3D%2221.92%22%20r%3D%220.67%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.61%22%2F%3E%3Ccircle%20cx%3D%2228.8%22%20cy%3D%225.65%22%20r%3D%220.57%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.65%22%2F%3E%3Ccircle%20cx%3D%2245.59%22%20cy%3D%228.68%22%20r%3D%220.44%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.69%22%2F%3E%3Ccircle%20cx%3D%2213.78%22%20cy%3D%2250.26%22%20r%3D%220.73%22%20fill%3D%22%23fffec8%22%20opacity%3D%220.71%22%2F%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22url%28%23v%29%22%2F%3E%3C%2Fsvg%3E"); background-size: cover;"
                 />
+              </span>
+              <span
+                class="kw-glyphs"
+              >
+                <span
+                  class="kw-fx"
+                  data-keyword-fx="Trample"
+                  data-kw-layer="glyph"
+                  data-kw-motion="on"
+                >
+                  <span
+                    class="kw-part kw-anim kw-shock"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        r="44"
+                        stroke="#ffd08a"
+                        stroke-width="5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="kw-part kw-glyph-art"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      focusable="false"
+                      preserveAspectRatio="xMidYMid meet"
+                      viewBox="0 0 100 100"
+                    >
+                      <path
+                        d="M30 34 C30 16 70 16 70 34 L70 62 C70 71 61 73 57 66 L55 46 C55 39 45 39 45 46 L43 66 C39 73 30 71 30 62 Z"
+                        fill="#c98a45"
+                        stroke="#0b0d12"
+                        stroke-linejoin="round"
+                        stroke-width="3.5"
+                      />
+                      <path
+                        d="M36 30 C40 24 60 24 64 30"
+                        fill="none"
+                        stroke="#f3c690"
+                        stroke-linecap="round"
+                        stroke-width="2.5"
+                      />
+                    </svg>
+                  </span>
+                </span>
               </span>
               <span
                 class="cost-gem"
@@ -2649,9 +3166,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         <span
           class="modifier-badge"
           data-modifier-id="m1"
-          title="Cost (4)+ cards cost (1) less (next turn)"
+          title="(4)+ Cost cards cost (1) less (next turn)"
         >
-          Cost (4)+ cards cost (1) less (next turn)
+          (4)+ Cost cards cost (1) less (next turn)
         </span>
         <span
           class="modifier-badge"

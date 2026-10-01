@@ -30,17 +30,24 @@ import { SCRIPT_MODULES } from "../src/scripts/_generated";
 import {
   compareSortKeys,
   expectedBasename,
+  expectedRelPath,
+  folderOf,
   matchesCard,
   moduleAliasOf,
   prefixRank,
   resolveBasename,
+  resolveRelPath,
+  setSegmentOf,
   slugPrefixOf,
   slugify,
   sortKey,
 } from "../scripts/naming";
 
-/** SPEC §8 + §7, M4-T1's census: 100 cards + 11 tokens. `catalog.test.ts` proves the values. */
-const CATALOG_SIZE = 111;
+/**
+ * SPEC §8 + §7 and B2.1's census: Core's 100 cards + 11 tokens, Classic's 90 cards, Classic+'s 78
+ * cards + 38 tokens. `catalog.test.ts` proves the values.
+ */
+const CATALOG_SIZE = 317;
 
 /**
  * BUILD M4-T2's gate is "every catalog id has a script and every script has a catalog entry".
@@ -56,7 +63,13 @@ const CATALOG_SIZE = 111;
  * parallel, a hand-listed one would funnel all of them through the same line of this file.
  */
 const EXPECT_ALL_SCRIPTS = false;
-const IDS_ALLOWED_WITHOUT_SCRIPT: readonly string[] = EXPECT_ALL_SCRIPTS ? [] : CATALOG_IDS;
+/**
+ * Core's 111 files have all landed (M4-T4), so a Core card without a script is a regression; the
+ * Classic and Classic+ scripts land in patch v0.2.0's card waves (B10.2, M9-T6 … M9-T8).
+ */
+const IDS_ALLOWED_WITHOUT_SCRIPT: readonly string[] = EXPECT_ALL_SCRIPTS
+  ? []
+  : CATALOG_IDS.filter((id) => setSegmentOf(id) !== "core");
 
 const scriptedIds = Object.keys(CARDS);
 const idsWithoutScript = CATALOG_IDS.filter((id) => CARDS[id] === undefined);
@@ -99,7 +112,7 @@ describe("registry (BUILD M4-T2)", () => {
     expect(() => buildRegistry([{ def, base: {}, radiant: {} }])).toThrow(/not in/);
   });
 
-  it("registerAll registers all 111 defs and the catalog version", () => {
+  it("registerAll registers all 317 defs and the catalog version", () => {
     registerAll();
     const registered = registeredCatalog();
     expect(Object.keys(registered)).toHaveLength(CATALOG_SIZE);
@@ -168,7 +181,42 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
     expect(slugPrefixOf("core-043")).toBe("043");
     expect(slugPrefixOf("core-051-1")).toBe("051-1");
     expect(slugPrefixOf("core-t-rush")).toBe("t-rush");
+    expect(slugPrefixOf("classicplus-012-1")).toBe("012-1");
+    expect(slugPrefixOf("classicplus-t-ai-01")).toBe("t-ai-01");
     expect(() => slugPrefixOf("core")).toThrow(/not a catalog id/);
+  });
+
+  it("files each set in its own folder (B2.2): Core at the top, classic/ and classic-plus/", () => {
+    expect(setSegmentOf("core-043")).toBe("core");
+    expect(setSegmentOf("classic-043")).toBe("classic");
+    expect(setSegmentOf("classicplus-043")).toBe("classicplus");
+    expect(setSegmentOf("boss-001")).toBeUndefined();
+    expect(folderOf("core-043")).toBe("");
+    expect(folderOf("classic-043")).toBe("classic");
+    expect(folderOf("classicplus-012-1")).toBe("classic-plus");
+    expect(expectedRelPath("core-043", cardDef("core-043").name)).toBe("043-big-felinor");
+    expect(expectedRelPath("classic-043", cardDef("classic-043").name)).toBe("classic/043-plague-nuke");
+    expect(expectedRelPath("classicplus-012-1", cardDef("classicplus-012-1").name)).toBe("classic-plus/012-1-devour");
+    // The AI generated cards are shared tokens of Classic+, but carry their slug (their prefix alone
+    // names no card), unlike Core's §7 tokens.
+    expect(expectedRelPath("classicplus-t-ai-01", cardDef("classicplus-t-ai-01").name)).toBe(
+      "classic-plus/t-ai-01-helpful-assistant",
+    );
+    expect(expectedRelPath("core-t-rush", cardDef("core-t-rush").name)).toBe("t-rush");
+  });
+
+  it("resolves a file by its folder's set, since an index repeats across sets", () => {
+    expect(resolveRelPath("043-big-felinor", CATALOG_IDS)).toBe("core-043");
+    expect(resolveRelPath("classic/043-plague-nuke", CATALOG_IDS)).toBe("classic-043");
+    expect(resolveRelPath("classic-plus/043-ai-slop", CATALOG_IDS)).toBe("classicplus-043");
+    // A misspelled slug still lands on its card, in its own set only.
+    expect(resolveRelPath("classic/043-plague-nuk", CATALOG_IDS)).toBe("classic-043");
+    expect(resolveRelPath("classic-plus/012-1-devour", CATALOG_IDS)).toBe("classicplus-012-1");
+    expect(resolveRelPath("classic-plus/012-the-mother-pancake", CATALOG_IDS)).toBe("classicplus-012");
+    expect(resolveRelPath("classic-plus/t-ai-10-fine-tuning", CATALOG_IDS)).toBe("classicplus-t-ai-10");
+    expect(resolveRelPath("classic/091-no-such-card", CATALOG_IDS)).toBeUndefined();
+    expect(resolveRelPath("legacy/043-big-felinor", CATALOG_IDS)).toBeUndefined();
+    expect(resolveBasename("043-plague-nuke", CATALOG_IDS, "classic")).toBe("classic-043");
   });
 
   it("slugifies a card name the way the shipped filenames spell it", () => {
@@ -220,17 +268,17 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
   });
 
   it("round-trips every catalog id through its expected filename", () => {
-    // The whole catalog at once: no two cards may claim one filename, and every expected filename
-    // must resolve back to the card that expects it — which is what makes `missing-tests.ts` a
+    // The whole catalog at once: no two cards may claim one path, and every expected path must
+    // resolve back to the card that expects it — which is what makes `missing-tests.ts` a
     // trustworthy gate.
     const seen = new Map<string, string>();
     for (const id of CATALOG_IDS) {
-      const basename = expectedBasename(id, cardDef(id).name);
-      const owner = seen.get(basename);
-      expect(owner, `${basename}.ts is claimed by both ${owner} and ${id}`).toBeUndefined();
-      seen.set(basename, id);
-      expect(resolveBasename(basename, CATALOG_IDS), `${basename} -> ${id}`).toBe(id);
-      expect(matchesCard(basename, id, CATALOG_IDS)).toBe(true);
+      const path = expectedRelPath(id, cardDef(id).name);
+      const owner = seen.get(path);
+      expect(owner, `${path}.ts is claimed by both ${owner} and ${id}`).toBeUndefined();
+      seen.set(path, id);
+      expect(resolveRelPath(path, CATALOG_IDS), `${path} -> ${id}`).toBe(id);
+      expect(matchesCard(expectedBasename(id, cardDef(id).name), id, CATALOG_IDS)).toBe(true);
     }
     expect(seen.size).toBe(CATALOG_SIZE);
   });
@@ -247,14 +295,25 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
     expect(prefixRank("051-1")).toBeCloseTo(51.1);
     expect(prefixRank("t-rush")).toBe(Number.POSITIVE_INFINITY);
 
-    const ordered = CATALOG_IDS.map((id) => ({ id, basename: expectedBasename(id, cardDef(id).name) }))
-      .sort((a, b) => compareSortKeys(sortKey(a.basename, a.id), sortKey(b.basename, b.id)))
-      .map((entry) => entry.basename);
+    const ordered = CATALOG_IDS.map((id) => ({ id, path: expectedRelPath(id, cardDef(id).name) }))
+      .sort((a, b) => compareSortKeys(sortKey(a.path, a.id), sortKey(b.path, b.id)))
+      .map((entry) => entry.path);
 
+    // Catalog order: Core, then Classic, then Classic+ (B2.2), each by §5 index.
     expect(ordered[0]).toBe("001-big-d-fender");
     expect(ordered.indexOf("051-1-kys-empty-notebook")).toBe(ordered.indexOf("051-kys-private-tutor") + 1);
-    expect(ordered.indexOf("100-ceaseless-void")).toBe(ordered.length - 7);
-    expect(ordered.slice(-6)).toEqual(["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"]);
+    expect(ordered.indexOf("100-ceaseless-void")).toBe(111 - 7);
+    expect(ordered.slice(105, 111)).toEqual(["t-bread", "t-coin", "t-felinor", "t-ghoul", "t-rush", "t-sheep"]);
+    expect(ordered[111]).toBe("classic/001-curse-of-the-forgotten-classic");
+    expect(ordered[201]).toBe("classic-plus/001-doom-shroom");
+    expect(ordered.indexOf("classic-plus/012-8-frostspatula")).toBe(ordered.indexOf("classic-plus/012-the-mother-pancake") + 8);
+    expect(ordered.slice(-10)[0]).toBe("classic-plus/t-ai-01-helpful-assistant");
+    expect(ordered.at(-1)).toBe("classic-plus/t-ai-10-fine-tuning");
+    // Catalog.json's own order, but for the shared tokens, which the files sort by name.
+    const shared = (path: string): boolean => /(^|\/)t-/.test(path);
+    expect(CATALOG_IDS.map((id) => expectedRelPath(id, cardDef(id).name)).filter((path) => !shared(path))).toEqual(
+      ordered.filter((path) => !shared(path)),
+    );
     // Unrecognised filenames sort after everything, so the barrel stays deterministic.
     expect(compareSortKeys(sortKey("t-rush", "core-t-rush"), sortKey("mystery", undefined))).toBeLessThan(0);
   });
@@ -263,7 +322,9 @@ describe("naming (BUILD M4-T2, M4-T3)", () => {
     expect(moduleAliasOf("001-big-d-fender")).toBe("m001_big_d_fender");
     expect(moduleAliasOf("051-1-kys-empty-notebook")).toBe("m051_1_kys_empty_notebook");
     expect(moduleAliasOf("t-rush")).toBe("mt_rush");
-    const aliases = CATALOG_IDS.map((id) => moduleAliasOf(expectedBasename(id, cardDef(id).name)));
+    expect(moduleAliasOf("classic/043-plague-nuke")).toBe("mclassic_043_plague_nuke");
+    expect(moduleAliasOf("classic-plus/043-ai-slop")).toBe("mclassic_plus_043_ai_slop");
+    const aliases = CATALOG_IDS.map((id) => moduleAliasOf(expectedRelPath(id, cardDef(id).name)));
     expect(new Set(aliases).size).toBe(CATALOG_SIZE);
   });
 });

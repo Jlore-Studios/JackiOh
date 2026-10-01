@@ -26,9 +26,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
-import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
+import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
 
-import Clock from "../game/Clock.tsx";
+import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import {
@@ -46,6 +46,12 @@ import { BackLink, followInApp } from "./nav.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
+
+/** R79: the seat an open prompt waits on, as the view says it (`PlayerView.pending`), or null. */
+export function promptHolderOf(pending: PlayerView["pending"], viewer: PlayerId): PlayerId | null {
+  if (pending === null) return null;
+  return pending.forYou ? viewer : pending.pendingFor;
+}
 
 /** Chrome this route invented. None of it is in `e2e/support/testids.ts`; see the hand-off report. */
 export const matchTestid = {
@@ -182,7 +188,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   );
 
   const view = match.view;
-  const clock = match.clock;
+  // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
+  // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
+  const clock = useFrameFor(match.clock, turnKeyOf(view));
 
   // What the server said when it refused the socket is for a debugger, not the player (below).
   const refusedWith = match.connection === "refused" ? (match.error ?? "no reason given") : null;
@@ -300,10 +308,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
           graceMs={graceMs}
           mulligan={inMulligan}
-          // R268: the mulligan window can pass with no frame between its opening and its expiry,
-          // so the readout counts down off the frame's own deadline rather than waiting for one.
-          frame={inMulligan ? clock : null}
+          // R268, R439: the readout counts down off the frame's own deadlines between the server's
+          // frames — the mulligan window can pass with none, and a turn's last 30 seconds must tick.
+          frame={clock}
           viewer={view.viewer}
+          // R79: the turn clock is the active player's, and a prompt held by the other seat runs its
+          // own. A finished game runs neither.
+          activePlayer={view.result === null ? view.active : null}
+          promptHolder={view.result === null ? promptHolderOf(view.pending, view.viewer) : null}
         />
       </header>
       <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />

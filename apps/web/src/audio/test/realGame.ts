@@ -8,6 +8,7 @@
 import type { Handicap } from "@jackioh/engine/config";
 import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { resolveDeck } from "../../game/decks.ts";
 import type { EnginePort, EngineState } from "../../game/engine.ts";
 import { enginePort } from "../../game/engine.real.ts";
@@ -25,6 +26,12 @@ export type RealGame = {
 };
 
 let port: EnginePort | null = null;
+
+/** Mulligans and the prompts they open: far more steps than a setup ever takes. */
+const SETUP_STEPS_MAX = 8;
+/** How far `castOnDrawViews` looks: seeds, and actions in each. */
+const CAST_SEARCH_SEEDS = 400;
+const CAST_SEARCH_STEPS = 12;
 
 export function realPort(): EnginePort {
   port ??= enginePort();
@@ -68,11 +75,21 @@ export function realGame(
       return result.events;
     },
   };
-  for (let i = 0; i < 2; i += 1) {
+  // Both mulligans, and any prompt they open on the way (a replacement draw that casts #21 Hinder asks
+  // its caster to discard, so the window stays open until that is answered): the first listed answer.
+  for (let i = 0; i < SETUP_STEPS_MAX; i += 1) {
     const who = game.actor();
-    if (who === null || !game.legal(who).some((a) => a.type === "mulligan")) break;
-    const hand = game.view(who).you.hand;
-    game.act(who, { type: "mulligan", keep: Array.isArray(hand) ? hand.map((c) => c.instanceId) : [] });
+    if (who === null) break;
+    const legal = game.legal(who);
+    if (legal.some((a) => a.type === "mulligan")) {
+      const hand = game.view(who).you.hand;
+      game.act(who, { type: "mulligan", keep: Array.isArray(hand) ? hand.map((c) => c.instanceId) : [] });
+      continue;
+    }
+    const phase = game.view(who).phase;
+    const answer = phase === "mulligan" || phase === "setup" ? legal.find((a) => a.type === "answer") : undefined;
+    if (answer === undefined) break;
+    game.act(who, answer);
   }
   return game;
 }
@@ -98,4 +115,35 @@ export function answerPrompts(game: RealGame): void {
     if (answer === undefined) return;
     game.act(who, answer);
   }
+}
+
+/** Both seats' views of one moment of a real game. */
+export type SeatViews = { p1: PlayerView; p2: PlayerView };
+
+/**
+ * The first seed (`<prefix>-0`, `-1`, …) where p2 casts `defId` as it draws it, with both seats'
+ * views right after the cast has resolved (any prompt it asked answered with the first listed answer)
+ * and `settled` holding of them; null when none of `seeds` does within `steps` actions. Every action
+ * is an End turn or the first listed answer, so the search is deterministic.
+ */
+export function castOnDrawViews(
+  prefix: string,
+  decks: [string[], string[]],
+  defId: string,
+  settled: (seats: SeatViews) => boolean,
+  seeds = CAST_SEARCH_SEEDS,
+  steps = CAST_SEARCH_STEPS,
+): SeatViews | null {
+  for (let seed = 0; seed < seeds; seed += 1) {
+    const game = realGame(`${prefix}-${String(seed)}`, decks);
+    for (let step = 0; step <= steps; step += 1) {
+      const seats = { p1: game.view("p1"), p2: game.view("p2") };
+      const at = seats.p1.events.findIndex((e) => e.type === "cardPlayed" && e.defId === defId && e.player === "p2");
+      if (at >= 0 && castOnDrawAt(seats.p1.events, at) && settled(seats)) return seats;
+      const who = game.actor();
+      if (who === null) break;
+      game.act(who, game.legal(who).find((a) => a.type === "answer") ?? { type: "endTurn" });
+    }
+  }
+  return null;
 }

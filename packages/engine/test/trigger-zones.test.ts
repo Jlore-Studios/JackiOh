@@ -80,8 +80,12 @@ const wanderer = def("wanderer", "Spell");
 const shredder = unit("shredder");
 /** A unit with a start-of-turn hook, to be buried under a Stack (§3.2, R13). */
 const sleeper = unit("sleeper");
+/** Classic #65 Ace in the Hole's shape: a Trap whose end-of-turn hook answers while it is face-down. */
+const hiddenHook = def("hidden-hook", "Trap");
+/** The same hook on a public card, a Field Spell, whose entry is numbered. */
+const shownHook = def("shown-hook", "Field Spell");
 
-const DEFS = [logCard, farm, gifter, wanderer, shredder, sleeper];
+const DEFS = [logCard, farm, gifter, wanderer, shredder, sleeper, hiddenHook, shownHook];
 
 /** The fixture catalog's Rush token, the thing #58's shape puts on the board. */
 const TOKEN_ID = "fx-token-rush";
@@ -131,6 +135,8 @@ const SCRIPTS: Record<string, CardScripts> = {
   }),
   [shredder.id]: both({ endOfTurn: () => [note("shredder:end")] }),
   [sleeper.id]: both({ startOfTurn: (ctx) => [note(`sleeper:${ctx.self?.id ?? "none"}`)] }),
+  [hiddenHook.id]: both({ endOfTurn: () => [note("hidden:end")] }),
+  [shownHook.id]: both({ endOfTurn: () => [note("shown:end")] }),
 };
 
 // ---------------------------------------------------------------------------
@@ -339,5 +345,22 @@ describe("R153 a card registers only the triggers its zone allows (§10.3, §6.2
 
     const started = roundToP1Start(state);
     expect(notes(started)).toEqual([`sleeper:${top.id}`]);
+  });
+
+  it("R153, R177 a face-down trap answers its end-of-turn hook, and its queue entry takes no number from the counter both seats read", () => {
+    const bare = act(playing("tz-hidden-hook"), { type: "endTurn", playerId: "p1" });
+
+    const hidden = playing("tz-hidden-hook");
+    put(hidden, hiddenHook.id, slot("p1", "backrow", 1));
+    const afterHidden = act(hidden, { type: "endTurn", playerId: "p1" });
+    expect(notes(afterHidden)).toEqual(["hidden:end"]);
+    expect(afterHidden.nextSeq).toBe(bare.nextSeq);
+
+    // The public half, so the count above measures something: the same hook on a Field Spell is numbered.
+    const shown = playing("tz-hidden-hook");
+    put(shown, shownHook.id, slot("p1", "backrow", 1));
+    const afterShown = act(shown, { type: "endTurn", playerId: "p1" });
+    expect(notes(afterShown)).toEqual(["shown:end"]);
+    expect(afterShown.nextSeq).toBe(bare.nextSeq + 1);
   });
 });

@@ -148,6 +148,17 @@ describe("the board's catalog reaches the sound director", () => {
     expect(sfx(engine, "summon").every((params) => params?.timbre === undefined)).toBe(true);
   });
 
+  it("R506 through the board: a token that prints Legendary enters with the sting, and the new tags' families reach the director", () => {
+    play([
+      summoned("classicplus-073-1", "u1"),
+      summoned("classicplus-012", "u2"),
+      { type: "cardPlayed", player: "p1", instanceId: "c3", defId: "classic-016", costPaid: 1 },
+    ]);
+    expect(sfx(engine, "entrance").length).toBeGreaterThanOrEqual(2);
+    expect(sfx(engine, "summon").map((params) => params?.timbre)).toContain("pancake");
+    expect(sfx(engine, "spell")).toContainEqual({ timbre: "book" });
+  });
+
   it("R203 a unit behind the sentinel gets no sting and no family, whatever the catalog holds", () => {
     play([summoned(HIDDEN_DEF_ID)]);
     expect(sfx(engine, "entrance")).toEqual([]);

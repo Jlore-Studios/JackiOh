@@ -25,7 +25,6 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CATALOG, registerAll } from "@jackioh/cards";
-import { newestPatch, type Patch } from "@jackioh/cards/history";
 import { cardStats, formatCardStats, type GameRecord } from "@jackioh/shared";
 import { AI_DEV_RUN, devGameRecord } from "../src/index";
 
@@ -34,6 +33,14 @@ const MS_PER_SECOND = 1000;
 const SECONDS_DECIMALS = 1;
 
 const PATCHES_PATH = fileURLToPath(new URL("../../cards/patches/patches.json", import.meta.url));
+
+/** R388: the newest patch is the last one `patches.json` lists; the order of versions is the list's. */
+function newestPatch(list: unknown): string {
+  const newest: unknown = Array.isArray(list) ? list[list.length - 1] : undefined;
+  const version = typeof newest === "object" && newest !== null ? (newest as { version?: unknown }).version : undefined;
+  if (typeof version !== "string" || version.length === 0) throw new Error(`${PATCHES_PATH} names no newest patch (R388)`);
+  return version;
+}
 
 const USAGE = `Usage: pnpm ai:stats [options]
 
@@ -76,7 +83,7 @@ function main(): void {
   const args = parseDevRunArgs(process.argv.slice(2));
   registerAll();
 
-  const patch = args.patch ?? newestPatch(JSON.parse(readFileSync(PATCHES_PATH, "utf8")) as Patch[]).version;
+  const patch = args.patch ?? newestPatch(JSON.parse(readFileSync(PATCHES_PATH, "utf8")) as unknown);
   // pnpm runs this in packages/ai; a path the user typed means the directory they typed it in.
   const out = args.out === null ? null : resolve(process.env["INIT_CWD"] ?? process.cwd(), args.out);
   if (out !== null) writeFileSync(out, "");

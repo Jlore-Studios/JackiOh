@@ -2,11 +2,13 @@
 
 import type { Keyword, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, armorOf, hasKeyword } from "@jackioh/shared";
+import { activeBrittleCount } from "./brittleCount";
 import { defOf } from "./catalog";
 import { RADIANT_FALLBACK_FACTOR } from "./config";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import type { StatMod } from "./script";
+import { tunedKeywords, xOf } from "./tuning";
 import { activeUnitsOf, slotsOf, cardAt } from "./zones";
 
 export type UnitView = {
@@ -34,23 +36,76 @@ export function wornStatsOverride(
   return { attack: RADIANT_FALLBACK_FACTOR * stats.attack, health: RADIANT_FALLBACK_FACTOR * stats.health };
 }
 
-/** The card's printed face, radiant when the instance is (§5.2). */
+/**
+ * B2.7: a face that prints its stats as multiples of X (Classic+ #69 Buff Billy's "[3X/3X]") is those
+ * multiples of the X the card was played for, tuned (`tuning.xOf`), and 0/0 when it has none — a
+ * Recruit, a copy, a card outside a play — as the Ghoul Token's X/X is with no X (§7). A summon's
+ * `statsOverride` still wins, as it wins over any printed stats.
+ */
+function xStatsOf(
+  face: { xStats?: { attack: number; health: number } },
+  instance: CardInstance,
+): { attack: number; health: number } | undefined {
+  const multiples = face.xStats;
+  if (multiples === undefined) return undefined;
+  const x = xOf(instance);
+  return { attack: multiples.attack * x, health: multiples.health * x };
+}
+
+/**
+ * The card's printed face, radiant when the instance is (§5.2), as the card's lasting changes leave
+ * it: B2.7's X stats, and B3.4's `tuning` — the stats changes on top of the printed stats and the
+ * keyword changes on the printed keywords (`tuning.tunedKeywords`). Tuning is part of the card, kept
+ * in every zone (R78 leaves it alone), so this is the face a card in a hand or a deck will enter with
+ * (B3.4 rule 6) as well as layer 1 on the field.
+ */
 export function faceOf(state: GameState, instance: CardInstance): { attack: number; health: number; keywords: Keyword[] } {
   const def = defOf(state, instance.defId);
   const face = instance.radiant ? def.radiant : def.base;
-  const stats = wornStatsOverride(def, instance);
+  const stats = wornStatsOverride(def, instance) ?? xStatsOf(face, instance);
   return {
-    attack: stats?.attack ?? face.attack ?? 0,
-    health: stats?.health ?? face.health ?? 0,
-    // §7: the Bread Token's radiant "Armor X" is the same X as its X/X, so the printed `n` is a
-    // placeholder the summon fills in, exactly as `statsOverride` fills in the printed 0/0.
-    keywords:
-      instance.armorOverride === undefined
-        ? face.keywords
-        : face.keywords.map((keyword) =>
-            keyword.kind === "Armor" ? { kind: "Armor" as const, n: instance.armorOverride ?? 0 } : keyword,
-          ),
+    attack: (stats?.attack ?? face.attack ?? 0) + (instance.tuning?.attack ?? 0),
+    health: (stats?.health ?? face.health ?? 0) + (instance.tuning?.health ?? 0),
+    keywords: tunedKeywords(printedKeywordsOf(state, instance), instance),
   };
+}
+
+/**
+ * The keywords the running face prints, before tuning (§5.2): what a Degrade takes a printed keyword
+ * off and what a numbered keyword's tuning steps from (B3.4). §7: the Bread Token's radiant "Armor X"
+ * is the same X as its X/X, so the printed `n` is a placeholder the summon fills in, exactly as
+ * `statsOverride` fills in the printed 0/0.
+ */
+export function printedKeywordsOf(state: GameState, instance: CardInstance): Keyword[] {
+  const def = defOf(state, instance.defId);
+  const face = instance.radiant ? def.radiant : def.base;
+  const override = instance.armorOverride;
+  return override === undefined
+    ? [...face.keywords]
+    : face.keywords.map((keyword) => (keyword.kind === "Armor" ? { kind: "Armor" as const, n: override } : keyword));
+}
+
+/**
+ * B3.3 rule 5, R385: a Brittle count in force is the card's Brittle, whatever it prints: the list's
+ * Brittle entries give way to one `Brittle n` of the count, a given count on a card that printed none
+ * included. With no count in force (a printed Brittle that has not started, off the field) the
+ * printed keyword stands.
+ */
+function withBrittleCount(keywords: readonly Keyword[], instance: CardInstance): Keyword[] {
+  const count = activeBrittleCount(instance);
+  if (count === null) return [...keywords];
+  return [...keywords.filter((keyword) => keyword.kind !== "Brittle"), { kind: "Brittle", n: count }];
+}
+
+/**
+ * §10.4 layers 1 to 4 of the keywords, before auras and position: the printed keywords as tuning
+ * leaves them (none on a Vanilla card, §6.3) with the granted ones, as a set (§6.1), and the Brittle
+ * count in force. What a card in a hand or a deck is made of (B5 E38, R243) — the granted keywords it
+ * gained there ride onto the field with it — and what a Degrade may take off it (B3.4).
+ */
+export function cardKeywords(state: GameState, instance: CardInstance): Keyword[] {
+  const printed = instance.vanilla ? [] : faceOf(state, instance).keywords;
+  return asSet(withBrittleCount([...printed, ...instance.grantedKeywords], instance));
 }
 
 /** §3.2, R13: a card in a unit zone that is not the top of its pile. */
@@ -101,14 +156,52 @@ function auraMods(state: GameState, unit: CardInstance): StatMod[] {
 function asSet(keywords: readonly Keyword[]): Keyword[] {
   const seen = new Set<Keyword["kind"]>();
   return keywords.filter((keyword) => {
-    if (keyword.kind === "Armor" || keyword.kind === "Lucky") return true;
+    // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor.
+    if (keyword.kind === "Armor" || keyword.kind === "Lucky" || keyword.kind === "Spell Damage") return true;
     if (seen.has(keyword.kind)) return false;
     seen.add(keyword.kind);
     return true;
   });
 }
 
+/**
+ * B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
+ * "while it has a Plague Token"): the card's `conditionalKeywords` hook, read with its printed ones,
+ * so a Vanilla takes it (`scriptOf` runs no script for one). The hook reads instance data only.
+ */
+function conditionalKeywordsOf(state: GameState, instance: CardInstance): Keyword[] {
+  const hook = scriptOf(instance).conditionalKeywords;
+  return hook === undefined ? [] : hook({ state, self: instance, radiant: instance.radiant });
+}
+
 export function unitView(state: GameState, instance: CardInstance): UnitView {
+  const layered = computeLayers(state, instance);
+  // Attack floors at 0; max health may fall to 0, which the state check turns into a death (§10.4).
+  const clampedAttack = Math.max(0, layered.attack);
+  return {
+    attack: clampedAttack,
+    maxHealth: layered.maxHealth,
+    health: layered.maxHealth - instance.damage,
+    keywords: layered.keywords,
+    armor: armorOf(layered.keywords),
+    position: layered.position,
+  };
+}
+
+/**
+ * §10.4's attack before layer 5's floor at 0 — what KY's Constant needs to set a unit's attack to a
+ * number exactly (`effects/tune.setNumber`), since a card whose layers come to −2 shows 0 and a delta
+ * taken off the shown number would land short.
+ */
+export function unclampedAttack(state: GameState, instance: CardInstance): number {
+  return computeLayers(state, instance).attack;
+}
+
+/** §10.4's five layers, attack unfloored: `unitView` floors it, `unclampedAttack` reads it raw. */
+function computeLayers(
+  state: GameState,
+  instance: CardInstance,
+): { attack: number; maxHealth: number; keywords: Keyword[]; position: "ATK" | "DEF" } {
   const printed = faceOf(state, instance);
   const position = instance.position ?? "ATK";
 
@@ -147,12 +240,21 @@ export function unitView(state: GameState, instance: CardInstance): UnitView {
     attack += mod.attack ?? 0;
     maxHealth += mod.maxHealth ?? 0;
   }
+  // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
+  // other layer, so nothing above lifts it; with several, the last in aura order holds.
+  for (const mod of auras) if (mod.setAttack !== undefined) attack = mod.setAttack;
 
-  const keywords: Keyword[] = [
-    ...(instance.vanilla ? [] : printed.keywords),
-    ...instance.grantedKeywords,
-    ...auras.flatMap((mod) => mod.keywords ?? []),
-  ];
+  // B3.3 rule 5: a Brittle count in force is the unit's Brittle (`withBrittleCount`).
+  const keywords: Keyword[] = withBrittleCount(
+    [
+      ...(instance.vanilla ? [] : printed.keywords),
+      // B5 E35: the keywords its text gives it only while a condition holds, beside the printed ones.
+      ...conditionalKeywordsOf(state, instance),
+      ...instance.grantedKeywords,
+      ...auras.flatMap((mod) => mod.keywords ?? []),
+    ],
+    instance,
+  );
 
   // Position grants: Defense adds Taunt and Armor +1 (§4.1).
   if (position === "DEF") keywords.push({ kind: "Taunt" }, { kind: "Armor", n: 1 });
@@ -172,16 +274,7 @@ export function unitView(state: GameState, instance: CardInstance): UnitView {
     ),
   );
 
-  // Attack floors at 0; max health may fall to 0, which the state check turns into a death (§10.4).
-  const clampedAttack = Math.max(0, attack);
-  return {
-    attack: clampedAttack,
-    maxHealth,
-    health: maxHealth - instance.damage,
-    keywords: finalKeywords,
-    armor: armorOf(finalKeywords),
-    position,
-  };
+  return { attack, maxHealth, keywords: finalKeywords, position };
 }
 
 /**

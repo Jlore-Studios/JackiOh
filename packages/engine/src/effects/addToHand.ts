@@ -7,7 +7,7 @@
 // `addToHand`, so §2.4's hand cap and R4's burn apply once, in one place, and R11's unit-token card
 // ceases to exist instead of reaching the graveyard.
 
-import { defOf, excludingIndex, query, type CatalogQueryArgs } from "../catalog";
+import { excludingDefId, query, type CatalogQueryArgs } from "../catalog";
 import { addToHand as putInHand } from "../draw";
 import type { Effect, EffectContext } from "../script";
 import { newInstance, type CardInstance } from "../state";
@@ -104,11 +104,11 @@ export function addToHand(args: {
  * §5.1: "a random pool never offers the card that generated it". The same computation as
  * `discoverFromCatalog` in `choose.ts`, and the reason both read it off `ctx.self` rather than
  * trusting the caller: a Spell resolving its own Cry is still findable (§10.5 parks it in
- * `resolving`), so the generating def is known without the card file having to name its own index.
+ * `resolving`), so the generating def is known without the card file having to name its own id (R387).
  */
 function poolQuery(ctx: EffectContext, args: CatalogQueryArgs = {}): CatalogQueryArgs {
   const self = ctx.self;
-  return excludingIndex(args, self === null ? undefined : defOf(ctx.state, self.defId).index);
+  return excludingDefId(args, self?.defId ?? ctx.defId);
 }
 
 /**

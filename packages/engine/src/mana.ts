@@ -1,7 +1,10 @@
-// Mana refresh, temporary mana and the cost calculation (SPEC §2.3, §6.3 Cost, R65).
+// Mana refresh, temporary mana and the cost calculation (SPEC §2.3, §6.3 Cost, R65, R396, R455).
 
 import type { GameEvent } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { climbPriceRules, costFloorOf, priceRulesFor } from "./costRules";
+import { cardTypeOf } from "./faces";
+import { playableFromGraveyard } from "./graveyardPlay";
 import { scriptOf } from "./scripts";
 import { handicapOf, type CardInstance, type GameState, type PlayerModifier, type PlayerState } from "./state";
 
@@ -93,6 +96,15 @@ export function modifierIsLive(state: GameState, mod: PlayerModifier): boolean {
 }
 
 /**
+ * How a price is read. `asPlay` prices the card as a play of it now wherever it lies: a card played
+ * from a graveyard (B5 E11, R454) pays the player's prices exactly as a card played from a hand does.
+ */
+export type CostOptions = { asPlay?: boolean };
+
+/** What `priceOf` works out: the price, and the `costRule` modifiers that changed it (spent by a play). */
+type Price = { cost: number; usedRules: string[] };
+
+/**
  * R65: start from costOverride or the printed cost, add the instance's costMod, add the player's
  * discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost
  * card costs exactly X and ignores modifiers, unless an override makes it free.
@@ -103,21 +115,56 @@ export function modifierIsLive(state: GameState, mod: PlayerModifier): boolean {
  * it from (§10.5 step 1), and no other. A card in a library or a graveyard is read at its own cost,
  * its `costOverride` or printed cost with its `costMod`: #30 Archivist's "highest" (R24), #94's
  * 2-cost draw and odd-cost exile (R66), a Recruit's filter — as Hearthstone's hand discounts never
- * reach the deck or the graveyard (R65).
+ * reach the deck or the graveyard (R65) — except a graveyard a permission lets its player play from
+ * (E11, R454), where a play takes the card from. `options.asPlay` prices any card as a play of it now.
+ *
+ * R455 (E15) adds its rungs through `costRules.ts`: after R65's discounts, the flat price rules (the
+ * `costRule` modifiers and the field's cost auras), then the threshold rules, which read the one
+ * number the flat ones left, as R363 reads Curvature there; then "costs (N)" sets; then the floor the
+ * card carries (Forever&'s "can't cost less than (N)"), which holds in every zone, as the card's own
+ * `costOverride` does; then 0. An X-cost card still ignores every modifier (R65), and only its floor
+ * reaches it.
  */
-export function effectiveCost(state: GameState, instance: CardInstance): number {
+export function effectiveCost(state: GameState, instance: CardInstance, options: CostOptions = {}): number {
+  return priceOf(state, instance, options).cost;
+}
+
+/** R454, R455: what a play of this card now costs, wherever the play takes it from. */
+export function playCost(state: GameState, instance: CardInstance): number {
+  return effectiveCost(state, instance, { asPlay: true });
+}
+
+/**
+ * R455: the `costRule` modifiers a play of this card at this price spends — the ones "until used" that
+ * changed its price (Classic #2's next Trap or Field Spell). A cast spends none, since it pays nothing
+ * (R70), and an X-cost card none, since no modifier reaches it (R65).
+ */
+export function costRulesSpentBy(state: GameState, instance: CardInstance): string[] {
+  const { usedRules } = priceOf(state, instance, { asPlay: true });
+  const mods = state.players[instance.controller].mods;
+  return usedRules.filter((id) => mods.some((mod) => mod.id === id && mod.expiry.until === "used"));
+}
+
+function priceOf(state: GameState, instance: CardInstance, options: CostOptions): Price {
   const side = state.players[instance.controller];
   const override = instance.costOverride;
+  const floor = costFloorOf(instance);
 
-  // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free.
+  // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free. R455: a
+  // floor the card carries is its own, and holds.
   if (isXCost(state, instance)) {
-    return override !== undefined ? 0 : printedCost(state, instance);
+    return { cost: Math.max(0, override !== undefined ? 0 : printedCost(state, instance), floor), usedRules: [] };
   }
 
   let cost = (override ?? printedCost(state, instance)) + instance.costMod;
-  // R65: a player's discounts price a play, and a play takes a card from its hand.
-  if (instance.zone.z !== "hand") return Math.max(0, cost);
-  const type = defOf(state, instance.defId).type;
+  // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
+  // graveyard, while a permission lets its player play it from there (E11, R454).
+  const forPlay =
+    options.asPlay === true ||
+    instance.zone.z === "hand" ||
+    (instance.zone.z === "graveyard" && playableFromGraveyard(state, instance));
+  if (!forPlay) return { cost: Math.max(0, cost, floor), usedRules: [] };
+  const type = cardTypeOf(state, instance);
 
   for (const mod of side.mods) {
     if (mod.kind !== "costDiscount") continue;
@@ -131,16 +178,41 @@ export function effectiveCost(state: GameState, instance: CardInstance): number 
   // above, which every live Curvature reads. Two of them (#39's copy, #33's) each test that one
   // number, so both apply to a card the discounts leave at 4 or more, and the order they were played
   // in changes nothing: a Curvature never reads the cost another Curvature has already lowered (R48).
-  const beforeCurvature = cost;
-  for (const mod of side.mods) {
-    if (mod.kind !== "costDiscount" || mod.minCurrentCost === undefined) continue;
-    if (!modifierIsLive(state, mod)) continue;
-    if (beforeCurvature >= mod.minCurrentCost) cost -= mod.amount;
-  }
+  // R455: the flat price rules come first, and the threshold rules read the same number Curvature does.
+  const curvature = (beforeCurvature: number): number => {
+    let off = 0;
+    for (const mod of side.mods) {
+      if (mod.kind !== "costDiscount" || mod.minCurrentCost === undefined) continue;
+      if (!modifierIsLive(state, mod)) continue;
+      if (beforeCurvature >= mod.minCurrentCost) off += mod.amount;
+    }
+    return off;
+  };
+  const rules = priceRulesFor(state, instance.controller, instance, (mod) => modifierIsLive(state, mod));
+  const climbed = climbPriceRules(cost, rules, curvature);
 
-  return Math.max(0, cost);
+  return { cost: Math.max(0, climbed.price, floor), usedRules: climbed.used };
 }
 
 export function canAfford(state: GameState, instance: CardInstance): boolean {
   return effectiveCost(state, instance) <= state.players[instance.controller].mana.current;
+}
+
+/**
+ * R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —
+ * the one reader card scripts compare costs with. An X-cost card on the field costs the X it was
+ * played for (the instance's `x`); anywhere else, and on the field when it arrived without a chosen X
+ * (a Recruit, a summon), it costs 0 (R65). An embiggen card outside a play costs its base price (R65),
+ * on the field too. Any other card is R65's cost as it stands: a hand card at its hand cost, a card in
+ * a library, a graveyard or on the field at its own (R66). A floor the card carries holds (R455).
+ */
+export function costNow(state: GameState, card: CardInstance): number {
+  const floor = costFloorOf(card);
+  if (isXCost(state, card)) {
+    return Math.max(0, card.zone.z === "field" ? (card.x ?? 0) : 0, floor);
+  }
+  if (card.embiggened === true && card.zone.z !== "resolving") {
+    return effectiveCost(state, { ...card, embiggened: false });
+  }
+  return effectiveCost(state, card);
 }

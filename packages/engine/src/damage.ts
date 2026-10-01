@@ -1,13 +1,31 @@
 // One damage instance: the ten ordered steps of SPEC §4.4, plus heal and lose health.
 // M2-T3 adds a test per step; combat's Cleave step lives in combat.ts (M2-T4).
+//
+// Patch v0.2.0 (docs/classic-sets.md B5) adds to the pipeline, in the order a hit meets them:
+//   - E6 Spell Damage, before step 1: a Spell's hit is raised by the Spell Damage on its controller's
+//     side (`spellDamageOf`), once — a Trample excess or a redirected hit is the same hit going on,
+//     and is not raised again;
+//   - E6 on a hero, after step 2's Armor: the divisors its controller's cards set (several multiply,
+//     rounded up once), then step 3's caps, the lowest of every cap (`heroHitAmount`);
+//   - E5 and E9, after the caps and before step 5: a hit that would bring its hero to 0 or less meets
+//     the "would take lethal damage" replacements (`replacements.lethalHitWindow`), which may send it
+//     to the other hero as a new instance from the same source;
+//   - E6 Trample stated by an effect (`flags.trample`), as R346 has an effect state Pierce;
+//   - E5 and E8 in every heal: "would be healed" and its conversion into Pierce damage
+//     (`replacements.healingReplaced`);
+//   - E7 set health (`setHeroHealth`): no pipeline, not damage, not a heal.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { armorOf, hasKeyword, opponentOf } from "@jackioh/shared";
-import { ANTI_ONESHOT_CAP, HERO_ARMOR } from "./config";
+import { ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR } from "./config";
+import { cardTypeOf } from "./faces";
+import { creditedKillerId } from "./killCredit";
 import { unitView } from "./layers";
-import { flagsOf, textsOf } from "./scripts";
+import { healingReplaced, lethalHitWindow } from "./replacements";
+import { isSpellSource } from "./restrictions";
+import { flagsOf, scriptOf, textsOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
-import { cardAt, slotsOf } from "./zones";
+import { activeUnitsOf, actsOnField, cardAt, slotsOf } from "./zones";
 
 export type DamageTarget = { kind: "unit"; instance: CardInstance } | { kind: "hero"; player: PlayerId };
 
@@ -15,7 +33,12 @@ export type DamageArgs = {
   source: CardInstance | null;
   target: DamageTarget;
   amount: number;
-  flags?: { ignoreArmor?: boolean; combat?: boolean; lifesteal?: boolean };
+  /**
+   * `trample` (E6): the effect states that its own damage has Trample, as `ignoreArmor` states Pierce
+   * (R346) and `lifesteal` Lifesteal (R85), so a Spell's printed Trample (Classic #83 Flame Lance)
+   * still tramples on a repeat that has no source left.
+   */
+  flags?: { ignoreArmor?: boolean; combat?: boolean; lifesteal?: boolean; trample?: boolean };
 };
 
 export type DamageSink = { state: GameState; events: GameEvent[] };
@@ -56,22 +79,93 @@ export function heroArmorOf(state: GameState, player: PlayerId): number {
     }, state.players[player].hero.armor);
 }
 
-/** §4.4 step 3: the smallest hero cap any Anti-oneshot Armor this player controls provides. */
+/**
+ * The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
+ * card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's hero
+ * guards read.
+ */
+function actingTextsOf(state: GameState, player: PlayerId): CardInstance[] {
+  const backrow = slotsOf(player, "backrow").flatMap((ref) => {
+    const card = cardAt(state, ref);
+    if (card === null) return [];
+    const type = cardTypeOf(state, card);
+    const faceDown = (type === "Trap" || type === "Field Trap") && card.faceUp !== true;
+    return faceDown ? [] : [card];
+  });
+  return [...activeUnitsOf(state, player), ...backrow];
+}
+
+/** E6: every hero guard a player's cards set on their hero now (`Script.heroGuard`). */
+function heroGuardsOf(state: GameState, player: PlayerId): { cap?: number; divisor?: number }[] {
+  return actingTextsOf(state, player).flatMap((card) => {
+    const guard = scriptOf(card).heroGuard;
+    return guard === undefined ? [] : guard({ state, self: card, radiant: card.radiant });
+  });
+}
+
+/**
+ * §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor this player controls, and every
+ * per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins.
+ */
 export function heroDamageCap(state: GameState, player: PlayerId): number | null {
-  const caps = slotsOf(player, "backrow")
+  const oneshot = slotsOf(player, "backrow")
     .map((ref) => cardAt(state, ref))
     .flatMap((card) => {
       if (card === null || flagsOf(card).antiOneshot !== true) return [];
       return [card.radiant ? ANTI_ONESHOT_CAP.radiant : ANTI_ONESHOT_CAP.base];
     });
+  const guarded = heroGuardsOf(state, player).flatMap((guard) =>
+    guard.cap === undefined ? [] : [Math.max(0, Math.trunc(guard.cap))],
+  );
+  const caps = [...oneshot, ...guarded];
   return caps.length === 0 ? null : Math.min(...caps);
 }
 
-/** The card that acts in its unit zone: on the field, and the top of its pile (§3.2). */
-function actsOnField(state: GameState, unit: CardInstance): boolean {
-  const zone = unit.zone;
-  if (zone.z !== "field") return false;
-  return cardAt(state, { player: zone.player, row: zone.row, lane: zone.lane })?.id === unit.id;
+/**
+ * E6: what a hit on this player's hero is divided by after Armor — the product of every divisor its
+ * cards set (Classic #75 Argusland's 2, 4 on its Radiant face), so several multiply. 1 when none does.
+ */
+export function heroDamageDivisor(state: GameState, player: PlayerId): number {
+  return heroGuardsOf(state, player).reduce(
+    (product, guard) => (guard.divisor === undefined ? product : product * Math.max(1, Math.trunc(guard.divisor))),
+    1,
+  );
+}
+
+/**
+ * §4.4 steps 2 and 3 on a hero, with E6 between them: Armor (unless the hit pierces, R346), then the
+ * divisors, rounded up once (R463), then the lowest cap. The one reading of what a hit takes off a
+ * hero, which the pipeline, R44's lethal projection and the Zephyrs scorer all call, so no projection
+ * disagrees with the hit.
+ */
+export function heroHitAmount(state: GameState, player: PlayerId, amount: number, pierce = false): number {
+  if (amount <= 0) return 0;
+  const afterArmor = pierce ? amount : Math.max(0, amount - heroArmorOf(state, player));
+  const divided = Math.ceil(afterArmor / heroDamageDivisor(state, player));
+  const cap = heroDamageCap(state, player);
+  return cap === null ? divided : Math.min(divided, cap);
+}
+
+/**
+ * E6, §4.4 step 0: the Spell Damage on a player's side — every "Spell Damage +N" among the keywords
+ * of the units acting on their field (the top of each pile, an animated card standing in a unit zone
+ * included), summed, as Armor sums (a numbered keyword, §10.4).
+ */
+export function spellDamageOf(state: GameState, player: PlayerId): number {
+  let total = 0;
+  for (const card of activeUnitsOf(state, player)) {
+    for (const keyword of unitView(state, card).keywords) {
+      if (keyword.kind === "Spell Damage") total += keyword.n;
+    }
+  }
+  return Math.max(0, total);
+}
+
+/** E6: how much a hit from this source is raised — its controller's Spell Damage, when it is a Spell. */
+function spellDamageFor(state: GameState, source: CardInstance | null): number {
+  if (source === null || !isSpellSource(state, source)) return 0;
+  const controller = source.zone.z === "resolving" ? source.zone.player : source.controller;
+  return spellDamageOf(state, controller);
 }
 
 /**
@@ -102,7 +196,8 @@ function creditKiller(unit: CardInstance, source: CardInstance | null, killedBef
     delete unit.lastDamagedBy;
     return;
   }
-  unit.lastDamagedBy = source.id;
+  // R412: a kill credit in force on the source names another unit (`killCredit.ts`).
+  unit.lastDamagedBy = creditedKillerId(source, unit);
 }
 
 /**
@@ -119,13 +214,26 @@ export function pierces(state: GameState, source: CardInstance | null, flags?: D
 }
 
 /**
- * Deal one damage instance. Returns the amount actually dealt. A hit of 0 before step 1 is not a
- * damage instance at all: Divine Shield stays and nothing triggers (R63).
+ * Deal one damage instance. Returns the amount actually dealt — by a redirected hit, where the
+ * instance went on to the other hero (E9). A hit of 0 before step 1 is not a damage instance at
+ * all: Divine Shield stays, nothing triggers (R63), and there is nothing for Spell Damage to raise.
  */
 export function dealDamage(sink: DamageSink, args: DamageArgs): number {
+  const amountIn = Math.trunc(args.amount);
+  if (amountIn <= 0) return 0;
+  // E6: before step 1, a Spell's hit is raised by its controller's Spell Damage.
+  return landHit(sink, args, amountIn + spellDamageFor(sink.state, args.source), 0);
+}
+
+/**
+ * §4.4 from step 1, for a hit already raised by Spell Damage. A Trample excess (step 9) and a
+ * redirected hit (E9) are new instances of the same hit, so they come back in here rather than
+ * through `dealDamage`, which would raise them a second time. `redirects` counts how often this hit
+ * has moved hero already (`DAMAGE_REDIRECT_CAP`).
+ */
+function landHit(sink: DamageSink, args: DamageArgs, amountIn: number, redirects: number): number {
   const { state, events } = sink;
   const { source, target } = args;
-  const amountIn = Math.trunc(args.amount);
   if (amountIn <= 0) return 0;
   // §4: damage is a unit's on the field — it stays there between turns and leaving the field takes
   // it off (R78). A card that has left the field, or lies dormant under a Stack (R13), is no unit to
@@ -147,19 +255,25 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
   // written on the hero plus every backrow grant (#84), summed per R124. Fatigue is an ordinary
   // instance on its own hero and pays this step like any other hit (R125); only "lose health"
   // bypasses the pipeline (R18), and that never comes through here.
+  // Step 3 on a hero, with E6's divisors between the two: `heroHitAmount`.
   let amount = amountIn;
-  if (!pierces(state, source, args.flags)) {
-    const armor =
-      target.kind === "unit"
-        ? armorOf(unitView(state, target.instance).keywords)
-        : heroArmorOf(state, target.player);
-    amount = Math.max(0, amount - armor);
+  if (target.kind === "hero") {
+    amount = heroHitAmount(state, target.player, amount, pierces(state, source, args.flags));
+  } else if (!pierces(state, source, args.flags)) {
+    amount = Math.max(0, amount - armorOf(unitView(state, target.instance).keywords));
   }
 
-  // Step 3: the hero cap.
-  if (target.kind === "hero") {
-    const cap = heroDamageCap(state, target.player);
-    if (cap !== null) amount = Math.min(amount, cap);
+  // E5, E9: after the caps and before step 5, a hit that would bring its hero to 0 or less — this
+  // hit alone, as R44 judges it — meets the "would take lethal damage" replacements, which may send
+  // it to the other hero as a new instance from the same source, through that hero's Armor and caps.
+  if (
+    target.kind === "hero" &&
+    amount > 0 &&
+    redirects < DAMAGE_REDIRECT_CAP &&
+    state.players[target.player].hero.health - amount <= 0
+  ) {
+    const to = lethalHitWindow(sink, { player: target.player, amount, sourceId: source?.id ?? null });
+    if (to !== null) return landHit(sink, { ...args, target: { kind: "hero", player: to } }, amountIn, redirects + 1);
   }
 
   // Step 4: Indestructible units take nothing, and emit no damage event.
@@ -175,7 +289,9 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
   let trampleExcess = 0;
   if (target.kind === "unit") {
     const view = unitView(state, target.instance);
-    const trample = source !== null && hasKeyword(unitView(state, source).keywords, "Trample");
+    // E6: a Spell's printed Trample is read off it while it resolves, as a unit's is, or stated.
+    const trample =
+      args.flags?.trample === true || (source !== null && hasKeyword(unitView(state, source).keywords, "Trample"));
     if (trample && amount > view.health) {
       dealt = Math.max(0, view.health);
       trampleExcess = amount - dealt;
@@ -189,12 +305,7 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
   // with the whole amount, because the excess beyond that unit's health is all of it.
   if (dealt <= 0) {
     if (trampleExcess > 0) {
-      dealDamage(sink, {
-        source,
-        target: { kind: "hero", player: controllerOf(target) },
-        amount: trampleExcess,
-        flags: args.flags,
-      });
+      landHit(sink, { source, target: { kind: "hero", player: controllerOf(target) }, amount: trampleExcess, flags: args.flags }, trampleExcess, 0);
     }
     return 0;
   }
@@ -229,7 +340,7 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
     target.instance.markedDestroyed = true;
     // R42: the Poisonous hit is the one that destroys it, whatever health it left — unless something
     // had already killed it, in which case this hit landed on a dead unit and kills nothing.
-    if (!killedBefore) target.instance.lastDamagedBy = source.id;
+    if (!killedBefore) target.instance.lastDamagedBy = creditedKillerId(source, target.instance);
   }
 
   // Step 8: Lifesteal heals the source's controller's hero by the amount dealt. R85: an effect
@@ -240,23 +351,25 @@ export function dealDamage(sink: DamageSink, args: DamageArgs): number {
     healHero(sink, source.controller, dealt);
   }
 
-  // Step 9: Trample sends the excess to the target's controller's hero as its own instance.
+  // Step 9: Trample sends the excess to the target's controller's hero as its own instance — of the
+  // same hit, so not raised again by Spell Damage.
   if (trampleExcess > 0) {
-    dealDamage(sink, {
-      source,
-      target: { kind: "hero", player: controllerOf(target) },
-      amount: trampleExcess,
-      flags: args.flags,
-    });
+    landHit(sink, { source, target: { kind: "hero", player: controllerOf(target) }, amount: trampleExcess, flags: args.flags }, trampleExcess, 0);
   }
 
   return dealt;
 }
 
-/** §6.3 Heal: units are capped at max health, heroes are not. */
+/**
+ * §6.3 Heal: units are capped at max health, heroes are not. E5, E8: the heal first meets the "would
+ * be healed" replacements on its stated amount, a heal on an undamaged unit included (R462) — one
+ * that replaced it heals nothing.
+ */
 export function healUnit(sink: DamageSink, instance: CardInstance, amount: number): number {
-  if (amount <= 0) return 0;
-  const healed = Math.min(instance.damage, Math.trunc(amount));
+  const stated = Math.trunc(amount);
+  if (stated <= 0) return 0;
+  if (healingReplaced(sink, { kind: "unit", instance }, stated)) return 0;
+  const healed = Math.min(instance.damage, stated);
   instance.damage -= healed;
   if (healed > 0) sink.events.push({ type: "healed", targetId: instance.id, amount: healed });
   return healed;
@@ -265,6 +378,8 @@ export function healUnit(sink: DamageSink, instance: CardInstance, amount: numbe
 export function healHero(sink: DamageSink, player: PlayerId, amount: number): number {
   if (amount <= 0) return 0;
   const healed = Math.trunc(amount);
+  if (healed <= 0) return 0;
+  if (healingReplaced(sink, { kind: "hero", player }, healed)) return 0;
   sink.state.players[player].hero.health += healed;
   sink.events.push({ type: "healed", targetId: `hero-${player}`, amount: healed });
   return healed;
@@ -288,6 +403,16 @@ export function loseHealth(sink: DamageSink, player: PlayerId, amount: number): 
   sink.state.players[player].hero.health -= lost;
   sink.events.push({ type: "healthLost", player, amount: lost });
   return lost;
+}
+
+/**
+ * E7: "Set a hero's health to N" (Classic #29) — no pipeline, not damage and not a heal, like R18's
+ * lose health: no Armor, no cap, no replacement, nothing that answers a hit or a heal. `healthSet`.
+ */
+export function setHeroHealth(sink: DamageSink, player: PlayerId, value: number, sourceId: string | null): void {
+  const health = Math.trunc(value);
+  sink.state.players[player].hero.health = health;
+  sink.events.push({ type: "healthSet", player, health, sourceId });
 }
 
 export function enemyOf(player: PlayerId): PlayerId {

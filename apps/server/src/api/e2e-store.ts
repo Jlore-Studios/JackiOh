@@ -53,12 +53,14 @@ import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
   createMemoryDeckStores,
   createMemoryGameRecordStore,
+  createMemoryLastBoardStore,
   createMemoryTutorialStore,
   matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
   type GameRecordTables,
+  type LastBoardTables,
   type TutorialTables,
 } from "./memory-stores";
 import type {
@@ -95,6 +97,7 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
+  LastBoardTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -113,6 +116,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
     gameRecords: [],
   };
 }
@@ -547,6 +551,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
 
   // R320: tutorial progress on the account, shared with the unit-test fake like the decks.
   store.tutorial = createMemoryTutorialStore(() => tables);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables);
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables);
 

@@ -4,7 +4,7 @@
 //
 // jsdom has no layout, so the workshop's own tests can only prove structure. This spec puts the
 // builder in front of a real layout engine with the heaviest pool it ever shows: every one of the
-// 100 deckable Core cards as a full CardFace, a full deck of 20 open in the sidebar, and three
+// 268 deckable cards of Core, Classic and Classic+ as a full CardFace, a full deck of 20 open in the sidebar, and three
 // saved decks and a trio in the rail.
 //
 // THE MOUNT. The deck builder is now the deck workshop (SPEC §9.4, R250–R256): `DeckWorkshop`, the
@@ -19,7 +19,7 @@
 //
 // WHAT IS MEASURED, as board-layout.cy.tsx does for the board: documentElement, body and the
 // workshop's own scrollWidth, each at most the viewport width. Two controls keep "it fits" from
-// being satisfied by a builder that is not there: all 100 pool items are present, and the workshop
+// being satisfied by a builder that is not there: all 268 pool items are present, and the workshop
 // spans the viewport. Each measure sits inside `.should()`, so it retries while the fonts, the
 // procedural art and `useFitText` settle.
 
@@ -53,7 +53,8 @@ const VIEWPORTS = [
 
 /** The deckable cards: no token, by flag or by tag, the same test the validator's L3 applies. */
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
-const DECKABLE_COUNT = 100;
+/** SPEC §8, §8.6, §8.7: Core's 100, Classic's 90 and Classic+'s 78 (R380: one format, every set). */
+const DECKABLE_COUNT = 268;
 
 /** A collection owning every deckable card once. */
 const COLLECTION: Record<string, number> = Object.fromEntries(DECKABLE.map((def) => [def.id, 1]));
@@ -119,7 +120,7 @@ const POOL_ITEMS = `${ts(CARD_POOL)} .db-item`;
 
 describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   beforeEach(() => {
-    expect(DECKABLE, "the Core set has 100 deckable cards").to.have.length(DECKABLE_COUNT);
+    expect(DECKABLE, "the three sets have 268 deckable cards").to.have.length(DECKABLE_COUNT);
     mountWorkshop(FULL_DECKS);
   });
 
@@ -197,7 +198,8 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
 
     it(`B38 the detail's Add to Deck and Close are on screen as it opens, for the longest card, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      cy.get(ts(poolCardId("core-098"))).click();
+      // Classic+ #73: the longest base and Radiant text together since patch v0.2.0.
+      cy.get(ts(poolCardId("classicplus-073"))).click();
       cy.get(ts(INSPECT_DETAIL)).should("be.visible");
       cy.document().should((doc) => {
         for (const id of [DB_DETAIL_ADD, INSPECT_CLOSE]) {
@@ -275,7 +277,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // Integration QA: a refused save's reasons rendered under all 100 pool cards on a phone. There is
+  // Integration QA: a refused save's reasons rendered under all 268 pool cards on a phone. There is
   // no Save button any more (R256); the deck's verdict sits in its sidebar, on the first screen, at
   // every size — and on a phone, where the sidebar and the pool stack, above the pool, never under
   // its cards. (On a desktop the two are side by side, so "above" means nothing there.)

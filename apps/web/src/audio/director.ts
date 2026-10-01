@@ -22,12 +22,21 @@
 // Events are matched by object identity: `newEventsSince` and `planEntries` both hand out the very
 // objects in `view.events`, so the entry the runner starts carries the same objects the director
 // owes.
+//
+// PLAYS IN PROGRESS (R506). The director resolves every event it voices in stream order, so it can
+// follow the plays the stream opens and closes: a `cardPlayed` opens one, its `cardResolved` closes
+// it, and a turn's start forgets any left open. A cue reads the innermost one (`playing`), which is
+// how #21 Hinder's rider and #27's Radiant cards know whose they are. A `cardPlayed` that directly
+// follows a readable `drawn` of the same card (a `cardAnnounced`, a Gifted Program `radiantSet` or
+// a cost change of that card may come between) is that card cast as it was drawn. Both read only
+// what the stream shows the viewer: a sentinel play opens a frame no moment matches, and a sentinel
+// draw marks nothing.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
 import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
-import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS } from "./constants.ts";
-import { cuesFor, type CueCard, type CueContext } from "./cues.ts";
+import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
+import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import type { SoundCue, SoundSink, VoiceLineTable } from "./types.ts";
 import { VOICE_LINES } from "./voiceData.ts";
 
@@ -50,6 +59,24 @@ function findUnit(view: PlayerView | null, instanceId: string): UnitView | null 
     for (const u of side.units) if (u !== null && u.instanceId === instanceId) return u;
   }
   return null;
+}
+
+/**
+ * Events that may come between a card's `drawn` and its cast's `cardPlayed` (R506): the card's own
+ * announce, Radiance or cost, and the prompts its cast asks the drawer (#21 Hinder's discard).
+ */
+function keepsDrawnCard(event: GameEvent, drawn: { instanceId: string; player: PlayerId }): boolean {
+  switch (event.type) {
+    case "cardAnnounced":
+    case "radiantSet":
+    case "costChanged":
+      return event.instanceId === drawn.instanceId || drawn.instanceId === HIDDEN_DEF_ID;
+    case "promptOpened":
+    case "promptAnswered":
+      return event.player === drawn.player;
+    default:
+      return false;
+  }
 }
 
 function sideMana(view: PlayerView, player: PlayerId): number {
@@ -75,23 +102,71 @@ export function createSoundDirector(
   const lastMana = new Map<PlayerId, number>();
   /** Instances whose `cardPlayed` has sounded, so their `summoned` does not speak again (R204). */
   const played = new Set<string>();
+  /** R506: the plays in progress, innermost last. */
+  let plays: PlayFrame[] = [];
+  /**
+   * R506: the card the last event drew, while nothing else has happened since. A draw behind the
+   * sentinel counts too: what it drew is named only by its own public cast, as the effects layer
+   * reads it (fx/castOnDraw.ts), and the sting it gets names nothing (R203).
+   */
+  let drawnLast: { instanceId: string; player: PlayerId } | null = null;
 
-  function ctx(view: PlayerView): CueContext {
+  function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
     return {
       view,
       lines,
       manaBefore: (player) => lastMana.get(player) ?? sideMana(view, player),
       wasPlayed: (instanceId) => played.has(instanceId),
       unitNow: (instanceId) => findUnit(seen, instanceId) ?? findUnit(view, instanceId),
+      playing: () => plays[plays.length - 1] ?? null,
+      castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
       ...(card === undefined ? {} : { card }),
     };
   }
 
-  /** The event's cues against `view`, then the mana baseline and the played set move on (B22). */
+  /** R506: a `cardPlayed` of the card a readable `drawn` has just drawn, by the same player. */
+  function castAsDrawn(event: GameEvent): string | null {
+    if (event.type !== "cardPlayed" || drawnLast === null) return null;
+    const same = event.instanceId === drawnLast.instanceId || drawnLast.instanceId === HIDDEN_DEF_ID;
+    return same && event.player === drawnLast.player ? event.instanceId : null;
+  }
+
+  /** R506: the plays in progress and the card just drawn, moved on past `event`. */
+  function follow(event: GameEvent, castOnDraw: boolean): void {
+    switch (event.type) {
+      case "turnStarted":
+        plays = [];
+        drawnLast = null;
+        return;
+      case "drawn":
+        drawnLast = { instanceId: event.instanceId, player: event.player };
+        return;
+      case "cardPlayed":
+        drawnLast = null;
+        plays.push({ defId: event.defId, instanceId: event.instanceId, player: event.player, castOnDraw });
+        if (plays.length > PLAY_STACK_MAX) plays = plays.slice(plays.length - PLAY_STACK_MAX);
+        return;
+      case "cardResolved": {
+        drawnLast = null;
+        let at = -1;
+        plays.forEach((frame, i) => {
+          if (frame.instanceId === event.instanceId) at = i;
+        });
+        if (at >= 0) plays.splice(at, 1);
+        return;
+      }
+      default:
+        if (drawnLast !== null && !keepsDrawnCard(event, drawnLast)) drawnLast = null;
+    }
+  }
+
+  /** The event's cues against `view`, then the mana baseline, the played set and the plays move on (B22). */
   function resolve(event: GameEvent, view: PlayerView): readonly SoundCue[] {
-    const cues = cuesFor(event, ctx(view));
+    const cast = castAsDrawn(event);
+    const cues = cuesFor(event, ctx(view, cast));
     if (event.type === "manaChanged") lastMana.set(event.player, event.current);
     if (event.type === "cardPlayed" && event.instanceId !== HIDDEN_DEF_ID) played.add(event.instanceId);
+    follow(event, cast !== null);
     return cues;
   }
 
@@ -150,6 +225,8 @@ export function createSoundDirector(
         owed = [];
         lastMana.clear();
         played.clear();
+        plays = [];
+        drawnLast = null;
         for (const event of view.events) known.add(event);
         seen = view;
         return;

@@ -22,6 +22,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Action, GameRecord } from "@jackioh/shared";
 import type {
   FrozenTrio,
+  LastBoardEntry,
   MatchClocks,
   MatchRow,
   Profile,
@@ -814,6 +815,47 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
     // -----------------------------------------------------------------------
     // The Best-of-3 series (SPEC §9.5, R259–R263)
     // -----------------------------------------------------------------------
+
+    describe("lastBoards", () => {
+      const BOARD: LastBoardEntry[] = [
+        { defId: "core-012", radiant: false },
+        { defId: "t-1:core-012+core-025", radiant: true },
+      ];
+
+      it("R565 holds no board before a profile's first finished game, then the one written", async () => {
+        const profile = await activeProfile();
+        expect(await store.lastBoards.get(profile.id, "server")).toBeNull();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual(BOARD);
+      });
+
+      it("R565 a later game's board replaces it, and each kind is its own", async () => {
+        const profile = await activeProfile();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        await store.lastBoards.put(profile.id, "server", [], harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual([]);
+        await store.lastBoards.put(profile.id, "practice", BOARD, harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual([]);
+        expect(await store.lastBoards.get(profile.id, "practice")).toEqual(BOARD);
+        const other = await activeProfile();
+        expect(await store.lastBoards.get(other.id, "practice")).toBeNull();
+      });
+
+      it("R565 goes with the profile", async () => {
+        const profile = await activeProfile();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        expect(await store.profiles.remove(profile.id)).toBe(true);
+        expect(await store.lastBoards.get(profile.id, "server")).toBeNull();
+      });
+
+      it("R417 a match row keeps the boards it started with", async () => {
+        const [p1, p2] = [await activeProfile(), await activeProfile()];
+        const row: MatchRow = { ...matchRow(id(), p1.id, p2.id, harness, harness.now()), lastBoards: [BOARD, []] };
+        await store.matches.create(row);
+        expect(await store.matches.get(row.id)).toEqual(row);
+        expect((await store.matches.live()).find((match) => match.id === row.id)?.lastBoards).toEqual([BOARD, []]);
+      });
+    });
 
     describe("series", () => {
       function seriesRow(p1: string, p2: string, over: Partial<SeriesRow> = {}): SeriesRow {

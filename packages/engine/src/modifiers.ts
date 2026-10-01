@@ -2,13 +2,14 @@
 
 import type { DistributiveOmit, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
+import { SETUP_TURN } from "./config";
 import { findInstance, type DelayedEffect, type GameState, type PlayerModifier, type Resume } from "./state";
 import type { EngineSink } from "./resolve";
 import { flagsOf } from "./scripts";
 import { cardAt, slotsOf } from "./zones";
 
 export function addModifier(
-  sink: EngineSink,
+  sink: Pick<EngineSink, "state" | "events">,
   player: PlayerId,
   mod: DistributiveOmit<PlayerModifier, "id">,
 ): PlayerModifier {
@@ -143,12 +144,14 @@ export function scheduleDelayed(
   at: DelayedEffect["at"],
   resume: Resume,
   watch?: string,
+  notBefore?: number,
 ): DelayedEffect {
   const effect: DelayedEffect = {
     id: `d${sink.state.nextSeq}`,
     seq: sink.state.nextSeq,
     owner,
     at,
+    ...(notBefore === undefined ? {} : { notBefore }),
     resume,
     ...(watch === undefined ? {} : { watch }),
   };
@@ -157,13 +160,81 @@ export function scheduleDelayed(
   return effect;
 }
 
-/** R68: delayed effects due now, in the order they were created. */
+/**
+ * R68: delayed effects due now, in the order they were created. R458: one made for "your *next*
+ * turn" waits until that turn (`notBefore`), so the boundary of the turn it was made on passes it by.
+ */
 export function dueDelayed(state: GameState, phase: "start" | "end", player: PlayerId): DelayedEffect[] {
   return state.delayed
-    .filter((effect) => effect.at.phase === phase && effect.at.player === player)
+    .filter(
+      (effect) =>
+        effect.at.phase === phase &&
+        effect.at.player === player &&
+        (effect.notBefore === undefined || state.turn >= effect.notBefore),
+    )
     .sort((a, b) => a.seq - b.seq);
 }
 
 export function dropDelayed(state: GameState, id: string): void {
   state.delayed = state.delayed.filter((effect) => effect.id !== id);
+}
+
+// ---------------------------------------------------------------------------
+// ---- v0.2.0: activate and turn (B5 E10, E28) ----
+// ---------------------------------------------------------------------------
+
+export type TurnEndsModifier = Extract<PlayerModifier, { kind: "turnEnds" }>;
+export type StartOfTurnEffectModifier = Extract<PlayerModifier, { kind: "startOfTurnEffect" }>;
+
+/** B5 E10, R456: the "your turn ends" rider on `player` for the turn running now, or null. */
+export function turnEndsOf(state: GameState, player: PlayerId): TurnEndsModifier | null {
+  for (const mod of state.players[player].mods) {
+    if (mod.kind !== "turnEnds") continue;
+    if (mod.expiry.until === "thisTurn" && mod.expiry.turn !== state.turn) continue;
+    return mod;
+  }
+  return null;
+}
+
+/**
+ * B5 E10, R456: `player`'s turn ends once `actionsLeft` more of their main-phase actions have
+ * resolved (0: once what is resolving now has resolved). Only on that player's own turn and before
+ * it has begun to end — on the other player's turn there is no turn of theirs to end. A second
+ * rider on the same turn keeps the sooner end, and names the card that set it.
+ */
+export function cutTurnShort(sink: EngineSink, player: PlayerId, actionsLeft: number, byInstanceId: string | null): void {
+  const state = sink.state;
+  if (state.turn === SETUP_TURN || state.active !== player || state.phase === "end" || state.result !== null) return;
+  const left = Math.max(0, Math.trunc(actionsLeft));
+  const existing = turnEndsOf(state, player);
+  if (existing !== null) {
+    if (left < existing.actionsLeft) {
+      existing.actionsLeft = left;
+      existing.byInstanceId = byInstanceId;
+    }
+    return;
+  }
+  addModifier(sink, player, {
+    kind: "turnEnds",
+    actionsLeft: left,
+    byInstanceId,
+    expiry: { until: "thisTurn", turn: state.turn },
+  });
+}
+
+/**
+ * B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
+ * `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage). Its `seq`
+ * is the one its id is numbered from (`addModifier`), R68's creation order among the delayed effects.
+ */
+export function addStartOfTurnEffect(sink: EngineSink, player: PlayerId, resume: Resume, label: string): PlayerModifier {
+  const seq = sink.state.nextSeq;
+  return addModifier(sink, player, { kind: "startOfTurnEffect", seq, resume, label, expiry: { until: "never" } });
+}
+
+/** B5 E28, R458: `player`'s rest-of-game effects that have not run this turn, in creation order. */
+export function dueStartOfTurnEffects(state: GameState, player: PlayerId): StartOfTurnEffectModifier[] {
+  return state.players[player].mods
+    .filter((mod): mod is StartOfTurnEffectModifier => mod.kind === "startOfTurnEffect" && mod.ranTurn !== state.turn)
+    .sort((a, b) => a.seq - b.seq);
 }

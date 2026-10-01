@@ -24,7 +24,7 @@ concurrency:
 env:
   # Card data and rules only. No secret belongs in this file: SUPABASE_SECRET_KEY and CODE_PEPPER
   # are the two that must never be committed, which is why .gitignore carries `.env`.
-  CATALOG_VERSION: core-1
+  CATALOG_VERSION: v0.2.0
 
 jobs:
   # ------------------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ jobs:
       - name: typecheck
         run: pnpm typecheck
       # BUILD §5 names these four by hand, so they run by hand rather than hiding inside `test`.
-      - name: catalog data (100 cards, 9 tokens, rarity counts)
+      - name: catalog data (268 cards, 49 tokens, rarity counts per set)
         run: pnpm validate:catalog
       - name: every card has a test file
         run: pnpm exec tsx packages/cards/scripts/missing-tests.ts

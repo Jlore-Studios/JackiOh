@@ -12,8 +12,13 @@
 //    its own result dialog (PracticeResult) is the panel there.
 //
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
-// its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result` and nothing else.
-// `data-reason` keeps the engine's own reason for tests and tools.
+// its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
+// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests
+// and tools.
+//
+// R434: the game's end reveals both hands. When the view shows the opponent's hand (`reveal.ts`),
+// the panel lists it as "Their hand", every card a face that opens large, and the chip offers
+// "Their hand" as a button that opens the same cards in the list dialog (TheirHand.tsx).
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -21,6 +26,8 @@ import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { prefersReducedMotion } from "./animations.ts";
 import { testid } from "./contract.ts";
+import { revealedOpponentHand } from "./reveal.ts";
+import { TheirHand, TheirHandButton, type TheirHandProps } from "./TheirHand.tsx";
 import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
 import { getFxSettings } from "../fx/settings.ts";
 import { readSettings } from "../settings/index.ts";
@@ -74,6 +81,12 @@ export function resultRevealMs(): number {
   return FX_LETHAL_LEAD_MAX_MS + FX_RESULT_MS;
 }
 
+/** R434: what the result shows of the opponent's hand, once the view reveals it; else null. */
+export function theirHandOf(view: PlayerView): TheirHandProps | null {
+  const cards = revealedOpponentHand(view);
+  return cards === null ? null : { view, cards };
+}
+
 type GameResultProps = {
   result: Result;
   viewer: PlayerId;
@@ -82,9 +95,11 @@ type GameResultProps = {
   actions?: ReactNode;
   /** The animation-runner marker the overlay has always carried (BUILD M5-T4). */
   animating?: string;
+  /** R434: the opponent's hand, once the view reveals it (`revealedOpponentHand`), and its view. */
+  theirHand?: TheirHandProps | null;
 };
 
-export function GameResult({ result, viewer, form, actions, animating }: GameResultProps): ReactElement {
+export function GameResult({ result, viewer, form, actions, animating, theirHand = null }: GameResultProps): ReactElement {
   const outcome = outcomeFor(result, viewer);
   // The panel folds to the chip ("View the board") and opens again ("Result"). Only the first
   // appearance waits for the effects layer; a fold or an unfold is immediate.
@@ -133,6 +148,7 @@ export function GameResult({ result, viewer, form, actions, animating }: GameRes
       >
         <strong className="result-overlay__word">{RESULT_WORD[outcome]}</strong>
         <span className="result-overlay__reason">{resultReason(outcome, result.reason)}</span>
+        {shownForm === "panel" && theirHand !== null ? <TheirHand view={theirHand.view} cards={theirHand.cards} /> : null}
         {shownForm === "panel" ? (
           <div className="result-overlay__actions" ref={firstAction}>
             {actions}
@@ -161,6 +177,7 @@ export function GameResult({ result, viewer, form, actions, animating }: GameRes
             Result
           </button>
         ) : null}
+        {shownForm === "chip" && theirHand !== null ? <TheirHandButton view={theirHand.view} cards={theirHand.cards} /> : null}
       </div>
     </>
   );

@@ -50,7 +50,7 @@ import {
   type AnimationQueue,
 } from "./animations.ts";
 import { testid, type BoardControl, type ClickTarget } from "./contract.ts";
-import { GameResult, type ResultForm } from "./Result.tsx";
+import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
@@ -359,8 +359,10 @@ export default function Game({
         onClick={handleClick}
         onControl={handleControl}
       />
-      <FxLayer queue={runner} view={shown} />
-      <CardShowcase view={view} />
+      {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
+          cast on draw up as the runner reaches it. */}
+      <FxLayer queue={runner} view={shown} latest={view} />
+      <CardShowcase view={view} queue={runner} />
 
       <Prompt
         view={shown}
@@ -382,6 +384,7 @@ export default function Game({
           form={resultForm}
           actions={resultActions}
           animating={animating.get(testid.result)}
+          theirHand={theirHandOf(shown)}
         />
       ) : null}
 
