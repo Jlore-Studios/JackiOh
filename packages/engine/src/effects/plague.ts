@@ -25,6 +25,7 @@
 
 import type { Selection } from "@jackioh/shared";
 import { defOf } from "../catalog";
+import { randomCastOf } from "../randomCast";
 import { permanentsOnField, placePlagueOn, removePlague } from "../plague";
 import {
   closePrompt,
@@ -172,6 +173,16 @@ export function placePlagueTokens(args: { count: number; amount?: number }): Eff
     apply(ctx): void {
       const count = Math.trunc(args.count);
       if (count <= 0) return;
+      // R452: a random cast's caster is never asked, so under one each placement goes on a random
+      // permanent (R60, repeats allowed) and nothing pauses.
+      if (randomCastOf(ctx.state, ctx.controller) !== null) {
+        for (let i = 0; i < count; i += 1) {
+          const card = ctx.rng.pick(permanentsOnField(ctx.state, ctx.controller));
+          if (card === undefined) return;
+          placePlagueOn(ctx, card, Math.max(1, Math.trunc(args.amount ?? 1)));
+        }
+        return;
+      }
       const resume = resumeAt({
         defId: ctx.self?.defId ?? ctx.defId ?? "",
         hook: PLAGUE_PLACEMENT_HOOK,

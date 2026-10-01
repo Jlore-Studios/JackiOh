@@ -13,6 +13,25 @@ export * from "./comboIndex";
 export * from "./callToChaos";
 // B3.2, R384: Activate abilities — the `activate` action, its refusal, its listing and its view.
 export * from "./activate";
+
+// ---- v0.2.0 subsystems: Classic+ cards #40–#78 (the cards-plus-d workstream) ----
+
+// C+ #42 KY's Test's question bank (E31, R420):
+export * from "./kyTest";
+// C+ #44 Simplicity Audit and #45 Complexity Audit's lines-of-code sweep (E36):
+export * from "./audit";
+
+// C+ #62 KY's Papaya's curve targeting (E32, R422):
+export * from "./papaya";
+
+// C+ #73 Call to Chaos (Classic+ Edition)'s table (R423) and #74's fusing Field Trap (R425):
+export * from "./callToChaosPlus";
+export * from "./twiceForward";
+
+// C+ #46–#61:
+
+// C+ #63–#76:
+
 // B5 E33, R404: quests — Classic #90 In Too Deep's count, completion and view (`Script.quests`).
 export * from "./quests";
 // B5 E14, R399, R545–R547: a card that has the text of the last Spell played (Classic #57 Echo).

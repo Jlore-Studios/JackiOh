@@ -38,6 +38,9 @@ const SPITEFUL_STAB = "core-070";
 const FED_FAUCI = "core-091";
 const COMBO_INDEX = "core-093";
 
+/** R583: C+ #44 Simplicity Audit and #45 Complexity Audit, whose Radiant face previews a set of cards. */
+const AUDITS = ["classicplus-044", "classicplus-045"];
+
 /** R280's six, in index order. */
 const PREVIEWED = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEFUL_STAB, FED_FAUCI];
 
@@ -49,6 +52,10 @@ const PLAGUE_DOCTOR = "classic-059"; // C #59 Plague Doctor
 const SIPHON_SQUAD = "classic-088"; // C #88 Siphon Squad
 const DIVINE_FAVOR = "classic-046"; // C #46 Divine Favor
 const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE, DIVINE_FAVOR, PLAGUE_DOCTOR, SIPHON_SQUAD];
+/** Patch v0.2.0's cards that declare preview, each proved in its own block below (R280). */
+const DATACENTER_FIRE = "classicplus-t-ai-06";
+const TWICE_FORWARD = "classicplus-074";
+const NEW_SET_PREVIEWED = [TWICE_FORWARD, DATACENTER_FIRE];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -110,14 +117,16 @@ describe("R280 the Core cards that declare preview", () => {
   // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
   // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
   // proves its values.
-  it("R280 R372 are exactly #18, #31, #38, #40, #70, #91 and #93, and the Classic cards listed, on both faces", () => {
+  it("R280 R372 R583 are exactly #18, #31, #38, #40, #70, #91 and #93 and the new sets' listed ones, on both faces, and C+ #44 and #45 on the Radiant face", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED].sort());
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED, ...NEW_SET_PREVIEWED, ...AUDITS].sort());
     for (const id of hooked) {
-      expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
+      // R583: an Audit's base face marks nothing; its Radiant face "highlights targets".
+      if (AUDITS.includes(id)) expect(CARDS[id]?.base.preview, `${id} base`).toBeUndefined();
+      else expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
       expect(CARDS[id]?.radiant.preview, `${id} radiant`).toBeTypeOf("function");
     }
   });
@@ -429,6 +438,71 @@ describe("#91 Fed Fauci previews the mana its next start of turn gives (R280)", 
   it("R280 in hand it holds no tokens (R78), so it previews 0", () => {
     const s = scenario({ p1: { hand: [FED_FAUCI, RAPID_REPLENISH] } });
     expect(valueOf(handCard(s.view("p1"), s.card(FED_FAUCI).id))).toBe(0);
+  });
+});
+
+// =============================================================================================
+// T-AI-6 Datacenter Fire: the Field Spells its sweep dooms, times its face's number
+// =============================================================================================
+
+describe("T-AI-6 Datacenter Fire previews the damage each hero would take (R280)", () => {
+  const TWINSPELL = "core-079"; // (2) Field Spell
+  const FARM = "core-058"; // (2) Field Spell
+  const HEROIC_POWER = "core-098"; // Field Spell, Indestructible
+  const up = (defId: string, lane: number): { def: string; faceUp: boolean; lane: number } => ({ def: defId, faceUp: true, lane });
+  const LABELS = {
+    base: "Deal 1 damage to each hero for each one destroyed",
+    radiant: "Deal 2 damage to the enemy hero for each one destroyed",
+  } as const;
+
+  function board(face: Face): Scenario {
+    return scenario({
+      // Not a Twinspell of p1's: it would spend itself on this Spell as it is played, before the sweep.
+      p1: { hand: [{ def: DATACENTER_FIRE, radiant: face === "radiant" }, RAPID_REPLENISH], backrow: [up(FARM, 1)] },
+      p2: { backrow: [up(TWINSPELL, 1), up(FARM, 2), up(HEROIC_POWER, 3)] },
+    });
+  }
+
+  for (const face of FACES) {
+    const value = face === "base" ? 3 : 4;
+    it(`R280 ${face}: "${LABELS[face]}" previews ${value}, and each hit then deals exactly that`, () => {
+      const s = board(face);
+      const list = shown(handCard(s.view("p1"), s.card(DATACENTER_FIRE).id));
+      expect(list).toEqual([{ label: LABELS[face], value }]);
+      expect(cardDef(DATACENTER_FIRE)[face].text).toContain(LABELS[face]);
+
+      s.play(DATACENTER_FIRE);
+
+      expect(hitsOn(s, "p2")).toEqual([value]);
+      expect(hitsOn(s, "p1")).toEqual(face === "base" ? [value] : []);
+    });
+  }
+
+  it("R280 R46 with no Field Spell its sweep would destroy, it previews 0, and deals nothing", () => {
+    const s = scenario({
+      p1: { hand: [DATACENTER_FIRE, RAPID_REPLENISH] },
+      p2: { backrow: [up(HEROIC_POWER, 1)] },
+    });
+    expect(valueOf(handCard(s.view("p1"), s.card(DATACENTER_FIRE).id))).toBe(0);
+    s.play(DATACENTER_FIRE);
+    expect(hitsOn(s, "p2")).toEqual([]);
+  });
+
+  it("R280 its hook is a pure read of public facts: no write, and no library, hand or state.active", () => {
+    for (const face of FACES) {
+      for (const active of ["p1", "p2"] as const) {
+        const s = scenario({
+          active,
+          p1: { hand: [{ def: DATACENTER_FIRE, radiant: face === "radiant" }], library: [MENACE], backrow: [up(TWINSPELL, 1)] },
+          p2: { hand: [STOCKPILE], library: [MENACE], backrow: [up(FARM, 1)] },
+        });
+        const card = must(s.hand("p1").find((c) => c.defId === DATACENTER_FIRE), "p1's Datacenter Fire");
+        const hook = must(CARDS[DATACENTER_FIRE]?.[face].preview, "the hook");
+        const { state, self } = guarded(s.state, card.id);
+        const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: active === "p1" });
+        expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      }
+    }
   });
 });
 
@@ -902,6 +976,104 @@ describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
       const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
       expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
       expect(answer).toEqual([{ label: LABEL, value: 4 }]);
+    }
+  });
+});
+
+describe("R280 R583 C+ #44 and #45 preview the permanents they would exile", () => {
+  /** p1's Radiant Audit in hand over a board of both sides, an enemy face-down card among it. */
+  function board(audit: string, enemyTrap: string, active: PlayerId = "p1"): Scenario {
+    return scenario({
+      active,
+      p1: { hand: [{ def: audit, radiant: true }, STOCKPILE], field: ["core-008", "core-022"], library: [MENACE] },
+      p2: {
+        hand: [STOCKPILE],
+        field: ["core-008", "core-022"],
+        backrow: [{ def: enemyTrap, faceUp: false }],
+        library: [MENACE],
+      },
+    });
+  }
+
+  it("R280 R583 the hook reads no library, hand or state.active, and answers as the view shows, on either turn", () => {
+    for (const audit of AUDITS) {
+      for (const active of ["p1", "p2"] as const) {
+        const s = board(audit, "core-071", active);
+        const card = must(s.hand("p1").find((c) => c.defId === audit), audit);
+        const { state, self } = guarded(s.state, card.id);
+        const hook = must(CARDS[audit]?.radiant.preview, `${audit}'s hook`);
+        const answer = hook({ state, self, controller: "p1", radiant: true, zone: "hand", yourTurn: active === "p1" });
+        expect(shown(handCard(s.view("p1"), card.id)), `${audit} ${active}`).toEqual(answer);
+        expect(answer.map((entry) => entry.label)).toEqual(["all permanents", "only your opponent's"]);
+        // Each label sits in the Radiant text, and each value counts its ids.
+        for (const entry of answer) {
+          expect(cardDef(audit).radiant.text).toContain(entry.label);
+          expect(entry.value).toBe(entry.ids?.length);
+        }
+      }
+    }
+  });
+
+  it("R177 R583 two boards that differ only in an enemy face-down card show the same preview", () => {
+    for (const audit of AUDITS) {
+      // Intern Stimmy's loc is below both Audits', Bear Honeypot's above: one of them is always a target.
+      const low = board(audit, "core-071");
+      const high = board(audit, "core-060");
+      const of = (s: Scenario): PreviewValue[] | null => shown(handCard(s.view("p1"), must(s.hand("p1")[0], audit).id));
+      expect(of(low)).not.toBeNull();
+      expect(of(low)).toEqual(of(high));
+    }
+  });
+});
+
+// =============================================================================================
+// C+ #74 Twice Forward One Step Backwards: the opponent's plays since it was set, its controller's alone
+// =============================================================================================
+
+describe("C+ #74 Twice Forward previews the plays it has counted, to its controller alone (R280, R33)", () => {
+  const LABEL = "your opponent plays";
+  const TIMMY = "core-011"; // (1) Unit
+
+  function counted(face: Face): Scenario {
+    return scenario({
+      active: "p2",
+      p1: { hand: [STOCKPILE], backrow: [{ def: TWICE_FORWARD, radiant: face === "radiant", faceUp: false }], library: [MENACE] },
+      p2: { hand: [TIMMY, STOCKPILE], library: [MENACE, MENACE] },
+    });
+  }
+
+  for (const face of FACES) {
+    it(`R280 ${face}: the label sits in the face's text, and the value is the plays counted so far`, () => {
+      const s = counted(face);
+      const trap = s.card(TWICE_FORWARD);
+      const at = (): PreviewValue[] | null => shown(s.view("p1").you.backrow[0]);
+      expect(cardDef(TWICE_FORWARD)[face].text).toContain(LABEL);
+      expect(at()).toEqual([{ label: LABEL, value: 0 }]);
+      s.play(TIMMY);
+      expect(at()).toEqual([{ label: LABEL, value: 1 }]);
+      expect(s.card(trap).faceUp).not.toBe(true);
+    });
+  }
+
+  it("R33 R177 face-down, the opponent's view carries neither the preview nor the count", () => {
+    const s = counted("base");
+    s.play(TIMMY);
+    const theirs = s.view("p2").opponent.backrow[0];
+    expect(theirs).toMatchObject({ faceDown: true });
+    expect(JSON.stringify(theirs)).not.toContain(LABEL);
+    expect(JSON.stringify(s.view("p2"))).not.toContain(LABEL);
+  });
+
+  it("R280 its hook is a pure read: no write, and no library, hand or state.active", () => {
+    for (const face of FACES) {
+      const s = counted(face);
+      s.play(TIMMY);
+      const card = s.card(TWICE_FORWARD);
+      const hook = must(CARDS[TWICE_FORWARD]?.[face].preview, "the hook");
+      const { state, self } = guarded(s.state, card.id);
+      const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "field", yourTurn: false });
+      expect(shown(s.view("p1").you.backrow[0])).toEqual(answer);
+      expect(hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true })).toEqual([]);
     }
   });
 });

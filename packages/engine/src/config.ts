@@ -347,3 +347,88 @@ export const PLAGUE_MULTIPLIER_NONE = 1;
  * Classic+ #73's). The base face rolls one.
  */
 export const CALL_TO_CHAOS_RADIANT_EFFECTS = 3;
+
+// ---- v0.2.0 constants: Classic+ cards #40–#78 and the AI cards (the cards-plus-d workstream) ----
+
+// Classic+ #42 KY's Test (SPEC §8.7, R420, BUILD §2).
+/** R420: the three difficulties, in the order the first prompt offers them. */
+export const KY_TEST_DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+/** R420: the options every problem shows, exactly one of them its answer. */
+export const KY_TEST_OPTIONS = 4;
+/** R420: the floor of bank problems per difficulty (the bank test's floor, in `packages/cards`). */
+export const KY_TEST_MIN_PROBLEMS = 30;
+/** R420: an Easy problem is a + b with each addend in this range, inclusive. */
+export const KY_TEST_EASY_ADDENDS = { min: 10, max: 99 } as const;
+/** R420: an Easy problem's three wrong sums are a + b moved by three different ones of these. */
+export const KY_TEST_EASY_MISSES: readonly number[] = [1, -1, 2, -2, 10, -10];
+
+/**
+ * R420: one reward a difficulty may roll (BUILD §2 `KY_TEST_REWARDS`). `label` is the reward as the
+ * card's text prints it, which the first prompt shows beside its difficulty. A reward is cards: the
+ * one card the text names (`defId`: The Coin, KY's Gift), or random cards from a pool of non-token
+ * cards of every set (`pool`, R380; never KY's Test itself, R387; repeats allowed, R60). `count` is
+ * how many, or `"fill"`: as many as the hand has room for under `HAND_CAP`. `costOverride` is the cost
+ * the text sets each card to ("which costs (0)", "which cost (1)").
+ */
+export type KyTestReward = {
+  readonly id: string;
+  readonly label: string;
+  readonly defId?: string;
+  readonly pool?: { readonly tags?: Tag[]; readonly rarity?: "Legendary"; readonly cost?: number };
+  readonly count: number | "fill";
+  readonly costOverride?: number;
+};
+
+/** R420: each difficulty's list of rewards, in the order the text prints them; one is rolled per difficulty. */
+export const KY_TEST_REWARDS: { readonly [D in (typeof KY_TEST_DIFFICULTIES)[number]]: readonly KyTestReward[] } = {
+  Easy: [
+    { id: "coins", label: "3 The Coins", defId: "core-t-coin", count: 3 },
+    { id: "ky", label: "a random (2) Cost KY card", pool: { tags: ["KY"], cost: 2 }, count: 1 },
+    { id: "legendary", label: "a random Legendary card, which costs (0)", pool: { rarity: "Legendary" }, count: 1, costOverride: 0 },
+    { id: "books", label: "2 random Books", pool: { tags: ["Book"] }, count: 2 },
+  ],
+  Medium: [
+    { id: "fours", label: "2 random (4) Cost cards, which cost (1)", pool: { cost: 4 }, count: 2, costOverride: 1 },
+    { id: "books", label: "5 random Books", pool: { tags: ["Book"] }, count: 5 },
+    { id: "ky", label: "5 random KY cards", pool: { tags: ["KY"] }, count: 5 },
+    { id: "fill", label: "fill your hand with random Books", pool: { tags: ["Book"] }, count: "fill" },
+  ],
+  Hard: [{ id: "gift", label: "KY's Gift, which costs (0)", defId: "classicplus-042-1", count: 1, costOverride: 0 }],
+};
+
+// Classic+ #62 KY's Papaya (SPEC §8.7, R422, BUILD §2).
+/** R422: the rows of the curve's grid, y 0 (your backrow) to 3 (their backrow). */
+export const PAPAYA_ROWS = 4;
+/** R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have. */
+export const PAPAYA_MAX_CELLS = 4;
+
+// Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
+/**
+ * R382: each Grape's chance in percent, in Lucky's order from worst to best (Rotten < Normal < Large <
+ * Golden < Mythic): a roll with Lucky keeps the later of its two.
+ */
+export const GRAPE_ODDS: readonly { readonly defId: string; readonly percent: number }[] = [
+  { defId: "classicplus-065-1", percent: 12 },
+  { defId: "classicplus-065-2", percent: 60 },
+  { defId: "classicplus-065-3", percent: 20 },
+  { defId: "classicplus-065-4", percent: 7 },
+  { defId: "classicplus-065-5", percent: 1 },
+];
+
+// Classic+ #73 Call to Chaos (Classic+ Edition) (SPEC §8.7 row 73, R423): its table's numbers.
+/** §8.7 row 73 entry 1: "Add 5 random Fruits to your hand". */
+export const CHAOS_PLUS_FRUITS = 5;
+/** §8.7 row 73 entry 2: "Add 3 random Books to your hand". */
+export const CHAOS_PLUS_BOOKS = 3;
+/** §8.7 row 73 entry 4: "Add 3 random Classic cards to your hand". */
+export const CHAOS_PLUS_CLASSIC_CARDS = 3;
+/** §8.7 row 73 entries 1, 2, 4 and 9: the added and the replacing cards "cost (0)" (`costOverride`). */
+export const CHAOS_PLUS_COST = 0;
+/** §8.7 row 73 entry 5: "Upgrade every card in your hand and deck twice". */
+export const CHAOS_PLUS_UPGRADES = 2;
+/** §8.7 row 73 entry 7: "Degrade every card on your opponent's field and in their hand three times". */
+export const CHAOS_PLUS_DEGRADES = 3;
+
+// T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
+/** T-AI-4: the repeats after the first draw, a termination bound: five draws at most. */
+export const CHAIN_OF_THOUGHT_REPEATS = 4;
