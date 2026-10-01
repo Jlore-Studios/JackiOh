@@ -32,7 +32,7 @@ const SHARD = gateShard();
 const PLAYED = gamesToPlay(GAMES, SHARD);
 const SHARD_LABEL = SHARD === undefined ? "" : `, shard ${String(SHARD.index)}/${String(SHARD.count)}: ${String(PLAYED.length)} played`;
 /** Per-game allowance under load (the machine is shared), plus a fixed margin. */
-const TIMEOUT = 60_000 + PLAYED.length * 45_000;
+const TIMEOUT = 60_000 + GAMES * 45_000;
 
 let cached: GateReport | undefined;
 function report(): GateReport {

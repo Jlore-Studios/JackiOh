@@ -38,7 +38,7 @@ const GAMES = FULL ? AI_GATE.perfFullGames : AI_GATE.perfSmokeGames;
 const SHARD = gateShard();
 const PLAYED = gamesToPlay(GAMES, SHARD);
 /** Per-game allowance under load (the machine is shared), plus a fixed margin. */
-const TIMEOUT = 60_000 + PLAYED.length * 120_000;
+const TIMEOUT = 60_000 + GAMES * 120_000;
 
 type Timing = {
   /** The decision's cost on the development machine: its smallest ratio to the yardstick, in ms. */

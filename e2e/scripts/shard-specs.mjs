@@ -14,9 +14,12 @@ import { fileURLToPath } from "node:url";
 
 const SPEC_DIR = "cypress/e2e";
 
-/** Seconds per spec, Chrome on ubuntu-latest (CI run 36903763074, main at 8d0c643's parent). */
+/**
+ * Seconds per spec, Chrome on ubuntu-latest: CI run 36903763074, and 08 from run 36922696530 (patch
+ * v0.2.0 plays it to the 60-turn cap).
+ */
 const WEIGHTS = {
-  "01": 59, "02": 106, "03": 25, "04": 41, "05": 17, "06": 11, "07": 36, "08": 69, "09": 14,
+  "01": 59, "02": 106, "03": 25, "04": 41, "05": 17, "06": 11, "07": 36, "08": 155, "09": 14,
   "10": 3, "11": 23, "12": 36, "13": 42, "14": 19, "15": 15, "16": 25, "17": 49, "18": 25,
   "19": 24, "20": 28, "21": 20, "22": 22, "23": 9, "24": 10, "25": 32, "26": 6, "28": 24, "99": 1,
 };

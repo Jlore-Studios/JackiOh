@@ -163,14 +163,19 @@ jobs:
   # every k-th game per shard (packages/ai/test/_shard.ts). A shard checks that each game it played
   # is clean and times each of its perf decisions. Wins are a property of the whole run, so each
   # shard uploads its games and the summary job holds them against `gateNeeded` together.
+  #
+  # Twelve shards, and fifteen minutes rather than ten: under patch v0.2.0 one hard-vs-easy game can
+  # take four to five minutes on its own (gate:v2:hard-vs-easy:12), so a shard that draws it runs
+  # long however finely the gate is split. ci-duration.yml reports such a shard; the cure is engine
+  # speed (#70), not more shards.
   ai-gate-shard:
     name: ai gates (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup

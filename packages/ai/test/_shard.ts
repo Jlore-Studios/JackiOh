@@ -4,6 +4,8 @@
 // every decision of its games, but a win-rate threshold is a property of the whole run, so a shard
 // writes its games to `JACKIOH_AI_GATE_OUT` and `pnpm ai:gate:merge` holds the wins of all shards
 // together against `gateNeeded`. Unsharded, every gate plays and judges its whole run as before.
+// A shard keeps the whole run's test timeout rather than a share of it: one game can take minutes
+// on its own (a perf game of patch v0.2.0 outran 180 s), and the CI job's own timeout bounds a shard.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
