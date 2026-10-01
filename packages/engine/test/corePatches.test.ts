@@ -19,6 +19,9 @@ import { declareAttack, forceAttack } from "../src/combat";
 import { DECK_SIZE } from "../src/config";
 import { damage } from "../src/effects";
 import { marksOn } from "../src/marks";
+import { leftFieldSinceResolved } from "../src/query";
+import { exitMark } from "../src/stays";
+import { moveToZone } from "../src/zones";
 import { ownLibraryView } from "../src/ownLibrary";
 import { beginGame, reduce } from "../src/reduce";
 import { fold, hashState } from "../src/replay";
@@ -226,6 +229,34 @@ describe("R429 §10.5 step 4 counts the plays of a card that asks", () => {
     const copy = newInstance(state, counted.id, "p1", { z: "hand", player: "p1" });
     expect(timesPlayedOf(card)).toBe(3);
     expect(timesPlayedOf(copy)).toBe(0);
+  });
+});
+
+describe("R427, R174 a resolved play's card that something answering the play has since taken off the field", () => {
+  it("R427 `leftFieldSinceResolved` is false while the card stands, and for one that left before the play resolved; true once it leaves after", () => {
+    const state = board("r427-left");
+    const unit = put(state, plain.id, slot("p1", "units", 1));
+    const resolvedNow = (): Extract<GameEvent, { type: "cardResolved" }> => ({
+      type: "cardResolved",
+      player: "p1",
+      instanceId: unit.id,
+      defId: plain.id,
+      permanent: true,
+      costPaid: 1,
+      exitsFrom: exitMark(state),
+    });
+
+    // Standing: nothing has taken it.
+    const event = resolvedNow();
+    expect(leftFieldSinceResolved(state, event)).toBe(false);
+
+    // Taken off after the play resolved — what a trap answering the play does (R174).
+    moveToZone(state, unit, "graveyard");
+    expect(leftFieldSinceResolved(state, event)).toBe(true);
+
+    // A play whose card had already left as it resolved (its own resolution took it, R427): its
+    // event's mark is after the departure, so nothing has taken it since.
+    expect(leftFieldSinceResolved(state, { ...resolvedNow(), permanent: false })).toBe(false);
   });
 });
 

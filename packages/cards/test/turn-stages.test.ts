@@ -452,7 +452,6 @@ describe("§2.2, R62: a 'this turn' effect made after cleanup ends with that tur
 
 const PREM_PANTHER = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
 const MOTHS = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
-const TIMMY = "core-011"; // Tempo Timmy, 3/3 Rush, First Strike
 
 
 
