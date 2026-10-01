@@ -1,26 +1,27 @@
-// #95 Call to Chaos (Core Edition) (SPEC §8.4, R28, R58, R60, R70, R87, BUILD M4-T4 row 95).
+// #95 Call to Chaos (Core Edition) (SPEC §8.4, R28, R58, R60, R70, R87, R423, R436, BUILD M4-T4 row 95).
 //
-// Base: "One random effect" out of ten. Radiant: "Two random effects: 'cast a random Call to Chaos'
-// plus one drawn from the other 9" (R28) — the recursion is guaranteed and never doubled.
+// Base: "One random effect" out of ten. Radiant (patch v0.2.0, R423): "Three different random
+// effects, resolved in the order listed" — the shape Classic+ #73 has, so both editions follow one
+// rule. The recursion is one of the ten like any other: rolled only when it falls among the three,
+// and resolved where the list puts it.
 //
 // The whole card is `engine/src/subsystems/callToChaos.ts`, whose header names this file's shape:
-// "#95's own file (M4) is a one-line hook that returns `[callToChaos()]`". The subsystem owns the
-// ten effects, the roll and the chain counter, for reasons that are all engine concerns:
-//   * each effect must read the board when it RESOLVES, not when the hook builds it, because the
-//     radiant pair resolves the recursion and its whole chain first (R87) and a nested cast draws
-//     cards, summons units and changes costs in between. Every effect there is a lazy wrapper.
+// "#95's own file is a one-line hook that returns `[callToChaos()]`". The subsystem owns the ten
+// effects, the roll, the announcement and the chain counter, for reasons that are all engine concerns:
+//   * each effect must read the board when it RESOLVES, not when the hook builds it, because a
+//     rolled recursion resolves its whole chain before the effects after it (R87), and a nested cast
+//     draws cards, summons units and changes costs in between. Every effect there is a lazy wrapper.
 //   * the chain length is game state, on the cast instance's `memory` (§10.1,
 //     `CHAOS_CHAIN_KEY`), so a paused and serialized game resumes with the same cap left and two
 //     independent Calls in one turn never share a counter.
-//   * R28's cap of 20 (`CALL_TO_CHAOS_CHAIN_CAP`) is a HARD stop: a roll that lands on the
-//     recursion once the chain is at the cap resolves into nothing and no substitute effect is
-//     rolled (R87), so a radiant Call at the cap runs only its partner.
+//   * R28's cap of 20 (`CALL_TO_CHAOS_CHAIN_CAP`) is a HARD stop: a recursion rolled once the chain
+//     is at the cap resolves into nothing and no substitute effect is rolled (R87), so a Radiant
+//     Call at the cap runs only its other two.
+//   * R436: before anything resolves, `chaosRolled` names the rolled clauses to both players.
 // Rebuilding any of that here would be a second source of truth for the same rules.
 //
-// `callToChaos()` reads `ctx.radiant` when no argument is given, which would work too — the flag
-// `makeContext` puts in the context is the same flag `scriptOf` used to pick this face. The flag is
-// passed explicitly anyway so each face states which text of §8 it is, and so neither depends on
-// the context plumbing to tell the two apart.
+// The face is passed explicitly, so each face states which text of §8 it is, rather than leaning on
+// the flag `makeContext` puts in the context (the same flag `scriptOf` used to pick this face).
 //
 // Two rulings worth naming here because they are invisible in the one-liner: R70 makes the
 // recursion a Cast — free, counted as a play, running the card's own script, with the caster
@@ -36,5 +37,5 @@ export const def = cardDef("core-095");
 /** §8: "One random effect" out of the ten. */
 export const base: Script = { cry: () => [subsystems.callToChaos({ radiant: false })] };
 
-/** §8, R28: "cast a random Call to Chaos" plus one of the other 9, the recursion first (R87). */
+/** §8, R423: three different random effects of the ten, resolved in the order the list writes them. */
 export const radiant: Script = { cry: () => [subsystems.callToChaos({ radiant: true })] };

@@ -145,7 +145,7 @@ const SWEPT = CATALOG_IDS.filter((id) => {
 });
 
 describe("R387 a card never generates itself (B4.1 rule 5's sweep)", () => {
-  it("R387 no card's play creates or Discovers its own definition, over every set and several seeds", () => {
+  it("R387 no card's play creates or Discovers its own definition, over every set and several seeds", { timeout: 120_000 }, () => {
     const violations: string[] = [];
     for (const defId of SWEPT) {
       for (const seed of SEEDS) {

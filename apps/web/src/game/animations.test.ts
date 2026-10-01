@@ -121,6 +121,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
     instanceId: "u1",
     defId: "core-004",
     owner: "p1",
+    controller: "p1",
     attack: 2,
     maxHealth: 3,
     killerId: "u6",
@@ -988,7 +989,7 @@ describe("newEventsSince", () => {
     const buff: GameEvent = { type: "buffed", instanceId: "c7", attack: 2, health: 1 };
     const discount: GameEvent = { type: "costChanged", instanceId: "c7", cost: 1 };
     const radiant: GameEvent = { type: "radiantSet", instanceId: "c7", defId: "core-031", zone: { z: "hand", player: "p1" } };
-    const kill: GameEvent = { type: "destroyed", instanceId: "u4", defId: "core-004", owner: "p2", attack: 3, maxHealth: 4, killerId: "c7" };
+    const kill: GameEvent = { type: "destroyed", instanceId: "u4", defId: "core-004", owner: "p2", controller: "p2", attack: 3, maxHealth: 4, killerId: "c7" };
     const prev = [resolved, set, buff, discount, radiant, kill];
     // The other seat's copies, once #31 has gone back to p1's hand and the trap sits face-down.
     const redacted: GameEvent[] = [
@@ -1025,7 +1026,7 @@ describe("newEventsSince", () => {
     expect(sameOccurrence({ type: "costChanged", instanceId: "c7", cost: 1 }, { type: "costChanged", instanceId: "c7", cost: 2 })).toBe(false);
     expect(sameOccurrence(play, { ...play, formerId: "c3" })).toBe(false);
     // R97 rewrites only what `redactEvent` rewrites: a hidden `destroyed` keeps its stats.
-    const kill: GameEvent = { type: "destroyed", instanceId: "u4", defId: "core-004", owner: "p2", attack: 3, maxHealth: 4, killerId: null };
+    const kill: GameEvent = { type: "destroyed", instanceId: "u4", defId: "core-004", owner: "p2", controller: "p2", attack: 3, maxHealth: 4, killerId: null };
     expect(sameOccurrence({ ...kill, instanceId: HIDDEN_ID, defId: HIDDEN_ID }, kill)).toBe(true);
     expect(sameOccurrence({ ...kill, instanceId: HIDDEN_ID, defId: HIDDEN_ID, attack: 0 }, kill)).toBe(false);
     // An event naming no card by `instanceId` has nothing R97 rewrites but its ids.

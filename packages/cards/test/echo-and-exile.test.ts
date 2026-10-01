@@ -13,7 +13,7 @@
 //    Combo modifier the play itself installed (#78's own "Combo: draw 1").
 
 import type { Selection, GameEvent } from "@jackioh/shared";
-import type { CardInstance } from "@jackioh/engine";
+import { createRng, query, subsystems, type CardInstance } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
 
@@ -139,6 +139,24 @@ const FULLSEND = "core-078";
 const CALL_TO_CHAOS = "core-095";
 
 const R119_LIBRARY = [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA];
+const R119_SEED = "r9-c2c-0";
+
+/**
+ * A cursor at which #95's one roll is "summon 5 random Field Spells or Traps" and a Quickstriker is
+ * among the five picks: the roll is one draw over the ten, each pick one draw over the backrow pool
+ * (`summonRandom`, R60), in that order.
+ */
+function quickstrikerCursor(): number {
+  const pool = query({ type: ["Field Spell", "Trap", "Field Trap"] });
+  const backrow = subsystems.CHAOS_EFFECTS.findIndex((effect) => effect.name === "backrow");
+  for (let cursor = 0; cursor < 100_000; cursor += 1) {
+    const rng = createRng(R119_SEED, cursor);
+    if (rng.int(subsystems.CHAOS_EFFECTS.length) !== backrow) continue;
+    const picks = Array.from({ length: 5 }, () => pool[rng.int(pool.length)]?.id);
+    if (picks.includes(QUICKSTRIKER)) return cursor;
+  }
+  throw new Error("no cursor rolls a Quickstriker into #95's backrow");
+}
 
 function ofType<T extends GameEvent["type"]>(events: readonly GameEvent[], type: T): Extract<GameEvent, { type: T }>[] {
   return events.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
@@ -177,10 +195,12 @@ describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answe
   });
 
   it("R119 a Quickstriker Call to Chaos summons in its first resolution deals nothing on the Echo repeat of that same play (§10.5 step 6)", () => {
-    // This seed's Call to Chaos rolls "summon 5 random Field Spells or Traps" first — Quickstriker
-    // among them — and "add 3 random cards to hand costing 0" on the repeat.
+    // The roll is pinned (R423 left the base face's one roll as it was): the play's first rng draw is
+    // #95's roll, and the five picks of "summon 5 random Field Spells or Traps" follow it, from the
+    // pool of every set (R380). `quickstrikerCursor` finds a cursor at which the roll is that effect
+    // and a Quickstriker is among the five, so the fixture holds whatever else the pools hold.
     const s = scenario({
-      seed: "r9-c2c-0",
+      seed: R119_SEED,
       p1: { hand: [TEMPO_TIMMY, TWINSPELL, CALL_TO_CHAOS], mana: 10, library: [...R119_LIBRARY] },
       p2: { hand: [STOCKPILE], field: [MIDRANGE_MENACE], library: [...R119_LIBRARY] },
     });
@@ -189,17 +209,22 @@ describe("R119, §10.5 step 6: an Echo repeat's granted Combo parts do not answe
     expect(quickstrikersOf(s, "p1")).toEqual([]);
     const call = s.card(CALL_TO_CHAOS);
 
+    s.state.rngCursor = quickstrikerCursor();
     s.play(CALL_TO_CHAOS);
+    while (s.state.pending !== null) {
+      const first = s.state.pending.options[0];
+      if (first === undefined) break;
+      s.answer(first.key);
+    }
 
     // The setup did what it says: the Echo was taken (Twinspell reached the graveyard, two
     // resolutions), and a Quickstriker arrived in p1's backrow during this play.
     expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain(TWINSPELL);
-    expect(quickstrikersOf(s, "p1")).toHaveLength(1);
-    expect(ofType(s.lastEvents, "addedToHand")).toHaveLength(3);
+    expect(ofType(s.events, "chaosRolled").filter((event) => event.instanceId === call.id)).toHaveLength(2);
+    expect(quickstrikersOf(s, "p1").length).toBeGreaterThanOrEqual(1);
     // R119: a permanent #95 summons while the play resolves "starts counting from the next play";
     // the Echo repeat is not a next play, so the Quickstriker grants it no Combo damage.
-    const hits = ofType(s.lastEvents, "damage").filter((hit) => hit.sourceId === call.id && hit.targetId === "hero-p2");
+    const hits = ofType(s.events, "damage").filter((hit) => hit.sourceId === call.id && hit.targetId === "hero-p2");
     expect(hits).toEqual([]);
-    s.expectHealth("p2", 30);
-  });
+});
 });

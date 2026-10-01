@@ -225,7 +225,8 @@ describe("R215: a card that lands from the resolving zone is the printed card ag
 // Round 7 (lens L8): a return Spell cast on the other player's turn.
 // ---------------------------------------------------------------------------
 
-const PREM_PANTHER = "core-032"; // 5/4 Rush; whenever this destroys a unit, draw 2
+const MOTHS = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
+const PREM_PANTHER = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
 const RENO = "core-053";
 
 /** A fixture card: a transient def in the match state and its script in the registry. */
@@ -250,14 +251,14 @@ function fixture(s: Scenario, id: string, type: CardType, script: Script, stats 
 
 describe("R155, §5.1: an end-of-turn return belongs to the turn the Spell was played on", () => {
   it("R155 a return Spell cast on the opponent's turn does not come back at the end of its caster's next turn (R70, §5.1, §6.2)", () => {
-    // p2's Tempo Timmy (3/3 First Strike) attacks p1's Prem Panther (5/4): the Panther survives the
-    // first strike and kills Timmy, so p1 draws 2 on p2's turn. The top card is a cast-on-draw Spell
-    // carrying #23 Reoccurring Dream's "End of turn: returns from the GY to your hand" (the flag
-    // R155 writes is what the return reads), so p1 casts it on p2's turn (§2.4, R70).
+    // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther
+    // (5/4) attack it: the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top
+    // card is a cast-on-draw Spell carrying #23 Reoccurring Dream's "End of turn: returns from the GY
+    // to your hand" (the flag R155 writes is what the return reads), so p1 casts it on p2's turn
+    // (§2.4, R70).
     const s = scenario({
-      active: "p2",
       p1: { field: [PREM_PANTHER], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
-      p2: { field: [TIMMY], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
+      p2: { field: [{ def: MOTHS, damage: 10 }], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
     });
     fixture(s, "edge-r7-dream-cod", "Spell", {
       staticFlags: { castOnDraw: true },
@@ -267,7 +268,8 @@ describe("R155, §5.1: an end-of-turn return belongs to the turn the Spell was p
     const cod = newInstance(s.state, "edge-r7-dream-cod", "p1", { z: "library", player: "p1" });
     s.state.players.p1.library.unshift(cod);
 
-    s.attack(TIMMY, PREM_PANTHER);
+    s.endTurn();
+    expect(s.state.active).toBe("p2");
     // The cast happened on p2's turn, and the Spell landed in p1's graveyard (§10.5 step 7).
     expect(s.events.some((event) => event.type === "cardPlayed" && event.instanceId === cod.id)).toBe(true);
     s.expectInZone(cod, "graveyard");

@@ -22,16 +22,15 @@ import { effectiveCost } from "../mana";
 import type { EngineSink } from "../resolve";
 import type { CardInstance, GameState } from "../state";
 import {
-  cardAt,
   isLocked,
   isReserved,
   isUnitToken,
   moveToZone,
-  pileAt,
   placeOnField,
   removeFromField,
   ringNeighbor,
   ringOrder,
+  zoneContents,
   type ZoneSlot,
 } from "../zones";
 
@@ -71,9 +70,8 @@ type RingEntry = { from: ZoneSlot; to: ZoneSlot; cards: CardInstance[] };
  * under the top are in the zone too, so they rotate with it (§3.2).
  */
 function contentsOf(state: GameState, ref: ZoneSlot): CardInstance[] {
-  if (ref.row === "units") return [...(pileAt(state, ref) ?? [])];
-  const card = cardAt(state, ref);
-  return card === null ? [] : [card];
+  // B5 E21, R446: a backrow zone's pile and a carrier's Unit travel whole too (`zones.zoneContents`).
+  return zoneContents(state, ref);
 }
 
 /**

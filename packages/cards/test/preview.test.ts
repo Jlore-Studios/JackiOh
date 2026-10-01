@@ -7,11 +7,14 @@
 // the end, which makes every library and every hand throw on access:
 //
 //   #18 Bread and Butter        the active player's current mana (public, §10.8)
-//   #31 KY's Math Equation      its own printed cost and costMod (the card's own face, R67)
+//   #31 KY's Math Equation      its own count of plays (the card's own instance, R429)
 //   #38 Quickstriker            its controller's count of plays this turn (public)
 //   #40 Echoes of the Forgotten its controller's exile count (public, §3)
 //   #70 Spiteful Stab           its controller's hero health and exile count (public)
 //   #91 Fed Fauci               its own Plague Tokens (its counters travel on its view, §10.8)
+//   C #19 Lizard's Breath       its controller's deck, graveyard and exile SIZES (public, §10.8), never
+//                               their contents — so it has its own proof below rather than the fence
+//                               at the end, which walls a library off whole
 //
 // None reads a library's contents or order, or a hand's contents: the value shows to every viewer
 // who may read the card — the other seat too, for a card on the field — so it must say nothing more
@@ -21,7 +24,7 @@
 // Not previewed, on purpose (R280): #92's stats, #100's cost and #89's hand stats are on the face
 // already, and #24's and #74's X is chosen at play. The set test pins the six.
 
-import { createRng, subsystems, type CardInstance, type ConditionContext, type GameState } from "@jackioh/engine";
+import { createRng, stepParam, subsystems, type CardInstance, type ConditionContext, type GameState } from "@jackioh/engine";
 import type { CardView, PlayerId, PlayerView, PreviewValue } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { CARDS, cardDef } from "../src/index";
@@ -37,6 +40,12 @@ const COMBO_INDEX = "core-093";
 
 /** R280's six, in index order. */
 const PREVIEWED = [BREAD_AND_BUTTER, MATH_EQUATION, QUICKSTRIKER, ECHOES, SPITEFUL_STAB, FED_FAUCI];
+
+/** Patch v0.2.0's Classic cards that declare one (R280), each proved in its own block below. */
+const CURSE = "classic-001"; // C #1 Curse of the Forgotten Classic
+const PLAGUE_NUKE = "classic-043"; // C #43 Plague Nuke
+const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
+const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -98,12 +107,12 @@ describe("R280 the Core cards that declare preview", () => {
   // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
   // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
   // proves its values.
-  it("R280 R372 are exactly #18, #31, #38, #40, #70, #91 and #93, on both faces", () => {
+  it("R280 R372 are exactly #18, #31, #38, #40, #70, #91 and #93, and the Classic cards listed, on both faces", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX]);
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED].sort());
     for (const id of hooked) {
       expect(CARDS[id]?.base.preview, `${id} base`).toBeTypeOf("function");
       expect(CARDS[id]?.radiant.preview, `${id} radiant`).toBeTypeOf("function");
@@ -130,8 +139,8 @@ describe("R280 the Core cards that declare preview", () => {
     };
     expect(labels(BREAD_AND_BUTTER, "base")).toEqual(["X = that player's unspent mana"]);
     expect(labels(BREAD_AND_BUTTER, "radiant")).toEqual(["X = 3 × that player's unspent mana"]);
-    expect(labels(MATH_EQUATION, "base")).toEqual(["Fib(cost+1)"]);
-    expect(labels(MATH_EQUATION, "radiant")).toEqual(["Fib(cost+3)"]);
+    expect(labels(MATH_EQUATION, "base")).toEqual(["Fib(times played + 1)"]);
+    expect(labels(MATH_EQUATION, "radiant")).toEqual(["Fib(times played + 3)"]);
     expect(labels(QUICKSTRIKER, "base")).toEqual(["X = cards you played earlier this turn"]);
     expect(labels(QUICKSTRIKER, "radiant")).toEqual(["X = cards you played earlier this turn"]);
     expect(labels(ECHOES, "base")).toEqual(["the cards in your exile"]);
@@ -213,31 +222,34 @@ describe("#18 Bread and Butter previews the Bread Token's X (R280)", () => {
 });
 
 // =============================================================================================
-// #31 KY's Math Equation: its own cost
+// #31 KY's Math Equation: its own count of plays (R429)
 // =============================================================================================
 
 describe("#31 KY's Math Equation previews its damage (R280)", () => {
-  function equation(face: Face, costMod: number): Scenario {
-    return scenario({
+  function equation(face: Face, timesPlayed: number, costMod = 0): Scenario {
+    const s = scenario({
       p1: {
         hand: [{ def: MATH_EQUATION, radiant: face === "radiant", costMod }, RAPID_REPLENISH],
         mana: 10,
       },
       p2: { field: [MENACE], hand: [MATH_EQUATION] },
     });
+    // R429: the plays it has had before, which the harness cannot seed.
+    must(s.hand("p1").find((c) => c.defId === MATH_EQUATION), "p1's Equation").timesPlayed = timesPlayed;
+    return s;
   }
 
-  const CASES: readonly [Face, number, number][] = [
-    ["base", 0, 1], // Fib(1 + 1)
-    ["base", 2, 3], // Fib(3 + 1)
-    ["radiant", 0, 3], // Fib(1 + 3)
-    ["radiant", 1, 5], // Fib(2 + 3)
-    ["radiant", -3, 2], // R67: the cost floors at 0, Fib(0 + 3)
+  const CASES: readonly [Face, number, number, number][] = [
+    ["base", 0, 0, 1], // its 1st play: Fib(1 + 1)
+    ["base", 2, 0, 3], // its 3rd play: Fib(3 + 1)
+    ["base", 0, 3, 1], // R67: a (4) Equation's 1st play still deals Fib(1 + 1)
+    ["radiant", 0, 0, 3], // Fib(1 + 3)
+    ["radiant", 1, 0, 5], // Fib(2 + 3)
   ];
 
-  for (const [face, costMod, damage] of CASES) {
-    it(`R280 ${face} with costMod ${costMod} previews ${damage}, and deals exactly that`, () => {
-      const s = equation(face, costMod);
+  for (const [face, timesPlayed, costMod, damage] of CASES) {
+    it(`R280 R429 ${face}, played ${timesPlayed} times before, costMod ${costMod}: previews ${damage}, and deals exactly that`, () => {
+      const s = equation(face, timesPlayed, costMod);
       const card = must(s.hand("p1").find((c) => c.defId === MATH_EQUATION), "p1's Equation");
       expect(valueOf(handCard(s.view("p1"), card.id))).toBe(damage);
 
@@ -434,10 +446,10 @@ describe("R280 a fused Core card lists its ingredients' previews in order", () =
     );
 
     const list = must(shown(handCard(s.view("p1"), fused.id)), "the fused card's preview");
-    // #31's half reads the fused card's own cost, min(1 + 3, 4) = 4 (R77): Fib(4 + 1) = 5. #70's half
-    // reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
+    // #31's half reads the fused card's own count of plays, none yet (R429): its 1st play, Fib(0 + 1 +
+    // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
     expect(list).toEqual([
-      { label: "Fib(cost+1)", value: 5 },
+      { label: "Fib(times played + 1)", value: 1 },
       { label: cardDef(SPITEFUL_STAB).base.text, value: 5 },
     ]);
     const text = must(s.state.transientDefs[fused.defId], "the fused def").base.text;
@@ -446,6 +458,161 @@ describe("R280 a fused Core card lists its ingredients' previews in order", () =
     s.play(fused, { targets: [...AT_ENEMY_HERO, ...AT_ENEMY_HERO] });
 
     expect(hitsOn(s, "p2")).toEqual(list.map((entry) => entry.value));
+  });
+});
+
+// =============================================================================================
+// Classic #19 Lizard's Breath: the pile or piles that count now (R280)
+// =============================================================================================
+
+describe("C #19 Lizard's Breath previews the pile or piles that would count now (R280)", () => {
+  const X = "core-008";
+
+  function breath(face: Face, deck: number, graveyard: number, exile: number, extra: Partial<ScenarioOptions> = {}): Scenario {
+    return scenario({
+      ...extra,
+      p1: {
+        hand: [{ def: LIZARDS_BREATH, radiant: face === "radiant" }, RAPID_REPLENISH],
+        library: Array.from({ length: deck }, () => X),
+        graveyard: Array.from({ length: graveyard }, () => STOCKPILE),
+        exile: Array.from({ length: exile }, () => STOCKPILE),
+      },
+      p2: { hand: [STOCKPILE] },
+    });
+  }
+
+  function preview(s: Scenario): PreviewValue[] | null {
+    return shown(handCard(s.view("p1"), s.card(LIZARDS_BREATH).id));
+  }
+
+  function draws(s: Scenario): number {
+    return s.events.filter((event) => event.type === "drawn").length;
+  }
+
+  it("R280 base: the Deck largest names the Deck with its size, and the play then draws 1 after a hit of 2", () => {
+    const s = breath("base", 5, 2, 1);
+    expect(preview(s)).toEqual([{ label: "Your largest pile", value: 5, display: "Deck" }]);
+
+    s.play(LIZARDS_BREATH, { targets: AT_ENEMY_HERO });
+
+    expect(hitsOn(s, "p2")).toEqual([2]);
+    expect(draws(s)).toBe(1);
+  });
+
+  it("R280 base: the Exile largest names the Exile, and the play then hits for 6", () => {
+    const s = breath("base", 1, 2, 3);
+    expect(preview(s)).toEqual([{ label: "Your largest pile", value: 3, display: "Exile" }]);
+
+    s.play(LIZARDS_BREATH, { targets: AT_ENEMY_HERO });
+
+    expect(hitsOn(s, "p2")).toEqual([6]);
+  });
+
+  it("R280 base: a Graveyard–Exile tie names the Graveyard, listed first, and the play gives 2 mana", () => {
+    const s = breath("base", 0, 2, 2);
+    expect(preview(s)).toEqual([{ label: "Your largest pile", value: 2, display: "Graveyard" }]);
+
+    s.play(LIZARDS_BREATH, { targets: AT_ENEMY_HERO });
+
+    s.expectMana("p1", 5);
+  });
+
+  it("R280 base: three empty piles name the Deck at 0", () => {
+    expect(preview(breath("base", 0, 0, 0))).toEqual([{ label: "Your largest pile", value: 0, display: "Deck" }]);
+  });
+
+  it("R280 radiant: names the two largest in rank order, and the play then does both", () => {
+    const s = breath("radiant", 1, 3, 5);
+    expect(preview(s)).toEqual([
+      { label: "Your two largest piles", value: 5, display: "Exile" },
+      { label: "Your two largest piles", value: 3, display: "Graveyard" },
+    ]);
+
+    s.play(LIZARDS_BREATH, { targets: AT_ENEMY_HERO });
+
+    expect(hitsOn(s, "p2")).toEqual([8]);
+    s.expectMana("p1", 5);
+    expect(draws(s)).toBe(0);
+  });
+
+  it("R280 radiant: three equal piles name the Deck and the Graveyard", () => {
+    expect((preview(breath("radiant", 2, 2, 2)) ?? []).map((entry) => entry.display)).toEqual(["Deck", "Graveyard"]);
+  });
+
+  it("R280 each label is an exact substring of its face's text, with no placeholder in it", () => {
+    for (const face of FACES) {
+      const text = cardDef(LIZARDS_BREATH)[face].text;
+      for (const entry of preview(breath(face, 3, 2, 1)) ?? []) {
+        expect(text).toContain(entry.label);
+        expect(entry.label).not.toMatch(/[{}]/);
+      }
+    }
+  });
+
+  it("R280 it follows the piles as they change: a pile growing past another moves the preview", () => {
+    const s = scenario({
+      p1: { hand: [LIZARDS_BREATH, RAPID_REPLENISH, STOCKPILE], library: [X, X, X], graveyard: [STOCKPILE, STOCKPILE] },
+      p2: { hand: [STOCKPILE] },
+    });
+    expect(preview(s)?.[0]?.display).toBe("Deck");
+
+    // Stockpile draws 2 (deck 3 → 1) and lands in the graveyard (2 → 3).
+    s.play(STOCKPILE);
+
+    expect(preview(s)).toEqual([{ label: "Your largest pile", value: 3, display: "Graveyard" }]);
+  });
+
+  it("R280 in the opponent's hand it is hidden: p2's view carries no preview of it", () => {
+    const s = breath("base", 3, 1, 1);
+
+    expect(JSON.stringify(s.view("p2"))).not.toContain("Your largest pile");
+  });
+
+  it("R280 it reads only pile sizes: two games whose decks and hands differ but whose sizes match show the same preview", () => {
+    const one = scenario({
+      p1: { hand: [LIZARDS_BREATH, STOCKPILE], library: [X, X, X], graveyard: [STOCKPILE], exile: [STOCKPILE] },
+      p2: { hand: [STOCKPILE], library: [X] },
+    });
+    const other = scenario({
+      p1: { hand: [LIZARDS_BREATH, MENACE], library: [TEMPO_TIMMY, BIG_D_FENDER, RAPID_REPLENISH], graveyard: [STOCKPILE], exile: [STOCKPILE] },
+      p2: { hand: [MATH_EQUATION], library: [BIG_D_FENDER] },
+    });
+
+    expect(preview(other)).toEqual(preview(one));
+  });
+
+  it("R280 the hook is a pure read: no write, no state.active, and of a library or a hand only its size", () => {
+    for (const face of FACES) {
+      const s = breath(face, 3, 2, 1);
+      const card = must(s.hand("p1").find((c) => c.defId === LIZARDS_BREATH), "p1's Breath");
+      const scripts = must(CARDS[LIZARDS_BREATH], LIZARDS_BREATH);
+      const hook = must((card.radiant ? scripts.radiant : scripts.base).preview, "the Breath's hook");
+      const copy = structuredClone(s.state);
+      const self = must(copy.players.p1.hand.find((c) => c.id === card.id), "the Breath in the copy");
+      // A pile that answers its length and throws on anything else: the sizes are public, the cards are not.
+      const sizeOnly = (pile: CardInstance[], what: string): CardInstance[] =>
+        new Proxy(pile, {
+          get: (target, key) => {
+            if (key === "length") return target.length;
+            throw new Error(`a preview read ${what}[${String(key)}]`);
+          },
+        });
+      for (const player of ["p1", "p2"] as const) {
+        copy.players[player].library = sizeOnly(copy.players[player].library, `${player}'s library`);
+        copy.players[player].hand = sizeOnly(copy.players[player].hand, `${player}'s hand`);
+      }
+      Object.defineProperty(copy, "active", {
+        get: () => {
+          throw new Error("a preview read state.active");
+        },
+      });
+      deepFreeze(copy);
+
+      const answer = hook({ state: copy, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
+
+      expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      expect(answer.map((entry) => entry.display)).toEqual(face === "base" ? ["Deck"] : ["Deck", "Graveyard"]);
+    }
   });
 });
 
@@ -596,5 +763,142 @@ describe("R280 each Core hook is a pure read of public facts", () => {
     expect(previews(one, "p1").filter((list) => list !== null).length).toBeGreaterThanOrEqual(7);
     expect(previews(one, "p2").filter((list) => list !== null).length).toBeGreaterThanOrEqual(5);
     expect(previews(forP2, "p1")).not.toEqual(previews(one, "p1"));
+  });
+});
+
+// =============================================================================================
+// C #1 Curse of the Forgotten Classic: the damage per card times the opponent's exile size
+// =============================================================================================
+
+describe("C #1 Curse of the Forgotten Classic previews N, its one hit (R280)", () => {
+  function curse(face: Face, theirExile: number): Scenario {
+    return scenario({
+      p1: { hand: [{ def: CURSE, radiant: face === "radiant" }, RAPID_REPLENISH], library: [MENACE, TEMPO_TIMMY], exile: [STOCKPILE] },
+      p2: { hand: [STOCKPILE], exile: Array.from({ length: theirExile }, () => STOCKPILE), library: [MENACE] },
+    });
+  }
+
+  for (const face of FACES) {
+    it(`R280 ${face}: the label is the formula the face prints, an exact substring of its text`, () => {
+      const s = curse(face, 2);
+      const list = must(shown(handCard(s.view("p1"), s.card(CURSE).id)), "the Curse's preview");
+      expect(list.map((entry) => entry.label)).toEqual(["for each card in their exile"]);
+      for (const entry of list) expect(cardDef(CURSE)[face].text).toContain(entry.label);
+    });
+
+    for (const exiled of [0, 3]) {
+      it(`R280 ${face}: ${exiled} cards in their exile preview ${exiled}, and the Spell deals exactly that`, () => {
+        const s = curse(face, exiled);
+        expect(valueOf(handCard(s.view("p1"), s.card(CURSE).id))).toBe(exiled);
+
+        s.play(CURSE);
+
+        // R63: 0 is no hit at all. Your own exile is not counted.
+        expect(hitsOn(s, "p2")).toEqual(exiled === 0 ? [] : [exiled]);
+      });
+    }
+  }
+
+  it("R280 R386 an Upgrade of damage per card doubles the preview, and the hit", () => {
+    const s = curse("base", 3);
+    stepParam(s.card(CURSE), "damage", 1);
+    expect(valueOf(handCard(s.view("p1"), s.card(CURSE).id))).toBe(6);
+    s.play(CURSE);
+    expect(hitsOn(s, "p2")).toEqual([6]);
+  });
+
+  it("R280 in the opponent's hand it is hidden: p2's view carries no preview of it", () => {
+    const s = curse("base", 3);
+    expect(s.view("p2").opponent.hand).toEqual({ count: 2 });
+  });
+
+  it("R280 the hook is a pure read of public facts: no library, no hand, no state.active", () => {
+    for (const face of FACES) {
+      const s = curse(face, 4);
+      const card = must(s.hand("p1").find((c) => c.defId === CURSE), "p1's Curse");
+      const scripts = must(CARDS[CURSE], CURSE);
+      const hook = must((card.radiant ? scripts.radiant : scripts.base).preview, "the Curse's hook");
+      const { state, self } = guarded(s.state, card.id);
+      const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
+      expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      expect(answer).toEqual([{ label: "for each card in their exile", value: 4 }]);
+    }
+  });
+});
+
+// =============================================================================================
+// C #43 Plague Nuke: the mana it would give, the Plague Tokens on the Units on the field
+// =============================================================================================
+
+describe("C #43 Plague Nuke previews the mana it would give now (R280)", () => {
+  const LABEL = "for each Plague Token that was on them";
+  const VANILLA = "core-008";
+
+  function nuke(face: Face, mine: number, theirs: number): Scenario {
+    return scenario({
+      p1: { hand: [{ def: PLAGUE_NUKE, radiant: face === "radiant" }, RAPID_REPLENISH], field: [{ def: VANILLA, counters: { plague: mine } }] },
+      p2: { hand: [STOCKPILE], field: [{ def: MENACE, counters: { plague: theirs } }, TEMPO_TIMMY] },
+    });
+  }
+
+  function gained(s: Scenario): number {
+    // The Spell paid 3 of 4; read off p1's own view (§10.8).
+    return s.view("p1").you.mana.current - 1;
+  }
+
+  for (const face of FACES) {
+    it(`R280 ${face}: the label is the formula's words, an exact substring of its text with no placeholder`, () => {
+      const s = nuke(face, 1, 1);
+      const list = must(shown(handCard(s.view("p1"), s.card(PLAGUE_NUKE).id)), "the Nuke's preview");
+      expect(list.map((entry) => entry.label)).toEqual([LABEL]);
+      expect(cardDef(PLAGUE_NUKE)[face].text).toContain(LABEL);
+      expect(LABEL).not.toMatch(/[{}]/);
+    });
+
+    it(`R280 ${face}: the tokens on every Unit on both sides preview 5, and the Spell then gives exactly 5`, () => {
+      const s = nuke(face, 2, 3);
+      expect(valueOf(handCard(s.view("p1"), s.card(PLAGUE_NUKE).id))).toBe(5);
+
+      s.play(PLAGUE_NUKE);
+
+      expect(gained(s)).toBe(5);
+    });
+  }
+
+  it("R280 no tokens on the board preview 0, and the Spell gives nothing", () => {
+    const s = nuke("base", 0, 0);
+    expect(valueOf(handCard(s.view("p1"), s.card(PLAGUE_NUKE).id))).toBe(0);
+
+    s.play(PLAGUE_NUKE);
+
+    expect(gained(s)).toBe(0);
+  });
+
+  it("R280 R386 an Upgrade of mana per token doubles the preview, and the gain", () => {
+    const s = nuke("base", 1, 2);
+    stepParam(s.card(PLAGUE_NUKE), "mana", 1);
+    expect(valueOf(handCard(s.view("p1"), s.card(PLAGUE_NUKE).id))).toBe(6);
+
+    s.play(PLAGUE_NUKE);
+
+    expect(gained(s)).toBe(6);
+  });
+
+  it("R280 in the opponent's hand it is hidden: p2's view carries no preview of it", () => {
+    const s = nuke("base", 1, 1);
+    expect(JSON.stringify(s.view("p2"))).not.toContain(LABEL);
+  });
+
+  it("R280 the hook is a pure read of public facts: no library, no hand, no state.active", () => {
+    for (const face of FACES) {
+      const s = nuke(face, 2, 2);
+      const card = must(s.hand("p1").find((c) => c.defId === PLAGUE_NUKE), "p1's Nuke");
+      const scripts = must(CARDS[PLAGUE_NUKE], PLAGUE_NUKE);
+      const hook = must((card.radiant ? scripts.radiant : scripts.base).preview, "the Nuke's hook");
+      const { state, self } = guarded(s.state, card.id);
+      const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true });
+      expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      expect(answer).toEqual([{ label: LABEL, value: 4 }]);
+    }
   });
 });

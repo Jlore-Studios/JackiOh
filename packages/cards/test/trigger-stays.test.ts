@@ -58,7 +58,7 @@ const CORPSE_EATER = "core-089";
 const FAUCI = "core-091";
 const RENO = "core-053";
 const BREAD = "core-018";
-const HINDER = "core-021";
+const HINDER = "core-021"; // cast on draw; its Radiant face asks nothing (R431)
 const HONEYPOT = "core-060";
 const BREAD_TOKEN = "core-t-bread";
 const RUSH_TOKEN = "core-t-rush";
@@ -283,7 +283,7 @@ describe("R212 for traps: a trap answers an event as the board stood when it hap
   it("R212 a Bear Honeypot its opponent's Spell stole after a cast in the same list answers that cast for the player who held it then", () => {
     const s = scenario({
       seed: "edge-r8-honeypot-lifted",
-      p1: { hand: [VANILLA], field: [{ def: VANILLA, lane: 5 }], library: [HINDER, VANILLA, VANILLA, VANILLA] },
+      p1: { hand: [VANILLA], field: [{ def: VANILLA, lane: 5 }], library: [{ def: HINDER, radiant: true }, VANILLA, VANILLA, VANILLA] },
       p2: {
         hand: [VANILLA],
         field: [{ def: VANILLA, lane: 5 }],
@@ -365,7 +365,7 @@ describe("R212 for traps: a trap answers an event as the board stood when it hap
   it("R212 a Bear Honeypot that arrived after a cast in the same list does not answer that cast (R174)", () => {
     const s = scenario({
       seed: "edge-r8-honeypot-late",
-      p1: { hand: [VANILLA], field: [{ def: VANILLA, lane: 5 }], library: [HINDER, VANILLA, VANILLA, VANILLA] },
+      p1: { hand: [VANILLA], field: [{ def: VANILLA, lane: 5 }], library: [{ def: HINDER, radiant: true }, VANILLA, VANILLA, VANILLA] },
       p2: { hand: [VANILLA], field: [{ def: VANILLA, lane: 5 }], library: [...LIBRARY] },
     });
     // A 2-cost Spell: "Draw a card, then summon a Bear Honeypot face-down for the opponent."

@@ -143,10 +143,12 @@ describe("fused scripts belong to the state that fused them", () => {
     const first = craftedGame("fuse-registry-json", alpha, beta);
     const copy = JSON.parse(JSON.stringify(first)) as GameState;
     const id = onlyFused(copy);
-    // The def carries nothing but a card's fields: the id is what names the ingredients.
+    // The def carries a card's fields and, since R468, the ingredient list its id spells out. A
+    // readable id is still enough on its own: with the list taken off the def, it rebuilds the same.
     expect(Object.keys(copy.transientDefs[id] ?? {}).sort()).toEqual(
-      ["base", "cost", "id", "index", "name", "radiant", "rarity", "set", "tags", "token", "type"].sort(),
+      ["base", "cost", "id", "index", "ingredients", "name", "radiant", "rarity", "set", "tags", "token", "type"].sort(),
     );
+    delete copy.transientDefs[id]?.ingredients;
     expect(fusedIngredients(id)).toEqual([alpha.id, beta.id]);
 
     // A process that never ran this Fuse.

@@ -30,15 +30,14 @@ import type { Effect, EffectContext } from "../script";
 import { hideFromOwner } from "../ownLibrary";
 import type { CardInstance, GameState } from "../state";
 import {
-  cardAt,
   isLocked,
   isReserved,
   isUnitToken,
   moveToZone,
-  pileAt,
   placeOnField,
   removeFromField,
   slotsOf,
+  zoneContents,
   type ZoneSlot,
 } from "../zones";
 import { chosenOptions } from "./choose";
@@ -59,9 +58,8 @@ type SwapEntry = { from: ZoneSlot; to: ZoneSlot; cards: CardInstance[] };
  * under the top are in the zone too, so they swap with it (§3.2).
  */
 function contentsOf(state: GameState, ref: ZoneSlot): CardInstance[] {
-  if (ref.row === "units") return [...(pileAt(state, ref) ?? [])];
-  const card = cardAt(state, ref);
-  return card === null ? [] : [card];
+  // B5 E21, R446: a backrow zone's pile and a carrier's Unit travel whole too (`zones.zoneContents`).
+  return zoneContents(state, ref);
 }
 
 /** R73: "lane-preserving" — the same row and lane on the other side of the centre line. */

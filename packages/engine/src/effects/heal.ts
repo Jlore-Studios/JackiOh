@@ -38,8 +38,10 @@ export function heal(args: HealArgs): Effect {
         healHeroUpTo(ctx, target.player, args.upTo);
         return;
       }
-      // A unit reaches N only if its own damage is in the way; healing never raises max health.
-      healUnit(ctx, target.instance, args.upTo - unitView(ctx.state, target.instance).health);
+      // A unit reaches N only if its own damage is in the way; healing never raises max health. B5 E8:
+      // the heal is what it would restore, which is what a conversion into damage deals (R462).
+      const missing = args.upTo - unitView(ctx.state, target.instance).health;
+      healUnit(ctx, target.instance, Math.min(target.instance.damage, missing));
     },
   };
 }

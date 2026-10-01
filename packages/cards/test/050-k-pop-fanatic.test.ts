@@ -1,5 +1,6 @@
 // #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
-// died (R76); fizzles if the target left; radiant Divine Shield". The polish-4 edge-case hunt, round 5
+// died (R76); fizzles if the target left; radiant Divine Shield". Patch v0.2.0 (R437): the pending
+// steal marks its target purple in both views while it waits. The polish-4 edge-case hunt, round 5
 // (lens "card by card"): a base #50 made Radiant on the field gains its radiant face's Divine Shield
 // at once, even after a granted one was spent (§5.2).
 //
@@ -23,7 +24,8 @@
 // steal), #49 Snom Bunny Mind Control (a steal of its own) and #92 Felinor Fiender (a Stack card).
 
 import { describe, expect, it } from "vitest";
-import type { PlayerId } from "@jackioh/shared";
+import type { Action, ActionInput, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import { beginGame, createGame, fold, hashState, reduce, viewFor, type GameState } from "@jackioh/engine";
 import { scenario, type Scenario } from "./_harness";
 import { base, def, radiant } from "../src/scripts/050-k-pop-fanatic";
 
@@ -565,5 +567,171 @@ describe("#50 K-Pop Fanatic — a Radiant flip on the field adds Divine Shield (
     s.attack(menace, kpop);
     s.expectInZone(kpop, "field");
     expect(s.card(kpop).damage).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R437: the pending steal marks its target purple, in both views, while it waits.
+// ---------------------------------------------------------------------------------------------
+
+const STEAL_MARK = { mark: "steal", color: "purple" };
+
+/** The marks a card's view carries, wherever the viewer sees it on the field. */
+function marksIn(view: PlayerView, instanceId: string): unknown {
+  for (const side of [view.you, view.opponent]) {
+    for (const unit of side.units) if (unit?.instanceId === instanceId) return unit.marks;
+    for (const card of side.backrow) if (card !== null && "instanceId" in card && card.instanceId === instanceId) return card.marks;
+  }
+  return "not on the field";
+}
+
+function markEvents(events: readonly GameEvent[]): Extract<GameEvent, { type: "marked" }>[] {
+  return events.filter((event): event is Extract<GameEvent, { type: "marked" }> => event.type === "marked");
+}
+
+describe("#50 K-Pop Fanatic — R437 the pending steal marks its target", () => {
+  it("R437 the Cry marks its target purple in both views, and the mark goes when the steal resolves", () => {
+    const g = scenario({
+      p1: { hand: [KPOP, FILLER], library: [...LIBRARY] },
+      p2: { hand: [FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },
+    });
+    const prey = g.unit("p2", 2);
+    if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
+    g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
+
+    expect(markEvents(g.lastEvents)).toEqual([{ type: "marked", instanceId: prey.id, ...STEAL_MARK, added: true }]);
+    expect(marksIn(g.view("p1"), prey.id)).toEqual([STEAL_MARK]);
+    expect(marksIn(g.view("p2"), prey.id)).toEqual([STEAL_MARK]);
+    // K-Pop Fanatic itself carries none.
+    const fanatic = g.unit("p1", 1);
+    expect(marksIn(g.view("p1"), fanatic?.id ?? "")).toBeUndefined();
+
+    g.endTurn();
+    // Still waiting through p2's turn.
+    expect(marksIn(g.view("p2"), prey.id)).toEqual([STEAL_MARK]);
+    g.endTurn();
+
+    // Stolen at p1's start of turn: the mark is gone, from both views, with a `marked` removal.
+    expect(g.card(prey).controller).toBe("p1");
+    expect(marksIn(g.view("p1"), prey.id)).toBeUndefined();
+    expect(marksIn(g.view("p2"), prey.id)).toBeUndefined();
+    expect(markEvents(g.events).map((event) => event.added)).toEqual([true, false]);
+    expect(g.state.marks).toBeUndefined();
+  });
+
+  it("R437, R76 a steal that fizzles on a card already this player's takes the mark away too", () => {
+    const g = scenario({
+      p1: { hand: [KPOP, MIND_CONTROL], library: [...LIBRARY], mana: 5 },
+      p2: { hand: [FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },
+    });
+    const prey = g.unit("p2", 2);
+    if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
+    g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
+    g.play(MIND_CONTROL, { targets: [{ pick: "instance", instanceId: prey.id }] });
+    // Taking control is not leaving the field (R171): the steal still waits, and so does its mark.
+    expect(marksIn(g.view("p1"), prey.id)).toEqual([STEAL_MARK]);
+
+    untilActive(g, "p2");
+    untilActive(g, "p1");
+
+    expect(marksIn(g.view("p1"), prey.id)).toBeUndefined();
+    expect(markEvents(g.events).map((event) => event.added)).toEqual([true, false]);
+  });
+
+  it("R437, R174 the mark goes the moment the target leaves the field, with the steal", () => {
+    const g = scenario({
+      p1: { hand: [KPOP, FILLER], library: [...LIBRARY] },
+      // Flood (4) bounces every unit: p2 takes the prey back to hand on its own turn.
+      p2: { hand: [FLOOD, FILLER], field: [{ def: SEVEN_SEVEN, lane: 2 }], library: [...LIBRARY] },
+    });
+    const prey = g.unit("p2", 2);
+    if (prey === null) throw new Error("setup: p2 should hold the 7/7 in lane 2");
+    g.play(KPOP, { targets: [{ pick: "instance", instanceId: prey.id }] });
+    g.endTurn();
+
+    g.play(FLOOD);
+
+    g.expectInZone(prey, "hand");
+    expect(g.state.delayed).toHaveLength(0);
+    expect(markEvents(g.lastEvents)).toEqual([{ type: "marked", instanceId: prey.id, ...STEAL_MARK, added: false }]);
+    // The removal comes after the bounce that ended it.
+    const types = g.lastEvents.map((event) => event.type);
+    expect(types.lastIndexOf("marked")).toBeGreaterThan(types.findIndex((type) => type === "bounced"));
+    expect(g.state.marks).toBeUndefined();
+  });
+
+  it("R437, R33 a face-down target: p1 sees the mark on its back and the event as the sentinel; p2 sees both in full", () => {
+    const g = scenario({
+      p1: { hand: [KPOP, FILLER], library: [...LIBRARY] },
+      p2: { hand: [FILLER], backrow: [{ def: "core-096", lane: 3 }], library: [...LIBRARY] },
+    });
+    const trap = g.backrow("p2", 3);
+    if (trap === null) throw new Error("setup: p2 should hold a face-down trap in backrow lane 3");
+    g.play(KPOP, { targets: [{ pick: "instance", instanceId: trap.id }] });
+
+    const back = g.view("p1").opponent.backrow[2];
+    expect(back).toMatchObject({ faceDown: true, marks: [STEAL_MARK] });
+    expect(back).not.toHaveProperty("defId");
+    const seen = markEvents(g.view("p1").events);
+    expect(seen).toEqual([{ type: "marked", instanceId: "hidden", ...STEAL_MARK, added: true }]);
+    expect(marksIn(g.view("p2"), trap.id)).toEqual([STEAL_MARK]);
+    expect(markEvents(g.view("p2").events)[0]?.instanceId).toBe(trap.id);
+  });
+
+  it("R437, §9.3 in a real game the mark rides the log: folding it rebuilds the same marked state and views", () => {
+    // p1's deck holds K-Pop Fanatic; p2's cheap Units give it a target on p1's second turn.
+    const p1Deck = [KPOP, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015", "core-016",
+      "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055"];
+    const p2Deck = ["core-015", "core-011", "core-004", "core-002", "core-005", "core-006", "core-008", "core-012", "core-013", "core-016",
+      "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055"];
+    const log: Action[] = [];
+    let n = 0;
+    const act = (state: GameState, body: ActionInput): GameState => {
+      n += 1;
+      const action = { ...body, nonce: `kpop-mark-${n}` } as Action;
+      const result = reduce(state, action);
+      if (result.error !== undefined) throw new Error(result.error);
+      log.push(action);
+      return result.state;
+    };
+
+    let found: { seed: string; state: GameState } | null = null;
+    for (let at = 0; at < 300 && found === null; at += 1) {
+      const seed = `kpop-mark-${at}`;
+      const begun = beginGame(createGame({ seed, decks: [p1Deck, p2Deck] })).state;
+      const p1Has = begun.players.p1.hand.some((card) => card.defId === KPOP);
+      const p2Has = begun.players.p2.hand.some((card) => card.defId === "core-015");
+      if (p1Has && p2Has && begun.pending === null) found = { seed, state: begun };
+    }
+    expect(found).not.toBeNull();
+    if (found === null) return;
+
+    let state = found.state;
+    for (const player of ["p1", "p2"] as PlayerId[]) {
+      state = act(state, { type: "mulligan", keep: state.players[player].hand.map((card) => card.id), playerId: player });
+    }
+    state = act(state, { type: "endTurn", playerId: "p1" });
+    const token = state.players.p2.hand.find((card) => card.defId === "core-015");
+    if (token === undefined) throw new Error("p2 should hold Me and Mr Token");
+    state = act(state, { type: "play", instanceId: token.id, zone: { row: "units", lane: 1 }, playerId: "p2" } as ActionInput);
+    state = act(state, { type: "endTurn", playerId: "p2" });
+    const fanatic = state.players.p1.hand.find((card) => card.defId === KPOP);
+    if (fanatic === undefined) throw new Error("p1 should hold K-Pop Fanatic");
+    state = act(state, {
+      type: "play",
+      instanceId: fanatic.id,
+      targets: [{ pick: "instance", instanceId: token.id }],
+      playerId: "p1",
+    } as ActionInput);
+
+    expect(marksIn(viewFor(state, "p1"), token.id)).toEqual([STEAL_MARK]);
+    expect(marksIn(viewFor(state, "p2"), token.id)).toEqual([STEAL_MARK]);
+
+    const replayed = fold({ seed: found.seed, decks: [p1Deck, p2Deck], log });
+    expect(replayed.errors).toEqual([]);
+    expect(hashState(replayed.state)).toBe(hashState(state));
+    for (const viewer of ["p1", "p2"] as PlayerId[]) {
+      expect(viewFor(replayed.state, viewer)).toEqual(viewFor(state, viewer));
+    }
   });
 });

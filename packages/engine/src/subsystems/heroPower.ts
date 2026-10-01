@@ -40,6 +40,7 @@ import type { Effect, EffectContext, Hook } from "../script";
 import { stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState } from "../state";
 import { paused as isPaused } from "../work";
+import { actsOnField } from "../zones";
 
 /** R43: where the rolled power and its last use live on the instance. */
 export const POWER_KEY = "power";
@@ -380,12 +381,19 @@ export const heroPower: Hook = (ctx) => {
  *
  * R43's once per turn is checked ahead of the mana and the phase: it is the rule that belongs to
  * the card rather than to the player's turn, and it is the reason a player needs to hear.
+ *
+ * R384 generalises it: a power is an activated ability, so it is used only while its card acts on
+ * the field (B3.2 rule 2, `activate.isActingOnField`) — a Heroic Power buried under a backrow pile
+ * (B5 E21) acts no more than a unit under a Stack pile does (R13). Every other card's abilities are
+ * `activate.whyCannotActivateAbility`'s, which follows the same order.
  */
 export function whyCannotActivate(state: GameState, player: PlayerId, instanceId: string): string | null {
   const card = findInstance(state, instanceId);
   if (card === undefined) return `no card ${instanceId}`;
   if (card.controller !== player) return "that card is not yours";
   if (card.zone.z !== "field") return "that card is not on the field";
+  // B5 E21: a card dormant under a backrow pile does not act (§3.2, R13, R447).
+  if (!actsOnField(state, card)) return "that card is under a pile and does not act";
 
   const power = powerOf(card);
   if (power === null) return "that card has no power";

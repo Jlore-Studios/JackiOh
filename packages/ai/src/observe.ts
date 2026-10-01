@@ -12,7 +12,9 @@
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
+  ANSWER_KEY,
   SETUP_WORK,
+  announcedFaceDownTo,
   cloneState,
   effectiveCost,
   findDef,
@@ -33,6 +35,9 @@ function everyInstance(state: GameState): CardInstance[] {
     out.push(...side.hand, ...side.library, ...side.graveyard, ...side.exile, ...side.resolving);
     for (const pile of side.units) if (pile !== null) out.push(...pile);
     for (const card of side.backrow) if (card !== null) out.push(card);
+    // B5 E21, R446: a backrow pile's dormant cards and a carrier's Unit are on the board too.
+    for (const pile of side.backrowPiles ?? []) out.push(...pile);
+    for (const card of side.carried ?? []) if (card !== null) out.push(card);
   }
   return out;
 }
@@ -79,8 +84,14 @@ export function hiddenInstanceIds(state: GameState, seat: PlayerId): Set<string>
   for (const card of state.players[opp].library) hidden.add(card.id);
 
   for (const player of PLAYER_IDS) {
-    for (const card of state.players[player].backrow) {
+    // B5 E21: a face-down card dormant under a backrow pile is as hidden as one on top (R33, R447).
+    const side = state.players[player];
+    for (const card of [...side.backrow, ...(side.backrowPiles ?? []).flat()]) {
       if (card !== null && backrowHiddenFrom(state, card, seat)) hidden.add(card.id);
+    }
+    // R448: a card waiting in the resolving zone to be set face-down is its player's alone.
+    for (const card of state.players[player].resolving) {
+      if (announcedFaceDownTo(state, card, seat)) hidden.add(card.id);
     }
   }
 
@@ -125,6 +136,11 @@ function toPlaceholder(card: CardInstance): void {
   delete card.returnToHandAtEndOfTurn;
   // R311: what the card's owner was shown of it going into their library names it too.
   delete card.knownAs;
+  // R385, R386, B5 E39 (patch v0.2.0): its Brittle count, what Degrade, Upgrade and KY's Constant
+  // changed on it and the enchantments riding it are the card's as much as its face is.
+  delete card.tuning;
+  delete card.brittle;
+  delete card.enchantments;
 }
 
 type Loose = Record<string, unknown>;
@@ -164,6 +180,20 @@ function scrubResume<T>(entry: T, hidden: ReadonlySet<string>): T {
     ...(entry as Loose),
     resume: { ...(loose.resume as Loose), data: { ...data, event: scrubEvent(data.event, hidden) } },
   } as T;
+}
+
+/**
+ * R465: a multiple-choice problem's key (`ANSWER_KEY`, Classic+ #42) rides in the resume data of the
+ * prompt that asks it, and of the tail a pause inside its answered step parks. It never leaves the
+ * engine, so the seat reads no key, its own prompt's included: it answers from what the prompt shows,
+ * as a human does, and a simulated answer is judged right by nothing (`answeredCorrectly`).
+ */
+function withoutAnswerKey<T>(entry: T): T {
+  const loose = entry as { resume?: { data?: Loose } };
+  const data = loose.resume?.data;
+  if (data === undefined || data === null || !(ANSWER_KEY in data)) return entry;
+  const { [ANSWER_KEY]: _key, ...rest } = data;
+  return { ...(entry as Loose), resume: { ...(loose.resume as Loose), data: rest } } as T;
 }
 
 /**
@@ -225,7 +255,7 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   // Step 5: queue entries of hidden cards go; events naming one lose the definition.
   next.triggerQueue = next.triggerQueue
     .filter((entry) => !belongsToHidden(entry, hidden))
-    .map((entry) => scrubResume(entry, hidden));
+    .map((entry) => withoutAnswerKey(scrubResume(entry, hidden)));
 
   let cursor = next.workCursor;
   const keptWork: typeof next.work = [];
@@ -234,7 +264,7 @@ export function redact(state: GameState, seat: PlayerId): GameState {
       if (index < next.workCursor) cursor -= 1;
       return;
     }
-    keptWork.push(scrubOwedMulligan(scrubResume(item, hidden), opp));
+    keptWork.push(withoutAnswerKey(scrubOwedMulligan(scrubResume(item, hidden), opp)));
   });
   next.work = keptWork;
   next.workCursor = Math.max(0, Math.min(cursor, keptWork.length));
@@ -242,9 +272,9 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   next.echoQueue = next.echoQueue.filter((entry) => !belongsToHidden(entry, hidden));
   next.delayed = next.delayed
     .filter((entry) => !belongsToHidden(entry, hidden))
-    .map((entry) => scrubResume(entry, hidden));
+    .map((entry) => withoutAnswerKey(scrubResume(entry, hidden)));
   next.dispatch = next.dispatch.map((entry) => ({ ...entry, event: scrubEvent(entry.event, hidden) }));
-  if (next.pending !== null) next.pending = scrubResume(next.pending, hidden);
+  if (next.pending !== null) next.pending = withoutAnswerKey(scrubResume(next.pending, hidden));
 
   // Step 6: a transient definition only a hidden card uses would name that card.
   const referenced = new Set<string>();
