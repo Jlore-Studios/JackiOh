@@ -551,7 +551,13 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
  * the definition behind an option is exactly what the chooser is owed.
  */
 function optionView(state: GameState, viewer: PlayerId, option: PromptOption): PendingOption {
-  const base = { key: option.key, label: option.label };
+  // B5 E18: a `pick` option's cost against the budget, and the face an option shows when it is Radiant.
+  const base = {
+    key: option.key,
+    label: option.label,
+    ...(option.cost === undefined ? {} : { cost: option.cost }),
+    ...(option.radiant === true ? { radiant: true as const } : {}),
+  };
   const selection = option.selection;
   switch (selection.pick) {
     case "instance": {
@@ -560,13 +566,19 @@ function optionView(state: GameState, viewer: PlayerId, option: PromptOption): P
       // enemy face-down trap (#49, #50, an Echo repeat's fresh pick). The option is the zone's card
       // and nothing more: the id to answer with, never the definition, and neither the label nor
       // the key the engine built from its name. A card revealed out of a library is the opposite
-      // case: the prompt IS its reveal, so the chooser sees it in full (above).
+      // case: the prompt IS its reveal, so the chooser sees it in full (above) — and so is B5 E17's
+      // look at the opponent's hand (Classic #11), whose options only their chooser is sent (R81).
       if (card !== undefined && isFaceDownTo(state, card, viewer)) {
         return { key: `instance:${selection.instanceId}`, label: HIDDEN_OPTION_LABEL, instanceId: selection.instanceId };
       }
       return card === undefined
         ? { ...base, instanceId: selection.instanceId }
-        : { ...base, instanceId: selection.instanceId, defId: card.defId };
+        : {
+            ...base,
+            instanceId: selection.instanceId,
+            defId: card.defId,
+            ...(card.radiant ? { radiant: true as const } : {}),
+          };
     }
     case "hero":
       return { ...base, player: selection.player };
@@ -590,6 +602,11 @@ function pendingView(state: GameState, viewer: PlayerId): PendingView | null {
   return promptView(state, viewer, pending);
 }
 
+/**
+ * The chooser's own prompt, copied field by field: `resume` never travels, so nothing a prompt keeps
+ * for its answer — the owner a prompt the other player holds continues as (B5 E18), a multiple-choice
+ * problem's key (R465) — can leave the engine through the view.
+ */
 function promptView(state: GameState, viewer: PlayerId, pending: PendingChoice): PendingView {
   return {
     forYou: true,
@@ -599,6 +616,7 @@ function promptView(state: GameState, viewer: PlayerId, pending: PendingChoice):
     min: pending.min,
     max: pending.max,
     prompt: pending.prompt,
+    ...(pending.budget === undefined ? {} : { budget: pending.budget }),
   };
 }
 
@@ -861,7 +879,16 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
         ...(hidden(event.instanceId) ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID } : {}),
         ...(event.byInstanceId !== null && hidden(event.byInstanceId) ? { byInstanceId: HIDDEN_ID } : {}),
       };
-    case "stolen":
+    // B5 E2, E16, R466: a stolen card reads to whoever could read it where it was taken from — the
+    // hand's holder, the controller of a face-down zone, everyone for a face-up card or a public pile
+    // (`readableFrom`, written as it was taken) — and to whoever can read it where it is now (R97). A
+    // card out of a library was nobody's to read, so its old owner never learns which card left.
+    case "stolen": {
+      const { readableFrom, ...shown } = event;
+      return hidden(event.instanceId) && !readableWhereStolen(event, readableFrom, viewer)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID }
+        : shown;
+    }
     case "crumbled":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
 
@@ -920,6 +947,32 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
       return event.type === "healthSet" && event.sourceId !== null && hidden(event.sourceId)
         ? { ...event, sourceId: HIDDEN_ID }
         : event;
+  }
+}
+
+/**
+ * B5 E2, E16, R466: whether `viewer` could read the card a `stolen` event names where it was taken
+ * from. `ownership.changeOwner` writes who could (`readableFrom`) as it takes the card; an event
+ * without the record is judged by its pile alone — a hand is its holder's (§9.1), a library nobody's,
+ * a graveyard, an exile pile or the resolving zone everyone's (a play is public, R98), and a card off
+ * the field nobody's, since whether it stood face-down there is not otherwise on the event.
+ */
+function readableWhereStolen(
+  event: Extract<GameEvent, { type: "stolen" }>,
+  readableFrom: readonly PlayerId[] | undefined,
+  viewer: PlayerId,
+): boolean {
+  if (readableFrom !== undefined) return readableFrom.includes(viewer);
+  switch (event.zone) {
+    case "hand":
+      return event.from === viewer;
+    case "graveyard":
+    case "exile":
+    case "resolving":
+      return true;
+    case "library":
+    case "field":
+      return false;
   }
 }
 

@@ -12,6 +12,7 @@
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
+  ANSWER_KEY,
   SETUP_WORK,
   cloneState,
   effectiveCost,
@@ -172,6 +173,20 @@ function scrubResume<T>(entry: T, hidden: ReadonlySet<string>): T {
 }
 
 /**
+ * R465: a multiple-choice problem's key (`ANSWER_KEY`, Classic+ #42) rides in the resume data of the
+ * prompt that asks it, and of the tail a pause inside its answered step parks. It never leaves the
+ * engine, so the seat reads no key, its own prompt's included: it answers from what the prompt shows,
+ * as a human does, and a simulated answer is judged right by nothing (`answeredCorrectly`).
+ */
+function withoutAnswerKey<T>(entry: T): T {
+  const loose = entry as { resume?: { data?: Loose } };
+  const data = loose.resume?.data;
+  if (data === undefined || data === null || !(ANSWER_KEY in data)) return entry;
+  const { [ANSWER_KEY]: _key, ...rest } = data;
+  return { ...(entry as Loose), resume: { ...(loose.resume as Loose), data: rest } } as T;
+}
+
+/**
  * R266, R185: setup's owed mulligan item (R224, R265) carries two things the seat may not read: the
  * sealed answers of the seats still to resolve (`rest`), and, while a seat's own resolution waits on
  * a cast's question, the cards it returned (`returned`, full instances until they go back). The
@@ -230,7 +245,7 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   // Step 5: queue entries of hidden cards go; events naming one lose the definition.
   next.triggerQueue = next.triggerQueue
     .filter((entry) => !belongsToHidden(entry, hidden))
-    .map((entry) => scrubResume(entry, hidden));
+    .map((entry) => withoutAnswerKey(scrubResume(entry, hidden)));
 
   let cursor = next.workCursor;
   const keptWork: typeof next.work = [];
@@ -239,7 +254,7 @@ export function redact(state: GameState, seat: PlayerId): GameState {
       if (index < next.workCursor) cursor -= 1;
       return;
     }
-    keptWork.push(scrubOwedMulligan(scrubResume(item, hidden), opp));
+    keptWork.push(withoutAnswerKey(scrubOwedMulligan(scrubResume(item, hidden), opp)));
   });
   next.work = keptWork;
   next.workCursor = Math.max(0, Math.min(cursor, keptWork.length));
@@ -247,9 +262,9 @@ export function redact(state: GameState, seat: PlayerId): GameState {
   next.echoQueue = next.echoQueue.filter((entry) => !belongsToHidden(entry, hidden));
   next.delayed = next.delayed
     .filter((entry) => !belongsToHidden(entry, hidden))
-    .map((entry) => scrubResume(entry, hidden));
+    .map((entry) => withoutAnswerKey(scrubResume(entry, hidden)));
   next.dispatch = next.dispatch.map((entry) => ({ ...entry, event: scrubEvent(entry.event, hidden) }));
-  if (next.pending !== null) next.pending = scrubResume(next.pending, hidden);
+  if (next.pending !== null) next.pending = withoutAnswerKey(scrubResume(next.pending, hidden));
 
   // Step 6: a transient definition only a hidden card uses would name that card.
   const referenced = new Set<string>();

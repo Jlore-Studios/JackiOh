@@ -428,14 +428,18 @@ export const EVENT_KEY = "event";
 
 /**
  * An event trigger's own list, re-entered by its id (R113). A `TriggerDef` lives in an array
- * (`triggers`, `handTriggers`), not under a `Script` key, so a trigger or a trap whose list asks
+ * (`triggers`, `handTriggers`, `deckTriggers`, `graveyardTriggers`), not under a `Script` key, so a trigger or a trap whose list asks
  * mid-list parks its tail under the trigger's id, and the tail is rebuilt here from the event the
  * continuation carries in its data.
  */
 function triggerStepFor(script: Script, resume: Resume): Hook | undefined {
-  const def = [...(script.triggers ?? []), ...(script.handTriggers ?? [])].find(
-    (candidate) => candidate.id === resume.hook,
-  );
+  const def = [
+    ...(script.triggers ?? []),
+    ...(script.handTriggers ?? []),
+    // B5 E26: a deck or graveyard trigger's list parks under its id like any other trigger's.
+    ...(script.deckTriggers ?? []),
+    ...(script.graveyardTriggers ?? []),
+  ].find((candidate) => candidate.id === resume.hook);
   if (def === undefined) return undefined;
   return (ctx) => {
     const event: unknown = ctx.data[EVENT_KEY];

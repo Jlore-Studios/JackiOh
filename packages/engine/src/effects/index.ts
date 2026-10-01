@@ -208,6 +208,27 @@ export { destroyAtNextTurnStart, discardHandAtTurnEnd, forRestOfGame } from "./d
 // ---- v0.2.0 verbs: damage and combat (set health, redirect, split damage, statuses) ----
 
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
+// Prompts and movement: the new prompt kinds and the opponent's hand as options (E17, E18, R465),
+// cards between the players' piles (E2, E16, R466), trigger a Cry (E13, R467), summon this out of a
+// hand or a deck (E26).
+export {
+  ANSWER_OPTION_IDS,
+  answeredCorrectly,
+  chooseAnswer,
+  chooseCell,
+  chooseCostInHand,
+  chooseNumber,
+  choosePick,
+  chooseReward,
+  chosenCells,
+  chosenNumber,
+  matchesLibraryFilter,
+} from "./choose";
+export type { CellScope, PickFilter, PileSpec } from "./choose";
+export { drawFromOpponent, giveFromHand, takeFromLibrary } from "./give";
+export type { TakenRiders } from "./give";
+export { hasTriggerableCry, triggerCry } from "./cry";
+export { summonThis } from "./summonThis";
 
 // generation, below A6a's prompt verbs — Plague placements and removal (B5 E19, R471):
 export {
