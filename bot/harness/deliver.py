@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from harness import asks
 from harness import gates as gates_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_REVIEW, LABEL_PR,
@@ -170,6 +171,10 @@ class Deliverer:
 
     def _item(self) -> None:
         number = int(self.plan["number"])
+        self._deliver_item(number)
+        self._close_asks(number)
+
+    def _deliver_item(self, number: int) -> None:
         status = self._late_stop(number, str(self.result.get("status")))
         kind = "revise" if self.plan["action"] == "revise" else "build"
         if status == "infra":
@@ -183,6 +188,27 @@ class Deliverer:
         else:
             self._build(number, status)
         self._settle(number)
+
+    def _close_asks(self, number: int) -> None:
+        """Settle the asks this run took (`asks`): 🎉 when it answered them, 😕 when it ended
+        without an answer, or back to waiting when the item is queued again."""
+        if not self._record(number).get("taken_asks"):
+            return
+        status = str(self.result.get("status"))
+        blocked = LABEL_BLOCKED in self._labels(number)
+        again = not blocked and status in ("interrupted", "infra", "failed")
+        settled: list[str] = []
+
+        def change(state: dict[str, Any]) -> None:
+            entry = state_item(state, number)
+            if again:
+                asks.give_back(entry)
+            else:
+                settled[:] = asks.pop_taken(entry)
+
+        self.ctx.store.update(change, f"asks #{number}")
+        answered = not blocked and status == "approved"
+        asks.react(self.gh, settled, asks.DONE if answered else asks.NO_ANSWER)
 
     def _labels(self, number: int) -> set[str]:
         return label_names(self.gh.get_issue(number))
@@ -298,6 +324,10 @@ class Deliverer:
         pr = int(record.get("pr") or 0) if status == "approved" else 0
         if self.plan["action"] == "build" and pr:
             target = pr
+            # The asks that came in during the build are answered on the pull request now.
+            self.ctx.store.update(lambda s: asks.add(state_item(s, pr),
+                                                     asks.pop_waiting(state_item(s, number))),
+                                  f"asks #{number} to #{pr}")
         is_pr = "pull_request" in self.gh.get_issue(target)
         if is_pr:
             pull = self.gh.get_pull(target)
@@ -582,7 +612,20 @@ class Deliverer:
             # A survey that did not finish gives its slot back: it is due again as before.
             before = {"last_run": self.plan.get("previous_last_run"),
                       "requested": bool(self.plan.get("was_requested"))}
-            self.ctx.store.update(lambda s: s["suggest"].update(before), "survey unfinished")
+
+            def unfinished(s: dict[str, Any]) -> None:
+                s["suggest"].update(before)
+                asks.give_back(s["suggest"])
+
+            self.ctx.store.update(unfinished, "survey unfinished")
+        else:
+            settled: list[str] = []
+
+            def done(s: dict[str, Any]) -> None:
+                settled[:] = asks.pop_taken(s["suggest"])
+
+            self.ctx.store.update(done, "survey asks")
+            asks.react(self.gh, settled, asks.DONE)
         found = self.result.get("suggestions") or []
         open_now = [i for i in self.gh.list_issues(labels=LABEL_SUGGESTION) if "pull_request" not in i]
         room = max(0, self.cfg.suggestions_max_open - len(open_now))

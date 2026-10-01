@@ -136,9 +136,80 @@ class CommentTests(unittest.TestCase):
         self.send("/harness run #5")
         self.assertEqual(self.gh.dispatches[-1]["inputs"], {"item": "5", "force": "true", "mode": "auto"})
 
-    def test_unknown_verbs_get_the_help(self):
-        self.send("/harness dance")
-        self.assertIn("I do not know `dance`", self.reply())
+    def test_a_misspelt_verb_runs_nothing_and_asks(self):
+        self.send("@jgoetzmann-bot stauts")
+        self.assertIn("`stauts` is not a command; did you mean `status`?", self.reply())
+        self.assertEqual(self.gh.label_names(5), set())
+        self.assertEqual(self.gh.reacted, [(501, "eyes"), (501, "rocket")])
+        self.assertNotIn("5", self.ctx.store.load()["items"])
+
+    def test_free_text_after_the_slash_asks_for_a_build_too(self):
+        self.send("/harness please make it sparkle")
+        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
+        self.assertIn("read your notes", self.reply())
+
+    def test_help_and_status(self):
+        self.send("/harness help")
+        self.assertIn("**Commands.**", self.reply())
+        self.send("@jgoetzmann-bot help build")
+        self.assertIn("**`build [notes]`** (level 2, maintainer; also written `work`)", self.reply())
+        self.send("/harness status")
+        self.assertIn("Night bot status", self.reply())
+        self.assertIn("lists the commands", self.reply())
+        self.assertNotIn("| Verb |", self.reply())
+
+    def reactions(self, cid=501):
+        return [content for i, content in self.gh.reacted if i == cid]
+
+    def test_work_for_a_model_gets_a_thumbs_up_and_is_kept_on_the_record(self):
+        self.send("/harness build")
+        self.assertEqual(self.reactions(), ["eyes", "+1", "rocket"])
+        self.assertEqual(self.ctx.store.load()["items"]["5"]["asks"], ["c:501"])
+
+    def test_a_command_with_no_model_work_gets_no_thumbs_up(self):
+        self.send("/harness status")
+        self.assertEqual(self.reactions(), ["eyes", "rocket"])
+        self.gh.threads[5]["state"] = "closed"
+        events.handle(self.ctx, "issue_comment", {**comment_event(5, "/harness build"),
+                                                  "comment": {**comment_event(5, "")["comment"],
+                                                              "id": 502, "body": "/harness build"}})
+        self.assertIn("is closed", self.reply())
+        self.assertEqual(self.reactions(502), ["eyes", "rocket"])
+
+    def test_a_note_during_a_run_waits_for_the_next_pass(self):
+        self.gh.threads[5]["labels"] = [{"name": LABEL_WORKING}]
+        self.send("@jgoetzmann-bot also make it sparkle")
+        self.assertEqual(self.reactions(), ["eyes", "+1", "rocket"])
+        record = self.ctx.store.load()["items"]["5"]
+        self.assertEqual((record["pending_request"], record["asks"]), (True, ["c:501"]))
+
+    def test_stop_answers_what_was_waiting(self):
+        self.send("/harness build")
+        events.handle(self.ctx, "issue_comment", {**comment_event(5, ""), "comment": {
+            "id": 502, "body": "/harness stop", "user": OPERATOR, "author_association": "OWNER"}})
+        self.assertEqual(self.reactions(), ["eyes", "+1", "rocket", "confused"])
+        self.assertEqual(self.reactions(502), ["eyes", "rocket"])
+        self.assertEqual(self.ctx.store.load()["items"]["5"]["asks"], [])
+
+    def test_a_request_routed_to_the_pull_request_keeps_its_comment(self):
+        self.gh.threads[5]["labels"] = [{"name": LABEL_PR_OPEN}]
+        self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR,))
+        self.send("@jgoetzmann-bot also make it sparkle")
+        self.assertEqual(self.ctx.store.load()["items"]["9"]["asks"], ["c:501"])
+
+    def test_a_suggest_request_waits_for_the_survey(self):
+        self.send("/harness suggest")
+        self.assertEqual(self.reactions(), ["eyes", "+1", "rocket"])
+        self.assertEqual(self.ctx.store.load()["suggest"]["asks"], ["c:501"])
+
+    def test_a_line_comment_on_a_diff_is_kept_by_its_own_kind(self):
+        self.gh.add_pull(9, "feature/mine")
+        events.handle(self.ctx, "pull_request_review_comment", {
+            "action": "created", "sender": OPERATOR, "pull_request": {"number": 9},
+            "comment": {"id": 77, "body": "@jgoetzmann-bot rename this", "user": OPERATOR,
+                        "author_association": "OWNER"}})
+        self.assertEqual(self.ctx.store.load()["items"]["9"]["asks"], ["rc:77"])
+        self.assertIn((77, "+1"), self.gh.reacted)
 
     def test_revise_on_a_pull_request_from_a_fork_is_refused(self):
         self.gh.add_pull(9, "their-branch", fork=True)

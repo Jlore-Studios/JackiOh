@@ -131,7 +131,7 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(self.verbs("/harness work"), [("build", "", False)])
         self.assertEqual(self.verbs("/harness fix it"), [("revise", "it", False)])
         self.assertEqual(self.verbs("/harness resume"), [("start", "", False)])
-        self.assertEqual(self.verbs("/harness help"), [("status", "", False)])
+        self.assertEqual(self.verbs("/harness help"), [("help", "", False)])
 
     def test_force_flag(self):
         self.assertEqual(self.verbs("/harness build --force"), [("build", "", True)])
@@ -160,8 +160,50 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(len(found), commands.MAX_COMMANDS)
         self.assertEqual([c.verb for c in found[:2]], ["status", "build"])
 
-    def test_unknown_verb_is_reported(self):
-        self.assertEqual(self.verbs("/harness dance"), [("unknown:dance", "", False)])
+    def test_words_that_are_not_a_verb_are_a_request_after_either_prefix(self):
+        self.assertEqual(self.verbs("/harness dance"), [("request", "dance", False)])
+        self.assertEqual(self.verbs("/harness please make it shiny --force"),
+                         [("request", "please make it shiny", True)])
+        self.assertEqual(self.verbs("/harness"), self.verbs("@jgoetzmann-bot"))
+
+    def test_both_prefixes_read_every_verb_and_alias_the_same(self):
+        lines = [*commands.VERBS, *commands.ALIASES, "build make it spin", "revise tighten it",
+                 "run #12", "start --force", "help build", "please make the coin shinier",
+                 "stauts", "biuld --force"]
+        for line in lines:
+            forms = [f"/harness {line}", f"/harness-{line}", f"@{self.bot} {line}",
+                     f"@{self.bot} /harness {line}"]
+            read = [[(c.verb, c.args, c.force, c.meant) for c in commands.parse(f, self.bot)]
+                    for f in forms]
+            self.assertTrue(read[0] and all(r == read[0] for r in read), (line, read))
+
+    def test_a_misspelt_verb_runs_nothing(self):
+        def meant(body):
+            return [(c.verb, c.meant) for c in commands.parse(body, self.bot)]
+        self.assertEqual(meant("@jgoetzmann-bot stauts"), [("typo", "status")])
+        self.assertEqual(meant("/harness biuld --force"), [("typo", "build")])
+        self.assertEqual(meant("/harness rnu #5"), [("typo", "run")])
+        self.assertEqual(meant("@jgoetzmann-bot fit"), [("typo", "fix")])
+        self.assertEqual(commands.parse("/harness stauts", self.bot)[0].level, 1)
+        # More than one word is a request in plain words, near misses and all.
+        self.assertEqual(meant("@jgoetzmann-bot do the thing"), [("request", "")])
+        self.assertEqual(meant("/harness sparkle"), [("request", "")])
+
+    def test_a_colon_after_a_control_verb_makes_its_words_its_own(self):
+        self.assertEqual(self.verbs("@jgoetzmann-bot halt: away this week"),
+                         [("halt", "away this week", False)])
+        self.assertEqual(self.verbs("/harness halt: away this week"),
+                         [("halt", "away this week", False)])
+        self.assertEqual(self.verbs("@jgoetzmann-bot halt away this week")[0][0], "request")
+
+    def test_help_for_one_verb(self):
+        text = commands.help_text(self.bot, "fix")
+        self.assertIn("`revise <notes>`", text)
+        self.assertIn("`fix`, `update`", text)
+        self.assertIn("For example: `@jgoetzmann-bot revise", text)
+        self.assertIn("I do not know `dance`", commands.help_text(self.bot, "dance"))
+        self.assertIn("| `help [verb]` |", commands.help_text(self.bot))
+        self.assertEqual(set(commands.VERB_HELP), set(commands.VERBS))
 
     def test_help_mentions_every_verb(self):
         text = commands.HELP.format(bot=self.bot)
