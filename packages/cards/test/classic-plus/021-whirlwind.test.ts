@@ -86,7 +86,8 @@ describe("C+ #21 Whirlwind", () => {
         p2: { hand: [FILLER], field: [{ def: BODY, lane: 1 }, { def: ARMORED, lane: 2 }] },
       });
       s.play(WHIRLWIND);
-      expect(hits(s)).toEqual([3, 3, 3].slice(0, hits(s).length));
+      // Solarius itself is a Unit too: three hits of 1 + 2.
+      expect(hits(s)).toEqual([3, 3, 3]);
       s.expectStats(s.unit("p2", 1) ?? "", { health: 6 });
       s.expectStats(s.unit("p2", 2) ?? "", { health: 4 });
     });
@@ -116,10 +117,18 @@ describe("C+ #21 Whirlwind", () => {
     });
 
     it("a Reborn unit it kills comes back at 1 health", () => {
-      const s = scenario({ p1: { hand: [WHIRLWIND, FILLER] }, p2: { hand: [FILLER], field: [{ def: ONE, lane: 2 }] } });
-      // The defender's Divine Shield takes the first hit; a second Whirlwind kills it and Reborn returns it.
-      s.play(WHIRLWIND);
-      expect(s.unit("p2", 2)?.defId).toBe(ONE);
+      const s = scenario({ p1: { hand: [WHIRLWIND, WHIRLWIND, FILLER] }, p2: { hand: [FILLER], field: [{ def: ONE, lane: 2 }] } });
+      const first = s.unit("p2", 2);
+      if (first === null) throw new Error("setup");
+      // The defender's Divine Shield takes the first Whirlwind; the second kills it and Reborn returns it.
+      s.play(s.hand("p1")[0] ?? WHIRLWIND);
+      expect(s.unit("p2", 2)?.id).toBe(first.id);
+      s.play(s.hand("p1").find((card) => card.defId === WHIRLWIND) ?? WHIRLWIND);
+      expect(s.lastEvents.some((event) => event.type === "destroyed" && event.instanceId === first.id)).toBe(true);
+      const back = s.unit("p2", 2);
+      expect(back?.defId).toBe(ONE);
+      s.expectStats(back ?? "", { health: 1 });
+      expect(s.stats(back ?? "").keywords.some((keyword) => keyword.kind === "Reborn")).toBe(false);
     });
   });
 
@@ -156,11 +165,12 @@ describe("C+ #21 Whirlwind", () => {
       });
       const card = s.card(WHIRLWIND);
       s.play(WHIRLWIND);
-      // Refill the hand to the cap before the end of the turn: one card back from the library.
+      // Stockpile's "Draw 2" refills the hand to the cap before the end of the turn.
       s.play(FILLER);
-      expect(s.hand("p1").length).toBeGreaterThanOrEqual(HAND_CAP - 1);
+      expect(s.hand("p1")).toHaveLength(HAND_CAP);
       s.endTurn();
       expect(s.card(card).zone.z).toBe("graveyard");
+      expect(s.events.some((event) => event.type === "burned" && event.instanceId === card.id)).toBe(true);
     });
   });
 });
