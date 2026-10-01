@@ -220,8 +220,9 @@ function withXStep(card: CardInstance, key: string, delta: number): Pick<CardIns
  * better — more is better for all but Tribute, and nothing goes below 1 (`TUNED_FLOOR`). A Brittle
  * count in force moves itself (B3.3 rule 5); a printed Brittle that has not started moves the number
  * it will start at. An X-cost card with no chosen X (off the field) has its X still to come, so its
- * step always applies ("its X counts 1 less or more when it resolves"); one on the field applies
- * while the X it counts can move.
+ * step always applies ("its X counts 1 less or more when it resolves"). On the field its X has
+ * resolved, so it has no X to move (SPEC §8.7 row 69: Classic+ #69 Buff Billy's Cry Upgrades draw
+ * from the stats and keyword rows only); elsewhere one applies while the X it counts can move.
  */
 function xItems(state: GameState, card: CardInstance, direction: TuneDirection): XItem[] {
   const items: XItem[] = [];
@@ -232,7 +233,7 @@ function xItems(state: GameState, card: CardInstance, direction: TuneDirection):
     tidyTuning(card);
   };
 
-  if (isXCost(state, card)) {
+  if (isXCost(state, card) && card.zone.z !== "field") {
     if (card.x === undefined) {
       items.push({ key: X_KEY, before: 0, after: better, write: step(X_KEY, better) });
     } else {

@@ -269,10 +269,12 @@ describe("B3.4 the menu, row by row (R386)", () => {
     expect(unitView(state, unit)).toMatchObject({ attack: 6, maxHealth: 6 });
     unit.tuning = { x: { X: 1 } };
     expect(unitView(state, unit)).toMatchObject({ attack: 9, maxHealth: 9 });
-    // On the field its X is known, so a Degrade of it needs room above 1.
+    // On the field its X has resolved: neither a Degrade nor an Upgrade has an X to move (SPEC §8.7 row 69).
     unit.x = 1;
     unit.tuning = undefined;
     expect(applicableChanges(state, unit, "degrade")).not.toContain("x");
+    expect(applicableChanges(state, unit, "upgrade")).not.toContain("x");
+    expect(applicableChanges(state, unit, "upgrade")).toEqual(["stats", "keyword"]);
   });
 
   it("R386 X: a Brittle count in force moves itself (never below 1); a printed one not yet started moves the number it starts at", () => {
