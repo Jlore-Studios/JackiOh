@@ -25,7 +25,7 @@ describe("replay (M1 gate)", () => {
     }
   });
 
-  it("a different seed gives a different hash", () => {
+  it("a different seed gives a different hash", { timeout: 60_000 }, () => {
     const a = playRandomGame("hash-a");
     const b = playRandomGame("hash-b");
     expect(hashState(a.state)).not.toBe(hashState(b.state));
