@@ -80,7 +80,7 @@ import {
   type PlayNeed,
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
-import { MatchCardsProvider, useCardInfo, useFieldPower } from "./catalog.ts";
+import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
@@ -524,6 +524,7 @@ function CardOption(props: {
 }) {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
+  const copied = useCopiedDef(props.item.card);
   const name = props.item.defId === undefined ? props.item.label : info.name;
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
@@ -532,7 +533,10 @@ function CardOption(props: {
     props.item.defId === undefined
       ? null
       : props.item.card !== undefined
-        ? liveFace(info, props.item.card, fieldPower === undefined ? {} : { fieldPower })
+        ? liveFace(info, props.item.card, {
+            ...(fieldPower === undefined ? {} : { fieldPower }),
+            ...(copied === undefined ? {} : { copied }),
+          })
         : faceModel({
             defId: props.item.defId,
             def: info.def,
@@ -1083,7 +1087,11 @@ function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
 function WaitingCard(props: { card: CardView; keep: boolean }) {
   const info = useCardInfo(props.card.defId, props.card.radiant);
   const fieldPower = useFieldPower(props.card.instanceId);
-  const face = liveFace(info, props.card, fieldPower === undefined ? {} : { fieldPower });
+  const copied = useCopiedDef(props.card);
+  const face = liveFace(info, props.card, {
+    ...(fieldPower === undefined ? {} : { fieldPower }),
+    ...(copied === undefined ? {} : { copied }),
+  });
   const verdict = props.keep ? "keep" : "redraw";
   return (
     <span

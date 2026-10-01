@@ -1,22 +1,24 @@
 // The per-card states a face draws beside its printed text (SPEC §10.8, patch v0.2.0): a Brittle count
 // (B3.3, R385), the enchantments riding the card (B5 E39), a card standing in a unit zone as a Unit
-// (B3.1, R383) and a card Degrade or Upgrade changed (B3.4, R386, tuning.ts). Each is a badge on the
+// (B3.1, R383), a card Degrade or Upgrade changed (B3.4, R386, tuning.ts) and each open quest of a
+// quest line with its progress, "1/2" (Classic #90 In Too Deep, B5 E33, R404). Each is a badge on the
 // face — a glyph with the count where there is one, its words as the tooltip and the accessible name —
 // and a line in the inspect overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)"
 // the verb, so a floor is "can't cost less than (2)").
 //
 // `stateBadges` lists a face's badges in the order the rail draws them: the Brittle count first (it is
-// the one that ends the card), then the tuned mark, the enchantments and the animated mark. Everything
+// the one that ends the card), then the open quests (what the card is doing), the tuned mark, the
+// enchantments and the animated mark. Everything
 // is read off the FaceModel, which read it off the view (CLAUDE.md rule 7); a face with none of them
 // has no badge at all.
 
-import type { CardType, Enchantment } from "@jackioh/shared";
+import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
 import type { IconName } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "tuned" | Enchantment["kind"] | "animated";
+export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -36,6 +38,16 @@ export const PILE_WORDS = "Cards buried under this pile";
 /** R385: "Brittle 2: crumbles at 0". */
 export function brittleWords(count: number): string {
   return `Brittle ${String(count)}: crumbles at 0`;
+}
+
+/** R404: an open quest's progress against its goal, "1/2". */
+export function questProgress(quest: QuestView["open"][number]): string {
+  return `${String(quest.progress)}/${String(quest.goal)}`;
+}
+
+/** R404: an open quest in words, "Quest: Draw 2 cards (1/2)". */
+export function questWords(quest: QuestView["open"][number]): string {
+  return `Quest: ${quest.text} (${questProgress(quest)})`;
 }
 
 /** E39, R432: an enchantment in a player's words. */
@@ -89,6 +101,15 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       icon: "brittle",
       words: brittleWords(brittle),
       data: { "data-brittle": String(brittle) },
+    });
+  }
+  for (const quest of face.quest?.open ?? []) {
+    badges.push({
+      kind: "quest",
+      text: questProgress(quest),
+      icon: null,
+      words: questWords(quest),
+      data: { "data-quest": quest.id, "data-progress": String(quest.progress), "data-goal": String(quest.goal) },
     });
   }
   const tuning = face.tuning;

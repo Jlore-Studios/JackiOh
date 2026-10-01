@@ -166,6 +166,11 @@ function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): numbe
   return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
+/** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
+function questText(view: PlayerView, instanceId: string, quest: string): string | null {
+  return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
+}
+
 /** What became of a card a full deck turned away (R316), as a line ends. */
 const OVERFLOW_OUTCOME: Readonly<Record<LibraryOverflowOutcome, string>> = {
   notCreated: "was not created",
@@ -324,10 +329,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
     case "healthSet":
       return `${capitalised(name.whose(event.player))} hero's health was set to ${event.health}`;
-    case "questProgressed":
-      return `${name.seat(event.player)} quest ${event.quest}: ${event.progress}/${event.goal}`;
+    case "questProgressed": {
+      // R404: the event names the quest by its id; its words are the card's view's while it is open.
+      const text = questText(view, event.instanceId, event.quest);
+      const where = `${name.whose(event.player)} ${name.instance(event.instanceId, "card")} quest`;
+      return capitalised(`${where}: ${text === null ? "" : `${text}, `}${String(event.progress)}/${String(event.goal)}`);
+    }
     case "questCompleted":
-      return `${name.seat(event.player)} completed quest ${event.quest}`;
+      // A completed quest has left the view's open quests, so its words are gone with it.
+      return capitalised(`${name.whose(event.player)} ${name.instance(event.instanceId, "card")} completed a quest`);
     case "rolledBack":
       return `The board went back ${event.turnsAgo} turn${event.turnsAgo === 1 ? "" : "s"}`;
     case "chaosRolled": {
@@ -418,6 +428,8 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
     case "costChanged":
     case "positionSwitched":
     case "controlChanged":
+    case "questProgressed":
+    case "questCompleted":
       return byInstance(event.instanceId);
     case "attackDeclared":
     case "attackCancelled":

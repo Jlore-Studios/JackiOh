@@ -55,7 +55,7 @@ import {
 import CardMarks from "../cards/CardMarks.tsx";
 import { marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import { useCardInfo, useFieldPower } from "./catalog.ts";
+import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { conditionAttr, glowAttr } from "./glow.ts";
@@ -210,6 +210,7 @@ export default function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
   const fieldPower = useFieldPower(card?.instanceId);
+  const copied = useCopiedDef(card);
   const settings = useCardSettings();
   // The preview opens only while the panel's "Hover previews" is on too (useInspectTrigger.tsx).
   const panelHover = useSetting("hoverPreviews");
@@ -224,6 +225,7 @@ export default function Card(props: CardProps): ReactElement {
       : liveFace(info, shown, {
           ...(props.type === undefined ? {} : { type: props.type }),
           ...(fieldPower === undefined ? {} : { fieldPower }),
+          ...(copied === undefined ? {} : { copied }),
         });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.

@@ -17,7 +17,16 @@
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
-import { fillParams, type CardDef, type CardDefs, type CardType, type PlayerView, type Rarity, type Tag } from "@jackioh/shared";
+import {
+  fillParams,
+  type CardDef,
+  type CardDefs,
+  type CardType,
+  type CardView,
+  type PlayerView,
+  type Rarity,
+  type Tag,
+} from "@jackioh/shared";
 
 import type { RolledPower } from "../cards/index.ts";
 
@@ -103,6 +112,13 @@ export function useCardInfo(defId: string, radiant: boolean): CardInfo {
   const lookup = useContext(CatalogContext);
   const match = useContext(MatchCardsContext);
   return lookup?.(defId, radiant) ?? lookupFromDefs(match.defs)(defId, radiant) ?? unknownCard(defId);
+}
+
+/** B5 E14: the definition of the Spell a copier has the text of (`CardView.copies`), when it copies one. */
+export function useCopiedDef(card: CardView | null | undefined): CardDef | undefined {
+  const copies = card?.copies;
+  const info = useCardInfo(copies?.defId ?? "", copies?.radiant ?? false);
+  return copies === undefined ? undefined : info.def;
 }
 
 /** The power a Heroic Power on the field rolled, when the view names one for this instance. */

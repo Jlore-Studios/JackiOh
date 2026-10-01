@@ -1076,3 +1076,26 @@
 .inspect-facedown-hint {
   color: var(--text-dim, #9aa1b8);
 }
+
+/* R404: a quest's text, its progress and the rewards it offers, under it (StateNotes.tsx). */
+.inspect-quest {
+  align-items: flex-start;
+}
+
+.inspect-quest-progress {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspect-quest-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.inspect-quest-rewards {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}

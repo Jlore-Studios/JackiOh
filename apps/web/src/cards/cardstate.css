@@ -1,8 +1,8 @@
 /*
  * Patch v0.2.0's per-card states on a face (CardStates.tsx, cardState.ts, tuning.ts; SPEC §10.8):
- * the state rail of badges (Brittle R385, the tuned mark R386, the enchantments E39, the animated mark
- * R383), the numbers a Degrade or an Upgrade moved, the tuned stat pips and the tuned keyword chips,
- * and a backrow pile's depth (E21).
+ * the state rail of badges (Brittle R385, a quest's progress R404, the tuned mark R386, the
+ * enchantments E39, the animated mark R383), the numbers a Degrade or an Upgrade moved, the tuned stat
+ * pips and the tuned keyword chips, and a backrow pile's depth (E21).
  *
  * Every mark reads by shape as well as colour: a glyph (a cracked pane, ▲ ▼ ◆, a return arrow, a
  * spark, a crosshair, a cog), a dotted box, a "+" or a struck "−". Nothing here moves, so the reduced
@@ -86,6 +86,21 @@
 
 .cf .cf-state[data-state="tuned"][data-tuned="tuned"] .cf-state-text {
   color: var(--cf-state-tuned);
+}
+
+/* R404: a quest's progress, "1/2", a gold-ringed pill so a count like "12/12" fits. */
+.cf .cf-state[data-state="quest"] {
+  width: auto;
+  min-width: var(--cf-state-size);
+  padding: 0 0.3em;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) var(--radiant, #ffd24a),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+.cf .cf-state[data-state="quest"] .cf-state-text {
+  font-size: calc(var(--cf-state-size) * 0.48);
 }
 
 /* The "+n" a small face folds the rest of its badges into (STATE_BADGES_SMALL_MAX, constants.ts). */

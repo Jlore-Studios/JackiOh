@@ -24,7 +24,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, type Interaction } from "../actions.ts";
-import { MatchCardsProvider, useCardInfo } from "../catalog.ts";
+import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { liveFace } from "../faces.ts";
 import { setLanding } from "./landing.ts";
 import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DragSource, type DropSpot } from "./model.ts";
@@ -519,7 +519,8 @@ function DragGhost(props: {
   testId?: string;
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
-  const face = props.card === null ? null : liveFace(info, props.card);
+  const copied = useCopiedDef(props.card);
+  const face = props.card === null ? null : liveFace(info, props.card, copied === undefined ? {} : { copied });
   const text = face === null ? info.text : face.text.full;
   const stats = face === null ? (info.attack === undefined || info.health === undefined ? null : { attack: info.attack, health: info.health }) : face.stats;
   const style: CSSProperties = { left: props.at.x, top: props.at.y };

@@ -27,6 +27,12 @@
 //
 // An Animated Field Spell or Trap prints the attack and health of the Unit it becomes (B3.1 rule 1),
 // so its face carries them as a Unit's does, wherever it is.
+//
+// A face in play carries a quest line as the view gives it (`quest`, B5 E33, R404: In Too Deep's open
+// quests, their progress and rewards, its auras), which cardState.ts draws as badges. A copier (Classic
+// #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
+// with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
+// cost, type and art, and `copying` names the card it copies for the inspect notes.
 
 import {
   fillParams,
@@ -38,6 +44,7 @@ import {
   type Enchantment,
   type Keyword,
   type Param,
+  type QuestView,
   type Rarity,
   type PreviewValue,
   type PrintedRarity,
@@ -171,6 +178,10 @@ export type FaceModel = {
   loc?: number | null;
   /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
   marks?: readonly CardMark[];
+  /** B5 E33, R404: in play, the card's quest line (`CardView.quest`); null for a card with none. */
+  quest?: QuestView | null;
+  /** B5 E14, R511: in play, the Spell a copier's text is now (`CardView.copies`); null when it copies none. */
+  copying?: { defId: string; name: string; radiant: boolean } | null;
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -200,6 +211,10 @@ export type InPlay = {
   animated?: { home?: number };
   /** R437: the marks on the card (`CardView.marks`). */
   marks?: readonly CardMark[];
+  /** B5 E33, R404: the card's quest line (`CardView.quest`). */
+  quest?: QuestView;
+  /** B5 E14, R399: the Spell a copier has the text of (`CardView.copies`), with its definition. */
+  copies?: { def: CardDef; radiant: boolean; params?: Readonly<Record<string, number>> };
 };
 export type FaceSource = {
   defId: string;
@@ -235,7 +250,10 @@ export function faceModel(source: FaceSource): FaceModel {
   const vanilla = inPlay?.vanilla === true;
   const printedText = textOf(def, source.radiant);
   // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
-  const liveText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
+  const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
+  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads.
+  const copies = inPlay?.copies;
+  const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
   const keywords = source.live?.keywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
@@ -261,7 +279,7 @@ export function faceModel(source: FaceSource): FaceModel {
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
-    refs: def?.refs ?? [],
+    refs: [...(copies?.def.refs ?? []), ...(def?.refs ?? [])],
     values: printsItsText ? (inPlay?.preview ?? []) : [],
     keywords,
     inPlay: inPlay !== undefined,
@@ -278,6 +296,32 @@ export function faceModel(source: FaceSource): FaceModel {
     animated: inPlay?.animated ?? null,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
+    quest: inPlay?.quest ?? null,
+    copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+  };
+}
+
+/**
+ * B5 E14, R511: a copier's text in play — the copied text where its own face prints its copying
+ * sentence (its base text), so whatever else its face prints stays: a Radiant Echo still reads "Echo 1"
+ * over the text it copies, marked as its Radiant face marks it. A face that does not print that
+ * sentence prints the copied text alone.
+ */
+function copiedText(own: FaceText, def: CardDef | undefined, copied: FaceText): FaceText {
+  const sentence = def === undefined ? "" : fillParams(def, "base");
+  const at = sentence === "" ? -1 : own.full.indexOf(sentence);
+  if (at < 0) return copied;
+  const after = at + sentence.length;
+  const by = (offset: number) => (range: TextRange): TextRange => ({ start: range.start + offset, end: range.end + offset });
+  const tuned = (copied.tuned ?? []).map((range) => ({ ...range, ...by(at)(range) }));
+  return {
+    full: own.full.slice(0, at) + copied.full + own.full.slice(after),
+    marks: [
+      ...own.marks.filter((range) => range.end <= at),
+      ...copied.marks.map(by(at)),
+      ...own.marks.filter((range) => range.start >= after).map(by(copied.full.length - sentence.length)),
+    ],
+    ...(tuned.length === 0 ? {} : { tuned }),
   };
 }
 
