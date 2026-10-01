@@ -191,6 +191,23 @@ import * as mclassic_plus_012_7_legion_of_the_hungry from "./classic-plus/012-7-
 import * as mclassic_plus_012_8_frostspatula from "./classic-plus/012-8-frostspatula";
 import * as mclassic_plus_013_mommy_barker from "./classic-plus/013-mommy-barker";
 import * as mclassic_plus_014_forever from "./classic-plus/014-forever";
+import * as mclassic_plus_015_conjure_rush_token from "./classic-plus/015-conjure-rush-token";
+import * as mclassic_plus_016_conjure_rush_token from "./classic-plus/016-conjure-rush-token";
+import * as mclassic_plus_017_conjure_rush_token from "./classic-plus/017-conjure-rush-token";
+import * as mclassic_plus_018_gullible_treatler from "./classic-plus/018-gullible-treatler";
+import * as mclassic_plus_019_league_of_losers from "./classic-plus/019-league-of-losers";
+import * as mclassic_plus_019_1_top_loser from "./classic-plus/019-1-top-loser";
+import * as mclassic_plus_019_2_jungle_loser from "./classic-plus/019-2-jungle-loser";
+import * as mclassic_plus_019_3_mid_loser from "./classic-plus/019-3-mid-loser";
+import * as mclassic_plus_019_4_support_loser from "./classic-plus/019-4-support-loser";
+import * as mclassic_plus_019_5_bot_loser from "./classic-plus/019-5-bot-loser";
+import * as mclassic_plus_020_mushroom_power from "./classic-plus/020-mushroom-power";
+import * as mclassic_plus_021_whirlwind from "./classic-plus/021-whirlwind";
+import * as mclassic_plus_022_blood_moon from "./classic-plus/022-blood-moon";
+import * as mclassic_plus_023_dropshipping from "./classic-plus/023-dropshipping";
+import * as mclassic_plus_024_crushing_walls from "./classic-plus/024-crushing-walls";
+import * as mclassic_plus_025_soul_shot from "./classic-plus/025-soul-shot";
+import * as mclassic_plus_026_tommy_tempo from "./classic-plus/026-tommy-tempo";
 import * as mclassic_plus_027_zephrys_zealotism from "./classic-plus/027-zephrys-zealotism";
 import * as mclassic_plus_028_nuestro_hogar_nuestras_tumbas from "./classic-plus/028-nuestro-hogar-nuestras-tumbas";
 import * as mclassic_plus_029_portal_to_the_past from "./classic-plus/029-portal-to-the-past";
@@ -388,6 +405,23 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_012_8_frostspatula,
   mclassic_plus_013_mommy_barker,
   mclassic_plus_014_forever,
+  mclassic_plus_015_conjure_rush_token,
+  mclassic_plus_016_conjure_rush_token,
+  mclassic_plus_017_conjure_rush_token,
+  mclassic_plus_018_gullible_treatler,
+  mclassic_plus_019_league_of_losers,
+  mclassic_plus_019_1_top_loser,
+  mclassic_plus_019_2_jungle_loser,
+  mclassic_plus_019_3_mid_loser,
+  mclassic_plus_019_4_support_loser,
+  mclassic_plus_019_5_bot_loser,
+  mclassic_plus_020_mushroom_power,
+  mclassic_plus_021_whirlwind,
+  mclassic_plus_022_blood_moon,
+  mclassic_plus_023_dropshipping,
+  mclassic_plus_024_crushing_walls,
+  mclassic_plus_025_soul_shot,
+  mclassic_plus_026_tommy_tempo,
   mclassic_plus_027_zephrys_zealotism,
   mclassic_plus_028_nuestro_hogar_nuestras_tumbas,
   mclassic_plus_029_portal_to_the_past,

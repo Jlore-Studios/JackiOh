@@ -19,6 +19,7 @@ import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { armorOf, hasKeyword, opponentOf } from "@jackioh/shared";
 import { ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR } from "./config";
 import { cardTypeOf } from "./faces";
+import { creditedKillerId } from "./killCredit";
 import { unitView } from "./layers";
 import { healingReplaced, lethalHitWindow } from "./replacements";
 import { isSpellSource } from "./restrictions";
@@ -195,7 +196,8 @@ function creditKiller(unit: CardInstance, source: CardInstance | null, killedBef
     delete unit.lastDamagedBy;
     return;
   }
-  unit.lastDamagedBy = source.id;
+  // R412: a kill credit in force on the source names another unit (`killCredit.ts`).
+  unit.lastDamagedBy = creditedKillerId(source, unit);
 }
 
 /**
@@ -338,7 +340,7 @@ function landHit(sink: DamageSink, args: DamageArgs, amountIn: number, redirects
     target.instance.markedDestroyed = true;
     // R42: the Poisonous hit is the one that destroys it, whatever health it left — unless something
     // had already killed it, in which case this hit landed on a dead unit and kills nothing.
-    if (!killedBefore) target.instance.lastDamagedBy = source.id;
+    if (!killedBefore) target.instance.lastDamagedBy = creditedKillerId(source, target.instance);
   }
 
   // Step 8: Lifesteal heals the source's controller's hero by the amount dealt. R85: an effect
