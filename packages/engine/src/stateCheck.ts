@@ -539,6 +539,9 @@ function collect(sink: EngineSink, dying: readonly CardInstance[], cause: DeathC
       // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
       // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
       killerId: cause === "sacrificed" ? null : (snapshot.lastDamagedBy ?? null),
+      // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
+      // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
+      ...(snapshot.radiant ? { radiant: true as const } : {}),
     });
   }
 
