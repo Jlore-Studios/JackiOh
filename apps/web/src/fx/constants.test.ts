@@ -93,6 +93,10 @@ const S2 = {
   FX_SPEED_MAX: 3,
   FX_SPEED_DEFAULT: 1,
   FX_SPEED_STEP: 0.25,
+  FX_FLICKER_RETURN_AT: 0.5,
+  FX_REDIRECT_FLIGHT_FRACTION: 0.6,
+  FX_COUNTER_TRAUMA: 0.25,
+  FX_REWIND_TRAUMA: 0.35,
   FX_INTENSITY_SCALE: { off: 0, low: 0.45, normal: 1, high: 1.6 },
   FX_SETTINGS_KEY: "jackioh.fx.v1",
   FX_CENTER: { x: 0.5, y: 0.45 },
@@ -132,6 +136,8 @@ describe("S2 the effects constants", () => {
       constants.FX_CONCEAL_AT,
       constants.FX_LUNGE_STANDOFF,
       constants.FX_LUNGE_CONTACT_AT,
+      constants.FX_FLICKER_RETURN_AT,
+      constants.FX_REDIRECT_FLIGHT_FRACTION,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
