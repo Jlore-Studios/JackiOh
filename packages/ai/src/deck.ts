@@ -24,6 +24,8 @@ export type AiDeckOptions = {
   theme?: string | null;
   /** The seat's handicap manaCap; default MAX_MANA. Shifts the curve and the uncastable test. */
   manaCap?: number;
+  /** R390: these ids' weights are multiplied by `by` (the sweep's pass 2, as `themeBoost` leans a theme). */
+  boost?: { ids: readonly string[]; by: number };
 };
 
 export const AI_DECK = {
@@ -189,6 +191,7 @@ export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {})
   const unitsNeeded = Math.ceil(size * AI_DECK.minUnitShare);
   const themeNeeded = theme === null ? 0 : Math.ceil(size * AI_DECK.themeMinShare);
   const castableCeiling = manaCap + AI_DECK.costSlack;
+  const boosted = new Set(options.boost?.ids ?? []);
 
   const deck: CardDef[] = [...includeDefs];
   const counts: Record<CostBucket, number> = { "0-1": 0, "2": 0, "3": 0, "4+": 0 };
@@ -222,6 +225,7 @@ export function buildAiDeck(rng: Rng, size: number, options: AiDeckOptions = {})
       if (isUnit(def) && units < unitsNeeded) weight *= AI_DECK.unitBoost;
       if (theme !== null && hasTag(def, theme)) weight *= AI_DECK.themeBoost;
       if (queryCost(def) > castableCeiling) weight *= AI_DECK.uncastable;
+      if (boosted.has(def.id)) weight *= options.boost?.by ?? 1;
       return weight;
     });
 

@@ -214,6 +214,7 @@ const SERVER_ACTOR_TEST = "../../../apps/server/test/match/actor.test.ts";
 const SERVER_CLOCK_TEST = "../../../apps/server/test/match/clock.test.ts";
 const SERVER_RECOVERY_TEST = "../../../apps/server/test/match/recovery.test.ts";
 const AI_SHADOW_BAN_TEST = "../../ai/test/shadowBan.test.ts";
+const AI_DECK_TEST = "../../ai/test/deck.test.ts";
 const AI_DECIDE_TEST = "../../ai/test/decide.test.ts";
 const WEB_PRACTICE_CORE_TEST = "../../../apps/web/src/practice/core.test.ts";
 /** R203's and R204's proofs (SPEC §10.11): the client's sound cue table, and the director that plays it. */
@@ -2711,9 +2712,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Patch v0.2.0's catalog rows (docs/classic-sets.md B2, B4.2, B4.3; issue #40).
 
   // Proved by cards query.test.ts "R380 …" (a pool that names no set reaches all three, one that
-  // names a set keeps to it).
+  // names a set keeps to it), and packages/ai deck.test.ts and observe.test.ts "R380 …" (the AI's
+  // decks and determinizations draw from every set).
   it("R380 makes one format of every set: a pool that names no set draws from all of them", () => {
-    provenIn(380, CARDS_QUERY_TEST);
+    provenIn(380, CARDS_QUERY_TEST, AI_DECK_TEST, AI_OBSERVE_TEST);
   });
 
   // Proved by cards references.test.ts "R381 …" (rules words name no card unless refs list it) and
@@ -2740,6 +2742,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
     expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
     provenIn(389, SERVER_CLOCK_TEST, "turn-cap.test.ts");
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 …" (pass 2's numbers, at risk at half strength, the
+  // at-risk list a pure function of pass 1 and the two tables, the filler's keep-out and lifted ban,
+  // pass-2 evidence for a judgement ban, suspects, and one real pass-2 game on its named seed).
+  it("R390 sweeps the shadow ban in two passes, leaning toward the cards at risk", () => {
+    provenIn(390, AI_SHADOW_BAN_TEST);
   });
 
   // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's
@@ -2907,6 +2916,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // limited draw never happened; an empty-deck draw counts but gives nothing).
   it("R521 counts every draw that happened toward C #9 Income Tax", () => {
     provenIn(521, CLASSIC_009_TEST);
+  });
+
+  // The AI workstream's rows (R600–R609, docs/v0.2.0-rulings/ai.md).
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R600 …" (watched when its own numbers put it at
+  // risk and it was not banned; off the list when it was at risk only by the old tables and is clean).
+  it("R600 keeps a card on SHADOW_WATCH only while its own numbers keep it at risk", () => {
+    provenIn(600, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R601 …" (6 affordable turns and no play, or 8 plays,
+  // over pass 2's games at that tier, forced and filler summed; pass 1's numbers never added in).
+  it("R601 judges a neverPlayed or selfHarm ban on pass 2's numbers alone", () => {
+    provenIn(601, AI_SHADOW_BAN_TEST);
   });
 });
 
