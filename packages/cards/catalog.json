@@ -7946,6 +7946,7 @@
         "min": 1
       }
     ],
+    "loc": 27,
     "base": {
       "attack": 4,
       "health": 4,
@@ -7997,6 +7998,7 @@
         "min": 1
       }
     ],
+    "loc": 19,
     "base": {
       "attack": 5,
       "health": 5,
@@ -8038,6 +8040,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Cast {casts|random Spell|random Spells}."
@@ -8059,6 +8062,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
+    "loc": 8,
     "base": {
       "attack": 0,
       "health": 3,
@@ -8092,6 +8096,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 3,
       "health": 6,
@@ -8141,6 +8146,7 @@
         "min": 1
       }
     ],
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −3/−3. Otherwise, give all Units +{buff}/+{buff}."
@@ -8162,6 +8168,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 3,
     "base": {
       "attack": 7,
       "health": 2,
@@ -8222,6 +8229,7 @@
         "min": 1
       }
     ],
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "For the rest of the game: At the start of your turn, add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
@@ -8256,6 +8264,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Summon {tokens|Rush Token|Rush Tokens}."
@@ -8287,6 +8296,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Add {books|random Book|random Books} to your hand. Each costs (0)."
@@ -8318,13 +8328,14 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {cards} random Legendary or Mythic cards to your hand."
+      "text": "Add {cards|random Legendary or Mythic card|random Legendary or Mythic cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards} random Radiant Legendary or Mythic cards to your hand."
+      "text": "Add {cards|random Radiant Legendary or Mythic card|random Radiant Legendary or Mythic cards} to your hand."
     }
   },
   "classicplus-056": {
@@ -8349,6 +8360,7 @@
         "min": 1
       }
     ],
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Your opponent discards {discards|card|cards}."
@@ -8380,6 +8392,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{buff}/+{buff}."
@@ -8411,6 +8424,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Add {fruits|random Fruit|random Fruits} to your hand."
@@ -8453,6 +8467,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Summon a Rush Token. Heal your hero {heal}. Deal {damage} damage."
@@ -8485,6 +8500,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Cry and start of turn: Add {apples|All Purpose Apple|All Purpose Apples} to your hand."
@@ -8519,6 +8535,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)."
@@ -9087,6 +9104,7 @@
       "core-095",
       "classicplus-073"
     ],
+    "loc": 3,
     "base": {
       "keywords": [],
       "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
@@ -9109,6 +9127,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 4,
+    "loc": 11,
     "base": {
       "attack": 10,
       "health": 10,
@@ -9173,6 +9192,7 @@
         "min": 1
       }
     ],
+    "loc": 3,
     "base": {
       "keywords": [
         {
@@ -9390,6 +9410,7 @@
         "min": 1
       }
     ],
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "End of turn: Add {cards|random AI generated card|random AI generated cards} to your hand. Each costs (0)."
@@ -9500,6 +9521,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "loc": 4,
     "base": {
       "keywords": [],
       "text": "Draw 1. If it costs (1) or less, repeat this, up to 4 more times."
@@ -9522,6 +9544,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Add a copy of the last Unit, Spell or Field Spell your opponent played to your hand."
@@ -9544,6 +9567,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 2,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Destroy all Field Spells. Deal 1 damage to each hero for each one destroyed."
@@ -9566,6 +9590,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Your opponent's cards cost (1) more during their next turn."
@@ -9588,6 +9613,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
@@ -9610,6 +9636,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays a Spell that targets one of your Units: Counter it."

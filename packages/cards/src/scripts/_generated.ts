@@ -176,6 +176,23 @@ import * as mclassic_plus_042_1_kys_gift from "./classic-plus/042-1-kys-gift";
 import * as mclassic_plus_043_ai_slop from "./classic-plus/043-ai-slop";
 import * as mclassic_plus_044_simplicity_audit from "./classic-plus/044-simplicity-audit";
 import * as mclassic_plus_045_complexity_audit from "./classic-plus/045-complexity-audit";
+import * as mclassic_plus_046_felinor_flagbearer from "./classic-plus/046-felinor-flagbearer";
+import * as mclassic_plus_046_1_felinor_flagbearer_prime from "./classic-plus/046-1-felinor-flagbearer-prime";
+import * as mclassic_plus_047_joggs_box from "./classic-plus/047-joggs-box";
+import * as mclassic_plus_048_jlockheeds_lobbyist from "./classic-plus/048-jlockheeds-lobbyist";
+import * as mclassic_plus_049_jay_fungus from "./classic-plus/049-jay-fungus";
+import * as mclassic_plus_050_adaptive_growth from "./classic-plus/050-adaptive-growth";
+import * as mclassic_plus_051_jlockheeds_j15_fighter from "./classic-plus/051-jlockheeds-j15-fighter";
+import * as mclassic_plus_052_jlockheeds_permanent_defense_contract from "./classic-plus/052-jlockheeds-permanent-defense-contract";
+import * as mclassic_plus_053_book_of_tokens from "./classic-plus/053-book-of-tokens";
+import * as mclassic_plus_054_book_of_books from "./classic-plus/054-book-of-books";
+import * as mclassic_plus_055_book_of_greed from "./classic-plus/055-book-of-greed";
+import * as mclassic_plus_056_book_of_pain from "./classic-plus/056-book-of-pain";
+import * as mclassic_plus_057_book_of_stats from "./classic-plus/057-book-of-stats";
+import * as mclassic_plus_058_fruit_basket from "./classic-plus/058-fruit-basket";
+import * as mclassic_plus_059_all_purpose_apple from "./classic-plus/059-all-purpose-apple";
+import * as mclassic_plus_060_doctors_orders from "./classic-plus/060-doctors-orders";
+import * as mclassic_plus_061_bauble_bubble from "./classic-plus/061-bauble-bubble";
 import * as mclassic_plus_062_kys_papaya from "./classic-plus/062-kys-papaya";
 import * as mclassic_plus_063_fruit_tree from "./classic-plus/063-fruit-tree";
 import * as mclassic_plus_064_mulch_muncher from "./classic-plus/064-mulch-muncher";
@@ -192,14 +209,24 @@ import * as mclassic_plus_069_buff_billy from "./classic-plus/069-buff-billy";
 import * as mclassic_plus_070_chaos_machine from "./classic-plus/070-chaos-machine";
 import * as mclassic_plus_071_book_of_buff from "./classic-plus/071-book-of-buff";
 import * as mclassic_plus_072_book_of_nerf from "./classic-plus/072-book-of-nerf";
+import * as mclassic_plus_073_call_to_chaos_classic_edition from "./classic-plus/073-call-to-chaos-classic-edition";
+import * as mclassic_plus_073_1_classic_golem from "./classic-plus/073-1-classic-golem";
+import * as mclassic_plus_074_twice_forward_one_step_backwards from "./classic-plus/074-twice-forward-one-step-backwards";
 import * as mclassic_plus_075_j_lease_j_jungle_ex_plorer from "./classic-plus/075-j-lease-j-jungle-ex-plorer";
 import * as mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack from "./classic-plus/075-1-j-lease-j-jungle-ex-plorer-pack";
 import * as mclassic_plus_076_brother_lar from "./classic-plus/076-brother-lar";
 import * as mclassic_plus_076_1_brother_ping from "./classic-plus/076-1-brother-ping";
 import * as mclassic_plus_077_anti_softlock from "./classic-plus/077-anti-softlock";
+import * as mclassic_plus_078_claudes_datacenter from "./classic-plus/078-claudes-datacenter";
 import * as mclassic_plus_t_ai_01_helpful_assistant from "./classic-plus/t-ai-01-helpful-assistant";
 import * as mclassic_plus_t_ai_02_scaling_law from "./classic-plus/t-ai-02-scaling-law";
 import * as mclassic_plus_t_ai_03_hallucination from "./classic-plus/t-ai-03-hallucination";
+import * as mclassic_plus_t_ai_04_chain_of_thought from "./classic-plus/t-ai-04-chain-of-thought";
+import * as mclassic_plus_t_ai_05_autocomplete from "./classic-plus/t-ai-05-autocomplete";
+import * as mclassic_plus_t_ai_06_datacenter_fire from "./classic-plus/t-ai-06-datacenter-fire";
+import * as mclassic_plus_t_ai_07_alignment_tax from "./classic-plus/t-ai-07-alignment-tax";
+import * as mclassic_plus_t_ai_08_rate_limit from "./classic-plus/t-ai-08-rate-limit";
+import * as mclassic_plus_t_ai_09_refusal from "./classic-plus/t-ai-09-refusal";
 import * as mclassic_plus_t_ai_10_fine_tuning from "./classic-plus/t-ai-10-fine-tuning";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
@@ -366,6 +393,23 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_043_ai_slop,
   mclassic_plus_044_simplicity_audit,
   mclassic_plus_045_complexity_audit,
+  mclassic_plus_046_felinor_flagbearer,
+  mclassic_plus_046_1_felinor_flagbearer_prime,
+  mclassic_plus_047_joggs_box,
+  mclassic_plus_048_jlockheeds_lobbyist,
+  mclassic_plus_049_jay_fungus,
+  mclassic_plus_050_adaptive_growth,
+  mclassic_plus_051_jlockheeds_j15_fighter,
+  mclassic_plus_052_jlockheeds_permanent_defense_contract,
+  mclassic_plus_053_book_of_tokens,
+  mclassic_plus_054_book_of_books,
+  mclassic_plus_055_book_of_greed,
+  mclassic_plus_056_book_of_pain,
+  mclassic_plus_057_book_of_stats,
+  mclassic_plus_058_fruit_basket,
+  mclassic_plus_059_all_purpose_apple,
+  mclassic_plus_060_doctors_orders,
+  mclassic_plus_061_bauble_bubble,
   mclassic_plus_062_kys_papaya,
   mclassic_plus_063_fruit_tree,
   mclassic_plus_064_mulch_muncher,
@@ -382,13 +426,23 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_070_chaos_machine,
   mclassic_plus_071_book_of_buff,
   mclassic_plus_072_book_of_nerf,
+  mclassic_plus_073_call_to_chaos_classic_edition,
+  mclassic_plus_073_1_classic_golem,
+  mclassic_plus_074_twice_forward_one_step_backwards,
   mclassic_plus_075_j_lease_j_jungle_ex_plorer,
   mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack,
   mclassic_plus_076_brother_lar,
   mclassic_plus_076_1_brother_ping,
   mclassic_plus_077_anti_softlock,
+  mclassic_plus_078_claudes_datacenter,
   mclassic_plus_t_ai_01_helpful_assistant,
   mclassic_plus_t_ai_02_scaling_law,
   mclassic_plus_t_ai_03_hallucination,
+  mclassic_plus_t_ai_04_chain_of_thought,
+  mclassic_plus_t_ai_05_autocomplete,
+  mclassic_plus_t_ai_06_datacenter_fire,
+  mclassic_plus_t_ai_07_alignment_tax,
+  mclassic_plus_t_ai_08_rate_limit,
+  mclassic_plus_t_ai_09_refusal,
   mclassic_plus_t_ai_10_fine_tuning,
 ];

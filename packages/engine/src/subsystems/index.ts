@@ -25,6 +25,8 @@ export * from "./audit";
 export * from "./papaya";
 
 // C+ #73 Call to Chaos (Classic+ Edition)'s table (R423) and #74's fusing Field Trap (R425):
+export * from "./callToChaosPlus";
+export * from "./twiceForward";
 
 // C+ #46–#61:
 

@@ -49,6 +49,9 @@ const CURSE = "classic-001"; // C #1 Curse of the Forgotten Classic
 const PLAGUE_NUKE = "classic-043"; // C #43 Plague Nuke
 const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
 const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
+/** Patch v0.2.0's cards that declare preview, each proved in its own block below (R280). */
+const DATACENTER_FIRE = "classicplus-t-ai-06";
+const NEW_SET_PREVIEWED = [DATACENTER_FIRE];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -110,12 +113,12 @@ describe("R280 the Core cards that declare preview", () => {
   // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
   // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
   // proves its values.
-  it("R280 R372 R583 are exactly #18, #31, #38, #40, #70, #91 and #93 and the Classic cards listed, on both faces, and C+ #44 and #45 on the Radiant face", () => {
+  it("R280 R372 R583 are exactly #18, #31, #38, #40, #70, #91 and #93 and the new sets' listed ones, on both faces, and C+ #44 and #45 on the Radiant face", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.preview !== undefined || card.radiant.preview !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED, ...AUDITS].sort());
+    expect(hooked).toEqual([...PREVIEWED, COMBO_INDEX, ...CLASSIC_PREVIEWED, ...NEW_SET_PREVIEWED, ...AUDITS].sort());
     for (const id of hooked) {
       // R583: an Audit's base face marks nothing; its Radiant face "highlights targets".
       if (AUDITS.includes(id)) expect(CARDS[id]?.base.preview, `${id} base`).toBeUndefined();
@@ -431,6 +434,71 @@ describe("#91 Fed Fauci previews the mana its next start of turn gives (R280)", 
   it("R280 in hand it holds no tokens (R78), so it previews 0", () => {
     const s = scenario({ p1: { hand: [FED_FAUCI, RAPID_REPLENISH] } });
     expect(valueOf(handCard(s.view("p1"), s.card(FED_FAUCI).id))).toBe(0);
+  });
+});
+
+// =============================================================================================
+// T-AI-6 Datacenter Fire: the Field Spells its sweep dooms, times its face's number
+// =============================================================================================
+
+describe("T-AI-6 Datacenter Fire previews the damage each hero would take (R280)", () => {
+  const TWINSPELL = "core-079"; // (2) Field Spell
+  const FARM = "core-058"; // (2) Field Spell
+  const HEROIC_POWER = "core-098"; // Field Spell, Indestructible
+  const up = (defId: string, lane: number): { def: string; faceUp: boolean; lane: number } => ({ def: defId, faceUp: true, lane });
+  const LABELS = {
+    base: "Deal 1 damage to each hero for each one destroyed",
+    radiant: "Deal 2 damage to the enemy hero for each one destroyed",
+  } as const;
+
+  function board(face: Face): Scenario {
+    return scenario({
+      // Not a Twinspell of p1's: it would spend itself on this Spell as it is played, before the sweep.
+      p1: { hand: [{ def: DATACENTER_FIRE, radiant: face === "radiant" }, RAPID_REPLENISH], backrow: [up(FARM, 1)] },
+      p2: { backrow: [up(TWINSPELL, 1), up(FARM, 2), up(HEROIC_POWER, 3)] },
+    });
+  }
+
+  for (const face of FACES) {
+    const value = face === "base" ? 3 : 4;
+    it(`R280 ${face}: "${LABELS[face]}" previews ${value}, and each hit then deals exactly that`, () => {
+      const s = board(face);
+      const list = shown(handCard(s.view("p1"), s.card(DATACENTER_FIRE).id));
+      expect(list).toEqual([{ label: LABELS[face], value }]);
+      expect(cardDef(DATACENTER_FIRE)[face].text).toContain(LABELS[face]);
+
+      s.play(DATACENTER_FIRE);
+
+      expect(hitsOn(s, "p2")).toEqual([value]);
+      expect(hitsOn(s, "p1")).toEqual(face === "base" ? [value] : []);
+    });
+  }
+
+  it("R280 R46 with no Field Spell its sweep would destroy, it previews 0, and deals nothing", () => {
+    const s = scenario({
+      p1: { hand: [DATACENTER_FIRE, RAPID_REPLENISH] },
+      p2: { backrow: [up(HEROIC_POWER, 1)] },
+    });
+    expect(valueOf(handCard(s.view("p1"), s.card(DATACENTER_FIRE).id))).toBe(0);
+    s.play(DATACENTER_FIRE);
+    expect(hitsOn(s, "p2")).toEqual([]);
+  });
+
+  it("R280 its hook is a pure read of public facts: no write, and no library, hand or state.active", () => {
+    for (const face of FACES) {
+      for (const active of ["p1", "p2"] as const) {
+        const s = scenario({
+          active,
+          p1: { hand: [{ def: DATACENTER_FIRE, radiant: face === "radiant" }], library: [MENACE], backrow: [up(TWINSPELL, 1)] },
+          p2: { hand: [STOCKPILE], library: [MENACE], backrow: [up(FARM, 1)] },
+        });
+        const card = must(s.hand("p1").find((c) => c.defId === DATACENTER_FIRE), "p1's Datacenter Fire");
+        const hook = must(CARDS[DATACENTER_FIRE]?.[face].preview, "the hook");
+        const { state, self } = guarded(s.state, card.id);
+        const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: active === "p1" });
+        expect(shown(handCard(s.view("p1"), card.id))).toEqual(answer);
+      }
+    }
   });
 });
 

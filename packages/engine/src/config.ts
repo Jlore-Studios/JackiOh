@@ -415,6 +415,20 @@ export const GRAPE_ODDS: readonly { readonly defId: string; readonly percent: nu
   { defId: "classicplus-065-5", percent: 1 },
 ];
 
+// Classic+ #73 Call to Chaos (Classic+ Edition) (SPEC §8.7 row 73, R423): its table's numbers.
+/** §8.7 row 73 entry 1: "Add 5 random Fruits to your hand". */
+export const CHAOS_PLUS_FRUITS = 5;
+/** §8.7 row 73 entry 2: "Add 3 random Books to your hand". */
+export const CHAOS_PLUS_BOOKS = 3;
+/** §8.7 row 73 entry 4: "Add 3 random Classic cards to your hand". */
+export const CHAOS_PLUS_CLASSIC_CARDS = 3;
+/** §8.7 row 73 entries 1, 2, 4 and 9: the added and the replacing cards "cost (0)" (`costOverride`). */
+export const CHAOS_PLUS_COST = 0;
+/** §8.7 row 73 entry 5: "Upgrade every card in your hand and deck twice". */
+export const CHAOS_PLUS_UPGRADES = 2;
+/** §8.7 row 73 entry 7: "Degrade every card on your opponent's field and in their hand three times". */
+export const CHAOS_PLUS_DEGRADES = 3;
+
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /** T-AI-4: the repeats after the first draw, a termination bound: five draws at most. */
 export const CHAIN_OF_THOUGHT_REPEATS = 4;

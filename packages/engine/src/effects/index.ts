@@ -326,8 +326,14 @@ export { shuffleRandomFromCatalog } from "./shuffleRandom";
 export { addLibraryCopies } from "./libraryCopies";
 
 // Classic+ #73 Call to Chaos (Classic+ Edition), #73.1, #74, #78, T-AI-4 to T-AI-9:
+// a draw repeated while the card it brought is cheap (T-AI-4 Chain of Thought, R596), and a sweep of Field
+// Spells that hits the heroes once per Field Spell it dooms (T-AI-6 Datacenter Fire, R408's count).
+export { destroyFieldSpellsAndHit, drawWhileCheap, fieldSpellsDoomed } from "./datacenter";
+export type { FieldSpellSide } from "./datacenter";
 
 // Classic+ #46–#61:
+// Armor a hero keeps for the game (C+ #46) and a random hand card made cheaper (C+ #49).
+export { discountRandomInHand, gainHeroArmor } from "./perks";
 
 // Classic+ #63–#67, #75, #76 and their tokens:
 // the Grapes a Grape card rolls (GRAPE_ODDS, R382), a hit on an enemy or a heal on a friend, a draw whose

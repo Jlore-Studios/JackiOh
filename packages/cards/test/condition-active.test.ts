@@ -11,6 +11,7 @@
 //   C #22 Mid Runner     hand only          your mana is 4 or more now (what "when you played this" reads)
 //   C #36 Burn           hand only          base: mana left after paying its price now; Radiant: max mana; 4+
 //   C #40 MC Tech        hand only          your opponent controls 4 or more permanents
+//   C+ #50 Adaptive Growth hand only        you control fewer Units than the opponent
 //
 // The key is present and `true`, or absent: `glows` below fails on a key that is present with any
 // other value.
@@ -804,16 +805,75 @@ describe("C #40 MC Tech lights up in hand while the opponent controls enough per
 });
 
 // =============================================================================================
+// C+ #50 Adaptive Growth (hand only): you control fewer Units than your opponent
+// =============================================================================================
+
+describe("C+ #50 Adaptive Growth lights up while you control fewer Units (R195)", () => {
+  const GROWTH = "classicplus-050";
+  const VANILLA = "core-008";
+
+  function growth(mine: number, theirs: number, radiant = false): Scenario {
+    return scenario({
+      seed: `r195-cp050-${mine}-${theirs}-${String(radiant)}`,
+      p1: { hand: [radiant ? { def: GROWTH, radiant: true } : GROWTH, "core-005"], field: Array.from({ length: mine }, () => VANILLA) },
+      p2: { hand: ["core-005"], field: Array.from({ length: theirs }, () => VANILLA) },
+    });
+  }
+
+  it("R195 with fewer Units it glows in hand, and the Spell then gives every Unit −3/−3", () => {
+    const s = growth(1, 2);
+    expect(handGlows(s, s.card(GROWTH))).toBe(true);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 1, health: 1 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
+  });
+
+  it("R195 with equal counts it does not glow, and the Spell then gives every Unit +2/+2", () => {
+    const s = growth(1, 1);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 6, health: 6 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 6, health: 6 });
+  });
+
+  it("R195 with more Units it does not glow either", () => {
+    const s = growth(2, 1);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+  });
+
+  it("R195 the radiant face glows on the same count: fewer, and only the enemy Units get −4/−4", () => {
+    const s = growth(1, 2, true);
+    expect(handGlows(s, s.card(GROWTH))).toBe(true);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 4, health: 4 });
+    expect(s.unit("p2", 1)).toBeNull();
+  });
+
+  it("R195 the radiant face with equal counts does not glow, and gives your Units +3/+3", () => {
+    const s = growth(1, 1, true);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 7, health: 7 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 4, health: 4 });
+  });
+
+  it("R195 the opponent's view never carries the flag (its hand is a count)", () => {
+    const s = growth(0, 2);
+    expect(s.view("p2").opponent.hand).toEqual({ count: 2 });
+  });
+});
+
+// =============================================================================================
 // The set of cards that declare the hook is R195's list
 // =============================================================================================
 
 describe("R195 the cards that declare conditionMet", () => {
-  it("R195 are exactly #10, #53, #68, #71 and #93, and Classic #22, #36 and #40, on both faces, so a new hook cannot land untested", () => {
+  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36 and #40, and C+ #50, on both faces, so a new hook cannot land untested", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.conditionMet !== undefined || card.radiant.conditionMet !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual(["classic-022", "classic-036", "classic-040", "core-010", "core-053", "core-068", "core-071", "core-093"]);
+    expect(hooked).toEqual(["classic-022", "classic-036", "classic-040", "classicplus-050", "core-010", "core-053", "core-068", "core-071", "core-093"]);
 
     for (const id of hooked) {
       const card = CARDS[id];
