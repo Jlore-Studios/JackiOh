@@ -205,12 +205,11 @@
   },
   "usage": {
     "five_hour": {
-      "resets_at": "2026-10-01T07:00:00Z",
-      "utilization": 1.0
+      "resets_at": "2026-10-01T13:50:00Z",
+      "utilization": 0.65
     },
-    "observed_at": "2026-10-01T04:44:48Z",
-    "rejected_resets_at": "2026-10-01T07:00:00Z",
-    "status": "rejected"
+    "observed_at": "2026-10-01T10:48:02Z",
+    "status": "allowed"
   },
   "version": 1
 }
