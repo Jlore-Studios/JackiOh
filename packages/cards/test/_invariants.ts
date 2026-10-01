@@ -71,6 +71,11 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
   // R424: the latest declared attack, and whether its attacker destroyed its target (R42).
   let attack: { attackerId: string; targetId: string; killed: boolean } | null = null;
 
+  /** R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it. */
+  function isReadied(card: CardInstance): boolean {
+    return readied.has(card.id) && card.summonedTurn === undefined;
+  }
+
   function enter(id: string): void {
     entered.set(id, turn);
     stint.set(id, (stint.get(id) ?? 0) + 1);
@@ -112,7 +117,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
         return found;
       }
       for (const unit of activeUnitsOf(state, player)) {
-        if (entered.get(unit.id) !== state.turn || readied.has(unit.id)) continue;
+        if (entered.get(unit.id) !== state.turn || isReadied(unit)) continue;
         const targets = attackTargets(state, unit).map((target) =>
           target.kind === "hero" ? `hero-${target.player}` : target.instance.id,
         );
@@ -121,7 +126,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
       }
       if (action.type === "attack") {
         const attacker = findInstance(state, action.attackerId);
-        if (attacker !== undefined && entered.get(attacker.id) === state.turn && !readied.has(attacker.id)) {
+        if (attacker !== undefined && entered.get(attacker.id) === state.turn && !isReadied(attacker)) {
           const violation = sickAttack(state, attacker, [action.targetId], "chosen");
           if (violation !== null) found.push(violation);
         }
@@ -131,6 +136,9 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
 
     after(events, state): string[] {
       const found: string[] = [];
+      // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
+      // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
+      attack = null;
 
       // I5: the check that ends the game is the last thing that happens (§2.5, R216).
       const over = events.findIndex((event) => event.type === "gameOver");
@@ -187,12 +195,10 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
       for (const card of fieldCards(state)) {
         const at = entered.get(card.id);
         if (at === undefined) continue; // I3 reports it before the next action.
-        const expected = readied.has(card.id) ? undefined : at;
-        if (card.summonedTurn !== expected) {
+        if (card.summonedTurn !== at && !isReadied(card)) {
           found.push(
             `I4 entry mismatch: ${nameOf(card)} has summonedTurn ${String(card.summonedTurn)} on turn ` +
-              `${state.turn}, but its latest entry event was on turn ${at}` +
-              `${expected === undefined ? ", readied (R424)" : ""} (§4.1, R83, R171)`,
+              `${state.turn}, but its latest entry event was on turn ${at} (§4.1, R83, R171)`,
           );
         }
         if (card.exertion.attacked) {
