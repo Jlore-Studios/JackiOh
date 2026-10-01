@@ -357,9 +357,9 @@ describe("B5 E11, E19 Plague Tokens paying a graveyard play (Classic #74)", () =
   const one: ActionBody = { type: "play", instanceId: "gy1", zone: { row: "units", lane: 5 }, plague: { from: "fs1", tokens: 1 } };
   const two: ActionBody = { type: "play", instanceId: "gy1", zone: { row: "units", lane: 5 }, plague: { from: "fs1", tokens: 2 } };
 
-  it("plays that differ by the tokens they spend ask how many, mana-only first, and send the one picked", () => {
+  it("plays that differ by the tokens they spend ask how many, in the engine's order, and send the one picked", () => {
     const view = activateView();
-    const legal = [two, mana, one];
+    const legal = [mana, one, two];
 
     const picked = onClickTarget(view, legal, IDLE, { on: "graveyard", instanceId: "gy1" }).interaction;
     const need = outstandingNeed(picked);

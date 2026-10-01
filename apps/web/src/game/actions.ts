@@ -425,12 +425,6 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
   return [...out.values()];
 }
 
-/** "None" first, then each card's counts from fewest tokens up. */
-function plagueOrder(a: PlagueChoice, b: PlagueChoice): number {
-  if (a === "none" || b === "none") return a === b ? 0 : a === "none" ? -1 : 1;
-  return a.from === b.from ? a.tokens - b.tokens : a.from < b.from ? -1 : 1;
-}
-
 /**
  * The next choice the build still needs, or null when the candidates agree on everything. Derived
  * purely from the candidate array: two candidates that differ only in `x` mean the player must
@@ -457,10 +451,11 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   }
 
   if (interaction.picked.plague === undefined) {
+    // In the engine's order: mana alone first, then each card's counts from fewest tokens up.
     const options = distinctBy(
       fields.map((c): PlagueChoice => c.plague ?? "none"),
       plagueKey,
-    ).sort(plagueOrder);
+    );
     if (options.length > 1) return { kind: "plague", min: 1, max: 1, options };
   }
 

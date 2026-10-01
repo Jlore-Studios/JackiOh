@@ -62,51 +62,29 @@
   outline-offset: 2px;
 }
 
-/* The `activated` row (animations.ts): the control flares as the ability is used. */
-.board .activate-control[data-flash="activated"] {
-  animation: jk-activate-flash calc(300ms * var(--anim-scale, 1)) ease-out;
-}
-
-@keyframes jk-activate-flash {
-  0% {
-    scale: 1;
-    filter: brightness(1);
-  }
-  40% {
-    scale: 1.35;
-    filter: brightness(1.8);
-  }
-  100% {
-    scale: 1;
-    filter: brightness(1);
-  }
-}
-
-/* Under reduced motion nothing moves; a static ring marks the control while the row plays. */
-@media (prefers-reduced-motion: reduce) {
-  .board .activate-control[data-flash="activated"] {
-    animation: none;
-    outline: 2px solid #fde68a;
-  }
-}
-
-:root[data-reduce-motion="true"] .board .activate-control[data-flash="activated"] {
-  animation: none;
-  outline: 2px solid #fde68a;
-}
-
-/* A Heroic Power's flash on the hero panel (Hero.tsx), the same flare. */
+/* The `activated` row (animations.ts): the control, or a Heroic Power's button (Hero.tsx), flares as
+   the ability is used. Under reduced motion nothing moves; a static ring marks it while the row plays. */
+.board .activate-control[data-flash="activated"],
 .board .power-button[data-flash="activated"] {
   animation: jk-activate-flash calc(300ms * var(--anim-scale, 1)) ease-out;
 }
 
+@keyframes jk-activate-flash {
+  40% {
+    scale: 1.35;
+    filter: brightness(1.8);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .board .activate-control[data-flash="activated"],
   .board .power-button[data-flash="activated"] {
     animation: none;
     outline: 2px solid #fde68a;
   }
 }
 
+:root[data-reduce-motion="true"] .board .activate-control[data-flash="activated"],
 :root[data-reduce-motion="true"] .board .power-button[data-flash="activated"] {
   animation: none;
   outline: 2px solid #fde68a;
