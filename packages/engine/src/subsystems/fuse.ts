@@ -101,6 +101,8 @@ const COST_KEY = "cost";
 const RESUME_KEY = "resume";
 const SET_STAT_KEY = "setStat";
 const CONDITION_MET_KEY = "conditionMet";
+/** Classic #88 (R403): "When …, Tribute this" holds for a fusion when it holds for any ingredient. */
+const TRIBUTE_WHEN_KEY = "tributeWhen";
 /** R471: a placement multiplier answers a number, so the ingredients' multipliers multiply. */
 const PLAGUE_MULTIPLIER_KEY = "plagueMultiplier";
 
@@ -642,6 +644,7 @@ function scriptRecord(script: Script, defId: string, index: number): Record<stri
   delete out[COST_KEY];
   delete out[SET_STAT_KEY];
   delete out[CONDITION_MET_KEY];
+  delete out[TRIBUTE_WHEN_KEY];
   delete out[PLAGUE_MULTIPLIER_KEY];
   for (const key of TRIGGER_KEYS) {
     const list = out[key];
@@ -791,6 +794,13 @@ function fusedConditionMet(scripts: readonly Script[]): Script["conditionMet"] |
   return (ctx) => hooks.some((hook) => hook(ctx) === true);
 }
 
+/** R403, R102: a fusion carries every ingredient's "When …, Tribute this", so any one that holds takes it. */
+function fusedTributeWhen(scripts: readonly Script[]): Script["tributeWhen"] | undefined {
+  const hooks = scripts.flatMap((script) => (script.tributeWhen === undefined ? [] : [script.tributeWhen]));
+  if (hooks.length <= 1) return hooks[0];
+  return (args) => hooks.some((hook) => hook(args));
+}
+
 /**
  * One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
  * whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
@@ -809,8 +819,10 @@ function fusedScript(specs: readonly FusedIngredient[], radiant: boolean): Scrip
   const cry = fusedCry(faces);
   const aura = fusedAura(faces);
   const plagueMultiplier = fusedPlagueMultiplier(scripts);
+  const tributeWhen = fusedTributeWhen(scripts);
   return {
     ...combined,
+    ...(tributeWhen === undefined ? {} : { tributeWhen }),
     ...(setStat === undefined ? {} : { setStat }),
     ...(conditionMet === undefined ? {} : { conditionMet }),
     ...(aura === undefined ? {} : { aura }),

@@ -97,6 +97,7 @@ import {
   type CardInstance,
   type CastMode,
   type GameState,
+  type PlayRecord,
   type Resume,
   type WorkItem,
 } from "./state";
@@ -114,6 +115,7 @@ import {
   whyTargetAnswerRefused,
 } from "./targetingPoint";
 import { exitMark, leftFieldAfter } from "./stays";
+import { copiedTextOf, copiesText, fixCopiedText, textFaceOf } from "./subsystems/copiedText";
 import { beginWorkCascade, drainWork, dropWork, paused, pausedOf, pushWork, registerWorkHandler } from "./work";
 import {
   cardAt,
@@ -336,6 +338,13 @@ export type PlayRun = {
    * cast has resolved, and its held `drawn` is released then (`drawComplete.ts`).
    */
   drawnAs?: string;
+  // ---- B5 E14 (Classic #57 Echo; R399, R546) ----
+  /**
+   * The Spell text a copier's play resolves, fixed at step 1 as its choices are checked against it
+   * (null: nothing had been played), and written on the card as the announce moves it into the
+   * resolving zone (`subsystems/copiedText.fixCopiedText`). Absent for every other card.
+   */
+  copied?: PlayRecord | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -476,6 +485,8 @@ export function validatePlay(
       exitsFrom: exitMark(state),
       ...playBegins(state, player),
       manaBefore: state.players[player].mana.current,
+      // B5 E14, R546: a copier's copy is fixed as its play is checked, the choices with it.
+      ...(copiesText(card) ? { copied: copiedTextOf(state, card) } : {}),
       ...(source.from === "graveyard" ? { source: "graveyard" as const } : {}),
       ...(action.plague === undefined ? {} : { plague: { from: action.plague.from, tokens: action.plague.tokens } }),
     },
@@ -773,6 +784,8 @@ function announcePlay(sink: EngineSink, run: PlayRun): boolean {
     if (!takeFromPlaySource(state, run, card)) return false;
     card.zone = { z: "resolving", player: run.player };
     side.resolving.push(card);
+    // B5 E14, R546: the copy step 1 checked the choices against is the one the card resolves.
+    if (run.copied !== undefined) fixCopiedText(state, card, run.copied);
   }
 
   const type = cardTypeOf(state, card);
@@ -1288,7 +1301,8 @@ function resolveStep(sink: EngineSink, run: PlayRun): void {
         comboDrawStep(sink, run);
         break;
       case "script":
-        runHookResumable(sink, card, "cry", {
+        // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
+        runHookResumable(sink, textFaceOf(sink.state, card), "cry", {
           controller: run.player,
           targets: standingTargets(run),
           modes: run.modes,
@@ -1322,7 +1336,9 @@ function castChoicesMade(sink: EngineSink, run: PlayRun, step: PlayStepName = "r
   // R453: an X card's X first, so its targets and modes are asked of the card as it will resolve.
   if (!castXChosen(sink, run, card, step)) return false;
   if (run.repeat === null) {
-    const declares = declaredTargets(card).length > 0 || declaredModes(card).length > 0;
+    // B5 E14, R399: a copier's choices are its copied text's.
+    const face = textFaceOf(sink.state, card);
+    const declares = declaredTargets(face).length > 0 || declaredModes(face).length > 0;
     if (!declares || run.targets.length > 0 || run.modes.length > 0) {
       run.castChosen = true;
       return true;
@@ -1406,9 +1422,11 @@ function labelOf(selection: Selection): string {
  * Returns true when every declaration has its answer and the repeat can resolve. A declaration the
  * board cannot satisfy is skipped rather than refused: the effect fizzles (R90, §8's conventions).
  */
-function askRepeatChoices(sink: EngineSink, run: PlayRun, card: CardInstance, step: PlayStepName = "echo"): boolean {
+function askRepeatChoices(sink: EngineSink, run: PlayRun, played: CardInstance, step: PlayStepName = "echo"): boolean {
   const repeat = run.repeat;
   if (repeat === null) return false;
+  // B5 E14, R399: a copier asks for the choices its copied text declares.
+  const card = textFaceOf(sink.state, played);
   // A declaration that belongs to some modes only (`forModes`, #24) cannot be asked before the
   // mode it depends on, so such a card's repeat asks its modes first.
   if (targetsFollowModes(declaredTargets(card))) {
@@ -1611,7 +1629,8 @@ function resolveRepeat(sink: EngineSink, run: PlayRun): boolean {
         break;
       case "script":
         run.repeat = null;
-        runHookResumable(sink, card, "cry", {
+        // B5 E14, R399: an Echo repeat of a copier runs its copied text again.
+        runHookResumable(sink, textFaceOf(sink.state, card), "cry", {
           controller: run.player,
           targets: repeat.targets,
           modes: repeat.modes,
@@ -1856,6 +1875,8 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
   removeFromAnyZone(state, instance);
   instance.zone = { z: "resolving", player };
   state.players[player].resolving.push(instance);
+  // B5 E14, R546: a copier cast resolves the Spell that is last as the cast begins.
+  fixCopiedText(state, instance);
 
   // R452: a cast made while a random cast of its caster's resolves is random too, and counts in that
   // cast's chain; a card that targets enemies (E39's enchantment) is cast so, whoever casts it.

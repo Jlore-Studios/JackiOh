@@ -86,6 +86,7 @@ export type HookName =
   | "death"
   | "startOfGame"
   | "startOfTurn"
+  | "startOfOpponentTurn"
   | "endOfTurn"
   | "activate"
   | "onPlayHook";

@@ -24,8 +24,8 @@
 import type { PlayerId, PreviewValue } from "@jackioh/shared";
 import { cardTypeOf } from "./faces";
 import type { ConditionZone } from "./script";
-import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
+import { runningScriptOf, textFaceOf } from "./subsystems/copiedText";
 import { isBuried } from "./zones";
 
 /**
@@ -70,13 +70,15 @@ export function previewOf(
   zone: ConditionZone,
 ): PreviewValue[] | null {
   if (!mayPreview(state, card, viewer, zone)) return null;
-  const hook = scriptOf(card).preview;
+  // B5 E14, R547: a copier (Classic #57 Echo) previews the formula of the text it has, on that face.
+  const hook = runningScriptOf(state, card).preview;
   if (hook === undefined) return null;
+  const face = textFaceOf(state, card);
   const values = hook({
     state,
-    self: card,
+    self: face,
     controller: card.controller,
-    radiant: card.radiant,
+    radiant: face.radiant,
     zone,
     yourTurn: state.active === card.controller,
   });

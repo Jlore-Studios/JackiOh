@@ -167,6 +167,8 @@ const TESTED_BY: Readonly<Record<string, string>> = {
   fuse: "effects-random.test.ts",
   rotate: "effects-random.test.ts",
   playerMods: "effects-delay.test.ts",
+  // C #90 In Too Deep's two random picks (rewards C and E) are proved with the quests subsystem.
+  randomPicks: "quests.test.ts",
   // The Classic #1–#45 workstream's card-specific verbs, each with its own test file named in kebab case.
   afterCheck: "effects-after-check.test.ts",
   chooseWhere: "effects-choose-where.test.ts",
