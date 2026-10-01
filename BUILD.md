@@ -135,9 +135,19 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `TUNE_COST_CAP` / `TUNE_COST_FLOOR` | 4 / 0: a Degrade never lifts a cost above (4), an Upgrade never takes one below (0) | §6.3, R386 |
 | `TUNE_X_STEP` | 1: an X or a numbered keyword moves 1 per application | §6.3, R386 |
 | `TUNE_MIN_AMOUNT` | 1: a tuned amount, an X, Activate X and Tribute X never go below it | §5, §6.3, R386 |
+| `BRITTLE_TICK` | 1: what each Brittle tick takes | §6.1, R385 |
+| `TUNE_COST_STEP` / `TUNE_ATTACK_FLOOR` / `TUNE_HEALTH_FLOOR` | 1 / 0 / 1: a cost change's size, and the floors a stats change stops at | §6.3, R386 |
+| `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle: keywords a Degrade never removes | §6.3, R386, R442 |
+| `MIN_PLAGUE_PAYMENT` / `PLAGUE_TOKEN_MANA` | 1 / 1: a play paid with Plague Tokens spends at least one, each paying (1) | §6.3 Play, R454; C #74 |
+| `PLAGUE_MULTIPLIER_NONE` | 1: a card's Plague placement multiplier when it declares none | §6.3, R471 |
+| `RANDOM_CAST_CHAIN_CAP` | 20: casts one random cast and the casts inside it may make | §6.3 Cast, R452 |
+| `LAST_FACE_UP_SKIPPED_TAGS` | AI: tags whose plays the last face-up record skips | R451; T-AI-5 |
+| `DAMAGE_REDIRECT_CAP` | `2 × BACKROW_ZONES`: redirects of one hit before it lands where it stands | §6.3 Redirect, R460 |
+| `FUSED_ID_CAP` | 120: characters a fused id may spell out before it becomes a digest | R468 |
+| `BERSERK_MARK` | the mark a Berserk unit carries, red | §6.1, R437; C+ #19.5 |
+| `POOL_TOKEN_TAGS` | Fruit: the tags whose pools hold their tokens | §5.1, R382 |
 | `PARAM_DEFAULT_STEP` | 1 for a number up to 5, 2 for 6 to 12, a quarter (rounded) above 12, where a `params` entry names no `step` | §5, §6.3, R386 |
-| `KY_MATH_EQUATION_COST_CAP` | 4: #31's return never lifts its cost above it | §8 #31, R429 |
-| `CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos of either edition resolves | §8 #95, §8.7 C+ #73, R423 |
+| `CALL_TO_CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos of either edition resolves | §8 #95, §8.7 C+ #73, R423 |
 | `CHAOS_PLUS_FRUITS` / `CHAOS_PLUS_BOOKS` / `CHAOS_PLUS_CLASSIC_CARDS` | 5 / 3 / 3: the cards C+ #73's first, second and fourth entries add | §8.7 C+ #73 |
 | `CHAOS_PLUS_UPGRADES` / `CHAOS_PLUS_DEGRADES` | 2 per card of your hand and deck / 3 per card of the opponent's field and hand | §8.7 C+ #73, R386 |
 | `MID_LANE` | 3, the middle lane of `UNIT_ZONES` ("midlane") | §3.1, §8.6 C #22 |
@@ -152,7 +162,7 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `MAX_PROMPT_ANSWERS` | 256 (exported from `prompts.ts` today) | §10.6, §8.7 C+ #62 |
 | `CHAIN_OF_THOUGHT_REPEATS` | 4: repeats after the first draw, a termination bound | §8.7 T-AI-4 |
 
-A card's own printed numbers that nothing outside its script reads (C+ #7's 2 in 3, C+ #41's 3, every "costs (0)") stay named constants in its script, as Core's do; the numbers Degrade, Upgrade and KY's Constant may tune are the card's `params` (§5), not constants. In Too Deep's quest tree (C #90) is card data in its file.
+A card's own printed numbers that nothing outside its script reads (C+ #7's 2 in 3, C+ #41's 3, #31's return cap of (4), every "costs (0)") stay named constants in its script, as Core's do; the numbers Degrade, Upgrade and KY's Constant may tune are the card's `params` (§5), not constants. In Too Deep's quest tree (C #90) is card data in its file.
 
 Server constants (`apps/server/src/config.ts`, added in M7) carry R79's values: `TURN_CLOCK_SECONDS` 75, `PROMPT_CLOCK_SECONDS` 30, `MULLIGAN_CLOCK_SECONDS` 45 (R268), `DISCONNECT_GRACE_SECONDS` 60, `MATCH_CEILING_MINUTES` 120 (R389), `ROOM_CODE_LENGTH` 6, `ELO_K` 32, `ELO_START` 1000; and since patch v0.2.0 `DECK_CODE_VERSION` 2 and `TRIO_CODE_VERSION` 2 with the per-set number offsets Core 0, Classic 1000, Classic+ 2000 (R255, R339).
 
