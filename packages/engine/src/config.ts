@@ -347,3 +347,10 @@ export const PLAGUE_MULTIPLIER_NONE = 1;
  * Classic+ #73's). The base face rolls one.
  */
 export const CALL_TO_CHAOS_RADIANT_EFFECTS = 3;
+
+// ---- v0.2.0 constants: Classic+ cards #1–#39 (cards-plus-c) ----
+/**
+ * R59, §8.7 C+ #32.3 Blade Storm: the printed round cap, "up to 30 times". The card reads its declared
+ * `rounds` (R386), which the catalog prints as this and a Degrade or Upgrade moves on that card only.
+ */
+export const BLADE_STORM_ROUNDS = 30;

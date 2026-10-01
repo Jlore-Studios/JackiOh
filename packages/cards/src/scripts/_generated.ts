@@ -169,6 +169,14 @@ import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-to
 import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
 import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
 import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_plus_027_zephrys_zealotism from "./classic-plus/027-zephrys-zealotism";
+import * as mclassic_plus_028_nuestro_hogar_nuestras_tumbas from "./classic-plus/028-nuestro-hogar-nuestras-tumbas";
+import * as mclassic_plus_030_felinor_fuser from "./classic-plus/030-felinor-fuser";
+import * as mclassic_plus_031_fusion_lab from "./classic-plus/031-fusion-lab";
+import * as mclassic_plus_032_otherworldly_removal from "./classic-plus/032-otherworldly-removal";
+import * as mclassic_plus_032_1_execute from "./classic-plus/032-1-execute";
+import * as mclassic_plus_032_2_brawl from "./classic-plus/032-2-brawl";
+import * as mclassic_plus_032_3_blade_storm from "./classic-plus/032-3-blade-storm";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -327,4 +335,12 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_043_plague_nuke,
   mclassic_044_back_from_the_gy,
   mclassic_045_nature_titan,
+  mclassic_plus_027_zephrys_zealotism,
+  mclassic_plus_028_nuestro_hogar_nuestras_tumbas,
+  mclassic_plus_030_felinor_fuser,
+  mclassic_plus_031_fusion_lab,
+  mclassic_plus_032_otherworldly_removal,
+  mclassic_plus_032_1_execute,
+  mclassic_plus_032_2_brawl,
+  mclassic_plus_032_3_blade_storm,
 ];

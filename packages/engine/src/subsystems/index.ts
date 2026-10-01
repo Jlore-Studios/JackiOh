@@ -13,3 +13,5 @@ export * from "./comboIndex";
 export * from "./callToChaos";
 // B3.2, R384: Activate abilities — the `activate` action, its refusal, its listing and its view.
 export * from "./activate";
+// B5 E34, R416: R29's scorer choosing a whole hand (Classic+ #27 Zephrys Zealotism).
+export * from "./perfectHand";

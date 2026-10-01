@@ -7200,6 +7200,7 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 4,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Replace your hand with the perfect hand of Classic and Classic+ cards. Refresh your mana."
@@ -7229,6 +7230,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 3,
       "health": 4,
@@ -7300,6 +7302,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 3,
@@ -7323,6 +7326,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 2,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
@@ -7347,6 +7351,7 @@
       "classicplus-032-2",
       "classicplus-032-3"
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Add an Execute, a Brawl and a Blade Storm to your hand."
@@ -7369,6 +7374,7 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Destroy a damaged Unit."
@@ -7391,6 +7397,7 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 2,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Destroy all Units but one chosen at random."
@@ -7423,6 +7430,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "Deal 1 damage to all Units. Repeat until a Unit dies, up to {rounds|time|times}."
