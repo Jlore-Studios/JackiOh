@@ -142,17 +142,17 @@ describe("C+ #19.2 Jungle Loser", () => {
 
     it("R386 the chance reads through param: a Degrade to 15% and an Upgrade to 35%", () => {
       for (const steps of [-1, 1]) {
-        let hits = 0;
-        for (let seed = 1; seed <= 20; seed += 1) {
+        // Seeds where the tuned chance and the printed 25% disagree: the outcome must follow the tuned one.
+        let differs = 0;
+        for (let seed = 1; seed <= 40; seed += 1) {
           const s = jungle([], false, { field: [{ def: VANILLA, lane: 4 }] }, `jungle-tuned-${seed}`);
           stepParam(loser(s), "chance", steps);
           const expected = createRng(s.state.seed, s.state.rngCursor).chance((25 + 10 * steps) / 100);
+          if (expected !== createRng(s.state.seed, s.state.rngCursor).chance(0.25)) differs += 1;
           s.endTurn();
-          const made = attacksBy(s, loser(s).id).length > 0;
-          expect(made).toBe(expected);
-          if (made) hits += 1;
+          expect(attacksBy(s, loser(s).id).length > 0).toBe(expected);
         }
-        expect(hits).toBeGreaterThanOrEqual(0);
+        expect(differs).toBeGreaterThan(0);
       }
     });
 

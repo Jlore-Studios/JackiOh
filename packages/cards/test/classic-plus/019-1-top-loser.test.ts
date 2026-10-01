@@ -7,11 +7,10 @@
 // Spells: no Spell targets it and no Spell's effect touches it (Powder Spray, Whirlwind, Brawl pass it
 // by), while Field Spells, Traps and Units still reach it and it may still be attacked from its lane".
 //
-// Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386,
-// R482): the "reads through param()" clause is proved by an Upgrade of that number.
+// Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386):
+// the "reads through param()" clause is proved by an Upgrade of that number.
 
 import { addStep, legalActions, tuningOf } from "@jackioh/engine";
-import type { Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/019-1-top-loser";
@@ -26,6 +25,7 @@ const SWITCH_ALL = "core-048"; // Spell: switch the position of every Unit
 const NETHER = "core-088"; // Spell: destroy all permanents
 const BIG_FELINOR = "core-043"; // Unit: Cry destroy all non-Felinor Units
 const WHIRLWIND = "classicplus-021";
+const AURA = "core-046"; // Field Spell: "Aura: All Units have −1/−1."
 const HONEYPOT = "core-060"; // Trap; radiant: fill your board with Rush Tokens, they attack a played Unit
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER];
@@ -42,10 +42,6 @@ function top(s: Scenario): ReturnType<Scenario["card"]> {
   const unit = s.unit("p2", 3);
   if (unit === null || unit.defId !== TOP) throw new Error("no Top Loser in lane 3");
   return unit;
-}
-
-function at(s: Scenario, player: "p1" | "p2", lane: number): Selection[] {
-  return [{ pick: "instance", instanceId: s.unit(player, lane)?.id ?? "none" }];
 }
 
 function attackTargets(s: Scenario, attackerId: string): string[] {
@@ -200,8 +196,19 @@ describe("C+ #19.1 Top Loser", () => {
       expect(() => s.switchPosition(s.unit("p1", 1) ?? "")).toThrow(/Defense/);
     });
 
-    it("unused helper guard", () => {
-      expect(at).toBeDefined();
+    it("§6.1 Field Spells and Traps still reach it: Suppressive Aura shrinks it, a radiant Honeypot's token attacks it", () => {
+      const aura = topLoser({ backrow: [{ def: AURA, lane: 1 }] }, true);
+      aura.expectStats(top(aura), { attack: 9, health: 9 });
+
+      const s = scenario({
+        active: "p2",
+        p1: { hand: [FILLER], backrow: [{ def: HONEYPOT, lane: 1, faceUp: false, radiant: true }], library: DECK },
+        p2: { hand: [{ def: TOP, radiant: true }, FILLER], library: DECK },
+      });
+      s.play(TOP, { zone: 3 });
+      const tokens = s.events.flatMap((event) => (event.type === "summoned" && event.player === "p1" ? [event.instanceId] : []));
+      const attackers = s.events.flatMap((event) => (event.type === "attackDeclared" ? [event.attackerId] : []));
+      expect(attackers).toEqual([tokens[2]]);
     });
   });
 });

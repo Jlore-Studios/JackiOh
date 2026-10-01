@@ -14,6 +14,7 @@ const MID = "classicplus-019-3";
 const LEAGUE = "classicplus-019";
 const CUBE = "core-022"; // Cry: Tribute one of your other Units and remember it. Death: summon 2 copies of it.
 const HIT_JOB = "core-016";
+const TESLA = "classic-005"; // Field Trap: when your opponent summons a Unit, deal 4 damage to it
 const FILLER = "core-005";
 const DECK = [FILLER, FILLER, FILLER, FILLER];
 
@@ -36,8 +37,7 @@ function seeded(make: (seed: string) => Scenario, want: (s: Scenario) => boolean
   throw new Error("no seed lands the flips wanted");
 }
 
-function fromHand(radiantFace = false, extra: { damage?: number } = {}): (seed: string) => Scenario {
-  void extra;
+function fromHand(radiantFace = false): (seed: string) => Scenario {
   return (seed) =>
     scenario({ seed, p1: { hand: [{ def: MID, radiant: radiantFace }, FILLER], library: DECK }, p2: { hand: [FILLER], library: DECK } });
 }
@@ -76,17 +76,24 @@ describe("C+ #19.3 Mid Loser", () => {
       expect(s.state.players.p2.mana.current).toBe(before + 1);
     });
 
-    it("§4.5 tails on a Mid Loser already damaged can kill it at the state check", () => {
-      // A League of Losers summons it at 5/5; it is then hurt before a second Cry would land — here,
-      // simply, a Mid Loser whose Cry is the first thing it does cannot be damaged first, so the
-      // check is shown with a damaged copy whose Cry runs again through a League summon of a pile.
-      const s = seeded(
-        (seed) => scenario({ seed, p1: { hand: [{ def: MID }, FILLER], library: DECK }, p2: { hand: [FILLER], library: DECK } }),
-        (each) => nextFlip(each) === "tails",
-      );
-      s.play(MID);
-      const unit = mid(s);
-      expect(s.stats(unit).health).toBe(2);
+    it("§4.5 tails on a damaged Mid Loser can kill it at the state check; heads saves it", () => {
+      // The opponent's Tesla answers the summon with 4 damage: a 5/5 left at 1 health.
+      const tesla = (seed: string): Scenario =>
+        scenario({
+          seed,
+          p1: { hand: [MID, FILLER], library: DECK },
+          p2: { hand: [FILLER], library: DECK, backrow: [{ def: TESLA, lane: 1, faceUp: false }] },
+        });
+      const tails = seeded(tesla, (each) => nextFlip(each) === "tails");
+      const doomed = tails.card(MID);
+      tails.play(MID);
+      expect(tails.events.some((event) => event.type === "trapFired")).toBe(true);
+      tails.expectInZone(doomed, "gone");
+      expect(tails.state.players.p2.mana.nextTurnMod).toBe(1);
+
+      const heads = seeded(tesla, (each) => nextFlip(each) === "heads");
+      heads.play(MID);
+      heads.expectStats(mid(heads), { attack: 10, health: 6, maxHealth: 10 });
     });
 
     it("R1 a copy flips nothing: Carnivorous Cube's copies of an eaten Mid Loser are plain 5/5s", () => {
