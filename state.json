@@ -88,6 +88,7 @@
       "stop_requested": false
     },
     "45": {
+      "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
