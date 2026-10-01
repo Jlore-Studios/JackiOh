@@ -5,12 +5,12 @@
 // card's `costChanged` shows −1 to the other player (R177); radiant 10/10: (2) more; its tuned number
 // (surcharge) reads through `param()` (R386)".
 //
-// The aura is B5 E15's price rule (B5 E15), read by R65's `effectiveCost` wherever a play takes a card
-// from. A graveyard play needs a permission (C #28, C #74, C #90's reward L), each another
-// workstream's card: the engine's own cost-rules tests prove the graveyard half of `effectiveCost`
-// through fixtures, and this file proves the hand half and every other clause.
+// The aura is B5 E15's price rule, read by R65's `effectiveCost` wherever a play takes a card from: a
+// hand, or a graveyard C #28 Second Wind's permission opens (its Radiant face, so a played card lands
+// in the graveyard as usual), whose plays are sent to `reduce` since the harness's `play` takes a hand
+// card.
 
-import { legalActions, stepParam } from "@jackioh/engine";
+import { legalActions, reduce, stepParam } from "@jackioh/engine";
 import type { PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/077-anti-magic-monkey";
@@ -28,6 +28,7 @@ const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const CN_VIRUS = "core-090-1"; // (1) Spell, Cast on draw
 const RISKY_DIE = "classic-079"; // (1) Spell: Draw 3; they cost (1) less; …
 const FILLER = "core-010"; // (0) Spell
+const SECOND_WIND = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
 
 /** The cost a player's own view gives a card in their hand (R65). */
 function handCost(s: Scenario, player: PlayerId, defId: string): number | undefined {
@@ -59,6 +60,17 @@ describe("C #77 Anti-Magic Monkey", () => {
       expect(handCost(s, "p1", ARMOR)).toBe(2);
       expect(handCost(s, "p1", HONEYPOT)).toBe(1);
       expect(handCost(s, "p1", VANILLA)).toBe(1);
+    });
+
+    it("R65 a Spell played from a graveyard C #28 Second Wind permits pays the surcharge too", () => {
+      const s = scenario({
+        p1: { hand: [FILLER], field: [MONKEY], backrow: [{ def: SECOND_WIND, radiant: true }], graveyard: [STOCKPILE], library: [VANILLA, VANILLA] },
+      });
+      const stockpile = s.card(STOCKPILE);
+      const result = reduce(s.state, { type: "play", playerId: "p1", instanceId: stockpile.id, nonce: "c77-graveyard" });
+      expect(result.error).toBeUndefined();
+      expect(result.events.find((event) => event.type === "cardPlayed")).toMatchObject({ instanceId: stockpile.id, from: "graveyard", costPaid: 2 });
+      expect(result.state.players.p1.mana.current).toBe(2);
     });
 
     it("R65 an X-cost Spell is untouched: it costs exactly its X, up to all your mana", () => {
