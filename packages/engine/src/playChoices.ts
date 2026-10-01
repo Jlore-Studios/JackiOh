@@ -56,6 +56,7 @@ import {
   carrierZonesFor,
   firstFreeZone,
   isOpen,
+  isLocked,
   isReserved,
   openZones,
   pileAt,
