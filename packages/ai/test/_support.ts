@@ -43,16 +43,16 @@ export const HUMAN: PlayerId = "p2";
 // Card lookups
 // ---------------------------------------------------------------------------------------------
 
-/** Every non-token Core id, sorted: the pool AI decks and determinizations draw from. */
-export function corePool(): string[] {
-  return query({ set: "Core" })
+/** Every non-token id of every set, sorted: the pool AI decks and determinizations draw from (R380). */
+export function aiPool(): string[] {
+  return query()
     .map((def) => def.id)
     .sort();
 }
 
-/** Every Trap and Field Trap id in Core: the only defs a face-down sample may take. */
+/** Every Trap and Field Trap id of every set: the only defs a face-down sample may take. */
 export function trapPool(): string[] {
-  return query({ set: "Core", type: ["Trap", "Field Trap"] })
+  return query({ type: ["Trap", "Field Trap"] })
     .map((def) => def.id)
     .sort();
 }
@@ -176,9 +176,13 @@ export function allOutAttack(start: GameState, attacker: PlayerId): GameState {
 // Real games
 // ---------------------------------------------------------------------------------------------
 
-/** Two distinct-card Core decks from one seeded shuffle (the fuzz suite's construction). */
+/**
+ * Two distinct-card decks from one seeded shuffle (the fuzz suite's construction), of Core cards so
+ * that the fixed deals the tests were written against stay the same.
+ */
 export function randomDecks(seed: string, sizes: [number, number] = [DECK_SIZE, DECK_SIZE]): [string[], string[]] {
-  const shuffled = createRng(`ai-test-decks:${seed}`).shuffle(corePool());
+  const core = query({ set: "Core" }).map((def) => def.id).sort();
+  const shuffled = createRng(`ai-test-decks:${seed}`).shuffle(core);
   return [shuffled.slice(0, sizes[0]), shuffled.slice(sizes[0], sizes[0] + sizes[1])];
 }
 

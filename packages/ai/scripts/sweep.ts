@@ -146,10 +146,10 @@ function main(): void {
 
   const json = args[0] === "--json";
   const requested = json ? args.slice(1) : args;
-  const pool = query({ set: "Core" }).map((def) => def.id);
+  const pool = query().map((def) => def.id);
   const unknown = requested.filter((id) => !pool.includes(id));
   if (unknown.length > 0) {
-    process.stderr.write(`[ai:sweep] not non-token Core ids, skipped: ${unknown.join(", ")}\n`);
+    process.stderr.write(`[ai:sweep] not non-token card ids, skipped: ${unknown.join(", ")}\n`);
   }
   const ids = requested.length > 0 ? pool.filter((id) => requested.includes(id)) : pool;
 

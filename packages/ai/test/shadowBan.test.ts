@@ -1,6 +1,6 @@
 // The AI's shadow ban and the sweep that decides it (SPEC §9.9, R186; docs/polish/3-ai.md B24, B25).
 //
-// B24: the table itself. Every entry names a real non-token Core card and a reason that starts
+// B24: the table itself. Every entry names a real non-token card of any set and a reason that starts
 // with the sweep flags that put it there; the AI never deals itself a banned card; and enough
 // cards stay unbanned to build a 30-card Hard deck. A banned card stays legal for every player.
 //
@@ -21,7 +21,7 @@ import {
   type SweepResult,
   type SweepStats,
 } from "../src/index";
-import { corePool } from "./_support";
+import { aiPool } from "./_support";
 
 const REASON = /^(error|timeout|neverPlayed|selfHarm)(, (error|timeout|neverPlayed|selfHarm))*: \S/;
 
@@ -30,10 +30,10 @@ const REASON = /^(error|timeout|neverPlayed|selfHarm)(, (error|timeout|neverPlay
 // ---------------------------------------------------------------------------------------------
 
 describe("the shadow ban (B24)", () => {
-  it("R186 B24: every entry is a real non-token Core card with a reason that starts with its sweep flags", () => {
-    const pool = new Set(corePool());
+  it("R186 B24: every entry is a real non-token card with a reason that starts with its sweep flags", () => {
+    const pool = new Set(aiPool());
     for (const [defId, reason] of Object.entries(SHADOW_BAN)) {
-      expect(pool.has(defId), `${defId} is not a non-token Core card`).toBe(true);
+      expect(pool.has(defId), `${defId} is not a non-token card`).toBe(true);
       expect(reason, defId).toMatch(REASON);
     }
   });
@@ -44,7 +44,7 @@ describe("the shadow ban (B24)", () => {
   });
 
   it("R186 B24: the unbanned pool holds at least AI_DECK.minPool cards, enough for a Hard deck", () => {
-    const unbanned = corePool().filter((id) => !SHADOW_BAN_IDS.includes(id));
+    const unbanned = aiPool().filter((id) => !SHADOW_BAN_IDS.includes(id));
     expect(unbanned.length).toBeGreaterThanOrEqual(AI_DECK.minPool);
     expect(unbanned.length).toBeGreaterThanOrEqual(AI_DIFFICULTY.hard.deckSize);
   });
@@ -61,7 +61,7 @@ describe("the shadow ban (B24)", () => {
   });
 
   it("R186 B24: a banned card stays legal for a human's deck", () => {
-    const others = corePool().filter((id) => !SHADOW_BAN_IDS.includes(id));
+    const others = aiPool().filter((id) => !SHADOW_BAN_IDS.includes(id));
     const deck = [...SHADOW_BAN_IDS.slice(0, DECK_SIZE), ...others].slice(0, DECK_SIZE);
     const opponent = buildAiDeck(createRng("shadow-ban-legal"), DECK_SIZE);
     expect(new Set(deck).size).toBe(DECK_SIZE);
