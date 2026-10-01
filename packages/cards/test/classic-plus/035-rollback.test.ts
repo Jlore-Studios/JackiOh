@@ -559,7 +559,7 @@ describe("C+ #35 Rollback — Radiant: your side, your opponent's or both", () =
 });
 
 describe("C+ #35 Rollback — a whole game (§9.3)", () => {
-  it("R419 a game using it replays to the same hash, and its views match", () => {
+  it("R419 a game using it replays to the same hash and the same history", () => {
     const deck = [ROLLBACK, "core-008", "core-011", "core-015", "core-002", "core-005", "core-006", "core-012", "core-013", "core-016",
       "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055"];
     const other = ["core-008", "core-011", "core-015", "core-002", "core-005", "core-006", "core-012", "core-013", "core-016", "core-019",
