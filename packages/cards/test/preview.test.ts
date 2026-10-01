@@ -1195,8 +1195,11 @@ describe("C #46 Divine Favor previews how many cards it would draw now (R280)", 
     });
     s.play(DIVINE_FAVOR);
     const echo = s.card("classic-057");
-    // Radiant (2×): the opponent's 2 cards make a mark of 4; p1 holds the drawn cards and the Filler.
-    const yours = s.hand("p1").length - 1;
-    expect(shown(handCard(s.view("p1"), echo.id))).toEqual([{ label: LABEL, value: Math.max(0, 4 - yours) }]);
+    // Radiant (2×): the opponent's 2 cards make a mark of 4. Divine Favor drew 2 (Echo and the Filler
+    // left made 2), so p1 holds 3 cards besides Echo, which leaves when it resolves: 1 more draw.
+    expect(s.hand("p1")).toHaveLength(4);
+    expect(shown(handCard(s.view("p1"), echo.id))).toEqual([{ label: LABEL, value: 1 }]);
+    s.play(echo);
+    expect(s.lastEvents.filter((event) => event.type === "drawn" && event.player === "p1")).toHaveLength(1);
   });
 });
