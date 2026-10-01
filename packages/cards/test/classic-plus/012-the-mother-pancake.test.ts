@@ -88,6 +88,9 @@ describe("C+ #12 The Mother Pancake", () => {
       s.expectStats(MOTHER, { attack: 16, health: 16 });
       expect(added).toHaveLength(2);
       for (const id of added) expect(PANCAKE_TOKENS).toContain(id);
+      // §5.1: each is added on its base face, whatever the Mother's face.
+      const tokens = s.hand("p1").filter((card) => PANCAKE_TOKENS.includes(card.defId));
+      expect(tokens.map((card) => card.radiant)).toEqual([false, false]);
     });
   });
 });

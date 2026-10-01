@@ -10,6 +10,7 @@ import { scenario, type Scenario } from "../_harness";
 const MOMMY = "classicplus-013";
 const MENACE = "core-019"; // 9/9: Mommy dies attacking it.
 const FLOOD = "core-017"; // (4) Spell: bounce all Units.
+const COLLATERAL = "core-034"; // (4) Spell: exile target permanent and a random card of the opponent's deck.
 const FILLER = "core-005";
 const PANCAKE_TOKENS = [1, 2, 3, 4, 5, 6, 7, 8].map((k) => `classicplus-012-${k}`);
 
@@ -46,6 +47,13 @@ describe("C+ #13 Mommy Barker", () => {
       expect(pancakesIn(s)).toHaveLength(0);
     });
 
+    it("exile adds nothing: it never dies", () => {
+      const s = scenario({ p1: { hand: [COLLATERAL, FILLER], field: [MOMMY], library: [FILLER], mana: 8 }, p2: { hand: [FILLER], library: [FILLER] } });
+      s.play(COLLATERAL, { targets: [{ pick: "instance", instanceId: s.card(MOMMY).id }] });
+      s.expectInZone(MOMMY, "exile");
+      expect(pancakesIn(s)).toHaveLength(0);
+    });
+
     it("a full hand burns it", () => {
       const s = diesAttacking(false, Array.from({ length: HAND_CAP }, () => FILLER));
       expect(pancakesIn(s)).toHaveLength(0);
@@ -74,6 +82,8 @@ describe("C+ #13 Mommy Barker", () => {
       s.endTurn().endTurn();
       s.attack(s.unit("p1", 1)?.id ?? MOMMY, MENACE); // second death
       expect(pancakesIn(s)).toHaveLength(2);
+      // §5.1: added on their base faces.
+      expect(s.hand("p1").filter((card) => PANCAKE_TOKENS.includes(card.defId)).every((card) => !card.radiant)).toBe(true);
     });
   });
 });

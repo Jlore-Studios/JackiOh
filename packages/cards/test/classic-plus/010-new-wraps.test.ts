@@ -93,7 +93,7 @@ describe("C+ #10 New Wraps", () => {
       expect(s.card(vanilla).grantedKeywords).toEqual([]);
     });
 
-    it("a Unit that has Reborn gains nothing: it still returns once", () => {
+    it("a Unit that has Reborn gains no second one: it still returns once", () => {
       const s = setup({ hand: [WRAPS, HIT_JOB, HIT_JOB, FILLER], field: [DEFENDER] });
       const defender = s.card(DEFENDER);
 

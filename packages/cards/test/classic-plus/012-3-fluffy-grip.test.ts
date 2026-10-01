@@ -14,6 +14,7 @@ const MENACE = "core-019"; // (3) Unit
 const ROCK = "core-066"; // (4) Unit
 const LUNAR = "core-035"; // a Spell
 const FILLER = "core-005"; // a Spell
+const RUSH_TOKEN = "core-t-rush"; // a unit-token card (R11)
 
 function grip(radiant: boolean, p2Library: SideSetup["library"], p1: SideSetup = {}, seed?: string): Scenario {
   const s = scenario({
@@ -68,6 +69,21 @@ describe("C+ #12.3 Fluffy Grip", () => {
       const burned = s.pile("p1", "graveyard").find((card) => card.defId === MENACE);
       expect(burned?.owner).toBe("p1");
       expect(s.pile("p2", "graveyard").some((card) => card.defId === MENACE)).toBe(false);
+    });
+
+    it("R11 R218 a unit-token card leaves a library only by a draw, so the steal passes over it", () => {
+      const only = scenario({ p1: { hand: [GRIP, FILLER] }, p2: { hand: [FILLER], library: [RUSH_TOKEN] } });
+      const cursor = only.state.rngCursor;
+      only.play(GRIP);
+      expect(only.pile("p2", "library").map((card) => card.defId)).toEqual([RUSH_TOKEN]);
+      expect(only.hand("p1").map((card) => card.defId)).toEqual([FILLER]);
+      expect(only.state.rngCursor).toBe(cursor);
+
+      for (let i = 0; i < 6; i += 1) {
+        const s = grip(false, [RUSH_TOKEN, MENACE, RUSH_TOKEN], {}, `grip-token-${i}`);
+        expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, MENACE]);
+        expect(s.pile("p2", "library").map((card) => card.defId)).toEqual([RUSH_TOKEN, RUSH_TOKEN]);
+      }
     });
 
     it("R97 `stolen` names the card to you only; the opponent sees the sentinel and a smaller deck", () => {

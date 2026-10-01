@@ -4,8 +4,8 @@
 // Unit is not a backrow card and stays; no Cry when copied or recruited (R1); radiant destroys every
 // backrow card on both sides, the opponent's face-down cards reaching their graveyard openly (R97)".
 //
-// The C+ #61 clause waits for that card's script, which this branch does not carry; the engine proves
-// a backrow card's Death through fixtures (`packages/engine/test/backrow-death.test.ts`).
+// The "prints Death" clause is proved with C+ #12.8 Frostspatula, a Field Spell whose Death fires when
+// it is destroyed in the backrow (C+ #61 proves it again in its own file).
 
 import { carriedAt } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -21,6 +21,7 @@ const FROSTSPATULA = "classicplus-012-8"; // Field Spell token: Animated on your
 const TOWER = "classicplus-033"; // Ivory Tower: a Unit may be played on top of it.
 const VANILLA = "core-008"; // (1) 4/4.
 const COOKIE_GUILD = "classic-031"; // (2) Cry: Recruit 1 Unit of (2) Cost or less.
+const MR_TOKEN = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
 
@@ -137,6 +138,29 @@ describe("C+ #5 Guy Att", () => {
       expect(s.events.filter((event) => event.type === "trapFired")).toHaveLength(0);
       expect(s.view("p1").opponent.graveyard.map((card) => card.defId)).toContain(MY_PAWN);
       expect(s.view("p2").you.graveyard.map((card) => card.defId)).toContain(MY_PAWN);
+    });
+
+    it("§4.5 a destroyed backrow card that prints Death fires it: the opponent's Frostspatula resummons its kill", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { hand: [{ def: GUY, radiant: true }, FILLER], library: [STOCKPILE, STOCKPILE], field: [MR_TOKEN], mana: 8 },
+        p2: { hand: [FROSTSPATULA, FILLER], library: [STOCKPILE, STOCKPILE], mana: 8 },
+      });
+      const victim = s.card(MR_TOKEN);
+      s.play(FROSTSPATULA, { zone: 2 }); // R383: it animates into p2's unit zone 2 at once
+      s.attack(FROSTSPATULA, victim); // its Rush reaches units: the 1/1 dies, remembered (R42)
+      s.endTurn(); // it returns to p2's backrow zone 2 at their cleanup
+      expect(s.backrow("p2", 2)?.defId).toBe(FROSTSPATULA);
+
+      s.play(GUY, { zone: 2 });
+
+      s.expectInZone(FROSTSPATULA, "graveyard");
+      const copy = s.unit("p2", 1);
+      expect(copy?.defId).toBe(MR_TOKEN);
+      expect(copy?.id).not.toBe(victim.id);
+      expect(copy?.controller).toBe("p2");
+      // A summon, not a play: the copy's Cry (a Rush Token) never runs (R1).
+      expect(s.unit("p2", 2)).toBeNull();
     });
 
     it("R46 an Indestructible backrow card on either side stays", () => {

@@ -9,6 +9,7 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/006-wrong-hou
 
 const WRONG = "classicplus-006";
 const MENACE = "core-019"; // (3) 9/9 Taunt.
+const VANILLA = "core-008"; // (1) 4/4, no keywords.
 const HIT_JOB = "core-016"; // (3) Destroy target Unit.
 const FILLER = "core-010";
 const STOCKPILE = "core-005";
@@ -30,12 +31,26 @@ describe("C+ #6 Wrong-House Attacker", () => {
   });
 
   describe("base", () => {
-    it("Rush: on its summon turn it may attack a unit but not the hero", () => {
-      const s = setup();
+    it("Rush: on its summon turn it may attack a unit but not the hero, which it may attack a turn later", () => {
+      // No Taunt on p2's side, so only summoning sickness can refuse the swing at the hero.
+      const s = scenario({
+        p1: { hand: [WRONG, FILLER], library: [STOCKPILE, STOCKPILE], mana: 8 },
+        p2: { hand: [FILLER], library: [STOCKPILE, STOCKPILE], field: [VANILLA] },
+      });
       s.play(WRONG, { zone: 1 });
 
       expect(() => s.attack(WRONG, "hero")).toThrow();
+      s.endTurn().endTurn();
+      s.attack(WRONG, "hero");
+      s.expectHealth("p2", 29);
+    });
+
+    it("Rush: on its summon turn it attacks a unit", () => {
+      const s = setup();
+      s.play(WRONG, { zone: 1 });
+
       s.attack(WRONG, MENACE);
+
       expect(s.events.some((event) => event.type === "attackDeclared")).toBe(true);
     });
 
