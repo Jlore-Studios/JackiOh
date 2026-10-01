@@ -14,9 +14,15 @@ export const lesson: TutorialLesson = {
   // send back, and The Rock comes in its place. Friend of Felinors is the second draw, just in time
   // for the second turn, and Reno the third, which glows yellow while the hero is hurt; the coach
   // asks for it on the fifth turn, once The Rock is down and the mana is there. The coach's line
-  // (the policies "coach" and "coach-passive") and the autopilot both win it with the hero near full
-  // health, and so does a follower who picks other lanes and tokens. Scanned with
+  // (the policies "coach" and "coach-passive") and the autopilot both win it on the seventh turn with
+  // the hero never below 22, and so does a follower who picks other lanes and tokens. Scanned with
   // scripts/lesson-deal.ts.
+  //
+  // Patch v0.2.0 made Hit Job cost (3), and a player who plays their dearest card first then spent a
+  // whole turn on it, sometimes on a 1/1, which lost a game on another deal of these decks (the
+  // autopilot's deal 9, ../scripts/advanced.test.ts). Gravedigger took its place in the list: no line
+  // on the lesson's own seed draws that card, so the lesson plays exactly as before, and the other
+  // deals end as they did before the patch.
   seed: "tutorial-advanced-3087",
   humanSeat: "p2",
   humanDeck: [
@@ -38,7 +44,7 @@ export const lesson: TutorialLesson = {
     "core-019", // Midrange Menace (Common)
     "core-013", // Jlockeed Shredder-10 (Common)
     "core-044", // True Strike (Common)
-    "core-016", // Hit Job (Common)
+    "core-037", // Gravedigger (Rare)
     "core-035", // Lunar Eclipse (Rare)
   ],
   // A light opponent: a few cheap units that keep the board busy (Me and Mr Token's Rush Token

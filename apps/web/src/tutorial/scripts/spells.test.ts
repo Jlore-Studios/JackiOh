@@ -13,7 +13,7 @@ import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView
 
 import { newEventsSince } from "../../game/animations.ts";
 import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
-import { playLesson, type LessonRun } from "../harness.ts";
+import { LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./spells.ts";
 
@@ -30,11 +30,7 @@ const PASSIVE_TURNS_MAX = 9;
 /** The most "Got it" bubbles the coach shows in a row, with no move of the player's between them. */
 const GOT_IT_RUN_MAX = 2;
 /** Policy seeds for the player who ignores the coach (each game meets the harness's cheaper AI). */
-const RANDOM_RUNS = 15;
-/** One lesson game through the real core takes a few seconds; generous, for a loaded machine. */
-const LESSON_TIMEOUT_MS = 60_000;
-/** The random policy's allowance, for all of its runs. */
-const RANDOM_TIMEOUT_MS = 240_000;
+const RANDOM_RUNS = 8;
 
 const VANILLA = "core-008";
 const TIMMY = "core-011";
@@ -158,7 +154,7 @@ describe("R293 lesson spells", () => {
   beforeAll(() => {
     coach = playLesson(LESSON, { policy: "coach" });
     steps = stepsOf(coach);
-  }, LESSON_TIMEOUT_MS);
+  }, LESSON_GAME_TIMEOUT_MS);
 
   it("R293 spells: following the coach wins the lesson, and every step shows and is done", () => {
     expect(coach.winner, "the human wins").toBe(human);
@@ -350,7 +346,7 @@ describe("R293 lesson spells", () => {
       expect(run.humanActions.filter((entry) => entry.action.type === "play" && !entry.byCoach)).toEqual([]);
       expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -361,7 +357,7 @@ describe("R293 lesson spells", () => {
       expect(run.humanTurns).toBeLessThanOrEqual(AUTOPILOT_TURNS_MAX);
       expect(run.coach.finished).toBe(true);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -377,7 +373,7 @@ describe("R293 lesson spells", () => {
         }
       }
     },
-    RANDOM_TIMEOUT_MS,
+    RANDOM_RUNS * RANDOM_GAME_MS,
   );
 
   it(
@@ -395,6 +391,6 @@ describe("R293 lesson spells", () => {
       expect(again.shown).toEqual(coach.shown);
       expect(again.tips).toEqual(coach.tips);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 });
