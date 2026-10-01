@@ -8,14 +8,16 @@
 // (R82). Props: #8 Mr. Vanilla, #11 Tempo Timmy, #15 Me and Mr Token (a Cry that would show), #16 Hit
 // Job, #17 Flood, #34 Collateral Damage, #36 Magic Jammed, #41 Sheepish (a face-down Trap), #43 Big
 // Felinor under #92 Felinor Fiender (a Stack pile), #3 Right-house defender (Reborn), #49 Snom Bunny Mind
-// Control, #66 The Rock (Radiant: Indestructible, Immutable), #83 Transmogulate, #85 Unlicensed
-// Experimentation, the Rush Token and C+ #12.8 Frostspatula ("Animated on your turn").
+// Control, #63 Plastic Surgery (a buff and a keyword), #66 The Rock (Radiant: Indestructible, Immutable),
+// #83 Transmogulate, #85 Unlicensed Experimentation, the Rush Token, C+ #12.8 Frostspatula ("Animated on
+// your turn") and C+ #33 Ivory Tower (a carried Unit).
 
 import { describe, expect, it } from "vitest";
 import type { Action, ActionInput, GameEvent, PlayerId } from "@jackioh/shared";
 import {
   BOARD_HISTORY_DEPTH,
   beginGame,
+  carriedAt,
   createGame,
   createRng,
   fold,
@@ -44,11 +46,13 @@ const BIG_FELINOR = "core-043";
 const FIENDER = "core-092";
 const DEFENDER = "core-003";
 const MIND_CONTROL = "core-049";
+const SURGERY = "core-063";
 const ROCK = "core-066";
 const TRANSMOGULATE = "core-083";
 const UNLICENSED = "core-085";
 const RUSH_TOKEN = "core-t-rush";
 const SPATULA = "classicplus-012-8";
+const TOWER = "classicplus-033";
 const FILLER = Array.from({ length: 8 }, () => VANILLA);
 
 /** The board at p1's turn 11, with the snapshots of turns 10 and 11 recorded. */
@@ -243,6 +247,91 @@ describe("C+ #35 Rollback — base: both sides", () => {
     expect(s.state.players.p1.units[0]?.map((card) => card.id)).toEqual([fiender.id, felinor?.id]);
     expect(s.card(vanilla)).toMatchObject({ damage: 1, position: "DEF", counters: { plague: 2 }, buffs: { attack: 0, health: 0 } });
     expect(s.state.players.p1.graveyard.map((card) => card.id)).not.toContain(fiender.id);
+  });
+
+  it("R419 step 1: a Stack card played on top since goes to its owner's hand; the card beneath stands alone and acts again", () => {
+    const s = onTurn11({ p1: { hand: [ROLLBACK, FIENDER], field: [BIG_FELINOR] }, p2: { field: [TIMMY] } });
+    const felinor = s.unit("p1", 1)!;
+    s.play(FIENDER, { zone: 1 });
+    const fiender = s.unit("p1", 1)!;
+    expect(s.state.players.p1.units[0]?.map((card) => card.id)).toEqual([fiender.id, felinor.id]);
+    s.endTurn().endTurn();
+
+    s.play(ROLLBACK, { modes: ["2"] }); // the start of turn 11, before the Fiender
+    s.expectInZone(fiender, "hand");
+    expect(s.state.players.p1.units[0]?.map((card) => card.id)).toEqual([felinor.id]);
+    expect(s.unit("p1", 1)?.id).toBe(felinor.id);
+    expect(ofType(s.lastEvents, "bounced").map((event) => event.instanceId)).toEqual([fiender.id]);
+    // The Felinor never left its side: nothing but `rolledBack` reports it (R566).
+    expect(ofType(s.lastEvents, "controlChanged")).toEqual([]);
+  });
+
+  it("R419 R97 step 1: a face-down card set since goes back to its owner's hand, and the opponent reads neither it nor its definition", () => {
+    const s = onTurn11({ p1: { hand: [ROLLBACK, SHEEPISH], field: [VANILLA] }, p2: { field: [TIMMY] } });
+    s.play(SHEEPISH);
+    const trap = s.backrow("p1", 1)!;
+    s.endTurn().endTurn();
+
+    s.play(ROLLBACK, { modes: ["2"] });
+    s.expectInZone(trap, "hand");
+    expect(ofType(s.view("p2").events, "bounced")).toEqual([{ type: "bounced", instanceId: "hidden", defId: "hidden", owner: "p1" }]);
+    const seen = JSON.stringify(s.view("p2"));
+    expect(seen).not.toContain(SHEEPISH);
+    expect(seen).not.toContain(`"${trap.id}"`);
+    // Its owner reads it.
+    expect(ofType(s.view("p1").events, "bounced")).toEqual([{ type: "bounced", instanceId: trap.id, defId: SHEEPISH, owner: "p1" }]);
+  });
+
+  it("R419 step 2: buffs and granted keywords are the snapshot's — back on a card that died since, gone from one buffed since", () => {
+    const s = onTurn11({
+      p1: { hand: [ROLLBACK, SURGERY, SURGERY], field: [VANILLA, { def: VANILLA, lane: 2 }] },
+      p2: { hand: [HIT_JOB], field: [TIMMY] },
+    });
+    const [early, late] = [s.unit("p1", 1)!, s.unit("p1", 2)!];
+    s.play(SURGERY, { targets: target(early.id) }); // turn 11: +3/+3 and a random keyword
+    const keywords = s.card(early).grantedKeywords;
+    expect(keywords).toHaveLength(1);
+    s.endTurn(); // turn 12's snapshot holds it buffed
+    s.play(HIT_JOB, { targets: target(early.id) }); // it dies, and leaving the field strips both (R78)
+    expect(s.card(early)).toMatchObject({ buffs: { attack: 0, health: 0 }, grantedKeywords: [] });
+    s.endTurn();
+    s.play(SURGERY, { targets: target(late.id) }); // turn 13, after that snapshot
+    expect(s.card(late).buffs).toEqual({ attack: 3, health: 3 });
+    s.endTurn().endTurn();
+
+    s.play(ROLLBACK, { modes: ["3"] }); // turn 15 → the start of turn 12
+    expect(s.unit("p1", 1)?.id).toBe(early.id);
+    expect(s.card(early)).toMatchObject({ buffs: { attack: 3, health: 3 }, grantedKeywords: keywords });
+    expect(s.card(late)).toMatchObject({ buffs: { attack: 0, health: 0 }, grantedKeywords: [] });
+    expect(s.stats(late).attack).toBe(s.stats(early).attack - 3);
+  });
+
+  it("R419 R566 a Unit an Ivory Tower carried goes back onto it: the Tower out of the graveyard, its Lock lifted, the Unit moved along its side", () => {
+    const s = onTurn11({
+      p1: { hand: [ROLLBACK, TOKEN_MAKER], field: [VANILLA], backrow: [{ def: TOWER, lane: 2 }] },
+      p2: { hand: [MAGIC_JAMMED], field: [TIMMY] },
+    });
+    const carrierZone = { player: "p1", row: "backrow", lane: 2 } as const;
+    s.play(TOKEN_MAKER, { zone: 2, row: "backrow" });
+    const tower = s.backrow("p1", 2)!;
+    const rider = carriedAt(s.state, carrierZone)!;
+    expect(rider.defId).toBe(TOKEN_MAKER);
+    s.endTurn(); // turn 12's snapshot: the Tower carrying it
+    // The Tower to the graveyard and its zone Locked; the Unit steps down into a unit zone (R446).
+    s.play(MAGIC_JAMMED, { targets: target(tower.id) });
+    s.expectInZone(tower, "graveyard");
+    expect(carriedAt(s.state, carrierZone)).toBeNull();
+    expect(s.state.players.p1.units.flat().some((card) => card?.id === rider.id)).toBe(true);
+    s.endTurn();
+
+    s.play(ROLLBACK, { modes: ["1"] });
+    expect(s.backrow("p1", 2)?.id).toBe(tower.id);
+    expect(carriedAt(s.state, carrierZone)?.id).toBe(rider.id);
+    expect(s.state.players.p1.units.flat().some((card) => card?.id === rider.id)).toBe(false);
+    expect(s.state.players.p1.locks.backrow[1]).toBe(false);
+    expect(ofType(s.lastEvents, "unlocked")).toEqual([{ type: "unlocked", player: "p1", row: "backrow", lane: 2 }]);
+    // The Tower entered from the graveyard; the Unit never left the side (R566).
+    expect(ofType(s.lastEvents, "controlChanged").map((event) => event.instanceId)).toEqual([tower.id]);
   });
 
   it("R419 step 2: from a hand, a graveyard and exile — no Cry for a card that comes back (R1)", () => {
