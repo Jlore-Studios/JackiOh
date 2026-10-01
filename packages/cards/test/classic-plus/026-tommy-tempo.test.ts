@@ -8,8 +8,7 @@
 // position switch, an activation, or ending the turn yourself) and the turn ends once it resolves
 // (R415); the action count reads through `param()`".
 
-import { applyEffects, createRng, makeContext, stepParam } from "@jackioh/engine";
-import { draw } from "@jackioh/engine/effects";
+import { stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
@@ -19,6 +18,9 @@ const TOMMY = "classicplus-026";
 const STOCKPILE = "core-005"; // Draw 2. Heal your hero 2.
 const MENACE = "core-019"; // 9/9 Taunt; end of turn: heal this to full.
 const FILLER = "core-008"; // Mr. Vanilla, a (1) 4/4: a plain card to play or hold
+const PANTHER = "core-032"; // Prem Panther: after it attacks and survives, draw 2 for each Unit it destroyed
+const MOTHS = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this
+const NOSE = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
 const DECK = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
 function types(events: readonly GameEvent[]): string[] {
@@ -66,7 +68,7 @@ describe("C+ #26 Tommy Tempo", () => {
       expect(s.stats(tommy ?? "").keywords.some((keyword) => keyword.kind === "Taunt")).toBe(true);
     });
 
-    it("R456 a Draw 2 draws its second card and heals, then the turn ends with every end-of-turn step", () => {
+    it("§6.3 End the turn: a Draw 2 draws its second card and heals, then the turn ends with every end-of-turn step", () => {
       const s = scenario({
         p1: { hand: [STOCKPILE, FILLER], library: [TOMMY, FILLER, ...DECK], field: [{ def: MENACE, lane: 1, damage: 4 }], health: 20 },
         p2: { hand: [FILLER], library: DECK },
@@ -75,11 +77,13 @@ describe("C+ #26 Tommy Tempo", () => {
       if (menace === null) throw new Error("setup");
       const second = s.state.players.p1.library[1];
       s.play(STOCKPILE);
-      const log = types(s.lastEvents);
+      const log = s.lastEvents;
+      const at = (match: (event: GameEvent) => boolean): number => log.findIndex(match);
+      const cut = at((event) => event.type === "turnCutShort");
       // The second draw and the heal resolve before the turn is cut short.
       expect(s.card(second ?? "").zone.z).toBe("hand");
-      expect(log.indexOf("turnCutShort")).toBeGreaterThan(log.lastIndexOf("drawn"));
-      expect(log.indexOf("turnCutShort")).toBeGreaterThan(log.indexOf("healed"));
+      expect(cut).toBeGreaterThan(at((event) => event.type === "drawn" && event.instanceId === second?.id));
+      expect(cut).toBeGreaterThan(at((event) => event.type === "healed" && event.targetId === "hero-p1"));
       // Every end-of-turn step ran: the Menace healed to full at the end of p1's turn.
       expect(s.card(menace).damage).toBe(0);
       expect(s.state.active).toBe("p2");
@@ -87,19 +91,22 @@ describe("C+ #26 Tommy Tempo", () => {
     });
 
     it("R415 drawn on the opponent's turn only the summon happens", () => {
+      // p2's Moths to the Flame makes p1's Prem Panther attack it at p2's start of turn; the Panther kills
+      // it and survives, so p1 draws 2 on p2's turn — Tommy Tempo first.
       const s = scenario({
-        active: "p2",
-        p1: { hand: [FILLER], library: [TOMMY, ...DECK] },
-        p2: { hand: [FILLER, FILLER], library: DECK },
+        p1: { hand: [FILLER], library: [TOMMY, ...DECK], field: [{ def: PANTHER, lane: 1 }] },
+        p2: { hand: [FILLER, FILLER], library: DECK, field: [{ def: MOTHS, lane: 3, damage: 10 }] },
       });
-      const sink = { state: s.state, events: [] as GameEvent[], rng: createRng(s.state.seed, s.state.rngCursor) };
-      applyEffects([draw({ count: 1 })], makeContext(sink, null, { controller: "p1" }));
-      s.state.rngCursor = sink.rng.cursor;
-      expect(tommyOnField(s)).not.toBeNull();
-      // No rider on anybody, and p2's turn goes on: p2 still plays.
+      s.endTurn();
+      const tommy = tommyOnField(s);
+      expect(tommy).not.toBeNull();
+      expect(s.events.find((event) => event.type === "cardPlayed" && event.instanceId === tommy?.id)).toMatchObject({ costPaid: 0 });
+      // No rider on anybody, nothing cut short, and p2's turn goes on: p2 still plays.
+      expect(s.events.some((event) => event.type === "turnCutShort")).toBe(false);
       expect(s.state.players.p1.mods.some((mod) => mod.kind === "turnEnds")).toBe(false);
       expect(s.state.players.p2.mods.some((mod) => mod.kind === "turnEnds")).toBe(false);
-      s.play(FILLER);
+      expect(s.state.active).toBe("p2");
+      s.play(s.hand("p2")[0] ?? FILLER);
       expect(s.state.active).toBe("p2");
     });
 
@@ -165,6 +172,14 @@ describe("C+ #26 Tommy Tempo", () => {
       const s = drawnAtStart(true, { field: [{ def: MENACE, lane: 1 }] });
       s.endTurn();
       s.switchPosition(s.unit("p1", 1) ?? "");
+      expect(s.state.active).toBe("p2");
+    });
+
+    it("R415 an activation is the action", () => {
+      const s = drawnAtStart(true, { field: [{ def: NOSE, lane: 1 }], hand: [FILLER, FILLER] });
+      s.endTurn();
+      s.activate(s.unit("p1", 1) ?? "");
+      expect(s.events.some((event) => event.type === "activated")).toBe(true);
       expect(s.state.active).toBe("p2");
     });
 

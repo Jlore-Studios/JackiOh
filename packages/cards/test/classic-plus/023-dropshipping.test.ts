@@ -115,9 +115,18 @@ describe("C+ #23 Dropshipping", () => {
       expect(crumbled.map((event) => event.instanceId).sort()).toEqual([...ids].sort());
       expect(s.events.some((event) => event.type === "discarded")).toBe(false);
       for (const id of ids) expect(["graveyard", "gone"]).toContain(s.card(id).zone.z);
-      // R97: each crumble in a hand reaches the opponent under the sentinel.
-      const theirs = s.view("p2").events.filter((event) => event.type === "crumbled");
-      for (const event of theirs) expect(event.instanceId).toBe("hidden");
+      // R97, R385: the ticks in the hand were silent to the opponent, while a crumble lands the card in
+      // a graveyard, which is public, so it names the card there (a unit-token card, gone, names none).
+      const view = s.view("p2");
+      const theirs = view.events.filter((event) => event.type === "crumbled");
+      expect(theirs).toHaveLength(3);
+      for (const event of theirs) {
+        expect(event).toMatchObject({ owner: "p1", zone: "hand" });
+        if (event.instanceId !== "hidden") expect(s.card(event.instanceId).zone.z).toBe("graveyard");
+      }
+      // The only counts reported are the three gives (R97 judges them where the cards are now); no tick.
+      const counts = view.events.filter((event) => event.type === "counterChanged" && ids.includes(event.instanceId));
+      expect(counts.map((event) => (event.type === "counterChanged" ? event.value : null))).toEqual([2, 2, 2]);
     });
 
     it("R11 R385 a unit-token card that crumbles in the hand ceases to exist", () => {
@@ -170,7 +179,7 @@ describe("C+ #23 Dropshipping", () => {
     });
 
     it("§2.4 R317 a full hand burns what doesn't fit, and a burned card takes no count", () => {
-      const s = shop("drop-full", false, Array.from({ length: HAND_CAP - 2 }, () => FILLER));
+      const s = shop("drop-full", false, Array.from({ length: HAND_CAP - 1 }, () => FILLER));
       s.play(DROP);
       // Nine cards in hand after the play: one fits, two burn.
       expect(added(s)).toHaveLength(1);
@@ -179,6 +188,7 @@ describe("C+ #23 Dropshipping", () => {
       for (const event of burned) {
         const card = s.card(event.instanceId);
         expect(card.zone.z === "graveyard" || card.zone.z === "gone").toBe(true);
+        expect(card.brittle).toBeUndefined();
       }
       expect(s.hand("p1")).toHaveLength(HAND_CAP);
     });
