@@ -180,7 +180,15 @@ import * as mclassic_plus_012_7_legion_of_the_hungry from "./classic-plus/012-7-
 import * as mclassic_plus_012_8_frostspatula from "./classic-plus/012-8-frostspatula";
 import * as mclassic_plus_013_mommy_barker from "./classic-plus/013-mommy-barker";
 import * as mclassic_plus_014_forever from "./classic-plus/014-forever";
+import * as mclassic_plus_027_zephrys_zealotism from "./classic-plus/027-zephrys-zealotism";
+import * as mclassic_plus_028_nuestro_hogar_nuestras_tumbas from "./classic-plus/028-nuestro-hogar-nuestras-tumbas";
 import * as mclassic_plus_029_portal_to_the_past from "./classic-plus/029-portal-to-the-past";
+import * as mclassic_plus_030_felinor_fuser from "./classic-plus/030-felinor-fuser";
+import * as mclassic_plus_031_fusion_lab from "./classic-plus/031-fusion-lab";
+import * as mclassic_plus_032_otherworldly_removal from "./classic-plus/032-otherworldly-removal";
+import * as mclassic_plus_032_1_execute from "./classic-plus/032-1-execute";
+import * as mclassic_plus_032_2_brawl from "./classic-plus/032-2-brawl";
+import * as mclassic_plus_032_3_blade_storm from "./classic-plus/032-3-blade-storm";
 import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
 import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
 import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
@@ -358,7 +366,15 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mclassic_plus_012_8_frostspatula,
   mclassic_plus_013_mommy_barker,
   mclassic_plus_014_forever,
+  mclassic_plus_027_zephrys_zealotism,
+  mclassic_plus_028_nuestro_hogar_nuestras_tumbas,
   mclassic_plus_029_portal_to_the_past,
+  mclassic_plus_030_felinor_fuser,
+  mclassic_plus_031_fusion_lab,
+  mclassic_plus_032_otherworldly_removal,
+  mclassic_plus_032_1_execute,
+  mclassic_plus_032_2_brawl,
+  mclassic_plus_032_3_blade_storm,
   mclassic_plus_033_ivory_tower,
   mclassic_plus_034_memory_leak,
   mclassic_plus_036_conjure_bones,

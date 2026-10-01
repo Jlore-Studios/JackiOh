@@ -197,11 +197,15 @@ export function chooseFromHand(args: {
   of?: PlayerSpec;
   /** Who picks. Default the card's controller. */
   by?: PlayerSpec;
+  /** Only the cards this admits are offered (C+ #31 Fusion Lab: no Immutable card, R23). */
+  where?: (ctx: EffectContext, card: CardInstance) => boolean;
 }): Effect {
   return {
     kind: "chooseFromHand",
     apply(ctx): void {
-      const hand = ctx.state.players[playerOf(ctx, args.of ?? "self")].hand;
+      const where = args.where;
+      const all = ctx.state.players[playerOf(ctx, args.of ?? "self")].hand;
+      const hand = where === undefined ? all : all.filter((card) => where(ctx, card));
       if (hand.length === 0) return;
       const count = Math.min(args.count ?? 1, hand.length);
       openPrompt(ctx, {
