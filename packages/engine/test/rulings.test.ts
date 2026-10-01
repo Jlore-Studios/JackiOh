@@ -2872,6 +2872,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R513 marks what Degrade, Upgrade and KY's Constant changed on a card", () => {
     provenIn(513, "../../../apps/web/src/cards/cardState.test.tsx");
   });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R514 …" (the offered zones glow and answer on the board).
+  it("R514 answers a cell prompt on the board", () => {
+    provenIn(514, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R515 …" (the running total, greying, Confirm).
+  it("R515 shows a budgeted pick's total and greys what would go over", () => {
+    provenIn(515, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
