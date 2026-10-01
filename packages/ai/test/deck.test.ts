@@ -86,6 +86,15 @@ describe("buildAiDeck (B22)", () => {
     expect([...dealt].sort()).toEqual(["Classic", "Classic+", "Core"]);
   });
 
+  it("R390 B22: `boost` multiplies its ids' weights, so they are dealt far more often; without it the deal is unchanged", { timeout: 60_000 }, () => {
+    const ids = aiPool().filter((id) => !SHADOW_BAN_IDS.includes(id)).slice(40, 60);
+    const dealtOf = (all: string[][]): number => all.reduce((sum, deck) => sum + deck.filter((id) => ids.includes(id)).length, 0);
+    const plain = decks(20, {}, "boost");
+    const boosted = decks(20, { boost: { ids, by: 4 } }, "boost");
+    expect(dealtOf(boosted)).toBeGreaterThan(2 * dealtOf(plain));
+    expect(decks(20, { boost: { ids, by: 1 } }, "boost")).toEqual(plain);
+  });
+
   it("B22: the same seed deals the same deck, and different seeds deal different decks", () => {
     for (const size of SIZES) {
       const one = buildAiDeck(createRng("deck-test-same"), size);
