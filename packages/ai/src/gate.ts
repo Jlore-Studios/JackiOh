@@ -180,8 +180,25 @@ export function gameConfig(
 
 /** Plays games 1..seeds; each is folded with its handicaps to fill replayHash/replayErrors. */
 export function runGate(matchup: Matchup, seeds: number, budget: SearchBudget = AI_GATE_BUDGET): GateReport {
+  return runGateGames(
+    matchup,
+    Array.from({ length: seeds }, (_, at) => at + 1),
+    budget,
+  );
+}
+
+/**
+ * Plays the listed games of a matchup (1-based, as `gameConfig` numbers them), each folded with its
+ * handicaps to fill replayHash/replayErrors. CI plays a gate in shards, each one every k-th game
+ * (`gateShardGames`), and holds the wins of all of them together against `gateNeeded`.
+ */
+export function runGateGames(
+  matchup: Matchup,
+  numbers: readonly number[],
+  budget: SearchBudget = AI_GATE_BUDGET,
+): GateReport {
   const games: GateGame[] = [];
-  for (let n = 1; n <= seeds; n += 1) {
+  for (const n of numbers) {
     const config = gameConfig(matchup, n, budget, AI_GATE.seedSeries);
     const subjectSeat = subjectSeatOf(n);
     const record = playMatch(config);
@@ -203,5 +220,16 @@ export function runGate(matchup: Matchup, seeds: number, budget: SearchBudget = 
   const turnCapDraws = games.filter(
     (game) => game.record.result?.winner === "draw" && game.record.result.reason === "turn-cap",
   ).length;
-  return { matchup, games, wins, turnCapDraws, rate: seeds > 0 ? wins / seeds : 0 };
+  return { matchup, games, wins, turnCapDraws, rate: games.length > 0 ? wins / games.length : 0 };
+}
+
+/**
+ * Shard `index` of `count` (1-based) of a gate run of `total` games: games index, index + count,
+ * index + 2 × count, …, so every shard gets a share of early and late seeds and the shards together
+ * play each game exactly once.
+ */
+export function gateShardGames(total: number, index: number, count: number): number[] {
+  const numbers: number[] = [];
+  for (let n = index; n <= total; n += count) numbers.push(n);
+  return numbers;
 }

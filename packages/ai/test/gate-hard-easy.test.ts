@@ -17,21 +17,26 @@ import {
   buildAiDeck,
   gameConfig,
   gateNeeded,
-  runGate,
+  runGateGames,
   type GateReport,
   type Matchup,
 } from "../src/index";
+import { gamesToPlay, gateShard, writeShard } from "./_shard";
 
 const MATCHUP: Matchup = "hard-vs-easy";
 const FULL = process.env["JACKIOH_AI_GATE"] === "full";
 const GAMES = FULL ? AI_GATE.fullSeeds[MATCHUP] : AI_GATE.smokeSeeds;
 const NEEDED = gateNeeded(MATCHUP, GAMES);
+const SHARD = gateShard();
+/** The games this process plays: all of them, or its shard's when CI splits the run (./_shard.ts). */
+const PLAYED = gamesToPlay(GAMES, SHARD);
+const SHARD_LABEL = SHARD === undefined ? "" : `, shard ${String(SHARD.index)}/${String(SHARD.count)}: ${String(PLAYED.length)} played`;
 /** Per-game allowance under load (the machine is shared), plus a fixed margin. */
-const TIMEOUT = 60_000 + GAMES * 45_000;
+const TIMEOUT = 60_000 + PLAYED.length * 45_000;
 
 let cached: GateReport | undefined;
 function report(): GateReport {
-  cached ??= runGate(MATCHUP, GAMES, AI_GATE_BUDGET);
+  cached ??= runGateGames(MATCHUP, PLAYED, AI_GATE_BUDGET);
   return cached;
 }
 
@@ -42,7 +47,7 @@ function losingSeeds(gate: GateReport): string {
     .join(", ");
 }
 
-describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
+describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games${SHARD_LABEL})`, () => {
   it("R180 B30: gameConfig seats Hard's handicap against Easy's, the same AI and budget on both, alternating seats", () => {
     for (const n of [1, 2, 3]) {
       const config = gameConfig(MATCHUP, n, AI_GATE_BUDGET);
@@ -73,15 +78,24 @@ describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
   it(`B30: the Hard AI wins at least ${NEEDED} of ${GAMES} games against itself on Easy`, { timeout: TIMEOUT }, () => {
     const gate = report();
     expect(gate.matchup).toBe(MATCHUP);
-    expect(gate.games).toHaveLength(GAMES);
+    expect(gate.games).toHaveLength(PLAYED.length);
     gate.games.forEach((game, at) => {
-      expect(game.seed).toBe(`${AI_GATE.seedSeries}:${MATCHUP}:${at + 1}`);
-      expect(game.subjectSeat).toBe(at % 2 === 0 ? "p1" : "p2");
+      expect(game.seed).toBe(`${AI_GATE.seedSeries}:${MATCHUP}:${String(PLAYED[at])}`);
+      expect(game.subjectSeat).toBe((PLAYED[at] ?? 0) % 2 === 1 ? "p1" : "p2");
       expect(game.won).toBe(game.record.result?.winner === game.subjectSeat);
     });
     // Only wins count: a draw at the turn cap is reported beside them and is a game the AI did not close.
     expect(gate.wins).toBe(gate.games.filter((game) => game.won).length);
-    expect(gate.rate).toBeCloseTo(gate.wins / GAMES, 10);
+    expect(gate.rate).toBeCloseTo(gate.wins / PLAYED.length, 10);
+    // A shard's wins are a share of the run's, so `pnpm ai:gate:merge` holds them against NEEDED
+    // together with the other shards'. The games' cleanliness is still checked here (B31).
+    if (SHARD !== undefined) {
+      const path = writeShard(gate, GAMES, SHARD, PLAYED);
+      process.stdout.write(
+        `[gate ${MATCHUP}${SHARD_LABEL}] ${String(gate.wins)} wins and ${String(gate.turnCapDraws)} turn-cap draws, written to ${path}\n`,
+      );
+      return;
+    }
     // Written to stdout, as the fuzz suite writes its numbers: vitest's default reporter swallows
     // console output from a passing test, and a green gate should still show how it passed.
     process.stdout.write(
@@ -95,7 +109,7 @@ describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
 
   it("B31: every game is clean: nothing rejected or thrown, no fallback, a result, and a replay that matches", { timeout: TIMEOUT }, () => {
     const gate = report();
-    expect(gate.games).toHaveLength(GAMES);
+    expect(gate.games).toHaveLength(PLAYED.length);
     for (const game of gate.games) {
       const label = `${game.seed} (${game.subjectSeat})`;
       expect(game.record.rejected, label).toEqual([]);

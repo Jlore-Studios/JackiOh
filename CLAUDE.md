@@ -72,12 +72,14 @@ pnpm --dir e2e test:component       # component/pixel specs, no server needed; E
 
 The server reseeds fixture accounts and invite codes at boot (R144). Spec 10 uses them up, so restart the server before re-running it. `vite dev` reloads the page mid-run whenever `apps/web/src` changes, which restarts a hotseat game at turn 0. If you're editing while specs run, serve a built client the way CI does: `pnpm build:e2e`, then `pnpm --dir apps/web exec vite preview --port 5173 --strictPort` (a plain `build` strips `window.__jackioh`, and every spec fails). `99-online-smoke.cy.ts` drives the deployed stack with real accounts. It is skipped unless enabled, and its header gives the command.
 
-CI (`.github/workflows/ci.yml`) runs five parallel jobs:
-- `checks`: lint, typecheck, validate:catalog, missing-tests, rulings:coverage, test, fuzz, test:coverage, in that order.
-- `ai-gate`: `pnpm ai:gate`.
+CI (`.github/workflows/ci.yml`) reports five required checks. Each long one is a summary job over short jobs that run side by side, so no job takes more than five minutes (#73):
+- `checks`: lint, typecheck, validate:catalog, missing-tests and rulings:coverage in one job; `pnpm test` by project; the fuzz gate by seed range; `test:coverage` by shard, with the 90% floor held on the merged report.
+- `ai-gate`: `pnpm ai:gate`, every k-th game per shard (`JACKIOH_AI_GATE_SHARD=k/K`). `pnpm ai:gate:merge` holds the shards' wins together against `gateNeeded`.
 - `sql`: `test:sql`.
 - `db`: `test:db`.
-- `e2e`: the twenty-eight specs (`01`–`28`) on Chrome and on Electron, plus the component specs on Chrome.
+- `e2e`: the twenty-eight specs (`01`–`28`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
+
+`ci-duration.yml` reads every CI run's job times and opens an issue (or comments on the open one) when a job went over five minutes; split that job further, usually by lengthening its matrix list.
 
 `bot-selftest.yml` adds a sixth required check, `bot selftest`: the night bot's own suite (`cd bot && python3 -m unittest discover -s tests -t .`) and actionlint over its workflows. Branch protection on `main` requires all of these checks, which is what lets the night bot's pull requests auto-merge safely.
 

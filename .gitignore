@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+.vitest-reports/
+ai-gate-shards/
 .vite/
 *.log
 .DS_Store

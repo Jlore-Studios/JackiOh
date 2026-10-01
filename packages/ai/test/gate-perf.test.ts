@@ -26,11 +26,19 @@ import type { PlayerId } from "@jackioh/shared";
 import { createRng, type GameState } from "@jackioh/engine";
 import { AI_BUDGET, AI_GATE, candidateActions, decide, gameConfig, playMatch } from "../src/index";
 import { scenario, type ScenarioOptions } from "./_support";
+import { gamesToPlay, gateShard } from "./_shard";
 
 const FULL = process.env["JACKIOH_AI_GATE"] === "full";
 const GAMES = FULL ? AI_GATE.perfFullGames : AI_GATE.perfSmokeGames;
+/**
+ * The games whose decisions this process times: all of them, or its shard's when CI splits the run
+ * (./_shard.ts). Every decision is judged on its own, so the shards together time exactly what one
+ * run would, and the wide boards are timed in every shard.
+ */
+const SHARD = gateShard();
+const PLAYED = gamesToPlay(GAMES, SHARD);
 /** Per-game allowance under load (the machine is shared), plus a fixed margin. */
-const TIMEOUT = 60_000 + GAMES * 120_000;
+const TIMEOUT = 60_000 + PLAYED.length * 120_000;
 
 type Timing = {
   /** The decision's cost on the development machine: its smallest ratio to the yardstick, in ms. */
@@ -42,10 +50,10 @@ type Timing = {
 };
 type Timed = Timing & { game: number; turn: number };
 
-/** Every state the AI seat decided in ai-vs-greedy gate games 1..GAMES, played at AI_BUDGET. */
+/** Every state the AI seat decided in the ai-vs-greedy gate games PLAYED, played at AI_BUDGET. */
 function decisionStates(): { game: number; seat: PlayerId; state: GameState }[] {
   const states: { game: number; seat: PlayerId; state: GameState }[] = [];
-  for (let n = 1; n <= GAMES; n += 1) {
+  for (const n of PLAYED) {
     const seat: PlayerId = n % 2 === 1 ? "p1" : "p2";
     playMatch(gameConfig("ai-vs-greedy", n, AI_BUDGET), {
       afterAction(before, _after, actor) {
@@ -100,8 +108,11 @@ function timeDecision(state: GameState, seat: PlayerId, rngSeed: string): Timing
 // The yardstick's first runs pay for compiling the engine; they are no measurement.
 yardstickMs();
 
-describe(`gate perf: one decision at AI_BUDGET (${FULL ? "full" : "smoke"}: ${GAMES} game(s))`, () => {
-  it(`B42 every decision stays within the node budget and under ${AI_GATE.maxDecisionMs} ms`, { timeout: TIMEOUT }, () => {
+const SHARD_LABEL = SHARD === undefined ? "" : `, shard ${String(SHARD.index)}/${String(SHARD.count)}: ${String(PLAYED.length)} timed`;
+
+describe(`gate perf: one decision at AI_BUDGET (${FULL ? "full" : "smoke"}: ${GAMES} game(s)${SHARD_LABEL})`, () => {
+  // A shard with more shards than games has none of its own; the wide boards below still run.
+  it.skipIf(PLAYED.length === 0)(`B42 every decision stays within the node budget and under ${AI_GATE.maxDecisionMs} ms`, { timeout: TIMEOUT }, () => {
     const timed: Timed[] = [];
     for (const { game, seat, state } of decisionStates()) {
       timed.push({ game, turn: state.turn, ...timeDecision(state, seat, `perf:${game}:${state.turn}`) });

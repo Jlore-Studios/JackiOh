@@ -10,6 +10,7 @@
     "build": "pnpm --filter @jackioh/web build",
     "build:e2e": "pnpm --filter @jackioh/web build:e2e",
     "ai:gate": "JACKIOH_AI_GATE=full vitest run --project ai gate-",
+    "ai:gate:merge": "tsx packages/ai/scripts/gate-merge.ts",
     "ai:stats": "pnpm --filter @jackioh/ai stats",
     "ai:sweep": "pnpm --filter @jackioh/ai sweep",
     "dev": "pnpm --filter @jackioh/web dev",
