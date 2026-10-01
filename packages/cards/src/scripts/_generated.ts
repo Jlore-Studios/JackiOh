@@ -124,6 +124,29 @@ import * as mt_felinor from "./t-felinor";
 import * as mt_ghoul from "./t-ghoul";
 import * as mt_rush from "./t-rush";
 import * as mt_sheep from "./t-sheep";
+import * as mclassic_plus_062_kys_papaya from "./classic-plus/062-kys-papaya";
+import * as mclassic_plus_063_fruit_tree from "./classic-plus/063-fruit-tree";
+import * as mclassic_plus_064_mulch_muncher from "./classic-plus/064-mulch-muncher";
+import * as mclassic_plus_065_two_grapes from "./classic-plus/065-two-grapes";
+import * as mclassic_plus_065_1_rotten_grape from "./classic-plus/065-1-rotten-grape";
+import * as mclassic_plus_065_2_normal_grape from "./classic-plus/065-2-normal-grape";
+import * as mclassic_plus_065_3_large_grape from "./classic-plus/065-3-large-grape";
+import * as mclassic_plus_065_4_golden_grape from "./classic-plus/065-4-golden-grape";
+import * as mclassic_plus_065_5_mythic_grape from "./classic-plus/065-5-mythic-grape";
+import * as mclassic_plus_066_vine_of_grapes from "./classic-plus/066-vine-of-grapes";
+import * as mclassic_plus_067_pear from "./classic-plus/067-pear";
+import * as mclassic_plus_068_organic_produce from "./classic-plus/068-organic-produce";
+import * as mclassic_plus_069_buff_billy from "./classic-plus/069-buff-billy";
+import * as mclassic_plus_070_chaos_machine from "./classic-plus/070-chaos-machine";
+import * as mclassic_plus_071_book_of_buff from "./classic-plus/071-book-of-buff";
+import * as mclassic_plus_072_book_of_nerf from "./classic-plus/072-book-of-nerf";
+import * as mclassic_plus_075_j_lease_j_jungle_ex_plorer from "./classic-plus/075-j-lease-j-jungle-ex-plorer";
+import * as mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack from "./classic-plus/075-1-j-lease-j-jungle-ex-plorer-pack";
+import * as mclassic_plus_076_brother_lar from "./classic-plus/076-brother-lar";
+import * as mclassic_plus_076_1_brother_ping from "./classic-plus/076-1-brother-ping";
+import * as mclassic_plus_t_ai_02_scaling_law from "./classic-plus/t-ai-02-scaling-law";
+import * as mclassic_plus_t_ai_03_hallucination from "./classic-plus/t-ai-03-hallucination";
+import * as mclassic_plus_t_ai_10_fine_tuning from "./classic-plus/t-ai-10-fine-tuning";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -237,4 +260,27 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mt_ghoul,
   mt_rush,
   mt_sheep,
+  mclassic_plus_062_kys_papaya,
+  mclassic_plus_063_fruit_tree,
+  mclassic_plus_064_mulch_muncher,
+  mclassic_plus_065_two_grapes,
+  mclassic_plus_065_1_rotten_grape,
+  mclassic_plus_065_2_normal_grape,
+  mclassic_plus_065_3_large_grape,
+  mclassic_plus_065_4_golden_grape,
+  mclassic_plus_065_5_mythic_grape,
+  mclassic_plus_066_vine_of_grapes,
+  mclassic_plus_067_pear,
+  mclassic_plus_068_organic_produce,
+  mclassic_plus_069_buff_billy,
+  mclassic_plus_070_chaos_machine,
+  mclassic_plus_071_book_of_buff,
+  mclassic_plus_072_book_of_nerf,
+  mclassic_plus_075_j_lease_j_jungle_ex_plorer,
+  mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack,
+  mclassic_plus_076_brother_lar,
+  mclassic_plus_076_1_brother_ping,
+  mclassic_plus_t_ai_02_scaling_law,
+  mclassic_plus_t_ai_03_hallucination,
+  mclassic_plus_t_ai_10_fine_tuning,
 ];

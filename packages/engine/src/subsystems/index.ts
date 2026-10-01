@@ -17,6 +17,7 @@ export * from "./callToChaos";
 // C+ #42 KY's Test's question bank (E31, R420):
 
 // C+ #62 KY's Papaya's curve targeting (E32, R422):
+export * from "./papaya";
 
 // C+ #73 Call to Chaos (Classic+ Edition)'s table (R423) and #74's fusing Field Trap (R425):
 

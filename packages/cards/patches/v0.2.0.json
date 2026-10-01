@@ -8489,6 +8489,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 1,
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Draw a curve y = ax³ + bx² + cx + d across the board, where x is the lane (0 to 4 from your lane 1) and y the row (0 your backrow, 1 your units, 2 their units, 3 their backrow). Exile every card on the curve."
@@ -8520,6 +8521,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Start of turn: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0)."
@@ -8549,6 +8551,7 @@
         "min": 1
       }
     ],
+    "loc": 12,
     "base": {
       "attack": 9,
       "health": 9,
@@ -8608,6 +8611,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Add {grapes|Grape|Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
@@ -8636,6 +8640,7 @@
     "printedRarity": "Common",
     "token": true,
     "cost": 1,
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Your hero loses 5 health."
@@ -8677,13 +8682,14 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. It costs (1) less."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. They cost (1) less."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     }
   },
   "classicplus-065-3": {
@@ -8718,13 +8724,14 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. It costs (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. They cost (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     }
   },
   "classicplus-065-4": {
@@ -8741,6 +8748,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 1,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Make a card on your side of the field or in your hand Radiant."
@@ -8764,6 +8772,7 @@
     "printedRarity": "Mythic",
     "token": true,
     "cost": 0,
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Replace your hand with random Mythic cards. They cost (0)."
@@ -8802,6 +8811,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "Add {grapes|Grape|Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
@@ -8838,6 +8848,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Summon {units} random (1) Cost Common Units."
@@ -8869,6 +8880,7 @@
         "min": 1
       }
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand.\nAura: Fruits you play are Radiant."
@@ -8890,6 +8902,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": "X",
+    "loc": 8,
     "base": {
       "attack": 0,
       "health": 0,
@@ -8931,6 +8944,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Start of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
@@ -8962,6 +8976,7 @@
         "min": 1
       }
     ],
+    "loc": 6,
     "base": {
       "keywords": [],
       "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
@@ -8993,6 +9008,7 @@
         "min": 1
       }
     ],
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "Degrade a permanent {times|time|times}."
@@ -9148,6 +9164,7 @@
         "min": 1
       }
     ],
+    "loc": 9,
     "base": {
       "attack": 5,
       "health": 5,
@@ -9184,6 +9201,7 @@
         "min": 1
       }
     ],
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Add {cards} random Radiant Classic or Classic+ cards to your hand."
@@ -9209,6 +9227,7 @@
     "refs": [
       "classicplus-076-1"
     ],
+    "loc": 4,
     "base": {
       "attack": 1,
       "health": 1,
@@ -9247,6 +9266,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "attack": 4,
       "health": 4,
@@ -9376,6 +9396,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 2,
+    "loc": 10,
     "base": {
       "attack": 2,
       "health": 2,
@@ -9402,6 +9423,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "Add a copy of a random card in your opponent's deck to your hand. Give it Brittle 2."
@@ -9556,6 +9578,7 @@
     "rarity": "Token",
     "token": true,
     "cost": 2,
+    "loc": 9,
     "base": {
       "keywords": [],
       "text": "End of turn: Upgrade a random card in your hand."
