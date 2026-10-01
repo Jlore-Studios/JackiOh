@@ -6,7 +6,8 @@
 //
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
 
-import type { GameEvent } from "@jackioh/shared";
+import { hashState, reduce, type GameState } from "@jackioh/engine";
+import type { Action, GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/t-ai-08-rate-limit";
@@ -95,6 +96,34 @@ describe("T-AI-8 Rate Limit", () => {
       expect(s.state.active).toBe("p1");
       // Stockpile's whole list still resolved: both draws (the cast one and its replacement) and the heal.
       s.expectHealth("p2", 32);
+    });
+
+    it("R158 R456 a 3rd play that asks pauses the end: answered after a JSON round trip, the play finishes and then the turn ends", () => {
+      // Stockpile's draw casts a base Hinder, their 3rd play, which asks them to discard (R431).
+      const s = setup({}, { library: [HINDER, VANILLA, VANILLA, VANILLA] });
+      s.play(VANILLA, { zone: 1 }).play(STOCKPILE);
+      expect(s.state.pending?.kind).toBe("hand");
+      expect(s.state.active).toBe("p2");
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      expect(hashState(thawed)).toBe(hashState(s.state));
+      const discard = s.hand("p2").find((card) => card.defId === VANILLA)?.id ?? "";
+      const answer = {
+        type: "answer",
+        choiceId: s.state.pending?.id ?? "",
+        selection: [{ pick: "instance", instanceId: discard }],
+        playerId: "p2",
+        nonce: "rate-limit-pause",
+      } as Action;
+      const live = reduce(s.state, answer);
+      const frozen = reduce(thawed, answer);
+      expect(live.error).toBeUndefined();
+      expect(hashState(frozen.state)).toBe(hashState(live.state));
+      s.answer(discard);
+      s.expectInZone(RATE_LIMIT, "graveyard").expectInZone(discard, "graveyard");
+      // Stockpile's heal landed before the turn ended.
+      s.expectHealth("p2", 32);
+      expect(s.state.active).toBe("p1");
+      s.expectEvents("cardResolved", "turnCutShort", "turnEnded");
     });
 
     it("R448 a countered play is never played and doesn't count", () => {
