@@ -4,7 +4,8 @@
 // better destroyed, better being the higher attack plus current health, then the higher cost, then the
 // lower lane (R414)".
 
-import { addStep, createRng, tuningOf } from "@jackioh/engine";
+import { addStep, createRng, hashState, reduce, tuningOf, type GameState } from "@jackioh/engine";
+import type { Action } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic-plus/025-soul-shot";
@@ -142,6 +143,15 @@ describe("C+ #25 Soul Shot", () => {
 
     it("R414 then to the lower lane: of two (1) 4/4s, the one in lane 2 over lane 4", () => {
       expectLuckyKeeps({ field: [{ def: VANILLA, lane: 2 }, { def: VANILLA, lane: 4 }] }, [2, 4], 2);
+    });
+
+    it("§9.3 the two Lucky picks replay from a JSON copy to the same hash", () => {
+      const s = shot({ field: [{ def: SMALL, lane: 1 }, { def: BIG, lane: 2 }, { def: VANILLA, lane: 4 }] }, true, "shot-replay");
+      const action = { type: "play", instanceId: s.card(SHOT).id, playerId: "p1", nonce: "shot-replay" } as Action;
+      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+      const live = reduce(s.state, action);
+      expect(live.error).toBeUndefined();
+      expect(hashState(reduce(thawed, action).state)).toBe(hashState(live.state));
     });
 
     it("R386 Lucky is tuned like any numbered keyword: Lucky 2 makes three picks", () => {
