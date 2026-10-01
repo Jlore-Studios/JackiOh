@@ -19,6 +19,7 @@
 //   pnpm ai:sweep --report a.jsonl p2.jsonl …  the report from pass-1 and pass-2 lines
 //
 // Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
+// A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
 // Node tooling, so it may read the clock (`performance.now` for decision timing), read files and
 // write to the console; src/ stays pure and receives the clock as `now`.
 
@@ -82,7 +83,8 @@ function timed<T>(label: string, run: () => T, describe: (result: T) => string):
   return result;
 }
 
-function pass1(ids: readonly string[]): SweepResult[] {
+/** Each result is also handed to `emit` as it lands, so a slice cut short keeps what it finished. */
+function pass1(ids: readonly string[], emit: (result: SweepResult) => void = () => undefined): SweepResult[] {
   const results: SweepResult[] = [];
   ids.forEach((id, index) => {
     for (const tier of AI_SWEEP.tiers) {
@@ -91,13 +93,19 @@ function pass1(ids: readonly string[]): SweepResult[] {
         () => sweepCard(id, { now: () => performance.now(), tier }),
         (r) => (r.flags.length > 0 ? r.flags.join(", ") : r.unswept ? "unswept" : "clean"),
       );
+      emit(result);
       results.push(result);
     }
   });
   return results;
 }
 
-function pass2(ids: readonly string[], atRisk: readonly string[], keepOut: readonly string[]): SweepPass2[] {
+function pass2(
+  ids: readonly string[],
+  atRisk: readonly string[],
+  keepOut: readonly string[],
+  emit: (result: SweepPass2) => void = () => undefined,
+): SweepPass2[] {
   const results: SweepPass2[] = [];
   ids.forEach((id, index) => {
     for (const tier of AI_SWEEP.tiers) {
@@ -106,6 +114,7 @@ function pass2(ids: readonly string[], atRisk: readonly string[], keepOut: reado
         () => sweepAtRisk(id, atRisk, keepOut, { now: () => performance.now(), tier }),
         (r) => `${r.cards.length} at-risk card(s) dealt, ${r.suspects.length} suspect line(s)`,
       );
+      emit(result);
       results.push(result);
     }
   });
@@ -242,18 +251,15 @@ function main(): void {
     const first = readLines((args[1] ?? "").split(",").filter((file) => file !== "")) as SweepResult[];
     const atRisk = atRiskIds(first);
     const ids = pickIds(args.slice(2)).filter((id) => atRisk.includes(id));
-    for (const result of pass2(ids, atRisk, pass2KeepOut(first))) process.stdout.write(`${JSON.stringify(result)}\n`);
+    pass2(ids, atRisk, pass2KeepOut(first), (result) => process.stdout.write(`${JSON.stringify(result)}\n`));
     return;
   }
 
   const json = args[0] === "--json";
   const ids = pickIds(json ? args.slice(1) : args);
   const started = performance.now();
-  const first = pass1(ids);
-  if (json) {
-    for (const result of first) process.stdout.write(`${JSON.stringify(result)}\n`);
-    return;
-  }
+  const first = pass1(ids, json ? (result) => process.stdout.write(`${JSON.stringify(result)}\n`) : undefined);
+  if (json) return;
   const atRisk = atRiskIds(first);
   const second = pass2(
     ids.filter((id) => atRisk.includes(id)),
