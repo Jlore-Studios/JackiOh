@@ -9,10 +9,9 @@
 // Indestructible, still 1/1 (a named exception in the R275 radiant-standard test), so it survives the
 // redirected hit, with no Taunt (R347); no tuned numbers".
 //
-// This worktree's engine wires the attack half of "a friendly unit is targeted" (`combat.ts`); the
-// play, cast and prompt halves are the play pipeline's (§10.5 step 1 and every target prompt), wired
-// in the play-pipeline workstream's engine: those tests wait for integration, as does the random-pick
-// case, which needs C #42's Activate.
+// "A friendly unit is targeted" is one replacement point the engine runs for an attack (§4.2 step 2,
+// `combat.ts`) and for a play's, a cast's, an activation's and a prompt's pick (§10.5 step 1, every
+// target prompt); the random-pick case uses C #42 Transmutable Toxins' Activate.
 
 import { describe, expect, it } from "vitest";
 import { createRng, legalActions, subsystems } from "@jackioh/engine";

@@ -206,7 +206,7 @@ describe("C #21 Turtinator", () => {
     it("R384 stops at ACTIVATE_UNLIMITED_CAP uses in a turn", () => {
       const s = setup({ field: [TURTLE, TIMMY] });
       const turtle = s.card(TURTLE);
-      turtle.memory[subsystems.ACTIVATIONS_MEMORY_KEY] = { turn: s.state.turn, uses: { eat: ACTIVATE_UNLIMITED_CAP } };
+      turtle.memory[subsystems.ACTIVATIONS_MEMORY_KEY] = { turn: s.state.turn, count: ACTIVATE_UNLIMITED_CAP };
 
       expect(activationsOf(s, "p1", turtle.id)).toHaveLength(0);
       expect(() => eat(s, TIMMY)).toThrow();

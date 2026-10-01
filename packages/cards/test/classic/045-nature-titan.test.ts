@@ -4,9 +4,6 @@
 // overpays (R101); Cry, and whenever it attacks (each `attackDeclared` for it, forced attacks
 // included): draw 1 and heal your hero 3 with no cap (§6.3 Heal); defending does nothing; radiant
 // 12/12: draw 2, heal 6; its tuned numbers (draw, heal) read through `param()` (R386)".
-//
-// R391's full-board cases need the play validator of the engine's play-pipeline branch (eng-play-b);
-// they are real tests here and run once that branch is integrated.
 
 import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -120,7 +117,7 @@ describe("C #45 Nature Titan", () => {
         p1: { hand: [TITAN, ANCHOR], field: [MENACE, MENACE, VANILLA, MENACE, MENACE], library: [A] },
         p2: { hand: [ANCHOR] },
       });
-      // Lane 3 is Locked with its Vanilla in it (no card in this worktree locks a unit zone).
+      // Lane 3 is Locked with its Vanilla in it, set directly as Core #60's test sets a Lock.
       s.state.players.p1.locks.units[2] = true;
 
       expect(() => s.play(TITAN, { tributes: [VANILLA], zone: 3 })).toThrow();

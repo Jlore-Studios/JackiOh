@@ -5,8 +5,7 @@
 // 1 mana this turn; the gain never names the face-down trap in the opponent's view (R33, R97); its
 // tuned number (radiant mana) reads through `param()` (R386)".
 //
-// The cast case needs a card that casts a Trap: Classic+ #37 Wardrum's end-of-turn copy (the Classic+
-// workstream's script), so that one test waits for integration.
+// The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
 
 import { describe, expect, it } from "vitest";
 import { effectiveCost, stepParam } from "@jackioh/engine";

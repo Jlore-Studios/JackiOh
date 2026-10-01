@@ -5,10 +5,9 @@
 // Spell itself is resolving and spared; no event carries a deck position; radiant: the opponent's
 // field, hand and deck only; its tuned number (threshold) reads through `param()` (R386)".
 //
-// An X card on the field "played for X": C+ #69 Buff Billy's 3X/3X stats are E40's (the engine's
-// `xStats`), which this worktree's engine does not have yet, so the test stands one on the field with
-// its stats given (`statsOverride`) and records the X it was played for on the instance, as a play
-// would (`CardInstance.x`, §2.3).
+// An X card on the field "played for X": the test stands a C+ #69 Buff Billy on the field with its
+// stats given (`statsOverride`) and records the X it was played for on the instance, as a play would
+// (`CardInstance.x`, §2.3).
 
 import { describe, expect, it } from "vitest";
 import { stepParam, type CardInstance } from "@jackioh/engine";
