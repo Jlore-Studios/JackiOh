@@ -2855,6 +2855,23 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/patches/CardHistory.test.tsx",
     );
   });
+
+  // Proved by apps/web game/ActivateControl.test.tsx and game/activate.test.ts "R510 …" (the control, its
+  // count and reason, a press built from legalActions only, drag to target, Heroic Power).
+  it("R510 puts an Activate control on every card that has an ability", () => {
+    provenIn(510, "../../../apps/web/src/game/ActivateControl.test.tsx", "../../../apps/web/src/game/activate.test.ts");
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R512 …" (the new rows in players' words, Degrade and Upgrade split).
+  it("R512 gives the glossary a row for every term v0.2.0's cards print", () => {
+    provenIn(512, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web cards/cardState.test.tsx "R513 …" (tuned numbers, stats and keywords marked, the
+  // overall mark, Brittle, enchantments, piles and lines of code on every surface).
+  it("R513 marks what Degrade, Upgrade and KY's Constant changed on a card", () => {
+    provenIn(513, "../../../apps/web/src/cards/cardState.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
