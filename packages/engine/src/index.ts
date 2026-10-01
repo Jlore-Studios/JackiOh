@@ -59,6 +59,8 @@ export * from "./castOnDrawNow";
 export * from "./announce";
 export * from "./targeting";
 export * from "./targetingPoint";
+// R376: a finished game's record for the card statistics, read off its replay (§9.11).
+export * from "./gameSummary";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";
 // B5 E30, R417: last boards, a setup input; the server reads `lastBoardFor` as a game ends.

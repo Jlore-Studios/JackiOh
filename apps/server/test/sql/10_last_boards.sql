@@ -1,8 +1,8 @@
--- Last boards (migration 0016, SPEC §8.7 C+ #29, R417, R565). Runs after 08_catalog_growth.sql;
+-- Last boards (migration 0017, SPEC §8.7 C+ #29, R417, R565). Runs after 09_catalog_growth.sql;
 -- profiles 1 and 2 are active by then (03 activated them).
 \set ON_ERROR_STOP on
 
--- Same rules as 01-08: every check raises on failure (`raise exception 'FAIL (R…): …'`), every
+-- Same rules as 01-09: every check raises on failure (`raise exception 'FAIL (R…): …'`), every
 -- expected refusal is matched on its constraint name or its SQLSTATE, never on `when others`, each
 -- check that could pass vacuously carries a guard, and every block runs inside a transaction that is
 -- rolled back. Each SPEC §11 row this file proves is named in a `### Rnnn: … ###` heading.
@@ -111,7 +111,7 @@ begin
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               p1_last_board, p2_last_board, catalog_version, ceiling_at, started_at)
   values (mid, 'live', 'seed-0016', p1, p2, '[]', '[]', v_board, '[]', 'core-1', now() + interval '1 hour', now());
-  -- A row written without them (an open room, any match from before 0016) reads the empty board.
+  -- A row written without them (an open room, any match from before 0017) reads the empty board.
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               catalog_version, ceiling_at, started_at, ended_at)
   values (old, 'over', 'seed-0015', p1, p2, '[]', '[]', 'core-1', now(), now(), now());

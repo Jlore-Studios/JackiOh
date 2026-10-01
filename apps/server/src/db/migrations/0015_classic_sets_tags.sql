@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0014: the tags of Classic and Classic+
+-- Migration 0015: the tags of Classic and Classic+
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and patch v0.2.0 (docs/classic-sets.md B2.4): three
 -- new tags, Book (every "Book of …" card), Pancake (Classic+ #12, #13 and the
@@ -17,7 +17,7 @@
 -- point at (0002's comment on the table). No existing row is rewritten. Every
 -- row 0010 admitted, this check admits too.
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0010 -> ... -> 0014 (this file).
+-- Apply order: 0002 (`public.cards`) -> ... -> 0010 -> ... -> 0015 (this file).
 -- Safe to re-apply: drop-constraint-if-exists-then-add, as 0010 does.
 -- ============================================================================
 
@@ -34,7 +34,7 @@ comment on constraint cards_tags_check on public.cards is
   $$SPEC §5, R278 and patch v0.2.0 (B2.4): every tag is one of Human,
   Felinor, KY, CN, Fruit, 'Call to Chaos', Quickdraw, Jlockeed, Book,
   Pancake, AI, Token. First defined in 0002; 0010 re-added it with Jlockeed,
-  0014 with Book, Pancake and AI.$$;
+  0015 with Book, Pancake and AI.$$;
 
 comment on column public.cards.set_id is
   $$SPEC §5 "Set": Core, Classic and Classic+ ship (R380, patch v0.2.0); Boss

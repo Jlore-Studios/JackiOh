@@ -37,6 +37,7 @@ packages/cards
     ├── _harness.ts              scenario() — the only way a card test builds a game (M4-T3)
     ├── globalSetup.ts           regenerates the script barrel before every test run
     ├── catalog.test.ts          SPEC §8 as a fixture table, counted per set (M4-T1)
+    ├── game-summary.test.ts     the engine's summarizeGame over real games (R376)
     ├── query.test.ts            the §5.1 pools (M4-T2)
     ├── references.test.ts       each entry's `refs` against its texts (R279), and the rules-words list (R381)
     ├── registry.test.ts         every catalog id has a script, every script a catalog entry (M4-T2)

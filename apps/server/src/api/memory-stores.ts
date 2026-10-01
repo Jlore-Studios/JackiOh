@@ -1,6 +1,6 @@
 /**
  * The in-memory halves of the stores R250–R263 added — saved decks, saved trios and the Conquest
- * series — and R320's tutorial progress, shared by the two in-memory `Store`s:
+ * series — R320's tutorial progress and R376's game records, shared by the two in-memory `Store`s:
  * `src/api/e2e-store.ts` (the end-to-end server) and `test/fakes/store.ts` (the unit tests). One
  * implementation, so the two cannot answer an upsert, a compare-and-set or a merge differently
  * while only one of them runs under `test/db/contract.ts`.
@@ -16,16 +16,21 @@
  *    composite foreign key) and one deck in two slots (the check constraint);
  *  - `decks.remove` empties every trio slot that named the deck (`on delete set null`);
  *  - `series.update` is compare-and-set on `version`;
- *  - `tutorial.merge` only ever grows the lessons and keeps the newest choice (0011, R320).
+ *  - `tutorial.merge` only ever grows the lessons and keeps the newest choice (0011, R320);
+ *  - `gameRecords.insert` writes one record per id and refuses a second, and refuses a development
+ *    record without a `dev:` id or a live one with one (0014, R376, R378).
  */
 
+import { DEV_RECORD_ID_PREFIX, recordMatches, type GameRecord } from "@jackioh/shared";
 import type {
   DeckStore,
   LastBoardEntry,
   LastBoardKind,
   LastBoardStore,
+  GameRecordStore,
   MatchActionRow,
   MatchRow,
+  QueueMode,
   RetentionPurgeInput,
   RetentionPurgeResult,
   Room,
@@ -284,7 +289,7 @@ export function createMemoryTutorialStore(
 // Last boards (C+ #29 Portal to the Past, R417, R565)
 // ---------------------------------------------------------------------------
 
-/** The table R565 adds (`public.last_boards`, migration 0016): one row per profile and kind. */
+/** The table R565 adds (`public.last_boards`, migration 0017): one row per profile and kind. */
 export type LastBoardTables = { lastBoards: { profileId: string; kind: LastBoardKind; board: LastBoardEntry[] }[] };
 
 /** The in-memory `LastBoardStore`, shared by both in-memory stores as the tutorial store is. */
@@ -305,6 +310,57 @@ export function createMemoryLastBoardStore(
       const row = find(profileId, kind);
       if (row === undefined) tables().lastBoards.push({ profileId, kind, board: clone([...board]) });
       else row.board = clone([...board]);
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Game records for the card statistics (SPEC §9.11, R376)
+// ---------------------------------------------------------------------------
+
+/**
+ * `MatchStore.modeOf` for both in-memory stores, as Postgres answers it: a game of a Conquest series
+ * is `bo3`, a room's match has the room's mode, and a queue match its tickets' mode.
+ */
+export function matchModeIn(
+  tables: { series: SeriesRow[]; rooms: Room[]; tickets: Ticket[] },
+  matchId: string,
+): QueueMode | null {
+  if (tables.series.some((row) => row.games.some((game) => game.matchId === matchId))) return "bo3";
+  const room = tables.rooms.find((row) => row.matchId === matchId);
+  if (room !== undefined) return room.mode;
+  return tables.tickets.find((row) => row.matchId === matchId)?.mode ?? null;
+}
+
+/** The table R376 adds (`public.game_records`, migration 0014): one row per recorded game. */
+export type GameRecordTables = { gameRecords: GameRecord[] };
+
+/**
+ * The in-memory `GameRecordStore`: one record per id, as the primary key makes it, and a read in id
+ * order that filters by source, mode and patch exactly as `cardStats` does.
+ */
+export function createMemoryGameRecordStore(
+  tables: () => GameRecordTables,
+  call: (method: string) => void = () => undefined,
+): GameRecordStore {
+  return {
+    insert: async (record) => {
+      call("gameRecords.insert");
+      // R378: `game_records_dev_id_check` (0014). A development id begins "dev:", a live one never.
+      if ((record.source === "dev") !== record.id.startsWith(DEV_RECORD_ID_PREFIX)) {
+        throw new Error(`game_records_dev_id_check: a ${record.source} record cannot have the id ${record.id}`);
+      }
+      const rows = tables().gameRecords;
+      if (rows.some((existing) => existing.id === record.id)) return false;
+      rows.push(clone(record));
+      return true;
+    },
+    list: async (query) => {
+      call("gameRecords.list");
+      return tables()
+        .gameRecords.filter((record) => recordMatches(record, { ...query, pilot: "unified" }))
+        .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+        .map(clone);
     },
   };
 }

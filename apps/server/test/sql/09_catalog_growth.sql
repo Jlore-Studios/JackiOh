@@ -1,8 +1,8 @@
--- A catalog that grows (migration 0015, R481). Runs after 07_retention_purge.sql; profiles 1 and 2
+-- A catalog that grows (migration 0016, R481). Runs after 08_game_records.sql; profiles 1 and 2
 -- are active by then and own CHECK 10's cards under 'core-1'.
 \set ON_ERROR_STOP on
 
--- Same rules as 01-07: every check raises on failure and runs inside a rolled-back transaction.
+-- Same rules as 01-08: every check raises on failure and runs inside a rolled-back transaction.
 
 \echo '=== R481: stamping a new catalog version grants its new cards to every active account, once ==='
 begin;

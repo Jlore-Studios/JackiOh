@@ -1,6 +1,6 @@
 /**
  * The production `Store` (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
- * migrations in `./migrations` (0001-0013) with the `pg` driver already in `apps/server/package.json`.
+ * migrations in `./migrations` (0001-0017) with the `pg` driver already in `apps/server/package.json`.
  *
  * `src/index.ts` finds this module by dynamic import and calls `createPostgresStore({
  * connectionString })`; until it existed the server threw `StoreUnavailableError` and could only
@@ -76,7 +76,7 @@ import type {
   TutorialProgressRow,
   UpsertOutcome,
 } from "../api/ports";
-import type { Action } from "@jackioh/shared";
+import { parseGameRecord, sourcesOf, type Action } from "@jackioh/shared";
 
 /**
  * The endings that always have a winner (`GameOverReason`, packages/shared/src/events.ts): one
@@ -379,7 +379,7 @@ const MATCH_COLUMNS = `id, status, seed, p1_profile_id, p2_profile_id, p1_deck, 
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board`;
 
-/** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0016's CHECK admits it. */
+/** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK admits it. */
 function lastBoardOf(value: unknown): LastBoardEntry[] {
   if (!Array.isArray(value)) throw new Error(`a last board is not an array: ${JSON.stringify(value)}`);
   return value.map((entry: LastBoardEntry) => ({ defId: entry.defId, radiant: entry.radiant }));
@@ -1543,6 +1543,33 @@ function buildStore(session: Session): Store {
     },
 
     /**
+     * R376: a Conquest game is its series' (`series.withGame`). Otherwise a room's match is the row
+     * the room was (`room_code` set) and has its `room_mode`, `bo1` when it has none as `rooms.get`
+     * reads it; a queue match is the skeleton `tickets.claimPair` wrote, and has its tickets' mode.
+     */
+    modeOf: async (matchId) => {
+      if (!isUuid(matchId)) return null;
+      if ((await store.series.withGame(matchId)) !== null) return "bo3";
+      const { rows } = await session.query<{
+        room_code: string | null;
+        room_mode: string | null;
+        ticket_mode: string | null;
+      }>(
+        null,
+        `select m.room_code, m.room_mode,
+                (select t.mode from public.tickets t where t.match_id = m.id
+                  order by t.enqueued_at, t.id limit 1) as ticket_mode
+           from public.matches m
+          where m.id = $1::uuid`,
+        [matchId],
+      );
+      const row = rows[0];
+      if (row === undefined) return null;
+      if (row.room_code !== null) return row.room_mode === null ? "bo1" : queueModeOf(row.room_mode);
+      return row.ticket_mode === null ? null : queueModeOf(row.ticket_mode);
+    },
+
+    /**
      * R263: "A series that ends before its first game releases the id it reserved." In this schema
      * a reserved id is a row — the `open` skeleton `tickets.claimPair` writes, or a room
      * `rooms.claim` renamed to it — so releasing it is deleting that row, and only while it is still
@@ -2051,6 +2078,38 @@ function buildStore(session: Session): Store {
          on conflict (profile_id, kind) do update set board = excluded.board, updated_at = excluded.updated_at`,
         [profileId, kind, json(board), at],
       );
+    },
+  };
+
+  // -------------------------------------------------------------------------
+  // Game records for the card statistics (SPEC §9.11, R376)
+  // -------------------------------------------------------------------------
+
+  store.gameRecords = {
+    /** R376: one record per id; `on conflict do nothing` answers a second write of a game with false. */
+    insert: async (record) => {
+      const { rowCount } = await session.query(
+        null,
+        `insert into public.game_records (id, source, mode, patch, record)
+         values ($1::text, $2::text, $3::text, $4::text, $5::jsonb)
+         on conflict (id) do nothing`,
+        [record.id, record.source, record.mode, record.patch, json(record)],
+      );
+      return affected(rowCount) === 1;
+    },
+
+    /** The filter on the indexed columns; each row read back through `parseGameRecord`. */
+    list: async (query) => {
+      const { rows } = await session.query<{ record: unknown }>(
+        null,
+        `select record from public.game_records
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)
+          order by id collate "C"`,
+        [sourcesOf(query.source), query.mode, query.patch],
+      );
+      return rows.map((row) => parseGameRecord(row.record));
     },
   };
 

@@ -106,7 +106,7 @@ describe("R278 the catalog's tags and the cards table's tag check", () => {
   it("R278 every tag the real catalog carries, Jlockeed, Book, Pancake and AI included, is one the latest cards_tags_check admits", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const { file, tags } = admittedTags();
-    expect(file, "0014 re-adds the check with Book, Pancake and AI").toBe("0014_classic_sets_tags.sql");
+    expect(file, "0015 re-adds the check with Book, Pancake and AI").toBe("0015_classic_sets_tags.sql");
     const carried = [...new Set(entries.flatMap((entry) => entry.tags))].sort();
     expect(carried).toContain("Jlockeed");
     expect(carried).toEqual(expect.arrayContaining(["Book", "Pancake", "AI"]));

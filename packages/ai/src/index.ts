@@ -20,3 +20,4 @@ export * from "./baselines";
 export * from "./match";
 export * from "./gate";
 export * from "./sweep";
+export * from "./devRun";

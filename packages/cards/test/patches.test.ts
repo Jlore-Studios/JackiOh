@@ -113,3 +113,20 @@ describe("R388 card patch history (B4.2)", () => {
     expect(Object.keys(CATALOG).filter((id) => index[id] === undefined)).toEqual([]);
   });
 });
+
+// R375: issue #39's first build of the history was replaced by R388's when the two met on main, and
+// what both agreed on is held here: the versions before v0.2.0, their order, and the cards they hold.
+describe("R375 issue #39's versions of the patch history", () => {
+  it("R375 keeps v0.1.0, v0.1.0-r1, v0.1.0-r2, v0.1.0-r3 and v0.1.1, in that order, before v0.2.0", () => {
+    expect(VERSIONS.slice(0, VERSIONS.indexOf("v0.2.0"))).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1"]);
+  });
+
+  it("R375 has v0.1.0 as 100 cards and 9 tokens, and The Coin first in v0.1.0-r2", () => {
+    const first = Object.values(readSnapshot("v0.1.0"));
+    const tokens = first.filter((def) => def.token === true || (Array.isArray(def.tags) && def.tags.includes("Token")));
+    expect(first.length - tokens.length).toBe(100);
+    expect(tokens).toHaveLength(9);
+    expect(readSnapshot("v0.1.0")["core-t-coin"]).toBeUndefined();
+    expect(readSnapshot("v0.1.0-r2")["core-t-coin"]).toBeDefined();
+  });
+});

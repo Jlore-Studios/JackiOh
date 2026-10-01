@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0015: a catalog that grows is granted to everyone who owns it
+-- Migration 0016: a catalog that grows is granted to everyone who owns it
 -- ============================================================================
 -- Serves SPEC §9.1 ("Everyone owns every card at launch; keep the ledger
 -- anyway"), §9.4 (every collection change writes `collection` and
@@ -26,7 +26,7 @@
 -- profile now, which is a no-op unless cards were seeded before this migration
 -- ran (a deployment that seeded v0.2.0 first and migrated after).
 --
--- Apply order: 0002 (`app.grant_launch_collection_all`) -> ... -> 0015.
+-- Apply order: 0002 (`app.grant_launch_collection_all`) -> ... -> 0016.
 -- Safe to re-apply: create-or-replace and drop-trigger-if-exists.
 -- ============================================================================
 

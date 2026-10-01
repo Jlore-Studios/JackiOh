@@ -13,7 +13,8 @@
  *  - `reduce` is pure, returns `{ state, events, error? }` and refuses illegal actions itself;
  *  - a reused nonce returns the original events and does not advance the state (SPEC §9.3);
  *  - `viewFor` shows the viewer's hand in full and the opponent's as a count (§10.8);
- *  - `fold({ seed, decks, log })` rebuilds the same state, so crash recovery is testable;
+ *  - `fold({ seed, decks, log })` rebuilds the same state, so crash recovery is testable, and
+ *    `summarizeGame` folds the same way to a finished game's record (R376);
  *  - a prompt is state, answered by another action (§9.3);
  *  - with `{ mulligan: true }`, the game opens on the concurrent mulligan (R265): both seats' prompts
  *    open at once outside `pending`, either seat answers first, an answer is sealed until the other
@@ -474,6 +475,36 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         mulliganOwed: owedOf(fake),
         phase: fake.phase,
         result: fake.result,
+      };
+    },
+
+    // R376's port method, scripted: the fake draws nothing after the deal, so a seat's record is its
+    // deck, its hand once the game reached turn 1, nothing drawn, and the cards it played.
+    summarizeGame: ({ seed, decks, log }) => {
+      let state = port.beginGame(port.createGame({ seed, decks })).state;
+      const openingOf = (fake: FakeState): Record<PlayerId, string[]> | null =>
+        fake.mulligan === null && fake.turn >= 1 ? clone(fake.hands) : null;
+      let opening = openingOf(asFake(state));
+      for (const action of log) {
+        const result = port.reduce(state, action);
+        if (result.error !== undefined) continue;
+        state = result.state;
+        opening ??= openingOf(asFake(state));
+      }
+      const fake = asFake(state);
+      if (fake.result === null) return null;
+      const seat = (player: PlayerId, at: 0 | 1) => ({
+        deck: [...decks[at]],
+        opening: opening?.[player] ?? [],
+        drawn: [],
+        played: [...fake.played[player]],
+      });
+      return {
+        first: "p1",
+        winner: fake.result.winner,
+        reason: fake.result.reason,
+        turns: fake.turn,
+        seats: { p1: seat("p1", 0), p2: seat("p2", 1) },
       };
     },
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0016: last boards (Classic+ #29 Portal to the Past)
+-- Migration 0017: last boards (Classic+ #29 Portal to the Past)
 -- ============================================================================
 -- Serves SPEC.md §8.7 row C+ #29, §9.3 and SPEC §11 R417, R565. "Your last
 -- game" is your last finished game of the same kind, and Portal to the Past
@@ -28,7 +28,7 @@
 -- grant to anon or authenticated. The server (service_role, BYPASSRLS) is
 -- the only reader and writer.
 --
--- Apply order: ... -> 0004 (`public.matches`) -> ... -> 0015 -> 0016.
+-- Apply order: ... -> 0004 (`public.matches`) -> ... -> 0016 -> 0017.
 -- Safe to re-apply: create-if-not-exists, add-column-if-not-exists and
 -- drop-constraint-if-exists-then-add.
 -- ============================================================================

@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 18 tables of migrations 0001-0016 ==='
+\echo '=== CHECK 2: the 19 tables of migrations 0001-0017 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -55,13 +55,12 @@ declare
   -- BUILD M6-T1..T4: profiles/invite_codes/code_attempts (0001), cards/collection/
   -- collection_grants (0002), loadouts/loadout_decks/loadout_deck_cards (0003),
   -- matches/match_actions/tickets/results (0004); then decks/trios (0007, R250, R252),
-  -- series (0009, R263), tutorial_progress (0011, R320) and last_boards (0016, R565). 0005, 0006,
-  -- 0008, 0010 and 0012-0015 add no
-  -- table. The three loadout tables stay after 0007, unread and unwritten (R254), so they are
-  -- still expected here.
+  -- series (0009, R263), tutorial_progress (0011, R320), game_records (0014, R376) and last_boards
+  -- (0017, R565). 0005, 0006, 0008, 0010, 0012, 0013, 0015 and 0016 add no table. The three loadout
+  -- tables stay after 0007, unread and unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'invite_codes',
-    'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions', 'matches',
+    'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'game_records',
+    'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions', 'matches',
     'profiles', 'results', 'series', 'tickets', 'trios', 'tutorial_progress'];
   actual  text[];
   missing text[];
@@ -789,7 +788,7 @@ declare
     ['join_room',                   'definer'],
     ['live_matches',                'definer'],
     ['on_profile_activated',        'definer'],
-    -- 0015, R481: the trigger on app.settings' catalog_version stamp, DEFINER like
+    -- 0016, R481: the trigger on app.settings' catalog_version stamp, DEFINER like
     -- on_profile_activated, the other trigger that grants the launch collection: it runs
     -- app.grant_launch_collection_all as the owner, whoever stamped the version.
     ['on_catalog_version_stamped',  'definer'],
@@ -866,7 +865,7 @@ end $$;
 
 \echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake and AI included, and refuses any other ==='
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
--- re-adds the check with it, and 0014 with patch v0.2.0's Book, Pancake and AI (B2.4). Each probe row is removed before the next, and each probe runs in a
+-- re-adds the check with it, and 0015 with patch v0.2.0's Book, Pancake and AI (B2.4). Each probe row is removed before the next, and each probe runs in a
 -- block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$
 declare

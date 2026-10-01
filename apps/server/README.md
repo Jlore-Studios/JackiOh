@@ -5,7 +5,8 @@ collection ledger, saved decks and trios, an active account's copy of its tutori
 each profile's last board for C+ #29 Portal to the Past (R417), matchmaking in three modes, the
 Conquest series, and the match itself: one actor per match holding the `GameState` in memory, one
 WebSocket per player, `reduce` on every action and `viewFor` pushed to each player after every
-change (SPEC §9.1–§9.5, §10.8).
+change (SPEC §9.1–§9.5, §10.8). Every match that ends leaves a game record for the card statistics
+(SPEC §9.11, R376–R378).
 
 The client sends intent and renders `viewFor`. It never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7).
@@ -312,6 +313,42 @@ An accepted offer ends the match `{ winner: "draw", reason: "draw-accepted" }` a
 the mulligan window included. Both go through the one results path (`api/results.ts`,
 `createRecordResult`): one `results` row, Elo scored 0.5 each for a draw and 1/0 for a concede,
 both in-match flags cleared, once.
+
+## Card statistics (SPEC §9.11, R376–R378)
+
+Once a match's result has committed, `createRecordResult` (`src/api/results.ts`) files the game in
+`public.game_records` (migration 0014) through `src/api/game-records.ts`: the engine port's
+`summarizeGame` folds `(seed, decks, log)` into each seat's decklist, opening hand, draws and plays,
+who went first and who won, and the record is filed under the match's mode (`matches.modeOf`: a
+Conquest game's is its series', else its room's or its queue tickets'), the newest patch of `packages/cards/patches/patches.json` (`loadCurrentPatch`, read at boot) and two
+human pilots, as `source: "live"`. It never costs a result: a failure is logged as
+`game.record.failed` and the result stands, and a second write of the same match files nothing. The
+reaper's ceiling draws (R112) file none. The record names no account; only the server reads it.
+Nothing on a match's own path touches `game_records`, so until 0014 is applied each match end logs
+`game.record.failed` and plays on.
+
+```bash
+# Card win rates. With no option: live games of every mode, patch and pilot.
+pnpm --filter @jackioh/server stats:cards
+pnpm --filter @jackioh/server stats:cards --mode=random --patch=v0.2.5 --pilot=human
+pnpm --filter @jackioh/server stats:cards --card=core-002 --json
+
+# A pre-release AI run of a patch, loaded, then compared with the same patch's live games: one
+# query each, the same --patch on both, since no one query shows the two side by side.
+pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl
+pnpm --filter @jackioh/server stats:import v0.2.5-dev.jsonl
+pnpm --filter @jackioh/server stats:cards --source=dev --patch=v0.2.5
+pnpm --filter @jackioh/server stats:cards --patch=v0.2.5
+```
+
+`stats:cards` takes `--source=live|dev|all` (live unless told otherwise: a development run is read
+only by name, R378), `--mode=bo1|bo3|random`, `--patch=<version>`, `--pilot=human|ai|unified`,
+`--card=<id>` and `--json`, in any combination. Each card's row is its win rate in deck, in the
+opening hand, going first, going second, played and drawn but not played, every rate with its games
+beside it, and the played delta: the played rate minus the drawn-but-not-played rate, in points
+(R377 defines each). `stats:import` reads the file `pnpm ai:stats` wrote, a relative path from the
+directory the command was started in as `--out`'s is (pnpm's `INIT_CWD`), refuses it whole if any
+line is not a development record, and skips a game already imported. Both read `DATABASE_URL`.
 
 ## Tests
 

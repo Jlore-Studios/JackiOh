@@ -59,6 +59,7 @@ export function enginePort(): EnginePort {
     hashState: (state: unknown) => string;
     mulliganOwed: (state: unknown) => MatchSnapshot["mulliganOwed"];
     lastBoardFor: (state: unknown, player: "p1" | "p2") => ReturnType<EnginePort["lastBoards"]>[number];
+    summarizeGame: (args: unknown) => ReturnType<EnginePort["summarizeGame"]>;
   };
 
   return {
@@ -86,5 +87,7 @@ export function enginePort(): EnginePort {
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
     dealRandomDeck: (seed) => buildAiDeck(engine.createRng(seed), DECK_SIZE, { banned: [] }),
     lastBoards: (state) => [api.lastBoardFor(state, "p1"), api.lastBoardFor(state, "p2")],
+    // R376: the record a finished match leaves for the card statistics, folded like `fold`.
+    summarizeGame: (args) => api.summarizeGame(args),
   };
 }
