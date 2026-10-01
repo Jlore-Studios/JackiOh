@@ -13,6 +13,12 @@
       "lines": [
         "@jgoetzmann-bot review copilots work when its done. This is not blocked by v0.2.0"
       ]
+    },
+    "c:5924248309": {
+      "at": "2026-10-01T03:40:02Z",
+      "lines": [
+        "/harness status"
+      ]
     }
   },
   "items": {
