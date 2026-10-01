@@ -124,7 +124,51 @@ import * as mt_felinor from "./t-felinor";
 import * as mt_ghoul from "./t-ghoul";
 import * as mt_rush from "./t-rush";
 import * as mt_sheep from "./t-sheep";
+import * as mclassic_001_curse_of_the_forgotten_classic from "./classic/001-curse-of-the-forgotten-classic";
+import * as mclassic_002_the_trickster from "./classic/002-the-trickster";
+import * as mclassic_003_book_of_heal from "./classic/003-book-of-heal";
+import * as mclassic_004_palantir from "./classic/004-palantir";
+import * as mclassic_005_tesla from "./classic/005-tesla";
+import * as mclassic_006_cloaked_toe_cracker from "./classic/006-cloaked-toe-cracker";
+import * as mclassic_007_infiniscepter from "./classic/007-infiniscepter";
+import * as mclassic_008_pickle from "./classic/008-pickle";
+import * as mclassic_009_income_tax from "./classic/009-income-tax";
+import * as mclassic_010_exile from "./classic/010-exile";
+import * as mclassic_011_mind_melt from "./classic/011-mind-melt";
+import * as mclassic_012_book_of_blood from "./classic/012-book-of-blood";
+import * as mclassic_013_boots_on_the_ground from "./classic/013-boots-on-the-ground";
+import * as mclassic_014_shadowstep from "./classic/014-shadowstep";
+import * as mclassic_015_nose_hunter from "./classic/015-nose-hunter";
+import * as mclassic_016_book_of_flame from "./classic/016-book-of-flame";
+import * as mclassic_017_counterspell from "./classic/017-counterspell";
+import * as mclassic_018_glitch_in_the_system from "./classic/018-glitch-in-the-system";
+import * as mclassic_019_lizards_breath from "./classic/019-lizards-breath";
+import * as mclassic_020_the_power_to_punish from "./classic/020-the-power-to-punish";
+import * as mclassic_021_turtinator from "./classic/021-turtinator";
+import * as mclassic_022_mid_runner from "./classic/022-mid-runner";
+import * as mclassic_023_devils_pact from "./classic/023-devils-pact";
+import * as mclassic_024_book_of_knowledge from "./classic/024-book-of-knowledge";
+import * as mclassic_025_lag_in_the_system from "./classic/025-lag-in-the-system";
+import * as mclassic_026_rapid_draw from "./classic/026-rapid-draw";
+import * as mclassic_027_pestilent_slime from "./classic/027-pestilent-slime";
+import * as mclassic_028_second_wind from "./classic/028-second-wind";
+import * as mclassic_029_book_of_vital_kill from "./classic/029-book-of-vital-kill";
+import * as mclassic_030_recycle from "./classic/030-recycle";
+import * as mclassic_031_cookie_guild from "./classic/031-cookie-guild";
+import * as mclassic_032_felinor_feelings from "./classic/032-felinor-feelings";
+import * as mclassic_033_joro from "./classic/033-joro";
+import * as mclassic_034_ancient_acquisition from "./classic/034-ancient-acquisition";
+import * as mclassic_035_prep from "./classic/035-prep";
+import * as mclassic_036_burn from "./classic/036-burn";
+import * as mclassic_037_last_hurrah from "./classic/037-last-hurrah";
+import * as mclassic_038_jackiestan_auctioneer from "./classic/038-jackiestan-auctioneer";
+import * as mclassic_039_outbreak from "./classic/039-outbreak";
+import * as mclassic_040_mc_tech from "./classic/040-mc-tech";
 import * as mclassic_041_state_of_the_game from "./classic/041-state-of-the-game";
+import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-toxins";
+import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
+import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
+import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -238,5 +282,49 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mt_ghoul,
   mt_rush,
   mt_sheep,
+  mclassic_001_curse_of_the_forgotten_classic,
+  mclassic_002_the_trickster,
+  mclassic_003_book_of_heal,
+  mclassic_004_palantir,
+  mclassic_005_tesla,
+  mclassic_006_cloaked_toe_cracker,
+  mclassic_007_infiniscepter,
+  mclassic_008_pickle,
+  mclassic_009_income_tax,
+  mclassic_010_exile,
+  mclassic_011_mind_melt,
+  mclassic_012_book_of_blood,
+  mclassic_013_boots_on_the_ground,
+  mclassic_014_shadowstep,
+  mclassic_015_nose_hunter,
+  mclassic_016_book_of_flame,
+  mclassic_017_counterspell,
+  mclassic_018_glitch_in_the_system,
+  mclassic_019_lizards_breath,
+  mclassic_020_the_power_to_punish,
+  mclassic_021_turtinator,
+  mclassic_022_mid_runner,
+  mclassic_023_devils_pact,
+  mclassic_024_book_of_knowledge,
+  mclassic_025_lag_in_the_system,
+  mclassic_026_rapid_draw,
+  mclassic_027_pestilent_slime,
+  mclassic_028_second_wind,
+  mclassic_029_book_of_vital_kill,
+  mclassic_030_recycle,
+  mclassic_031_cookie_guild,
+  mclassic_032_felinor_feelings,
+  mclassic_033_joro,
+  mclassic_034_ancient_acquisition,
+  mclassic_035_prep,
+  mclassic_036_burn,
+  mclassic_037_last_hurrah,
+  mclassic_038_jackiestan_auctioneer,
+  mclassic_039_outbreak,
+  mclassic_040_mc_tech,
   mclassic_041_state_of_the_game,
+  mclassic_042_transmutable_toxins,
+  mclassic_043_plague_nuke,
+  mclassic_044_back_from_the_gy,
+  mclassic_045_nature_titan,
 ];

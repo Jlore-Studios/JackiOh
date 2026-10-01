@@ -45,6 +45,13 @@ export const POOL_TOKEN_TAGS: readonly Tag[] = ["Fruit"];
 export const UNIT_ZONES = 5;
 /** §3 */
 export const BACKROW_ZONES = 5;
+/** §3.1: "midlane", the middle lane of UNIT_ZONES — Classic #22 Mid Runner's lane 3 (SPEC §8.6 row 22, BUILD §2). */
+export const MID_LANE = 3;
+/**
+ * Classic #18 Glitch in the System's number choice (SPEC §8.6 row 18, BUILD §2): the numbers 0 to 10,
+ * the same eleven options every time, so the options reveal nothing about any hand or deck.
+ */
+export const GLITCH_NUMBERS: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /** R5 (decide): any unit may attack any enemy unit or hero, subject to Taunt. */
 export const LANE_RESTRICTED_ATTACKS: boolean = false;

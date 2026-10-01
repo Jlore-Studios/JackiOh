@@ -291,6 +291,18 @@ const CARDS_MROW_TEST = "../../cards/test/086-miss-mrow.test.ts";
 const CARDS_FIENDER_TEST = "../../cards/test/092-felinor-fiender.test.ts";
 const CARDS_TRANSMOGULATE_TEST = "../../cards/test/083-transmogulate.test.ts";
 const CARDS_CARD_TEXT_TEST = "../../cards/test/card-text.test.ts";
+/** The Classic #1–#45 cards' own tests (patch v0.2.0, the cards-classic-a workstream). */
+const CLASSIC_007_TEST = "../../cards/test/classic/007-infiniscepter.test.ts";
+const CLASSIC_009_TEST = "../../cards/test/classic/009-income-tax.test.ts";
+const CLASSIC_010_TEST = "../../cards/test/classic/010-exile.test.ts";
+const CLASSIC_015_TEST = "../../cards/test/classic/015-nose-hunter.test.ts";
+const CLASSIC_018_TEST = "../../cards/test/classic/018-glitch-in-the-system.test.ts";
+const CLASSIC_025_TEST = "../../cards/test/classic/025-lag-in-the-system.test.ts";
+const CLASSIC_028_TEST = "../../cards/test/classic/028-second-wind.test.ts";
+const CLASSIC_032_TEST = "../../cards/test/classic/032-felinor-feelings.test.ts";
+const CLASSIC_033_TEST = "../../cards/test/classic/033-joro.test.ts";
+const CLASSIC_038_TEST = "../../cards/test/classic/038-jackiestan-auctioneer.test.ts";
+const CLASSIC_039_TEST = "../../cards/test/classic/039-outbreak.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -2729,6 +2741,34 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(389, SERVER_CLOCK_TEST);
   });
 
+  // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's
+  // cost, once per turn; an empty hand can't activate it).
+  it("R392 reads C #15 Nose Hunter's \"Discard a random card: …\" as an Activate whose cost is the discard", () => {
+    provenIn(392, CLASSIC_015_TEST);
+  });
+
+  // Proved by cards classic/028-second-wind.test.ts "R393 …" (the Cry's discards land before the Aura
+  // starts, so they are playable from the graveyard).
+  it("R393 lets C #28 Second Wind's discarded hand be played from the graveyard", () => {
+    provenIn(393, CLASSIC_028_TEST);
+  });
+
+  // Proved by cards classic/033-joro.test.ts "R394 …" (from the hand only, one targeting, the first pick).
+  it("R394 has C #33 Joro answer a targeting from its owner's hand only", () => {
+    provenIn(394, CLASSIC_033_TEST);
+  });
+
+  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the activation
+  // condition is live; the "whenever" starts with the next play).
+  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has activated", () => {
+    provenIn(395, CLASSIC_038_TEST);
+  });
+
+  // Proved by the Classic cards that compare costs, each "R396 …": C #10, #18, #25, #32 and #39.
+  it("R396 reads an X card on the field at the X it was played for", () => {
+    provenIn(396, CLASSIC_010_TEST, CLASSIC_018_TEST, CLASSIC_025_TEST, CLASSIC_032_TEST, CLASSIC_039_TEST);
+  });
+
   // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
   // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
   it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
@@ -2854,6 +2894,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "../../../apps/web/src/patches/history.test.ts",
       "../../../apps/web/src/patches/CardHistory.test.tsx",
     );
+  });
+
+  // Proved by cards classic/007-infiniscepter.test.ts "R520 …" (an X Spell's copy is cast with the X its
+  // caster picks, 1 to their current mana, unpaid).
+  it("R520 casts C #7 InfiniScepter's copy of an X-cost Spell with the X its caster chooses", () => {
+    provenIn(520, CLASSIC_007_TEST);
+  });
+
+  // Proved by cards classic/009-income-tax.test.ts "R521 …" (burned and cast-on-draw cards were drawn; a
+  // limited draw never happened; an empty-deck draw counts but gives nothing).
+  it("R521 counts every draw that happened toward C #9 Income Tax", () => {
+    provenIn(521, CLASSIC_009_TEST);
   });
 });
 

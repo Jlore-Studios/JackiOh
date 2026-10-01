@@ -2870,6 +2870,7 @@
         "min": 1
       }
     ],
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}."
@@ -2901,6 +2902,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "attack": 2,
       "health": 1,
@@ -2936,6 +2938,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -2973,6 +2976,7 @@
         "min": 1
       }
     ],
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, you may Tribute this to steal it."
@@ -3002,6 +3006,7 @@
         "min": 1
       }
     ],
+    "loc": 28,
     "base": {
       "attack": 1,
       "health": 4,
@@ -3051,6 +3056,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "attack": 3,
       "health": 4,
@@ -3084,6 +3090,7 @@
         "min": 1
       }
     ],
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
@@ -3137,6 +3144,7 @@
         "min": 1
       }
     ],
+    "loc": 97,
     "base": {
       "keywords": [],
       "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
@@ -3174,6 +3182,7 @@
         "min": 1
       }
     ],
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
@@ -3203,6 +3212,7 @@
         "min": 1
       }
     ],
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and exile it."
@@ -3232,6 +3242,7 @@
         "min": 1
       }
     ],
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Look at your opponent's hand. Exile {cards|card|cards} from it."
@@ -3263,6 +3274,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [
         {
@@ -3310,6 +3322,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "attack": 2,
       "health": 1,
@@ -3351,6 +3364,7 @@
         "min": 0
       }
     ],
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
@@ -3382,6 +3396,7 @@
         "min": 1
       }
     ],
+    "loc": 18,
     "base": {
       "attack": 3,
       "health": 1,
@@ -3417,6 +3432,7 @@
         "min": 1
       }
     ],
+    "loc": 7,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage."
@@ -3446,6 +3462,7 @@
         "min": 0
       }
     ],
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Activates when your opponent plays a Spell: Counter it."
@@ -3465,6 +3482,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Choose a number. Exile every card on the field, in hands and in decks that costs that much."
@@ -3518,6 +3536,7 @@
         "min": 1
       }
     ],
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage. Your largest pile adds its effect: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the pile listed first."
@@ -3555,6 +3574,7 @@
         "min": 1
       }
     ],
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
@@ -3584,6 +3604,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "attack": 5,
       "health": 4,
@@ -3627,6 +3648,7 @@
         "min": 1
       }
     ],
+    "loc": 37,
     "base": {
       "attack": 2,
       "health": 1,
@@ -3663,6 +3685,7 @@
         "min": 1
       }
     ],
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
@@ -3694,6 +3717,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Draw {draw}."
@@ -3723,6 +3747,7 @@
         "min": 1
       }
     ],
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Exile every card on the field, in hands and in decks that costs ({threshold}) or less."
@@ -3760,6 +3785,7 @@
         "min": 1
       }
     ],
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Then discard {discard|card|cards}."
@@ -3789,6 +3815,7 @@
         "min": 1
       }
     ],
+    "loc": 5,
     "base": {
       "attack": 1,
       "health": 1,
@@ -3822,6 +3849,7 @@
         "min": 1
       }
     ],
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard. Cards that would go to your graveyard are exiled instead."
@@ -3846,6 +3874,7 @@
     "refs": [
       "classic-016"
     ],
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Set a hero's health to 13."
@@ -3883,6 +3912,7 @@
         "min": 1
       }
     ],
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Shuffle your graveyard into your deck. Draw {draw}."
@@ -3922,6 +3952,7 @@
         "min": 1
       }
     ],
+    "loc": 8,
     "base": {
       "attack": 2,
       "health": 4,
@@ -3950,6 +3981,7 @@
     "refs": [
       "core-t-felinor"
     ],
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Steal an enemy permanent in a lane where you control a (1) Cost Unit."
@@ -3969,6 +4001,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 0,
+    "loc": 5,
     "base": {
       "attack": 1,
       "health": 1,
@@ -4006,6 +4039,7 @@
         "min": 1
       }
     ],
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Return {cards|card|cards} from your graveyard to your hand."
@@ -4035,6 +4069,7 @@
         "min": 1
       }
     ],
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Your next Spell this turn costs ({discount}) less."
@@ -4080,6 +4115,7 @@
         "min": 1
       }
     ],
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage. If you have {threshold} or more mana left, draw {draw}."
@@ -4099,6 +4135,7 @@
     "rarity": "Epic",
     "token": false,
     "cost": 0,
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Draw your deck. At the end of this turn, discard your hand."
@@ -4146,6 +4183,7 @@
         "min": 1
       }
     ],
+    "loc": 30,
     "base": {
       "attack": 4,
       "health": 4,
@@ -4187,6 +4225,7 @@
         "min": 1
       }
     ],
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Place {tokens|Plague Token|Plague Tokens} on a permanent. If it's an enemy permanent with at least as many Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it."
@@ -4216,6 +4255,7 @@
         "min": 1
       }
     ],
+    "loc": 36,
     "base": {
       "attack": 3,
       "health": 3,
@@ -4292,6 +4332,7 @@
         "min": 1
       }
     ],
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each of {tokens|random Unit|random Units}."
@@ -4321,6 +4362,7 @@
         "min": 1
       }
     ],
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Destroy all Units. Gain {mana} mana for each Plague Token that was on them."
@@ -4350,6 +4392,7 @@
         "min": 1
       }
     ],
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Summon Units from your graveyard that cost ({budget}) or less in total. Exile this."
@@ -4387,6 +4430,7 @@
         "min": 1
       }
     ],
+    "loc": 19,
     "base": {
       "attack": 6,
       "health": 6,

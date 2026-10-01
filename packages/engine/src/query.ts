@@ -182,3 +182,30 @@ export function killerOf(state: GameState, card: CardInstance | null): CardInsta
   if (at === null || cardAt(state, at)?.id !== killer.id) return null;
   return killer;
 }
+
+// ---------------------------------------------------------------------------
+// v0.2.0 readers: the Classic #1–#45 cards (card-specific, the cards-classic-a workstream)
+// ---------------------------------------------------------------------------
+
+/**
+ * §2.3's max mana, which the refresh fills current mana to: Classic #36 Burn's Radiant face, "if your
+ * max mana is 4 or more" (SPEC §8.6 row 36). Mana is public (§10.8), so a `conditionMet` may read it.
+ */
+export function maxManaOf(state: GameState, player: PlayerId): number {
+  return state.players[player].mana.max;
+}
+
+/**
+ * What this player's latest play of `card` this turn paid (§10.5 step 2, R56; a cast's 0, R70) — the
+ * turn log's `costsPaid` read beside `playedIds` — or null when the card was not played this turn.
+ * Classic #22 Mid Runner's "the mana you had when you played this" is the mana its controller holds
+ * as its Cry runs plus this price, the one change to that mana between §10.5 step 1 and the Cry
+ * (SPEC §8.6 row 22).
+ */
+export function costPaidThisTurn(state: GameState, player: PlayerId, card: CardInstance | string): number | null {
+  const log = state.players[player].turnLog;
+  const id = typeof card === "string" ? card : card.id;
+  const at = log.playedIds.lastIndexOf(id);
+  if (at < 0) return null;
+  return log.costsPaid?.[at] ?? null;
+}

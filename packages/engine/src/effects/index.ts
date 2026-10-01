@@ -190,3 +190,19 @@ export { forEachCard } from "./each";
 // ---- v0.2.0 verbs: prompts and generation (trigger a Cry, piles, prompts, plague, fuse, transform, recruit) ----
 
 // ---- v0.2.0 verbs: Core patches (R426–R437) ----
+
+// ---- v0.2.0 verbs: Classic cards #1–#45 (card-specific, the cards-classic-a workstream) ----
+
+// §6.3 Exile at random out of a hand (C #15 Nose Hunter's Radiant face, R60).
+export { exileRandomFromHand } from "./handExile";
+
+// §6.3 Shuffle an existing card into its owner's library, R80's cap leaving a graveyard card where it
+// is (C #30 Recycle, R316).
+export { shuffleCardInto } from "./shuffleCard";
+
+// A target prompt narrowed by a card's own condition (C #32 Felinor Feelings' Radiant face, §10.6).
+export { chooseTargetWhere } from "./chooseWhere";
+
+// §4.5's check at this point of a list, then the rest on a stay that begins after it (C #43 Plague
+// Nuke, R59, R113, R174).
+export { afterStateCheck } from "./afterCheck";
