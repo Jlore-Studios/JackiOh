@@ -21,12 +21,20 @@
 // nothing is left to fuse. The printed Brittle is the catalog face's keyword (R385 starts it as the card
 // is set; B3.4's X change tunes it), and "every N" and the Brittle gained are its declared `params`.
 
-import type { Script } from "@jackioh/engine";
+import type { PreviewHook, Script } from "@jackioh/engine";
 import { subsystems } from "@jackioh/engine";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classicplus-074");
 
-export const base: Script = { triggers: [subsystems.twiceForwardTrigger({ radiantCopy: false })] };
+/**
+ * SPEC §8.7 row 74: "until then its Brittle count and its play count are read by its controller only".
+ * The play count rides the card's preview (R280), which a face-down card shows its controller alone
+ * (R33); in play only, since the count starts as it is set.
+ */
+const preview: PreviewHook = ({ self, zone }) =>
+  zone === "field" ? [{ label: "your opponent plays", value: subsystems.twiceForwardPlays(self) }] : [];
 
-export const radiant: Script = { triggers: [subsystems.twiceForwardTrigger({ radiantCopy: true })] };
+export const base: Script = { triggers: [subsystems.twiceForwardTrigger({ radiantCopy: false })], preview };
+
+export const radiant: Script = { triggers: [subsystems.twiceForwardTrigger({ radiantCopy: true })], preview };

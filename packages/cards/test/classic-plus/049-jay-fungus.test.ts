@@ -59,6 +59,21 @@ describe("C+ #49 Jay Fungus", () => {
       expect(one === undefined ? -1 : effectiveCost(s.state, one)).toBe(0);
     });
 
+    it("§2.3 two Fungi stack on one card: `costMod` adds up, −2 then −2", () => {
+      const s = scenario({
+        p1: { field: [FUNGUS, FUNGUS], hand: [THREE], library: [ONE, ONE] },
+        p2: { hand: [ONE], library: [ONE, ONE] },
+      });
+      s.endTurn();
+      const three = s.card(THREE);
+      expect(three.costMod).toBe(-4);
+      expect(effectiveCost(s.state, three)).toBe(0);
+      expect(costChanges(s)).toEqual([
+        { instanceId: three.id, cost: 1 },
+        { instanceId: three.id, cost: 0 },
+      ]);
+    });
+
     it("R60 the card is random among those it can make cheaper", () => {
       const picked = new Set<number>();
       for (let i = 0; i < 40; i += 1) {

@@ -7,10 +7,10 @@
 // enemy Field Spells, and 2 damage to the enemy hero for each".
 //
 // The preview's own proofs (labels, values against the resolution, what the hook reads) are in
-// `../preview.test.ts`. Each hero's hit is one `damage` event of N, so a per-hit cap (Anime Armor) caps it
-// once; a Field Spell that prints Death and an Ivory Tower holding a Unit (R418) are proved through
-// fixtures in `packages/engine/test/effects-datacenter.test.ts`, since neither card's script (C+ #61, #33)
-// is part of this slice.
+// `../preview.test.ts`. Each hero's hit is one `damage` event of N, so a per-hit cap (C+ #11 Anime Armor)
+// caps it once, and an Ivory Tower holding a Unit (R418) is swept: both are proved through fixtures in
+// `packages/engine/test/effects-datacenter.test.ts`, since neither card's script (C+ #11, #33) is part of
+// this slice.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -25,6 +25,8 @@ const HEROIC_POWER = "core-098"; // Field Spell, Indestructible
 const BEAR = "core-060"; // (1) Trap
 const BREAD = "core-018"; // Field Trap
 const SOLARIUS = "classicplus-038"; // Unit printing Spell Damage +2
+const BAUBLE = "classicplus-061"; // (1) Field Spell: "Death: Add 2 Stockpiles to your hand. Each costs (0)."
+const STOCKPILE = "core-005";
 const VANILLA = "core-008";
 
 function fire(p1: SideSetup = {}, p2: SideSetup = {}, radiantFace = false): Scenario {
@@ -77,6 +79,15 @@ describe("T-AI-6 Datacenter Fire", () => {
     it("R46 an Indestructible Heroic Power stays and doesn't count", () => {
       const s = fire({ backrow: [up(HEROIC_POWER, 1)] }, { backrow: [up(TWINSPELL, 1)] });
       s.expectInZone(HEROIC_POWER, "field");
+      expect(hitsOn(s, "p2")).toEqual([1]);
+    });
+
+    it("§4.5 a destroyed Field Spell that prints Death fires it: Bauble Bubble's Stockpiles reach its owner", () => {
+      const s = fire({}, { backrow: [up(BAUBLE, 1)] });
+      s.expectInZone(BAUBLE, "graveyard");
+      const stockpiles = s.hand("p2").filter((card) => card.defId === STOCKPILE);
+      expect(stockpiles).toHaveLength(2);
+      expect(stockpiles.every((card) => card.costOverride === 0)).toBe(true);
       expect(hitsOn(s, "p2")).toEqual([1]);
     });
 

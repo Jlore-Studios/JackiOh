@@ -22,6 +22,7 @@ const BEAR = "core-060"; // (1) Trap
 const HINDER = "core-021"; // (0) Spell, cast on draw
 const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const TIMMY = "core-011"; // (1) Unit: p1's library, so its draw is never a card under test
+const REFUSAL = "classicplus-t-ai-09"; // (1) Trap: counters a Spell that targets one of your Units
 
 /** p2 makes `plays` on its turn (each a hand card, played in order), then p1's turn begins. */
 function afterTheirTurn(
@@ -141,6 +142,24 @@ describe("T-AI-5 Autocomplete", () => {
       s.play(AUTOCOMPLETE);
       expect(copiesIn(s, HINDER)).toBe(1);
       expect(s.hand("p1").find((card) => card.defId === HINDER)?.radiant).toBe(true);
+    });
+
+    it("R448 a countered card was never played: the play before it is the last one", () => {
+      const s = scenario({
+        active: "p2",
+        p1: {
+          hand: [AUTOCOMPLETE, VANILLA],
+          field: [MENACE],
+          backrow: [{ def: REFUSAL, faceUp: false }],
+          library: [TIMMY, TIMMY, TIMMY],
+        },
+        p2: { hand: [STOCKPILE, HIT_JOB, VANILLA], library: [VANILLA, VANILLA, VANILLA], mana: 9 },
+      });
+      s.play(STOCKPILE).play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.unit("p1", 1)?.id ?? "" }] });
+      expect(s.events.some((event) => event.type === "countered")).toBe(true);
+      s.endTurn().play(AUTOCOMPLETE);
+      expect(copiesIn(s, HIT_JOB)).toBe(0);
+      expect(copiesIn(s, STOCKPILE)).toBe(1);
     });
 
     it("R57 a copy by definition and face: a Radiant play is copied Radiant", () => {

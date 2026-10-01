@@ -27,6 +27,8 @@ import {
   field,
   fieldTrap,
   free,
+  GUARD_CAP,
+  guard,
   hardField,
   one,
   runner,
@@ -169,6 +171,17 @@ describe("destroyFieldSpellsAndHit (T-AI-6 Datacenter Fire)", () => {
     expect(heroHits(events, "p2")).toEqual([3]);
     expect(eventsOfType(events, "damage").map((event) => event.targetId)).toEqual(["hero-p1", "hero-p2"]);
     expect(state.players.p1.hero.health).toBe(27);
+  });
+
+  it("§4.4 E6 each hero's hit is one instance: a per-hit cap of 1 caps the whole sweep at 1", () => {
+    const state = game("fire-cap");
+    put(state, guard.id, slot("p1", "units", 1));
+    put(state, field.id, slot("p1", "backrow", 1));
+    put(state, field.id, slot("p2", "backrow", 1));
+    put(state, field.id, slot("p2", "backrow", 2));
+    run(state, destroyFieldSpellsAndHit({ side: "any", damagePer: 1 }));
+    expect(state.players.p1.hero.health).toBe(30 - GUARD_CAP);
+    expect(state.players.p2.hero.health).toBe(27);
   });
 
   it("R46 an Indestructible Field Spell survives and doesn't count", () => {

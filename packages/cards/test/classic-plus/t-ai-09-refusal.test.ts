@@ -25,6 +25,8 @@ const STOCKPILE = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
 const TWINSPELL = "core-079"; // (2) Field Spell: your next Spell gains Echo +1.
 const BEAR = "core-060"; // (1) Trap
 const COUNTERSPELL_TEST_FILLER = "core-011"; // (1) Unit
+const SCEPTER = "classic-007"; // (1) Field Spell: Cry: exile a (1) Cost or less Spell from your hand. Activate: cast a copy of it.
+const FLAME = "classic-016"; // (1) Spell, Book: Deal 4 damage.
 
 function refusal(radiantFace = false, lane = 2): { def: string; radiant: boolean; faceUp: boolean; lane: number } {
   return { def: REFUSAL, radiant: radiantFace, faceUp: false, lane };
@@ -141,6 +143,27 @@ describe("T-AI-9 Refusal", () => {
       s.play(HIT_JOB, { targets: at(s, "p1") });
       expect(s.unit("p1", 1)).toBeNull();
       expect(count(s.events, "countered")).toBe(0);
+    });
+
+    it("R70 R448 a cast Spell is announced like a play: an InfiniScepter's copy aimed at your Unit is countered", () => {
+      const s = setup({}, { hand: [SCEPTER, FLAME, VANILLA] });
+      s.play(SCEPTER, { zone: 1, targets: [{ pick: "instance", instanceId: s.card(FLAME).id }] });
+      s.activate(SCEPTER).answer(at(s, "p1"));
+      expect(count(s.events, "countered")).toBe(1);
+      s.expectInZone(REFUSAL, "graveyard");
+      s.expectStats(s.unit("p1", 1) ?? "", { health: 9 });
+      expect(s.pile("p2", "graveyard").some((card) => card.defId === FLAME)).toBe(true);
+    });
+
+    it("R81 a pick made while it resolves is no target of the play: an Echo repeat aimed at your Unit leaves it set", () => {
+      const s = setup({}, { backrow: [{ def: TWINSPELL, faceUp: true }] });
+      s.play(TRUE_STRIKE, { targets: P1_HERO });
+      expect(s.state.pending?.playerId).toBe("p2");
+      s.answer(at(s, "p1"));
+      expect(count(s.events, "countered")).toBe(0);
+      expect(s.card(REFUSAL).faceUp).toBe(false);
+      s.expectHealth("p1", 26);
+      expect(s.unit("p1", 1)?.damage).toBe(4);
     });
 
     it("R448 with two Refusals the first cancels the Spell and the second stays set", () => {

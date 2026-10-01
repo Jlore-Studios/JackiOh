@@ -51,7 +51,8 @@ const LIZARDS_BREATH = "classic-019"; // C #19 Lizard's Breath
 const CLASSIC_PREVIEWED = [CURSE, LIZARDS_BREATH, PLAGUE_NUKE];
 /** Patch v0.2.0's cards that declare preview, each proved in its own block below (R280). */
 const DATACENTER_FIRE = "classicplus-t-ai-06";
-const NEW_SET_PREVIEWED = [DATACENTER_FIRE];
+const TWICE_FORWARD = "classicplus-074";
+const NEW_SET_PREVIEWED = [TWICE_FORWARD, DATACENTER_FIRE];
 
 const RAPID_REPLENISH = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY = "core-011"; // 1-cost Unit
@@ -1018,6 +1019,58 @@ describe("R280 R583 C+ #44 and #45 preview the permanents they would exile", () 
       const of = (s: Scenario): PreviewValue[] | null => shown(handCard(s.view("p1"), must(s.hand("p1")[0], audit).id));
       expect(of(low)).not.toBeNull();
       expect(of(low)).toEqual(of(high));
+    }
+  });
+});
+
+// =============================================================================================
+// C+ #74 Twice Forward One Step Backwards: the opponent's plays since it was set, its controller's alone
+// =============================================================================================
+
+describe("C+ #74 Twice Forward previews the plays it has counted, to its controller alone (R280, R33)", () => {
+  const LABEL = "your opponent plays";
+  const TIMMY = "core-011"; // (1) Unit
+
+  function counted(face: Face): Scenario {
+    return scenario({
+      active: "p2",
+      p1: { hand: [STOCKPILE], backrow: [{ def: TWICE_FORWARD, radiant: face === "radiant", faceUp: false }], library: [MENACE] },
+      p2: { hand: [TIMMY, STOCKPILE], library: [MENACE, MENACE] },
+    });
+  }
+
+  for (const face of FACES) {
+    it(`R280 ${face}: the label sits in the face's text, and the value is the plays counted so far`, () => {
+      const s = counted(face);
+      const trap = s.card(TWICE_FORWARD);
+      const at = (): PreviewValue[] | null => shown(s.view("p1").you.backrow[0]);
+      expect(cardDef(TWICE_FORWARD)[face].text).toContain(LABEL);
+      expect(at()).toEqual([{ label: LABEL, value: 0 }]);
+      s.play(TIMMY);
+      expect(at()).toEqual([{ label: LABEL, value: 1 }]);
+      expect(s.card(trap).faceUp).not.toBe(true);
+    });
+  }
+
+  it("R33 R177 face-down, the opponent's view carries neither the preview nor the count", () => {
+    const s = counted("base");
+    s.play(TIMMY);
+    const theirs = s.view("p2").opponent.backrow[0];
+    expect(theirs).toMatchObject({ faceDown: true });
+    expect(JSON.stringify(theirs)).not.toContain(LABEL);
+    expect(JSON.stringify(s.view("p2"))).not.toContain(LABEL);
+  });
+
+  it("R280 its hook is a pure read: no write, and no library, hand or state.active", () => {
+    for (const face of FACES) {
+      const s = counted(face);
+      s.play(TIMMY);
+      const card = s.card(TWICE_FORWARD);
+      const hook = must(CARDS[TWICE_FORWARD]?.[face].preview, "the hook");
+      const { state, self } = guarded(s.state, card.id);
+      const answer = hook({ state, self, controller: "p1", radiant: card.radiant, zone: "field", yourTurn: false });
+      expect(shown(s.view("p1").you.backrow[0])).toEqual(answer);
+      expect(hook({ state, self, controller: "p1", radiant: card.radiant, zone: "hand", yourTurn: true })).toEqual([]);
     }
   });
 });

@@ -16,6 +16,7 @@ const MENACE = "core-019"; // (3) Unit
 const ADAPTIVE_UI = "core-074"; // (X) Spell
 const HINDER = "core-021"; // (0) Spell, cast on draw; the base face asks its caster to discard 1 (R431)
 const VANILLA = "core-008"; // (1) Unit, the spare in hand
+const PALANTIR = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
 
 function chain(library: readonly PileSetup[], opts: { radiantFace?: boolean; hand?: readonly PileSetup[] } = {}): Scenario {
   return scenario({
@@ -88,6 +89,16 @@ describe("T-AI-4 Chain of Thought", () => {
       const s = chain([]).play(CHAIN);
       expect(s.events.filter((event) => event.type === "fatigue")).toHaveLength(1);
       s.expectHealth("p1", 29);
+    });
+
+    it("R457 a draw the draw limit stops ends the chain: it is tried once and not again", () => {
+      const s = scenario({
+        p1: { hand: [CHAIN, VANILLA], library: [TIMMY, TIMMY, TIMMY] },
+        p2: { hand: [VANILLA], backrow: [{ def: PALANTIR, faceUp: true }], library: [VANILLA] },
+      }).play(CHAIN);
+      expect(drawn(s)).toBe(1);
+      expect(s.events.filter((event) => event.type === "drawLimited")).toHaveLength(1);
+      expect(s.pile("p1", "library")).toHaveLength(2);
     });
 
     it("R97 the opponent sees the draws under the sentinel", () => {

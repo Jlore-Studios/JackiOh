@@ -19,6 +19,7 @@ const COLLATERAL = "core-034"; // (4) Spell: exile target permanent and a random
 const TRANSMOGULATE = "core-083"; // (2) Spell: replace every card of yours with a random Legendary
 const SILAS = "core-052"; // Radiant: cards crossing to the opponent bounce to their owner's hand
 const CUBE = "core-022"; // Carnivorous Cube: its Cry tributes one of your other Units
+const MIND_CONTROL = "core-049"; // (4) Spell: steal target enemy permanent
 const VANILLA = "core-008";
 const FILLER = "core-011"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
 
@@ -70,6 +71,18 @@ describe("C+ #61 Bauble Bubble", () => {
       s.expectEvents("destroyed", "addedToHand");
     });
 
+    it("§4.5 destroyed on the opponent's turn by their Nether, the Stockpiles still go to your hand", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { backrow: [BAUBLE], hand: [FILLER], library: [FILLER] },
+        p2: { hand: [NETHER, FILLER], library: [FILLER] },
+      });
+      s.play(NETHER);
+      s.expectInZone(BAUBLE, "graveyard");
+      expect(stockpiles(s)).toHaveLength(2);
+      expect(s.hand("p2").some((card) => card.defId === STOCKPILE)).toBe(false);
+    });
+
     it("§4.5 a targeted destroy of the backrow card (Magic Jammed) fires it too", () => {
       const s = bubble({ hand: [JAMMED, FILLER] });
       s.play(JAMMED, { targets: [{ pick: "instance", instanceId: s.card(BAUBLE).id }] });
@@ -99,6 +112,18 @@ describe("C+ #61 Bauble Bubble", () => {
       expect(s.events.some((event) => event.type === "transformed")).toBe(true);
       expect(s.events.some((event) => event.type === "addedToHand" && event.defId === STOCKPILE)).toBe(false);
       s.expectInZone(id, "gone");
+    });
+
+    it("§6.2 a steal adds nothing: it changes sides and stays on the field", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { backrow: [BAUBLE], hand: [FILLER], library: [FILLER] },
+        p2: { hand: [MIND_CONTROL, FILLER], library: [FILLER] },
+      });
+      s.play(MIND_CONTROL, { targets: [{ pick: "instance", instanceId: s.card(BAUBLE).id }] });
+      s.expectInZone(BAUBLE, "field");
+      expect(s.card(BAUBLE).controller).toBe("p2");
+      expect(s.events.some((event) => event.type === "addedToHand" && event.defId === STOCKPILE)).toBe(false);
     });
 
     it("R428 Carnivorous Cube can't eat it: Units only", () => {

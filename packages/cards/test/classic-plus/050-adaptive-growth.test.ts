@@ -97,8 +97,12 @@ describe("C+ #50 Adaptive Growth", () => {
 
     it("§3.2 the counts read the tops of the piles: a Stack pile is one Unit", () => {
       const s = drawn({ mine: [VANILLA, { def: FIENDER, stack: true }], theirs: [VANILLA, VANILLA] });
+      const buried = s.state.players.p1.units[0]?.find((card) => card.defId === VANILLA);
+      if (buried === undefined) throw new Error("no pile");
       s.endTurn();
       s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
+      // The dormant card is not on the field for effects (R13): it keeps its 4/4.
+      expect(s.card(buried.id).buffs).toEqual({ attack: 0, health: 0 });
     });
 
     it("§6.2 played from a hand it does the same", () => {

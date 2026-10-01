@@ -95,6 +95,19 @@ describe("C+ #46 Felinor Flagbearer", () => {
       s.expectStats(s.unit("p2", 1) ?? "", { attack: 3, health: 4 });
     });
 
+    it("§3.2 R13 a Felinor dormant under a Stack pile gets no aura; the one on top does", () => {
+      const s = scenario({
+        p1: { hand: [FLAG, FILLER], field: [DUPE, { def: DUPE, stack: true }], mana: 10 },
+        p2: { hand: [FILLER] },
+      });
+      const top = s.unit("p1", 1);
+      const buried = s.state.players.p1.units[0]?.find((card) => card.id !== top?.id);
+      if (top === null || buried === undefined) throw new Error("no pile");
+      s.play(FLAG);
+      s.expectStats(top, { attack: 4, health: 5 });
+      s.expectStats(buried, { attack: 3, health: 4 });
+    });
+
     it("§10.4 the aura lasts only while it is on the field", () => {
       const s = rally();
       s.play(FLAG);

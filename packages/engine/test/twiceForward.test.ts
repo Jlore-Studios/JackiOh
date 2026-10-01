@@ -19,6 +19,7 @@ import {
   CRIER_DAMAGE,
   TURNER_DAMAGE,
   TWICE_FORWARD_SCRIPTS,
+  caster,
   crier,
   forward,
   selfExiler,
@@ -140,6 +141,16 @@ describe("C+ #74's Field Trap (R425)", () => {
     const theirs = JSON.stringify(viewFor(second.state, "p2"));
     expect(theirs).not.toContain(trapId);
     expect(theirs).not.toContain(forward.id);
+  });
+
+  it("R70 R425 a card a play casts is the later play: the cast is the 2nd and is fused, not the card that cast it", () => {
+    const { state, trapId } = opponentsTurn("nested");
+    const first = play(state, "p2", caster.id);
+    const played = eventsOfType(first.events, "cardPlayed");
+    expect(played.map((event) => event.defId)).toEqual([caster.id, spell.id]);
+    expect(eventsOfType(first.events, "fused")[0]?.instanceIds).toEqual([played[1]?.instanceId, trapId]);
+    expect(first.state.players.p2.graveyard.map((card) => card.defId)).toContain(caster.id);
+    expect(twiceForwardPlays(trapOf(first.state, trapId))).toBe(2);
   });
 
   it("R425 its own controller's plays never count", () => {

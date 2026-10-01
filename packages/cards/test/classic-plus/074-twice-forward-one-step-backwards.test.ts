@@ -75,7 +75,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       { key: "plays", base: 2, radiant: 2, better: "down", step: 1, min: 2 },
       { key: "brittleGain", base: 1, radiant: 1, better: "up", step: 1, min: 1 },
     ]);
-    expect(base.triggers?.[0]?.on).toEqual(["cardResolved"]);
+    expect(base.triggers?.[0]?.on).toEqual(["cardPlayed", "cardResolved"]);
     expect(radiant.triggers?.[0]?.when).toBeTypeOf("function");
   });
 
@@ -97,6 +97,18 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(playsOf(s)).toBe(1);
       expect(trapOf(s).faceUp === true).toBe(false);
       expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+    });
+
+    it("R33 R385 until it fuses the opponent reads neither its Brittle count nor its play count", () => {
+      const s = setThenTheirTurn().play(RAPID);
+      const trap = trapOf(s);
+      const seen = s.view("p2").opponent.backrow[1];
+      expect(seen).not.toBeNull();
+      expect(JSON.stringify(seen)).not.toMatch(/brittle|plays|memory/);
+      const theirs = JSON.stringify(s.view("p2"));
+      expect(theirs).not.toContain(trap.id);
+      expect(theirs).not.toContain(FORWARD);
+      expect((s.view("p1").you.backrow[1] as CardView | null)?.brittle).toBe(4);
     });
 
     it("R425 R77 the 2nd, a Unit, is fused into this after it resolves: still a Field Trap, the Unit gone, +1 Brittle, face-up (R33)", () => {
@@ -140,11 +152,25 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(JSON.stringify(brittle)).not.toContain(trapOf(s).id);
     });
 
-    it("R70 a cast is a play: the cast-on-draw card their 1st play draws is their 2nd", () => {
+    it("R70 a cast is a play: the cast-on-draw card their turn's draw casts is their 1st, so the next play is fused", () => {
       const s = setThenTheirTurn({ p2: { hand: [STOCKPILE, VANILLA], library: [{ def: HINDER, radiant: true }, ...deck(6)] } });
+      expect(playsOf(s)).toBe(1);
+      expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([HINDER]);
       s.play(STOCKPILE);
       expect(playsOf(s)).toBe(2);
-      expect(fusedEvents(s)).toBe(1);
+      expect(s.events.filter((event) => event.type === "fused").map((event) => event.defId)).toEqual([trapOf(s).defId]);
+      expect(defOf(s.state, trapOf(s).defId).ingredients?.map((part) => part.defId)).toEqual([STOCKPILE, FORWARD]);
+    });
+
+    it("R70 R425 a card their play casts is the later play: the Hinder Stockpile draws is their 2nd, fused once it resolves", () => {
+      const s = setThenTheirTurn({ p2: { hand: [STOCKPILE, VANILLA], library: [TIMMY, { def: HINDER, radiant: true }, ...deck(6)] } });
+      expect(playsOf(s)).toBe(0);
+      s.play(STOCKPILE);
+      const played = s.events.flatMap((event) => (event.type === "cardPlayed" && event.player === "p2" ? [event.defId] : []));
+      expect(played).toEqual([STOCKPILE, HINDER]);
+      expect(playsOf(s)).toBe(2);
+      expect(defOf(s.state, trapOf(s).defId).ingredients?.map((part) => part.defId)).toEqual([HINDER, FORWARD]);
+      expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([STOCKPILE]);
     });
 
     it("R448 a countered play is never played and doesn't count", () => {
@@ -269,6 +295,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       const trap = trapOf(s);
       expect(trap.defId).not.toBe(FORWARD);
       expect(defOf(s.state, trap.defId).type).toBe("Field Trap");
+      expect(defOf(s.state, trap.defId).ingredients?.find((part) => part.defId === VANILLA)).toEqual({ defId: VANILLA, radiant: true });
       expect(activeBrittleCount(trap)).toBe(11);
       expect(trap.faceUp).toBe(true);
     });

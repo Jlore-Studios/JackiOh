@@ -3,6 +3,7 @@
 // cases again (packages/cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts).
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
+import { castNew } from "../../src/effects/cast";
 import { damage } from "../../src/effects/damage";
 import { exile } from "../../src/effects/move";
 import type { CardScripts } from "../../src/script";
@@ -31,12 +32,14 @@ export const trap = spellDef(963, { id: "fx-tf-trap", name: "Fixture Trap", type
 /** A Unit whose end-of-turn line hits the enemy hero for 1, and one whose Cry hits it for 5. */
 export const turner = unitDef(964, { id: "fx-tf-turner", name: "Fixture End-Of-Turn Unit", attack: 1, health: 1 });
 export const crier = unitDef(965, { id: "fx-tf-crier", name: "Fixture Cry Unit", attack: 1, health: 1 });
+/** A Spell whose resolution casts the plain Spell (R70): the cast is the later play, though it resolves first. */
+export const caster = spellDef(966, { id: "fx-tf-caster", name: "Fixture Casting Spell" });
 export const TURNER_DAMAGE = 1;
 export const CRIER_DAMAGE = 5;
 
 export function twiceForwardCatalog(base: CardDefs): CardDefs {
   const defs: Record<string, CardDef> = { ...base };
-  for (const def of [forward, spell, selfExiler, trap, turner, crier]) defs[def.id] = def;
+  for (const def of [forward, spell, selfExiler, trap, turner, crier, caster]) defs[def.id] = def;
   return defs;
 }
 
@@ -48,6 +51,10 @@ export const TWICE_FORWARD_SCRIPTS: Record<string, CardScripts> = {
   [selfExiler.id]: {
     base: { cry: () => [exile({ target: { of: "self" } })] },
     radiant: { cry: () => [exile({ target: { of: "self" } })] },
+  },
+  [caster.id]: {
+    base: { cry: () => [castNew({ def: spell.id })] },
+    radiant: { cry: () => [castNew({ def: spell.id })] },
   },
   [turner.id]: {
     base: { endOfTurn: () => [damage({ to: { of: "enemyHero" }, amount: TURNER_DAMAGE })] },

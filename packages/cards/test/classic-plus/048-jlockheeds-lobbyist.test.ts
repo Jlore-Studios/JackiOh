@@ -79,6 +79,21 @@ describe("C+ #48 Jlockheed's Lobbyist", () => {
       expect(s.view("p1").you.hand).toEqual(expect.arrayContaining([expect.objectContaining({ instanceId: card.id, cost: 0 })]));
     });
 
+    it("§6.2 killed on the opponent's turn, its Death still adds the card to your hand", () => {
+      const s = scenario({
+        active: "p2",
+        p1: { field: [LOBBYIST], hand: [FILLER] },
+        p2: { hand: [HIT_JOB, FILLER], field: [VANILLA] },
+      });
+      s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: s.card(LOBBYIST).id }] });
+      const added = s.lastEvents.flatMap((event) => (event.type === "addedToHand" ? [event] : []));
+      expect(added.map((event) => event.player)).toEqual(["p1"]);
+      const card = s.card(added[0]?.instanceId ?? "");
+      expect(card.zone).toMatchObject({ z: "hand", player: "p1" });
+      expect(POOL).toContain(card.defId);
+      expect(card.costOverride).toBe(0);
+    });
+
     it("R278 R387 the pool is exactly Core #13, #14 and C+ #51, #52 — one tag, never itself", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 80; i += 1) {
@@ -111,6 +126,7 @@ describe("C+ #48 Jlockheed's Lobbyist", () => {
     it("§5.2 0/6 with no Defense ban: it may switch to Defense Position", () => {
       const s = board({ radiant: true });
       s.expectStats(s.unit("p1", 1) ?? "", { attack: 0, health: 6 });
+      expect(() => s.attack(s.unit("p1", 1) ?? "", "hero")).toThrow(/0 attack/);
       s.switchPosition(s.unit("p1", 1) ?? "");
       expect(s.stats(s.unit("p1", 1) ?? "").position).toBe("DEF");
     });
