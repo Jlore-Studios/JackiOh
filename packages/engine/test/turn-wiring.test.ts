@@ -41,8 +41,17 @@ import {
   write,
 } from "./fixtures/turn";
 
-vi.mock("../src/brittle", () => ({ brittleTick: vi.fn() }));
-vi.mock("../src/animated", () => ({ animateAtTurnStart: vi.fn(), returnAtCleanup: vi.fn() }));
+// Only the two stage bodies are doubled: every other export of the modules (the readers other
+// modules import, such as `animated.faceTypeOf` and the Brittle count helpers) stays the real one.
+vi.mock("../src/brittle", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/brittle")>()),
+  brittleTick: vi.fn(),
+}));
+vi.mock("../src/animated", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/animated")>()),
+  animateAtTurnStart: vi.fn(),
+  returnAtCleanup: vi.fn(),
+}));
 
 /** The log card also answers the doubles' prompts, and holds a delayed step for them. */
 const LOG_SCRIPTS: CardScripts = {

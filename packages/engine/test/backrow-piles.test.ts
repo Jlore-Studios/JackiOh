@@ -204,7 +204,7 @@ describe("B5 E21 backrow piles (R447)", () => {
     flush(state, "p1");
     expect(whyCannotActivate(state, "p1", power.id)).toBeNull();
     stackOnto(state, cover.id, power);
-    expect(whyCannotActivate(state, "p1", power.id)).toBe("that card is not on the field");
+    expect(whyCannotActivate(state, "p1", power.id)).toBe("that card is under a pile and does not act");
     expect(legalActions(state, "p1").some((action) => action.type === "activatePower")).toBe(false);
   });
 
