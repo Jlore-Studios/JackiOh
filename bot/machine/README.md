@@ -80,7 +80,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
 - **Disk:** each job's files and the user's package store are deleted when the job ends
-  (`/usr/local/bin/night-vm-job-done`, the runners' job-completed hook); the checkout and the
+  (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
   logins stay.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
