@@ -1,0 +1,103 @@
+{
+  "max_parallel": 3,
+  "difficult_label": "difficult",
+  "priority": ["claude-1", "claude-2", "claude-3", "claude-4", "gpt", "gemini", "muse"],
+  "providers": {
+    "claude-1": {
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness, so it waits for quiet.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude-opus",
+      "model": "opus",
+      "effort": "xhigh",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "self_review": true,
+      "difficult": true,
+      "quiet_check": true
+    },
+    "claude-2": {
+      "note": "A second Claude account. Paste its `claude setup-token` into the secret to turn it on.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude-opus",
+      "model": "opus",
+      "effort": "xhigh",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "self_review": true,
+      "difficult": true,
+      "quiet_check": false
+    },
+    "claude-3": {
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude-opus",
+      "model": "opus",
+      "effort": "xhigh",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "self_review": true,
+      "difficult": true,
+      "quiet_check": false
+    },
+    "claude-4": {
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude-opus",
+      "model": "opus",
+      "effort": "xhigh",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "self_review": true,
+      "difficult": true,
+      "quiet_check": false
+    },
+    "gpt": {
+      "note": "ChatGPT through the Codex CLI. The secret holds ~/.codex/auth.json after `codex login`; the bot keeps the refreshed file encrypted on bot-state.",
+      "enabled": true,
+      "cli": "codex",
+      "family": "gpt",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "secret": "CODEX_AUTH_JSON",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
+      "self_review": false,
+      "difficult": false,
+      "quiet_check": false
+    },
+    "gemini": {
+      "note": "Login with Google through the Gemini CLI. The secret holds ~/.gemini/oauth_creds.json. Use gemini-2.5-pro if the account has no preview models.",
+      "enabled": true,
+      "cli": "gemini",
+      "family": "gemini",
+      "model": "gemini-3-pro-preview",
+      "effort": "",
+      "secret": "GEMINI_OAUTH_CREDS",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
+      "self_review": false,
+      "difficult": false,
+      "quiet_check": false
+    },
+    "muse": {
+      "note": "Meta's Muse Code CLI. The secret holds ~/.config/muse/auth.json after `muse login` on Linux; an API key instead bills per token.",
+      "enabled": true,
+      "cli": "muse",
+      "family": "muse",
+      "model": "muse-spark-1.3",
+      "effort": "high",
+      "secret": "MUSE_AUTH",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
+      "self_review": false,
+      "difficult": false,
+      "quiet_check": false
+    }
+  }
+}

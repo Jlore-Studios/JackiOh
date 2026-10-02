@@ -1,15 +1,15 @@
-"""The `status` report: halt, window, usage, what is running and what is queued."""
+"""The `status` report: halt, each subscription, what is running and what is queued."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from harness import clock
+from harness import providers as providers_mod
 from harness.clock import human_delta, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION,
-                            LABEL_WORKING)
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_WORKING)
 from harness.context import Context
-from harness.state import usage_refusal
+from harness.providers import Provider
 
 
 def _numbers(items: list[dict[str, Any]]) -> str:
@@ -18,36 +18,55 @@ def _numbers(items: list[dict[str, Any]]) -> str:
     return ", ".join(f"#{i['number']}" for i in items)
 
 
-def _usage_line(state: dict[str, Any], ctx: Context) -> str:
-    usage = state.get("usage") or {}
-    if not usage:
-        return "no reading yet (the first model call records one)"
+def _usage_text(provider: Provider, entry: dict[str, Any], ctx: Context) -> str:
+    usage = entry.get("usage") or {}
     parts = []
     for window, label in (("five_hour", "5-hour"), ("seven_day", "7-day")):
-        reading = usage.get(window)
+        reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
-        stop = ctx.cfg.usage_stop.get(window)
         resets = parse_iso(reading.get("resets_at"))
         if resets is not None and resets <= ctx.now():
             parts.append(f"{label}: reset since the reading")
             continue
         text = f"{label} {float(reading.get('utilization', 0)):.0%}"
-        if stop is not None:
-            text += f" (stops at {stop:.0%})"
-        if resets is not None:
-            text += f", resets in {human_delta(resets - ctx.now())}"
+        cap = provider.limits.stops.get(window)
+        if cap is not None:
+            text += f" (cap {cap:.0%})"
         parts.append(text)
-    observed = parse_iso(usage.get("observed_at"))
-    age = f" (read {human_delta(ctx.now() - observed)} ago)" if observed else ""
-    return "; ".join(parts) + age if parts else "no reading yet"
+    for window, budget in provider.limits.budgets.items():
+        since = ctx.now() - providers_mod.WINDOWS[window]
+        spent = providers_mod.minutes_spent(entry, since)
+        parts.append(f"{providers_mod.WINDOW_NAMES[window]} {spent:.0f}/{budget} min")
+    observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
+    if observed and parts:
+        parts[-1] += f" (read {human_delta(ctx.now() - observed)} ago)"
+    return "; ".join(parts) or "no reading yet"
+
+
+def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) -> list[str]:
+    cfg = ctx.cfg
+    busy = {p: n for n, p in held.items()}
+    lines = []
+    for provider in cfg.pool.ordered():
+        entry = providers_mod.peek_record(state, provider.id)
+        reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
+        if provider.id in busy:
+            number = busy[provider.id]
+            now_doing = f"**working on #{number}**" if number else "**running a survey**"
+        elif reason is None:
+            now_doing = "free"
+        else:
+            now_doing = reason
+        lines.append(f"  - `{provider.id}` ({provider.cli}, `{provider.model}`, "
+                     f"{provider.schedule.describe(cfg.timezone)}): {now_doing}. "
+                     f"Usage: {_usage_text(provider, entry, ctx)}.")
+    return lines
 
 
 def report(ctx: Context) -> str:
     cfg = ctx.cfg
-    now = ctx.now()
     state = ctx.store.load()
-    window = ctx.window
     lines = ["**Night bot status**", ""]
     halt = state.get("halt") or {}
     if state.get("halted"):
@@ -58,20 +77,8 @@ def report(ctx: Context) -> str:
         lines.append("- Not halted.")
     if ctx.repo_halted():
         lines.append("- **`.harness/HALT` is on `main`**: nothing runs until that file is deleted.")
-    local = now.astimezone(clock.zone(cfg.timezone))
-    if window.is_open(now):
-        closes = window.closes_at(now)
-        lines.append(f"- Window {window.describe()}: **open**, closes in "
-                     f"{human_delta(closes - now) if closes else '?'} (it is {local:%H:%M} there).")
-    else:
-        opens = window.next_open(now)
-        lines.append(f"- Window {window.describe()}: closed, opens in {human_delta(opens - now)} "
-                     f"(it is {local:%H:%M} there).")
-    lines.append(f"- Usage: {_usage_line(state, ctx)}.")
-    refusal = usage_refusal(state, dict(cfg.usage_stop), now)
-    if refusal:
-        lines.append(f"- **Paused for usage**: {refusal}.")
     issues = ctx.gh.list_issues(labels="")
+
     def labelled(name: str, prs: bool | None = None) -> list[dict[str, Any]]:
         found = []
         for issue in issues:
@@ -80,9 +87,20 @@ def report(ctx: Context) -> str:
             if name in names and (prs is None or prs == is_pr):
                 found.append(issue)
         return found
+
+    held: dict[int, str] = {}
+    for issue in labelled(LABEL_WORKING):
+        record = state["items"].get(str(issue["number"]), {})
+        held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
+    survey = state.get("suggest") or {}
+    if survey.get("provider"):
+        held[0] = str(survey["provider"])
+    lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, one item each):")
+    lines += provider_lines(ctx, state, held)
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}.")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
-                 f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}.")
+                 f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
+                 f"for a second review: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
     lines.append(f"- Waiting for a person: {_numbers(labelled(LABEL_BLOCKED))}.")
     lines.append(f"- Open bot pull requests: {_numbers(labelled(LABEL_PR, prs=True))}.")
     suggestions = labelled(LABEL_SUGGESTION, prs=False)
@@ -91,7 +109,8 @@ def report(ctx: Context) -> str:
     last = state.get("last_run") or {}
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
-    lines.append(f"- Model: `{cfg.model}` at `{cfg.effort}` effort; up to {cfg.max_review_cycles} "
-                 "build and review rounds per item; auto-merge "
+    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item. A change "
+                 "merges on its builder's model's approval when that model is enough by itself "
+                 "(Opus), else after a second model approves it too; auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")
     return "\n".join(lines)

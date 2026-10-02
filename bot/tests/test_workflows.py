@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from harness import config
+from harness import config, providers
 
 WORKFLOWS = config.REPO_ROOT / ".github" / "workflows"
 
@@ -38,21 +38,51 @@ class NightWorkflowTests(unittest.TestCase):
         block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", work).group(1)
         grants = dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
         self.assertEqual(grants, {"contents": "read"})
-        self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", work)
+        # Exactly one model secret: the one plan named, picked by name.
+        self.assertEqual(set(re.findall(r"\$\{\{\s*(secrets[^}]*?)\s*\}\}", work)),
+                         {"secrets[needs.plan.outputs.secret]"})
 
-    def test_only_jobs_that_cannot_write_hold_the_claude_token(self):
-        self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", job(self.text, "deliver"))
-        plan = job(self.text, "plan")
-        self.assertNotRegex(plan, r"CLAUDE_CODE_OAUTH_TOKEN\s*:")  # never set as a variable
-        mentions = re.findall(r"secrets\.CLAUDE_CODE_OAUTH_TOKEN[^}]*", plan)
-        self.assertEqual(mentions, ["secrets.CLAUDE_CODE_OAUTH_TOKEN != '' "])  # presence only
+    def test_model_secrets_reach_only_jobs_that_cannot_write(self):
+        """A model secret's value goes only to the gate's quiet step and to the model job, which
+        hold no write token. Every other job learns only whether each secret is set."""
+        for name in ("plan", "deliver"):
+            block = job(self.text, name)
+            for secret in providers.SECRETS:
+                self.assertNotRegex(block, rf"\b{secret}\s*:", (name, secret))
+                for mention in re.findall(rf"secrets\.{secret}\b[^}}]*", block):
+                    self.assertTrue(mention.startswith(f"secrets.{secret} != '' && '{secret}'"),
+                                    (name, mention))
+            self.assertNotIn("secrets[", block)
+        gate = job(self.text, "gate")
+        self.assertRegex(gate, r"CLAUDE_CODE_OAUTH_TOKEN:\s*\$\{\{ secrets\[steps\.peek\.outputs\."
+                               r"quiet_secret\] \}\}")
         for name in ("gate", "work"):
             block = job(self.text, name)
-            self.assertRegex(block, r"CLAUDE_CODE_OAUTH_TOKEN\s*:")
             self.assertNotIn("BOT_GITHUB_TOKEN", block)
             perms = re.search(r"permissions:\n((?:\s{6}.*\n)+)", block).group(1)
             grants = dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", perms, re.M))
             self.assertEqual(set(grants.values()), {"read"}, name)
+
+    def test_every_provider_secret_is_known_to_every_list(self):
+        """providers.SECRETS is the list the workflows hand over; each `HARNESS_SECRETS_SET`
+        names every one, or a subscription would look unconfigured."""
+        for name in ("bot-night.yml", "bot-commands.yml"):
+            text = read(name)
+            lists = re.findall(r"HARNESS_SECRETS_SET: >-\n((?:\s+\$\{\{.*\}\}\n)+)", text)
+            self.assertTrue(lists, name)
+            for found in lists:
+                named = re.findall(r"secrets\.(\w+) != '' && '(\w+)'", found)
+                self.assertEqual([a for a, _ in named], list(providers.SECRETS), name)
+                self.assertTrue(all(a == b for a, b in named), name)
+
+    def test_only_the_chosen_cli_is_installed(self):
+        work = job(self.text, "work")
+        for cli in providers.CLIS:
+            self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}'")
+
+    def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
+        self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")
+        self.assertIn("group: bot-night-plan", job(self.text, "plan"))
 
     def test_the_step_names_the_partner_reads(self):
         """bright-bots-harness treats `Build, check and review` as this bot spending, and its
@@ -110,7 +140,12 @@ class CommandsWorkflowTests(unittest.TestCase):
     text = read("bot-commands.yml")
 
     def test_no_model_and_no_pull_request_code(self):
-        self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", self.text)
+        # The model secrets are named only to say whether each is set, never handed over.
+        for secret in providers.SECRETS:
+            self.assertNotRegex(self.text, rf"\b{secret}\s*:")
+            for mention in re.findall(rf"secrets\.{secret}\b[^}}]*", self.text):
+                self.assertTrue(mention.startswith(f"secrets.{secret} != '' && '{secret}'"), mention)
+        self.assertNotIn("secrets[", self.text)
         self.assertNotIn("claude-code", self.text)
         self.assertNotIn("github.event.pull_request.head", self.text)
         self.assertIn("ref: ${{ github.event.repository.default_branch || 'main' }}", self.text)

@@ -19,6 +19,19 @@ _PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
+#: Secret values that are not whole environment values: the tokens inside a provider's login
+#: file (`logins.py`), which a transcript could show one at a time.
+_REMEMBERED: list[str] = []
+MIN_REMEMBERED = 16
+
+
+def remember(values: list[str]) -> None:
+    """Redact these values too, from now on in this process."""
+    for value in values:
+        if isinstance(value, str) and len(value) >= MIN_REMEMBERED and value not in _REMEMBERED:
+            _REMEMBERED.append(value)
+
+
 def redact(text: str, extra: list[str] | None = None) -> str:
     """`text` with every known token shape and every live secret value replaced."""
     if not text:
@@ -26,7 +39,7 @@ def redact(text: str, extra: list[str] | None = None) -> str:
     out = text
     for pattern in _PATTERNS:
         out = pattern.sub(REDACTION, out)
-    values = list(config.secret_values()) + list(extra or [])
+    values = list(config.secret_values()) + _REMEMBERED + list(extra or [])
     for value in sorted(values, key=len, reverse=True):
         if value and value in out:
             out = out.replace(value, REDACTION)

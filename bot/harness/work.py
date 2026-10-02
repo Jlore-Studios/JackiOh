@@ -1,4 +1,5 @@
-"""The model job: one item through builder -> checks -> adversarial review, or a suggestion survey.
+"""The model job: one item through builder -> checks -> adversarial review, a second model's
+review of a bot pull request, or a suggestion survey, all on the one subscription `plan` chose.
 
 This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
 to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
@@ -38,6 +39,19 @@ BUILDER_DENY = ("WebFetch", "WebSearch") + NETWORK_DENY
 READER_DENY = BUILDER_DENY + ("Edit", "Write", "MultiEdit", "NotebookEdit", "Bash(git commit:*)")
 
 DIFF_IN_PROMPT = 60_000
+#: The builder's running notes, at the top of the worktree. Git ignores it (`info/exclude`), so it
+#: is never committed; the harness reads it when the run ends and hands it to the next agent.
+NOTES_FILE = ".bot-notes.md"
+NOTES_CHARS = 8000
+NOTES_ASK = f"""
+
+## Keep notes for whoever picks this up
+
+Keep a short running log in `{NOTES_FILE}` at the top of this worktree (git ignores it, so it is
+never delivered): your plan, what is done, what is next, the decisions you made and why, and the
+dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
+moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
+file and the branch."""
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.json")
 MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
 
@@ -92,6 +106,9 @@ class Worker:
         self.deadline = self.started + timedelta(minutes=cfg.job_budget_minutes)
         self.templates = {name: prompts.load(name) for name in prompts.NAMES}
         self.system = self.templates["system"].substitute(bot=cfg.bot_login, repo=cfg.repo)
+        self.provider = cfg.pool.get(plan.get("provider")) or cfg.pool.ordered()[0]
+        self.minutes = 0.0
+        self.build_transcript: Path | None = None
         self.who = Identity.bot(cfg.bot_login, cfg.bot_user_id)
         self.last_usage: dict | None = None
         self.calls = 0
@@ -111,6 +128,8 @@ class Worker:
             "reason": "",
             "started_at": iso(self.started),
             "cycles": [],
+            "provider": self.provider.id,
+            "family": self.provider.family,
         }
 
     # ------------------------------------------------------------------ plumbing
@@ -148,6 +167,9 @@ class Worker:
         timeout = int(min(self.cfg.call_timeout_minutes * 60, self.seconds_left() - 300))
         where = self.out_dir if self.cfg.upload_transcripts else self.work_dir
         transcript = where / "transcripts" / f"{self.calls:02d}-{role}.jsonl"
+        if not reader:
+            prompt += NOTES_ASK
+            self.build_transcript = transcript
         request = RunRequest(
             role=role,
             prompt=prompt,
@@ -157,24 +179,40 @@ class Worker:
             disallowed_tools=READER_DENY if reader else BUILDER_DENY,
             max_turns=int(self.cfg.max_turns[role]),
             timeout_s=max(60, timeout),
-            model=self.cfg.model,
-            effort=self.cfg.effort,
+            model=self.provider.model,
+            effort=self.provider.effort,
             transcript=transcript,
+            read_only=reader,
+            extra_dirs=self._git_dirs(cwd),
         )
         result = self.runner.run(request)
+        self.minutes += result.duration_s / 60
         if result.usage:
             self.last_usage = result.usage
         if result.rate_limited:
-            raise Interrupt("the subscription's usage limit was reached", "usage", result.reset_at)
+            raise Interrupt(f"`{self.provider.id}` reached its usage limit", "usage",
+                            result.reset_at)
         if result.infra:
-            raise Interrupt(f"the claude CLI could not run: {result.error}", "infra")
+            raise Interrupt(f"the {self.provider.cli} CLI could not run: {result.error}", "infra")
         return result
+
+    def _git_dirs(self, cwd: Path) -> tuple[str, ...]:
+        """The repository's git directory, which a worktree's git commands write to and a
+        sandboxed CLI must be told about."""
+        proc = Git(cwd, self.env).run("rev-parse", "--path-format=absolute", "--git-common-dir",
+                                      check=False)
+        found = proc.stdout.strip() if proc.returncode == 0 else ""
+        return (found,) if found else ()
 
     def write_result(self) -> Path:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.result["usage"] = self.last_usage
         self.result["finished_at"] = iso(self.now())
         self.result["model_calls"] = self.calls
+        self.result["minutes"] = round(self.minutes, 1)
+        handoff = self._handoff()
+        if handoff:
+            self.result["handoff"] = handoff
         path = self.out_dir / "result.json"
         path.write_text(json.dumps(redact_json(self.result), indent=2) + "\n", encoding="utf-8")
         return path
@@ -189,6 +227,8 @@ class Worker:
                 self._suggest()
             elif action in ("build", "revise"):
                 self._item()
+            elif action == "review":
+                self._second_review()
             else:
                 self.result.update(status="nothing", reason="the plan had nothing to do")
         except Interrupt as stop:
@@ -209,7 +249,7 @@ class Worker:
             self.installed_at = self.wt.head()
         return result
 
-    def _prepare(self) -> list[str]:
+    def _prepare(self, *, merge_main: bool = True) -> list[str]:
         number = int(self.plan["number"])
         branch = str(self.plan["branch"])
         default = self.cfg.default_branch
@@ -219,16 +259,17 @@ class Worker:
                       f"+refs/heads/{branch}:refs/remotes/origin/{branch}", check=False)
         remote = f"origin/{branch}"
         has_remote = self.repo.rev(remote) is not None
-        if self.plan["action"] == "revise" and not has_remote:
+        if self.plan["action"] in ("revise", "review") and not has_remote:
             raise RuntimeError(f"the pull request's branch {branch} is not on origin")
         start = remote if has_remote else self.base_ref
         self.base_sha = self.repo.rev(self.base_ref) or ""
         self.start_sha = self.repo.rev(start) or ""
         self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, start)
+        self._exclude_notes()
         self.result.update(branch=branch, base=self.base_sha, start=self.start_sha,
                            remote_branch_existed=has_remote)
         conflicts: list[str] = []
-        if has_remote:
+        if has_remote and merge_main:
             conflicts = self.wt.merge(self.base_ref, self.who)
         if any(_is_manifest(p) for p in conflicts):
             return conflicts  # the builder resolves the manifests first; install runs after
@@ -237,6 +278,54 @@ class Worker:
             raise Interrupt(f"dependency install failed on untouched main (exit "
                             f"{install.exit_code}): {install.tail[-1500:]}", "infra")
         return conflicts
+
+    def _exclude_notes(self) -> None:
+        """Tell git to ignore the notes file in every worktree of this clone."""
+        assert self.wt is not None
+        common = self.wt.run("rev-parse", "--path-format=absolute", "--git-common-dir",
+                             check=False).stdout.strip()
+        if not common:
+            return
+        exclude = Path(common) / "info" / "exclude"
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        lines = exclude.read_text(encoding="utf-8").splitlines() if exclude.exists() else []
+        if f"/{NOTES_FILE}" not in lines:
+            exclude.write_text("\n".join([*lines, f"/{NOTES_FILE}"]) + "\n", encoding="utf-8")
+
+    def _handoff(self) -> dict[str, Any] | None:
+        """What the next agent needs if this run did not finish the item: the builder's notes
+        and the end of its last session. None when there is neither."""
+        if self.wt is None:
+            return None
+        notes_path = self.wt.cwd / NOTES_FILE
+        notes = ""
+        if notes_path.is_file():
+            notes = notes_path.read_text(encoding="utf-8", errors="replace")[-NOTES_CHARS:]
+        trail = ""
+        trail_of = getattr(self.runner, "trail", None)
+        if self.build_transcript is not None and self.build_transcript.exists() and trail_of:
+            trail = trail_of(self.build_transcript)
+        if not notes.strip() and not trail.strip():
+            return None
+        return {"provider": self.provider.id, "family": self.provider.family,
+                "at": iso(self.now()), "reason": str(self.result.get("reason") or ""),
+                "notes": redact(notes), "trail": redact(trail)}
+
+    def _handoff_text(self) -> str:
+        """The section a first prompt gets when another agent worked on this before."""
+        handoff = self.plan.get("handoff")
+        if not isinstance(handoff, dict):
+            return ""
+        parts = [f"## Picking up from another agent\n\nAn earlier run on "
+                 f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) worked on this "
+                 f"and stopped: {handoff.get('reason') or 'no reason recorded'}. Its work so far is "
+                 "on the branch. Below are the notes it kept and the end of its session. Check "
+                 "them against the diff and re-run the checks before you trust any of it."]
+        if str(handoff.get("notes") or "").strip():
+            parts.append(data(str(handoff["notes"]), "Its notes"))
+        if str(handoff.get("trail") or "").strip():
+            parts.append(data(str(handoff["trail"]), "The end of its session"))
+        return "\n\n" + "\n\n".join(parts)
 
     def _branch_state(self) -> str:
         assert self.wt is not None
@@ -276,7 +365,7 @@ class Worker:
                 conflicts=conflict_text, branch_state=self._branch_state(),
                 gate_list=self._gate_list(),
             )
-            return "revise", prompt
+            return "revise", prompt + self._handoff_text()
         previous = ""
         prior = plan.get("previous_findings") or []
         if prior:
@@ -297,7 +386,7 @@ class Worker:
             thread=plan.get("thread", ""), branch_state=self._branch_state(), previous=previous,
             gate_list=self._gate_list(),
         )
-        return "build", prompt
+        return "build", prompt + self._handoff_text()
 
     def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str) -> str:
         return self.render(
@@ -397,7 +486,8 @@ class Worker:
         return self._base_wt
 
     def _review(self, cycle: int, report: verdicts.BuildReport,
-                results: list[gates_mod.GateResult], previous: list[Finding]) -> verdicts.Review:
+                results: list[gates_mod.GateResult], previous: list[Finding], *,
+                context: str = "", max_cycles: int | None = None) -> verdicts.Review:
         assert self.wt is not None
         diff, cut = self.wt.diff(self.base_ref, max_chars=DIFF_IN_PROMPT)
         note = ("The diff below is cut short; run `git diff "
@@ -406,12 +496,14 @@ class Worker:
         prompt = self.render(
             "review",
             number=self.plan["number"], repo=self.cfg.repo, cycle=cycle,
-            max_cycles=self.cfg.max_review_cycles, branch=self.plan["branch"], base=self.base_sha,
-            thread=self.plan.get("thread", ""),
+            max_cycles=max_cycles or self.cfg.max_review_cycles, branch=self.plan["branch"],
+            base=self.base_sha, thread=self.plan.get("thread", ""),
             report=data(report.body or "(the builder wrote no report)", "Builder's report"),
-            gates=gates_mod.table(results),
-            previous_findings=(self._findings_text(previous) if previous
-                               else "This is the first review of this change."),
+            gates=(gates_mod.table(results) if results else
+                   "The harness ran no checks in this run; CI runs every check on the pull "
+                   "request before anything merges, and you may run any of them yourself."),
+            previous_findings=context or (self._findings_text(previous) if previous
+                                          else "This is the first review of this change."),
             diff_note=note, diff=data(diff, "git diff main...HEAD"),
         )
         head = self.wt.head()
@@ -501,6 +593,36 @@ class Worker:
         found = self.probe(None)
         if found and found[1] in ("halt", "stop"):
             raise Interrupt(found[0], found[1])
+
+    def _second_review(self) -> None:
+        """A model of another family reads a bot pull request its builder's model approved.
+        Nothing is built or pushed: the verdict goes to `deliver`, which merges or asks for a
+        revision."""
+        self._prepare(merge_main=False)
+        assert self.wt is not None
+        self.check()
+        builder = str(self.plan.get("builder") or "an unknown model")
+        context = (f"This is a second review. `{builder}` built this change and its own reviewer "
+                   f"approved it; you are `{self.provider.family}`, a different model, and the "
+                   "change merges only if you approve it too. Judge it from scratch: the first "
+                   "approval is not evidence.")
+        report = verdicts.BuildReport("done", str(self.plan.get("title") or ""), "",
+                                      str(self.plan.get("pull") or ""))
+        review = self._review(1, report, [], [], context=context, max_cycles=1)
+        self.result["cycles"].append({"n": 1, "review": review.to_dict()})
+        if not review.readable:
+            self.result.update(status="failed", reason="the second reviewer's answer could not "
+                               "be read twice in a row")
+            return
+        self.result.update(
+            status="reviewed",
+            verdict="approve" if review.approved else "changes",
+            reviewed_sha=review.reviewed_sha,
+            review=review.to_dict(),
+            findings=[f.to_dict() for f in review.blocking],
+            reason=(f"`{self.provider.id}` approved it" if review.approved
+                    else f"`{self.provider.id}` found {len(review.blocking)} blocking problem(s)"),
+        )
 
     # ------------------------------------------------------------------ endings
 

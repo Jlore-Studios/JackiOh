@@ -11,17 +11,12 @@ import copy
 import json
 import random
 import time
-from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from harness.clock import iso, parse_iso
 from harness.config import STATE_BRANCH, STATE_FILE
 from harness.errors import GitHubError, StateConflict
 
 MAX_ATTEMPTS = 6
-WINDOW_NAMES = {"five_hour": "5-hour", "seven_day": "7-day"}
-#: How long a reading with no reset time of its own can hold: its window's length.
-WINDOW_LENGTH = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
 
 
 def default_state() -> dict[str, Any]:
@@ -29,8 +24,11 @@ def default_state() -> dict[str, Any]:
         "version": 1,
         "halted": False,
         "halt": {},
+        # Before there were several subscriptions: the first Claude account's readings, which
+        # `providers.record` moves under `providers["claude-1"]`.
         "usage": None,
         "rate_limited_until": None,
+        "providers": {},
         "items": {},
         "suggest": {"last_run": None, "requested": False},
         "last_run": None,
@@ -47,6 +45,8 @@ def normalise(data: Any) -> dict[str, Any]:
         state["items"] = {}
     if not isinstance(state.get("suggest"), dict):
         state["suggest"] = {"last_run": None, "requested": False}
+    if not isinstance(state.get("providers"), dict):
+        state["providers"] = {}
     return state
 
 
@@ -123,45 +123,3 @@ def _dump(state: dict[str, Any]) -> str:
 def item(state: dict[str, Any], number: int) -> dict[str, Any]:
     """The record for one issue or PR, created empty when missing."""
     return state["items"].setdefault(str(int(number)), {})
-
-
-def usage_refusal(state: dict[str, Any], stops: dict[str, float], at: datetime) -> str | None:
-    """Why the last usage reading says to start no model call now, or None."""
-    until = parse_iso(state.get("rate_limited_until"))
-    if until is not None and until > at:
-        return f"the subscription refused a call; it resets at {iso(until)}"
-    usage = state.get("usage") or {}
-    observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
-    for window, stop in stops.items():
-        reading = usage.get(window) if isinstance(usage, dict) else None
-        if not isinstance(reading, dict):
-            continue
-        resets = parse_iso(reading.get("resets_at"))
-        if resets is None and observed is not None:
-            resets = observed + WINDOW_LENGTH.get(window, timedelta(hours=5))
-        if resets is None or resets <= at:
-            continue  # that window has reset since the reading, or cannot be dated
-        utilization = reading.get("utilization")
-        if isinstance(utilization, (int, float)) and utilization >= stop:
-            when = f"; it resets at {iso(resets)}" if resets else ""
-            name = WINDOW_NAMES.get(window, window)
-            return f"{name} usage is {utilization:.0%}, at or over the {stop:.0%} stop{when}"
-    return None
-
-
-def record_usage(state: dict[str, Any], usage: dict | None, reset_at: str | None,
-                 at: datetime) -> None:
-    """Keep the newest usage reading and any refusal."""
-    if isinstance(usage, dict) and usage:
-        state["usage"] = {**usage, "observed_at": iso(at)}
-    if reset_at:
-        resets = parse_iso(reset_at)
-        if resets is None and reset_at.startswith("+PT"):
-            resets = at + _duration(reset_at)
-        if resets is not None:
-            state["rate_limited_until"] = iso(resets)
-
-
-def _duration(text: str) -> timedelta:
-    amount = int("".join(ch for ch in text if ch.isdigit()) or "30")
-    return timedelta(hours=amount) if text.upper().endswith("H") else timedelta(minutes=amount)

@@ -20,7 +20,10 @@ NIGHT = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
 # 2026-09-29 17:00 UTC is 12:00 CDT: outside it.
 DAY = datetime(2026, 9, 29, 17, 0, tzinfo=timezone.utc)
 
-TEST_ENV = {"GITHUB_RUN_ID": "777", "GITHUB_REPOSITORY": "jgoetzmann/JackiOh"}
+#: Only the first Claude account's secret is set, as before there were several subscriptions;
+#: tests of the others set `HARNESS_SECRETS_SET` themselves.
+TEST_ENV = {"GITHUB_RUN_ID": "777", "GITHUB_REPOSITORY": "jgoetzmann/JackiOh",
+            "HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN"}
 
 
 def raw_config() -> dict[str, Any]:
