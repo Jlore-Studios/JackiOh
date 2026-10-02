@@ -285,11 +285,12 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-01T13:39:51Z",
       "requested_by": "jgoetzmann",
-      "run_id": "36972474019",
+      "run_id": "37062549920",
       "source": "request",
-      "started_at": "2026-10-02T06:23:42Z",
+      "started_at": "2026-10-02T20:45:26Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -406,9 +407,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-02T20:44:48Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37062501266",
-    "what": "build #37 on gpt"
+    "at": "2026-10-02T20:45:26Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37062549920",
+    "what": "revise #53 on agy"
   },
   "last_sweep": {
     "at": "2026-10-02T18:00:51Z",
