@@ -73,7 +73,7 @@ FAKE_AGY = PRELUDE + textwrap.dedent('''\
     def step(index, kind, state, **fields):
         emit({{"event": "step_update", "step_update": {{"step_index": index, "step_type": kind,
               "state": state, **fields}}}})
-    emit({{"event": "init", "init": {{"session_id": "s1", "model": "gemini-3.1-pro"}}}})
+    emit({{"event": "init", "init": {{"session_id": "s1", "model": "gemini-3.8-flash-high"}}}})
     step(0, "agent_response", "RUNNING", text_delta="Let me ")
     step(0, "agent_response", "DONE", text_delta="look.")
     step(1, "tool", "DONE", tool_info={{"name": "run_command",

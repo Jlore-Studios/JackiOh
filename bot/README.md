@@ -140,7 +140,7 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `revise <notes>` | queue a revision of this pull request | PR | 2 |
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
 | `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
-| `status` | halt state, window, usage, what is running and queued | anywhere | 1 |
+| `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
 | `start` | lift a halt (`start --force` also starts a run) | anywhere | 3 |
@@ -208,9 +208,10 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
 | `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
-| `claude-2`, `-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_2`, `_3`, `_4` | 21:00–07:00 | the same |
+| `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | 21:00–07:00 | 90% of 5 hours, 90% of the week |
+| `claude-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_3`, `_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
-| `agy` | Antigravity (`agy`), `gemini-3.1-pro` at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
 Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
@@ -220,8 +221,8 @@ as set up; turn one off with `enabled: false`. `python3 -m harness providers` in
 each one and whether it could start now, and `/harness status` does the same on GitHub.
 
 **What each entry says.**
-- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one (`gemini-3.1-pro`
-  takes `low` or `high`).
+- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
+  carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
   leaves it. agy logs in only on the machine.
@@ -483,7 +484,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/` |
+| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |

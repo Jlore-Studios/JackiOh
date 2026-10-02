@@ -53,11 +53,15 @@ chmod -R a+rX /usr/local/lib/muse
 rm -f /usr/local/bin/night-vm-job-done
 cat > /usr/local/bin/night-vm-job-done.sh <<'EOF'
 #!/bin/bash
+# The runner runs this with `bash -e`; nothing here may fail the job, so errors are ignored.
+set +e
 if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
 fi
 rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" 2>/dev/null
-find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
+if [ -d "$HOME/.codex/sessions" ]; then
+  find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
+fi
 exit 0
 EOF
 chmod 755 /usr/local/bin/night-vm-job-done.sh
