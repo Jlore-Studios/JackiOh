@@ -19,7 +19,7 @@
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
 import { marksOf } from "../cards/marks.ts";
-import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
+import { faceModel, powerX, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
 /** R97: the id and definition an event or a prompt carries in place of a card the viewer may not read. */
@@ -58,9 +58,9 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit === undefined && card.attack !== undefined && card.health !== undefined) {
     inPlay.handStats = { attack: card.attack, health: card.health };
   }
-  // R43, R243: in hand the power rides on the card and its X is the card's cost; on the field the
-  // hero's power list names it.
-  const power = card.power !== undefined ? { name: card.power, x: card.cost } : facts.fieldPower;
+  // R43, R243: in hand the power rides on the card by name, and the card costs (0), so its X is the
+  // power's own (`powerX`); on the field the hero's power list names it with its X.
+  const power = card.power !== undefined ? { name: card.power, x: powerX(card.power) ?? card.cost } : facts.fieldPower;
   if (power !== undefined) inPlay.power = power;
   if (unit?.vanilla === true) inPlay.vanilla = true;
   // R280: what the card's formula comes to now, where the view says (never in the collection).

@@ -26,9 +26,6 @@ import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.t
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 
-/** A position change should read as a quick snap, not linger into the next turn. */
-export const POSITION_SWITCH_DURATION_MS = 160;
-
 /* ------------------------------------------------------------------------------------------- *
  * Testids this table needs that `contract.ts` does not define
  * ------------------------------------------------------------------------------------------- */
@@ -398,7 +395,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // Rotate 90° / back.
   positionSwitched: {
     animation: "jk-rotate-def",
-    durationMs: POSITION_SWITCH_DURATION_MS,
+    durationMs: 250,
     testid: "card-<instanceId>",
     target: (e, view) => locateInstance(view, e.instanceId),
   },
@@ -850,6 +847,13 @@ export function planEntries(
 export type AnimationQueue = {
   /** Plans `events` against `view` and appends them; starts the pump if it is idle. */
   enqueue(events: readonly GameEvent[], view: PlayerView): void;
+  /**
+   * Runs `fn` once every entry enqueued before it has finished and before any entry enqueued after
+   * it starts; at once when nothing is in flight. `drain` and `reset` drop it unrun (a drain
+   * settles, and `onSettled` shows the newest view anyway). Game swaps the board here at a turn
+   * boundary (its `turnBoundary`); a checkpoint is not an entry and is never in `pending()`.
+   */
+  checkpoint(fn: () => void): void;
   /** Elements currently mid-animation, for `data-animating` (M5-T4). */
   animating(): AnimatingMap;
   /** The entry in flight, or `null`. */
@@ -900,6 +904,13 @@ export type AnimationQueueOptions = {
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
+
+/** A `checkpoint` waiting in the queue between entries. */
+type Checkpoint = { readonly run: () => void };
+
+function isCheckpoint(item: AnimationEntry | Checkpoint): item is Checkpoint {
+  return "run" in item;
+}
 
 /**
  * How long one action's animations may hold the board back, and the shortest an entry may be
@@ -1036,7 +1047,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   // deliberately unread: `schedule` owns every deadline, so the runner keeps no timestamps and
   // stays free of a clock it would have to mock.
 
-  const queue: AnimationEntry[] = [];
+  /** Entries waiting their turn, and the checkpoints between them. */
+  const queue: (AnimationEntry | Checkpoint)[] = [];
   let current: AnimationEntry | null = null;
   /** Bumped by `drain`/`reset` so a timer already in flight cannot resurrect a cleared queue. */
   let epoch = 0;
@@ -1060,14 +1072,19 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
     return true;
   }
 
+  /** The entries still waiting, in order, without the checkpoints between them. */
+  function waiting(): AnimationEntry[] {
+    return queue.filter((item): item is AnimationEntry => !isCheckpoint(item));
+  }
+
   /** Squeeze what is still waiting so the whole backlog fits the burst budget. See the note above. */
   function fitBudget(budgetMs: number): void {
-    const total = queue.reduce((sum, entry) => sum + entry.durationMs, 0);
+    const total = waiting().reduce((sum, entry) => sum + entry.durationMs, 0);
     if (total <= budgetMs) return;
     const factor = budgetMs / total;
     for (let i = 0; i < queue.length; i += 1) {
       const entry = queue[i];
-      if (entry === undefined || entry.durationMs <= 0) continue;
+      if (entry === undefined || isCheckpoint(entry) || entry.durationMs <= 0) continue;
       queue[i] = { ...entry, durationMs: Math.max(minEntryMs, Math.round(entry.durationMs * factor)) };
     }
   }
@@ -1083,6 +1100,10 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         notify();
         if (settle()) signal({ kind: "idle" });
         return;
+      }
+      if (isCheckpoint(next)) {
+        next.run();
+        continue;
       }
       if (next.durationMs <= 0) continue;
       current = next;
@@ -1114,6 +1135,14 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       fitBudget(burstBudgetMs / normalizeSpeed(settings.speed));
       pump();
     },
+    checkpoint(fn) {
+      if (current === null && queue.length === 0) {
+        fn();
+        return;
+      }
+      queue.push({ run: fn });
+      pump();
+    },
     animating() {
       return current === null ? EMPTY_ANIMATING : current.frames;
     },
@@ -1121,14 +1150,15 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       return current;
     },
     pending() {
-      return queue.length;
+      return waiting().length;
     },
     idle() {
       return current === null && queue.length === 0;
     },
     drain() {
       epoch += 1;
-      const cut = current === null ? [...queue] : [current, ...queue];
+      const rest = waiting();
+      const cut = current === null ? rest : [current, ...rest];
       queue.length = 0;
       current = null;
       notify();

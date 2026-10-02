@@ -194,7 +194,10 @@ export type InPlay = {
   handStats?: { attack: number; health: number };
   /** R243: the unit's text is gone (`UnitView.vanilla`). */
   vanilla?: boolean;
-  /** R43, R243: the power a #98 Heroic Power rolled, with its X. */
+  /**
+   * R43, R243: the power a #98 Heroic Power rolled, with its X; its text in play is that power alone,
+   * its `{key}`s filled from `params`.
+   */
   power?: RolledPower;
   /** R280: what the card's formula comes to now (`CardView.preview`). */
   preview?: readonly PreviewValue[];
@@ -279,7 +282,7 @@ export function faceModel(source: FaceSource): FaceModel {
     index: def?.index ?? null,
     set: def?.set ?? null,
     radiant: source.radiant,
-    cost: costOf(def, source.liveCost, inPlay?.power),
+    cost: costOf(def, source.liveCost),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
@@ -395,15 +398,34 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
   if (def === undefined) return printedText;
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
-    const face = radiant ? def.radiant : def.base;
-    const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "));
-    if (words !== null) {
-      // R277: a Radiant power is marked against the same power's base words.
-      const baseWords = radiant ? powerText(inPlay.power, false, def.base.keywords.map(keywordKey).join(", ")) : null;
-      return { full: words, marks: baseWords === null ? [] : radiantMarks(baseWords, words) };
-    }
+    return powerInPlay(def, radiant, inPlay.power, inPlay.params) ?? printedText;
   }
   return printedText;
+}
+
+/**
+ * R43: a #98 Heroic Power's rules box in play — its keyword line, then the one power it rolled as the
+ * catalog prints it (inPlay.ts `powerText`). Its `{key}`s are filled as every face's are (B3.4 rule
+ * 5): with the numbers the view gives the card, a moved one marked where it stands (`tuned`, R386:
+ * Radiant Steady Shot's Upgraded `{shot}`, R608). A Radiant power is marked against the same power's
+ * base words as printed (R277). Null for a power the table does not know.
+ */
+function powerInPlay(
+  def: CardDef,
+  radiant: boolean,
+  power: RolledPower,
+  values: Readonly<Record<string, number>> | undefined,
+): FaceText | null {
+  const keywordLine = (face: PrintedFace): string => face.keywords.map(keywordKey).join(", ");
+  const words = powerText(power, radiant, keywordLine(radiant ? def.radiant : def.base));
+  if (words === null) return null;
+  const sheet = { params: def.params, base: { ...def.base, text: words }, radiant: { ...def.radiant, text: words } };
+  const { text: full, tuned } = filledText(sheet, radiant ? "radiant" : "base", values);
+  const moved = tuned.length === 0 ? {} : { tuned };
+  if (!radiant) return { full, marks: [], ...moved };
+  const baseWords = powerText(power, false, keywordLine(def.base)) ?? "";
+  const base = fillParams({ params: def.params, base: { ...def.base, text: baseWords }, radiant: def.radiant }, "base");
+  return { full, marks: radiantMarks(base, full), ...moved };
 }
 
 /**
@@ -431,7 +453,7 @@ function costTone(live: number | undefined, printed: number): FaceCost["tone"] {
   return "base";
 }
 
-function costOf(def: CardDef | undefined, liveCost: number | undefined, power?: RolledPower): FaceCost {
+function costOf(def: CardDef | undefined, liveCost: number | undefined): FaceCost {
   const live = liveCost === undefined ? undefined : String(liveCost);
 
   if (def === undefined) {
@@ -441,13 +463,8 @@ function costOf(def: CardDef | undefined, liveCost: number | undefined, power?: 
 
   const printed = def.cost;
   if (printed === "X") {
-    // A #98 Heroic Power's X is its rolled power's (R43), which the view names: in play, that is
-    // what the gem says, as its text does.
-    if (power !== undefined) {
-      const x = String(power.x);
-      return { text: x, value: live ?? x, tone: "base", alt: null };
-    }
     // An X card costs exactly X (R65): the gem says X, and `data-cost` carries whatever the view says.
+    // (#98 Heroic Power is no X card since patch v0.2.1: it costs (0), and its power's X is in its text.)
     return { text: "X", value: live ?? "X", tone: "base", alt: null };
   }
   if (typeof printed === "number") {

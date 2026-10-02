@@ -117,7 +117,7 @@ describe("R384 the Activate control is lit by the activations legalActions lists
   });
 
   it("R510 a Heroic Power's activatePower lights `power` for the first power and `power-<id>` for a further one", () => {
-    const second = { ...heroPower, instanceId: "power-2", name: "Draw" };
+    const second = { ...heroPower, instanceId: "power-2", name: "draw", ability: "draw" };
     const view = activateView({
       you: { ...activateView().you, hero: { health: 30, armor: 0, powers: [heroPower, second], power: heroPower } },
     });
@@ -306,6 +306,80 @@ describe("R384 Heroic Power is built through the same activation", () => {
     expect(highlightFor(view, legal, pressed).glow?.has(testid.hero("opponent"))).toBe(true);
 
     expect(onClickTarget(view, legal, pressed, { on: "hero", side: "opponent" }).action).toEqual(legal[1]);
+  });
+});
+
+describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built and aimed from the hero", () => {
+  // As `viewFor` gives it: the power on the hero, and the #98 card in the backrow listing the one
+  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R606).
+  const ping = { ...heroPower, name: "ping", ability: "ping", x: 1 };
+  const PING_ABILITY: ActivationView = { ability: "ping", label: "Ping: Pierce. Deal 1 damage", usesLeft: 1, usable: true };
+  const powerPing = (target: Selection): ActionBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
+  const legal: ActionBody[] = [powerPing(at("e1")), powerPing(at("e2")), powerPing(heroP2), { type: "endTurn" }];
+
+  function pingView(): PlayerView {
+    const base = activateView();
+    return activateView({
+      you: {
+        ...base.you,
+        hero: { health: 30, armor: 0, powers: [ping], power: ping },
+        backrow: [
+          ...base.you.backrow.slice(0, 2),
+          faceUpBackrow("p1", { instanceId: "power-1", defId: "core-098", cost: 0, activations: [PING_ABILITY] }),
+          null,
+          null,
+        ],
+      },
+    });
+  }
+
+  it("R510 its `activate`s light the power on the hero as well as the card's own control", () => {
+    const { legal: lit, glow } = highlightFor(pingView(), legal, IDLE);
+    expect(lit.has(testid.power)).toBe(true);
+    expect(glow?.has(testid.power)).toBe(true);
+    expect(lit.has(testid.activate("power-1"))).toBe(true);
+    expect(activationControlTestids(pingView(), powerPing(heroP2))[0]).toBe(testid.power);
+  });
+
+  it("R606 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
+    const view = pingView();
+    const pressed = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "power-1" });
+    expect(pressed.action).toBeUndefined();
+    expect(highlightFor(view, legal, pressed.interaction).selected.has(testid.power)).toBe(true);
+
+    expect(onClickTarget(view, legal, pressed.interaction, { on: "unit", instanceId: "e2", side: "opponent", lane: 2 }).action).toEqual(
+      powerPing(at("e2")),
+    );
+    expect(onClickTarget(view, legal, pressed.interaction, { on: "hero", side: "opponent" }).action).toEqual(powerPing(heroP2));
+    // A click no listed body names is not a move.
+    expect(onClickTarget(view, legal, pressed.interaction, { on: "unit", instanceId: "u1", side: "you", lane: 3 }).action).toBeUndefined();
+  });
+
+  it("R510 a drag from the power lifts it with the arrow from `power`; a drop on a target sends that `activate`", () => {
+    const view = pingView();
+    const plan = planDrag(view, legal, IDLE, { on: "activate", instanceId: "power-1" });
+    if (plan === null) throw new Error("no plan");
+
+    expect(plan.kind).toBe("activate");
+    expect(plan.arrow).toBe(true);
+    expect(plan.sourceTestid).toBe(testid.power);
+    expect([...plan.dropTestids].sort()).toEqual([testid.card("e1"), testid.card("e2"), testid.hero("opponent")].sort());
+
+    const onUnit = resolveDrop(view, legal, plan, {
+      at: "target",
+      target: { on: "unit", instanceId: "e1", side: "opponent", lane: 1 },
+      testid: testid.card("e1"),
+    });
+    expect(onUnit.action).toEqual(powerPing(at("e1")));
+    const onHero = resolveDrop(view, legal, plan, { at: "target", target: { on: "hero", side: "opponent" }, testid: testid.hero("opponent") });
+    expect(onHero.action).toEqual(powerPing(heroP2));
+    expect(resolveDrop(view, legal, plan, { at: "board" })).toEqual({ interaction: IDLE });
+  });
+
+  it("R510 the #98 card in the backrow aims the same power when dragged", () => {
+    const plan = planDrag(pingView(), legal, IDLE, { on: "backrow", instanceId: "power-1", side: "you", lane: 3 });
+    expect(plan?.kind).toBe("activate");
+    expect([...(plan?.dropTestids ?? [])]).toContain(testid.hero("opponent"));
   });
 });
 

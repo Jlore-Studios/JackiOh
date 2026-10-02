@@ -8,8 +8,8 @@
 //            N = 0 is no hit (R63); then the draw. The Radiant face keeps the draw. Recruit (§6.3) from
 //            the opponent's exile: exile is chronological (§3), so Recruit's top-down scan is newest
 //            first, and the most recently exiled permanent card there is summoned under your control,
-//            no Cry (R1), its owner unchanged, so it goes to its owner's piles when it leaves the field
-//            (§3.2); a Unit then makes one forced attack on the enemy hero (R53), summoning sickness
+//            no Cry (R1), becoming yours as it reaches your field, so it goes to your piles when it
+//            leaves the field (R12); a Unit then makes one forced attack on the enemy hero (R53), summoning sickness
 //            ignored; with no permanent in their exile nothing is recruited. Tunes: damage per card 1
 //            ↑; draw 1 ↑."
 //
@@ -22,8 +22,8 @@
 // size and the card's own number, both public.
 //
 // THE RADIANT RECRUIT is the engine's E25 `recruit({ from: "exile", whose: "enemy" })`: their exile
-// scanned newest first for a permanent (never a Spell), summoned on your side under your control with
-// its owner unchanged (a Unit to your leftmost open unit zone, a Trap face-down to your backrow, read by
+// scanned newest first for a permanent (never a Spell), summoned on your side under your control and
+// yours from then on (R12, R611) (a Unit to your leftmost open unit zone, a Trap face-down to your backrow, read by
 // you alone, R33); with no open zone for it, or no permanent there, nothing is recruited. A Unit it
 // recruited then makes one forced attack on the enemy hero (`forcedAttacks` over the units of its
 // definition this list summoned, R53): no Taunt, position or summoning sickness stops it, and it spends

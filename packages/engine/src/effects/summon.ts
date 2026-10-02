@@ -430,8 +430,9 @@ function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, rad
  *
  * B5 E25 extends where and how often: `from: "exile"` scans an exile newest first, and `whose` names
  * whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
- * Radiant) summons the opponent's card on the recruiting side, under its control, its owner unchanged,
- * so it goes back to its owner's piles when it leaves the field (§3.2, R12). `count` is "Recruit N"
+ * Radiant) summons the opponent's card on the recruiting side, under its control, and it becomes that
+ * side's card as it arrives, so it goes to the recruiting side's piles when it leaves the field (R12,
+ * R611). `count` is "Recruit N"
  * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
  * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
  * "three top-down scans; stops when the board is full").

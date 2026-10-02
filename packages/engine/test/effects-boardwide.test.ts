@@ -136,16 +136,17 @@ function stolenOnto(state: GameState, defId: string, owner: PlayerId, ref: Retur
 // ---------------------------------------------------------------------------
 
 describe("destroyAll (§6.3, §4.5, R46, R59, M3-T1)", () => {
-  it("§6.3 marks every matching enemy unit, leaves allies and other tags standing, and one state check buries them in their owners' graveyards (R12, R59)", () => {
+  it("§6.3 marks every matching enemy unit, leaves allies and other tags standing, and one state check buries them in their current owners' graveyards (R12, R59, R611)", () => {
     const state = game("destroyAll-scope");
     const ally = put(state, beast.id, slot("p1", "units", 1));
     const allyHuman = put(state, human.id, slot("p1", "units", 2));
     const enemyOne = put(state, beast.id, slot("p2", "units", 1));
     const enemyHuman = put(state, human.id, slot("p2", "units", 2));
     const enemyTwo = put(state, felinor.id, slot("p2", "units", 3));
-    // R12: owned by p1, standing on p2's side, so the sweep's scope is by side and the graveyard
-    // is by owner. These are two different questions and this card answers both at once.
+    // R12, R611: p1's card placed on p2's side, which made p2 its current owner as it arrived, so
+    // the sweep's scope (by side) and its graveyard (by current owner) both name p2.
     const stolen = stolenOnto(state, beast.id, "p1", slot("p2", "units", 4));
+    expect(stolen.owner).toBe("p2");
     const run = runner(state);
 
     run.apply(destroyAll({ side: "enemy", rows: ["units"], notTags: ["Human"] }));
@@ -169,9 +170,9 @@ describe("destroyAll (§6.3, §4.5, R46, R59, M3-T1)", () => {
     expect(cardAt(state, slot("p2", "units", 2))?.id).toBe(enemyHuman.id);
     expect(cardAt(state, slot("p1", "units", 1))?.id).toBe(ally.id);
     expect(cardAt(state, slot("p1", "units", 2))?.id).toBe(allyHuman.id);
-    // R12: the two p2-owned bodies to p2's graveyard, the stolen p1-owned one to p1's.
-    expect(state.players.p2.graveyard.map((c) => c.id).sort()).toEqual([enemyOne.id, enemyTwo.id].sort());
-    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([stolen.id]);
+    // R611: all three to p2's graveyard, the card that came over from p1 included.
+    expect(state.players.p2.graveyard.map((c) => c.id).sort()).toEqual([enemyOne.id, enemyTwo.id, stolen.id].sort());
+    expect(state.players.p1.graveyard).toHaveLength(0);
     // R59: one state check collected all three, so there are exactly three deaths from one pass.
     expect(eventsOfType(run.events, "destroyed")).toHaveLength(3);
   });
@@ -444,21 +445,21 @@ describe("damageAll (§6.3, §4.4, R59, M3-T1)", () => {
 // ---------------------------------------------------------------------------
 
 describe("bounceAll (§6.3, §3.2, R11, R12, R78, M3-T1)", () => {
-  it("R12 returns real cards to their owners' hands and R11 makes a unit token cease to exist (#17 Flood)", () => {
+  it("R12 returns real cards to their current owners' hands and R11 makes a unit token cease to exist (#17 Flood)", () => {
     const state = game("bounceAll-owners");
     const mine = put(state, beast.id, slot("p1", "units", 1));
     mine.damage = 1;
     mine.buffs = { attack: 3, health: 3 };
     const token = put(state, rushToken.id, slot("p1", "units", 2));
     const theirs = put(state, beast.id, slot("p2", "units", 1));
-    // R12: p1 owns it, p2 is standing it up; a bounce sends it to p1's hand, not p2's.
+    // R611: p1's card placed on p2's side is p2's now, so a bounce sends it to p2's hand, not p1's.
     const stolen = stolenOnto(state, beast.id, "p1", slot("p2", "units", 2));
     const run = runner(state);
 
     run.apply(bounceAll({ side: "any" }));
 
-    expect(state.players.p1.hand.map((c) => c.id)).toEqual([mine.id, stolen.id]);
-    expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p1.hand.map((c) => c.id)).toEqual([mine.id]);
+    expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id, stolen.id]);
     // R11: the token reached no hand at all and is not in either player's pile.
     expect(token.zone.z).toBe("gone");
     expect(state.players.p1.hand.map((c) => c.id)).not.toContain(token.id);

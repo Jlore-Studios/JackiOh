@@ -27,9 +27,14 @@ export {
   VANILLA_TEXT,
   concealedInPlay,
   concealedText,
+  fillPowerParams,
+  powerClause,
+  powerLine,
   powerText,
+  powerTitle,
+  powerX,
 } from "./inPlay.ts";
-export type { RolledPower } from "./inPlay.ts";
+export type { PowerWords, RolledPower } from "./inPlay.ts";
 
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
 export type { GlossaryEntry, GlossaryTermId, StatusTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
@@ -70,6 +75,9 @@ export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, UNREVEALED_NOTE, costPh
 // Slice A: art.
 export { ART_MANIFEST, CardArt, artUrl } from "./art/index.ts";
 export type { ArtManifest, ArtShape } from "./art/index.ts";
+// #98 Heroic Power's crest on the hero panel, one per power (patch v0.2.1).
+export { DEFAULT_POWER_ART, POWER_ART, POWER_ART_BOX, powerArtOf } from "./art/index.ts";
+export type { PowerArt } from "./art/index.ts";
 
 // Slice C: inspect.
 export {

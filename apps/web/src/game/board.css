@@ -193,76 +193,138 @@
   background: radial-gradient(circle at 35% 30%, #94a3b8, #475569 60%, #334155);
 }
 
-.power-button,
-.power-tag {
+/* The Heroic Powers (Hero.tsx, patch v0.2.1), drawn on the hero as Hearthstone draws a hero power:
+   a round crest with the power's own art (cards/art/powerArt.ts: its glyph on a gradient in its own
+   two colours, `--power-light` and `--power-dark`) inside a stone rim, its X in a mana gem on the
+   rim, and its printed title beside it. A Radiant power's rim is gold, as a Radiant face's words are
+   (R277); a spent one is greyed. `.hero` in front outranks src/index.css's `.app-shell button`. */
+.hero .power-button,
+.hero .power-tag {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  max-width: 16ch;
-  min-height: 34px;
-  padding: 3px 9px 3px 4px;
-  overflow: hidden;
-  border-radius: 18px;
+  gap: 6px;
+  max-width: 20ch;
+  min-height: 42px;
+  padding: 2px 11px 2px 2px;
+  border: 1px solid color-mix(in srgb, var(--line-bright) 75%, transparent);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 8%), rgb(0 0 0 / 24%)), var(--bg-sunken);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 1px 3px rgb(0 0 0 / 45%);
+  color: var(--text);
+  font: inherit;
   font-size: 0.85em;
   font-weight: 750;
+  line-height: 1.1;
+  text-align: left;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
-.power-tag {
-  border: 1px solid color-mix(in srgb, var(--line-bright) 80%, var(--radiant));
-  background: color-mix(in srgb, var(--bg-sunken) 80%, #253255);
-  color: var(--text);
+/* Not live (the opponent's turn, too little mana) is the absence of the green glow, not a faded
+   button: the crest stays readable, as the opponent's does. A spent power is greyed below. */
+.hero .power-button:disabled,
+.hero .power-button[aria-disabled="true"] {
+  opacity: 1;
+  cursor: default;
 }
 
-.power-button[data-legal="true"] {
+.hero .power-button[data-legal="true"] {
   cursor: pointer;
 }
 
-.power-button[data-used="true"],
-.power-tag[data-used="true"] {
-  filter: saturate(0.45);
-  opacity: 0.7;
+.hero .power-button[data-legal="true"]:hover {
+  border-color: color-mix(in srgb, var(--glow-ready, #4ade80) 60%, var(--line-bright));
+  background: linear-gradient(180deg, rgb(255 255 255 / 13%), rgb(0 0 0 / 18%)), var(--bg-sunken);
 }
 
-/* A small crest gives every selected Heroic Power its own readable art while it stays attached to
-   the hero, rather than adding another card to the board. The data value is a public power name's
-   visual motif, never a rules lookup. */
-.power-emblem {
+.hero .power-button[data-legal="true"]:hover .power-crest {
+  filter: brightness(1.15);
+}
+
+.hero .power-button:focus-visible {
+  outline: 2px solid #fde68a;
+  outline-offset: 2px;
+}
+
+.power-crest {
+  position: relative;
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgb(255 255 255 / 58%);
+  width: 36px;
+  height: 36px;
+  border: 3px solid #8a94a6;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 28%, #9ac7ff, #355ba9 66%, #18244c);
-  box-shadow: inset 0 1px 1px rgb(255 255 255 / 42%), 0 1px 3px rgb(0 0 0 / 55%);
-  color: #fff;
-  font-size: 17px;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 75%);
+  background: radial-gradient(circle at 36% 30%, var(--power-light, #9ac7ff), var(--power-dark, #18244c) 80%);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 45%),
+    inset 0 3px 5px rgb(255 255 255 / 28%),
+    inset 0 -3px 6px rgb(0 0 0 / 35%),
+    0 2px 5px rgb(0 0 0 / 60%);
+  transition: filter calc(160ms * var(--anim-scale, 1)) ease-out;
 }
 
-.power-emblem[data-power-art="map"],
-.power-emblem[data-power-art="tricks"] { background: radial-gradient(circle at 35% 28%, #f8cf7a, #9b5a20 66%, #47200c); }
-.power-emblem[data-power-art="tap"],
-.power-emblem[data-power-art="brain"] { background: radial-gradient(circle at 35% 28%, #b68cff, #6337a3 66%, #30144f); }
-.power-emblem[data-power-art="shot"],
-.power-emblem[data-power-art="ping"] { background: radial-gradient(circle at 35% 28%, #8fe7f7, #197d9e 66%, #0a3b52); }
-.power-emblem[data-power-art="ranch"],
-.power-emblem[data-power-art="cat"] { background: radial-gradient(circle at 35% 28%, #f2b8a1, #a74a61 66%, #552036); }
-.power-emblem[data-power-art="witness"],
-.power-emblem[data-power-art="stitch"] { background: radial-gradient(circle at 35% 28%, #d1e0ff, #60759b 66%, #2d3852); }
-.power-emblem[data-power-art="armor"],
-.power-emblem[data-power-art="tank"] { background: radial-gradient(circle at 35% 28%, #d8e6f5, #6d8297 66%, #33404d); }
-.power-emblem[data-power-art="insect"],
-.power-emblem[data-power-art="pluck"] { background: radial-gradient(circle at 35% 28%, #d3f28c, #578b28 66%, #24450d); }
+.power-glyph {
+  width: 62%;
+  height: 62%;
+  fill: #fff;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 75%));
+}
 
+/* The X: a mana gem on the crest's rim, where Hearthstone prints a hero power's cost. */
 .power-x {
-  color: #93c5fd;
-  font-weight: 700;
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #93c5fd, #2563eb 55%, #1e3a8a);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 65%);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 70%);
+  transform: translateX(-50%);
+}
+
+.power-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.power-button[data-radiant="true"] .power-crest,
+.power-tag[data-radiant="true"] .power-crest {
+  border-color: var(--radiant);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 45%),
+    inset 0 3px 5px rgb(255 255 255 / 28%),
+    inset 0 -3px 6px rgb(0 0 0 / 35%),
+    0 0 9px color-mix(in srgb, var(--radiant) 65%, transparent);
+}
+
+.power-button[data-radiant="true"] .power-title,
+.power-tag[data-radiant="true"] .power-title {
+  color: var(--radiant);
+}
+
+/* Spent this turn: the crest goes grey and dark and the title dims, as Hearthstone turns a used
+   hero power over. */
+.power-button[data-used="true"] .power-crest,
+.power-tag[data-used="true"] .power-crest {
+  filter: grayscale(0.9) brightness(0.6);
+}
+
+.power-button[data-used="true"] .power-title,
+.power-tag[data-used="true"] .power-title {
+  opacity: 0.6;
 }
 
 /* R169's badge list beside the hero, and the element `modifierChanged` fades (BUILD M5-T4).
@@ -1862,6 +1924,13 @@
   .hero-armor {
     min-width: 26px;
     height: 26px;
+  }
+
+  /* A phone's seat is narrow: the power's title gives way first, and the crest keeps its size. */
+  .hero .power-button,
+  .hero .power-tag {
+    max-width: 13ch;
+    padding-right: 8px;
   }
 
   .modifier-badge {

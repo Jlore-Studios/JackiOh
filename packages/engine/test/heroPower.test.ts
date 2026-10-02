@@ -514,7 +514,16 @@ describe("Heroic Power: playing it and activating its power (R43, R103, R384)", 
     const state = playing("activate");
     const card = powered(state, "burn");
     expect(viewFor(state, "p1").you.hero.powers).toEqual([
-      { instanceId: card.id, defId: heroicPower.id, name: "burn", x: HERO_POWER_COST.burn, usedThisTurn: false },
+      {
+        instanceId: card.id,
+        defId: heroicPower.id,
+        name: "burn",
+        ability: "burn",
+        radiant: false,
+        x: HERO_POWER_COST.burn,
+        usedThisTurn: false,
+        params: { [STEADY_SHOT_PARAM]: paramValue(state, card, STEADY_SHOT_PARAM) },
+      },
     ]);
 
     const { state: after, events } = act(state, use(card));
@@ -528,7 +537,16 @@ describe("Heroic Power: playing it and activating its power (R43, R103, R384)", 
     expect(after.counters.played).toBe(state.counters.played);
     expect(cardIn(after, card.id).memory[ACTIVATIONS_MEMORY_KEY]).toEqual({ turn: state.turn, count: 1 });
     expect(viewFor(after, "p1").you.hero.powers).toEqual([
-      { instanceId: card.id, defId: heroicPower.id, name: "burn", x: HERO_POWER_COST.burn, usedThisTurn: true },
+      {
+        instanceId: card.id,
+        defId: heroicPower.id,
+        name: "burn",
+        ability: "burn",
+        radiant: false,
+        x: HERO_POWER_COST.burn,
+        usedThisTurn: true,
+        params: { [STEADY_SHOT_PARAM]: paramValue(state, card, STEADY_SHOT_PARAM) },
+      },
     ]);
 
     // The alias every old log carries is the same activation (reduce.ts routes it to `activateAbility`).

@@ -152,11 +152,16 @@ export const yourModifiers: ModifierView[] = [
 /** The opponent's side of the same list — §10.8 gives a seat no privacy over its own badges. */
 export const opponentModifiers: ModifierView[] = [{ id: "m3", label: "Next Spell gains Echo +1" }];
 
-/** §8 #98: a Heroic Power the viewer controls, with the instance `activatePower` needs. */
+/**
+ * §8 #98: a Heroic Power the viewer controls (Witness Value, stored as "discover", R103), with the
+ * instance and the ability its `activate` names (R384, patch v0.2.1).
+ */
 export const heroPower: HeroPowerView = {
   instanceId: "power-1",
   defId: "core-098",
-  name: "Heroic Power",
+  name: "discover",
+  ability: "discover",
+  radiant: false,
   x: 2,
   usedThisTurn: false,
 };

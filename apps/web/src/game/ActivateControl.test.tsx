@@ -43,17 +43,27 @@ const USED: ActivationView = {
 };
 const PUNISH: ActivationView = { ...USED, usesLeft: 1, usable: true, reason: undefined } as ActivationView;
 
-const SECOND_POWER: HeroPowerView = { instanceId: "power-2", defId: "core-098", name: "Draw", x: 1, usedThisTurn: false };
+const SECOND_POWER: HeroPowerView = {
+  instanceId: "power-2",
+  defId: "core-098",
+  name: "draw",
+  ability: "draw",
+  radiant: false,
+  x: 1,
+  usedThisTurn: false,
+};
 
 /**
  * `act1` Brother Ping (one ability, its damage moved to 3), `act2` a Turtinator listing two
  * abilities, `fs1` a Field Spell whose ability is spent (greyed), `fs2` one with modes; `u1`, `u2`
- * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; two Heroic Powers.
+ * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; two Heroic Powers (`power` the first,
+ * `over.power` in its place when given).
  */
-function activateView(over: { fs1?: ActivationView[] } = {}): PlayerView {
+function activateView(over: { fs1?: ActivationView[]; power?: HeroPowerView } = {}): PlayerView {
+  const first = over.power ?? heroPower;
   return baseView({
     you: emptySide("p1", {
-      hero: { health: 30, armor: 0, powers: [heroPower, SECOND_POWER], power: heroPower },
+      hero: { health: 30, armor: 0, powers: [first, SECOND_POWER], power: first },
       hand: [
         card({ instanceId: "h1", defId: "core-002" }),
         card({ instanceId: "h2", defId: "core-019" }),
@@ -90,6 +100,21 @@ const DAMAGE: ActionBody = { type: "activate", instanceId: "fs2", ability: "puni
 const DISCARD: ActionBody = { type: "activate", instanceId: "fs2", ability: "punish", modes: ["discard"] };
 const TURTLE_U1: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u1"], targets: [at("e1")] };
 const TURTLE_U2: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u2"], targets: [at("e1")] };
+
+/**
+ * Patch v0.2.1 (R43, R606): a Ping Heroic Power, whose power is the card's one Activate ability
+ * `ping`, its target (any unit or hero) declared in the `activate` that `legalActions` lists — one
+ * body per target, as the engine lists them.
+ */
+const PING_POWER: HeroPowerView = { ...heroPower, name: "ping", ability: "ping", x: 1 };
+const powerPing = (target: Selection): ActionBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
+const PING_POWER_LEGAL: readonly ActionBody[] = [
+  powerPing(at("e1")),
+  powerPing(at("e2")),
+  powerPing(at("u1")),
+  powerPing({ pick: "hero", player: "p2" }),
+  powerPing({ pick: "hero", player: "p1" }),
+];
 
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
@@ -323,6 +348,55 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledWith(legal[1]);
   });
 
+  it("R43 patch v0.2.1: a power with no target sends its one listed `activate`, naming its ability, at once", () => {
+    const body: ActionBody = { type: "activate", instanceId: "power-1", ability: "discover" };
+    const { onAction } = renderGame([body]);
+
+    expect(el(testid.power)).toHaveAttribute("data-glow", "ready");
+    fireEvent.click(el(testid.power));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(body);
+  });
+
+  it("R606 Ping: a press waits for its target, the targets light, and a click on an enemy unit sends that `activate`", () => {
+    const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
+
+    fireEvent.click(el(testid.power));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(el(testid.power)).toHaveAttribute("data-selected", "true");
+    for (const lit of [testid.card("e1"), testid.card("e2"), testid.card("u1"), testid.hero("opponent"), testid.hero("you")]) {
+      expect(el(lit), lit).toHaveAttribute("data-glow", "ready");
+    }
+    // A unit `legal` names no target on is not one.
+    expect(el(testid.card("u2"))).not.toHaveAttribute("data-glow");
+
+    fireEvent.click(el(testid.card("e2")));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(powerPing(at("e2")));
+  });
+
+  it("R606 Ping: a click on either hero sends the `activate` naming that hero", () => {
+    const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
+
+    fireEvent.click(el(testid.power));
+    fireEvent.click(el(testid.hero("opponent")));
+    expect(onAction).toHaveBeenLastCalledWith(powerPing({ pick: "hero", player: "p2" }));
+
+    fireEvent.click(el(testid.power));
+    fireEvent.click(el(testid.hero("you")));
+    expect(onAction).toHaveBeenLastCalledWith(powerPing({ pick: "hero", player: "p1" }));
+    expect(onAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("R606 Ping: a second press on the power puts it down and sends nothing", () => {
+    const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
+
+    fireEvent.click(el(testid.power));
+    fireEvent.click(el(testid.power));
+    expect(el(testid.power)).not.toHaveAttribute("data-selected");
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("R384 a power legal does not list is disabled and sends nothing", () => {
     const { onAction } = renderGame([{ type: "endTurn" }]);
     expect(el(testid.power)).toBeDisabled();
@@ -387,6 +461,34 @@ describe("R510 an activation is dragged from its control onto its target", () =>
     fireEvent.pointerUp(window, { pointerId: 1, button: 0, clientX: 420, clientY: 180 });
 
     expect(onAction).toHaveBeenCalledWith(legal[0]);
+  });
+
+  it("R606 patch v0.2.1: Ping is dragged from the power on the hero to an enemy unit, and the release sends that `activate`", () => {
+    const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
+
+    drag(el(testid.power), el(testid.card("e1")));
+    expect(el("drag-layer")).toHaveAttribute("data-kind", "activate");
+    expect(el("drag-arrow")).toHaveAttribute("data-from", testid.power);
+    expect(el("drag-reticle")).toHaveAttribute("data-target", testid.card("e1"));
+    expect(onAction).not.toHaveBeenCalled();
+
+    act(() => {
+      fireEvent.pointerUp(window, { pointerId: 1, button: 0, clientX: 420, clientY: 180 });
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(powerPing(at("e1")));
+  });
+
+  it("R606 patch v0.2.1: Ping is dragged from the power to the enemy hero", () => {
+    const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
+
+    drag(el(testid.power), el(testid.hero("opponent")));
+    expect(el("drag-reticle")).toHaveAttribute("data-target", testid.hero("opponent"));
+    act(() => {
+      fireEvent.pointerUp(window, { pointerId: 1, button: 0, clientX: 420, clientY: 180 });
+    });
+
+    expect(onAction).toHaveBeenCalledWith(powerPing({ pick: "hero", player: "p2" }));
   });
 
   it("R510 a release on something that is not a target sends nothing and puts the activation down", () => {
