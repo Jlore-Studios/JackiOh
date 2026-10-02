@@ -39,6 +39,7 @@ import {
 import {
   addRandomFromCatalog,
   addToHand,
+  afterStateCheck,
   chosenOptions,
   damage,
   discoverFromCatalog,
@@ -59,7 +60,6 @@ import { costNow, isXCost } from "../mana";
 import { param } from "../params";
 import type { EngineSink } from "../resolve";
 import type { ActivationDecl, Effect, EffectContext, Hook } from "../script";
-import { stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState } from "../state";
 import { activeUnitsOf, slotOf } from "../zones";
 import { projectedHeroDamage } from "./lethal";
@@ -121,7 +121,7 @@ export type HeroPower = {
   /** The power's name as the card prints it, base face and Radiant face (Armor Up's is Tank Up). */
   title: string;
   radiantTitle: string;
-  /** The §8 #98 clause this entry implements, base form and Radiant form (`{shot}` is `params`'). */
+  /** The §8 #98 clause this entry implements, base form and Radiant form (`{shot}` is `params`). */
   label: string;
   radiantLabel: string;
   /** The choices its activation declares (R81): only the ping's target. */
@@ -166,29 +166,28 @@ function drawEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
  * right after the hit (§4.5, as `afterStateCheck` runs one), and a `destroyed` event that check
  * emitted for the target, killed by this card (R42), summons a Ghoul Token for the activating player
  * with the attack and max health the Unit died with (the event's, R89) as its X/X (`statsOverride`).
- * One effect does all three, as `withKillCredit` reads its kills, so a Death in that check that asks
- * loses none of them.
+ * The rider runs after that state check, so a Death that asks is answered before the Ghoul is made.
  */
-function pingEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+function pingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   const hit = damage({ to: { of: "chosen" }, amount: PING_DAMAGE, ignoreArmor: true });
   if (!radiant) return [hit];
+  const from = ctx.events.length;
+  const sourceId = ctx.self?.id;
+  const [target] = ctx.targets;
+  const targetId = target?.pick === "instance" ? target.instanceId : null;
   return [
-    {
-      kind: "heroPowerPing",
-      apply(ctx): void {
-        const from = ctx.events.length;
-        hit.apply(ctx);
-        const [target] = ctx.targets;
-        if (ctx.self === null || target?.pick !== "instance") return;
-        if (ctx.state.result === null) stateCheck(ctx);
-        const ghoul = tokenDefId(GHOUL_TOKEN_INDEX);
-        const killed = ctx.events
-          .slice(from)
-          .find((event) => event.type === "destroyed" && event.instanceId === target.instanceId && event.killerId === ctx.self?.id);
-        if (ghoul === null || killed === undefined || killed.type !== "destroyed" || ctx.state.result !== null) return;
-        summon({ defId: ghoul, statsOverride: { attack: killed.attack, health: killed.maxHealth } }).apply(ctx);
-      },
-    },
+    hit,
+    // R606: the condition reads the death after its check. `afterStateCheck` parks this rider behind
+    // a Death prompt rather than resolving the Ghoul while an answer is open (R59, R113).
+    afterStateCheck((after) => {
+      if (sourceId === undefined || targetId === null || after.state.result !== null) return [];
+      const ghoul = tokenDefId(GHOUL_TOKEN_INDEX);
+      const killed = after.events
+        .slice(from)
+        .find((event) => event.type === "destroyed" && event.instanceId === targetId && event.killerId === sourceId);
+      if (ghoul === null || killed === undefined || killed.type !== "destroyed") return [];
+      return [summon({ defId: ghoul, statsOverride: { attack: killed.attack, health: killed.maxHealth } })];
+    }),
   ];
 }
 
@@ -286,6 +285,14 @@ function armorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 /** R605: one pick for Die Insect, an enemy unit acting on the field or the enemy hero. */
 type InsectPick = { kind: "unit"; unit: CardInstance } | { kind: "hero" };
 
+/** R605's documented Lucky ordering: a lethal hero, a destroyed Unit, then a damaged hero, then a surviving Unit. */
+const INSECT_PRIORITY = {
+  survives: 0,
+  heroDamage: 1,
+  unitDestroyed: 2,
+  heroLethal: 3,
+} as const;
+
 /**
  * R605: Lucky's "best" for Die Insect (§6.1: a comparator per effect). A pick the hit would finish
  * beats one it would not — the enemy hero when the hit is lethal, then a Unit it destroys — and
@@ -295,11 +302,15 @@ type InsectPick = { kind: "unit"; unit: CardInstance } | { kind: "hero" };
  */
 function insectRank(state: GameState, enemy: PlayerId, pick: InsectPick): number {
   if (pick.kind === "hero") {
-    return projectedHeroDamage(state, enemy, DIE_INSECT_DAMAGE) >= state.players[enemy].hero.health ? 3 : 1;
+    return projectedHeroDamage(state, enemy, DIE_INSECT_DAMAGE) >= state.players[enemy].hero.health
+      ? INSECT_PRIORITY.heroLethal
+      : INSECT_PRIORITY.heroDamage;
   }
   const view = unitView(state, pick.unit);
   const shielded = view.keywords.some((keyword) => keyword.kind === "Divine Shield" || keyword.kind === "Indestructible");
-  return !shielded && Math.max(0, DIE_INSECT_DAMAGE - view.armor) >= view.health ? 2 : 0;
+  return !shielded && Math.max(0, DIE_INSECT_DAMAGE - view.armor) >= view.health
+    ? INSECT_PRIORITY.unitDestroyed
+    : INSECT_PRIORITY.survives;
 }
 
 function betterInsectPick(state: GameState, enemy: PlayerId): (a: InsectPick, b: InsectPick) => InsectPick {
@@ -399,8 +410,7 @@ function terminusEffects(ctx: EffectContext, radiant: boolean): Effect[] {
 
 /**
  * The thirteen powers of §8 #98 (patch v0.2.1), in the order the card lists them, which is the order
- * the roll draws from. R103: the stored names are state, so the eight of v0.2.0 keep their names and
- * their places and the five new ones come after them.
+ * the roll draws from. R103: the stored name is state, and this order matches the printed card.
  */
 export const HERO_POWERS: readonly HeroPower[] = [
   {
@@ -420,16 +430,6 @@ export const HERO_POWERS: readonly HeroPower[] = [
     label: `Draw ${LIFE_TAP_DRAW}. Take ${LIFE_TAP_DAMAGE} damage`,
     radiantLabel: `Draw ${LIFE_TAP_DRAW} from each player's deck`,
     build: drawEffects,
-  },
-  {
-    name: "ping",
-    x: HERO_POWER_COST.ping,
-    title: "Ping",
-    radiantTitle: "Ping",
-    label: `Pierce. Deal ${PING_DAMAGE} damage`,
-    radiantLabel: `Pierce. Deal ${PING_DAMAGE} damage. If this kills a Unit, summon a Ghoul Token with its stats`,
-    targets: PING_TARGETS,
-    build: pingEffects,
   },
   {
     name: "burn",
@@ -457,6 +457,16 @@ export const HERO_POWERS: readonly HeroPower[] = [
     label: "Summon a Felinor Token",
     radiantLabel: "Summon a random Felinor",
     build: felinorEffects,
+  },
+  {
+    name: "ping",
+    x: HERO_POWER_COST.ping,
+    title: "Ping",
+    radiantTitle: "Ping",
+    label: `Pierce. Deal ${PING_DAMAGE} damage`,
+    radiantLabel: `Pierce. Deal ${PING_DAMAGE} damage. If this kills a Unit, summon a Ghoul Token with its stats`,
+    targets: PING_TARGETS,
+    build: pingEffects,
   },
   {
     name: "discover",

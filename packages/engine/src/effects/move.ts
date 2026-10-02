@@ -188,7 +188,7 @@ export function exileMatching(
   };
 }
 
-/** §6.3 Bounce: return the card to its owner's hand (R12). */
+/** §6.3 Bounce: return the card to its current owner's hand (R12). */
 export function bounce(args: { target: TargetSpec }): Effect {
   return {
     kind: "bounce",

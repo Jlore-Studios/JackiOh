@@ -299,11 +299,17 @@
   overscroll-behavior: contain;
 }
 
-/* Both faces side by side at every width, including a 390 px phone. */
+/* One printed face at a time: the pager holds its radiant and directly named related cards. */
+.inspect-detail-carousel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .inspect-detail-faces {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  width: 100%;
 }
 
 .inspect-detail-face {
@@ -313,6 +319,52 @@
   gap: 6px;
   min-width: 0;
   margin: 0;
+}
+
+.inspect-detail-face[hidden] {
+  display: none;
+}
+
+.inspect-carousel-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspect-carousel-controls > button,
+.inspect-voice-line {
+  min-width: 36px;
+  min-height: 32px;
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 8px;
+  background: var(--bg-sunken, #0b0d13);
+  color: var(--text, #e8eaf2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.inspect-carousel-controls > button:hover,
+.inspect-voice-line:hover {
+  border-color: var(--radiant, #ffd24a);
+}
+
+.inspect-carousel-controls > button:focus-visible,
+.inspect-voice-line:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 2px;
+}
+
+.inspect-voice-lines {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inspect-voice-line {
+  padding: 0 10px;
 }
 
 /* As wide as its half of the dialog allows, up to 290 px, and never taller than the screen leaves
@@ -461,9 +513,10 @@
     gap: 16px;
   }
 
-  .inspect-detail-faces {
+  .inspect-detail-carousel {
     flex: none;
-    grid-template-columns: repeat(2, auto);
+    width: min(290px, calc((100vh - 150px) * 5 / 7));
+    width: min(290px, calc((100dvh - 150px) * 5 / 7));
   }
 
   .inspect-face--detail {
@@ -547,10 +600,6 @@
   .inspect-detail {
     padding: 10px;
     gap: 10px;
-  }
-
-  .inspect-detail-faces {
-    gap: 8px;
   }
 
   .inspect-actions {

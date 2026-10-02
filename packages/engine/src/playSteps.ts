@@ -1028,8 +1028,8 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
     run.zone = type === "Spell" ? null : firstFreeZone(state, run.player, type === "Unit" ? "units" : "backrow");
   } else {
     // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent. It is
-    // still this player's play (`cardPlayed`), and its owner does not change (§3.2); the zone, and
-    // so its controller, is the opponent's (`placeOnField`).
+    // still this player's play (`cardPlayed`), while the receiving side becomes its current owner
+    // and controller on the field (R12, `placeOnField`).
     const theirs = handedOverZone(state, run, card);
     if (theirs !== null) run.zone = theirs;
   }

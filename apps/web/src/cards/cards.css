@@ -624,6 +624,35 @@
   white-space: pre-line;
 }
 
+/* Printed keyword chips belong to catalogue faces as well as live minions. Unlike the board's
+   `data-keyword` controls they are static presentation, so a deck-builder card carries its own
+   readable keyword names without masquerading as a field card. */
+.cf .cf-printed-keywords {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.28em;
+  margin-top: 0.35em;
+}
+
+.cf .cf-text-base:empty + .cf-printed-keywords {
+  margin-top: 0;
+}
+
+.cf .cf-printed-keyword {
+  display: inline-block;
+  padding: 0.1em 0.32em;
+  border-radius: 0.55em;
+  background: rgb(48 62 88 / 0.82);
+  color: #fff;
+  font-size: 0.76em;
+  font-weight: 800;
+  line-height: 1.1;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 65%);
+  white-space: nowrap;
+}
+
 /* In play, the keywords a card has gained since it was printed, under a green rule (the buffed
    stat's colour): a Plastic Surgery's, an aura's, Defense Position's, a Vanilla unit's granted ones. */
 .cf .cf-text-gained {

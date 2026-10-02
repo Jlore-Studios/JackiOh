@@ -9,9 +9,9 @@
 // changes is `controller`, and only when the card's new zone is on the other side of the centre
 // line. That crossing is an entry (R171): the card takes this turn as its
 // `summonedTurn` and a fresh exertion, so it is summoning sick on its new side for the rest of the
-// turn. A card that moves along its own side has entered nothing and keeps both. The owner never
-// changes, so the card still goes to its owner's hand, library, graveyard or exile whenever it
-// later leaves the field (R12). A face-down trap that crosses is read by its new controller and no
+// turn. A card that moves along its own side has entered nothing and keeps both. A card that
+// crosses also transfers current ownership, so its new controller's off-field piles receive it
+// whenever it later leaves the field (R12). A face-down trap that crosses is read by its new controller and no
 // longer by the old one, which follows from `controller` alone, so `faceUp` is deliberately
 // untouched here (R33).
 
@@ -196,6 +196,9 @@ export function rotateRings(sink: EngineSink, args: RotationArgs): RotationResul
       result.moved.push(card.id);
       const previous = before[at];
       if (previous === undefined || card.controller === previous) return;
+      // R12: a crossing transfers the card's current owner along with control, so a later bounce,
+      // destruction, exile, or other departure follows the side that now controls it.
+      card.owner = card.controller;
       enterNewSide(sink, card, previous);
       result.crossed.push(card.id);
       sink.events.push({

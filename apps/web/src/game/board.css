@@ -195,30 +195,70 @@
 
 .power-button,
 .power-tag {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  max-width: 14ch;
+  gap: 5px;
+  max-width: 16ch;
+  min-height: 34px;
+  padding: 3px 9px 3px 4px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-radius: 18px;
   font-size: 0.85em;
-  padding: 3px 8px;
-  border-radius: 999px;
+  font-weight: 750;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .power-tag {
-  border: 1px dashed var(--line-bright);
-  color: var(--text-dim);
-}
-
-.power-extra {
-  opacity: 0.8;
+  border: 1px solid color-mix(in srgb, var(--line-bright) 80%, var(--radiant));
+  background: color-mix(in srgb, var(--bg-sunken) 80%, #253255);
+  color: var(--text);
 }
 
 .power-button[data-legal="true"] {
   cursor: pointer;
 }
+
+.power-button[data-used="true"],
+.power-tag[data-used="true"] {
+  filter: saturate(0.45);
+  opacity: 0.7;
+}
+
+/* A small crest gives every selected Heroic Power its own readable art while it stays attached to
+   the hero, rather than adding another card to the board. The data value is a public power name's
+   visual motif, never a rules lookup. */
+.power-emblem {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgb(255 255 255 / 58%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #9ac7ff, #355ba9 66%, #18244c);
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / 42%), 0 1px 3px rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 75%);
+}
+
+.power-emblem[data-power-art="map"],
+.power-emblem[data-power-art="tricks"] { background: radial-gradient(circle at 35% 28%, #f8cf7a, #9b5a20 66%, #47200c); }
+.power-emblem[data-power-art="tap"],
+.power-emblem[data-power-art="brain"] { background: radial-gradient(circle at 35% 28%, #b68cff, #6337a3 66%, #30144f); }
+.power-emblem[data-power-art="shot"],
+.power-emblem[data-power-art="ping"] { background: radial-gradient(circle at 35% 28%, #8fe7f7, #197d9e 66%, #0a3b52); }
+.power-emblem[data-power-art="ranch"],
+.power-emblem[data-power-art="cat"] { background: radial-gradient(circle at 35% 28%, #f2b8a1, #a74a61 66%, #552036); }
+.power-emblem[data-power-art="witness"],
+.power-emblem[data-power-art="stitch"] { background: radial-gradient(circle at 35% 28%, #d1e0ff, #60759b 66%, #2d3852); }
+.power-emblem[data-power-art="armor"],
+.power-emblem[data-power-art="tank"] { background: radial-gradient(circle at 35% 28%, #d8e6f5, #6d8297 66%, #33404d); }
+.power-emblem[data-power-art="insect"],
+.power-emblem[data-power-art="pluck"] { background: radial-gradient(circle at 35% 28%, #d3f28c, #578b28 66%, #24450d); }
 
 .power-x {
   color: #93c5fd;
@@ -711,12 +751,41 @@
 
 .lock-icon {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 5px;
+  left: 5px;
+  z-index: 2;
+  width: 13px;
+  height: 11px;
+  border: 2px solid color-mix(in srgb, var(--locked) 84%, #fff);
+  border-radius: 2px 2px 3px 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--locked) 72%, #47320c), #201506);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 72%), inset 0 1px 0 rgb(255 255 255 / 24%);
+}
+
+.lock-icon::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
   width: 9px;
-  height: 9px;
-  border: 2px solid var(--locked);
+  height: 8px;
+  border: 2px solid color-mix(in srgb, var(--locked) 84%, #fff);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  transform: translateX(-50%);
+}
+
+.lock-icon::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 3px;
+  height: 5px;
   border-radius: 2px;
+  background: #170e04;
+  box-shadow: 0 -1px 0 1px rgb(255 241 197 / 25%);
+  transform: translateX(-50%);
 }
 
 /* R64: held for a Reborn unit. Same "takes no summon" meaning, a different cause, so a different
@@ -729,6 +798,22 @@
 .reserved-icon {
   border-color: var(--radiant);
   border-radius: 50%;
+  background: transparent;
+}
+
+.reserved-icon::before {
+  width: 7px;
+  height: 7px;
+  border-color: var(--radiant);
+  border-bottom: 2px solid var(--radiant);
+  border-radius: 50%;
+}
+
+.reserved-icon::after {
+  width: 3px;
+  height: 3px;
+  background: var(--radiant);
+  box-shadow: 0 0 4px var(--radiant);
 }
 
 .resolving {

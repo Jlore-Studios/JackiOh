@@ -10,6 +10,11 @@ export const INSPECT_CLOSE = "inspect-close";
 export const INSPECT_FACE = "inspect-face";
 export const INSPECT_FACE_BASE = "inspect-face-base";
 export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
+/** The one-at-a-time related-card pager in the deck builder's detail dialog. */
+export const INSPECT_CAROUSEL = "inspect-carousel";
+export const INSPECT_CAROUSEL_PREVIOUS = "inspect-carousel-previous";
+export const INSPECT_CAROUSEL_NEXT = "inspect-carousel-next";
+export const INSPECT_CAROUSEL_POSITION = "inspect-carousel-position";
 export const INSPECT_GLOSSARY = "inspect-glossary";
 /** A face in play's printed text, where the two differ (SPEC §10.10). */
 export const INSPECT_PRINTED = "inspect-printed";

@@ -33,13 +33,14 @@
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
+import { keywordKey, type CardType, type Keyword, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
+import { KEYWORD_MARK } from "./glossary.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -79,7 +80,29 @@ export function tuningLine(face: FaceModel): string {
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
 function printedText(face: FaceModel): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${face.text.full}${values}`, gainedLine(face), tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${face.text.full}${values}`, face.keywords.map(keywordKey).join(" "), gainedLine(face), tuningLine(face)]
+    .filter((part) => part !== "")
+    .join(" ");
+}
+
+/** Printed keywords are visible on full catalog faces too, including the deck builder's card pool. */
+function PrintedKeywords({ keywords }: { keywords: readonly Keyword[] }): ReactElement | null {
+  if (keywords.length === 0) return null;
+  return (
+    <span className="cf-printed-keywords" aria-label={`Keywords: ${keywords.map(keywordKey).join(", ")}`}>
+      {keywords.map((keyword, index) => (
+        <span
+          key={`${keywordKey(keyword)}-${index}`}
+          className="cf-printed-keyword"
+          data-printed-keyword={keyword.kind}
+          data-n={"n" in keyword ? keyword.n : undefined}
+          title={keywordKey(keyword)}
+        >
+          <span aria-hidden="true">{KEYWORD_MARK[keyword.kind]}</span> {keywordKey(keyword)}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /** R386: the keywords Upgrade added ("+") and Degrade removed (struck "−"), at the foot of the rules box. */
@@ -227,6 +250,7 @@ export function CardFace({ face, layout = "full", className }: CardFaceProps): R
                 {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
               />
             </span>
+            <PrintedKeywords keywords={face.keywords} />
             {face.gained.length > 0 && (
               <span className="cf-text-gained" data-gained={face.gained.map(keywordKey).join("|")}>
                 <RulesText text={gainedLine(face)} />

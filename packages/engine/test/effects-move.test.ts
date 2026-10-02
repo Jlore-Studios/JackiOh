@@ -151,15 +151,15 @@ describe("exile (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "exiled").map((e) => e.instanceId)).toEqual([token.id]);
   });
 
-  it("R12 a stolen unit is exiled to its owner's pile", () => {
+  it("R12 a controlled unit is exiled to its current owner's pile", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
 
     run(state, exile({ target: chosen }), theirs, { controller: "p1" });
 
-    expect(state.players.p2.exile.map((c) => c.id)).toEqual([theirs.id]);
-    expect(state.players.p1.exile).toHaveLength(0);
+    expect(state.players.p1.exile.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.exile).toHaveLength(0);
   });
 
   it("R78 exile resets the instance but keeps costMod and radiant", () => {

@@ -12,8 +12,8 @@
 //   destination is on the other side of the centre line, and that is an entry (R171): every card
 //   that lands, a dormant Stack card and a backrow card included, takes this turn as its
 //   `summonedTurn` and a fresh exertion, so the units a player receives are summoning sick for the
-//   rest of the turn. `owner` does not change (R12), so the card still goes to its owner's hand,
-//   library, graveyard or exile when it later leaves the field. Locks are zone flags, so they stay
+//   rest of the turn. Its current owner changes with control (R12), so the new controller's hand,
+//   library, graveyard or exile receives it when it later leaves the field. Locks are zone flags, so they stay
 //   with their zones and never travel with a card (R73, §3.2). A face-down trap stays face-down and
 //   is readable by its new controller only: `viewFor` keys that on `controller`, so `faceUp` is
 //   deliberately untouched here (R33).
@@ -98,7 +98,7 @@ function placeContents(state: GameState, cards: readonly CardInstance[], to: Zon
 }
 
 /**
- * The bounce of the decision above: the card goes to its owner's hand (R12). The hand cap applies,
+ * The bounce of the decision above: the card goes to its current owner's hand (R12). The hand cap applies,
  * so a full hand burns it (§2.4, R4), and a unit token ceases to exist on the way and never reaches
  * a hand (R11).
  */
@@ -177,6 +177,9 @@ function swapBoardNow(ctx: EffectContext): void {
     // dormant Stack cards included: they are in the zone and moved with it (§3.2). Each one has
     // entered its new side (R171).
     entry.cards.forEach((card, at) => {
+      // R12: a board swap changes current ownership together with control, before this card can
+      // later leave the field and be routed by `moveToZone`.
+      card.owner = card.controller;
       enterNewSide(ctx, card, before[at] ?? card.owner);
       ctx.events.push({
         type: "controlChanged",
@@ -266,7 +269,7 @@ export function swapHealth(): Effect {
   };
 }
 
-/** R73: zone contents change sides lane by lane in both rows; locks stay, control moves, owners don't. */
+/** R73: zone contents change sides lane by lane in both rows; locks stay, and control and current ownership move. */
 export function swapBoard(): Effect {
   return {
     kind: "swapBoard",

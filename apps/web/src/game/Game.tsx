@@ -88,6 +88,15 @@ export type GameProps = {
 /** What the board is offered while it is still showing an older view than `legal` describes. */
 const NOTHING_LEGAL: readonly ActionBody[] = [];
 
+/** The newest turn event ends the old board's animation burst and begins presentation on the new turn. */
+function latestTurnBoundary(events: readonly PlayerView["events"][number][]): PlayerView["events"][number] | null {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.type === "turnStarted" || event?.type === "turnAutoEnded") return event;
+  }
+  return null;
+}
+
 export default function Game({
   view,
   legal: offered,
@@ -232,6 +241,17 @@ export default function Game({
         : newEventsSince(previous.events, view.events);
 
     if (previous !== null && previous.viewer !== view.viewer) runner.drain();
+    // A new turn must never wait behind a position switch, a mulligan answer, or another old-board
+    // animation. Those entries were truthful while their board was current, but replaying them now
+    // labels the new turn with the old phase. Drop that stale burst, show the current public view,
+    // then play its one turn banner on the current board.
+    const boundary = latestTurnBoundary(fresh);
+    if (boundary !== null && previous !== null) {
+      runner.drain();
+      setShown(view);
+      runner.enqueue([boundary], view);
+      return;
+    }
     // Planned against the view the board is STILL SHOWING, not the one that has just arrived.
     // BUILD M5-T4: "the state view updates after the animation for that event completes", so an
     // event animates over the board as it was before it happened — which is the only board that
@@ -243,7 +263,9 @@ export default function Game({
   }, [view, runner]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
-  const legal = shown === view ? offered : NOTHING_LEGAL;
+  // A turn-boundary banner starts on the current view, unlike ordinary old-board animations, so
+  // hold its controls with the in-flight entry too.
+  const legal = shown === view && inFlight === null ? offered : NOTHING_LEGAL;
 
   // A seat hand-over or a game over must not sit behind a queue of animations.
   const settleNow = useCallback(() => {

@@ -26,6 +26,9 @@ import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.t
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 
+/** A position change should read as a quick snap, not linger into the next turn. */
+export const POSITION_SWITCH_DURATION_MS = 160;
+
 /* ------------------------------------------------------------------------------------------- *
  * Testids this table needs that `contract.ts` does not define
  * ------------------------------------------------------------------------------------------- */
@@ -395,7 +398,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // Rotate 90° / back.
   positionSwitched: {
     animation: "jk-rotate-def",
-    durationMs: 250,
+    durationMs: POSITION_SWITCH_DURATION_MS,
     testid: "card-<instanceId>",
     target: (e, view) => locateInstance(view, e.instanceId),
   },

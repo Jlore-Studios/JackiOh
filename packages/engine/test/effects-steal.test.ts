@@ -1,4 +1,4 @@
-// Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership, R33's face-down trap and
+// Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's current ownership, R33's face-down trap and
 // #86's "steal all enemy units". The fixture Trap this file needs is registered here, so no shared
 // fixture has to grow for it (BUILD §0).
 
@@ -36,7 +36,7 @@ function run(state: GameState, effect: Effect, options: HookOptions = {}): GameE
 const controls = (state: GameState, card: CardInstance): GameEvent[] => run(state, steal({ instanceId: card.id }), { controller: "p1" });
 
 describe("steal (§6.3, R15, M3-T1)", () => {
-  it("R15 takes the same lane when it is free, and moves control only", () => {
+  it("R15 takes the same lane when it is free, and moves control and current ownership", () => {
     const state = game();
     const victim = put(state, plain.id, slot("p2", "units", 3));
     victim.damage = 1;
@@ -50,8 +50,8 @@ describe("steal (§6.3, R15, M3-T1)", () => {
     expect(cardAt(state, slot("p1", "units", 3))?.id).toBe(victim.id);
     expect(cardAt(state, slot("p2", "units", 3))).toBeNull();
     expect(victim.controller).toBe("p1");
-    // R12: ownership never moves.
-    expect(victim.owner).toBe("p2");
+    // R12: ownership follows a field control change.
+    expect(victim.owner).toBe("p1");
     expect(victim.zone).toEqual({ z: "field", player: "p1", row: "units", lane: 3 });
 
     // The card never left the field, so R78's reset does not apply: damage, buffs, position and
@@ -102,7 +102,7 @@ describe("steal (§6.3, R15, M3-T1)", () => {
     expect(events).toHaveLength(0);
   });
 
-  it("R12 keeps the owner, so a stolen unit that dies goes to its owner's graveyard", () => {
+  it("R12 transfers current ownership, so a stolen unit dies to the thief's graveyard", () => {
     const state = game();
     const victim = put(state, plain.id, slot("p2", "units", 1));
     controls(state, victim);
@@ -110,10 +110,10 @@ describe("steal (§6.3, R15, M3-T1)", () => {
 
     moveToZone(state, victim, "graveyard");
 
-    expect(state.players.p2.graveyard.map((card) => card.id)).toEqual([victim.id]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
-    // R78: leaving the field hands control back to the owner.
-    expect(victim.controller).toBe("p2");
+    expect(state.players.p1.graveyard.map((card) => card.id)).toEqual([victim.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
+    // R78 keeps control with the current owner.
+    expect(victim.controller).toBe("p1");
   });
 
   it("R33 leaves a stolen face-down trap face-down, under its new controller", () => {
@@ -125,7 +125,7 @@ describe("steal (§6.3, R15, M3-T1)", () => {
 
     expect(cardAt(state, slot("p1", "backrow", 4))?.id).toBe(hidden.id);
     expect(hidden.controller).toBe("p1");
-    expect(hidden.owner).toBe("p2");
+    expect(hidden.owner).toBe("p1");
     // The steal never flips the card: `controller` is what decides who may read it (R33).
     expect(hidden.faceUp).toBeUndefined();
     expect(eventsOfType(events, "controlChanged")).toEqual([

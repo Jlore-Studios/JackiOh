@@ -10,7 +10,7 @@
 //     viewer was shown going in (`ownLibrary.ts`) — definitions, faces and counts, never an instance
 //     id — so R97's rule below still reads no library card, the owner's included.
 //   - R33: a face-down trap is readable by its *current controller* only, so a steal, a board swap
-//     or a rotation moves who may read it even though ownership never changed; a Field Trap that
+//     or a rotation moves who may read it as current ownership follows control; a Field Trap that
 //     has fired (`faceUp`) is public to both.
 //   - R13, §3.2: the lower cards of a Stack pile are dormant and not on the field. The view shows
 //     the top card and a count of what is buried under it, never a buried card's identity.

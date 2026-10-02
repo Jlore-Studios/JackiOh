@@ -40,7 +40,7 @@ import { instanceOf, playerOf, resolveTarget, type PlayerSpec, type TargetSpec }
 export type StatsOverride = { attack: number; health: number };
 
 export type SummonPlacement = {
-  /** Who controls the summoned card; its owner too when the card is created here (R12). */
+  /** Who controls the summoned card; it becomes this card's current owner on the field (R12). */
   player?: PlayerSpec;
   /** A named lane ("this lane", Reborn's zone); it fails when that zone is occupied or Locked (R47). */
   lane?: number;

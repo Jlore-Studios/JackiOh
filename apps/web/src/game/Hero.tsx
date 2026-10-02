@@ -16,15 +16,12 @@
 // view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
 // it is the last N events (§10.8), so a badge could appear and never leave.
 //
-// The Heroic Powers (R43, R384, R510). The view carries every Heroic Power a player controls, each
-// separately once per turn, with its `instanceId`. Each of the viewer's own is a button that
-// reports `{ on: "activate", instanceId }`, the click every Activate control reports
-// (ActivateControl.tsx), so `actions.ts` builds a power exactly as it builds any activation:
-// whichever of `activatePower` (R43's alias) or `activate` `legalActions` lists for it, sent at
-// once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
-// when there are several. The first keeps the `power` testid the e2e specs press; any further one
-// is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
-// `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
+// The selected Heroic Power (R43, R384, R510). The view can retain every power a player controls,
+// but the hero surface deliberately shows only `hero.power`: the selected one. Its button reports
+// `{ on: "activate", instanceId }`, the click every Activate control reports (ActivateControl.tsx),
+// so `actions.ts` builds it once or waits for its target (and game/drag can aim it) exactly as for a
+// card activation. The power keeps the `power` testid the e2e specs press. Whether a button is
+// live is `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
 // `activated` row, which plays on its card (`card-<instanceId>`).
 
 import type { ReactElement } from "react";
@@ -53,6 +50,37 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
 };
+
+type PowerArt = { key: string; mark: string };
+
+/** Public names select visual motifs only; the power's effect and legality still come solely from the view. */
+const POWER_ART: Readonly<Record<string, PowerArt>> = {
+  "Expedition Map": { key: "map", mark: "⌖" },
+  "Life Tap": { key: "tap", mark: "✦" },
+  "Steady Shot": { key: "shot", mark: "➶" },
+  Ranching: { key: "ranch", mark: "♞" },
+  "Cat Cafe": { key: "cat", mark: "♟" },
+  Ping: { key: "ping", mark: "✧" },
+  "Witness Value": { key: "witness", mark: "◈" },
+  Stitching: { key: "stitch", mark: "✚" },
+  "Armor Up": { key: "armor", mark: "⬟" },
+  "Tank Up": { key: "tank", mark: "⬢" },
+  "Die Insect": { key: "insect", mark: "✹" },
+  "KY Brainstorm": { key: "brain", mark: "☄" },
+  Pluck: { key: "pluck", mark: "❋" },
+  "Terminus Tricks": { key: "tricks", mark: "◆" },
+};
+
+const DEFAULT_POWER_ART: PowerArt = { key: "default", mark: "✦" };
+
+function PowerEmblem({ power }: { power: HeroPowerView }): ReactElement {
+  const art = POWER_ART[power.name] ?? DEFAULT_POWER_ART;
+  return (
+    <span className="power-emblem" data-power-art={art.key} aria-hidden="true">
+      {art.mark}
+    </span>
+  );
+}
 
 export default function Hero(props: HeroProps): ReactElement {
   const { view, side } = props;
@@ -108,30 +136,11 @@ export default function Hero(props: HeroProps): ReactElement {
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
           <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
+            <PowerEmblem power={hero.power} />
             {hero.power.name}
             <span className="power-x">{hero.power.x}</span>
           </span>
         ))}
-
-      {/* Any further power this player controls (R43), each its own control on your side. */}
-      {(hero.powers ?? [])
-        .filter((power) => power.instanceId !== hero.power?.instanceId)
-        .map((power) =>
-          side === "you" ? (
-            <PowerButton key={power.instanceId} power={power} testId={testid.powerOf(power.instanceId)} extra props={props} />
-          ) : (
-            <span
-              key={power.instanceId}
-              className="power-tag power-extra"
-              data-instance-id={power.instanceId}
-              data-used={power.usedThisTurn ? "true" : "false"}
-              data-x={power.x}
-            >
-              {power.name}
-              <span className="power-x">{power.x}</span>
-            </span>
-          ),
-        )}
 
       {/* R169: one badge per `SideView.modifiers` entry, in the view's order. Always present, so
           `modifierChanged` has an element to fade even when the badge that changed is the one that
@@ -168,12 +177,10 @@ export default function Hero(props: HeroProps): ReactElement {
 function PowerButton({
   power,
   testId,
-  extra = false,
   props,
 }: {
   power: HeroPowerView;
   testId: string;
-  extra?: boolean;
   props: HeroProps;
 }): ReactElement {
   const live = isLegal(props.highlight, testId);
@@ -181,7 +188,7 @@ function PowerButton({
   return (
     <button
       type="button"
-      className={cx("power-button", extra && "power-extra")}
+      className="power-button"
       data-testid={testId}
       data-instance-id={power.instanceId}
       data-legal={legalAttr(live)}
@@ -200,6 +207,7 @@ function PowerButton({
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
     >
+      <PowerEmblem power={power} />
       {power.name}
       <span className="power-x">{power.x}</span>
     </button>

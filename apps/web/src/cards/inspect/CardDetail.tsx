@@ -20,13 +20,17 @@
 // the card, newest first, with its faces as that patch left them and what changed marked. The
 // Patch notes page opens the detail with it already open (`historyOpen`).
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, VoiceLineKind } from "@jackioh/shared";
+import { VOICE_PRIORITY } from "../../audio/constants.ts";
+import { getAudioEngine } from "../../audio/engine.ts";
+import { VOICE_LINES, lineFor } from "../../audio/voiceData.ts";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
+import { useDefResolver } from "../refContext.tsx";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
@@ -35,12 +39,22 @@ import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
+  INSPECT_CAROUSEL,
+  INSPECT_CAROUSEL_NEXT,
+  INSPECT_CAROUSEL_POSITION,
+  INSPECT_CAROUSEL_PREVIOUS,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
   INSPECT_SCRIM,
 } from "./testids.ts";
 import "./inspect.css";
+
+const VOICE_LINE_BUTTONS: readonly { kind: VoiceLineKind; label: string }[] = [
+  { kind: "play", label: "Play voice line" },
+  { kind: "death", label: "Death voice line" },
+  { kind: "cast", label: "Cast voice line" },
+];
 
 export type CardDetailProps = {
   def: CardDef;
@@ -67,6 +81,109 @@ export function detailMetaLine(def: CardDef): string {
 
 /** Text tiers whose printed face shrinks far enough to want the reading-size copy on any screen. */
 const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
+
+type DetailFace = {
+  key: string;
+  caption: string;
+  testId?: string;
+  relatedId?: string;
+  face: FaceModel;
+};
+
+/**
+ * The detail reader pages through the card's two printed faces, then the public card ids its
+ * definition directly names. We deliberately do not search for reverse references: that would
+ * turn a token's detail into an unbounded, unrelated list as the catalog grows.
+ */
+function detailFaces(def: CardDef, resolve: ((id: string) => CardDef | undefined) | null): DetailFace[] {
+  const faces: DetailFace[] = [
+    { key: "base", caption: "Base", testId: INSPECT_FACE_BASE, face: faceModel({ defId: def.id, def, radiant: false }) },
+    { key: "radiant", caption: "Radiant", testId: INSPECT_FACE_RADIANT, face: faceModel({ defId: def.id, def, radiant: true }) },
+  ];
+  if (resolve === null) return faces;
+  const seen = new Set([def.id]);
+  for (const id of def.refs ?? []) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const related = resolve(id);
+    if (related === undefined) continue;
+    faces.push({
+      key: `related:${related.id}`,
+      caption: related.name,
+      relatedId: related.id,
+      face: faceModel({ defId: related.id, def: related, radiant: false }),
+    });
+  }
+  return faces;
+}
+
+function RelatedCardCarousel({ def }: { def: CardDef }): ReactElement {
+  const resolve = useDefResolver();
+  const faces = detailFaces(def, resolve);
+  const [active, setActive] = useState(0);
+  useEffect(() => setActive(0), [def.id]);
+  const index = Math.min(active, faces.length - 1);
+  const previous = (): void => setActive((current) => (current - 1 + faces.length) % faces.length);
+  const next = (): void => setActive((current) => (current + 1) % faces.length);
+
+  return (
+    <div className="inspect-detail-carousel" data-testid={INSPECT_CAROUSEL}>
+      <div className="inspect-detail-faces">
+        {faces.map((entry, entryIndex) => (
+          <figure
+            key={entry.key}
+            className={`inspect-detail-face${entry.face.radiant ? " inspect-detail-face--radiant" : ""}`}
+            hidden={entryIndex !== index}
+            data-related-id={entry.relatedId}
+          >
+            <div className="inspect-face inspect-face--detail" {...(entry.testId === undefined ? {} : { "data-testid": entry.testId })}>
+              <CardFace face={entry.face} layout="full" />
+            </div>
+            <figcaption className="inspect-detail-caption">{entry.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+      {faces.length > 1 && (
+        <div className="inspect-carousel-controls" aria-label="Related cards">
+          <button type="button" data-testid={INSPECT_CAROUSEL_PREVIOUS} aria-label="Previous related card" onClick={previous}>
+            ‹
+          </button>
+          <span data-testid={INSPECT_CAROUSEL_POSITION} aria-live="polite">
+            {index + 1} of {faces.length}
+          </span>
+          <button type="button" data-testid={INSPECT_CAROUSEL_NEXT} aria-label="Next related card" onClick={next}>
+            ›
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Every authored line this card has, each played only after the click has unlocked Web Audio. */
+function VoiceLineButtons({ defId }: { defId: string }): ReactElement | null {
+  const lines = VOICE_LINE_BUTTONS.filter(({ kind }) => lineFor(VOICE_LINES, defId, kind) !== null);
+  if (lines.length === 0) return null;
+  return (
+    <span className="inspect-voice-lines" aria-label="Voice lines">
+      {lines.map(({ kind, label }) => (
+        <button
+          key={kind}
+          type="button"
+          className="inspect-voice-line"
+          data-testid={`inspect-voice-${kind}`}
+          onClick={() => {
+            const audio = getAudioEngine();
+            audio.unlock();
+            audio.playVoice(defId, kind, 0, VOICE_PRIORITY.summon);
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </span>
+  );
+}
 
 /**
  * The rules at reading size: the base text, then the Radiant face's whole text with what the base
@@ -133,20 +250,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
             Add and Close are on screen as the dialog opens, whatever the card's length. */}
         <div className="inspect-detail-body">
           <RefsInteractive>
-            <div className="inspect-detail-faces">
-              <figure className="inspect-detail-face">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
-                  <CardFace face={base} layout="full" />
-                </div>
-                <figcaption className="inspect-detail-caption">Base</figcaption>
-              </figure>
-              <figure className="inspect-detail-face inspect-detail-face--radiant">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
-                  <CardFace face={radiant} layout="full" />
-                </div>
-                <figcaption className="inspect-detail-caption">Radiant</figcaption>
-              </figure>
-            </div>
+            <RelatedCardCarousel def={def} />
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
                 them on a wide, short one such as a 1280x720 desktop (inspect.css). */}
             <div className="inspect-detail-info">
@@ -161,6 +265,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
           </RefsInteractive>
         </div>
         <div className="inspect-actions">
+          <VoiceLineButtons defId={def.id} />
           {actions}
           <button
             ref={closeButton}

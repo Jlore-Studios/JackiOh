@@ -62,9 +62,21 @@ const LEGAL: readonly ActionBody[] = [
   { type: "concede" },
 ];
 
-function renderGame(onAction = vi.fn()) {
-  const utils = render(<Game view={dragView()} legal={LEGAL} onAction={onAction} />);
+function renderGame(onAction = vi.fn(), view = dragView(), legal: readonly ActionBody[] = LEGAL) {
+  const utils = render(<Game view={view} legal={legal} onAction={onAction} />);
   return { ...utils, onAction };
+}
+
+/** h1's lane 4 is visibly locked and absent from the legal actions the server supplied. */
+function lockedDragView(): PlayerView {
+  const view = dragView();
+  return {
+    ...view,
+    you: {
+      ...view.you,
+      locks: { ...view.you.locks, units: [false, false, false, true, false] },
+    },
+  };
 }
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
@@ -432,6 +444,38 @@ describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows th
 
     fireEvent.click(source);
     expect(source).not.toHaveAttribute("data-selected");
+  });
+
+  it("B38 a summon released over a server-locked zone shows a blocked X without sending an action", () => {
+    vi.useFakeTimers();
+    const { onAction } = renderGame(vi.fn(), lockedDragView(), LEGAL.filter((action) => action !== H1_LANE4));
+    const source = el("hand-card-h1");
+    const locked = el("zone-you-units-4");
+    expect(locked).toHaveAttribute("data-locked", "true");
+
+    lift(source);
+    over(locked);
+    move(420, 180);
+    release(420, 180);
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(el("drag-blocked")).toHaveAttribute("data-zone", "zone-you-units-4");
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.queryByTestId("drag-blocked")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("B38 an invalid but unlocked drop does not pretend the zone is locked", () => {
+    const { onAction } = renderGame();
+    lift(el("hand-card-h1"));
+    over(el("zone-you-units-5"));
+    move(500, 300);
+    release(500, 300);
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("drag-blocked")).toBeNull();
   });
 
   it("B38 releasing back over your own hand cancels, even a spell that may drop anywhere on the board", () => {
