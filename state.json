@@ -385,7 +385,7 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "queued_at": "2026-10-02T17:10:19Z",
+      "queued_at": "2026-10-02T17:42:45Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     }
