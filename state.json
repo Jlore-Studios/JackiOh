@@ -469,6 +469,24 @@
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
+    "claude-1": {
+      "refused_until": "2026-10-03T02:50:00Z",
+      "spent": [
+        {
+          "at": "2026-10-02T23:14:12Z",
+          "minutes": 73.8
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-03T02:50:00Z",
+          "utilization": 1.01
+        },
+        "observed_at": "2026-10-02T23:14:12Z",
+        "rejected_resets_at": "2026-10-03T02:50:00Z",
+        "status": "rejected"
+      }
+    },
     "gpt": {
       "refused_until": "2026-10-02T22:05:44Z",
       "spent": [
