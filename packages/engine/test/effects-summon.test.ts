@@ -233,7 +233,7 @@ describe("summon (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "summoned").map((e) => e.instanceId)).toEqual([dead.id]);
   });
 
-  it("R12 summoning an enemy-owned card puts it under the summoner's control, owner unchanged", () => {
+  it("R611 summoning an enemy-owned card puts it under the summoner's control and makes the summoner its current owner", () => {
     const state = game();
     const theirs = inGraveyard(state, "fx-9", "p2");
 
@@ -243,8 +243,9 @@ describe("summon (§6.3, M3-T1)", () => {
     });
 
     expect(cardAt(state, slot("p1", "units", 1))?.id).toBe(theirs.id);
+    expect(state.players.p2.graveyard.map((c) => c.id)).not.toContain(theirs.id);
     expect(theirs.controller).toBe("p1");
-    expect(theirs.owner).toBe("p2");
+    expect(theirs.owner).toBe("p1");
   });
 });
 

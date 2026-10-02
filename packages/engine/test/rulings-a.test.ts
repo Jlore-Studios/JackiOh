@@ -669,7 +669,8 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
       expect(victim.owner).toBe("p1");
       expect(moveToZone(state, victim, zone)).toBe("moved");
       expect(victim.zone).toEqual({ z: zone, player: "p1" });
-      expect(state.players.p2[zone]).toHaveLength(0);
+      expect(state.players.p1[zone].map((card) => card.id)).toContain(victim.id);
+      expect(state.players.p2[zone].map((card) => card.id)).not.toContain(victim.id);
     }
   });
 

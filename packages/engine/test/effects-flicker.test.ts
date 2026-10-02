@@ -102,7 +102,7 @@ describe("B5 E22 Flicker", () => {
     expect(state.delayed).toEqual([]);
   });
 
-  it("a stolen unit re-enters the same zone on its thief's side", () => {
+  it("a stolen unit re-enters the same zone on its thief's side, still the thief's card (R611)", () => {
     const state = playing("flicker-stolen");
     const unit = put(state, plain.id, slot("p2", "units", 1));
     const sink = sinkFor(state);
@@ -111,7 +111,7 @@ describe("B5 E22 Flicker", () => {
     flickerCard(sink, unit);
     expect(unit.zone).toEqual(at);
     expect(unit.controller).toBe("p1");
-    expect(unit.owner).toBe("p2");
+    expect(unit.owner).toBe("p1");
   });
 
   it("flickers every card a scope names, and never a card dormant under a Stack", () => {

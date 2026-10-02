@@ -90,7 +90,7 @@ import { copiedTextOf, textFaceOf } from "./subsystems/copiedText";
 import { paramsView } from "./params";
 import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
-import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { powerAbilityOf, powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { questViewOf } from "./subsystems/quests";
 import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
@@ -431,12 +431,14 @@ function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { ca
 /**
  * R43: a Heroic Power lives on its instance and it is a Field Spell (§8 #98), so it is public to
  * both players once it is on the field — the row §2's hero panel marks visible to both. The power,
- * its X and its use are `heroPower`'s to report, never re-derived here.
+ * its X, the ability its `activate` names, its face and its use are `heroPower`'s to report, never
+ * re-derived here; its declared numbers (`params`, R386) are the card's as they stand.
  *
- * It follows control, not ownership: a stolen Heroic Power powers its new controller's hero. So a
- * player can hold more than one — their own plus one taken with #36 radiant or #49 — and each is
- * separately once-per-turn, which is why this is a list and every entry carries its `instanceId`
- * for its `activate` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
+ * It follows control: a stolen Heroic Power powers its new controller's hero, who is its current
+ * owner too since patch v0.2.1 (R611). So a player can hold more than one — their own plus one
+ * taken with #36 radiant or #49 — and each is separately once-per-turn, which is why this is a list
+ * and every entry carries its `instanceId` for its `activate` (§10.2). Board order: p1's backrow
+ * lane 1 to 5, then p2's.
  */
 function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
   const powers: HeroPowerView[] = [];
@@ -445,12 +447,16 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
       if (card === null || card.controller !== player) continue;
       const power = powerOf(card);
       if (power === null) continue;
+      const params = paramsView(state, card);
       powers.push({
         instanceId: card.id,
         defId: card.defId,
         name: power.name,
+        ability: powerAbilityOf(state, card) ?? power.name,
+        radiant: card.radiant,
         x: powerCostOf(card),
         usedThisTurn: usedThisTurn(state, card),
+        ...(params === null ? {} : { params }),
       });
     }
   }

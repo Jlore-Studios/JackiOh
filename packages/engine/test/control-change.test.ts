@@ -318,7 +318,8 @@ describe("R171 a change of control is an entry (§4.1)", () => {
     expect(eventsOfType(events, "controlChanged").map((e) => e.instanceId)).toEqual([inbound.id]);
     expect(live(state, outbound).zone.z).toBe("hand");
     expect(inbound.controller).toBe("p1");
-    expect(inbound.owner).toBe("p2");
+    // R611: what crosses onto p1's side becomes p1's card.
+    expect(inbound.owner).toBe("p1");
     expect(inbound.summonedTurn).toBe(turn);
     expect(inbound.exertion).toEqual(FRESH);
     expect(attackTargets(state, inbound)).toEqual([]);
@@ -430,7 +431,7 @@ describe("R171 a change of control is an entry (§4.1)", () => {
 // ---------------------------------------------------------------------------
 
 describe("R172 a stolen unit dies as its controller's", () => {
-  it("R172 a stolen Reborn unit returns to the zone it reserved on the thief's side, owned by its owner and sick", () => {
+  it("R172 a stolen Reborn unit returns to the zone it reserved on the thief's side, owned by the thief (R611) and sick", () => {
     const state = playing("cc-reborn");
     const turn = state.turn;
     ready(put(state, plain.id, slot("p1", "units", 1)), turn - 1);
@@ -443,12 +444,13 @@ describe("R172 a stolen unit dies as its controller's", () => {
     const events: GameEvent[] = [];
     stateCheck(sinkFor(state, events));
 
-    // It died as p1's, went to its owner's pile on the way (R12), and came back where it died.
-    expect(eventsOfType(events, "destroyed").map((e) => [e.instanceId, e.owner])).toEqual([[body.id, "p2"]]);
+    // It died as p1's, went to its current owner's pile, p1's, on the way (R12, R611), and came
+    // back where it died.
+    expect(eventsOfType(events, "destroyed").map((e) => [e.instanceId, e.owner])).toEqual([[body.id, "p1"]]);
     const back = live(state, body);
     expect(cardAt(state, slot("p1", "units", 3))?.id).toBe(body.id);
     expect(back.controller).toBe("p1");
-    expect(back.owner).toBe("p2");
+    expect(back.owner).toBe("p1");
     expect(state.players.p1.graveyard.map((c) => c.id)).not.toContain(body.id);
     expect(state.players.p2.graveyard.map((c) => c.id)).not.toContain(body.id);
     // R83: the return is an entry, so it is sick for the rest of the turn.

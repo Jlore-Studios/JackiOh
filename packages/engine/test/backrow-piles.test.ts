@@ -15,7 +15,7 @@ import { legalActions } from "../src/reduce";
 import { hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
-import { whyCannotActivate } from "../src/subsystems/heroPower";
+import { whyCannotActivateAbility } from "../src/subsystems/activate";
 import { settle } from "../src/triggers";
 import { viewFor } from "../src/viewFor";
 import {

@@ -469,7 +469,10 @@ export const LIFE_TAP_DRAW = 1;
 export const LIFE_TAP_DAMAGE = 2;
 /** §8 #98 Ping: "Pierce. Deal 1 damage", on both faces (R606). */
 export const PING_DAMAGE = 1;
-/** §8 #98 Armor Up and its Radiant face Tank Up: the hero's Armor until its controller's next turn (R603). */
+/**
+ * §8 #98 Armor Up, the hero's Armor until its controller's next turn, and its Radiant face Tank Up,
+ * the hero's Armor for the rest of the game (R603).
+ */
 export const ARMOR_UP = { base: 2, radiant: 4 } as const;
 /** §8 #98 Die Insect: "Deal 8 damage to a random enemy"; its Radiant face adds "Lucky 1" (R605). */
 export const DIE_INSECT_DAMAGE = 8;

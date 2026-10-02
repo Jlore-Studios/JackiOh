@@ -8,7 +8,7 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { cloneState, query, type CardInstance, type GameState, type Rng } from "@jackioh/engine";
+import { activeUnitsOf, cloneState, query, unitView, type CardInstance, type GameState, type Rng } from "@jackioh/engine";
 import { AI_DETERMINIZE } from "./config";
 import { HIDDEN_DEF_ID } from "./observe";
 
@@ -28,21 +28,34 @@ function allCards(state: GameState): CardInstance[] {
 
 /**
  * One def id, uniformly, from `pool` minus `seen` minus what this determinization already sampled;
- * with replacement from the whole pool once that is empty.
+ * with replacement from the whole pool once that is empty. `fits` narrows the pool to the
+ * definitions the seat's observations allow (R602), both times.
  */
 function sampleDef(
   pool: readonly string[],
   seen: ReadonlySet<string>,
   sampled: Set<string>,
   rng: Rng,
+  fits: (id: string) => boolean = () => true,
 ): string {
-  const open = pool.filter((id) => !seen.has(id) && !sampled.has(id));
+  const open = pool.filter((id) => !seen.has(id) && !sampled.has(id) && fits(id));
   if (open.length > 0) {
     const pick = open[rng.int(open.length)] as string;
     sampled.add(pick);
     return pick;
   }
-  return pool[rng.int(pool.length)] ?? HIDDEN_DEF_ID;
+  const any = pool.filter(fits);
+  return any[rng.int(any.length)] ?? HIDDEN_DEF_ID;
+}
+
+/** R602: every acting unit's Attack and Health as the board shows them, in board order. */
+function shownStats(state: GameState): string {
+  return PLAYER_IDS.flatMap((player) =>
+    activeUnitsOf(state, player).map((unit) => {
+      const view = unitView(state, unit);
+      return `${unit.id}:${String(view.attack)}/${String(view.health)}/${String(view.maxHealth)}`;
+    }),
+  ).join(",");
 }
 
 function isPlaceholder(card: CardInstance): boolean {
@@ -67,11 +80,23 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
 
   // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool.
   const trapPool = query({ type: ["Trap", "Field Trap"] }).map((def) => def.id);
+  // R602, R403: a face-down trap's aura is live, and `redact` already left every unit the stats the
+  // board shows, so a placeholder on the board may only become a trap that changes none of them —
+  // a world where it shrinks the seat's units is not one the seat could be in.
+  const board = shownStats(next);
+  const keepsBoard =
+    (card: CardInstance) =>
+    (id: string): boolean => {
+      card.defId = id;
+      const same = shownStats(next) === board;
+      card.defId = HIDDEN_DEF_ID;
+      return same;
+    };
   for (const side of [opp, seat] as const) {
     // B5 E21: then the face-down cards dormant under each backrow pile, lane by lane.
     const backrow = [...next.players[side].backrow, ...(next.players[side].backrowPiles ?? []).flat()];
     for (const card of backrow) {
-      if (card !== null && isPlaceholder(card)) card.defId = sampleDef(trapPool, seen, sampled, rng);
+      if (card !== null && isPlaceholder(card)) card.defId = sampleDef(trapPool, seen, sampled, rng, keepsBoard(card));
     }
     // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
     for (const card of next.players[side].resolving) {

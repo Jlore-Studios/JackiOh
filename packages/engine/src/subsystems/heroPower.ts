@@ -47,6 +47,7 @@ import {
   drawFromOpponent,
   forEachCard,
   fuseCards,
+  gainHeroArmor,
   gainHeroArmorUntilNextTurn,
   recruit,
   setCostMod,
@@ -54,13 +55,15 @@ import {
   summonRandom,
   upgradeOwnNumber,
 } from "../effects";
+import { selfOnItsStay } from "../effects/targets";
 import { cardTypeOf } from "../faces";
 import { unitView } from "../layers";
 import { costNow, isXCost } from "../mana";
 import { param } from "../params";
-import type { EngineSink } from "../resolve";
+import { lazyPart, type EngineSink } from "../resolve";
 import type { ActivationDecl, Effect, EffectContext, Hook } from "../script";
 import { findInstance, type CardInstance, type GameState } from "../state";
+import { exitMark, leftFieldAfter } from "../stays";
 import { activeUnitsOf, slotOf } from "../zones";
 import { projectedHeroDamage } from "./lethal";
 import { abilitiesOf, usesAllowed, usesThisTurn } from "./activate";
@@ -161,32 +164,74 @@ function drawEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
+ * R606: what Radiant Ping's hit did to its target, read as the hit lands and kept as the rider's part
+ * memo, so a Death that asks — whose answer comes in a later action, with an event list of its own —
+ * still finds it (§9.3, R113). `from` is the field's departures then (R174).
+ */
+type PingKill = { doomed: boolean; attack: number; health: number; from: number };
+
+function isPingKill(memo: unknown): memo is PingKill {
+  if (memo === null || typeof memo !== "object") return false;
+  const kill = memo as Partial<PingKill>;
+  return (
+    typeof kill.doomed === "boolean" &&
+    typeof kill.attack === "number" &&
+    typeof kill.health === "number" &&
+    typeof kill.from === "number"
+  );
+}
+
+/**
+ * R42, R89: whether the hit doomed the target with this card as its killer — the Unit's lethal hit is
+ * this card's (`lastDamagedBy`) — and the attack and max health it has as the check is about to
+ * collect it, which are the ones it dies with.
+ */
+function pingKillOf(ctx: EffectContext, targetId: string | null, sourceId: string | undefined): PingKill {
+  const from = exitMark(ctx.state);
+  const none: PingKill = { doomed: false, attack: 0, health: 0, from };
+  if (targetId === null || sourceId === undefined) return none;
+  const unit = findInstance(ctx.state, targetId);
+  if (unit === undefined || unit.zone.z !== "field" || unit.lastDamagedBy !== sourceId) return none;
+  const view = unitView(ctx.state, unit);
+  // A hit that doomed it took its health to 0 or less, or was Poisonous (§4.4 step 7: a Heroic Power
+  // fused onto a Poisonous card, R102), and either way named this card its killer above.
+  if (view.health > 0 && unit.markedDestroyed !== true) return none;
+  return { doomed: true, attack: view.attack, health: view.maxHealth, from };
+}
+
+/**
  * Ping, R606: "Pierce. Deal 1 damage" to the target the activation declared (R81), any unit or hero.
- * The Radiant face adds "If this kills a Unit, summon a Ghoul Token with its stats": the check runs
- * right after the hit (§4.5, as `afterStateCheck` runs one), and a `destroyed` event that check
- * emitted for the target, killed by this card (R42), summons a Ghoul Token for the activating player
- * with the attack and max health the Unit died with (the event's, R89) as its X/X (`statsOverride`).
- * The rider runs after that state check, so a Death that asks is answered before the Ghoul is made.
+ * The Radiant face adds "If this kills a Unit, summon a Ghoul Token with its stats": the hit's kill
+ * is read as it lands (`pingKillOf`), the check runs right after it (§4.5, as `afterStateCheck` runs
+ * one), and a target that hit doomed and that check took off the field (R174; an Indestructible one
+ * stays, R46) summons a Ghoul Token for the activating player with the attack and max health the Unit
+ * died with as its X/X (`statsOverride`). The rider runs after that state check, so a Death that asks
+ * is answered before the Ghoul is made.
  */
 function pingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   const hit = damage({ to: { of: "chosen" }, amount: PING_DAMAGE, ignoreArmor: true });
   if (!radiant) return [hit];
-  const from = ctx.events.length;
   const sourceId = ctx.self?.id;
   const [target] = ctx.targets;
   const targetId = target?.pick === "instance" ? target.instanceId : null;
   return [
     hit,
-    // R606: the condition reads the death after its check. `afterStateCheck` parks this rider behind
-    // a Death prompt rather than resolving the Ghoul while an answer is open (R59, R113).
-    afterStateCheck((after) => {
-      if (sourceId === undefined || targetId === null || after.state.result !== null) return [];
-      const ghoul = tokenDefId(GHOUL_TOKEN_INDEX);
-      const killed = after.events
-        .slice(from)
-        .find((event) => event.type === "destroyed" && event.instanceId === targetId && event.killerId === sourceId);
-      if (ghoul === null || killed === undefined || killed.type !== "destroyed") return [];
-      return [summon({ defId: ghoul, statsOverride: { attack: killed.attack, health: killed.maxHealth } })];
+    // R606: the part is built once the hit has landed, and a resume rebuilds it from its memo.
+    lazyPart("pingKill", (landed, memo) => {
+      const kill = isPingKill(memo) ? memo : pingKillOf(landed, targetId, sourceId);
+      return {
+        effects: [
+          // `afterStateCheck` parks the Ghoul behind a Death prompt rather than resolving it while an
+          // answer is open (R59, R113).
+          afterStateCheck((after) => {
+            const ghoul = tokenDefId(GHOUL_TOKEN_INDEX);
+            if (!kill.doomed || targetId === null || ghoul === null || after.state.result !== null) return [];
+            if (!leftFieldAfter(after.state, kill.from, targetId)) return [];
+            return [summon({ defId: ghoul, statsOverride: { attack: kill.attack, health: kill.health } })];
+          }),
+        ],
+        memo: kill,
+      };
     }),
   ];
 }
@@ -273,13 +318,15 @@ function stitchingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
 
 /**
  * Armor Up, R603: "Your hero gains 2 Armor until your next turn" — §4.4 step 2's per-hit reduction,
- * held until the start of the activating player's next turn. The Radiant face, Tank Up, gains 4 for
- * as long and then refreshes the power into a different one (R604), whose Radiant face the card runs
- * from then on.
+ * held until the start of the activating player's next turn. The Radiant face, Tank Up, "Your hero
+ * gains 4 Armor", names no end: the designer writes each power's Radiant face out in full (Life Tap's
+ * drops its damage the same way), so its 4 is the hero's for the rest of the game, as C+ #46's Armor
+ * is. It then refreshes the power into a different one (R604), whose Radiant face the card runs from
+ * then on.
  */
 function armorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
   if (!radiant) return [gainHeroArmorUntilNextTurn({ amount: ARMOR_UP.base })];
-  return [gainHeroArmorUntilNextTurn({ amount: ARMOR_UP.radiant }), refreshPower()];
+  return [gainHeroArmor({ amount: ARMOR_UP.radiant }), refreshPower()];
 }
 
 /** R605: one pick for Die Insect, an enemy unit acting on the field or the enemy hero. */
@@ -409,8 +456,9 @@ function terminusEffects(ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * The thirteen powers of §8 #98 (patch v0.2.1), in the order the card lists them, which is the order
- * the roll draws from. R103: the stored name is state, and this order matches the printed card.
+ * The thirteen powers of §8 #98 (patch v0.2.1), in the order the roll draws from. R103: the stored
+ * name is state, and a new power is added at the end, so the eight before patch v0.2.1 keep their
+ * places and its five follow (the card prints them in its own order).
  */
 export const HERO_POWERS: readonly HeroPower[] = [
   {
@@ -430,6 +478,16 @@ export const HERO_POWERS: readonly HeroPower[] = [
     label: `Draw ${LIFE_TAP_DRAW}. Take ${LIFE_TAP_DAMAGE} damage`,
     radiantLabel: `Draw ${LIFE_TAP_DRAW} from each player's deck`,
     build: drawEffects,
+  },
+  {
+    name: "ping",
+    x: HERO_POWER_COST.ping,
+    title: "Ping",
+    radiantTitle: "Ping",
+    label: `Pierce. Deal ${PING_DAMAGE} damage`,
+    radiantLabel: `Pierce. Deal ${PING_DAMAGE} damage. If this kills a Unit, summon a Ghoul Token with its stats`,
+    targets: PING_TARGETS,
+    build: pingEffects,
   },
   {
     name: "burn",
@@ -459,16 +517,6 @@ export const HERO_POWERS: readonly HeroPower[] = [
     build: felinorEffects,
   },
   {
-    name: "ping",
-    x: HERO_POWER_COST.ping,
-    title: "Ping",
-    radiantTitle: "Ping",
-    label: `Pierce. Deal ${PING_DAMAGE} damage`,
-    radiantLabel: `Pierce. Deal ${PING_DAMAGE} damage. If this kills a Unit, summon a Ghoul Token with its stats`,
-    targets: PING_TARGETS,
-    build: pingEffects,
-  },
-  {
     name: "discover",
     x: HERO_POWER_COST.discover,
     title: "Witness Value",
@@ -492,7 +540,7 @@ export const HERO_POWERS: readonly HeroPower[] = [
     title: "Armor Up",
     radiantTitle: "Tank Up",
     label: `Your hero gains ${ARMOR_UP.base} Armor until your next turn`,
-    radiantLabel: `Your hero gains ${ARMOR_UP.radiant} Armor until your next turn. Refresh this power`,
+    radiantLabel: `Your hero gains ${ARMOR_UP.radiant} Armor. Refresh this power`,
     build: armorEffects,
   },
   {
@@ -608,7 +656,7 @@ export function refreshPower(): Effect {
   return {
     kind: "refreshPower",
     apply(ctx): void {
-      const card = ctx.self;
+      const card = selfOnItsStay(ctx);
       if (card === null || card.zone.z !== "field") return;
       const current = powerOf(card);
       const next = ctx.rng.pick(HERO_POWERS.filter((power) => power.name !== current?.name));
@@ -618,14 +666,33 @@ export function refreshPower(): Effect {
   };
 }
 
+/** R102: an ability's id on a fused card carries its part (`<id>#<n>`); its own id is the part before. */
+function abilityBase(id: string): string {
+  return id.split("#")[0] ?? id;
+}
+
+/** The card's Activate ability for the power it has now (R384), when it has one. */
+function powerDecl(state: GameState, instance: CardInstance): ActivationDecl | undefined {
+  const power = powerOf(instance);
+  if (power === null) return undefined;
+  return abilitiesOf(state, instance).find((ability) => abilityBase(ability.id) === power.name);
+}
+
+/**
+ * The id an `activate` names for the card's power (R384) — the power's name, or a fused card's own
+ * id for it (R102) — or null for a card that has no power to use.
+ */
+export function powerAbilityOf(state: GameState, instance: CardInstance): string | null {
+  return powerDecl(state, instance)?.id ?? null;
+}
+
 /**
  * Whether the card's power is spent for this turn: its Activate uses are all used (R384). A card
  * Upgrade has turned into "Activate 2" has two (R386). The count is the card's, so this reads the
  * ability of the power it has now.
  */
 export function usedThisTurn(state: GameState, instance: CardInstance): boolean {
-  const power = powerOf(instance);
-  const decl = abilitiesOf(state, instance).find((ability) => ability.id.split("#")[0] === power?.name);
+  const decl = powerDecl(state, instance);
   if (decl === undefined) return usesThisTurn(state, instance) > 0;
   return usesThisTurn(state, instance) >= usesAllowed(instance, decl);
 }
