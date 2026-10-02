@@ -62,7 +62,7 @@ import type { CardInstance, GameState } from "../state";
 import { TUNED_FLOOR, X_KEY, addStep, tidyTuning, tunedCount, tuningOf, xOf } from "../tuning";
 import { randomPoolKeywords } from "./buff";
 import { cardsInCardScope, unreadableBy, type CardScope } from "./cardScope";
-import { instanceOnItsStay, resolveTarget, type TargetSpec } from "./targets";
+import { instanceOnItsStay, resolveTarget, selfOnItsStay, type TargetSpec } from "./targets";
 
 /** Which way a change goes. */
 export type TuneDirection = "degrade" | "upgrade";
@@ -405,6 +405,41 @@ export function degrade(args: TuneArgs): Effect {
  */
 export function upgrade(args: TuneArgs): Effect {
   return tuneEffect("upgrade", "upgrade", args);
+}
+
+/**
+ * R608, Core #98's Steady Shot: "Upgrade this permanently by +2 damage" — an Upgrade of the card
+ * running the text whose change is named rather than drawn: `steps` steps of its declared number
+ * `key` toward better (the number row, `params.steppableParams`), kept in `tuning` like every other
+ * (R386), so nothing is drawn. An Immutable card is not changed (B3.4 rule 2), and a number at the
+ * bound it would pass stops there. Reported by `upgraded` with the change made, hidden as any
+ * Upgrade's is (R177); a change of nothing is not reported.
+ */
+export function upgradeOwnNumber(args: { key: string; steps?: number }): Effect {
+  return {
+    kind: "upgradeOwnNumber",
+    apply(ctx): void {
+      // R174: "this" is the card on the stay the run began with; one that has left since is not it.
+      const card = selfOnItsStay(ctx);
+      if (card === null || hasKeyword(keywordsNow(ctx.state, card), "Immutable")) return;
+      const hiddenFrom = unreadableBy(ctx.state, card);
+      let delta = 0;
+      for (let step = 0; step < Math.max(0, Math.trunc(args.steps ?? 1)); step += 1) {
+        const item = steppableParams(ctx.state, card, "upgrade").find((entry) => entry.param.key === args.key);
+        if (item === undefined) break;
+        stepParam(card, item.param.key, item.steps);
+        delta += item.delta;
+      }
+      if (delta === 0) return;
+      ctx.events.push({
+        type: "upgraded",
+        instanceId: card.id,
+        defId: card.defId,
+        change: { kind: "number", key: args.key, delta },
+        ...(hiddenFrom.length === 0 ? {} : { hiddenFrom }),
+      });
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

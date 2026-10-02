@@ -138,6 +138,21 @@ export function expireModifiers(sink: EngineSink, player: PlayerId): void {
   }
 }
 
+/**
+ * R603: the start of `player`'s turn ends what lasted "until your next turn" (Core #98's Armor Up) —
+ * every `startOfTurnOf` modifier for this player made on an earlier turn, on either seat — before the
+ * mana refresh (§2.2), each removal reported like any other (R169).
+ */
+export function expireAtTurnStart(sink: EngineSink, player: PlayerId): void {
+  for (const side of PLAYER_IDS) {
+    for (const mod of [...sink.state.players[side].mods]) {
+      if (mod.expiry.until !== "startOfTurnOf") continue;
+      if (mod.expiry.player !== player || sink.state.turn <= mod.expiry.fromTurn) continue;
+      removeModifier(sink, side, mod.id);
+    }
+  }
+}
+
 export function scheduleDelayed(
   sink: EngineSink,
   owner: PlayerId,

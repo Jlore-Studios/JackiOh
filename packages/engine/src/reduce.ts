@@ -22,7 +22,8 @@
 //                      (R113): the answer action finishes it, exactly as it finishes a Cry.
 //   switchPosition   → `combat.switchPosition` (§4.1, R20, R49)
 //   activate         → `subsystems/activate.activateAbility`, listed by `activateActionsFor` (B3.2,
-//                      R384); on a Heroic Power, `subsystems/heroPower.activatePower` (R43)
+//                      R384); a Heroic Power's power is one of its Activate abilities since patch
+//                      v0.2.1 (R43)
 //   activatePower    → the alias of `activate` every old log carries: the same routing (R384)
 //   answer           → `prompts.answerPrompt`, which hands a prompt the play pipeline opened itself
 //                      to that pipeline's answerer (R122)
@@ -52,7 +53,6 @@ import { cloneState, findInstance, type CardInstance, type GameState } from "./s
 import { activateAbility, activateActionsFor } from "./subsystems/activate";
 import { playOutTurn } from "./subsystems/aiPolicy";
 import { syncFusedScripts } from "./subsystems/fuse";
-import { activatePower, powerOf, whyCannotActivate } from "./subsystems/heroPower";
 import { settle } from "./triggers";
 import { answerDraw, canOfferDraw, concede, endTurn, hasStandingDrawOffer, offerDraw } from "./turn";
 import { activeUnitsOf, cardAt, carriedUnitsOf, slotsOf } from "./zones";
@@ -131,50 +131,21 @@ function switchAction(sink: EngineSink, player: PlayerId, instanceId: string): s
 type ActivationAction = Extract<ActionBody, { type: "activate" | "activatePower" }>;
 
 /**
- * B3.2 rule 10, R384, R43: `activate` and its alias `activatePower`, one routing for both. A Heroic
- * Power's power is its own activation in v0.2.0 (R43), so an action on a card with a power that names
- * no ability of the card's own goes to `heroPower.activatePower` — every old log's `activatePower`
- * replays exactly — and everything else to `activate.activateAbility`, which answers for any card's
- * "Activate:" abilities.
+ * B3.2 rule 10, R384, R43: `activate` and its alias `activatePower`, one routing for both. Since
+ * patch v0.2.1 a Heroic Power's power is an Activate ability of the card's own (the one it rolled,
+ * `heroPower.heroPowerActivations`), so an `activatePower` — which names no ability, as every old log
+ * carries it — is an `activate` of the card's only ability and goes to `activate.activateAbility`
+ * with the targets it carried, as everything else does.
  */
 function activateCard(sink: EngineSink, player: PlayerId, action: ActivationAction): string | null {
-  const card = findInstance(sink.state, action.instanceId);
-  const named = action.type === "activate" ? action.ability : undefined;
-  const modes = action.type === "activate" ? action.modes : undefined;
-  const tributes = action.type === "activate" ? action.tributes : undefined;
-  const discards = action.type === "activate" ? action.discards : undefined;
-  if (card !== undefined && powerOf(card) !== null && named === undefined) {
-    if ((modes?.length ?? 0) > 0) return "that power takes no mode choices";
-    if ((tributes?.length ?? 0) > 0) return "that power needs no Tribute";
-    if ((discards?.length ?? 0) > 0) return "that power takes no discards";
-    return activatePower(sink, player, {
+  if (action.type === "activatePower") {
+    return activateAbility(sink, player, {
+      type: "activate",
       instanceId: action.instanceId,
       ...(action.targets === undefined ? {} : { targets: action.targets }),
     });
   }
-  return activateAbility(sink, player, {
-    type: "activate",
-    instanceId: action.instanceId,
-    ...(named === undefined ? {} : { ability: named }),
-    ...(action.targets === undefined ? {} : { targets: action.targets }),
-    ...(modes === undefined ? {} : { modes }),
-    ...(tributes === undefined ? {} : { tributes }),
-    ...(discards === undefined ? {} : { discards }),
-  });
-}
-
-/**
- * R43, R384: what `legalActions` offers for one card acting on the field — a Heroic Power's power as
- * the `activatePower` it has always been listed as, and every usable "Activate:" ability with its
- * choices (`activate.activateActionsFor`).
- */
-function activationActions(state: GameState, player: PlayerId, card: CardInstance): ActionBody[] {
-  const out: ActionBody[] = [];
-  if (powerOf(card) !== null && whyCannotActivate(state, player, card.id) === null) {
-    out.push({ type: "activatePower", instanceId: card.id });
-  }
-  out.push(...activateActionsFor(state, player, card));
-  return out;
+  return activateAbility(sink, player, action);
 }
 
 /** §4.1 and R49: whether this unit's own switch is on offer at all. */
@@ -487,8 +458,9 @@ function mulliganSubsets(ids: string[]): string[][] {
  *
  * Each kind comes from the module that refuses it, never from a second copy of the rule here: the
  * plays from `playChoices` (R81's five choice kinds crossed and bounded, R90), the attacks from
- * `combat.attackTargets`, the powers from `heroPower.whyCannotActivate` and, while a prompt is
- * open, that prompt's own answers from `prompts.promptAnswers`.
+ * `combat.attackTargets`, the Activate abilities (a Heroic Power's power among them, R43) from
+ * `activate.whyCannotActivateAbility` and, while a prompt is open, that prompt's own answers from
+ * `prompts.promptAnswers`.
  */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
   syncFusedScripts(state);
@@ -548,7 +520,7 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
   for (const row of ["units", "backrow"] as const) {
     for (const ref of slotsOf(player, row)) {
       const card = cardAt(state, ref);
-      if (card !== null) out.push(...activationActions(state, player, card));
+      if (card !== null) out.push(...activateActionsFor(state, player, card));
     }
   }
 

@@ -131,7 +131,7 @@ function summonOnto(
   // R43, R151: "one created later rolls when it is created", as it arrives anywhere a card can be
   // looked at, and the field is such a place. A #98 Heroic Power that #22's Death summons as a copy
   // or #95 summons into the backrow reaches neither a hand nor a library, the two arrivals
-  // `draw.ts` rolls on, and would otherwise hold no power and never be offered `activatePower`. The
+  // `draw.ts` rolls on, and would otherwise hold no power and never be offered its Activate. The
   // hook keeps a power the card already rolled (`heroPower.ensurePower`), so a card that arrives
   // with its answer takes no rng draw.
   // §9.3, R113: resumably, so a question in the clause pauses the rest of it (`runStartOfGame`).

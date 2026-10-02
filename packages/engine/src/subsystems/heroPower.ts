@@ -1,55 +1,77 @@
-// Heroic Power (SPEC §8 #98, R43, R352): the eight powers, the roll that picks one, the cost that is
-// always the power's X, and the once-a-turn activation.
+// Heroic Power (SPEC §8 #98, R43, R103, R352, patch v0.2.1's R603–R610): the thirteen powers, the roll
+// that picks one, and each power as an Activate ability.
 //
-// R43 puts everything about the card on its instance: `memory.power` is the power it rolled and
-// `memory.usedTurn` the turn it last used it. Nothing here is a module variable, so two Heroic
-// Powers in one game never share a roll or a use, and a serialized game resumes knowing both
-// (§10.1). The roll goes through the match rng, so a replay rolls the same power (§9.3).
+// R43 puts everything about the card on its instance: `memory.power` is the power it rolled, and its
+// uses are the Activate count every ability keeps (`memory.activations`, R384). Nothing here is a
+// module variable, so two Heroic Powers in one game never share a roll or a use, and a serialized game
+// resumes knowing both (§10.1). The roll goes through the match rng, so a replay rolls the same power
+// (§9.3).
 //
-// The card's cost is the power's X and the player never chooses it (R43, R65). That works through
-// the ordinary cost pipeline: #98's script has a `cost` hook of `powerCostOf`, which `printedCost`
-// reads ahead of the printed "X", so the play validator, `legalActions` and the client all see the
-// same number without a special case for this card.
+// Patch v0.2.1 moves the card onto Activate (docs/classic-sets.md B3.2 rule 10): it costs (0) to play
+// and playing it uses nothing; each power is an "Activate: Spend (X): …" ability, declared by
+// `heroPowerActivations` for #98's script, which the `activate` action uses through
+// `subsystems/activate.ts` like any other card's — the mana price, the declared target (the ping's,
+// so the power can be dragged to it), the once-per-turn count, the `activated` event. The card
+// declares one ability per power and has only the one it rolled (`ActivationDecl.has`).
 //
-// Three powers pause. "Deal 1 damage to a target" takes a target, which R81 lets the `activatePower`
-// action carry, and "Discover a Unit" and Stitching's two Discovers are prompts by definition
-// (§6.3). Each is written as one builder that reads `ctx.targets`: with a selection it does the
-// work, without one it opens the prompt and names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower`
-// below with the selection in `ctx.targets`, which runs the same builder down its other branch —
-// so a paused activation is a `PendingChoice` in state and never a callback (§9.3, §10.6).
+// Four powers ask. Witness Value's Discover, Stitching's two and Terminus Tricks' are prompts by
+// definition (§6.3). Each is one builder that reads `ctx.targets`: with a selection it does the work,
+// without one it opens the prompt and names `POWER_RESUME` as the step to come back to. The answer
+// re-enters `heroPower` below with the selection in `ctx.targets`, which runs the same builder down
+// its other branch — so a paused activation is a `PendingChoice` in state and never a callback (§9.3,
+// §10.6).
 
-import type { PlayerId, Selection } from "@jackioh/shared";
-import { defByIndex } from "../catalog";
+import type { CardType, PlayerId, TargetDecl } from "@jackioh/shared";
+import { opponentOf } from "@jackioh/shared";
+import { defByIndex, type CatalogQueryArgs } from "../catalog";
 import {
+  ARMOR_UP,
+  DIE_INSECT_DAMAGE,
+  DIE_INSECT_LUCKY,
+  HERO_POWER_COST,
+  KY_BRAINSTORM_DISCOUNT,
+  LIFE_TAP_DAMAGE,
+  LIFE_TAP_DRAW,
+  PING_DAMAGE,
+  PLUCK_COST,
+  STEADY_SHOT_UPGRADE_STEPS,
+} from "../config";
+import {
+  addRandomFromCatalog,
   addToHand,
-  chooseTarget,
   chosenOptions,
   damage,
   discoverFromCatalog,
   draw,
+  drawFromOpponent,
+  forEachCard,
   fuseCards,
-  loseHealth,
+  gainHeroArmorUntilNextTurn,
   recruit,
+  setCostMod,
   summon,
-  targetsInScope,
-  type TargetScope,
+  summonRandom,
+  upgradeOwnNumber,
 } from "../effects";
-import { manaEvent, spendMana } from "../mana";
-import { applyEffects, makeContext, type EngineSink } from "../resolve";
-import type { Effect, EffectContext, Hook } from "../script";
+import { cardTypeOf } from "../faces";
+import { unitView } from "../layers";
+import { costNow, isXCost } from "../mana";
+import { param } from "../params";
+import type { EngineSink } from "../resolve";
+import type { ActivationDecl, Effect, EffectContext, Hook } from "../script";
 import { stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState } from "../state";
-import { paused as isPaused } from "../work";
-import { actsOnField } from "../zones";
+import { activeUnitsOf, slotOf } from "../zones";
+import { projectedHeroDamage } from "./lethal";
+import { abilitiesOf, usesAllowed, usesThisTurn } from "./activate";
 
-/** R43: where the rolled power and its last use live on the instance. */
+/** R43: where the rolled power lives on the instance. */
 export const POWER_KEY = "power";
-export const POWER_USED_KEY = "usedTurn";
 
 /**
- * The resume step an activation that opened a prompt comes back to (§10.6). `prompts.ts` stores it
- * as the `step` of the `Resume` a prompt carries and looks the answer up in the card's own step
- * table (`RESUME_HOOK`), so #98's script wires the pair together in one line:
+ * The resume step a power that opened a prompt comes back to (§10.6). `prompts.ts` stores it as the
+ * `step` of the `Resume` a prompt carries and looks the answer up in the card's own step table
+ * (`RESUME_HOOK`), so #98's script wires the pair together in one line:
  *
  *     resume: { [POWER_RESUME]: heroPower }
  *
@@ -60,28 +82,51 @@ export const POWER_RESUME = "heroPower";
 /** The data key that names the power a paused activation is finishing. */
 export const POWER_DATA_KEY = "power";
 
-/** §8 #98: "lose 2 health, draw 1" — the health is a cost, so it is a loss, not damage (R18). */
-export const POWER_HEALTH_COST = 2;
-
 /** §7: the tokens #98 summons, by catalog index (§5.3), so the engine names no catalog id. */
 export const RUSH_TOKEN_INDEX = "T-rush";
 export const FELINOR_TOKEN_INDEX = "T-felinor";
+export const GHOUL_TOKEN_INDEX = "T-ghoul";
 /** B2.2: the set whose indices those are, since an index is unique only within its set. */
 const TOKEN_SET = "Core";
 
-/** "Deal 1 damage to a target": any unit or hero, either side. */
-const PING_SCOPE: TargetScope = { side: "any", of: ["unit", "hero"] };
+/** R608: Steady Shot's damage, the number #98 declares (`params`) so its Radiant face can Upgrade it. */
+export const STEADY_SHOT_PARAM = "shot";
 
-export type HeroPowerName = "recruit" | "draw" | "ping" | "burn" | "rush" | "felinor" | "discover" | "stitching";
+/** R606: Ping's declared target — any unit or hero, either side — carried in the `activate` action (R81). */
+const PING_TARGETS: TargetDecl[] = [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }];
+
+/** R609: "a Trap" — a Field Trap is a Trap that stays (§5.1), so the pool holds both. */
+const TRAP_TYPES: CardType[] = ["Trap", "Field Trap"];
+
+export type HeroPowerName =
+  | "recruit"
+  | "draw"
+  | "ping"
+  | "burn"
+  | "rush"
+  | "felinor"
+  | "discover"
+  | "stitching"
+  | "armor"
+  | "insect"
+  | "brainstorm"
+  | "pluck"
+  | "terminus";
 
 export type HeroPower = {
+  /** R103: the name stored in `memory.power`; state, so stable across versions. */
   name: HeroPowerName;
-  /** "Once per turn, spend X" (§8 #98): the X, which is also the card's cost (R43, R65). */
+  /** "Activate: Spend (X)" (§8 #98): the mana the power's activation spends. */
   x: number;
-  /** The §8 #98 clause this entry implements, base form and radiant form. */
+  /** The power's name as the card prints it, base face and Radiant face (Armor Up's is Tank Up). */
+  title: string;
+  radiantTitle: string;
+  /** The §8 #98 clause this entry implements, base form and Radiant form (`{shot}` is `params`'). */
   label: string;
   radiantLabel: string;
-  /** The effects one activation runs. `radiant` picks the radiant clause (§5.2). */
+  /** The choices its activation declares (R81): only the ping's target. */
+  targets?: TargetDecl[];
+  /** The effects one activation runs. `radiant` picks the Radiant clause (§5.2). */
   build: (ctx: EffectContext, radiant: boolean) => Effect[];
 };
 
@@ -89,62 +134,92 @@ function tokenDefId(index: string): string | null {
   return defByIndex(TOKEN_SET, index)?.id ?? null;
 }
 
-/** §7: a token summon needs the token's def id, which the catalog holds under its index. */
-function summonTokens(index: string, count: number): Effect[] {
+/** §7: a token summon needs the token's def id, which the catalog holds under its index (R103). */
+function summonToken(index: string, radiant = false): Effect[] {
   const defId = tokenDefId(index);
   if (defId === null) return [];
-  return Array.from({ length: count }, () => summon({ defId }));
+  return [summon({ defId, ...(radiant ? { radiant: true } : {}) })];
 }
 
 /**
- * R43: "'Recruit a card' recruits a permanent", which is what §6.3's Recruit already does — it
- * scans the library top down for the first Unit, Field Spell, Trap or Field Trap.
+ * Expedition Map. R43: "'Recruit a card' recruits a permanent", which is what §6.3's Recruit already
+ * does — it scans the library top down for the first Unit, Field Spell, Trap or Field Trap.
  */
 function recruitEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
   return [recruit({ radiant })];
 }
 
-function drawEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
-  return [
-    loseHealth({ player: "self", amount: POWER_HEALTH_COST }),
-    draw({ count: radiant ? 2 : 1 }),
-  ];
-}
-
 /**
- * R81: a target named in the `activatePower` action arrives in `ctx.targets`, so the power deals
- * the damage at once. With no target named it opens the prompt instead and finishes when the
- * answer re-enters `heroPower`.
+ * Life Tap, R607: "Draw 1. Take 2 damage" — damage now, a hit on its own hero from the card through
+ * §4.4, where v0.2.0's "lose 2 health" was a loss (R18). The Radiant face, "Draw 1 from each player's
+ * deck", draws the top of its own deck and then the top of the opponent's, a draw of its own taken
+ * from their deck (§6.3 Draw, C #58), which becomes its card (R12); it takes no damage.
  */
-function pingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
-  const amount = radiant ? 2 : 1;
-  if (ctx.targets.length > 0) return [damage({ to: { of: "chosen" }, amount })];
-  return [
-    chooseTarget({
-      step: POWER_RESUME,
-      scope: PING_SCOPE,
-      prompt: `Deal ${amount} damage to a target`,
-      data: { [POWER_DATA_KEY]: "ping" },
-    }),
-  ];
-}
-
-/** §8 #98: "deal 2 damage to each opposing hero"; two players, so that is the one enemy hero. */
-function burnEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
-  return [damage({ to: { of: "enemyHero" }, amount: radiant ? 4 : 2 })];
-}
-
-function rushEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
-  return summonTokens(RUSH_TOKEN_INDEX, radiant ? 2 : 1);
-}
-
-function felinorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
-  return summonTokens(FELINOR_TOKEN_INDEX, radiant ? 2 : 1);
+function drawEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  if (radiant) return [draw({ count: LIFE_TAP_DRAW }), drawFromOpponent({ end: "top" })];
+  return [draw({ count: LIFE_TAP_DRAW }), damage({ to: { of: "selfHero" }, amount: LIFE_TAP_DAMAGE })];
 }
 
 /**
- * §6.3 Discover: 1 of 3 Units, shown only to the chooser. The pick comes back as a mode selection
- * carrying a def id, and the Unit goes to hand — Radiant when the power is (§8 #98 radiant).
+ * Ping, R606: "Pierce. Deal 1 damage" to the target the activation declared (R81), any unit or hero.
+ * The Radiant face adds "If this kills a Unit, summon a Ghoul Token with its stats": the check runs
+ * right after the hit (§4.5, as `afterStateCheck` runs one), and a `destroyed` event that check
+ * emitted for the target, killed by this card (R42), summons a Ghoul Token for the activating player
+ * with the attack and max health the Unit died with (the event's, R89) as its X/X (`statsOverride`).
+ * One effect does all three, as `withKillCredit` reads its kills, so a Death in that check that asks
+ * loses none of them.
+ */
+function pingEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  const hit = damage({ to: { of: "chosen" }, amount: PING_DAMAGE, ignoreArmor: true });
+  if (!radiant) return [hit];
+  return [
+    {
+      kind: "heroPowerPing",
+      apply(ctx): void {
+        const from = ctx.events.length;
+        hit.apply(ctx);
+        const [target] = ctx.targets;
+        if (ctx.self === null || target?.pick !== "instance") return;
+        if (ctx.state.result === null) stateCheck(ctx);
+        const ghoul = tokenDefId(GHOUL_TOKEN_INDEX);
+        const killed = ctx.events
+          .slice(from)
+          .find((event) => event.type === "destroyed" && event.instanceId === target.instanceId && event.killerId === ctx.self?.id);
+        if (ghoul === null || killed === undefined || killed.type !== "destroyed" || ctx.state.result !== null) return;
+        summon({ defId: ghoul, statsOverride: { attack: killed.attack, health: killed.maxHealth } }).apply(ctx);
+      },
+    },
+  ];
+}
+
+/**
+ * Steady Shot, R608: "Deal {shot} damage to the enemy hero" (2, Radiant 4, the card's declared
+ * number). The Radiant face then Upgrades that number by one step, +2, kept in the card's `tuning` in
+ * every zone (R386), so each Radiant shot hits 2 harder than the last.
+ */
+function burnEffects(ctx: EffectContext, radiant: boolean): Effect[] {
+  const shot = damage({ to: { of: "enemyHero" }, amount: param(ctx, STEADY_SHOT_PARAM) });
+  if (!radiant) return [shot];
+  return [shot, upgradeOwnNumber({ key: STEADY_SHOT_PARAM, steps: STEADY_SHOT_UPGRADE_STEPS })];
+}
+
+/** Ranching: "Summon a Rush Token"; Radiant: "Summon a Radiant Rush Token" (§7's 6/6 Rush, Cleave). */
+function rushEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  return summonToken(RUSH_TOKEN_INDEX, radiant);
+}
+
+/**
+ * Cat Cafe: "Summon a Felinor Token"; Radiant: "Summon a random Felinor" — a non-token Felinor Unit
+ * of any set (R380), its base face, since the text does not say Radiant.
+ */
+function felinorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  if (radiant) return [summonRandom({ query: { type: "Unit", tags: ["Felinor"] } })];
+  return summonToken(FELINOR_TOKEN_INDEX);
+}
+
+/**
+ * Witness Value. §6.3 Discover: 1 of 3 Units, shown only to the chooser. The pick comes back as a
+ * mode selection carrying a def id, and the Unit goes to hand — Radiant when the power is (R103).
  */
 function discoverEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   const picked = chosenOptions(ctx)[0];
@@ -159,7 +234,7 @@ function discoverEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   ];
 }
 
-/** R352: Stitching's "Discover 2 Units that cost (2) or less". */
+/** R352: Stitching's "Discover two Units that cost (2) or less". */
 export const STITCHING_INGREDIENTS = 2;
 export const STITCHING_MAX_COST = 2;
 /** The data key a paused Stitching carries its Discover picks in (§10.6). */
@@ -173,11 +248,11 @@ function stitchedSoFar(ctx: EffectContext): string[] {
 }
 
 /**
- * R352, §8 #98: "Stitching — Discover 2 Units that cost (2) or less. Fuse them and add the result to
+ * R352, §8 #98: "Stitching: Discover two Units that cost (2) or less. Fuse them and add the result to
  * your hand." Two chained Discovers, as #99 Craft a Card chains its own, each answer re-entering
  * `heroPower` with the picks so far in the prompt's data; the second answer fuses the two per R77
  * with no target on the field. Unlike #99's, the result keeps R77's fused cost, min(sum, 4) — the
- * power says nothing of a price — and on the radiant face ("Discover 2 Radiant Units") the result
+ * power says nothing of a price — and on the Radiant face ("Discover two Radiant Units") the result
  * is Radiant. A Discover with no pool left fizzles (§8 Conventions), and fewer than two picks fuse
  * nothing: the activation is still spent.
  */
@@ -197,64 +272,254 @@ function stitchingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   ];
 }
 
-/** The eight powers of §8 #98, in the order the card lists them. */
+/**
+ * Armor Up, R603: "Your hero gains 2 Armor until your next turn" — §4.4 step 2's per-hit reduction,
+ * held until the start of the activating player's next turn. The Radiant face, Tank Up, gains 4 for
+ * as long and then refreshes the power into a different one (R604), whose Radiant face the card runs
+ * from then on.
+ */
+function armorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  if (!radiant) return [gainHeroArmorUntilNextTurn({ amount: ARMOR_UP.base })];
+  return [gainHeroArmorUntilNextTurn({ amount: ARMOR_UP.radiant }), refreshPower()];
+}
+
+/** R605: one pick for Die Insect, an enemy unit acting on the field or the enemy hero. */
+type InsectPick = { kind: "unit"; unit: CardInstance } | { kind: "hero" };
+
+/**
+ * R605: Lucky's "best" for Die Insect (§6.1: a comparator per effect). A pick the hit would finish
+ * beats one it would not — the enemy hero when the hit is lethal, then a Unit it destroys — and
+ * otherwise the hero, which takes the whole hit, beats a Unit that survives it. Two Units of one kind
+ * are ordered as R414 orders Soul Shot's: the higher attack plus current health, then the higher
+ * cost, then the lower lane.
+ */
+function insectRank(state: GameState, enemy: PlayerId, pick: InsectPick): number {
+  if (pick.kind === "hero") {
+    return projectedHeroDamage(state, enemy, DIE_INSECT_DAMAGE) >= state.players[enemy].hero.health ? 3 : 1;
+  }
+  const view = unitView(state, pick.unit);
+  const shielded = view.keywords.some((keyword) => keyword.kind === "Divine Shield" || keyword.kind === "Indestructible");
+  return !shielded && Math.max(0, DIE_INSECT_DAMAGE - view.armor) >= view.health ? 2 : 0;
+}
+
+function betterInsectPick(state: GameState, enemy: PlayerId): (a: InsectPick, b: InsectPick) => InsectPick {
+  const worth = (unit: CardInstance): number => {
+    const view = unitView(state, unit);
+    return view.attack + view.health;
+  };
+  const lane = (unit: CardInstance): number => slotOf(state, unit)?.lane ?? Number.MAX_SAFE_INTEGER;
+  return (a, b) => {
+    const rankA = insectRank(state, enemy, a);
+    const rankB = insectRank(state, enemy, b);
+    if (rankA !== rankB) return rankA > rankB ? a : b;
+    if (a.kind !== "unit" || b.kind !== "unit") return a;
+    if (worth(a.unit) !== worth(b.unit)) return worth(a.unit) > worth(b.unit) ? a : b;
+    if (costNow(state, a.unit) !== costNow(state, b.unit)) return costNow(state, a.unit) > costNow(state, b.unit) ? a : b;
+    return lane(b.unit) < lane(a.unit) ? b : a;
+  };
+}
+
+/**
+ * Die Insect, R605: "Deal 8 damage to a random enemy" — one pick, uniform over the enemy hero and the
+ * enemy Units acting on the field (§3.2, R13), drawn from the match rng as the effect applies; the
+ * Radiant face's "Lucky 1" draws a second pick and keeps the better (`betterInsectPick`).
+ */
+function damageRandomEnemy(lucky: number): Effect {
+  return {
+    kind: "dieInsect",
+    apply(ctx): void {
+      const enemy = opponentOf(ctx.controller);
+      const pool: InsectPick[] = [
+        ...activeUnitsOf(ctx.state, enemy).map((unit): InsectPick => ({ kind: "unit", unit })),
+        { kind: "hero" },
+      ];
+      const roll = (): InsectPick | undefined => ctx.rng.pick(pool);
+      const better = betterInsectPick(ctx.state, enemy);
+      const pick =
+        lucky > 0
+          ? ctx.rng.lucky(lucky, roll, (a, b) => (a === undefined ? b : b === undefined ? a : better(a, b)))
+          : roll();
+      if (pick === undefined) return;
+      const to = pick.kind === "hero" ? { of: "enemyHero" as const } : { of: "instance" as const, instanceId: pick.unit.id };
+      damage({ to, amount: DIE_INSECT_DAMAGE }).apply(ctx);
+    },
+  };
+}
+
+function insectEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  return [damageRandomEnemy(radiant ? DIE_INSECT_LUCKY : 0)];
+}
+
+/**
+ * KY Brainstorm, R610: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand
+ * by (1)" — the KY pool of every set (R380), Radiant on the Radiant face; then every Spell in the hand
+ * as it stands, the card just added included, takes `costMod` −1 (an X-cost Spell, which no modifier
+ * reaches, R65, is left out).
+ */
+function brainstormEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  return [
+    addRandomFromCatalog({ query: { tags: ["KY"] }, ...(radiant ? { radiant: true } : {}) }),
+    forEachCard({
+      cards: (ctx) =>
+        ctx.state.players[ctx.controller].hand.filter(
+          (card) => cardTypeOf(ctx.state, card) === "Spell" && !isXCost(ctx.state, card),
+        ),
+      each: (instanceId) => setCostMod({ target: { of: "instance", instanceId }, amount: -KY_BRAINSTORM_DISCOUNT }),
+    }),
+  ];
+}
+
+/**
+ * Pluck, R610: "Add a random Fruit to your hand. It costs (0)" — R382's Fruit pool, the five Grapes
+ * included; Radiant on the Radiant face.
+ */
+function pluckEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
+  return [addRandomFromCatalog({ query: { tags: ["Fruit"] }, costOverride: PLUCK_COST, ...(radiant ? { radiant: true } : {}) })];
+}
+
+/**
+ * Terminus Tricks, R609: "Discover a Trap to summon" — 1 of 3 Traps or Field Traps of any set, shown
+ * only to the chooser; the pick is summoned into its controller's backrow face-down (R64's leftmost
+ * open zone), Radiant on the Radiant face. With no open backrow zone the summon fails silently (§3.2).
+ */
+const TRAP_POOL: CatalogQueryArgs = { type: TRAP_TYPES };
+
+function terminusEffects(ctx: EffectContext, radiant: boolean): Effect[] {
+  const picked = chosenOptions(ctx)[0];
+  if (picked !== undefined) return [summon({ defId: picked, ...(radiant ? { radiant: true } : {}) })];
+  return [
+    discoverFromCatalog({
+      step: POWER_RESUME,
+      query: TRAP_POOL,
+      prompt: radiant ? "Discover a Radiant Trap to summon" : "Discover a Trap to summon",
+      data: { [POWER_DATA_KEY]: "terminus" },
+    }),
+  ];
+}
+
+/**
+ * The thirteen powers of §8 #98 (patch v0.2.1), in the order the card lists them, which is the order
+ * the roll draws from. R103: the stored names are state, so the eight of v0.2.0 keep their names and
+ * their places and the five new ones come after them.
+ */
 export const HERO_POWERS: readonly HeroPower[] = [
   {
     name: "recruit",
-    x: 3,
+    x: HERO_POWER_COST.recruit,
+    title: "Expedition Map",
+    radiantTitle: "Expedition Map",
     label: "Recruit a permanent",
-    radiantLabel: "Recruit a permanent and make it Radiant",
+    radiantLabel: "Recruit a permanent. Make it Radiant",
     build: recruitEffects,
   },
   {
     name: "draw",
-    x: 1,
-    label: "Lose 2 health, draw 1",
-    radiantLabel: "Lose 2 health, draw 2",
+    x: HERO_POWER_COST.draw,
+    title: "Life Tap",
+    radiantTitle: "Life Tap",
+    label: `Draw ${LIFE_TAP_DRAW}. Take ${LIFE_TAP_DAMAGE} damage`,
+    radiantLabel: `Draw ${LIFE_TAP_DRAW} from each player's deck`,
     build: drawEffects,
   },
   {
     name: "ping",
-    x: 1,
-    label: "Deal 1 damage to a target",
-    radiantLabel: "Deal 2 damage to a target",
+    x: HERO_POWER_COST.ping,
+    title: "Ping",
+    radiantTitle: "Ping",
+    label: `Pierce. Deal ${PING_DAMAGE} damage`,
+    radiantLabel: `Pierce. Deal ${PING_DAMAGE} damage. If this kills a Unit, summon a Ghoul Token with its stats`,
+    targets: PING_TARGETS,
     build: pingEffects,
   },
   {
     name: "burn",
-    x: 1,
-    label: "Deal 2 damage to each opposing hero",
-    radiantLabel: "Deal 4 damage to each opposing hero",
+    x: HERO_POWER_COST.burn,
+    title: "Steady Shot",
+    radiantTitle: "Steady Shot",
+    label: `Deal {${STEADY_SHOT_PARAM}} damage to the enemy hero`,
+    radiantLabel: `Deal {${STEADY_SHOT_PARAM}} damage to the enemy hero. Upgrade this permanently by +2 damage`,
     build: burnEffects,
   },
   {
     name: "rush",
-    x: 2,
+    x: HERO_POWER_COST.rush,
+    title: "Ranching",
+    radiantTitle: "Ranching",
     label: "Summon a Rush Token",
-    radiantLabel: "Summon two Rush Tokens",
+    radiantLabel: "Summon a Radiant Rush Token",
     build: rushEffects,
   },
   {
     name: "felinor",
-    x: 1,
+    x: HERO_POWER_COST.felinor,
+    title: "Cat Cafe",
+    radiantTitle: "Cat Cafe",
     label: "Summon a Felinor Token",
-    radiantLabel: "Summon two Felinor Tokens",
+    radiantLabel: "Summon a random Felinor",
     build: felinorEffects,
   },
   {
     name: "discover",
-    x: 2,
+    x: HERO_POWER_COST.discover,
+    title: "Witness Value",
+    radiantTitle: "Witness Value",
     label: "Discover a Unit",
     radiantLabel: "Discover a Radiant Unit",
     build: discoverEffects,
   },
   {
     name: "stitching",
-    x: 2,
-    label: "Stitching — Discover 2 (2) Cost or less Units. Fuse them and add the result to your hand",
-    radiantLabel:
-      "Stitching — Discover 2 Radiant (2) Cost or less Units. Fuse them and add the result to your hand",
+    x: HERO_POWER_COST.stitching,
+    title: "Stitching",
+    radiantTitle: "Stitching",
+    label: `Discover two Units that cost (${STITCHING_MAX_COST}) or less. Fuse them and add the result to your hand`,
+    radiantLabel: `Discover two Radiant Units that cost (${STITCHING_MAX_COST}) or less. Fuse them and add the result to your hand`,
     build: stitchingEffects,
+  },
+  {
+    name: "armor",
+    x: HERO_POWER_COST.armor,
+    title: "Armor Up",
+    radiantTitle: "Tank Up",
+    label: `Your hero gains ${ARMOR_UP.base} Armor until your next turn`,
+    radiantLabel: `Your hero gains ${ARMOR_UP.radiant} Armor until your next turn. Refresh this power`,
+    build: armorEffects,
+  },
+  {
+    name: "insect",
+    x: HERO_POWER_COST.insect,
+    title: "Die Insect",
+    radiantTitle: "Die Insect",
+    label: `Deal ${DIE_INSECT_DAMAGE} damage to a random enemy`,
+    radiantLabel: `Lucky ${DIE_INSECT_LUCKY}. Deal ${DIE_INSECT_DAMAGE} damage to a random enemy`,
+    build: insectEffects,
+  },
+  {
+    name: "brainstorm",
+    x: HERO_POWER_COST.brainstorm,
+    title: "KY Brainstorm",
+    radiantTitle: "KY Brainstorm",
+    label: `Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (${KY_BRAINSTORM_DISCOUNT})`,
+    radiantLabel: `Add a random Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (${KY_BRAINSTORM_DISCOUNT})`,
+    build: brainstormEffects,
+  },
+  {
+    name: "pluck",
+    x: HERO_POWER_COST.pluck,
+    title: "Pluck",
+    radiantTitle: "Pluck",
+    label: `Add a random Fruit to your hand. It costs (${PLUCK_COST})`,
+    radiantLabel: `Add a random Radiant Fruit to your hand. It costs (${PLUCK_COST})`,
+    build: pluckEffects,
+  },
+  {
+    name: "terminus",
+    x: HERO_POWER_COST.terminus,
+    title: "Terminus Tricks",
+    radiantTitle: "Terminus Tricks",
+    label: "Discover a Trap to summon",
+    radiantLabel: "Discover a Radiant Trap to summon",
+    build: terminusEffects,
   },
 ];
 
@@ -275,10 +540,9 @@ export function powerOf(instance: CardInstance): HeroPower | null {
 }
 
 /**
- * R43: "Its cost is always the power's X, never chosen by the player". #98's `cost` hook is this
- * function, so `printedCost` reports it and `effectiveCost` builds on it (R65). A card that has not
- * rolled yet has no X to report and costs 0; R43 rolls one as it arrives in a hand or library, so
- * the only cards in that state are ones no player can play.
+ * R43: the (X) the card's power spends to activate, which the hero panel shows. Since patch v0.2.1
+ * the card itself costs (0) to play (§8 #98), so this is no longer its cost; a card that has not
+ * rolled has no power to price and reads 0.
  */
 export function powerCostOf(instance: CardInstance): number {
   return powerOf(instance)?.x ?? 0;
@@ -299,14 +563,6 @@ export function ensurePower(sink: EngineSink, instance: CardInstance): HeroPower
   return rolled;
 }
 
-export function usedThisTurn(state: GameState, instance: CardInstance): boolean {
-  return instance.memory[POWER_USED_KEY] === state.turn;
-}
-
-function markPowerUsed(state: GameState, instance: CardInstance): void {
-  instance.memory[POWER_USED_KEY] = state.turn;
-}
-
 function sinkOf(ctx: EffectContext): EngineSink {
   return { state: ctx.state, events: ctx.events, rng: ctx.rng };
 }
@@ -315,10 +571,6 @@ function cardOf(ctx: EffectContext, instanceId?: string): CardInstance | null {
   if (instanceId === undefined) return ctx.self;
   return findInstance(ctx.state, instanceId) ?? null;
 }
-
-// ---------------------------------------------------------------------------
-// Activating it (R43).
-// ---------------------------------------------------------------------------
 
 /**
  * R43's roll as an effect, so #98's `startOfGame` hook is a list of effects like every other card's
@@ -336,30 +588,63 @@ export function rollPower(args: { instanceId?: string } = {}): Effect {
 }
 
 /**
- * One activation of the power, and this turn's use (R43). Playing the card returns this from its
- * Cry — "Playing it pays X and activates the power once, which is that turn's use" — and the
- * `activatePower` action runs the same effect afterwards.
- *
- * The use is marked before the effects run, so a power that pauses on a prompt has already spent
- * the turn's activation and the answer cannot buy a second one. No power's list has an effect after
- * the one that opens its prompt, which is why this applies the list directly; a power that ever
- * needs one would have to go through `prompts.applyResumable` to park its tail (§9.3).
+ * R604, Tank Up: "then this power refreshes into a different Radiant one" — the card rolls again,
+ * uniformly from the match rng over the twelve powers it does not have, and runs the new one's face
+ * from then on (the card is Radiant, so its Radiant face). Its use this turn is spent already: the
+ * Activate count is the card's, whichever ability spent it (R384), so the new power waits for the next
+ * turn. A card that has left the field since the run began is not this power (R174).
  */
-export function usePower(args: { instanceId?: string; radiant?: boolean } = {}): Effect {
+export function refreshPower(): Effect {
   return {
-    kind: "usePower",
+    kind: "refreshPower",
     apply(ctx): void {
-      const card = cardOf(ctx, args.instanceId);
-      if (card === null) return;
-      const power = ensurePower(sinkOf(ctx), card);
-      if (power === null) return;
-
-      const radiant = args.radiant ?? card.radiant;
-      markPowerUsed(ctx.state, card);
-      const powerCtx: EffectContext = { ...ctx, self: card, radiant };
-      applyEffects(power.build(powerCtx, radiant), powerCtx);
+      const card = ctx.self;
+      if (card === null || card.zone.z !== "field") return;
+      const current = powerOf(card);
+      const next = ctx.rng.pick(HERO_POWERS.filter((power) => power.name !== current?.name));
+      if (next === undefined) return;
+      card.memory[POWER_KEY] = next.name;
     },
   };
+}
+
+/**
+ * Whether the card's power is spent for this turn: its Activate uses are all used (R384). A card
+ * Upgrade has turned into "Activate 2" has two (R386). The count is the card's, so this reads the
+ * ability of the power it has now.
+ */
+export function usedThisTurn(state: GameState, instance: CardInstance): boolean {
+  const power = powerOf(instance);
+  const decl = abilitiesOf(state, instance).find((ability) => ability.id.split("#")[0] === power?.name);
+  if (decl === undefined) return usesThisTurn(state, instance) > 0;
+  return usesThisTurn(state, instance) >= usesAllowed(instance, decl);
+}
+
+// ---------------------------------------------------------------------------
+// The powers as Activate abilities (R43, R384, patch v0.2.1).
+// ---------------------------------------------------------------------------
+
+/** The power's printed name on a face (§8 #98: the Radiant face of Armor Up is Tank Up). */
+export function powerTitle(power: HeroPower, radiant: boolean): string {
+  return radiant ? power.radiantTitle : power.title;
+}
+
+/**
+ * #98's `activations` (B3.2 rule 10, R43): one "Activate: Spend (X): …" ability per power, under the
+ * power's stored name, once per turn, paying the power's X in mana, with the ping's target declared so
+ * it travels in the action (R81) — and the card has only the one it rolled (`has`), so only that one
+ * is listed, shown or accepted. `radiant` is the face that declares them (§5.2).
+ */
+export function heroPowerActivations(radiant: boolean): ActivationDecl[] {
+  return HERO_POWERS.map((power) => ({
+    id: power.name,
+    label: `${powerTitle(power, radiant)}: ${radiant ? power.radiantLabel : power.label}`,
+    uses: 1,
+    cost: { mana: power.x },
+    ...(power.targets === undefined ? {} : { targets: power.targets }),
+    has: ({ self }) => powerOf(self)?.name === power.name,
+    run: (ctx) => power.build(ctx, radiant),
+  }));
 }
 
 /**
@@ -374,97 +659,3 @@ export const heroPower: Hook = (ctx) => {
   if (power === null) return [];
   return power.build(ctx, ctx.self?.radiant ?? ctx.radiant);
 };
-
-/**
- * Why this player cannot activate that power right now, or null when they can. `legalActions` and
- * the reducer share it, so the greyed-out button and the rejected action give one reason (§10.2).
- *
- * R43's once per turn is checked ahead of the mana and the phase: it is the rule that belongs to
- * the card rather than to the player's turn, and it is the reason a player needs to hear.
- *
- * R384 generalises it: a power is an activated ability, so it is used only while its card acts on
- * the field (B3.2 rule 2, `activate.isActingOnField`) — a Heroic Power buried under a backrow pile
- * (B5 E21) acts no more than a unit under a Stack pile does (R13). Every other card's abilities are
- * `activate.whyCannotActivateAbility`'s, which follows the same order.
- */
-export function whyCannotActivate(state: GameState, player: PlayerId, instanceId: string): string | null {
-  const card = findInstance(state, instanceId);
-  if (card === undefined) return `no card ${instanceId}`;
-  if (card.controller !== player) return "that card is not yours";
-  if (card.zone.z !== "field") return "that card is not on the field";
-  // B5 E21: a card dormant under a backrow pile does not act (§3.2, R13, R447).
-  if (!actsOnField(state, card)) return "that card is under a pile and does not act";
-
-  const power = powerOf(card);
-  if (power === null) return "that card has no power";
-  if (usedThisTurn(state, card)) return "that power has already been used this turn";
-
-  if (state.result !== null) return "the game is over";
-  if (state.pending !== null) return "answer the open prompt first";
-  if (state.active !== player) return "it is not your turn";
-  if (state.phase !== "main") return "a power is activated in the main phase";
-  if (power.x > state.players[player].mana.current) {
-    return `that power costs ${power.x}, more than your mana`;
-  }
-  return null;
-}
-
-/**
- * §9.3 "reduce refuses illegal actions itself", for what an `activatePower` carries. R103 lets the
- * action name one thing: the ping's target, which must be a target the ping could reach — a unit on
- * the field (never one dormant under a Stack, R13, nor a card in a hand or the backrow) or a hero,
- * exactly what the prompt would have offered (`PING_SCOPE`). Every other power takes nothing, so a
- * selection sent with one is refused rather than read — above all a Discover's answer, which only
- * the Discover's own prompt may carry (§6.3: its options are drawn by the engine, not named by the
- * client).
- */
-function whyTargetsRefused(
-  sink: EngineSink,
-  player: PlayerId,
-  card: CardInstance,
-  targets: readonly Selection[],
-): string | null {
-  if (targets.length === 0) return null;
-  if (powerOf(card)?.name !== "ping") return "that power takes no target";
-  if (targets.length > 1) return "that power takes one target";
-  const [pick] = targets;
-  const legal = targetsInScope(makeContext(sink, card, { controller: player }), PING_SCOPE);
-  const reachable = legal.some(
-    (option) =>
-      (option.pick === "instance" && pick?.pick === "instance" && option.instanceId === pick.instanceId) ||
-      (option.pick === "hero" && pick?.pick === "hero" && option.player === pick.player),
-  );
-  return reachable ? null : "that is not a target the power can reach";
-}
-
-/**
- * The `activatePower` action of §10.2: validate, spend the power's X, activate it once. The targets
- * the action carried travel into the activation as the play's selections do (R81), so a power that
- * needs one takes it from there instead of opening a prompt.
- */
-export function activatePower(
-  sink: EngineSink,
-  player: PlayerId,
-  args: { instanceId: string; targets?: readonly Selection[] },
-): string | null {
-  const why = whyCannotActivate(sink.state, player, args.instanceId);
-  if (why !== null) return why;
-
-  const card = findInstance(sink.state, args.instanceId);
-  if (card === undefined) return `no card ${args.instanceId}`;
-
-  const refused = whyTargetsRefused(sink, player, card, args.targets ?? []);
-  if (refused !== null) return refused;
-
-  const side = sink.state.players[player];
-  spendMana(side, powerCostOf(card));
-  sink.events.push(manaEvent(player, side));
-
-  const ctx = makeContext(sink, card, { controller: player, targets: [...(args.targets ?? [])] });
-  applyEffects([usePower({ instanceId: card.id })], ctx);
-  // R59: the check follows the whole power. One whose draw cast a card that is still asking is not
-  // whole yet — the unit the cast brought to 0 is on the field where its prompt offered it — and the
-  // answer's own check finishes it (§2.4's chain checks after each cast, R156).
-  if (!isPaused(sink)) stateCheck(sink);
-  return null;
-}

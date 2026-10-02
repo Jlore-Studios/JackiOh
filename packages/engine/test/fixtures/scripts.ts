@@ -13,9 +13,16 @@ import {
   draw,
   gainMana,
   nextTurnMana,
-  rememberRandom,
   shuffleCopiesOfSelf,
 } from "../../src/effects";
+import {
+  HERO_POWER_NAMES,
+  POWER_RESUME,
+  STEADY_SHOT_PARAM,
+  heroPower,
+  heroPowerActivations,
+  rollPower,
+} from "../../src/subsystems/heroPower";
 
 /** "All enemies": every enemy unit plus the enemy hero, one instance each (R51). */
 function damageAllEnemies(amount: number): Effect {
@@ -147,24 +154,32 @@ const goingLongScripts: CardScripts = {
   radiant: { staticFlags: { quickdraw: true } },
 };
 
-/** #98 Heroic Power: rolls one of eight powers at start of game, and its cost is that power's X. */
-export const HERO_POWERS = ["recruit", "drain", "ping", "bolt", "rush-token", "felinor-token", "discover", "stitching"] as const;
+/**
+ * #98 Heroic Power as patch v0.2.1 wires it (R43): costs (0), rolls one of the thirteen powers at start
+ * of game, and has that power as its one Activate ability. It declares Steady Shot's number (R608).
+ */
+export const HERO_POWERS = HERO_POWER_NAMES;
 export const heroicPower = def({
   id: "fx-heroic-power",
   index: "98",
   name: "Heroic Power (fixture)",
   type: "Field Spell",
   tags: ["Quickdraw"],
-  cost: "X",
+  cost: 0,
+  params: [{ key: STEADY_SHOT_PARAM, base: 2, radiant: 4, better: "up", step: 2 }],
 });
 const heroicPowerScripts: CardScripts = {
   base: {
     staticFlags: { quickdraw: true },
-    startOfGame: () => [rememberRandom({ key: "power", options: HERO_POWERS })],
+    startOfGame: () => [rollPower()],
+    activations: heroPowerActivations(false),
+    resume: { [POWER_RESUME]: heroPower },
   },
   radiant: {
     staticFlags: { quickdraw: true },
-    startOfGame: () => [rememberRandom({ key: "power", options: HERO_POWERS })],
+    startOfGame: () => [rollPower()],
+    activations: heroPowerActivations(true),
+    resume: { [POWER_RESUME]: heroPower },
   },
 };
 

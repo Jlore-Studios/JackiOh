@@ -202,10 +202,10 @@ describe("B5 E21 backrow piles (R447)", () => {
     const power = put(state, heroicPower.id, slot("p1", "backrow", 3));
     power.memory.power = "ping";
     flush(state, "p1");
-    expect(whyCannotActivate(state, "p1", power.id)).toBeNull();
+    expect(whyCannotActivateAbility(state, "p1", power.id)).toBeNull();
     stackOnto(state, cover.id, power);
-    expect(whyCannotActivate(state, "p1", power.id)).toBe("that card is under a pile and does not act");
-    expect(legalActions(state, "p1").some((action) => action.type === "activatePower")).toBe(false);
+    expect(whyCannotActivateAbility(state, "p1", power.id)).toBe("that card is under a pile and does not act");
+    expect(legalActions(state, "p1").some((action) => "instanceId" in action && action.instanceId === power.id)).toBe(false);
   });
 
   it("R447 a JSON round trip keeps the pile, and a game with no pile carries no pile field", () => {

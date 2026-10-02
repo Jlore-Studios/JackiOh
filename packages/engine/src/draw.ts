@@ -37,7 +37,7 @@ import { activeUnitsOf, cardAt, firstFreeZone, isUnitToken, moveToZone, reportGr
  * "at start of game every Heroic Power in either player's hand or library rolls its power … and one
  * that ends up in a hand or library with no `memory.power` (a bounced or reset instance, R78) rolls
  * as it arrives" — so a copy that reaches a hand later (#72 Reminisce out of a graveyard, a bounce,
- * a draw, a card an effect created) has to roll too, or it carries no power and costs 0 for ever.
+ * a draw, a card an effect created) has to roll too, or it carries no power for ever.
  *
  * GENERAL, NOT #98 BY ID: the test is `scriptOf(card).startOfGame`, the same thing `setup.finishSetup`
  * reads, so any card that ever grows a start-of-game clause is covered without the engine naming a

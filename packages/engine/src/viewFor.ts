@@ -256,7 +256,7 @@ function withMarks(state: GameState, instanceId: string): { marks?: CardMark[] }
  * face as well. A Unit's stats are its face plus the permanent buffs it gained in hand (§10.4
  * layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
  * floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
- * R151), which its cost alone does not.
+ * R151), which its (0) cost does not.
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
   const view = withCopies(cardView(state, card), state, card);
@@ -436,7 +436,7 @@ function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { ca
  * It follows control, not ownership: a stolen Heroic Power powers its new controller's hero. So a
  * player can hold more than one — their own plus one taken with #36 radiant or #49 — and each is
  * separately once-per-turn, which is why this is a list and every entry carries its `instanceId`
- * for `activatePower` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
+ * for its `activate` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
  */
 function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
   const powers: HeroPowerView[] = [];
@@ -516,6 +516,9 @@ function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): str
     // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
     case "replacePlays":
       return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
+    // R603: #98's Armor Up and Tank Up, in the power's own words.
+    case "heroArmor":
+      return `Your hero has +${mod.amount} Armor until your next turn`;
   }
 }
 

@@ -563,8 +563,8 @@ function combinedHook(fns: readonly (ListFn | undefined)[], step = false): (ctx:
   return (ctx) => {
     const depth = typeof ctx.data[PART_DEPTH_KEY] === "number" ? (ctx.data[PART_DEPTH_KEY] as number) : 0;
     // A step of the `resume` table is one continuation of one text, so one that names no part — the
-    // engine left it for the card as a whole, not one of its texts: the prompt of the power R43
-    // activates once (`heroPower.activatePower`) — comes back to the first ingredient that has the
+    // engine left it for the card as a whole, not one of its texts: the prompt of the one power R43
+    // has rolled (`heroPower.heroPower`) — comes back to the first ingredient that has the
     // step, once, rather than to every ingredient that names its step the same (R43, R102).
     const routed = partPathOf(ctx.data)?.[depth] ?? (step ? fns.findIndex((fn) => fn !== undefined) : undefined);
     const indices = fns.flatMap((fn, index) =>
@@ -1065,7 +1065,7 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
     // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included —
     // and "one created later rolls when it is created". The ingredient's rolled power ceased to exist
     // with it, and the kept instance's memory is the target's (R77), so without the roll the card
-    // would carry "Once per turn, spend X" and no power for as long as it stood. A card that already
+    // would carry the powers' Activate and no power for as long as it stood. A card that already
     // has its power keeps it (`heroPower.ensurePower`). A crafted card rolls as it reaches the hand.
     runStartOfGame(sink, result, result.controller);
   } else if (toHand !== undefined) {

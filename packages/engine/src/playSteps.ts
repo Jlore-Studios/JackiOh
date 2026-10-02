@@ -262,7 +262,7 @@ export type PlayRun = {
    * R119: every card acting on the field as the play began — at step 1 for a play, as the cast began
    * for a cast (R70) — by id, with the field's departures then (`standingFrom`). A permanent that
    * arrives on the field after that, whatever puts it there — a tributed unit's Death at step 2
-   * (#22's copies, R210), the Cry recruiting it (#98), summoning it (#95) or bringing a body back
+   * (#22's copies, R210), a Cry recruiting it, summoning it (#95) or bringing a body back
    * through Reborn, a trap answering the play summoning it — does not answer the play, as the played
    * card itself does not: not its `cardPlayed` and `summoned` at step 4, not step 5's granted Combo
    * (#38) on the first resolution or an Echo repeat, and not its `cardResolved` at step 7
