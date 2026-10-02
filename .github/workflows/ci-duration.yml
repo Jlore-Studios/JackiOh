@@ -4,6 +4,14 @@
 # seen and split before it grows into the old 19-minute wait. The night bot's own workflows are
 # exempt: a build legitimately runs for hours.
 #
+# The report is handed to the night bot (.harness/config.json's bot_login): a new issue is assigned
+# to it and queued with bot:build, and an open one nobody is assigned to is handed over the same
+# way, so the bot starts on the split without anyone asking. A write by this job's token starts no
+# other workflow, so the label queues it directly (the planner reads its queue from the labels). A
+# run of a fork's pull request is reported but never handed over: its branch and job names are
+# outside text, and the bot would read them as its task. The bot cannot change .github/, so the
+# issue tells it what it can do when the split itself needs ci.yml.
+#
 # The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
 # few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
 # under the target, not just under the alert, so the fix has headroom and the alert stays quiet.
@@ -23,6 +31,8 @@ env:
   TARGET_MINUTES: "5"
   # What gets reported: a job that ran longer than this.
   ALERT_MINUTES: "7"
+  # Who fixes it: the night bot (.harness/config.json's bot_login).
+  BOT_LOGIN: jgoetzmann-bot
 
 permissions:
   actions: read
@@ -44,6 +54,7 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           SHA: ${{ github.event.workflow_run.head_sha }}
           EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           set -euo pipefail
           export LIMIT_SECONDS=$((ALERT_MINUTES * 60))
@@ -73,8 +84,22 @@ jobs:
             "" \
             "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\`; for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`." \
             "" \
+            "Night bot: you cannot change \`.github/\`. Make the part of the fix that lives elsewhere (the e2e \`WEIGHTS\`, a slow test made faster or split across files), and when the split needs \`ci.yml\`'s matrix, give the exact lines to change there and ask a person to make them." \
+            "" \
             "---" \
             "_Posted by \`.github/workflows/ci-duration.yml\`._")
+
+          # Hands an issue to the night bot: assigned to it and queued, as a person assigning it
+          # would. A failure here leaves the report standing for a person.
+          hand_over() {
+            if [ "$HEAD_REPO" != "$REPO" ]; then
+              echo "a run from $HEAD_REPO: #$1 is not handed to @$BOT_LOGIN"
+              return 0
+            fi
+            gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+              && echo "handed #$1 to @$BOT_LOGIN" \
+              || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+          }
 
           # One open issue collects every report, so a slow job does not open one issue per run.
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
@@ -82,6 +107,12 @@ jobs:
           if [ -n "$open" ]; then
             gh issue comment "$open" --repo "$REPO" --body "$body"
             echo "commented on #$open"
+            # Someone already on it, the bot or a person, keeps it.
+            if [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ]; then
+              hand_over "$open"
+            fi
           else
-            gh issue create --repo "$REPO" --title "$TITLE" --body "$body"
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+            hand_over "${url##*/}"
           fi
