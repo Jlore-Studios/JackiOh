@@ -497,6 +497,28 @@
         "status": "rejected"
       }
     },
+    "claude-2": {
+      "refused_until": "2026-10-03T04:10:00Z",
+      "spent": [
+        {
+          "at": "2026-10-02T23:44:01Z",
+          "minutes": 27.2
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-03T04:10:00Z",
+          "utilization": 1.0
+        },
+        "observed_at": "2026-10-02T23:44:01Z",
+        "rejected_resets_at": "2026-10-03T04:10:00Z",
+        "seven_day": {
+          "resets_at": "2026-10-03T05:00:00Z",
+          "utilization": 0.16
+        },
+        "status": "rejected"
+      }
+    },
     "gpt": {
       "refused_until": "2026-10-02T22:05:44Z",
       "spent": [
