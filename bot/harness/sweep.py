@@ -2,7 +2,7 @@
 
 Events are delivered once, and a handler can fail before it acts (GitHub is down, a write
 races, a bug). The labels are the queue and survive all of that, but a comment, a review, an
-assignment or a failed CI run lives only in its event. So every half hour, and on demand, this
+assignment or a failed CI run lives only in its event. So every ten minutes, and on demand, this
 reads recent history back from GitHub itself and answers, through the same code the event would
 have used:
 
@@ -10,7 +10,10 @@ have used:
   nobody has claimed (`events.claim`);
 - a trusted review asking a bot pull request for changes, likewise unclaimed;
 - an open issue or PR assigned to the bot that nothing ever queued;
-- a failed CI run on the head of a bot PR that nothing reran or queued a fix for.
+- a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
+- last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
+  whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
+  work and no `bot-night` run is queued or going, the sweep starts one.
 
 It looks back to the later of `LOOKBACK` and the first sweep ever (so the first one replays
 nothing), leaves anything younger than `SETTLE` to a handler that may still be running, and
@@ -25,9 +28,10 @@ from datetime import datetime, timedelta
 from typing import Any, Callable
 
 from harness import commands, events
+from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING)
+                            LABEL_WORKING, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.queue import label_names, queue_build, queue_revise
 
@@ -37,6 +41,8 @@ SETTLE = timedelta(minutes=10)
 #: An edit shows as `updated_at` later than `created_at` by more than this.
 EDITED = timedelta(seconds=5)
 QUEUE_LABELS = {LABEL_BUILD, LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
+#: A `bot-night` run in one of these states is going, or about to.
+LIVE_RUN = ("queued", "in_progress", "waiting", "pending", "requested")
 
 _NUMBER = re.compile(r"/(?:issues|pulls)/(\d+)$")
 
@@ -52,7 +58,7 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci):
+    for part in (_comments, _reviews, _assignments, _failed_ci, _night_run):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -210,3 +216,17 @@ def _failed_ci(ctx: Context, since: datetime) -> list[str]:
 
     _each(pulls, act, notes)
     return notes
+
+
+def _night_run(ctx: Context, since: datetime) -> list[str]:
+    """Start a night run when one should be going and none is. Runs after the other parts, so
+    a request they just answered counts. A run already queued or going means nothing to do, so
+    the `bot-night` concurrency group never fills with runs it would cancel."""
+    work, reason, _ = plan_mod.peek(ctx)
+    if not work:
+        return []
+    live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=10) if r.get("status") in LIVE_RUN]
+    if live:
+        return []
+    ctx.dispatch()
+    return [f"started a night run, as none was going: {reason}"]

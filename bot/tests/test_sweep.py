@@ -13,7 +13,7 @@ from harness.errors import GitHubError, StateConflict
 from harness.state import item as state_item
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub
-from tests.support import DAY, make_ctx
+from tests.support import DAY, NIGHT, make_ctx
 
 TRUST = "jgoetzmann 3 id:95732896\nhelper 2\n"
 AN_HOUR_AGO = iso(DAY - timedelta(hours=1))
@@ -218,6 +218,67 @@ class LostEventTests(Base):
         sweep.sweep(self.ctx)
         self.assertIn(LABEL_REVISE, self.gh.label_names(9))
         self.assertEqual(sweep.sweep(self.ctx), [])
+
+
+
+class NightRunTests(Base):
+    """GitHub drops scheduled `bot-night` runs; the sweep starts one when work waits and none is
+    going, so a dropped hour costs ten minutes."""
+
+    def at_night(self):
+        self.ctx.clock_fn.at = NIGHT
+        self.ctx.store.update(lambda s: s.update(last_sweep={"since": iso(NIGHT - timedelta(days=1))}))
+
+    def test_a_due_survey_counts_as_work_too(self):
+        self.at_night()
+        sweep.sweep(self.ctx)
+        self.assertEqual(len(self.gh.dispatches), 1)
+
+    def test_queued_work_in_the_window_with_no_run_going_starts_one(self):
+        self.at_night()
+        self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
+        notes = sweep.sweep(self.ctx)
+        self.assertEqual(len(self.gh.dispatches), 1)
+        self.assertEqual(self.gh.dispatches[0]["workflow"], "bot-night.yml")
+        self.assertIn("started a night run", notes[-1])
+
+    def test_a_run_already_queued_or_going_is_left_to_it(self):
+        self.at_night()
+        self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
+        for status in ("queued", "in_progress", "waiting", "pending"):
+            self.gh.runs = {"1": {"status": "completed"}, "2": {"status": status}}
+            sweep.sweep(self.ctx)
+            self.assertEqual(self.gh.dispatches, [], status)
+
+    def test_no_run_without_work_or_outside_the_window(self):
+        self.at_night()
+        self.ctx.store.update(lambda s: s["suggest"].update(last_run=iso(NIGHT - timedelta(hours=1))))
+        sweep.sweep(self.ctx)  # nothing queued, and no survey due
+        self.ctx.clock_fn.at = DAY
+        self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
+        sweep.sweep(self.ctx)  # queued, but the window is closed
+        self.assertEqual(self.gh.dispatches, [])
+
+    def test_forced_work_starts_a_run_outside_the_window_but_never_while_halted(self):
+        self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
+        self.ctx.store.update(lambda s: state_item(s, 5).update(forced=True))
+        self.ctx.store.update(lambda s: s.update(halted=True))
+        sweep.sweep(self.ctx)
+        self.assertEqual(self.gh.dispatches, [])
+        self.ctx.store.update(lambda s: s.update(halted=False))
+        sweep.sweep(self.ctx)
+        self.assertEqual(len(self.gh.dispatches), 1)
+
+    def test_a_run_that_cannot_be_started_is_noted_and_tried_again_next_sweep(self):
+        self.at_night()
+        self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
+
+        def refuse(*args, **kwargs):
+            raise GitHubError("workflow dispatch refused", 422)
+
+        self.gh.dispatch_workflow = refuse
+        notes = sweep.sweep(self.ctx)
+        self.assertIn("night_run: could not finish", notes[-1])
 
 
 if __name__ == "__main__":

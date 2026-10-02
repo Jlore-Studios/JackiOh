@@ -128,8 +128,18 @@ class CommandsWorkflowTests(unittest.TestCase):
                         "pull_request_review:", "issues:", "pull_request_target:", "workflow_run:",
                         "workflow_dispatch:"):
             self.assertIn(trigger, self.text)
-        self.assertRegex(self.text, r'cron: "\d+(,\d+)* \* \* \* \*"')  # the sweep, every half hour
         self.assertIn("python -m harness sweep", self.text)
+
+    def test_the_sweep_leaves_no_gap_longer_than_ten_minutes(self):
+        """It is also the fallback that starts a dropped night run (harness/sweep.py)."""
+        crons = re.findall(r'cron: "([^"]+)"', self.text)
+        self.assertEqual(len(crons), 1)
+        minutes, rest = crons[0].split(" ", 1)
+        self.assertEqual(rest, "* * * *")
+        marks = sorted(int(m) for m in minutes.split(","))
+        gaps = [b - a for a, b in zip(marks, marks[1:] + [marks[0] + 60])]
+        self.assertLessEqual(max(gaps), 10, marks)
+        self.assertNotIn(0, marks)  # the top of the hour is when GitHub drops the most
 
     def test_pull_request_events_use_target(self):
         self.assertIn("pull_request_target:", self.text)

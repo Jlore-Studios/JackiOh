@@ -78,7 +78,7 @@ Every way of asking either gets an answer at once, or is found again later:
   If a command fails, the reply says so; the other commands in the same comment still run.
 - **Naming the bot mid-sentence** ("thanks @jgoetzmann-bot, could you…") gets a reply explaining
   how to phrase a request. The bot does not guess a build from it, and does not ignore it.
-- **The sweep** runs every half hour (`harness sweep`, and on demand from the Actions tab). It
+- **The sweep** runs every ten minutes (`harness sweep`, and on demand from the Actions tab). It
   reads the last three days back from GitHub and answers anything no handler answered:
   - a trusted command (in a comment, a diff comment or a review) that nobody claimed;
   - an assignment nothing queued;
@@ -86,7 +86,10 @@ Every way of asking either gets an answer at once, or is found again later:
   - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head.
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
-  nothing is answered twice.
+  nothing is answered twice. Last, it starts a night run when one should be going and none is:
+  GitHub drops scheduled runs, sometimes a whole night of `bot-night`'s hourly ones, so when the
+  gate's own question (`harness peek`) finds work and no `bot-night` run is queued or going, the
+  sweep dispatches one. A dropped hourly run costs about ten minutes, not the night.
 - **Labels are the queue**, so a `bot:build` or `bot:revise` label is never lost, even if no
   handler ever saw it being added.
 - **A request made while the bot is working** on the thread gets another pass once the run
