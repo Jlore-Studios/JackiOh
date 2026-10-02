@@ -48,8 +48,10 @@ ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse
 chmod -R a+rX /usr/local/lib/muse
 
 # After every job, as the runner's user: give back the disk the job used. The repo's packages
-# come back from the network next time; the checkout and the logins stay.
-cat > /usr/local/bin/night-vm-job-done <<'EOF'
+# come back from the network next time; the checkout and the logins stay. The runner takes a hook
+# only by its extension (.sh, .ps1 or .js), and fails the job's last step otherwise.
+rm -f /usr/local/bin/night-vm-job-done
+cat > /usr/local/bin/night-vm-job-done.sh <<'EOF'
 #!/bin/bash
 if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
@@ -58,7 +60,7 @@ rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache"
 find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
 exit 0
 EOF
-chmod 755 /usr/local/bin/night-vm-job-done
+chmod 755 /usr/local/bin/night-vm-job-done.sh
 
 # The newest GitHub Actions runner, unpacked once per user (register-runners.sh registers it).
 version="$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)"
@@ -94,11 +96,18 @@ GEMINI_FORCE_FILE_STORAGE=true
 TBH_CREDENTIAL_BACKEND=file
 MUSE_NO_AUTO_UPDATE=1
 COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/night-vm-job-done
+ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/night-vm-job-done.sh
 EOF
   echo "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin" | sudo -u "$user" tee "$dir/.path" >/dev/null
-  # A running runner reads .env and .path only when it starts.
-  if [ -f "$dir/.service" ]; then (cd "$dir" && ./svc.sh stop >/dev/null && ./svc.sh start >/dev/null); fi
+  # A running runner reads .env and .path only when it starts; one in the middle of a job is left
+  # alone, since restarting it would kill the job (run this again later).
+  if [ -f "$dir/.service" ]; then
+    if pgrep -u "$user" -f Runner.Worker >/dev/null; then
+      echo "$user: busy with a job; its runner picks up the new settings at its next restart"
+    else
+      (cd "$dir" && ./svc.sh stop >/dev/null && ./svc.sh start >/dev/null)
+    fi
+  fi
 done
 
 # Power off when idle: no job running (Runner.Worker), no Session Manager session, and first-boot
