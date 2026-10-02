@@ -18,8 +18,8 @@
 //     93.1, 95.1, T-rush, T-sheep, T-felinor, T-bread), so "no tokens" and "an integer 1–100" are
 //     the same set of 100 cards — there is nothing left for this card to filter by number.
 //   - "rerolls its own index": §5.1's "a random pool never offers the card that generated it".
-//     `discoverFromCatalog` reads `defOf(state, ctx.self.defId).index` and passes it as
-//     `excludeIndex` itself, so #82 can never be offered and the reroll costs nothing.
+//     `discoverFromCatalog` reads `ctx.self.defId` and passes it as `excludeDefId` itself (R387),
+//     so #82 can never be offered and the reroll costs nothing.
 //   - "1–100": `set: "Core"`, which is §8's own numbering — the Core set is indices 1–100 plus its
 //     tokens, and the tokens are already gone.
 // So: 3 options out of those 100, drawn without replacement by `rng.shuffle` (§6.3 Discover), which
@@ -34,7 +34,7 @@
 //
 // THE PICK COMES BACK AS A MODE (§10.6, R81). A Discover answer arrives in `ctx.targets` as
 // `{ pick: "mode", option: "<index>" }`; `chosenOptions` is the one reader for that, `defByIndex`
-// turns the number back into its card, and the named `resume` step below is where `prompts.ts`
+// turns the number back into its Core card (an index is unique only within its set, B2.2), and the named `resume` step below is where `prompts.ts`
 // re-enters this script (`RESUME_HOOK` = "resume", the step name is `Resume.step`). Nothing is
 // captured in `data`: the answer is the whole state the continuation needs.
 //
@@ -52,6 +52,9 @@ export const def = cardDef("core-082");
 /** §6.3 Discover offers three, and R54's roll is "1–100", which is the non-token Core set. */
 const OPTIONS = 3;
 
+/** B2.6: KY's Trial names the Core set's numbers, so its pool stays Core whatever else ships. */
+const TRIAL_SET = "Core";
+
 /** The `resume` step `prompts.ts` re-enters with the Discover answer (§10.6). */
 const PICKED = "picked";
 
@@ -64,7 +67,7 @@ function trial(costsZero: boolean): Script {
         step: PICKED,
         count: OPTIONS,
         // §5.1's one pool source. Tokens and #82 itself are excluded for us — see the header.
-        query: { set: "Core" },
+        query: { set: TRIAL_SET },
         // R247: the options are the numbers, not the cards they index.
         offer: "index",
         prompt: "KY's Trial: Discover a number from 1 to 100",
@@ -74,7 +77,7 @@ function trial(costsZero: boolean): Script {
       [PICKED]: (ctx) => {
         const [index] = chosenOptions(ctx);
         // §8 Conventions: an empty pick fizzles and the spell still counts as played.
-        const defId = index === undefined ? undefined : defByIndex(index)?.id;
+        const defId = index === undefined ? undefined : defByIndex(TRIAL_SET, index)?.id;
         if (defId === undefined) return [];
         return [
           addToHand({ defId, radiant: true, ...(costsZero ? { costOverride: 0 } : {}) }),

@@ -33,8 +33,12 @@ export const PROMPT_CLOCK_SECONDS = 30;
 export const MULLIGAN_CLOCK_SECONDS = 45;
 /** R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss. */
 export const DISCONNECT_GRACE_SECONDS = 60;
-/** R79: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`. */
-export const MATCH_CEILING_MINUTES = 60;
+/**
+ * R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
+ * Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
+ * minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
+ */
+export const MATCH_CEILING_MINUTES = 120;
 /** R79, §9.5: room codes are 6 characters from the invite-code alphabet. */
 export const ROOM_CODE_LENGTH = 6;
 
@@ -287,41 +291,41 @@ export function ratingWindow(waitedSeconds: number): number {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The hidden rating: Glicko-2 (SPEC §9.11, R376). The maths is `src/ranked/glicko2.ts`.
+// The hidden rating: Glicko-2 (SPEC §9.12, R603). The maths is `src/ranked/glicko2.ts`.
 // ---------------------------------------------------------------------------------------------
 
 /**
- * SPEC §11 R376: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
+ * SPEC §11 R603: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
  * depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
  * ratings and only the deviation and volatility are new (migration 0014).
  */
 export const RATING_START = 1000;
-/** R376: a new profile's rating deviation: Glickman's starting value, the most uncertain rating. */
+/** R603: a new profile's rating deviation: Glickman's starting value, the most uncertain rating. */
 export const RATING_DEVIATION_START = 350;
-/** R376: a new profile's rating volatility: Glickman's starting value. */
+/** R603: a new profile's rating volatility: Glickman's starting value. */
 export const RATING_VOLATILITY_START = 0.06;
-/** R376: Glicko-2's system constant τ, which bounds how fast volatility moves. Glickman's 0.3–1.2. */
+/** R603: Glicko-2's system constant τ, which bounds how fast volatility moves. Glickman's 0.3–1.2. */
 export const GLICKO_TAU = 0.5;
 /**
- * R376: the factor between a displayed rating and Glicko-2's internal scale, 400 / ln 10. Glickman
+ * R603: the factor between a displayed rating and Glicko-2's internal scale, 400 / ln 10. Glickman
  * writes it 173.7178; this is the same number to double precision.
  */
 export const GLICKO_SCALE = 400 / Math.LN10;
-/** R376: the volatility iteration stops once its bracket is narrower than this (Glickman's ε). */
+/** R603: the volatility iteration stops once its bracket is narrower than this (Glickman's ε). */
 export const GLICKO_CONVERGENCE = 0.000001;
 /**
- * R376: the most volatility iterations one update runs. The Illinois iteration converges in a
+ * R603: the most volatility iterations one update runs. The Illinois iteration converges in a
  * handful of steps on any real input; the cap only makes a non-finite input end rather than spin.
  */
 export const GLICKO_MAX_ITERATIONS = 100;
 
 // ---------------------------------------------------------------------------------------------
-// The visible ladder (SPEC §9.11, R378–R381). The rules are `src/ranked/ladder.ts`. PUBLIC: the
+// The visible ladder (SPEC §9.12, R605–R608). The rules are `src/ranked/ladder.ts`. PUBLIC: the
 // client reads the shape (divisions, pips, placements) to draw a rank it is handed.
 // ---------------------------------------------------------------------------------------------
 
 /**
- * SPEC §11 R379: the share of active players each Grape tier is meant to hold, in whole percents,
+ * SPEC §11 R606: the share of active players each Grape tier is meant to hold, in whole percents,
  * lowest first: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%. A player's hidden rating is
  * placed at its percentile among the season's placed players and read off these shares, so retuning
  * a boundary is a change here and nowhere else. Whole numbers, so a boundary is exact; they sum to 100.
@@ -333,52 +337,52 @@ export const RANK_TIER_PERCENTS = {
   golden: 7,
   mythic: 1,
 } as const;
-/** R378: divisions per Grape tier, III up to I. */
+/** R605: divisions per Grape tier, III up to I. */
 export const RANK_DIVISIONS_PER_TIER = 3;
-/** R378: pips per division. A division is climbed one pip at a time; a full division promotes. */
+/** R605: pips per division. A division is climbed one pip at a time; a full division promotes. */
 export const RANK_PIPS_PER_DIVISION = 3;
-/** R378: rated games a season's placements take. Until they are played the player is a Raisin. */
+/** R605: rated games a season's placements take. Until they are played the player is a Raisin. */
 export const RANK_PLACEMENT_GAMES = 5;
-/** R379: pips a win gives before any bonus. */
+/** R606: pips a win gives before any bonus. */
 export const RANK_WIN_PIPS = 1;
-/** R379: pips a loss takes before any adjustment. A draw moves no pip. */
+/** R606: pips a loss takes before any adjustment. A draw moves no pip. */
 export const RANK_LOSS_PIPS = 1;
-/** R379: the win that makes a streak this long, and every win after it, earns the streak bonus. */
+/** R606: the win that makes a streak this long, and every win after it, earns the streak bonus. */
 export const RANK_STREAK_LENGTH = 3;
-/** R379: the streak bonus, in pips, earned below Mythic Grape only. */
+/** R606: the streak bonus, in pips, earned below Mythic Grape only. */
 export const RANK_STREAK_BONUS_PIPS = 1;
 /**
- * R379: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
+ * R606: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
  * before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
  */
 export const RANK_CONVERGENCE_GAP_PIPS = 3;
 /**
- * R379: how many pips the lean adds — to a win when the rating is above the visible rank, to a loss
+ * R606: how many pips the lean adds — to a win when the rating is above the visible rank, to a loss
  * when it is below. Gentle by design: never more than this, and a win never gives fewer pips than a
  * plain win, nor a loss take fewer than a plain loss.
  */
 export const RANK_CONVERGENCE_PIPS = 1;
-/** R381: Jlorious is the top this-many Mythic Grape players by hidden rating. */
+/** R608: Jlorious is the top this-many Mythic Grape players by hidden rating. */
 export const JLORIOUS_SIZE = 100;
 /**
- * R385: the most players the leaderboard lists in each Grape tier below Jlorious. The tier's full
+ * R612: the most players the leaderboard lists in each Grape tier below Jlorious. The tier's full
  * count is always given, and the viewer's own row is always listed.
  */
 export const LEADERBOARD_TIER_ROWS_MAX = 50;
-/** R385: characters in a player's public tag, from the invite-code alphabet (30 bits). */
+/** R612: characters in a player's public tag, from the invite-code alphabet (30 bits). */
 export const PLAYER_TAG_LENGTH = 6;
 
 // ---------------------------------------------------------------------------------------------
-// Seasons (SPEC §9.11, R382). The reset is `src/ranked/season.ts`.
+// Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.ts`.
 // ---------------------------------------------------------------------------------------------
 
 /**
- * SPEC §11 R382: how far a season's soft reset pulls each rating toward the players' mean: 0 keeps
+ * SPEC §11 R609: how far a season's soft reset pulls each rating toward the players' mean: 0 keeps
  * every rating, 1 puts everyone on the mean. Half way.
  */
 export const SEASON_RESET_STRENGTH = 0.5;
 /**
- * R382: the deviation a season's reset adds, combined in quadrature as Glicko adds uncertainty for
+ * R609: the deviation a season's reset adds, combined in quadrature as Glicko adds uncertainty for
  * time away: `min(√(RD² + this²), RATING_DEVIATION_START)`. A settled 60 becomes about 160.
  */
 export const SEASON_RESET_DEVIATION_BOOST = 150;
@@ -436,8 +440,23 @@ export const DECK_NAME_MAX_LENGTH = 40;
  * still the error's message, so nothing a player could fix is hidden.
  */
 export const DRAFT_ISSUES_REPORTED_MAX = 50;
-/** SPEC §11 R255: the deck-code format's version; a code naming any other version is refused. */
-export const DECK_CODE_VERSION = 1;
+/**
+ * SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
+ * writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
+ * other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused.
+ */
+export const DECK_CODE_VERSION = 2;
+/**
+ * SPEC §11 R255: the one older deck-code version still read. Every code minted before patch v0.2.0
+ * is a version 1 code, and its numbers are Core's (the only set there was).
+ */
+export const DECK_CODE_CORE_ONLY_VERSION = 1;
+/**
+ * SPEC §11 R255, R339 (B2.2): a card's catalog number in a version 2 deck or trio code is its §5
+ * index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n — still written as
+ * LEB128. No set holds 1000 cards, so a number names one set and one card.
+ */
+export const CATALOG_NUMBER_SET_OFFSETS = { Core: 0, Classic: 1000, "Classic+": 2000 } as const;
 /**
  * SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
  * a full deck with the longest name is under 200 characters, so this leaves room for whatever a
@@ -448,8 +467,14 @@ export const DECK_CODE_MAX_INPUT_LENGTH = 512;
 export const DECK_AUTOSAVE_DEBOUNCE_MS = 800;
 /** SPEC §11 R256: how long the builder waits before it tries a failed save again. */
 export const DECK_AUTOSAVE_RETRY_SECONDS = 5;
-/** SPEC §11 R339: the trio-code format's version; a code naming any other version is refused. */
-export const TRIO_CODE_VERSION = 1;
+/**
+ * SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
+ * does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
+ * `TRIO_CODE_CORE_ONLY_VERSION` is refused.
+ */
+export const TRIO_CODE_VERSION = 2;
+/** SPEC §11 R339: the one older trio-code version still read, whose decks carry Core numbers. */
+export const TRIO_CODE_CORE_ONLY_VERSION = 1;
 /**
  * SPEC §11 R339: raw trio-code input longer than this is refused before it is read. A trio code
  * carries three decks' names and cards and the trio's name: about 200 characters for ASCII names,
@@ -614,10 +639,13 @@ export const SERVER_CONFIG = Object.freeze({
   DECK_NAME_MAX_LENGTH,
   DRAFT_ISSUES_REPORTED_MAX,
   DECK_CODE_VERSION,
+  DECK_CODE_CORE_ONLY_VERSION,
+  CATALOG_NUMBER_SET_OFFSETS,
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_AUTOSAVE_DEBOUNCE_MS,
   DECK_AUTOSAVE_RETRY_SECONDS,
   TRIO_CODE_VERSION,
+  TRIO_CODE_CORE_ONLY_VERSION,
   TRIO_CODE_MAX_INPUT_LENGTH,
   SERIES_WINS_NEEDED,
   SERIES_MAX_GAMES,

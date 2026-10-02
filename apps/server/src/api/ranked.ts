@@ -1,5 +1,5 @@
 /**
- * The ranked ladder on the server (SPEC §9.11, R376–R385): opening a season, rating a ranked game,
+ * The ranked ladder on the server (SPEC §9.12, R603–R612): opening a season, rating a ranked game,
  * and the three reads the client has — your own rank, the leaderboard, and both players' ranks on
  * the match screen.
  *
@@ -9,20 +9,18 @@
  *
  * Who calls it:
  *  - `results.ts`, for a ranked match that is not a series game, in the transaction that writes the
- *    result (R377);
+ *    result (R604);
  *  - `series.ts`, for a ranked series when it ends, in the transaction of its last transition (R262);
- *  - `src/index.ts` at boot, and `src/db/season-start.ts` by hand, to open the build's season (R382).
+ *  - `src/index.ts` at boot, and `src/db/season-start.ts` by hand, to open the build's season (R609).
  *
- * Nothing here ever sends a rating to a client (R385): the reads answer with `VisibleRank`s, tags,
+ * Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, tags,
  * and the season's badges.
  */
 
-import { readFile } from "node:fs/promises";
-
 import type { GameOverReason, PlayerId } from "@jackioh/shared";
-import { newestPatch, type Patch } from "@jackioh/cards/history";
 
 import { LEADERBOARD_TIER_ROWS_MAX } from "../config";
+import { loadCurrentPatch } from "./catalog";
 import { rateGame, START_GLICKO, type Glicko, type Score } from "../ranked/glicko2";
 import {
   GRAPE_TIERS,
@@ -57,21 +55,19 @@ import type {
 } from "./ports";
 
 // ---------------------------------------------------------------------------
-// The game's version (R375) and its season (R382)
+// The game's version (R375) and its season (R609)
 // ---------------------------------------------------------------------------
 
-/** Where `patches.json` lives, resolved through the workspace link, as `catalog.ts` finds catalog.json. */
-function patchesUrl(): URL {
-  return new URL("../patches/patches.json", import.meta.resolve("@jackioh/cards"));
-}
-
-/** The newest patch's version: the game's version, which names the season (R382). Read once at boot. */
+/**
+ * The newest patch's version: the game's version, which names the season (R609). Read once at
+ * boot. Answered by `catalog.ts`'s reader, so the ranked ladder and the game records file under
+ * the same version.
+ */
 export async function loadPatchVersion(): Promise<string> {
-  const patches = JSON.parse(await readFile(patchesUrl(), "utf8")) as readonly Patch[];
-  return newestPatch(patches).version;
+  return loadCurrentPatch();
 }
 
-/** R382: the id of the season this build rates games in. */
+/** R609: the id of the season this build rates games in. */
 export function buildSeasonId(deps: Pick<ServerDeps, "patchVersion">): string {
   return seasonIdOf(deps.patchVersion);
 }
@@ -83,7 +79,7 @@ export type SeasonDeps = Pick<ServerDeps, "patchVersion" | "timers" | "log">;
 export type OpenedSeason = { season: Season; opened: boolean; reset: ResetReport | null };
 
 /**
- * R382: the build's season, opened inside `t` when it does not exist yet. The first season of all
+ * R609: the build's season, opened inside `t` when it does not exist yet. The first season of all
  * resets nothing — there is no season before it to come back from — and every later one runs the
  * soft reset over every rated player in the same transaction as the season row, so a season is
  * either open and reset or neither. Two processes opening it at once both try the insert; the
@@ -111,16 +107,16 @@ export async function openSeasonInTx(t: Store, deps: SeasonDeps): Promise<Opened
   return { season, opened: true, reset: report };
 }
 
-/** R382: opens the build's season in a transaction of its own (boot, and `season-start.ts`). */
+/** R609: opens the build's season in a transaction of its own (boot, and `season-start.ts`). */
 export async function openSeason(deps: SeasonDeps & Pick<ServerDeps, "store">): Promise<OpenedSeason> {
   return deps.store.tx((t) => openSeasonInTx(t, deps));
 }
 
 // ---------------------------------------------------------------------------
-// Rating one ranked game (R376–R381, R383, R384)
+// Rating one ranked game (R603–R608, R610, R611)
 // ---------------------------------------------------------------------------
 
-/** One side of a ranked game: a player's profile, or one of the AI bots (R383). */
+/** One side of a ranked game: a player's profile, or one of the AI bots (R610). */
 export type RankedSideInput = { kind: "player"; profileId: string } | { kind: "bot"; botId: string };
 
 export type RankedGameInput = {
@@ -173,7 +169,7 @@ function positionIn(order: readonly string[], profileId: string): number | null 
 }
 
 /**
- * Plans one ranked game (R376–R381): both sides rated against each other's rating from before it,
+ * Plans one ranked game (R603–R608): both sides rated against each other's rating from before it,
  * each player's season moved toward the rank their new rating calls for, and the Jlorious peaks it
  * gave anyone. Both targets are read from the season as it stood before the game, with both new
  * ratings in it, so neither side's placement depends on which of the two is computed first.
@@ -300,7 +296,7 @@ export async function planRankedGame(t: Store, deps: ServerDeps, input: RankedGa
   };
 }
 
-/** Writes a plan inside `t`: both ratings, both season rows, the peaks, and the record (R384). */
+/** Writes a plan inside `t`: both ratings, both season rows, the peaks, and the record (R611). */
 export async function commitRankedGame(t: Store, plan: RankedPlan, at: number): Promise<void> {
   if (plan.writes === null) return;
   for (const { side, glicko, games } of plan.writes.glickos) {
@@ -320,7 +316,7 @@ export async function rateRankedGame(t: Store, deps: ServerDeps, input: RankedGa
 }
 
 // ---------------------------------------------------------------------------
-// What the client reads (R385)
+// What the client reads (R612)
 // ---------------------------------------------------------------------------
 
 /** One profile's rank in a season it has standings for. */
@@ -334,7 +330,7 @@ export type OwnRankBody = {
   season: string;
   tag: string;
   rank: VisibleRank;
-  /** The current win streak, which earns bonus pips below Mythic Grape (R379). */
+  /** The current win streak, which earns bonus pips below Mythic Grape (R606). */
   streak: number;
   record: { games: number; wins: number; losses: number; draws: number };
   /** Each season's best, newest season first; a season whose placements were never finished has none. */
@@ -363,7 +359,7 @@ export async function ownRank(deps: ServerDeps, profileId: string): Promise<OwnR
 /** One row of a Grape tier on the leaderboard. */
 export type LeaderboardRow = { tag: string; division: number; pips: number; you: boolean };
 
-/** `GET /api/leaderboard` (R385). */
+/** `GET /api/leaderboard` (R612). */
 export type LeaderboardBody = {
   season: string;
   /** Jlorious, #1 first. */
@@ -420,9 +416,9 @@ export async function leaderboard(deps: ServerDeps, viewerId: string): Promise<L
   };
 }
 
-/** `GET /api/matches/:matchId/ranks`: both seats' ranks for the match screen (R385). */
+/** `GET /api/matches/:matchId/ranks`: both seats' ranks for the match screen (R612). */
 export type MatchRanksBody = {
-  /** R377: whether this game moves the rating and the ladder. */
+  /** R604: whether this game moves the rating and the ladder. */
   ranked: boolean;
   seats: Record<PlayerId, { tag: string; rank: VisibleRank; you: boolean }>;
 };
@@ -433,15 +429,16 @@ export async function matchRanks(deps: ServerDeps, matchId: string, viewerId: st
   const standings = await deps.store.ranked.standings(buildSeasonId(deps));
   const jlorious = jloriousOrder(standings);
   const seat = (profileId: string) => ({ tag: playerTag(profileId), rank: rankIn(standings, jlorious, profileId), you: profileId === viewerId });
-  return { ranked: match.ranked, seats: { p1: seat(match.players[0]), p2: seat(match.players[1]) } };
+  // Absent on Postgres rows (no ranked column yet): unranked, so this game moves nothing.
+  return { ranked: match.ranked ?? false, seats: { p1: seat(match.players[0]), p2: seat(match.players[1]) } };
 }
 
 export function createRankedRoutes(): Route[] {
   return [
-    /** The caller's own rank, record, streak, tag and season badges. Never the rating (R385). */
+    /** The caller's own rank, record, streak, tag and season badges. Never the rating (R612). */
     route("GET", "/api/ranked", "active", async (req, deps) => ok(await ownRank(deps, callerProfile(req).id))),
 
-    /** R385: Jlorious #1–#100, then everyone else by Grape tier, then how many are still placing. */
+    /** R612: Jlorious #1–#100, then everyone else by Grape tier, then how many are still placing. */
     route("GET", "/api/leaderboard", "active", async (req, deps) => ok(await leaderboard(deps, callerProfile(req).id))),
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Seasons (SPEC §9.11, R382): which season a build plays in, and the soft reset that opens one.
+ * Seasons (SPEC §9.12, R609): which season a build plays in, and the soft reset that opens one.
  *
  * A season is named by the minor version of the game: every patch of v0.2 (v0.2.0, v0.2.6,
  * v0.2.6-r1) plays in season `v0.2`, and the first patch of v0.3 opens the next. The version is the
@@ -9,7 +9,7 @@
  * the mean of those players' ratings and widens each deviation by `SEASON_RESET_DEVIATION_BOOST` in
  * quadrature, capped at a new player's deviation; volatility is kept. The season's ladder starts
  * empty, so everyone is a Raisin again. Bots are not reset: their ratings measure a fixed program,
- * not a player coming back from a break (R383).
+ * not a player coming back from a break (R610).
  *
  * Pure: `src/api/ranked.ts` reads the players, calls `softReset`, and writes the result and the
  * season row in one transaction; `src/db/season-start.ts` runs the same path against a database
@@ -22,7 +22,7 @@ import type { Glicko } from "./glicko2";
 /** The leading `v<major>.<minor>` of a patch version. */
 const MINOR_VERSION = /^v(\d+)\.(\d+)(?:[.-]|$)/;
 
-/** R382: the season a patch version plays in, `v<major>.<minor>`. Throws on a version it cannot read. */
+/** R609: the season a patch version plays in, `v<major>.<minor>`. Throws on a version it cannot read. */
 export function seasonIdOf(patchVersion: string): string {
   const match = MINOR_VERSION.exec(patchVersion);
   if (match === null) throw new Error(`"${patchVersion}" is not a patch version (v<major>.<minor>…)`);
@@ -74,7 +74,7 @@ export function resetGlicko(glicko: Glicko, centre: number): Glicko {
 }
 
 /**
- * R382: the soft reset of every rated player. Players are taken in profile-id order, so the mean is
+ * R609: the soft reset of every rated player. Players are taken in profile-id order, so the mean is
  * summed the same way whatever order the store returned them in, and the same players always reset
  * to the same ratings.
  */

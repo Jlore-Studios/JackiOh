@@ -43,6 +43,8 @@ const SPRITE_STYLE: { readonly [P in FxPreset]: SpriteStyle } = {
   prismatic: "glow",
   void: "soft",
   confetti: "paper",
+  blood: "hard",
+  frost: "hard",
 };
 
 /** The paper scrap, as fractions of the sprite: its width, its height, and the lit band along its top. */

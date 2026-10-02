@@ -1,0 +1,637 @@
+/* The patch history (R388, R507): the Patch notes page (routes/patch-notes.tsx, inside `.tavern`)
+   and the History section of the card detail view (patches/CardHistory.tsx, inside the inspect
+   dialog, which is portalled outside `.tavern`). The change marks are shared, so their colours are
+   tokens of their own that read on both dark panels. Nothing here moves: no animation and no
+   transition, so reduced motion has nothing to stop. */
+
+:root {
+  /* The patch mark: teal, never the Radiant gold (R277) or a reference's dotted line (R279). The ink
+     is 10:1 or more on the tavern's panels and the inspect dialog; the band only tints behind it. */
+  --patch-mark-ink: #7fe3d6;
+  --patch-mark-line: #3fb6a8;
+  --patch-mark-band: rgb(63 182 168 / 0.2);
+  /* What a patch took away: struck through, in a muted clay that still reads at 6:1. */
+  --patch-cut-ink: #e0a998;
+  --patch-cut-line: #e8664f;
+}
+
+/* ---- the marks ------------------------------------------------------------------------------ */
+
+/* R507: bold, a double underline and the teal, so the mark does not rest on colour alone. */
+.patch-mark {
+  color: var(--patch-mark-ink);
+  font-weight: 800;
+  text-decoration: underline double;
+  text-decoration-color: var(--patch-mark-line);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+  background: var(--patch-mark-band);
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.patch-cut {
+  color: var(--patch-cut-ink);
+  text-decoration: line-through;
+  text-decoration-color: var(--patch-cut-line);
+  text-decoration-thickness: 0.12em;
+}
+
+/* `<ins>` and `<del>` are not announced by every screen reader, so each mark says what it is. */
+.patch-mark::before,
+.patch-mark::after,
+.patch-cut::before,
+.patch-cut::after,
+.patch-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(100%);
+  white-space: nowrap;
+}
+
+.patch-mark::before {
+  content: " new: ";
+}
+
+.patch-mark::after {
+  content: " (end new) ";
+}
+
+.patch-cut::before {
+  content: " removed: ";
+}
+
+.patch-cut::after {
+  content: " (end removed) ";
+}
+
+/* ---- one card's changes (ChangeList.tsx), on both surfaces ---------------------------------- */
+
+.patch-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.patch-change {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.patch-change__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.patch-values__arrow {
+  opacity: 0.8;
+}
+
+.patch-values__was {
+  opacity: 0.85;
+}
+
+.patch-values__now {
+  color: var(--patch-mark-ink);
+  font-weight: 800;
+}
+
+.patch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.patch-text__now,
+.patch-text__was {
+  white-space: pre-line;
+}
+
+.patch-text__was {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.patch-text__tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.patch-text__none {
+  font-style: italic;
+}
+
+.patch-change-note {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* A printed face, sized by its box: the face fills it at 5:7 (cards.css `.cf`). */
+.patch-face {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+}
+
+.patch-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
+.patch-status p {
+  margin: 0;
+}
+
+.patch-version {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* ---- the History section in the card detail view (inspect dialog) ---------------------------- */
+
+.patch-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgb(201 149 63 / 30%));
+  color: var(--text, #efe0bf);
+}
+
+.patch-history__title {
+  margin: 0;
+  font-size: inherit;
+}
+
+.patch-history__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-bright, rgb(201 149 63 / 55%));
+  border-radius: 10px;
+  background: var(--bg-sunken, #0e0905);
+  color: var(--text, #efe0bf);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* A caret drawn in borders (no character for a screen reader to read): down when shut, up when open. */
+.patch-history__toggle::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-left: 12px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.patch-history__toggle[aria-expanded="true"]::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.patch-history__toggle:hover {
+  border-color: var(--text-dim, rgb(239 224 191 / 72%));
+}
+
+.patch-history__toggle:focus-visible,
+.patch-retry:focus-visible,
+.patch-name:focus-visible,
+.patch-filter input:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 2px;
+}
+
+.patch-history__body[hidden] {
+  display: none;
+}
+
+.patch-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.patch-history__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgb(201 149 63 / 30%));
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.22);
+}
+
+.patch-history__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.patch-history__head .patch-version {
+  color: var(--patch-mark-ink);
+}
+
+.patch-date {
+  color: var(--text-dim, rgb(239 224 191 / 72%));
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.patch-history__patch-title {
+  font-weight: 600;
+}
+
+.patch-history__faces {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 132px));
+  gap: 10px;
+}
+
+.patch-history__face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+}
+
+.patch-history__face figcaption {
+  color: var(--text-dim, rgb(239 224 191 / 72%));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.patch-history__face--radiant figcaption {
+  color: var(--radiant, #ffd24a);
+}
+
+.patch-retry {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-bright, rgb(201 149 63 / 55%));
+  border-radius: 999px;
+  background: var(--bg-sunken, #0e0905);
+  color: var(--text, #efe0bf);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- the Patch notes page (routes/patch-notes.tsx, in the tavern) ----------------------------- */
+
+.tavern.app-shell .patch-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 960px;
+}
+
+.tavern.app-shell .patch-notes__head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.tavern.app-shell .patch-notes__title {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--tavern-gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 24px rgba(243, 201, 105, 0.25);
+}
+
+.tavern.app-shell .patch-notes__intro {
+  margin: 0 auto;
+  max-width: 60ch;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.tavern.app-shell .patch-notes .patch-status {
+  align-items: center;
+  text-align: center;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A patch: framed like the tavern's boards (auth/tavern.css `.panel--auth`), without the studs. */
+.tavern.app-shell .patch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px 20px 22px;
+  /* A source or a note may hold a long path ("docs/classic-sets.md"): it wraps, the page never scrolls sideways. */
+  overflow-wrap: anywhere;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+  box-shadow:
+    inset 0 0 0 3px rgba(18, 11, 7, 0.9),
+    inset 0 0 0 4px rgba(201, 149, 63, 0.35),
+    0 18px 44px rgba(0, 0, 0, 0.55);
+}
+
+.tavern.app-shell .patch > * {
+  max-width: 100%;
+}
+
+.tavern.app-shell .patch__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tavern.app-shell .patch__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: clamp(20px, 4.4vw, 26px);
+  line-height: 1.2;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch__title .patch-version {
+  padding: 2px 10px;
+  border: 1px solid var(--tavern-teal);
+  border-radius: 999px;
+  color: var(--patch-mark-ink);
+  font-family: inherit;
+  font-size: 0.72em;
+}
+
+.tavern.app-shell .patch__meta,
+.tavern.app-shell .patch__counts {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .patch__notes {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch__counts {
+  font-weight: 600;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch__panel {
+  width: 100%;
+}
+
+.tavern.app-shell .patch__panel[hidden] {
+  display: none;
+}
+
+.tavern.app-shell .patch-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  padding-top: 6px;
+}
+
+.tavern.app-shell .patch-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.tavern.app-shell .patch-filter__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-filter input {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 10px;
+  background: var(--tavern-well);
+  color: var(--tavern-parchment);
+  font: inherit;
+  font-size: 16px;
+}
+
+.tavern.app-shell .patch-filter input::placeholder {
+  color: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .patch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tavern.app-shell .patch-section__title,
+.tavern.app-shell .patch-group__title {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-group__title {
+  font-size: 16px;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-count {
+  color: var(--tavern-text-dim);
+  font-weight: 400;
+}
+
+/* A changed card: its face beside what changed. */
+.tavern.app-shell .patch-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-card {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid rgba(201, 149, 63, 0.35);
+  border-radius: 12px;
+  background: rgba(14, 9, 5, 0.55);
+}
+
+.tavern.app-shell .patch-card__face {
+  cursor: pointer;
+}
+
+.tavern.app-shell .patch-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-card__name {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 18px;
+}
+
+/* A card's name as a control: gold prose over a brass hairline, as the tavern writes a link. The
+   `link-button` class keeps the tavern's wood-button rule off it (auth/tavern.css). */
+.tavern.app-shell .patch-notes .patch-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(201, 149, 63, 0.55);
+  border-radius: 0;
+  background: none;
+  color: var(--tavern-gold);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tavern.app-shell .patch-notes .patch-name:hover {
+  color: var(--tavern-gold-pale);
+  border-bottom-color: var(--tavern-gold-pale);
+}
+
+/* Changed only in data a face does not print: a name and a line. */
+.tavern.app-shell .patch-quiet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-quiet__card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tavern.app-shell .patch-quiet__what {
+  font-size: 13px;
+  color: var(--tavern-text-dim);
+  overflow-wrap: anywhere;
+}
+
+/* Added and removed cards: names in columns, grouped by set. */
+.tavern.app-shell .patch-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tavern.app-shell .patch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tavern.app-shell .patch-names {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 2px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-names li {
+  min-width: 0;
+}
+
+/* A phone: the face narrower beside its changes, the name lists in two columns, and every name a
+   finger's 44 px target (docs/polish/7-mobile-ux.md). */
+@media (max-width: 600px) {
+  .tavern.app-shell .patch {
+    padding: 16px 14px 18px;
+  }
+
+  .tavern.app-shell .patch-card {
+    grid-template-columns: 108px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .tavern.app-shell .patch-names,
+  .tavern.app-shell .patch-quiet {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+  .tavern.app-shell .patch-notes .patch-name {
+    min-height: 44px;
+  }
+}

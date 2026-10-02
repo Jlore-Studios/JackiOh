@@ -1,14 +1,14 @@
 /**
- * Results and rating (BUILD M7-T2, SPEC §2.5, §9.5, §9.11, R79, R112, R376, R377).
+ * Results and rating (BUILD M7-T2, SPEC §2.5, §9.5, §9.12, R79, R112, R603, R604).
  *
  * §9.5: "Every ending records a result and clears both players' in-match state, and a reaper
- * resolves anything past the ceiling." §9.11: a ranked game moves both players' hidden Glicko-2
+ * resolves anything past the ceiling." §9.12: a ranked game moves both players' hidden Glicko-2
  * ratings and their ranks on the ladder.
  *
  * One function is that sentence: `createRecordResult(deps)` returns the `RecordResult` port the
  * actor calls for every one of §2.5's seven endings — `hero-death`, `both-heroes-dead`,
  * `concede`, `draw-accepted`, `turn-cap`, `disconnect` and `match-ceiling` — and it writes exactly
- * one `results` row, rates both players when the match is ranked (R377) and clears both in-match
+ * one `results` row, rates both players when the match is ranked (R604) and clears both in-match
  * flags in one transaction.
  *
  * It is idempotent by design, not by luck: the actor and the reaper can both reach the same
@@ -16,11 +16,11 @@
  * thing the transaction does is look for the row it is about to write.
  *
  * The rating maths is `src/ranked/glicko2.ts` and the ladder `src/ranked/ladder.ts`, reached through
- * `rateRankedGame` (`ranked.ts`), which also writes the record of the rated game (R384). This file
+ * `rateRankedGame` (`ranked.ts`), which also writes the record of the rated game (R611). This file
  * only decides which side won: §2.5's draws are a draw (0.5 each), and a concede and a disconnect
  * are a loss like any other.
  *
- * A room challenge is unranked (R377): its row records both ratings unchanged.
+ * A room challenge is unranked (R604): its row records both ratings unchanged.
  *
  * A game of a Conquest series is written the same way with one difference and one addition
  * (R262, R263): its row leaves both ratings unchanged, because a series moves the rating once, when it
@@ -40,6 +40,7 @@ import type {
   Store,
 } from "./ports";
 import type { RecordResult, RecordResultInput, TerminalOutcome } from "../match/contracts";
+import { recordLiveGame } from "./game-records";
 import { rateRankedGame } from "./ranked";
 import { advanceSeriesInTx, resumeSeries } from "./series";
 
@@ -83,7 +84,7 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
     if (already !== null) return { row: already, series: null };
 
     // R262: a game of a Conquest series is recorded but not rated — the series moves the rating
-    // once, when it ends — whoever resolved it. R377: and a match the queue did not pair (a room
+    // once, when it ends — whoever resolved it. R604: and a match the queue did not pair (a room
     // challenge) is never rated at all. The match row is what says so; a match whose row is gone
     // cannot say it was ranked, so it is not rated.
     const series = await t.series.byMatch(input.matchId);
@@ -109,7 +110,7 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
     let before: [number, number] = [ratingOf(seatA), ratingOf(seatB)];
     let after: [number, number] = [before[0], before[1]];
     if (ratingPolicy === "rated" && match !== null) {
-      // R376–R384: both hidden ratings, both ranks and the record of the rated game, in this
+      // R603–R611: both hidden ratings, both ranks and the record of the rated game, in this
       // transaction, so the result and its rating move commit together or not at all.
       const rated = await rateRankedGame(t, deps, {
         id: input.matchId,
@@ -141,6 +142,14 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
       ratingAfter: after,
     };
     await t.results.insert(row);
+
+    // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
+    // server board, with the result or not at all. The reaper reads no state, so it writes none.
+    if (input.lastBoards !== undefined) {
+      for (const [at, seat] of input.seats.entries()) {
+        await t.lastBoards.put(seat.profileId, "server", input.lastBoards[at] ?? [], input.at);
+      }
+    }
 
     for (const seat of [seatA, seatB]) {
       // R112's "leaves both ratings unchanged" is literal: no rating write happens at all, and the
@@ -185,8 +194,9 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
 
 /**
  * The `RecordResult` port the actor holds (`ActorDeps.recordResult`). Every terminal reason comes
- * through here, and a ranked match gets the ordinary rating move (R376, R112's "live match actor"
- * half).
+ * through here, and a ranked match gets the ordinary Glicko-2 rating move (R603, R112's
+ * "live match actor" half). Once the result is in, the game is filed for the card statistics
+ * (R376, `game-records.ts`).
  */
 export function createRecordResult(deps: ServerDeps): RecordResult {
   return async (input: RecordResultInput) => {
@@ -194,6 +204,9 @@ export function createRecordResult(deps: ServerDeps): RecordResult {
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
     await resumeSeries(deps, written.series);
+    // R376: after the commit too, and never at the result's expense — it logs and swallows its
+    // own failures, and a second write of the same match files nothing.
+    await recordLiveGame(deps, input.matchId);
     return written.row;
   };
 }

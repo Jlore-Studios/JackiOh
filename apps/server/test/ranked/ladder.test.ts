@@ -1,5 +1,5 @@
 /**
- * The visible ladder (SPEC §9.11, R378–R381), as pure functions: where a position sits, what the
+ * The visible ladder (SPEC §9.12, R605–R608), as pure functions: where a position sits, what the
  * hidden rating calls for, how one game moves it, the floor, and Jlorious.
  */
 
@@ -54,8 +54,8 @@ function play(rank: SeasonRank, results: readonly GameResult[], target: number):
   return results.reduce((row, result) => applyRankedGame(row, { result, target, at: AT }), rank);
 }
 
-describe("R378 the ladder's shape", () => {
-  it("R378 has five Grape tiers of three divisions, III up to I, each of RANK_PIPS_PER_DIVISION pips", () => {
+describe("R605 the ladder's shape", () => {
+  it("R605 has five Grape tiers of three divisions, III up to I, each of RANK_PIPS_PER_DIVISION pips", () => {
     expect(GRAPE_TIERS).toEqual(["rotten", "normal", "large", "golden", "mythic"]);
     expect(RANK_DIVISIONS_PER_TIER).toBe(3);
     expect(placeOf(0)).toEqual({ tier: "rotten", division: 3, pips: 0 });
@@ -67,7 +67,7 @@ describe("R378 the ladder's shape", () => {
     expect(placeOf(LADDER_TOP)).toEqual({ tier: "mythic", division: 1, pips: RANK_PIPS_PER_DIVISION - 1 });
   });
 
-  it("R378 a player is a Raisin until the season's placements are played, then stands where the rating calls for", () => {
+  it("R605 a player is a Raisin until the season's placements are played, then stands where the rating calls for", () => {
     const target = tierBottom(2) + 4; // Large Grape II, 1 pip
     let rank = freshRank("v0.1", "p", AT);
     for (let game = 1; game < RANK_PLACEMENT_GAMES; game += 1) {
@@ -84,19 +84,19 @@ describe("R378 the ladder's shape", () => {
     expect(visibleRank(null, null)).toEqual({ tier: "raisin", placementsPlayed: 0, placementGames: RANK_PLACEMENT_GAMES });
   });
 
-  it("R378 counts every rated game of the season, placements included", () => {
+  it("R605 counts every rated game of the season, placements included", () => {
     const rank = play(freshRank("v0.1", "p", AT), ["win", "loss", "draw", "win", "win", "win"], 10);
     expect({ games: rank.games, wins: rank.wins, losses: rank.losses, draws: rank.draws }).toEqual({ games: 6, wins: 4, losses: 1, draws: 1 });
   });
 });
 
-describe("R379 the rank the hidden rating calls for", () => {
-  it("R379 is the rating's mid-rank percentile among the season's placed players", () => {
+describe("R606 the rank the hidden rating calls for", () => {
+  it("R606 is the rating's mid-rank percentile among the season's placed players", () => {
     expect(percentileOf(1000, [])).toEqual({ numerator: 1, denominator: 2 });
     expect(percentileOf(1000, [900, 1000, 1100])).toEqual({ numerator: 2 * 1 + 1 + 1, denominator: 8 });
   });
 
-  it("R379 spreads a population over the tiers in RANK_TIER_PERCENTS: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%", () => {
+  it("R606 spreads a population over the tiers in RANK_TIER_PERCENTS: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%", () => {
     expect(RANK_TIER_PERCENTS).toEqual({ rotten: 12, normal: 60, large: 20, golden: 7, mythic: 1 });
     const ratings = Array.from({ length: 1000 }, (_, i) => 700 + i);
     const counts = new Map<string, number>();
@@ -108,7 +108,7 @@ describe("R379 the rank the hidden rating calls for", () => {
     expect(Object.fromEntries(counts)).toEqual({ rotten: 120, normal: 600, large: 200, golden: 70, mythic: 10 });
   });
 
-  it("R379 compares a boundary exactly, a percentile on one belonging to the tier above", () => {
+  it("R606 compares a boundary exactly, a percentile on one belonging to the tier above", () => {
     // 50 players: the best stands at exactly the 99th percentile, Mythic's lower edge.
     expect(placeOf(targetLadder({ numerator: 99, denominator: 100 })).tier).toBe("mythic");
     expect(placeOf(targetLadder({ numerator: 12, denominator: 100 })).tier).toBe("normal");
@@ -121,10 +121,10 @@ describe("R379 the rank the hidden rating calls for", () => {
   });
 });
 
-describe("R379 how one game moves a placed player", () => {
+describe("R606 how one game moves a placed player", () => {
   const mid = tierBottom(1) + 4; // Normal Grape II, 1 pip
 
-  it("R379 a win gives a pip, a loss takes one and a draw moves none, near the target", () => {
+  it("R606 a win gives a pip, a loss takes one and a draw moves none, near the target", () => {
     expect(pipDelta({ result: "win", ladder: mid, target: mid, streak: 1 })).toBe(1);
     expect(pipDelta({ result: "loss", ladder: mid, target: mid, streak: 0 })).toBe(-1);
     expect(pipDelta({ result: "draw", ladder: mid, target: mid, streak: 0 })).toBe(0);
@@ -133,7 +133,7 @@ describe("R379 how one game moves a placed player", () => {
     expect(pipDelta({ result: "loss", ladder: mid, target: mid - RANK_CONVERGENCE_GAP_PIPS + 1, streak: 0 })).toBe(-1);
   });
 
-  it("R379 leans one pip toward a target a division or more away, and no more however far", () => {
+  it("R606 leans one pip toward a target a division or more away, and no more however far", () => {
     const above = mid + RANK_CONVERGENCE_GAP_PIPS;
     const below = mid - RANK_CONVERGENCE_GAP_PIPS;
     // Rated above the visible rank: wins count double, losses as ever.
@@ -146,8 +146,8 @@ describe("R379 how one game moves a placed player", () => {
     expect(pipDelta({ result: "win", ladder: mid, target: below, streak: 1 })).toBe(1);
   });
 
-  it("R379 converges: a player who wins half their games drifts to the rank the rating calls for", () => {
-    // Up across tiers, and down inside one (the floor, R380, stops a fall across a tier boundary).
+  it("R606 converges: a player who wins half their games drifts to the rank the rating calls for", () => {
+    // Up across tiers, and down inside one (the floor, R607, stops a fall across a tier boundary).
     for (const [start, target] of [
       [tierBottom(0), tierBottom(3) + 4],
       [tierBottom(1) + PIPS_PER_TIER - 2, tierBottom(1)],
@@ -158,7 +158,7 @@ describe("R379 how one game moves a placed player", () => {
     }
   });
 
-  it("R379 a win streak earns a bonus pip from its RANK_STREAK_LENGTH-th win, below Mythic Grape only", () => {
+  it("R606 a win streak earns a bonus pip from its RANK_STREAK_LENGTH-th win, below Mythic Grape only", () => {
     const wins = Array.from({ length: RANK_STREAK_LENGTH }, () => "win" as const);
     // Below Mythic: the streak's third win gives two pips.
     const rank = play(placed(mid), wins, mid);
@@ -173,13 +173,13 @@ describe("R379 how one game moves a placed player", () => {
     expect(play(placed(mythic), wins, mythic).ladder).toBe(mythic + RANK_STREAK_LENGTH);
   });
 
-  it("R379 holds a player at the top of Mythic Grape I", () => {
+  it("R606 holds a player at the top of Mythic Grape I", () => {
     expect(play(placed(LADDER_TOP), ["win", "win"], LADDER_TOP).ladder).toBe(LADDER_TOP);
   });
 });
 
-describe("R380 the tier floor and the season's peak", () => {
-  it("R380 a player cannot drop below the Grape tier they have reached this season, but divisions inside it can drop", () => {
+describe("R607 the tier floor and the season's peak", () => {
+  it("R607 a player cannot drop below the Grape tier they have reached this season, but divisions inside it can drop", () => {
     const large = tierBottom(2) + 4; // Large Grape II, 1 pip
     const fallen = play(placed(large), ["loss", "loss", "loss", "loss", "loss", "loss", "loss"], 0);
     expect(fallen.ladder).toBe(tierBottom(2));
@@ -191,7 +191,7 @@ describe("R380 the tier floor and the season's peak", () => {
     expect(play(climbed, ["loss", "loss", "loss"], 0).peakLadder).toBe(tierBottom(3));
   });
 
-  it("R380 keeps the season's best position as the profile's badge", () => {
+  it("R607 keeps the season's best position as the profile's badge", () => {
     // +1, +1, then +2 for the streak's third win; then two losses, the first leaning toward the
     // target four pips below.
     const rank = play(placed(tierBottom(1)), ["win", "win", "win", "loss", "loss"], tierBottom(1));
@@ -205,11 +205,11 @@ describe("R380 the tier floor and the season's peak", () => {
   });
 });
 
-describe("R381 Jlorious", () => {
+describe("R608 Jlorious", () => {
   const mythic = tierBottom(4);
   const standing = (profileId: string, ladder: number | null, rating: number): Standing => ({ profileId, ladder, rating });
 
-  it("R381 is the top JLORIOUS_SIZE Mythic Grape players by hidden rating, ties on profile id", () => {
+  it("R608 is the top JLORIOUS_SIZE Mythic Grape players by hidden rating, ties on profile id", () => {
     expect(JLORIOUS_SIZE).toBe(100);
     const standings = Array.from({ length: 130 }, (_, i) => standing(`m-${String(i).padStart(3, "0")}`, mythic + (i % 9), 2000 - i));
     standings.push(standing("tie-b", mythic, 1950.5), standing("tie-a", mythic, 1950.5));
@@ -221,7 +221,7 @@ describe("R381 Jlorious", () => {
     expect(order).not.toContain("m-129");
   });
 
-  it("R381 is every Mythic Grape player when fewer than JLORIOUS_SIZE qualify, and nobody below Mythic or still placing", () => {
+  it("R608 is every Mythic Grape player when fewer than JLORIOUS_SIZE qualify, and nobody below Mythic or still placing", () => {
     const order = jloriousOrder([
       standing("golden-but-rated-highest", tierBottom(3) + 8, 2600),
       standing("raisin-rated-high", null, 2500),
@@ -231,7 +231,7 @@ describe("R381 Jlorious", () => {
     expect(order).toEqual(["mythic-high", "mythic-low"]);
   });
 
-  it("R381 is shown as a numbered position instead of a division, and a player who falls out is in Mythic Grape again", () => {
+  it("R608 is shown as a numbered position instead of a division, and a player who falls out is in Mythic Grape again", () => {
     const rank = placed(mythic + 2);
     expect(visibleRank(rank, 7)).toEqual({ tier: "jlorious", position: 7 });
     expect(visibleRank(rank, null)).toMatchObject({ tier: "mythic", division: 3, pips: 2 });

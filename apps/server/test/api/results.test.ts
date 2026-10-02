@@ -18,10 +18,12 @@ import { RATING_DEVIATION_START, RATING_VOLATILITY_START } from "../../src/confi
 import { rateGame, type Score } from "../../src/ranked/glicko2";
 import type { FrozenTrio, MatchSeat, ResultRow, SeriesRow } from "../../src/api/ports";
 import type { TerminalOutcome } from "../../src/match/contracts";
-import { TEST_PATCH_VERSION, createFakeMatchDirectory, createTestDeps, type TestDeps } from "../fakes/deps";
+import { TEST_PATCH_VERSION, createFakeMatchDirectory, createTestDeps, testConfig, type TestDeps } from "../fakes/deps";
 import { createFakeEngine, fakeDeck } from "../fakes/engine";
 
 const MINUTE = 60 * 1000;
+/** A minute past the test config's ceiling (R79, R389), whatever it is. */
+const PAST_CEILING_MS = (testConfig().matchCeilingMinutes + 1) * MINUTE;
 const MATCH_ID = "match-1";
 const A = "profile-a";
 const B = "profile-b";
@@ -57,7 +59,7 @@ function play(inputs: readonly ActionInput[]): { outcome: TerminalOutcome; turns
 }
 
 /**
- * R376: the Glicko-2 move one ranked game makes between two players new to it (each at a new
+ * R603: the Glicko-2 move one ranked game makes between two players new to it (each at a new
  * player's deviation and volatility), `scoreA` being the first one's score.
  */
 function move(ratingA: number, ratingB: number, scoreA: Score): { a: number; b: number } {
@@ -74,7 +76,7 @@ function toTheTurnCap(): ActionInput[] {
   }));
 }
 
-/** A ranked match `MATCH_ID` between A and B, unless `ranked: false` makes it a room's (R377). */
+/** A ranked match `MATCH_ID` between A and B, unless `ranked: false` makes it a room's (R604). */
 async function scenario(
   options: { ratings?: [number, number]; startedOffsetMs?: number; ranked?: boolean } = {},
 ): Promise<TestDeps> {
@@ -141,7 +143,7 @@ async function expectOneEnding(
 }
 
 describe("results (M7-T2)", () => {
-  // R376: two new players at 1000, equally rated, so the winner gains exactly what the loser gives.
+  // R603: two new players at 1000, equally rated, so the winner gains exactly what the loser gives.
   const { a: WIN, b: LOSS } = move(1000, 1000, 1);
 
   it("hero-death: the winner is rated up and the loser down", async () => {
@@ -168,7 +170,7 @@ describe("results (M7-T2)", () => {
     expect(row.turns).toBe(1);
     expect(row.ratingBefore).toEqual([1200, 1000]);
 
-    // The same move a draw gets anywhere else (R376): the favourite gives, the underdog takes.
+    // The same move a draw gets anywhere else (R603): the favourite gives, the underdog takes.
     const expected = move(1200, 1000, 0.5);
     expect(expected.a).toBeLessThan(1200);
     expect(expected.b).toBeGreaterThan(1000);
@@ -265,8 +267,8 @@ describe("results (M7-T2)", () => {
     expect(await deps.store.tickets.openForProfile(A)).toBeNull();
   });
 
-  describe("ranked and unranked (R377, R384)", () => {
-    it("R377 a room challenge moves neither rating nor rank, and records both ratings unchanged", async () => {
+  describe("ranked and unranked (R604, R611)", () => {
+    it("R604 a room challenge moves neither rating nor rank, and records both ratings unchanged", async () => {
       const deps = await scenario({ ratings: [1200, 1000], ranked: false });
       const row = await record(deps, [{ type: "concede", playerId: "p2" }]);
       expect(row).toMatchObject({ winnerProfileId: A, ratingBefore: [1200, 1000], ratingAfter: [1200, 1000] });
@@ -277,7 +279,7 @@ describe("results (M7-T2)", () => {
       expect((await deps.store.profiles.getById(A))?.ratingDeviation).toBe(RATING_DEVIATION_START);
     });
 
-    it("R377 a ranked match moves both hidden ratings, their deviations and both players' seasons", async () => {
+    it("R604 a ranked match moves both hidden ratings, their deviations and both players' seasons", async () => {
       const deps = await scenario();
       await record(deps, [{ type: "concede", playerId: "p2" }]);
       const profileA = await deps.store.profiles.getById(A);
@@ -288,7 +290,7 @@ describe("results (M7-T2)", () => {
       ]);
     });
 
-    it("R384 records the rated game: version, pilots, result, and both ratings and ranks before and after", async () => {
+    it("R611 records the rated game: version, pilots, result, and both ratings and ranks before and after", async () => {
       const deps = await scenario({ ratings: [1200, 1000] });
       await record(deps, [{ type: "disconnectExpired", player: "p1", playerId: "p1" }]);
       const expected = move(1200, 1000, 0);
@@ -300,7 +302,7 @@ describe("results (M7-T2)", () => {
         seasonId: "v0.1",
         patchVersion: TEST_PATCH_VERSION,
         catalogVersion: deps.catalog.version,
-        // R376: a disconnect is a loss like any other.
+        // R603: a disconnect is a loss like any other.
         winnerSide: 1,
         reason: "disconnect",
       });
@@ -318,8 +320,8 @@ describe("results (M7-T2)", () => {
 
   describe("the reaper (§9.5, R112)", () => {
     it("resolves a match past its ceiling as a draw and leaves both ratings unchanged (R112)", async () => {
-      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: 61 * MINUTE });
-      const startedAt = deps.timers.now() - 61 * MINUTE;
+      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: PAST_CEILING_MS });
+      const startedAt = deps.timers.now() - PAST_CEILING_MS;
       expect(matchCeilingAt(startedAt, deps.config)).toBeLessThan(deps.timers.now());
 
       expect(await reapStuckMatches(deps)).toEqual([MATCH_ID]);
@@ -345,14 +347,14 @@ describe("results (M7-T2)", () => {
     });
 
     it("is a no-op once the actor has already recorded the ending", async () => {
-      const deps = await scenario({ startedOffsetMs: 61 * MINUTE });
+      const deps = await scenario({ startedOffsetMs: PAST_CEILING_MS });
       await record(deps, [{ type: "concede", playerId: "p2" }]);
       expect(await reapStuckMatches(deps)).toEqual([]);
       await expectOneEnding(deps, { winner: A, reason: "concede", ratingAfter: [WIN, LOSS] });
     });
 
     it("keeps its own row when an actor reports the same match afterwards", async () => {
-      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: 61 * MINUTE });
+      const deps = await scenario({ ratings: [1200, 1000], startedOffsetMs: PAST_CEILING_MS });
       await reapStuckMatches(deps);
       const late = await record(deps, [{ type: "concede", playerId: "p2" }]);
       expect(late.reason).toBe("match-ceiling");

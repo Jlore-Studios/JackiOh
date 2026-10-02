@@ -8,7 +8,8 @@
 // migrations/), what this browser keeps (net/session.ts, auth/pkce.ts, settings/store.ts,
 // tutorial/progress.ts, net/return-to.ts, auth/redirect.ts), where it runs (render.yaml,
 // vercel.json), how long it is kept (the retention constants in apps/server/src/config.ts, purged
-// by migration 0013) and what deleting an account removes (migration 0012). The two things the code
+// by migration 0013), what deleting an account removes (migration 0012) and the summary each finished
+// match leaves for the card statistics (migration 0014, SPEC §9.11). The two things the code
 // cannot say, a minimum age and a private contact address, are marked for the owner. Change the
 // date on the page whenever the text changes.
 
@@ -28,7 +29,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-09-29";
+export const PRIVACY_LAST_UPDATED = "2026-10-01";
 
 export default function PrivacyRoute(): ReactElement {
   return (
@@ -76,6 +77,11 @@ export default function PrivacyRoute(): ReactElement {
               lessons you finish while signed in.
             </li>
             <li>
+              A summary of each online match you finish, kept for card statistics: its mode, the cards each
+              player&rsquo;s deck held, the ones each player started with, drew and played, who went first and
+              who won. The summary itself names no account.
+            </li>
+            <li>
               Our hosts receive your IP address, your browser type and the pages you ask for with each
               request, and may keep them in their logs. Supabase also records your IP address and browser
               when you sign in.
@@ -91,6 +97,7 @@ export default function PrivacyRoute(): ReactElement {
           <ul>
             <li>To create your account, sign you in, and email you the links you ask for: to confirm your address or reset your password.</li>
             <li>To run online matches, keep score, and set your rating.</li>
+            <li>To see how often each card wins, so the cards can be balanced.</li>
             <li>To save your decks and tutorial progress so they follow your account.</li>
             <li>To stop invite-code guessing and other abuse.</li>
             <li>To keep the site running and fix problems.</li>
@@ -151,6 +158,10 @@ export default function PrivacyRoute(): ReactElement {
             <li>
               The move-by-move record of a finished match: {MATCH_ACTION_RETENTION_DAYS} days after the match
               ends. Its result, and the rating change it made, are kept.
+            </li>
+            <li>
+              A finished match&rsquo;s summary for card statistics: for as long as the statistics are kept. It
+              names no account, and once your account is deleted nothing links it to you.
             </li>
             <li>Our hosts&rsquo; request logs: as long as each host&rsquo;s own policy says.</li>
           </ul>

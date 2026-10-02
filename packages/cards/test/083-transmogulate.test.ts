@@ -2,11 +2,12 @@
 //
 // BUILD M4-T4's must-pass row: "Zone counts preserved; board cards replaced by same-type
 // Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes
-// Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards".
+// Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards" —
+// and since patch v0.2.0 (R380) the pool is every set's non-token Legendaries but #83.
 //
 // The board fixture covers every permanent type at once: a Unit, an Immutable Unit (R23), a Field
-// Spell, a Trap and a Field Trap. The pool is asserted as the six ids R35 names, so if `query`, the
-// rarities or the exclusion of #83 ever drift, these tests name the card that appeared.
+// Spell, a Trap and a Field Trap. The pool is read from the catalog and checked to hold the six ids
+// R35 names, so if `query`, the rarities or the exclusion of #83 ever drift, these tests say so.
 //
 // One count to keep in mind: Transmogulate is a Spell, so it reaches its owner's graveyard AFTER
 // its own script has run (§10.5). The graveyard therefore ends one card larger than it started —
@@ -15,16 +16,21 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
+import { catalog } from "../src/query";
 
 const TRANSMOGULATE = "core-083";
 
-/** R35's pool, written out: "the §8 Legendary-rarity cards except #83". */
-const POOL = ["core-052", "core-085", "core-087", "core-092", "core-093", "core-095"];
-/** The Legendary Units in the pool: #52 Silly Silas and #92 Felinor Fiender. */
-const LEGENDARY_UNITS = ["core-052", "core-092"];
-/** The only Legendary Field Spell: #93 Combo-Index. */
-const LEGENDARY_FIELD_SPELL = "core-093";
-/** The only Legendary Trap: #85 Unlicensed Experimentation — and "Field Trap counts as Trap". */
+/**
+ * R35's pool: "every non-token Legendary except #83" — of every set since patch v0.2.0 (R380). In
+ * Core that is the six R35 names, #52, #85, #87, #92, #93, #95.
+ */
+const POOL = catalog.pool(TRANSMOGULATE, { rarity: "Legendary" }).map((def) => def.id);
+const CORE_SIX = ["core-052", "core-085", "core-087", "core-092", "core-093", "core-095"];
+/** The Legendary Units in the pool, every set's (Core #52 Silly Silas and #92 Felinor Fiender among them). */
+const LEGENDARY_UNITS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Unit" }).map((def) => def.id);
+/** The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, Classic+ #78. */
+const LEGENDARY_FIELD_SPELLS = catalog.pool(TRANSMOGULATE, { rarity: "Legendary", type: "Field Spell" }).map((def) => def.id);
+/** The only Legendary Trap of any set: #85 Unlicensed Experimentation — and "Field Trap counts as Trap". */
 const LEGENDARY_TRAP = "core-085";
 
 /** Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
@@ -59,7 +65,7 @@ describe("#83 Transmogulate — base", () => {
     // A Unit becomes a Legendary Unit, in its own lane.
     expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
     // A Field Spell becomes the Legendary Field Spell; a Trap becomes the Legendary Trap.
-    expect(s.backrow("p1", 1)?.defId).toBe(LEGENDARY_FIELD_SPELL);
+    expect(LEGENDARY_FIELD_SPELLS).toContain(s.backrow("p1", 1)?.defId);
     expect(s.backrow("p1", 2)?.defId).toBe(LEGENDARY_TRAP);
     s.expectEvents("cardPlayed", "transformed");
   });
@@ -97,7 +103,10 @@ describe("#83 Transmogulate — base", () => {
     expect(s.pile("p1", "graveyard").map((card) => card.defId)).toContain(TRANSMOGULATE);
   });
 
-  it("R35 the pool is exactly #52, #85, #87, #92, #93, #95 — never Transmogulate itself", () => {
+  it("R35 R380 the pool is every set's non-token Legendaries — Core's #52, #85, #87, #92, #93, #95 among them — never Transmogulate itself", () => {
+    for (const id of CORE_SIX) expect(POOL).toContain(id);
+    expect(POOL).not.toContain(TRANSMOGULATE);
+    expect(POOL.some((id) => id.startsWith("classic"))).toBe(true);
     const s = board();
     const spell = s.card(TRANSMOGULATE).id;
     s.play(TRANSMOGULATE);
@@ -167,10 +176,28 @@ describe("#83 Transmogulate — base", () => {
     expect(s.backrow("p1", 1)?.radiant).toBe(false);
   });
 
-  it.todo(
-    "R13 a card dormant under a Stack is not on your board — blocked on harness support for " +
-      "seeding a Stack pile (SideSetup.field cannot put two cards in one lane)",
-  );
+  it("R13 a card dormant under a Stack is not on your board: only the top of the pile is replaced", () => {
+    // #92 Felinor Fiender (Stack) on top of #43 Big Felinor in lane 1; the Big Felinor is dormant.
+    const s = scenario({
+      seed: "transmogulate-stack",
+      p1: { hand: [TRANSMOGULATE], field: ["core-043", { def: "core-092", stack: true }], library: ["core-020"] },
+      p2: { field: ["core-011"], library: ["core-020"] },
+    });
+    const buried = s.card("core-043");
+    const top = s.card("core-092");
+    expect(s.unit("p1", 1)?.id, "the Fiender is on top of lane 1").toBe(top.id);
+
+    s.play(TRANSMOGULATE);
+
+    // The acting top card was replaced in place by a Legendary Unit.
+    const transformed = s.events.filter((event) => event.type === "transformed");
+    expect(transformed.some((event) => event.instanceId === top.id)).toBe(true);
+    expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
+    // The dormant card is untouched: still on the field beneath it, still a Big Felinor.
+    expect(transformed.some((event) => event.instanceId === buried.id)).toBe(false);
+    s.expectInZone(buried, "field");
+    expect(s.card(buried).defId).toBe("core-043");
+  });
 });
 
 describe("#83 Transmogulate — radiant", () => {
@@ -195,7 +222,7 @@ describe("#83 Transmogulate — radiant", () => {
     const s = board(true).play(TRANSMOGULATE);
 
     expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
-    expect(s.backrow("p1", 1)?.defId).toBe(LEGENDARY_FIELD_SPELL);
+    expect(LEGENDARY_FIELD_SPELLS).toContain(s.backrow("p1", 1)?.defId);
     expect(s.backrow("p1", 3)?.defId).toBe(LEGENDARY_TRAP);
     for (const card of s.pile("p1", "library")) expect(POOL).toContain(card.defId);
   });

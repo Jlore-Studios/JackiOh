@@ -20,12 +20,12 @@ export const FACE_DOWN_TITLE = "Face-down trap";
 /** R370: the line under it in its inspect overlay. */
 export const FACE_DOWN_HINT = "Only the player who set it can see what it is. It springs by itself when its condition is met.";
 
-/** "Cost (2)": a specific cost, written as card text writes one (v0.1.1). */
+/** "(2) Cost": a specific cost, written as card text writes one, the cost as a noun (R432). */
 export function costPhrase(cost: number): string {
-  return `Cost (${String(cost)})`;
+  return `(${String(cost)}) Cost`;
 }
 
-/** R370: a back's label and tooltip, "Face-down trap, Cost (2)", or without a cost the view does not give. */
+/** R370, R432: a back's label and tooltip, "Face-down trap, (2) Cost", or without a cost the view does not give. */
 export function faceDownLabel(cost: number | undefined): string {
   return cost === undefined ? FACE_DOWN_TITLE : `${FACE_DOWN_TITLE}, ${costPhrase(cost)}`;
 }

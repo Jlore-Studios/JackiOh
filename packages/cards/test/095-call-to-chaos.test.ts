@@ -1,8 +1,9 @@
 // #95 Call to Chaos (Core Edition) and #95.1 Chaos Golem — SPEC §8.4, §7, §5.1, §10.5, §10.8,
-// R4, R11, R28, R60, R64, R70, R87.
+// R4, R11, R28, R60, R64, R70, R87, R423, R436.
 //
-// BUILD M4-T4 row 95: "Each of the 10 effects has a test; recursion stops at 20 (R28); radiant
-// rolls the recursion plus one of the other 9 effects (R28)".
+// BUILD M4-T4 row 95, as patch v0.2.0 rewrites it: "Each of the 10 effects has a test; recursion
+// stops at 20 (R28); radiant rolls three different effects of the ten, resolved in the list's order
+// (R423); what was rolled is named to both players (R436)".
 // BUILD M4-T4 row 95.1: "10/10 with all four keywords". R276 has since given it a Radiant face:
 //                        20/20 "Charge, Lifesteal, Divine Shield, First Strike" (R275).
 //
@@ -24,12 +25,12 @@
 // Rush Token and Chaos Golem indices, the real backrow types) down the real §10.5 play path.
 
 import { describe, expect, it } from "vitest";
-import type { GameEvent, PlayerId } from "@jackioh/shared";
+import type { Action, GameEvent, PlayerId } from "@jackioh/shared";
 // R28's number lives in `config.ts` and is NOT re-exported by the subsystem namespace: reaching
 // for it as `subsystems.CALL_TO_CHAOS_CHAIN_CAP` yields `undefined`, which silently disables every
 // chain assertion below, so it is imported by name.
-import { CALL_TO_CHAOS_CHAIN_CAP, createRng, effectiveCost, queryCost, subsystems } from "@jackioh/engine";
-import type { CardInstance } from "@jackioh/engine";
+import { CALL_TO_CHAOS_CHAIN_CAP, createRng, effectiveCost, hashState, queryCost, reduce, subsystems } from "@jackioh/engine";
+import type { CardInstance, GameState } from "@jackioh/engine";
 import { cardDef } from "../src/catalog-data";
 import { query } from "../src/query";
 import { base as chaosBase, radiant as chaosRadiant } from "../src/scripts/095-call-to-chaos";
@@ -59,20 +60,29 @@ type ChaosEffect = (typeof subsystems.CHAOS_EFFECTS)[number]["name"];
 
 const CURSOR_SEARCH = 500;
 
-/** What the engine's roll picks for (SEED, cursor); index 1 is the radiant pair's partner (R28). */
-function rolledAt(cursor: number, radiantFace: boolean): ChaosEffect | undefined {
-  const rolled = subsystems.rollChaosEffects(createRng(SEED, cursor), radiantFace);
-  return rolled[radiantFace ? 1 : 0]?.name;
+/** What the engine's base roll picks for (SEED, cursor). */
+function rolledAt(cursor: number): ChaosEffect | undefined {
+  return subsystems.rollChaosEffects(createRng(SEED, cursor), false)[0]?.name;
 }
 
-function cursorFor(effect: ChaosEffect, radiantFace = false): number {
+/** R423: the three the engine's Radiant roll picks for (SEED, cursor), in the order they resolve. */
+function radiantRollAt(cursor: number): ChaosEffect[] {
+  return subsystems.rollChaosEffects(createRng(SEED, cursor), true).map((effect) => effect.name);
+}
+
+function cursorFor(effect: ChaosEffect): number {
   for (let cursor = 0; cursor < CURSOR_SEARCH; cursor += 1) {
-    if (rolledAt(cursor, radiantFace) === effect) return cursor;
+    if (rolledAt(cursor) === effect) return cursor;
   }
-  throw new Error(
-    `no cursor below ${CURSOR_SEARCH} rolls "${effect}" from seed "${SEED}" ` +
-      `(radiant face: ${String(radiantFace)})`,
-  );
+  throw new Error(`no cursor below ${CURSOR_SEARCH} rolls "${effect}" from seed "${SEED}"`);
+}
+
+/** R423: a cursor whose Radiant roll the predicate accepts. */
+function radiantCursorWhere(accept: (rolled: readonly ChaosEffect[]) => boolean, what: string): number {
+  for (let cursor = 0; cursor < CURSOR_SEARCH * 4; cursor += 1) {
+    if (accept(radiantRollAt(cursor))) return cursor;
+  }
+  throw new Error(`no cursor below ${CURSOR_SEARCH * 4} rolls ${what} on the Radiant face from seed "${SEED}"`);
 }
 
 /**
@@ -83,12 +93,15 @@ function side(extra: SideSetup = {}): SideSetup {
   return { hand: [CHAOS, MENACE], mana: 8, ...extra };
 }
 
-/** Play #95 with the roll pinned to `effect`. `chain` seeds R28's counter on the played card. */
+/**
+ * Play #95 with the roll pinned: a base roll of `effect`, or — `radiantCursor` given — the Radiant
+ * roll that cursor draws. `chain` seeds R28's counter on the played card.
+ */
 function chaos(
-  effect: ChaosEffect,
-  opts: { p1?: SideSetup; p2?: SideSetup; radiantFace?: boolean; chain?: number } = {},
+  effect: ChaosEffect | null,
+  opts: { p1?: SideSetup; p2?: SideSetup; radiantCursor?: number; chain?: number } = {},
 ): Scenario {
-  const radiantFace = opts.radiantFace === true;
+  const radiantFace = opts.radiantCursor !== undefined;
   const p1 = opts.p1 ?? side();
   const hand = p1.hand ?? [CHAOS, MENACE];
   const s = scenario({
@@ -100,7 +113,7 @@ function chaos(
     ...(opts.p2 === undefined ? {} : { p2: opts.p2 }),
   });
   if (opts.chain !== undefined) s.card(CHAOS).memory[subsystems.CHAOS_CHAIN_KEY] = opts.chain;
-  s.state.rngCursor = cursorFor(effect, radiantFace);
+  s.state.rngCursor = opts.radiantCursor ?? cursorFor(must(effect, "a base effect to pin"));
   return s.play(CHAOS);
 }
 
@@ -429,6 +442,12 @@ describe("#95 Call to Chaos — the two caps", () => {
     expect(cast.memory[subsystems.CHAOS_CHAIN_KEY]).toBeUndefined();
   });
 
+  it("R28 R380 the recursion's pool is every Call to Chaos of every set: both editions", () => {
+    const pool = query({ tags: ["Call to Chaos"] }).map((def) => def.id);
+    expect(pool).toEqual(expect.arrayContaining([CHAOS, "classicplus-073"]));
+    expect(pool.every((id) => cardDef(id).tags.includes("Call to Chaos"))).toBe(true);
+  });
+
   it("R28 the counter is instance state, so two Calls in one turn do not share it", () => {
     const s = chaos("recast", { p1: { hand: [CHAOS, CHAOS], mana: 8 } });
     expect(chaosPlays(s)).toHaveLength(2);
@@ -440,54 +459,145 @@ describe("#95 Call to Chaos — the two caps", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The radiant face (§8.4: "Two random effects").
+// The radiant face (§8.4, R423: "Three different random effects, resolved in the order listed").
 // ---------------------------------------------------------------------------
 
+/** The labels `chaosRolled` named, in order (R436). */
+function announced(s: Scenario): string[][] {
+  return eventsOf(s, "chaosRolled").map((event) => event.effects);
+}
+
+function labelsOf(names: readonly ChaosEffect[]): string[] {
+  return names.map((name) => must(subsystems.CHAOS_EFFECTS.find((effect) => effect.name === name), name).label);
+}
+
 describe("#95 Call to Chaos — radiant", () => {
-  it("R28 rolls the recursion plus one of the other 9, the recursion never doubled", () => {
-    // The played card sits one below the cap, so the guaranteed recursion casts exactly one card
-    // and that card can cast nothing further. The #95 play count is then 1 + the number of
-    // recursions the radiant roll produced, which pins "guaranteed and never doubled" as a number.
-    const partners = new Set<string>();
-    for (let cursor = 0; cursor < 40; cursor += 1) {
-      const s = scenario({
-        seed: SEED,
-        p1: { hand: [{ def: CHAOS, radiant: true }, MENACE], mana: 8 },
-      });
-      s.card(CHAOS).memory[subsystems.CHAOS_CHAIN_KEY] = CALL_TO_CHAOS_CHAIN_CAP - 1;
+  it("R423 rolls three DIFFERENT effects of the ten and resolves them in the order the list writes them", () => {
+    const order = subsystems.CHAOS_EFFECTS.map((effect) => effect.name);
+    const reached = new Set<string>();
+    for (let cursor = 0; cursor < 60; cursor += 1) {
+      // At the cap, so a rolled recursion casts nothing and each play is this card alone (R87).
+      const s = scenario({ seed: SEED, p1: { hand: [{ def: CHAOS, radiant: true }, MENACE], mana: 8 } });
+      s.card(CHAOS).memory[subsystems.CHAOS_CHAIN_KEY] = CALL_TO_CHAOS_CHAIN_CAP;
       s.state.rngCursor = cursor;
       s.play(CHAOS);
-      expect(chaosPlays(s)).toHaveLength(2);
-      partners.add(String(rolledAt(cursor, true)));
+
+      const rolled = radiantRollAt(cursor);
+      expect(new Set(rolled).size).toBe(3);
+      const at = rolled.map((name) => order.indexOf(name));
+      expect(at).toEqual([...at].sort((a, b) => a - b));
+      // R436: the card itself named exactly those three, in that order.
+      expect(announced(s)).toEqual([labelsOf(rolled)]);
+      for (const name of rolled) reached.add(name);
     }
-    expect(partners.has("recast")).toBe(false);
-    expect(partners.size).toBeGreaterThan(1);
+    expect(reached.size).toBe(10);
   });
 
-  it("R87 resolves the recursion first, so its whole chain is done before the partner reads", () => {
-    const s = chaos("golem", {
-      radiantFace: true,
-      chain: CALL_TO_CHAOS_CHAIN_CAP - 1,
-    });
+  it("R423 the recursion is not guaranteed any more: a roll without it casts nothing", () => {
+    const cursor = radiantCursorWhere((rolled) => !rolled.includes("recast"), "no recursion");
+    const s = chaos(null, { radiantCursor: cursor });
+    expect(chaosPlays(s)).toHaveLength(1);
+    expect(s.state.counters.played).toBe(1);
+  });
+
+  it("R87 R423 a rolled recursion resolves where the list puts it, last: the Golem is summoned before the chain is cast", () => {
+    const cursor = radiantCursorWhere(
+      (rolled) => rolled.includes("golem") && rolled.includes("recast"),
+      "the Golem and the recursion",
+    );
+    const s = chaos(null, { radiantCursor: cursor, chain: CALL_TO_CHAOS_CHAIN_CAP - 1 });
     const cast = must(chaosPlays(s)[1], "the cast #95");
     const castAt = s.events.indexOf(cast);
     const golemAt = s.events.findIndex((event) => event.type === "summoned" && event.defId === GOLEM);
-    expect(castAt).toBeGreaterThanOrEqual(0);
-    expect(golemAt).toBeGreaterThan(castAt);
+    expect(golemAt).toBeGreaterThanOrEqual(0);
+    expect(castAt).toBeGreaterThan(golemAt);
   });
 
-  it("R28 at the cap a radiant Call runs only its partner", () => {
-    const s = chaos("golem", { radiantFace: true, chain: CALL_TO_CHAOS_CHAIN_CAP });
+  it("R28 R87 at the cap a rolled recursion resolves into nothing, and the other two still run", () => {
+    const cursor = radiantCursorWhere(
+      (rolled) => rolled.includes("golem") && rolled.includes("recast"),
+      "the Golem and the recursion",
+    );
+    const s = chaos(null, { radiantCursor: cursor, chain: CALL_TO_CHAOS_CHAIN_CAP });
     expect(chaosPlays(s)).toHaveLength(1);
-    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toEqual([GOLEM]);
+    expect(unitsOf(s, "p1").map((unit) => unit.defId)).toContain(GOLEM);
+    // R436: the recursion was rolled, and is named, though it did nothing.
+    expect(announced(s)[0]).toContain("Cast a random Call to Chaos");
   });
 
-  it("§5.2 a base copy gets no guaranteed recursion, however deep the chain is", () => {
+  it("§5.2 a base copy rolls one effect, however deep the chain is", () => {
     // Both faces call the same subsystem; the `radiant` argument each face passes is the whole
     // difference, which is why the base face can roll any single one of the ten.
     const s = chaos("heal", { chain: CALL_TO_CHAOS_CHAIN_CAP - 1 });
     expect(chaosPlays(s)).toHaveLength(1);
     s.expectHealth("p1", 60);
+    expect(announced(s)).toEqual([["Heal your hero 30"]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R436: what was rolled, named to both players.
+// ---------------------------------------------------------------------------
+
+describe("#95 Call to Chaos — R436 names what it rolled to both players", () => {
+  it("R436 both seats read the same `chaosRolled`, the card and the labels unredacted, before the first effect lands", () => {
+    const s = chaos("golem");
+    const event = must(eventsOf(s, "chaosRolled")[0], "the announcement");
+    expect(event).toMatchObject({ player: "p1", defId: CHAOS, effects: ["Summon a Chaos Golem"] });
+    const at = s.events.indexOf(event);
+    const summonAt = s.events.findIndex((e) => e.type === "summoned" && e.defId === GOLEM);
+    expect(at).toBeLessThan(summonAt);
+
+    for (const viewer of ["p1", "p2"] as const) {
+      const seen = s.view(viewer).events.filter((e) => e.type === "chaosRolled");
+      expect(seen).toEqual([event]);
+    }
+  });
+
+  it("R436 every label is a clause of the card's printed list", () => {
+    const text = cardDef(CHAOS).base.text.toLowerCase();
+    for (const effect of subsystems.CHAOS_EFFECTS) expect(text).toContain(effect.label.toLowerCase());
+  });
+
+  it("R436 R113 a roll a question pauses is announced once: Hinder's discard stops the whole-deck draw, and the rest follows the answer", () => {
+    // A Radiant roll with the whole-deck draw and a later effect, the Golem. The library's Hinder is
+    // cast by that draw and asks p1 to discard (R431), which pauses the draw and the Golem behind it.
+    const cursor = radiantCursorWhere(
+      (rolled) =>
+        rolled.includes("draw") && rolled.includes("golem") && !rolled.includes("recast") && !rolled.includes("tokens"),
+      "the draw and the Golem, with room for it",
+    );
+    const s = chaos(null, {
+      radiantCursor: cursor,
+      p1: { hand: [CHAOS, MENACE, JAMMED], mana: 8, library: ["core-021", RENO, RENO] },
+    });
+    expect(s.state.pending?.kind).toBe("hand");
+    expect(eventsOf(s, "chaosRolled")).toHaveLength(1);
+    expect(eventsOf(s, "summoned").some((event) => event.defId === GOLEM)).toBe(false);
+    // §9.3: the paused roll is plain JSON, its memo included: a round-tripped copy answers to the
+    // same game as the live one.
+    const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
+    expect(hashState(thawed)).toBe(hashState(s.state));
+    const answer = {
+      type: "answer",
+      choiceId: s.state.pending?.id ?? "",
+      selection: [{ pick: "instance", instanceId: s.card(JAMMED).id }],
+      playerId: "p1",
+      nonce: "chaos-roundtrip-answer",
+    } as Action;
+    const live = reduce(s.state, answer);
+    const frozen = reduce(thawed, answer);
+    expect(live.error).toBeUndefined();
+    expect(frozen.state).toEqual(live.state);
+    expect(frozen.events).toEqual(live.events);
+
+    s.answer(s.card(JAMMED).id);
+
+    // The rest of the roll resolved after the answer, and nothing was rolled or announced again.
+    expect(eventsOf(s, "chaosRolled")).toHaveLength(1);
+    expect(eventsOf(s, "summoned").some((event) => event.defId === GOLEM)).toBe(true);
+    s.expectInZone(JAMMED, "graveyard");
+    expect(s.hand("p1").filter((card) => card.defId === RENO)).toHaveLength(2);
   });
 });
 

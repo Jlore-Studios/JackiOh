@@ -26,12 +26,17 @@ import {
 } from "../../src/api/e2e-store";
 import {
   createMemoryDeckStores,
+  createMemoryGameRecordStore,
+  createMemoryLastBoardStore,
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
+  matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type GameRecordTables,
+  type LastBoardTables,
   type RankedTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
@@ -66,7 +71,9 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
-  RankedTables;
+  RankedTables &
+  LastBoardTables &
+  GameRecordTables;
 
 function emptyTables(): Tables {
   return {
@@ -84,6 +91,8 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
+    gameRecords: [],
     ...emptyRankedTables(),
   };
 }
@@ -228,6 +237,12 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
       row.ratingDeviation = glicko.deviation;
       row.ratingVolatility = glicko.volatility;
     },
+    setRating: async (profileId, rating) => {
+      call("profiles.setRating");
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.rating = rating;
+    },
     // Migration 0012's account deletion, shared with `src/api/e2e-store.ts`.
     remove: async (profileId) => {
       call("profiles.remove");
@@ -321,6 +336,10 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.series = deckStores.series;
   // R320: tutorial progress, the same in-memory store the end-to-end server runs.
   store.tutorial = createMemoryTutorialStore(() => tables, call);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables, call);
+  // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
+  store.gameRecords = createMemoryGameRecordStore(() => tables, call);
 
   store.matches = {
     create: async (match) => {
@@ -366,6 +385,10 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     live: async () => {
       call("matches.live");
       return tables.matches.filter((match) => match.status === "live").map(clone);
+    },
+    modeOf: async (matchId) => {
+      call("matches.modeOf");
+      return matchModeIn(tables, matchId);
     },
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {

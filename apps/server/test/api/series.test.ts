@@ -64,7 +64,7 @@ function trio(owner: string): FrozenTrio {
   return { name: `${owner}'s trio`, decks: [deck(0), deck(1), deck(2)] };
 }
 
-/** R376: the move one rated game makes between two players new to rating (a series is one, R262). */
+/** R603: the move one rated game makes between two players new to rating (a series is one, R262). */
 function move(ratingA: number, ratingB: number, scoreA: Score): { a: number; b: number } {
   const fresh = (rating: number) => ({ rating, deviation: RATING_DEVIATION_START, volatility: RATING_VOLATILITY_START });
   const next = rateGame(fresh(ratingA), fresh(ratingB), scoreA);
@@ -341,6 +341,9 @@ describe("R259 — the series through the API", () => {
     const game2 = await pickBoth(h, [2, 0]);
     const game2Id = game2.currentMatchId ?? "";
     expect(game2Id).not.toBe(FIRST_MATCH);
+    // R376: a game of the series is filed as Conquest's, whatever made the series.
+    expect(await h.deps.store.matches.modeOf(game2Id)).toBe("bo3");
+    expect(await h.deps.store.matches.modeOf(FIRST_MATCH)).toBe("bo3");
     expect(h.deps.matches.started[1]).toEqual({
       matchId: game2Id,
       seed: "seed-base:2",

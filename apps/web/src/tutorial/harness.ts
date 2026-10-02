@@ -57,6 +57,20 @@ export const RANDOM_POLICY_AI_BUDGET: SearchBudget = {
   finalists: 1,
 };
 
+/**
+ * What a lesson game costs, for the tests' timeouts. Measured in patch v0.2.0 on the shared 8-core
+ * development machine at load averages of 13 to 35: a game under the gates' budget takes 3 to 101 s,
+ * about 11 s on average at load 13 and 42 s at load 34; under the random policy's budget, 3 to 23 s.
+ * About 90% of it is the AI's search (`decide`), whose every node is an engine `reduce` with its
+ * `legalActions`: 5 to 7.5 ms a node, where the v0.1.1 engine took about 3 to 4 ms on the same games
+ * run side by side. The harness's own reads (the core's snapshots and the coach) are about 1%.
+ */
+export const LESSON_GAME_TIMEOUT_MS = 180_000;
+/** A test that plays many games under the gates' budget allows each this much, on average. */
+export const LESSON_GAME_MS = 90_000;
+/** The same under the random policy's budget. */
+export const RANDOM_GAME_MS = 45_000;
+
 export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random";
 
 export type LessonRun = {

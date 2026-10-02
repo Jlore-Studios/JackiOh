@@ -142,6 +142,8 @@ describe("the room-code challenge (§9.5)", () => {
     expect(started?.seats.map((seat) => seat.deck)).toEqual([DECK, DECK]);
     expect(started?.seats.map((seat) => seat.profileId)).toEqual([HOST, GUEST]);
     expect(started?.seats.map((seat) => seat.player)).toEqual(["p1", "p2"]);
+    // R376: the mode its game record is filed under is read off the room.
+    expect(await h.deps.store.matches.modeOf(started?.matchId ?? "")).toBe("bo1");
     // §9.5: both ends of the lifecycle read the in-match flag.
     expect((await h.deps.store.profiles.getById(HOST))?.inMatchId).toBe(started?.matchId);
     expect((await h.deps.store.profiles.getById(GUEST))?.inMatchId).toBe(started?.matchId);
@@ -501,6 +503,7 @@ describe("R264 — rooms carry a mode (§9.5, R257)", () => {
       mode: "random",
     });
     expect(started?.seats.map((seat) => seat.profileId)).toEqual([HOST, GUEST]);
+    expect(await h.deps.store.matches.modeOf(started?.matchId ?? "")).toBe("random");
     expect(started?.seats.map((seat) => seat.deck)).toEqual([
       h.deps.dealRandomDeck(`${seed}:p1-deck`),
       h.deps.dealRandomDeck(`${seed}:p2-deck`),

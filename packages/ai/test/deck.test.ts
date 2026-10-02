@@ -1,6 +1,6 @@
 // AI decks (SPEC §9.9 "Decks", R184; docs/polish/3-ai.md B22, B23).
 //
-// B22: `buildAiDeck(rng, size, options)` deals exactly `size` distinct non-token Core ids, every
+// B22: `buildAiDeck(rng, size, options)` deals exactly `size` distinct non-token ids of every set (R380), every
 // `include`d id and no banned one, and the same seed always deals the same deck. B23: over many
 // seeds the cost curve sits within AI_DECK.curveTolerance of `curveTargets`, units make up at least
 // AI_DECK.minUnitShare, and a Human-themed deck is at least AI_DECK.themeMinShare Human.
@@ -30,7 +30,7 @@ import {
   type AiDeckOptions,
   type CostBucket,
 } from "../src/index";
-import { corePool } from "./_support";
+import { aiPool } from "./_support";
 
 const SEEDS = 200;
 const SIZES = [20, 25, 30] as const;
@@ -67,8 +67,8 @@ function meanShareWhere(all: readonly string[][], test: (def: CardDef) => boolea
 
 describe("buildAiDeck (B22)", () => {
   for (const size of SIZES) {
-    it(`B22: deals exactly ${size} distinct non-token Core ids with no banned card, over ${SEEDS} seeds`, { timeout: 60_000 }, () => {
-      const pool = new Set(corePool());
+    it(`R380 B22: deals exactly ${size} distinct non-token ids of every set with no banned card, over ${SEEDS} seeds`, { timeout: 60_000 }, () => {
+      const pool = new Set(aiPool());
       const banned = new Set(SHADOW_BAN_IDS);
       for (const [at, deck] of decks(size).entries()) {
         expect(deck, `seed ${at + 1}`).toHaveLength(size);
@@ -80,6 +80,20 @@ describe("buildAiDeck (B22)", () => {
       }
     });
   }
+
+  it("R380 B22: the decks reach every set, Core, Classic and Classic+ alike", { timeout: 60_000 }, () => {
+    const dealt = new Set(decks(30, {}, "sets").flat().map((id) => defOf(null, id).set));
+    expect([...dealt].sort()).toEqual(["Classic", "Classic+", "Core"]);
+  });
+
+  it("R390 B22: `boost` multiplies its ids' weights, so they are dealt far more often; without it the deal is unchanged", { timeout: 60_000 }, () => {
+    const ids = aiPool().filter((id) => !SHADOW_BAN_IDS.includes(id)).slice(40, 60);
+    const dealtOf = (all: string[][]): number => all.reduce((sum, deck) => sum + deck.filter((id) => ids.includes(id)).length, 0);
+    const plain = decks(20, {}, "boost");
+    const boosted = decks(20, { boost: { ids, by: 4 } }, "boost");
+    expect(dealtOf(boosted)).toBeGreaterThan(2 * dealtOf(plain));
+    expect(decks(20, { boost: { ids, by: 1 } }, "boost")).toEqual(plain);
+  });
 
   it("B22: the same seed deals the same deck, and different seeds deal different decks", () => {
     for (const size of SIZES) {
@@ -104,7 +118,7 @@ describe("buildAiDeck (B22)", () => {
   });
 
   it("B22: an explicit ban list is honoured instead of the default", () => {
-    const banned = corePool().slice(0, 15);
+    const banned = aiPool().slice(0, 15);
     for (const [at, deck] of decks(30, { banned }, "banned").entries()) {
       for (const id of banned) expect(deck, `seed ${at + 1}`).not.toContain(id);
       expect(deck).toHaveLength(30);
@@ -117,21 +131,21 @@ describe("buildAiDeck (B22)", () => {
     expect(kept.every((deck) => !deck.includes(target))).toBe(true);
     const lifted = buildAiDeck(createRng("deck-test-lift"), 20, { banned: [], include: [target] });
     expect(lifted).toContain(target);
-    // And with no ban at all, every dealt card is still a non-token Core card.
-    const pool = new Set(corePool());
+    // And with no ban at all, every dealt card is still a non-token card.
+    const pool = new Set(aiPool());
     for (const deck of decks(30, { banned: [] }, "lift")) {
       for (const id of deck) expect(pool.has(id)).toBe(true);
     }
   });
 
   it("B22: throws when the unbanned pool is too small to fill the deck", () => {
-    const pool = corePool();
+    const pool = aiPool();
     const banned = pool.slice(0, pool.length - 10);
     expect(() => buildAiDeck(createRng("deck-test-small"), 20, { banned })).toThrow();
   });
 
-  it("B22: throws for a deck larger than the whole Core pool", () => {
-    expect(() => buildAiDeck(createRng("deck-test-huge"), corePool().length + 1, { banned: [] })).toThrow();
+  it("B22: throws for a deck larger than the whole pool", () => {
+    expect(() => buildAiDeck(createRng("deck-test-huge"), aiPool().length + 1, { banned: [] })).toThrow();
   });
 
   it("R184 B22: every dealt deck is a legal deck for its tier's handicap", () => {
@@ -224,7 +238,7 @@ describe("the curve and the theme (B23)", () => {
   }
 
   it("B23: a Human-themed deck is at least themeMinShare Human, well above the pool's own share", { timeout: 60_000 }, () => {
-    const pool = query({ set: "Core" });
+    const pool = query();
     const poolShare = pool.filter((def) => def.tags.includes("Human")).length / pool.length;
     for (const size of SIZES) {
       const share = meanShareWhere(decks(size, { theme: "Human" }, "human"), (def) => def.tags.includes("Human"));
@@ -234,7 +248,7 @@ describe("the curve and the theme (B23)", () => {
   });
 
   it("B23: at the human mana cap a card that can never be cast is rarely dealt", { timeout: 60_000 }, () => {
-    const pool = query({ set: "Core" });
+    const pool = query();
     const uncastable = (def: CardDef): boolean => queryCost(def) > MAX_MANA + AI_DECK.costSlack;
     const poolShare = pool.filter(uncastable).length / pool.length;
     expect(poolShare).toBeGreaterThan(0);
@@ -243,7 +257,7 @@ describe("the curve and the theme (B23)", () => {
   });
 
   it("B23: a theme whose every card is banned cannot lean the deck, which is still dealt whole", () => {
-    const humans = query({ set: "Core", tags: ["Human"] }).map((def) => def.id);
+    const humans = query({ tags: ["Human"] }).map((def) => def.id);
     expect(humans.length).toBeGreaterThanOrEqual(AI_DECK.minThemeSize);
     for (let n = 1; n <= 20; n += 1) {
       const deck = buildAiDeck(createRng(`deck-test-banned-theme:${n}`), 20, { theme: "Human", banned: humans });

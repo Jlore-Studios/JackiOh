@@ -26,9 +26,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
-import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
+import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
 
-import Clock from "../game/Clock.tsx";
+import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import {
@@ -40,12 +40,19 @@ import {
   type SocketFactory,
 } from "../game/net.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
-import { getCatalog } from "../net/api.ts";
+import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
+
+/** R79: the seat an open prompt waits on, as the view says it (`PlayerView.pending`), or null. */
+export function promptHolderOf(pending: PlayerView["pending"], viewer: PlayerId): PlayerId | null {
+  if (pending === null) return null;
+  return pending.forYou ? viewer : pending.pendingFor;
+}
 
 /** Chrome this route invented. None of it is in `e2e/support/testids.ts`; see the hand-off report. */
 export const matchTestid = {
@@ -60,6 +67,8 @@ export const matchTestid = {
   connecting: "match-connecting",
   /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
+  /** Both seats' visible ranks and whether this game moves them (R604, R612). */
+  ranks: "match-ranks",
 } as const;
 
 /** A connection state in a player's words, for the match bar and the wait before the board. */
@@ -140,6 +149,43 @@ export function withoutToken(raw: string): string {
   }
 }
 
+/** A `GET /api/matches/:id/ranks` body, or null when the answer is not one. */
+function asMatchRanks(value: unknown): MatchRanksResponse | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { ranked, seats } = value as { ranked?: unknown; seats?: unknown };
+  if (typeof ranked !== "boolean" || typeof seats !== "object" || seats === null) return null;
+  for (const side of ["p1", "p2"] as const) {
+    const seat = (seats as Record<string, unknown>)[side];
+    if (typeof seat !== "object" || seat === null) return null;
+    const { tag, rank } = seat as { tag?: unknown; rank?: unknown };
+    if (typeof tag !== "string" || typeof rank !== "object" || rank === null) return null;
+    if (typeof (rank as { tier?: unknown }).tier !== "string") return null;
+  }
+  return value as MatchRanksResponse;
+}
+
+/**
+ * Both seats' ranks for the match bar (R604, R612): whether this game moves the rating, and each
+ * seat's visible rank. Read once: a promotion mid-match shows on the next one. An answer that is
+ * not a ranks body — or no answer — leaves no banner rather than breaking the board.
+ */
+function useMatchRanks(token: string, matchId: string): MatchRanksResponse | null {
+  const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getMatchRanks(token, matchId).then(
+      (answer) => {
+        if (!cancelled) setRanks(asMatchRanks(answer));
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [token, matchId]);
+  return ranks;
+}
+
 export default function MatchRoute({ matchId, token, socketFactory }: MatchRouteProps): ReactElement {
   const match = useMatch({
     matchId,
@@ -147,6 +193,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     ...(socketFactory === undefined ? {} : { socketFactory }),
   });
   const defs = useCatalog();
+  const ranks = useMatchRanks(token, matchId);
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
   const series = useMatchSeries(token, matchId, match.view?.result != null);
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
@@ -182,7 +229,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   );
 
   const view = match.view;
-  const clock = match.clock;
+  // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
+  // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
+  const clock = useFrameFor(match.clock, turnKeyOf(view));
 
   // What the server said when it refused the socket is for a debugger, not the player (below).
   const refusedWith = match.connection === "refused" ? (match.error ?? "no reason given") : null;
@@ -300,13 +349,24 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
           graceMs={graceMs}
           mulligan={inMulligan}
-          // R268: the mulligan window can pass with no frame between its opening and its expiry,
-          // so the readout counts down off the frame's own deadline rather than waiting for one.
-          frame={inMulligan ? clock : null}
+          // R268, R439: the readout counts down off the frame's own deadlines between the server's
+          // frames — the mulligan window can pass with none, and a turn's last 30 seconds must tick.
+          frame={clock}
           viewer={view.viewer}
+          // R79: the turn clock is the active player's, and a prompt held by the other seat runs its
+          // own. A finished game runs neither.
+          activePlayer={view.result === null ? view.active : null}
+          promptHolder={view.result === null ? promptHolderOf(view.pending, view.viewer) : null}
         />
       </header>
       <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
+      {ranks !== null ? (
+        <p className="match-ranks" data-testid={matchTestid.ranks}>
+          {ranks.ranked ? "Ranked match" : "Unranked match"} · {ranks.seats.p1.tag}
+          {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs {ranks.seats.p2.tag}
+          {ranks.seats.p2.you ? " (you)" : ""} {rankWords(ranks.seats.p2.rank)}
+        </p>
+      ) : null}
 
       {readOnly ? (
         <p className="notice" data-testid={matchTestid.missingLegal} role="alert">

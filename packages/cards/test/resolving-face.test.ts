@@ -17,6 +17,7 @@ import { scenario, type Scenario } from "./_harness";
 const BIGOT = "core-002";
 const STOCKPILE = "core-005";
 const VANILLA = "core-008";
+const MOTHS = "core-009";
 const TIMMY = "core-011";
 const HINDER = "core-021";
 const PANTHER = "core-032";
@@ -58,9 +59,15 @@ function resolvedFace(g: Scenario, card: CardInstance): boolean | null {
 
 describe("R213: Gifted Program's first cheap card is its controller's first of the turn", () => {
   it("R213 a Gifted Program stolen after it fired for its owner this turn still makes the thief's first cheap card Radiant (§8 Conventions, R171)", () => {
-    // p1's turn. p2 holds Gifted Program, a Prem Panther, and a Hinder on top of the library.
+    // p1's turn begins. p1 holds #9 Moths to the Flame, worn down to 4 health; p2 holds Gifted
+    // Program, a Prem Panther, and a Hinder on top of the library.
     const g = scenario({
-      p1: { hand: [MIND_CONTROL, STOCKPILE], field: [{ def: "core-011", lane: 1 }], library: [...LIBRARY] },
+      // Snom Bunny Mind Control (4 since patch v0.2.0, issue #40) and Stockpile (1).
+      p1: {
+        hand: [MIND_CONTROL, STOCKPILE],
+        field: [{ def: MOTHS, lane: 1, damage: 10 }],
+        library: [...LIBRARY],
+      },
       p2: {
         hand: [VANILLA],
         field: [{ def: PANTHER, lane: 1 }],
@@ -70,15 +77,17 @@ describe("R213: Gifted Program's first cheap card is its controller's first of t
     });
     const gifted = backrowAt(g, "p2", 1);
 
-    // p1's Tempo Timmy dies attacking the Panther, which draws 2 for p2 — on p1's turn. The first
-    // draw is Hinder, cast as it is drawn: p2's play costing 0 (R70), made Radiant by p2's Gifted.
-    g.attack(unitAt(g, "p1", 1), unitAt(g, "p2", 1));
+    // p1's start of turn: Moths makes p2's Panther attack it; the Panther destroys it and survives,
+    // so p2 draws 2 — on p1's turn (R426: a forced attack is an attack). The first draw is Hinder,
+    // cast as it is drawn: p2's play costing 0 (R70), made Radiant by p2's Gifted Program.
+    g.startTurn();
     const hinder = g.events.find((event) => event.type === "cardPlayed" && event.defId === HINDER);
     expect(hinder).toMatchObject({ player: "p2", costPaid: 0 });
     expect(g.state.players.p1.mana.nextTurnMod).toBe(-2); // the radiant face ran: "2 lower"
 
     // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: Snom Bunny
-    // Mind Control cost 3. Stockpile is p1's first cheap card, so it resolves its radiant text.
+    // Mind Control cost 4. Stockpile is p1's first cheap card, so it resolves its radiant text.
+    g.state.players.p1.mana.current = 5;
     g.play(MIND_CONTROL, { targets: at(gifted) });
     expect(g.card(gifted).controller).toBe("p1");
     const stockpile = g.card(STOCKPILE);
@@ -174,7 +183,7 @@ describe("R214: a play's choices are the choices of the face it resolves with", 
 
   it("R214 a crafted Bigot + Twisted Sorcerer that Gifted Program will make Radiant names the Sorcerer's target alone (R90, R102)", () => {
     const g = scenario({
-      seed: "craft-17", // the first Discover offers Bigot, the second Twisted Sorcerer
+      seed: "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
       p1: { hand: [CRAFT_A_CARD, RENO], mana: 4, backrow: [GIFTED] },
       p2: { hand: [RENO], field: [PANTHER] },
     });
@@ -215,25 +224,33 @@ describe("R214: step 3 applies the face step 1 checked, whatever step 2 put on t
     const s = scenario({
       p1: {
         hand: [CARNIVOROUS_CUBE, LAVA_GOLEM, BIGOT],
-        field: [GARY, JEWELOSCO_SCARAB],
+        field: [GARY, JEWELOSCO_SCARAB, VANILLA],
         backrow: [GIFTED],
         library: [RENO, RENO],
         mana: 4,
       },
       p2: { field: [BIG_FELINOR, SEVEN_SEVEN], hand: [RENO], library: [RENO] },
     });
+    const sink: EngineSink = { state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) };
+    // A Unit that carries Gifted Program's text: the Gifted Program fused onto p1's Mr. Vanilla, which
+    // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
+    const vanilla = must(s.unit("p1", 3), "p1's Mr. Vanilla");
+    const giftedUnit = must(
+      subsystems.fuse(sink, { ingredients: [vanilla, must(s.backrow("p1", 1), "p1's Gifted Program")], target: vanilla }),
+      "the Mr. Vanilla carrying Gifted Program",
+    );
     // #99's result, built the way `099-craft-a-card.test.ts` builds one: Lava Golem + Bigot, a
     // Unit with Tribute 3 costing 0, whose base face names an enemy non-Human unit to destroy and
     // whose radiant face destroys every enemy non-Human unit and names nothing (R102, R214).
-    const sink: EngineSink = { state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) };
     const crafted = must(
       subsystems.fuse(sink, { ingredients: [s.card(LAVA_GOLEM), s.card(BIGOT)], toHand: "p1" }),
       "the crafted Lava Golem + Bigot",
     );
-    // #22 eats the Gifted Program (R41), so none stands on p1's side any more.
-    const gifted = must(s.backrow("p1", 1), "p1's Gifted Program");
-    s.play(CARNIVOROUS_CUBE, { targets: [{ pick: "instance", instanceId: gifted.id }] });
-    const cube = must(s.unit("p1", 3), "p1's Carnivorous Cube");
+    // #22 eats the Unit carrying the Gifted Program's text (R41, R428), so none stands on p1's side
+    // any more; its Death will summon two copies of it.
+    s.play(CARNIVOROUS_CUBE, { targets: [{ pick: "instance", instanceId: giftedUnit.id }] });
+    s.expectInZone(giftedUnit, "graveyard");
+    const cube = must(s.unit("p1", 4), "p1's Carnivorous Cube");
     const felinor = must(s.unit("p2", 1), "p2's Big Felinor");
     const sevenSeven = must(s.unit("p2", 2), "p2's 4-mana 7/7");
 
@@ -251,8 +268,10 @@ describe("R214: step 3 applies the face step 1 checked, whatever step 2 put on t
     );
     expect(offered).toBe(true);
 
-    // Step 2 pays the Tribute: the Cube's Death summons two copies of the Gifted Program it ate.
-    s.play(crafted, { tributes, targets: [{ pick: "instance", instanceId: felinor.id }], zone: 4 });
+    // Step 2 pays the Tribute: the Cube's Death summons two copies of the Unit it ate, each carrying
+    // Gifted Program's text.
+    s.play(crafted, { tributes, targets: [{ pick: "instance", instanceId: felinor.id }], zone: 5 });
+    expect(s.events.filter((event) => event.type === "summoned" && event.defId === giftedUnit.defId)).toHaveLength(2);
 
     // R214: "step 1 already knows" the face, and step 1 checked the play's choices against the base
     // face, so that is the face step 5 resolves: the chosen Big Felinor is destroyed and nothing

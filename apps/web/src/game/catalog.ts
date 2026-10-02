@@ -17,7 +17,16 @@
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
-import type { CardDef, CardDefs, CardType, PlayerView, Rarity, Tag } from "@jackioh/shared";
+import {
+  fillParams,
+  type CardDef,
+  type CardDefs,
+  type CardType,
+  type CardView,
+  type PlayerView,
+  type Rarity,
+  type Tag,
+} from "@jackioh/shared";
 
 import type { RolledPower } from "../cards/index.ts";
 
@@ -47,8 +56,10 @@ export function lookupFromDefs(defs: CardDefs): CardLookup {
     const face = radiant ? def.radiant : def.base;
     return {
       name: def.name,
-      type: def.type,
-      text: face.text,
+      // B2.7: a face with its own type is that type (Classic+ #22's Radiant Field Trap).
+      type: face.type ?? def.type,
+      // B3.4: the face's `{key}` numbers filled in with its printed values; a raw placeholder never shows.
+      text: fillParams(def, radiant ? "radiant" : "base"),
       tags: def.tags,
       attack: face.attack,
       health: face.health,
@@ -101,6 +112,13 @@ export function useCardInfo(defId: string, radiant: boolean): CardInfo {
   const lookup = useContext(CatalogContext);
   const match = useContext(MatchCardsContext);
   return lookup?.(defId, radiant) ?? lookupFromDefs(match.defs)(defId, radiant) ?? unknownCard(defId);
+}
+
+/** B5 E14: the definition of the Spell a copier has the text of (`CardView.copies`), when it copies one. */
+export function useCopiedDef(card: CardView | null | undefined): CardDef | undefined {
+  const copies = card?.copies;
+  const info = useCardInfo(copies?.defId ?? "", copies?.radiant ?? false);
+  return copies === undefined ? undefined : info.def;
 }
 
 /** The power a Heroic Power on the field rolled, when the view names one for this instance. */

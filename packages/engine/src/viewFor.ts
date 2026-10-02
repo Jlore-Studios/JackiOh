@@ -31,6 +31,10 @@
 //     one, #64 and #79 install theirs without one, and only #77 is a Cry. The caption is built from
 //     the modifier's own kind and numbers and never from its `sourceId`, so no card identity can
 //     leave through a badge.
+//   - R434: once the game is over, the opponent's hand travels in full, as the owner's does; the
+//     libraries, face-down traps and R97's event redaction stay as they were.
+//   - R437: a mark (an effect aimed at the card that still waits, #50's pending steal) rides every
+//     view of the card in both seats, a face-down card's back included (`marks.ts`).
 //   - R195, R280: two things the engine works out for a card ride on its view. `conditionActive`
 //     (the yellow glow) on the viewer's own cards only; `preview` (what a formula comes to now) on
 //     every card view the viewer may read — the viewer's hand, the top of a unit pile and a backrow
@@ -42,6 +46,7 @@
 import type {
   BackrowView,
   CardDef,
+  CardMark,
   CardView,
   GameEvent,
   HeroPowerView,
@@ -54,16 +59,21 @@ import type {
   PreviewValue,
   Row,
   SideView,
+  TuningChange,
   UnitView,
   Zone,
 } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { defOf, findDef } from "./catalog";
+import { announcedFaceDownTo } from "./announce";
+import { findDef } from "./catalog";
 import { hasExertion } from "./combat";
 import { conditionActive } from "./condition";
 import { heroArmorOf } from "./damage";
+import { cardTypeOf } from "./faces";
+import { handKeywordsView, instanceDataView } from "./instanceView";
 import { echoGrantOf } from "./echo";
 import { statsWithBuffs, unitView as unitLayers } from "./layers";
+import { costRuleModifierLabel, enchantNextSpellLabel } from "./costRules";
 import { NEXT_REFRESH_MODIFIER_ID, effectiveCost, modifierIsLive } from "./mana";
 import {
   findInstance,
@@ -76,13 +86,20 @@ import {
   type PromptOption,
 } from "./state";
 import { gradeName } from "./subsystems/comboIndex";
+import { copiedTextOf, textFaceOf } from "./subsystems/copiedText";
+import { paramsView } from "./params";
+import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { questViewOf } from "./subsystems/quests";
+import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
+import { plagueOn } from "./plague";
 import { backrowIsPublic, isFaceDown, previewOf } from "./preview";
 import { mulliganPromptFor, returnedAwaitingShuffle } from "./setup";
 import { standingDrawOffer } from "./turn";
-import { isReserved, slotsOf } from "./zones";
+import { beneathAt, carriedAt, carriedUnitsOf, homeOf, isReserved, slotOf, slotsOf } from "./zones";
+import { isAnimated } from "./animated";
 
 /** §10.8, §10.10: how many of the most recent events the view carries for animation. */
 export const VIEW_EVENT_LIMIT = 32;
@@ -103,6 +120,9 @@ const HIDDEN_POSITION = -1;
  * a sequence of costs over a library would spell out its order (§9.1).
  */
 const HIDDEN_COST = -1;
+
+/** R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read. */
+const HIDDEN_COUNT = -1;
 
 /** R177: what a prompt option names when it offers a card the chooser may not read (§10.8, R33). */
 export const HIDDEN_OPTION_LABEL = "Face-down card";
@@ -153,7 +173,7 @@ function replacementsOf(events: readonly GameEvent[], state?: GameState): Replac
     // by its old id are judged by where it is now, exactly as they were before it moved: its draw
     // stays hidden while the trap is face-down and reads once the trap is public (R97). No
     // `hiddenFrom` is kept, since nothing ceased to exist.
-    if ((event.type === "cardPlayed" || event.type === "summoned") && event.formerId !== undefined) {
+    if ((event.type === "cardPlayed" || event.type === "summoned" || event.type === "controlChanged") && event.formerId !== undefined) {
       replacedBy.set(event.formerId, event.instanceId);
     }
   }
@@ -193,6 +213,8 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
   if (zone.z === "library") return false;
   if (zone.z === "hand") return zone.player === viewer;
   if (zone.z === "field" && zone.row === "backrow") return backrowIsPublic(state, card, viewer);
+  // R448: a card waiting in the resolving zone to be set face-down is its player's alone (R33, R227).
+  if (announcedFaceDownTo(state, card, viewer)) return false;
   // Units, graveyard, exile, `resolving` (R98) and `gone` (R11, R86) are all public.
   return true;
 }
@@ -201,14 +223,32 @@ function mayRead(state: GameState, viewer: PlayerId, instanceId: string, replace
 // Cards, units and the backrow
 // ---------------------------------------------------------------------------
 
-/** R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. */
+/**
+ * R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
+ * v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
+ * the viewer may read where it is.
+ */
 function cardView(state: GameState, card: CardInstance): CardView {
+  // B5 E33, R404: a quest line on the field, public as the card is.
+  const quest = questViewOf(state, card);
   return {
     instanceId: card.id,
     defId: card.defId,
     radiant: card.radiant,
     cost: effectiveCost(state, card),
+    ...instanceDataView(state, card),
+    ...withMarks(state, card.id),
+    ...(quest === null ? {} : { quest }),
   };
+}
+
+/**
+ * R437: the marks a card carries while an effect aimed at it waits (#50's pending steal), on every
+ * view of it and in both players' views — or no key at all, so an unmarked card looks as it did.
+ */
+function withMarks(state: GameState, instanceId: string): { marks?: CardMark[] } {
+  const marks = marksOn(state, instanceId);
+  return marks.length === 0 ? {} : { marks };
 }
 
 /**
@@ -219,15 +259,29 @@ function cardView(state: GameState, card: CardInstance): CardView {
  * R151), which its cost alone does not.
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
-  const view = cardView(state, card);
-  const stats =
-    defOf(state, card.defId).type === "Unit" ? statsWithBuffs(state, card) : null;
+  const view = withCopies(cardView(state, card), state, card);
+  const stats = cardTypeOf(state, card) === "Unit" ? statsWithBuffs(state, card) : null;
   const power = powerOf(card);
+  // B5 E38: the keywords it gained in the hand or the deck, which it carries onto the field.
+  const keywords = handKeywordsView(state, card);
   return {
     ...view,
     ...(stats === null ? {} : { attack: Math.max(0, stats.attack), health: stats.maxHealth }),
     ...(power === null ? {} : { power: power.name }),
+    ...(keywords === null ? {} : { keywords }),
   };
+}
+
+/**
+ * B5 E14, R399, R243: a copier's view carries the Spell text it has now (`CardView.copies`), with that
+ * definition's declared numbers as they read on the card — or nothing, when it copies nothing. Asked
+ * only where the viewer may read the card and R399 shows it: the owner's hand, and the resolving zone.
+ */
+function withCopies<T extends CardView>(view: T, state: GameState, card: CardInstance): T {
+  const copy = copiedTextOf(state, card);
+  if (copy === null) return view;
+  const params = paramsView(state, textFaceOf(state, card));
+  return { ...view, copies: { defId: copy.defId, radiant: copy.radiant, ...(params === null ? {} : { params }) } };
 }
 
 /**
@@ -248,6 +302,15 @@ function withPreview<T extends CardView>(view: T, values: PreviewValue[] | null)
 }
 
 /**
+ * B3.2, R384: a card's Activate abilities ride its controller's own view of it on the field
+ * (`activate.activationViewsFor` owns where), or not at all — never `[]`.
+ */
+function withActivations<T extends CardView>(view: T, state: GameState, card: CardInstance, viewer: PlayerId): T {
+  const activations = activationViewsFor(state, viewer, card);
+  return activations === null ? view : { ...view, activations };
+}
+
+/**
  * The card that acts in a unit zone: the top of the pile (§3.2). `buried` is how many dormant cards
  * sit under it (R13) — a count, so no buried identity reaches either player.
  */
@@ -255,10 +318,19 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
   const top = pile[0];
   if (top === undefined) return null;
   const layers = unitLayers(state, top);
+  // B3.1, R383: a Field Spell, Trap or Field Trap standing here as a Unit, and the backrow lane an
+  // "Animated on your turn" card will go back to (that zone is `reserved` meanwhile).
+  const home = isAnimated(state, top) ? homeOf(state, top.id) : undefined;
+  const animated = isAnimated(state, top) ? { animated: home === undefined ? {} : { home: home.zone.lane } } : {};
   return {
-    ...withPreview(
-      withCondition(cardView(state, top), conditionActive(state, top, viewer, "field")),
-      previewOf(state, top, viewer, "field"),
+    ...withActivations(
+      withPreview(
+        withCondition(cardView(state, top), conditionActive(state, top, viewer, "field")),
+        previewOf(state, top, viewer, "field"),
+      ),
+      state,
+      top,
+      viewer,
     ),
     owner: top.owner,
     controller: top.controller,
@@ -273,6 +345,9 @@ function unitViewOf(state: GameState, pile: Pile, viewer: PlayerId): UnitView | 
     canAct: canAct(state, top),
     // R243, §6.3 Vanilla: the text is gone, which the definition the client reads does not say.
     ...(top.vanilla === true ? { vanilla: true as const } : {}),
+    ...animated,
+    // B5 E35: a status, public on the field like the unit itself.
+    ...(top.berserk === true ? { berserk: true as const } : {}),
   };
 }
 
@@ -300,21 +375,56 @@ function canAct(state: GameState, card: CardInstance): boolean {
  */
 function backrowView(state: GameState, card: CardInstance | null, viewer: PlayerId): BackrowView {
   if (card === null) return null;
-  if (!backrowIsPublic(state, card, viewer)) return { faceDown: true, cost: effectiveCost(state, card) };
+  // B5 E19, R471: Plague Tokens are public wherever they sit, a face-down card's included; B5 E21: a
+  // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
+  const plague = plagueOn(card);
+  const slot = slotOf(state, card);
+  const under = slot === null ? 0 : beneathAt(state, slot).length;
+  const buried = under === 0 ? {} : { buried: under };
+  // R437: a mark on a face-down card rides its back, which is all the other player sees of it (R33).
+  if (!backrowIsPublic(state, card, viewer)) {
+    return {
+      faceDown: true,
+      cost: effectiveCost(state, card),
+      ...(plague === 0 ? {} : { plague }),
+      ...buried,
+      ...withMarks(state, card.id),
+    };
+  }
   const grade = card.counters.grade;
   return {
-    ...withPreview(
-      withCondition(cardView(state, card), conditionActive(state, card, viewer, "field")),
-      previewOf(state, card, viewer, "field"),
+    ...withActivations(
+      withPreview(
+        withCondition(cardView(state, card), conditionActive(state, card, viewer, "field")),
+        previewOf(state, card, viewer, "field"),
+      ),
+      state,
+      card,
+      viewer,
     ),
     faceDown: false,
-    type: defOf(state, card.defId).type,
+    type: cardTypeOf(state, card),
     // R372: the engine names the grade's letter, so no client works out which letter 3 is.
-    counters: grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) },
+    counters: {
+      ...(grade === undefined ? {} : { grade, gradeLetter: gradeName(grade) }),
+      ...(plague === 0 ? {} : { plague }),
+    },
     owner: card.owner,
     controller: card.controller,
     // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
     ...(isFaceDown(state, card) ? { unrevealed: true as const } : {}),
+    ...buried,
+  };
+}
+
+/** R446: the Units this side's carriers hold, by backrow lane, or nothing when none holds one. */
+function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { carried?: (UnitView | null)[] } {
+  if (carriedUnitsOf(state, player).length === 0) return {};
+  return {
+    carried: slotsOf(player, "backrow").map((ref) => {
+      const unit = carriedAt(state, ref);
+      return unit === null ? null : unitViewOf(state, [unit], viewer);
+    }),
   };
 }
 
@@ -358,8 +468,8 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
  */
 function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): string {
   const less = `cost${mod.oncePerTurn === true ? "s" : ""} ${mod.amount} less`;
-  // R363: #77's own words, "Cost (4)+ cards cost (1) less".
-  if (mod.minCurrentCost !== undefined) return `Cost (${mod.minCurrentCost})+ cards cost (${mod.amount}) less`;
+  // R363, R432: #77's own words, "(4)+ Cost cards cost (1) less".
+  if (mod.minCurrentCost !== undefined) return `(${mod.minCurrentCost})+ Cost cards cost (${mod.amount}) less`;
   if (mod.onlyType !== undefined) {
     return mod.oncePerTurn === true ? `Next ${mod.onlyType} ${less}` : `${mod.onlyType}s ${less}`;
   }
@@ -375,7 +485,7 @@ function discountLabel(mod: Extract<PlayerModifier, { kind: "costDiscount" }>): 
  * must not hand either seat an identity through a badge. `echo` is the grant as it stands
  * (`echo.echoGrantOf`), a number read off the permanent's current face (R209, §5.2).
  */
-function modifierLabel(mod: PlayerModifier, echo: number): string {
+function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): string {
   switch (mod.kind) {
     case "costDiscount":
       return discountLabel(mod);
@@ -387,6 +497,25 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
       return `Your cards gain "Combo: draw ${mod.amount}"`;
     case "quickstrikerDamage":
       return `Your cards gain "Combo X: X damage to the enemy hero"`;
+    // B5 E10, R456: how much of the turn is left.
+    case "turnEnds":
+      return mod.actionsLeft === 0
+        ? "Your turn ends"
+        : `Your turn ends after ${mod.actionsLeft} more action${mod.actionsLeft === 1 ? "" : "s"}`;
+    // B5 E28, R458: the card's own words.
+    case "startOfTurnEffect":
+      return mod.label;
+    // B5 E15, E39 (R455): the play pipeline's price rules and Forever&'s rider, worded by their owner.
+    case "costRule":
+      return costRuleModifierLabel(mod);
+    case "enchantNextSpell":
+      return enchantNextSpellLabel(mod.enchantment);
+    // B5 E8: Classic+ #22 Blood Moon's base face, read off the modifier alone.
+    case "healToDamage":
+      return "Healing on your enemies deals Pierce damage instead";
+    // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
+    case "replacePlays":
+      return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
   }
 }
 
@@ -405,7 +534,7 @@ function modifierLabel(mod: PlayerModifier, echo: number): string {
  */
 function modifierViews(state: GameState, player: PlayerId): ModifierView[] {
   const views = state.players[player].mods.map((mod) => {
-    const label = modifierLabel(mod, echoGrantOf(state, player, mod));
+    const label = modifierLabel(state, mod, echoGrantOf(state, player, mod));
     return { id: mod.id, label: modifierIsLive(state, mod) ? label : `${label} (next turn)` };
   });
   // §6.3 Mana: the next refresh's rider (#21 Hinder, #24 Efficiency Dividend) is a modifier too, one
@@ -421,7 +550,10 @@ function modifierViews(state: GameState, player: PlayerId): ModifierView[] {
 // One side of the board
 // ---------------------------------------------------------------------------
 
-/** R64: the zones this player is holding for a dying Reborn unit, as a mask per row. */
+/**
+ * R64: the zones this player is holding for a dying Reborn unit, as a mask per row — and B3.1 rule 6's
+ * backrow zones held for an animated "Animated on your turn" card's return (`zones.isReserved`).
+ */
 function reservedMask(state: GameState, player: PlayerId): { units: boolean[]; backrow: boolean[] } {
   const mask = (row: Row): boolean[] => slotsOf(player, row).map((ref) => isReserved(state, ref));
   return { units: mask("units"), backrow: mask("backrow") };
@@ -445,7 +577,8 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     // R169: the badge list beside the hero, public on both seats.
     modifiers: modifierViews(state, player),
     mana: { current: side.mana.current, max: side.mana.max },
-    // §10.8: the viewer's own hand in full, the opponent's as a count.
+    // §10.8: the viewer's own hand in full, the opponent's as a count — until the game is over, when
+    // both hands are revealed (R434): the opponent's cards as they stand, as their owner saw them.
     hand:
       player === viewer
         ? side.hand.map((card) =>
@@ -454,7 +587,9 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
               previewOf(state, card, viewer, "hand"),
             ),
           )
-        : { count: side.hand.length },
+        : state.result !== null
+          ? side.hand.map((card) => handCardView(state, card))
+          : { count: side.hand.length },
     // §9.1: a library's order ships to nobody, and the opponent's library is a count and nothing
     // else. R310–R312: the viewer's own is a list without order as well, of what they were shown
     // going in (`ownLibrary.ts`), with no instance id or position in it.
@@ -462,10 +597,16 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
     ...(player === viewer ? { ownLibrary: ownLibraryView(state, player) } : {}),
     graveyard: side.graveyard.map((card) => cardView(state, card)),
     exile: side.exile.map((card) => cardView(state, card)),
-    // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public.
-    resolving: side.resolving.map((card) => cardView(state, card)),
+    // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
+    // card announced to be set face-down waits here too, and the other player sees a card back.
+    resolving: side.resolving.map((card) =>
+      announcedFaceDownTo(state, card, viewer)
+        ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID, radiant: false, cost: HIDDEN_COST }
+        : withCopies(cardView(state, card), state, card),
+    ),
     units: side.units.map((pile) => (pile === null ? null : unitViewOf(state, pile, viewer))),
     backrow: side.backrow.map((card) => backrowView(state, card, viewer)),
+    ...carriedView(state, player, viewer),
     locks: { units: [...side.locks.units], backrow: [...side.locks.backrow] },
     reserved: reservedMask(state, player),
     fatigueCount: side.fatigueCount,
@@ -482,7 +623,13 @@ function sideView(state: GameState, player: PlayerId, viewer: PlayerId): SideVie
  * the definition behind an option is exactly what the chooser is owed.
  */
 function optionView(state: GameState, viewer: PlayerId, option: PromptOption): PendingOption {
-  const base = { key: option.key, label: option.label };
+  // B5 E18: a `pick` option's cost against the budget, and the face an option shows when it is Radiant.
+  const base = {
+    key: option.key,
+    label: option.label,
+    ...(option.cost === undefined ? {} : { cost: option.cost }),
+    ...(option.radiant === true ? { radiant: true as const } : {}),
+  };
   const selection = option.selection;
   switch (selection.pick) {
     case "instance": {
@@ -491,13 +638,19 @@ function optionView(state: GameState, viewer: PlayerId, option: PromptOption): P
       // enemy face-down trap (#49, #50, an Echo repeat's fresh pick). The option is the zone's card
       // and nothing more: the id to answer with, never the definition, and neither the label nor
       // the key the engine built from its name. A card revealed out of a library is the opposite
-      // case: the prompt IS its reveal, so the chooser sees it in full (above).
+      // case: the prompt IS its reveal, so the chooser sees it in full (above) — and so is B5 E17's
+      // look at the opponent's hand (Classic #11), whose options only their chooser is sent (R81).
       if (card !== undefined && isFaceDownTo(state, card, viewer)) {
         return { key: `instance:${selection.instanceId}`, label: HIDDEN_OPTION_LABEL, instanceId: selection.instanceId };
       }
       return card === undefined
         ? { ...base, instanceId: selection.instanceId }
-        : { ...base, instanceId: selection.instanceId, defId: card.defId };
+        : {
+            ...base,
+            instanceId: selection.instanceId,
+            defId: card.defId,
+            ...(card.radiant ? { radiant: true as const } : {}),
+          };
     }
     case "hero":
       return { ...base, player: selection.player };
@@ -521,6 +674,11 @@ function pendingView(state: GameState, viewer: PlayerId): PendingView | null {
   return promptView(state, viewer, pending);
 }
 
+/**
+ * The chooser's own prompt, copied field by field: `resume` never travels, so nothing a prompt keeps
+ * for its answer — the owner a prompt the other player holds continues as (B5 E18), a multiple-choice
+ * problem's key (R465) — can leave the engine through the view.
+ */
 function promptView(state: GameState, viewer: PlayerId, pending: PendingChoice): PendingView {
   return {
     forYou: true,
@@ -530,6 +688,7 @@ function promptView(state: GameState, viewer: PlayerId, pending: PendingChoice):
     min: pending.min,
     max: pending.max,
     prompt: pending.prompt,
+    ...(pending.budget === undefined ? {} : { budget: pending.budget }),
   };
 }
 
@@ -606,7 +765,8 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     // like the #31 KY's Math Equation that returns to its owner's hand at the end of the turn.
     case "destroyed": {
       const killerHidden = event.killerId !== null && hidden(event.killerId);
-      const redacted = hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+      const { radiant: _face, ...faceless } = event;
+      const redacted = hidden(event.instanceId) ? { ...faceless, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
       return killerHidden ? { ...redacted, killerId: HIDDEN_ID } : redacted;
     }
 
@@ -714,10 +874,22 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     // One instance, no definition: the id alone would still name a card in a hidden zone.
     case "divineShieldLost":
     case "keywordGranted":
-    case "counterChanged":
     case "positionSwitched":
-    case "controlChanged":
       return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+    // R227: as on `summoned`, a fresh id's `formerId` goes with the card's identity (C+ #35, R419).
+    case "controlChanged": {
+      if (!hidden(event.instanceId)) return event;
+      const { formerId: _former, ...rest } = event;
+      return { ...rest, instanceId: HIDDEN_ID };
+    }
+
+    // R385: a Brittle count is its card's, read only where the card is (a face-down card's by its
+    // controller alone), so on a card this viewer may not read the number goes with the id.
+    case "counterChanged":
+      if (!hidden(event.instanceId)) return event;
+      return event.counter === "brittle"
+        ? { ...event, instanceId: HIDDEN_ID, value: HIDDEN_COUNT }
+        : { ...event, instanceId: HIDDEN_ID };
 
     // R177: the new cost is the card's too, and over a library it would give the order away — so a
     // change made in a library stays unread for good (`hiddenFrom`), whatever became of the card.
@@ -772,8 +944,128 @@ function redactEvent(state: GameState, viewer: PlayerId, event: GameEvent, repla
     case "drawAnswered":
     case "gameOver":
       return event;
+
+    // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+
+    // B5 E1: an announce shows what `cardPlayed` would. A card being set face-down is its zone only
+    // to the other player (R97, R227): the identity and the targets it declared go, the zone stays.
+    case "cardAnnounced": {
+      const unread = (event.faceDown === true && event.player !== viewer) || hidden(event.instanceId);
+      if (!unread) return { ...event, targets: event.targets.map((id) => (hidden(id) ? HIDDEN_ID : id)) };
+      // R448: whether a face-down card is a Trap or a Field Trap is the card's too (R33), so the
+      // other player reads every one as a Trap, as its backrow will show it.
+      const cardType = event.faceDown === true ? "Trap" : event.cardType;
+      return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID, cardType, targets: event.targets.map(() => HIDDEN_ID) };
+    }
+
+    // B5 E1, E2, B3.3: judged by where the card is now (R97) — a countered card in a public pile reads,
+    // one stolen into a hand reads to that hand's owner only, a crumbled card reads once it is in the
+    // graveyard. `byInstanceId` is the countering card, a fired trap by then, judged the same way.
+    case "countered":
+      return {
+        ...event,
+        ...(hidden(event.instanceId) ? { instanceId: HIDDEN_ID, defId: HIDDEN_ID } : {}),
+        ...(event.byInstanceId !== null && hidden(event.byInstanceId) ? { byInstanceId: HIDDEN_ID } : {}),
+      };
+    // B5 E2, E16, R466: a stolen card reads to whoever could read it where it was taken from — the
+    // hand's holder, the controller of a face-down zone, everyone for a face-up card or a public pile
+    // (`readableFrom`, written as it was taken) — and to whoever can read it where it is now (R97). A
+    // card out of a library was nobody's to read, so its old owner never learns which card left.
+    case "stolen": {
+      const { readableFrom, ...shown } = event;
+      return hidden(event.instanceId) && !readableWhereStolen(event, readableFrom, viewer)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID }
+        : shown;
+    }
+    case "crumbled":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+
+    // B3.4, R386, R177: a change is the card's, and over a library or a hidden hand it would say
+    // which card changed and how — so it stays unread for good for whoever could not read the card
+    // where it changed (`hiddenFrom`), and for whoever cannot read it now.
+    case "degraded":
+    case "upgraded": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, change: HIDDEN_TUNING_CHANGE }
+        : shown;
+    }
+    // Classic+ #41: a number set outright is the card's as well, so it follows `degraded`.
+    case "numberChanged": {
+      const { hiddenFrom, ...shown } = event;
+      return hiddenFrom?.includes(viewer) === true || hidden(event.instanceId)
+        ? { ...shown, instanceId: HIDDEN_ID, defId: HIDDEN_ID, key: HIDDEN_ID, value: 0 }
+        : shown;
+    }
+
+    // B5 E9: a hit, an attack or a pick moves between cards on the field or heroes, all public; a
+    // card that has since gone somewhere unreadable is the sentinel, as on `damage`.
+    case "redirected":
+      return {
+        ...event,
+        fromId: hidden(event.fromId) ? HIDDEN_ID : event.fromId,
+        toId: hidden(event.toId) ? HIDDEN_ID : event.toId,
+        byInstanceId: event.byInstanceId !== null && hidden(event.byInstanceId) ? HIDDEN_ID : event.byInstanceId,
+      };
+
+    // A card on the field acting face-up (an ability, an animation, a quest, a flicker, a mark): public
+    // while it is readable, the sentinel once it has gone somewhere hidden (R97).
+    case "activated":
+    case "animated":
+    case "deanimated":
+    case "flickered":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+    case "questProgressed":
+    case "questCompleted":
+    case "marked":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID } : event;
+
+    // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
+    case "chaosRolled":
+      return hidden(event.instanceId) ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event;
+
+    case "turnCutShort":
+      return event.byInstanceId !== null && hidden(event.byInstanceId) ? { ...event, byInstanceId: HIDDEN_ID } : event;
+
+    // Public: a zone, a player, a number.
+    case "unlocked":
+    case "healthSet":
+    case "rolledBack":
+    case "drawLimited":
+      return event.type === "healthSet" && event.sourceId !== null && hidden(event.sourceId)
+        ? { ...event, sourceId: HIDDEN_ID }
+        : event;
   }
 }
+
+/**
+ * B5 E2, E16, R466: whether `viewer` could read the card a `stolen` event names where it was taken
+ * from. `ownership.changeOwner` writes who could (`readableFrom`) as it takes the card; an event
+ * without the record is judged by its pile alone — a hand is its holder's (§9.1), a library nobody's,
+ * a graveyard, an exile pile or the resolving zone everyone's (a play is public, R98), and a card off
+ * the field nobody's, since whether it stood face-down there is not otherwise on the event.
+ */
+function readableWhereStolen(
+  event: Extract<GameEvent, { type: "stolen" }>,
+  readableFrom: readonly PlayerId[] | undefined,
+  viewer: PlayerId,
+): boolean {
+  if (readableFrom !== undefined) return readableFrom.includes(viewer);
+  switch (event.zone) {
+    case "hand":
+      return event.from === viewer;
+    case "graveyard":
+    case "exile":
+    case "resolving":
+      return true;
+    case "library":
+    case "field":
+      return false;
+  }
+}
+
+/** R386, R177: what a hidden Degrade or Upgrade shows — that a card changed, never how. */
+const HIDDEN_TUNING_CHANGE: TuningChange = { kind: "number", key: HIDDEN_ID, delta: 0 };
 
 /**
  * §10.8: "the last N events for animation". `state.applied` is the only event history a state

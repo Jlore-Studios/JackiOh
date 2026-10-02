@@ -1,0 +1,49 @@
+# One window of deploy-watch.yml's wait: polls the live server's GET /api/catalog until it serves
+# `expected` or `seconds` pass. deploy-watch.yml chains a few of these as separate jobs, so the wait
+# for Render's deploy can run long without any one job breaking CI's five-minute budget (#73).
+name: poll live catalog
+description: Poll the live server's /api/catalog until it serves the expected catalog version
+inputs:
+  server:
+    description: the server's base URL
+    required: true
+  expected:
+    description: the catalog version main's render.yaml names
+    required: true
+  seconds:
+    description: how long this window polls
+    required: true
+outputs:
+  live:
+    description: "'true' once the server served the expected version"
+    value: ${{ steps.poll.outputs.live }}
+  served:
+    description: the version the server served last, or why it did not answer
+    value: ${{ steps.poll.outputs.served }}
+runs:
+  using: composite
+  steps:
+    - id: poll
+      shell: bash
+      env:
+        SERVER: ${{ inputs.server }}
+        EXPECTED: ${{ inputs.expected }}
+        SECONDS_: ${{ inputs.seconds }}
+      run: |
+        deadline=$(( $(date +%s) + SECONDS_ ))
+        served="(no answer)"
+        while [ "$(date +%s)" -lt "$deadline" ]; do
+          left=$(( deadline - $(date +%s) ))
+          # A free instance asleep takes about a minute to answer its first request.
+          if body=$(curl -fsS -m "$(( left < 90 ? (left < 5 ? 5 : left) : 90 ))" "$SERVER/api/catalog" 2>/dev/null); then
+            served=$(printf '%s' "$body" | jq -r '.version // "(no version)"')
+            if [ "$served" = "$EXPECTED" ]; then
+              echo "live: catalog $served"
+              { echo "live=true"; echo "served=$served"; } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "$(date -u +%H:%M:%S) serving $served, waiting for $EXPECTED"
+          sleep 20
+        done
+        { echo "live=false"; echo "served=$served"; } >> "$GITHUB_OUTPUT"

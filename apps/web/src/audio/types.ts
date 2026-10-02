@@ -5,17 +5,26 @@ export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
   | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
-  | "cancel" | "entrance" | "fatigue" | "refuse";
+  | "cancel" | "entrance" | "fatigue" | "refuse"
+  // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
+  | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
  * card art's theme order): the summon thud gains the family's accent and the spell shimmer its
  * chimes. Absent: the plain recipe, which is all a card the viewer cannot name ever gets (R203).
+ * Patch v0.2.0 adds the Book, Pancake and AI tags' families.
  */
-export type SfxTimbre = "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field";
+export type SfxTimbre =
+  | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field"
+  | "book" | "pancake" | "ai";
 
 export type SfxParams = {
-  /** damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP]. */
+  /**
+   * damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP].
+   * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
+   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
+   */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */
   mine?: boolean;
@@ -28,13 +37,25 @@ export type SfxParams = {
    * like a doorbell rather than the routine two blips, inside the same durationMs.
    */
   urgent?: boolean;
+  /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
+  release?: boolean;
 };
 
 export type VoiceLineKind = "play" | "death" | "cast";
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${VoiceLineKind}`;
 
-export type Persona = {
+/** What every persona carries, whichever synthesizer rendered its files. */
+type PersonaCommon = {
+  /** For the speechSynthesis fallback: SpeechSynthesisUtterance pitch (0–2) and rate (0.1–10). */
+  web: { pitch: number; rate: number };
+  /** Output trim applied at runtime to this persona's files, 0–2. Default 1. */
+  gain?: number;
+};
+
+/** A persona rendered by macOS `say` (gen-voice.mjs's default backend). */
+export type SayPersona = PersonaCommon & {
+  backend?: "say";
   /** A `say -v` voice name, verbatim, e.g. "Reed (English (US))". */
   say: string;
   /** `[[rate]]` words per minute, 90–360. */
@@ -43,11 +64,25 @@ export type Persona = {
   pbas: number;
   /** `[[pmod]]` pitch modulation, 0–127. */
   pmod: number;
-  /** For the speechSynthesis fallback: SpeechSynthesisUtterance pitch (0–2) and rate (0.1–10). */
-  web: { pitch: number; rate: number };
-  /** Output trim applied at runtime to this persona's files, 0–2. Default 1. */
-  gain?: number;
 };
+
+/**
+ * R501: a persona rendered by Windows SAPI and shaped by ffmpeg (gen-voice.mjs's second backend).
+ * Its lines take no per-card overrides.
+ */
+export type SapiPersona = PersonaCommon & {
+  backend: "sapi";
+  /** An installed SAPI voice name, e.g. "Microsoft Zira Desktop". */
+  voice: string;
+  /** SSML prosody rate in percent, -50 to 100. */
+  rate: number;
+  /** ffmpeg pitch shift in semitones, -12 to 12, tempo kept. */
+  semitones: number;
+  /** An ffmpeg audio filter chain that colours the voice ("" for none). */
+  filter: string;
+};
+
+export type Persona = SayPersona | SapiPersona;
 
 type Overrides = { rate?: number; pbas?: number; pmod?: number };
 export type VoiceLineEntry =
@@ -57,7 +92,7 @@ export type VoiceLineEntry =
 export type VoiceLineTable = {
   version: 1;
   personas: Record<string, Persona>;
-  /** Keyed by catalog id: exactly the 111 ids of packages/cards/catalog.json. */
+  /** Keyed by catalog id: exactly the ids of packages/cards/catalog.json, tokens included. */
   cards: Record<string, VoiceLineEntry>;
 };
 

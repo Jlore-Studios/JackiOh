@@ -12,8 +12,8 @@
  *    (a pick that arrives after the game began finds `playing`). A pick is persisted in the row
  *    before it is acknowledged, so a restart keeps it, and it leaves the server only in its owner's
  *    projection (R331).
- *  - **The rating move** (R262, R377). When a transition ends a ranked series, it is rated as one
- *    game (`ranked.ts`, R376): planned from both players' current ratings and ranks, put on the row
+ *  - **The rating move** (R262, R604). When a transition ends a ranked series, it is rated as one
+ *    game (`ranked.ts`, R603): planned from both players' current ratings and ranks, put on the row
  *    (`ratingBefore`, `ratingAfter`) by the same compare-and-set, and written only once that has
  *    won, in the same transaction. A game inside a series is never rated (`results.ts`). An
  *    abandoned series and a room's series are unrated.
@@ -137,7 +137,8 @@ async function startSeriesGame(deps: ServerDeps, series: SeriesRow): Promise<boo
   }
 
   try {
-    await deps.matches.start({ matchId, seed, catalogVersion: series.catalogVersion, ranked: series.ranked, seats });
+    // A series row read from Postgres carries no `ranked` (no column yet): it never rates.
+    await deps.matches.start({ matchId, seed, catalogVersion: series.catalogVersion, ranked: series.ranked ?? false, seats });
   } catch (error) {
     // Another start got there first — a request and the sweeper, or a second process — and wrote
     // the row this one was about to write. That start sets the flags.
@@ -194,7 +195,7 @@ export async function resumeSeries(deps: ServerDeps, series: SeriesRow | null): 
 // ---------------------------------------------------------------------------
 
 /**
- * R262, R377: plans a ranked series' one rating move as a game between its two sides, or null for a
+ * R262, R604: plans a ranked series' one rating move as a game between its two sides, or null for a
  * series that does not move the rating: unranked, abandoned, or not over.
  */
 async function planSeriesRating(t: Store, deps: ServerDeps, series: SeriesRow): Promise<RankedPlan | null> {

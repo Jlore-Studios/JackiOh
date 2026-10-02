@@ -1,0 +1,34 @@
+{
+  "id": "32-tribute-a",
+  "spec": "32-tribute-full-board.cy.ts",
+  "description": "Player 1 deck for spec 32 (R391). This is spec 03 player 1 deck (03-plays-a) with #28 Knockoff Temu Glowy Jelly Bean swapped for C #45 Nature Titan (2 mana, Tribute 1). The deck already holds the three cards that fill the row: #3 Right-house defender (1 mana, Reborn) in lane 1, then #62 Friend of Felinors (1 mana), which fills lanes 2-5 with Felinor Tokens, then #92 Felinor Fiender (2 mana, Stack) stacked onto the lane-2 Felinor, so lane 2 is a pile. Nature Titan may then go only into a zone its own Tribute empties, lanes 3-5. It never goes into lane 1, whose unit would Reborn into it (R64), or lane 2, where the Felinor beneath would resume (R13). The handicap (R180) is a human handicap except for 3 bonus mana and 6 extra opening cards. Four specific cards across two turns would otherwise take until player-turn 7 on a rare seed. With the handicap, player 1 fills the row on its first turn (1 + 1 + 2 = 4 mana) and plays the Titan on its second turn, from a 10-card hand that holds all four cards on the spec seed. The opening hand is 9 cards and the turn-1 draw makes 10, which is HAND_CAP, so nothing is burned.",
+  "cards": [
+    "core-003",
+    "core-005",
+    "core-008",
+    "core-010",
+    "core-011",
+    "core-015",
+    "core-019",
+    "core-020",
+    "core-025",
+    "classic-045",
+    "core-032",
+    "core-045",
+    "core-053",
+    "core-056",
+    "core-062",
+    "core-073",
+    "core-077",
+    "core-081",
+    "core-091",
+    "core-092"
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 3,
+    "manaCap": 4,
+    "extraOpeningCards": 6,
+    "extraDrawsPerTurn": 0
+  }
+}

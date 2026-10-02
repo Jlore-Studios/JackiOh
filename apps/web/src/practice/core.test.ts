@@ -15,6 +15,7 @@ import {
   createRng,
   fold,
   hashState,
+  lastBoardFor,
   legalActions,
   reduce,
   registeredCatalog,
@@ -29,6 +30,7 @@ import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
 import { createPracticeCore } from "./core.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
+import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import type {
   PracticeDebug,
@@ -158,9 +160,12 @@ function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): Pra
  */
 function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai: PlayerId): void {
   const snapshot = snapshotOf(response);
-  expect(Object.keys(snapshot).sort()).toEqual(["aiToAct", "error", "legal", "view"]);
-
   const state = stateOf(debugOf(d));
+  // R508: a finished free game adds the human's last board, which is what the human saw (R417).
+  const over = state.result !== null;
+  expect(Object.keys(snapshot).sort()).toEqual(["aiToAct", "error", ...(over ? ["lastBoard"] : []), "legal", "view"]);
+  if (over) expect(snapshot.lastBoard).toEqual(lastBoardFor(state, human));
+
   expect(snapshot.view).toEqual(viewFor(state, human));
   expect(snapshot.legal).toEqual(legalActions(state, human));
   expect(snapshot.aiToAct).toBe(aiToAct(state, ai));
@@ -805,5 +810,61 @@ describe("B39 a draw offer is declined by the AI's next step", () => {
     expect(after.hash).toBe(before.hash);
     expect(after.log).toEqual(before.log);
     expect(after.log.some((action) => action.type === "answerDraw")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R508: the human's last practice board (R417, Classic+ #29 Portal to the Past)
+// ---------------------------------------------------------------------------------------------
+
+describe("R508 a practice game's last board", () => {
+  /** A free game walked by the random policy until the field holds a card, then conceded. */
+  function finishWithBoard(d: Driver, human: PlayerId, seed: string): PracticeSnapshot {
+    const rng = createRng(`${seed}:walk`);
+    let last = snapshotOf(d.send({ type: "start", config: config({ seed, humanSeat: human }) }));
+    for (let n = 0; n < WALK_CAP && lastBoardFor(stateOf(debugOf(d)), human).length === 0; n += 1) {
+      const next = step(d, human, rng, last);
+      if (next === null) break;
+      last = snapshotOf(next);
+    }
+    if (last.view.result !== null) return last;
+    expect(last.lastBoard, "a game still running gives no board").toBeUndefined();
+    return snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
+  }
+
+  it("R508 a free game that ends gives the human's board as the human saw it, and the next one starts with it on the human's seat alone and folds with it", { timeout: 240_000 }, () => {
+    const d = driver();
+    const over = finishWithBoard(d, "p2", "r508-first");
+    expect(over.view.result).not.toBeNull();
+    const board = lastBoardFor(stateOf(debugOf(d)), "p2");
+    expect(board.length, "the walk put a card on the field").toBeGreaterThan(0);
+    expect(over.lastBoard).toEqual(board);
+
+    const next = driver();
+    const opened = snapshotOf(next.send({ type: "start", config: config({ seed: "r508-next", humanSeat: "p1", lastBoard: board }) }));
+    const started = debugOf(next);
+    expect(started.lastBoards).toEqual([board, []]);
+    const frozen = stateOf(started).lastBoards;
+    expect(frozen?.p1?.length).toBeGreaterThan(0);
+    expect(frozen?.p2, "the AI's seat has no last board").toBeUndefined();
+
+    untilHumanMain(next, "p1", opened);
+    const after = debugOf(next);
+    const { seed, decks, handicaps, log, lastBoards } = after;
+    expect(hashState(fold({ seed, decks, handicaps, log, ...(lastBoards === undefined ? {} : { lastBoards }) }).state)).toBe(after.hash);
+  });
+
+  it("R508 a tutorial lesson neither takes the last board nor gives one", () => {
+    const lesson = TUTORIAL_LESSONS[0];
+    if (lesson === undefined) throw new Error("the tutorial has no lesson");
+    const d = driver();
+    const board = [{ defId: "core-008", radiant: false }];
+    d.send({ type: "start", config: config({ seed: "r508-lesson", humanSeat: "p1", lesson: lesson.id, lastBoard: board }) });
+    const started = debugOf(d);
+    expect(started.lastBoards).toBeUndefined();
+    expect(stateOf(started).lastBoards).toBeUndefined();
+    const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
+    expect(over.view.result).not.toBeNull();
+    expect(over.lastBoard).toBeUndefined();
   });
 });

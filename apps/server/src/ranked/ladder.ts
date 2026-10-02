@@ -1,15 +1,15 @@
 /**
- * The visible ladder (SPEC §9.11, R378–R381): the Grape tiers a player climbs, read off the hidden
+ * The visible ladder (SPEC §9.12, R605–R608): the Grape tiers a player climbs, read off the hidden
  * rating (`glicko2.ts`) without ever showing it.
  *
  * A placed player's rank is one integer, `ladder`: the pips they stand above the bottom of Rotten
  * Grape III. Each tier has `RANK_DIVISIONS_PER_TIER` divisions of `RANK_PIPS_PER_DIVISION` pips, so
  * the division and the pips are that integer divided out, and a full division is the next one's
- * bottom (R378). Above the Grape tiers is Jlorious, which is not a ladder position at all but the top
- * `JLORIOUS_SIZE` Mythic Grape players by rating (R381), and below them all is Raisin, the season's
- * placements (R378).
+ * bottom (R605). Above the Grape tiers is Jlorious, which is not a ladder position at all but the top
+ * `JLORIOUS_SIZE` Mythic Grape players by rating (R608), and below them all is Raisin, the season's
+ * placements (R605).
  *
- * The hidden rating pulls the visible rank toward itself gently (R379): the rating's percentile
+ * The hidden rating pulls the visible rank toward itself gently (R606): the rating's percentile
  * among the season's placed players, read off `RANK_TIER_PERCENTS`, is the rank it calls for (the
  * target), and a game played a division or more away from its target leans one pip toward it.
  *
@@ -31,7 +31,7 @@ import {
   RANK_WIN_PIPS,
 } from "../config";
 
-/** R378: the Grape tiers, lowest first. Raisin sits below them and Jlorious above. */
+/** R605: the Grape tiers, lowest first. Raisin sits below them and Jlorious above. */
 export const GRAPE_TIERS = ["rotten", "normal", "large", "golden", "mythic"] as const;
 export type GrapeTier = (typeof GRAPE_TIERS)[number];
 /** Every tier a player can be shown in, lowest first. */
@@ -47,16 +47,16 @@ const MYTHIC = GRAPE_TIERS.indexOf("mythic");
 const PERCENT = 100;
 const percentTotal = GRAPE_TIERS.reduce((sum, tier) => sum + RANK_TIER_PERCENTS[tier], 0);
 if (percentTotal !== PERCENT || GRAPE_TIERS.some((tier) => !Number.isInteger(RANK_TIER_PERCENTS[tier]) || RANK_TIER_PERCENTS[tier] <= 0)) {
-  throw new Error("RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R379)");
+  throw new Error("RANK_TIER_PERCENTS must be positive whole percents that sum to 100 (R606)");
 }
 
 /** A game's result for one side. */
 export type GameResult = "win" | "loss" | "draw";
 
 /**
- * One player's season on the ladder: the store's `season_ranks` row (R378). `ladder` is null until
+ * One player's season on the ladder: the store's `season_ranks` row (R605). `ladder` is null until
  * the placements are played. `floor` is the Grape tier the player has reached this season (its index
- * in `GRAPE_TIERS`), which the ladder never drops below (R380); `peakLadder` and `peakJlorious` are
+ * in `GRAPE_TIERS`), which the ladder never drops below (R607); `peakLadder` and `peakJlorious` are
  * the best the season has seen, for the profile's badge.
  */
 export type SeasonRank = {
@@ -69,7 +69,7 @@ export type SeasonRank = {
   draws: number;
   ladder: number | null;
   floor: number;
-  /** Consecutive wins, ended by a loss. A draw neither extends nor ends it (R379). */
+  /** Consecutive wins, ended by a loss. A draw neither extends nor ends it (R606). */
   streak: number;
   peakLadder: number | null;
   /** The best (lowest) Jlorious position held this season, or null. */
@@ -111,7 +111,7 @@ export function tierBottom(tierIndex: number): number {
 /** A position inside a Grape tier, as the client draws it: division III to I, and pips. */
 export type LadderPlace = { tier: GrapeTier; division: number; pips: number };
 
-/** R378: where a ladder position sits. Division 3 is the bottom of a tier (III), 1 the top (I). */
+/** R605: where a ladder position sits. Division 3 is the bottom of a tier (III), 1 the top (I). */
 export function placeOf(ladder: number): LadderPlace {
   const tierIndex = tierIndexOf(ladder);
   const within = ladder - tierBottom(tierIndex);
@@ -124,7 +124,7 @@ export function placeOf(ladder: number): LadderPlace {
 }
 
 /**
- * A rating's percentile among the others, as an exact fraction (R379). It is the mid-rank: the
+ * A rating's percentile among the others, as an exact fraction (R606). It is the mid-rank: the
  * others below, half of those level with it, and half of the player's own place, over everyone
  * counted, `(2·below + level + 1) / (2·(others + 1))`. Kept as two integers so a tier boundary is
  * compared exactly. With nobody else placed the percentile is one half.
@@ -142,7 +142,7 @@ export function percentileOf(rating: number, others: readonly number[]): Percent
 }
 
 /**
- * R379: the ladder position a percentile calls for. The tiers take `RANK_TIER_PERCENTS` of the
+ * R606: the ladder position a percentile calls for. The tiers take `RANK_TIER_PERCENTS` of the
  * range in order, a percentile exactly on a boundary belonging to the tier above it, and inside a
  * tier the percentile is spread evenly over its pips.
  */
@@ -164,7 +164,7 @@ export function targetLadder(percentile: Percentile): number {
 }
 
 /**
- * R379: the pips one game moves a placed player, before the floor and the top clamp it. A win gives
+ * R606: the pips one game moves a placed player, before the floor and the top clamp it. A win gives
  * `RANK_WIN_PIPS`, plus the streak bonus below Mythic Grape, plus the lean when the rating calls for
  * a rank a division or more above; a loss takes `RANK_LOSS_PIPS`, plus the lean when the rating calls
  * for a rank a division or more below; a draw moves nothing. `ladder` is the position before the
@@ -183,7 +183,7 @@ export function pipDelta(input: { result: GameResult; ladder: number; target: nu
 }
 
 /**
- * R378–R380: one rated game on a player's season. `target` is the rank the player's rating calls for
+ * R605–R607: one rated game on a player's season. `target` is the rank the player's rating calls for
  * once this game has moved it. A player still placing plays toward their placements, and the game
  * that completes them puts them straight at the target; a placed player moves by `pipDelta`, never
  * below the floor of the highest Grape tier they have reached this season, and never past the top.
@@ -224,7 +224,7 @@ export function applyRankedGame(rank: SeasonRank, input: { result: GameResult; t
 }
 
 /**
- * R381: Jlorious, in order: the season's placed Mythic Grape players by hidden rating, highest
+ * R608: Jlorious, in order: the season's placed Mythic Grape players by hidden rating, highest
  * first, ties broken by profile id, the first `JLORIOUS_SIZE` of them. When fewer qualify, every one
  * of them is Jlorious. A player who falls out is in Mythic Grape again, where the floor holds them.
  */
@@ -236,14 +236,14 @@ export function jloriousOrder(standings: readonly Standing[]): string[] {
     .map((standing) => standing.profileId);
 }
 
-/** R381: the rank row with a Jlorious position it has just held, kept if it is its best. */
+/** R608: the rank row with a Jlorious position it has just held, kept if it is its best. */
 export function withJloriousPeak(rank: SeasonRank, position: number): SeasonRank {
   if (rank.peakJlorious !== null && rank.peakJlorious <= position) return rank;
   return { ...rank, peakJlorious: position };
 }
 
 /**
- * What a player is shown as (R385): Raisin with their placements, a Grape tier with its division,
+ * What a player is shown as (R612): Raisin with their placements, a Grape tier with its division,
  * pips and the floor that holds them, or a Jlorious position. Never the rating.
  */
 export type VisibleRank =
@@ -271,7 +271,7 @@ export function visibleRank(rank: SeasonRank | null, jloriousPosition: number | 
   };
 }
 
-/** A season's best, as the profile's badge shows it (R380): a Jlorious position or a Grape division. */
+/** A season's best, as the profile's badge shows it (R607): a Jlorious position or a Grape division. */
 export type PeakBadge =
   | { seasonId: string; tier: "jlorious"; position: number }
   | { seasonId: string; tier: GrapeTier; division: number };

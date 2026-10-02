@@ -270,7 +270,7 @@ export function createRoomRoutes(): Route[] {
         ],
         seedBase: seed,
         catalogVersion: deps.catalog.version,
-        // R377: a room's series is unranked.
+        // R604: a room's series is unranked.
         ranked: false,
       });
       deps.log.info("room.joined", {
@@ -287,7 +287,7 @@ export function createRoomRoutes(): Route[] {
       matchId,
       seed,
       catalogVersion: deps.catalog.version,
-      // R377: a room challenge is unranked: it moves neither rating nor rank.
+      // R604: a room challenge is unranked: it moves neither rating nor rank.
       ranked: false,
       seats: roomSeats(deps, claimed, profileId, frozen, seed),
     });

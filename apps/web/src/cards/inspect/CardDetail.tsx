@@ -1,5 +1,5 @@
 // The deck builder's detail view (B29): both printed faces side by side at every width, a meta
-// line, the glossary of both faces, and the caller's meta and actions above Close. It is a centred
+// line (its lines of code last, E36), the glossary of both faces, and the caller's meta and actions above Close. It is a centred
 // modal dialog over a scrim, closed by Close, the scrim or Escape (B25), and it takes the one
 // inspect slot: opening it closes any hover preview or sheet, and closeInspect() closes it.
 //
@@ -15,8 +15,10 @@
 // them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
 // is visible the moment the dialog opens, which is also where focus lands.
 //
-// Last in that column is the card's History (History.tsx, R375): collapsed, with its version count,
-// until the player opens it, which is when the catalog snapshots it reads are loaded.
+// Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
+// "History" control, it loads the card's patch history when opened and lists each patch that changed
+// the card, newest first, with its faces as that patch left them and what changed marked. The
+// Patch notes page opens the detail with it already open (`historyOpen`).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -24,12 +26,12 @@ import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
-import { faceModel, type FaceModel } from "../model.ts";
+import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
+import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
-import { CardHistory } from "./History.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -40,12 +42,26 @@ import {
 } from "./testids.ts";
 import "./inspect.css";
 
-export type CardDetailProps = { def: CardDef; onClose: () => void; actions?: ReactNode; meta?: ReactNode };
+export type CardDetailProps = {
+  def: CardDef;
+  onClose: () => void;
+  actions?: ReactNode;
+  meta?: ReactNode;
+  /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
+  historyOpen?: boolean;
+};
 
-/** `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any. */
-function detailMetaLine(def: CardDef): string {
-  const parts = [`#${def.index}`, def.set, def.rarity, def.type];
+/**
+ * `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any, then ` · N lines of
+ * code` (E36) when the card's script was counted. A face with a type of its own (B2.7, Classic+ #22
+ * Blood Moon's Radiant Field Trap) says so after the type: "Trap (Radiant: Field Trap)".
+ */
+export function detailMetaLine(def: CardDef): string {
+  const radiantType = def.radiant.type;
+  const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
+  const parts = [`#${def.index}`, def.set, def.rarity, type];
   if (def.tags.length > 0) parts.push(def.tags.join(", "));
+  if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }
 
@@ -83,7 +99,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta }: CardDetailProps): ReactElement {
+export function CardDetail({ def, onClose, actions, meta, historyOpen = false }: CardDetailProps): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -134,11 +150,13 @@ export function CardDetail({ def, onClose, actions, meta }: CardDetailProps): Re
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
                 them on a wide, short one such as a 1280x720 desktop (inspect.css). */}
             <div className="inspect-detail-info">
-              <p className="inspect-meta">{detailMetaLine(def)}</p>
+              <p className="inspect-meta" data-loc={def.loc}>
+                {detailMetaLine(def)}
+              </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
-              <CardHistory key={def.id} def={def} />
+              <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
             </div>
           </RefsInteractive>
         </div>

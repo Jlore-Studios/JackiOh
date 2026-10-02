@@ -11,6 +11,7 @@ const destroyed = (id: string): GameEvent => ({
   instanceId: id,
   defId: "fx",
   owner: "p1",
+  controller: "p1",
   attack: 1,
   maxHealth: 1,
   killerId: null,

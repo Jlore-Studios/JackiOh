@@ -8,7 +8,15 @@
  * `Store` and supply `ServerConfig`, and nothing here imports them.
  */
 
-import type { Action, CardDef, GameOverReason, PlayerId } from "@jackioh/shared";
+import type {
+  Action,
+  CardDef,
+  CardStatsFilter,
+  GameOverReason,
+  GameRecord,
+  GameSummary,
+  PlayerId,
+} from "@jackioh/shared";
 import type { Glicko } from "../ranked/glicko2";
 import type { SeasonRank, VisibleRank } from "../ranked/ladder";
 import type { ResetChange, ResetPlayer } from "../ranked/season";
@@ -60,7 +68,7 @@ export type ServerConfig = {
   matchCeilingMinutes: number;
   /** R79: room-code length, from the invite-code alphabet. */
   roomCodeLength: number;
-  /** R376: the hidden rating a new profile starts at. */
+  /** R603: the hidden rating a new profile starts at. */
   ratingStart: number;
 };
 
@@ -220,8 +228,8 @@ export type Profile = {
   email: string;
   status: ProfileStatus;
   /**
-   * R376: the hidden Glicko-2 rating, its deviation and its volatility. Server-side only: no
-   * response carries any of the three (R385), the queue's rating window reads the first.
+   * R603: the hidden Glicko-2 rating, its deviation and its volatility. Server-side only: no
+   * response carries any of the three (R612), the queue's rating window reads the first.
    */
   rating: number;
   ratingDeviation: number;
@@ -235,11 +243,13 @@ export type ProfileStore = {
   getById: (profileId: string) => Promise<Profile | null>;
   getByUserId: (userId: string) => Promise<Profile | null>;
   getMany: (profileIds: readonly string[]) => Promise<Profile[]>;
-  /** A new profile, at `rating` with a new player's deviation and volatility (R376). */
+  /** A new profile, at `rating` with a new player's deviation and volatility (R603). */
   create: (input: { userId: string; email: string; rating: number; at: number }) => Promise<Profile>;
   setStatus: (profileId: string, status: ProfileStatus) => Promise<void>;
-  /** R376: one profile's hidden rating after a rated game. */
+  /** R603: one profile's hidden rating after a rated game. */
   setGlicko: (profileId: string, glicko: Glicko) => Promise<void>;
+  /** One profile's rating, as a number alone. The rated game writes through `setGlicko`. */
+  setRating: (profileId: string, rating: number) => Promise<void>;
   /** Pass null to clear. §9.5: every terminal reason clears both players'. */
   setInMatch: (profileId: string, matchId: string | null) => Promise<void>;
   /**
@@ -482,15 +492,22 @@ export type MatchRow = {
   decks: [string[], string[]];
   catalogVersion: string;
   /**
-   * R377: a match the queue paired (or a game of a series it paired) is ranked; a room challenge
-   * is not. Only a ranked game moves a rating or a rank.
+   * R604: a match the queue paired (or a game of a series it paired) is ranked; a room challenge
+   * is not. Only a ranked game moves a rating or a rank. Absent on rows read from Postgres, which
+   * has no ranked column until the ranked-ladder migration lands: they read as unranked and never
+   * rate.
    */
-  ranked: boolean;
+  ranked?: boolean;
   status: MatchStatus;
   createdAt: number;
   finishedAt: number | null;
   /** Deadlines the clients render (§9.5: the grace countdown is stored on the match). */
   clocks: MatchClocks;
+  /**
+   * R417: each seat's last board as this match started (seat order, like `decks`), a `createGame`
+   * input frozen on the row so a rebuilt actor folds the same game. Absent when both are empty.
+   */
+  lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
 };
 
 export type MatchClocks = {
@@ -522,6 +539,12 @@ export type MatchStore = {
   finish: (matchId: string, at: number) => Promise<void>;
   /** For the reaper (§9.5). */
   live: () => Promise<MatchRow[]>;
+  /**
+   * R257, R376: the mode a match was made in, read off what made it: `bo3` for a game of a Conquest
+   * series (`series.withGame`), else the room's mode, else the mode of the queue tickets it paired.
+   * Null for a match none of them made. The match row itself does not record it.
+   */
+  modeOf: (matchId: string) => Promise<QueueMode | null>;
   /**
    * R263: forget a match id that was reserved and never started — the first game of a Conquest
    * series that ended (forfeit, abandoned) before it was played. In Postgres the reservation is an
@@ -628,6 +651,20 @@ export type ResultStore = {
 };
 
 // ---------------------------------------------------------------------------
+// Game records for the card statistics (SPEC §9.11, R376–R378). Server-only (migration 0014).
+// ---------------------------------------------------------------------------
+
+/** R377, R378: which records a read returns. Pilots are per seat, so `cardStats` applies those. */
+export type GameRecordQuery = Pick<CardStatsFilter, "source" | "mode" | "patch">;
+
+export type GameRecordStore = {
+  /** R376: one record per id. False, and nothing written, when a record with this id exists. */
+  insert: (record: GameRecord) => Promise<boolean>;
+  /** The records of the query's sources, mode and patch, in id order (code points). */
+  list: (query: GameRecordQuery) => Promise<GameRecord[]>;
+};
+
+// ---------------------------------------------------------------------------
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series survives a
 // server restart; every transition is a pure function in `src/api/series-rules.ts` written back
 // with `SeriesStore.update`, which is compare-and-set on `version`.
@@ -684,8 +721,8 @@ export type SeriesRow = {
   id: string;
   sides: [SeriesSide, SeriesSide];
   catalogVersion: string;
-  /** R377: a series the queue paired is ranked and moves the rating when it ends; a room's is not. */
-  ranked: boolean;
+  /** R604: a series the queue paired is ranked and moves the rating when it ends; a room's is not. Absent on rows read from Postgres (no ranked column yet): they never rate. */
+  ranked?: boolean;
   /** Each game's seed is `${seedBase}:${gameNo}` (R335). The server mints it; R143's e2e override feeds it. */
   seedBase: string;
   status: SeriesStatus;
@@ -701,7 +738,7 @@ export type SeriesRow = {
   endReason: SeriesEnd | null;
   /**
    * R262: the one rating move a series makes, recorded when it ends; null until then, when abandoned
-   * and for an unranked series (R377).
+   * and for an unranked series (R604).
    */
   ratingBefore: [number, number] | null;
   ratingAfter: [number, number] | null;
@@ -734,24 +771,24 @@ export type SeriesStore = {
 };
 
 // ---------------------------------------------------------------------------
-// The ranked ladder (SPEC §9.11, R376–R385): seasons, each player's season on the ladder, the bots'
+// The ranked ladder (SPEC §9.12, R603–R612): seasons, each player's season on the ladder, the bots'
 // ratings, and the record of every rated game. The rules are `src/ranked/*`, pure; `src/api/ranked.ts`
 // reads and writes through this port.
 // ---------------------------------------------------------------------------
 
-/** R382: a season, named by the minor version of the game (`v0.2`), and the patch that opened it. */
+/** R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it. */
 export type Season = { id: string; patchVersion: string; startedAt: number };
 
 /** One player's season row with their current hidden rating: what percentiles and Jlorious read. */
 export type SeasonStanding = SeasonRank & { rating: number };
 
-/** R383: an AI bot's own Glicko-2 rating. A bot has no ladder rank and no place on the leaderboard. */
+/** R610: an AI bot's own Glicko-2 rating. A bot has no ladder rank and no place on the leaderboard. */
 export type BotRating = { botId: string; glicko: Glicko; games: number; updatedAt: number };
 
-/** R384: who played a side of a rated game: a person, or one of the AI bots (R383). */
+/** R611: who played a side of a rated game: a person, or one of the AI bots (R610). */
 export type Pilot = "human" | "ai";
 
-/** R384: one side of a rated game, as recorded. */
+/** R611: one side of a rated game, as recorded. */
 export type RatedSide = {
   /** The player, or null for a bot (and for a player whose account was deleted since). */
   profileId: string | null;
@@ -767,7 +804,7 @@ export type RatedSide = {
 };
 
 /**
- * R384: the record of one rated game: a ranked match, or a ranked series, which is rated once as a
+ * R611: the record of one rated game: a ranked match, or a ranked series, which is rated once as a
  * whole (R262). Kept for good (account deletion empties a side's `profileId`, as for `results`).
  */
 export type RatedGameRow = {
@@ -792,28 +829,28 @@ export type RankedStore = {
   /** False, writing nothing, when a season of that id exists already (another process opened it). */
   createSeason: (season: Season) => Promise<boolean>;
   /**
-   * R382: every profile that has played a rated game, with its hidden rating: the soft reset's
+   * R609: every profile that has played a rated game, with its hidden rating: the soft reset's
    * input. Bots are not profiles and are never in it.
    */
   ratedPlayers: () => Promise<ResetPlayer[]>;
-  /** R382: writes a soft reset's ratings, every one in one statement. */
+  /** R609: writes a soft reset's ratings, every one in one statement. */
   resetRatings: (changes: readonly ResetChange[]) => Promise<void>;
   /** Every row of a season, each with the player's current rating, in profile-id order. */
   standings: (seasonId: string) => Promise<SeasonStanding[]>;
   rank: (seasonId: string, profileId: string) => Promise<SeasonRank | null>;
-  /** Every season row this profile has, oldest season first: the profile's badges (R380). */
+  /** Every season row this profile has, oldest season first: the profile's badges (R607). */
   ranksOf: (profileId: string) => Promise<SeasonRank[]>;
   /** Insert or replace one player's season row. Only that player's own rated games call it. */
   putRank: (row: SeasonRank) => Promise<void>;
   /**
-   * R381: records that a player has held this Jlorious position, keeping the best. One targeted
+   * R608: records that a player has held this Jlorious position, keeping the best. One targeted
    * write, so it cannot undo a game the same player has just finished elsewhere.
    */
   notePeakJlorious: (seasonId: string, profileId: string, position: number) => Promise<void>;
-  /** R383: a bot's rating, or null before its first rated game. */
+  /** R610: a bot's rating, or null before its first rated game. */
   bot: (botId: string) => Promise<BotRating | null>;
   putBot: (bot: BotRating) => Promise<void>;
-  /** R384: one row per rated game. Rejects a second row for the same id. */
+  /** R611: one row per rated game. Rejects a second row for the same id. */
   recordGame: (row: RatedGameRow) => Promise<void>;
   game: (id: string) => Promise<RatedGameRow | null>;
 };
@@ -865,6 +902,19 @@ export type TutorialStore = {
    * with no row gets one. `maxLessons` is the caller's cap on the union (`TUTORIAL_LESSONS_MAX`).
    */
   merge: (input: TutorialMergeInput, maxLessons: number) => Promise<TutorialMergeOutcome>;
+};
+
+/** R417: one card of a last board — the card and its face, never its stats (C+ #29). */
+export type LastBoardEntry = { defId: string; radiant: boolean };
+
+/** R417: "your last game" is your last finished game of the same kind; only `server` is written today. */
+export type LastBoardKind = "server" | "practice";
+
+export type LastBoardStore = {
+  /** The profile's last board of this kind, or null before its first finished game of it. */
+  get: (profileId: string, kind: LastBoardKind) => Promise<LastBoardEntry[] | null>;
+  /** R565: replace it, or write the first one, as a game of that kind ends (epoch ms `at`). */
+  put: (profileId: string, kind: LastBoardKind, board: readonly LastBoardEntry[], at: number) => Promise<void>;
 };
 
 export type RetentionPurgeInput = { codeAttemptsBefore: number; matchActionsEndedBefore: number };
@@ -920,6 +970,10 @@ export type Store = {
   tutorial: TutorialStore;
   /** SPEC §9.11: seasons, ranks, bots and the record of rated games. */
   ranked: RankedStore;
+  /** R417, R565: each profile's last finished game's board, per kind (C+ #29). */
+  lastBoards: LastBoardStore;
+  /** R376: the card statistics' game records. */
+  gameRecords: GameRecordStore;
 };
 
 // ---------------------------------------------------------------------------
@@ -933,9 +987,20 @@ export type StartMatchInput = {
   matchId: string;
   seed: string;
   catalogVersion: string;
-  /** R377: true when the queue paired it, for the match row. */
+  /** R604: true when the queue paired it, for the match row. */
   ranked: boolean;
   seats: [MatchSeat, MatchSeat];
+};
+
+/**
+ * R376: what the server needs to file a finished live match for the card statistics. Bound at the
+ * composition root (`src/index.ts`); absent, as in most tests, no record is written.
+ */
+export type GameRecorder = {
+  /** R388's newest patch (`packages/cards/patches/patches.json`): every live record's `patch`. */
+  patch: string;
+  /** The engine port's `summarizeGame`: the record's game half, read off `(seed, decks, log)`. */
+  summarize: (args: { seed: string; decks: [string[], string[]]; log: readonly Action[] }) => GameSummary | null;
 };
 
 export type MatchDirectory = {
@@ -986,10 +1051,12 @@ export type ServerDeps = {
    * composition root from `src/match/engine.real.ts`, the one file that reaches the engine.
    */
   dealRandomDeck: (seed: string) => string[];
+  /** R376: the live game recorder `api/game-records.ts` files each finished match with. */
+  games?: GameRecorder;
   matches: MatchDirectory;
   /**
    * The game's version, the newest patch in `packages/cards/patches/patches.json` (R375). It names
-   * the season games are rated in (R382) and is recorded with every rated game (R384). Read at boot
+   * the season games are rated in (R609) and is recorded with every rated game (R611). Read at boot
    * by `src/index.ts`.
    */
   patchVersion: string;

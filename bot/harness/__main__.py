@@ -1,8 +1,8 @@
 """The command line: `python -m harness <command>` from the `bot/` directory.
 
-The workflows call `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An operator calls `status`, `halt`,
-`start`, `dispatch`, `doctor`, `setup` and `window`, with a token in BOT_GITHUB_TOKEN,
-GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
+The workflows call `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An operator
+calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`, `setup` and `forget`, with a
+token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 """
 
 from __future__ import annotations
@@ -20,16 +20,17 @@ from harness import config as config_mod
 from harness import context as context_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
+from harness import logins as logins_mod
 from harness import plan as plan_mod
+from harness import providers as providers_mod
 from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness import sweep as sweep_mod
-from harness.clock import human_delta, iso
+from harness.clock import iso, now as clock_now
 from harness.config import LABELS, Config
-from harness.errors import ConfigError, GitHubError, HarnessError
+from harness.errors import ConfigError, GitHubError, HarnessError, LoginError
 from harness.redact import redact
 from harness.runner import get_runner, ping_usage
-from harness.state import record_usage, usage_refusal
 from harness.state import item as state_item
 from harness.work import Worker, check_templates
 
@@ -76,13 +77,22 @@ def _dump(obj: Any) -> None:
 def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
     item = int(args.item) if str(args.item or "").strip().lstrip("#").isdigit() else None
-    planned = plan_mod.make(ctx, force=args.force, item=item, mode=args.mode)
+    planned = plan_mod.make(ctx, force=args.force, item=item, mode=args.mode,
+                            quiet_ok=args.quiet_ok)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(planned, indent=2) + "\n", encoding="utf-8")
-    _output({"action": planned["action"], "number": planned.get("number") or ""})
+    # The provider, its CLI and the name of its secret steer the model job: which CLI to install
+    # and which one secret to hand it. They come from providers.json, never from the model.
+    _output({"action": planned["action"], "number": planned.get("number") or "",
+             "provider": planned.get("provider") or "", "cli": planned.get("cli") or "",
+             "secret": planned.get("secret") or "",
+             "shared": str(bool(planned.get("shared"))).lower(),
+             "runs_on": planned.get("runs_on") or "ubuntu-latest"})
     what = planned["action"] if planned["action"] == "none" else (
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
+    if planned.get("provider"):
+        what += f" on {planned['provider']}"
     _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n")
     print(f"plan: {what} {planned.get('reason', '')}".strip())
     return 0
@@ -91,12 +101,15 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
 def cmd_peek(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg, write=False)
     item = int(args.item) if str(args.item or "").strip().lstrip("#").isdigit() else None
-    work, reason, forced = plan_mod.peek(ctx, force=args.force, item=item, mode=args.mode)
-    check = work and not forced and cfg.quiet.enabled
-    _output({"work": str(work).lower(), "quiet_check": str(check).lower()})
-    then = " First, the subscription must be quiet." if check else ""
-    _summary(f"### Peek: {'work' if work else 'nothing to do'}\n\n{reason}.{then}\n")
-    print(f"peek: {'work' if work else 'nothing'}: {reason}.{then}")
+    look = plan_mod.peek(ctx, force=args.force, item=item, mode=args.mode)
+    check = bool(look.work and look.quiet_provider)
+    _output({"work": str(look.work).lower(), "quiet_check": str(check).lower(),
+             "quiet_provider": look.quiet_provider, "quiet_secret": look.quiet_secret,
+             "fallback": str(look.fallback).lower()})
+    then = (f" First, `{look.quiet_provider}` must be quiet"
+            + (" (other work can go ahead if it is not)." if look.fallback else ".")) if check else ""
+    _summary(f"### Peek: {'work' if look.work else 'nothing to do'}\n\n{look.reason}.{then}\n")
+    print(f"peek: {'work' if look.work else 'nothing'}: {look.reason}.{then}")
     return 0
 
 
@@ -118,7 +131,10 @@ def cmd_quiet(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
-def make_probe(ctx: context_mod.Context, number: int | None):
+def make_probe(ctx: context_mod.Context, number: int | None,
+               provider: providers_mod.Provider | None = None):
+    provider = provider or ctx.cfg.pool.ordered()[0]
+
     def probe(last_usage: dict | None):
         if ctx.repo_halted():
             return ("halted by .harness/HALT on main", "halt")
@@ -129,10 +145,11 @@ def make_probe(ctx: context_mod.Context, number: int | None):
             record = state["items"].get(str(number), {})
             if record.get("stop_requested"):
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
-        record_usage(state, last_usage, None, ctx.now())
-        refusal = usage_refusal(state, dict(ctx.cfg.usage_stop), ctx.now())
+        providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
+        refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
+                                        ctx.now())
         if refusal:
-            return (f"usage stop: {refusal}", "usage")
+            return (f"`{provider.id}` stops: {refusal}", "usage")
         return None
     return probe
 
@@ -141,11 +158,43 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
     planned = json.loads(Path(args.plan).read_text(encoding="utf-8"))
     ctx = _ctx(cfg, write=False)
     number = planned.get("number")
+    out = Path(args.out)
+    provider = cfg.pool.get(planned.get("provider")) or cfg.pool.ordered()[0]
+    login = None
+    if cfg.backend != "fake":
+        secret = cfg.secret_for(provider.secret) if provider.login == "secret" else ""
+        if secret or provider.cli != "claude" or provider.login == "machine":
+            try:
+                login = logins_mod.prepare(provider, secret, str(planned.get("vault") or ""),
+                                           Path(args.work_dir) / ".logins" / provider.id)
+            except LoginError as exc:
+                out.mkdir(parents=True, exist_ok=True)
+                failed = {"version": 1, "action": planned.get("action"), "number": number,
+                          "status": "infra", "reason": redact(str(exc)), "provider": provider.id}
+                (out / "result.json").write_text(json.dumps(failed, indent=2) + "\n",
+                                                 encoding="utf-8")
+                print(f"work: infra: {redact(str(exc))}")
+                return 0
+    def keep_login() -> None:
+        """After every model call: seal a login the CLI refreshed (and redact its new tokens
+        from then on), so even a job killed later hands it on to the next run."""
+        if login is None:
+            return
+        try:
+            sealed = logins_mod.seal(login)
+        except (ValueError, OSError) as exc:
+            print(f"work: could not seal the refreshed login: {redact(str(exc))}")
+            return
+        if sealed:
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "vault.enc").write_text(sealed + "\n", encoding="utf-8")
+
     worker = Worker(
-        cfg, planned, get_runner(cfg), cfg.root, Path(args.work_dir), Path(args.out),
-        probe=make_probe(ctx, int(number) if number else None),
+        cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
+        probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
     )
     result = worker.run()
+    keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")
     print(f"work: {result.get('status')}: {result.get('reason', '')}")
     return 0
@@ -159,7 +208,8 @@ def cmd_deliver(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
     number = int(args.number) if str(args.number or "").isdigit() else None
     outcome = deliver_mod.Deliverer(ctx, planned, Path(args.out), cfg.root,
-                                    action=args.action or None, number=number).run()
+                                    action=args.action or None, number=number,
+                                    provider=args.provider or None).run()
     _summary(f"### Deliver: {outcome.get('status')}\n\n" + "\n".join(f"- {l}" for l in outcome["log"]))
     print(f"deliver: {outcome.get('status')}; " + "; ".join(outcome["log"]))
     return 0
@@ -218,15 +268,24 @@ def cmd_dispatch(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_window(cfg: Config, args: argparse.Namespace) -> int:
-    ctx = _ctx(cfg, write=False)
-    now = ctx.now()
-    window = ctx.window
-    if window.is_open(now):
-        closes = window.closes_at(now)
-        print(f"open ({window.describe()}); closes in {human_delta(closes - now) if closes else '?'}")
-    else:
-        print(f"closed ({window.describe()}); opens in {human_delta(window.next_open(now) - now)}")
+def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
+    """Each subscription: its CLI and model, hours, limits, and whether it could start now."""
+    now = clock_now(cfg.now_override)
+    state: dict[str, Any] = {}
+    if not args.offline:
+        try:
+            state = _ctx(cfg, write=False).store.load()
+        except (GitHubError, HarnessError) as exc:
+            print(f"(the state file could not be read: {exc}; usage is not shown)")
+    for provider in cfg.pool.ordered():
+        reason = providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets)
+        limits = provider.limits
+        caps = ", ".join([f"{k} {v:.0%}" for k, v in limits.stops.items()]
+                         + [f"{k} {v} min" for k, v in limits.budgets.items()]) or "none"
+        print(f"{provider.id:10} {provider.cli:7} {provider.model:16} "
+              f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
+              f"{'ready' if reason is None else reason}")
+    print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
     return 0
 
 
@@ -258,13 +317,20 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
     else:
         warnings.append("no GitHub token in the environment")
     if args.work:
-        if not shutil.which(cfg.claude_bin):
-            errors.append(f"`{cfg.claude_bin}` is not on PATH")
+        provider = cfg.pool.ordered()[0]
+        if args.plan:
+            planned = json.loads(Path(args.plan).read_text(encoding="utf-8"))
+            provider = cfg.pool.get(planned.get("provider")) or provider
+        binary = cfg.bin(provider.cli)
+        if not shutil.which(binary):
+            errors.append(f"`{binary}` ({provider.id}'s CLI) is not on PATH")
         else:
-            version = subprocess.run([cfg.claude_bin, "--version"], capture_output=True, text=True)
-            ok.append(f"claude: {version.stdout.strip()}")
-        if not cfg.claude_token_present:
-            errors.append("CLAUDE_CODE_OAUTH_TOKEN is not set")
+            version = subprocess.run([binary, "--version"], capture_output=True, text=True)
+            ok.append(f"{provider.cli}: {(version.stdout or version.stderr).strip()[:80]}")
+        if provider.login == "machine":
+            ok.append(f"{provider.id} uses the login on this machine")
+        elif not cfg.secret_for(provider.secret):
+            errors.append(f"{provider.id}'s secret ({provider.secret}) is not in this job")
     try:
         info = ctx.gh.repo_info()
         # Only a token with push access sees this field; a read-only token cannot tell.
@@ -292,9 +358,11 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
         state = ctx.store.load()
         if state.get("halted"):
             warnings.append(f"halted: {state.get('halt')}")
-        refusal = usage_refusal(state, dict(cfg.usage_stop), ctx.now())
-        if refusal:
-            warnings.append(f"usage stop: {refusal}")
+        for provider in cfg.pool.ordered():
+            refusal = providers_mod.refusal(provider, providers_mod.peek_record(
+                state, provider.id), ctx.now())
+            if refusal:
+                warnings.append(f"{provider.id}: {refusal}")
         if ctx.repo_halted():
             warnings.append(".harness/HALT is on main")
     except GitHubError as exc:
@@ -339,11 +407,13 @@ def parser() -> argparse.ArgumentParser:
     sub = top.add_subparsers(dest="command", required=True)
     p = sub.add_parser("plan", help="decide what this night run does, and claim it")
     p.add_argument("--out", required=True)
-    p.add_argument("--force", action="store_true", help="ignore the night window")
+    p.add_argument("--force", action="store_true", help="ignore the subscriptions' hours")
+    p.add_argument("--quiet-ok", default=None,
+                   help="the gate's verdict: the shared subscription it saw quiet, or empty")
     p.add_argument("--item", default="")
     p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
     p = sub.add_parser("peek", help="would a run find work? changes nothing")
-    p.add_argument("--force", action="store_true", help="ignore the night window")
+    p.add_argument("--force", action="store_true", help="ignore the subscriptions' hours")
     p.add_argument("--item", default="")
     p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
     sub.add_parser("quiet", help="wait until nobody else is spending the subscription")
@@ -356,6 +426,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--action", default="", help="the plan job's action output, which wins")
     p.add_argument("--number", default="", help="the plan job's number output, which wins")
+    p.add_argument("--provider", default="", help="the plan job's provider output, which wins")
     p = sub.add_parser("event", help="handle one GitHub event")
     p.add_argument("--name", default="")
     p.add_argument("--payload", default="")
@@ -368,9 +439,12 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--item", default="")
     p.add_argument("--force", action="store_true")
     p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
-    sub.add_parser("window", help="is the night window open")
+    for name in ("providers", "window"):
+        p = sub.add_parser(name, help="each subscription's hours, limits and readiness")
+        p.add_argument("--offline", action="store_true", help="do not read the state file")
     p = sub.add_parser("doctor", help="check the configuration and the repository")
-    p.add_argument("--work", action="store_true", help="also check the claude CLI and its token")
+    p.add_argument("--work", action="store_true", help="also check the model job's CLI and secret")
+    p.add_argument("--plan", default="", help="the plan file, for the provider to check")
     p = sub.add_parser("setup", help="create labels and the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
@@ -391,7 +465,8 @@ COMMANDS = {
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,
-    "window": cmd_window,
+    "providers": cmd_providers,
+    "window": cmd_providers,
     "doctor": cmd_doctor,
     "setup": cmd_setup,
     "forget": cmd_forget,

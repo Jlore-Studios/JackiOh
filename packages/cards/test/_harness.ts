@@ -46,10 +46,10 @@
 // `undefined` (R33: a Trap is face-down until it fires). Every array is `readonly`, so a fixture
 // written `as const` is assignable as it stands.
 //
-// `stack: true` (unit zones only) builds a §3.2 Stack pile: the entry buries the card already in
-// its lane instead of taking a lane of its own, so the `lane` may be repeated, and with no `lane`
-// it lands on the entry before it. Later entries go on top, the way a play would put them, so the
-// pile reads top-first and the list reads bottom-first:
+// `stack: true` builds a §3.2 Stack pile, in a unit zone or a backrow zone (B5 E21): the entry
+// buries the card already in its lane instead of taking a lane of its own, so the `lane` may be
+// repeated, and with no `lane` it lands on the entry before it in its row. Later entries go on top,
+// the way a play would put them, so the pile reads top-first and the list reads bottom-first:
 //   field: ["core-043", { def: "core-092", stack: true }]
 // is a Felinor Fiender on top of a Big Felinor in lane 1, the Big Felinor dormant (R13).
 //
@@ -74,7 +74,8 @@
 // Steps 2-4 give a defId, and the instance is then the first one found scanning
 //   the ACTIVE player first, then the opponent, and within a side:
 //   hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
-//   backrow (lane 1..5) → graveyard → exile → library → resolving.
+//   backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
+//   resolving.
 // A method that needs the card somewhere particular narrows the search to that place first:
 // `play` looks in hands only, `attack`/`switchPosition` on the field only. Nothing matching throws
 // an Error naming the string and listing what was there instead. Holding several copies of one def?
@@ -173,6 +174,7 @@ import {
   type CardInstance,
   type EngineSink,
   type GameState,
+  type LastBoardInput,
   type PendingChoice,
   type UnitView,
 } from "@jackioh/engine";
@@ -239,8 +241,8 @@ export type FieldEntry = DefRef &
     /**
      * §3.2 Stack: this entry buries the card already in its lane instead of taking a lane of its
      * own, so the lane may be repeated. Later entries go on top, as a play would put them: the pile
-     * reads top-first, which is the reverse of the list. Unit zones only, and the buried card must
-     * come earlier in the list (or be pinned there with the same `lane`).
+     * reads top-first, which is the reverse of the list. A unit zone or a backrow zone (B5 E21), and
+     * the buried card must come earlier in the list (or be pinned there with the same `lane`).
      */
     stack?: boolean;
     position?: "ATK" | "DEF";
@@ -272,6 +274,8 @@ export type SideSetup = {
 export type PlayOptions = {
   /** 1-based lane; the row comes from the def's type. Omitted means R64's leftmost free zone. */
   zone?: number;
+  /** The row `zone` names when it is not the def's own: a Unit topping a carrier (C+ #33, R446). */
+  row?: Row;
   x?: number;
   embiggen?: boolean;
   targets?: readonly Selection[];
@@ -280,7 +284,19 @@ export type PlayOptions = {
   tributes?: readonly string[];
 };
 
-export type ActivateOptions = { targets?: readonly Selection[] };
+/**
+ * B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
+ * names one when a card has several, `modes` and `targets` are its declared choices, and `tributes`
+ * pays a Tribute its cost names (card references on the field, as `play`'s). With none of `ability`,
+ * `modes` or `tributes` the harness sends `activatePower`, the alias every old log carries, which
+ * the engine routes exactly as `activate` (R43, R384).
+ */
+export type ActivateOptions = {
+  targets?: readonly Selection[];
+  ability?: string;
+  modes?: readonly string[];
+  tributes?: readonly string[];
+};
 
 export type ScenarioOptions = {
   seed?: string;
@@ -288,6 +304,8 @@ export type ScenarioOptions = {
   p2?: SideSetup;
   turn?: number;
   active?: PlayerId;
+  /** R417: each seat's last board, the `createGame` input C+ #29 reads (seat order). */
+  lastBoards?: LastBoardInput;
 };
 
 export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "gone";
@@ -367,7 +385,12 @@ function defIdsFor(state: GameState, ref: string): string[] {
 function sideOrder(state: GameState, player: PlayerId, where: Where): CardInstance[] {
   const side = state.players[player];
   const units = side.units.flatMap((pile) => pile ?? []);
-  const backrow = side.backrow.flatMap((card) => (card === null ? [] : [card]));
+  // B5 E21, R446: a carrier's Unit and the cards dormant in a backrow pile are on the field too.
+  const backrow = [
+    ...side.backrow.flatMap((card) => (card === null ? [] : [card])),
+    ...(side.carried ?? []).flatMap((card) => (card === null ? [] : [card])),
+    ...(side.backrowPiles ?? []).flatMap((pile) => pile ?? []),
+  ];
   if (where === "hand") return [...side.hand];
   if (where === "field") return [...units, ...backrow];
   return [
@@ -469,9 +492,6 @@ function normalizePlacement(state: GameState, entry: FieldSetup, fallback: Row, 
   }
   if (row === "backrow" && def.type === "Unit") {
     throw new Error(`${label}: "${def.name}" is a Unit; the backrow holds Field Spells and Traps`);
-  }
-  if (row === "backrow" && fields.stack === true) {
-    throw new Error(`${label}: \`stack: true\` is a unit-zone pile (§3.2); the backrow holds one card per zone`);
   }
 
   return { ...fields, defId, row, label };
@@ -634,7 +654,7 @@ function placeSide(sink: EngineSink, player: PlayerId, setup: SideSetup): void {
 function buildState(opts: ScenarioOptions): GameState {
   const seed = opts.seed ?? DEFAULT_SEED;
   const deck = fillerDeck();
-  const state = createGame({ seed, decks: [deck, deck] });
+  const state = createGame({ seed, decks: [deck, deck], ...(opts.lastBoards === undefined ? {} : { lastBoards: opts.lastBoards }) });
 
   // The filler libraries exist only to satisfy §2.6's deck validation.
   for (const player of PLAYER_IDS) {
@@ -742,6 +762,7 @@ class Harness implements Scenario {
       if (side.resolving.some((card) => card.id === id)) return "resolving";
       if (side.units.some((pile) => (pile ?? []).some((card) => card.id === id))) return "field";
       if (side.backrow.some((card) => card?.id === id)) return "field";
+      if ((side.backrowPiles ?? []).some((pile) => pile.some((card) => card.id === id))) return "field";
     }
     return "gone";
   }
@@ -836,7 +857,7 @@ class Harness implements Scenario {
       if (def.type === "Spell") {
         throw new Error(`${what}: a Spell takes no zone, and zone ${opts.zone} was given`);
       }
-      const row: Row = def.type === "Unit" ? "units" : "backrow";
+      const row: Row = opts.row ?? (def.type === "Unit" ? "units" : "backrow");
       const size = row === "units" ? UNIT_ZONES : BACKROW_ZONES;
       if (!Number.isInteger(opts.zone) || opts.zone < 1 || opts.zone > size) {
         throw new Error(`${what}: zone ${opts.zone} is out of range; ${row} lanes are 1..${size}`);
@@ -940,6 +961,23 @@ class Harness implements Scenario {
   activate(card: CardRef, opts: ActivateOptions = {}): Scenario {
     const source = this.resolve(card, "field", "activate");
     const who = source.controller;
+    if (opts.ability !== undefined || opts.modes !== undefined || opts.tributes !== undefined) {
+      const what = `activate ${describeInstance(this.current, source)}`;
+      const tributes = opts.tributes?.map((ref) => this.resolve(ref, "field", `${what} (tribute)`).id);
+      this.action(
+        {
+          type: "activate",
+          playerId: who,
+          instanceId: source.id,
+          ...(opts.ability === undefined ? {} : { ability: opts.ability }),
+          ...(opts.targets === undefined ? {} : { targets: [...opts.targets] }),
+          ...(opts.modes === undefined ? {} : { modes: [...opts.modes] }),
+          ...(tributes === undefined ? {} : { tributes }),
+        },
+        what,
+      );
+      return this;
+    }
     this.actionOrEngine(
       {
         type: "activatePower",

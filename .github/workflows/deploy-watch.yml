@@ -1,0 +1,150 @@
+# Watches Render's deploy of each push to main and reports a deploy that never arrives.
+#
+# Render deploys apps/server from main on every push and, when a deploy fails, keeps the previous
+# one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
+# moved to catalog v0.2.0 while the live server, unable to migrate, stayed on core-1. This polls
+# the live server's one unauthenticated route, GET /api/catalog (R163), until it serves the catalog
+# version render.yaml names, and opens an issue, or comments on the open one, if it never does.
+#
+# The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
+# free instance waking), split into windows that each run as a job of their own, every one under
+# CI's five-minute budget (#73). A window runs only when the one before it saw no deploy yet.
+#
+# What it can see: the server is down, or it serves another catalog version than main's. What it
+# cannot: a failed deploy that leaves the old server on the same version, for which Render's own
+# deploy-failure notifications (dashboard, Settings, Notifications) are the alarm. The pre-merge
+# half is CI's `pnpm test:deploy`, which rehearses the deploy and fails before a bad one merges.
+name: deploy watch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  SERVER_URL: https://jackioh-server.onrender.com
+  WINDOW_SECONDS: "270"
+  TITLE: "Render: the live server is not serving main's catalog"
+
+jobs:
+  window-1:
+    name: live server, window 1 of 4
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      expected: ${{ steps.expected.outputs.version }}
+      live: ${{ steps.poll.outputs.live }}
+      served: ${{ steps.poll.outputs.served }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: expected
+        run: |
+          version=$(awk '$1 == "-" && $2 == "key:" { k = $3; next } k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' render.yaml)
+          echo "render.yaml names catalog $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - id: poll
+        uses: ./.github/actions/poll-live
+        with:
+          server: ${{ env.SERVER_URL }}
+          expected: ${{ steps.expected.outputs.version }}
+          seconds: ${{ env.WINDOW_SECONDS }}
+
+  window-2:
+    name: live server, window 2 of 4
+    needs: [window-1]
+    if: needs.window-1.outputs.live != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      live: ${{ steps.poll.outputs.live }}
+      served: ${{ steps.poll.outputs.served }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: poll
+        uses: ./.github/actions/poll-live
+        with:
+          server: ${{ env.SERVER_URL }}
+          expected: ${{ needs.window-1.outputs.expected }}
+          seconds: ${{ env.WINDOW_SECONDS }}
+
+  window-3:
+    name: live server, window 3 of 4
+    needs: [window-1, window-2]
+    if: needs.window-2.result == 'success' && needs.window-2.outputs.live != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      live: ${{ steps.poll.outputs.live }}
+      served: ${{ steps.poll.outputs.served }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: poll
+        uses: ./.github/actions/poll-live
+        with:
+          server: ${{ env.SERVER_URL }}
+          expected: ${{ needs.window-1.outputs.expected }}
+          seconds: ${{ env.WINDOW_SECONDS }}
+
+  window-4:
+    name: live server, window 4 of 4
+    needs: [window-1, window-3]
+    if: needs.window-3.result == 'success' && needs.window-3.outputs.live != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      live: ${{ steps.poll.outputs.live }}
+      served: ${{ steps.poll.outputs.served }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: poll
+        uses: ./.github/actions/poll-live
+        with:
+          server: ${{ env.SERVER_URL }}
+          expected: ${{ needs.window-1.outputs.expected }}
+          seconds: ${{ env.WINDOW_SECONDS }}
+
+  # Runs when the last window ran and still saw no deploy, or a window itself failed.
+  report:
+    name: report a deploy that never arrived
+    needs: [window-1, window-2, window-3, window-4]
+    if: >-
+      !cancelled() && (
+        (needs.window-4.result == 'success' && needs.window-4.outputs.live != 'true') ||
+        needs.window-1.result == 'failure' || needs.window-2.result == 'failure' ||
+        needs.window-3.result == 'failure' || needs.window-4.result == 'failure'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED: ${{ needs.window-1.outputs.expected }}
+          SERVED: ${{ needs.window-4.outputs.served || needs.window-3.outputs.served || needs.window-2.outputs.served || needs.window-1.outputs.served }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '%s\n' \
+            "After the push of \`${SHA:0:7}\` to main, \`$SERVER_URL/api/catalog\` served **${SERVED:-(unknown)}** for the whole wait, not render.yaml's **$EXPECTED** ([run]($RUN_URL))." \
+            "" \
+            "Render most likely failed the deploy and kept the previous one serving. Its deploy log (dashboard, jackioh-server, Events) names the step: the build, the \`release\` step's migrations or reseed, or the boot. \`pnpm test:deploy\` rehearses all three locally." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/deploy-watch.yml\`._")
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body"
+          fi
+          echo "::error::the live server never served catalog $EXPECTED"
+          exit 1

@@ -1,13 +1,18 @@
-// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32:
-// "Rush; draw 2 on a combat kill, none when it dies without killing; radiant Cleave kills draw per
-//  kill (R42)".
+// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32, patch v0.2.0 (R426):
+// "Rush / After this attacks and survives, draw 2 for each Unit that attack destroyed"; radiant
+// "Rush, Cleave / the same".
 //
-// R42: "destroys a unit" is a death whose lethal damage instance came from this unit, Cleave hits
-// included, and it is per unit — three Cleave kills draw 6.
+// R426 rewrites the old reading (R42's "whenever this destroys a unit", on either side of a combat):
+// it draws only after an attack it made — declared or forced (R53) — and only when it survives that
+// combat, 2 for each Unit that attack destroyed (the Unit it attacked, plus the Cleave kills of the
+// Radiant face). It never draws for a Unit it kills defending, and never when it dies in the combat.
+// R42 still says who killed a Unit, per Unit.
 //
 // The sparring partners: #15 Me and Mr Token is a 1/1 with no keywords (its Cry does not fire from a
-// `field` setup), and #13 Jlockeed Shredder-10 is an 8/10 with no keywords, so it kills a 5/4
-// Panther on the swing back and survives.
+// `field` setup), #13 Jlockeed Shredder-10 is an 8/10 with no keywords, so it kills a 5/4 Panther on
+// the swing back and survives, #11 Tempo Timmy is a 3/3 Rush, First Strike that attacks a Panther
+// and dies to its strike back, and #9 Moths to the Flame (1/14) makes every enemy Unit attack it at
+// its controller's start of turn.
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
@@ -32,24 +37,47 @@ describe("#32 Prem Panther — base", () => {
     s.expectInZone(must(s.unit("p1", 2), "the Panther"), "field");
   });
 
-  it("R42 draws 2 when its own combat damage kills a unit", () => {
+  it("R426 draws 2 after it attacks and survives, for the Unit that attack destroyed", () => {
     const s = scenario({
       seed: "panther-kill",
       p1: { field: ["32", "15"], library: ["15", "15", "15"] },
       p2: { field: ["15"] },
     });
     const prey = must(s.unit("p2", 1), "p2 lane 1");
+    const panther = must(s.unit("p1", 1), "the Panther");
     expect(s.hand("p1")).toHaveLength(0);
 
-    s.attack("32", prey);
+    s.attack(panther, prey);
 
     s.expectInZone(prey, "graveyard");
+    s.expectInZone(panther, "field");
     expect(s.hand("p1")).toHaveLength(2);
     expect(s.pile("p1", "library")).toHaveLength(1);
-    s.expectEvents("damage", "destroyed", "drawn", "drawn");
+    s.expectEvents("attackDeclared", "damage", "destroyed", "drawn", "drawn");
+    // The death names the Panther as its killer (R42).
+    const death = s.events.find((event) => event.type === "destroyed" && event.instanceId === prey.id);
+    expect(death).toMatchObject({ killerId: panther.id });
   });
 
-  it("R42 draws nothing when it dies without killing", () => {
+  it("R426 draws nothing when it dies in that combat, though it destroyed the Unit it attacked", () => {
+    const s = scenario({
+      seed: "panther-trade",
+      p1: { field: ["32", "15"], library: ["15", "15", "15"] },
+      p2: { field: ["32"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    const other = must(s.unit("p2", 1), "p2's Panther");
+
+    // 5 into a 5/4 and 5 back into a 5/4: both die.
+    s.attack(panther, other);
+
+    s.expectInZone(panther, "graveyard");
+    s.expectInZone(other, "graveyard");
+    expect(s.hand("p1")).toHaveLength(0);
+    expect(s.pile("p1", "library")).toHaveLength(3);
+  });
+
+  it("R426 draws nothing when it dies without killing", () => {
     const s = scenario({
       seed: "panther-trade",
       p1: { field: ["32"], library: ["15", "15", "15"] },
@@ -67,7 +95,102 @@ describe("#32 Prem Panther — base", () => {
     expect(s.pile("p1", "library")).toHaveLength(3);
   });
 
-  it("R42 is per unit, and a base Panther has no Cleave, so only the defender dies", () => {
+  it("R426 never draws while defending: a Unit it kills striking back is the attacker's attack", () => {
+    const s = scenario({
+      seed: "panther-defends",
+      active: "p2",
+      turn: 10,
+      p1: { field: ["32"], library: ["15", "15", "15"] },
+      p2: { field: ["11"], hand: ["15"], library: ["15", "15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    const timmy = must(s.unit("p2", 1), "p2's Tempo Timmy");
+
+    // First Strike 3 leaves the 5/4 Panther at 1; its 5 back kills the 3/3.
+    s.attack(timmy, panther);
+
+    s.expectInZone(timmy, "graveyard");
+    s.expectInZone(panther, "field");
+    const death = s.events.find((event) => event.type === "destroyed" && event.instanceId === timmy.id);
+    // R42: the Panther killed it — but in the other player's attack, which runs no hook of its (R426).
+    expect(death).toMatchObject({ killerId: panther.id });
+    expect(s.hand("p1")).toHaveLength(0);
+    expect(s.pile("p1", "library")).toHaveLength(3);
+  });
+
+  it("R426, R53 a forced attack is an attack: forced into #9 Moths to the Flame, it kills it, survives and draws 2", () => {
+    // p2's start of turn: Moths makes every enemy Unit attack it. Its 14 health, 10 of it already
+    // gone, falls to the Panther's 5; its 1 back leaves the Panther standing.
+    const s = scenario({
+      seed: "panther-forced",
+      p1: { field: ["32"], hand: ["15"], library: ["15", "15", "15"] },
+      p2: { field: [{ def: "9", damage: 10 }], hand: ["15"], library: ["15", "15", "15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    const moths = must(s.unit("p2", 1), "p2's Moths");
+
+    s.endTurn(); // p2's turn begins: the forced attack, on p2's turn.
+
+    expect(s.state.active).toBe("p2");
+    s.expectInZone(moths, "graveyard");
+    s.expectInZone(panther, "field");
+    expect(s.events.some((event) => event.type === "attackDeclared" && event.forced && event.attackerId === panther.id)).toBe(true);
+    // p1 drew 2 on p2's turn, for the Unit its forced attack destroyed.
+    expect(s.hand("p1")).toHaveLength(3);
+    expect(s.pile("p1", "library")).toHaveLength(1);
+  });
+
+  it("R426, R212 a Panther stolen by the Death of the Unit it destroyed still draws, for the player who attacked with it (#86)", () => {
+    // #86 "Miss" Mrow: "Death: Take control of the Unit that destroyed this." The Panther survives the
+    // combat on the stay it attacked from (a change of control is not leaving the field, R171), so
+    // the draws are the ones that attack earned — for p1, who controlled it in that combat (R212).
+    const s = scenario({
+      seed: "panther-mrow",
+      p1: { field: ["32"], hand: ["5"], library: ["15", "15", "15"] },
+      p2: { field: ["86"], hand: ["15"], library: ["15", "15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    const mrow = must(s.unit("p2", 1), "p2's Mrow");
+
+    s.attack(panther, mrow);
+
+    s.expectInZone(mrow, "graveyard");
+    expect(s.card(panther).controller).toBe("p2");
+    expect(s.hand("p1")).toHaveLength(3);
+    expect(s.hand("p2")).toHaveLength(1);
+  });
+
+  it("R426, R83 a Panther that dies in the combat and comes back through Reborn draws nothing: the body is a new arrival", () => {
+    const s = scenario({
+      seed: "panther-reborn",
+      p1: { field: ["32"], hand: ["5"], library: ["15", "15", "15"] },
+      p2: { field: ["32"], hand: ["15"] },
+    });
+    const panther = must(s.unit("p1", 1), "p1's Panther");
+    s.card(panther).grantedKeywords.push({ kind: "Reborn" });
+
+    // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health.
+    s.attack(panther, must(s.unit("p2", 1), "p2's Panther"));
+
+    expect(s.events.some((event) => event.type === "destroyed" && event.instanceId === panther.id)).toBe(true);
+    s.expectInZone(panther, "field");
+    expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(false);
+    expect(s.hand("p1")).toHaveLength(1);
+  });
+
+  it("R426 attacking the hero destroys no Unit and draws nothing", () => {
+    const s = scenario({
+      seed: "panther-face",
+      p1: { field: ["32"], hand: ["5"], library: ["15", "15", "15"] },
+      p2: { hand: ["15"], library: ["15"] },
+    });
+    s.attack("32", "hero");
+    s.expectHealth("p2", 25);
+    expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(false);
+    expect(s.hand("p1")).toHaveLength(1);
+  });
+
+  it("R42 R426 is per Unit, and a base Panther has no Cleave, so only the defender dies", () => {
     const s = scenario({
       seed: "panther-no-cleave",
       p1: { field: ["32"], library: ["15", "15", "15", "15", "15", "15", "15"] },
@@ -83,7 +206,7 @@ describe("#32 Prem Panther — base", () => {
     expect(s.hand("p1")).toHaveLength(2);
   });
 
-  it("R42 a kill by something else does not draw", () => {
+  it("R426 an attack by another Unit draws nothing", () => {
     const s = scenario({
       seed: "panther-someone-else",
       p1: { field: ["32", "13"], library: ["15", "15", "15"] },
@@ -100,7 +223,7 @@ describe("#32 Prem Panther — base", () => {
 });
 
 describe("#32 Prem Panther — radiant", () => {
-  it("R42 radiant Cleave draws 2 per unit it kills: three kills draw 6", () => {
+  it("R426 radiant Cleave draws 2 per Unit that attack destroyed: three kills draw 6", () => {
     const s = scenario({
       seed: "panther-cleave",
       p1: {
@@ -121,6 +244,27 @@ describe("#32 Prem Panther — radiant", () => {
     s.expectInZone(right, "graveyard");
     expect(s.hand("p1")).toHaveLength(6);
     expect(s.pile("p1", "library")).toHaveLength(2);
+  });
+
+  it("R426 radiant: Cleave kills draw nothing when the Panther dies in that combat", () => {
+    const s = scenario({
+      seed: "panther-cleave-dies",
+      p1: {
+        field: [{ def: "32", radiant: true }],
+        hand: ["5"],
+        library: ["15", "15", "15", "15", "15", "15", "15", "15"],
+      },
+      p2: { field: ["15", "13", "15"], hand: ["15"] },
+    });
+    const panther = must(s.unit("p1", 1), "the radiant Panther");
+
+    // 10 kills the 8/10 and cleaves both 1/1s; 8 back kills the 10/8.
+    s.attack(panther, must(s.unit("p2", 2), "p2's Shredder"));
+
+    s.expectInZone(panther, "graveyard");
+    expect([1, 2, 3].map((lane) => s.unit("p2", lane))).toEqual([null, null, null]);
+    expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(false);
+    expect(s.hand("p1")).toHaveLength(1);
   });
 
   it("§3.1 Cleave never crosses sides, so the Panther's own neighbours are not kills", () => {

@@ -1,5 +1,5 @@
 /**
- * The hidden rating (SPEC §9.11, R376): Glicko-2, as Mark Glickman's "Example of the Glicko-2
+ * The hidden rating (SPEC §9.12, R603): Glicko-2, as Mark Glickman's "Example of the Glicko-2
  * system" (2013) writes it, step for step. Every number is `src/config.ts`'s.
  *
  * One rated game is one rating period: each side is updated against the other's rating from before
@@ -13,7 +13,7 @@
  * Glickman's worked example and against reference values computed independently at 50 digits.
  *
  * Glicko-2's update depends only on rating differences, so the scale's centre (Glickman's 1500) is
- * any fixed number; this file uses `RATING_START`, and an Elo rating carries over as it is (R376).
+ * any fixed number; this file uses `RATING_START`, and an Elo rating carries over as it is (R603).
  */
 
 import {
@@ -35,7 +35,7 @@ export type Score = 0 | 0.5 | 1;
 /** One game of a rating period: the opponent's rating before it, and the score against them. */
 export type RatedOpponent = { opponent: Glicko; score: Score };
 
-/** The rating a profile starts with (R376). */
+/** The rating a profile starts with (R603). */
 export const START_GLICKO: Glicko = Object.freeze({
   rating: RATING_START,
   deviation: RATING_DEVIATION_START,
@@ -135,7 +135,7 @@ export function glicko2Period(player: Glicko, games: readonly RatedOpponent[], t
 }
 
 /**
- * R376: one rated game between `a` and `b`, `scoreA` being a's score (b's is `1 - scoreA`). Each side
+ * R603: one rated game between `a` and `b`, `scoreA` being a's score (b's is `1 - scoreA`). Each side
  * is rated against the other's rating from before the game.
  */
 export function rateGame(a: Glicko, b: Glicko, scoreA: Score): { a: Glicko; b: Glicko } {

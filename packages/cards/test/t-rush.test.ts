@@ -173,7 +173,7 @@ describe("T-rush Rush Token (SPEC §7)", () => {
       expect(ids(query({ cost: 1 }))).not.toContain(def.id);
       expect(ids(query({ token: true }))).toContain(def.id);
       expect(ids(query({ tags: ["Token"] }))).toContain(def.id);
-      expect(ids(query({ index: "T-rush" }))).toEqual([def.id]);
+      expect(ids(query({ defId: "core-t-rush" }))).toEqual([def.id]);
     });
   });
 

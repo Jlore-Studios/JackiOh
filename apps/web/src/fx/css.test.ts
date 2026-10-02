@@ -183,6 +183,9 @@ const DOM_KINDS = {
   arrows: "fx-arrows-rise",
   banner: "fx-banner-in",
   result: "fx-result-in",
+  fracture: "fx-fracture-crack",
+  brand: "fx-brand-slam",
+  chaos: "fx-chaos-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
@@ -400,6 +403,16 @@ describe("B40 — fx.css", () => {
   it("B46 a stand-in's copy is still, except for what the board plays on the card it carries", () => {
     expect(declsFor(fx, ".fx-hold > .fx-hold-card:not([data-animating])").get("animation")).toBe("none");
     expect(declsFor(fx, ".fx-hold > .fx-hold-card").has("animation")).toBe(false);
+  });
+
+  it("R502 the lasting crystal mark is drawn whether or not the layer is on, and holds still under the media query and the setting", () => {
+    const mark = '.mana-crystal[data-fx-hindered]';
+    // Not gated on `.fx-layer[data-fx="on"]`: it is information, drawn in every mode.
+    expect(fx.rules.some((rule) => !isReduced(rule) && rule.selectors.some((s) => normSelector(s) === normSelector(`${mark}::before`)))).toBe(true);
+    expect(fx.rules.some((rule) => rule.selectors.some((s) => s.includes("data-fx-hindered") && s.includes('data-fx="on"')))).toBe(false);
+    const stops = (rule: Rule): boolean => normValue(rule.decls.get("animation") ?? "").startsWith("none");
+    expect(fx.rules.some((rule) => isReduced(rule) && stops(rule) && rule.selectors.some((s) => normSelector(s) === normSelector(`${mark}::after`)))).toBe(true);
+    expect(declsFor(fx, `:root[data-reduce-motion="true"] ${mark}::after`).get("animation")).toBe("none");
   });
 
   it("B40 a reduced-motion block stops every fx animation and the cocoon's pulse", () => {

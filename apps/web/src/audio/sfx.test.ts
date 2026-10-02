@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP } from "./constants.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
@@ -16,6 +17,7 @@ const UNION_ORDER: SfxId[] = [
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
+  "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -50,6 +52,15 @@ const DURATION_MS: Record<SfxId, number> = {
   entrance: 1400,
   fatigue: 650,
   refuse: 400,
+  // Patch v0.2.0 (R506).
+  manaCrack: 900,
+  bloodDrain: 600,
+  goldBurst: 850,
+  castOnDraw: 400,
+  chaosRoll: 1650,
+  brand: 800,
+  heartbeat: 450,
+  clockTick: 350,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }];
@@ -196,7 +207,7 @@ function rampProblems(run: Run): string[] {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
-  it("B14 SFX_IDS lists all 30 ids, in the order of the SfxId union", () => {
+  it("B14 SFX_IDS lists all 38 ids, in the order of the SfxId union", () => {
     expect([...SFX_IDS]).toEqual(UNION_ORDER);
   });
 
@@ -362,5 +373,93 @@ describe("B14 the shared noise buffer", () => {
     const db = b.bufferOf(second).channel(0);
     expect(da.length).toBe(db.length);
     expect(da.findIndex((x, i) => x !== db[i])).toBe(-1);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * R506: patch v0.2.0's families and card moments keep the recipe contract, and vary as they say
+ * --------------------------------------------------------------------------------------------- */
+
+describe("R506 the new families and moments keep the recipe contract", () => {
+  const variants: Run[] = [
+    ...[0, 1, 2, 3, 25].map((amount) => runRecipe(`chaosRoll {amount: ${String(amount)}}`, SFX.chaosRoll.recipe, SFX.chaosRoll.durationMs, { amount })),
+    runRecipe("brand {release: true}", SFX.brand.recipe, SFX.brand.durationMs, { release: true }),
+    ...Array.from({ length: IMPACT_AMOUNT_CAP }, (_, i) =>
+      runRecipe(`clockTick {amount: ${String(i + 1)}}`, SFX.clockTick.recipe, SFX.clockTick.durationMs, { amount: i + 1 }),
+    ),
+    ...(["book", "pancake", "ai"] as const).flatMap((timbre) => [
+      runRecipe(`summon {timbre: ${timbre}, amount: 1}`, SFX.summon.recipe, SFX.summon.durationMs, { timbre, amount: 1 }),
+      runRecipe(`spell {timbre: ${timbre}}`, SFX.spell.recipe, SFX.spell.durationMs, { timbre }),
+    ]),
+  ];
+
+  it("no variant breaks a clause of the contract", () => {
+    expect([
+      ...variants.flatMap(subsetProblems),
+      ...variants.flatMap(lengthProblems),
+      ...variants.flatMap(scheduleProblems),
+      ...variants.flatMap(stopProblems),
+      ...variants.flatMap(wiringProblems),
+      ...variants.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("SFX_TIMBRES carries the Book, Pancake and AI families", () => {
+    expect(SFX_TIMBRES).toEqual(expect.arrayContaining(["book", "pancake", "ai"]));
+  });
+
+  it("a Book, Pancake or AI spell lays its family's texture under the chimes: more than the plain spell", () => {
+    const plain = runRecipe("spell {}", SFX.spell.recipe, SFX.spell.durationMs, {});
+    for (const timbre of ["book", "pancake", "ai"] as const) {
+      const coloured = runRecipe(`spell {timbre: ${timbre}}`, SFX.spell.recipe, SFX.spell.durationMs, { timbre });
+      expect(coloured.made.length, timbre).toBeGreaterThan(plain.made.length);
+    }
+  });
+
+  it("the AI family's blips play a bit-crushed wavetable: a looped buffer of a few stepped levels", () => {
+    const run = runRecipe("summon {timbre: ai}", SFX.summon.recipe, SFX.summon.durationMs, { timbre: "ai" });
+    const crushed = run.made.filter((n) => n.kind === "bufferSource" && n.buffer !== null && n.buffer.length < 1000);
+    expect(crushed.length, "two blips").toBe(2);
+    for (const blip of crushed) {
+      expect(blip.loop).toBe(true);
+      const levels = new Set(blip.buffer?.channel(0) ?? []);
+      expect(levels.size, "stepped to a handful of levels").toBeLessThanOrEqual(7);
+      expect(levels.size).toBeGreaterThan(2);
+    }
+  });
+
+  it("Call to Chaos's roll dings once for each effect named, up to CHAOS_REVEAL_MAX, and lasts longer for each", () => {
+    const made = (amount: number): Run => runRecipe(`chaosRoll ${String(amount)}`, SFX.chaosRoll.recipe, SFX.chaosRoll.durationMs, { amount });
+    const lengths = [0, 1, 2, 3].map((amount) => returnedSeconds(made(amount)));
+    expect([...lengths].sort((a, b) => a - b)).toEqual(lengths);
+    expect(new Set(lengths).size).toBe(4);
+    // A ding is an FM bell: two oscillators. Each effect named adds one.
+    const oscillators = (amount: number): number => made(amount).made.filter((n) => n.kind === "oscillator").length;
+    expect(oscillators(1) - oscillators(0)).toBe(2);
+    expect(oscillators(3) - oscillators(0)).toBe(2 * CHAOS_REVEAL_MAX);
+    expect(oscillators(25), "clamped").toBe(oscillators(CHAOS_REVEAL_MAX));
+    expect(returnedSeconds(made(25))).toBe(returnedSeconds(made(CHAOS_REVEAL_MAX)));
+  });
+
+  it("a mark lifting is a soft release, not the brand landing", () => {
+    const landing = runRecipe("brand {}", SFX.brand.recipe, SFX.brand.durationMs, {});
+    const lifting = runRecipe("brand {release: true}", SFX.brand.recipe, SFX.brand.durationMs, { release: true });
+    expect(returnedSeconds(lifting)).toBeLessThan(returnedSeconds(landing));
+    expect(lifting.made.some((n) => n.kind === "bufferSource"), "no searing hiss").toBe(false);
+    expect(landing.made.some((n) => n.kind === "bufferSource")).toBe(true);
+  });
+
+  it("the clock's tick grows sharper each second: higher and shorter as amount climbs from 1 to 10", () => {
+    const tick = (amount: number): Run => runRecipe(`clockTick ${String(amount)}`, SFX.clockTick.recipe, SFX.clockTick.durationMs, { amount });
+    const pitch = (run: Run): number => {
+      const set = run.made.find((n) => n.kind === "oscillator")?.param("frequency").events.find((e) => e.method === "setValueAtTime");
+      return set?.method === "setValueAtTime" ? set.value : 0;
+    };
+    const pitches = Array.from({ length: IMPACT_AMOUNT_CAP }, (_, i) => pitch(tick(i + 1)));
+    const lengths = Array.from({ length: IMPACT_AMOUNT_CAP }, (_, i) => returnedSeconds(tick(i + 1)));
+    for (let i = 1; i < IMPACT_AMOUNT_CAP; i += 1) {
+      expect(pitches[i] ?? 0, `amount ${String(i + 1)} is higher`).toBeGreaterThan(pitches[i - 1] ?? Infinity);
+      expect(lengths[i] ?? Infinity, `amount ${String(i + 1)} is shorter`).toBeLessThan(lengths[i - 1] ?? 0);
+    }
   });
 });

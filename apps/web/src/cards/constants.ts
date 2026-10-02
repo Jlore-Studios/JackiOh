@@ -40,3 +40,9 @@ export const REF_TOOLTIP_HEIGHT_PX = 300;
 
 /** R279: the height of each named card's face in a hover preview's references column. */
 export const REF_PANEL_FACE_HEIGHT_PX = 190;
+
+/**
+ * Patch v0.2.0's state rail (CardStates.tsx): on a small face (below FACE_TEXT_MIN_HEIGHT_PX, a hand
+ * card) this many badges show and the rest fold into a "+n" chip. Mirrored in cardstate.css.
+ */
+export const STATE_BADGES_SMALL_MAX = 2;

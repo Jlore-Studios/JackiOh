@@ -69,6 +69,7 @@ import { registerScripts, registeredScripts, scriptsFor } from "../src/scripts";
 import { openingDrawFor } from "../src/setup";
 import { stateCheck } from "../src/stateCheck";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
+import { timesPlayedOf } from "../src/timesPlayed";
 import { AI_SKIPPED_ACTIONS, chooseAction, fuse, isLethal, policyActions, projectedDamage } from "../src/subsystems";
 import { ensurePower, powerCostOf, powerOf, usePower, whyCannotActivate } from "../src/subsystems/heroPower";
 import { isTrapType } from "../src/traps";
@@ -170,6 +171,8 @@ const unitToken = unitDefOf("token", 3, 3, [{ kind: "Rush" }], {
 
 const noop = cardDefOf("noop", "Spell");
 const pricey = cardDefOf("pricey", "Spell", { cost: 3 });
+/** #31 KY's Math Equation's engine half (R429): a Spell whose plays the engine counts. */
+const equation = cardDefOf("equation", "Spell", { cost: 1 });
 const giga = cardDefOf("giga", "Spell", { cost: 6 });
 const xCard = cardDefOf("x-card", "Spell", { cost: "X" });
 const embiggenCard = cardDefOf("embiggen", "Spell", { cost: { base: 2, embiggen: 4 } });
@@ -213,6 +216,7 @@ const DEFS: CardDef[] = [
   unitToken,
   noop,
   pricey,
+  equation,
   giga,
   xCard,
   embiggenCard,
@@ -315,6 +319,7 @@ const SCRIPTS: Record<string, CardScripts> = {
   [splitter.id]: both({ cry: () => [rbDamageEnemyUnits(9)] }),
   [allEnemies.id]: both({ cry: () => [rbDamageAllEnemies(2)] }),
   [pricey.id]: both(pingEnemyHero(1)),
+  [equation.id]: both({ staticFlags: { countsPlays: true }, cry: () => [] }),
   [fuseA.id]: both(pingEnemyHero(1)),
   [fuseB.id]: both(pingEnemyHero(2)),
   // R43: the card's cost is the power's X, reported by the card's own `cost` script.
@@ -1098,20 +1103,25 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     // M4: cards/test/94-genns-greed.test.ts proves the card half.
   });
 
-  it("R67 takes KY's Math Equation's Fib index from printed cost plus costMod plus 1, ignoring discounts", () => {
+  it("R67 R429 takes KY's Math Equation's Fib index from the times it has been played, this play included, and never from its cost", () => {
     const state = game("r67");
+    state.turn = 3;
+    state.active = "p1";
+    state.phase = "main";
     const sink = sinkFor(state);
-    const card = handCard(state, pricey.id); // printed 3
-    card.costMod = 1;
+    const card = newInstance(state, equation.id, "p1", { z: "resolving", player: "p1" });
+    state.players.p1.resolving.push(card);
+    // A price that moved every way it can: costMod up, a player discount down (R65).
+    card.costMod = 3;
     addModifier(sink, "p1", { kind: "costDiscount", amount: 2, expiry: { until: "never" } });
 
-    expect(effectiveCost(state, card)).toBe(2); // what the player would pay
-    expect(printedCost(state, card)).toBe(3); // and what R67 reads instead
+    // R70: a cast is a play, counted at §10.5 step 4 — the one under way included.
+    castCard(sink, card);
+    expect(timesPlayedOf(card)).toBe(1);
 
-    const index = printedCost(state, card) + card.costMod + 1;
-    expect(index).toBe(5);
-    expect(fib(index)).toBe(5);
-    expect(fib(index + 1)).toBe(8); // radiant adds 2 instead of 1
+    // R429: the index is the plays + 1 (Radiant + 3); the cost reads nowhere in it (R67).
+    expect(fib(timesPlayedOf(card) + 1)).toBe(1);
+    expect(fib(timesPlayedOf(card) + 3)).toBe(3);
     // M4: cards/test/31-kys-math-equation.test.ts proves the card half.
   });
 
@@ -1334,7 +1344,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(defOf(state, fuseB.id).tags).toContain(felinor);
 
     // A token index of the "N.1" form addresses a card (#90.1 CN-Virus).
-    expect(defByIndex("51.1")?.id).toBe(dotted.id);
+    expect(defByIndex("Core", "51.1")?.id).toBe(dotted.id);
 
     // #29 keeps cost 6 even though MAX_MANA is 4: castable only after a mana gain.
     expect(MAX_MANA).toBe(4);

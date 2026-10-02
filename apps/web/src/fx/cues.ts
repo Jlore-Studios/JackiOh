@@ -21,16 +21,21 @@ import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
+import { brandCues } from "./brand.ts";
+import { castOnDrawCues, planCardFx } from "./cardFx.ts";
+import { chaosCues } from "./chaos.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
   FX_CENTER,
+  FX_COUNTER_TRAUMA,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
   FX_DEATH_SMOKE_AT,
   FX_FATIGUE_FLIGHT_FRACTION,
   FX_FATIGUE_STREAK_AT,
+  FX_FLICKER_RETURN_AT,
   FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
@@ -45,8 +50,10 @@ import {
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
   FX_RAYS_TAIL_MS,
+  FX_REDIRECT_FLIGHT_FRACTION,
   FX_RESULT_MS,
   FX_RESULT_TRAUMA,
+  FX_REWIND_TRAUMA,
   FX_RING_MS,
   FX_SHAKE_MAX_TRAUMA,
   FX_SHAKE_MIN_DAMAGE,
@@ -139,6 +146,17 @@ const TUNING = {
   lungeDust: { count: 12, power: 0.8 },
   fizzleSmoke: { count: 10, power: 0.7 },
   manaSparkle: { count: 6, power: 0.5 },
+  // Patch v0.2.0's events (docs/classic-sets.md B3, B5).
+  announceSparkle: { count: 10, power: 0.6 },
+  animateArcane: { count: 12, power: 0.8 },
+  crumbleShard: { count: 26, power: 1.1 },
+  crumbleDust: { count: 14, power: 0.8 },
+  counterShard: { count: 22, power: 1.2 },
+  counterVoid: { count: 16, power: 0.9 },
+  flickerArcane: { count: 14, power: 0.9 },
+  unlockShard: { count: 18, power: 1 },
+  healthSetHoly: { count: 18, power: 0.9 },
+  rewindArcane: { count: 40, power: 1.2 },
   resultConfetti: { count: 90, power: 1.4 },
   resultShard: { count: 36, power: 1.5 },
   resultSmoke: { count: 24, power: 0.9 },
@@ -320,7 +338,21 @@ type Plan = {
 type Recipe = (event: GameEvent, p: Plan) => FxCue[];
 
 const cast: Recipe = (event, p) => {
+  // B5 E1: an announced play glows where it hangs; B3.2: an ability flares on its card.
+  if (event.type === "cardAnnounced") {
+    // It hangs where it was announced, under a sheen, while the window for a Counter is open.
+    const at = anchor(p.tgt);
+    const cues: FxCue[] = [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "sparkle", at, "ring", 0, "announceSparkle")];
+    if (isCard(p.tgt) || isHandCard(p.tgt)) cues.push({ kind: "sheen", at, delayMs: 0, durationMs: p.D });
+    return cues;
+  }
+  if (event.type === "activated") {
+    const at = anchor(p.tgt);
+    return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
+  }
   if (event.type !== "cardPlayed") return [];
+  // R502: a card cast as it was drawn never was in a hand; it bursts out of the Deck pile instead.
+  if (p.env.memory.castOnDraw(event)) return castOnDrawCues(event, p);
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
   const at = anchor(p.tgt);
@@ -331,6 +363,18 @@ const cast: Recipe = (event, p) => {
 };
 
 const summon: Recipe = (event, p) => {
+  // B3.1: a backrow card stepping into its unit zone lands like a summon, with no entrance of its own.
+  if (event.type === "animated") {
+    // B3.1: the card lifts off its backrow zone and lands in its unit zone, where it slams down.
+    const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
+    const slam = frac(FX_SLAM_AT, p.D);
+    return [
+      ghost(p.D, home, anchor(p.tgt)),
+      burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane"),
+      ring(p.D, "dust", anchor(p.tgt), slam),
+      burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", slam, "summonDust"),
+    ];
+  }
   if (event.type !== "summoned") return [];
   const i = p.env.intensity;
   const slam = frac(FX_SLAM_AT, p.D);
@@ -383,6 +427,8 @@ const impact: Recipe = (event, p) => {
 };
 
 const drain: Recipe = (event, p) => {
+  // B5 E7: a hero's health set outright — a drain of void with no number, since it is not a loss.
+  if (event.type === "healthSet") return healthSetCues(event, p);
   if (event.type !== "healthLost") return [];
   const at = anchor(p.tgt);
   return [burst(p.env.intensity, "void", at, "area", 0, "drainVoid"), splat(p.D, "loss", event.amount, at, 0)];
@@ -405,9 +451,18 @@ const shieldBreak: Recipe = (event, p) => {
 };
 
 const death: Recipe = (event, p) => {
-  if (event.type !== "destroyed") return [];
+  if (event.type !== "destroyed" && event.type !== "crumbled") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
+  if (event.type === "crumbled") {
+    // B3.3: Brittle runs out and the card shatters like glass where it stands (a pile stands in).
+    if (!isCard(p.tgt) && !isHandCard(p.tgt)) return [burst(i, "shard", at, "point", 0, "crumbleShard")];
+    return [
+      crack(p.D, at, 0),
+      burst(i, "shard", at, "ring", frac(FX_DEATH_EMBER_AT, p.D), "crumbleShard"),
+      burst(i, "dust", at, "area", frac(FX_DEATH_SMOKE_AT, p.D), "crumbleDust"),
+    ];
+  }
   if (!isCard(p.tgt)) return [burst(i, "smoke", at, "point", 0, "pileSmoke")];
   return [
     crack(p.D, at, 0),
@@ -417,9 +472,16 @@ const death: Recipe = (event, p) => {
 };
 
 const exile: Recipe = (event, p) => {
-  if (event.type !== "exiled") return [];
+  // B5 E22: a flicker blinks the card through the void and back into its zone.
+  if (event.type !== "exiled" && event.type !== "flickered") return [];
   const at = anchor(p.tgt);
-  return [ring(p.D, "void", at, 0), burst(p.env.intensity, "void", at, "area", 0, "exileVoid")];
+  const out: FxCue[] = [ring(p.D, "void", at, 0), burst(p.env.intensity, "void", at, "area", 0, "exileVoid")];
+  if (event.type === "flickered") {
+    // …and back in at once: an arcane ring and motes as it returns to the same zone.
+    const back = frac(FX_FLICKER_RETURN_AT, p.D);
+    out.push(ring(p.D, "arcane", at, back), burst(p.env.intensity, "arcane", at, "ring", back, "flickerArcane"));
+  }
+  return out;
 };
 
 const bounce: Recipe = (event, p) => {
@@ -479,9 +541,14 @@ const shuffle: Recipe = (event, p) => {
   ];
 };
 
+/** B3.4: which way a Degrade or Upgrade moved the card, for the arrows. */
+function tuningDirection(event: Extract<GameEvent, { type: "degraded" | "upgraded" }>): number {
+  return event.type === "upgraded" ? 1 : -1;
+}
+
 const buff: Recipe = (event, p) => {
-  if (event.type !== "buffed") return [];
-  const net = event.attack + event.health;
+  if (event.type !== "buffed" && event.type !== "degraded" && event.type !== "upgraded") return [];
+  const net = event.type === "buffed" ? event.attack + event.health : tuningDirection(event);
   const at = anchor(p.tgt);
   if (net > 0) {
     return [
@@ -515,6 +582,8 @@ const keyword: Recipe = (event, p) => {
 };
 
 const counter: Recipe = (event, p) => {
+  // Classic #90: a quest's count ticks like a counter.
+  if (event.type === "questProgressed") return [burst(p.env.intensity, "sparkle", anchor(p.tgt), "point", 0, "counterSparkle")];
   if (event.type !== "counterChanged") return [];
   const at = anchor(p.tgt);
   if (event.counter === "plague") return [burst(p.env.intensity, "poison", at, "area", 0, "counterPoison")];
@@ -526,11 +595,22 @@ const glint: Recipe = (event, p) => {
   if (event.type === "modifierChanged" && event.added) {
     return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
   }
+  // B3.1: a Unit sinking back into its backrow zone glints there; Classic+ #41: a number set outright.
+  if (event.type === "deanimated") {
+    // B3.1: the Unit lifts out of its unit zone and settles back into its backrow zone.
+    const from = anchor(testid.zone(sideOf(p.view, event.player), "units", event.unitLane));
+    return [ghost(p.D, from, anchor(p.tgt)), burst(p.env.intensity, "arcane", anchor(p.tgt), "point", p.D, "glintArcane")];
+  }
+  if (event.type === "numberChanged") {
+    // Classic+ #41: a number set outright shimmers on the card.
+    const at = anchor(p.tgt);
+    return [{ kind: "sheen", at, delayMs: 0, durationMs: p.D }, burst(p.env.intensity, "arcane", at, "point", 0, "glintArcane")];
+  }
   return [];
 };
 
 const radiant: Recipe = (event, p) => {
-  if (event.type !== "radiantSet") return [];
+  if (event.type !== "radiantSet" && event.type !== "questCompleted") return [];
   const at = anchor(p.tgt);
   const cues: FxCue[] = [
     { kind: "sheen", at, delayMs: 0, durationMs: p.D },
@@ -569,6 +649,8 @@ const fuse: Recipe = (event, p) => {
 };
 
 const mindControl: Recipe = (event, p) => {
+  // B5 E2, E16: a stolen card's arcane lands on the thief's hand.
+  if (event.type === "stolen") return stolenCues(event, p);
   if (event.type !== "controlChanged") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -579,8 +661,10 @@ const mindControl: Recipe = (event, p) => {
 };
 
 const lock: Recipe = (event, p) => {
-  if (event.type !== "locked") return [];
+  if (event.type !== "locked" && event.type !== "unlocked") return [];
   const at = anchor(p.tgt);
+  // B5 E20: an unlock snaps the chains in gold shards.
+  if (event.type === "unlocked") return [ring(p.D, "gold", at, 0), burst(p.env.intensity, "shard", at, "ring", 0, "unlockShard")];
   return [ring(p.D, "dust", at, 0), burst(p.env.intensity, "dust", at, "area", 0, "lockDust")];
 };
 
@@ -595,12 +679,16 @@ const trap: Recipe = (event, p) => {
 };
 
 const lunge: Recipe = (event, p) => {
+  // B5 E9: the redirected hit, attack or pick kicks up dust at its new target.
+  if (event.type === "redirected") return redirectedCues(event, p);
   if (event.type !== "attackDeclared") return [];
   return [burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "point", 0, "lungeDust")];
 };
 
 const fizzle: Recipe = (event, p) => {
-  if (event.type !== "attackCancelled") return [];
+  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck.
+  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited") return [];
+  if (event.type === "countered") return counteredCues(p);
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
 };
 
@@ -621,6 +709,8 @@ const mana: Recipe = (event, p) => {
 
 const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
+  // B5 E10: an effect cut the turn short.
+  if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   if (event.type !== "turnStarted") return [];
   if (event.player === p.view.viewer) {
     return [banner(p.D, FX_TEXT.yourTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];
@@ -669,6 +759,99 @@ const overflow: Recipe = (event, p) => {
   return cues;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Patch v0.2.0's events (docs/classic-sets.md B3, B5): their own looks, inside R200's bounds
+ * ------------------------------------------------------------------------------------------- */
+
+/** The engine writes a hero target as `hero-<playerId>` (as `damage` does). */
+const HERO_ID = /^hero-(p1|p2)$/;
+
+/** Where an instance or hero id is drawn in `view`, or null. */
+function idAnchor(view: PlayerView, id: string): FxAnchor | null {
+  if (id === HIDDEN_ID) return null;
+  const hero = HERO_ID.exec(id)?.[1];
+  if (hero !== undefined) return anchor(testid.hero(sideOf(view, hero as "p1" | "p2")));
+  const at = locateInstance(view, id);
+  return at === null ? null : anchor(at);
+}
+
+/** B5 E1: a countered card shatters where it hung, then its smoke drifts off; a pile stands in for it. */
+function counteredCues(p: Plan): FxCue[] {
+  const i = p.env.intensity;
+  const at = anchor(p.tgt);
+  if (!isCard(p.tgt) && !isHandCard(p.tgt)) {
+    return [burst(i, "void", at, "point", 0, "counterVoid"), burst(i, "smoke", at, "point", 0, "fizzleSmoke")];
+  }
+  const cues: FxCue[] = [
+    crack(p.D, at, 0),
+    burst(i, "shard", at, "ring", 0, "counterShard"),
+    burst(i, "void", at, "area", 0, "counterVoid"),
+  ];
+  pushShake(cues, i, FX_COUNTER_TRAUMA, 0);
+  return cues;
+}
+
+/**
+ * B5 E2, E16: a stolen card flies from where it was to its thief's hand. The ghost is a card back
+ * (R202): which card it is shows only where the view names it.
+ */
+function stolenCues(event: Extract<GameEvent, { type: "stolen" }>, p: Plan): FxCue[] {
+  const from = sideOf(p.view, event.from);
+  const source: FxAnchor =
+    event.zone === "hand"
+      ? anchor(animTestid.hand(from))
+      : event.zone === "library"
+        ? anchor(animTestid.library(from))
+        : event.zone === "graveyard"
+          ? anchor(animTestid.graveyard(from))
+          : event.zone === "exile"
+            ? anchor(animTestid.exile(from))
+            : event.zone === "field"
+              ? (idAnchor(p.view, event.instanceId) ?? viewportCenter())
+              : viewportCenter();
+  const flight = frac(FX_MIND_CONTROL_FLIGHT_FRACTION, p.D);
+  return [
+    ghost(p.D, source, anchor(p.tgt)),
+    burst(p.env.intensity, "arcane", source, "point", 0, "controlArcane"),
+    burst(p.env.intensity, "arcane", anchor(p.tgt), "area", flight, "controlArcane"),
+  ];
+}
+
+/** B5 E9: the hit, attack or pick flies off its old target onto the new one. */
+function redirectedCues(event: Extract<GameEvent, { type: "redirected" }>, p: Plan): FxCue[] {
+  const i = p.env.intensity;
+  const at = anchor(p.tgt);
+  const from = idAnchor(p.view, event.fromId);
+  if (from === null) return [ring(p.D, "arcane", at, 0), burst(i, "spark", at, "point", 0, "impactSpark")];
+  const flight = frac(FX_REDIRECT_FLIGHT_FRACTION, p.D);
+  return [ring(p.D, "arcane", from, 0), projectile(i, "arcane", from, at, flight), burst(i, "spark", at, "point", flight, "impactSpark")];
+}
+
+/**
+ * B5 E7: a hero's health set outright. Not damage and not a heal (R18's lose health is the nearest
+ * rule), so it reads as either by the way it went: holy light and the gain, or void and the loss.
+ */
+function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, p: Plan): FxCue[] {
+  const i = p.env.intensity;
+  const at = anchor(p.tgt);
+  const before = (sideOf(p.view, event.player) === "you" ? p.view.you : p.view.opponent).hero.health;
+  const change = event.health - before;
+  if (change > 0) return [rays(p.D, "holy", at, 0), burst(i, "holy", at, "area", 0, "healthSetHoly"), splat(p.D, "heal", change, at, 0)];
+  if (change < 0) return [burst(i, "void", at, "area", 0, "drainVoid"), splat(p.D, "loss", -change, at, 0)];
+  return [ring(p.D, "arcane", at, 0)];
+}
+
+/** Classic+ #35 Rollback: the whole board rewinds, a swirl of arcane at its centre and a jolt. */
+const rewind: Recipe = (event, p) => {
+  if (event.type !== "rolledBack") return [];
+  const cues: FxCue[] = [
+    { kind: "sheen", at: anchor(p.tgt), delayMs: 0, durationMs: p.D },
+    burst(p.env.intensity, "arcane", viewportCenter(), "ring", 0, "rewindArcane"),
+  ];
+  pushShake(cues, p.env.intensity, FX_REWIND_TRAUMA, 0);
+  return cues;
+};
+
 const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   cast,
   summon,
@@ -700,17 +883,31 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   banner: turnBanner,
   fatigue,
   overflow,
+  // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
+  chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
+  // R437: a mark branded onto its card in the mark's colours (brand.ts).
+  brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
+  rewind,
 };
 
 /* ------------------------------------------------------------------------------------------- *
  * Public planners (S6)
  * ------------------------------------------------------------------------------------------- */
 
-/** Plans every event of one entry: each event's row recipe, in event order, concatenated. */
+/**
+ * Plans every event of one entry: each event's row recipe, in event order, concatenated. R502: while
+ * a card with a signature recipe is resolving (`CARD_FX`, cardFx.ts), that recipe may claim an event
+ * of its own resolution first, adding to the row's cues or replacing them.
+ */
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
   const cues: FxCue[] = [];
   for (const event of entry.events) {
+    const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
+    if (signature !== null) {
+      cues.push(...signature.cues);
+      if (signature.row === "replace") continue;
+    }
     const recipe = ANIMATIONS[event.type].fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);

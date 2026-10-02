@@ -3,9 +3,10 @@
 // R275's standard has two halves. The stat half is mechanical, and this file holds every Unit face
 // to it: a Radiant Unit's attack and health are each at least twice its base face's, a 0 staying 0
 // (#1 Big D-fender, #65.1 Spikey Pillow), and a token summoned X/X (the Bread Token's printed 0/0)
-// passing on its printed face because the card that summons it scales X itself. Any card allowed
-// below it would be named in `STAT_EXCEPTIONS` with its reason; after the audit there is none. The
-// effect half — 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded
+// passing on its printed face because the card that summons it scales X itself. A card allowed
+// below it is named in `STAT_EXCEPTIONS` with its reason: Core has none, and patch v0.2.0 names the
+// two the designer's numbers keep (docs/classic-sets.md B9 #17 and #20). A "[3X/3X]" face (Classic+
+// #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half — 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded
 // card by card in docs/radiant-audit.md, and this file proves that document covers every entry.
 //
 // R276: every entry's Radiant face changes it, in its text, its stats or its keywords, so no Make
@@ -13,7 +14,7 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { CardDef } from "@jackioh/shared";
+import { fillParams, type CardDef } from "@jackioh/shared";
 import { CATALOG } from "../src/catalog-data";
 
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
@@ -21,8 +22,18 @@ const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 /** R275: the factor a Radiant Unit's attack and health are held to. */
 const STAT_FACTOR = 2;
 
-/** R275's named exceptions to the stat half, by id, with the reason. None after the audit. */
-const STAT_EXCEPTIONS: Readonly<Record<string, string>> = {};
+/**
+ * R275's named exceptions to the stat half, by id, with the reason (docs/classic-sets.md B9, whose
+ * defaults patch v0.2.0 adopts). Core has none.
+ */
+const STAT_EXCEPTIONS: Readonly<Record<string, string>> = {
+  "classic-033":
+    "Joro stays 1/1 on its Radiant face, the designer's number (B9 #17): its Radiant adds Indestructible, " +
+    "which makes the decoy endless, instead of doubling a 1/1 body",
+  "classic-080":
+    "BOOM! Big Max keeps its 26 attack at 26/16, the designer's number (B9 #20): its health doubles and " +
+    "Charge replaces Rush as the Radiant rider",
+};
 
 const AUDIT = new URL("../../../docs/radiant-audit.md", import.meta.url);
 
@@ -33,6 +44,13 @@ describe("R275 the Radiant power standard (SPEC §5.2)", () => {
       if (card.type !== "Unit" || card.id in STAT_EXCEPTIONS) continue;
       const base = { attack: card.base.attack ?? 0, health: card.base.health ?? 0 };
       const radiant = { attack: card.radiant.attack ?? 0, health: card.radiant.health ?? 0 };
+      // B2.7: a "[3X/3X]" face's stats are its X multiples.
+      const baseX = card.base.xStats;
+      const radiantX = card.radiant.xStats;
+      if (baseX !== undefined || radiantX !== undefined) {
+        Object.assign(base, baseX ?? { attack: 0, health: 0 });
+        Object.assign(radiant, radiantX ?? { attack: 0, health: 0 });
+      }
       for (const stat of ["attack", "health"] as const) {
         if (radiant[stat] < STAT_FACTOR * base[stat]) {
           short.push(`${card.id} ${card.name}: radiant ${stat} ${radiant[stat]} < ${STAT_FACTOR} × ${base[stat]}`);
@@ -46,8 +64,12 @@ describe("R275 the Radiant power standard (SPEC §5.2)", () => {
     for (const [id, reason] of Object.entries(STAT_EXCEPTIONS)) {
       const card = CATALOG[id];
       expect(card?.type, `${id}: ${reason}`).toBe("Unit");
+      const below = (["attack", "health"] as const).some(
+        (stat) => (card?.radiant[stat] ?? 0) < STAT_FACTOR * (card?.base[stat] ?? 0),
+      );
+      expect(below, `${id} is below the stat half, or it needs no exception`).toBe(true);
     }
-    expect(Object.keys(STAT_EXCEPTIONS)).toEqual([]);
+    expect(Object.keys(STAT_EXCEPTIONS)).toEqual(["classic-033", "classic-080"]);
   });
 
   it("R275 is recorded card by card: docs/radiant-audit.md has one row for every catalog entry", () => {
@@ -64,10 +86,12 @@ describe("R276 every card has a Radiant face (SPEC §5.2)", () => {
     // R349: a card that prints no Radiant form (`radiantFallback`, the Ghoul Token) changes by
     // doubling its stats, the X/X it is summoned with included, so its printed 0/0 reads alike on
     // both faces; `t-ghoul.test.ts` proves the doubling in play. Every other card differs in print.
+    // A face's text is read with its own `params` values filled in (B3.4 rule 5).
     const unchanged = ENTRIES.filter(
       (card) =>
         card.radiantFallback !== true &&
-        card.radiant.text === card.base.text &&
+        fillParams(card, "radiant") === fillParams(card, "base") &&
+        JSON.stringify(card.radiant.xStats) === JSON.stringify(card.base.xStats) &&
         card.radiant.attack === card.base.attack &&
         card.radiant.health === card.base.health &&
         JSON.stringify(card.radiant.keywords) === JSON.stringify(card.base.keywords),

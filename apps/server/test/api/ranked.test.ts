@@ -1,5 +1,5 @@
 /**
- * The ranked ladder through the server (SPEC §9.11, R376–R385): opening seasons, rating ranked
+ * The ranked ladder through the server (SPEC §9.12, R603–R612): opening seasons, rating ranked
  * games of players and bots, Jlorious, and the three reads the client has.
  *
  * The pure rules have their own suites (`test/ranked/*`); these drive `src/api/ranked.ts` against
@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { playerTag } from "../../src/api/crypto";
 import { createRouter } from "../../src/api/http";
-import type { MatchRow, SeriesRow } from "../../src/api/ports";
+import type { FrozenDeck, FrozenTrio, MatchRow, SeriesRow } from "../../src/api/ports";
 import {
   createRankedRoutes,
   leaderboard,
@@ -58,8 +58,8 @@ async function seedPlaced(deps: TestDeps, profileId: string, rating: number, lad
   });
 }
 
-describe("R382 seasons on the server", () => {
-  it("R382 the build's season opens once, and the first season of all resets nothing", async () => {
+describe("R609 seasons on the server", () => {
+  it("R609 the build's season opens once, and the first season of all resets nothing", async () => {
     const deps = createTestDeps();
     deps.store.seedProfile({ id: A, rating: 1300, ratingDeviation: 80 });
     const first = await openSeason(deps);
@@ -69,7 +69,7 @@ describe("R382 seasons on the server", () => {
     expect((await deps.store.profiles.getById(A))?.rating).toBe(1300);
   });
 
-  it("R382 a new minor version opens the next season with a soft reset of every rated player, and nobody else", async () => {
+  it("R609 a new minor version opens the next season with a soft reset of every rated player, and nobody else", async () => {
     const deps = createTestDeps();
     deps.store.seedProfile({ id: A, rating: 1000 });
     deps.store.seedProfile({ id: B, rating: 1000 });
@@ -94,7 +94,7 @@ describe("R382 seasons on the server", () => {
     expect((await deps.store.ranked.ranksOf(A)).map((rank) => rank.seasonId)).toEqual(["v0.1"]);
   });
 
-  it("R382 the first rated game of a build opens its season itself", async () => {
+  it("R609 the first rated game of a build opens its season itself", async () => {
     const deps = createTestDeps();
     deps.store.seedProfile({ id: A });
     deps.store.seedProfile({ id: B });
@@ -104,8 +104,8 @@ describe("R382 seasons on the server", () => {
   });
 });
 
-describe("R378 placements through rated games", () => {
-  it("R378 RANK_PLACEMENT_GAMES rated games place a Raisin where the rating calls for", async () => {
+describe("R605 placements through rated games", () => {
+  it("R605 RANK_PLACEMENT_GAMES rated games place a Raisin where the rating calls for", async () => {
     const deps = createTestDeps();
     // A placed field to be read against, rated 700 to 1300.
     for (let n = 0; n < 7; n += 1) await seedPlaced(deps, `field-${String(n)}`, 700 + 100 * n, tierBottom(1));
@@ -126,7 +126,7 @@ describe("R378 placements through rated games", () => {
     expect(await ladder(A)).toBeGreaterThan(await ladder(B));
   });
 
-  it("R376 rating the same game twice changes nothing", async () => {
+  it("R603 rating the same game twice changes nothing", async () => {
     const deps = createTestDeps();
     deps.store.seedProfile({ id: A });
     deps.store.seedProfile({ id: B });
@@ -138,8 +138,8 @@ describe("R378 placements through rated games", () => {
   });
 });
 
-describe("R383 bots", () => {
-  it("R383 a bot is rated like a player, from its own rating, and has no rank, no season row and no place on the leaderboard", async () => {
+describe("R610 bots", () => {
+  it("R610 a bot is rated like a player, from its own rating, and has no rank, no season row and no place on the leaderboard", async () => {
     const deps = createTestDeps();
     deps.store.seedProfile({ id: A });
     const first = await rate(deps, game("b-1", [player(A), bot("ai-easy")], 0));
@@ -159,7 +159,7 @@ describe("R383 bots", () => {
     expect(JSON.stringify(board)).not.toContain("ai-easy");
   });
 
-  it("R383 a bot's rating is not among the players a rank's percentile is read from", async () => {
+  it("R610 a bot's rating is not among the players a rank's percentile is read from", async () => {
     const deps = createTestDeps();
     // One placed player, rated far above a fresh one: the fresh player's target reads only them.
     await seedPlaced(deps, "placed", 2000, tierBottom(2));
@@ -171,8 +171,8 @@ describe("R383 bots", () => {
   });
 });
 
-describe("R381 Jlorious through the server", () => {
-  it("R381 ranks Mythic Grape players by rating on the leaderboard and records the position a game gives as the season's peak", async () => {
+describe("R608 Jlorious through the server", () => {
+  it("R608 ranks Mythic Grape players by rating on the leaderboard and records the position a game gives as the season's peak", async () => {
     const deps = createTestDeps();
     const mythic = tierBottom(4);
     await seedPlaced(deps, "m-high", 1900, mythic);
@@ -199,7 +199,7 @@ describe("R381 Jlorious through the server", () => {
   });
 });
 
-describe("R385 what the client reads", () => {
+describe("R612 what the client reads", () => {
   async function routed() {
     const deps = createTestDeps();
     const tokenA = deps.auth.addUser({ userId: `user-${A}`, email: "a@example.test" });
@@ -217,7 +217,7 @@ describe("R385 what the client reads", () => {
     return { deps, get, tokenA, tokenB, stranger };
   }
 
-  it("R385 GET /api/ranked answers the caller's tag, rank, streak, record and badges, and never a rating", async () => {
+  it("R612 GET /api/ranked answers the caller's tag, rank, streak, record and badges, and never a rating", async () => {
     const { get, tokenA } = await routed();
     const { status, body, text } = await get<OwnRankBody>("/api/ranked", tokenA);
     expect(status).toBe(200);
@@ -232,7 +232,7 @@ describe("R385 what the client reads", () => {
     expect(text).not.toMatch(/1234|rating|deviation|volatility/);
   });
 
-  it("R385 GET /api/leaderboard lists tags and ranks, marks the caller, and counts the Raisins", async () => {
+  it("R612 GET /api/leaderboard lists tags and ranks, marks the caller, and counts the Raisins", async () => {
     const { deps, get, tokenA } = await routed();
     await deps.store.ranked.putRank({ ...freshRank("v0.1", B, 0), games: 2, wins: 2 });
     await deps.store.ranked.putRank({ ...freshRank("v0.1", A, 0), games: RANK_PLACEMENT_GAMES, ladder: tierBottom(1) + 4, floor: 1, peakLadder: tierBottom(1) + 4 });
@@ -250,7 +250,7 @@ describe("R385 what the client reads", () => {
     expect(text).not.toMatch(/1234|987|profile-|rating/);
   });
 
-  it("R385 GET /api/matches/:id/ranks shows both seats to a player of the match, and 404s for anyone else", async () => {
+  it("R612 GET /api/matches/:id/ranks shows both seats to a player of the match, and 404s for anyone else", async () => {
     const { deps, get, tokenA, stranger } = await routed();
     const match: MatchRow = {
       id: "match-1",
@@ -280,13 +280,14 @@ describe("R385 what the client reads", () => {
   });
 });
 
-describe("R377 a ranked series through the results writer", () => {
-  it("R377 a room's series moves no rating when it ends, and a queue's moves it once", async () => {
+describe("R604 a ranked series through the results writer", () => {
+  it("R604 a room's series moves no rating when it ends, and a queue's moves it once", async () => {
     for (const ranked of [false, true]) {
       const deps = createTestDeps();
       deps.store.seedProfile({ id: A, inMatchId: "game-1" });
       deps.store.seedProfile({ id: B, inMatchId: "game-1" });
-      const trio = { name: "t", decks: [0, 1, 2].map((slot) => ({ name: `d${String(slot)}`, cards: [] })) } as SeriesRow["sides"][0]["trio"];
+      const deck = (slot: number): FrozenDeck => ({ name: `d${String(slot)}`, cards: [] });
+      const trio: FrozenTrio = { name: "t", decks: [deck(0), deck(1), deck(2)] };
       const series: SeriesRow = {
         id: "series-1",
         sides: [

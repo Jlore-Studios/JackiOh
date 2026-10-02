@@ -8,7 +8,7 @@
 // The modes: the lobby sends intent (`ModeChoice`) and relays what the server said. Its verdict is
 // the shared validator's, as UX; a refusal is shown in the server's words.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -59,7 +59,7 @@ const TOKEN = "token-1";
 
 function me(currentMatchId: string | null, currentSeriesId: string | null = null) {
   return {
-    profile: { id: "p1", status: "active" as const, rating: 1000 },
+    profile: { id: "p1", status: "active" as const },
     needsInviteCode: false,
     emailVerified: true,
     currentMatchId,
@@ -353,9 +353,52 @@ describe("the lobby's modes", () => {
   it("shows the queue's population per mode", async () => {
     await renderLobby();
     const population = await screen.findByTestId(playTestid.population);
-    expect(population).toHaveAttribute("data-bo1", "2");
+    await waitFor(() => {
+      expect(population).toHaveAttribute("data-bo1", "2");
+    });
     expect(population).toHaveAttribute("data-bo3", "0");
     expect(population).toHaveAttribute("data-random", "1");
+  });
+
+  it("R433 All Random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
+    await renderLobby();
+    pickMode("random");
+    const setup = screen.getByRole("region", { name: "How do you want to play?" });
+    expect(setup).toHaveTextContent("No deck needed: the server deals both of you one when the game starts.");
+    expect(within(setup).queryByTestId(playTestid.deckSelect)).toBeNull();
+    expect(within(setup).queryByTestId(playTestid.trioSelect)).toBeNull();
+    // No card, no card count and no curve: nothing of a dealt deck is known before its game.
+    for (const def of Object.values(DEFS)) expect(setup).not.toHaveTextContent(def.name);
+    expect(setup.querySelector(".play-pick-summary")).toBeNull();
+  });
+
+  it("R505 the queue's counts are on the mode tiles alone: the Find a match box and the queued notice repeat none", async () => {
+    vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve({ ...openTicket(choice.mode), population: 7 }));
+    await renderLobby();
+    const tiles = screen.getByTestId(playTestid.population);
+    await waitFor(() => {
+      expect(tiles).toHaveAttribute("data-bo1", "2");
+    });
+    // Each tile says how many are waiting for its mode.
+    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
+    expect(tileOf("bo1")).toHaveTextContent("2 waiting");
+    expect(tileOf("bo3")).toHaveTextContent("0 waiting");
+    expect(tileOf("random")).toHaveTextContent("1 waiting");
+
+    const box = screen.getByRole("region", { name: "Find a match" });
+    expect(box).not.toHaveTextContent(/waiting/i);
+    expect(within(box).queryByTestId(playTestid.population)).toBeNull();
+
+    // Queued: the box says what it is doing and the notice where you are, and neither counts.
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    const status = await screen.findByTestId(playTestid.status);
+    expect(status).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
+    expect(status).toHaveTextContent("You will be taken to the game as soon as someone is found.");
+    expect(status).not.toHaveTextContent(/waiting|7/);
+    expect(within(box).getByTestId(playTestid.searching)).toHaveTextContent(`Looking for a ${MODE_LABEL.bo1} opponent`);
+    expect(box).not.toHaveTextContent(/waiting/i);
+    // The tiles still count.
+    expect(tileOf("bo1")).toHaveTextContent("waiting");
   });
 });
 

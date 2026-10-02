@@ -24,7 +24,14 @@ services:
     # server with no way to boot. CYPRESS_INSTALL_BINARY below keeps that full install from
     # downloading a browser this service never runs.
     buildCommand: pnpm install --frozen-lockfile --prod=false
-    startCommand: pnpm --filter @jackioh/server start
+    # `release` (db:migrate, then db:seed-catalog at CATALOG_VERSION) runs before every boot, so a
+    # deploy that ships new migrations or a new card patch brings the database along before the
+    # server listens: the server's CATALOG_VERSION and the database's must match, or every deck
+    # save and queue is refused as stale (SPEC §9.4, R105). Both steps are idempotent, so a boot
+    # with nothing new costs one ledger read and one upsert of the catalog. If either fails, this
+    # instance never passes its health check and Render keeps the previous one serving. It is not
+    # a `preDeployCommand` because free instances cannot run one.
+    startCommand: pnpm --filter @jackioh/server release && pnpm --filter @jackioh/server start
     # R163 makes /api/catalog the one unauthenticated route, so it is the honest readiness probe:
     # a 200 means the catalog really did register, not merely that a port is open.
     healthCheckPath: /api/catalog
@@ -38,7 +45,7 @@ services:
         value: production
       # R105's Core-set version. Must equal what db:seed-catalog stamped on public.cards.
       - key: CATALOG_VERSION
-        value: core-1
+        value: v0.2.0
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the
       # per-IP limits key on the entry that many places from the right, never on what the caller
       # wrote to its left. The server's default is 0 (no proxy), so this must be set. 1 is a safe

@@ -5,8 +5,8 @@ import { beginGame, legalActions, reduce } from "../src/reduce";
 import { mulliganOwed } from "../src/setup";
 import { newInstance, type GameState } from "../src/state";
 import { vanillaDeck } from "./fixtures/catalog";
-import { eventsOfType, newGame } from "./fixtures/harness";
-import { doubleEdge } from "./fixtures/scripts";
+import { eventsOfType, newGame, put, slot } from "./fixtures/harness";
+import { doubleEdge, infiniteReserves } from "./fixtures/scripts";
 
 let seq = 0;
 function act(state: GameState, body: ActionInput): { state: GameState; events: Action[] } {
@@ -69,8 +69,12 @@ describe("ending the game (M1-T8)", () => {
     expect(result.state.result).toEqual({ winner: "p1", reason: "concede" });
   });
 
-  it("ends in a draw after the 30th player-turn, not the 29th (R2)", () => {
+  it("ends in a draw after the 60th player-turn, not the 59th (R2, R389)", () => {
     let state = playing("cap");
+    // R389: do-nothing decks fatigue out at player-turn 48 (§2.4, R3); #75 Infinite Reserves on both
+    // sides turns every empty-library draw into a card, so nothing but the cap ends this game.
+    put(state, infiniteReserves.id, slot("p1", "backrow", 1));
+    put(state, infiniteReserves.id, slot("p2", "backrow", 1));
     for (let i = 0; i < TURN_CAP_PLAYER_TURNS - 1; i += 1) {
       state = act(state, { type: "endTurn", playerId: state.active }).state;
     }

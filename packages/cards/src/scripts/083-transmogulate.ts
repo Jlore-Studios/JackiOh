@@ -61,15 +61,16 @@ import { TRAP_TYPES, catalog } from "../query";
 
 export const def = cardDef("core-083");
 
-/** §5.1: the pool excludes the generating card, which R35 spells out for this one. */
-const OWN_INDEX = "83";
 
 /** R35's "other zones", in the order this card walks them; the hand is one of them (R365). */
 const OFF_FIELD_ZONES = ["hand", "library", "graveyard", "exile"] as const;
 
-/** R35's pool: #52, #85, #87, #92, #93, #95 — proved by `test/query.test.ts`, not listed here. */
+/**
+ * R35's pool: every non-token Legendary but this card (R387), of every set (R380) — in Core #52, #85,
+ * #87, #92, #93, #95, proved by `test/query.test.ts`, not listed here.
+ */
 function legendaries(type?: CardType | CardType[]): CardDef[] {
-  return catalog.pool(OWN_INDEX, { rarity: "Legendary", ...(type === undefined ? {} : { type }) });
+  return catalog.pool(def.id, { rarity: "Legendary", ...(type === undefined ? {} : { type }) });
 }
 
 /** R35 on the board: same type, with Field Trap counting as Trap in both directions. */

@@ -65,7 +65,38 @@ export const testid = {
   mulliganOpponentReady: "mulligan-opponent-ready",
   /** After the viewer's own answer, until both are in: the hand with the cards going back marked. */
   mulliganWaiting: "mulligan-waiting",
+  /**
+   * R384, R510: the Activate control on a card the viewer controls (ActivateControl.tsx). `ability`
+   * is named only when the card lists several (`CardView.activations`), so a card with one ability
+   * is always `activate-<instanceId>`.
+   */
+  activate: (instanceId: string, ability?: string): string =>
+    ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`,
+  /** R384, R510: that control's usable-count badge ("2", "∞"). */
+  activateUses: (instanceId: string, ability?: string): string =>
+    ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`,
+  /**
+   * R43, R510: a Heroic Power after the first on the hero panel (the first is `power`): each is its
+   * own control now, as each is separately once per turn.
+   */
+  powerOf: (instanceId: string): string => `power-${instanceId}`,
+  /** B5 E11: "Play" on a card in the viewer's graveyard pile, present only while `legal` lists that play. */
+  pilePlay: (instanceId: string): string => `pile-play-${instanceId}`,
+  /**
+   * A graveyard pile: the same string as `animTestid.graveyard` (animations.ts), named here so the
+   * action layer can light the pile (B5 E11) without importing the animation table.
+   */
+  graveyard: (side: Side): string => `graveyard-${side}`,
 } as const;
+
+/**
+ * R384, R510: the `ability` an Activate control names, in its testid and in its click: none when the
+ * card lists one ability (the engine then takes the card's only one), the ability's id when it lists
+ * several. The board's control and `actions.ts`'s highlight both ask this, so they agree.
+ */
+export function namedAbility(abilityCount: number, ability: string): string | undefined {
+  return abilityCount > 1 ? ability : undefined;
+}
 
 export function sideOf(view: PlayerView, player: PlayerId): Side {
   return player === view.viewer ? "you" : "opponent";
@@ -79,14 +110,22 @@ export function sideView(view: PlayerView, side: Side) {
   return side === "you" ? view.you : view.opponent;
 }
 
-/** Something the player clicked, dragged to, or dropped on. Never a decision, only a report. */
+/**
+ * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
+ *
+ * `activate` is an Activate control (R384): a card's own, or a Heroic Power's on the hero panel.
+ * `ability` is set only when the card lists several abilities. `graveyard` is "Play" on a card in
+ * the viewer's graveyard pile (B5 E11).
+ */
 export type ClickTarget =
   | { on: "hand"; instanceId: string }
   | { on: "unit"; instanceId: string; side: Side; lane: number }
   | { on: "backrow"; instanceId: string; side: Side; lane: number }
   | { on: "hero"; side: Side }
   | { on: "zone"; side: Side; row: Row; lane: number }
-  | { on: "switch"; instanceId: string };
+  | { on: "switch"; instanceId: string }
+  | { on: "activate"; instanceId: string; ability?: string }
+  | { on: "graveyard"; instanceId: string };
 
 export type BoardControl = "end-turn" | "offer-draw" | "power" | "concede";
 

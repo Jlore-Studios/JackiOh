@@ -14,10 +14,23 @@
 // at a pixel floor (cards.css); past that the last one becomes a "+n" count, and the hover preview
 // and the inspect sheet list them all.
 //
+// Keyword visuals (R438). Beside its chip, every keyword has a treatment on the minion drawn by
+// shape: a frame round the portrait, a veil over its art, a glyph in the top row, or Armor's plate
+// (keywordVisuals.ts has the map, the layers' caps and the cap on loops; KeywordFx.tsx draws them;
+// keywords.css their look and motion). Each carries `data-keyword-fx="<kind>"`: Taunt's shield,
+// which used to be the portrait's ::before, is now its own treatment, and the Divine Shield bubble
+// and the Armor plate carry the attribute on their existing elements.
+//
 // Vanilla. A unit a Vanilla took the text of (§6.3, R115) is marked Vanilla in the view
 // (`UnitView.vanilla`, R243), since its definition still names what it lost: the minion wears a
 // plain "Vanilla" stamp at its portrait's corner (`.cf-vanilla`, a "V" on a minion too small for
 // the word), and its hover preview's rules box says the text is gone. Its keyword chips are the view's, which already leave the lost ones out.
+//
+// Patch v0.2.0's states (SPEC §10.8). Brittle's count and the Animated cog are keyword treatments
+// above (the view's `brittle` count draws the cracks even when no Brittle keyword lists it). The rest
+// ride a small rail of badges just over the name plate (CardStates.tsx): the tuned mark (▲ Upgraded,
+// ▼ Degraded, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
+// ▼ pip beside its tone (cardstate.css), the number itself unchanged.
 //
 // There is no "zzz". `canAct` is false for every unit whose controller is not the active player,
 // and a summoning-sick unit may still switch (§4.1), so it can neither say "this unit is asleep"
@@ -29,16 +42,24 @@ import { useRef, type ReactElement } from "react";
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import type { StateBadgeKind } from "./cardState.ts";
+import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
-import { foilFor, type FaceModel } from "./model.ts";
+import { KeywordFx } from "./KeywordFx.tsx";
+import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
+import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
+import "./keywords.css";
 
 export type MinionFaceProps = { face: FaceModel; unit: UnitView; className?: string };
+
+/** The states the minion's keyword treatments already draw (Brittle's cracks, the Animated cog). */
+const DRAWN_BY_TREATMENTS: readonly StateBadgeKind[] = ["brittle", "animated"];
 
 /** How many keyword chips a minion shows before the last becomes a "+n" count. */
 export const KEYWORD_CHIPS_MAX = 3;
@@ -83,8 +104,15 @@ function KeywordIcons({ keywords, armor }: { keywords: readonly Keyword[]; armor
   );
 }
 
+/** The attributes of `kind`'s treatment, when the plan draws one. */
+function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): Record<string, string> {
+  const entry = plan.find((candidate) => candidate.kind === kind);
+  return entry === undefined ? {} : keywordFxAttributes(entry);
+}
+
 export function MinionFace({ face, unit, className }: MinionFaceProps): ReactElement {
   const settings = useCardSettings();
+  const plan = keywordFxPlan(unit);
   const nameRef = useRef<HTMLSpanElement>(null);
   useFitText(nameRef, face.name);
 
@@ -96,16 +124,19 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
       className={className === undefined ? "cf cf--minion" : `cf cf--minion ${className}`}
       data-layout="minion"
       data-card-type={face.type}
-      data-rarity={face.rarity ?? undefined}
+      data-rarity={frameRarity(face) ?? undefined}
       data-foil={foilFor(face, settings.animatedFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
+      data-tuned={face.tuning?.verdict}
     >
       <span className="cf-scale">
         <span className="cf-portrait">
-          <CardArt defId={face.defId} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
+          <CardArt defId={face.defId} name={face.name} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
         </span>
+
+        <KeywordFx plan={plan} />
 
         {hasCrest(face) && (
           <span className="cf-crest">
@@ -131,15 +162,21 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         )}
 
         <span className="stats">
-          <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone}>
+          <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
-          <span className="stat stat-health" data-health={unit.health} data-max-health={unit.maxHealth} data-tone={healthTone}>
+          <span
+            className="stat stat-health"
+            data-health={unit.health}
+            data-max-health={unit.maxHealth}
+            data-tone={healthTone}
+            data-tuned={face.tuning?.health}
+          >
             {unit.health}
             <span className="cf-max">/{unit.maxHealth}</span>
           </span>
           {unit.armor > 0 && (
-            <span className="stat stat-armor" data-armor={unit.armor}>
+            <span className="stat stat-armor" data-armor={unit.armor} {...fxAttributesOf(plan, "Armor")}>
               {unit.armor}
             </span>
           )}
@@ -147,9 +184,11 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
 
         <KeywordIcons keywords={unit.keywords} armor={unit.armor} />
 
+        <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
+
         {/* The `divineShieldLost` animation removes this by the keyword leaving the view. */}
         {hasKeyword(unit.keywords, "Divine Shield") && (
-          <span className="shield-icon" data-icon="shield" aria-label="Divine Shield" />
+          <span className="shield-icon" data-icon="shield" aria-label="Divine Shield" {...fxAttributesOf(plan, "Divine Shield")} />
         )}
 
       </span>

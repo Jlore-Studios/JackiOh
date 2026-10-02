@@ -1,9 +1,17 @@
-"""Model calls: the `claude` CLI backend and a scripted fake for tests.
+"""Model calls: one backend per CLI (`claude`, `codex`, `agy`, `muse`), and a scripted fake.
 
-The prompt travels on stdin. Output is `stream-json`, written straight to a transcript file so a
-long session never sits in memory, then read back for the result line and the subscription usage
-(`rate_limit_event`). Every secret except the Claude token is stripped from the child's
-environment.
+Every backend runs its CLI the same way (`_Cli._launch`): the prompt on stdin or in a file, the
+output written straight to a file so a long session never sits in memory, a timeout that kills
+the whole process group, and afterwards every process the call left behind reaped. The child's
+environment has every secret stripped (`config.child_env`) and gets back only its own login
+(`logins.Login.env`). What differs is the command line, how the output is read (the final text,
+success, the subscription's usage, a refusal and when it resets) and how a transcript is boiled
+down to a trail for the agent that picks the work up next (`trail`).
+
+Claude Code takes the system prompt as an appended system prompt and its tool lists as flags.
+The other CLIs get the system text at the top of the prompt, with a note that the instructions
+were written for Claude Code, and their own guard rails: Codex's workspace sandbox with the
+network off; agy's and Muse's own permission switches, inside a job that holds no write token.
 """
 
 from __future__ import annotations
@@ -17,17 +25,21 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from harness import config as config_mod
 from harness.redact import redact
 
 RATE_LIMIT_WORDS = re.compile(
-    r"(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:\w+ )?limit)"
+    r"(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:\w+ )?limit"
+    r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror)"
 )
 AUTH_WORDS = re.compile(
     r"(?i)(invalid api key|authentication[_ ]error|oauth token|not logged in|please run /login"
-    r"|invalid bearer|401 unauthorized|credit balance is too low)"
+    r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
+    r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
+    r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
+    r"|run `?muse login|authentication required)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.
@@ -39,6 +51,19 @@ ACTIONS_FILES = ("GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STATE", "
 QUIET_ENV = {"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1", "DISABLE_AUTOUPDATER": "1"}
 EXIT_TIMEOUT = 124
 EXIT_NOT_FOUND = 127
+#: When a refusal names no reset time: try again after this long.
+DEFAULT_PARK = "+PT60M"
+#: How much of a transcript the next agent is shown (`trail`).
+TRAIL_ENTRIES = 40
+TRAIL_CHARS = 6000
+
+CLI_NOTE = """\
+## You are running in the {cli} CLI
+
+These instructions were written for Claude Code. Where they mention subagents, `TodoWrite`,
+`EnterWorktree` or another tool you do not have, do that work yourself, one step after another.
+`CLAUDE.md` binds you exactly as it binds Claude: read it, and `AGENTS.md`, before you change
+anything."""
 
 
 @dataclass(frozen=True)
@@ -54,6 +79,10 @@ class RunRequest:
     model: str
     effort: str
     transcript: Path | None = None
+    #: A reviewer: may read and run things but not change them (the harness resets it anyway).
+    read_only: bool = False
+    #: Directories outside `cwd` the session may need to write (a worktree's git directory).
+    extra_dirs: tuple[str, ...] = ()
 
 
 @dataclass
@@ -68,13 +97,16 @@ class RunResult:
     reset_at: str | None = None
     timed_out: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
+    #: The backend knows the CLI could not run at all (its exit code says so).
+    infra_hint: bool = False
 
     @property
     def infra(self) -> bool:
         """The CLI could not run at all: missing, or refused by authentication."""
         if self.ok:
             return False
-        return self.exit_code == EXIT_NOT_FOUND or bool(AUTH_WORDS.search(self.error or ""))
+        return (self.infra_hint or self.exit_code == EXIT_NOT_FOUND
+                or bool(AUTH_WORDS.search(self.error or "")))
 
     @property
     def rate_limited(self) -> bool:
@@ -121,10 +153,7 @@ def usage_from_event(event: Mapping[str, Any]) -> dict[str, Any] | None:
     return usage or None
 
 
-def parse_stream(lines: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """`(result line, last usage reading)` from stream-json lines."""
-    result: dict[str, Any] | None = None
-    usage: dict[str, Any] | None = None
+def _json_lines(lines: Iterable[Any]) -> Iterable[dict[str, Any]]:
     for line in lines:
         text = line.strip() if isinstance(line, str) else ""
         if not text.startswith("{"):
@@ -133,8 +162,15 @@ def parse_stream(lines: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | No
             event = json.loads(text)
         except ValueError:
             continue
-        if not isinstance(event, dict):
-            continue
+        if isinstance(event, dict):
+            yield event
+
+
+def parse_stream(lines: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """`(result line, last usage reading)` from Claude's stream-json lines."""
+    result: dict[str, Any] | None = None
+    usage: dict[str, Any] | None = None
+    for event in _json_lines(lines):
         if event.get("type") == "result":
             result = event
         elif event.get("type") == "rate_limit_event":
@@ -144,17 +180,132 @@ def parse_stream(lines: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | No
     return result, usage
 
 
-class ClaudeCli:
+def _clip(text: Any, limit: int = 300) -> str:
+    flat = " ".join(str(text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
+
+def _trail_text(entries: list[str]) -> str:
+    text = "\n".join(f"- {e}" for e in entries[-TRAIL_ENTRIES:])
+    return redact(text[-TRAIL_CHARS:])
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+@dataclass
+class _Launch:
+    code: int
+    timed_out: bool
+    raw: Path
+    stderr: str
+    elapsed: float
+
+
+class _Cli:
+    """What every CLI backend shares: the environment, the launch, the transcript."""
+
+    cli = ""
+
+    def __init__(self, binary: str, login: Any = None,
+                 popen: Callable[..., subprocess.Popen] = subprocess.Popen) -> None:
+        self.binary = binary
+        self.login = login
+        self._popen = popen
+
+    @property
+    def claude_bin(self) -> str:  # the name older callers used
+        return self.binary
+
+    def env(self) -> dict[str, str]:
+        env = config_mod.child_env()
+        for key in ACTIONS_FILES:
+            env.pop(key, None)
+        if self.login is not None:
+            env.update(self.login.env)
+        return env
+
+    def _paths(self, request: RunRequest) -> tuple[Path, Path]:
+        transcript = request.transcript or (request.cwd / f".{self.cli}-{request.role}.jsonl")
+        transcript.parent.mkdir(parents=True, exist_ok=True)
+        return transcript, transcript.with_suffix(".raw")
+
+    def _launch(self, argv: list[str], request: RunRequest, env: dict[str, str],
+                stdin_text: str | None, raw: Path) -> _Launch | RunResult:
+        started = time.monotonic()
+        marker = f"{request.role}-{os.getpid()}-{time.time_ns()}"
+        env = {**env, CALL_MARKER: marker}
+        timed_out = False
+        before = _own_pids()
+        session: list[int] = []
+        stderr_path = raw.with_suffix(".stderr")
+        try:
+            with open(raw, "w", encoding="utf-8") as out, open(stderr_path, "w",
+                                                                encoding="utf-8") as err:
+                proc = self._popen(
+                    argv, cwd=str(request.cwd), env=env,
+                    stdin=subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL,
+                    stdout=out, stderr=err, text=True, start_new_session=True,
+                )
+                session.append(proc.pid)
+                try:
+                    proc.communicate(stdin_text, timeout=request.timeout_s)
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    _kill(proc)
+                code = proc.returncode if proc.returncode is not None else EXIT_TIMEOUT
+        except FileNotFoundError:
+            return RunResult(False, "", EXIT_NOT_FOUND, error=f"{self.binary} not found")
+        finally:
+            _reap(before, marker, session[0] if session else None)
+        return _Launch(code, timed_out, raw, _read(stderr_path), time.monotonic() - started)
+
+    def _keep(self, launch: _Launch, transcript: Path) -> None:
+        """The raw output, redacted, becomes the transcript; the raw file goes."""
+        _write_redacted(launch.raw, transcript)
+        launch.raw.unlink(missing_ok=True)
+
+    def _prompt(self, request: RunRequest) -> str:
+        """The system text, a note on the CLI, then the task: for a CLI with no flag for an
+        appended system prompt."""
+        return (f"{request.system_append.rstrip()}\n\n{CLI_NOTE.format(cli=self.cli)}\n\n---\n\n"
+                f"{request.prompt}")
+
+    def trail(self, transcript: Path) -> str:
+        """The end of a session, as a short list a later agent can read."""
+        lines = _read(transcript).splitlines()
+        return _trail_text([_clip(line) for line in lines if line.strip()])
+
+
+class ClaudeCli(_Cli):
     """Runs one model call through the `claude` binary."""
 
-    def __init__(self, claude_bin: str = "claude",
+    cli = "claude"
+
+    def __init__(self, claude_bin: str = "claude", login: Any = None,
                  popen: Callable[..., subprocess.Popen] = subprocess.Popen) -> None:
-        self.claude_bin = claude_bin
-        self._popen = popen
+        super().__init__(claude_bin, login, popen)
+
+    def env(self) -> dict[str, str]:
+        if self.login is None:
+            # Run by hand or in a test: the token comes from this process's own environment.
+            env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
+            for key in ACTIONS_FILES:
+                env.pop(key, None)
+        else:
+            env = super().env()
+        for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"):
+            env.pop(key, None)
+        env.update(QUIET_ENV)
+        return env
 
     def argv(self, request: RunRequest, system_file: Path) -> list[str]:
         argv = [
-            self.claude_bin,
+            self.binary,
             "--print",
             "--output-format", "stream-json",
             "--verbose",
@@ -171,75 +322,252 @@ class ClaudeCli:
         return argv
 
     def run(self, request: RunRequest) -> RunResult:
-        started = time.monotonic()
-        transcript = request.transcript or (request.cwd / f".claude-{request.role}.jsonl")
-        transcript.parent.mkdir(parents=True, exist_ok=True)
-        raw = transcript.with_suffix(".raw")
+        transcript, raw = self._paths(request)
         system_file = transcript.with_suffix(".system.md")
         system_file.write_text(request.system_append, encoding="utf-8")
-        env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
-        env.pop("ANTHROPIC_API_KEY", None)
-        for key in ACTIONS_FILES:
-            env.pop(key, None)
-        env.update(QUIET_ENV)
-        marker = f"{request.role}-{os.getpid()}-{time.time_ns()}"
-        env[CALL_MARKER] = marker
-        timed_out = False
-        before = _own_pids()
-        session: list[int] = []
-        try:
-            with open(raw, "w", encoding="utf-8") as out, open(
-                transcript.with_suffix(".stderr"), "w", encoding="utf-8"
-            ) as err:
-                proc = self._popen(
-                    self.argv(request, system_file),
-                    cwd=str(request.cwd),
-                    env=env,
-                    stdin=subprocess.PIPE,
-                    stdout=out,
-                    stderr=err,
-                    text=True,
-                    start_new_session=True,
-                )
-                session.append(proc.pid)
-                try:
-                    proc.communicate(request.prompt, timeout=request.timeout_s)
-                except subprocess.TimeoutExpired:
-                    timed_out = True
-                    _kill(proc)
-                code = proc.returncode if proc.returncode is not None else EXIT_TIMEOUT
-        except FileNotFoundError:
-            return RunResult(False, "", EXIT_NOT_FOUND, error=f"{self.claude_bin} not found")
-        finally:
-            _reap(before, marker, session[0] if session else None)
-        stderr = transcript.with_suffix(".stderr").read_text(encoding="utf-8", errors="replace")
+        launch = self._launch(self.argv(request, system_file), request, self.env(),
+                              request.prompt, raw)
+        if isinstance(launch, RunResult):
+            return launch
         with open(raw, encoding="utf-8", errors="replace") as handle:
             result, usage = parse_stream(handle)
-        _write_redacted(raw, transcript)
-        raw.unlink(missing_ok=True)
-        elapsed = time.monotonic() - started
-        if timed_out:
-            return RunResult(False, _text(result), EXIT_TIMEOUT, _turns(result), elapsed,
+        self._keep(launch, transcript)
+        if launch.timed_out:
+            return RunResult(False, _text(result), EXIT_TIMEOUT, _turns(result), launch.elapsed,
                              f"timed out after {request.timeout_s}s", usage, timed_out=True)
+        code = launch.code
         is_error = bool(result.get("is_error")) if isinstance(result, dict) else True
         text = _text(result)
         error = None
         if is_error or code != 0:
-            error = redact((text or stderr or f"claude exited {code}")[-2000:])
+            error = redact((text or launch.stderr or f"claude exited {code}")[-2000:])
         reset_at = None
         rejected = isinstance(usage, dict) and usage.get("status") == "rejected"
         if (is_error or code != 0) and (rejected or RATE_LIMIT_WORDS.search(error or "")):
-            reset_at = (usage or {}).get("rejected_resets_at") or _exhausted_reset(usage) or "+PT60M"
-        return RunResult(
-            ok=not is_error and code == 0,
-            text=text,
-            exit_code=code,
-            turns=_turns(result),
-            duration_s=elapsed,
-            error=error,
-            usage=usage,
-            reset_at=reset_at,
-        )
+            reset_at = (usage or {}).get("rejected_resets_at") or _exhausted_reset(usage) or DEFAULT_PARK
+        return RunResult(ok=not is_error and code == 0, text=text, exit_code=code,
+                         turns=_turns(result), duration_s=launch.elapsed, error=error,
+                         usage=usage, reset_at=reset_at)
+
+    def trail(self, transcript: Path) -> str:
+        entries: list[str] = []
+        for event in _json_lines(_read(transcript).splitlines()):
+            message = event.get("message") if isinstance(event.get("message"), dict) else {}
+            for block in message.get("content") or [] if isinstance(message, dict) else []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "text" and event.get("type") == "assistant":
+                    entries.append(f"said: {_clip(block.get('text'))}")
+                elif block.get("type") == "tool_use":
+                    entries.append(f"{block.get('name')}: {_clip(json.dumps(block.get('input')), 200)}")
+                elif block.get("type") == "tool_result" and block.get("is_error"):
+                    entries.append(f"tool error: {_clip(block.get('content'), 200)}")
+        return _trail_text(entries)
+
+
+class CodexCli(_Cli):
+    """OpenAI's Codex CLI (`codex exec`), signed in with ChatGPT."""
+
+    cli = "codex"
+
+    def argv(self, request: RunRequest, last_message: Path) -> list[str]:
+        argv = [self.binary, "exec", "--json", "--skip-git-repo-check", "--cd", str(request.cwd),
+                "--model", request.model, "--sandbox", "workspace-write",
+                "-c", "sandbox_workspace_write.network_access=false",
+                "--output-last-message", str(last_message)]
+        if request.effort:
+            argv += ["-c", f'model_reasoning_effort="{request.effort}"']
+        for directory in request.extra_dirs:
+            argv += ["--add-dir", directory]
+        return argv + ["-"]
+
+    def run(self, request: RunRequest) -> RunResult:
+        transcript, raw = self._paths(request)
+        last = transcript.with_suffix(".last.md")
+        since = time.time() - 5
+        launch = self._launch(self.argv(request, last), request, self.env(),
+                              self._prompt(request), raw)
+        if isinstance(launch, RunResult):
+            return launch
+        failed: list[str] = []
+        messages: list[str] = []
+        for event in _json_lines(_read(raw).splitlines()):
+            kind = event.get("type")
+            if kind in ("turn.failed", "error"):
+                error = event.get("error") if isinstance(event.get("error"), dict) else event
+                failed.append(str(error.get("message") or ""))
+            elif kind == "item.completed":
+                item = event.get("item") or {}
+                if item.get("type") == "agent_message":
+                    messages.append(str(item.get("text") or ""))
+        self._keep(launch, transcript)
+        text = _read(last).strip() or (messages[-1] if messages else "")
+        usage = codex_usage(Path(self.env().get("CODEX_HOME") or Path.home() / ".codex"), since)
+        if launch.timed_out:
+            return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
+                             f"timed out after {request.timeout_s}s", usage, timed_out=True)
+        ok = launch.code == 0 and not failed
+        error = None if ok else redact(("; ".join(failed) or launch.stderr
+                                        or f"codex exited {launch.code}")[-2000:])
+        reset_at = None
+        if not ok and RATE_LIMIT_WORDS.search(error or ""):
+            reset_at = _exhausted_reset(usage) or DEFAULT_PARK
+        return RunResult(ok, text, launch.code, None, launch.elapsed, error, usage, reset_at)
+
+    def trail(self, transcript: Path) -> str:
+        entries: list[str] = []
+        for event in _json_lines(_read(transcript).splitlines()):
+            if event.get("type") != "item.completed":
+                continue
+            item = event.get("item") or {}
+            kind = item.get("type")
+            if kind == "agent_message":
+                entries.append(f"said: {_clip(item.get('text'))}")
+            elif kind == "command_execution":
+                entries.append(f"ran `{_clip(item.get('command'), 160)}` (exit "
+                               f"{item.get('exit_code')})")
+            elif kind == "file_change":
+                paths = [c.get("path") for c in item.get("changes") or [] if isinstance(c, dict)]
+                entries.append(f"changed {', '.join(str(p) for p in paths)}")
+        return _trail_text(entries)
+
+
+def codex_usage(codex_home: Path, since: float) -> dict[str, Any] | None:
+    """The subscription's 5-hour and weekly use, from the newest `token_count` event in the
+    session logs Codex wrote since `since` (the `exec` stream itself carries none)."""
+    sessions = Path(codex_home) / "sessions"
+    newest: dict[str, Any] | None = None
+    if not sessions.is_dir():
+        return None
+    for path in sorted(sessions.rglob("rollout-*.jsonl")):
+        try:
+            if path.stat().st_mtime < since:
+                continue
+        except OSError:
+            continue
+        for event in _json_lines(_read(path).splitlines()):
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            if payload.get("type") == "token_count" and isinstance(payload.get("rate_limits"), dict):
+                newest = payload["rate_limits"]
+    if not newest:
+        return None
+    usage: dict[str, Any] = {"status": "allowed"}
+    for key in ("primary", "secondary"):
+        window = newest.get(key)
+        if not isinstance(window, dict) or not isinstance(window.get("used_percent"), (int, float)):
+            continue
+        minutes = window.get("window_minutes")
+        name = "five_hour" if isinstance(minutes, (int, float)) and minutes <= 360 else "seven_day"
+        if key == "primary" and minutes is None:
+            name = "five_hour"
+        usage[name] = {"utilization": float(window["used_percent"]) / 100.0,
+                       "resets_at": _epoch_iso(window.get("resets_at"))}
+    return usage if len(usage) > 1 else None
+
+
+class AgyCli(_Cli):
+    """Google's Antigravity CLI (`agy`), signed in on the machine with a Google account.
+
+    Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
+    told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
+    the job holds no write token. Its effort is part of the model's own choices (`gemini-3.1-pro`
+    takes `low` or `high`)."""
+
+    cli = "agy"
+
+    def argv(self, request: RunRequest) -> list[str]:
+        argv = [self.binary, "--output-format", "stream-json", "--dangerously-skip-permissions",
+                "--disable-slash-commands", "--model", request.model]
+        if request.effort:
+            argv += ["--effort", request.effort]
+        for directory in request.extra_dirs:
+            argv += ["--add-dir", directory]
+        return argv
+
+    def run(self, request: RunRequest) -> RunResult:
+        transcript, raw = self._paths(request)
+        launch = self._launch(self.argv(request), request, self.env(), self._prompt(request), raw)
+        if isinstance(launch, RunResult):
+            return launch
+        result: dict[str, Any] = {}
+        for event in _json_lines(_read(raw).splitlines()):
+            if event.get("event") == "result" and isinstance(event.get("result"), dict):
+                result = event["result"]
+        self._keep(launch, transcript)
+        text = str(result.get("response") or "").strip()
+        turns = result.get("num_turns") if isinstance(result.get("num_turns"), int) else None
+        if launch.timed_out:
+            return RunResult(False, text, EXIT_TIMEOUT, turns, launch.elapsed,
+                             f"timed out after {request.timeout_s}s", None, timed_out=True)
+        ok = launch.code == 0 and result.get("status") == "SUCCESS"
+        error = None
+        if not ok:
+            error = redact((str(result.get("error") or "") or launch.stderr
+                            or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
+        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        return RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at)
+
+    def trail(self, transcript: Path) -> str:
+        entries: list[str] = []
+        said: dict[Any, str] = {}
+        for event in _json_lines(_read(transcript).splitlines()):
+            step = event.get("step_update") if isinstance(event.get("step_update"), dict) else None
+            if step is None:
+                continue
+            if step.get("step_type") == "agent_response":
+                key = step.get("step_index")
+                said[key] = said.get(key, "") + str(step.get("text_delta") or "")
+                if step.get("state") == "DONE":
+                    entries.append(f"said: {_clip(said.pop(key))}")
+            elif step.get("step_type") == "tool" and step.get("state") == "DONE":
+                info = step.get("tool_info") or {}
+                params = info.get("parameters") or {}
+                shown = params.get("CommandLine") if isinstance(params, dict) else None
+                entries.append(f"{info.get('name')}: "
+                               f"{_clip(shown or json.dumps(params), 200)}")
+        return _trail_text(entries)
+
+
+class MuseCli(_Cli):
+    """Meta's Muse Code CLI (`muse exec`)."""
+
+    cli = "muse"
+
+    def argv(self, request: RunRequest, prompt_file: Path) -> list[str]:
+        argv = [self.binary, "exec", "--yolo", "--disable-web-tools",
+                "--workspace", str(request.cwd), "--model", request.model,
+                "--prompt-file", str(prompt_file), "--max-model-steps", str(request.max_turns)]
+        if request.effort:
+            argv += ["--reasoning-effort", request.effort]
+        return argv
+
+    def run(self, request: RunRequest) -> RunResult:
+        transcript, raw = self._paths(request)
+        prompt_file = transcript.with_suffix(".prompt.md")
+        prompt_file.write_text(self._prompt(request), encoding="utf-8")
+        launch = self._launch(self.argv(request, prompt_file), request, self.env(), None, raw)
+        if isinstance(launch, RunResult):
+            return launch
+        text = _read(raw).strip()
+        stderr = launch.stderr
+        transcript_text = text + ("\n\n--- stderr ---\n" + stderr if stderr.strip() else "")
+        raw.write_text(transcript_text, encoding="utf-8")
+        self._keep(launch, transcript)
+        if launch.timed_out:
+            return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
+                             f"timed out after {request.timeout_s}s", None, timed_out=True)
+        ok = launch.code == 0
+        error = None
+        if not ok:
+            last = [line for line in stderr.splitlines() if line.strip()]
+            error = redact((last[-1] if last else f"muse exited {launch.code}")[-2000:])
+        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
+                         infra_hint=launch.code == 2)
+
+
+BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "agy": AgyCli,
+                                   "muse": MuseCli}
 
 
 PING_PROMPT = "Reply with the word ok."
@@ -247,8 +575,8 @@ PING_TIMEOUT_S = 180
 
 
 def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run) -> dict | None:
-    """The subscription's usage now, read off the smallest call there is: one turn of `model`
-    in an empty directory. None when the CLI gave no reading."""
+    """The Claude subscription's usage now, read off the smallest call there is: one turn of
+    `model` in an empty directory. None when the CLI gave no reading."""
     import tempfile
 
     argv = [claude_bin, "--print", "--output-format", "stream-json", "--verbose",
@@ -259,6 +587,7 @@ def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess
         env.pop(key, None)
     env.update(QUIET_ENV)
     with tempfile.TemporaryDirectory(prefix="bot-ping-") as empty:
+        env["CLAUDE_CONFIG_DIR"] = str(Path(empty) / ".claude")
         try:
             proc = run(argv, cwd=empty, env=env, input=PING_PROMPT, capture_output=True,
                        text=True, encoding="utf-8", errors="replace", timeout=PING_TIMEOUT_S)
@@ -370,6 +699,7 @@ class FakeRunner:
     """Replays scripted calls. Each handler receives the request and returns a RunResult."""
 
     name = "fake"
+    cli = "fake"
 
     def __init__(self, handlers: Mapping[str, Any] | None = None) -> None:
         self.handlers: dict[str, list[Callable[[RunRequest], RunResult]]] = {}
@@ -385,8 +715,14 @@ class FakeRunner:
         handler = queue.pop(0) if len(queue) > 1 else queue[0]
         return handler(request)
 
+    def trail(self, transcript: Path) -> str:
+        return ""
 
-def get_runner(cfg: config_mod.Config) -> Any:
+
+def get_runner(cfg: config_mod.Config, provider: Any = None, login: Any = None) -> Any:
+    """The backend for `provider` (the first Claude account when there is none), signed in with
+    `login`."""
     if cfg.backend == "fake":
         return FakeRunner()
-    return ClaudeCli(cfg.claude_bin)
+    cli = provider.cli if provider is not None else "claude"
+    return BACKENDS[cli](cfg.bin(cli), login)

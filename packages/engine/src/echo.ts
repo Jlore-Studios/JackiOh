@@ -18,12 +18,14 @@
 // the one side that may import `prompts.ts`.
 
 import type { PlayerId } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
+import { tunedCount } from "./tuning";
 import { modifierIsLive } from "./mana";
 import { installLastingModifiers, removeModifier } from "./modifiers";
 import type { EngineSink } from "./resolve";
 import { flagsOf } from "./scripts";
 import { exitMark, leftFieldAfter } from "./stays";
+import { copiedEcho } from "./subsystems/copiedText";
 import {
   findInstance,
   type CardInstance,
@@ -31,7 +33,7 @@ import {
   type GameState,
   type PlayerModifier,
 } from "./state";
-import { moveToZone } from "./zones";
+import { moveToZone, reportGraveyardLanding } from "./zones";
 
 // ---------------------------------------------------------------------------
 // The queue (§10.1 `echoQueue`)
@@ -100,9 +102,14 @@ export function dropEchoRepeats(state: GameState, instanceId: string): void {
 // What a resolution owes (§6.3, R30)
 // ---------------------------------------------------------------------------
 
-/** §6.1: the card's own printed Echo X (`staticFlags.echo`). */
-export function printedEcho(card: CardInstance): number {
-  return Math.max(0, Math.trunc(flagsOf(card).echo ?? 0));
+/**
+ * §6.1: the card's own printed Echo X (`staticFlags.echo`), plus, given the state, for a card that has
+ * a copied Spell's text (B5 E14, Classic #57 Echo, R546), the Echo X that text prints.
+ */
+export function printedEcho(card: CardInstance, state?: GameState): number {
+  // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
+  const own = Math.max(0, tunedCount(card, "Echo", Math.trunc(flagsOf(card).echo ?? 0)));
+  return state === undefined ? own : own + copiedEcho(state, card);
 }
 
 /**
@@ -134,7 +141,7 @@ export function echoGrantOf(state: GameState, player: PlayerId, mod: PlayerModif
  */
 export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstance): number {
   const state = sink.state;
-  if (defOf(state, card.defId).type !== "Spell") return 0;
+  if (cardTypeOf(state, card) !== "Spell") return 0;
   // R209: a Twinspell that arrived since the last state check — summoned mid-effect ahead of a cast
   // on draw — already stands on the field, so its rider is installed before the Spell reads them.
   installLastingModifiers(sink);
@@ -156,13 +163,8 @@ export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstan
 
     const source = findInstance(state, mod.sourceId);
     if (source === undefined || source.zone.z !== "field") continue;
-    if (moveToZone(state, source, "graveyard") !== "moved") continue;
-    sink.events.push({
-      type: "enteredGraveyard",
-      instanceId: source.id,
-      defId: source.defId,
-      owner: source.owner,
-    });
+    // B5 E5: to its graveyard, or wherever a replacement sends it.
+    reportGraveyardLanding(sink, source, moveToZone(state, source, "graveyard"));
   }
   return granted;
 }
@@ -177,7 +179,7 @@ export function grantedEcho(sink: EngineSink, player: PlayerId, card: CardInstan
  * it is played) — because it *consumes* the grant.
  */
 export function queueEchoRepeats(sink: EngineSink, card: CardInstance, player: PlayerId): number {
-  return addEchoRepeats(sink, card, player, printedEcho(card) + grantedEcho(sink, player, card));
+  return addEchoRepeats(sink, card, player, printedEcho(card, sink.state) + grantedEcho(sink, player, card));
 }
 
 // ---------------------------------------------------------------------------
@@ -267,13 +269,9 @@ export function landAfterResolution(sink: EngineSink, resolved: ResolvedCard): v
     delete card.memory[EXILE_ON_LANDING];
     if (moveToZone(state, card, "exile") === "moved") state.counters.exiled += 1;
     sink.events.push({ type: "exiled", instanceId: card.id, defId: card.defId, owner: card.owner });
-  } else if (card !== undefined && card.zone.z === "resolving" && moveToZone(state, card, "graveyard") === "moved") {
-    sink.events.push({
-      type: "enteredGraveyard",
-      instanceId: card.id,
-      defId: card.defId,
-      owner: card.owner,
-    });
+  } else if (card !== undefined && card.zone.z === "resolving") {
+    // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
+    reportGraveyardLanding(sink, card, moveToZone(state, card, "graveyard"));
   }
 
   sink.events.push({

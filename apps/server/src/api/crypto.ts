@@ -82,7 +82,7 @@ export function createHashes(peppers: { code: string; ip: string }): Hashes {
 }
 
 /**
- * SPEC §11 R385: a player's public tag on the leaderboard and the match screen, `PLAYER_TAG_LENGTH`
+ * SPEC §11 R612: a player's public tag on the leaderboard and the match screen, `PLAYER_TAG_LENGTH`
  * symbols of the code alphabet read off the SHA-256 of the profile id. Players have no public name,
  * and the profile id is never sent to anyone but its owner, so the tag stands in for both: stable,
  * the same on every screen, and no way back to the id or the account's email.

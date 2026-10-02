@@ -207,7 +207,7 @@ const tokenAttack: CoachStep = {
 /** "Your trap sprang": names The Coin when that is what the AI played into it (§7: it costs 0). */
 function honeypotText(ctx: CoachCtx): string {
   const coin = ctx.view.opponent.graveyard.some((card) => card.defId === COIN_DEF_ID);
-  const what = coin ? "The AI played The Coin, which costs 0" : "The AI played a card costing 1 or less";
+  const what = coin ? "The AI played The Coin, which costs (0)" : "The AI played a (1) Cost or less card";
   return `${what}, so your Bear Honeypot sprang on its turn and made two Rush Tokens. A trap that has fired goes to the graveyard.`;
 }
 
@@ -248,7 +248,7 @@ export const script: LessonScript = {
     info({
       id: "trap-waits",
       title: "A hidden trap",
-      text: "The AI sees only the back of your card. Bear Honeypot springs by itself when the AI plays a card costing 1 or less, even on its turn.",
+      text: "The AI sees only the back of your card. Bear Honeypot springs by itself when the AI plays a (1) Cost or less card, even on its turn.",
       anchor: (ctx) => {
         const lane = myBackrowLane(ctx, HONEYPOT);
         return lane === undefined ? { kind: "backrow", side: "you" } : { kind: "backrow", side: "you", lane };

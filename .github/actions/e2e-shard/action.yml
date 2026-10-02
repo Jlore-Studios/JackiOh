@@ -1,0 +1,85 @@
+# One shard of one browser's e2e run (.github/workflows/ci.yml, #73): a built client and a fresh E2E
+# server, then the specs `e2e/scripts/shard-specs.mjs` gives this shard.
+#
+# Fresh is the point. SPEC §11 R144 makes the server reseed its fixture accounts and invite codes at
+# boot, so a suite that activates the pending account or spends an invite code (spec 10) is
+# repeatable only against a fresh server. Each shard boots its own, which is also why `retries` is
+# left at the Cypress config's value: a retried spec-10 test cannot pass either.
+name: e2e shard
+description: Build the E2E client, start it and the E2E server, and run one shard of the e2e specs
+inputs:
+  browser:
+    description: chrome or electron
+    required: true
+  shard:
+    description: this shard, 1-based
+    required: true
+  shards:
+    description: how many shards the browser's run is split into
+    required: true
+runs:
+  using: composite
+  steps:
+    # A built client rather than `vite dev`: HMR reloads the page mid-run when anything under
+    # apps/web/src changes, which remounts the route and restarts the game at turn 0. `build:e2e`,
+    # not `build`: BUILD M5-T3 publishes `window.__jackioh` only outside production mode, and every
+    # spec reaches it through cy.jackioh(), so under a plain `vite build` every spec fails on its
+    # first command.
+    - name: build the client
+      shell: bash
+      run: pnpm build:e2e
+
+    # Backgrounded with stdout redirected to a file: without the redirect the step inherits the
+    # runner's output pipe and can wait on a child that never closes it, and the logs become
+    # uploadable evidence when a spec fails.
+    - name: start the client and the server
+      shell: bash
+      env:
+        E2E: "1"
+      run: |
+        nohup pnpm --dir apps/web exec vite preview --port 5173 --strictPort \
+          > "$RUNNER_TEMP/client.log" 2>&1 &
+        nohup pnpm --dir apps/server start > "$RUNNER_TEMP/server.log" 2>&1 &
+
+    # /api/catalog is the one route R163 makes unauthenticated, so a 200 means the catalog really
+    # registered. `localhost`, not `127.0.0.1`: `vite preview` may bind the IPv6 loopback only, and
+    # `localhost` is what `baseUrl` in e2e/cypress.config.ts asks the browser for. curl rather than
+    # `npx wait-on`, so readiness never waits on a registry fetch.
+    - name: wait for both to answer
+      shell: bash
+      run: |
+        for url in http://localhost:5173 http://localhost:8787/api/catalog; do
+          for i in $(seq 1 120); do
+            if curl -fs -o /dev/null "$url"; then echo "up: $url (${i}s)"; break; fi
+            if [ "$i" -eq 120 ]; then
+              echo "never answered: $url"
+              echo "--- client.log ---"; cat "$RUNNER_TEMP/client.log" || true
+              echo "--- server.log ---"; cat "$RUNNER_TEMP/server.log" || true
+              exit 1
+            fi
+            sleep 1
+          done
+        done
+
+    - name: the e2e specs of this shard
+      shell: bash
+      env:
+        E2E: "1"
+      run: |
+        specs=$(cd e2e && node scripts/shard-specs.mjs "${{ inputs.shard }}" "${{ inputs.shards }}")
+        echo "shard ${{ inputs.shard }}/${{ inputs.shards }}: ${specs//,/ }"
+        pnpm --dir e2e exec cypress run --browser "${{ inputs.browser }}" --spec "$specs"
+
+    # e2e/artifacts/*: e2e/cypress.config.ts puts screenshots under `artifacts/screenshots`. `warn`
+    # rather than `ignore`, because a red run with no screenshot is itself a finding
+    # (`screenshotOnRunFailure` is on).
+    - name: keep the evidence when it fails
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cypress-${{ inputs.browser }}-${{ inputs.shard }}-of-${{ inputs.shards }}
+        path: |
+          e2e/artifacts/screenshots
+          ${{ runner.temp }}/client.log
+          ${{ runner.temp }}/server.log
+        if-no-files-found: warn

@@ -15,14 +15,18 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { KEYWORD_KINDS, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, fillParams, type KeywordKind } from "@jackioh/shared";
 
 import {
   GLOSSARY,
   KEYWORD_MARK,
   RULED_TERMS,
+  SHORT_REMINDERS,
+  SHORT_TERMS,
   inPlayerWords,
+  splitPairedRule,
   type GlossaryTermId,
+  type StatusTermId,
   type TriggerTermId,
   type VerbTermId,
 } from "./glossary.ts";
@@ -52,22 +56,44 @@ function ruleColumn(section: "6.1" | "6.2" | "6.3"): Map<string, string> {
   return rules;
 }
 
+/** The Cry line the glossary printed before R500 shortened it: §6.2's ruling in full. */
+const CRY_RULING_BEFORE_R500 =
+  "When you play this card from your hand, or it is cast (Cast on draw, Echo, Call to Chaos). Not when it is summoned, copied, Recruited, Reborn or Transformed into";
+
+/** R500: a short reminder is one line of at most this many words. */
+const SHORT_REMINDER_MAX_WORDS = 16;
+
+function isShort(id: GlossaryTermId): id is (typeof SHORT_TERMS)[number] {
+  return (SHORT_TERMS as readonly string[]).includes(id);
+}
+
 /** Where a glossary id's SPEC row spells it differently (a trailing X, a capital). */
 const SPEC_ROW_NAME: Readonly<Partial<Record<GlossaryTermId, string>>> = {
   Armor: "Armor X",
   Lucky: "Lucky X",
+  Brittle: "Brittle X",
+  "Spell Damage": "Spell Damage X",
   "Start of game": "Start of Game",
   "Once per turn": "Once per Turn",
   Combo: "Combo X",
   Echo: "Echo X",
   Tribute: "Tribute X",
+  // Patch v0.2.0 (R512): the catalog's spelling of SPEC's row, and the rows that name several forms.
+  "Can't be in Defense Position": "Cannot be in Defense Position",
+  Activate: "Activate / Activate X / Activate ♾️",
+  Degrade: "Degrade / Upgrade",
+  Upgrade: "Degrade / Upgrade",
 };
+
+/** R512: the one SPEC row the glossary splits in two, and which half of it each term takes. */
+const PAIRED_HALF: Readonly<Partial<Record<GlossaryTermId, 0 | 1>>> = { Degrade: 0, Upgrade: 1 };
 
 function specRule(section: "6.1" | "6.2" | "6.3", id: GlossaryTermId): string {
   const name = SPEC_ROW_NAME[id] ?? id;
   const rule = ruleColumn(section).get(name);
   if (rule === undefined) throw new Error(`SPEC §${section} has no row "${name}"`);
-  return rule;
+  const half = PAIRED_HALF[id];
+  return half === undefined ? rule : splitPairedRule(rule)[half];
 }
 
 const TRIGGERS: readonly TriggerTermId[] = [
@@ -82,6 +108,15 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Echo",
   "Cast on draw",
   "Quickdraw",
+  "Activate",
+];
+
+/** R512: §6.1's statuses that are not keyword kinds, which patch v0.2.0's cards print. */
+const STATUSES: readonly StatusTermId[] = [
+  "Can't be in Defense Position",
+  "Can't be attacked",
+  "Only Units in this lane can attack this",
+  "Berserk",
 ];
 
 const VERBS_6_3: readonly VerbTermId[] = [
@@ -94,9 +129,24 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Vanilla",
   "Lock",
   "Choose one",
+  "Counter",
+  "Steal",
+  "Unlock",
+  "Flicker",
+  "Degrade",
+  "Upgrade",
+  "Plague Token",
+  "Set health",
+  "Redirect",
+  "End the turn",
+  "Trigger a Cry",
+  "Look at a hand",
 ];
 
-/** "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, and R346's PI. */
+/**
+ * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
+ * patch v0.2.0's AN AT BR SD IS.
+ */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -115,6 +165,11 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Can't attack": "NA",
   Armor: "AR",
   Lucky: "LK",
+  Animated: "AN",
+  "Animated on your turn": "AT",
+  Brittle: "BR",
+  "Spell Damage": "SD",
+  "Immune to Spells": "IS",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -292,18 +347,26 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(KEYWORD_MARK).toEqual(MARKS);
   });
 
+  it("B11 KEYWORD_MARK has a distinct two-letter mark for every keyword kind, patch v0.2.0's included", () => {
+    expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...KEYWORD_KINDS].sort());
+    const marks = KEYWORD_KINDS.map((kind) => KEYWORD_MARK[kind]);
+    for (const [index, mark] of marks.entries()) expect(mark, KEYWORD_KINDS[index]).toMatch(/^[A-Z]{2}$/);
+    expect(new Set(marks).size).toBe(marks.length);
+  });
+
   it("B11 every §6.2 term, with SPEC §6.2's rule text (or, for a ruled term, not the overridden Rule column)", () => {
     for (const id of TRIGGERS) {
       const entry = GLOSSARY[id];
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.2");
-      if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
+      if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
+      else if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
       else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.2", id)));
     }
   });
 
-  it("B11 Cry states §6.2's ruling: played from hand or cast, never summoned, copied, Recruited, Reborn or Transformed", () => {
+  it("B11 R500 Cry states §6.2's ruling, short: played or cast, never onto the field another way", () => {
     // The ruling this pins, read from SPEC so a change there fails here.
     const row = SPEC.split("\n").find((line) => line.startsWith("| Cry |"));
     expect(row).toBeDefined();
@@ -311,11 +374,28 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(row).toContain("Copies, Recruit, Reborn, tokens and Transform results do not fire it");
 
     const rule = GLOSSARY.Cry.rule;
+    expect(rule).toBe(SHORT_REMINDERS.Cry);
     expect(rule).not.toContain("enters the field");
-    expect(rule).toMatch(/play this card from your hand/);
-    for (const cast of ["Cast on draw", "Echo", "Call to Chaos"]) expect(rule).toContain(cast);
-    for (const never of ["summoned", "copied", "Recruited", "Reborn", "Transformed"]) expect(rule).toContain(never);
+    expect(rule).toMatch(/play this card/);
+    expect(rule).toMatch(/casts it/);
+    expect(rule).toMatch(/^[^.]*\. Never /);
     expect(RULED_TERMS).toEqual(["Cry"]);
+  });
+
+  it("R500 Cry and Tribute are short reminders, each shorter than the SPEC text it replaces and a single line", () => {
+    expect([...SHORT_TERMS]).toEqual(["Cry", "Tribute"]);
+    expect(GLOSSARY.Tribute.rule).toBe(SHORT_REMINDERS.Tribute);
+    expect(GLOSSARY.Tribute.section).toBe("§6.3");
+    expect(SHORT_REMINDERS.Cry.length).toBeLessThan(CRY_RULING_BEFORE_R500.length);
+    expect(SHORT_REMINDERS.Tribute.length).toBeLessThan(inPlayerWords(specRule("6.3", "Tribute")).length);
+    for (const id of SHORT_TERMS) {
+      const words = SHORT_REMINDERS[id].split(/\s+/).length;
+      expect(words, id).toBeLessThanOrEqual(SHORT_REMINDER_MAX_WORDS);
+      expect(SHORT_REMINDERS[id], id).not.toMatch(/\n|\(R\d+\)|library|sacrific/i);
+    }
+    // Tribute's reminder is Units only (R428: Carnivorous Cube no longer eats the backrow).
+    expect(SHORT_REMINDERS.Tribute).toContain("Units");
+    expect(SHORT_REMINDERS.Tribute).not.toMatch(/permanent|backrow/i);
   });
 
   it("B11 every §6.3 term, with SPEC §6.3's rule text, and Radiant under §5.2 with a non-empty rule", () => {
@@ -324,7 +404,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.3");
-      expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
+      if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
+      else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
     }
     const radiant = GLOSSARY.Radiant;
     expect(radiant.id).toBe("Radiant");
@@ -343,14 +424,52 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
     expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
-    expect(GLOSSARY.Tribute.rule).toMatch(/^As an additional cost of playing a card, tribute X of your units/);
+    // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
+    expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific/i);
     }
   });
 
-  it("B11 the glossary is exactly those 37 terms, each with a label, a rule and an alias list", () => {
-    const expected = [...KEYWORD_KINDS, ...TRIGGERS, ...VERBS_6_3, "Radiant"].sort();
+  it("R512 every §6.1 status a v0.2.0 card prints, with SPEC §6.1's rule text in players' words", () => {
+    for (const id of STATUSES) {
+      const entry = GLOSSARY[id];
+      expect(entry, id).toBeDefined();
+      expect(entry.id, id).toBe(id);
+      expect(entry.section, id).toBe("§6.1");
+      expect(entry.rule, id).toBe(inPlayerWords(specRule("6.1", id)));
+    }
+    // The catalog writes "Can't"; SPEC's row says "Cannot", which stays an alias.
+    expect(GLOSSARY["Can't be in Defense Position"].aliases).toContain("Cannot be in Defense Position");
+  });
+
+  it("R512 SPEC's one row \"Degrade / Upgrade\" is two terms, each its own word with the row's shared rest", () => {
+    const row = ruleColumn("6.3").get("Degrade / Upgrade");
+    expect(row).toBeDefined();
+    expect(splitPairedRule("Weaken / strengthen a card: one change per application (R386)")).toEqual([
+      "Weaken a card: one change per application (R386)",
+      "Strengthen a card: one change per application (R386)",
+    ]);
+    expect(GLOSSARY.Degrade.rule).toBe("Weaken a card: one change per application");
+    expect(GLOSSARY.Upgrade.rule).toBe("Strengthen a card: one change per application");
+    expect(GLOSSARY.Degrade.section).toBe("§6.3");
+    expect(GLOSSARY.Upgrade.section).toBe("§6.3");
+    // A rule with no pair is itself, twice.
+    expect(splitPairedRule("Take control")).toEqual(["Take control", "Take control"]);
+  });
+
+  it("R512 a ruling's number is no player's word: every rule is printed without SPEC's citations", () => {
+    expect(inPlayerWords("Once per turn (R384)")).toBe("Once per turn");
+    expect(inPlayerWords("one of your other Units (R41, R428)")).toBe("one of your other Units");
+    expect(inPlayerWords("A rule (with a note) stays")).toBe("A rule (with a note) stays");
+    for (const entry of Object.values(GLOSSARY)) expect(entry.rule, entry.id).not.toMatch(/\(R\d+/);
+    expect(GLOSSARY.Activate.rule).toBe(
+      'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
+    );
+  });
+
+  it("B11 the glossary is exactly those terms, each with a label, a rule and an alias list", () => {
+    const expected = [...KEYWORD_KINDS, ...STATUSES, ...TRIGGERS, ...VERBS_6_3, "Radiant"].sort();
     expect(Object.keys(GLOSSARY).sort()).toEqual(expected);
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.id, key).toBe(key);
@@ -364,5 +483,102 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY["Start of turn"].aliases).toContain("Start of your turn");
     expect(GLOSSARY["Start of game"].aliases).toContain("Start of Game");
     expect(GLOSSARY["Once per turn"].aliases).toContain("Once per Turn");
+  });
+});
+
+/* ------------------------------------------------------------------------------- patch v0.2.0 */
+
+/** A catalog face's text as a player reads it: its `{key}`s filled with the printed numbers. */
+function played(id: string, face: "base" | "radiant" = "base"): string {
+  const card = CATALOG[id];
+  if (card === undefined) throw new Error(`the catalog has no ${id}`);
+  return fillParams(card, face);
+}
+
+/** Every catalog face's text as a player reads it. */
+const PLAYED_TEXTS: readonly { where: string; text: string }[] = Object.values(CATALOG).flatMap((card) => [
+  { where: `${card.id} base`, text: fillParams(card, "base") },
+  { where: `${card.id} radiant`, text: fillParams(card, "radiant") },
+]);
+
+describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own texts", () => {
+  it("R384 Activate, Activate 2 and Activate ♾️ are one term each, with the colon; a trap's \"Activates when\" is not", () => {
+    expect(termsOf(played("classic-007"))).toContainEqual({ text: "Activate:", term: "Activate" });
+    expect(termsOf(played("classicplus-076-1", "radiant"))).toContainEqual({ text: "Activate 2:", term: "Activate" });
+    expect(termsOf(played("classic-021"))).toContainEqual({ text: "Activate ♾️:", term: "Activate" });
+    expect(termsOf("Activate ♾: deal 1")).toEqual([{ text: "Activate ♾:", term: "Activate" }]);
+    expect(termsIn(played("classic-010"))).not.toContain("Activate");
+    expect(termsIn("Once this has activated: draw 1")).not.toContain("Activate");
+  });
+
+  it("R512 each new verb is found where a card prints it", () => {
+    const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
+      ["Counter", "classic-017", "base", "Counter"],
+      ["Steal", "classic-032", "base", "Steal"],
+      ["Unlock", "classicplus-077", "base", "Unlock"],
+      ["Flicker", "classic-014", "radiant", "Flicker"],
+      ["Degrade", "classicplus-008", "base", "Degrade"],
+      ["Upgrade", "classicplus-071", "base", "Upgrade"],
+      ["Plague Token", "classic-039", "base", "Plague Tokens"],
+      ["Plague Token", "classic-069", "base", "Plague Token"],
+      ["Set health", "classic-029", "base", "Set a hero's health"],
+      ["Redirect", "classic-052", "base", "Redirect"],
+      ["End the turn", "classicplus-026", "base", "End your turn"],
+      ["Trigger a Cry", "classic-054", "base", "Trigger the Cry"],
+      ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
+    ];
+    for (const [term, id, face, spelling] of cases) {
+      // As for any term, a number right after it is taken with it ("Degrade 4 random cards").
+      const found = termsOf(played(id, face)).filter((entry) => entry.term === term);
+      expect(found.length, `${id} ${face}`).toBeGreaterThan(0);
+      expect(found.some((entry) => entry.text === spelling || entry.text.startsWith(`${spelling} `)), `${id} ${face}: ${spelling}`).toBe(true);
+    }
+  });
+
+  it("R512 each new status, and the v0.2.0 keyword kinds, are found where a card prints them", () => {
+    expect(termsIn(played("classicplus-051"))).toEqual(expect.arrayContaining(["Can't be in Defense Position", "Can't be attacked"]));
+    expect(termsIn(played("classicplus-019-1"))).toContain("Only Units in this lane can attack this");
+    expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
+    expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
+    expect(termsIn(played("classicplus-019-2"))).toContain("Berserk");
+    expect(termsOf(played("classicplus-074"))).toContainEqual({ text: "Brittle 4", term: "Brittle" });
+    expect(termsIn(played("classicplus-038"))).toContain("Spell Damage");
+    expect(termsIn(played("classic-005"))).toContain("Animated");
+    expect(termsIn(played("classicplus-012-8"))).toContain("Animated on your turn");
+    // SPEC's own spelling is an alias.
+    expect(termsOf("Cannot be in Defense Position.")).toEqual([{ text: "Cannot be in Defense Position", term: "Can't be in Defense Position" }]);
+  });
+
+  it("R512 matching stays case-sensitive: a lower-case \"steal it\" or \"can't attack or be attacked\" is plain words", () => {
+    expect(termsIn("you may Tribute this to steal it")).toEqual(["Tribute"]);
+    expect(termsIn("That Unit can't attack or be attacked")).toEqual([]);
+    expect(termsIn("This can't go Berserk.")).toEqual(["Berserk"]);
+  });
+
+  it("R512 every new term has at least one catalog text that prints it", () => {
+    const fresh: readonly GlossaryTermId[] = [
+      ...STATUSES,
+      "Activate",
+      "Counter",
+      "Steal",
+      "Unlock",
+      "Flicker",
+      "Degrade",
+      "Upgrade",
+      "Plague Token",
+      "Set health",
+      "Redirect",
+      "End the turn",
+      "Trigger a Cry",
+      "Look at a hand",
+    ];
+    const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
+    for (const term of fresh) expect(found.has(term), term).toBe(true);
+  });
+
+  it("R512 tokens stay lossless over every text a player reads, numbers filled in", () => {
+    for (const { where, text } of PLAYED_TEXTS) {
+      expect(joined(text), where).toBe(text);
+    }
   });
 });

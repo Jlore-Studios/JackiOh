@@ -1,5 +1,5 @@
-// The site footer: the privacy policy, the patch notes with the current version (R375), and a way
-// to reach the people who run JackiOh.
+// The site footer: the privacy policy, the patch notes (R388), and a way to reach the people who run
+// JackiOh.
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
 // email address. Kept off the board. The contact is the repository's public issue tracker until
@@ -7,7 +7,6 @@
 
 import type { ReactElement } from "react";
 
-import { CURRENT_VERSION } from "../cards/patches.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";
 
@@ -20,7 +19,6 @@ export const siteFooterTestid = {
   root: "site-footer",
   privacy: "site-footer-privacy",
   patchNotes: "site-footer-patch-notes",
-  version: "site-footer-version",
   contact: "site-footer-contact",
 } as const;
 
@@ -38,11 +36,6 @@ export function SiteFooter(): ReactElement {
           Contact us on GitHub
         </a>
       </nav>
-      <p className="site-footer__version">
-        <a href={paths.patchNotes} data-testid={siteFooterTestid.version} onClick={followInApp(paths.patchNotes)}>
-          JackiOh {CURRENT_VERSION}
-        </a>
-      </p>
     </footer>
   );
 }

@@ -8,6 +8,10 @@
 //   #68 Twisted Sorcerer hand only          your hero below 10, strict
 //   #71 Intern Stimmy    hand and field     your library strictly larger than the opponent's
 //   #93 Combo-Index      field only         your turn, cards played reach its grade, not at S
+//   C #22 Mid Runner     hand only          your mana is 4 or more now (what "when you played this" reads)
+//   C #36 Burn           hand only          base: mana left after paying its price now; Radiant: max mana; 4+
+//   C #40 MC Tech        hand only          your opponent controls 4 or more permanents
+//   C+ #50 Adaptive Growth hand only        you control fewer Units than the opponent
 //
 // The key is present and `true`, or absent: `glows` below fails on a key that is present with any
 // other value.
@@ -19,7 +23,7 @@
 // `NNN-slug.test.ts` points here (packages/cards/README.md §5), and the last test pins the set of
 // cards that declare the hook to R195's list, so a new hook cannot land without a proof.
 
-import { createRng, subsystems, type CardInstance } from "@jackioh/engine";
+import { createRng, stepParam, subsystems, type CardInstance } from "@jackioh/engine";
 import type { CardView, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { CARDS } from "../src/index";
@@ -615,21 +619,332 @@ describe("R196 a crafted #53 Reno + #68 Twisted Sorcerer glows when either print
 });
 
 // =============================================================================================
+// Classic #22 Mid Runner (hand only): your mana is {threshold} or more now
+// =============================================================================================
+
+describe("C #22 Mid Runner lights up in hand while your mana reaches its threshold (R195)", () => {
+  const RUNNER = "classic-022";
+  const ANCHOR = "core-010";
+  const TARGETS = ["core-008", "core-019", "core-011"];
+
+  function bounces(s: Scenario): number {
+    return countOf(s, "bounced");
+  }
+
+  for (const face of ["base", "radiant"] as const) {
+    it(`R195 ${face}: with 4 mana it glows in hand, and played now it bounces two`, () => {
+      const s = scenario({ p1: { hand: [{ def: RUNNER, radiant: face === "radiant" }, ANCHOR] }, p2: { hand: [ANCHOR], field: TARGETS } });
+
+      expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(true);
+      s.play(RUNNER, { zone: 1 });
+      expect(bounces(s)).toBe(2);
+    });
+
+    it(`R195 ${face}: with 3 mana it does not glow, and played now it bounces nothing`, () => {
+      const s = scenario({ p1: { hand: [{ def: RUNNER, radiant: face === "radiant" }, ANCHOR], mana: 3 }, p2: { hand: [ANCHOR], field: TARGETS } });
+
+      expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(false);
+      s.play(RUNNER, { zone: 1 });
+      expect(bounces(s)).toBe(0);
+    });
+  }
+
+  it("R195 R386 a Degrade of the threshold to 5: 4 mana neither glows nor bounces", () => {
+    const s = scenario({ p1: { hand: [RUNNER, ANCHOR] }, p2: { hand: [ANCHOR], field: TARGETS } });
+    stepParam(nth(copiesInHand(s, RUNNER), 0), "threshold", 1);
+
+    expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(false);
+    s.play(RUNNER, { zone: 1 });
+    expect(bounces(s)).toBe(0);
+  });
+
+  it("R195 on the field it never glows, and the opponent's view never carries the flag", () => {
+    const s = scenario({ p1: { hand: [RUNNER, ANCHOR], field: [RUNNER] }, p2: { hand: [ANCHOR] } });
+
+    expect(glows(s.view("p1").you.units[0])).toBe(false);
+    expect(JSON.stringify(s.view("p2"))).not.toContain("conditionActive");
+  });
+
+  it("R195 on the opponent's turn it never glows, whatever its owner's mana", () => {
+    const s = scenario({ active: "p2", p1: { hand: [RUNNER, ANCHOR] }, p2: { hand: [ANCHOR], field: TARGETS } });
+
+    expect(handGlows(s, nth(copiesInHand(s, RUNNER), 0))).toBe(false);
+  });
+});
+
+// =============================================================================================
+// Classic #36 Burn (hand only): mana left after paying now (base), max mana (Radiant)
+// =============================================================================================
+
+describe("C #36 Burn lights up in hand when it would draw if played now (R195)", () => {
+  const BURN = "classic-036";
+  const MONKEY = "classic-077"; // Anti-Magic Monkey: Aura: Spells cost (1) more.
+  const ANCHOR = "core-010";
+  const LIBRARY = ["core-008", "core-011"];
+  const AT_HERO = [{ pick: "hero" as const, player: "p2" as const }];
+
+  function drew(s: Scenario): number {
+    return countOf(s, "drawn");
+  }
+
+  it("R195 base: a (0) Burn with 4 mana glows, and played now it draws", () => {
+    const s = scenario({ p1: { hand: [BURN, ANCHOR], library: LIBRARY }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(true);
+    s.play(BURN, { targets: AT_HERO });
+    expect(drew(s)).toBe(1);
+  });
+
+  it("R195 base: with 3 mana it does not glow, and played now it draws nothing", () => {
+    const s = scenario({ p1: { hand: [BURN, ANCHOR], library: LIBRARY, mana: 3 }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(false);
+    s.play(BURN, { targets: AT_HERO });
+    expect(drew(s)).toBe(0);
+  });
+
+  it("R195 R65 base: it reads the mana left after paying its price now — a Burn made to cost (1) with 4 mana does not glow, and draws nothing", () => {
+    const s = scenario({ p1: { hand: [{ def: BURN, costMod: 1 }, ANCHOR], library: LIBRARY }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(false);
+    s.play(BURN, { targets: AT_HERO });
+    expect(drew(s)).toBe(0);
+  });
+
+  it("R195 R65 base: a surcharge moves it — under C #77 Anti-Magic Monkey a Burn costs (1), and 4 mana neither glows nor draws", () => {
+    const s = scenario({ p1: { hand: [BURN, ANCHOR], library: LIBRARY }, p2: { hand: [ANCHOR], field: [MONKEY] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(false);
+    s.play(BURN, { targets: AT_HERO });
+    s.expectMana("p1", 3);
+    expect(drew(s)).toBe(0);
+  });
+
+  it("R195 radiant: max mana 4 glows with no mana left, and played now it draws", () => {
+    const s = scenario({ p1: { hand: [{ def: BURN, radiant: true }, ANCHOR], library: LIBRARY, mana: 0 }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(true);
+    s.play(BURN, { targets: AT_HERO });
+    expect(drew(s)).toBe(1);
+  });
+
+  it("R195 radiant: max mana 3 does not glow however much mana is left, and draws nothing", () => {
+    const s = scenario({ turn: 5, p1: { hand: [{ def: BURN, radiant: true }, ANCHOR], library: LIBRARY, mana: 9 }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(false);
+    s.play(BURN, { targets: AT_HERO });
+    expect(drew(s)).toBe(0);
+  });
+
+  it("R195 on the opponent's turn it never glows", () => {
+    const s = scenario({ active: "p2", p1: { hand: [BURN, ANCHOR], library: LIBRARY }, p2: { hand: [ANCHOR] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, BURN), 0))).toBe(false);
+  });
+});
+
+// =============================================================================================
+// Classic #40 MC Tech (hand only): your opponent controls {threshold} or more permanents
+// =============================================================================================
+
+describe("C #40 MC Tech lights up in hand while the opponent controls enough permanents (R195)", () => {
+  const TECH = "classic-040";
+  const ANCHOR = "core-010";
+
+  function steals(s: Scenario): number {
+    return countOf(s, "controlChanged");
+  }
+
+  it("R195 base: 4 enemy permanents glow, and played now it steals one", () => {
+    const s = scenario({ p1: { hand: [TECH, ANCHOR] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011"], backrow: ["core-073"] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(true);
+    s.play(TECH, { zone: 5 });
+    expect(steals(s)).toBe(1);
+  });
+
+  it("R195 base: 3 enemy permanents do not glow, and played now it steals nothing", () => {
+    const s = scenario({ p1: { hand: [TECH, ANCHOR] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011"] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(false);
+    s.play(TECH, { zone: 5 });
+    expect(steals(s)).toBe(0);
+  });
+
+  it("R195 R13 a face-down trap counts, a card dormant under a Stack does not", () => {
+    const s = scenario({
+      p1: { hand: [TECH, ANCHOR] },
+      p2: { hand: [ANCHOR], field: ["core-008", { def: "core-092", stack: true }, "core-019"], backrow: [{ def: "core-096", faceUp: false }] },
+    });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(false);
+  });
+
+  it("R195 radiant: 4 enemy permanents glow, and played now it asks which to steal", () => {
+    const s = scenario({
+      p1: { hand: [{ def: TECH, radiant: true }, ANCHOR] },
+      p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011"], backrow: [{ def: "core-096", faceUp: false }] },
+    });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(true);
+    s.play(TECH, { zone: 5 });
+    expect(s.state.pending?.options).toHaveLength(4);
+  });
+
+  it("R195 on the field it never glows", () => {
+    const s = scenario({ p1: { hand: [ANCHOR], field: [TECH] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011", "core-001"] } });
+
+    expect(glows(s.view("p1").you.units[0])).toBe(false);
+  });
+
+  it("R195 on the opponent's turn it never glows, however many permanents they control", () => {
+    const s = scenario({ active: "p2", p1: { hand: [TECH, ANCHOR] }, p2: { hand: [ANCHOR], field: ["core-008", "core-019", "core-011", "core-001"] } });
+
+    expect(handGlows(s, nth(copiesInHand(s, TECH), 0))).toBe(false);
+  });
+});
+
+// =============================================================================================
+// C+ #50 Adaptive Growth (hand only): you control fewer Units than your opponent
+// =============================================================================================
+
+describe("C+ #50 Adaptive Growth lights up while you control fewer Units (R195)", () => {
+  const GROWTH = "classicplus-050";
+  const VANILLA = "core-008";
+
+  function growth(mine: number, theirs: number, radiant = false): Scenario {
+    return scenario({
+      seed: `r195-cp050-${mine}-${theirs}-${String(radiant)}`,
+      p1: { hand: [radiant ? { def: GROWTH, radiant: true } : GROWTH, "core-005"], field: Array.from({ length: mine }, () => VANILLA) },
+      p2: { hand: ["core-005"], field: Array.from({ length: theirs }, () => VANILLA) },
+    });
+  }
+
+  it("R195 with fewer Units it glows in hand, and the Spell then gives every Unit −3/−3", () => {
+    const s = growth(1, 2);
+    expect(handGlows(s, s.card(GROWTH))).toBe(true);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 1, health: 1 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
+  });
+
+  it("R195 with equal counts it does not glow, and the Spell then gives every Unit +2/+2", () => {
+    const s = growth(1, 1);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 6, health: 6 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 6, health: 6 });
+  });
+
+  it("R195 with more Units it does not glow either", () => {
+    const s = growth(2, 1);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+  });
+
+  it("R195 the radiant face glows on the same count: fewer, and only the enemy Units get −4/−4", () => {
+    const s = growth(1, 2, true);
+    expect(handGlows(s, s.card(GROWTH))).toBe(true);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 4, health: 4 });
+    expect(s.unit("p2", 1)).toBeNull();
+  });
+
+  it("R195 the radiant face with equal counts does not glow, and gives your Units +3/+3", () => {
+    const s = growth(1, 1, true);
+    expect(handGlows(s, s.card(GROWTH))).toBe(false);
+    s.play(GROWTH);
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 7, health: 7 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 4, health: 4 });
+  });
+
+  it("R195 the opponent's view never carries the flag (its hand is a count)", () => {
+    const s = growth(0, 2);
+    expect(s.view("p2").opponent.hand).toEqual({ count: 2 });
+  });
+});
+
+// =============================================================================================
 // The set of cards that declare the hook is R195's list
 // =============================================================================================
 
 describe("R195 the cards that declare conditionMet", () => {
-  it("R195 are exactly #10, #53, #68, #71 and #93, on both faces, so a new hook cannot land untested", () => {
+  // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
+  // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum).
+  it("R195 are exactly #10, #53, #68, #71 and #93, Classic #22, #36, #40 and #69, and C+ #18, #19.5, #37 and #50, on both faces, so a new hook cannot land untested", () => {
     const hooked = Object.entries(CARDS)
       .filter(([, card]) => card.base.conditionMet !== undefined || card.radiant.conditionMet !== undefined)
       .map(([id]) => id)
       .sort();
-    expect(hooked).toEqual(["core-010", "core-053", "core-068", "core-071", "core-093"]);
+    expect(hooked).toEqual([
+      "classic-022",
+      "classic-036",
+      "classic-040",
+      "classic-069",
+      "classicplus-018",
+      "classicplus-019-5",
+      "classicplus-037",
+      "classicplus-050",
+      "core-010",
+      "core-053",
+      "core-068",
+      "core-071",
+      "core-093",
+    ]);
 
     for (const id of hooked) {
       const card = CARDS[id];
       expect(card?.base.conditionMet, `${id} base`).toBeTypeOf("function");
       expect(card?.radiant.conditionMet, `${id} radiant`).toBeTypeOf("function");
     }
+  });
+});
+
+// =============================================================================================
+// C #69 Plague Charger (field only): while it has a Plague Token
+// =============================================================================================
+
+describe("C #69 Plague Charger lights up while it has a Plague Token (R195)", () => {
+  const CHARGER = "classic-069";
+  const VANILLA = "core-008"; // (1) Unit 4/4.
+  const FILLER = "core-005";
+
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R195 ${face}: with a token it glows on the field, and it then strikes first: a 4/4 dies before striking back`, () => {
+      const s = scenario({
+        seed: `r195-c069-${face}-on`,
+        p1: { hand: [FILLER], field: [{ def: CHARGER, radiant, counters: { plague: 1 } }] },
+        p2: { hand: [FILLER], field: [VANILLA] },
+      });
+
+      expect(glows(s.view("p1").you.units[0])).toBe(true);
+      s.attack(CHARGER, s.card(VANILLA));
+      s.expectInZone(VANILLA, "graveyard");
+      expect(s.events.filter((event) => event.type === "damage" && event.targetId === s.card(CHARGER).id)).toHaveLength(0);
+    });
+
+    it(`R195 ${face}: with no token it does not glow, and it then has no First Strike: the 4/4 strikes back`, () => {
+      const s = scenario({
+        seed: `r195-c069-${face}-off`,
+        p1: { hand: [FILLER], field: [{ def: CHARGER, radiant }] },
+        p2: { hand: [FILLER], field: [VANILLA] },
+      });
+
+      expect(glows(s.view("p1").you.units[0])).toBe(false);
+      s.attack(CHARGER, s.card(VANILLA));
+      expect(s.events.filter((event) => event.type === "damage" && event.targetId === s.card(CHARGER).id)).toHaveLength(1);
+    });
+  }
+
+  it("R195 in hand it never glows: a card there holds no tokens (R78)", () => {
+    const s = scenario({ seed: "r195-c069-hand", p1: { hand: [CHARGER, FILLER] } });
+    expect(handGlows(s, s.card(CHARGER))).toBe(false);
+  });
+
+  it("R195 the opponent's plagued Charger carries no flag in your view", () => {
+    const s = scenario({ seed: "r195-c069-theirs", p1: { hand: [FILLER] }, p2: { hand: [FILLER], field: [{ def: CHARGER, counters: { plague: 2 } }] } });
+    expect(glows(s.view("p1").opponent.units[0])).toBe(false);
+    expect(glows(s.view("p2").you.units[0])).toBe(true);
   });
 });

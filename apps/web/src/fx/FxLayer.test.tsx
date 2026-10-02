@@ -422,7 +422,7 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
       { type: "damage", sourceId: "u2", targetId: "u10", amount: 7, combat: false },
       { type: "healed", targetId: "hero-p1", amount: 3 },
       { type: "trapFired", instanceId: "b20", defId: "core-084", controller: "p1", row: "backrow", lane: 5 },
-      { type: "destroyed", instanceId: "u9", defId: "core-040", owner: "p2", attack: 1, maxHealth: 1, killerId: "u2" },
+      { type: "destroyed", instanceId: "u9", defId: "core-040", owner: "p2", controller: "p2", attack: 1, maxHealth: 1, killerId: "u2" },
       { type: "manaChanged", player: "p1", current: 4, max: 4 },
       { type: "turnStarted", player: "p2", turn: 4 },
       { type: "gameOver", winner: "p1", reason: "hero-death" },

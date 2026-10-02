@@ -4,11 +4,13 @@
 import type { CardType, PlayerId, Row, Tag } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { defOf } from "../catalog";
+import { cardTypeOf } from "../faces";
 import type { DamageTarget } from "../damage";
+import { unaffectedBy } from "../restrictions";
 import type { EffectContext } from "../script";
 import { findInstance, type CardInstance } from "../state";
 import { exitMark, leftFieldAfter } from "../stays";
-import { adjacent, cardAt, isBuried, slotOf, slotsOf, type ZoneSlot } from "../zones";
+import { adjacent, cardAt, carriedUnitsOf, isBuried, rowSize, slotOf, slotsOf, type ZoneSlot } from "../zones";
 
 export type TargetSpec =
   /** The unit running the script. */
@@ -63,6 +65,9 @@ export function resolveTarget(ctx: EffectContext, spec: TargetSpec): DamageTarge
     // pile — one the play's own Stack card buried at §10.5 step 4 (a crafted Felinor Fiender played
     // onto the unit its Cry chose): #61's copy and #22's meal fizzle, as #68's damage does.
     if (isBuried(ctx.state, instance)) return null;
+    // B5 E35: "a Spell can't target it and doesn't affect it" — the pick the play pipeline refuses to
+    // offer, and a pick that became immune since, is passed by.
+    if (unaffectedBy(ctx, instance)) return null;
     return { kind: "unit", instance };
   }
   return null;
@@ -83,6 +88,8 @@ export function instanceOnItsStay(ctx: EffectContext, instanceId: string): CardI
   if (instance === undefined) return null;
   // §3.2, R13: a card dormant under a Stack pile is not on the field for effects.
   if (isBuried(ctx.state, instance)) return null;
+  // B5 E35: a Spell's effect passes a unit immune to Spells by, named by id as much as chosen.
+  if (unaffectedBy(ctx, instance)) return null;
   return leftFieldAfter(ctx.state, stayMarkOf(ctx, instance.id), instance.id) ? null : instance;
 }
 
@@ -185,8 +192,10 @@ export function sidesOf(ctx: EffectContext, side: BoardScope["side"]): PlayerId[
 /** Whether one card passes a scope's filters. Zone membership is the caller's business. */
 export function matchesScope(ctx: EffectContext, card: CardInstance, scope: BoardScope = {}): boolean {
   if (scope.excludeSelf === true && ctx.self !== null && card.id === ctx.self.id) return false;
+  // B5 E35: every effect of a Spell passes a unit immune to Spells by — "all Units" included.
+  if (unaffectedBy(ctx, card)) return false;
   const def = defOf(ctx.state, card.defId);
-  if (scope.types !== undefined && !scope.types.includes(def.type)) return false;
+  if (scope.types !== undefined && !scope.types.includes(cardTypeOf(ctx.state, card))) return false;
   if (scope.tags !== undefined && !scope.tags.some((tag) => def.tags.includes(tag))) return false;
   if (scope.notTags !== undefined && scope.notTags.some((tag) => def.tags.includes(tag))) return false;
   return true;
@@ -207,9 +216,14 @@ export function cardsInScope(ctx: EffectContext, scope: BoardScope = {}): CardIn
   const out: CardInstance[] = [];
   for (const ref of slotsInScope(ctx, scope)) {
     const card = cardAt(ctx.state, ref);
-    if (card === null) continue;
-    if (!matchesScope(ctx, card, scope)) continue;
-    out.push(card);
+    if (card !== null && matchesScope(ctx, card, scope)) out.push(card);
+    // R446: a Unit a carrier holds is one of that side's units ("all Units" reach it), after the unit
+    // lanes; a backrow scope finds the carrier beneath it and never the Unit.
+    if (ref.row === "units" && ref.lane === rowSize("units")) {
+      for (const unit of carriedUnitsOf(ctx.state, ref.player)) {
+        if (matchesScope(ctx, unit, scope)) out.push(unit);
+      }
+    }
   }
   return out;
 }

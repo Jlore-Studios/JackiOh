@@ -86,8 +86,10 @@ export const paths = {
   practice: "/practice",
   /** The privacy policy (routes/privacy.tsx). Public, like the landing page. */
   privacy: "/privacy",
-  /** R375: every card patch, newest first (routes/patch-notes.tsx). Public, like the privacy policy. */
+  /** R388: every patch and the cards it touched (routes/patch-notes.tsx). Public, like the landing page. */
   patchNotes: "/patch-notes",
+  /** R608, R612: the global ranked ladder (routes/leaderboard.tsx). Gated: every read needs an account. */
+  leaderboard: "/leaderboard",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

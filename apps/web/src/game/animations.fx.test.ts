@@ -104,7 +104,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   healthLost: { type: "healthLost", player: "p1", amount: 3 },
   healed: { type: "healed", targetId: "hero-p1", amount: 2 },
   divineShieldLost: { type: "divineShieldLost", instanceId: "u6" },
-  destroyed: { type: "destroyed", instanceId: "u1", defId: "core-004", owner: "p1", attack: 2, maxHealth: 3, killerId: "u6" },
+  destroyed: { type: "destroyed", instanceId: "u1", defId: "core-004", owner: "p1", controller: "p1", attack: 2, maxHealth: 3, killerId: "u6" },
   enteredGraveyard: { type: "enteredGraveyard", instanceId: "u1", defId: "core-004", owner: "p1" },
   exiled: { type: "exiled", instanceId: "u2", defId: "core-011", owner: "p1" },
   bounced: { type: "bounced", instanceId: "u3", defId: "core-017", owner: "p1" },
@@ -140,6 +140,28 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
+  countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
+  stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
+  unlocked: { type: "unlocked", player: "p2", row: "backrow", lane: 1 },
+  activated: { type: "activated", player: "p1", instanceId: "u1", defId: "core-004", ability: "activate" },
+  animated: { type: "animated", player: "p1", instanceId: "b5", defId: "core-084", backrowLane: 3, unitLane: 3 },
+  deanimated: { type: "deanimated", player: "p1", instanceId: "b5", defId: "core-084", unitLane: 3, backrowLane: 3 },
+  crumbled: { type: "crumbled", instanceId: "u2", defId: "core-004", owner: "p1", zone: "field" },
+  degraded: { type: "degraded", instanceId: "u2", defId: "core-004", change: { kind: "cost", delta: 1 } },
+  upgraded: { type: "upgraded", instanceId: "u2", defId: "core-004", change: { kind: "stats", attack: 2, health: 2 } },
+  numberChanged: { type: "numberChanged", instanceId: "u2", defId: "core-004", key: "attack", value: 3 },
+  redirected: { type: "redirected", what: "damage", fromId: "hero-p1", toId: "hero-p2", byInstanceId: "b5" },
+  healthSet: { type: "healthSet", player: "p2", health: 13, sourceId: "c1" },
+  questProgressed: { type: "questProgressed", player: "p1", instanceId: "b5", quest: "1", progress: 1, goal: 2 },
+  questCompleted: { type: "questCompleted", player: "p1", instanceId: "b5", quest: "1" },
+  rolledBack: { type: "rolledBack", player: "p1", turnsAgo: 2, sides: ["p1", "p2"] },
+  chaosRolled: { type: "chaosRolled", player: "p1", instanceId: "c1", defId: "core-035", effects: ["Destroy all enemy permanents"] },
+  flickered: { type: "flickered", player: "p1", instanceId: "u2", defId: "core-004", row: "units", lane: 2 },
+  drawLimited: { type: "drawLimited", player: "p2" },
+  turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
+  marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -179,7 +201,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table, literally: `type → recipe`, `null` for the 11 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 12 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -224,6 +246,29 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   drawOffered: null,
   drawAnswered: null,
   gameOver: null,
+  // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
+  // and `rolledBack` rewinds the whole board.
+  cardAnnounced: "cast",
+  countered: "fizzle",
+  stolen: "mindControl",
+  unlocked: "lock",
+  activated: "cast",
+  animated: "summon",
+  deanimated: "glint",
+  crumbled: "death",
+  degraded: "buff",
+  upgraded: "buff",
+  numberChanged: "glint",
+  redirected: "lunge",
+  healthSet: "drain",
+  questProgressed: "counter",
+  questCompleted: "radiant",
+  rolledBack: "rewind",
+  chaosRolled: "chaos",
+  flickered: "void",
+  drawLimited: "fizzle",
+  turnCutShort: "banner",
+  marked: "brand",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -258,6 +303,9 @@ const FX_RECIPES = [
   "banner",
   "fatigue",
   "overflow",
+  "chaos",
+  "brand",
+  "rewind",
 ];
 
 /** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */
@@ -306,13 +354,35 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   drawOffered: ["jk-toast-in", 150, "draw-toast"],
   drawAnswered: ["jk-toast-resolve", 300, "draw-toast"],
   gameOver: ["jk-result-overlay", 0, "result-overlay"],
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],
+  countered: ["jk-exile-fade", 450, "hand-card-<instanceId> | graveyard-<side> | exile-<side> | hand-<side>"],
+  stolen: ["jk-cross-centre", 450, "hand-<side>"],
+  unlocked: ["jk-chain-close", 250, "zone-<side>-<row>-<lane>"],
+  activated: ["jk-icon-pop", 300, "card-<instanceId>"],
+  animated: ["jk-summon-scale", 350, "zone-<side>-units-<unitLane>"],
+  deanimated: ["jk-summon-scale", 300, "zone-<side>-backrow-<backrowLane>"],
+  crumbled: ["jk-dissolve", 400, "card-<instanceId> | hand-card-<instanceId> | graveyard-<side>"],
+  degraded: ["jk-stat-tick", 300, "card-<instanceId> | hand-card-<instanceId>"],
+  upgraded: ["jk-stat-tick", 300, "card-<instanceId> | hand-card-<instanceId>"],
+  numberChanged: ["jk-stat-tick", 300, "card-<instanceId> | hand-card-<instanceId>"],
+  redirected: ["jk-snap-back", 350, "card-<toId> | hero-<side>"],
+  healthSet: ["jk-loss-pop", 400, "hero-<side>"],
+  questProgressed: ["jk-badge-tick", 200, "card-<instanceId> | backrow-<side>"],
+  questCompleted: ["jk-radiant-pulse", 500, "card-<instanceId> | backrow-<side>"],
+  rolledBack: ["jk-swap-cross", 600, "board"],
+  chaosRolled: ["jk-banner", 900, "turn-banner"],
+  flickered: ["jk-summon-scale", 300, "zone-<side>-<row>-<lane>"],
+  drawLimited: ["jk-fatigue", 300, "library-<side>"],
+  turnCutShort: ["jk-banner", 600, "turn-banner"],
+  marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 32 rows of S4 carry fx with the listed recipe and the other 11 carry none", () => {
+  it("B1 exactly the 53 rows of S4 and patch v0.2.0 carry fx with the listed recipe and the other 11 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(32);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(53);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {
@@ -595,20 +665,25 @@ describe("B3 default settings", () => {
  * ------------------------------------------------------------------------------------------- */
 
 describe("B4 the effects speed scales the table", () => {
-  it("R201 the effects speed divides every non-zero duration and the burst budget, clamped to [0.5, 2]", () => {
+  it("R201 R435 the effects speed divides every non-zero duration and the burst budget, clamped to [0.25, 3]", () => {
     // 700 + 600 + 600 = 1,900 ms: inside the budget at every speed once the budget is divided too.
     const burst = [TRAP, TURN_STARTED, TURN_AUTO_ENDED];
     expect(scheduledAt(1, burst)).toEqual([700, 600, 600]);
     expect(scheduledAt(2, burst)).toEqual([350, 300, 300]);
     expect(scheduledAt(0.5, burst)).toEqual([1400, 1200, 1200]);
-    // 5 is clamped to FX_SPEED_MAX.
-    expect(scheduledAt(5, burst)).toEqual([350, 300, 300]);
+    expect(scheduledAt(3, burst)).toEqual([233, 200, 200]);
+    expect(scheduledAt(0.25, burst)).toEqual([2800, 2400, 2400]);
+    // 5 is clamped to FX_SPEED_MAX, 0.1 to FX_SPEED_MIN.
+    expect(scheduledAt(5, burst)).toEqual([233, 200, 200]);
+    expect(scheduledAt(0.1, burst)).toEqual([2800, 2400, 2400]);
 
     // Over budget at speed 1, so over budget at every speed, and squeezed by the same factor.
     const over = [TRAP, TRAP, TRAP, TRAP];
     expect(scheduledAt(2, over)).toEqual([300, 300, 300, 300]);
     expect(scheduledAt(0.5, over)).toEqual([1200, 1200, 1200, 1200]);
-    expect(scheduledAt(5, over)).toEqual([300, 300, 300, 300]);
+    expect(scheduledAt(3, over)).toEqual([200, 200, 200, 200]);
+    expect(scheduledAt(0.25, over)).toEqual([2400, 2400, 2400, 2400]);
+    expect(scheduledAt(5, over)).toEqual([200, 200, 200, 200]);
   });
 
   it("B4 scaleForSpeed: 0 stays 0, speed 1 is the identity, other speeds divide and round", () => {
@@ -634,19 +709,19 @@ describe("B4 the effects speed scales the table", () => {
   });
 
   it("B4 scaleForSpeed clamps speeds above FX_SPEED_MAX and below FX_SPEED_MIN", () => {
-    expect(FX_SPEED_MIN).toBe(0.5);
-    expect(FX_SPEED_MAX).toBe(2);
-    expect(scaleForSpeed(300, 5)).toBe(150);
-    expect(scaleForSpeed(300, 100)).toBe(150);
-    expect(scaleForSpeed(300, 0.1)).toBe(600);
-    expect(scaleForSpeed(300, 0.25)).toBe(600);
+    expect(FX_SPEED_MIN).toBe(0.25);
+    expect(FX_SPEED_MAX).toBe(3);
+    expect(scaleForSpeed(600, 5)).toBe(200);
+    expect(scaleForSpeed(600, 100)).toBe(200);
+    expect(scaleForSpeed(300, 0.1)).toBe(1200);
+    expect(scaleForSpeed(300, 0.25)).toBe(1200);
   });
 
   it("B4 a zero or negative speed is clamped to FX_SPEED_MIN rather than dividing by it", () => {
-    expect(scaleForSpeed(300, 0)).toBe(600);
-    expect(scaleForSpeed(300, -2)).toBe(600);
-    expect(scheduledAt(0, [TRAP])).toEqual([1400]);
-    expect(scheduledAt(-1, [TRAP])).toEqual([1400]);
+    expect(scaleForSpeed(300, 0)).toBe(1200);
+    expect(scaleForSpeed(300, -2)).toBe(1200);
+    expect(scheduledAt(0, [TRAP])).toEqual([2800]);
+    expect(scheduledAt(-1, [TRAP])).toEqual([2800]);
   });
 
   it("B4 a zero duration stays zero whatever the speed, valid or not", () => {

@@ -1,11 +1,12 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviours B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
 //
-//   B35  the 155 expected files exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at
+//   B35  the expected files (a play and a death line per catalog Unit, one cast line per anything
+//        else) exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at
 //        byte 4 and brand `M4A ` at byte 8; the manifest lists exactly those keys with each file's
 //        size and its recomputed voiceHash; the directory holds nothing else.
 //        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (3 MiB).
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501).
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
@@ -16,9 +17,10 @@
 // time, each in its own copy of the tree.
 //
 // voiceHash = sha1(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).hex.slice(0, 16), keys in
-// exactly that order, rate/pbas/pmod the EFFECTIVE values (card override ?? persona). It is
-// recomputed here from the Surface's formula, never imported, so the script and this test cannot
-// share a mistake.
+// exactly that order, rate/pbas/pmod the EFFECTIVE values (card override ?? persona), for a persona
+// rendered by macOS `say`; and, since R501, sha1(JSON.stringify({ v: 1, backend: "sapi", voice,
+// rate, semitones, filter, text })) for one rendered by Windows SAPI and ffmpeg. Both are recomputed
+// here from the formula, never imported, so the script and this test cannot share a mistake.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -58,7 +60,6 @@ const REL_LINES = join("src", "audio", "voice-lines.json");
 const REL_MANIFEST = join("src", "audio", "voice-manifest.json");
 const REL_VOICE_DIR = join("public", "audio", "voice");
 
-const EXPECTED_FILE_COUNT = 155;
 const BLOCK = 4096;
 const CHECK_TIMEOUT_MS = 60_000;
 
@@ -87,6 +88,9 @@ const EXPECTED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, c
   card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
 );
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
+/** Core's own count (44 units, 67 spells and traps) plus whatever the other sets bring. */
+const EXPECTED_FILE_COUNT = EXPECTED_KEYS.length;
+const CORE_FILE_COUNT = 155;
 
 const LINES = readJson(LINES_PATH);
 const MANIFEST = readJson(MANIFEST_PATH);
@@ -106,6 +110,15 @@ function voiceHash(input: { say: unknown; rate: unknown; pbas: unknown; pmod: un
     .slice(0, 16);
 }
 
+/** R501: a SAPI persona's hash, over its own fields. */
+function sapiHash(input: { voice: unknown; rate: unknown; semitones: unknown; filter: unknown; text: unknown }): string {
+  const { voice, rate, semitones, filter, text } = input;
+  return createHash("sha1")
+    .update(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones, filter, text }))
+    .digest("hex")
+    .slice(0, 16);
+}
+
 /** The hash `key` must carry, from a voice-lines table (the committed one unless given). */
 function expectedHash(key: string, lines: Json = LINES): string | null {
   const { defId, line } = splitKey(key);
@@ -119,6 +132,9 @@ function expectedHash(key: string, lines: Json = LINES): string | null {
   if (!isRecord(persona)) return null;
   const text = entry[line];
   if (typeof text !== "string") return null;
+  if (persona.backend === "sapi") {
+    return sapiHash({ voice: persona.voice, rate: persona.rate, semitones: persona.semitones, filter: persona.filter, text });
+  }
   return voiceHash({
     say: persona.say,
     rate: entry.rate ?? persona.rate,
@@ -186,7 +202,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^(core-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|death|cast))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|death|cast))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
@@ -259,9 +275,9 @@ function expectReported(root: string, keys: readonly string[]): void {
 // ------------------------------------------------------------------------------------ B35 ---
 
 describe("the committed voice files (B35)", () => {
-  it("B35 expects 155 files: a play and a death line per unit, one cast line per spell and trap", () => {
-    expect(EXPECTED_KEYS).toHaveLength(EXPECTED_FILE_COUNT);
+  it("B35 expects a play and a death line per unit and one cast line per spell and trap, Core's 155 among them", () => {
     expect(new Set(EXPECTED_KEYS).size, "no key twice").toBe(EXPECTED_FILE_COUNT);
+    expect(EXPECTED_KEYS.filter((key) => key.startsWith("core-")), "Core's own lines").toHaveLength(CORE_FILE_COUNT);
   });
 
   it("B35 leaves no expected voice file missing from public/audio/voice", () => {
@@ -343,7 +359,7 @@ describe("the committed voice files (B35)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("B35 keeps nothing in the voice directory but the 155 expected files", () => {
+  it("B35 keeps nothing in the voice directory but the expected files", () => {
     expect(existsSync(VOICE_DIR), `${VOICE_DIR} exists`).toBe(true);
     const expected = new Set(EXPECTED_FILES);
     const present = readdirSync(VOICE_DIR);
@@ -356,8 +372,8 @@ describe("the committed voice files (B35)", () => {
 // ------------------------------------------------------------------------------------ B36 ---
 
 describe("the voice budget (B36)", () => {
-  it("B36 fits the whole set into VOICE_BUDGET_BYTES (3 MiB), counted in 4 KiB blocks", () => {
-    expect(VOICE_BUDGET_BYTES, "the budget the Surface fixes").toBe(3 * 1024 * 1024);
+  it("B36 R501 fits the whole set into VOICE_BUDGET_BYTES (6 MiB), counted in 4 KiB blocks", () => {
+    expect(VOICE_BUDGET_BYTES, "the budget R501 fixes").toBe(6 * 1024 * 1024);
     const sizes = EXPECTED_KEYS.map((key) => sizeOnDisk(key));
     expect(sizes.filter((size) => size === null), "every expected file exists to be measured").toEqual([]);
     const onDisk = sizes.reduce<number>((sum, size) => sum + Math.ceil((size ?? 0) / BLOCK) * BLOCK, 0);
@@ -377,7 +393,7 @@ describe("gen-voice.mjs --check (B37)", () => {
   });
 
   it(
-    "B37 exits 0 on the committed tree and reports 155 files and their bytes",
+    "B37 exits 0 on the committed tree and reports every expected file and their bytes",
     () => {
       const run = runCheck();
       expect(run.status, describeRun(run)).toBe(0);
@@ -496,6 +512,89 @@ describe("gen-voice.mjs --check (B37)", () => {
         target.rate = rate >= 350 ? rate - 10 : rate + 10;
       });
       expectReported(root, stale);
+    },
+    CHECK_TIMEOUT_MS,
+  );
+
+  /**
+   * R501: a line voiced by a Windows SAPI persona, on a card a given catalog holds. The card is
+   * invented (`classicplus-999`), so no real catalog ever has it, and its file is a copy of a real one.
+   */
+  function sapiTree(): { root: string; catalog: string } {
+    const root = copyWebTree();
+    const persona = { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 5, semitones: -2, filter: "lowpass=f=3500", web: { pitch: 1, rate: 1 } };
+    const text = "A voice from another machine.";
+    editLines(root, (lines) => {
+      personasOf(lines)["test-sapi"] = persona;
+      cardsOf(lines)["classicplus-999"] = { kind: "spell", persona: "test-sapi", cast: text };
+    });
+    const voiceDir = join(root, REL_VOICE_DIR);
+    copyFileSync(voicePath("core-005-cast", voiceDir), voicePath("classicplus-999-cast", voiceDir));
+    const bytes = statSync(voicePath("classicplus-999-cast", voiceDir)).size;
+    const hash = sapiHash({ voice: persona.voice, rate: persona.rate, semitones: persona.semitones, filter: persona.filter, text });
+    editManifest(root, (files) => {
+      files["classicplus-999-cast"] = { hash, bytes };
+    });
+    const catalog = join(root, "catalog.json");
+    writeJson(catalog, { ...CATALOG, "classicplus-999": { type: "Spell" } });
+    return { root, catalog };
+  }
+
+  it(
+    "R501 accepts a line voiced by a SAPI persona, hashed over its own fields, against the catalog --catalog names",
+    () => {
+      const { root, catalog } = sapiTree();
+      const run = runCheck(["--root", root, "--catalog", catalog]);
+      expect(run.status, describeRun(run)).toBe(0);
+      expect(reportedKeys(run)).toEqual([]);
+    },
+    CHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "R501 reports a SAPI line whose pitch shift changed, and a card the default catalog does not hold",
+    () => {
+      const { root, catalog } = sapiTree();
+      editLines(root, (lines) => {
+        const persona = personasOf(lines)["test-sapi"];
+        if (!isRecord(persona)) throw new Error("no test-sapi persona");
+        persona.semitones = 3;
+      });
+      expectReported(root, ["classicplus-999-cast"]);
+      const withCatalog = runCheck(["--root", root, "--catalog", catalog]);
+      expect(withCatalog.status, describeRun(withCatalog)).toBe(1);
+      expect(reportedKeys(withCatalog)).toEqual(["classicplus-999-cast"]);
+      const withoutCatalog = runCheck(["--root", root]);
+      expect(
+        withoutCatalog.lines.some((line) => line.startsWith("classicplus-999: not in the catalog")),
+        describeRun(withoutCatalog),
+      ).toBe(true);
+    },
+    CHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "R501 refuses a SAPI persona whose pitch shift is out of range, and a per-card override on its lines",
+    () => {
+      const { root, catalog } = sapiTree();
+      editLines(root, (lines) => {
+        const persona = personasOf(lines)["test-sapi"];
+        if (!isRecord(persona)) throw new Error("no test-sapi persona");
+        persona.semitones = 13;
+      });
+      const outOfRange = runCheck(["--root", root, "--catalog", catalog]);
+      expect(outOfRange.status, describeRun(outOfRange)).toBe(1);
+      expect(outOfRange.lines.some((line) => line.startsWith("persona test-sapi: semitones 13")), describeRun(outOfRange)).toBe(true);
+
+      const second = sapiTree();
+      editLines(second.root, (lines) => {
+        const entry = cardsOf(lines)["classicplus-999"];
+        if (!isRecord(entry)) throw new Error("no classicplus-999 entry");
+        entry.rate = 200;
+      });
+      const override = runCheck(["--root", second.root, "--catalog", second.catalog]);
+      expect(override.status, describeRun(override)).toBe(1);
+      expect(override.lines.some((line) => line.startsWith("classicplus-999: a SAPI persona")), describeRun(override)).toBe(true);
     },
     CHECK_TIMEOUT_MS,
   );

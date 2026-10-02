@@ -1,0 +1,106 @@
+/* R434: "Their hand" on the game-over screen (TheirHand.tsx). The panel's section is a row of small
+   faces that deal in one after another (every duration scaled by --anim-scale, so reduced motion
+   shows them at once); the chip's is one more button beside "Result". */
+
+.their-hand {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: min(640px, calc(100vw - 88px));
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgb(201 149 63 / 30%));
+}
+
+.their-hand__title {
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.their-hand__count {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.their-hand__empty {
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 0.9em;
+}
+
+.their-hand__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-height: 42vh;
+  margin: 0;
+  padding: 2px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.their-hand__item {
+  animation: their-hand-deal calc(320ms * var(--anim-scale)) ease-out calc(var(--i, 0) * 70ms * var(--anim-scale)) both;
+}
+
+.their-hand__card {
+  position: relative;
+  display: block;
+  height: 92px;
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+}
+
+.their-hand__card:hover {
+  filter: brightness(1.08);
+}
+
+.their-hand__card:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 2px;
+}
+
+@keyframes their-hand-deal {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) rotateY(70deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The chip's button: the same size as "Result" beside it. */
+.result-overlay__their-hand {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .their-hand__card {
+    height: 66px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .their-hand__item {
+    animation: none;
+  }
+}

@@ -1,4 +1,6 @@
-// Drag to play with unified pointer events (docs/polish/7-mobile-ux.md S9, B36-B39).
+// Drag to play with unified pointer events (docs/polish/7-mobile-ux.md S9, B36-B39), and to aim an
+// activation (R384, R510): a press on an Activate control, a Heroic Power's button, or a card of
+// yours with nothing to attack, draws the targeting arrow to the activation's targets.
 //
 // One pointer at a time, mouse, pen and touch alike. A press on a hand card or on one of your
 // units is only a *press* until it has travelled DRAG_THRESHOLD_PX; below that it is a click and
@@ -22,7 +24,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, type Interaction } from "../actions.ts";
-import { MatchCardsProvider, useCardInfo } from "../catalog.ts";
+import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { liveFace } from "../faces.ts";
 import { setLanding } from "./landing.ts";
 import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DragSource, type DropSpot } from "./model.ts";
@@ -239,7 +241,10 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
       const hit = targetFromElement(target);
       if (hit === null) return;
       const source = hit.target;
-      if (source.on !== "hand" && !(source.on === "unit" && source.side === "you")) return;
+      // A hand card, a card of yours on the field (an attack, or its one Activate ability), or an
+      // Activate control (a card's own or a Heroic Power's, R384).
+      const yours = (source.on === "unit" || source.on === "backrow") && source.side === "you";
+      if (source.on !== "hand" && source.on !== "activate" && !yours) return;
       if (!readSettings().dragToPlay) return;
 
       const element = target.closest(`[data-testid="${hit.testid.replace(/["\\]/g, "\\$&")}"]`) ?? target;
@@ -514,7 +519,8 @@ function DragGhost(props: {
   testId?: string;
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
-  const face = props.card === null ? null : liveFace(info, props.card);
+  const copied = useCopiedDef(props.card);
+  const face = props.card === null ? null : liveFace(info, props.card, copied === undefined ? {} : { copied });
   const text = face === null ? info.text : face.text.full;
   const stats = face === null ? (info.attack === undefined || info.health === undefined ? null : { attack: info.attack, health: info.health }) : face.stats;
   const style: CSSProperties = { left: props.at.x, top: props.at.y };

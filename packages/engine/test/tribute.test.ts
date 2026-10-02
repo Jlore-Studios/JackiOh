@@ -36,6 +36,7 @@ import {
 import { beginGame, legalActions, reduce } from "../src/reduce";
 import { applyEffects, makeContext } from "../src/resolve";
 import type { CardScripts, Script, StaticFlags } from "../src/script";
+import { stepParam } from "../src/params";
 import { registerScripts, registeredScripts } from "../src/scripts";
 import type { CardInstance, GameState } from "../src/state";
 import { activeUnitsOf } from "../src/zones";
@@ -87,6 +88,14 @@ const sheep = unit("sheep", 1, 1, {
   cost: 1,
 });
 
+/**
+ * C #82 Sheeople's shape: worth 2 Tributes (Radiant 3) as a declared number, `worth`, which Degrade and
+ * Upgrade move (B3.4 rule 5, R386).
+ */
+const worthy = unit("worthy", 1, 1, {
+  params: [{ key: "worth", base: 2, radiant: 3, better: "up", step: 1, min: 1 }],
+});
+
 /** #66 The Rock's shape: Tribute 1 on a big body. */
 const tributeOne = unit("tribute-one", 10, 10, { cost: 4 });
 /** Tribute 2, the cost one Sheep alone can pay (§3.2). */
@@ -108,7 +117,7 @@ const rebornBody = unit("reborn-body", 1, 1, {
   radiant: { attack: 2, health: 2, keywords: [{ kind: "Reborn" }], text: "Reborn" },
 });
 
-const DEFS = [sheep, tributeOne, tributeTwo, lavaGolem, deathPinger, cube, fieldCard, handOverGolem, rebornBody];
+const DEFS = [sheep, worthy, tributeOne, tributeTwo, lavaGolem, deathPinger, cube, fieldCard, handOverGolem, rebornBody];
 
 function both(script: Script): CardScripts {
   return { base: script, radiant: script };
@@ -124,6 +133,7 @@ const lavaGolemFlags = { tribute: 3, tributeEnemies: true } as StaticFlags;
 const SCRIPTS: Record<string, CardScripts> = {
   // §3.2, §7: the Sheep's worth is its face's text, the static flag its script declares.
   [sheep.id]: { base: { staticFlags: { tributeWorth: SHEEP_TRIBUTE_VALUE } }, radiant: { staticFlags: { tributeWorth: RADIANT_SHEEP_TRIBUTE_VALUE } } },
+  [worthy.id]: { base: { staticFlags: { tributeWorth: 2 } }, radiant: { staticFlags: { tributeWorth: 3 } } },
   [tributeOne.id]: both({ staticFlags: { tribute: 1 } }),
   [tributeTwo.id]: both({ staticFlags: { tribute: 2 } }),
   [lavaGolem.id]: both({ staticFlags: lavaGolemFlags }),
@@ -237,6 +247,20 @@ describe("Tribute as an additional cost of a play (§6.3, §3.2, R81)", () => {
         tributes: [one.id],
       }),
     ).toMatch(/needs no Tribute/);
+  });
+
+  it("R386 a unit that declares its worth is worth what a Degrade or an Upgrade left it", () => {
+    const state = playing("worth-tuned");
+    const base = put(state, worthy.id, slot("p1", "units", 1));
+    const shining = put(state, worthy.id, slot("p1", "units", 2));
+    shining.radiant = true;
+    expect(tributeValueOf(state, base)).toBe(2);
+    expect(tributeValueOf(state, shining)).toBe(3);
+
+    stepParam(base, "worth", 1);
+    stepParam(shining, "worth", -1);
+    expect(tributeValueOf(state, base)).toBe(3);
+    expect(tributeValueOf(state, shining)).toBe(2);
   });
 
   it("§3.2 a Sheep Token counts 2 toward a Tribute cost, so one Sheep alone pays Tribute 2", () => {

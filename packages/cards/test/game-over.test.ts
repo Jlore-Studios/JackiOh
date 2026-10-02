@@ -77,7 +77,8 @@ describe("R216: nothing happens after the game is over", () => {
         hand: [{ def: FULLSEND, radiant: true }, { def: FULLSEND, radiant: true }, VANILLA],
         mana: 10,
         health: 2,
-        library: [VANILLA, HINDER],
+        // The Radiant Hinder discards nothing (R431), so its cast asks no question.
+        library: [VANILLA, { def: HINDER, radiant: true }],
       },
       p2: { field: [{ def: VANILLA, lane: 1 }] },
     });

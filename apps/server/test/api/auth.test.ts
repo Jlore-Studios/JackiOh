@@ -877,7 +877,7 @@ describe("/api/profile reports identity and the ladder record", () => {
     expect(body.winRate).toBeCloseTo(1 / 3, 5);
   });
 
-  it("R385 sends no rating, here or in /api/auth/me", async () => {
+  it("R612 sends no rating, here or in /api/auth/me", async () => {
     const deps = createTestDeps();
     const { token } = await activeProfile(deps);
     const router = createRouter(createAuthRoutes(), deps);

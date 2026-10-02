@@ -1,7 +1,7 @@
 // SPEC §5.1's one catalog query, as the `packages/cards` surface every card script writes against.
 //
 // "The catalog needs one query function, `catalog.query({type, cost, costRange, tags, notTags,
-// rarity, set, excludeIndex})`, that every random-generation and Discover effect uses" (§5.1).
+// rarity, set, excludeDefId})`, that every random-generation and Discover effect uses" (§5.1).
 // ONE function means one implementation: the filter lives in `packages/engine/src/catalog.ts` (the
 // engine needs it for Recruit, Discover and every `generate` effect), and this file is the thin
 // typed wrapper card scripts import. Nothing here filters, sorts, excludes tokens or reads a cost —
@@ -11,21 +11,23 @@
 // The contract (proved by `test/query.test.ts`, which is the reference for card agents):
 //
 //   1. Tokens are out unless you ask. §5.1: "Random pools ('a random card', 'Discover a (2) cost
-//      card') never include Token-tagged cards". `query({})` is therefore the 100 non-token cards;
-//      tokens arrive only for a query that names the token pool — `tags: ["Token"]`,
-//      `rarity: "Token"`, `token: true`, or naming members outright via `index`/`defId`.
+//      card') never include Token-tagged cards". `query({})` is therefore every non-token card of
+//      every set (R380); tokens arrive only for a query that names the token pool — `tags:
+//      ["Token"]`, `rarity: "Token"`, `token: true`, `withTokens: true` (R382), or naming members
+//      outright via `defId` — and a Fruit pool holds the Grapes (R382).
 //      BUILD M4-T4 row 51.1 ("absent from every random pool") needs no extra argument: KY's Empty
 //      Notebook carries the KY tag, and `query({ tags: ["KY"] })` still leaves it out.
 //   2. The generating card is out when the card says so. §5.1: pools "never include the generating
-//      card's own definition, unless the card names the pool itself". That is `excludeIndex`, and
-//      because it is the caller's own §5 index, the caller passes it — see `pool()` below, which
-//      makes it impossible to forget. The exception is real: #95 Call to Chaos casts "a random Call
+//      card's own definition, unless the card names the pool itself". That is `excludeDefId`, keyed
+//      by the catalog id because an index repeats across sets (R387, B2.2), and because it is the
+//      caller's own id, the caller passes it — see `pool()` below, which makes it impossible to
+//      forget. The exception is real: #95 Call to Chaos casts "a random Call
 //      to Chaos" from the tag "which includes #95", so #95 uses plain `query({ tags: [...] })`.
 //   3. Costs are read out of play (R65): "an embiggen card's printed cost is its base price and an
 //      X-cost card's is 0". `cost`, `costRange` and `queryCost` all read that one number, so #7's
 //      brackets, #51's brackets, #30's highest/lowest and #94's odd costs agree.
-//   4. The result is ordered by SPEC §5 index, ascending, with no dependence on the order the
-//      registry handed the defs over. A seeded `rng.pick`/`rng.shuffle` over a pool therefore
+//   4. The result is ordered set by set (Core first), each by SPEC §5 index, ascending, with no
+//      dependence on the order the registry handed the defs over. A seeded `rng.pick`/`rng.shuffle` over a pool therefore
 //      replays identically (§9.3, R58, R60).
 //   5. Only registered catalog cards are reachable. `registerAll()` (src/index.ts) registers
 //      CATALOG before a game starts; until then every pool is empty. Fused and crafted definitions
@@ -39,9 +41,9 @@ import { query as engineQuery, queryCost, type CatalogQueryArgs } from "@jackioh
 import type { CardDef, CardType } from "@jackioh/shared";
 
 /**
- * §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeIndex }`,
- * plus the engine's identity fields (`index`, `notIndex`, `defId`, `token`) for a pool a card names
- * card by card. `tags` means "has every listed tag"; `notTags` means "has none of them"; every
+ * §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
+ * withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
+ * card. `tags` means "has every listed tag"; `notTags` means "has none of them"; every
  * field narrows, and `{}` is the whole non-token catalog.
  */
 export type CardQuery = CatalogQueryArgs;
@@ -58,20 +60,20 @@ export function query(args: CardQuery = {}): CardDef[] {
 }
 
 /**
- * §5.1's "never include the generating card's own definition": the pool for card `ownIndex`, which
- * is `query` with `ownIndex` added to `excludeIndex` rather than replacing what the caller passed.
+ * §5.1's "never include the generating card's own definition": the pool for card `ownId`, which is
+ * `query` with `ownId` added to `excludeDefId` rather than replacing what the caller passed (R387).
  *
  * ```ts
- * pool("57", { tags: ["KY"] })                  // #57 Conjure KY  -> #31, #51, #82
- * pool("83", { rarity: "Legendary" })           // #83 Transmogulate (R35) -> #52, #85, #87, #92, #93, #95
- * pool("67", { type: TRAP_TYPES })              // #67 Zoomerbin Oomen -> #18, #41, #60, #71, #85, #96
+ * pool("core-057", { tags: ["KY"] })         // #57 Conjure KY  -> Core #31, #51, #82
+ * pool("core-083", { rarity: "Legendary" })  // #83 Transmogulate (R35) -> Core #52, #85, #87, #92, #93, #95
+ * pool("core-067", { type: TRAP_TYPES })     // #67 Zoomerbin Oomen -> Core #18, #41, #60, #71, #85, #96
  * ```
  */
-export function pool(ownIndex: string, args: CardQuery = {}): CardDef[] {
-  const already = args.excludeIndex;
-  const excludeIndex =
-    already === undefined ? [ownIndex] : [...(Array.isArray(already) ? already : [already]), ownIndex];
-  return query({ ...args, excludeIndex });
+export function pool(ownId: string, args: CardQuery = {}): CardDef[] {
+  const already = args.excludeDefId;
+  const excludeDefId =
+    already === undefined ? [ownId] : [...(Array.isArray(already) ? already : [already]), ownId];
+  return query({ ...args, excludeDefId });
 }
 
 /**

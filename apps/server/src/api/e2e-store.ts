@@ -24,10 +24,10 @@
  *  - `results.insert` refuses a second row for the same match (§9.5);
  *  - `tickets.insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
  *    which `queue.ts` relies on as the race-proof half of "not already queued");
- *  - `decks`, `trios`, `series` and `tutorial` are `src/api/memory-stores.ts`, shared with the
- *    unit-test fake: the deck and trio caps, the owner check, `series.update`'s compare-and-set and
- *    the tutorial's grow-only merge are one implementation for both in-memory stores (R250, R252,
- *    R263, R320).
+ *  - `decks`, `trios`, `series`, `tutorial` and `gameRecords` are `src/api/memory-stores.ts`,
+ *    shared with the unit-test fake: the deck and trio caps, the owner check, `series.update`'s
+ *    compare-and-set, the tutorial's grow-only merge and one game record per id are one
+ *    implementation for both in-memory stores (R250, R252, R263, R320, R376).
  *
  * R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler. SPEC §11 R111:
  * "Becoming `active` grants one copy of every non-token card, written by a trigger on the
@@ -54,12 +54,17 @@ import {
 import { LAUNCH_COPIES, LAUNCH_GRANT_REASON } from "./collection";
 import {
   createMemoryDeckStores,
+  createMemoryGameRecordStore,
+  createMemoryLastBoardStore,
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
+  matchModeIn,
   purgeExpiredRows,
   removeProfileRows,
   type DeckTables,
+  type GameRecordTables,
+  type LastBoardTables,
   type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
@@ -97,7 +102,9 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
-  RankedTables;
+  RankedTables &
+  LastBoardTables &
+  GameRecordTables;
 
 function emptyTables(): Tables {
   return {
@@ -115,6 +122,8 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    lastBoards: [],
+    gameRecords: [],
     ...emptyRankedTables(),
   };
 }
@@ -464,6 +473,11 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       row.ratingDeviation = glicko.deviation;
       row.ratingVolatility = glicko.volatility;
     },
+    setRating: async (profileId, rating) => {
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.rating = rating;
+    },
     setInMatch: async (profileId, matchId) => {
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
@@ -553,6 +567,10 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
 
   // R320: tutorial progress on the account, shared with the unit-test fake like the decks.
   store.tutorial = createMemoryTutorialStore(() => tables);
+  // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
+  store.lastBoards = createMemoryLastBoardStore(() => tables);
+  // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
+  store.gameRecords = createMemoryGameRecordStore(() => tables);
 
   // SPEC §9.11: the ranked ladder, shared with the unit-test fake like the decks.
   store.ranked = createMemoryRankedStore(() => tables);
@@ -598,6 +616,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       row.finishedAt = at;
     },
     live: async () => tables.matches.filter((match) => match.status === "live").map(clone),
+    modeOf: async (matchId) => matchModeIn(tables, matchId),
     // No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
     discardOpen: async (_matchId) => {
     },

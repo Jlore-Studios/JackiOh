@@ -365,7 +365,7 @@ describe("R263 — a series survives a restart", () => {
     expect(a.deps.store.tables.results).toHaveLength(3);
     expect((await a.deps.store.profiles.getById(ALICE))?.rating).toBe(expected.a.rating);
     expect(await row(a.deps.store)).toMatchObject({ status: "over", ratingAfter: [expected.a.rating, expected.b.rating] });
-    // R384: and the series is recorded once, as one rated game.
+    // R611: and the series is recorded once, as one rated game.
     expect(a.deps.store.tables.ratedGames.map((game) => [game.id, game.kind])).toEqual([[SERIES_ID, "series"]]);
   });
 });

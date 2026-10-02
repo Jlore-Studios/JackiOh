@@ -22,10 +22,10 @@
 // nothing. An empty answer, or no hook, is no preview: the key is absent rather than `[]`.
 
 import type { PlayerId, PreviewValue } from "@jackioh/shared";
-import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import type { ConditionZone } from "./script";
-import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
+import { runningScriptOf, textFaceOf } from "./subsystems/copiedText";
 import { isBuried } from "./zones";
 
 /**
@@ -45,7 +45,7 @@ export function backrowIsPublic(state: GameState, card: CardInstance, viewer: Pl
  * and the back the other player sees cannot disagree.
  */
 export function isFaceDown(state: GameState, card: CardInstance): boolean {
-  const type = defOf(state, card.defId).type;
+  const type = cardTypeOf(state, card);
   if (type !== "Trap" && type !== "Field Trap") return false;
   return card.faceUp !== true;
 }
@@ -70,23 +70,30 @@ export function previewOf(
   zone: ConditionZone,
 ): PreviewValue[] | null {
   if (!mayPreview(state, card, viewer, zone)) return null;
-  const hook = scriptOf(card).preview;
+  // B5 E14, R547: a copier (Classic #57 Echo) previews the formula of the text it has, on that face.
+  const hook = runningScriptOf(state, card).preview;
   if (hook === undefined) return null;
+  const face = textFaceOf(state, card);
   const values = hook({
     state,
-    self: card,
+    self: face,
     controller: card.controller,
-    radiant: card.radiant,
+    radiant: face.radiant,
     zone,
     yourTurn: state.active === card.controller,
   });
-  // R372: a value the text names by a word (#93's grade letter) carries it as `display`.
+  // R372: a value the text names by a word (#93's grade letter) carries it as `display`; a value that
+  // counts a set of cards (Classic+ #44, #45's Radiant "highlight targets") carries their ids.
   const copied = values
     .filter((entry) => typeof entry.label === "string" && entry.label.length > 0 && Number.isFinite(entry.value))
-    .map((entry) =>
-      typeof entry.display === "string" && entry.display.length > 0
-        ? { label: entry.label, value: entry.value, display: entry.display }
-        : { label: entry.label, value: entry.value },
-    );
+    .map((entry): PreviewValue => {
+      const ids = Array.isArray(entry.ids) ? entry.ids.filter((id): id is string => typeof id === "string") : null;
+      return {
+        label: entry.label,
+        value: entry.value,
+        ...(typeof entry.display === "string" && entry.display.length > 0 ? { display: entry.display } : {}),
+        ...(ids === null ? {} : { ids: [...ids] }),
+      };
+    });
   return copied.length === 0 ? null : copied;
 }

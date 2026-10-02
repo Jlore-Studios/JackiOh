@@ -8,15 +8,17 @@
 // Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import type { ActionBody } from "@jackioh/shared";
 
-import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED } from "../../../server/src/config.ts";
+import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "../../../server/src/config.ts";
 
 import type { SocketLike } from "../game/net.ts";
 import { baseView } from "../test/fixtures.ts";
-import MatchRoute, { connectionWords, withoutToken } from "./match.tsx";
+import { formatClock } from "../game/Clock.tsx";
+import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import MatchRoute, { connectionWords, promptHolderOf, withoutToken } from "./match.tsx";
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -384,6 +386,103 @@ describe("R268 the mulligan clock on the match bar", () => {
   });
 });
 
+describe("R439 the turn clock's last 30 seconds on the match bar", () => {
+  /** A `clock` frame whose turn clock has `ms` left at the server's `now`. */
+  function clockFrame(now: number, ms: number | null): string {
+    return JSON.stringify({
+      type: "clock",
+      now,
+      clocks: {
+        turnDeadline: ms === null ? null : now + ms,
+        promptDeadline: null,
+        graceDeadline: { p1: null, p2: null },
+        ceilingAt: now + 3_600_000,
+      },
+    });
+  }
+
+  function clockRoot(): Element | null {
+    return document.querySelector(".match-bar .clock");
+  }
+
+  it("R439 counts the turn clock down between the server's frames and turns urgent at 30 seconds", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout", "performance", "Date"] });
+    try {
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      const now = 1_000_000;
+      act(() => {
+        live().onopen?.({});
+        live().onmessage?.({ data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1", turn: 3 }) }) });
+        live().onmessage?.({ data: clockFrame(now, TURN_CLOCK_FINAL_MS + 5_000) });
+      });
+      expect(screen.getByTestId("clock-you")).toHaveAttribute("data-kind", "turn");
+      expect(clockRoot()).toHaveAttribute("data-clock-urgency", "none");
+
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
+      expect(clockRoot()).toHaveAttribute("data-clock-urgency", "final");
+      expect(clockRoot()).toHaveAttribute("data-clock-side", "you");
+      expect(screen.getByTestId("clock-you")).toHaveTextContent(formatClock(TURN_CLOCK_FINAL_MS));
+      expect(screen.getByTestId("turn-clock-fuse")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("R439 a view on the next turn never reads the last turn's deadline, even before its own frame lands", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    const now = 1_000_000;
+    act(() => {
+      live().onopen?.({});
+      // The opponent's turn, with 5 seconds left on it.
+      live().onmessage?.({ data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p2", turn: 3 }) }) });
+      live().onmessage?.({ data: clockFrame(now, TURN_CLOCK_LAST_MS / 2) });
+    });
+    expect(clockRoot()).toHaveAttribute("data-clock-side", "opponent");
+    expect(clockRoot()).toHaveAttribute("data-clock-urgency", "last10");
+
+    // The viewer's turn begins: its view first, the server's fresh frame just after (actor.ts).
+    act(() => {
+      live().onmessage?.({
+        data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1", turn: 4, clockMs: TURN_CLOCK_MS }) }),
+      });
+    });
+    expect(clockRoot(), "the old turn's 5 seconds are not the new turn's").toHaveAttribute("data-clock-urgency", "none");
+    expect(screen.getByTestId("clock-you")).toHaveTextContent(formatClock(TURN_CLOCK_MS));
+
+    act(() => {
+      live().onmessage?.({ data: clockFrame(now + 1_000, TURN_CLOCK_MS) });
+    });
+    expect(clockRoot()).toHaveAttribute("data-clock-urgency", "none");
+    expect(screen.getByTestId("clock-you")).toHaveAttribute("data-kind", "turn");
+  });
+
+  it("R439 a finished game runs no clock and warns nobody", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    act(() => {
+      live().onopen?.({});
+      live().onmessage?.({
+        data: JSON.stringify({
+          type: "view",
+          view: baseView({ viewer: "p1", active: "p1", phase: "over", result: { winner: "p2", reason: "hero-death" } }),
+        }),
+      });
+      live().onmessage?.({ data: clockFrame(1_000_000, TURN_CLOCK_LAST_MS) });
+    });
+    expect(clockRoot()).toHaveAttribute("data-clock-urgency", "none");
+    expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
+  });
+
+  it("R79 names the prompt's holder from the view", () => {
+    expect(promptHolderOf(null, "p1")).toBeNull();
+    expect(promptHolderOf({ forYou: false, pendingFor: "p2" }, "p1")).toBe("p2");
+    expect(
+      promptHolderOf({ forYou: true, choiceId: "c", kind: "discover", options: [], min: 1, max: 1, prompt: "" }, "p2"),
+    ).toBe("p2");
+  });
+});
+
 /** `WS_CLOSE.forbidden` in apps/server/src/match/wsServer.ts (R148): a refusal, never retried. */
 const FORBIDDEN_CLOSE = 4403;
 
@@ -455,6 +554,62 @@ describe("the match screen in a player's words", () => {
       });
     });
     expect(document.title).toBe("Match · JackiOh");
+  });
+});
+
+describe("the match screen's ranks (R604, R612)", () => {
+  const ranksBody = {
+    ranked: true,
+    seats: {
+      p1: { tag: "ABC123", rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }, you: true },
+      p2: { tag: "XYZ999", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: false },
+    },
+  };
+
+  function stubFetch(ranks: unknown): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify(String(url).includes("/ranks") ? ranks : { version: "v1", defs: {} }),
+          ),
+      } as unknown as Response),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("names both seats' ranks and whether the game moves them", async () => {
+    stubFetch(ranksBody);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    expect(banner).toHaveTextContent("Ranked match");
+    expect(banner).toHaveTextContent("ABC123 (you) Normal Grape III");
+    expect(banner).toHaveTextContent("XYZ999 Raisin");
+  });
+
+  it("says an unranked match moves nothing, and stays silent when the read is not a ranks body", async () => {
+    stubFetch({ ...ranksBody, ranked: false });
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    expect(await screen.findByTestId("match-ranks")).toHaveTextContent("Unranked match");
+
+    cleanup();
+    const fetchMock = stubFetch({ version: "v1", defs: {} });
+    render(<MatchRoute matchId="m-2" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    await screen.findByTestId("hero-you");
+    // The ranks read has answered by now, and its body was not a ranks body: no banner, no crash.
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
+    });
+    await act(async () => {});
+    expect(screen.queryByTestId("match-ranks")).toBeNull();
   });
 });
 

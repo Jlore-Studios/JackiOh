@@ -90,6 +90,10 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
         (e): e is Extract<GameEvent, { type: "cardPlayed" }> => e.type === "cardPlayed" && e.instanceId === event.instanceId,
       );
       const landMs = frac(FX_SLAM_AT, D);
+      // R502: a card cast as it was drawn never was in a hand, so it comes out of its Deck pile.
+      if (played !== undefined && c.env.memory.castOnDraw(played)) {
+        return [hold(tid(animTestid.library(sideOf(view, played.player))), zone, landMs)];
+      }
       if (played !== undefined && event.instanceId !== "hidden") {
         // R227: a card set face-down took a fresh id, and its hand card still has the old one.
         const inHand = locateInstance(view, event.formerId ?? event.instanceId);

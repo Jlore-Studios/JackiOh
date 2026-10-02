@@ -756,7 +756,7 @@ export function createAuthRoutes(): Route[] {
         id: profile.id,
         email: user.email,
         status: profile.status,
-        // R385: never the hidden rating. The rank it moves is `GET /api/ranked`'s.
+        // R612: never the hidden rating. The rank it moves is `GET /api/ranked`'s.
         record,
         // Computed here so the client cannot disagree with itself about what counts as a played
         // match. Draws count as played and as neither win nor loss, which is the convention every
@@ -810,7 +810,7 @@ export function createAuthRoutes(): Route[] {
       // or the room's host — learns there is a deck to pick. Its own series only, like the match.
       const series = await deps.store.series.activeFor(profile.id);
       return ok({
-        // R385: the hidden rating is never sent, not even to its owner.
+        // R612: the hidden rating is never sent, not even to its owner.
         profile: { id: profile.id, status: profile.status },
         // §9.4: "Redeeming an invite code flips pending to active", so only a pending account is
         // shown the code screen. A banned account is not offered a way out of it.

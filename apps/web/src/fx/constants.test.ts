@@ -68,10 +68,35 @@ const S2 = {
   FX_ADAPT_RECOVER_WINDOWS: 3,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
-  FX_SPEED_MIN: 0.5,
-  FX_SPEED_MAX: 2,
+  // v0.2.0: R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand;
+  // R436's Call to Chaos reveal.
+  FX_MEMORY_RECENT: 16,
+  FX_MEMORY_RESOLVING: 8,
+  FX_CAST_ON_DRAW_TRAUMA: 0.25,
+  FX_CRACK_HIT_AT: 0.45,
+  FX_CRACK_STAGGER_MS: 50,
+  FX_FRACTURE_TAIL_MS: 800,
+  FX_CRACK_TRAUMA: 0.3,
+  FX_NEXT_REFRESH_MODIFIER_ID: "nextTurnMana",
+  FX_BLOOD_FLIGHT_FRACTION: 0.6,
+  FX_BLOOD_PICK_BASE: 1,
+  FX_BLOOD_PICK_STRIDE: 2,
+  FX_BLOOD_TRAUMA: 0.2,
+  FX_BRAND_SLAM_AT: 0.35,
+  FX_BRAND_TAIL_MS: 700,
+  FX_CHAOS_LAND_AT: 0.4,
+  FX_CHAOS_STAGGER: 0.2,
+  FX_CHAOS_LAND_LAST: 0.85,
+  FX_CHAOS_REEL_DECOYS: 6,
+  FX_CHAOS_DECOY_STEP: 3,
+  FX_SPEED_MIN: 0.25,
+  FX_SPEED_MAX: 3,
   FX_SPEED_DEFAULT: 1,
-  FX_SPEED_STEPS: [0.5, 1, 1.5, 2],
+  FX_SPEED_STEP: 0.25,
+  FX_FLICKER_RETURN_AT: 0.5,
+  FX_REDIRECT_FLIGHT_FRACTION: 0.6,
+  FX_COUNTER_TRAUMA: 0.25,
+  FX_REWIND_TRAUMA: 0.35,
   FX_INTENSITY_SCALE: { off: 0, low: 0.45, normal: 1, high: 1.6 },
   FX_SETTINGS_KEY: "jackioh.fx.v1",
   FX_CENTER: { x: 0.5, y: 0.45 },
@@ -79,6 +104,8 @@ const S2 = {
     yourTurn: "Your turn",
     opponentTurn: "Opponent's turn",
     autoEnded: "No moves left",
+    chaosRolled: "Call to Chaos:",
+    turnCutShort: "Turn cut short",
     victory: "Victory",
     defeat: "Defeat",
     draw: "Draw",
@@ -109,6 +136,8 @@ describe("S2 the effects constants", () => {
       constants.FX_CONCEAL_AT,
       constants.FX_LUNGE_STANDOFF,
       constants.FX_LUNGE_CONTACT_AT,
+      constants.FX_FLICKER_RETURN_AT,
+      constants.FX_REDIRECT_FLIGHT_FRACTION,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -118,13 +147,13 @@ describe("S2 the effects constants", () => {
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
   });
 
-  it("S2 the speed steps offered to task 7's panel lie in [FX_SPEED_MIN, FX_SPEED_MAX] and include the default", () => {
-    for (const step of constants.FX_SPEED_STEPS) {
-      expect(step).toBeGreaterThanOrEqual(constants.FX_SPEED_MIN);
-      expect(step).toBeLessThanOrEqual(constants.FX_SPEED_MAX);
-    }
-    expect(constants.FX_SPEED_STEPS).toContain(constants.FX_SPEED_DEFAULT);
-    expect([...constants.FX_SPEED_STEPS]).toEqual([...constants.FX_SPEED_STEPS].sort((a, b) => a - b));
+  it("R435 the slider runs from 0.25x to 3x in steps that land on both ends and on the default", () => {
+    expect(constants.FX_SPEED_MIN).toBe(0.25);
+    expect(constants.FX_SPEED_MAX).toBe(3);
+    const steps = (constants.FX_SPEED_MAX - constants.FX_SPEED_MIN) / constants.FX_SPEED_STEP;
+    expect(Number.isInteger(steps)).toBe(true);
+    const toDefault = (constants.FX_SPEED_DEFAULT - constants.FX_SPEED_MIN) / constants.FX_SPEED_STEP;
+    expect(Number.isInteger(toDefault)).toBe(true);
   });
 
   it("S2 the particle caps shrink from desktop to phone to the adaptive floor", () => {
@@ -162,5 +191,16 @@ describe("S2 the effects constants", () => {
     // The result thumps hardest of all, and a trap reveal is still felt.
     expect(peak(constants.FX_RESULT_TRAUMA)).toBeGreaterThanOrEqual(12);
     expect(peak(constants.FX_TRAP_TRAUMA)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("R200 the v0.2.0 tails fit inside T", () => {
+  it("R502 R437 every new tail and landing fraction keeps its cue inside its entry plus FX_MAX_TAIL_MS", () => {
+    expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST]) {
+      expect(at).toBeGreaterThanOrEqual(0);
+      expect(at).toBeLessThanOrEqual(1);
+    }
   });
 });

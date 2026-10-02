@@ -17,8 +17,8 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { ApiError } from "../api/http";
-import type { MatchClocks, MatchDirectory, MatchRow, StartMatchInput } from "../api/ports";
-import { createMatchActor, type MatchActor } from "./actor";
+import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, StartMatchInput } from "../api/ports";
+import { createMatchActor, lastBoardsOf, type MatchActor } from "./actor";
 import type { ActorDeps, Socket } from "./contracts";
 
 export type MatchRegistry = MatchDirectory & {
@@ -52,6 +52,11 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
   async function start(input: StartMatchInput): Promise<void> {
     const [first, second] = input.seats;
     const now = deps.timers.now();
+    // R417: each seat's last server-match board, frozen on the match as it starts.
+    const boards: [LastBoardEntry[], LastBoardEntry[]] = [
+      (await deps.store.lastBoards.get(first.profileId, "server")) ?? [],
+      (await deps.store.lastBoards.get(second.profileId, "server")) ?? [],
+    ];
     const match: MatchRow = {
       id: input.matchId,
       seed: input.seed,
@@ -63,13 +68,14 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       createdAt: now,
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
+      ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
     };
     await deps.store.matches.create(match);
 
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
     // `beginGame` from `(seed, decks)` before it applies a single action (§9.3).
     const state = deps.engine.beginGame(
-      deps.engine.createGame({ seed: match.seed, decks: match.decks }),
+      deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match) }),
     ).state;
 
     actors.set(match.id, createMatchActor(deps, { match, state }));
@@ -85,6 +91,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       seed: match.seed,
       decks: match.decks,
       log: log.map((row) => row.action),
+      ...lastBoardsOf(match),
     });
     if (folded.errors.length > 0) {
       // An action the engine once accepted and now refuses is a determinism break: the log no

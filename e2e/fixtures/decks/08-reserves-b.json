@@ -1,0 +1,27 @@
+{
+  "id": "08-reserves-b",
+  "spec": "08-turn-cap-draw.cy.ts",
+  "description": "Player 2's deck for spec 08 at R389's 60-turn cap: 08-do-nothing-b with #100 Ceaseless Void swapped for #75 Infinite Reserves, for the same reason as 08-reserves-a. The card list differs from seat 1's so the spec is not asserting a mirror of one shuffle, but the constraints are identical. The spec's seed (08-turn-cap-26) deals Infinite Reserves into this seat's opening hand, so its library runs dry into Rush Tokens instead of fatigue.",
+  "cards": [
+    "core-006",
+    "core-013",
+    "core-014",
+    "core-017",
+    "core-019",
+    "core-022",
+    "core-025",
+    "core-026",
+    "core-029",
+    "core-034",
+    "core-038",
+    "core-043",
+    "core-070",
+    "core-076",
+    "core-078",
+    "core-088",
+    "core-094",
+    "core-095",
+    "core-099",
+    "core-075"
+  ]
+}

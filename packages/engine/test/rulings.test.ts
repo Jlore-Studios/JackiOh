@@ -130,6 +130,12 @@ const SERVER_CODES_TEST = "../../../apps/server/test/api/codes.test.ts";
 const SERVER_CORS_TEST = "../../../apps/server/test/api/cors.test.ts";
 const SERVER_CATALOG_TEST = "../../../apps/server/test/api/catalog.test.ts";
 const SERVER_QUEUE_TEST = "../../../apps/server/test/api/queue.test.ts";
+/** The ranked ladder's proofs (issue #49, SPEC §9.12, R603–R612). */
+const SERVER_GLICKO_TEST = "../../../apps/server/test/ranked/glicko2.test.ts";
+const SERVER_LADDER_TEST = "../../../apps/server/test/ranked/ladder.test.ts";
+const SERVER_SEASON_TEST = "../../../apps/server/test/ranked/season.test.ts";
+const SERVER_RANKED_TEST = "../../../apps/server/test/api/ranked.test.ts";
+const SERVER_RANKED_RESULTS_TEST = "../../../apps/server/test/api/results.test.ts";
 
 /** R169's card-side proofs: the two §8 cards a missing badge list made invisible. */
 const CARDS_CURVATURE_TEST = "../../cards/test/077-professor-curvature.test.ts";
@@ -190,6 +196,12 @@ const WEB_PROMPT_CARDS_TEST = "../../../apps/web/src/game/PromptCards.test.tsx";
 const CARDS_RADIANT_STANDARD_TEST = "../../cards/test/radiant-standard.test.ts";
 const CARDS_CATALOG_TEST = "../../cards/test/catalog.test.ts";
 const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
+/** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
+const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
+const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
+/** R481's SQL evidence: migration 0016's grant for a catalog that grows. */
+const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/09_catalog_growth.sql";
 const CARDS_PREVIEW_TEST = "../../cards/test/preview.test.ts";
 const CARDS_QUICKSTRIKER_TEST = "../../cards/test/038-quickstriker.test.ts";
 const CARDS_KPOP_FANATIC_TEST = "../../cards/test/050-k-pop-fanatic.test.ts";
@@ -208,6 +220,7 @@ const SERVER_ACTOR_TEST = "../../../apps/server/test/match/actor.test.ts";
 const SERVER_CLOCK_TEST = "../../../apps/server/test/match/clock.test.ts";
 const SERVER_RECOVERY_TEST = "../../../apps/server/test/match/recovery.test.ts";
 const AI_SHADOW_BAN_TEST = "../../ai/test/shadowBan.test.ts";
+const AI_DECK_TEST = "../../ai/test/deck.test.ts";
 const AI_DECIDE_TEST = "../../ai/test/decide.test.ts";
 const WEB_PRACTICE_CORE_TEST = "../../../apps/web/src/practice/core.test.ts";
 /** R203's and R204's proofs (SPEC §10.11): the client's sound cue table, and the director that plays it. */
@@ -285,6 +298,73 @@ const CARDS_MROW_TEST = "../../cards/test/086-miss-mrow.test.ts";
 const CARDS_FIENDER_TEST = "../../cards/test/092-felinor-fiender.test.ts";
 const CARDS_TRANSMOGULATE_TEST = "../../cards/test/083-transmogulate.test.ts";
 const CARDS_CARD_TEXT_TEST = "../../cards/test/card-text.test.ts";
+/** The Classic #1–#45 cards' own tests (patch v0.2.0, the cards-classic-a workstream). */
+const CLASSIC_007_TEST = "../../cards/test/classic/007-infiniscepter.test.ts";
+const CLASSIC_009_TEST = "../../cards/test/classic/009-income-tax.test.ts";
+const CLASSIC_010_TEST = "../../cards/test/classic/010-exile.test.ts";
+const CLASSIC_015_TEST = "../../cards/test/classic/015-nose-hunter.test.ts";
+const CLASSIC_PLUS_040_TEST = "../../cards/test/classic-plus/040-appropriations.test.ts";
+const CLASSIC_PLUS_042_TEST = "../../cards/test/classic-plus/042-kys-test.test.ts";
+const CLASSIC_PLUS_043_TEST = "../../cards/test/classic-plus/043-ai-slop.test.ts";
+const CLASSIC_PLUS_044_TEST = "../../cards/test/classic-plus/044-simplicity-audit.test.ts";
+const CLASSIC_PLUS_045_TEST = "../../cards/test/classic-plus/045-complexity-audit.test.ts";
+const CLASSIC_PLUS_062_TEST = "../../cards/test/classic-plus/062-kys-papaya.test.ts";
+const CLASSIC_PLUS_064_TEST = "../../cards/test/classic-plus/064-mulch-muncher.test.ts";
+const CLASSIC_PLUS_065_2_TEST = "../../cards/test/classic-plus/065-2-normal-grape.test.ts";
+const CLASSIC_PLUS_065_3_TEST = "../../cards/test/classic-plus/065-3-large-grape.test.ts";
+const CLASSIC_PLUS_070_TEST = "../../cards/test/classic-plus/070-chaos-machine.test.ts";
+const CLASSIC_PLUS_060_TEST = "../../cards/test/classic-plus/060-doctors-orders.test.ts";
+const CLASSIC_PLUS_073_TEST = "../../cards/test/classic-plus/073-call-to-chaos-classic-edition.test.ts";
+const CLASSIC_PLUS_073_1_TEST = "../../cards/test/classic-plus/073-1-classic-golem.test.ts";
+const CLASSIC_PLUS_047_TEST = "../../cards/test/classic-plus/047-joggs-box.test.ts";
+const CLASSIC_PLUS_052_TEST = "../../cards/test/classic-plus/052-jlockheeds-permanent-defense-contract.test.ts";
+const CLASSIC_PLUS_074_TEST = "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts";
+const CLASSIC_PLUS_T_AI_06_TEST = "../../cards/test/classic-plus/t-ai-06-datacenter-fire.test.ts";
+const CLASSIC_PLUS_T_AI_03_TEST = "../../cards/test/classic-plus/t-ai-03-hallucination.test.ts";
+const CLASSIC_018_TEST = "../../cards/test/classic/018-glitch-in-the-system.test.ts";
+const CLASSIC_025_TEST = "../../cards/test/classic/025-lag-in-the-system.test.ts";
+const CLASSIC_028_TEST = "../../cards/test/classic/028-second-wind.test.ts";
+const CLASSIC_032_TEST = "../../cards/test/classic/032-felinor-feelings.test.ts";
+const CLASSIC_033_TEST = "../../cards/test/classic/033-joro.test.ts";
+const CLASSIC_038_TEST = "../../cards/test/classic/038-jackiestan-auctioneer.test.ts";
+const CLASSIC_039_TEST = "../../cards/test/classic/039-outbreak.test.ts";
+/** The Classic+ #1–#39 cards' own tests (patch v0.2.0, the cards-plus-c workstream). */
+const PLUS = (file: string): string => `../../cards/test/classic-plus/${file}.test.ts`;
+const PLUS_002_TEST = PLUS("002-groom-shroom");
+const PLUS_007_TEST = PLUS("007-the-house");
+const PLUS_008_TEST = PLUS("008-withering-storm");
+const PLUS_009_TEST = PLUS("009-silence");
+const PLUS_010_TEST = PLUS("010-new-wraps");
+const PLUS_012_6_TEST = PLUS("012-6-frozen-wastes");
+const PLUS_012_7_TEST = PLUS("012-7-legion-of-the-hungry");
+const PLUS_012_8_TEST = PLUS("012-8-frostspatula");
+const PLUS_014_TEST = PLUS("014-forever");
+const PLUS_019_TEST = PLUS("019-league-of-losers");
+const PLUS_019_2_TEST = PLUS("019-2-jungle-loser");
+const PLUS_019_3_TEST = PLUS("019-3-mid-loser");
+const PLUS_019_5_TEST = PLUS("019-5-bot-loser");
+const PLUS_022_TEST = PLUS("022-blood-moon");
+const PLUS_025_TEST = PLUS("025-soul-shot");
+const PLUS_026_TEST = PLUS("026-tommy-tempo");
+const PLUS_027_TEST = PLUS("027-zephrys-zealotism");
+const PLUS_029_TEST = PLUS("029-portal-to-the-past");
+const PLUS_030_TEST = PLUS("030-felinor-fuser");
+const PLUS_031_TEST = PLUS("031-fusion-lab");
+const PLUS_033_TEST = PLUS("033-ivory-tower");
+const PLUS_035_TEST = PLUS("035-rollback");
+const PLUS_037_TEST = PLUS("037-wardrum");
+const SERVER_LAST_BOARDS_TEST = "../../../apps/server/test/match/last-boards.test.ts";
+/** Classic #46–#90's card-side proofs (cards-classic-b). */
+const CLASSIC_048_TEST = "../../cards/test/classic/048-hired-shrimp.test.ts";
+const CLASSIC_050_TEST = "../../cards/test/classic/050-voidwalker.test.ts";
+const CLASSIC_057_TEST = "../../cards/test/classic/057-echo.test.ts";
+const CLASSIC_058_TEST = "../../cards/test/classic/058-common-resources.test.ts";
+const CLASSIC_062_TEST = "../../cards/test/classic/062-living-bomb.test.ts";
+const CLASSIC_063_TEST = "../../cards/test/classic/063-crop-dusting.test.ts";
+const CLASSIC_066_TEST = "../../cards/test/classic/066-eu-striker.test.ts";
+const CLASSIC_078_TEST = "../../cards/test/classic/078-mutate-spell.test.ts";
+const CLASSIC_088_TEST = "../../cards/test/classic/088-siphon-squad.test.ts";
+const CLASSIC_090_TEST = "../../cards/test/classic/090-in-too-deep.test.ts";
 const WEB_OVERFLOW_TEST = "../../../apps/web/src/game/overflow.test.tsx";
 const WEB_ANIMATIONS_WINDOW_TEST = "../../../apps/web/src/game/animations.window.test.ts";
 /** The migrations R105, R110, R111 and R112 live in (BUILD M6-T2, M7-T2). */
@@ -311,11 +391,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(1, "rulings-a.test.ts", "effects-summon.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R2 counts the cap in player-turns: 30 turns, 15 each, then the game is a
-  // draw".
-  it("R2 counts the turn cap in player-turns: 30, so 15 each", () => {
-    expect(config.TURN_CAP_PLAYER_TURNS).toBe(30);
-    expect(config.TURN_CAP_PLAYER_TURNS / 2).toBe(15);
+  // Proved by rulings-a.test.ts "R2 counts the cap in player-turns: 60 turns, 30 each (R389), then the
+  // game is a draw" — patch v0.2.0 doubled the cap (R389).
+  it("R2 counts the turn cap in player-turns: 60, so 30 each (R389)", () => {
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
+    expect(config.TURN_CAP_PLAYER_TURNS / 2).toBe(30);
     provenIn(2, "rulings-a.test.ts");
   });
 
@@ -1149,8 +1229,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R108 runs the sweeper every 3 seconds and the reaper every 30", () => {
     expect(serverConstant(SERVER_CONFIG, "MATCHMAKER_SWEEP_INTERVAL_SECONDS")).toBe("3");
     expect(serverConstant(SERVER_CONFIG, "MATCH_REAPER_INTERVAL_SECONDS")).toBe("30");
-    // The reaper is the coarser clock of the two, and both sit well inside the 60-minute ceiling.
-    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("60");
+    // The reaper is the coarser clock of the two, and both sit well inside the 120-minute ceiling (R389).
+    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
   });
 
   // A config value with no database behaviour; BUILD M7-T3 proves the limits at the server level.
@@ -1445,10 +1525,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // NOTE: no server test names this row; the index asserts the attribution against the result path.
+  // Since the ranked ladder (R603) the attribution names the side, not the score: `winnerSideOf`
+  // is `scoreForSeat`'s successor, and the assertion is the same — the winner is read off the seat,
+  // never off whoever was active.
   it("R146 stamps a lifecycle result with the seat it belongs to, not with whoever was active", () => {
     const source = sourceOf(SERVER_RESULTS);
-    expect(source).toMatch(/function scoreForSeat\(outcome: TerminalOutcome, seat: MatchSeat\)/);
-    expect(source).toMatch(/outcome\.winner === seat\.player/);
+    expect(source).toMatch(/function winnerSideOf\(outcome: TerminalOutcome, seats: readonly \[MatchSeat, MatchSeat\]\)/);
+    expect(source).toMatch(/outcome\.winner === seats\[0\]\.player/);
   });
 
   // NOTE: no server test names this row; the index asserts the guard against the clock.
@@ -2152,7 +2235,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by deckCode.test.ts "R255 …": the round trip, the caps, the version and checksum, and
   // what an import drops and marks.
   it("R255 shares a deck as a versioned, checksummed, length-capped code", () => {
-    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_VERSION")).toBe("1");
+    // Version 2 since patch v0.2.0 (B2.2): each number carries its set; version 1 still reads as Core.
+    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_VERSION")).toBe("2");
+    expect(serverConstant(SERVER_CONFIG, "DECK_CODE_CORE_ONLY_VERSION")).toBe("1");
     expect(serverConstant(SERVER_CONFIG, "DECK_CODE_MAX_INPUT_LENGTH")).toBe("512");
     provenIn(255, WEB_DECK_CODE_TEST);
   });
@@ -2513,7 +2598,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by trioCode.test.ts "R339 …" (the round trip, totality, every refusal, each deck read as a
   // deck code's) and DeckWorkshop.test.tsx "R339 …" (Copy trio code, and a code that cannot be read).
   it("R339 shares a trio and its decks as a versioned, checksummed, length-capped code", () => {
-    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_VERSION")).toBe("1");
+    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_VERSION")).toBe("2");
+    expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_CORE_ONLY_VERSION")).toBe("1");
     expect(serverConstant(SERVER_CONFIG, "TRIO_CODE_MAX_INPUT_LENGTH")).toBe("2048");
     provenIn(339, WEB_TRIO_CODE_TEST, WEB_WORKSHOP_TEST);
   });
@@ -2687,21 +2773,972 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(374, "../../../apps/web/src/routes/landingFan.test.ts", "../../../apps/web/src/routes/landing.test.tsx");
   });
 
-  // Proved by packages/cards patches.test.ts "R375 …" (the list, its dates, commits and sources, the
-  // reconstructed labels, each shipped snapshot byte-equal to its commit's catalog.json, the newest
-  // equal to catalog.json, changes.json), history.test.ts "R375 …" (True Strike's three entries, #68's
-  // rename, The Coin and the Ghoul Token, #85's cost, #11's lone creation, one creation per card),
-  // and apps/web cards/patches.test.ts (the loaders, and no snapshot in the main bundle),
-  // cards/inspect/History.test.tsx (the section) and routes/patch-notes.test.tsx (the page, the footer).
-  it("R375 shows each card's patch history, and the Patch notes page lists every patch", () => {
+  // Proved by packages/cards patches.test.ts "R375 …" (issue #39's versions, in patches.json's order,
+  // before v0.2.0). The rest of the patch history is R388's and R507's, below.
+  it("R375 keeps issue #39's versions of the patch history, in their order, under R388", () => {
+    provenIn(375, CARDS_PATCHES_TEST);
+  });
+
+  // Proved by game-summary.test.ts "R376 …" (the record read off a hand-written game and off random
+  // fixture games, a cast never a play, no record without a result, empty opening hands before a
+  // turn), packages/cards game-summary.test.ts "R376 …" (the same oracles over real cards, The Coin
+  // in the second seat's opening hand), packages/shared stats.test.ts "R376 …" (a record read back),
+  // and apps/server game-records.test.ts "R376 …" (a live match filed once after its result, under
+  // its mode, the patch and two human pilots; never at the result's expense; bound at the
+  // composition root), engine.real.test.ts "R376 …" (the real port), db/contract.ts "R376 …" (both
+  // stores: a match's mode read off its room, its tickets or its series; one record per id) and
+  // sql/08_game_records.sql (the table's checks).
+  it("R376 files every finished game's record: mode, patch, pilots, first seat, decks, hands, draws and plays", () => {
     provenIn(
-      375,
-      "../../cards/test/patches.test.ts",
-      "../../cards/test/history.test.ts",
-      "../../../apps/web/src/cards/patches.test.ts",
-      "../../../apps/web/src/cards/inspect/History.test.tsx",
-      "../../../apps/web/src/routes/patch-notes.test.tsx",
+      376,
+      "game-summary.test.ts",
+      "../../cards/test/game-summary.test.ts",
+      "../../shared/test/stats.test.ts",
+      "../../../apps/server/test/api/game-records.test.ts",
+      "../../../apps/server/test/match/engine.real.test.ts",
+      "../../../apps/server/test/db/contract.ts",
+      "../../../apps/server/test/sql/08_game_records.sql",
     );
+  });
+
+  // Proved by packages/shared stats.test.ts "R377 …" (each breakdown counted by hand, a mirror once
+  // per deck, the played delta and its baseline, any combination of mode, patch and pilot, the table
+  // with the games beside every rate) and apps/server db/card-stats.test.ts "R377 …" (stats:cards's
+  // options and one card's row).
+  it("R377 reads each card's four breakdowns, with the games beside every rate, by mode, patch and pilot", () => {
+    provenIn(377, "../../shared/test/stats.test.ts", "../../../apps/server/test/db/card-stats.test.ts");
+  });
+
+  // Proved by packages/ai dev-run.test.ts "R378 …" (All Random's deal to two AI seats, each game a
+  // development record of the patch it tests, with the patch in its id so another patch's run of the
+  // same seeds is other records), packages/shared stats.test.ts "R378 …" (live unless
+  // asked), apps/server db/card-stats.test.ts "R378 …" (stats:cards reads a run only when asked, and
+  // the same patch's live games in a second query; stats:import adds development records and nothing
+  // else) and db/contract.ts "R378 …" (both stores filter by source, mode and patch, and keep `dev:`
+  // ids to development records).
+  it("R378 keeps the AI's development runs apart from live data unless they are asked for", () => {
+    provenIn(
+      378,
+      "../../ai/test/dev-run.test.ts",
+      "../../shared/test/stats.test.ts",
+      "../../../apps/server/test/db/card-stats.test.ts",
+      "../../../apps/server/test/db/contract.ts",
+    );
+  });
+
+  // Patch v0.2.0's catalog rows (docs/classic-sets.md B2, B4.2, B4.3; issue #40).
+
+  // Proved by cards query.test.ts "R380 …" (a pool that names no set reaches all three, one that
+  // names a set keeps to it), and packages/ai deck.test.ts and observe.test.ts "R380 …" (the AI's
+  // decks and determinizations draw from every set).
+  it("R380 makes one format of every set: a pool that names no set draws from all of them", () => {
+    provenIn(380, CARDS_QUERY_TEST, AI_DECK_TEST, AI_OBSERVE_TEST);
+  });
+
+  // Proved by cards references.test.ts "R381 …" (rules words name no card unless refs list it) and
+  // catalog.test.ts "R381 …" (no two cards share a name: Book of Wildfire, Grand Counterspell).
+  it("R381 keeps every name distinct and reads the rules-word names as rules words", () => {
+    provenIn(381, CARDS_REFERENCES_TEST, CARDS_CATALOG_TEST);
+  });
+
+  // Proved by cards query.test.ts "R382 …" (the Fruit pool and the Grapes, Dropshipping's pool).
+  it("R382 puts the five Grapes in every Fruit pool and every token in Dropshipping's", () => {
+    provenIn(382, CARDS_QUERY_TEST);
+  });
+
+  // Proved by animated.test.ts, effects-animate.test.ts "R383 …".
+  it("R383 makes an Animated card a Unit while it is animated, and sends it home", () => {
+    provenIn(383, "animated.test.ts", "effects-animate.test.ts");
+  });
+
+  // Proved by activate.test.ts "R384 …".
+  it("R384 gives cards Activate abilities their controller uses as an action", () => {
+    provenIn(384, "activate.test.ts");
+  });
+
+  // Proved by brittle.test.ts, effects-brittle.test.ts "R385 …".
+  it("R385 counts Brittle down at its controller's turn start and crumbles the card at 0", () => {
+    provenIn(385, "brittle.test.ts", "effects-brittle.test.ts");
+  });
+
+  // Proved by effects-tune.test.ts, instance-data.test.ts, params.test.ts "R386 …".
+  it("R386 tunes a card's numbers with Degrade and Upgrade, on the instance", () => {
+    provenIn(386, "effects-tune.test.ts", "instance-data.test.ts", "params.test.ts");
+  });
+
+  // Proved by pools.test.ts, query.test.ts, self-generation.test.ts "R387 …".
+  it("R387 never lets a card generate itself, keyed by definition id", () => {
+    provenIn(387, "pools.test.ts", "../../cards/test/query.test.ts", "../../cards/test/self-generation.test.ts");
+  });
+
+  // Proved by cards patches.test.ts "R388 …" (the history, the snapshots, the version everywhere),
+  // loc.test.ts's patch snapshot, the server's catalog.test.ts "R388 …" (GET /api/catalog/:version) and
+  // apps/web patches/diff.test.ts "R388 …" (the History section and Patch notes page diff every field).
+  it("R388 makes card patches data and the catalog version the newest patch", () => {
+    provenIn(388, CARDS_PATCHES_TEST, SERVER_CATALOG_TEST, "../../../apps/web/src/patches/diff.test.ts");
+  });
+
+  // Proved by the server's clock.test.ts "R389 …" (the 120-minute ceiling), and turn-cap.test.ts
+  // "R389 …" (60 player-turns, fatigue ending two idle decks first) and rulings-a.test.ts "R2 …".
+  it("R389 doubles the turn cap and the match ceiling with it", () => {
+    expect(config.TURN_CAP_PLAYER_TURNS).toBe(60);
+    expect(serverConstant(SERVER_CONFIG, "MATCH_CEILING_MINUTES")).toBe("120");
+    provenIn(389, SERVER_CLOCK_TEST, "turn-cap.test.ts");
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 …" (pass 2's numbers, at risk at half strength, the
+  // at-risk list a pure function of pass 1 and the two tables, the filler's keep-out and lifted ban,
+  // pass-2 evidence for a judgement ban, suspects, and one real pass-2 game on its named seed).
+  it("R390 sweeps the shadow ban in two passes, leaning toward the cards at risk", () => {
+    provenIn(390, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by tribute-zones.test.ts "R391 …".
+  it("R391 lets a Tribute pay for the zone its card takes", () => {
+    provenIn(391, "tribute-zones.test.ts");
+  });
+
+  // Proved by cards classic/015-nose-hunter.test.ts "R392 …" (the random discard is the Activate's
+  // cost, once per turn; an empty hand can't activate it).
+  it("R392 reads C #15 Nose Hunter's \"Discard a random card: …\" as an Activate whose cost is the discard", () => {
+    provenIn(392, CLASSIC_015_TEST);
+  });
+
+  // Proved by cards classic/028-second-wind.test.ts "R393 …" (the Cry's discards land before the Aura
+  // starts, so they are playable from the graveyard).
+  it("R393 lets C #28 Second Wind's discarded hand be played from the graveyard", () => {
+    provenIn(393, CLASSIC_028_TEST);
+  });
+
+  // Proved by cards classic/033-joro.test.ts "R394 …" (from the hand only, one targeting, the first pick).
+  it("R394 has C #33 Joro answer a targeting from its owner's hand only", () => {
+    provenIn(394, CLASSIC_033_TEST);
+  });
+
+  // Proved by cards classic/038-jackiestan-auctioneer.test.ts "R395 …" (face-down only the activation
+  // condition is live; the "whenever" starts with the next play).
+  it("R395 keeps C #38 Jackiestan Auctioneer's \"whenever\" text off until it has activated", () => {
+    provenIn(395, CLASSIC_038_TEST);
+  });
+
+  // Proved by the Classic cards that compare costs, each "R396 …": C #10, #18, #25, #32 and #39.
+  it("R396 reads an X card on the field at the X it was played for", () => {
+    provenIn(396, CLASSIC_010_TEST, CLASSIC_018_TEST, CLASSIC_025_TEST, CLASSIC_032_TEST, CLASSIC_039_TEST);
+  });
+
+  // Proved by cards classic/048-hired-shrimp.test.ts "R397 …" (the base face's unfiltered guess that
+  // fizzles, the Radiant face's filtered offer with face-down cards always offered and judged at
+  // resolution, and `loc` read from the catalog).
+  it("R397 keeps C #48 Hired Shrimp's guess: its base Cry destroys only a permanent with more lines of code", () => {
+    provenIn(397, CLASSIC_048_TEST);
+  });
+
+  // Proved by cards classic/050-voidwalker.test.ts "R398 …" (its own card reaches the graveyard as it dies).
+  it("R398 exiles what would go to a graveyard while C #50 Voidwalker stands, but not Voidwalker itself", () => {
+    provenIn(398, CLASSIC_050_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R399 …" (fixture copiers) and cards classic/057-echo.test.ts
+  // "R399 …" (the record, the view, nothing before any Spell, two Echoes never loop).
+  it("R399 gives C #57 Echo the text of the last Spell either player played", () => {
+    provenIn(399, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by cards classic/062-living-bomb.test.ts "R400 …" (each player's own plagued permanents, at
+  // the start of their turn; the Radiant face on the opponent's turn only).
+  it("R400 has C #62 Living Bomb destroy the turn player's own plagued permanents", () => {
+    provenIn(400, CLASSIC_062_TEST);
+  });
+
+  // Proved by cards classic/066-eu-striker.test.ts "R401 …" (neither trigger answers the play that moved it).
+  it("R401 never lets C #66 EU Striker's triggers answer the play that moved it", () => {
+    provenIn(401, CLASSIC_066_TEST);
+  });
+
+  // Proved by cards classic/078-mutate-spell.test.ts "R402 …" (a Field Spell with Activate ♾️, the three
+  // branches, and the Radiant fuse onto a card of yours of its type).
+  it("R402 reads C #78 Mutate Spell as a Field Spell with Activate ♾️", () => {
+    provenIn(402, CLASSIC_078_TEST);
+  });
+
+  // Proved by the engine's self-tribute.test.ts "R403 …" and cards classic/088-siphon-squad.test.ts "R403 …"
+  // (live while face-down, the self-Tribute at every state check, the Radiant 0 set last).
+  it("R403 keeps a Trap with no activation condition live while face-down (C #88 Siphon Squad)", () => {
+    provenIn(403, "self-tribute.test.ts", CLASSIC_088_TEST);
+  });
+
+  // Proved by the engine's quests.test.ts "R404 …" (each goal kind, completion at the state check, the
+  // reward prompt, the Radiant paths) and cards classic/090-in-too-deep.test.ts "R404 …" (the tree).
+  it("R404 runs C #90 In Too Deep's quests and rewards", () => {
+    provenIn(404, "quests.test.ts", CLASSIC_090_TEST);
+  });
+
+  // Proved by cards classic-plus/002-groom-shroom.test.ts "R405 …" (a board filled with Felinor Units given
+  // Taunt; the declared attack still hits the hero) and classic-plus/030-felinor-fuser.test.ts "R405 …".
+  it("R405 reads C+ #2's Felinors as Felinor-tagged Units, the attack that set it off still hitting the hero", () => {
+    provenIn(405, PLUS_002_TEST, PLUS_030_TEST);
+  });
+
+  // Proved by cards classic-plus/007-the-house.test.ts "R406 …" (one of the twins, 2 in 3 the defender).
+  it("R406 has C+ #7 The House summon #3 Right-house defender 2 in 3, else a Wrong-House Attacker", () => {
+    provenIn(406, PLUS_007_TEST);
+  });
+
+  // Proved by cards classic-plus/009-silence.test.ts "R407 …" (an aura stops, a face-down trap sits inert,
+  // an Animated card loses Animated where it stands).
+  it("R407 leaves a Vanilla backrow card with no text", () => {
+    provenIn(407, PLUS_009_TEST);
+  });
+
+  // Proved by cards classic-plus/012-6-frozen-wastes.test.ts and 012-7-legion-of-the-hungry.test.ts "R408 …".
+  it("R408 reads a Field Spell's unlabelled one-time text as its Cry", () => {
+    provenIn(408, PLUS_012_6_TEST, PLUS_012_7_TEST);
+  });
+
+  // Proved by cards classic-plus/012-8-frostspatula.test.ts "R409 …" (copies, the originals staying put).
+  it("R409 has C+ #12.8 Frostspatula's resummon make copies", () => {
+    provenIn(409, PLUS_012_8_TEST);
+  });
+
+  // Proved by cards classic-plus/014-forever.test.ts "R410 …" (returns after it resolves; a discarded or
+  // countered Spell does not come back).
+  it("R410 reads C+ #14 Forever&'s \"leaves your hand\" as \"is played and resolves\"", () => {
+    provenIn(410, PLUS_014_TEST);
+  });
+
+  // Proved by cards classic-plus/019-league-of-losers.test.ts and 019-3-mid-loser.test.ts "R411 …".
+  it("R411 fires C+ #19.3 Mid Loser's Cry when League of Losers summons it", () => {
+    provenIn(411, PLUS_019_TEST, PLUS_019_3_TEST);
+  });
+
+  // Proved by cards classic-plus/019-2-jungle-loser.test.ts and 019-5-bot-loser.test.ts "R412 …".
+  it("R412 reads Tranquility as \"can't go Berserk\" and credits Jungle Loser's kill to Bot Loser", () => {
+    provenIn(412, PLUS_019_2_TEST, PLUS_019_5_TEST);
+  });
+
+  // Proved by cards classic-plus/022-blood-moon.test.ts "R413 …" (the heal that sets it off is converted).
+  it("R413 reads C+ #22 Blood Moon's \"is healed\" as \"would be healed\"", () => {
+    provenIn(413, PLUS_022_TEST);
+  });
+
+  // Proved by cards classic-plus/025-soul-shot.test.ts "R414 …" (attack plus health, then cost, then lane).
+  it("R414 gives C+ #25 Soul Shot's Lucky its comparator", () => {
+    provenIn(414, PLUS_025_TEST);
+  });
+
+  // Proved by cards classic-plus/026-tommy-tempo.test.ts "R415 …" (a play, an attack, a switch, an
+  // activation or ending the turn by hand is the one more action).
+  it("R415 reads C+ #26 Tommy Tempo's \"one more action\" as one main-phase action", () => {
+    provenIn(415, PLUS_026_TEST);
+  });
+
+  // Proved by cards classic-plus/027-zephrys-zealotism.test.ts "R416 …" and engine perfectHand.test.ts "R416 …".
+  it("R416 keeps C+ #27 Zephrys Zealotism's hand size and its pool to Classic and Classic+", () => {
+    provenIn(416, PLUS_027_TEST, "perfectHand.test.ts");
+  });
+
+  // Proved by cards classic-plus/029-portal-to-the-past.test.ts "R417 …" and engine lastBoards.test.ts "R417 …".
+  it("R417 makes each seat's last board a setup input of the match", () => {
+    provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
+  });
+
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" and engine carried-damage.test.ts "R418 …".
+  it("R418 lets a Unit top C+ #33 Ivory Tower's backrow pile, the Tower acting beneath it", () => {
+    provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
+  });
+
+  // Proved by cards classic-plus/035-rollback.test.ts "R419 …" (the three steps, hidden information, JSON
+  // and a whole game replayed) and engine boardHistory.test.ts "R419 …" (the snapshots and the restore).
+  it("R419 returns the board to a snapshot taken at the start of an earlier turn", () => {
+    provenIn(419, PLUS_035_TEST, "boardHistory.test.ts");
+  });
+
+  // Proved by cards classic-plus/042-kys-test.test.ts and engine kyTest.test.ts "R420 …" (the two
+  // prompts, the rewards, the key that never leaves the engine, a paused prompt through JSON).
+  it("R420 asks C+ #42 KY's Test's difficulty, then a problem whose key never leaves the engine", () => {
+    provenIn(420, CLASSIC_PLUS_042_TEST, "kyTest.test.ts");
+  });
+
+  // Proved by cards classic-plus/060-doctors-orders.test.ts "R421 …" (a Field Spell whose Cry and start of
+  // turn add an All Purpose Apple).
+  it("R421 reads C+ #60 Doctors Orders as a Field Spell", () => {
+    provenIn(421, CLASSIC_PLUS_060_TEST);
+  });
+
+  // Proved by cards classic-plus/062-kys-papaya.test.ts and engine papaya.test.ts "R422 …" (cells one
+  // prompt at a time, the lowest-degree curve in exact rationals, every card on it exiled).
+  it("R422 draws C+ #62 KY's Papaya's curve through the cells its caster picks", () => {
+    provenIn(422, CLASSIC_PLUS_062_TEST, "papaya.test.ts");
+  });
+
+  // Proved by cards 095-call-to-chaos.test.ts and classic-plus/073 and engine callToChaos.test.ts and
+  // callToChaosPlus.test.ts "R423 …" (three different effects, in the list's order, both editions).
+  it("R423 casts three different random effects on either Call to Chaos's Radiant face", () => {
+    provenIn(423, "../../cards/test/095-call-to-chaos.test.ts", CLASSIC_PLUS_073_TEST, "callToChaos.test.ts", "callToChaosPlus.test.ts");
+  });
+
+  // Proved by cards classic-plus/073-1-classic-golem.test.ts and engine transform-variants.test.ts "R424 …"
+  // (the transform after the combat; "may attack again" passes to the new Unit).
+  it("R424 transforms C+ #73.1 Classic Golem after the combat of an attack it declared on a Unit", () => {
+    provenIn(424, CLASSIC_PLUS_073_1_TEST, "transform-variants.test.ts");
+  });
+
+  // Proved by cards classic-plus/074 and engine twiceForward.test.ts "R425 …" (a Field Trap that fuses
+  // every second play of the opponent's and grows its Brittle).
+  it("R425 makes C+ #74 Twice Forward One Step Backwards a Field Trap that fuses every second play", () => {
+    provenIn(425, CLASSIC_PLUS_074_TEST, "twiceForward.test.ts");
+  });
+
+  // Proved by after-attack.test.ts, 032-prem-panther.test.ts "R426 …".
+  it("R426 draws for Prem Panther only after it attacks and survives", () => {
+    provenIn(426, "after-attack.test.ts", "../../cards/test/032-prem-panther.test.ts");
+  });
+
+  // Proved by corePatches.test.ts, 041-sheepish.test.ts "R427 …".
+  it("R427 fires Sheepish after the Cry of the Unit it answers", () => {
+    provenIn(427, "corePatches.test.ts", "../../cards/test/041-sheepish.test.ts");
+  });
+
+  // Proved by 022-carnivorous-cube.test.ts "R428 …".
+  it("R428 lets Carnivorous Cube eat only Units", () => {
+    provenIn(428, "../../cards/test/022-carnivorous-cube.test.ts");
+  });
+
+  // Proved by corePatches.test.ts, 031-kys-math-equation.test.ts "R429 …".
+  it("R429 counts KY's Math Equation's plays and stops its cost at (4)", () => {
+    provenIn(429, "corePatches.test.ts", "../../cards/test/031-kys-math-equation.test.ts");
+  });
+
+  // Proved by 060-bear-honeypot.test.ts "R430 …".
+  it("R430 holds Bear Honeypot while its controller's unit row is full", () => {
+    provenIn(430, "../../cards/test/060-bear-honeypot.test.ts");
+  });
+
+  // Proved by 021-hinder.test.ts "R431 …".
+  it("R431 makes Hinder's base face discard 1 card of its caster's choice", () => {
+    provenIn(431, "../../cards/test/021-hinder.test.ts");
+  });
+
+  // Proved by cards card-text.test.ts "R432 …" (every face's cost words), apps/web wording.test.ts "R432 …"
+  // (no player-readable client string writes the old cost noun) and facedown.test.tsx "R432 …".
+  it("R432 writes a specific cost as \"(N) Cost\" and a price as \"costs (N)\"", () => {
+    provenIn(432, CARDS_CARD_TEXT_TEST, "../../../apps/web/src/wording.test.ts", "../../../apps/web/src/game/facedown.test.tsx");
+  });
+
+  // R433's client half: apps/web game/dealtDeck.test.tsx "R433 …" (a mostly unknown deck is backs under
+  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck).
+  it("R433 lists a dealt deck with only the cards its owner has been shown", () => {
+    provenIn(433, "../../../apps/web/src/game/dealtDeck.test.tsx", WEB_PLAY_TEST);
+  });
+
+  // R434's client half: apps/web game/reveal.test.tsx and game/Hand.test.tsx "R434 …" (the opponent's
+  // hand turns face up at the end, and the result lists it).
+  it("R434 reveals both hands once the game is over", () => {
+    provenIn(434, "../../../apps/web/src/game/reveal.test.tsx", "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
+  // Proved by apps/web fx/constants.test.ts, fx/settings.test.ts, settings/wiring.test.tsx and
+  // game/animations.fx.test.ts "R435 …" (the range and step, the clamp, the slider and its readout, and
+  // the runner's durations and burst budget at 0.25x and 3x).
+  it("R435 runs the effects speed from 0.25x to 3x on a slider", () => {
+    provenIn(
+      435,
+      "../../../apps/web/src/fx/constants.test.ts",
+      "../../../apps/web/src/fx/settings.test.ts",
+      "../../../apps/web/src/settings/wiring.test.tsx",
+      WEB_ANIMATIONS_FX_TEST,
+    );
+  });
+
+  // R436's client half: apps/web fx/chaos.test.ts "R436 …" (each rolled effect named on both seats, the
+  // reels inside R200's bounds, the still banner and the live region).
+  it("R436 names the effects Call to Chaos rolled, to both players", () => {
+    provenIn(436, "../../../apps/web/src/fx/chaos.test.ts");
+  });
+
+  // R437's client half: apps/web cards/CardMarks.test.tsx "R437 …" (the aura and badge in the mark's
+  // colours on units, backrow cards and a back, the fallback, reduced motion).
+  it("R437 shows a mark on the card it is aimed at", () => {
+    provenIn(437, "../../../apps/web/src/cards/CardMarks.test.tsx");
+  });
+
+  // R438: apps/web cards/keywordVisuals.test.tsx "R438 …" (a treatment for every keyword kind, the layers
+  // and caps, canAct, Brittle's count, reduced motion, Vanilla).
+  it("R438 draws every keyword on a board unit", () => {
+    provenIn(438, "../../../apps/web/src/cards/keywordVisuals.test.tsx");
+  });
+
+  // Proved by apps/web game/Clock.test.tsx "R439 …" (the thresholds, whose clock, a paused clock, the
+  // reduced state) and routes/match.test.tsx "R439 …" (the frame reaches the clock on every turn).
+  it("R439 marks the last 30 seconds of a turn clock", () => {
+    provenIn(439, "../../../apps/web/src/game/Clock.test.tsx", "../../../apps/web/src/routes/match.test.tsx");
+  });
+
+  // Proved by effects-tune.test.ts, effects-brittle.test.ts, effects-cardScope.test.ts,
+  // instance-data.test.ts "R440 …".
+  it("R440 never tells a player how many hidden cards a change reached", () => {
+    provenIn(
+      440,
+      "effects-tune.test.ts",
+      "effects-brittle.test.ts",
+      "effects-cardScope.test.ts",
+      "instance-data.test.ts",
+    );
+  });
+
+  // Proved by brittle.test.ts "R441 …".
+  it("R441 spends a crumbled Brittle count and starts a given one from the print", () => {
+    provenIn(441, "brittle.test.ts");
+  });
+
+  // Proved by effects-tune.test.ts "R442 …".
+  it("R442 draws a Degrade or Upgrade's row, then its item, uniformly", () => {
+    provenIn(442, "effects-tune.test.ts");
+  });
+
+  // Proved by effects-enchant.test.ts "R443 …".
+  it("R443 carries enchantments onto copies and fusions, each once", () => {
+    provenIn(443, "effects-enchant.test.ts");
+  });
+
+  // Proved by effects-flicker.test.ts "R444 …".
+  it("R444 flickers a card out and back into its zone as a fresh, summoning-sick entry", () => {
+    provenIn(444, "effects-flicker.test.ts");
+  });
+
+  // Proved by animated.test.ts "R445 …".
+  it("R445 does not count animating as summoning", () => {
+    provenIn(445, "animated.test.ts");
+  });
+
+  // Proved by backrow-piles.test.ts "R446 …".
+  it("R446 makes a carried Unit a Unit that neither attacks nor is attacked", () => {
+    provenIn(446, "backrow-piles.test.ts");
+  });
+
+  // Proved by backrow-piles.test.ts, redact-backrow-piles.test.ts "R447 …".
+  it("R447 lets only the top of a backrow pile act, and shows the pile as a count", () => {
+    provenIn(447, "backrow-piles.test.ts", "../../ai/test/redact-backrow-piles.test.ts");
+  });
+
+  // Proved by announce.test.ts, effects-move.test.ts, redact-announce.test.ts "R448
+  // …".
+  it("R448 announces a play before it moves, in a window traps and Counters answer", () => {
+    provenIn(
+      448,
+      "announce.test.ts",
+      "effects-move.test.ts",
+      "../../ai/test/redact-announce.test.ts",
+    );
+  });
+
+  // Proved by play-step3.test.ts "R449 …".
+  it("R449 applies step 3's replacement and tag rules to a play", () => {
+    provenIn(449, "play-step3.test.ts");
+  });
+
+  // Proved by targeting.test.ts "R450 …".
+  it("R450 makes targeting one point, where target costs are paid and interceptors answer", () => {
+    provenIn(450, "targeting.test.ts");
+  });
+
+  // Proved by playCounts.test.ts "R451 …".
+  it("R451 records plays by type, by tag, the last Spell and each player's last face-up card", () => {
+    provenIn(451, "playCounts.test.ts");
+  });
+
+  // Proved by effects-cast.test.ts, play-pipeline-b-replay.test.ts "R452 …".
+  it("R452 makes every choice of a random cast at random", () => {
+    provenIn(452, "effects-cast.test.ts", "play-pipeline-b-replay.test.ts");
+  });
+
+  // Proved by effects-cast.test.ts "R453 …".
+  it("R453 casts a card from anywhere but the field, or a new card of a named definition", () => {
+    provenIn(453, "effects-cast.test.ts");
+  });
+
+  // Proved by graveyard-play.test.ts "R454 …".
+  it("R454 plays a card from its player's graveyard under a permission", () => {
+    provenIn(454, "graveyard-play.test.ts");
+  });
+
+  // Proved by cost-rules.test.ts "R455 …".
+  it("R455 applies price rules after R65's discounts, in a fixed order", () => {
+    provenIn(455, "cost-rules.test.ts");
+  });
+
+  // Proved by effects-turnEnd.test.ts "R456 …".
+  it("R456 ends the turn from an effect once the action has resolved", () => {
+    provenIn(456, "effects-turnEnd.test.ts");
+  });
+
+  // Proved by draw-limit.test.ts "R457 …".
+  it("R457 counts every draw on its turn for its player, and limits draws from the field", () => {
+    provenIn(457, "draw-limit.test.ts");
+  });
+
+  // Proved by delayed-kinds.test.ts "R458 …".
+  it("R458 times next-turn and rest-of-game effects", () => {
+    provenIn(458, "delayed-kinds.test.ts");
+  });
+
+  // Proved by draw-limit.test.ts "R459 …".
+  it("R459 casts a card enchanted to cast on draw as it is drawn", () => {
+    provenIn(459, "draw-limit.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R460 …".
+  it("R460 applies several replacements of one event one at a time, in R68 order", () => {
+    provenIn(460, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R461 …".
+  it("R461 does not count a card exiled instead of dying as a death", () => {
+    provenIn(461, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts "R462 …".
+  it("R462 reads each replacement moment as it is written", () => {
+    provenIn(462, "replacements.test.ts");
+  });
+
+  // Proved by replacements.test.ts, damage-pipeline.test.ts "R463 …".
+  it("R463 lets collected cards leave together, and keeps a hidden text from guarding", () => {
+    provenIn(463, "replacements.test.ts", "damage-pipeline.test.ts");
+  });
+
+  // Proved by effects-summonThis.test.ts "R464 …".
+  it("R464 orders deck triggers after hand triggers and before graveyard ones", () => {
+    provenIn(464, "effects-summonThis.test.ts");
+  });
+
+  // Proved by prompt-kinds.test.ts, answer-key.test.ts "R465 …".
+  it("R465 keeps an answer prompt's key inside the engine", () => {
+    provenIn(465, "prompt-kinds.test.ts", "../../ai/test/answer-key.test.ts");
+  });
+
+  // Proved by effects-give.test.ts "R466 …".
+  it("R466 makes a card taken from another player's pile the taker's", () => {
+    provenIn(466, "effects-give.test.ts");
+  });
+
+  // Proved by effects-cry.test.ts "R467 …".
+  it("R467 runs a Unit's Cry when an effect triggers it", () => {
+    provenIn(467, "effects-cry.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R468 …".
+  it("R468 bounds a fused id, past the cap a digest of its ingredients", () => {
+    provenIn(468, "fuse-variants.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R469 …".
+  it("R469 gives a Radiant ingredient's face to the fused card", () => {
+    provenIn(469, "fuse-variants.test.ts");
+  });
+
+  // Proved by fuse-variants.test.ts "R470 …".
+  it("R470 fuses into a hand or deck card, whose cost does not change", () => {
+    provenIn(470, "fuse-variants.test.ts");
+  });
+
+  // Proved by effects-plague.test.ts "R471 …".
+  it("R471 places Plague Tokens one placement at a time, on cards that act", () => {
+    provenIn(471, "effects-plague.test.ts");
+  });
+
+  // Proved by cards references.test.ts "R480 …".
+  it("R480 names the Pancake tokens and the AI generated cards by the tag a card's text names", () => {
+    provenIn(480, CARDS_REFERENCES_TEST);
+  });
+
+  // Proved by apps/server test/sql/09_catalog_growth.sql "=== R481: … ===".
+  it("R481 grants a new catalog version's new cards to every active account, once", () => {
+    provenIn(481, SERVER_CATALOG_GROWTH_SQL);
+  });
+
+  // Proved by cards params.test.ts "R482 …".
+  it("R482 writes a card's tunable numbers as {key} in the faces that show them", () => {
+    provenIn(482, CARDS_PARAMS_TEST);
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R500 …" (the two short lines, their length, Units only).
+  it("R500 writes the glossary's Cry and Tribute rows as short reminders", () => {
+    provenIn(500, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web audio/voice-assets.test.ts "R501 …" (a SAPI persona's hash, --catalog, the
+  // persona's ranges, the 6 MiB budget), voice-lines.test.ts "R501 …" and voiceData.test.ts "R501 …";
+  // gen-voice.test.ts's "R501 …" cases render through SAPI and ffmpeg where a machine has them.
+  it("R501 renders the voice set on macOS or Windows, within 6 MiB", () => {
+    provenIn(
+      501,
+      "../../../apps/web/src/audio/voice-assets.test.ts",
+      "../../../apps/web/src/audio/voice-lines.test.ts",
+      "../../../apps/web/src/audio/voiceData.test.ts",
+    );
+  });
+
+  // Proved by apps/web fx/cardFx.test.ts "R502 …" (the signal in the redacted stream, both seats,
+  // Hinder's crystals and Blood Ridden's stream, never naming a hidden card, R200's bounds).
+  it("R502 shows a cast on draw on both seats", () => {
+    provenIn(502, "../../../apps/web/src/fx/cardFx.test.ts");
+  });
+
+  // Proved by apps/web cards/art/motifs.test.ts "R503 …" (a motif per name, distinct faces over the whole
+  // catalog, the families), with art.test.ts, CardFace.test.tsx and model.test.ts (the set mark and a
+  // token's printed rarity).
+  it("R503 draws every card a face of its own, and its set on the frame", () => {
+    provenIn(503, "../../../apps/web/src/cards/art/motifs.test.ts");
+  });
+
+  // Proved by apps/web game/Hand.test.tsx "R504 …" (the outline, its size rule, either seat).
+  it("R504 keeps an empty hand's place on the board", () => {
+    provenIn(504, "../../../apps/web/src/game/Hand.test.tsx");
+  });
+
+  // Proved by apps/web routes/play.test.tsx "R505 …".
+  it("R505 shows the queue counts on the mode tiles alone", () => {
+    provenIn(505, WEB_PLAY_TEST);
+  });
+
+  // Proved by apps/web audio/moments.test.ts, cues.test.ts and clockAlarm.test.ts "R506 …" (the play a
+  // sound answers, Hinder's crack, #27's drain, a cast on draw, the families, the clock alarm).
+  it("R506 lets sound answer the card moments of v0.2.0", () => {
+    provenIn(506, "../../../apps/web/src/audio/moments.test.ts");
+  });
+
+  // Proved by apps/web patches/PatchNotes.test.tsx "R507 …" (the page's grouping, filter and marks),
+  // patches/history.test.ts and patches/CardHistory.test.tsx "R507 …" (the History section).
+  it("R507 marks a patch's changes in its own teal and lists the cards each patch touched", () => {
+    provenIn(
+      507,
+      "../../../apps/web/src/patches/PatchNotes.test.tsx",
+      "../../../apps/web/src/patches/history.test.ts",
+      "../../../apps/web/src/patches/CardHistory.test.tsx",
+    );
+  });
+
+  // Proved by apps/web practice/core.test.ts "R508 …" (the board a finished free game gives, the next game's
+  // input on the human's seat alone, the fold, a lesson), practice/lastBoard.test.ts and controller.test.ts
+  // "R508 …" (the device's copy, untrusted and blocked storage, the controller carrying it both ways).
+  it("R508 keeps the human's last practice board on the device for the next practice game", () => {
+    provenIn(
+      508,
+      "../../../apps/web/src/practice/core.test.ts",
+      "../../../apps/web/src/practice/lastBoard.test.ts",
+      "../../../apps/web/src/practice/controller.test.ts",
+    );
+  });
+
+  // Proved by apps/web game/ActivateControl.test.tsx and game/activate.test.ts "R510 …" (the control, its
+  // count and reason, a press built from legalActions only, drag to target, Heroic Power).
+  it("R510 puts an Activate control on every card that has an ability", () => {
+    provenIn(510, "../../../apps/web/src/game/ActivateControl.test.tsx", "../../../apps/web/src/game/activate.test.ts");
+  });
+
+  // Proved by apps/web cards/copies.test.tsx "R511 …" (the copied text on every face Echo shows, filled with
+  // the view's numbers, the Radiant line kept, the inspect note, and a real game's Echo after Book of Knowledge).
+  it("R511 prints the Spell text a copier has on its face", () => {
+    provenIn(511, "../../../apps/web/src/cards/copies.test.tsx");
+  });
+
+  // Proved by apps/web cards/rules.test.ts "R512 …" (the new rows in players' words, Degrade and Upgrade split).
+  it("R512 gives the glossary a row for every term v0.2.0's cards print", () => {
+    provenIn(512, "../../../apps/web/src/cards/rules.test.ts");
+  });
+
+  // Proved by apps/web cards/cardState.test.tsx "R513 …" (tuned numbers, stats and keywords marked, the
+  // overall mark, Brittle, enchantments, piles and lines of code on every surface).
+  it("R513 marks what Degrade, Upgrade and KY's Constant changed on a card", () => {
+    provenIn(513, "../../../apps/web/src/cards/cardState.test.tsx");
+  });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R514 …" (the offered zones glow and answer on the board).
+  it("R514 answers a cell prompt on the board", () => {
+    provenIn(514, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
+
+  // Proved by apps/web game/PromptE18.test.tsx "R515 …" (the running total, greying, Confirm).
+  it("R515 shows a budgeted pick's total and greys what would go over", () => {
+    provenIn(515, "../../../apps/web/src/game/PromptE18.test.tsx");
+  });
+
+  // Proved by cards classic/007-infiniscepter.test.ts "R520 …" (an X Spell's copy is cast with the X its
+  // caster picks, 1 to their current mana, unpaid).
+  it("R520 casts C #7 InfiniScepter's copy of an X-cost Spell with the X its caster chooses", () => {
+    provenIn(520, CLASSIC_007_TEST);
+  });
+
+  // Proved by cards classic/009-income-tax.test.ts "R521 …" (burned and cast-on-draw cards were drawn; a
+  // limited draw never happened; an empty-deck draw counts but gives nothing).
+  it("R521 counts every draw that happened toward C #9 Income Tax", () => {
+    provenIn(521, CLASSIC_009_TEST);
+  });
+
+  // Classic #46–#90's own rows (the cards-classic-b workstream's block).
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R540 …" (reward J's 100 mana on the next turn).
+  it("R540 grants C #90's reward J as next-turn mana", () => {
+    provenIn(540, CLASSIC_090_TEST);
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R541 …" and the engine's quests.test.ts "R541 …".
+  it("R541 counts every draw that took a card toward C #90's quest 1", () => {
+    provenIn(541, CLASSIC_090_TEST, "quests.test.ts");
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R542 …" (the side a card died on, the side a hit landed on).
+  it("R542 counts C #90's deaths and damage by who controlled them as they happened", () => {
+    provenIn(542, CLASSIC_090_TEST);
+  });
+
+  // Proved by cards classic/090-in-too-deep.test.ts "R543 …" (every reward in the tree's order, no reward prompt).
+  it("R543 grants C #90's Radiant rewards in the tree's order", () => {
+    provenIn(543, CLASSIC_090_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R545 …" and cards classic/057-echo.test.ts "R545 …".
+  it("R545 has C #57 Echo choose a copied X with its play, after paying its own (1)", () => {
+    provenIn(545, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R546 …" and cards classic/057-echo.test.ts "R546 …".
+  it("R546 fixes C #57 Echo's copied text as its play begins", () => {
+    provenIn(546, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by the engine's copied-text.test.ts "R547 …" and cards classic/057-echo.test.ts "R547 …".
+  it("R547 gives C #57 Echo the copied Spell's static text, but no return from the graveyard", () => {
+    provenIn(547, "copied-text.test.ts", CLASSIC_057_TEST);
+  });
+
+  // Proved by cards classic/066-eu-striker.test.ts "R548 …" (both triggers answer a resolved play).
+  it("R548 has C #66 EU Striker answer its owner's plays once they resolve", () => {
+    provenIn(548, CLASSIC_066_TEST);
+  });
+
+  // Proved by cards classic/058-common-resources.test.ts "R549 …" (Hinder off the enemy deck's bottom:
+  // the repeat comes from your own deck).
+  it("R549 repeats a cast on draw taken from the opponent's deck with a draw from your own", () => {
+    provenIn(549, CLASSIC_058_TEST);
+  });
+
+  // Proved by cards classic/063-crop-dusting.test.ts "R550 …" (the firing trap takes its own placement).
+  it("R550 places C #63 Crop Dusting's tokens on the firing trap too", () => {
+    provenIn(550, CLASSIC_063_TEST);
+  });
+
+  // Proved by cards classic-plus/026-tommy-tempo.test.ts "R560 …" (the hand uncast, a full hand burning it).
+  it("R560 sends C+ #26 Tommy Tempo with no zone to the hand uncast", () => {
+    provenIn(560, PLUS_026_TEST);
+  });
+
+  // Proved by cards classic-plus/031-fusion-lab.test.ts "R561 …" (the Radiant ingredient in both forms).
+  it("R561 lends C+ #31 Fusion Lab's Radiant ingredient to both of the fusion's forms", () => {
+    provenIn(561, PLUS_031_TEST);
+  });
+
+  // Proved by cards classic-plus/035-rollback.test.ts "R562 …" and engine boardHistory.test.ts "R562 …".
+  it("R562 rolls back as far as the history goes", () => {
+    provenIn(562, PLUS_035_TEST, "boardHistory.test.ts");
+  });
+
+  // Proved by engine boardHistory.test.ts "R563 …" (a Reborn return let go) and the card test "R563 …".
+  it("R563 releases the zones a Rollback restores", () => {
+    provenIn(563, "boardHistory.test.ts", PLUS_035_TEST);
+  });
+
+  // Proved by engine lastBoards.test.ts "R564 …" and cards classic-plus/029-portal-to-the-past.test.ts "R564 …".
+  it("R564 keeps a last board as card and face, dropping what the match cannot rebuild", () => {
+    provenIn(564, "lastBoards.test.ts", PLUS_029_TEST);
+  });
+
+  // Proved by apps/server match/last-boards.test.ts "R565 …" (written in the result's transaction, frozen
+  // on the match row, never the opponent's face-down cards).
+  it("R565 stores each profile's last board on the server", () => {
+    provenIn(565, SERVER_LAST_BOARDS_TEST);
+  });
+
+  // Proved by engine boardHistory.test.ts "R566 …" and cards classic-plus/035-rollback.test.ts "R566 …".
+  it("R566 keeps a put-back card's instance whole but its turn state", () => {
+    provenIn(566, "boardHistory.test.ts", PLUS_035_TEST);
+  });
+
+  // Proved by cards classic-plus/008-withering-storm.test.ts "R569 …".
+  it("R569 draws C+ #8 Withering Storm's 4 among the cards a Degrade can change", () => {
+    provenIn(569, PLUS_008_TEST);
+  });
+
+  // Proved by cards classic-plus/010-new-wraps.test.ts "R570 …" (the grant recorded; a later Vanilla keeps it).
+  it("R570 records C+ #10 New Wraps' Reborn on a Unit that already has Reborn", () => {
+    provenIn(570, PLUS_010_TEST);
+  });
+
+  // Proved by cards classic-plus/012-8-frostspatula.test.ts "R409 R572 …" (a mutual kill counts).
+  it("R572 counts C+ #12.8 Frostspatula's kill in its own last combat", () => {
+    provenIn(572, PLUS_012_8_TEST);
+  });
+
+  // Proved by cards classic-plus/037-wardrum.test.ts "R578 …" (a cast inside the 3rd play is the 4th).
+  it("R578 counts C+ #37 Wardrum's plays in play order", () => {
+    provenIn(578, PLUS_037_TEST);
+  });
+
+  // Proved by cards classic-plus/042-kys-test.test.ts and engine kyTest.test.ts "R580 …" (a + b from
+  // the rng, three different near misses).
+  it("R580 generates C+ #42 KY's Test's Easy problems from the rng", () => {
+    provenIn(580, CLASSIC_PLUS_042_TEST, "kyTest.test.ts");
+  });
+
+  // Proved by cards classic-plus/040-appropriations.test.ts "R581 …" (one roll per card, Radiant ones too).
+  it("R581 rolls every card of the field, hand and deck for C+ #40 Appropriations' Culture", () => {
+    provenIn(581, CLASSIC_PLUS_040_TEST);
+  });
+
+  // Proved by cards classic-plus/043-ai-slop.test.ts "R582 …" (one card is added as it is).
+  it("R582 adds C+ #43 AI Slop's one card unfused when its count is 1", () => {
+    provenIn(582, CLASSIC_PLUS_043_TEST);
+  });
+
+  // Proved by cards preview.test.ts and classic-plus/044, 045 "R583 …" (the Radiant face's preview
+  // names the permanents each choice would exile, never an enemy face-down card).
+  it("R583 previews the permanents C+ #44 and #45's Radiant face would exile", () => {
+    provenIn(583, CARDS_PREVIEW_TEST, CLASSIC_PLUS_044_TEST, CLASSIC_PLUS_045_TEST);
+  });
+
+  // Proved by cards classic-plus/064-mulch-muncher.test.ts "R584 …" (the discount prices a play only).
+  it("R584 discounts C+ #64 Mulch Muncher only where a play takes it from", () => {
+    provenIn(584, CLASSIC_PLUS_064_TEST);
+  });
+
+  // Proved by cards classic-plus/070-chaos-machine.test.ts "R585 …" (it may Upgrade itself).
+  it("R585 lets C+ #70 Chaos Machine pick itself", () => {
+    provenIn(585, CLASSIC_PLUS_070_TEST);
+  });
+
+  // Proved by cards classic-plus/t-ai-03-hallucination.test.ts and engine library-copies.test.ts
+  // "R586 …" (copies in the order drawn; a small deck copied whole with no draw).
+  it("R586 hands T-AI-3 Hallucination's copies over in the order drawn", () => {
+    provenIn(586, CLASSIC_PLUS_T_AI_03_TEST, "library-copies.test.ts");
+  });
+
+  // Proved by cards classic-plus/t-ai-06-datacenter-fire.test.ts and engine effects-datacenter.test.ts
+  // "R588 …" (an animated Field Spell is a Unit, neither destroyed nor counted).
+  it("R588 sweeps T-AI-6 Datacenter Fire's Field Spells from the backrow alone", () => {
+    provenIn(588, CLASSIC_PLUS_T_AI_06_TEST, "effects-datacenter.test.ts");
+  });
+
+  // Proved by cards classic-plus/074 and engine twiceForward.test.ts "R589 …" (an exiled card is
+  // nothing to fuse; the Brittle still grows).
+  it("R589 fuses into C+ #74 only a card still on the field or in a graveyard", () => {
+    provenIn(589, CLASSIC_PLUS_074_TEST, "twiceForward.test.ts");
+  });
+
+  // Proved by cards classic-plus/047-joggs-box.test.ts "R593 …" (a Call the Box casts is link 1 of its
+  // chain; engine effects-cast-chaos.test.ts proves the cast itself).
+  it("R593 makes a Call to Chaos a random cast makes a link of its chain", () => {
+    provenIn(593, CLASSIC_PLUS_047_TEST);
+  });
+
+  // Proved by cards classic-plus/052 "R594 …" (an Upgrade before the cast holds for the rest of the game).
+  it("R594 reads C+ #52's numbers as it resolves and carries them", () => {
+    provenIn(594, CLASSIC_PLUS_052_TEST);
+  });
+
+  // Proved by cards classic-plus/065-2 and 065-3 and engine effects-fruit.test.ts "R596 …" (a card
+  // cast on draw, and the card its chain then brings, take no price).
+  it("R596 reads \"it\" after a draw as the card that draw itself put in the hand", () => {
+    provenIn(596, CLASSIC_PLUS_065_2_TEST, CLASSIC_PLUS_065_3_TEST, "effects-fruit.test.ts");
+  });
+
+  // The AI workstream's rows (from R600).
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R600 …" (watched when its own numbers put it at
+  // risk and it was not banned; off the list when it was at risk only by the old tables and is clean).
+  it("R600 keeps a card on SHADOW_WATCH only while its own numbers keep it at risk", () => {
+    provenIn(600, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by packages/ai shadowBan.test.ts "R390 R601 …" (6 affordable turns and no play, or 8 plays,
+  // over pass 2's games at that tier, forced and filler summed; pass 1's numbers never added in).
+  it("R601 judges a neverPlayed or selfHarm ban on pass 2's numbers alone", () => {
+    provenIn(601, AI_SHADOW_BAN_TEST);
+  });
+
+  // Proved by packages/ai redact-live-face-down.test.ts "R602 …" (a face-down Siphon Squad: the AI's
+  // view keeps its units' shown Attack and Health, the card stays a placeholder, and every move its
+  // determinizations offer is legal on the true board).
+  it("R602 keeps in the AI's view what a live face-down card visibly does", () => {
+    provenIn(602, "../../ai/test/redact-live-face-down.test.ts");
+  });
+
+  // The ranked ladder's rows (issue #49, SPEC §9.12).
+
+  // Proved by apps/server test/ranked/glicko2.test.ts "R603 …" (Glickman's worked example, draws as
+  // half-wins against reference values, and one rated game as one rating period) and
+  // test/api/ranked.test.ts "R603 rating the same game twice changes nothing" (idempotent rating).
+  it("R603 rates every player with a hidden, deterministic Glicko-2 rating", () => {
+    provenIn(603, SERVER_GLICKO_TEST, SERVER_RANKED_TEST);
+  });
+
+  // Proved by test/api/ranked.test.ts "R604 a ranked series through the results writer" (a room's
+  // series moves nothing, a queue's moves it once) and test/api/results.test.ts "ranked and
+  // unranked (R604, R611)" (a room challenge records both ratings unchanged; a ranked match moves
+  // both hidden ratings, their deviations and both seasons).
+  it("R604 moves a rating or a rank only for the ranked match type", () => {
+    provenIn(604, SERVER_RANKED_TEST, SERVER_RANKED_RESULTS_TEST);
+  });
+
+  // Proved by test/ranked/ladder.test.ts "R605 the ladder's shape" (five Grape tiers of three
+  // divisions, Raisin until placements are played) and test/api/ranked.test.ts "R605 placements
+  // through rated games".
+  it("R605 shows Raisin placements, then five Grape tiers of three divisions", () => {
+    provenIn(605, SERVER_LADDER_TEST, SERVER_RANKED_TEST);
+  });
+
+  // Proved by test/ranked/ladder.test.ts "R606 …" (the mid-rank percentile, the tier spread, the
+  // one-pip lean, convergence, the streak bonus below Mythic Grape, holding the top).
+  it("R606 leans pips gently toward the hidden rating and bonuses win streaks", () => {
+    provenIn(606, SERVER_LADDER_TEST);
+  });
+
+  // Proved by test/ranked/ladder.test.ts "R607 the tier floor and the season's peak" (no drop below
+  // the reached Grape tier; the season's best as the profile's badge).
+  it("R607 floors each season's Grape tier and keeps its peak as a badge", () => {
+    provenIn(607, SERVER_LADDER_TEST);
+  });
+
+  // Proved by test/ranked/ladder.test.ts "R608 Jlorious" (top JLORIOUS_SIZE Mythic players by
+  // rating; every Mythic player when fewer qualify; numbered positions; falling out returns to
+  // Mythic) and test/api/ranked.test.ts "R608 Jlorious through the server".
+  it("R608 ranks the top 100 Mythic players by rating as numbered Jlorious", () => {
+    provenIn(608, SERVER_LADDER_TEST, SERVER_RANKED_TEST);
+  });
+
+  // Proved by test/ranked/season.test.ts "R609 …" (season per minor version; the soft reset's pull,
+  // deviation widening, order-independence, nobody to reset) and test/api/ranked.test.ts "R609
+  // seasons on the server".
+  it("R609 opens a season per minor version with a soft reset", () => {
+    provenIn(609, SERVER_SEASON_TEST, SERVER_RANKED_TEST);
+  });
+
+  // Proved by test/api/ranked.test.ts "R610 bots" (a bot rated like a player from its own rating,
+  // with no rank, season row or leaderboard place, and outside the percentiles).
+  it("R610 keeps each AI bot's own rating, off the player leaderboard", () => {
+    provenIn(610, SERVER_RANKED_TEST);
+  });
+
+  // Proved by test/api/results.test.ts "R611 records the rated game …" (version, pilots, result,
+  // both ratings and ranks before and after).
+  it("R611 records every rated game with versions, pilots, result and before/after", () => {
+    provenIn(611, SERVER_RANKED_RESULTS_TEST);
+  });
+
+  // Proved by test/api/ranked.test.ts "R612 what the client reads" (own rank, leaderboard, match
+  // ranks, never a rating) and test/api/auth.test.ts "R612 sends no rating …".
+  it("R612 reads the rank everywhere and the hidden rating nowhere", () => {
+    provenIn(612, SERVER_RANKED_TEST, SERVER_AUTH_TEST);
   });
 });
 

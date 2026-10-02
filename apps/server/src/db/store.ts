@@ -1,6 +1,6 @@
 /**
  * The production `Store` (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
- * migrations in `./migrations` (0001-0013) with the `pg` driver already in `apps/server/package.json`.
+ * migrations in `./migrations` (0001-0017) with the `pg` driver already in `apps/server/package.json`.
  *
  * `src/index.ts` finds this module by dynamic import and calls `createPostgresStore({
  * connectionString })`; until it existed the server threw `StoreUnavailableError` and could only
@@ -51,6 +51,7 @@ import type {
   CollectionGrant,
   FrozenTrio,
   InviteCode,
+  LastBoardEntry,
   MatchActionRow,
   MatchClocks,
   MatchRow,
@@ -58,6 +59,7 @@ import type {
   Profile,
   ProfileStatus,
   QueueMode,
+  RankedStore,
   RedeemResult,
   ResultRow,
   Room,
@@ -75,7 +77,8 @@ import type {
   TutorialProgressRow,
   UpsertOutcome,
 } from "../api/ports";
-import type { Action } from "@jackioh/shared";
+import { RATING_DEVIATION_START, RATING_VOLATILITY_START } from "../config";
+import { parseGameRecord, sourcesOf, type Action } from "@jackioh/shared";
 
 /**
  * The endings that always have a winner (`GameOverReason`, packages/shared/src/events.ts): one
@@ -349,6 +352,11 @@ function toProfile(row: ProfileRow): Profile {
     email: row.email ?? "",
     status: status satisfies ProfileStatus,
     rating: row.rating,
+    // No Glicko columns until the ranked-ladder migration lands (SPEC §9.12): Postgres profiles
+    // read as fresh. Queue matchmaking reads `rating` only, so it is unaffected; anything that
+    // rates (a ranked result, a series end, the season reset) throws before it could use these.
+    ratingDeviation: RATING_DEVIATION_START,
+    ratingVolatility: RATING_VOLATILITY_START,
     inMatchId: row.current_match_id,
     createdAt: msOf(row.created_at),
   };
@@ -370,11 +378,19 @@ type MatchDbRow = {
   ceiling_at: Date;
   created_at: Date;
   ended_at: Date | null;
+  p1_last_board: unknown;
+  p2_last_board: unknown;
 };
 
 const MATCH_COLUMNS = `id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
-  ceiling_at, created_at, ended_at`;
+  ceiling_at, created_at, ended_at, p1_last_board, p2_last_board`;
+
+/** R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK admits it. */
+function lastBoardOf(value: unknown): LastBoardEntry[] {
+  if (!Array.isArray(value)) throw new Error(`a last board is not an array: ${JSON.stringify(value)}`);
+  return value.map((entry: LastBoardEntry) => ({ defId: entry.defId, radiant: entry.radiant }));
+}
 
 function toMatch(row: MatchDbRow): MatchRow {
   const p2 = row.p2_profile_id;
@@ -383,6 +399,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     throw new Error(`match ${row.id} has no second player; it is still an open room`);
   }
   const status: MatchStatus = row.status === "over" ? "finished" : "live";
+  const boards: [LastBoardEntry[], LastBoardEntry[]] = [lastBoardOf(row.p1_last_board), lastBoardOf(row.p2_last_board)];
   return {
     id: row.id,
     seed: row.seed,
@@ -402,6 +419,8 @@ function toMatch(row: MatchDbRow): MatchRow {
       },
       ceilingAt: msOf(row.ceiling_at),
     },
+    // R417: absent when both are empty, as the registry writes it.
+    ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
   };
 }
 
@@ -998,6 +1017,13 @@ function buildStore(session: Session): Store {
       if (affected(rowCount) === 0) throw new Error(`no profile ${profileId}`);
     },
 
+    // No Glicko columns until the ranked-ladder migration lands, and writing the rating alone
+    // would silently drop the deviation and volatility: fail loudly instead. Unreachable in
+    // practice — rows read here carry no `ranked`, so nothing on this store ever rates.
+    setGlicko: async () => {
+      throw new Error("profiles.setGlicko requires the ranked-ladder migration (SPEC §9.12)");
+    },
+
     // §9.5: set when a match starts and cleared by every ending.
     setInMatch: async (profileId, matchId) => {
       const { rowCount } = await session.query(
@@ -1379,18 +1405,21 @@ function buildStore(session: Session): Store {
           match.clocks.ceilingAt,
           match.createdAt,
           match.finishedAt,
+          json(match.lastBoards?.[0] ?? []),
+          json(match.lastBoards?.[1] ?? []),
         ];
         const values = `
           $2::text, $3::text, $4::uuid, $5::uuid, $6::jsonb, $7::jsonb, $8::text,
           ${nullableTs("$9")}, ${nullableTs("$10")}, ${nullableTs("$11")}, ${nullableTs("$12")},
-          ${nullableTs("$13")}, ${ts("$14")}, ${ts("$15")}, ${nullableTs("$16")}`;
+          ${nullableTs("$13")}, ${ts("$14")}, ${ts("$15")}, ${nullableTs("$16")}, $17::jsonb, $18::jsonb`;
 
         if (status === undefined) {
           await q(
             `insert into public.matches (
                id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
-               grace_deadline_at, ceiling_at, created_at, ended_at, started_at, last_seq)
+               grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
+               started_at, last_seq)
              values ($1::uuid, ${values}, ${ts("$15")}, 0)`,
             params,
           );
@@ -1404,7 +1433,8 @@ function buildStore(session: Session): Store {
              turn_deadline_at = ${nullableTs("$9")}, prompt_deadline_at = ${nullableTs("$10")},
              p1_disconnected_at = ${nullableTs("$11")}, p2_disconnected_at = ${nullableTs("$12")},
              grace_deadline_at = ${nullableTs("$13")}, ceiling_at = ${ts("$14")},
-             created_at = ${ts("$15")}, ended_at = ${nullableTs("$16")}, started_at = ${ts("$15")}
+             created_at = ${ts("$15")}, ended_at = ${nullableTs("$16")}, started_at = ${ts("$15")},
+             p1_last_board = $17::jsonb, p2_last_board = $18::jsonb
            where id = $1::uuid`,
           params,
         );
@@ -1524,6 +1554,33 @@ function buildStore(session: Session): Store {
     live: async () => {
       const { rows } = await session.query<MatchDbRow>(null, `select ${MATCH_COLUMNS} from app.live_matches()`);
       return rows.filter((row) => row.p2_profile_id !== null).map(toMatch);
+    },
+
+    /**
+     * R376: a Conquest game is its series' (`series.withGame`). Otherwise a room's match is the row
+     * the room was (`room_code` set) and has its `room_mode`, `bo1` when it has none as `rooms.get`
+     * reads it; a queue match is the skeleton `tickets.claimPair` wrote, and has its tickets' mode.
+     */
+    modeOf: async (matchId) => {
+      if (!isUuid(matchId)) return null;
+      if ((await store.series.withGame(matchId)) !== null) return "bo3";
+      const { rows } = await session.query<{
+        room_code: string | null;
+        room_mode: string | null;
+        ticket_mode: string | null;
+      }>(
+        null,
+        `select m.room_code, m.room_mode,
+                (select t.mode from public.tickets t where t.match_id = m.id
+                  order by t.enqueued_at, t.id limit 1) as ticket_mode
+           from public.matches m
+          where m.id = $1::uuid`,
+        [matchId],
+      );
+      const row = rows[0];
+      if (row === undefined) return null;
+      if (row.room_code !== null) return row.room_mode === null ? "bo1" : queueModeOf(row.room_mode);
+      return row.ticket_mode === null ? null : queueModeOf(row.ticket_mode);
     },
 
     /**
@@ -2010,6 +2067,92 @@ function buildStore(session: Session): Store {
         return { kind: "merged", progress: toTutorial(row) } as const;
       }),
   };
+
+  // -------------------------------------------------------------------------
+  // Last boards (C+ #29, R417, R565). No `app.*` function: the one rule is "replace", which the
+  // primary key on (profile_id, kind) says.
+  // -------------------------------------------------------------------------
+
+  store.lastBoards = {
+    get: async (profileId, kind) => {
+      if (!isUuid(profileId)) return null;
+      const { rows } = await session.query<{ board: unknown }>(
+        profileId,
+        `select board from public.last_boards where profile_id = $1::uuid and kind = $2::text`,
+        [profileId, kind],
+      );
+      const row = rows[0];
+      return row === undefined ? null : lastBoardOf(row.board);
+    },
+    put: async (profileId, kind, board, at) => {
+      await session.query(
+        profileId,
+        `insert into public.last_boards (profile_id, kind, board, created_at, updated_at)
+         values ($1::uuid, $2::text, $3::jsonb, ${ts("$4")}, ${ts("$4")})
+         on conflict (profile_id, kind) do update set board = excluded.board, updated_at = excluded.updated_at`,
+        [profileId, kind, json(board), at],
+      );
+    },
+  };
+
+  // -------------------------------------------------------------------------
+  // Game records for the card statistics (SPEC §9.11, R376)
+  // -------------------------------------------------------------------------
+
+  store.gameRecords = {
+    /** R376: one record per id; `on conflict do nothing` answers a second write of a game with false. */
+    insert: async (record) => {
+      const { rowCount } = await session.query(
+        null,
+        `insert into public.game_records (id, source, mode, patch, record)
+         values ($1::text, $2::text, $3::text, $4::text, $5::jsonb)
+         on conflict (id) do nothing`,
+        [record.id, record.source, record.mode, record.patch, json(record)],
+      );
+      return affected(rowCount) === 1;
+    },
+
+    /** The filter on the indexed columns; each row read back through `parseGameRecord`. */
+    list: async (query) => {
+      const { rows } = await session.query<{ record: unknown }>(
+        null,
+        `select record from public.game_records
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)
+          order by id collate "C"`,
+        [sourcesOf(query.source), query.mode, query.patch],
+      );
+      return rows.map((row) => parseGameRecord(row.record));
+    },
+  };
+
+  // -------------------------------------------------------------------------
+  // Ranked ladder (SPEC §9.12): not yet carried by Postgres. Seasons, season ranks, bot ratings
+  // and rated games need their migration first; until then every ranked method fails loudly
+  // rather than answering from missing tables. Unreachable in practice — rows read here carry
+  // no `ranked`, so nothing on this store ever rates.
+  // -------------------------------------------------------------------------
+
+  const noRanked = (method: string): (() => Promise<never>) => async () => {
+    throw new Error(`ranked.${method} requires the ranked-ladder migration (SPEC §9.12)`);
+  };
+  const ranked: RankedStore = {
+    seasons: noRanked("seasons"),
+    createSeason: noRanked("createSeason"),
+    ratedPlayers: noRanked("ratedPlayers"),
+    resetRatings: noRanked("resetRatings"),
+    standings: noRanked("standings"),
+    rank: noRanked("rank"),
+    ranksOf: noRanked("ranksOf"),
+    putRank: noRanked("putRank"),
+    notePeakJlorious: noRanked("notePeakJlorious"),
+    bot: noRanked("bot"),
+    putBot: noRanked("putBot"),
+    recordGame: noRanked("recordGame"),
+    game: noRanked("game"),
+  };
+  store.ranked = ranked;
 
   return store;
 }

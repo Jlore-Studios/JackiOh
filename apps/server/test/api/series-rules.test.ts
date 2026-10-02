@@ -733,7 +733,7 @@ describe("R262 — how a series is rated", () => {
     expect(seriesScore(forfeitSeries(fresh(), "p2", NOW))).toBe(1);
   });
 
-  it("R262 the one move is recorded on the ending row without a second write, and its rating never reaches a player (R385)", () => {
+  it("R262 the one move is recorded on the ending row without a second write, and its rating never reaches a player (R612)", () => {
     const decided = play(play(play(fresh(), [0, 0], "p2", "m2"), [1, 1], "p2", "m3"), [2, 2], "p2", "unused");
     const rated = rateSeries(decided, { before: [1200, 1000], after: [1180.5, 1019.5] });
     expect(rated.ratingBefore).toEqual([1200, 1000]);
@@ -744,7 +744,7 @@ describe("R262 — how a series is rated", () => {
     expect(viewOf(rated, BOB).result).toEqual({ outcome: "win", endReason: "decided", ranked: true });
     expect(viewOf(rated, ALICE).result).toEqual({ outcome: "loss", endReason: "decided", ranked: true });
     expect(JSON.stringify(viewOf(rated, ALICE))).not.toMatch(/1180\.5|1200|1019\.5/);
-    // R377: a room's series is unranked, and its row records no move.
+    // R604: a room's series is unranked, and its row records no move.
     expect(viewOf(rateSeries({ ...decided, ranked: false }, null), BOB).result).toMatchObject({ ranked: false });
   });
 });

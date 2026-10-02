@@ -54,7 +54,7 @@ function json(status: number, body?: unknown): Response {
 
 function me(status: "pending" | "active") {
   return {
-    profile: { id: "p1", status, rating: 1000 },
+    profile: { id: "p1", status },
     needsInviteCode: status === "pending",
     emailVerified: true,
     currentMatchId: null,
@@ -239,7 +239,11 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    await screen.findByTestId(shellTestid.error, undefined, SLOW);
+    // Every step here runs on promises and faked timers (/account is in the entry chunk and the
+    // stubbed fetch answers at once), so flushing them settles the screen without waiting on the
+    // wall clock, however loaded the machine is.
+    await flushMicrotasks();
+    expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
 
     // A phone freezes a background tab's timers: the clock moves on, one tick arrives on return.
@@ -264,8 +268,10 @@ describe("B40 the gate's error panel", () => {
     });
     at(paths.account);
     render(<App />);
+    // As above: promises and faked timers only, so the test never waits on the wall clock.
+    await flushMicrotasks();
 
-    const panel = await screen.findByTestId(shellTestid.error, undefined, SLOW);
+    const panel = screen.getByTestId(shellTestid.error);
     expect(panel.textContent).toMatch(/42 s/);
     expect(panel.textContent).not.toContain("too many requests; slow down");
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
@@ -277,9 +283,8 @@ describe("B40 the gate's error panel", () => {
     expect(retry).toBeEnabled();
     limited = false;
     fireEvent.click(retry);
-    await waitFor(() => {
-      expect(screen.queryByTestId(shellTestid.error)).toBeNull();
-    }, SLOW);
+    await flushMicrotasks();
+    expect(screen.queryByTestId(shellTestid.error)).toBeNull();
   });
 });
 
@@ -485,7 +490,7 @@ describe("the code screen when the device moves to another account", () => {
       vi.fn((input: unknown, init?: RequestInit) => {
         const url = String(input);
         const isA = (new Headers(init?.headers).get("authorization") ?? "") === `Bearer ${a}`;
-        const account = (id: string, email: string) => ({ ...me("pending"), profile: { id, status: "pending", rating: 1000 }, email });
+        const account = (id: string, email: string) => ({ ...me("pending"), profile: { id, status: "pending" }, email });
         if (url === `${API}/api/auth/me`) {
           return Promise.resolve(json(200, isA ? account("a", "a@example.test") : account("b", "b@example.test")));
         }

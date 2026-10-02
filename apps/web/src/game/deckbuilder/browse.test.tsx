@@ -36,7 +36,16 @@ import { HOVER_DELAY_MS, LONG_PRESS_MS } from "../../cards/inspect/constants.ts"
 import { DECK_STATUS_MS } from "./DeckEditor.tsx";
 import DeckWorkshop from "./DeckWorkshop.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { COST_BUCKETS, FILTER_RARITIES, FILTER_TAGS, FILTER_TYPES, deckListOrder, manaCurve, type SortKey } from "./filters.ts";
+import {
+  COST_BUCKETS,
+  FILTER_RARITIES,
+  FILTER_SETS,
+  FILTER_TAGS,
+  FILTER_TYPES,
+  deckListOrder,
+  manaCurve,
+  type SortKey,
+} from "./filters.ts";
 import { fixtureCatalog, fixtureCollection, legalDecks } from "./fixtures.ts";
 import type { DeckSyncApi } from "./sync.ts";
 import { decksResponse, fakeDeckServer, manualClock, quietDeckApi, savedDeck } from "./testkit.ts";
@@ -60,6 +69,7 @@ import {
   deckCardId,
   filterCostId,
   filterRarityId,
+  filterSetId,
   filterTagId,
   filterTypeId,
   addPoolId,
@@ -450,16 +460,17 @@ describe("the pool grid (B30)", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("filtering (B31)", () => {
-  it("B31 every cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
+  it("B31 every set, cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
     mount();
     const filters = screen.getByTestId(DB_FILTERS);
     const ids = [
+      ...FILTER_SETS.map(filterSetId),
       ...COST_BUCKETS.map(filterCostId),
       ...FILTER_TYPES.map(filterTypeId),
       ...FILTER_TAGS.map(filterTagId),
       ...FILTER_RARITIES.map(filterRarityId),
     ];
-    expect(ids).toHaveLength(8 + 5 + 8 + 5);
+    expect(ids).toHaveLength(3 + 8 + 5 + 10 + 5);
     for (const id of ids) {
       const chip = within(filters).getByTestId(id);
       expect(chip.tagName, id).toBe("BUTTON");

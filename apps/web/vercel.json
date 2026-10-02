@@ -4,7 +4,7 @@
   "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|patch-notes){/}?", "destination": "/index.html" },
+    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|patch-notes|leaderboard){/}?", "destination": "/index.html" },
     { "source": "/(match|series)/([^/]+){/}?", "destination": "/index.html" }
   ],
   "headers": [

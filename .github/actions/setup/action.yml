@@ -1,0 +1,16 @@
+# Every Node job's first three steps, after actions/checkout: pnpm, Node from .nvmrc with the pnpm
+# store cached, and the workspace install. One definition, so the dozen jobs CI splits into (#73)
+# cannot drift apart in how they install.
+name: setup
+description: pnpm, Node from .nvmrc with the pnpm cache, and `pnpm install --frozen-lockfile`
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - name: install
+      shell: bash
+      run: pnpm install --frozen-lockfile

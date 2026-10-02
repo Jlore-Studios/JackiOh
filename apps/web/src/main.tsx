@@ -91,6 +91,7 @@ const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
+const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -400,6 +401,8 @@ function screenNameFor(path: string): string | null {
       return "Privacy";
     case paths.patchNotes:
       return "Patch notes";
+    case paths.leaderboard:
+      return "Leaderboard";
     case paths.hotseat:
       return DEV_ONLY ? "Hotseat" : null;
   }
@@ -487,7 +490,11 @@ export function App(): ReactElement {
     }
 
     if (path === paths.practice) return <PracticeRoute />;
+    if (path === paths.leaderboard) {
+      return <Gated key={path}>{(account) => <LeaderboardRoute token={account.token} />}</Gated>;
+    }
     if (path === paths.privacy) return <PrivacyRoute />;
+    // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) return <PatchNotesRoute />;
 
     const matchId = matchIdOf(path);

@@ -6,7 +6,8 @@ const SEEDS = Array.from({ length: 100 }, (_, i) => `smoke-${i + 1}`);
 
 /** M1 gate: 100 random-policy games between script-less decks, start to finish. */
 describe("hotseat smoke (M1 gate)", () => {
-  it("finishes 100 seeded games by hero death or the turn cap, without throwing", { timeout: 120_000 }, () => {
+  // R389: the 60-turn cap doubles the length of a game that reaches it, which most random ones do.
+  it("finishes 100 seeded games by hero death or the turn cap, without throwing", { timeout: 300_000 }, () => {
     const reasons = new Map<string, number>();
 
     for (const seed of SEEDS) {

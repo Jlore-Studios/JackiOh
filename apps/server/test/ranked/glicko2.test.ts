@@ -1,5 +1,5 @@
 /**
- * The hidden rating's maths (SPEC §9.11, R376): Glicko-2 against reference values.
+ * The hidden rating's maths (SPEC §9.12, R603): Glicko-2 against reference values.
  *
  * Two sources. Glickman's own worked example ("Example of the Glicko-2 system", 2013, §"Example"),
  * at the precision the paper prints, which it rounds at every step; and the values below marked
@@ -23,8 +23,8 @@ function expectReference(actual: Glicko, reference: { rating: number; deviation:
   expect(Math.abs(actual.volatility - reference.volatility)).toBeLessThan(1e-8);
 }
 
-describe("R376 Glicko-2 matches Glickman's worked example", () => {
-  it("R376 rates 1500/200/0.06 after beating 1400/30 and losing to 1550/100 and 1700/300 as the paper does", () => {
+describe("R603 Glicko-2 matches Glickman's worked example", () => {
+  it("R603 rates 1500/200/0.06 after beating 1400/30 and losing to 1550/100 and 1700/300 as the paper does", () => {
     const after = glicko2Period(glicko(1500, 200), [
       { opponent: glicko(1400, 30), score: 1 },
       { opponent: glicko(1550, 100), score: 0 },
@@ -39,7 +39,7 @@ describe("R376 Glicko-2 matches Glickman's worked example", () => {
     expectReference(after, { rating: 1464.050670819481, deviation: 151.516521926373, volatility: 0.05999598440084 });
   });
 
-  it("R376 the update depends only on rating differences, so the scale's centre is any number", () => {
+  it("R603 the update depends only on rating differences, so the scale's centre is any number", () => {
     // RATING_START is R79's 1000, not Glickman's 1500: the same example moved by 500 moves by 500.
     const games = (shift: number) => [
       { opponent: glicko(1400 + shift, 30), score: 1 as const },
@@ -54,8 +54,8 @@ describe("R376 Glicko-2 matches Glickman's worked example", () => {
   });
 });
 
-describe("R376 draws count as half a win", () => {
-  it("R376 the paper's player drawing all three games (REFERENCE)", () => {
+describe("R603 draws count as half a win", () => {
+  it("R603 the paper's player drawing all three games (REFERENCE)", () => {
     const after = glicko2Period(glicko(1500, 200), [
       { opponent: glicko(1400, 30), score: 0.5 },
       { opponent: glicko(1550, 100), score: 0.5 },
@@ -64,7 +64,7 @@ describe("R376 draws count as half a win", () => {
     expectReference(after, { rating: 1509.107200047628, deviation: 151.516520727744, volatility: 0.05999567822515 });
   });
 
-  it("R376 a draw between two new players moves neither rating and narrows both deviations (REFERENCE)", () => {
+  it("R603 a draw between two new players moves neither rating and narrows both deviations (REFERENCE)", () => {
     const { a, b } = rateGame(START_GLICKO, START_GLICKO, 0.5);
     for (const side of [a, b]) {
       expect(side.rating).toBe(RATING_START);
@@ -72,15 +72,15 @@ describe("R376 draws count as half a win", () => {
     }
   });
 
-  it("R376 a draw pulls an underdog up and a favourite down (REFERENCE)", () => {
+  it("R603 a draw pulls an underdog up and a favourite down (REFERENCE)", () => {
     const { a: under, b: over } = rateGame(glicko(1400, 80), glicko(1600, 120), 0.5);
     expectReference(under, { rating: 1408.306768783764, deviation: 79.272855907714, volatility: 0.05999850515082 });
     expectReference(over, { rating: 1581.089049161912, deviation: 115.693290645246, volatility: 0.05999851743814 });
   });
 });
 
-describe("R376 one rated game is one rating period", () => {
-  it("R376 a win and a loss between new players are mirror images (REFERENCE)", () => {
+describe("R603 one rated game is one rating period", () => {
+  it("R603 a win and a loss between new players are mirror images (REFERENCE)", () => {
     const { a: winner, b: loser } = rateGame(START_GLICKO, START_GLICKO, 1);
     expectReference(
       { ...winner, rating: winner.rating + 500 },
@@ -92,19 +92,19 @@ describe("R376 one rated game is one rating period", () => {
     );
   });
 
-  it("R376 an upset moves both sides by their own deviations, each from the other's rating before (REFERENCE)", () => {
+  it("R603 an upset moves both sides by their own deviations, each from the other's rating before (REFERENCE)", () => {
     const { a: underdog, b: favourite } = rateGame(glicko(1350, 60), glicko(1720, 45), 1);
     expectReference(underdog, { rating: 1368.629463000698, deviation: 60.547858911524, volatility: 0.06000902052519 });
     expectReference(favourite, { rating: 1709.330958947476, deviation: 46.03837643654, volatility: 0.06000892422778 });
   });
 
-  it("R376 a result far from the expected one takes the other branch of the volatility bracket (REFERENCE)", () => {
+  it("R603 a result far from the expected one takes the other branch of the volatility bracket (REFERENCE)", () => {
     // Δ² > φ² + v here, so step 5 starts B at ln(Δ² − φ² − v) rather than stepping down from a.
     const after = glicko2Period(glicko(1500, 50), [{ opponent: glicko(2400, 30), score: 1 }]);
     expectReference(after, { rating: 1514.856410184712, deviation: 51.062871777297, volatility: 0.06001314423775 });
   });
 
-  it("R376 is deterministic and independent of which side is computed first", () => {
+  it("R603 is deterministic and independent of which side is computed first", () => {
     const a = glicko(1123.4, 77.7, 0.061);
     const b = glicko(1088.8, 140.2, 0.059);
     const first = rateGame(a, b, 0);
@@ -114,7 +114,7 @@ describe("R376 one rated game is one rating period", () => {
     expect(rateGame(a, b, 0)).toEqual(first);
   });
 
-  it("R376 a new profile starts at R79's 1000 with Glickman's starting deviation and volatility", () => {
+  it("R603 a new profile starts at R79's 1000 with Glickman's starting deviation and volatility", () => {
     expect(START_GLICKO).toEqual({
       rating: RATING_START,
       deviation: RATING_DEVIATION_START,

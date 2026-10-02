@@ -31,11 +31,9 @@ export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
 export const INSPECT_NOTE = "inspect-note";
 
-// R375: the detail view's History section (History.tsx): its toggle, one entry per version, the
-// reconstructed badge, and the control that draws a version's faces and what it draws.
-export const INSPECT_HISTORY = "inspect-history";
-export const INSPECT_HISTORY_TOGGLE = "inspect-history-toggle";
-export const INSPECT_HISTORY_ENTRY = "inspect-history-entry";
-export const INSPECT_HISTORY_BADGE = "inspect-history-badge";
-export const INSPECT_HISTORY_SHOW = "inspect-history-show";
-export const INSPECT_HISTORY_FACES = "inspect-history-faces";
+// Patch v0.2.0 (SPEC §10.8): a face in play's states spelled out beside it (StateNotes.tsx) — the
+// tuned ribbon (R386), the list of the other states (Brittle R385, enchantments E39, animated R383) —
+// and the lines-of-code meta line (E36).
+export const INSPECT_TUNED = "inspect-tuned";
+export const INSPECT_STATES = "inspect-states";
+export const INSPECT_LOC = "inspect-loc";

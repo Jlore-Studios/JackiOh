@@ -105,8 +105,8 @@ export type SeriesView = {
     reason: GameOverReason | null;
   }[];
   /**
-   * Null until the series is over. `ranked`: the series moved your rank (R377); the rating it moved
-   * is never sent (R385), and the rank it left is `GET /api/ranked`'s.
+   * Null until the series is over. `ranked`: the series moved your rank (R604); the rating it moved
+   * is never sent (R612), and the rank it left is `GET /api/ranked`'s.
    */
   result: {
     outcome: "win" | "loss" | "draw" | "abandoned";
@@ -329,7 +329,7 @@ export type NewSeriesInput = {
   /** Each game's seed is `${seedBase}:${gameNo}` (R335). */
   seedBase: string;
   catalogVersion: string;
-  /** R377: true when the queue paired it; a room's series is unranked. */
+  /** R604: true when the queue paired it; a room's series is unranked. */
   ranked: boolean;
 };
 
@@ -504,7 +504,7 @@ export function forfeitSeries(series: SeriesRow, seat: SeriesSeat, now: number):
 
 /**
  * R262: records the series' one rating move on a row that has just ended: series p1's rating, then
- * p2's, before and after (`series.ts` rates it, R376). Not a transition — it rides on the ending's
+ * p2's, before and after (`series.ts` rates it, R603). Not a transition — it rides on the ending's
  * own write, so the version is left alone. An abandoned or unranked series keeps both fields null.
  */
 export function rateSeries(
@@ -641,7 +641,7 @@ export function projectSeries(series: SeriesRow, viewerProfileId: string, now: n
                 ? "abandoned"
                 : outcomeOf(series.winner),
             endReason: series.endReason,
-            ranked: series.ranked && series.ratingAfter !== null,
+            ranked: (series.ranked ?? false) && series.ratingAfter !== null,
           },
   };
 }
