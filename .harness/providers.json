@@ -81,11 +81,11 @@
       "quiet_check": false
     },
     "agy": {
-      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. gemini-3.1-pro takes effort low or high.",
+      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High); `agy models` lists the names, each carrying its effort.",
       "enabled": true,
       "cli": "agy",
       "family": "gemini",
-      "model": "gemini-3.1-pro",
+      "model": "gemini-3.8-flash-high",
       "effort": "high",
       "login": "machine",
       "runs_on": "night-vm-agy",

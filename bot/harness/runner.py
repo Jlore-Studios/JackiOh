@@ -470,8 +470,8 @@ class AgyCli(_Cli):
 
     Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
     told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
-    the job holds no write token. Its effort is part of the model's own choices (`gemini-3.1-pro`
-    takes `low` or `high`)."""
+    the job holds no write token. Its model names carry their effort (`gemini-3.8-flash-high`;
+    `agy models` lists them), and `--effort` passes the same."""
 
     cli = "agy"
 
