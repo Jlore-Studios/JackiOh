@@ -187,6 +187,9 @@
       "merged": true
     },
     "44": {
+      "asks": [
+        "c:5961370035"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -195,8 +198,8 @@
       "last_findings": [],
       "pending_request": false,
       "question": "Issue #44 depends on #40 (Patch v0.2.0), and #40 isn't on main yet. main's catalog.json has only the 111 Core entries, its patch history stops at v0.1.1, and the Classic and Classic+ cards exist only on the unmerged origin/v0.2.0 branch. Which should happen? (a) Merge #40 / v0.2.0 into main, then queue #44 again. (b) Fold these rarity and text changes into #40's branch before it merges. (c) Have the bot only update docs/classic-sets.md now. Whichever you choose, please also settle the family conflict the issue raises. Either the ___ Glowy Jelly Bean and ___ of the Forgotten families become Common, or Core #27 Blood Ridden, #28 Knockoff Temu and #40 Echoes of the Forgotten become Rare, which breaks the issue's 'Core: no changes'.",
-      "queued_at": "2026-09-30T15:13:37Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-02T20:58:24Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "36804467291",
       "started_at": "2026-10-01T02:19:39Z",
       "stop_requested": false
