@@ -121,6 +121,12 @@
       "lines": [
         "@jgoetzmann-bot status"
       ]
+    },
+    "c:5962582547": {
+      "at": "2026-10-02T22:38:38Z",
+      "lines": [
+        "/harness status"
+      ]
     }
   },
   "items": {
