@@ -305,6 +305,7 @@
       "stop_requested": false
     },
     "66": {
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -312,7 +313,9 @@
       "pending_request": false,
       "queued_at": "2026-10-02T06:44:41Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "stop_requested": true,
+      "stopped_at": "2026-10-02T06:59:26Z",
+      "stopped_by": "squishy-squooby"
     },
     "67": {
       "failures": 0,
