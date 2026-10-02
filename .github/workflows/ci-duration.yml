@@ -1,5 +1,5 @@
-# Holds CI to its budget (#73): no job may run longer than five minutes. After every run of CI or
-# bot selftest, this reads how long each of its jobs took and, if any went over, opens an issue
+# Holds CI to its budget (#73): no job may run longer than five minutes. After every run of CI,
+# bot selftest or deploy watch, this reads how long each of its jobs took and, if any went over, opens an issue
 # naming them, or comments on the one already open, so a slow job is seen and split before it grows
 # into the old 19-minute wait. The night bot's own workflows are exempt: a build legitimately runs
 # for hours.
@@ -11,7 +11,7 @@ name: ci duration
 
 on:
   workflow_run:
-    workflows: ["CI", "bot selftest"]
+    workflows: ["CI", "bot selftest", "deploy watch"]
     types: [completed]
 
 permissions:
