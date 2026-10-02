@@ -1,4 +1,5 @@
-"""The `status` report: halt, each subscription, what is running and what is queued."""
+"""The `status` report: halt, which subscriptions are running what, each subscription, and what
+is queued."""
 
 from __future__ import annotations
 
@@ -9,7 +10,11 @@ from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING)
 from harness.context import Context
+from harness.plan import run_status
 from harness.providers import Provider
+
+#: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
+DOING = {"build": "building", "revise": "revising", "review": "giving a second review to"}
 
 
 def _numbers(items: list[dict[str, Any]]) -> str:
@@ -42,6 +47,50 @@ def _usage_text(provider: Provider, entry: dict[str, Any], ctx: Context) -> str:
     if observed and parts:
         parts[-1] += f" (read {human_delta(ctx.now() - observed)} ago)"
     return "; ".join(parts) or "no reading yet"
+
+
+def _record(state: dict[str, Any], number: int) -> dict[str, Any]:
+    """The state record of a lane: an item's, or the suggestion survey's (number 0)."""
+    if number == 0:
+        return state.get("suggest") or {}
+    return state["items"].get(str(number), {})
+
+
+def live_lanes(ctx: Context, state: dict[str, Any], held: dict[int, str]) -> dict[int, str]:
+    """`held` without the runs GitHub says have ended (the next plan requeues their items). A run
+    GitHub cannot read counts as still going, as it does for the plan (`plan.read_lanes`)."""
+    return {number: provider for number, provider in held.items()
+            if run_status(ctx, _record(state, number).get("run_id")) != "dead"}
+
+
+def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
+    """Which subscriptions are running now: on what, for how long, and in which run."""
+    cfg = ctx.cfg
+    lanes = cfg.pool.max_parallel
+    free = max(0, lanes - len(live))
+    if not live:
+        return [f"- Running now: nothing ({free} of {lanes} lanes free)."]
+    order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
+    lines = [f"- **Running now** ({len(live)} of {lanes} lanes, {free} free):"]
+    for number, provider_id in sorted(live.items(),
+                                      key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
+        record = _record(state, number)
+        if number:
+            what = f"{DOING.get(str(record.get('kind')), 'working on')} #{number}"
+            since = parse_iso(record.get("started_at"))
+        else:
+            what = "a suggestion survey"
+            since = parse_iso(record.get("last_run"))
+        provider = cfg.pool.get(provider_id)
+        name = f"`{provider_id}`" + (f" ({provider.cli}, `{provider.model}`)" if provider else "")
+        detail = []
+        if since is not None:
+            elapsed = human_delta(ctx.now() - since)
+            detail.append("just started" if elapsed == "now" else f"for {elapsed}")
+        if record.get("run_id"):
+            detail.append(f"[run]({cfg.server_url}/{cfg.repo}/actions/runs/{record['run_id']})")
+        lines.append(f"  - {name}: {what}" + (f", {', '.join(detail)}" if detail else "") + ".")
+    return lines
 
 
 def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) -> list[str]:
@@ -95,9 +144,14 @@ def report(ctx: Context) -> str:
     survey = state.get("suggest") or {}
     if survey.get("provider"):
         held[0] = str(survey["provider"])
+    live = live_lanes(ctx, state, held)
+    lines += running_lines(ctx, state, live)
     lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, one item each):")
-    lines += provider_lines(ctx, state, held)
-    lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}.")
+    lines += provider_lines(ctx, state, live)
+    ended = ", ".join(f"#{n}" for n in sorted(held) if n and n not in live)
+    lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"
+                 + (f" (no run is going for {ended} any more; the next plan requeues it)"
+                    if ended else "") + ".")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
                  f"for a second review: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
