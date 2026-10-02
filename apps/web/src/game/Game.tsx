@@ -33,12 +33,13 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
+import { promptOver } from "./promptOver.ts";
 import DragLayer from "./drag/DragLayer.tsx";
 import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
@@ -61,9 +62,16 @@ import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
  * `turn-banner` in the tree, and the shell owns it (M5-T4, `e2e/support/testids.ts` BANNER).
  */
-function bannerText(view: PlayerView, lastType: string | undefined): string | null {
+function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
+  return event.type === "turnStarted" || event.type === "turnAutoEnded";
+}
+
+function bannerText(view: PlayerView, lastType: string | undefined, startedFor?: PlayerId): string | null {
   if (view.result !== null) return "Game over";
   if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
+  // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
+  // so its banner names the turn that is starting, not the one (or the mulligan) being left.
+  if (startedFor !== undefined) return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
   if (view.phase === "mulligan") return "Mulligan";
   return view.active === view.viewer ? "Your turn" : "Opponent's turn";
 }
@@ -310,8 +318,12 @@ export default function Game({
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 
-  const lastTurnEvent = [...shown.events].reverse().find((e) => e.type === "turnStarted" || e.type === "turnAutoEnded");
-  const banner = bannerText(shown, lastTurnEvent?.type);
+  // The newest turn event the burst has reached, the one in flight included: the board is still the
+  // view from before it, and the banner must not fall back to that view's turn between its entry and
+  // the board catching up (#37).
+  const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
+  const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
+  const banner = bannerText(shown, lastTurnEvent?.type, burstTurn?.type === "turnStarted" ? burstTurn.player : undefined);
 
   return (
     <div
@@ -364,17 +376,20 @@ export default function Game({
       <FxLayer queue={runner} view={shown} latest={view} />
       <CardShowcase view={view} queue={runner} />
 
-      <Prompt
-        view={shown}
-        interaction={interaction}
-        legal={legal}
-        onAction={dispatch}
-        onInteraction={setInteraction}
-        // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
-        // and must be answered, so it offers none: the button would do nothing (the mulligan, a
-        // Discover, a trigger's choice).
-        onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
-      />
+      {promptOver(shown, burst, inFlight) ? null : (
+        <Prompt
+          view={shown}
+          interaction={interaction}
+          legal={legal}
+          onAction={dispatch}
+          onInteraction={setInteraction}
+          animating={animating.get(animTestid.prompt)}
+          // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
+          // and must be answered, so it offers none: the button would do nothing (the mulligan, a
+          // Discover, a trigger's choice).
+          onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
+        />
+      )}
       <DragLayer view={shown} legal={legal} interaction={interaction} onInteraction={setInteraction} onAction={onAction} />
 
       {shown.result !== null ? (
