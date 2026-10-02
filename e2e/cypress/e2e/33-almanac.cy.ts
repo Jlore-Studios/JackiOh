@@ -1,12 +1,13 @@
 // Spec 33 — the Card Almanac (issue #54; SPEC §10.10, R630), on the landing page and `/almanac`,
 // against `build:e2e` with no server.
 //
-// BUILD M8's row: "while signed out, open the landing page, follow the footer's 'Card almanac' link
-// to /almanac, filter by a cost, open a card's detail view, close it, and press Back to return to
-// the landing page." Also asserted, off the DOM: the link sits right after Patch notes; the
-// almanac is the deck builder's browse pane, read-only (no "Owned only", no "+", no draggable
-// card); the cost chip narrows the pool to that cost; the detail view offers no add action; and
-// the almanac asks the server nothing (R630: no catalog, collection, deck or account read).
+// BUILD M8's key assertions for this row: "the footer's "Card almanac" link opens `/almanac`;
+// filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action
+// and closes; no API call is made on the page; Back returns to the landing page". Issue #54 asks
+// for the same walk: signed out, the landing page, the footer's link, a cost, a card's detail
+// closed again, and Back. Also asserted, off the DOM: the link sits right after Patch notes, and
+// the almanac is the deck builder's browse pane, read-only (no "Owned only", no "+", no draggable
+// card).
 //
 // Run it:
 //   pnpm build:e2e

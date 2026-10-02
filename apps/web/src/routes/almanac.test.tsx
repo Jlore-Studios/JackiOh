@@ -171,7 +171,9 @@ describe("R630 the almanac's browse pane", () => {
     }
   });
 
-  it("R630 a click, a right-click or a long-press opens the card's detail, with its rarity and no add action", () => {
+  // A long-press reaches `onInspect` through the same `useInspectTrigger` as the right-click, which
+  // the deck builder's browse.test.tsx holds to it; the read-only grid wires both the same way.
+  it("R630 a click or a right-click opens the card's detail, with its rarity and no add action", () => {
     render(<AlmanacRoute />);
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
@@ -247,10 +249,12 @@ describe("R630 the almanac's browse pane", () => {
     expect(shownIds()).toHaveLength(CARDS.length);
   });
 
-  it("R630 the sort orders the pool", () => {
+  it("R630 the sort key and its direction order the pool", () => {
     render(<AlmanacRoute />);
     fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: "name" } });
     expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "asc" })]);
-    expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "asc");
+    fireEvent.click(screen.getByTestId(DB_SORT_DIR));
+    expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "desc");
+    expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "desc" })]);
   });
 });
