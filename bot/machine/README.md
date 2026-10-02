@@ -82,6 +82,11 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 - **Disk:** each job's files and the user's package store are deleted when the job ends
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
   logins stay.
+- **How many at once:** three (`max_parallel`) is as many as this machine holds. Measured on
+  2026-10-02 with three jobs running (a Claude build in typecheck and the web tests, Muse and
+  agy): load average 14 on 2 vCPUs, 6.1 of 7.8 GB in use and 1.5 GB swapped, about 4 GB for the
+  Claude job alone. More jobs need a bigger machine, and the Free plan's largest are the
+  2-vCPU `m7i-flex.large` and `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
