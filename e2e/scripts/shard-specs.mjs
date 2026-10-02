@@ -15,13 +15,15 @@ import { fileURLToPath } from "node:url";
 const SPEC_DIR = "cypress/e2e";
 
 /**
- * Seconds per spec, Chrome on ubuntu-latest: CI run 36903763074, and 08 from run 36922696530 (patch
- * v0.2.0 plays it to the 60-turn cap).
+ * Seconds per spec on ubuntu-latest, the slower of Chrome and Electron: CI run 36973335249 (main
+ * at e762937). Specs 29-32 are estimates from the turns they play, spec 03's length per turn; once
+ * they have run, replace them with measured times (#79).
  */
 const WEIGHTS = {
-  "01": 59, "02": 106, "03": 25, "04": 41, "05": 17, "06": 11, "07": 36, "08": 155, "09": 14,
-  "10": 3, "11": 23, "12": 36, "13": 42, "14": 19, "15": 15, "16": 25, "17": 49, "18": 25,
-  "19": 24, "20": 28, "21": 20, "22": 22, "23": 9, "24": 10, "25": 32, "26": 6, "28": 24, "99": 1,
+  "01": 67, "02": 124, "03": 30, "04": 46, "05": 20, "06": 11, "07": 38, "08": 170, "09": 32,
+  "10": 4, "11": 26, "12": 43, "13": 49, "14": 22, "15": 17, "16": 28, "17": 55, "18": 51,
+  "19": 28, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4,
+  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "99": 1,
 };
 const DEFAULT_WEIGHT = 30;
 

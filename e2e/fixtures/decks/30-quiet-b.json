@@ -1,0 +1,27 @@
+{
+  "id": "30-quiet-b",
+  "spec": "30-activate.cy.ts",
+  "description": "Player 2 deck for specs 30, 31 (player 1 side is 31-spells-a) and 32: 08-do-nothing-b card list. Every card costs 3 or more and none has a Cast-on-draw, a Quickdraw, a hand trigger or a Trap, so player 2 does nothing on the turns these specs pass through and the board and both heroes move only through player 1 plays.",
+  "cards": [
+    "core-006",
+    "core-013",
+    "core-014",
+    "core-017",
+    "core-019",
+    "core-022",
+    "core-025",
+    "core-026",
+    "core-029",
+    "core-034",
+    "core-038",
+    "core-043",
+    "core-070",
+    "core-076",
+    "core-078",
+    "core-088",
+    "core-094",
+    "core-095",
+    "core-099",
+    "core-100"
+  ]
+}

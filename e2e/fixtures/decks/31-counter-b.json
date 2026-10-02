@@ -1,0 +1,27 @@
+{
+  "id": "31-counter-b",
+  "spec": "31-counter-opponent-turn.cy.ts",
+  "description": "Player 2 deck for spec 31 (section 10.5, R17, R448). This is spec 03 player 2 deck (03-sheepish-b) with #41 Sheepish swapped for C #17 Counterspell and #1 Big D Fender swapped for #60 Bear Honeypot. These are the only two Traps in either deck. Bear Honeypot springs on any 1-cost card player 1 plays, so set beside Counterspell it is the trap a countered 1-cost Spell would have reached: R17 says a countered card reaches no other trap. Counterspell answers Spells only, so the Unit player 1 plays next is not countered and springs the Honeypot, which shows that the Honeypot was armed all along.",
+  "cards": [
+    "core-060",
+    "core-003",
+    "core-005",
+    "core-008",
+    "core-010",
+    "core-011",
+    "core-015",
+    "core-019",
+    "core-020",
+    "core-025",
+    "core-032",
+    "classic-017",
+    "core-045",
+    "core-053",
+    "core-056",
+    "core-062",
+    "core-073",
+    "core-075",
+    "core-077",
+    "core-081"
+  ]
+}

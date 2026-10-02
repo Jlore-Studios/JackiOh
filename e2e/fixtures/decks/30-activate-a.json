@@ -1,0 +1,27 @@
+{
+  "id": "30-activate-a",
+  "spec": "30-activate.cy.ts",
+  "description": "Player 1 deck for spec 30 (R384, R510). This is spec 03 player 1 deck (03-plays-a) with #28 Knockoff Temu Glowy Jelly Bean swapped for C #81 The Power to Thrive, and #91 Fed Fauci swapped for C #21 Turtinator. Thrive costs 2 and Turtinator 2, and #8 Mr. Vanilla (1 mana, 4/4) is the Unit that pays Turtinator Tribute. Nothing else here has an Activate ability, a Trap, a Cast-on-draw or a Quickdraw, so the only Activate controls on the board are the two this spec asserts.",
+  "cards": [
+    "core-003",
+    "core-005",
+    "core-008",
+    "core-010",
+    "core-011",
+    "core-015",
+    "core-019",
+    "core-020",
+    "core-025",
+    "classic-081",
+    "core-032",
+    "core-045",
+    "core-053",
+    "core-056",
+    "core-062",
+    "core-073",
+    "core-077",
+    "core-081",
+    "classic-021",
+    "core-092"
+  ]
+}

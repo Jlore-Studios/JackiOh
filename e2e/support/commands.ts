@@ -224,7 +224,27 @@ function asHandicap(raw: unknown, id: string): FixtureHandicap {
   return raw as FixtureHandicap;
 }
 
-function asDeck(raw: unknown, id: string): FixtureDeck {
+/** SPEC §8's Core ids: what a fixture may hold when no catalog was read (`installLoadout`). */
+const CORE_IDS: ReadonlySet<string> = new Set(Object.keys(CARD_NAMES).map((index) => catalogId(Number(index))));
+
+/** Where the catalog sits, from e2e/ (Cypress's project root), read at run time rather than imported. */
+const CATALOG_PATH = "../packages/cards/catalog.json";
+
+/**
+ * A9: every deckable id of every set (one format, R380), read off `packages/cards/catalog.json` at
+ * run time, so `e2e/` stays self-contained at compile time (tsconfig.json) and a Classic or Classic+
+ * fixture is checked against the catalog the build serves. Tokens are left out: L3 bans them.
+ */
+function deckableIds(): Cypress.Chainable<ReadonlySet<string>> {
+  return cy.readFile(CATALOG_PATH, { log: false }).then((raw: Record<string, { token?: boolean }>) => {
+    const ids = Object.entries(raw)
+      .filter(([, def]) => def.token !== true)
+      .map(([id]) => id);
+    return new Set(ids) as ReadonlySet<string>;
+  });
+}
+
+function asDeck(raw: unknown, id: string, known: ReadonlySet<string> = CORE_IDS): FixtureDeck {
   const deck = raw as Partial<FixtureDeck>;
   expect(deck, `fixture decks/${id}.json`).to.be.an("object");
   expect(deck.cards, `decks/${id}.json cards`).to.be.an("array");
@@ -239,9 +259,8 @@ function asDeck(raw: unknown, id: string): FixtureDeck {
     handicap === undefined ? `decks/${id}.json holds DECK_SIZE cards` : `decks/${id}.json holds its handicap's deckSize (R184)`,
   ).to.eq(size);
   expect(new Set(cards).size, `decks/${id}.json has no duplicate ids (L3)`).to.eq(cards.length);
-  const known = new Set(Object.keys(CARD_NAMES).map((index) => catalogId(Number(index))));
   for (const card of cards) {
-    expect(known.has(card), `decks/${id}.json: "${card}" is a SPEC §8 catalog id (L6)`).to.eq(true);
+    expect(known.has(card), `decks/${id}.json: "${card}" is a deckable catalog id (L6)`).to.eq(true);
   }
   return {
     id,
@@ -418,36 +437,38 @@ Cypress.Commands.add("playByName", (name: string, options: PlayCardOptions = {})
 Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
   const { seed, a, b, mulligan = "keep" } = options;
 
-  cy.fixture(`decks/${a}.json`).then((rawA) => {
-    cy.fixture(`decks/${b}.json`).then((rawB) => {
-      const deckA = asDeck(rawA, a);
-      const deckB = asDeck(rawB, b);
-      const decks = {
-        [a]: deckA.cards,
-        [b]: deckB.cards,
-      };
-      // R180: fixture A seats p1 and fixture B seats p2, so their handicaps are p1's and p2's.
-      const handicaps: Partial<Record<PlayerId, FixtureHandicap>> = {
-        ...(deckA.handicap === undefined ? {} : { p1: deckA.handicap }),
-        ...(deckB.handicap === undefined ? {} : { p2: deckB.handicap }),
-      };
-      const injection: E2EDeckInjection = {
-        seed,
-        decks,
-        ...(Object.keys(handicaps).length === 0 ? {} : { handicaps }),
-      };
-      cy.visit(hotseatUrl(seed, a, b), {
-        onBeforeLoad(win) {
-          // ASSUMPTION A1: in E2E mode the hotseat route resolves `a=`/`b=` from this injection
-          // before falling back to its built-in dev decks, and creates the game with its handicaps.
-          win.__jackiohE2E = injection;
-          try {
-            win.localStorage.setItem(DECKS_STORAGE_KEY, JSON.stringify(injection));
-          } catch (error) {
-            Cypress.log({ name: "seedGame", message: `localStorage unavailable: ${String(error)}` });
-          }
-          options.onBeforeLoad?.(win);
-        },
+  deckableIds().then((known) => {
+    cy.fixture(`decks/${a}.json`).then((rawA) => {
+      cy.fixture(`decks/${b}.json`).then((rawB) => {
+        const deckA = asDeck(rawA, a, known);
+        const deckB = asDeck(rawB, b, known);
+        const decks = {
+          [a]: deckA.cards,
+          [b]: deckB.cards,
+        };
+        // R180: fixture A seats p1 and fixture B seats p2, so their handicaps are p1's and p2's.
+        const handicaps: Partial<Record<PlayerId, FixtureHandicap>> = {
+          ...(deckA.handicap === undefined ? {} : { p1: deckA.handicap }),
+          ...(deckB.handicap === undefined ? {} : { p2: deckB.handicap }),
+        };
+        const injection: E2EDeckInjection = {
+          seed,
+          decks,
+          ...(Object.keys(handicaps).length === 0 ? {} : { handicaps }),
+        };
+        cy.visit(hotseatUrl(seed, a, b), {
+          onBeforeLoad(win) {
+            // ASSUMPTION A1: in E2E mode the hotseat route resolves `a=`/`b=` from this injection
+            // before falling back to its built-in dev decks, and creates the game with its handicaps.
+            win.__jackiohE2E = injection;
+            try {
+              win.localStorage.setItem(DECKS_STORAGE_KEY, JSON.stringify(injection));
+            } catch (error) {
+              Cypress.log({ name: "seedGame", message: `localStorage unavailable: ${String(error)}` });
+            }
+            options.onBeforeLoad?.(win);
+          },
+        });
       });
     });
   });
