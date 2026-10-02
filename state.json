@@ -347,9 +347,7 @@
       "stop_requested": false
     },
     "79": {
-      "asks": [
-        "c:5946907338"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -357,7 +355,9 @@
       "pending_request": false,
       "queued_at": "2026-10-02T06:46:09Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "stop_requested": true,
+      "stopped_at": "2026-10-02T06:59:30Z",
+      "stopped_by": "squishy-squooby"
     }
   },
   "last_infra": {
