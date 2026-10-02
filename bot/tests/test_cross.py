@@ -46,7 +46,8 @@ class TwoModelTests(unittest.TestCase):
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
         self.assertEqual(h.gh.auto_merge, {})
         votes = h.ctx.store.load()["items"][str(pr)]["votes"]
-        self.assertEqual(votes, {"sha": result["head"], "builder": "gpt", "approvals": ["gpt"]})
+        self.assertEqual(votes, {"sha": result["head"], "builder": "gpt", "approvals": ["gpt"],
+                                 "rejections": []})
         self.assertIn("waits for a second model's review", h.gh.bot_comments(12)[-1])
         spent = h.ctx.store.load()["providers"]["gpt"]["spent"]
         self.assertEqual(spent[-1]["minutes"], 10.0)

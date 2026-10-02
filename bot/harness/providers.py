@@ -42,6 +42,10 @@ SECRETS: tuple[str, ...] = (
     "MUSE_AUTH",
 )
 
+#: After a run on a provider could not work (its login refused, its CLI would not install or
+#: start), unforced runs leave that provider alone this long. The others carry on.
+INFRA_BACKOFF = timedelta(minutes=50)
+
 #: Usage windows, and how long each lasts when a reading carries no reset time of its own.
 WINDOWS = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
 WINDOW_NAMES = {"five_hour": "5-hour", "seven_day": "7-day"}
@@ -212,6 +216,9 @@ def _provider(name: str, raw: Any) -> Provider:
     env = raw.get("env") or {}
     if not isinstance(env, Mapping):
         raise ConfigError(f"{where}.env: expected an object")
+    if raw.get("quiet_check") and cli != "claude":
+        raise ConfigError(f"{where}.quiet_check: only a Claude account can be checked for quiet "
+                          "(the check reads Claude's usage)")
     return Provider(
         id=name,
         enabled=bool(raw.get("enabled", True)),
@@ -313,6 +320,12 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         entry["spent"] = spent[-SPENT_KEEP:]
 
 
+def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime) -> None:
+    """A run on this provider could not work: leave it alone for `INFRA_BACKOFF`."""
+    entry = record(state, provider_id)
+    entry["infra"] = {"at": iso(at), "reason": str(reason)[:500]}
+
+
 def _duration(text: str) -> timedelta:
     amount = int("".join(ch for ch in text if ch.isdigit()) or "30")
     return timedelta(hours=amount) if text.upper().endswith("H") else timedelta(minutes=amount)
@@ -385,7 +398,13 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
         window = provider.schedule.window(zone_name)
         opens = window.next_open(at) if window else at
         return f"outside its hours ({provider.schedule.describe(zone_name)}; opens in {human_delta(opens - at)})"
-    return refusal(provider, peek_record(state, provider.id), at)
+    entry = peek_record(state, provider.id)
+    infra = entry.get("infra") if isinstance(entry.get("infra"), Mapping) else {}
+    failed = parse_iso(infra.get("at"))
+    if not forced and failed is not None and at - failed < INFRA_BACKOFF:
+        return (f"its last run could not work ({str(infra.get('reason') or '')[:120]}); it is "
+                f"left alone until {iso(failed + INFRA_BACKOFF)}")
+    return refusal(provider, entry, at)
 
 
 def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,

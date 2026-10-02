@@ -80,8 +80,10 @@ class PlanTests(unittest.TestCase):
     def test_an_infrastructure_failure_backs_off_unforced_runs(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         at = "2026-09-30T02:40:00Z"  # twenty minutes before NIGHT
-        self.ctx.store.update(lambda s: s.update(last_infra={"at": at, "reason": "doctor failed"}))
-        self.assertIn("backing off", plan_mod.make(self.ctx)["reason"])
+        self.ctx.store.update(lambda s: s.update(providers={"claude-1": {
+            "infra": {"at": at, "reason": "doctor failed"}}}))
+        self.assertIn("`claude-1` its last run could not work (doctor failed)",
+                      plan_mod.make(self.ctx)["reason"])
         self.assertEqual(plan_mod.make(self.ctx, force=True)["action"], "build")
 
     def test_both_halts(self):
@@ -314,7 +316,10 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertIn("behind the others", h.gh.bot_comments(12)[-1])
         self.assertEqual(h.gh.dispatches, [])  # no chaining after a run that died
-        self.assertEqual(plan_mod.make(h.ctx)["number"], 13)  # #12 went to the back
+        # Its subscription is left alone a while; then #12, at the back, waits behind #13.
+        self.assertIn("could not work", plan_mod.make(h.ctx)["reason"])
+        h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=4)
+        self.assertEqual(plan_mod.make(h.ctx)["number"], 13)
         h.gh.threads[13]["labels"] = []
         planned = plan_mod.make(h.ctx)
         out = h.root / "empty-2"
@@ -334,7 +339,7 @@ class FlowTests(unittest.TestCase):
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertNotIn("died", h.ctx.store.load()["items"]["12"])
-        self.assertIn("backing off", plan_mod.make(h.ctx)["reason"])
+        self.assertIn("`claude-1` its last run could not work", plan_mod.make(h.ctx)["reason"])
 
     def test_a_failed_run_is_requeued_then_blocked(self):
         h = Harness(self, max_failures=2)

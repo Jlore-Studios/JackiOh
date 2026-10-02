@@ -38,6 +38,7 @@ class FakeGitHub:
         self.reruns: list[Any] = []
         self.reacted: list[tuple[int, str]] = []
         self.auto_merge: dict[str, str] = {}
+        self.auto_merge_heads: dict[str, str] = {}
         self.auto_merge_error: str = ""
         self.protection: dict[str, Any] | None = None
         self.branch_checks: set[str] | None = None
@@ -225,10 +226,11 @@ class FakeGitHub:
     def required_checks(self, branch: str) -> set[str] | None:
         return None if self.branch_checks is None else set(self.branch_checks)
 
-    def enable_auto_merge(self, node_id: str, method: str) -> None:
+    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "") -> None:
         if self.auto_merge_error:
             raise GitHubError(self.auto_merge_error, 200)
         self.auto_merge[node_id] = method
+        self.auto_merge_heads[node_id] = expected_head
         self._pull_by_node(node_id)["auto_merge"] = {"merge_method": method}
 
     def disable_auto_merge(self, node_id: str) -> None:

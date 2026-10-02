@@ -79,6 +79,10 @@ FAKE_GEMINI = PRELUDE + textwrap.dedent('''\
         emit({{"type": "result", "status": "error", "error": {{"type": "TerminalQuotaError",
               "message": "You have exhausted your daily quota on this model."}}}})
         sys.exit(1)
+    if mode == "throttle":
+        emit({{"type": "result", "status": "error", "error": {{"type": "RateLimit",
+              "message": "Quota exceeded for requests per minute (RESOURCE_EXHAUSTED)."}}}})
+        sys.exit(1)
     emit({{"type": "message", "role": "assistant", "content": "<!-- review: {{\\"verdict\\": ",
           "delta": True}})
     emit({{"type": "message", "role": "assistant", "content": "\\"approve\\", \\"findings\\": []}} -->",
@@ -211,6 +215,11 @@ class GeminiTests(Base):
         self.assertTrue(result.rate_limited)
         self.assertTrue(result.reset_at.endswith(":05:00Z"))
 
+    def test_a_per_minute_throttle_parks_it_only_briefly(self):
+        result = self.run_fake(self.backend(), "throttle")
+        self.assertTrue(result.rate_limited)
+        self.assertEqual(result.reset_at, "+PT60M")
+
 
 class MuseTests(Base):
     fake, name = FAKE_MUSE, "muse"
@@ -226,6 +235,7 @@ class MuseTests(Base):
         self.assertTrue(result.text.startswith('<!-- bot: {"status": "done"'))
         seen = self.seen()
         self.assertIn("--yolo", seen["argv"])
+        self.assertIn("--disable-web-tools", seen["argv"])
         self.assertEqual(seen["argv"][seen["argv"].index("--max-model-steps") + 1], "42")
         self.assertIn("THE TASK", seen["prompt"])
         self.assert_only_its_own_login()

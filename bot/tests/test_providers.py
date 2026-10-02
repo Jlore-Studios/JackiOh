@@ -195,7 +195,12 @@ class PeekTests(unittest.TestCase):
     def test_the_gate_waits_for_quiet_only_when_the_shared_one_is_best(self):
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
+        # Another Claude account can take it now: no wait for the shared one.
         look = plan_mod.peek(ctx_for(gh))
+        self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-2", ""))
+        # Opus is still worth the wait over another model, which stays the fallback.
+        env = secrets("CLAUDE_CODE_OAUTH_TOKEN", "CODEX_AUTH_JSON")
+        look = plan_mod.peek(ctx_for(gh, env=env))
         self.assertEqual((look.work, look.provider, look.quiet_provider, look.quiet_secret,
                           look.fallback),
                          (True, "claude-1", "claude-1", "CLAUDE_CODE_OAUTH_TOKEN", True))

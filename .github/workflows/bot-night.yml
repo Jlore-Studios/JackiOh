@@ -159,6 +159,7 @@ jobs:
       provider: ${{ steps.plan.outputs.provider }}
       cli: ${{ steps.plan.outputs.cli }}
       secret: ${{ steps.plan.outputs.secret }}
+      shared: ${{ steps.plan.outputs.shared }}
     steps:
       # First, before anything else: a committed .harness/HALT stops the whole run.
       - name: HALT check (.harness/HALT on the default branch)
@@ -300,12 +301,26 @@ jobs:
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
         run: python -m harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
+      # bright-bots-harness reads a step named "Build, check and review" as this bot spending the
+      # shared Claude subscription (quiet.py), so only a run on it (claude-1) has that name; a run
+      # on any other subscription must not excuse a rise on the shared one.
       - name: Build, check and review
+        if: needs.plan.outputs.shared == 'true'
         working-directory: bot
         env:
           # The one secret of the subscription plan chose, picked by name; no other provider's.
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
+        run: |
+          python -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
+            --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
+
+      - name: Work on another subscription (build, check and review)
+        if: needs.plan.outputs.shared != 'true'
+        working-directory: bot
+        env:
+          HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"

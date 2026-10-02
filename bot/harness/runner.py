@@ -532,8 +532,9 @@ class GeminiCli(_Cli):
                             or launch.stderr or f"gemini exited {launch.code}")[-2000:])
         reset_at = None
         if not ok and RATE_LIMIT_WORDS.search(error or ""):
-            reset_at = (_next_midnight(GEMINI_QUOTA_ZONE) if re.search(r"(?i)quota", error or "")
-                        else DEFAULT_PARK)
+            # The daily quota resets at midnight Pacific; a per-minute throttle in a minute or so.
+            daily = re.search(r"(?i)(daily|per day|terminalquotaerror)", error or "")
+            reset_at = _next_midnight(GEMINI_QUOTA_ZONE) if daily else DEFAULT_PARK
         # 41: no usable login; 55: the workspace is not trusted. Neither is the item's fault.
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
                          infra_hint=launch.code in (41, 55))
@@ -565,9 +566,9 @@ class MuseCli(_Cli):
     cli = "muse"
 
     def argv(self, request: RunRequest, prompt_file: Path) -> list[str]:
-        argv = [self.binary, "exec", "--yolo", "--workspace", str(request.cwd),
-                "--model", request.model, "--prompt-file", str(prompt_file),
-                "--max-model-steps", str(request.max_turns)]
+        argv = [self.binary, "exec", "--yolo", "--disable-web-tools",
+                "--workspace", str(request.cwd), "--model", request.model,
+                "--prompt-file", str(prompt_file), "--max-model-steps", str(request.max_turns)]
         if request.effort:
             argv += ["--reasoning-effort", request.effort]
         return argv

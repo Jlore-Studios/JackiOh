@@ -90,6 +90,7 @@ class Worker:
         out_dir: Path,
         *,
         probe: Probe | None = None,
+        after_call: Callable[[], None] | None = None,
         now: Callable[[], datetime] | None = None,
         env: dict[str, str] | None = None,
     ) -> None:
@@ -100,6 +101,9 @@ class Worker:
         self.work_dir = Path(work_dir)
         self.out_dir = Path(out_dir)
         self.probe = probe
+        #: Run after every model call: keeps a login the CLI just refreshed (`logins.seal`), so
+        #: a job that is killed later still hands it on.
+        self.after_call = after_call
         self.now = now or (lambda: clock_now(cfg.now_override))
         self.env = dict(env) if env is not None else child_env()
         self.started = self.now()
@@ -186,6 +190,8 @@ class Worker:
             extra_dirs=self._git_dirs(cwd),
         )
         result = self.runner.run(request)
+        if self.after_call is not None:
+            self.after_call()
         self.minutes += result.duration_s / 60
         if result.usage:
             self.last_usage = result.usage
@@ -249,7 +255,7 @@ class Worker:
             self.installed_at = self.wt.head()
         return result
 
-    def _prepare(self, *, merge_main: bool = True) -> list[str]:
+    def _prepare(self, *, merge_main: bool = True, install: bool = True) -> list[str]:
         number = int(self.plan["number"])
         branch = str(self.plan["branch"])
         default = self.cfg.default_branch
@@ -273,10 +279,12 @@ class Worker:
             conflicts = self.wt.merge(self.base_ref, self.who)
         if any(_is_manifest(p) for p in conflicts):
             return conflicts  # the builder resolves the manifests first; install runs after
-        install = self._install()
-        if not install.ok and not has_remote:
+        if not install:
+            return conflicts
+        installed = self._install()
+        if not installed.ok and not has_remote:
             raise Interrupt(f"dependency install failed on untouched main (exit "
-                            f"{install.exit_code}): {install.tail[-1500:]}", "infra")
+                            f"{installed.exit_code}): {installed.tail[-1500:]}", "infra")
         return conflicts
 
     def _exclude_notes(self) -> None:
@@ -597,15 +605,19 @@ class Worker:
     def _second_review(self) -> None:
         """A model of another family reads a bot pull request its builder's model approved.
         Nothing is built or pushed: the verdict goes to `deliver`, which merges or asks for a
-        revision."""
-        self._prepare(merge_main=False)
+        revision. Nothing is installed or run either: the reviewer holds another subscription's
+        login, and the builder's code (a postinstall script, a test) must not run beside it. CI
+        runs every check on the pull request before it can merge."""
+        self._prepare(merge_main=False, install=False)
         assert self.wt is not None
         self.check()
         builder = str(self.plan.get("builder") or "an unknown model")
         context = (f"This is a second review. `{builder}` built this change and its own reviewer "
                    f"approved it; you are `{self.provider.family}`, a different model, and the "
                    "change merges only if you approve it too. Judge it from scratch: the first "
-                   "approval is not evidence.")
+                   "approval is not evidence. Dependencies are not installed in this run and you "
+                   "should not run the branch's code: read it. CI runs every check on the pull "
+                   "request before it can merge.")
         report = verdicts.BuildReport("done", str(self.plan.get("title") or ""), "",
                                       str(self.plan.get("pull") or ""))
         review = self._review(1, report, [], [], context=context, max_cycles=1)

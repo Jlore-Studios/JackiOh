@@ -37,8 +37,6 @@ from harness.queue import (KIND_ORDER, Candidate, branch_for_issue, candidates, 
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
-#: After a failure that was not an item's fault, unforced runs wait this long before trying again.
-INFRA_BACKOFF = timedelta(minutes=50)
 #: A run asked for and never taken up is dropped after this long.
 RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
@@ -61,13 +59,20 @@ def nothing(reason: str) -> dict[str, Any]:
     return {"action": "none", "reason": reason}
 
 
-def run_alive(ctx: Context, run_id: Any) -> bool:
+def run_status(ctx: Context, run_id: Any) -> str:
+    """`alive`, `dead`, or `unknown` when GitHub could not say. Runs now overlap, so a run that
+    cannot be read is treated as alive: its lane stays held and its item is not requeued."""
     if not run_id:
-        return False
+        return "dead"
     try:
-        return ctx.gh.get_run(run_id).get("status") in LIVE
-    except GitHubError:
-        return False
+        return "alive" if ctx.gh.get_run(run_id).get("status") in LIVE else "dead"
+    except GitHubError as exc:
+        return "dead" if exc.status == 404 else "unknown"
+
+
+def run_alive(ctx: Context, run_id: Any) -> bool:
+    """True unless the run is known to have ended."""
+    return run_status(ctx, run_id) != "dead"
 
 
 def vault_path(provider_id: str) -> str:
@@ -78,17 +83,13 @@ def vault_path(provider_id: str) -> str:
 def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
     """Why no run may start now, whatever is queued, or None. `make` and `peek` share it."""
     cfg = ctx.cfg
-    now = ctx.now()
     if ctx.repo_halted():
         return "halted by .harness/HALT on main"
     if state.get("halted"):
         return "halted by /harness halt"
     if cfg.secrets.known and not any(cfg.secrets.has(p.secret) for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
-    last_infra = parse_iso((state.get("last_infra") or {}).get("at"))
-    if not force and last_infra is not None and now - last_infra < INFRA_BACKOFF:
-        return (f"backing off after a failure outside any item at {iso(last_infra)}: "
-                f"{(state.get('last_infra') or {}).get('reason', '')[:200]}")
+    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFF).
     return None
 
 
@@ -280,6 +281,11 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
     other = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=""), None) if (
         mode != "suggest") else None
     fallback = other is not None
+    if other is not None and other[1].family == provider.family:
+        # Another account of the same model can take work now: no reason to wait for this one.
+        return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
+                    f"`{other[1].id}`", force or other[0].forced, other[1].id,
+                    held=len(lanes.held))
     if quiet_waiting(ctx):
         if fallback:
             return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
@@ -304,7 +310,7 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
     """What `housekeeping` would requeue, read without changing anything, or None."""
     for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
         run_id = state["items"].get(str(thread["number"]), {}).get("run_id")
-        if not run_alive(ctx, run_id):
+        if run_status(ctx, run_id) == "dead":
             return f"#{thread['number']} was left working by a run that ended"
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
@@ -332,14 +338,19 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     state = ctx.store.load()
     asked = run_request(ctx, state)
     if asked is not None:
-        # Taken up here, whatever this run finds: one request, one run.
-        ctx.store.update(lambda s: s.update(run_requested=None), "run request taken")
         force = True
         item = item if item is not None else asked.get("item")
     stop = stops(ctx, state, force)
     if stop:
         return nothing(stop)
     notes = housekeeping(ctx, state)
+
+    def taken(planned: dict[str, Any]) -> dict[str, Any]:
+        # A `/harness run` is taken up by the run that claims something for it, never by one
+        # that found every lane busy: one request, one run.
+        if asked is not None:
+            ctx.store.update(lambda s: s.update(run_requested=None), "run request taken")
+        return planned
     state = ctx.store.load()
     lanes = read_lanes(ctx, state)
     if lanes.free <= 0:
@@ -352,14 +363,14 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
                 planned["housekeeping"] = notes
                 planned["forced"] = bool(force or candidate.forced)
                 fill_lanes(ctx, lanes, candidate, provider, planned)
-                return planned
+                return taken(planned)
     if item is not None and mode != "suggest":
         return nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or no "
                        f"subscription can take it now: {why_none(ctx, state, lanes)}")
     if mode == "suggest" or (mode == "auto" and not queue):
         planned = suggestion_plan(ctx, lanes, force=mode == "suggest", quiet_ok=quiet)
         if planned is not None:
-            return planned
+            return taken(planned)
     reason = ("nothing is queued" if not queue else
               f"no subscription can take the queue now: {why_none(ctx, state, lanes)}")
     return {**nothing(reason), "housekeeping": notes}
@@ -392,7 +403,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         run_id = str(record.get("run_id") or "")
         if run_id and run_id == ctx.cfg.run_id:
             continue
-        if run_alive(ctx, run_id):
+        if run_status(ctx, run_id) != "dead":
             continue
         if record.get("kind") == "review":
             wanted = LABEL_CROSS
@@ -404,7 +415,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
                               "finishing; it is back in the queue.")
         notes.append(f"requeued #{number} from a dead run")
     survey = state.get("suggest") or {}
-    if survey.get("provider") and not run_alive(ctx, survey.get("run_id")):
+    if survey.get("provider") and run_status(ctx, survey.get("run_id")) == "dead":
         ctx.store.update(lambda s: s["suggest"].update(provider=None, run_id=None), "survey ended")
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         if "pull_request" not in thread:
@@ -417,6 +428,12 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if pull.get("mergeable_state") == "dirty" and not record.get("stop_requested"):
             number = int(pull["number"])
             set_state_label(ctx, number, names, LABEL_REVISE)
+            if pull.get("auto_merge") and pull.get("node_id"):
+                # The revision may come from another model; its approval decides afresh.
+                try:
+                    ctx.gh.disable_auto_merge(pull["node_id"])
+                except GitHubError:
+                    pass
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 kind="revise", source="conflict", queued_at=iso(ctx.now()), failures=0,
                 stop_requested=False), f"conflict #{number}")
@@ -434,7 +451,7 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
     is never here: the workflow hands the model job only the secret named."""
     vault, _ = ctx.gh.get_file(vault_path(provider.id), STATE_BRANCH)
     return {"provider": provider.id, "cli": provider.cli, "secret": provider.secret,
-            "family": provider.family, "vault": vault or ""}
+            "family": provider.family, "shared": provider.quiet_check, "vault": vault or ""}
 
 
 def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, Any] | None:

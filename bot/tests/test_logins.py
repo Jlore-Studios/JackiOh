@@ -82,10 +82,14 @@ class PrepareTests(unittest.TestCase):
         self.assertEqual(again.source, "vault")
         auth = json.loads((Path(again.env["CODEX_HOME"]) / "auth.json").read_text())
         self.assertEqual(auth["tokens"]["refresh_token"], "ref-" + "z" * 40)
-        # A vault from another provider, or under another secret, is ignored.
+        # A vault under another secret is ignored: a freshly pasted login wins.
         other = logins.prepare(self.pool.get("gpt"), json.dumps({**CODEX_AUTH, "x": 1}), sealed,
                                self.home / "three")
         self.assertEqual(other.source, "secret")
+        # And so is one sealed for another provider, even under the same secret.
+        foreign = vault.seal({"provider": "gemini", "files": {"auth.json": "{}"}}, secret)
+        mismatch = logins.prepare(self.pool.get("gpt"), secret, foreign, self.home / "four")
+        self.assertEqual(mismatch.source, "secret")
 
     def test_gemini_gets_its_creds_and_a_settings_file_selecting_that_login(self):
         login = logins.prepare(self.pool.get("gemini"), json.dumps(GEMINI_CREDS), "", self.home)

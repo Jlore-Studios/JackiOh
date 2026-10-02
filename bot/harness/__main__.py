@@ -86,7 +86,8 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
     # and which one secret to hand it. They come from providers.json, never from the model.
     _output({"action": planned["action"], "number": planned.get("number") or "",
              "provider": planned.get("provider") or "", "cli": planned.get("cli") or "",
-             "secret": planned.get("secret") or ""})
+             "secret": planned.get("secret") or "",
+             "shared": str(bool(planned.get("shared"))).lower()})
     what = planned["action"] if planned["action"] == "none" else (
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
     if planned.get("provider"):
@@ -173,19 +174,26 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
                                                  encoding="utf-8")
                 print(f"work: infra: {redact(str(exc))}")
                 return 0
-    worker = Worker(
-        cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
-        probe=make_probe(ctx, int(number) if number else None, provider),
-    )
-    result = worker.run()
-    if login is not None:
+    def keep_login() -> None:
+        """After every model call: seal a login the CLI refreshed (and redact its new tokens
+        from then on), so even a job killed later hands it on to the next run."""
+        if login is None:
+            return
         try:
             sealed = logins_mod.seal(login)
         except (ValueError, OSError) as exc:
-            sealed = None
             print(f"work: could not seal the refreshed login: {redact(str(exc))}")
+            return
         if sealed:
+            out.mkdir(parents=True, exist_ok=True)
             (out / "vault.enc").write_text(sealed + "\n", encoding="utf-8")
+
+    worker = Worker(
+        cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
+        probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
+    )
+    result = worker.run()
+    keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")
     print(f"work: {result.get('status')}: {result.get('reason', '')}")
     return 0

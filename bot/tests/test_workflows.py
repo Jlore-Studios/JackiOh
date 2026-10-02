@@ -80,6 +80,17 @@ class NightWorkflowTests(unittest.TestCase):
         for cli in providers.CLIS:
             self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}'")
 
+    def test_only_a_run_on_the_shared_subscription_looks_like_spending_it(self):
+        """The partner bot excuses a rise on the shared Claude account while a step named
+        `Build, check and review` runs, so a run on any other subscription must not use it."""
+        work = job(self.text, "work")
+        shared = re.search(r"- name: Build, check and review\n\s+if: (.*)\n", work)
+        other = re.search(r"- name: (Work on another subscription.*)\n\s+if: (.*)\n", work)
+        self.assertEqual(shared.group(1), "needs.plan.outputs.shared == 'true'")
+        self.assertEqual(other.group(2), "needs.plan.outputs.shared != 'true'")
+        self.assertFalse(other.group(1).startswith("Build, check and review"))
+        self.assertEqual(work.count("python -m harness work --plan"), 2)
+
     def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
         self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")
         self.assertIn("group: bot-night-plan", job(self.text, "plan"))

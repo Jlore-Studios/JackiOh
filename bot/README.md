@@ -241,15 +241,23 @@ item at a time. Items go in this order: forced, `difficult`, second reviews, rev
 oldest builds. Each goes to the first subscription in `priority` that is free, set up, inside its
 hours (unless the item is forced) and under its limits. A run that claims an item starts another
 run while a lane and more work are free, and a run that finishes starts the next, so the lanes
-fill up. By night that is usually Opus; by day, whoever else is set up.
+fill up. By night that is usually Opus; by day, whoever else is set up. A run that could not work
+at all (its login refused, its CLI would not install or start) leaves its subscription alone for
+50 minutes, and the item goes to another one meanwhile.
 
 **The two-model rule.** Every run reviews its own work with a fresh session of its own model.
 - **Built by Opus:** its approval is enough, and auto-merge turns on.
 - **Built by another model:** the pull request is labelled `bot:cross-review`, and a later run on
   a different model family reads it from scratch.
-  - If that second model approves the same commit, auto-merge turns on.
+  - The second reviewer reads the change but installs and runs nothing: it holds another
+    subscription's login, which the builder's code must never run beside. CI runs every check.
+  - If that second model approves the same commit, auto-merge turns on, pinned to that commit:
+    GitHub will not merge a head that moved after the approval.
   - If it has blocking findings, a revision is queued, and the revision goes round the same way.
-    After three such rounds the bot stops and asks you.
+    Its rejection stands against that commit until the same model approves it or the commit
+    changes. After three such rounds the bot stops and asks you.
+  - Whenever the rule is not met, auto-merge is off, even if an earlier Opus approval had turned
+    it on for an older commit.
   - A second review of a commit that moved in the meantime does not count.
   - If no subscription of another family is set up, such a change waits in `bot:cross-review`
     until one is, or until you merge it yourself.
@@ -326,10 +334,13 @@ subscription:
      It keeps looking for up to two hours. If it never turns quiet, the run takes other work on
      another subscription instead, if there is some, or gives up until the next run.
 
-   Only one run waits at a time: while one does, the others go to the other subscriptions.
+   Only one run waits at a time: while one does, the others go to the other subscriptions. And
+   when another Claude account can take the same work, the run goes ahead on that one instead of
+   waiting.
 
 bright-bots-harness applies the same rule the other way round: its partner is this bot's "Build,
-check and review" step. The gate's own step, "Wait until the subscription is quiet", never counts
+check and review" step, which only a run on `claude-1` has. A run on any other subscription
+names its step "Work on another subscription", so it never excuses a rise on the shared account. The gate's own step, "Wait until the subscription is quiet", never counts
 as spending. A forced run (`--force`, `/harness run`, or an item queued with `--force`) skips the
 wait. The settings are `quiet` in `.harness/config.json`.
 

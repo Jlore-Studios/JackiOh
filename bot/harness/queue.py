@@ -184,8 +184,6 @@ class Candidate:
     queued_at: str
     #: Labelled `difficult` (on the thread, or on the issue a bot PR was built for): Opus only.
     difficult: bool = False
-    #: The provider that worked on it last, preferred again while it is free.
-    provider: str = ""
     #: For a review: the model family whose approval it already has, which may not review again.
     builder: str = ""
 
@@ -210,15 +208,14 @@ def candidates(ctx: Context, state: dict[str, Any]) -> list[Candidate]:
             if LABEL_WORKING in names or number in found:
                 continue
             is_pr = "pull_request" in thread
-            if label == LABEL_CROSS and not is_pr:
-                continue
+            if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
+                continue  # a second review is for the bot's own pull requests only
             record = state["items"].get(str(number), {})
             kind = "review" if label == LABEL_CROSS else "revise" if is_pr else "build"
             found[number] = Candidate(
                 number, kind, str(thread.get("title", "")), bool(record.get("forced")),
                 str(record.get("queued_at") or thread.get("created_at") or ""),
                 difficult=difficult in names or bool(record.get("difficult")),
-                provider=str(record.get("provider") or ""),
                 builder=str((record.get("votes") or {}).get("builder") or ""))
     return sorted(found.values(), key=lambda c: (not c.forced, KIND_ORDER[c.kind], c.queued_at,
                                                  c.number))
