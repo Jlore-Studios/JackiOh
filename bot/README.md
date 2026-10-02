@@ -140,7 +140,7 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `revise <notes>` | queue a revision of this pull request | PR | 2 |
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
 | `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
-| `status` | halt state, window, usage, what is running and queued | anywhere | 1 |
+| `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
 | `start` | lift a halt (`start --force` also starts a run) | anywhere | 3 |
@@ -483,7 +483,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/` |
+| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |

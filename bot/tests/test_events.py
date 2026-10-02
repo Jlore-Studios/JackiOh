@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import unittest
 
-from harness import events
+from datetime import timedelta
+
+from harness import events, status
+from harness.clock import iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_WORKING, MARKER)
 from harness.state import item as state_item
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub
-from tests.support import DAY, make_ctx
+from tests.support import DAY, NIGHT, make_ctx
 
 TRUST = "jgoetzmann 3 id:95732896\nhelper 2\nreader 1\n"
 HELPER = {"login": "helper", "id": 7}
@@ -370,6 +373,48 @@ class ReviewAndCiTests(unittest.TestCase):
         events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": OPERATOR,
                                                          "pull_request": pull})
         self.assertIn("closed without merging", self.gh.bot_comments(5)[-1])
+
+
+class StatusTests(unittest.TestCase):
+    """`/harness status` says which subscriptions are running, on what, and for how long."""
+
+    def test_which_subscriptions_are_running_now(self):
+        gh = FakeGitHub()
+        for number in (37, 49, 50):
+            gh.add_issue(number, labels=(LABEL_WORKING,))
+        gh.runs.update({"101": {"status": "in_progress"}, "102": {"status": "queued"},
+                        "103": {"status": "in_progress"}})  # run 999 has ended (404)
+        ctx = make_ctx(gh, at=NIGHT)
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        def seed(state):
+            state_item(state, 37).update(provider="claude-1", kind="build", run_id="101",
+                                         started_at=ago(47))
+            state_item(state, 49).update(provider="muse", kind="revise", run_id="102",
+                                         started_at=ago(123))
+            state_item(state, 50).update(provider="gpt", kind="build", run_id="999",
+                                         started_at=ago(300))
+            state["suggest"].update(provider="agy", run_id="103", last_run=ago(0))
+        ctx.store.update(seed, "seed")
+        text = status.report(ctx)
+        runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
+        self.assertIn("\n".join([
+            "- **Running now** (3 of 3 lanes, 0 free):",
+            f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
+            f"  - `agy` (agy, `gemini-3.1-pro`): a suggestion survey, just started, [run]({runs}/103).",
+            f"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, "
+            f"[run]({runs}/102).",
+        ]), text)
+        # A run that ended holds nothing, and its subscription says why it is or is not free.
+        self.assertNotIn("`gpt` (codex", text.split("- Subscriptions")[0])
+        self.assertIn("  - `claude-1` (claude, `opus`, 21:00–07:00 America/Chicago): "
+                      "**working on #37**.", text)
+        self.assertNotIn("`gpt` (codex, `gpt-5.6-terra`, any time): **working", text)
+        self.assertIn("- Working on: #37, #49, #50 (no run is going for #50 any more; the next "
+                      "plan requeues it).", text)
+
+    def test_nothing_running(self):
+        text = status.report(make_ctx(FakeGitHub(), at=NIGHT))
+        self.assertIn("- Running now: nothing (3 of 3 lanes free).", text)
 
 
 if __name__ == "__main__":

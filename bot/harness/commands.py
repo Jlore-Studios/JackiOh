@@ -249,8 +249,8 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
              "up at its next checkpoint and keeps what it has.", "/harness stop"),
     "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
                 "@{bot} suggest"),
-    "status": ("status", "Halt state, each subscription (its hours, usage, and what it is "
-               "doing), and what is running and queued.",
+    "status": ("status", "Halt state, which subscriptions are running what right now, each "
+               "subscription (its hours, usage, and what it is doing), and what is queued.",
                "@{bot} status"),
     "help": ("help [verb]", "The list of commands, or one of them in detail.",
              "/harness help build"),
