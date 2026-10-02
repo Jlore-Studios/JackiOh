@@ -1,8 +1,12 @@
-# Holds CI to its budget (#73): no job may run longer than five minutes. After every run of CI,
-# bot selftest or deploy watch, this reads how long each of its jobs took and, if any went over, opens an issue
-# naming them, or comments on the one already open, so a slow job is seen and split before it grows
-# into the old 19-minute wait. The night bot's own workflows are exempt: a build legitimately runs
-# for hours.
+# Holds CI to its budget (#73): every job should finish under TARGET_MINUTES. After every run of CI,
+# bot selftest or deploy watch, this reads how long each of its jobs took and, if any went over
+# ALERT_MINUTES, opens an issue naming them, or comments on the one already open, so a slow job is
+# seen and split before it grows into the old 19-minute wait. The night bot's own workflows are
+# exempt: a build legitimately runs for hours.
+#
+# The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
+# few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
+# under the target, not just under the alert, so the fix has headroom and the alert stays quiet.
 #
 # It never checks out or runs code. `workflow_run` runs this file from the default branch with a
 # write token even for a fork's pull request, so it only reads job timings through the API, and the
@@ -14,13 +18,19 @@ on:
     workflows: ["CI", "bot selftest", "deploy watch"]
     types: [completed]
 
+env:
+  # What a fix or a new split aims for: every job finishes under this.
+  TARGET_MINUTES: "5"
+  # What gets reported: a job that ran longer than this.
+  ALERT_MINUTES: "7"
+
 permissions:
   actions: read
   issues: write
 
 jobs:
   check:
-    name: no CI job over 5 minutes
+    name: flag CI jobs over the alert
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -34,12 +44,13 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           SHA: ${{ github.event.workflow_run.head_sha }}
           EVENT: ${{ github.event.workflow_run.event }}
-          LIMIT_SECONDS: "300"
-          TITLE: "CI: a job ran over 5 minutes"
         run: |
           set -euo pipefail
+          export LIMIT_SECONDS=$((ALERT_MINUTES * 60))
+          export TITLE="CI: a job ran over $ALERT_MINUTES minutes"
           # The latest attempt's jobs that ran to an end. A cancelled job (a newer push superseding
-          # the run) says nothing about how long the job takes.
+          # the run) says nothing about how long the job takes. The filter's `$s` is jq's, not the shell's.
+          # shellcheck disable=SC2016
           slow=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '
             .jobs[]
             | select(.started_at != null and .completed_at != null)
@@ -54,13 +65,13 @@ jobs:
           echo "over $LIMIT_SECONDS s:"; echo "$slow"
 
           body=$(printf '%s\n' \
-            "[$WORKFLOW run $RUN_ID]($RUN_URL) on \`$BRANCH\` (\`${SHA:0:7}\`, $EVENT) had jobs over the 5-minute budget (#73):" \
+            "[$WORKFLOW run $RUN_ID]($RUN_URL) on \`$BRANCH\` (\`${SHA:0:7}\`, $EVENT) had jobs over the $ALERT_MINUTES-minute alert (#73):" \
             "" \
             "| Job | Time | Result |" \
             "|---|---|---|" \
             "$slow" \
             "" \
-            "Split the slow job further: most splits only need a longer matrix list in \`.github/workflows/ci.yml\`; for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`." \
+            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\`; for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/ci-duration.yml\`._")
