@@ -428,7 +428,25 @@
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
-  "providers": {},
+  "providers": {
+    "gpt": {
+      "refused_until": "2026-10-02T22:05:44Z",
+      "spent": [
+        {
+          "at": "2026-10-02T21:05:44Z",
+          "minutes": 15.9
+        }
+      ],
+      "usage": {
+        "observed_at": "2026-10-02T21:05:44Z",
+        "seven_day": {
+          "resets_at": "2026-10-03T18:35:55Z",
+          "utilization": 0.96
+        },
+        "status": "allowed"
+      }
+    }
+  },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
   "suggest": {
