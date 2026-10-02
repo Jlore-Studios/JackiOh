@@ -204,41 +204,53 @@ describe("R630 the almanac's browse pane", () => {
     expect(screen.queryByTestId(DB_DETAIL_ADD)).toBeNull();
   });
 
-  it("R630 search, cost, type, tag and rarity filters and the sort all narrow and order the pool", () => {
+  // One filter per test: a full pool is 317 cards, and every render of all of them costs about as
+  // much as the rest of a test does.
+  it("R630 the search narrows the pool, and a search nothing matches shows the empty state", () => {
     render(<AlmanacRoute />);
     const named = cardOf("core-001");
-
     fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: named.name } });
     expect(shownIds()).toContain(named.id);
     expect(shownIds().length).toBeLessThan(CARDS.length);
     fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "zzz-no-card-says-this" } });
     expect(shownIds()).toEqual([]);
     expect(screen.getByTestId(DB_EMPTY)).toBeInTheDocument();
-    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "" } });
+  });
 
+  it("R630 a cost chip keeps the cards of that cost", () => {
+    render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(filterCostId("6+")));
     expect(shownIds().length).toBeGreaterThan(0);
     for (const id of shownIds()) expect(costBucket(cardOf(id).cost), id).toBe("6+");
-    fireEvent.click(screen.getByTestId(filterCostId("6+")));
+  });
 
+  it("R630 a type chip keeps the cards of that type", () => {
+    render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(filterTypeId("Trap")));
     expect(shownIds().length).toBeGreaterThan(0);
     for (const id of shownIds()) expect(cardOf(id).type, id).toBe("Trap");
-    fireEvent.click(screen.getByTestId(filterTypeId("Trap")));
+  });
 
+  it("R630 every almanac tag has a chip, and the Token chip keeps exactly the tokens", () => {
+    render(<AlmanacRoute />);
     for (const tag of ALMANAC_TAGS) expect(screen.getByTestId(filterTagId(tag)), tag).toBeInTheDocument();
     fireEvent.click(screen.getByTestId(filterTagId("Token" satisfies Tag)));
     expect([...shownIds()].sort()).toEqual(TOKENS.map((def) => def.id).sort());
-    fireEvent.click(screen.getByTestId(filterTagId("Token")));
+  });
 
+  it("R630 a rarity chip keeps the cards of that rarity, and Clear filters shows every card again", () => {
+    render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(filterRarityId("Mythic")));
     expect(shownIds().length).toBeGreaterThan(0);
     for (const id of shownIds()) expect(cardOf(id).rarity, id).toBe("Mythic");
     fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
     expect(shownIds()).toHaveLength(CARDS.length);
+  });
 
+  it("R630 the sort orders the pool", () => {
+    render(<AlmanacRoute />);
     fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: "name" } });
-    fireEvent.click(screen.getByTestId(DB_SORT_DIR));
-    expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "desc" })]);
+    expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "asc" })]);
+    expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "asc");
   });
 });
