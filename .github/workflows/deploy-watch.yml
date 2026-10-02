@@ -1,0 +1,89 @@
+# Watches Render's deploy of each push to main and reports a deploy that never arrives.
+#
+# Render deploys apps/server from main on every push and, when a deploy fails, keeps the previous
+# one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
+# moved to catalog v0.2.0 while the live server, unable to migrate, stayed on core-1. This polls
+# the live server's one unauthenticated route, GET /api/catalog (R163), until it serves the catalog
+# version render.yaml names, and opens an issue, or comments on the open one, if it never does.
+#
+# What it can see: the server is down, or it serves another catalog version than main's. What it
+# cannot: a failed deploy that leaves the old server on the same version, for which Render's own
+# deploy-failure notifications (dashboard, Settings, Notifications) are the alarm. The pre-merge
+# half is CI's `pnpm test:deploy`, which rehearses the deploy and fails before a bad one merges.
+name: deploy watch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  SERVER_URL: https://jackioh-server.onrender.com
+  # How long a deploy may take to go live: Render's build and boot, plus a free instance waking.
+  DEPLOY_MINUTES: "20"
+  TITLE: "Render: the live server is not serving main's catalog"
+
+jobs:
+  watch:
+    name: the live server serves main's catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: poll /api/catalog until it serves render.yaml's version
+        id: poll
+        run: |
+          expected=$(awk '$1 == "-" && $2 == "key:" { k = $3; next } k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' render.yaml)
+          echo "expected=$expected" >> "$GITHUB_OUTPUT"
+          echo "waiting for $SERVER_URL to serve catalog $expected"
+          deadline=$(( $(date +%s) + DEPLOY_MINUTES * 60 ))
+          served="(no answer)"
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            # A free instance asleep takes about a minute to answer its first request.
+            if body=$(curl -fsS -m 120 "$SERVER_URL/api/catalog" 2>/dev/null); then
+              served=$(printf '%s' "$body" | jq -r '.version // "(no version)"')
+              if [ "$served" = "$expected" ]; then
+                echo "live: catalog $served"
+                echo "served=$served" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            fi
+            echo "$(date -u +%H:%M:%S) serving $served; waiting"
+            sleep 30
+          done
+          echo "served=$served" >> "$GITHUB_OUTPUT"
+          echo "::error::after $DEPLOY_MINUTES minutes $SERVER_URL serves $served, not $expected"
+          exit 1
+
+      - name: report it
+        if: failure() && steps.poll.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED: ${{ steps.poll.outputs.expected }}
+          SERVED: ${{ steps.poll.outputs.served }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '%s\n' \
+            "After the push of \`${SHA:0:7}\` to main, \`$SERVER_URL/api/catalog\` served **$SERVED** for $DEPLOY_MINUTES minutes, not render.yaml's **$EXPECTED** ([run]($RUN_URL))." \
+            "" \
+            "Render most likely failed the deploy and kept the previous one serving. Its deploy log (dashboard, jackioh-server, Events) names the step: the build, the \`release\` step's migrations or reseed, or the boot. \`pnpm test:deploy\` rehearses all three locally." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/deploy-watch.yml\`._")
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body"
+          fi

@@ -263,6 +263,18 @@ jobs:
         if: always()
         run: docker rm -f jackioh-pg-store-test || true
 
+      # Render's deploy, rehearsed before it happens (apps/server/test/deploy/rehearse.sh):
+      # render.yaml's own start command, migrating as a role that is not a superuser, as Supabase's
+      # is not, then the reseed and a production boot, held to the readiness probe Render uses and
+      # to the free instance's memory. Migration 0013 passed every suite here, all of which migrate
+      # as a superuser, and then failed Render's deploy: this is the step that would have caught it.
+      - name: the Render deploy, rehearsed
+        run: pnpm test:deploy
+
+      - name: remove the rehearsal's container
+        if: always()
+        run: docker rm -f jackioh-pg-deploy || true
+
   # ------------------------------------------------------------------------------------------------
   # e2e (chrome), e2e (electron)
   # ------------------------------------------------------------------------------------------------

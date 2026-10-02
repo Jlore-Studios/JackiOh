@@ -34,6 +34,20 @@ comment on table app.migrations is
   'Which files in apps/server/src/db/migrations have been applied. Written by src/db/migrate.ts.';
 `;
 
+/**
+ * Files rewritten after some database had applied them, each with the checksums of its earlier
+ * versions. A database that applied an earlier version keeps it (the ledger is not rewritten); any
+ * other edit to an applied file is still refused. Add an entry only when the earlier version can
+ * stay where it was applied and the new one is what every database that has not applied it needs.
+ *
+ * 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set
+ * jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
+ * on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
+ */
+const REWRITTEN: Readonly<Record<string, readonly string[]>> = {
+  "0013_retention_purge.sql": ["16b93e4d"],
+};
+
 /** FNV-1a, so a changed file that was already applied is reported instead of silently skipped. */
 function checksum(text: string): string {
   let hash = 0x811c9dc5;
@@ -84,7 +98,7 @@ export async function migrate(connectionString: string): Promise<string[]> {
         );
         const previous = ledger.rows[0]?.checksum;
         if (previous !== undefined) {
-          if (previous !== sum) {
+          if (previous !== sum && !(REWRITTEN[filename] ?? []).includes(previous)) {
             throw new Error(
               `${filename} was already applied but its contents changed (${previous} -> ${sum}). ` +
                 `Migrations are append-only: add a new file instead of editing this one.`,

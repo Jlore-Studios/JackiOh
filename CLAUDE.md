@@ -46,6 +46,7 @@ pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, an
 pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>   # the card patch history, packages/cards/patches/ (R388): snapshots the catalog and bumps CATALOG_VERSION everywhere
 pnpm test:sql          # schema, RLS and trigger invariants: Docker only, starts a throwaway postgres:16
 pnpm test:db           # src/db/store.ts against a throwaway postgres:16 (Docker only; KEEP_DB=1 keeps it)
+pnpm test:deploy       # Render's deploy rehearsed: render.yaml's start command, migrating as a role that is not a superuser (as on Supabase), then a production boot (Docker only)
 pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines with macOS `say`/`afconvert` (idempotent); `--check` runs anywhere
 ```
 
@@ -76,10 +77,10 @@ CI (`.github/workflows/ci.yml`) reports five required checks. Each long one is a
 - `checks`: lint, typecheck, validate:catalog, missing-tests and rulings:coverage in one job; `pnpm test` by project; the fuzz gate by seed range; `test:coverage` by shard, with the 90% floor held on the merged report.
 - `ai-gate`: `pnpm ai:gate`, every k-th game per shard (`JACKIOH_AI_GATE_SHARD=k/K`). `pnpm ai:gate:merge` holds the shards' wins together against `gateNeeded`.
 - `sql`: `test:sql`.
-- `db`: `test:db`.
+- `db`: `test:db`, then `test:deploy`.
 - `e2e`: the twenty-eight specs (`01`–`28`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
 
-`ci-duration.yml` reads every CI run's job times and opens an issue (or comments on the open one) when a job went over five minutes; split that job further, usually by lengthening its matrix list.
+`deploy-watch.yml` polls the live server after every push to main and opens an issue if it never serves render.yaml's catalog version, which is what a failed Render deploy looks like from outside. `ci-duration.yml` reads every CI run's job times and opens an issue (or comments on the open one) when a job went over five minutes; split that job further, usually by lengthening its matrix list.
 
 `bot-selftest.yml` adds a sixth required check, `bot selftest`: the night bot's own suite (`cd bot && python3 -m unittest discover -s tests -t .`) and actionlint over its workflows. Branch protection on `main` requires all of these checks, which is what lets the night bot's pull requests auto-merge safely.
 
