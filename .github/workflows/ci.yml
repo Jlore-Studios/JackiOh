@@ -4,7 +4,8 @@
 # the AI gates 15, each browser's e2e 14). They are now short jobs that run side by side: the unit
 # suites by project, and the fuzz gate, the coverage run, the AI gates and the e2e specs by shard.
 # A shard learns how many shards there are from `strategy.job-total`, so resizing a split is only
-# a change to its matrix list. `ci-duration.yml` opens an issue when any job here passes 5 minutes.
+# a change to its matrix list. Every job here aims to finish under 5 minutes; `ci-duration.yml`
+# opens an issue when one passes 7 (its TARGET_MINUTES and ALERT_MINUTES).
 #
 # The names branch protection requires stay, and so do their meanings. `.harness/config.json`'s
 # `required_checks` and branch protection wait on six names; each long one is now a summary job that
@@ -166,8 +167,9 @@ jobs:
   #
   # Twelve shards, and fifteen minutes rather than ten: under patch v0.2.0 one hard-vs-easy game can
   # take four to five minutes on its own (gate:v2:hard-vs-easy:12), so a shard that draws it runs
-  # long however finely the gate is split. ci-duration.yml reports such a shard; the cure is engine
-  # speed (#70), not more shards.
+  # long however finely the gate is split: over ci-duration.yml's 5-minute target, though under its
+  # 7-minute alert. If such a shard ever trips the alert, the cure is engine speed (#70), not more
+  # shards.
   ai-gate-shard:
     name: ai gates (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
