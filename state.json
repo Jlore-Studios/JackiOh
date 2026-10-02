@@ -280,6 +280,16 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     },
+    "66": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-02T06:44:41Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
+    },
     "75": {
       "failures": 0,
       "forced": false,
