@@ -3663,6 +3663,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R602 keeps in the AI's view what a live face-down card visibly does", () => {
     provenIn(602, "../../ai/test/redact-live-face-down.test.ts");
   });
+
+  // Proved by apps/web routes/almanac.test.tsx "R630 …" (the public route, its footer link and sitemap
+  // entry, every card with tokens, the read-only browse pane, the detail view, filters and sort) and
+  // game/deckbuilder/filters.test.ts "R630 …" (the almanac's pool and tag chips).
+  it("R630 opens a public, read-only Card Almanac of every card, tokens included", () => {
+    provenIn(630, "../../../apps/web/src/routes/almanac.test.tsx", WEB_FILTERS_TEST);
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

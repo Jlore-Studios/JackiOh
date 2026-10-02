@@ -78,7 +78,7 @@ CI (`.github/workflows/ci.yml`) reports five required checks. Each long one is a
 - `ai-gate`: `pnpm ai:gate`, every k-th game per shard (`JACKIOH_AI_GATE_SHARD=k/K`). `pnpm ai:gate:merge` holds the shards' wins together against `gateNeeded`.
 - `sql`: `test:sql`.
 - `db`: `test:db`, then `test:deploy`.
-- `e2e`: the thirty-two specs (`01`–`32`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
+- `e2e`: the thirty-three specs (`01`–`33`) on Chrome and on Electron, each browser split by `e2e/scripts/shard-specs.mjs` over jobs that boot their own server, plus the component specs on Chrome.
 
 `deploy-watch.yml` polls the live server after every push to main and opens an issue if it never serves render.yaml's catalog version, which is what a failed Render deploy looks like from outside. `ci-duration.yml` reads every CI run's job times and opens an issue (or comments on the open one) when a job went over seven minutes (`ALERT_MINUTES`); split that job further, usually by lengthening its matrix list, until it finishes under five (`TARGET_MINUTES`). A job between five and seven minutes is not reported, so it never costs a re-split on its own.
 

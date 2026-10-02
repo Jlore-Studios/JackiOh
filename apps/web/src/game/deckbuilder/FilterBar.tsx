@@ -1,5 +1,7 @@
 // The deck builder's filter bar: text search, toggle chips for set, cost, type, tag and rarity, the
-// "owned only" checkbox, the sort key and direction, a clear control and the result count.
+// "owned only" checkbox, the sort key and direction, a clear control and the result count. The Card
+// Almanac (R630) renders the same bar with no "owned only" control and its own tag chips; without
+// those two props the bar is the deck builder's.
 //
 // Controlled and dumb: the filter and the sort live in `Deckbuilder`, and what they mean lives in
 // filters.ts. Chips are real toggle buttons (`aria-pressed`), so a keyboard and a screen reader
@@ -53,7 +55,11 @@ type FilterBarProps = {
   /** How many pool cards the current filter shows. */
   count: number;
   /** True when the collection could not be read: ownership is unknown, so the toggle is inert. */
-  ownedUnavailable: boolean;
+  ownedUnavailable?: boolean;
+  /** False leaves the "owned only" control out altogether (the almanac has no collection). */
+  ownedControl?: boolean;
+  /** The tag chips, in order; the deck builder's `FILTER_TAGS` when absent. */
+  tags?: readonly Tag[];
 };
 
 const SORT_LABELS: Readonly<Record<SortKey, string>> = {
@@ -93,7 +99,7 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 }
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
-  const { filter, onFilter, sort, onSort, count, ownedUnavailable } = props;
+  const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = FILTER_TAGS } = props;
 
   const setSets = (set: SetName) => {
     onFilter({ ...filter, sets: toggled(filter.sets, set) });
@@ -137,18 +143,20 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             onFilter({ ...filter, search: event.target.value });
           }}
         />
-        <label className="db-owned">
-          <input
-            type="checkbox"
-            data-testid={DB_FILTER_OWNED}
-            checked={filter.ownedOnly}
-            disabled={ownedUnavailable}
-            onChange={(event) => {
-              onFilter({ ...filter, ownedOnly: event.target.checked });
-            }}
-          />
-          <span>Owned only</span>
-        </label>
+        {ownedControl ? (
+          <label className="db-owned">
+            <input
+              type="checkbox"
+              data-testid={DB_FILTER_OWNED}
+              checked={filter.ownedOnly}
+              disabled={ownedUnavailable}
+              onChange={(event) => {
+                onFilter({ ...filter, ownedOnly: event.target.checked });
+              }}
+            />
+            <span>Owned only</span>
+          </label>
+        ) : null}
         {/* The sort and its direction wrap as one, so the arrow never ends up alone on a row. */}
         <span className="db-sort-group">
           <label className="db-sort">
@@ -285,7 +293,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             <span className="db-group-label" aria-hidden="true">
               Tag
             </span>
-            {FILTER_TAGS.map((tag) => (
+            {tags.map((tag) => (
               <Chip
                 key={tag}
                 testId={filterTagId(tag)}

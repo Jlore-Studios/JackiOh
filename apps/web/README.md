@@ -130,6 +130,9 @@ src/
   routes/dev/hotseat.tsx  the dev hotseat route
   routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
                         R388, R507); the site footer (routes/SiteFooter.tsx) links it
+  routes/almanac.tsx    /almanac: the public Card Almanac (R630), every card with tokens, read-only through
+                        the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
+                        catalog, no API call; the site footer links it beside Patch notes
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
@@ -247,7 +250,8 @@ queue, and the server's refusal, when it comes, is shown in its own words (rule 
 ```
 routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser, the trio editor that marks every card two of its decks share (R251),
+                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
+                        the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits

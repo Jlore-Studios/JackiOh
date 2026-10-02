@@ -615,8 +615,9 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 | `30-activate.cy.ts` | Hotseat: C #81 The Power to Thrive and C #21 Turtinator on the field (R384) | the Activate control shows on each; a mode chosen on the control resolves; a second use of an "Activate" card that turn is refused and the control greys out; "Activate ♾️" pays its Tribute each time until no Unit is left to pay |
 | `31-counter-opponent-turn.cy.ts` | Networked or hotseat: P2 has C #17 Counterspell set; P1 plays a Spell (§10.5, R427) | the Spell is announced, then countered on P1's turn: it lands in P1's graveyard with no `cardPlayed`, its mana stays spent, Combo counts do not move, and a Sheepish set beside it never sees a countered Unit |
 | `32-tribute-full-board.cy.ts` | Hotseat: P1's five unit zones full, #66 The Rock or C #45 Nature Titan in hand (R391) | the zone a Tribute empties glows as legal; the card is played into it paying that Tribute; a zone whose tributed unit has Reborn or sits on a pile is never offered |
+| `33-almanac.cy.ts` | Signed out, against a built client with every API call stubbed: the landing page's site footer, then `/almanac` (R630) | the footer's "Card almanac" link opens `/almanac`; filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action and closes; no API call is made on the page; Back returns to the landing page |
 
-**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–32) green in CI on Chrome and Electron.
+**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–33) green in CI on Chrome and Electron.
 
 ### M9 — Patch v0.2.0: Classic, Classic+, the new keywords and mechanics (issue #40)
 
