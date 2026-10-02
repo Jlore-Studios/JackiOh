@@ -364,6 +364,16 @@
       "stop_requested": true,
       "stopped_at": "2026-10-02T06:59:30Z",
       "stopped_by": "squishy-squooby"
+    },
+    "88": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-02T17:10:19Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false
     }
   },
   "last_infra": {
