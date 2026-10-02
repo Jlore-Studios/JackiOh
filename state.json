@@ -73,6 +73,12 @@
       "lines": [
         "/harness build"
       ]
+    },
+    "c:5947044737": {
+      "at": "2026-10-02T06:59:23Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
