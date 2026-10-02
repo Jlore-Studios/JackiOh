@@ -275,8 +275,10 @@
     "what": "revise #53"
   },
   "last_sweep": {
-    "at": "2026-10-02T05:29:59Z",
-    "notes": [],
+    "at": "2026-10-02T06:12:44Z",
+    "notes": [
+      "started a night run, as none was going: #53 is queued to revise"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "rate_limited_until": "2026-10-01T18:50:00Z",
