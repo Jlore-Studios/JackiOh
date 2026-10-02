@@ -432,8 +432,10 @@
     "what": "build #49 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-02T18:00:51Z",
-    "notes": [],
+    "at": "2026-10-02T21:57:30Z",
+    "notes": [
+      "started a night run, as a lane was free: #37 is queued to build, for `claude-1`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
