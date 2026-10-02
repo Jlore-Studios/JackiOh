@@ -388,6 +388,16 @@
       "queued_at": "2026-10-02T17:42:45Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
+    },
+    "90": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-02T20:16:19Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false
     }
   },
   "last_infra": {
@@ -404,6 +414,7 @@
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
+  "providers": {},
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
   "suggest": {
