@@ -88,13 +88,33 @@ describe("T-sheep Sheep Token (SPEC §7)", () => {
       expect(legalTributeUnits(s.state, "p1", cube).map((unit) => unit.id)).toEqual([onField.id]);
     });
 
-    it.todo(
-      "§6.3 one Sheep Token alone pays #66 The Rock's Tribute 1 and two pay #55 Lava Golem's " +
-        "Tribute 3 where three ordinary units would be needed — blocked on two things: no shipped " +
-        "script declares a Tribute play cost yet (`core-055`/`core-066` are not in src/scripts), and " +
-        "`reduce.ts`'s `playCard` neither calls `whyChoicesRefused` (playChoices.ts) nor sacrifices " +
-        "`action.tributes`, so a Tribute cost is currently neither validated nor paid by a play",
-    );
+    it("§6.3 one Sheep Token alone pays #66 The Rock's Tribute 1", () => {
+      const s = scenario({ seed: SEED, p1: { hand: ["core-066"], field: ["core-t-sheep"] } });
+      const sheep = s.unit("p1", 1) as CardInstance;
+
+      s.play("core-066", { tributes: [sheep.id] });
+
+      s.expectInZone("core-066", "field");
+      // R11: the paid Sheep ceases to exist rather than reaching the graveyard.
+      s.expectInZone(sheep, "gone");
+      expect(s.pile("p1", "graveyard")).toEqual([]);
+    });
+
+    it("§6.3 two Sheep Tokens pay #55 Lava Golem's Tribute 3, where one ordinary unit more would not", () => {
+      const s = scenario({ seed: SEED, p1: { hand: ["core-055"], field: ["core-t-sheep", "core-t-sheep"] } });
+      const sheep = [s.unit("p1", 1), s.unit("p1", 2)] as CardInstance[];
+
+      s.play("core-055", { tributes: sheep.map((unit) => unit.id) });
+
+      s.expectInZone("core-055", "field");
+      for (const unit of sheep) s.expectInZone(unit, "gone");
+
+      // Two ordinary units are worth 2, short of the 3 the two Sheep paid.
+      const ordinary = scenario({ seed: SEED, p1: { hand: ["core-055"], field: ["core-025", "core-025"] } });
+      const pair = [ordinary.unit("p1", 1), ordinary.unit("p1", 2)] as CardInstance[];
+      expect(() => ordinary.play("core-055", { tributes: pair.map((unit) => unit.id) })).toThrow(/Tribute 3/);
+      ordinary.expectInZone("core-055", "hand");
+    });
 
     it("§6.3 and R41 a script tribute (#22) sacrifices only the permanent it names; the 2 never applies", () => {
       const s = scenario({

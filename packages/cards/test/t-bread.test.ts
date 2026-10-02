@@ -31,9 +31,10 @@ import { scenario, type Scenario } from "./_harness";
 const SEED = "t-bread";
 
 /**
- * §7: "always summoned as X/X through `statsOverride`", driven the way #18 Bread and Butter will
- * drive it — the shipped definition plus a `statsOverride` on the summon. #18 has no script yet, so
- * this reaches for the `summon` verb itself rather than for a card that is not this one.
+ * §7: "always summoned as X/X through `statsOverride`", driven the way #18 Bread and Butter drives
+ * it — the shipped definition plus a `statsOverride` on the summon. The `summon` verb itself lets a
+ * test pick any X, a radiant flag and an armor override; the tests below that play #18 prove the
+ * card's own path.
  */
 function summonBreadToken(
   s: Scenario,
@@ -165,12 +166,36 @@ describe("T-bread Bread Token (SPEC §7, R37)", () => {
       expect(ids(query({ defId: "core-t-bread" }))).toEqual([def.id]);
     });
 
-    it.todo(
-      "§7, R52 and R62 #18 Bread and Butter summons this token as X/X for the TRAP's controller at " +
-        "either player's end of turn with unspent mana, X = that mana (radiant 3X), and X = 0 " +
-        "summons nothing — blocked on `core-018`'s script, which is not in src/scripts yet; the " +
-        "`statsOverride` summon it needs is the one exercised above",
-    );
+    it("§7, R52 and R62 #18 Bread and Butter summons this token as X/X for the trap's controller at the opponent's end of turn", () => {
+      const s = scenario({
+        seed: SEED,
+        active: "p2",
+        p1: { backrow: ["core-018"], library: ["core-010"] },
+        p2: { mana: 3, library: ["core-010"] },
+      });
+
+      s.endTurn();
+
+      // R52: p2 ended the turn with 3 unspent, and the token is p1's, the trap's controller.
+      const token = s.unit("p1", 1) as CardInstance;
+      expect(token.defId).toBe(def.id);
+      s.expectStats(token, { attack: 3, health: 3, maxHealth: 3 });
+      expect(keywordsOf(s.state, token)).toEqual([]);
+      for (const lane of [1, 2, 3, 4, 5]) expect(s.unit("p2", lane)).toBeNull();
+    });
+
+    it("§7 and R52 X = 0 summons no Bread Token at all, not a 0/0 that dies", () => {
+      const s = scenario({
+        seed: SEED,
+        p1: { backrow: ["core-018"], mana: 0, library: ["core-010"] },
+        p2: { library: ["core-010"] },
+      });
+
+      s.endTurn();
+
+      expect(s.events.some((event) => event.type === "summoned")).toBe(false);
+      for (const lane of [1, 2, 3, 4, 5]) expect(s.unit("p1", lane)).toBeNull();
+    });
   });
 
   // §7's "Radiant form" column reads "none", so every case above holds for a radiant instance too:
