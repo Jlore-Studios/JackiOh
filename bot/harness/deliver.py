@@ -660,7 +660,8 @@ class Deliverer:
     def _other_family_set_up(self, family: str) -> bool:
         secrets = self.cfg.secrets
         return any(p.enabled and p.family != family and "review" in p.roles
-                   and secrets.has(p.secret) is not False for p in self.cfg.pool.ordered())
+                   and (p.login == "machine" or secrets.has(p.secret) is not False)
+                   for p in self.cfg.pool.ordered())
 
     def _carry_difficult(self, issue: int, pr: int) -> None:
         """A `difficult` issue's pull request stays Opus-only for its revisions."""

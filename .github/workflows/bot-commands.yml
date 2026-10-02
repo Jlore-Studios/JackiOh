@@ -95,7 +95,6 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
-            ${{ secrets.GEMINI_OAUTH_CREDS != '' && 'GEMINI_OAUTH_CREDS' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then

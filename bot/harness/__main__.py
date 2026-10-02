@@ -87,7 +87,8 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
     _output({"action": planned["action"], "number": planned.get("number") or "",
              "provider": planned.get("provider") or "", "cli": planned.get("cli") or "",
              "secret": planned.get("secret") or "",
-             "shared": str(bool(planned.get("shared"))).lower()})
+             "shared": str(bool(planned.get("shared"))).lower(),
+             "runs_on": planned.get("runs_on") or "ubuntu-latest"})
     what = planned["action"] if planned["action"] == "none" else (
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
     if planned.get("provider"):
@@ -161,8 +162,8 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
     provider = cfg.pool.get(planned.get("provider")) or cfg.pool.ordered()[0]
     login = None
     if cfg.backend != "fake":
-        secret = cfg.secret_for(provider.secret)
-        if secret or provider.cli != "claude":
+        secret = cfg.secret_for(provider.secret) if provider.login == "secret" else ""
+        if secret or provider.cli != "claude" or provider.login == "machine":
             try:
                 login = logins_mod.prepare(provider, secret, str(planned.get("vault") or ""),
                                            Path(args.work_dir) / ".logins" / provider.id)
@@ -326,7 +327,9 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
         else:
             version = subprocess.run([binary, "--version"], capture_output=True, text=True)
             ok.append(f"{provider.cli}: {(version.stdout or version.stderr).strip()[:80]}")
-        if not cfg.secret_for(provider.secret):
+        if provider.login == "machine":
+            ok.append(f"{provider.id} uses the login on this machine")
+        elif not cfg.secret_for(provider.secret):
             errors.append(f"{provider.id}'s secret ({provider.secret}) is not in this job")
     try:
         info = ctx.gh.repo_info()

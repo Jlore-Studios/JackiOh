@@ -13,7 +13,7 @@ from harness.providers import Secrets
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import DAY, NIGHT, ROOT, make_config, make_ctx
+from tests.support import DAY, MACHINE, NIGHT, ROOT, make_config, make_ctx, test_pool
 
 ALL = " ".join(providers.SECRETS)
 
@@ -64,6 +64,36 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r.update(priority=["claude-1"]))
         broken(lambda r: r.update(max_parallel=0))
 
+    def test_logins_and_runners(self):
+        pool = providers.load(ROOT)
+        for provider in pool.ordered():
+            # Every subscription has a runner of its own on the machine (bot/machine/README.md).
+            self.assertEqual(provider.runs_on, f"night-vm-{provider.id}")
+            self.assertEqual(provider.login, "secret" if provider.cli == "claude" else "machine")
+        self.assertEqual(pool.get("gpt").secret, "")
+
+        def broken(change, words) -> None:
+            raw = raw_providers()
+            change(raw)
+            with self.assertRaisesRegex(ConfigError, words):
+                providers.parse(raw)
+        broken(lambda r: r["providers"]["gpt"].update(secret="CODEX_AUTH_JSON"), "takes no secret")
+        broken(lambda r: r["providers"]["gpt"].update(runs_on="ubuntu-latest"), "its runner")
+        broken(lambda r: r["providers"]["gpt"].update(runs_on="night vm"), "not a runner label")
+        broken(lambda r: r["providers"]["gpt"].update(login="keyring"), "not one of")
+        broken(lambda r: r["providers"]["agy"].update(login="secret", secret="MUSE_AUTH",
+                                                      runs_on="ubuntu-latest"), "on the machine only")
+        broken(lambda r: r["providers"]["muse"].update(runs_on="night-vm-gpt"), "share the runner")
+        broken(lambda r: r["providers"]["claude-2"].update(runs_on="night-vm-claude-1"),
+               "share the runner")
+        # A secret login may still run on GitHub's runners, and those are shared by design.
+        raw = raw_providers()
+        for name in ("claude-1", "claude-2"):
+            raw["providers"][name]["runs_on"] = "ubuntu-latest"
+        raw["providers"]["gpt"].update(login="secret", secret="CODEX_AUTH_JSON",
+                                       runs_on="ubuntu-latest")
+        self.assertEqual(providers.parse(raw).get("gpt").secret, "CODEX_AUTH_JSON")
+
 
 class AvailabilityTests(unittest.TestCase):
     zone = "America/Chicago"
@@ -79,7 +109,14 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIn("outside its hours (21:00–07:00", self.why("claude-1", at=DAY))
         self.assertIsNone(self.why("claude-1", at=DAY, forced=True))
         self.assertIsNone(self.why("gpt", at=DAY))
-        self.assertIn("`CODEX_AUTH_JSON` is not set", self.why("gpt", env=secrets("MUSE_AUTH")))
+        self.assertIn("`CLAUDE_CODE_OAUTH_TOKEN_2` is not set",
+                      self.why("claude-2", env=secrets("CLAUDE_CODE_OAUTH_TOKEN")))
+        # A login on the machine has no secret to be missing.
+        self.assertIsNone(self.why("gpt", env=secrets()))
+        keyed = pool_with(gpt={"login": "secret", "secret": "CODEX_AUTH_JSON",
+                               "runs_on": "ubuntu-latest"})
+        self.assertIn("`CODEX_AUTH_JSON` is not set",
+                      self.why("gpt", env=secrets("MUSE_AUTH"), pool=keyed))
         off = pool_with(gpt={"enabled": False})
         self.assertIn("switched off", self.why("gpt", pool=off))
         # Run by hand, nothing says which secrets the workflow has: nothing is ruled out.
@@ -119,8 +156,9 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIsNone(self.why("claude-1", state))
 
 
-def ctx_for(gh, at=NIGHT, env=None):
-    return make_ctx(gh, at=at, cfg=make_config(env=env or secrets(*providers.SECRETS)))
+def ctx_for(gh, at=NIGHT, env=None, machine=MACHINE):
+    return make_ctx(gh, at=at, cfg=make_config(env=env or secrets(*providers.SECRETS),
+                                               machine=machine))
 
 
 class MatchingTests(unittest.TestCase):
@@ -130,13 +168,14 @@ class MatchingTests(unittest.TestCase):
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx_for(gh, at=DAY))
-        self.assertEqual((planned["number"], planned["provider"], planned["cli"], planned["secret"]),
-                         (3, "gpt", "codex", "CODEX_AUTH_JSON"))
+        self.assertEqual((planned["number"], planned["provider"], planned["cli"], planned["secret"],
+                          planned["login"], planned["runs_on"]),
+                         (3, "gpt", "codex", "", "machine", "night-vm-gpt"))
         gh2 = FakeGitHub()
         gh2.add_issue(3, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx_for(gh2, at=DAY, env=secrets("GEMINI_OAUTH_CREDS")))
-        self.assertEqual(planned["provider"], "gemini")
-        self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "gemini")
+        planned = plan_mod.make(ctx_for(gh2, at=DAY, machine=("agy",)))
+        self.assertEqual((planned["provider"], planned["runs_on"]), ("agy", "night-vm-agy"))
+        self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "agy")
 
     def test_difficult_work_waits_for_opus_and_opus_takes_it_first(self):
         gh = FakeGitHub()
@@ -165,7 +204,7 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"], r=str(len(taken)): state_item(
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(3, "gpt"), (4, "gemini"), (5, "muse")])
+        self.assertEqual(taken, [(3, "gpt"), (4, "agy"), (5, "muse")])
         self.assertIn("every lane is busy", planned["reason"])
         # Each claim with work and a lane left started the next run.
         self.assertEqual(len(gh.dispatches), 2)
@@ -178,7 +217,7 @@ class MatchingTests(unittest.TestCase):
             votes={"sha": "h1", "builder": "gpt", "approvals": ["gpt"]}))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"], planned["head"], planned["builder"]),
-                         ("review", "gemini", "h1", "gpt"))
+                         ("review", "agy", "h1", "gpt"))
         self.assertEqual(gh.label_names(9), {LABEL_PR, LABEL_WORKING})
 
     def test_the_shared_subscription_needs_the_gates_word(self):
@@ -186,8 +225,9 @@ class MatchingTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD,))
         env = secrets("CLAUDE_CODE_OAUTH_TOKEN")
         self.assertIn("waits for its owner to be quiet",
-                      plan_mod.make(ctx_for(gh, env=env), quiet_ok="")["reason"])
-        self.assertEqual(plan_mod.make(ctx_for(gh, env=env), quiet_ok="claude-1")["provider"],
+                      plan_mod.make(ctx_for(gh, env=env, machine=()), quiet_ok="")["reason"])
+        self.assertEqual(plan_mod.make(ctx_for(gh, env=env, machine=()),
+                                       quiet_ok="claude-1")["provider"],
                          "claude-1")
 
 
@@ -199,8 +239,7 @@ class PeekTests(unittest.TestCase):
         look = plan_mod.peek(ctx_for(gh))
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-2", ""))
         # Opus is still worth the wait over another model, which stays the fallback.
-        env = secrets("CLAUDE_CODE_OAUTH_TOKEN", "CODEX_AUTH_JSON")
-        look = plan_mod.peek(ctx_for(gh, env=env))
+        look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=("gpt",)))
         self.assertEqual((look.work, look.provider, look.quiet_provider, look.quiet_secret,
                           look.fallback),
                          (True, "claude-1", "claude-1", "CLAUDE_CODE_OAUTH_TOKEN", True))
@@ -214,20 +253,18 @@ class PeekTests(unittest.TestCase):
         gh.jobs["50"] = [{"steps": [{"name": plan_mod.QUIET_STEP, "status": "in_progress"}]}]
         look = plan_mod.peek(ctx_for(gh))
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-2", ""))
-        look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN")))
+        look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=()))
         self.assertFalse(look.work)
         self.assertIn("already waits for `claude-1`", look.reason)
 
 
 class WhenTests(unittest.TestCase):
     def test_when_a_queued_item_runs(self):
-        pool = providers.load(ROOT)
-        text = providers.when_free(pool, {}, DAY, "America/Chicago",
-                                   Secrets.of(secrets("CLAUDE_CODE_OAUTH_TOKEN")))
+        only_claude = Secrets.of(secrets("CLAUDE_CODE_OAUTH_TOKEN"))
+        text = providers.when_free(test_pool(), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
-        text = providers.when_free(pool, {}, DAY, "America/Chicago",
-                                   Secrets.of(secrets("CODEX_AUTH_JSON")))
-        self.assertIn("`gpt` can take it now", text)
+        text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
+        self.assertIn("`gpt`, `agy`, `muse` can take it now", text)
 
 
 if __name__ == "__main__":

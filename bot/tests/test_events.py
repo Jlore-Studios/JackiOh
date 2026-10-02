@@ -105,8 +105,8 @@ class CommentTests(unittest.TestCase):
         self.assertIn("Queued to build: #6", text)
         self.assertIn("`claude-1` (claude, `opus`, 21:00–07:00 America/Chicago): outside its "
                       "hours", text)
-        self.assertIn("`gpt` (codex, `gpt-6.1-sol`, any time): its secret `CODEX_AUTH_JSON` is "
-                      "not set", text)
+        self.assertIn("`claude-2` (claude, `opus`, 21:00–07:00 America/Chicago): its secret "
+                      "`CLAUDE_CODE_OAUTH_TOKEN_2` is not set", text)
 
     def test_free_text_on_an_issue_asks_for_a_build(self):
         self.send("@jgoetzmann-bot please also make it sparkle")

@@ -87,7 +87,8 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
         return "halted by .harness/HALT on main"
     if state.get("halted"):
         return "halted by /harness halt"
-    if cfg.secrets.known and not any(cfg.secrets.has(p.secret) for p in cfg.pool.ordered()):
+    if cfg.secrets.known and not any(p.enabled and (p.login == "machine" or cfg.secrets.has(p.secret))
+                                     for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
     # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFF).
     return None
@@ -451,7 +452,8 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
     is never here: the workflow hands the model job only the secret named."""
     vault, _ = ctx.gh.get_file(vault_path(provider.id), STATE_BRANCH)
     return {"provider": provider.id, "cli": provider.cli, "secret": provider.secret,
-            "family": provider.family, "shared": provider.quiet_check, "vault": vault or ""}
+            "family": provider.family, "shared": provider.quiet_check, "vault": vault or "",
+            "login": provider.login, "runs_on": provider.runs_on}
 
 
 def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, Any] | None:

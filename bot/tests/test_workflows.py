@@ -75,10 +75,23 @@ class NightWorkflowTests(unittest.TestCase):
                 self.assertEqual([a for a, _ in named], list(providers.SECRETS), name)
                 self.assertTrue(all(a == b for a, b in named), name)
 
-    def test_only_the_chosen_cli_is_installed(self):
+    def test_only_the_chosen_cli_is_installed_and_only_on_githubs_runners(self):
         work = job(self.text, "work")
-        for cli in providers.CLIS:
-            self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}'")
+        for cli in providers.SECRET_CLIS:
+            self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}' && "
+                                   r"startsWith\(needs\.plan\.outputs\.runs_on, 'ubuntu-'\)")
+        self.assertNotIn("cli == 'agy'", work)  # agy lives on the machine only
+        for action in ("pnpm/action-setup", "actions/setup-node", "actions/setup-python"):
+            step = work[work.index(action):]
+            self.assertTrue(step.split("\n", 2)[1].strip().startswith(
+                "if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')"), action)
+
+    def test_the_model_job_runs_on_its_subscriptions_runner(self):
+        self.assertIn("runs_on: ${{ steps.plan.outputs.runs_on }}", job(self.text, "plan"))
+        self.assertIn("runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}",
+                      job(self.text, "work"))
+        for name in ("gate", "plan", "deliver"):  # the jobs that hold a GitHub write token
+            self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
 
     def test_only_a_run_on_the_shared_subscription_looks_like_spending_it(self):
         """The partner bot excuses a rise on the shared Claude account while a step named
@@ -89,7 +102,7 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertEqual(shared.group(1), "needs.plan.outputs.shared == 'true'")
         self.assertEqual(other.group(2), "needs.plan.outputs.shared != 'true'")
         self.assertFalse(other.group(1).startswith("Build, check and review"))
-        self.assertEqual(work.count("python -m harness work --plan"), 2)
+        self.assertEqual(work.count("python3 -m harness work --plan"), 2)
 
     def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
         self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")

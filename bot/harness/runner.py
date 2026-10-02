@@ -1,4 +1,4 @@
-"""Model calls: one backend per CLI (`claude`, `codex`, `gemini`, `muse`), and a scripted fake.
+"""Model calls: one backend per CLI (`claude`, `codex`, `agy`, `muse`), and a scripted fake.
 
 Every backend runs its CLI the same way (`_Cli._launch`): the prompt on stdin or in a file, the
 output written straight to a file so a long session never sits in memory, a timeout that kills
@@ -11,7 +11,7 @@ down to a trail for the agent that picks the work up next (`trail`).
 Claude Code takes the system prompt as an appended system prompt and its tool lists as flags.
 The other CLIs get the system text at the top of the prompt, with a note that the instructions
 were written for Claude Code, and their own guard rails: Codex's workspace sandbox with the
-network off, a Gemini policy file, Muse's `--yolo` inside a job that holds no write token.
+network off; agy's and Muse's own permission switches, inside a job that holds no write token.
 """
 
 from __future__ import annotations
@@ -23,11 +23,10 @@ import signal
 import subprocess
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
-from harness import clock
 from harness import config as config_mod
 from harness.redact import redact
 
@@ -40,7 +39,7 @@ AUTH_WORDS = re.compile(
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
     r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
     r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
-    r"|run `?muse login)"
+    r"|run `?muse login|authentication required)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.
@@ -54,8 +53,6 @@ EXIT_TIMEOUT = 124
 EXIT_NOT_FOUND = 127
 #: When a refusal names no reset time: try again after this long.
 DEFAULT_PARK = "+PT60M"
-#: Gemini's daily quota resets at midnight Pacific time.
-GEMINI_QUOTA_ZONE = "America/Los_Angeles"
 #: How much of a transcript the next agent is shown (`trail`).
 TRAIL_ENTRIES = 40
 TRAIL_CHARS = 6000
@@ -468,95 +465,66 @@ def codex_usage(codex_home: Path, since: float) -> dict[str, Any] | None:
     return usage if len(usage) > 1 else None
 
 
-GEMINI_DENY_ALWAYS = ("web_fetch", "google_web_search")
-GEMINI_DENY_READER = ("write_file", "replace")
+class AgyCli(_Cli):
+    """Google's Antigravity CLI (`agy`), signed in on the machine with a Google account.
 
+    Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
+    told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
+    the job holds no write token. Its effort is part of the model's own choices (`gemini-3.1-pro`
+    takes `low` or `high`)."""
 
-class GeminiCli(_Cli):
-    """Google's Gemini CLI, signed in with Google (OAuth)."""
+    cli = "agy"
 
-    cli = "gemini"
-
-    def argv(self, request: RunRequest, policy: Path) -> list[str]:
-        return [self.binary, "--output-format", "stream-json", "--model", request.model,
-                "--approval-mode", "yolo", "--skip-trust", "--policy", str(policy)]
-
-    def _settings(self, request: RunRequest) -> None:
-        home = self.env().get("GEMINI_CLI_HOME")
-        if not home:
-            return
-        from harness.logins import GEMINI_SETTINGS
-        settings = json.loads(json.dumps(GEMINI_SETTINGS))
-        settings["model"] = {"maxSessionTurns": int(request.max_turns)}
-        path = Path(home) / ".gemini" / "settings.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    def argv(self, request: RunRequest) -> list[str]:
+        argv = [self.binary, "--output-format", "stream-json", "--dangerously-skip-permissions",
+                "--disable-slash-commands", "--model", request.model]
+        if request.effort:
+            argv += ["--effort", request.effort]
+        for directory in request.extra_dirs:
+            argv += ["--add-dir", directory]
+        return argv
 
     def run(self, request: RunRequest) -> RunResult:
         transcript, raw = self._paths(request)
-        policy = transcript.with_suffix(".policy.toml")
-        denied = GEMINI_DENY_ALWAYS + (GEMINI_DENY_READER if request.read_only else ())
-        policy.write_text("".join(f'[[rule]]\ntoolName = "{tool}"\ndecision = "deny"\n'
-                                  f"priority = 100\n\n" for tool in denied), encoding="utf-8")
-        self._settings(request)
-        launch = self._launch(self.argv(request, policy), request, self.env(),
-                              self._prompt(request), raw)
+        launch = self._launch(self.argv(request), request, self.env(), self._prompt(request), raw)
         if isinstance(launch, RunResult):
             return launch
-        text_parts: list[str] = []
         result: dict[str, Any] = {}
-        errors: list[str] = []
         for event in _json_lines(_read(raw).splitlines()):
-            kind = event.get("type")
-            if kind == "message" and event.get("role") in ("assistant", "model"):
-                text_parts.append(str(event.get("content") or ""))
-            elif kind in ("tool_use", "tool_result"):
-                text_parts = []  # the final answer is what comes after the last tool
-            elif kind == "error":
-                errors.append(str(event.get("message") or ""))
-            elif kind == "result":
-                result = event
+            if event.get("event") == "result" and isinstance(event.get("result"), dict):
+                result = event["result"]
         self._keep(launch, transcript)
-        text = "".join(text_parts).strip()
+        text = str(result.get("response") or "").strip()
+        turns = result.get("num_turns") if isinstance(result.get("num_turns"), int) else None
         if launch.timed_out:
-            return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
+            return RunResult(False, text, EXIT_TIMEOUT, turns, launch.elapsed,
                              f"timed out after {request.timeout_s}s", None, timed_out=True)
-        status = str(result.get("status") or "")
-        ok = launch.code == 0 and status not in ("error", "failure", "failed")
+        ok = launch.code == 0 and result.get("status") == "SUCCESS"
         error = None
         if not ok:
-            detail = result.get("error")
-            if isinstance(detail, dict):
-                detail = detail.get("message")
-            error = redact(("; ".join(e for e in [str(detail or ""), *errors] if e)
-                            or launch.stderr or f"gemini exited {launch.code}")[-2000:])
-        reset_at = None
-        if not ok and RATE_LIMIT_WORDS.search(error or ""):
-            # The daily quota resets at midnight Pacific; a per-minute throttle in a minute or so.
-            daily = re.search(r"(?i)(daily|per day|terminalquotaerror)", error or "")
-            reset_at = _next_midnight(GEMINI_QUOTA_ZONE) if daily else DEFAULT_PARK
-        # 41: no usable login; 55: the workspace is not trusted. Neither is the item's fault.
-        return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
-                         infra_hint=launch.code in (41, 55))
+            error = redact((str(result.get("error") or "") or launch.stderr
+                            or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
+        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        return RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at)
 
     def trail(self, transcript: Path) -> str:
         entries: list[str] = []
-        said: list[str] = []
+        said: dict[Any, str] = {}
         for event in _json_lines(_read(transcript).splitlines()):
-            kind = event.get("type")
-            if kind == "message" and event.get("role") in ("assistant", "model"):
-                said.append(str(event.get("content") or ""))
+            step = event.get("step_update") if isinstance(event.get("step_update"), dict) else None
+            if step is None:
                 continue
-            if said:
-                entries.append(f"said: {_clip(''.join(said))}")
-                said = []
-            if kind == "tool_use":
-                entries.append(f"{event.get('tool_name')}: "
-                               f"{_clip(json.dumps(event.get('parameters')), 200)}")
-            elif kind == "tool_result" and event.get("status") != "success":
-                entries.append(f"tool {event.get('status')}: {_clip(event.get('error') or event.get('output'), 200)}")
-        if said:
-            entries.append(f"said: {_clip(''.join(said))}")
+            if step.get("step_type") == "agent_response":
+                key = step.get("step_index")
+                said[key] = said.get(key, "") + str(step.get("text_delta") or "")
+                if step.get("state") == "DONE":
+                    entries.append(f"said: {_clip(said.pop(key))}")
+            elif step.get("step_type") == "tool" and step.get("state") == "DONE":
+                info = step.get("tool_info") or {}
+                params = info.get("parameters") or {}
+                shown = params.get("CommandLine") if isinstance(params, dict) else None
+                entries.append(f"{info.get('name')}: "
+                               f"{_clip(shown or json.dumps(params), 200)}")
         return _trail_text(entries)
 
 
@@ -598,13 +566,7 @@ class MuseCli(_Cli):
                          infra_hint=launch.code == 2)
 
 
-def _next_midnight(zone_name: str) -> str:
-    local = datetime.now(timezone.utc).astimezone(clock.zone(zone_name))
-    midnight = (local + timedelta(days=1)).replace(hour=0, minute=5, second=0, microsecond=0)
-    return midnight.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "gemini": GeminiCli,
+BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "agy": AgyCli,
                                    "muse": MuseCli}
 
 

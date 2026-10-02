@@ -1,14 +1,19 @@
-"""A provider's login, written where its CLI looks for it, for one model job.
+"""A provider's login, for one model job.
 
-The workflow hands the model job one secret, its provider's, as `HARNESS_PROVIDER_SECRET`.
-`prepare` turns it into what that CLI reads, under a private directory outside every worktree,
-and returns the environment the CLI needs; the CLI's own home stays untouched.
+A **machine** login (`"login": "machine"` in providers.json) was made once, by hand, on the
+bot's own machine as that provider's Linux user (`agent-<id>`, whose runner alone runs its jobs;
+`bot/machine/README.md`): the CLI finds it in its usual place in that home, so `prepare` writes
+nothing and only sets the CLI's environment. agy logs in only this way.
+
+A **secret** login: the workflow hands the model job one secret, its provider's, as
+`HARNESS_PROVIDER_SECRET`. `prepare` turns it into what that CLI reads, under a private directory
+outside every worktree, and returns the environment the CLI needs; the CLI's own home stays
+untouched.
 
 | CLI | The secret holds | Written as |
 |---|---|---|
 | claude | the token `claude setup-token` prints | `CLAUDE_CODE_OAUTH_TOKEN`, with a `CLAUDE_CONFIG_DIR` of its own |
 | codex | `~/.codex/auth.json` after `codex login` (ChatGPT) | `$CODEX_HOME/auth.json`, stored as a file |
-| gemini | `~/.gemini/oauth_creds.json` after Login with Google | `$GEMINI_CLI_HOME/.gemini/oauth_creds.json` and a settings file that selects that login |
 | muse | `~/.config/muse/auth.json` after `muse login`, or an API key | `$XDG_CONFIG_HOME/muse/auth.json`, or `META_API_KEY` (billed per token) |
 
 A JSON secret may be pasted as it is or base64-encoded. A login refreshed by an earlier run (the
@@ -34,12 +39,11 @@ from harness.providers import Provider
 #: What a secret must look like for each CLI that takes a login file, for the error a person reads.
 FILE_HINTS = {
     "codex": "the contents of ~/.codex/auth.json after `codex login` (Sign in with ChatGPT)",
-    "gemini": "the contents of ~/.gemini/oauth_creds.json after Login with Google",
     "muse": "the contents of ~/.config/muse/auth.json after `muse login`, or a META_API_KEY",
 }
-GEMINI_SETTINGS: dict[str, Any] = {
-    "security": {"auth": {"selectedType": "oauth-personal"}},
-    "context": {"fileName": ["AGENTS.md", "GEMINI.md"]},
+#: Environment each CLI gets on top of its login, either way.
+CLI_ENV: dict[str, dict[str, str]] = {
+    "muse": {"MUSE_NO_AUTO_UPDATE": "1"},
 }
 
 
@@ -100,7 +104,11 @@ def _write(path: Path, text: str) -> None:
 
 
 def prepare(provider: Provider, secret: str, vault_text: str, home: Path) -> Login:
-    """Write `provider`'s login under `home`. Raises `LoginError` when the secret is unusable."""
+    """Write `provider`'s login under `home`, or for a machine login, only its environment.
+    Raises `LoginError` when the secret is unusable."""
+    if provider.login == "machine":
+        env = {**CLI_ENV.get(provider.cli, {}), **dict(provider.env)}
+        return Login(provider.id, provider.cli, Path(home), env, source="machine")
     secret = (secret or "").strip()
     if not secret:
         raise LoginError(f"`{provider.id}`'s secret `{provider.secret}` is empty in this job")
@@ -123,14 +131,8 @@ def prepare(provider: Provider, secret: str, vault_text: str, home: Path) -> Log
         _install(login, "auth.json", codex_home / "auth.json", saved, secret)
         _write(codex_home / "config.toml", 'cli_auth_credentials_store = "file"\n')
         env["CODEX_HOME"] = str(codex_home)
-    elif provider.cli == "gemini":
-        gemini_home = home / "gemini"
-        dot = gemini_home / ".gemini"
-        _install(login, "oauth_creds.json", dot / "oauth_creds.json", saved, secret)
-        _write(dot / "settings.json", json.dumps(GEMINI_SETTINGS, indent=2) + "\n")
-        env["GEMINI_CLI_HOME"] = str(gemini_home)
     elif provider.cli == "muse":
-        env["MUSE_NO_AUTO_UPDATE"] = "1"
+        env.update(CLI_ENV["muse"])
         if saved.get("auth.json") or _json_text(secret):
             config_home = home / "muse-config"
             _install(login, "auth.json", config_home / "muse" / "auth.json", saved, secret)
@@ -140,7 +142,7 @@ def prepare(provider: Provider, secret: str, vault_text: str, home: Path) -> Log
             env["META_API_KEY"] = secret
             login.source = "api key"
     else:
-        raise LoginError(f"no login for the {provider.cli} CLI")
+        raise LoginError(f"the {provider.cli} CLI has no secret login; it logs in on the machine")
     for path in login.files.values():
         redact.remember(_leaves(path.read_text(encoding="utf-8")))
     return login

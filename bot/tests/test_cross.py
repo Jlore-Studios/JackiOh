@@ -13,7 +13,7 @@ from harness.runner import FakeRunner, RunResult
 from harness.work import NOTES_FILE
 
 from tests.fakes import git
-from tests.support import DAY, NIGHT
+from tests.support import DAY, MACHINE, NIGHT
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, DONE, builder, changes, reviewer
 
@@ -36,12 +36,12 @@ class TwoModelTests(unittest.TestCase):
                              "review": reviewer(APPROVE)})
         planned, result = h.night(runner)
         self.assertEqual((planned["provider"], result["status"]), ("gpt", "approved"))
-        self.assertEqual(runner.calls[0].model, "gpt-6.1-sol")
+        self.assertEqual(runner.calls[0].model, "gpt-5.6-terra")
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         return pr, result
 
     def test_a_change_built_by_another_model_waits_for_a_second_review(self):
-        h = Harness(self, env=ALL, at=DAY)
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, result = self.build_on_gpt(h)
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
         self.assertEqual(h.gh.auto_merge, {})
@@ -53,16 +53,16 @@ class TwoModelTests(unittest.TestCase):
         self.assertEqual(spent[-1]["minutes"], 10.0)
         # The second review goes to another family, and its approval turns auto-merge on.
         planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
-        self.assertEqual((planned["action"], planned["provider"]), ("review", "gemini"))
+        self.assertEqual((planned["action"], planned["provider"]), ("review", "agy"))
         self.assertEqual((review["status"], review["verdict"]), ("reviewed", "approve"))
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR})
         self.assertEqual(h.ctx.store.load()["items"][str(pr)]["votes"]["approvals"],
-                         ["gpt", "gemini"])
+                         ["gpt", "gemini"])  # agy's family
         self.assertIn("Second review", h.gh.bot_comments(pr)[-1])
 
     def test_a_second_review_with_findings_sends_it_back_and_stops_after_three(self):
-        h = Harness(self, env=ALL, at=DAY)
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, _ = self.build_on_gpt(h)
         h.night(FakeRunner({"review": reviewer(changes("It skips the replay check."))}))
         record = h.ctx.store.load()["items"][str(pr)]
@@ -85,7 +85,7 @@ class TwoModelTests(unittest.TestCase):
         self.assertIn("It needs a person", h.gh.bot_comments(pr)[-1])
 
     def test_a_review_of_a_head_that_moved_does_not_count(self):
-        h = Harness(self, env=ALL, at=DAY)
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, _ = self.build_on_gpt(h)
         from tests.fakes import push_branch
         def moved(request):
@@ -99,7 +99,7 @@ class TwoModelTests(unittest.TestCase):
         self.assertIn("does not count", h.gh.bot_comments(pr)[-1])
 
     def test_opus_needs_no_second_model_and_difficult_stays_with_it(self):
-        h = Harness(self, env=ALL)
+        h = Harness(self, env=ALL, machine=MACHINE)
         h.gh.add_issue(12, labels=(LABEL_BUILD, "difficult"))
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                                               "review": reviewer(APPROVE)}))
@@ -112,7 +112,7 @@ class TwoModelTests(unittest.TestCase):
 
 class HandoffTests(unittest.TestCase):
     def test_the_next_agent_gets_the_notes_and_the_branch(self):
-        h = Harness(self, env=ALL)
+        h = Harness(self, env=ALL, machine=MACHINE)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
 
         def limited(request):
@@ -141,7 +141,7 @@ class HandoffTests(unittest.TestCase):
 
 class VaultDeliveryTests(unittest.TestCase):
     def test_deliver_keeps_a_sealed_login_and_refuses_anything_else(self):
-        h = Harness(self, env=ALL, at=DAY)
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         from harness import plan as plan_mod
         planned = plan_mod.make(h.ctx)

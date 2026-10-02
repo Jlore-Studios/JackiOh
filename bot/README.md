@@ -2,15 +2,17 @@
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
 free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
-Google through the Gemini CLI and Meta through Muse Code, each with its own hours and limits
-([Subscriptions](#subscriptions)). Up to three items run at once, one per subscription. Each run
+Google through the Antigravity CLI (`agy`) and Meta through Muse Code, each with its own hours
+and limits ([Subscriptions](#subscriptions)). Up to three items run at once, one per subscription. Each run
 builds its item, runs the repository's checks, and has a second, independent session of the same
 model review the change adversarially, going round that loop until the reviewer approves. Opus's
 approval is enough; a change another model built also needs a second model's approval. Then the
 pull request merges itself into `main` once CI passes. When it has nothing to do, it proposes
 improvements to the game as issues, at most four open at a time.
 
-It runs entirely on GitHub Actions and is modelled on
+It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
+subscription is a Linux user of its own with its own runner ([`machine/`](machine/README.md));
+everything that holds a GitHub write token runs on GitHub's runners. It is modelled on
 [bright-bots-harness](https://github.com/jgoetzmann/bright-bots-harness), cut down to one
 repository and reshaped around an adversarial review loop and auto-merge.
 
@@ -30,7 +32,7 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?<br/>for the shared Claude account: is it quiet?"]
     GA -- "quiet, the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
-    PL --> B["work (that subscription's secret only)<br/>builder: Claude, Codex, Gemini or Muse"]
+    PL --> B["work, on that subscription's own runner<br/>(its login only) builder: Claude, Codex, agy or Muse"]
     B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
     G --> R["adversarial reviewer<br/>a fresh session of the same model"]
     R -- "blocking findings or red checks<br/>(up to 10 rounds)" --> F["a fresh builder<br/>fixes the findings"]
@@ -203,20 +205,29 @@ needs level 3.
 The bot spends whichever of your subscriptions is free. They are listed in
 [`.harness/providers.json`](../.harness/providers.json), the file to edit:
 
-| Provider | CLI | Secret (Settings → Secrets and variables → Actions) | Hours | Limits |
+| Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
-| `claude-2`, `-3`, `-4` | Claude Code | `CLAUDE_CODE_OAUTH_TOKEN_2`, `_3`, `_4` | 21:00–07:00 | the same |
-| `gpt` | Codex (`codex exec`) | `CODEX_AUTH_JSON` | any time | none: until it refuses |
-| `gemini` | Gemini CLI | `GEMINI_OAUTH_CREDS` | any time | none: until it refuses |
-| `muse` | Muse Code (`muse exec`) | `MUSE_AUTH` | any time | none: until it refuses |
+| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
+| `claude-2`, `-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_2`, `_3`, `_4` | 21:00–07:00 | the same |
+| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
+| `agy` | Antigravity (`agy`), `gemini-3.1-pro` at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
-A subscription works only once its secret is set, so the ones you have not set up yet sit out.
-`python3 -m harness providers` in `bot/` prints each one and whether it could start now, and
-`/harness status` does the same on GitHub.
+Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
+works only once its secret is set (Settings → Secrets and variables → Actions), so the ones you
+have not set up yet sit out. A login on the machine has no secret to check, so the bot counts it
+as set up; turn one off with `enabled: false`. `python3 -m harness providers` in `bot/` prints
+each one and whether it could start now, and `/harness status` does the same on GitHub.
 
 **What each entry says.**
-- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one.
+- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one (`gemini-3.1-pro`
+  takes `low` or `high`).
+- `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
+  or `machine`, a login made once on the machine in that subscription's own home, which never
+  leaves it. agy logs in only on the machine.
+- `runs_on`: the runner its model job runs on. `night-vm-<id>` is its own runner on the machine;
+  a secret login may also run on GitHub's `ubuntu-latest`, which installs its CLI each time. Two
+  subscriptions never share a runner on the machine, since a runner is one user's home.
 - `schedule`: `{"mode": "always"}`, or `{"mode": "window", "start": "21:00", "end": "07:00"}` in
   `America/Chicago`.
 - `limits`: `{"mode": "none"}` uses whatever there is, and a refusal parks the subscription
@@ -224,17 +235,18 @@ A subscription works only once its secret is set, so the ones you have not set u
   - `five_hour` and `seven_day`: a fraction of the allowance, for the CLIs that report usage
     (Claude, and Codex through its session log);
   - `five_hour_minutes` and `seven_day_minutes`: minutes of model time the bot counts itself, for
-    Gemini and Muse, which report none.
+    agy and Muse, which report none.
 - `self_review: true`: its own approval is enough to merge (Opus).
 - `difficult: true`: it may take `difficult` items.
 - `quiet_check: true`: it waits until nobody else is spending it
   ([below](#it-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`build`, `fix`, `revise`, `review`, `suggest`).
-- `env`: non-secret environment, a `GOOGLE_CLOUD_PROJECT` for example.
+- `env`: non-secret environment for its CLI.
 - `enabled: false`: turns it off.
 
 At the top level, `max_parallel` is how many run at once and `priority` the order they are tried
-in. A `secret` must be one of the seven names above, because the workflows hand over no other.
+in. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+`CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on one
 item at a time. Items go in this order: forced, `difficult`, second reviews, revisions, then the
@@ -267,46 +279,36 @@ the bot is halted. Its work so far is pushed to the branch, as always. Every bui
 running notes in an ignored `.bot-notes.md` (plan, done, next, decisions, dead ends), and the
 harness keeps the end of its session. Both are saved on the item. The next run, on any
 subscription, starts with a "Picking up from another agent" section in its prompt. So a task
-Gemini started when its quota ran out can be finished by Codex the same hour.
+agy started when its quota ran out can be finished by Codex the same hour.
 
 ### Setting up each subscription
 
-Each secret is the login of one account, made once on your own machine and pasted into a GitHub
-secret. None of them is an API key.
+None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-4`).
+- **Claude** (`claude-1` to `claude-4`), a GitHub secret each.
   1. Log in to the account with `claude`.
-  2. Run `claude setup-token` and paste the token it prints (good for a year).
+  2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 
   `claude-1` is the existing `CLAUDE_CODE_OAUTH_TOKEN`; each further account gets its own secret.
-- **ChatGPT through Codex** (`gpt`).
-  1. Run `npm install -g @openai/codex`, then `codex login`, and choose Sign in with ChatGPT.
-  2. Paste the whole of `~/.codex/auth.json` (as it is, or base64-encoded) into
-     `CODEX_AUTH_JSON`.
+  The token reaches only that account's model job, which runs as `agent-claude-<n>` on the
+  machine, and is never written to its home.
+- **ChatGPT, Google and Meta** (`gpt`, `agy`, `muse`), once, on the machine, as each one's own
+  user. Open a shell with `aws ssm start-session --target <instance>` and run:
+  - `sudo -iu agent-gpt codex login --device-auth`, then Sign in with ChatGPT;
+  - `sudo -iu agent-agy agy`, then sign in with the Google account and quit;
+  - `sudo -iu agent-muse muse login`.
 
-  Codex replaces its refresh token every time it refreshes. So after each run the bot keeps the
-  refreshed file, encrypted, on the `bot-state` branch, and the next run uses that one. Don't use
-  the same `auth.json` anywhere else: log in separately on your laptop afterwards. If another copy
-  refreshes first, the bot's copy stops working and needs a fresh one pasted in.
-- **Google through Gemini** (`gemini`).
-  1. Run `npm install -g @google/gemini-cli`, then `gemini`, and choose Login with Google.
-  2. Paste `~/.gemini/oauth_creds.json` into `GEMINI_OAUTH_CREDS`.
+  Each CLI refreshes its own login in that home from then on, so don't copy those files
+  anywhere else. [`machine/README.md`](machine/README.md) has the rest: building the machine,
+  registering the runners, and the starter that wakes it.
 
-  An account that needs a Google Cloud project (Workspace, Code Assist) also needs
-  `"env": {"GOOGLE_CLOUD_PROJECT": "<project>"}` in its entry. The model is pinned
-  (`gemini-3-pro-preview`) so it never drops silently to Flash; use `gemini-2.5-pro` if the
-  account has no preview models.
-- **Meta through Muse Code** (`muse`).
-  1. On macOS, Muse keeps its login in the Keychain, so log in on Linux instead (a container is
-     fine: `docker run -it ubuntu`).
-  2. Run `curl -fsSL https://dev.meta.ai/install.sh | sh`, then `muse login`.
-  3. Paste `~/.config/muse/auth.json` into `MUSE_AUTH`.
-
-  A Meta API key works there too, but Meta bills it per token rather than on the subscription.
-
-**The vault.** The key for a refreshed login is derived from that subscription's own secret, so a
-run can open only its own. Pasting in a fresh login makes the old vault unreadable, so the fresh
-one wins.
+Codex and Muse can also log in from a secret on GitHub's runners: set `"login": "secret"`,
+`"runs_on": "ubuntu-latest"` and a `secret` (`CODEX_AUTH_JSON`: the whole of `~/.codex/auth.json`
+after `codex login`; `MUSE_AUTH`: `~/.config/muse/auth.json` after `muse login` on Linux, or a
+Meta API key, which Meta bills per token). Codex replaces its refresh token every time it
+refreshes, so after each such run the bot keeps the refreshed file encrypted on the `bot-state`
+branch (**the vault**), under a key derived from that subscription's own secret; pasting a fresh
+login makes the old vault unreadable, so the fresh one wins.
 
 **Provider policies.** Each provider has its own policy on scripted use of a personal
 subscription:
@@ -358,8 +360,10 @@ GitHub Actions, such as the harness's local `bb` container.
    more work are free. With nothing queued, it runs a suggestion survey if one is due (at most one
    every 20 hours, and only while fewer than four are open).
 2. **work** (up to about five and a half hours, holding only the chosen subscription's secret).
-   It installs that subscription's CLI and writes its login into a private directory
-   ([setting up](#setting-up-each-subscription)). A worktree on `bot/issue-<n>` (or the pull
+   It runs on that subscription's own runner, where the CLI is installed and a machine login
+   already sits in its user's home; a Claude token is written only into a private directory for
+   the job ([setting up](#setting-up-each-subscription)). After the job, the runner deletes its
+   working files and package store. A worktree on `bot/issue-<n>` (or the pull
    request's own branch, with `main` merged in), then `pnpm install`. Then up to ten rounds:
    - a builder session on that CLI (`claude --model opus --effort xhigh`, say) that can read,
      edit and run commands;
@@ -410,8 +414,13 @@ GitHub Actions, such as the harness's local `bb` container.
 - **The model never holds a GitHub write token.** The `work` job has one model secret, the
   chosen subscription's (picked by name, `secrets[...]`), and a read-only Actions token, and the
   model's own environment has neither GitHub token nor any other subscription's login. Pushing,
-  commenting and labelling happen in `plan` and `deliver`, which run no model and see only
-  whether each model secret is set.
+  commenting and labelling happen in `plan` and `deliver`, which run no model, run on GitHub's
+  runners and see only whether each model secret is set.
+- **Each subscription is walled off on the machine.** It is a Linux user of its own whose home,
+  with its login, no other user can read; none of them has `sudo` or Docker; and its runner,
+  labelled `night-vm-<id>` alone, takes only its own jobs. The machine accepts no inbound
+  connection, and the repository makes outside contributors' pull requests wait for approval
+  before any workflow runs, so a stranger's pull request cannot reach these runners.
 - **Text from GitHub is data.** Issue text (the title included), comments, reviews and CI logs
   reach the model fenced and labelled as data. Comments from people outside the trust list are
   left out, and their commands never start a runner.
@@ -420,13 +429,16 @@ GitHub Actions, such as the harness's local `bb` container.
 - **Usage.** Claude and Codex report each subscription's 5-hour and 7-day usage; the bot counts
   minutes for the others. Past a subscription's caps no new call starts on it, and a refused call
   parks it until the limit resets while the item moves to another subscription.
-- **Refreshed logins** (Codex rotates its own) are kept on `bot-state` only encrypted
-  (AES-256 with an HMAC, through `openssl`), under a key derived from that subscription's secret.
+- **Refreshed logins** from a secret (Codex rotates its own) are kept on `bot-state` only
+  encrypted (AES-256 with an HMAC, through `openssl`), under a key derived from that
+  subscription's secret. A login on the machine never leaves it.
 
 **What it cannot rule out.** The model has a shell and its subscription's login, because it
 needs the login to run. Network tools such as `curl`, `wget` and `ssh` are denied, but that only slows a
 determined model down. And anything the model writes into a pull request is public once it is
-pushed. So a prompt injection that fools the model could, in principle, leak that login.
+pushed. So a prompt injection that fools the model could, in principle, leak that login, or, on
+the machine, leave something in its user's home for that subscription's next run (never
+another's).
 The defences are upstream of that: only people on the trust list can start work, text from
 anyone else is left out, and each login is one you can revoke and replace at any time. Read an issue from a stranger before you label it `bot:build`.
 
@@ -437,8 +449,10 @@ days.
 
 ## Setting it up
 
-1. **Secrets** (Settings → Secrets and variables → Actions):
-   - The subscriptions' logins, one secret each
+1. **The machine** ([`machine/README.md`](machine/README.md)): build it, log each machine
+   subscription in, register the runners, and deploy the starter.
+2. **Secrets** (Settings → Secrets and variables → Actions):
+   - The Claude accounts' tokens, one secret each
      ([setting up each subscription](#setting-up-each-subscription)). `CLAUDE_CODE_OAUTH_TOKEN`
      alone is enough to start.
    - `BOT_GITHUB_TOKEN`: a classic token for the `jgoetzmann-bot` account, which must be a
@@ -449,7 +463,7 @@ days.
      Actions token, so the bot's token needs no `repo` scope. Without this token the bot falls
      back to the Actions token: its comments come from `github-actions[bot]`, and its pull
      requests do not start CI, so auto-merge never fires.
-2. **Labels, the state branch and the repository settings**, once, with an admin token (a
+3. **Labels, the state branch and the repository settings**, once, with an admin token (a
    logged-in `gh` works):
 
    ```sh
@@ -461,7 +475,7 @@ days.
    `--repo-settings` allows auto-merge, deletes merged branches, and protects `main` so that
    every check in `required_checks` must pass before anything merges. Admins can still push to
    `main` directly.
-3. **Try it**: open an issue, comment `/harness build --force`, and watch the `bot-night` run in
+4. **Try it**: open an issue, comment `/harness build --force`, and watch the `bot-night` run in
    the Actions tab. `workflow_dispatch` on `bot-night` also takes `dry_run`, which records every
    GitHub write instead of sending it.
 
@@ -474,7 +488,8 @@ days.
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
 | see each subscription | `/harness status`, or `python3 -m harness providers` in `bot/` |
-| add a subscription, or change its hours, limits or model | set its secret, and edit `.harness/providers.json` in a pull request |
+| add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
+| look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | keep an item for Opus | label it `difficult` |
 | stop one item | `/harness stop` on its issue or pull request |
 | retry something it gave up on | fix what it asked about, then `/harness build`; `python3 -m harness forget <n>` clears the failure count |
@@ -508,8 +523,9 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
 | `quiet.py` | the gate's second question: is anyone else spending the subscription |
 | `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
-| `runner.py` | one backend per CLI (`claude`, `codex`, `gemini`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
-| `logins.py`, `vault.py` | a subscription's secret written as its CLI's login; a refreshed login kept encrypted |
+| `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
+| `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
+| `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |

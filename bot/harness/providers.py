@@ -1,9 +1,12 @@
 """The subscriptions the bot can spend: `.harness/providers.json`, and whether each is usable now.
 
 A *provider* is one subscription behind one CLI: a Claude account (`claude`), ChatGPT through
-the Codex CLI (`codex`), Google through the Gemini CLI (`gemini`), or Meta through Muse Code
-(`muse`). Each has its own hours (`schedule`), its own limits (`limits`) and its own secret,
-which the workflows hand to a run's model job and to nothing else. A run uses exactly one
+the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), or Meta through Muse Code
+(`muse`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
+runs on (`runs_on`: GitHub's `ubuntu-latest`, or its own runner on the bot's machine,
+`night-vm-<id>`, which runs as a Linux user of its own; `bot/machine/README.md`), and its login
+(`login`): a `secret` the workflows hand to that model job and to nothing else, or a login made
+once on the machine in that user's home (`machine`), which never leaves it. A run uses exactly one
 provider from start to finish; `plan` chooses it and records it on the item it claims, so a
 provider works on one item at a time and at most `max_parallel` items run at once.
 
@@ -15,6 +18,7 @@ Whether a provider may start a run now is `availability()`; its reading of the s
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -26,7 +30,20 @@ from harness.errors import ConfigError
 
 PROVIDERS_PATH = Path(".harness") / "providers.json"
 
-CLIS = ("claude", "codex", "gemini", "muse")
+CLIS = ("claude", "codex", "agy", "muse")
+LOGINS = ("secret", "machine")
+#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy keeps its
+#: login only on the machine.
+SECRET_CLIS = ("claude", "codex", "muse")
+_LABEL = re.compile(r"^[A-Za-z0-9._-]+$")
+#: Labels of GitHub's own runners: a fresh virtual machine per job, with no login on it.
+HOSTED_PREFIXES = ("ubuntu-", "windows-", "macos-")
+
+
+def hosted(label: str) -> bool:
+    """Whether `label` is one of GitHub's own runners rather than the bot's machine."""
+    return label.startswith(HOSTED_PREFIXES)
+
 ROLES = ("build", "fix", "revise", "review", "suggest")
 
 #: The secrets a provider may name. The workflows can only hand a run a secret they list, so this
@@ -38,7 +55,6 @@ SECRETS: tuple[str, ...] = (
     "CLAUDE_CODE_OAUTH_TOKEN_3",
     "CLAUDE_CODE_OAUTH_TOKEN_4",
     "CODEX_AUTH_JSON",
-    "GEMINI_OAUTH_CREDS",
     "MUSE_AUTH",
 )
 
@@ -117,8 +133,12 @@ class Provider:
     #: Wait until nobody else is spending the subscription before an unforced run (`quiet.py`).
     quiet_check: bool
     roles: tuple[str, ...]
-    #: Extra, non-secret environment for the CLI (a Google Cloud project, say).
+    #: Extra, non-secret environment for the CLI.
     env: Mapping[str, str] = field(default_factory=dict)
+    #: `secret` (handed over by the workflow) or `machine` (logged in on the runner already).
+    login: str = "secret"
+    #: The runner label its model job runs on.
+    runs_on: str = "ubuntu-latest"
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -189,7 +209,8 @@ def _limits(raw: Any, where: str) -> Limits:
 
 
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "secret", "schedule", "limits",
-                  "self_review", "difficult", "quiet_check", "roles", "env", "note"}
+                  "self_review", "difficult", "quiet_check", "roles", "env", "note", "login",
+                  "runs_on"}
 
 
 def _provider(name: str, raw: Any) -> Provider:
@@ -199,16 +220,31 @@ def _provider(name: str, raw: Any) -> Provider:
     unknown = sorted(set(raw) - _PROVIDER_KEYS)
     if unknown:
         raise ConfigError(f"{where}: unknown keys {', '.join(unknown)}")
-    for key in ("cli", "family", "model", "secret", "schedule", "limits"):
+    for key in ("cli", "family", "model", "schedule", "limits"):
         if key not in raw:
             raise ConfigError(f"{where}: missing {key}")
     cli = str(raw["cli"])
     if cli not in CLIS:
         raise ConfigError(f"{where}.cli: {cli!r} is not one of {', '.join(CLIS)}")
-    secret = str(raw["secret"])
-    if secret not in SECRETS:
-        raise ConfigError(f"{where}.secret: {secret!r} is not one the workflows hand over "
-                          f"({', '.join(SECRETS)})")
+    login = str(raw.get("login", "secret"))
+    if login not in LOGINS:
+        raise ConfigError(f"{where}.login: {login!r} is not one of {', '.join(LOGINS)}")
+    secret = str(raw.get("secret") or "")
+    if login == "secret":
+        if cli not in SECRET_CLIS:
+            raise ConfigError(f"{where}: the {cli} CLI logs in on the machine only "
+                              '("login": "machine")')
+        if secret not in SECRETS:
+            raise ConfigError(f"{where}.secret: {secret!r} is not one the workflows hand over "
+                              f"({', '.join(SECRETS)})")
+    elif secret:
+        raise ConfigError(f"{where}.secret: a machine login takes no secret")
+    runs_on = str(raw.get("runs_on", "ubuntu-latest"))
+    if not _LABEL.match(runs_on):
+        raise ConfigError(f"{where}.runs_on: {runs_on!r} is not a runner label")
+    if login == "machine" and hosted(runs_on):
+        raise ConfigError(f"{where}: a machine login needs runs_on to be its runner on the machine "
+                          f"(night-vm-{name}), not GitHub's {runs_on}")
     roles = tuple(str(r) for r in raw.get("roles", ROLES))
     bad = [r for r in roles if r not in ROLES]
     if bad:
@@ -234,6 +270,8 @@ def _provider(name: str, raw: Any) -> Provider:
         quiet_check=bool(raw.get("quiet_check", False)),
         roles=roles,
         env={str(k): str(v) for k, v in env.items()},
+        login=login,
+        runs_on=runs_on,
     )
 
 
@@ -244,10 +282,17 @@ def parse(raw: Any) -> Pool:
     providers = {str(k): _provider(str(k), v) for k, v in dict(raw.get("providers") or {}).items()}
     if not providers:
         raise ConfigError(f"{PROVIDERS_PATH}: at least one provider is required")
-    secrets = [p.secret for p in providers.values()]
+    secrets = [p.secret for p in providers.values() if p.login == "secret"]
     clash = sorted({s for s in secrets if secrets.count(s) > 1})
     if clash:
         raise ConfigError(f"{PROVIDERS_PATH}: two providers share the secret {', '.join(clash)}")
+    # A runner on the machine is one Linux user with one home: a machine login lives there, and a
+    # second provider on the same runner would run in the first one's home, with its login.
+    for p in providers.values():
+        shared = sorted(q.id for q in providers.values() if q.id != p.id and q.runs_on == p.runs_on)
+        if shared and not hosted(p.runs_on):
+            raise ConfigError(f"{PROVIDERS_PATH}: {p.id} and {', '.join(shared)} share the runner "
+                              f"{p.runs_on}; each provider on the machine has its own")
     priority = tuple(str(p) for p in raw.get("priority") or providers)
     missing = [p for p in providers if p not in priority]
     extra = [p for p in priority if p not in providers]
@@ -392,7 +437,7 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     """Why `provider` may not start a run now, or None when it may. Busy-ness is the caller's."""
     if not provider.enabled:
         return "switched off in providers.json"
-    if secrets.has(provider.secret) is False:
+    if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
     if not forced and not provider.schedule.is_open(zone_name, at):
         window = provider.schedule.window(zone_name)

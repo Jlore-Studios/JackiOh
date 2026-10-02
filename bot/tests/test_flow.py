@@ -28,7 +28,7 @@ class Harness:
     """One repository, one fake GitHub, and the three jobs of a night run."""
 
     def __init__(self, test: unittest.TestCase, env: dict | None = None, at=NIGHT,
-                 **cfg_overrides) -> None:
+                 machine: tuple[str, ...] = (), **cfg_overrides) -> None:
         self.root = Path(tempfile.mkdtemp())
         self.origin, self.clone = make_origin(self.root)
         self.gh = FakeGitHub()
@@ -36,7 +36,7 @@ class Harness:
                **(env or {})}
         overrides = {"gates": GATES, "install": {"run": "true", "timeout_minutes": 1},
                      "max_review_cycles": 2, **cfg_overrides}
-        self.cfg = make_config(env=env, **overrides)
+        self.cfg = make_config(env=env, machine=machine, **overrides)
         self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
         self.gh.branch_checks = set(self.cfg.required_checks)
         self.deliver_repo = self.root / "deliver"
