@@ -2,10 +2,11 @@
 //   Base:    "While this is in your hand: After you play a Unit, summon this. / After you play a card,
 //            return this to your hand."
 //   Radiant: "Rush / (the same)."
-//   Engine:  "Hand and deck triggers (§6.2): a hand trigger on your `cardPlayed` of a Unit, after it
-//            resolves, summoning this (no Cry, R1; summoning sick, §4.1) into your leftmost open,
-//            unlocked, unreserved unit zone (R64; none open: it stays in hand); a field trigger on your
-//            `cardPlayed` of any card, returning this to your hand (R78's reset; the hand cap applies).
+//   Engine:  "Hand and deck triggers (§6.2): a hand trigger on your play of a Unit once it has
+//            resolved (its `cardResolved`, R548), summoning this (no Cry, R1; summoning sick, §4.1)
+//            into your leftmost open, unlocked, unreserved unit zone (R64; none open: it stays in hand);
+//            a field trigger on your play of any card once it has resolved (its `cardResolved`, R548),
+//            returning this to your hand (R78's reset; the hand cap applies).
 //            Neither trigger answers the play that moved the card (R401, R119): the Unit that summons it
 //            doesn't bounce it, and the card that bounces it doesn't summon it back. Tunes: none."
 //
