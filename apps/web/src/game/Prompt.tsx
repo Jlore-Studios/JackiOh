@@ -94,6 +94,8 @@ export type PromptProps = {
   onAction: (body: ActionBody) => void;
   onInteraction?: (next: Interaction) => void;
   onCancel?: () => void;
+  /** The event type animating the open modal (`promptAnswered` fades it out), for `data-animating`. */
+  animating?: string;
 };
 
 /**
@@ -689,6 +691,7 @@ function PromptModal(props: {
   onAction: (body: ActionBody) => void;
   onInteraction?: (next: Interaction) => void;
   onCancel?: () => void;
+  animating?: string;
 }) {
   const { picker } = props;
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
@@ -992,6 +995,7 @@ function PromptModal(props: {
         data-testid="prompt-modal"
         data-prompt-kind={picker.chrome}
         data-prompt-source={props.source}
+        data-animating={props.animating}
         /* The board cells this prompt has blessed, so a `target` pick can be made on the board
            too (BUILD M5-T2). Derived by `highlightFor`, which reads only `legalActions` and the
            prompt's own options. */
@@ -1181,6 +1185,7 @@ export default function Prompt(props: PromptProps) {
           {...(pending.kind === "mulligan" && mulligan !== undefined
             ? { status: <OpponentMulliganStatus mulligan={mulligan} /> }
             : {})}
+          {...(props.animating === undefined ? {} : { animating: props.animating })}
           boardTestids={boardTestids}
           onAction={props.onAction}
           {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}
