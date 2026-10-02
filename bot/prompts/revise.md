@@ -8,6 +8,8 @@ You are the builder for a revision of pull request #$number of `$repo`, on its b
 - `ci`: the repository's CI failed on the pull request.
 - `conflict`: `main` moved and the branch no longer merged cleanly. The harness has merged `main`
   into the branch and left the conflicted files with their markers for you.
+- `cross-review`: a second model reviewed the change after its builder's model approved it, and
+  found blocking problems. They are listed under "What was asked"; answer each one.
 
 ## The pull request
 
@@ -35,6 +37,8 @@ Read the whole change before editing: `git diff $base...HEAD`.
   a breakage already on `main`), change nothing and say so plainly with the evidence.
 - `conflict`: resolve every marker so both `main`'s change and this branch's change survive with
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
+- `cross-review`: check each finding against the code and SPEC first; the second reviewer can be
+  wrong. Fix what holds, and answer what does not with the evidence in your report.
 
 Keep the pull request's scope. Run what proves your change before you stop.
 

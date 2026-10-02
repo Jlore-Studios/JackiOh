@@ -208,12 +208,12 @@ class PeekTests(unittest.TestCase):
     def agree(self, gh, at=NIGHT, **kwargs):
         ctx = make_ctx(gh, at=at)
         before = json.dumps({n: t["labels"] for n, t in gh.threads.items()}, sort_keys=True)
-        work, reason, forced = plan_mod.peek(ctx, **kwargs)
+        look = plan_mod.peek(ctx, **kwargs)
         after = json.dumps({n: t["labels"] for n, t in gh.threads.items()}, sort_keys=True)
         self.assertEqual(before, after, "peek changed labels")
         planned = plan_mod.make(ctx, **kwargs)
-        self.assertEqual(work, planned["action"] != "none", (reason, planned))
-        return work, reason, forced
+        self.assertEqual(look.work, planned["action"] != "none", (look.reason, planned))
+        return look.work, look.reason, look.forced
 
     def test_a_queued_issue(self):
         gh = FakeGitHub()
@@ -230,8 +230,11 @@ class PeekTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD,))
         ctx = make_ctx(gh, at=DAY)
         ctx.store.update(lambda s: state_item(s, 3).update(forced=True))
-        self.assertEqual(plan_mod.peek(ctx), (True, "#3 is queued to build", True))
-        self.assertEqual(plan_mod.peek(make_ctx(FakeGitHub(), at=DAY), force=True)[::2], (True, True))
+        look = plan_mod.peek(ctx)
+        self.assertEqual((look.work, look.reason, look.forced, look.quiet_provider),
+                         (True, "#3 is queued to build, for `claude-1`", True, ""))
+        look = plan_mod.peek(make_ctx(FakeGitHub(), at=DAY), force=True)
+        self.assertEqual((look.work, look.forced), (True, True))
 
     def test_a_survey_when_idle(self):
         work, reason, _ = self.agree(FakeGitHub())
@@ -246,9 +249,9 @@ class PeekTests(unittest.TestCase):
         ctx.store.update(lambda s: (state_item(s, 3).update(run_id="5"),
                                     s.update(suggest={"last_run": "2026-09-30T02:59:00Z",
                                                       "requested": False})))
-        work, reason, _ = plan_mod.peek(ctx)
-        self.assertTrue(work)
-        self.assertIn("left working", reason)
+        look = plan_mod.peek(ctx)
+        self.assertTrue(look.work)
+        self.assertIn("left working", look.reason)
 
     def test_a_conflicted_bot_pr_counts_as_work(self):
         gh = FakeGitHub()
@@ -256,7 +259,7 @@ class PeekTests(unittest.TestCase):
         ctx = make_ctx(gh)
         ctx.store.update(lambda s: s.update(suggest={"last_run": "2026-09-30T02:59:00Z",
                                                      "requested": False}))
-        self.assertIn("conflicts with main", plan_mod.peek(ctx)[1])
+        self.assertIn("conflicts with main", plan_mod.peek(ctx).reason)
 
     def test_the_committed_config(self):
         cfg = make_config()

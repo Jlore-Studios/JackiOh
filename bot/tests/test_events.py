@@ -103,8 +103,10 @@ class CommentTests(unittest.TestCase):
         self.send("/harness status")
         text = self.reply()
         self.assertIn("Queued to build: #6", text)
-        self.assertIn("closed, opens in", text)
-        self.assertIn("`opus` at `xhigh`", text)
+        self.assertIn("`claude-1` (claude, `opus`, 21:00–07:00 America/Chicago): outside its "
+                      "hours", text)
+        self.assertIn("`claude-2` (claude, `opus`, 21:00–07:00 America/Chicago): its secret "
+                      "`CLAUDE_CODE_OAUTH_TOKEN_2` is not set", text)
 
     def test_free_text_on_an_issue_asks_for_a_build(self):
         self.send("@jgoetzmann-bot please also make it sparkle")

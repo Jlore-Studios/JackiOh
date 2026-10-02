@@ -18,9 +18,11 @@ class ConfigTests(unittest.TestCase):
     def test_committed_config_loads(self):
         cfg = config.load(env={})
         self.assertEqual(cfg.repo, "jgoetzmann/JackiOh")
-        self.assertEqual(cfg.model, "opus")
-        self.assertEqual(cfg.effort, "xhigh")
-        self.assertEqual((cfg.window_start, cfg.window_end), ("21:00", "07:00"))
+        first = cfg.pool.ordered()[0]
+        self.assertEqual((first.id, first.cli, first.model, first.effort, first.secret),
+                         ("claude-1", "claude", "opus", "xhigh", "CLAUDE_CODE_OAUTH_TOKEN"))
+        self.assertEqual((first.schedule.start, first.schedule.end), ("21:00", "07:00"))
+        self.assertEqual(cfg.pool.max_parallel, 3)
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)
@@ -37,11 +39,12 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             config.parse(raw, config.REPO_ROOT, {})
 
-    def test_usage_stop_must_be_a_fraction(self):
-        raw = raw_config()
-        raw["usage_stop"] = {"five_hour": 98}
-        with self.assertRaises(ConfigError):
-            config.parse(raw, config.REPO_ROOT, {})
+    def test_the_old_single_subscription_keys_are_gone(self):
+        for key in ("model", "effort", "window", "usage_stop"):
+            raw = raw_config()
+            raw[key] = 1
+            with self.assertRaises(ConfigError):
+                config.parse(raw, config.REPO_ROOT, {})
 
     def test_environment_supplies_tokens_and_run(self):
         cfg = make_config(env={"BOT_GITHUB_TOKEN": "bot-token-value", "GITHUB_TOKEN": "actions-token"})
@@ -345,21 +348,6 @@ class StateTests(unittest.TestCase):
         gh.conflicts_to_inject = 99
         with self.assertRaises(StateConflict):
             store.update(lambda s: s.update(halted=True), "y")
-
-    def test_usage_refusal(self):
-        at = NIGHT
-        stops = {"five_hour": 0.98, "seven_day": 0.9}
-        s = state.default_state()
-        self.assertIsNone(state.usage_refusal(s, stops, at))
-        later = clock.iso(at + timedelta(hours=2))
-        s["usage"] = {"seven_day": {"utilization": 0.95, "resets_at": later}}
-        self.assertIn("7-day", state.usage_refusal(s, stops, at))
-        # Once that window has reset, the old reading no longer refuses.
-        self.assertIsNone(state.usage_refusal(s, stops, at + timedelta(hours=3)))
-        s = state.default_state()
-        state.record_usage(s, None, "+PT30M", at)
-        self.assertIn("refused", state.usage_refusal(s, stops, at))
-        self.assertIsNone(state.usage_refusal(s, stops, at + timedelta(minutes=31)))
 
 
 if __name__ == "__main__":

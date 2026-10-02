@@ -27,15 +27,17 @@ def pr_node(h, number) -> str:
 class Harness:
     """One repository, one fake GitHub, and the three jobs of a night run."""
 
-    def __init__(self, test: unittest.TestCase, **cfg_overrides) -> None:
+    def __init__(self, test: unittest.TestCase, env: dict | None = None, at=NIGHT,
+                 machine: tuple[str, ...] = (), **cfg_overrides) -> None:
         self.root = Path(tempfile.mkdtemp())
         self.origin, self.clone = make_origin(self.root)
         self.gh = FakeGitHub()
-        env = {"GITHUB_SERVER_URL": f"file://{self.root / 'remote'}", "BOT_GITHUB_TOKEN": "t" * 20}
+        env = {"GITHUB_SERVER_URL": f"file://{self.root / 'remote'}", "BOT_GITHUB_TOKEN": "t" * 20,
+               **(env or {})}
         overrides = {"gates": GATES, "install": {"run": "true", "timeout_minutes": 1},
                      "max_review_cycles": 2, **cfg_overrides}
-        self.cfg = make_config(env=env, **overrides)
-        self.ctx = make_ctx(self.gh, cfg=self.cfg)
+        self.cfg = make_config(env=env, machine=machine, **overrides)
+        self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
         self.gh.branch_checks = set(self.cfg.required_checks)
         self.deliver_repo = self.root / "deliver"
         git(self.root, "clone", "-q", str(self.origin), str(self.deliver_repo))
@@ -64,22 +66,24 @@ class PlanTests(unittest.TestCase):
     def test_nothing_outside_the_window_unless_forced(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         day = make_ctx(self.gh, at=DAY)
-        self.assertIn("outside the night window", plan_mod.make(day)["reason"])
+        self.assertIn("`claude-1` outside its hours (21:00–07:00", plan_mod.make(day)["reason"])
         self.assertEqual(plan_mod.make(day, force=True)["action"], "build")
 
     def test_nothing_starts_without_the_claude_secret(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
-        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_CLAUDE_READY": "false"}))
-        self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", plan_mod.make(ctx, force=True)["reason"])
+        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_SECRETS_SET": ""}))
+        self.assertIn("no subscription has its secret set", plan_mod.make(ctx, force=True)["reason"])
         self.assertEqual(self.gh.label_names(3), {LABEL_BUILD})
-        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_CLAUDE_READY": "true"}))
+        ctx = make_ctx(self.gh, cfg=make_config(env={"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN"}))
         self.assertEqual(plan_mod.make(ctx)["action"], "build")
 
     def test_an_infrastructure_failure_backs_off_unforced_runs(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
         at = "2026-09-30T02:40:00Z"  # twenty minutes before NIGHT
-        self.ctx.store.update(lambda s: s.update(last_infra={"at": at, "reason": "doctor failed"}))
-        self.assertIn("backing off", plan_mod.make(self.ctx)["reason"])
+        self.ctx.store.update(lambda s: s.update(providers={"claude-1": {
+            "infra": {"at": at, "reason": "doctor failed"}}}))
+        self.assertIn("`claude-1` its last run could not work (doctor failed)",
+                      plan_mod.make(self.ctx)["reason"])
         self.assertEqual(plan_mod.make(self.ctx, force=True)["action"], "build")
 
     def test_both_halts(self):
@@ -92,12 +96,14 @@ class PlanTests(unittest.TestCase):
 
     def test_usage_stop(self):
         self.gh.add_issue(3, labels=(LABEL_BUILD,))
+        # The readings the state file kept before there were several subscriptions are the first
+        # Claude account's.
         self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95},
                                                         "observed_at": "2026-09-30T02:00:00Z"}))
-        self.assertIn("usage stop", plan_mod.make(self.ctx)["reason"])
+        self.assertIn("`claude-1` 7-day usage is 95%", plan_mod.make(self.ctx)["reason"])
         # A reading that cannot be dated never blocks for ever.
         self.ctx.store.update(lambda s: s.update(usage={"seven_day": {"utilization": 0.95}}))
-        self.assertNotIn("usage stop", plan_mod.make(self.ctx).get("reason", ""))
+        self.assertEqual(plan_mod.make(self.ctx)["action"], "build")
 
     def test_claims_the_oldest_forced_first_and_marks_it(self):
         self.gh.add_issue(3, title="old", labels=(LABEL_BUILD,))
@@ -117,7 +123,8 @@ class PlanTests(unittest.TestCase):
         by_hand = make_ctx(self.gh, cfg=make_config(env={"GITHUB_RUN_ID": ""}))
         self.gh.add_issue(5, labels=(LABEL_BUILD,))
         plan_mod.make(by_hand, item=5)
-        self.assertIn("Starting work on this now. I build it", self.gh.bot_comments(5)[-1])
+        self.assertIn("Starting work on this now, on `claude-1` (claude, opus). I build it",
+                      self.gh.bot_comments(5)[-1])
         self.assertEqual(self.ctx.store.load()["items"]["4"]["run_id"], "777")
 
     def test_revisions_come_before_builds(self):
@@ -160,7 +167,7 @@ class PlanTests(unittest.TestCase):
         # Claimed: not due again for twenty hours.
         self.assertEqual(plan_mod.make(self.ctx)["action"], "none")
         self.gh.add_issue(23, labels=(LABEL_SUGGESTION,))
-        self.assertIsNone(plan_mod.suggestion_plan(self.ctx, force=True))
+        self.assertIsNone(plan_mod.suggestion_plan(self.ctx, plan_mod.Lanes(3), force=True))
 
 
 class FlowTests(unittest.TestCase):
@@ -182,7 +189,7 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR})
         self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN})
         self.assertIn("Auto-merge is on", h.gh.bot_comments(12)[-1])
-        usage = h.ctx.store.load()["usage"]
+        usage = h.ctx.store.load()["providers"]["claude-1"]["usage"]
         self.assertEqual(usage["five_hour"]["utilization"], 0.3)
 
     def test_a_change_to_a_review_path_waits_for_a_person(self):
@@ -250,7 +257,8 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(first["status"], "interrupted")
         self.assertEqual(h.origin_sha("bot/issue-12"), first["head"])
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
-        self.assertEqual(h.ctx.store.load()["rate_limited_until"], "2026-09-30T04:00:00Z")
+        self.assertEqual(h.ctx.store.load()["providers"]["claude-1"]["refused_until"],
+                         "2026-09-30T04:00:00Z")
         self.assertEqual(h.gh.dispatches, [])  # no chaining into a refusal
         h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=5)
         runner = FakeRunner({"build": builder({"src/game.txt": "whole\n"}), "review": reviewer(APPROVE)})
@@ -308,7 +316,10 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertIn("behind the others", h.gh.bot_comments(12)[-1])
         self.assertEqual(h.gh.dispatches, [])  # no chaining after a run that died
-        self.assertEqual(plan_mod.make(h.ctx)["number"], 13)  # #12 went to the back
+        # Its subscription is left alone a while; then #12, at the back, waits behind #13.
+        self.assertIn("could not work", plan_mod.make(h.ctx)["reason"])
+        h.ctx.clock_fn.at = h.ctx.clock_fn.at.replace(hour=4)
+        self.assertEqual(plan_mod.make(h.ctx)["number"], 13)
         h.gh.threads[13]["labels"] = []
         planned = plan_mod.make(h.ctx)
         out = h.root / "empty-2"
@@ -328,7 +339,7 @@ class FlowTests(unittest.TestCase):
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
         self.assertNotIn("died", h.ctx.store.load()["items"]["12"])
-        self.assertIn("backing off", plan_mod.make(h.ctx)["reason"])
+        self.assertIn("`claude-1` its last run could not work", plan_mod.make(h.ctx)["reason"])
 
     def test_a_failed_run_is_requeued_then_blocked(self):
         h = Harness(self, max_failures=2)

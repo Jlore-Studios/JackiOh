@@ -1,8 +1,9 @@
 """The work queue, kept as labels on issues and pull requests plus a record in the state file.
 
-`bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:working` means a
-run holds it; `bot:blocked` means it waits for a person. Only one `bot:` state label is on a
-thread at a time, apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
+`bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:cross-review` on a
+bot pull request means it waits for a second model's review; `bot:working` means a run holds it;
+`bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
+apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
 """
 
 from __future__ import annotations
@@ -11,15 +12,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from harness import asks
+from harness import providers as providers_mod
 from harness.asks import Ask
-from harness.clock import human_delta, iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING)
+from harness.clock import iso
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
 
-STATE_LABELS = (LABEL_BUILD, LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED)
+STATE_LABELS = (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS, LABEL_WORKING, LABEL_BLOCKED)
 
 
 def label_names(thread: dict[str, Any]) -> set[str]:
@@ -44,12 +46,9 @@ def open_pull_for_branch(ctx: Context, branch: str) -> dict[str, Any] | None:
     return pulls[0] if pulls else None
 
 
-def _when(ctx: Context) -> str:
-    window = ctx.window
-    now = ctx.now()
-    if window.is_open(now):
-        return f"in the current night window ({window.describe()})"
-    return f"when the night window opens ({window.describe()}, in {human_delta(window.next_open(now) - now)})"
+def _when(ctx: Context, state: dict[str, Any]) -> str:
+    return providers_mod.when_free(ctx.cfg.pool, state, ctx.now(), ctx.cfg.timezone,
+                                   ctx.cfg.secrets)
 
 
 def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
@@ -80,7 +79,7 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
                              f"queue #{number}")
     if force:
         return _start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
-    return f"Queued #{number}; I will build it {_when(ctx)}.{_halt_note(ctx, state)}"
+    return f"Queued #{number}; I will build it {_when(ctx, state)}.{_halt_note(ctx, state)}"
 
 
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
@@ -114,12 +113,13 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
     if force:
         return (_start_now(ctx, number, "revise", f"Queued a revision of #{number}") + held
                 + _halt_note(ctx, state))
-    return f"Queued a revision of #{number}; I will do it {_when(ctx)}.{held}{_halt_note(ctx, state)}"
+    return (f"Queued a revision of #{number}; I will do it {_when(ctx, state)}.{held}"
+            f"{_halt_note(ctx, state)}")
 
 
 def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
     """Start a forced run. If GitHub refuses, the item is still queued and still forced, and the
-    next hourly run starts it, inside the window or not."""
+    next hourly run starts it, inside a subscription's hours or not."""
     try:
         ctx.dispatch(item=number, force=True, mode=mode)
     except GitHubError as exc:
@@ -178,29 +178,45 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
 @dataclass
 class Candidate:
     number: int
-    kind: str  # "build" | "revise"
+    kind: str  # "build" | "revise" | "review" (a second model's review of a bot PR)
     title: str
     forced: bool
     queued_at: str
+    #: Labelled `difficult` (on the thread, or on the issue a bot PR was built for): Opus only.
+    difficult: bool = False
+    #: For a review: the model family whose approval it already has, which may not review again.
+    builder: str = ""
+
+
+#: The order of urgency after forced items (`pairs` in plan.py puts `difficult` ones next).
+KIND_ORDER = {"review": 0, "revise": 1, "build": 2}
 
 
 def candidates(ctx: Context, state: dict[str, Any]) -> list[Candidate]:
-    """Queued threads: forced requests first, then revisions, then oldest first.
+    """Queued threads: forced requests first, then second reviews, revisions, and the oldest
+    builds.
 
     Read by label, so no number of open threads hides one. Either queue label queues either kind
     of thread: an issue builds and a pull request revises. A queue label is the request, so a
     thread that failed before and was labelled again is taken again."""
     found: dict[int, Candidate] = {}
-    for label in (LABEL_BUILD, LABEL_REVISE):
+    difficult = ctx.cfg.pool.difficult_label
+    for label in (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS):
         for thread in ctx.gh.list_issues(labels=label):
             number = int(thread["number"])
-            if LABEL_WORKING in label_names(thread) or number in found:
+            names = label_names(thread)
+            if LABEL_WORKING in names or number in found:
                 continue
+            is_pr = "pull_request" in thread
+            if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
+                continue  # a second review is for the bot's own pull requests only
             record = state["items"].get(str(number), {})
+            kind = "review" if label == LABEL_CROSS else "revise" if is_pr else "build"
             found[number] = Candidate(
-                number, "revise" if "pull_request" in thread else "build",
-                str(thread.get("title", "")), bool(record.get("forced")),
-                str(record.get("queued_at") or thread.get("created_at") or ""))
-    return sorted(found.values(), key=lambda c: (not c.forced, c.kind != "revise", c.queued_at,
+                number, kind, str(thread.get("title", "")), bool(record.get("forced")),
+                str(record.get("queued_at") or thread.get("created_at") or ""),
+                difficult=difficult in names or bool(record.get("difficult")),
+                builder=str((record.get("votes") or {}).get("builder") or ""))
+    return sorted(found.values(), key=lambda c: (not c.forced, KIND_ORDER[c.kind], c.queued_at,
                                                  c.number))
 
