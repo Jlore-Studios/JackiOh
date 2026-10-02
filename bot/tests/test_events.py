@@ -400,7 +400,7 @@ class StatusTests(unittest.TestCase):
         self.assertIn("\n".join([
             "- **Running now** (3 of 3 lanes, 0 free):",
             f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
-            f"  - `agy` (agy, `gemini-3.1-pro`): a suggestion survey, just started, [run]({runs}/103).",
+            f"  - `agy` (agy, `gemini-3.8-flash-high`): a suggestion survey, just started, [run]({runs}/103).",
             f"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, "
             f"[run]({runs}/102).",
         ]), text)

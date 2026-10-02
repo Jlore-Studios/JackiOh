@@ -210,7 +210,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `claude-2`, `-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_2`, `_3`, `_4` | 21:00–07:00 | the same |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
-| `agy` | Antigravity (`agy`), `gemini-3.1-pro` at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
 Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
@@ -220,8 +220,8 @@ as set up; turn one off with `enabled: false`. `python3 -m harness providers` in
 each one and whether it could start now, and `/harness status` does the same on GitHub.
 
 **What each entry says.**
-- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one (`gemini-3.1-pro`
-  takes `low` or `high`).
+- `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
+  carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
   leaves it. agy logs in only on the machine.
