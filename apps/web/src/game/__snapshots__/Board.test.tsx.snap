@@ -1046,11 +1046,38 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-side="opponent"
         data-testid="zone-opponent-units-2"
       >
-        <span
+        <svg
           aria-label="Locked zone"
-          class="lock-icon"
-          title="Locked zone"
-        />
+          class="zone-lock"
+          role="img"
+          viewBox="0 0 24 24"
+        >
+          <title>
+            Locked zone
+          </title>
+          <path
+            class="zone-lock-shackle"
+            d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"
+          />
+          <rect
+            class="zone-lock-body"
+            height="11"
+            rx="2.4"
+            width="15"
+            x="4.5"
+            y="10.5"
+          />
+          <circle
+            class="zone-lock-keyhole"
+            cx="12"
+            cy="15.2"
+            r="1.6"
+          />
+          <path
+            class="zone-lock-keyhole"
+            d="M12 15.6v3"
+          />
+        </svg>
         <div
           aria-disabled="true"
           class="card card-unit cf-host cf-host--minion"
@@ -2231,11 +2258,38 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-side="you"
         data-testid="zone-you-backrow-3"
       >
-        <span
+        <svg
           aria-label="Locked zone"
-          class="lock-icon"
-          title="Locked zone"
-        />
+          class="zone-lock"
+          role="img"
+          viewBox="0 0 24 24"
+        >
+          <title>
+            Locked zone
+          </title>
+          <path
+            class="zone-lock-shackle"
+            d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"
+          />
+          <rect
+            class="zone-lock-body"
+            height="11"
+            rx="2.4"
+            width="15"
+            x="4.5"
+            y="10.5"
+          />
+          <circle
+            class="zone-lock-keyhole"
+            cx="12"
+            cy="15.2"
+            r="1.6"
+          />
+          <path
+            class="zone-lock-keyhole"
+            d="M12 15.6v3"
+          />
+        </svg>
         <div
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
