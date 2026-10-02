@@ -404,7 +404,7 @@
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
-  "rate_limited_until": "2026-10-02T11:10:00Z",
+  "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
   "suggest": {
     "last_run": null,
@@ -412,11 +412,11 @@
   },
   "usage": {
     "five_hour": {
-      "resets_at": "2026-10-02T11:10:00Z",
+      "resets_at": "2026-10-02T21:30:00Z",
       "utilization": 1.0
     },
-    "observed_at": "2026-10-02T09:41:05Z",
-    "rejected_resets_at": "2026-10-02T11:10:00Z",
+    "observed_at": "2026-10-02T18:10:59Z",
+    "rejected_resets_at": "2026-10-02T21:30:00Z",
     "status": "rejected"
   },
   "version": 1
