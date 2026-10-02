@@ -176,10 +176,28 @@ describe("#83 Transmogulate — base", () => {
     expect(s.backrow("p1", 1)?.radiant).toBe(false);
   });
 
-  it.todo(
-    "R13 a card dormant under a Stack is not on your board — blocked on harness support for " +
-      "seeding a Stack pile (SideSetup.field cannot put two cards in one lane)",
-  );
+  it("R13 a card dormant under a Stack is not on your board: only the top of the pile is replaced", () => {
+    // #92 Felinor Fiender (Stack) on top of #43 Big Felinor in lane 1; the Big Felinor is dormant.
+    const s = scenario({
+      seed: "transmogulate-stack",
+      p1: { hand: [TRANSMOGULATE], field: ["core-043", { def: "core-092", stack: true }], library: ["core-020"] },
+      p2: { field: ["core-011"], library: ["core-020"] },
+    });
+    const buried = s.card("core-043");
+    const top = s.card("core-092");
+    expect(s.unit("p1", 1)?.id, "the Fiender is on top of lane 1").toBe(top.id);
+
+    s.play(TRANSMOGULATE);
+
+    // The acting top card was replaced in place by a Legendary Unit.
+    const transformed = s.events.filter((event) => event.type === "transformed");
+    expect(transformed.some((event) => event.instanceId === top.id)).toBe(true);
+    expect(LEGENDARY_UNITS).toContain(s.unit("p1", 1)?.defId);
+    // The dormant card is untouched: still on the field beneath it, still a Big Felinor.
+    expect(transformed.some((event) => event.instanceId === buried.id)).toBe(false);
+    s.expectInZone(buried, "field");
+    expect(s.card(buried).defId).toBe("core-043");
+  });
 });
 
 describe("#83 Transmogulate — radiant", () => {
