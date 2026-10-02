@@ -13,7 +13,7 @@ have used:
 - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
-  work and no `bot-night` run is queued or going, the sweep starts one.
+  work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
 
 It looks back to the later of `LOOKBACK` and the first sweep ever (so the first one replays
 nothing), leaves anything younger than `SETTLE` to a handler that may still be running, and
@@ -219,14 +219,18 @@ def _failed_ci(ctx: Context, since: datetime) -> list[str]:
 
 
 def _night_run(ctx: Context, since: datetime) -> list[str]:
-    """Start a night run when one should be going and none is. Runs after the other parts, so
-    a request they just answered counts. A run already queued or going means nothing to do, so
-    the `bot-night` concurrency group never fills with runs it would cancel."""
-    work, reason, _ = plan_mod.peek(ctx)
-    if not work:
+    """Start a night run when a lane and a subscription are free for work and no run is on its
+    way to take it. Runs after the other parts, so a request they just answered counts. A run
+    that is going but holds no lane yet (still in its gate or plan, or delivering) is on its way,
+    so the sweep waits for it rather than piling more runs behind it."""
+    look = plan_mod.peek(ctx)
+    if not look.work:
         return []
-    live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=10) if r.get("status") in LIVE_RUN]
-    if live:
+    live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=20) if r.get("status") in LIVE_RUN]
+    # A run waiting for the shared subscription to be quiet may wait two hours; it is not on
+    # its way to the other subscriptions' work, which `peek` then offers instead.
+    waiting = 1 if plan_mod.quiet_waiting(ctx) else 0
+    if len(live) - waiting > look.held:
         return []
     ctx.dispatch()
-    return [f"started a night run, as none was going: {reason}"]
+    return [f"started a night run, as a lane was free: {look.reason}"]

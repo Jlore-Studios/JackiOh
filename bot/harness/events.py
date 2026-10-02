@@ -228,7 +228,7 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
             extra = " `.harness/HALT` is still on `main`, though, and it wins until it is deleted."
         if command.force:
             return "Started. " + _run_now(ctx, None) + extra
-        return "Started. The bot works in the next night window." + extra
+        return "Started. The bot takes work again as soon as a subscription is free." + extra
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
@@ -240,7 +240,8 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         if command.force:
             ctx.dispatch(force=True, mode="suggest")
             return "A suggestion survey is starting now."
-        return "I will survey for suggestions the next time the queue is empty in the window."
+        return ("I will survey for suggestions the next time the queue is empty and a "
+                "subscription is free.")
     if not number:
         return f"`{verb}` needs an issue or a pull request to act on."
     if verb == "stop":
@@ -266,7 +267,7 @@ def _run_now(ctx: Context, item: int | None) -> str:
     except GitHubError as exc:
         return (f"Starting a run{which} failed ({str(exc)[:200]}); the next hourly run does it "
                 "instead.")
-    return f"A run{which} is starting now, outside the window if need be."
+    return f"A run{which} is starting now, outside a subscription's hours if need be."
 
 
 def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:

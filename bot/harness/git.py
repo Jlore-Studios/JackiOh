@@ -248,9 +248,18 @@ def is_forbidden(path: str, forbidden: Iterable[str]) -> bool:
 
 
 def worktree_add(repo: Git, path: Path, branch: str, start: str) -> Git:
-    """A worktree at `path` with `branch` (re)set to `start` and checked out."""
+    """A worktree at `path` with `branch` (re)set to `start` and checked out. An older worktree
+    of this clone that still has `branch` checked out (an earlier item on the same branch) is
+    removed first, since git lets only one worktree hold a branch."""
     if path.exists():
         repo.run("worktree", "remove", "--force", str(path), check=False)
+    listing = repo.run("worktree", "list", "--porcelain", check=False).stdout
+    current = ""
+    for line in listing.splitlines():
+        if line.startswith("worktree "):
+            current = line[len("worktree "):]
+        elif line == f"branch refs/heads/{branch}" and current and Path(current) != repo.cwd:
+            repo.run("worktree", "remove", "--force", current, check=False)
     repo.run("worktree", "prune", check=False)
     repo.run("worktree", "add", "-q", "-B", branch, str(path), start)
     return Git(path, repo.env)

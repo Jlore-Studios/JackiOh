@@ -320,7 +320,17 @@ class GitHub:
         found |= {str(c.get("context")) for c in checks.get("checks") or [] if isinstance(c, dict)}
         return found
 
-    def enable_auto_merge(self, node_id: str, method: str) -> None:
+    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "") -> None:
+        """Auto-merge, pinned to `expected_head` when given: GitHub then refuses to merge a head
+        that moved after the approval it was turned on for."""
+        if expected_head:
+            self.graphql(
+                "mutation($id: ID!, $m: PullRequestMergeMethod!, $h: GitObjectID!) {"
+                " enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $m,"
+                " expectedHeadOid: $h}) { clientMutationId } }",
+                {"id": node_id, "m": method.upper(), "h": expected_head},
+            )
+            return
         self.graphql(
             "mutation($id: ID!, $m: PullRequestMergeMethod!) {"
             " enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $m})"

@@ -48,7 +48,7 @@ LEVELS: dict[str, int] = {
     "run": 3,
 }
 
-#: `--force` lifts the calendar (the night window) and nothing else. Operator only.
+#: `--force` lifts the subscriptions' hours and nothing else (their usage caps hold). Operator only.
 FORCE_FLAG = "--force"
 FORCE_LEVEL = 3
 MAX_COMMANDS = 10
@@ -226,15 +226,15 @@ HELP = """\
 | `revise <notes>` | queue a revision of this PR with your notes | pull request | 2 |
 | `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |
 | `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |
-| `status` | halt state, window, usage, queue | anywhere | 1 |
+| `status` | halt state, each subscription, the queue | anywhere | 1 |
 | `help [verb]` | this list, or one command in detail | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
 | `start` | lift a halt | anywhere | 3 |
-| `run [#n]` | start a run now, outside the window | anywhere | 3 |
+| `run [#n]` | start a run now, outside a subscription's hours if need be | anywhere | 3 |
 
 Anything else after `/harness` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
-Add `--force` (level 3) to `build`, `revise` or `suggest` to start now instead of in the window.
+Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficult` to keep it for Opus.
 Labels do the same as the verbs: `bot:build` on an issue, `bot:revise` on a PR; assigning @{bot} queues the thread.
 On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.
 """
@@ -249,7 +249,8 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
              "up at its next checkpoint and keeps what it has.", "/harness stop"),
     "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
                 "@{bot} suggest"),
-    "status": ("status", "Halt state, the window, usage, and what is running and queued.",
+    "status": ("status", "Halt state, each subscription (its hours, usage, and what it is "
+               "doing), and what is running and queued.",
                "@{bot} status"),
     "help": ("help [verb]", "The list of commands, or one of them in detail.",
              "/harness help build"),
@@ -258,7 +259,7 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
              "@{bot} halt: away this week"),
     "start": ("start", "Lift a halt. `start --force` also starts a run now.",
               "/harness start --force"),
-    "run": ("run [#n]", "Start a run now, outside the window if need be, for one item or "
+    "run": ("run [#n]", "Start a run now, outside a subscription's hours if need be, for one item or "
             "whatever is next in the queue.", "@{bot} run #12"),
 }
 

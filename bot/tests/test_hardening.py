@@ -118,8 +118,8 @@ class EventTests(unittest.TestCase):
         events.handle(self.ctx, "issue_comment", comment(5, "/harness run #5", cid=10))
         self.assertIn("the next hourly run does it", self.gh.bot_comments(5)[-1])
         self.gh.threads[5]["labels"] = [{"name": LABEL_BUILD}]
-        work, _, forced = plan_mod.peek(self.ctx)  # by day, outside the window
-        self.assertEqual((work, forced), (True, True))
+        look = plan_mod.peek(self.ctx)  # by day, outside claude-1's hours
+        self.assertEqual((look.work, look.forced), (True, True))
         planned = plan_mod.make(self.ctx)
         self.assertEqual(planned["number"], 5)
         self.assertIsNone(self.ctx.store.load().get("run_requested"))  # taken up once

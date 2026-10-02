@@ -26,3 +26,7 @@ class GitError(HarnessError):
 
 class StateConflict(HarnessError):
     """The state file changed under an update more times than the retry allows."""
+
+
+class LoginError(HarnessError):
+    """A provider's secret could not be turned into a login its CLI reads."""
