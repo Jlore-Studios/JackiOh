@@ -472,6 +472,11 @@ Notes:
   through a transaction-mode pooler stays held on a pooled backend, where the next deploy's runner
   could wait on it forever. The runtime server is fine on either; transaction-mode pooling is the
   cheaper default for it.
+- **Migrations run as a role that is not a superuser.** On Supabase the role `DATABASE_URL`
+  names is not a superuser, so a migration must not need one: no `set` clause on a function for a
+  custom parameter (Postgres 15+ refuses it; set it with `set_config()` in the body, as 0013 does),
+  no `alter system`, no extension only a superuser may create. `pnpm test:deploy` applies every
+  migration as such a role; `test:sql` and `test:db` migrate as a superuser and cannot tell.
 - **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every Render
   boot, so a deploy that ships new migrations or a new card patch applies them and reseeds at its
   `CATALOG_VERSION` before the server listens. Both are idempotent, and a failure keeps the new
