@@ -1506,18 +1506,22 @@
         {
           "at": "2026-10-03T20:05:14Z",
           "minutes": 12.4
+        },
+        {
+          "at": "2026-10-03T20:05:22Z",
+          "minutes": 14.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T00:50:00Z",
-          "utilization": 1.01
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-03T20:05:14Z",
+        "observed_at": "2026-10-03T20:05:22Z",
         "rejected_resets_at": "2026-10-04T00:50:00Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.29
+          "utilization": 0.28
         },
         "status": "rejected"
       }
