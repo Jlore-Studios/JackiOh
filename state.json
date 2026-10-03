@@ -1476,7 +1476,7 @@
       "pr": 166,
       "provider": "agy",
       "question": "Continue the build from .bot-notes.md session 3: R647 Locked engine work is implemented and tested but its SPEC \u00a711 row is not yet written; plague single-target and recruit X-skip are not started; typecheck/eslint/validate:catalog/rulings:coverage were not re-run. Continue on this branch?",
-      "queued_at": "2026-10-03T21:59:58Z",
+      "queued_at": "2026-10-03T23:17:22Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37157132505",
       "started_at": "2026-10-03T22:04:53Z",
