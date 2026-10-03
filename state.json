@@ -756,7 +756,9 @@
       "taken_asks": []
     },
     "45": {
-      "asks": [],
+      "asks": [
+        "c:5946889038"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -780,9 +782,7 @@
       "run_id": "37123442904",
       "started_at": "2026-10-03T12:37:23Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5946889038"
-      ]
+      "taken_asks": []
     },
     "46": {
       "asks": [],
