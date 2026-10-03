@@ -40,7 +40,7 @@ async function restoreFixtureCatalog(admin: Client): Promise<void> {
   await seedCards(admin);
 }
 
-describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake, AI and Plague tags included", () => {
+describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake and AI tags included", () => {
   let admin: Client;
 
   beforeAll(async () => {
@@ -74,7 +74,6 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake,
     expect(rows.filter((row) => row.tags.includes("Book"))).toHaveLength(14);
     expect(rows.filter((row) => row.tags.includes("Pancake"))).toHaveLength(10);
     expect(rows.filter((row) => row.tags.includes("AI"))).toHaveLength(10);
-    expect(rows.filter((row) => row.tags.includes("Plague"))).toHaveLength(17);
     // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
     const byId = new Map(entries.map((entry) => [entry.id, entry.tags]));
     for (const row of rows) expect(row.tags, row.id).toEqual(byId.get(row.id));

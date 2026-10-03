@@ -334,7 +334,7 @@ Acceptance (`catalog.test.ts`):
 - Core: exactly 100 entries with `token: false` and 11 with `token: true`; indices 1–100 each present once. (M9-T1 adds Classic and Classic+: 268 and 49 in all.)
 - For every entry, `cost`, `type`, `tags`, `rarity`, `base.attack/health`, `radiant.attack/health` equal the values in SPEC §8 (encode §8 as a fixture table in the test; the test is the diff).
 - Rarity counts: 35 Common, 37 Rare, 16 Epic, 7 Legendary, 5 Mythic.
-- Every `tags` value is one of Human, Felinor, KY, CN, Fruit, "Call to Chaos", Quickdraw, Jlockeed (R278), Book, Pancake, AI, Plague (issue #45), Token.
+- Every `tags` value is one of Human, Felinor, KY, CN, Fruit, "Call to Chaos", Quickdraw, Jlockeed (R278), Book, Pancake, AI, Token.
 - Every entry's `radiant` face differs from its `base` face (R276), and every Radiant Unit's attack and health are at least twice its base's (R275, `radiant-standard.test.ts`). `radiant.text` is the §8 Radiant cell written out in full (R277), and `refs` lists the cards a text names (R279, `references.test.ts`).
 
 **M4-T2 Script contract and registry.** Files: `cards/src/index.ts`, `cards/src/scripts/NNN-slug.ts`.

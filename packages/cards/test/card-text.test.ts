@@ -129,41 +129,16 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R366 patch v0.2.4 only changes base.text, radiant.text and the Plague cards' tags between v0.2.0 and the current catalog", () => {
+  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and the current catalog", () => {
     const before = readSnapshot("v0.2.0");
-    // Issue #45 (@MaxGoetzmann): every card whose printed faces place, count or key off Plague
-    // Tokens gains the Plague tag. Only these cards' `tags` may differ, and only by that tag.
-    const plagueTagged: readonly string[] = [
-      "core-091",
-      "classic-027",
-      "classic-039",
-      "classic-042",
-      "classic-043",
-      "classic-053",
-      "classic-059",
-      "classic-061",
-      "classic-062",
-      "classic-063",
-      "classic-069",
-      "classic-070",
-      "classic-074",
-      "classic-076",
-      "classic-078",
-      "classic-087",
-      "classicplus-003",
-    ];
     const differingCards: string[] = [];
     for (const [id, currentCard] of Object.entries(CATALOG)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.0`).toBeDefined();
       if (!priorCard) continue;
 
-      if (plagueTagged.includes(id)) {
-        expect(currentCard.tags, `tags of ${id}`).toEqual([...priorCard.tags, "Plague"]);
-      }
       const priorNonText = {
         ...priorCard,
-        tags: plagueTagged.includes(id) ? currentCard.tags : priorCard.tags,
         base: { ...priorCard.base, text: "" },
         radiant: { ...priorCard.radiant, text: "" },
       };
@@ -184,33 +159,17 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "core-024",
       "core-031",
       "core-067",
-      "core-091",
       "classic-010",
       "classic-014",
       "classic-022",
       "classic-025",
-      "classic-027",
       "classic-029",
       "classic-034",
-      "classic-039",
-      "classic-042",
-      "classic-043",
       "classic-047",
-      "classic-053",
       "classic-054",
-      "classic-059",
-      "classic-061",
-      "classic-062",
       "classic-063",
       "classic-065",
       "classic-066",
-      "classic-069",
-      "classic-070",
-      "classic-074",
-      "classic-076",
-      "classic-078",
-      "classic-087",
-      "classicplus-003",
       "classicplus-014",
       "classicplus-019-5",
       "classicplus-021",

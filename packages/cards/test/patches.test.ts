@@ -103,33 +103,15 @@ describe("R388 card patch history (B4.2)", () => {
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
   });
 
-  it("R388 records patch v0.2.4: card text pass (issue #45), plus the Plague tag", () => {
+  it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
     expect(idsOf("v0.2.4", "added")).toHaveLength(0);
     expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
-    expect(idsOf("v0.2.4", "changed")).toHaveLength(38);
-    // Issue #45 (@MaxGoetzmann): the 17 Plague cards gain the Plague tag; every other change is text.
-    const plagueTagged = new Set([
-      "core-091",
-      "classic-027",
-      "classic-039",
-      "classic-042",
-      "classic-043",
-      "classic-053",
-      "classic-059",
-      "classic-061",
-      "classic-062",
-      "classic-063",
-      "classic-069",
-      "classic-070",
-      "classic-074",
-      "classic-076",
-      "classic-078",
-      "classic-087",
-      "classicplus-003",
-    ]);
-    const tagged = changesOf("v0.2.4").filter((change) => change.kind === "changed" && change.fields.includes("tags")).map((change) => change.id);
-    expect(new Set(tagged)).toEqual(plagueTagged);
-    expect(changesOf("v0.2.4").every((change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text" || (f === "tags" && plagueTagged.has(change.id))))).toBe(true);
+    expect(idsOf("v0.2.4", "changed")).toHaveLength(22);
+    expect(
+      changesOf("v0.2.4").every(
+        (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
+      ),
+    ).toBe(true);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

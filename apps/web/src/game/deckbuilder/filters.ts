@@ -57,8 +57,6 @@ export const FILTER_TAGS: readonly Tag[] = [
   // only the ten AI tokens carry it, and the pool never offers a Token.
   "Book",
   "Pancake",
-  // Patch v0.2.4 (issue #45): every card whose printed faces place, count or key off Plague Tokens.
-  "Plague",
 ];
 
 /**

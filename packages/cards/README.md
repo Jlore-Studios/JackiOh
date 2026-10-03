@@ -140,8 +140,7 @@ and names its own id: `cardDef("classic-043")`, `cardDef("classicplus-012-1")`.
   #13 and the eight Pancake tokens) and `AI` (the ten AI cards), and every tag list is the designer's
   as written. `Jlockeed` is one tag on five cards, Core #13 and #14 and C+ #48, #51 and #52 (whose
   names keep the designer's "Jlockheed"), and since C+ #48 and #52 draw "a random Jlockheed card"
-  from it, it is a pool as well as a filter (R278). Patch v0.2.4 adds `Plague` (issue #45): every
-  card whose printed faces place, count or key off Plague Tokens carries it, seventeen cards.
+  from it, it is a pool as well as a filter (R278).
 - **Names** (R381). No two cards share a name: Classic #55 is Book of Wildfire and Classic #72 Grand
   Counterspell, so "Book of Flame" and "Counterspell" each name one card. Cards named like rules words
   keep their names (C #10 Exile, #30 Recycle, #36 Burn, #57 Echo); `test/references.test.ts` holds a

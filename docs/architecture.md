@@ -748,7 +748,6 @@ apps/server/
         0011_tutorial_progress.sql      tutorial_progress, app.merge_tutorial_progress (R320)
         0014_game_records.sql           game_records: the card statistics (R376)
         0015_classic_sets_tags.sql      cards_tags_check re-added with Book, Pancake and AI (patch v0.2.0)
-        0019_plague_tag.sql             cards_tags_check re-added with Plague (patch v0.2.4, issue #45)
         0016_catalog_growth_grants.sql  a new catalog version grants its new cards (R481)
         0017_last_boards.sql            last_boards, matches.p1_last_board / p2_last_board (R417, R565)
         0018_player_settings.sql        player_settings, app.merge_player_settings (R633, R634)
