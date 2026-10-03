@@ -131,7 +131,7 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
                                                          else "")
                           for seat in cfg.pool.seats(provider))
         lines.append(f"  - `{provider.id}` ({provider.cli}: {seats}; "
-                     f"{provider.schedule.describe(cfg.timezone)}): {now_doing}. "
+                     f"{provider.hours(cfg.timezone)}): {now_doing}. "
                      f"Usage: {_usage_text(provider, entry, ctx)}.")
     return lines
 

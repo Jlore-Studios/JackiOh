@@ -156,7 +156,7 @@ def subscription_table(ctx: Context, state: dict[str, Any], live: dict[int, str]
                                                 cfg.secrets)
             now = "⚪ free" if reason is None else "⏸️ " + _cell(reason, 60)
         seats = ", ".join(f"`{seat.model}` {seat.tier}" for seat in cfg.pool.seats(provider))
-        lines.append(f"| `{provider.id}` | {seats} | {_cell(provider.schedule.describe(cfg.timezone))} "
+        lines.append(f"| `{provider.id}` | {seats} | {_cell(provider.hours(cfg.timezone))} "
                      f"| {now} | {bar(_reading(ctx, entry, 'five_hour'))} "
                      f"| {bar(_reading(ctx, entry, 'seven_day'))} |")
     return lines

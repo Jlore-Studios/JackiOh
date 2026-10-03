@@ -15,14 +15,16 @@ is forced, under its limits):
 
 - **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
   claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
-  all of them) with a seat that meets the tier, on its weakest such seat. claude-3 and claude-1
-  build an easy item with Sonnet, not Opus. A
+  all of them) with a seat that meets the tier, on its weakest such seat. An easy item goes to
+  an `easy_first` subscription (Devin) ahead of that order while it has a free lane; otherwise
+  claude-3 and claude-1 build it with Sonnet, not Opus. A
   builder above the item's tier (no seat of that tier free, or one comes later in the usage
   order) is said in the run's log.
 - **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
   seat, strong whenever one is free. When the builder's own subscription has a seat of that tier,
   the plan and the build share one run; otherwise the planning is a run of its own, and the item
-  goes back to the queue to build from the plan.
+  goes back to the queue to build from the plan. Such a planning run is short and starts before
+  any long run, so a planner plans Devin's next item before it builds one of its own.
 - **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
   a weak seat never reviews, so a run with none hands the change to a review run.
 - **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
@@ -241,8 +243,10 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tupl
     seat that meets its tier, on its weakest such seat; with a note when that seat is above the
     tier, saying why (none of that tier is free, or the usage order puts this one first)."""
     floor = MIN_TIER[difficulty]
-    # A subscription marked `build_last` (claude-2) builds only after every other one.
-    order = sorted(providers, key=lambda provider: provider.build_last)
+    # An easy item goes first to a subscription marked `easy_first` (Devin), which may build
+    # nothing harder; one marked `build_last` (claude-2) builds only after every other one.
+    order = sorted(providers, key=lambda provider: (
+        not (provider.easy_first and difficulty == "easy"), provider.build_last))
     usable = [(provider, [seat for seat in pool.seats(provider) if tier_at_least(seat.tier, floor)])
               for provider in order]
     for index, (provider, seats) in enumerate(usable):
@@ -343,10 +347,14 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
     order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority,
                                          -DIFFICULTIES.index(c.difficulty),
                                          KIND_ORDER[c.kind], c.queued_at, c.number))
-    for candidate in order:
-        assignment = assign(ctx, state, candidate, lanes, force=force, quiet_ok=quiet_ok)
-        if assignment is not None:
-            yield candidate, assignment
+    found = [(candidate, assignment) for candidate in order
+             if (assignment := assign(ctx, state, candidate, lanes, force=force,
+                                      quiet_ok=quiet_ok)) is not None]
+    # A planning run of its own is a short read-only session that lets a builder which cannot
+    # plan (Devin) start, so it goes ahead of the long runs: a free planner plans Devin's next
+    # item before it takes an item of its own.
+    found.sort(key=lambda pair: (not (force or pair[0].forced), pair[1].action != "plan"))
+    yield from found
 
 
 def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force: bool,
