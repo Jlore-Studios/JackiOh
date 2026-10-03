@@ -71,13 +71,13 @@ describe("R631 the audio panel's music controls", () => {
       ["epic", "Epic Orchestral"],
     ]);
     expect(station.value).toBe("tavern");
-    for (const id of ["audio-dynamic-music", "audio-duck-music", "audio-pause-music"]) expect(input(id).checked, id).toBe(true);
+    for (const id of ["audio-dynamic-music", "audio-duck-music", "audio-music-background"]) expect(input(id).checked, id).toBe(id !== "audio-music-background");
     const labels: Record<string, string> = {
       "audio-music": "Music volume",
       "audio-station": "Music station",
       "audio-dynamic-music": "Dynamic music",
       "audio-duck-music": "Lower music under voices and big moments",
-      "audio-pause-music": "Silence music when the game is in the background",
+      "audio-music-background": "Keep playing music when this tab is in the background",
     };
     for (const [id, label] of Object.entries(labels)) expect(screen.getByLabelText(label), id).toBe(screen.getByTestId(id));
   });
@@ -88,10 +88,10 @@ describe("R631 the audio panel's music controls", () => {
     fireEvent.change(screen.getByTestId("audio-station"), { target: { value: "epic" } });
     fireEvent.click(input("audio-dynamic-music"));
     fireEvent.click(input("audio-duck-music"));
-    fireEvent.click(input("audio-pause-music"));
-    expect(readAudioSettings()).toMatchObject({ music: 0.25, station: "epic", dynamicMusic: false, duckMusic: false, pauseMusicOnBlur: false });
+    fireEvent.click(input("audio-music-background"));
+    expect(readAudioSettings()).toMatchObject({ music: 0.25, station: "epic", dynamicMusic: false, duckMusic: false, playMusicInBackground: true });
     resetAudioSettingsForTests();
-    expect(readAudioSettings()).toMatchObject({ music: 0.25, station: "epic", dynamicMusic: false, duckMusic: false, pauseMusicOnBlur: false });
+    expect(readAudioSettings()).toMatchObject({ music: 0.25, station: "epic", dynamicMusic: false, duckMusic: false, playMusicInBackground: true });
   });
 });
 

@@ -16,7 +16,7 @@ import {
 import type { AudioSettings } from "./types.ts";
 
 /** R631: the music's settings, which every value saved before them reads as. */
-const MUSIC_DEFAULTS = { music: 0.5, station: "tavern", dynamicMusic: true, duckMusic: true, pauseMusicOnBlur: true } as const;
+const MUSIC_DEFAULTS = { music: 0.5, station: "tavern", dynamicMusic: true, duckMusic: true, playMusicInBackground: false } as const;
 const DEFAULTS: AudioSettings = { master: 0.8, sfx: 0.8, voice: 1, muted: false, voiceOn: true, ...MUSIC_DEFAULTS };
 
 function stored(): unknown {
@@ -118,7 +118,7 @@ describe("B12 reading the settings", () => {
     for (const raw of [undefined, null, 0, 1, "x", true, [], [0.5, 0.5], () => 0, { master: {} }, { muted: 1, voiceOn: "false" }]) {
       const parsed = parseAudioSettings(raw);
       expect(Object.keys(parsed).sort(), String(raw)).toEqual([
-        "duckMusic", "dynamicMusic", "master", "music", "muted", "pauseMusicOnBlur", "sfx", "station", "voice", "voiceOn",
+        "duckMusic", "dynamicMusic", "master", "music", "muted", "playMusicInBackground", "sfx", "station", "voice", "voiceOn",
       ]);
       for (const key of ["master", "sfx", "voice", "music"] as const) {
         expect(Number.isFinite(parsed[key]), `${String(raw)}.${key}`).toBe(true);
@@ -127,7 +127,7 @@ describe("B12 reading the settings", () => {
       }
       expect(typeof parsed.muted).toBe("boolean");
       expect(typeof parsed.voiceOn).toBe("boolean");
-      for (const key of ["dynamicMusic", "duckMusic", "pauseMusicOnBlur"] as const) expect(typeof parsed[key]).toBe("boolean");
+      for (const key of ["dynamicMusic", "duckMusic", "playMusicInBackground"] as const) expect(typeof parsed[key]).toBe("boolean");
       expect(["tavern", "edm", "lofi", "epic"]).toContain(parsed.station);
     }
     expect(parseAudioSettings({ muted: 1, voiceOn: "false" })).toEqual(DEFAULTS);
@@ -145,10 +145,32 @@ describe("B12 reading the settings", () => {
   });
 
   it("R631 the music's settings read back, each on its own, and a bad one takes its default", () => {
-    storeRaw(JSON.stringify({ ...DEFAULTS, music: 0.2, station: "lofi", dynamicMusic: false, duckMusic: false, pauseMusicOnBlur: false }));
-    expect(readAudioSettings()).toEqual({ ...DEFAULTS, music: 0.2, station: "lofi", dynamicMusic: false, duckMusic: false, pauseMusicOnBlur: false });
+    storeRaw(JSON.stringify({ ...DEFAULTS, music: 0.2, station: "lofi", dynamicMusic: false, duckMusic: false, playMusicInBackground: true }));
+    expect(readAudioSettings()).toEqual({ ...DEFAULTS, music: 0.2, station: "lofi", dynamicMusic: false, duckMusic: false, playMusicInBackground: true });
     expect(parseAudioSettings({ music: 7, station: "polka", dynamicMusic: "no", duckMusic: 0 })).toEqual({ ...DEFAULTS, music: 1 });
     for (const station of ["tavern", "edm", "lofi", "epic"] as const) expect(parseAudioSettings({ station }).station).toBe(station);
+  });
+
+  it("R631 a fresh profile keeps the music playing in the background only when it is turned on: the default is off", () => {
+    expect(DEFAULT_AUDIO_SETTINGS.playMusicInBackground).toBe(false);
+    expect(readAudioSettings().playMusicInBackground).toBe(false);
+    expect(parseAudioSettings({ playMusicInBackground: "yes" }).playMusicInBackground).toBe(false);
+    expect(parseAudioSettings({ playMusicInBackground: true }).playMusicInBackground).toBe(true);
+  });
+
+  it("R631 settings saved under the old pauseMusicOnBlur read inverted, so no player's music changes", () => {
+    // Off was "do not silence it": the player had chosen to keep it playing.
+    expect(parseAudioSettings({ pauseMusicOnBlur: false }).playMusicInBackground).toBe(true);
+    expect(parseAudioSettings({ pauseMusicOnBlur: true }).playMusicInBackground).toBe(false);
+    expect(parseAudioSettings({ pauseMusicOnBlur: "no" }).playMusicInBackground).toBe(false);
+    // The new key wins when both are present, and the old key is never written back.
+    expect(parseAudioSettings({ pauseMusicOnBlur: false, playMusicInBackground: false }).playMusicInBackground).toBe(false);
+    const { playMusicInBackground: _new, ...saved } = DEFAULTS;
+    storeRaw(JSON.stringify({ ...saved, pauseMusicOnBlur: false }));
+    expect(readAudioSettings().playMusicInBackground).toBe(true);
+    writeAudioSettings({ music: 0.4 });
+    expect(stored()).not.toHaveProperty("pauseMusicOnBlur");
+    expect(stored()).toMatchObject({ music: 0.4, playMusicInBackground: true });
   });
 
   it("R631 settings saved before the music existed keep their own values and gain the music's defaults", () => {
