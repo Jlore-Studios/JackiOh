@@ -641,7 +641,9 @@
     },
     "160": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5972198034"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -666,9 +668,7 @@
       "run_id": "37145147691",
       "started_at": "2026-10-03T18:42:18Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972198034"
-      ]
+      "taken_asks": []
     },
     "165": {
       "failures": 0,
