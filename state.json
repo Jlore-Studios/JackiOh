@@ -381,6 +381,12 @@
       "issue": 37,
       "kind": "revise"
     },
+    "142": {
+      "failures": 0,
+      "feedback_since": "2026-10-03T11:03:50Z",
+      "issue": 124,
+      "kind": "revise"
+    },
     "31": {
       "failures": 0,
       "forced": false,
