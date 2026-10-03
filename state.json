@@ -373,10 +373,7 @@
       "merged": true
     },
     "37": {
-      "asks": [
-        "c:5946888700",
-        "c:5957930923"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": true,
@@ -392,14 +389,17 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-3",
       "question": "Issue #37 (patch v0.2.1) says it should only be built once Classic+ ships, and Classic+ hasn't shipped: the catalog is still the 111 Core cards and patch v0.2.0 (Classic, Classic+, the Activate and Upgrade keywords, the Fruit pool with its Grapes) is only a design brief in docs/classic-sets.md. Should the bot (a) wait until v0.2.0 is merged and pick this up then, (b) build only the cosmetic items now (keywords in the deckbuilder, the locked-zone icon and its blocked X, the defense-position and mulligan animations bleeding into the next turn, scrolling through related cards), or (c) build the whole patch now on the existing Heroic Power code, with Pluck and KY Brainstorm drawing only from Core's pools?",
       "queued_at": "2026-10-02T17:40:27Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37098986287",
-      "started_at": "2026-10-03T05:11:15Z",
+      "run_id": "37112879404",
+      "started_at": "2026-10-03T09:23:52Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5946888700",
+        "c:5957930923"
+      ]
     },
     "39": {
       "died": 0,
@@ -760,9 +760,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T08:05:57Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37108515379",
-    "what": "revise #136 on claude-2"
+    "at": "2026-10-03T09:23:52Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37112879404",
+    "what": "build #37 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-03T05:54:16Z",
