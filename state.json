@@ -471,8 +471,9 @@
       "feedback_since": "2026-10-03T14:59:59Z",
       "forced": false,
       "handoff": {
-        "at": "2026-10-03T13:33:20Z",
-        "family": "claude-opus",
+        "at": "2026-10-03T15:44:48Z",
+        "family": "claude",
+        "kind": "work",
         "notes": "",
         "provider": "claude-3",
         "reason": "the reviewer's answer could not be read twice in a row",
