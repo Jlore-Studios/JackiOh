@@ -307,7 +307,7 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
