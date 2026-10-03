@@ -1,7 +1,7 @@
 # `apps/server` — the JackiOh server runtime
 
 The authority for everything that is not presentation. It owns identity and the invite gate, the
-collection ledger, saved decks and trios, an active account's copy of its tutorial progress (R320),
+collection ledger, saved decks and trios, an active account's copy of its tutorial progress (R320) and of its game settings (R633),
 each profile's last board for C+ #29 Portal to the Past (R417), matchmaking in three modes, the
 Conquest series, and the match itself: one actor per match holding the `GameState` in memory, one
 WebSocket per player, `reduce` on every action and `viewFor` pushed to each player after every
@@ -208,6 +208,8 @@ top of every handler:
 | `GET` | `/api/matches/:id/ranks` | active | Both seats' ranks for the match screen, and whether the game moves them; 404 unless the caller plays it (R604, R612) |
 | `GET` | `/api/tutorial` | active | The account's tutorial progress (R320): completed lesson ids and the newest Hide/Show choice; empty before the first write |
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
+| `GET` | `/api/settings` | active | The account's game settings (R633): groups (`gameplay`, `audio`, `fx`, `cards`), each `{ at, values }`; empty before the first write |
+| `PUT` | `/api/settings` | active | Merge a device's changed groups into the account's (R634): `{ groups }`. A group replaces the stored one only when its `at` is strictly later (a time after the server's clock counts as now); groups the write does not name stay; 409 past `PLAYER_SETTINGS_GROUPS_MAX` groups or `PLAYER_SETTINGS_BYTES_MAX` bytes |
 
 **Deck and trio codes, version 2.** A code is the client's business (no route reads one: an import
 is a new saved deck, and a trio import posts its decks), but the format versions are server numbers

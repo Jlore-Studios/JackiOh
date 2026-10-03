@@ -17,8 +17,11 @@
  *  - `decks.remove` empties every trio slot that named the deck (`on delete set null`);
  *  - `series.update` is compare-and-set on `version`;
  *  - `tutorial.merge` only ever grows the lessons and keeps the newest choice (0011, R320);
+ *  - `playerSettings.merge` replaces a group only with a strictly later one and caps the result's
+ *    groups and bytes (0018, R633, R634);
  *  - `ranked.createSeason` refuses an id that exists, `ranked.recordGame` a second row for one game,
- *    and `ranked.notePeakJlorious` only ever lowers a peak (0014, R608, R609, R611).
+ *    and `ranked.notePeakJlorious` only ever lowers a peak (R608, R609, R611; the Postgres
+ *    migration has not landed — `db/store.ts` throws until it does),
  *  - `gameRecords.insert` writes one record per id and refuses a second, and refuses a development
  *    record without a `dev:` id or a live one with one (0014, R376, R378).
  */
@@ -28,6 +31,11 @@ import type { SeasonRank } from "../ranked/ladder";
 import type {
   BotRating,
   DeckStore,
+  PlayerSettingsLimits,
+  PlayerSettingsMergeInput,
+  PlayerSettingsMergeOutcome,
+  PlayerSettingsRow,
+  PlayerSettingsStore,
   LastBoardEntry,
   LastBoardKind,
   LastBoardStore,
@@ -294,6 +302,84 @@ export function createMemoryTutorialStore(
 }
 
 // ---------------------------------------------------------------------------
+// Player settings on the account (SPEC §9.1, R633, R634)
+// ---------------------------------------------------------------------------
+
+/** The table R633 adds (`public.player_settings`, migration 0018): one row per profile. */
+export type PlayerSettingsTables = { playerSettings: PlayerSettingsRow[] };
+
+export function emptyPlayerSettingsTables(): PlayerSettingsTables {
+  return { playerSettings: [] };
+}
+
+/**
+ * The size Postgres measures for the byte cap: `octet_length(groups::text)`. jsonb prints an object
+ * with its keys shorter first and then bytewise, a space after each colon and comma, so the
+ * in-memory store prints the same text to count the same bytes.
+ */
+export function jsonbTextBytes(value: unknown): number {
+  const text = (node: unknown): string => {
+    if (Array.isArray(node)) return `[${node.map(text).join(", ")}]`;
+    if (node !== null && typeof node === "object") {
+      const keys = Object.keys(node).sort(
+        (a, b) => Buffer.byteLength(a) - Buffer.byteLength(b) || Buffer.compare(Buffer.from(a), Buffer.from(b)),
+      );
+      return `{${keys.map((key) => `${JSON.stringify(key)}: ${text((node as Record<string, unknown>)[key])}`).join(", ")}}`;
+    }
+    return JSON.stringify(node);
+  };
+  return Buffer.byteLength(text(value));
+}
+
+/**
+ * R634's merge, exactly as `app.merge_player_settings` (0018) makes it: each group sent replaces
+ * the stored group only when its time is strictly later (the stored one on a tie), and a group the
+ * write does not name stays. `limit` when the result would pass a cap; nothing changes then.
+ */
+export function mergePlayerSettingsRow(
+  existing: PlayerSettingsRow | null,
+  input: PlayerSettingsMergeInput,
+  limits: PlayerSettingsLimits,
+): PlayerSettingsRow | "limit" {
+  const groups = clone(existing?.groups ?? {});
+  for (const [id, sent] of Object.entries(input.groups)) {
+    const held = groups[id];
+    if (held === undefined || sent.at > held.at) groups[id] = clone(sent);
+  }
+  if (Object.keys(groups).length > limits.maxGroups || jsonbTextBytes(groups) > limits.maxBytes) return "limit";
+  return { profileId: input.profileId, groups };
+}
+
+/**
+ * The in-memory `PlayerSettingsStore`, shared by both in-memory stores as the tutorial store is.
+ * Laxer than Postgres in two places, both listed in `src/db/store.ts`'s KNOWN DIVERGENCES: it
+ * writes a row for a profile that is not active, and it does not re-check a group's shape (the
+ * handler has).
+ */
+export function createMemoryPlayerSettingsStore(
+  tables: () => PlayerSettingsTables,
+  call: (method: string) => void = () => undefined,
+): PlayerSettingsStore {
+  return {
+    get: async (profileId) => {
+      call("playerSettings.get");
+      const row = tables().playerSettings.find((existing) => existing.profileId === profileId);
+      return row === undefined ? null : clone(row);
+    },
+    merge: async (input, limits): Promise<PlayerSettingsMergeOutcome> => {
+      call("playerSettings.merge");
+      const rows = tables().playerSettings;
+      const at = rows.findIndex((existing) => existing.profileId === input.profileId);
+      const merged = mergePlayerSettingsRow(rows[at] ?? null, input, limits);
+      if (merged === "limit") return { kind: "limit" };
+      if (at < 0) rows.push(clone(merged));
+      else rows[at] = clone(merged);
+      return { kind: "merged", settings: clone(merged) };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Last boards (C+ #29 Portal to the Past, R417, R565)
 // ---------------------------------------------------------------------------
 
@@ -380,6 +466,7 @@ export function createMemoryGameRecordStore(
 /** The rows `ProfileStore.remove` and `Store.purgeExpired` reach, as both in-memory stores hold them. */
 export type AccountTables = DeckTables &
   TutorialTables &
+  PlayerSettingsTables &
   RankedTables &
   LastBoardTables & {
     profiles: { id: string }[];
@@ -422,6 +509,7 @@ export function removeProfileRows(tables: AccountTables, profileId: string): boo
   keepOnly(tables.decks, (row) => row.profileId !== profileId);
   keepOnly(tables.trios, (row) => row.profileId !== profileId);
   keepOnly(tables.tutorial, (row) => row.profileId !== profileId);
+  keepOnly(tables.playerSettings, (row) => row.profileId !== profileId);
   keepOnly(tables.lastBoards, (row) => row.profileId !== profileId);
   keepOnly(tables.tickets, (row) => row.profileId !== profileId);
   keepOnly(tables.rooms, (row) => !(row.hostProfileId === profileId && row.guestProfileId === null));
@@ -452,7 +540,8 @@ export function purgeExpiredRows(tables: AccountTables, input: RetentionPurgeInp
 }
 
 // ---------------------------------------------------------------------------------------------
-// The ranked ladder (SPEC §9.12, migration 0014), for both in-memory stores.
+// The ranked ladder (SPEC §9.12; the Postgres migration has not landed — `db/store.ts` throws
+// until it does), for both in-memory stores.
 // ---------------------------------------------------------------------------------------------
 
 export type RankedTables = {

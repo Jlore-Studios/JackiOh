@@ -205,6 +205,90 @@ class CommandsWorkflowTests(unittest.TestCase):
         self.assertNotRegex(self.text, r"^  pull_request:", )
 
 
+class StatusIssueStepTests(unittest.TestCase):
+    """The pinned status issue is rewritten after every sweep, and never fails the sweep."""
+
+    def test_after_the_sweep_on_the_sweeps_schedule_only(self):
+        text = read("bot-commands.yml")
+        step = text[text.index("- name: Rewrite the pinned status issue"):]
+        self.assertLess(text.index("python -m harness sweep"),
+                        text.index("- name: Rewrite the pinned status issue"))
+        self.assertIn("if: github.event_name == 'schedule' || github.event_name == "
+                      "'workflow_dispatch'", step)
+        self.assertIn("continue-on-error: true", step)
+        self.assertIn("run: python -m harness dashboard", step)
+        self.assertIn("BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}", step)
+
+
+class StatusLoopWorkflowTests(unittest.TestCase):
+    """bot-status keeps the pinned status issue current every ten minutes, whatever GitHub does
+    with schedules: one job loops and starts the next loop itself."""
+
+    text = read("bot-status.yml")
+
+    def test_one_job_rewrites_it_every_ten_minutes(self):
+        refresh = job(self.text, "refresh")
+        self.assertIn("runs-on: ubuntu-latest", refresh)
+        self.assertIn('EVERY_SECONDS: "600"', self.text)
+        self.assertIn('python -m harness dashboard --sweep --every "${EVERY_SECONDS}" '
+                      '--for "${LOOP_SECONDS}"', refresh)
+        # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
+        loop = int(re.search(r'LOOP_SECONDS: "(\d+)"', self.text).group(1))
+        timeout = int(re.search(r"timeout-minutes: (\d+)", refresh).group(1))
+        self.assertLess(loop, timeout * 60)
+        self.assertLessEqual(timeout, 360)
+
+    def test_it_starts_the_next_loop_and_a_schedule_restarts_a_stopped_one(self):
+        self.assertRegex(self.text, r"schedule:\n\s+- cron: ")
+        self.assertIn("workflow_dispatch: {}", self.text)
+        self.assertIn("group: bot-status\n  cancel-in-progress: false", self.text)
+        nxt = self.text[self.text.index("- name: Start the next loop"):]
+        self.assertIn("if: success() || failure()", nxt)  # not after a cancellation
+        self.assertIn('gh workflow run bot-status.yml --repo "${REPO}" --ref "${REF}"', nxt)
+        self.assertIn("actions: write", job(self.text, "refresh"))
+
+    def test_no_model_secret(self):
+        self.assertNotIn("HARNESS_PROVIDER_SECRET", self.text)
+        self.assertNotIn("secrets[", self.text)
+        self.assertNotIn("harness work", self.text)
+
+
+class TriageWorkflowTests(unittest.TestCase):
+    text = read("triage.yml")
+
+    def grants(self, name: str) -> dict[str, str]:
+        block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", job(self.text, name)).group(1)
+        return dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
+
+    def test_only_new_threads_and_never_pull_request_code(self):
+        self.assertRegex(self.text, r"issues:\n\s+types: \[opened\]")
+        self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
+        self.assertNotRegex(self.text, r"^  pull_request:", "would run the pull request's code")
+        refs = re.findall(r"ref: (.*)", self.text)
+        self.assertEqual(len(refs), 3)
+        self.assertTrue(all("default_branch" in ref for ref in refs), refs)
+        self.assertEqual(self.text.count("persist-credentials: false"), 3)
+        self.assertNotIn("secrets.", self.text)
+
+    def test_the_model_runs_on_devins_runner_and_cannot_write(self):
+        classify = job(self.text, "classify")
+        self.assertIn("runs-on: night-vm-devin", classify)
+        self.assertIn("if: needs.gate.outputs.go == 'true'", classify)
+        self.assertEqual(self.grants("classify"),
+                         {"contents": "read", "issues": "read", "pull-requests": "read"})
+        for name in ("gate", "apply"):
+            self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
+        self.assertEqual(self.grants("gate"), {"contents": "read"})
+        self.assertEqual(self.grants("apply"),
+                         {"contents": "read", "issues": "write", "pull-requests": "write"})
+        self.assertIn("always() && needs.gate.outputs.go == 'true'", job(self.text, "apply"))
+
+    def test_every_job_has_a_timeout_and_actionlint_reads_it(self):
+        for name in ("gate", "classify", "apply"):
+            self.assertIn("timeout-minutes:", job(self.text, name), name)
+        self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
+
+
 class RequiredChecksTests(unittest.TestCase):
     def test_every_required_check_is_a_job_that_runs_on_every_pull_request(self):
         cfg = config.load(env={})

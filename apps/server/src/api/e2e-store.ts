@@ -56,6 +56,7 @@ import {
   createMemoryDeckStores,
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
+  createMemoryPlayerSettingsStore,
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
@@ -65,6 +66,7 @@ import {
   type DeckTables,
   type GameRecordTables,
   type LastBoardTables,
+  type PlayerSettingsTables,
   type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
@@ -102,6 +104,7 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
+  PlayerSettingsTables &
   RankedTables &
   LastBoardTables &
   GameRecordTables;
@@ -122,6 +125,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    playerSettings: [],
     lastBoards: [],
     gameRecords: [],
     ...emptyRankedTables(),
@@ -567,6 +571,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
 
   // R320: tutorial progress on the account, shared with the unit-test fake like the decks.
   store.tutorial = createMemoryTutorialStore(() => tables);
+  // R633: the player's game settings on the account, shared with the other in-memory store like the tutorial.
+  store.playerSettings = createMemoryPlayerSettingsStore(() => tables);
   // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
   store.lastBoards = createMemoryLastBoardStore(() => tables);
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.

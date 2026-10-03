@@ -33,6 +33,7 @@ class FakeGitHub:
         self.files: dict[tuple[str, str], tuple[str, str]] = {}
         self.branches: set[str] = {"main"}
         self.dispatches: list[dict[str, Any]] = []
+        self.pinned: list[str] = []
         self.runs: dict[str, dict[str, Any]] = {}
         self.jobs: dict[str, list[dict[str, Any]]] = {}
         self.reruns: list[Any] = []
@@ -158,7 +159,13 @@ class FakeGitHub:
     def create_issue(self, title: str, body: str, labels: Any = ()) -> dict[str, Any]:
         number = max(self.threads, default=0) + 1
         thread = self.add_issue(number, title, with_marker(body), tuple(labels), BOT)
+        thread["node_id"] = f"I_{number}"
         return copy.deepcopy(thread)
+
+    def pin_issue(self, node_id: str) -> None:
+        if len(self.pinned) >= 3:
+            raise GitHubError("a repository pins at most three issues", 422)
+        self.pinned.append(node_id)
 
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         self.threads[number].update(fields)
@@ -170,11 +177,22 @@ class FakeGitHub:
             if name not in current:
                 self.threads[number]["labels"].append({"name": name})
 
+    def add_assignees(self, number: int, logins: Any) -> None:
+        current = {a.get("login") for a in self.threads[number].setdefault("assignees", [])}
+        for login in logins:
+            if login not in current:
+                self.threads[number]["assignees"].append({"login": login})
+
     def remove_label(self, number: int, name: str) -> None:
         self.threads[number]["labels"] = [l for l in self.threads[number]["labels"] if l["name"] != name]
 
     def list_labels(self) -> list[dict]:
         return list(self.labels.values())
+
+    def list_issue_types(self) -> list[dict]:
+        return [{"name": "Task", "description": "A specific piece of work"},
+                {"name": "Bug", "description": "An unexpected problem or behavior"},
+                {"name": "Feature", "description": "A request, idea, or new functionality"}]
 
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         if name in self.labels:

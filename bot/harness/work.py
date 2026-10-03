@@ -1,5 +1,13 @@
-"""The model job: one item through builder -> checks -> adversarial review, a second model's
-review of a bot pull request, or a suggestion survey, all on the one subscription `plan` chose.
+"""The model job: one item through builder -> checks -> adversarial review, a review run of a bot
+pull request, a planning run, or a suggestion survey, all on the one subscription `plan` chose.
+
+Each role runs on the seat `plan` gave it (`plan["seats"]`: a model and its tier on this
+subscription): a planning session first when the item has no plan yet, the builder and its
+fixes, and the run's own adversarial reviewer. A builder whose seat has `self_check` (Devin) checks
+its own change before any review: build, checks, a self check by a fresh session of the same
+model, and on findings a fix and the checks and the self check again, up to
+`max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
+seat that may review (only weak ones) ends with the change built, for a review run to judge.
 
 This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
 to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
@@ -20,6 +28,7 @@ from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
 from harness.git import Git, Identity, worktree_add
 from harness.prompts import data
+from harness.providers import hosted
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
 from harness.verdicts import Finding
@@ -52,6 +61,12 @@ never delivered): your plan, what is done, what is next, the decisions you made 
 dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
+#: How much of a planner's answer becomes the plan.
+PLAN_CHARS = 12_000
+SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
+this change, in a fresh session, and nothing you say here approves it: an independent reviewer
+judges it afterwards. Adversarially find every reason your own change should not ship, as that
+reviewer would, and report each as a blocking finding. Self check {n} of at most {cap}."""
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.json")
 MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
 
@@ -111,6 +126,20 @@ class Worker:
         self.templates = {name: prompts.load(name) for name in prompts.NAMES}
         self.system = self.templates["system"].substitute(bot=cfg.bot_login, repo=cfg.repo)
         self.provider = cfg.pool.get(plan.get("provider")) or cfg.pool.ordered()[0]
+        #: The checks this run runs. On the bot's machine, only those marked for it (`Gate.machine`):
+        #: every job there shares two vCPUs, and CI on the pull request runs the rest anyway.
+        self.on_machine = not hosted(str(plan.get("runs_on") or self.provider.runs_on))
+        self.gates = [gate for gate in cfg.gates if gate.machine or not self.on_machine]
+        main = cfg.pool.seats(self.provider)[0]
+        seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
+        #: The model each role runs on. A plan from before seats runs every role on the
+        #: subscription's main model, its reviewer included.
+        self.build_seat = self._seat(seats, "build") or main
+        self.review_seat = self._seat(seats, "review") if seats is not None else main
+        self.plan_seat = self._seat(seats, "plan")
+        self.self_check = bool(seats.get("self_check")) if seats is not None else False
+        self.main_seat = main
+        self.plan_text = ""
         self.minutes = 0.0
         self.build_transcript: Path | None = None
         self.who = Identity.bot(cfg.bot_login, cfg.bot_user_id)
@@ -134,7 +163,27 @@ class Worker:
             "cycles": [],
             "provider": self.provider.id,
             "family": self.provider.family,
+            "seats": {"plan": self.plan_seat.to_dict() if self.plan_seat else None,
+                      "build": self.build_seat.to_dict(),
+                      "review": self.review_seat.to_dict() if self.review_seat else None,
+                      "self_check": self.self_check},
         }
+
+    def _seat(self, seats: dict[str, Any] | None, role: str) -> Any:
+        """The seat `plan` gave `role`, if it is one this subscription has."""
+        entry = (seats or {}).get(role)
+        if not isinstance(entry, dict):
+            return None
+        return self.cfg.pool.seat(self.provider.id, str(entry.get("model") or ""))
+
+    def seat_for(self, role: str) -> Any:
+        if role == "plan":
+            return self.plan_seat or self.main_seat
+        if role == "review":
+            return self.review_seat or self.build_seat
+        if role == "suggest":
+            return self.main_seat
+        return self.build_seat  # build, fix, revise, and the builder's own self check
 
     # ------------------------------------------------------------------ plumbing
 
@@ -174,6 +223,7 @@ class Worker:
         if not reader:
             prompt += NOTES_ASK
             self.build_transcript = transcript
+        seat = self.seat_for(role)
         request = RunRequest(
             role=role,
             prompt=prompt,
@@ -181,10 +231,10 @@ class Worker:
             system_append=self.system,
             allowed_tools=READER_TOOLS if reader else BUILDER_TOOLS,
             disallowed_tools=READER_DENY if reader else BUILDER_DENY,
-            max_turns=int(self.cfg.max_turns[role]),
+            max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
-            model=self.provider.model,
-            effort=self.provider.effort,
+            model=seat.model,
+            effort=seat.effort,
             transcript=transcript,
             read_only=reader,
             extra_dirs=self._git_dirs(cwd),
@@ -231,6 +281,8 @@ class Worker:
             action = self.plan.get("action")
             if action == "suggest":
                 self._suggest()
+            elif action == "plan":
+                self._plan_run()
             elif action in ("build", "revise"):
                 self._item()
             elif action == "review":
@@ -272,6 +324,7 @@ class Worker:
         self.start_sha = self.repo.rev(start) or ""
         self.wt = worktree_add(self.repo, self.work_dir / f"item-{number}", branch, start)
         self._exclude_notes()
+        self._seed_notes()
         self.result.update(branch=branch, base=self.base_sha, start=self.start_sha,
                            remote_branch_existed=has_remote)
         conflicts: list[str] = []
@@ -300,6 +353,15 @@ class Worker:
         if f"/{NOTES_FILE}" not in lines:
             exclude.write_text("\n".join([*lines, f"/{NOTES_FILE}"]) + "\n", encoding="utf-8")
 
+    def _seed_notes(self) -> None:
+        """Start the notes file from the handoff's notes (a planner's plan, or an earlier
+        builder's notes), so this run's builder keeps them going."""
+        assert self.wt is not None
+        handoff = self.plan.get("handoff")
+        notes = str(handoff.get("notes") or "") if isinstance(handoff, dict) else ""
+        if notes.strip():
+            (self.wt.cwd / NOTES_FILE).write_text(notes.rstrip() + "\n", encoding="utf-8")
+
     def _handoff(self) -> dict[str, Any] | None:
         """What the next agent needs if this run did not finish the item: the builder's notes
         and the end of its last session. None when there is neither."""
@@ -324,6 +386,15 @@ class Worker:
         handoff = self.plan.get("handoff")
         if not isinstance(handoff, dict):
             return ""
+        if handoff.get("kind") == "plan":
+            if not str(handoff.get("notes") or "").strip():
+                return ""
+            return ("\n\n## The plan\n\nA planning run on "
+                    f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) wrote the plan "
+                    f"below before anyone built this; it is also at the top of `{NOTES_FILE}`, "
+                    "which you keep going. Follow it unless the code shows it is wrong, and say "
+                    "where you departed from it and why.\n\n"
+                    + data(str(handoff["notes"]), "The plan"))
         parts = [f"## Picking up from another agent\n\nAn earlier run on "
                  f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) worked on this "
                  f"and stopped: {handoff.get('reason') or 'no reason recorded'}. Its work so far is "
@@ -346,16 +417,24 @@ class Worker:
     def _gate_list(self) -> str:
         lines = ["The harness's checks, run in this order after you stop:"]
         lines.append(f"- install: `{self.cfg.install.run}` (again whenever a manifest changed)")
-        lines += [f"- {g.name}: `{g.run}`" for g in self.cfg.gates]
+        lines += [f"- {g.name}: `{g.run}`" for g in self.gates]
         lines.append("CI on the pull request also runs the fuzz gate, coverage, the AI gates, "
                      "the Postgres suites and the Cypress e2e specs before anything merges.")
+        left = [f"{g.name} (`{g.run}`)" for g in self.cfg.gates if g not in self.gates]
+        if left:
+            lines.append(
+                "This run is on the bot's shared machine, so the harness leaves "
+                f"{', '.join(left)} to CI on the pull request, which runs before anything merges. "
+                "Don't run whole suites yourself either (`pnpm test`, `pnpm lint`, `pnpm fuzz`, "
+                "`pnpm ai:gate`, coverage, e2e): check only what you changed, such as "
+                "`pnpm vitest run <test file>` or `pnpm exec eslint <files>`.")
         return "\n".join(lines)
 
-    def _findings_text(self, findings: list[Finding]) -> str:
+    def _findings_text(self, findings: list[Finding], label: str = "Blocking findings") -> str:
         if not findings:
             return "No blocking findings were recorded."
         body = "\n".join(f.markdown() for f in findings)
-        return data(body, "Blocking findings")
+        return data(body, label)
 
     def _first_prompt(self, conflicts: list[str]) -> tuple[str, str]:
         plan = self.plan
@@ -388,6 +467,11 @@ class Worker:
             previous += ("\n\n`main` moved since then; merging it left conflict markers in: "
                          + ", ".join(f"`{c}`" for c in conflicts)
                          + ". Resolve them, keeping both sides' meaning. Do not commit.")
+        if self.plan_text:
+            previous += ("\n\nA planner wrote the plan below for this change before you started; "
+                         f"it is also at the top of `{NOTES_FILE}`. Follow it unless the code "
+                         "shows it is wrong, and say where you departed from it and why.\n\n"
+                         + data(self.plan_text, "The plan"))
         prompt = self.render(
             "build",
             number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
@@ -396,13 +480,14 @@ class Worker:
         )
         return "build", prompt + self._handoff_text()
 
-    def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str) -> str:
+    def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str,
+                    label: str = "Blocking findings") -> str:
         return self.render(
             "fix",
             number=self.plan["number"], repo=self.cfg.repo, branch=self.plan["branch"],
             base=self.base_sha, cycle=cycle, max_cycles=self.cfg.max_review_cycles,
             thread=self.plan.get("thread", ""), branch_state=self._branch_state(),
-            findings=self._findings_text(findings),
+            findings=self._findings_text(findings, label),
             gate_failures=(data(failures, "Checks this change turned red") if failures
                            else "Every check passed or was already red on main."),
             gate_list=self._gate_list(),
@@ -461,9 +546,9 @@ class Worker:
             if not install.ok:
                 results += [gates_mod.GateResult(g.name, g.run, False, -1, 0.0, "",
                                                  skipped="the install failed")
-                            for g in self.cfg.gates]
+                            for g in self.gates]
                 return results
-        results += gates_mod.run_all(self.cfg.gates, self.wt.cwd, self.env, self.seconds_left)
+        results += gates_mod.run_all(self.gates, self.wt.cwd, self.env, self.seconds_left)
         self._mark_pre_existing(results)
         return results
 
@@ -471,7 +556,7 @@ class Worker:
         for result in results:
             if result.ok or result.skipped or result.name == self.cfg.install.name:
                 continue
-            gate = next((g for g in self.cfg.gates if g.name == result.name), None)
+            gate = next((g for g in self.gates if g.name == result.name), None)
             if gate is None:
                 continue
             if result.name not in self._base_gate_cache:
@@ -495,7 +580,8 @@ class Worker:
 
     def _review(self, cycle: int, report: verdicts.BuildReport,
                 results: list[gates_mod.GateResult], previous: list[Finding], *,
-                context: str = "", max_cycles: int | None = None) -> verdicts.Review:
+                context: str = "", max_cycles: int | None = None,
+                role: str = "review") -> verdicts.Review:
         assert self.wt is not None
         diff, cut = self.wt.diff(self.base_ref, max_chars=DIFF_IN_PROMPT)
         note = ("The diff below is cut short; run `git diff "
@@ -517,7 +603,7 @@ class Worker:
         head = self.wt.head()
         review = verdicts.Review(False, "unreadable")
         for _ in range(2):
-            result = self.call("review", prompt, self.wt.cwd, reader=True)
+            result = self.call(role, prompt, self.wt.cwd, reader=True)
             if self.wt.head() != head:
                 self.wt.run("reset", "--quiet", "--hard", head)
             if self.wt.dirty():
@@ -529,42 +615,156 @@ class Worker:
         review.reviewed_sha = head
         return review
 
+    def _planning(self) -> None:
+        """A planning session before any building: the planner reads the task and the code and
+        writes the plan, which the harness puts at the top of the notes file (and so into the
+        handoff) for the builder, this run's or a later one's."""
+        assert self.wt is not None
+        self.check()
+        seat = self.seat_for("plan")
+        prompt = self.render(
+            "plan",
+            number=self.plan["number"], repo=self.cfg.repo, branch=self.plan["branch"],
+            base=self.base_sha, thread=self.plan.get("thread", ""),
+            branch_state=self._branch_state(), gate_list=self._gate_list(),
+            difficulty=self.plan.get("difficulty") or "medium",
+        ) + self._handoff_text()
+        head = self.wt.head()
+        result = self.call("plan", prompt, self.wt.cwd, reader=True)
+        if self.wt.head() != head:
+            self.wt.run("reset", "--quiet", "--hard", head)
+        if self.wt.dirty():
+            self.wt.discard_worktree_changes()
+        text = redact((result.text or "").strip())[-PLAN_CHARS:]
+        if not result.ok or not text:
+            raise RuntimeError(f"the planner on {seat.model} wrote no plan"
+                               + (f": {result.error}" if result.error else ""))
+        self.plan_text = text
+        notes = self.wt.cwd / NOTES_FILE
+        earlier = notes.read_text(encoding="utf-8", errors="replace") if notes.is_file() else ""
+        notes.write_text(f"# Plan ({seat.model}, {seat.tier})\n\n{text}\n\n# Notes\n\n"
+                         f"{earlier}", encoding="utf-8")
+        self.result["plan"] = {"seat": seat.to_dict(), "text": text}
+
+    def _plan_run(self) -> None:
+        """A planning run: the plan, and nothing built. The deliver job keeps it as the item's
+        handoff and queues the item to build from it."""
+        self._prepare(merge_main=False, install=False)
+        self._planning()
+        self.result.update(status="planned", reason=f"planned on {self.seat_for('plan').model}")
+        self._finish()
+
+    def _build_pass(self, cycle: int, role: str, prompt: str) -> tuple[Any, dict[str, Any]]:
+        """One builder session and its commit. Returns its report, or None when it stopped to
+        ask a person (the run then ends as `blocked`), and the round's record."""
+        assert self.wt is not None
+        built = self.call(role, prompt, self.wt.cwd, reader=False)
+        report = verdicts.build_report(built.text)
+        entry: dict[str, Any] = {
+            "n": cycle,
+            "builder": {"role": role, "ok": built.ok, "turns": built.turns,
+                        "minutes": round(built.duration_s / 60, 1), "status": report.status,
+                        "error": built.error, "timed_out": built.timed_out,
+                        "model": self.build_seat.model, "tier": self.build_seat.tier},
+        }
+        if report.status == "blocked":
+            self._save_wip("the builder needs a decision")
+            self.result.update(status="blocked", question=report.question, report=report.body,
+                               reason="the builder needs a person to decide something")
+            self._finish()
+            return None, entry
+        self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
+        return report, entry
+
+    def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
+                         results: list[gates_mod.GateResult],
+                         guard: list[Finding]) -> tuple[Any, list[gates_mod.GateResult],
+                                                        list[Finding], list[Finding]]:
+        """Self checks until one is clean: a fresh session of the builder's own model reads the
+        change as a reviewer would; on findings the builder fixes them, the checks run and the
+        self check goes again, up to `max_self_check_rounds`. Returns the last report, checks and
+        path guard, and the findings still open (none after a clean self check). The report is
+        None when a fix stopped to ask a person."""
+        assert self.wt is not None
+        cap = self.cfg.max_self_check_rounds
+        rounds: list[dict[str, Any]] = []
+        entry["self_check"] = rounds
+        flagged: list[Finding] = []
+        for n in range(1, cap + 1):
+            self.check()
+            verdict = self._review(cycle, report, results, [], role="self_check",
+                                   context=SELF_CHECK_CONTEXT.format(n=n, cap=cap))
+            flagged = list(guard) + list(verdict.blocking)
+            if not verdict.readable:
+                flagged.append(Finding("blocking", "self check", "The self check's answer could "
+                                       "not be read twice in a row.", "the harness"))
+            if not gates_mod.green(results):
+                flagged.append(Finding("blocking", "checks", "Checks this change turned red "
+                                       "must pass.", "the harness's gate run"))
+            rounds.append({"n": n, "review": verdict.to_dict(), "flagged": len(flagged)})
+            if not flagged or n == cap:
+                break
+            self.check()
+            fixed, fix_entry = self._build_pass(
+                cycle, "fix", self._fix_prompt(cycle, flagged, gates_mod.failures_text(results),
+                                               label="Your self check's blocking findings"))
+            rounds[-1]["fix"] = fix_entry["builder"]
+            if fixed is None:
+                return None, results, guard, flagged
+            report = fixed
+            guard = self._guard()
+            self.check()
+            results = self._checks()
+            rounds[-1]["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
+        return report, results, guard, flagged
+
     def _item(self) -> None:
         conflicts = self._prepare()
         assert self.wt is not None
+        if self.plan_seat is not None:
+            self._planning()
         findings: list[Finding] = [_finding(f) for f in self.plan.get("previous_findings") or []]
         failures = ""
         report = verdicts.BuildReport("unknown", "", "", "")
         review: verdicts.Review | None = None
         results: list[gates_mod.GateResult] = []
+        open_self_check: list[Finding] = []
         for cycle in range(1, self.cfg.max_review_cycles + 1):
             self.check()
             if cycle == 1:
                 role, prompt = self._first_prompt(conflicts)
             else:
                 role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
-            built = self.call(role, prompt, self.wt.cwd, reader=False)
-            report = verdicts.build_report(built.text)
-            entry: dict[str, Any] = {
-                "n": cycle,
-                "builder": {"role": role, "ok": built.ok, "turns": built.turns,
-                            "minutes": round(built.duration_s / 60, 1), "status": report.status,
-                            "error": built.error, "timed_out": built.timed_out},
-            }
+            built, entry = self._build_pass(cycle, role, prompt)
             self.result["cycles"].append(entry)
-            if report.status == "blocked":
-                self._save_wip("the builder needs a decision")
-                self.result.update(status="blocked", question=report.question, report=report.body,
-                                   reason="the builder needs a person to decide something")
-                self._finish()
+            if built is None:
                 return
-            self._commit(f"bot: {role} pass {cycle} for #{self.plan['number']}")
+            report = built
             guard = self._guard()
             self.check()
             results = self._checks()
             entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
+            if self.self_check:
+                checked, results, guard, open_self_check = self._self_check_loop(
+                    cycle, entry, report, results, guard)
+                if checked is None:
+                    return
+                report = checked
+            if self.review_seat is None:
+                # No seat here may review (a weak one never does): a review run judges it.
+                self.result.update(status="built", reason=(
+                    "built; no model on this subscription may review it, so it waits for a "
+                    "review run" + (f", with {len(open_self_check)} self-check finding(s) still "
+                                    "open" if open_self_check else "")))
+                break
             self.check()
-            review = self._review(cycle, report, results, findings)
+            context = ""
+            if open_self_check:
+                context = ((self._findings_text(findings) + "\n\n" if findings else "")
+                           + "The builder's own self checks ran out with these findings still "
+                           "open; judge them too:\n\n"
+                           + self._findings_text(open_self_check, "Open self-check findings"))
+            review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
                 self.result.update(status="not_approved", reason="the reviewer's answer could "
@@ -584,12 +784,14 @@ class Worker:
             self.result.update(status="not_approved",
                                reason=f"no approval after {self.cfg.max_review_cycles} review cycles")
         self._last_checkpoint()
+        status = self.result["status"]
         self.result.update(
             title=report.title or self.plan.get("title", ""),
             report=report.body,
             review=review.to_dict() if review else None,
             gates=[r.to_dict() for r in results],
-            findings=[f.to_dict() for f in findings] if self.result["status"] != "approved" else [],
+            findings=[f.to_dict() for f in findings] if status not in ("approved", "built") else [],
+            self_check_findings=[f.to_dict() for f in open_self_check],
         )
         self._finish()
 
@@ -603,28 +805,39 @@ class Worker:
             raise Interrupt(found[0], found[1])
 
     def _second_review(self) -> None:
-        """A model of another family reads a bot pull request its builder's model approved.
-        Nothing is built or pushed: the verdict goes to `deliver`, which merges or asks for a
-        revision. Nothing is installed or run either: the reviewer holds another subscription's
-        login, and the builder's code (a postinstall script, a test) must not run beside it. CI
-        runs every check on the pull request before it can merge."""
+        """A review run: a medium or strong model reads a bot pull request. Nothing is built or
+        pushed: the verdict goes to `deliver`, which merges once one strong approval, or two
+        medium ones of different families, hold for the same commit, or asks for a revision.
+        Nothing is installed or run either: the reviewer holds another subscription's login, and
+        the builder's code (a postinstall script, a test) must not run beside it. CI runs every
+        check on the pull request before it can merge."""
         self._prepare(merge_main=False, install=False)
         assert self.wt is not None
         self.check()
+        seat = self.seat_for("review")
         builder = str(self.plan.get("builder") or "an unknown model")
-        context = (f"This is a second review. `{builder}` built this change and its own reviewer "
-                   f"approved it; you are `{self.provider.family}`, a different model, and the "
-                   "change merges only if you approve it too. Judge it from scratch: the first "
-                   "approval is not evidence. Dependencies are not installed in this run and you "
+        approved = [str(f) for f in self.plan.get("approved") or []]
+        so_far = (f"It already has an approval from {', '.join(f'`{f}`' for f in approved)}, "
+                  "which is not evidence: judge it from scratch." if approved
+                  else "Nobody has approved it yet.")
+        context = (f"This is a review run. `{builder}` built this change; you are "
+                   f"`{self.provider.family}` on `{seat.model}` ({seat.tier} tier). It merges once "
+                   "one strong model, or two medium models of different families, approve the "
+                   f"same commit. {so_far} Dependencies are not installed in this run and you "
                    "should not run the branch's code: read it. CI runs every check on the pull "
                    "request before it can merge.")
+        open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]
+        if open_findings:
+            context += ("\n\nThe builder's own self checks ran out with these findings still "
+                        "open; judge them too:\n\n"
+                        + self._findings_text(open_findings, "Open self-check findings"))
         report = verdicts.BuildReport("done", str(self.plan.get("title") or ""), "",
                                       str(self.plan.get("pull") or ""))
         review = self._review(1, report, [], [], context=context, max_cycles=1)
         self.result["cycles"].append({"n": 1, "review": review.to_dict()})
         if not review.readable:
-            self.result.update(status="failed", reason="the second reviewer's answer could not "
-                               "be read twice in a row")
+            self.result.update(status="failed", reason="the reviewer's answer could not be read "
+                               "twice in a row")
             return
         self.result.update(
             status="reviewed",
@@ -632,8 +845,9 @@ class Worker:
             reviewed_sha=review.reviewed_sha,
             review=review.to_dict(),
             findings=[f.to_dict() for f in review.blocking],
-            reason=(f"`{self.provider.id}` approved it" if review.approved
-                    else f"`{self.provider.id}` found {len(review.blocking)} blocking problem(s)"),
+            reason=(f"`{self.provider.id}` ({seat.tier}) approved it" if review.approved
+                    else f"`{self.provider.id}` ({seat.tier}) found {len(review.blocking)} "
+                         "blocking problem(s)"),
         )
 
     # ------------------------------------------------------------------ endings

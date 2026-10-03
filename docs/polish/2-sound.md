@@ -905,7 +905,7 @@ Trap → `trap`. That gives 43 units × 2 + 66 × 1 = **152 files**.
 31. **B31**: A click on an enabled `button`, a `[role="button"]` or a `[data-legal="true"]` element plays `uiClick`, while a disabled button plays nothing. A mouse `pointerover` onto a new such element plays `uiHover` at most once per `UI_HOVER_THROTTLE_MS`, and a touch or pen `pointerover` plays nothing (ui.test.tsx).
 32. **B32**: Outside production, mounting `Game` sets `window.__jackiohAudio` with `state`, `log`, `clearLog` and `contextsCreated` of the singleton engine, and unmounting removes it (ui.test.tsx).
 33. **B33**: `voice-lines.json` holds exactly the 109 catalog ids, each `kind` matches the catalog type, units have `play` and `death` and nothing else has either, non-units have `cast`, and every referenced persona exists with a non-empty `say`, rate 90–360, pbas and pmod 0–127, web pitch 0–2 and web rate 0.1–10 (voice-lines.test.ts).
-34. **B34**: Every line is non-empty, matches `^[A-Za-z ,.'!?-]+$`, has at most `VOICE_MAX_WORDS[line]` words (counting tokens that contain a letter), and contains no `BANNED_RULES_WORDS` entry as a whole word, case-insensitive (voice-lines.test.ts).
+34. **B34**: Every line is non-empty, matches `^[A-Za-z ,.'!?-]+$`, has at most `VOICE_MAX_WORDS[line]` words (counting tokens that contain a letter), and contains a `BANNED_RULES_WORDS` entry as a whole word, case-insensitive, in fewer than `BANNED_WORDS_MAX_SHARE` (2%) of the lines overall (voice-lines.test.ts, issue #115).
 35. **B35**: The 152 expected files exist under `apps/web/public/audio/voice/`, each has `ftyp` at byte 4 and brand `M4A ` at byte 8, the manifest lists exactly those keys with each file's byte size and its recomputed `voiceHash`, the directory holds nothing else, and every file's MP4 header (`moov`/`mvhd`, priming frames included) puts it within `VOICE_FILE_MAX_MS` (voice-assets.test.ts).
 36. **B36**: The voice set fits the budget: Σ ceil(bytes/4096) × 4096 ≤ `VOICE_BUDGET_BYTES` (voice-assets.test.ts).
 37. **B37**: `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree. Run with `--root` on a temp copy whose `core-004` play line was edited, it exits 1 and prints a line starting `core-004-play` (voice-assets.test.ts).
@@ -1004,7 +1004,8 @@ charged to the burst, and that holds for a slow phone as much as for Cypress.
 
 - Attack voice lines, emotes, hero voices, and a player-chosen voice pack.
 - Music and ambient loops (tavern music, board ambience). (The UI ticks and the unlock do reach every
-  screen since the review fixes, B52.)
+  screen since the review fixes, B52.) Patch v0.2.7 (#51) added the music later, as R631: SPEC §10.11
+  "Music", `apps/web/src/audio/music*.ts` and `apps/web/scripts/gen-music.mjs`.
 - A bespoke sound per card: SFX are per event type, and personality comes from the voice lines. A
   summon is sized by the unit and a Radiant unit glints (B56); a rarity sting would need the rarity,
   which neither the view nor the client's card lookup carries.

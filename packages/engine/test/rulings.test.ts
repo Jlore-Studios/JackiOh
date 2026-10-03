@@ -226,6 +226,16 @@ const WEB_PRACTICE_CORE_TEST = "../../../apps/web/src/practice/core.test.ts";
 /** R203's and R204's proofs (SPEC §10.11): the client's sound cue table, and the director that plays it. */
 const WEB_AUDIO_CUES_TEST = "../../../apps/web/src/audio/cues.test.ts";
 const WEB_AUDIO_DIRECTOR_TEST = "../../../apps/web/src/audio/director.test.ts";
+/** R631's proofs (SPEC §10.11): the music's priority stack, the game's music director and the player. */
+const WEB_MUSIC_PLAN_TEST = "../../../apps/web/src/audio/musicPlan.test.ts";
+const WEB_MUSIC_DIRECTOR_TEST = "../../../apps/web/src/audio/musicDirector.test.ts";
+const WEB_MUSIC_PLAYER_TEST = "../../../apps/web/src/audio/music.test.ts";
+/** R632's proof (SPEC §9.2): where the browser keeps a session. */
+const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
+/** R633 and R634's proofs (SPEC §9.1): the account's settings, the routes, both stores and the client sync. */
+const SERVER_SETTINGS_API_TEST = "../../../apps/server/test/api/settings.test.ts";
+const SERVER_SETTINGS_SQL = "../../../apps/server/test/sql/11_player_settings.sql";
+const WEB_SETTINGS_SYNC_TEST = "../../../apps/web/src/settings/accountSync.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3739,6 +3749,43 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // ranks, never a rating) and test/api/auth.test.ts "R612 sends no rating …".
   it("R612 reads the rank everywhere and the hidden rating nowhere", () => {
     provenIn(612, SERVER_RANKED_TEST, SERVER_AUTH_TEST);
+  });
+
+  // Proved by apps/web routes/almanac.test.tsx "R630 …" (the public route, its footer link and sitemap
+  // entry, every card with tokens, the read-only browse pane, the detail view, filters and sort) and
+  // game/deckbuilder/filters.test.ts "R630 …" (the almanac's pool and tag chips).
+  it("R630 opens a public, read-only Card Almanac of every card, tokens included", () => {
+    provenIn(630, "../../../apps/web/src/routes/almanac.test.tsx", WEB_FILTERS_TEST);
+  });
+
+  // R631 is a client ruling (SPEC §10.11): proved by apps/web musicPlan.test.ts "R631 …" (the
+  // priority stack and dynamic music off), musicDirector.test.ts "R631 …" (the viewer's own state,
+  // casts at R204's moments and only when readable, a theme's end, station switches, the match's
+  // sting and rotation, the hotseat hand-over) and music.test.ts "R631 …" (bar-line crossfades, a
+  // sting's hand-off, the turn mix, resuming, focus and nothing scheduled on a stopped context).
+  it("R631 plays each viewer's own music from their own view, by the priority stack", () => {
+    provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
+  });
+
+  // R632 is a client ruling (SPEC §9.2): proved by apps/web net/session.test.ts "R632 …" (the tab's
+  // storage, an older build's session moved, the fixture's key, blocked storage, sign-out) and
+  // routes/shell-gate.test.tsx "R632 …" (another tab's sign-out leaves this tab signed in).
+  it("R632 keeps a session in its tab's storage and never in localStorage", () => {
+    provenIn(632, WEB_SESSION_TEST, "../../../apps/web/src/routes/shell-gate.test.tsx");
+  });
+
+  // Proved by apps/server test/api/settings.test.ts (the routes: active only, the caps, the body's
+  // checks), test/db/contract.ts (both stores), and the SQL suite's 11 (the merge function) and 02
+  // (a player reads only its own row and writes none) headings.
+  it("R633 keeps an active account's game settings on the server, in groups with the time each changed", () => {
+    provenIn(633, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, SERVER_RLS_SQL);
+  });
+
+  // Proved by apps/server test/api/settings.test.ts "R634 …" and test/db/contract.ts (a group replaces
+  // the stored one only when strictly later), the SQL suite's 11, and apps/web settings/accountSync.test.tsx
+  // "R634 …" (load, push-up, debounce, one request at a time, failures dropped, a clock running ahead).
+  it("R634 replaces a group of the account's settings only with a strictly later one, and merges the device's the same way", () => {
+    provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
   });
 });
 

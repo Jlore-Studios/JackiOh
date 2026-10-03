@@ -21,6 +21,8 @@ const WEB_CONFIG = join(HERE, "../../vercel.json");
 const ROOT_CONFIG = join(HERE, "../../../../vercel.json");
 
 type VercelConfig = {
+  git: { deploymentEnabled: Record<string, boolean> };
+  ignoreCommand: string;
   rewrites: { source: string; destination: string }[];
   headers: { source: string; headers: { key: string; value: string }[] }[];
 };
@@ -60,6 +62,8 @@ describe("vercel.json", () => {
       .filter(([name]) => name !== "hotseat")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
+    // R630: the Card Almanac is a public screen like the privacy policy.
+    expect(fixed).toContain(paths.almanac);
     for (const path of fixed) {
       expect(servedByApp(path), path).toBe(true);
       // `currentPath` drops a trailing slash, so the app serves the same screen at both.
@@ -82,9 +86,9 @@ describe("vercel.json", () => {
       "/assets/does-not-exist.js",
       "/favicon.ico",
       "/dev/hotseat",
-      "/terms",
       "/Login",
       "/loginx",
+      "/almanac/extra",
       "/login/extra",
       "/match",
       "/match/",
@@ -96,7 +100,7 @@ describe("vercel.json", () => {
     }
   });
 
-  it("sends the security headers on every response, the CSP as report-only", () => {
+  it("sends the security headers on every response, with an enforced CSP", () => {
     const all = config.headers.find((block) => block.source === "/(.*)");
     expect(all).toBeDefined();
     const headers = new Map((all?.headers ?? []).map(({ key, value }) => [key.toLowerCase(), value]));
@@ -104,8 +108,7 @@ describe("vercel.json", () => {
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
-    expect(headers.has("content-security-policy"), "not enforced yet").toBe(false);
-    const csp = headers.get("content-security-policy-report-only") ?? "";
+    const csp = headers.get("content-security-policy") ?? "";
     expect(csp).toMatch(/script-src 'self'(;|$)/u);
     expect(csp).toMatch(/frame-ancestors 'none'/u);
     // The three origins the bundle talks to: Supabase Auth, and the API and match socket on Render.
@@ -117,6 +120,54 @@ describe("vercel.json", () => {
         "https://jackioh-server.onrender.com",
         "wss://jackioh-server.onrender.com",
       ]),
+    );
+  });
+});
+
+// Vercel's free plan allows 100 deployments a day and counts every push to every branch, [skip ci]
+// or not (the night bot's `bot-state` commits alone used it up). `git.deploymentEnabled` stops the
+// deployment from being created at all for the branches machines push to; `ignoreCommand` is the
+// flag for the rest (scripts/vercel-ignore.sh, held by vercel-ignore.test.ts). The config is read
+// from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
+
+/** `bot/**` -> every branch under `bot/`; anything else is a branch name taken literally. Nothing else. */
+function branchRegex(pattern: string): RegExp {
+  const family = /^([a-z-]+)\/\*\*$/u.exec(pattern);
+  if (family !== null) return new RegExp(`^${family[1] ?? ""}/.+$`, "u");
+  if (/^[a-z-]+$/u.test(pattern)) return new RegExp(`^${pattern}$`, "u");
+  throw new Error(`deploy-routes.test.ts cannot read this branch pattern: ${pattern}`);
+}
+
+function deploys(branch: string): boolean {
+  const off = Object.entries(config.git.deploymentEnabled).some(
+    ([pattern, enabled]) => !enabled && branchRegex(pattern).test(branch),
+  );
+  return !off;
+}
+
+describe("vercel.json deployment flag", () => {
+  it("creates no deployment for the branches machines push to, and never for main", () => {
+    for (const branch of [
+      "bot-state",
+      "bot/issue-63",
+      "claude/stoic-tesla-837kse",
+      "copilot/fix-1",
+      "dependabot/npm_and_yarn/vite-7",
+      "patch/v0.1.1",
+      "patches/ship-74c8823",
+      "polish/3-ai",
+      "wt/engine",
+    ]) {
+      expect(deploys(branch), branch).toBe(false);
+    }
+    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany"]) {
+      expect(deploys(branch), branch).toBe(true);
+    }
+  });
+
+  it("hands the build decision to scripts/vercel-ignore.sh, and builds unless that exits 0", () => {
+    expect(config.ignoreCommand).toBe(
+      'sh "$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh" && exit 0; exit 1',
     );
   });
 });

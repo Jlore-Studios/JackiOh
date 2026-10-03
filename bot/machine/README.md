@@ -1,17 +1,20 @@
 # The night bot's machine
 
-Every model session of the night bot runs here: one virtual machine on AWS, where each
-subscription in [`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is
-`night-vm-<id>` has a Linux user of its own and a GitHub runner of its own. `gate`, `plan` and
-`deliver`, the jobs that hold a GitHub write token, stay on GitHub's runners.
+The night bot's model sessions for the subscriptions that log in here run on this machine: one
+virtual machine on AWS, where each subscription in
+[`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is `night-vm-<id>`
+(Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
+The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
+public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
+GitHub write token.
 
 | | |
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
-| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-muse`): a home only it can read, no `sudo`, no Docker |
-| Runners | `~agent-<id>/actions-runner`, registered as `night-vm-<id>` with that one label, a systemd service under that user |
-| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
+| Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
+| CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
 
@@ -21,7 +24,8 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. Jobs can run three at once (`max_parallel`), each as its own user.
+the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
+`"lanes": 6`, so Devin can fill the machine on its six runners when the others are idle.
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -34,7 +38,7 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 | `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or add a subscription |
 | `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, starting the machine first if it is stopped |
 | `register-runners.sh` | on your computer | registers each `night-vm-*` subscription's runner with GitHub and starts it as a service |
-| `starter.py` | AWS Lambda | starts the machine when a bot-night job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
+| `starter.py` | AWS Lambda | starts the machine when a bot-night or triage job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
 | `deploy-starter.sh` | on your computer | creates or updates the starter, its role and its five-minute schedule |
 
 The scripts on your computer need the AWS CLI signed in to the project (`aws login`) and, for the
@@ -49,7 +53,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 2. **Set it up**, with the ids from `providers.json`:
 
    ```sh
-   bot/machine/on-machine.sh bot/machine/setup.sh claude-1 claude-2 claude-3 claude-4 gpt agy muse
+   bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
    ```
 3. **Log in** each machine subscription, once, as its own user
    (`aws ssm start-session --target <instance>`):
@@ -58,6 +62,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    sudo -iu agent-gpt codex login --device-auth   # Sign in with ChatGPT
    sudo -iu agent-agy agy                         # sign in with Google, then quit
    sudo -iu agent-muse muse login
+   sudo -iu agent-devin devin auth login --force-manual-token-flow   # paste the page's token
    ```
 4. **Register the runners**, from the repository's root:
 
@@ -79,9 +84,22 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   login, and run `register-runners.sh`.
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
-- **Disk:** each job's files and the user's package store are deleted when the job ends
+- **Disk:** each job's files, the user's package store, Cypress's binary and what the job left in
+  `/tmp` are deleted when the job ends
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
-  logins stay.
+  logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
+  at all, since the bot's checks never run e2e.
+- **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
+  light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
+  the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
+  2026-10-03 for one job: `pnpm install` 26 s and 0.55 GB, lint 2 min and 0.8 GB, typecheck
+  4.5 min and 1.1 GB, the catalog and rulings checks seconds and 0.13 GB, and `pnpm test` 22.6
+  min on one of GitHub's four-vCPU runners. So a job here runs install, typecheck and the light
+  checks; lint and the unit tests (`"machine": false` in `.harness/config.json`) run in CI on
+  the pull request, and the agents are told to run only the tests for what they changed. The
+  Claude accounts run on GitHub's runners, so `max_parallel` is 10: six here and up to four
+  Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
+  `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.

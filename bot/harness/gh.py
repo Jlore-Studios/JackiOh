@@ -242,6 +242,13 @@ class GitHub:
         if names:
             self.request("POST", f"{self._r}/issues/{int(number)}/labels", {"labels": names})
 
+    def add_assignees(self, number: int, logins: Iterable[str]) -> None:
+        """Adds to whoever is assigned; GitHub skips an account it cannot assign."""
+        logins = [login for login in logins if login]
+        if logins:
+            self.request("POST", f"{self._r}/issues/{int(number)}/assignees",
+                         {"assignees": logins})
+
     def remove_label(self, number: int, name: str) -> None:
         quoted = urllib.parse.quote(name, safe="")
         try:
@@ -252,6 +259,16 @@ class GitHub:
 
     def list_labels(self) -> list[dict]:
         return self.paginate(f"{self._r}/labels")
+
+    def list_issue_types(self) -> list[dict]:
+        """The owning organisation's issue types (none for a user's repository)."""
+        owner = self.repo.split("/", 1)[0]
+        try:
+            return list(self.request("GET", f"/orgs/{owner}/issue-types") or [])
+        except GitHubError as exc:
+            if exc.status in (403, 404):
+                return []
+            raise
 
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         """Create the label unless it exists. True when it was created."""
@@ -342,6 +359,13 @@ class GitHub:
         self.graphql(
             "mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id})"
             " { clientMutationId } }",
+            {"id": node_id},
+        )
+
+    def pin_issue(self, node_id: str) -> None:
+        """Pin an issue to the top of the issue list (at most three are pinned)."""
+        self.graphql(
+            "mutation($id: ID!) { pinIssue(input: {issueId: $id}) { issue { number } } }",
             {"id": node_id},
         )
 

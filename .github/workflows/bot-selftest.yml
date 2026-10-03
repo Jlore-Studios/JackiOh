@@ -49,4 +49,5 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color \
             .github/workflows/bot-night.yml .github/workflows/bot-commands.yml \
-            .github/workflows/bot-selftest.yml
+            .github/workflows/bot-selftest.yml .github/workflows/triage.yml \
+            .github/workflows/bot-status.yml

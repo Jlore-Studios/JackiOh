@@ -1470,6 +1470,8 @@ describe("practice plays on the full board, with sound and settings", () => {
           listeners.delete(listener);
         };
       },
+      musicOutput: () => null,
+      subscribeState: () => () => undefined,
       dispose: () => undefined,
       playSfx: () => true,
       playVoice: () => true,

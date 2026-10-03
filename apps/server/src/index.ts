@@ -38,6 +38,7 @@ import { createRankedRoutes, loadPatchVersion, openSeason } from "./api/ranked";
 import { createRecordResult, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
+import { createSettingsRoutes } from "./api/settings";
 import { createTutorialRoutes } from "./api/tutorial";
 import { MATCH_REAPER_INTERVAL_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS } from "./config";
 import { loadEnv, type ServerEnv } from "./env";
@@ -260,6 +261,7 @@ export function allRoutes(): Route[] {
     ...createSeriesRoutes(),
     ...createTutorialRoutes(),
     ...createRankedRoutes(),
+    ...createSettingsRoutes(),
   ];
 }
 

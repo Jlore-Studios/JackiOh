@@ -1,7 +1,9 @@
 // The one hook `Game` calls for sound (SPEC §10.11). It feeds the director every view, tells it
 // (and the engine) when the animation runner starts an entry or goes idle, installs the gesture
 // unlock, the UI ticks and the debug handle for the component's lifetime, and preloads the voice
-// lines the view makes likely.
+// lines the view makes likely. It also gives the board the music (R631): a music director that
+// hears every view, every event the sound director resolves, and each idle, for as long as the
+// board is mounted.
 //
 // ORDER MATTERS. `Game` calls this directly after `const runner = queue.current;`, before its own
 // layout effects, so the director's `onView` runs before Game's enqueue layout effect: the events
@@ -22,6 +24,9 @@ import { retainAppAudio } from "./appAudio.ts";
 import { exposeAudioDebug } from "./debug.ts";
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { getAudioEngine } from "./engine.ts";
+import { getMusicPlayer } from "./music.ts";
+import { createMusicDirector, type MusicDirector } from "./musicDirector.ts";
+import { enterGameMusic } from "./musicScene.ts";
 import { VOICE_LINES, voiceKeysForView } from "./voiceData.ts";
 
 function quietly(run: () => void): void {
@@ -53,14 +58,24 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   const lookupRef = useRef(lookup);
   lookupRef.current = lookup;
 
-  // 1. The director, created once per mounted Game against the singleton engine.
+  // 1. The music director (R631), made when the board mounts (effect 7) and dropped when it leaves;
+  //    the sound director below reaches it through the ref, so it only ever hears this board's.
+  const musicRef = useRef<MusicDirector | null>(null);
+
+  // 1b. The sound director, created once per mounted Game against the singleton engine.
   const directorRef = useRef<SoundDirector | null>(null);
-  directorRef.current ??= createSoundDirector(getAudioEngine(), VOICE_LINES, (defId) => cueCard(lookupRef.current, defId));
+  directorRef.current ??= createSoundDirector(
+    getAudioEngine(),
+    VOICE_LINES,
+    (defId) => cueCard(lookupRef.current, defId),
+    (event, planned) => quietly(() => musicRef.current?.onEvent(event, planned)),
+  );
   const director = directorRef.current;
 
   // 2. Every view, before Game's enqueue layout effect sees it.
   useLayoutEffect(() => {
     quietly(() => director.onView(view));
+    quietly(() => musicRef.current?.onView(view));
   }, [director, view]);
 
   // 3. Entry starts and idles, straight from the runner's notifications. The engine is busy while
@@ -69,28 +84,37 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   //    fetched ahead of the held preload and the prefetch. A Game unmounted mid-burst frees it.
   useLayoutEffect(() => {
     const engine = getAudioEngine();
+    const music = getMusicPlayer();
     let last = runner.inFlight();
     quietly(() => engine.setBusy(last !== null));
+    quietly(() => music.setBusy(last !== null));
     const stop = runner.subscribe(() => {
       const entry = runner.inFlight();
       if (entry !== null) {
         quietly(() => engine.setBusy(true));
+        quietly(() => music.setBusy(true));
         if (entry !== last) quietly(() => director.onEntryStart(entry));
       } else {
         quietly(() => director.onIdle());
+        quietly(() => musicRef.current?.settle());
         quietly(() => engine.setBusy(false));
+        quietly(() => music.setBusy(false));
       }
       last = entry;
     });
     return () => {
       stop();
       quietly(() => engine.setBusy(false));
+      quietly(() => music.setBusy(false));
     };
   }, [director, runner]);
 
   // 4. After every layout effect: covers a view that produced no entry the runner could start.
   useEffect(() => {
-    if (runner.idle()) quietly(() => director.onIdle());
+    if (runner.idle()) {
+      quietly(() => director.onIdle());
+      quietly(() => musicRef.current?.settle());
+    }
   }, [director, view, runner]);
 
   // 5. Gesture unlock and UI ticks (shared with the app root, appAudio.ts) and the debug handle,
@@ -100,6 +124,25 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     const removers = [retainAppAudio(), exposeAudioDebug(engine)];
     return () => {
       for (const remove of removers) remove();
+    };
+  }, []);
+
+  // 7. The board's music: entered on mount, with the view it mounted on, and handed back to the menu
+  //    on unmount. A layout effect, so the first view reaches it before anything is drawn.
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useLayoutEffect(() => {
+    let leave: (() => void) | null = null;
+    quietly(() => {
+      const sink = enterGameMusic();
+      leave = () => sink.leave();
+      musicRef.current = createMusicDirector({ sink });
+      musicRef.current.onView(viewRef.current);
+    });
+    return () => {
+      quietly(() => musicRef.current?.dispose());
+      musicRef.current = null;
+      quietly(() => leave?.());
     };
   }, []);
 

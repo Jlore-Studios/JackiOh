@@ -1,7 +1,7 @@
 """The work queue, kept as labels on issues and pull requests plus a record in the state file.
 
 `bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:cross-review` on a
-bot pull request means it waits for a second model's review; `bot:working` means a run holds it;
+bot pull request means it waits for a review run; `bot:working` means a run holds it;
 `bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
 apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
 """
@@ -15,7 +15,9 @@ from harness import asks
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
+from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
                             LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
@@ -55,6 +57,26 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
     return " The bot is halted, though: `/harness start` resumes it." if state.get("halted") else ""
 
 
+def _label_note(names: set[str]) -> str:
+    """What `human` or `difficulty:hard` on the thread changes about who takes it."""
+    lowered = {name.lower() for name in names}
+    if LABEL_HUMAN in lowered:
+        return " It is labelled `human`, though, so no model takes it until that label comes off."
+    if difficulty_of(names) == "hard":
+        return " It is labelled `difficulty:hard`, so only Opus plans, builds and reviews it."
+    return ""
+
+
+def difficulty_of(names: set[str], carried: str = "") -> str:
+    """The thread's difficulty: the hardest `difficulty:*` label on it (whatever its case) or
+    `carried` (what its issue had, kept on a bot PR's record), and `medium` with neither."""
+    found = [DIFFICULTY_LABELS[name.lower()] for name in names
+             if name.lower() in DIFFICULTY_LABELS]
+    if carried in DIFFICULTIES:
+        found.append(carried)
+    return max(found, key=DIFFICULTIES.index, default=DEFAULT_DIFFICULTY)
+
+
 def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
                 label_present: bool = False, ask: Ask | None = None) -> str:
     """Queue an issue for building. Returns the reply line. `ask` is the comment that asked, kept
@@ -78,8 +100,10 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     state = ctx.store.update(lambda s: _queued(s, number, "build", by, force, ctx, ask),
                              f"queue #{number}")
     if force:
-        return _start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
-    return f"Queued #{number}; I will build it {_when(ctx, state)}.{_halt_note(ctx, state)}"
+        return (_start_now(ctx, number, "build", f"Queued #{number}") + _halt_note(ctx, state)
+                + _label_note(names))
+    return (f"Queued #{number}; I will build it {_when(ctx, state)}.{_halt_note(ctx, state)}"
+            f"{_label_note(names)}")
 
 
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
@@ -112,9 +136,9 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
     held = " Auto-merge is off until the revision lands." if LABEL_PR in names else ""
     if force:
         return (_start_now(ctx, number, "revise", f"Queued a revision of #{number}") + held
-                + _halt_note(ctx, state))
+                + _halt_note(ctx, state) + _label_note(names))
     return (f"Queued a revision of #{number}; I will do it {_when(ctx, state)}.{held}"
-            f"{_halt_note(ctx, state)}")
+            f"{_halt_note(ctx, state)}{_label_note(names)}")
 
 
 def _start_now(ctx: Context, number: int, mode: str, queued: str) -> str:
@@ -175,48 +199,85 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
     return f"#{number} is out of the queue."
 
 
+#: The pickup tiers by label (#90). A thread with none of them is in tier 2.
+PRIORITY_TIERS = {LABEL_PRIORITY_HIGH: 0, LABEL_PRIORITY_MEDIUM: 1, LABEL_PRIORITY_LOW: 3}
+NO_PRIORITY = 2
+PRIORITY_NAMES = {0: "high", 1: "medium", NO_PRIORITY: "none", 3: "low"}
+
+
+def priority_tier(names: set[str]) -> int:
+    """The thread's pickup tier, the lowest picked first: `priority:high` 0, `priority:medium`
+    1, none 2, `priority:low` 3. The highest label wins; names match whatever their case, and any
+    other `priority:*` label counts as none."""
+    return min((PRIORITY_TIERS[name.lower()] for name in names if name.lower() in PRIORITY_TIERS),
+               default=NO_PRIORITY)
+
+
 @dataclass
 class Candidate:
     number: int
-    kind: str  # "build" | "revise" | "review" (a second model's review of a bot PR)
+    kind: str  # "build" | "revise" | "review" (a review run on a bot PR)
     title: str
     forced: bool
     queued_at: str
-    #: Labelled `difficult` (on the thread, or on the issue a bot PR was built for): Opus only.
-    difficult: bool = False
-    #: For a review: the model family whose approval it already has, which may not review again.
+    #: `easy`, `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
+    difficulty: str = DEFAULT_DIFFICULTY
+    #: For a review: the family of the model that built the change.
     builder: str = ""
+    #: Its pickup tier (`priority_tier`), which comes before everything but `forced`.
+    priority: int = NO_PRIORITY
+    #: For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
+    planned: bool = False
+    #: For a review: the families whose approval the head already has, which may not give it again.
+    approved: tuple[str, ...] = ()
+    #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
+    #: its revision needs a reviewer in the same run.
+    bot_pr: bool = False
 
 
-#: The order of urgency after forced items (`pairs` in plan.py puts `difficult` ones next).
+#: The order of urgency after forced items, the priority tier and the difficulty (`pairs` in
+#: plan.py puts harder items first, since only the stronger models can take them).
 KIND_ORDER = {"review": 0, "revise": 1, "build": 2}
 
 
-def candidates(ctx: Context, state: dict[str, Any]) -> list[Candidate]:
-    """Queued threads: forced requests first, then second reviews, revisions, and the oldest
-    builds.
+def candidates(ctx: Context, state: dict[str, Any],
+               skipped: list[str] | None = None) -> list[Candidate]:
+    """Queued threads: forced requests first, then by priority tier, then second reviews,
+    revisions, and the oldest builds.
 
-    Read by label, so no number of open threads hides one. Either queue label queues either kind
-    of thread: an issue builds and a pull request revises. A queue label is the request, so a
-    thread that failed before and was labelled again is taken again."""
+    Read by label, so no number of open threads hides one, and a label changed since the last
+    plan counts at this one. Either queue label queues either kind of thread: an issue builds
+    and a pull request revises. A queue label is the request, so a thread that failed before and
+    was labelled again is taken again. A thread labelled `human` is left out, whatever model
+    would take it, with a line in `skipped` when the caller keeps one."""
     found: dict[int, Candidate] = {}
-    difficult = ctx.cfg.pool.difficult_label
+    human: set[int] = set()
     for label in (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS):
         for thread in ctx.gh.list_issues(labels=label):
             number = int(thread["number"])
             names = label_names(thread)
-            if LABEL_WORKING in names or number in found:
+            if LABEL_WORKING in names or number in found or number in human:
                 continue
             is_pr = "pull_request" in thread
             if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
                 continue  # a second review is for the bot's own pull requests only
+            lowered = {name.lower() for name in names}
+            if LABEL_HUMAN in lowered:
+                human.add(number)
+                continue
             record = state["items"].get(str(number), {})
             kind = "review" if label == LABEL_CROSS else "revise" if is_pr else "build"
+            votes = record.get("votes") or {}
             found[number] = Candidate(
                 number, kind, str(thread.get("title", "")), bool(record.get("forced")),
                 str(record.get("queued_at") or thread.get("created_at") or ""),
-                difficult=difficult in names or bool(record.get("difficult")),
-                builder=str((record.get("votes") or {}).get("builder") or ""))
-    return sorted(found.values(), key=lambda c: (not c.forced, KIND_ORDER[c.kind], c.queued_at,
-                                                 c.number))
+                difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
+                builder=str(votes.get("builder") or ""),
+                priority=priority_tier(names), planned=bool(record.get("planned_at")),
+                approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
+    if skipped is not None:
+        skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
+                       "tier" for number in sorted(human))
+    return sorted(found.values(), key=lambda c: (not c.forced, c.priority, KIND_ORDER[c.kind],
+                                                 c.queued_at, c.number))
 

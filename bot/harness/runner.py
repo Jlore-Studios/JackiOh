@@ -1,4 +1,5 @@
-"""Model calls: one backend per CLI (`claude`, `codex`, `agy`, `muse`), and a scripted fake.
+"""Model calls: one backend per CLI (`claude`, `codex`, `agy`, `muse`, `devin`), and a scripted
+fake.
 
 Every backend runs its CLI the same way (`_Cli._launch`): the prompt on stdin or in a file, the
 output written straight to a file so a long session never sits in memory, a timeout that kills
@@ -39,7 +40,10 @@ AUTH_WORDS = re.compile(
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
     r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
     r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
-    r"|run `?muse login|authentication required)"
+    r"|run `?muse login|authentication required|devin auth login"
+    # Claude Code's answer when its token is revoked or mistyped: "Failed to authenticate. API
+    # Error: 401 OAuth access token is invalid." A model never says that on its own.
+    r"|failed to authenticate|access token is invalid|api error: 401)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.
@@ -470,8 +474,8 @@ class AgyCli(_Cli):
 
     Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
     told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
-    the job holds no write token. Its effort is part of the model's own choices (`gemini-3.1-pro`
-    takes `low` or `high`)."""
+    the job holds no write token. Its model names carry their effort (`gemini-3.8-flash-high`;
+    `agy models` lists them), and `--effort` passes the same."""
 
     cli = "agy"
 
@@ -566,8 +570,90 @@ class MuseCli(_Cli):
                          infra_hint=launch.code == 2)
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _devin_answer(stdout: str) -> str:
+    """Devin's printed answer without colour codes or the welcome line it prints first."""
+    text = _ANSI.sub("", stdout).strip()
+    if text.startswith("Welcome to Devin CLI!"):
+        text = text.split("\n", 1)[1].strip() if "\n" in text else ""
+    return text
+
+
+def _devin_steps(export: str) -> list[str]:
+    """Devin's exported conversation as one line per thing its agent did: `ran <command>`, a
+    tool with its arguments, or what it said."""
+    try:
+        steps = json.loads(export).get("steps") or []
+    except (ValueError, AttributeError):
+        return [line for line in export.splitlines() if line.strip()]
+    lines: list[str] = []
+    for step in steps:
+        if not isinstance(step, dict) or step.get("source") != "agent":
+            continue
+        for call in step.get("tool_calls") or []:
+            if not isinstance(call, dict):
+                continue
+            args = call.get("arguments") if isinstance(call.get("arguments"), dict) else {}
+            if args.get("command"):
+                lines.append(f"ran `{_clip(str(args['command']), 200)}`")
+            else:
+                lines.append(f"{call.get('function_name')}: {_clip(json.dumps(args), 200)}")
+        if str(step.get("message") or "").strip():
+            lines.append(f"said: {_clip(str(step['message']))}")
+    return lines
+
+
+class DevinCli(_Cli):
+    """Cognition's Devin CLI (`devin -p`), signed in on the machine with a Devin account.
+
+    Print mode reads the prompt from a file and prints the final answer.
+    `--permission-mode dangerous` lets it run commands and edit files unasked, as the other CLIs
+    do; the job holds no write token. Its effort is part of the model's name (`swe-2-max`;
+    `devin models list` names them). It reports no usage and takes no turn limit, so the call's
+    timeout bounds it and a refusal parks the subscription. Its conversation, exported as it goes,
+    joins the transcript for the trail."""
+
+    cli = "devin"
+
+    def argv(self, request: RunRequest, prompt_file: Path, export: Path) -> list[str]:
+        return [self.binary, "-p", "--prompt-file", str(prompt_file), "--model", request.model,
+                "--permission-mode", "dangerous", "--respect-workspace-trust", "false",
+                "--export", str(export)]
+
+    def run(self, request: RunRequest) -> RunResult:
+        transcript, raw = self._paths(request)
+        prompt_file = transcript.with_suffix(".prompt.md")
+        prompt_file.write_text(self._prompt(request), encoding="utf-8")
+        export = transcript.with_suffix(".export")
+        launch = self._launch(self.argv(request, prompt_file, export), request, self.env(), None,
+                              raw)
+        if isinstance(launch, RunResult):
+            return launch
+        text = _devin_answer(_read(raw))
+        stderr = launch.stderr
+        steps = _devin_steps(_read(export))
+        export.unlink(missing_ok=True)
+        raw.write_text("".join(f"{line}\n" for line in steps)
+                       + ("\n--- answer ---\n" if steps else "") + text
+                       + ("\n\n--- stderr ---\n" + stderr if stderr.strip() else ""),
+                       encoding="utf-8")
+        self._keep(launch, transcript)
+        if launch.timed_out:
+            return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
+                             f"timed out after {request.timeout_s}s", None, timed_out=True)
+        ok = launch.code == 0
+        error = None
+        if not ok:
+            last = [line for line in stderr.splitlines() if line.strip()]
+            error = redact((last[-1] if last else f"devin exited {launch.code}")[-2000:])
+        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at)
+
+
 BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "agy": AgyCli,
-                                   "muse": MuseCli}
+                                   "muse": MuseCli, "devin": DevinCli}
 
 
 PING_PROMPT = "Reply with the word ok."
@@ -695,6 +781,10 @@ def _write_redacted(source: Path, target: Path) -> None:
             dst.write(redact(line))
 
 
+#: What a scripted planning call answers when the script gives it no handler of its own.
+FAKE_PLAN = "1. **Goal.** Do what the issue asks.\n2. **Steps.** Change it, test it."
+
+
 class FakeRunner:
     """Replays scripted calls. Each handler receives the request and returns a RunResult."""
 
@@ -710,6 +800,8 @@ class FakeRunner:
     def run(self, request: RunRequest) -> RunResult:
         self.calls.append(request)
         queue = self.handlers.get(request.role) or []
+        if not queue and request.role == "plan":
+            return RunResult(True, FAKE_PLAN)  # every build plans first; most scripts skip it
         if not queue:
             return RunResult(False, "", 1, error=f"fake runner has no handler for {request.role}")
         handler = queue.pop(0) if len(queue) > 1 else queue[0]

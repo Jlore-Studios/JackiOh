@@ -904,6 +904,59 @@ export type TutorialStore = {
   merge: (input: TutorialMergeInput, maxLessons: number) => Promise<TutorialMergeOutcome>;
 };
 
+// ---------------------------------------------------------------------------
+// Player settings on the account (SPEC §9.1, R633, R634). The device keeps its own copy and the
+// client merges the two; this is the account's half, where a group is replaced only by a newer one.
+// ---------------------------------------------------------------------------
+
+/** One setting's value. The server does not know the settings: it keeps flat booleans, numbers and short texts. */
+export type PlayerSettingValue = boolean | number | string;
+
+/**
+ * R633: one group of settings (the gameplay switches, the audio volumes, the effects, the card
+ * display) and when it last changed on the device that wrote it (epoch ms, the writing device's
+ * clock, never later than the server's when it arrived).
+ */
+export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSettingValue> };
+
+export type PlayerSettingsRow = {
+  profileId: string;
+  /** Group id to group. A group the client no longer has is kept and ignored by it. */
+  groups: Record<string, PlayerSettingsGroup>;
+};
+
+/** What one write proposes: the groups a device has changed, merged into the account's (R634). */
+export type PlayerSettingsMergeInput = {
+  profileId: string;
+  /** Already checked by the handler: group ids, each a flat object of values. */
+  groups: Readonly<Record<string, PlayerSettingsGroup>>;
+  /**
+   * The server's clock when the write arrived. Postgres stamps it as the row's `updated_at` (and
+   * `created_at` for a new row), for operators; nothing reads it back through the port.
+   */
+  at: number;
+};
+
+/** The caller's caps on the result (`PLAYER_SETTINGS_GROUPS_MAX`, `PLAYER_SETTINGS_BYTES_MAX`). */
+export type PlayerSettingsLimits = { maxGroups: number; maxBytes: number };
+
+/**
+ * `merged` with the row as it now stands, or `limit` when the result would pass a cap (nothing
+ * written). Reachable only by a client that sends groups no client has.
+ */
+export type PlayerSettingsMergeOutcome = { kind: "merged"; settings: PlayerSettingsRow } | { kind: "limit" };
+
+export type PlayerSettingsStore = {
+  /** The profile's row, or null before its first write. */
+  get: (profileId: string) => Promise<PlayerSettingsRow | null>;
+  /**
+   * R634: one atomic merge. For each group sent, the stored group becomes the sent one only when
+   * the sent one's `at` is strictly later; a group the write does not name is left as it was. A
+   * profile with no row gets one.
+   */
+  merge: (input: PlayerSettingsMergeInput, limits: PlayerSettingsLimits) => Promise<PlayerSettingsMergeOutcome>;
+};
+
 /** R417: one card of a last board — the card and its face, never its stats (C+ #29). */
 export type LastBoardEntry = { defId: string; radiant: boolean };
 
@@ -968,6 +1021,8 @@ export type Store = {
   series: SeriesStore;
   /** R320: tutorial progress kept on the account. */
   tutorial: TutorialStore;
+  /** R633: the player's game settings kept on the account. */
+  playerSettings: PlayerSettingsStore;
   /** SPEC §9.11: seasons, ranks, bots and the record of rated games. */
   ranked: RankedStore;
   /** R417, R565: each profile's last finished game's board, per kind (C+ #29). */

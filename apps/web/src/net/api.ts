@@ -417,6 +417,43 @@ export async function putTutorialProgress(
 }
 
 // ---------------------------------------------------------------------------------------------
+// Game settings on the account (SPEC §9.1, R633, R634). The device's copy is the one the game
+// reads (`settings/`); `settings/accountSync.ts` is the only caller of these two.
+// ---------------------------------------------------------------------------------------------
+
+/** One setting's value, as the server keeps it. */
+export type PlayerSettingValue = boolean | number | string;
+
+/** One group of settings (a store of the client) and when it last changed (epoch ms, the device's clock). */
+export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSettingValue> };
+
+/** `PlayerSettingsView` in `apps/server/src/api/settings.ts`: group id to group, empty before the first write. */
+export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup> };
+
+/** `GET /api/settings` (`active`): the account's copy, empty before its first write. */
+export async function getPlayerSettings(token: string): Promise<PlayerSettingsAccountCopy> {
+  return (await apiRequest<{ settings: PlayerSettingsAccountCopy }>("/api/settings", { token })).settings;
+}
+
+/**
+ * `PUT /api/settings` (`active`): merges the groups this device changed into the account's and
+ * answers with the result. A group replaces the stored one only when its time is strictly later
+ * (R634), so sending the same groups twice, or a stale one, is harmless.
+ */
+export async function putPlayerSettings(
+  token: string,
+  groups: Record<string, PlayerSettingsGroup>,
+): Promise<PlayerSettingsAccountCopy> {
+  return (
+    await apiRequest<{ settings: PlayerSettingsAccountCopy }>("/api/settings", {
+      method: "PUT",
+      token,
+      body: { groups },
+    })
+  ).settings;
+}
+
+// ---------------------------------------------------------------------------------------------
 // Queue modes (SPEC §9.5, R257–R258, R264)
 // ---------------------------------------------------------------------------------------------
 

@@ -546,6 +546,30 @@ export const TUTORIAL_LESSONS_MAX = 32;
 export const TUTORIAL_LESSON_ID_MAX_LENGTH = 40;
 
 // ---------------------------------------------------------------------------------------------
+// Player settings on the account (SPEC §9.1, R633, R634). The settings themselves are the
+// client's (`apps/web/src/settings/`); the server stores groups of flat values it does not
+// interpret, so these only bound what one account can hold.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * SPEC §11 R633: the most setting groups one account keeps (the client has four: gameplay, audio,
+ * effects and card display). Mirrored in `app.settings` (0018).
+ */
+export const PLAYER_SETTINGS_GROUPS_MAX = 8;
+/** SPEC §11 R633: the most settings in one group. */
+export const PLAYER_SETTINGS_KEYS_MAX = 32;
+/** SPEC §11 R633: the longest group id or setting name, in characters. Both are camelCase or kebab-case words. */
+export const PLAYER_SETTINGS_NAME_MAX_LENGTH = 40;
+/** SPEC §11 R633: the longest text value, in characters (a station or an intensity name). */
+export const PLAYER_SETTINGS_TEXT_MAX_LENGTH = 40;
+/**
+ * SPEC §11 R633: the most text the stored groups of one account may come to, in bytes. Four
+ * groups of a dozen settings are well under a kilobyte; this bounds a body of junk. Mirrored in
+ * `app.settings` (0018).
+ */
+export const PLAYER_SETTINGS_BYTES_MAX = 4096;
+
+// ---------------------------------------------------------------------------------------------
 // Derived millisecond helpers, since timers (setTimeout/alarms) take milliseconds.
 // ---------------------------------------------------------------------------------------------
 
@@ -657,6 +681,11 @@ export const SERVER_CONFIG = Object.freeze({
   SERIES_POLL_SECONDS,
   TUTORIAL_LESSONS_MAX,
   TUTORIAL_LESSON_ID_MAX_LENGTH,
+  PLAYER_SETTINGS_GROUPS_MAX,
+  PLAYER_SETTINGS_KEYS_MAX,
+  PLAYER_SETTINGS_NAME_MAX_LENGTH,
+  PLAYER_SETTINGS_TEXT_MAX_LENGTH,
+  PLAYER_SETTINGS_BYTES_MAX,
   TURN_CLOCK_MS,
   PROMPT_CLOCK_MS,
   MULLIGAN_CLOCK_MS,

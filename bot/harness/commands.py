@@ -234,7 +234,7 @@ HELP = """\
 
 Anything else after `/harness` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
-Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficult` to keep it for Opus.
+Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.
 Labels do the same as the verbs: `bot:build` on an issue, `bot:revise` on a PR; assigning @{bot} queues the thread.
 On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.
 """
@@ -249,8 +249,8 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
              "up at its next checkpoint and keeps what it has.", "/harness stop"),
     "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
                 "@{bot} suggest"),
-    "status": ("status", "Halt state, each subscription (its hours, usage, and what it is "
-               "doing), and what is running and queued.",
+    "status": ("status", "Halt state, which subscriptions are running what right now, each "
+               "subscription (its hours, usage, and what it is doing), and what is queued.",
                "@{bot} status"),
     "help": ("help [verb]", "The list of commands, or one of them in detail.",
              "/harness help build"),

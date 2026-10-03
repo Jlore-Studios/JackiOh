@@ -8,7 +8,7 @@ import type { Row } from "@jackioh/shared";
 
 import { ACTIVATE_ABILITY_ATTRIBUTE, ACTIVATE_FOR_ATTRIBUTE } from "../ActivateControl.tsx";
 import type { ClickTarget, Side } from "../contract.ts";
-import type { DropSpot } from "./model.ts";
+import type { DragPlan, DropSpot } from "./model.ts";
 
 const HAND_CARD = /^hand-card-(.+)$/;
 const CARD = /^card-(.+)$/;
@@ -133,4 +133,30 @@ export function pickDropSpot(stack: readonly Element[], allowed: ReadonlySet<str
   if (top.closest('[data-testid="board"]') === null) return { at: "outside" };
   if (top.closest('[data-testid="hand-you"]') !== null) return { at: "outside" };
   return { at: "board" };
+}
+
+/**
+ * #37: the Locked zone a play was dropped on, when the card could have gone into a zone of that row
+ * had this one been open. The first zone under the pointer is the one dropped on, a card standing
+ * in it included. A drop on any other zone, on an unlocked one that is merely not offered (it
+ * holds a unit, say), on the opponent's side, or by a play that places nothing in a zone, is not
+ * refused for a lock and answers null. `data-locked` is what Zone.tsx writes off the view's
+ * `locks`; nothing here reads a rule.
+ */
+export function lockedZoneAt(
+  stack: readonly Element[],
+  plan: Pick<DragPlan, "kind" | "dropTestids">,
+): { testid: string; zone: Element } | null {
+  if (plan.kind !== "play") return null;
+  for (const element of stack) {
+    const hit = targetFromElement(element);
+    if (hit === null || hit.target.on !== "zone") continue;
+    const { side, row } = hit.target;
+    if (side !== "you" || plan.dropTestids.has(hit.testid)) return null;
+    const zone = element.closest(`[data-testid="${hit.testid}"]`);
+    if (zone === null || zone.getAttribute("data-locked") !== "true") return null;
+    const offered = [...plan.dropTestids].some((id) => id.startsWith(`zone-you-${row}-`));
+    return offered ? { testid: hit.testid, zone } : null;
+  }
+  return null;
 }

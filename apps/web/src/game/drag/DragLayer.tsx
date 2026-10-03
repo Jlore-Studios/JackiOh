@@ -18,7 +18,7 @@
 // fan (landing.ts) until the board shows a newer view: the runner holds the old one back while the
 // play's events animate, and the card flying back into the hand for that time read as a refusal.
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
@@ -26,9 +26,10 @@ import { readSettings } from "../../settings/index.ts";
 import { IDLE, type Interaction } from "../actions.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { liveFace } from "../faces.ts";
+import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { setLanding } from "./landing.ts";
 import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DragSource, type DropSpot } from "./model.ts";
-import { pickDropSpot, targetFromElement } from "./targets.ts";
+import { lockedZoneAt, pickDropSpot, targetFromElement } from "./targets.ts";
 import "./drag.css";
 
 export type DragLayerProps = {
@@ -148,7 +149,21 @@ function isValidSpot(plan: DragPlan, spot: DropSpot): boolean {
   return spot.at === "board" && plan.freeDrop;
 }
 
-export default function DragLayer(props: DragLayerProps): ReactElement | null {
+/** #37: a card dropped on a Locked zone is refused with a mark where it landed (BlockedMark.tsx). */
+export default function DragLayer(props: DragLayerProps): ReactElement {
+  const [blocked, setBlocked] = useState<Blocked | null>(null);
+  const clearBlocked = useCallback(() => setBlocked(null), []);
+  return (
+    <>
+      <PlayDrag {...props} onBlocked={setBlocked} />
+      <BlockedMark blocked={blocked} onDone={clearBlocked} />
+    </>
+  );
+}
+
+let blockedKey = 0;
+
+function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => void }): ReactElement | null {
   // The listeners are attached once and read the newest props through this ref, so a re-render
   // mid-drag (the lifted interaction arriving back as a prop) never drops the drag.
   const latest = useRef(props);
@@ -310,9 +325,10 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
     function onPointerUp(event: PointerEvent): void {
       if (flight !== null) {
         if (event.pointerId !== flight.pointerId) return;
-        const { view, legal, onInteraction, onAction } = latest.current;
+        const { view, legal, onInteraction, onAction, onBlocked } = latest.current;
         const spot = spotAt(flight.plan, event.clientX, event.clientY);
         const result = resolveDrop(view, legal, flight.plan, spot);
+        const refused = result.action === undefined ? lockedZoneAt(hits(event.clientX, event.clientY), flight.plan) : null;
         const { plan } = flight;
         // Where the card lands: the middle of the zone or target it was dropped on, or the pointer
         // for a drop anywhere on the board.
@@ -320,6 +336,17 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
         stopDragging();
         onInteraction(result.interaction);
+        if (refused !== null) {
+          const rect = refused.zone.getBoundingClientRect();
+          blockedKey += 1;
+          onBlocked({
+            key: blockedKey,
+            testid: refused.testid,
+            x: round(rect.left + rect.width / 2),
+            y: round(rect.top + rect.height / 2),
+            size: round(Math.min(rect.width, rect.height)),
+          });
+        }
         if (result.action !== undefined) {
           if (plan.kind === "play" && plan.source.on === "hand") {
             const instanceId = plan.source.instanceId;

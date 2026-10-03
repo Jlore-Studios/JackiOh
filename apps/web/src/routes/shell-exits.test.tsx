@@ -273,12 +273,13 @@ describe("B40 the gate's error panel", () => {
     meAnswer = "failing";
     renderGated();
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).not.toBeNull();
+    expect(window.sessionStorage.getItem(SESSION_STORAGE_KEY)).not.toBeNull();
     expect(window.localStorage.getItem(E2E_SESSION_STORAGE_KEY)).not.toBeNull();
 
     fireEvent.click(screen.getByTestId(shellTestid.signOut));
 
     await waitFor(() => {
+      expect(window.sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
       expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
       expect(window.localStorage.getItem(E2E_SESSION_STORAGE_KEY)).toBeNull();
     }, SLOW);
@@ -317,6 +318,7 @@ describe("B40 the banned panel", () => {
     fireEvent.click(await screen.findByTestId(shellTestid.signOut, undefined, SLOW));
 
     await waitFor(() => {
+      expect(window.sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
       expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
       expect(window.localStorage.getItem(E2E_SESSION_STORAGE_KEY)).toBeNull();
     }, SLOW);

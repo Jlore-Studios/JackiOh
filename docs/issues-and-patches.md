@@ -16,9 +16,23 @@ Every issue carries at least one type label:
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
-patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. `difficult`
-(only Claude Opus works on it) and the `bot:*` labels are separate. Never add `bot:build` while
-retitling or relabelling, because it queues a build.
+patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
+`difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; none is
+medium, and `hard` is Claude Opus's alone), `human` (no model does it), the `priority:*` labels
+(the bot's pickup order) and the `bot:*` labels are separate. Never add
+`bot:build` while retitling or relabelling, because it queues a build.
+
+## Issue type
+
+Every issue also has one of the organisation's issue types, which are not labels:
+
+| Type | For |
+|---|---|
+| Task | A specific piece of work: most patches, tooling, docs |
+| Bug | Something that behaves wrongly: a rule, a card, a crash, a failing job |
+| Feature | Something new for players or for the team: a mode, a screen, a system |
+
+A pull request has no type.
 
 ## Titles
 
@@ -43,8 +57,8 @@ titles, so retitle one when you accept it.
   of name order (#63). The order is `packages/cards/patches/patches.json`'s, and nothing parses or
   compares a version string (R105, R388).
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
-  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix, so v0.1.0-r1 becomes v0.1.0b
-  and v0.1.0-r3 becomes v0.1.0d. The patch history still uses the old names until #85 renames them.
+  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
+  v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
 
 ## A patch that takes several pull requests
 
@@ -64,7 +78,7 @@ titles, so retitle one when you accept it.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to card data goes live through
-  `pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
+  `pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
   catalog, appends the version to `patches.json` and bumps `CATALOG_VERSION` everywhere it lives
   (`packages/cards/README.md` §8), and the next deploy reseeds the database. The PR that runs it is
   the last part, and the patch is live when that PR merges. A patch with no card data change is

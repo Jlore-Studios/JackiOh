@@ -232,7 +232,10 @@ class PeekTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 3).update(forced=True))
         look = plan_mod.peek(ctx)
         self.assertEqual((look.work, look.reason, look.forced, look.quiet_provider),
-                         (True, "#3 is queued to build, for `claude-1`", True, ""))
+                         (True, "#3 (medium) is queued to build, for `claude-1`: plan on "
+                          "`claude-1` (claude, `opus`, strong); build on `claude-1` (claude, "
+                          "`opus`, strong); review on `claude-1` (claude, `opus`, strong)",
+                          True, ""))
         look = plan_mod.peek(make_ctx(FakeGitHub(), at=DAY), force=True)
         self.assertEqual((look.work, look.forced), (True, True))
 

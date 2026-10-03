@@ -26,8 +26,9 @@ import {
   TEXT_TIER_MAX,
   TIER_SCALE,
 } from "./constants.ts";
-import { nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
+import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
+import { termsIn } from "./rules.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
@@ -59,6 +60,7 @@ function def(id: string): CardDef {
 
 function renderFace(source: FaceSource, layout: "full" | "compact" = "full"): HTMLElement {
   const { container } = render(<CardFace face={faceModel(source)} layout={layout} />);
+  flushFits();
   const cf = container.querySelector<HTMLElement>(".cf");
   if (cf === null) throw new Error(`CardFace rendered no .cf for ${source.defId}`);
   expect(container.firstElementChild).toBe(cf);
@@ -348,6 +350,63 @@ describe("B10: RulesText marks terms in bold", () => {
     expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute"]);
   });
 
+  it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {
+    for (const card of DEFS) {
+      for (const radiant of [false, true]) {
+        const source: FaceSource = { defId: card.id, def: card, radiant };
+        const label = `${card.id} ${radiant ? "radiant" : "base"}`;
+        const drawn = new Set([...renderFace(source).querySelectorAll(".card-text strong.cf-term")].map((term) => term.getAttribute("data-term")));
+        expect([...drawn], label).toEqual(termsIn(faceModel(source).text.full));
+        for (const keyword of (radiant ? card.radiant : card.base).keywords) expect(drawn.has(keyword.kind), `${label} ${keyword.kind}`).toBe(true);
+        cleanup();
+      }
+    }
+  }, CATALOG_SWEEP_TIMEOUT_MS);
+
+  it("B10 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Upgrade, Degrade), and so is Classic #65's End of your turn (#85)", () => {
+    const termsOf = (id: string): string[] =>
+      [...catalogFace(id).querySelectorAll(".card-text strong.cf-term")].map((term) => `${term.getAttribute("data-term") ?? ""}=${term.textContent ?? ""}`);
+    expect(termsOf("classic-078")).toContain("Activate=Activate ♾️:");
+    cleanup();
+    expect(termsOf("classicplus-074")).toContain("Brittle=Brittle 4");
+    cleanup();
+    expect(termsOf("classic-038")[0]).toBe("Animated=Animated");
+    cleanup();
+    const tuners = termsOf("classicplus-070").map((term) => term.split("=")[0]);
+    expect(tuners).toContain("Upgrade");
+    expect(tuners).toContain("Degrade");
+    cleanup();
+    expect(termsOf("classic-065")[0]).toBe("End of turn=End of your turn:");
+  });
+
+  it("B10 a term keeps the rules box's ink in a tavern screen, whose own bold words are pale gold (#85)", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const rules = (file: string): { selector: string; body: string }[] =>
+      [...readFileSync(join(here, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+        selector: (match[1] ?? "").trim(),
+        body: match[2] ?? "",
+      }));
+    /** [ids, classes, types] of a selector made of ids, classes and type names, as both of these are. */
+    const specificity = (selector: string): number[] => [
+      selector.match(/#[\w-]+/g)?.length ?? 0,
+      selector.match(/\.[\w-]+/g)?.length ?? 0,
+      selector.split(/[\s>+~]+/).filter((part) => /^[a-z]/.test(part)).length,
+    ];
+    const outranks = (a: number[], b: number[]): boolean => {
+      const at = a.findIndex((value, index) => value !== b[index]);
+      return at >= 0 && (a[at] ?? 0) > (b[at] ?? 0);
+    };
+
+    const term = rules("cards.css").filter((rule) => /^\.cf .*\.cf-term$/.test(rule.selector) && !rule.selector.includes(".cf-mark"));
+    expect(term, "the face's one rule for its terms").toHaveLength(1);
+    expect(term[0]?.body).toMatch(/font-weight:\s*800/);
+    expect(term[0]?.body).toMatch(/color:\s*inherit/);
+
+    const tavern = rules("../auth/tavern.css").find((rule) => rule.selector === ".tavern.app-shell strong");
+    expect(tavern?.body).toMatch(/color:\s*var\(--tavern-gold-pale\)/);
+    expect(outranks(specificity(term[0]?.selector ?? ""), specificity(tavern?.selector ?? ""))).toBe(true);
+  });
+
   it("B10 lower-case or glued words are not bolded", () => {
     const plain: CardDef = {
       ...def("core-005"),
@@ -604,11 +663,13 @@ describe("B15: length tiers, and useFitText without layout", () => {
 
   it("B15 useFitText is a no-op on an element with no layout: no --cf-fit, no data-clamped, on content change too", () => {
     const { container, rerender } = render(<FitProbe content="A long line of rules text that would overflow" />);
+    flushFits();
     const probe = one(container, "[data-probe]");
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
 
     rerender(<FitProbe content={stringOf(400)} />);
+    flushFits();
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
   });
@@ -629,6 +690,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
     vi.stubGlobal("ResizeObserver", StubResizeObserver);
 
     const { container } = render(<FitProbe content={stringOf(300)} />);
+    flushFits();
     const probe = one(container, "[data-probe]");
     act(() => {
       for (const callback of callbacks) {
@@ -636,6 +698,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
         callback(entries as unknown as ResizeObserverEntry[], {} as ResizeObserver);
       }
     });
+    flushFits();
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
   });

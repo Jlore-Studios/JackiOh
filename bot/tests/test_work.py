@@ -44,6 +44,42 @@ GATES = [{"name": "rules exist", "run": "test -f src/game.txt", "timeout_minutes
          {"name": "no broken file", "run": "test ! -f broken.txt", "timeout_minutes": 1}]
 
 
+class MachineGateTests(unittest.TestCase):
+    """On the bot's machine a run runs only the checks marked for it; CI runs the rest."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.origin, self.clone = make_origin(self.root)
+        gates = [GATES[0], {**GATES[1], "machine": False}]
+        self.cfg = make_config(gates=gates, install={"run": "true", "timeout_minutes": 1})
+
+    def worker(self, runs_on: str) -> Worker:
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "runs_on": runs_on}
+        return Worker(self.cfg, plan, FakeRunner({}), self.clone, self.root / runs_on,
+                      self.root / f"out-{runs_on}")
+
+    def test_the_machine_leaves_heavy_checks_to_ci(self):
+        self.assertEqual([g.machine for g in self.cfg.gates], [True, False])
+        on_machine = self.worker("night-vm-gpt")
+        self.assertEqual([g.name for g in on_machine.gates], ["rules exist"])
+        text = on_machine._gate_list()
+        self.assertIn("- rules exist:", text)
+        self.assertNotIn("- no broken file:", text)
+        self.assertIn("leaves no broken file (`test ! -f broken.txt`) to CI", text)
+        self.assertIn("pnpm vitest run <test file>", text)
+        on_github = self.worker("ubuntu-latest")
+        self.assertEqual([g.name for g in on_github.gates], ["rules exist", "no broken file"])
+        self.assertNotIn("shared machine", on_github._gate_list())
+
+    def test_the_committed_checks(self):
+        cfg = make_config()
+        machine = {g.name: g.machine for g in cfg.gates}
+        self.assertEqual(machine, {"lint": False, "typecheck": True, "catalog": True,
+                                   "card tests exist": True, "rulings coverage": True,
+                                   "unit and integration": False})
+
+
 class WorkTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
@@ -193,6 +229,16 @@ class WorkTests(unittest.TestCase):
             return RunResult(False, "", 1, error="Invalid API key · Please run /login")
         result = self.worker(FakeRunner({"build": denied})).run()
         self.assertEqual(result["status"], "infra")
+
+    def test_a_revoked_claude_token_stops_the_run_before_any_check(self):
+        def revoked(request: RunRequest) -> RunResult:
+            return RunResult(False, "", 1, error="Failed to authenticate. API Error: 401 OAuth "
+                             "access token is invalid.")
+        runner = FakeRunner({"build": revoked, "review": reviewer(APPROVE)})
+        result = self.worker(runner).run()
+        self.assertEqual(result["status"], "infra")
+        self.assertEqual([call.role for call in runner.calls], ["build"])  # no review either
+        self.assertFalse(any(cycle.get("gates") for cycle in result.get("cycles") or []))
 
     def test_a_blocked_builder_asks_its_question(self):
         blocked = '<!-- bot: {"status": "blocked", "question": "Coin or no coin?"} -->\nI stopped.'

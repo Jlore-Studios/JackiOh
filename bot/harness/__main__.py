@@ -18,6 +18,7 @@ from typing import Any
 
 from harness import config as config_mod
 from harness import context as context_mod
+from harness import dashboard as dashboard_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import logins as logins_mod
@@ -26,12 +27,14 @@ from harness import providers as providers_mod
 from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness import sweep as sweep_mod
+from harness import triage as triage_mod
 from harness.clock import iso, now as clock_now
-from harness.config import LABELS, Config
+from harness.config import LABELS, TRUST_PATH, Config
 from harness.errors import ConfigError, GitHubError, HarnessError, LoginError
 from harness.redact import redact
 from harness.runner import get_runner, ping_usage
 from harness.state import item as state_item
+from harness.trust import Trust
 from harness.work import Worker, check_templates
 
 
@@ -67,6 +70,11 @@ def _summary(text: str) -> None:
             handle.write(redact(text) + "\n")
 
 
+def _bullets(lines: list[str]) -> str:
+    """`lines` as a Markdown list after a blank line, or nothing when there are none."""
+    return "\n" + "".join(f"- {line}\n" for line in lines) if lines else ""
+
+
 def _dump(obj: Any) -> None:
     print(redact(json.dumps(obj, indent=2, default=str)))
 
@@ -93,8 +101,17 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
     if planned.get("provider"):
         what += f" on {planned['provider']}"
-    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n")
+    if planned.get("priority"):
+        what += f", priority tier {planned['priority']}"
+    if planned.get("difficulty"):
+        what += f", difficulty {planned['difficulty']}"
+    if planned.get("assignment"):
+        what += f" ({planned['assignment']})"
+    notes = [*(planned.get("routing") or []), *(planned.get("skipped") or [])]
+    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n{_bullets(notes)}")
     print(f"plan: {what} {planned.get('reason', '')}".strip())
+    for line in notes:
+        print(f"plan: {line}")
     return 0
 
 
@@ -108,8 +125,11 @@ def cmd_peek(cfg: Config, args: argparse.Namespace) -> int:
              "fallback": str(look.fallback).lower()})
     then = (f" First, `{look.quiet_provider}` must be quiet"
             + (" (other work can go ahead if it is not)." if look.fallback else ".")) if check else ""
-    _summary(f"### Peek: {'work' if look.work else 'nothing to do'}\n\n{look.reason}.{then}\n")
+    _summary(f"### Peek: {'work' if look.work else 'nothing to do'}\n\n{look.reason}.{then}\n"
+             f"{_bullets(look.skipped)}")
     print(f"peek: {'work' if look.work else 'nothing'}: {look.reason}.{then}")
+    for line in look.skipped:
+        print(f"peek: {line}")
     return 0
 
 
@@ -147,7 +167,7 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
-                                        ctx.now())
+                                        ctx.now(), ctx.cfg.timezone)
         if refusal:
             return (f"`{provider.id}` stops: {refusal}", "usage")
         return None
@@ -244,6 +264,30 @@ def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
+    """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
+    `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
+    for GitHub's late schedules to start its next run when its chain of runs breaks. A failure is
+    only a warning: it never fails the sweep or the loop."""
+    every = max(0, int(getattr(args, "every", 0) or 0))
+    deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
+    while True:
+        if getattr(args, "sweep", False):
+            try:
+                for line in sweep_mod.sweep(_ctx(cfg)) or ["nothing was left unanswered"]:
+                    print(redact(f"sweep: {line}"), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the sweep failed: {exc}"), flush=True)
+        try:
+            note = dashboard_mod.update(_ctx(cfg))
+            print(redact(f"dashboard: {note}"), flush=True)
+        except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+            print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        if not every or time.monotonic() + every > deadline:
+            return 0
+        time.sleep(every)
+
+
 def cmd_halt(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
     reason = " ".join(args.reason) or "halted from the command line"
@@ -282,10 +326,19 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         limits = provider.limits
         caps = ", ".join([f"{k} {v:.0%}" for k, v in limits.stops.items()]
                          + [f"{k} {v} min" for k, v in limits.budgets.items()]) or "none"
-        print(f"{provider.id:10} {provider.cli:7} {provider.model:16} "
-              f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
+        seats = ", ".join(f"{seat.model} {seat.tier}" + (" self-check" if seat.self_check else "")
+                          for seat in cfg.pool.seats(provider))
+        print(f"{provider.id:10} {provider.cli:7} {seats:36} "
+              f"hours: {provider.hours(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
     print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
+    # A tier's entries name models; whether one checks itself is its subscription's seat's.
+    checking = {seat.model for provider in cfg.pool.ordered() for seat in cfg.pool.seats(provider)
+                if seat.self_check}
+    for tier in providers_mod.TIERS:
+        order = ", ".join(e.model + (" (self-check)" if e.model in checking else "")
+                          for e in cfg.pool.tiers.get(tier, ()))
+        print(f"{tier} tier, tried in this order: {order or 'none'}")
     return 0
 
 
@@ -360,7 +413,7 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
             warnings.append(f"halted: {state.get('halt')}")
         for provider in cfg.pool.ordered():
             refusal = providers_mod.refusal(provider, providers_mod.peek_record(
-                state, provider.id), ctx.now())
+                state, provider.id), ctx.now(), cfg.timezone)
             if refusal:
                 warnings.append(f"{provider.id}: {refusal}")
         if ctx.repo_halted():
@@ -389,6 +442,60 @@ def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
         ctx.gh.set_protection(cfg.default_branch, list(cfg.required_checks))
         print(f"{cfg.default_branch}: requires {len(cfg.required_checks)} checks")
     print("setup done")
+    return 0
+
+
+def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
+    """Triage a new issue or pull request (`triage.py`). Every step skips quietly on failure:
+    triage is a convenience, never a reason for a red run."""
+    if args.step == "gate":
+        payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
+        go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
+                                  cfg.root, clock_now(), cfg.timezone)
+        thread, _ = triage_mod.thread_of(payload)
+        _output({"go": str(go).lower(), "number": thread.get("number") or ""})
+        print(f"triage: {'go' if go else 'skip'}: {why}")
+        return 0
+    number = int(args.number)
+    out = Path(args.verdict)
+    if args.step == "classify":
+        try:
+            ctx = _ctx(cfg, write=False)
+            thread = ctx.gh.get_issue(number)
+            text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
+                                     triage_mod.conventions_text(cfg.root),
+                                     triage_mod.issue_types(ctx.gh))
+            answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
+            verdict = triage_mod.parse(answer)
+        except Exception as exc:  # noqa: BLE001 - any failure skips
+            print(redact(f"triage: Devin did not classify #{number}: {exc}"))
+            return 0
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"number": number, "verdict": verdict}), encoding="utf-8")
+        print(f"triage: #{number}: {json.dumps(verdict)[:500]}")
+        return 0
+    try:
+        written = json.loads(out.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        print(f"triage: nothing to apply to #{number}")
+        return 0
+    if int(written.get("number") or 0) != number:
+        print(f"triage: the answer is for #{written.get('number')}, not #{number}")
+        return 0
+    try:
+        ctx = _ctx(cfg)
+        thread = ctx.gh.get_issue(number)
+        repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
+        plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
+                                 repo_labels, cfg.bot_login, triage_mod.issue_types(ctx.gh))
+        done = triage_mod.apply(ctx.gh, number, plan)
+    except GitHubError as exc:
+        print(redact(f"triage: could not triage #{number}: {exc}"))
+        return 0
+    lines = done or ["nothing to change"]
+    report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
+    print(report)
+    _summary(report)
     return 0
 
 
@@ -432,6 +539,14 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="")
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
+    dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
+                               "runs it every ten minutes; each sweep runs it once)")
+    dashboard.add_argument("--every", type=int, default=0,
+                           help="seconds between rewrites; 0 rewrites it once")
+    dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
+                           help="how long to keep rewriting it, in seconds")
+    dashboard.add_argument("--sweep", action="store_true",
+                           help="sweep before each rewrite, as the ten-minute sweep does")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -448,6 +563,11 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", help="create labels and the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
+    p = sub.add_parser("triage", help="label, assign and title a new issue or pull request")
+    p.add_argument("step", choices=("gate", "classify", "apply"))
+    p.add_argument("--payload", default="", help="gate: the event's payload file")
+    p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
+    p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top
@@ -462,6 +582,7 @@ COMMANDS = {
     "event": cmd_event,
     "sweep": cmd_sweep,
     "status": cmd_status,
+    "dashboard": cmd_dashboard,
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,
@@ -470,6 +591,7 @@ COMMANDS = {
     "doctor": cmd_doctor,
     "setup": cmd_setup,
     "forget": cmd_forget,
+    "triage": cmd_triage,
 }
 
 

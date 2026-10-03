@@ -28,6 +28,7 @@ import {
   createMemoryDeckStores,
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
+  createMemoryPlayerSettingsStore,
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
@@ -37,6 +38,7 @@ import {
   type DeckTables,
   type GameRecordTables,
   type LastBoardTables,
+  type PlayerSettingsTables,
   type RankedTables,
   type TutorialTables,
 } from "../../src/api/memory-stores";
@@ -71,6 +73,7 @@ type Tables = {
   results: ResultRow[];
 } & DeckTables &
   TutorialTables &
+  PlayerSettingsTables &
   RankedTables &
   LastBoardTables &
   GameRecordTables;
@@ -91,6 +94,7 @@ function emptyTables(): Tables {
     tickets: [],
     results: [],
     tutorial: [],
+    playerSettings: [],
     lastBoards: [],
     gameRecords: [],
     ...emptyRankedTables(),
@@ -336,6 +340,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.series = deckStores.series;
   // R320: tutorial progress, the same in-memory store the end-to-end server runs.
   store.tutorial = createMemoryTutorialStore(() => tables, call);
+  // R633: the player's game settings on the account, shared with the other in-memory store like the tutorial.
+  store.playerSettings = createMemoryPlayerSettingsStore(() => tables, call);
   // R417, R565: each profile's last board, shared with the other in-memory store like the tutorial.
   store.lastBoards = createMemoryLastBoardStore(() => tables, call);
   // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
@@ -511,7 +517,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     },
   };
 
-  // Migration 0014's ranked ladder, shared with `src/api/e2e-store.ts`.
+  // SPEC §9.12's ranked ladder, shared with `src/api/e2e-store.ts` (the Postgres migration has
+  // not landed — `db/store.ts` throws until it does).
   store.ranked = createMemoryRankedStore(() => tables, call);
 
   return store;

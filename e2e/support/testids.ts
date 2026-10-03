@@ -980,3 +980,22 @@ export function powerOfId(instanceId: string): string {
 export function pilePlayId(instanceId: string): string {
   return `pile-play-${instanceId}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// A21: the Card Almanac (`/almanac`, R630) and the site footer's link to it. Mirrors, name for name,
+// `almanacTestid` in `apps/web/src/routes/almanac.tsx`, `siteFooterTestid` in
+// `apps/web/src/routes/SiteFooter.tsx` and `navTestid.back` in `apps/web/src/routes/nav.tsx`, which
+// are React modules a spec cannot import. Keep the files identical. The almanac's pool, filters and
+// detail view are A14's names: it renders the deck builder's own browse pane.
+// ---------------------------------------------------------------------------------------------
+
+/** A21: the almanac's root. */
+export const ALMANAC = "almanac";
+/** A21: the site footer, on the landing page and the sign-in screen. */
+export const SITE_FOOTER = "site-footer";
+/** A21: the footer's "Card almanac" link, right after its Patch notes link. */
+export const SITE_FOOTER_ALMANAC = "site-footer-almanac";
+/** A21: the footer's Patch notes link. */
+export const SITE_FOOTER_PATCH_NOTES = "site-footer-patch-notes";
+/** A21: a screen's "← Back" in its top bar. */
+export const NAV_BACK = "nav-back";

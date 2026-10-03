@@ -514,7 +514,7 @@ pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
-pnpm --filter @jackioh/cards patch <version> "<title>"   # record a patch (§8)
+pnpm --filter @jackioh/cards run patch <version> "<title>"   # record a patch (§8)
 ```
 
 ## 8. Patches and the catalog version (R388)
@@ -526,9 +526,9 @@ still be read.
   title, source, notes }`, and `patches/<version>.json` is the whole catalog as that patch left it
   (snapshots, not diffs). A generated index maps each card id to the versions in which it changed;
   the client's History section and Patch notes page read these files (`apps/web/README.md`).
-- **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0-r1
-  (2026-09-22: the Core Set balance changes of issue #1); v0.1.0-r2 (2026-09-24: #95's text, and The
-  Coin added); v0.1.0-r3 (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
+- **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0b
+  (2026-09-22: the Core Set balance changes of issue #1); v0.1.0c (2026-09-24: #95's text, and The
+  Coin added); v0.1.0d (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
   `refs`); v0.1.1 (2026-09-27, issue #27: the Ghoul Token added and 105 entries changed); v0.2.0
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
@@ -540,7 +540,7 @@ still be read.
   where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
   version stays opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s.
-- **Making one.** `pnpm --filter @jackioh/cards patch <version> "<title>"` (in `scripts/`, where fs
+- **Making one.** `pnpm --filter @jackioh/cards run patch <version> "<title>"` (in `scripts/`, where fs
   is allowed) snapshots `catalog.json`, diffs it against the previous snapshot and writes the
   patch-notes entry, card by card.
 - **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its

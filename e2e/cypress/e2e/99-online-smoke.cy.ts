@@ -73,6 +73,7 @@ function signInThroughForm(email: string): void {
   cy.visit("/login", {
     onBeforeLoad(win) {
       // A different account in the same browser: drop whatever token is there first.
+      win.sessionStorage.removeItem("jackioh.session");
       win.localStorage.removeItem("jackioh.session");
       win.localStorage.removeItem("jackioh.e2e.session");
     },
@@ -351,7 +352,8 @@ function signInThroughForm(email: string): void {
     // A real navigation, so the token is gone from storage as well as from memory.
     cy.location("pathname", { timeout: 40_000 }).should("eq", "/");
     cy.window().then((win) => {
-      expect(win.localStorage.getItem("jackioh.session"), "the token is cleared").to.eq(null);
+      expect(win.sessionStorage.getItem("jackioh.session"), "the token is cleared from the tab").to.eq(null);
+      expect(win.localStorage.getItem("jackioh.session"), "and none is left in localStorage").to.eq(null);
     });
 
     // And the gate now refuses a guarded screen.

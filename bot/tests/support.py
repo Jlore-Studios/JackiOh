@@ -36,21 +36,43 @@ def raw_providers() -> dict[str, Any]:
     return json.loads((ROOT / providers_mod.PROVIDERS_PATH).read_text(encoding="utf-8"))
 
 
-#: The subscriptions logged in on the machine, which no secret switches on or off.
-MACHINE: tuple[str, ...] = tuple(name for name, p in raw_providers()["providers"].items()
-                                 if p.get("login") == "machine")
+#: The machine subscriptions the tests switch on by default: no secret switches them on or off.
+#: Devin (`devin`, ahead of them in `priority`) is named by the tests about it, so the tests of
+#: the others stay about them.
+MACHINE: tuple[str, ...] = ("gpt", "agy", "muse")
+#: Every subscription logged in on the machine, Devin's included.
+ALL_MACHINE: tuple[str, ...] = tuple(name for name, p in raw_providers()["providers"].items()
+                                     if p.get("login") == "machine")
 
 
-def test_pool(machine: tuple[str, ...] = ()) -> providers_mod.Pool:
+#: The hours every Claude account has in tests unless a test asks for the committed ones.
+NIGHT_WINDOW = {"mode": "window", "start": "21:00", "end": "07:00"}
+
+
+def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False) -> providers_mod.Pool:
     """The committed subscriptions, with the machine's (`"login": "machine"`) switched off
     unless named in `machine`. A machine login has no secret to be missing, so it counts as set
     up in every run; tests start, as before the machine, with only the subscriptions whose
-    secrets `HARNESS_SECRETS_SET` names."""
+    secrets `HARNESS_SECRETS_SET` names.
+
+    Every Claude account keeps to the night window, whatever hours the owner commits for it
+    (`claude-3` runs all day), so a test of the other subscriptions by day stays about them;
+    `committed_hours` keeps the committed ones."""
     raw = raw_providers()
     for name, provider in raw["providers"].items():
         if provider.get("login") == "machine" and name not in machine:
             provider["enabled"] = False
+        if provider.get("cli") == "claude" and not committed_hours:
+            provider["schedule"] = dict(NIGHT_WINDOW)
+            provider.pop("off_hours", None)
     return providers_mod.parse(raw)
+
+
+def with_lanes(cfg: Any, max_parallel: int, machine_parallel: int | None = None) -> Any:
+    """`cfg` with other run limits, for a test about lanes filling up."""
+    machine = max_parallel if machine_parallel is None else machine_parallel
+    pool = dataclasses.replace(cfg.pool, max_parallel=max_parallel, machine_parallel=machine)
+    return dataclasses.replace(cfg, pool=pool)
 
 
 def secret_login(provider: providers_mod.Provider, secret: str) -> providers_mod.Provider:
@@ -59,11 +81,11 @@ def secret_login(provider: providers_mod.Provider, secret: str) -> providers_mod
 
 
 def make_config(root: Path | None = None, env: dict[str, str] | None = None,
-                machine: tuple[str, ...] = (), **overrides: Any):
+                machine: tuple[str, ...] = (), committed_hours: bool = False, **overrides: Any):
     raw = raw_config()
     raw.update(overrides)
     return config_mod.parse(raw, root or ROOT, {**TEST_ENV, **(env or {})},
-                            pool=test_pool(machine))
+                            pool=test_pool(machine, committed_hours))
 
 
 class Clock:

@@ -56,6 +56,8 @@ import type {
   MatchClocks,
   MatchRow,
   MatchStatus,
+  PlayerSettingsGroup,
+  PlayerSettingsRow,
   Profile,
   ProfileStatus,
   QueueMode,
@@ -621,6 +623,15 @@ function toTutorial(row: TutorialDbRow): TutorialProgressRow {
     // `tutorial_progress_choice_pair_check`: both or neither.
     hiddenChoice: row.hidden === null || at === null ? null : { hidden: row.hidden, at },
   };
+}
+
+/** `public.player_settings` (migration 0018, R633): a jsonb object of groups, parsed by node-pg. */
+type PlayerSettingsDbRow = { profile_id: string; groups: Record<string, PlayerSettingsGroup> };
+
+const PLAYER_SETTINGS_COLUMNS = `profile_id, groups`;
+
+function toPlayerSettings(row: PlayerSettingsDbRow): PlayerSettingsRow {
+  return { profileId: row.profile_id, groups: row.groups };
 }
 
 /**
@@ -2069,6 +2080,51 @@ function buildStore(session: Session): Store {
   };
 
   // -------------------------------------------------------------------------
+  // Player settings on the account (SPEC §9.1, R633, R634)
+  // -------------------------------------------------------------------------
+
+  store.playerSettings = {
+    get: async (profileId) => {
+      if (!isUuid(profileId)) return null;
+      const { rows } = await session.query<PlayerSettingsDbRow>(
+        profileId,
+        `select ${PLAYER_SETTINGS_COLUMNS} from public.player_settings where profile_id = $1::uuid`,
+        [profileId],
+      );
+      const row = rows[0];
+      return row === undefined ? null : toPlayerSettings(row);
+    },
+
+    /**
+     * R634: one call to `app.merge_player_settings` (0018), which takes the profile row lock,
+     * re-checks the shape, replaces each group only with a strictly later one and caps the result;
+     * then the row as it now stands, read in the same transaction so the answer is exactly what
+     * this write left.
+     */
+    merge: async (input, limits) =>
+      session.run(input.profileId, async (q) => {
+        const { rows } = await q<{ outcome: unknown }>(
+          `select app.merge_player_settings($1::uuid, $2::jsonb, ${ts("$3")}, $4::int, $5::int) as outcome`,
+          [input.profileId, JSON.stringify(input.groups), input.at, limits.maxGroups, limits.maxBytes],
+        );
+        const outcome = rows[0]?.outcome;
+        if (outcome === "limit") return { kind: "limit" } as const;
+        if (outcome !== "merged") {
+          throw new Error(
+            `app.merge_player_settings returned ${JSON.stringify(outcome)}, which is not merged or limit (migration 0018)`,
+          );
+        }
+        const read = await q<PlayerSettingsDbRow>(
+          `select ${PLAYER_SETTINGS_COLUMNS} from public.player_settings where profile_id = $1::uuid`,
+          [input.profileId],
+        );
+        const row = read.rows[0];
+        if (row === undefined) throw new Error("app.merge_player_settings answered merged and wrote no row");
+        return { kind: "merged", settings: toPlayerSettings(row) } as const;
+      }),
+  };
+
+  // -------------------------------------------------------------------------
   // Last boards (C+ #29, R417, R565). No `app.*` function: the one rule is "replace", which the
   // primary key on (profile_id, kind) says.
   // -------------------------------------------------------------------------
@@ -2235,6 +2291,14 @@ function fromTicketStatus(status: TicketStatus): string {
 //    itself (the union, the strictly-newer choice, the `limit` outcome) is the same in both and is
 //    asserted in `test/db/contract.ts`. Its cap is the smaller of the caller's and
 //    `app.settings.tutorial_lessons_max`, as for the deck caps below.
+//  * player settings strictness (R633). `app.merge_player_settings` (0018) refuses — by raising — a
+//    profile that is not active and a group that is not `{ at: whole milliseconds, values: an
+//    object }`; the in-memory stores check neither, because `src/api/settings.ts` refuses a
+//    malformed body first and its route is `active`. The merge itself (the strictly-later group,
+//    the groups a write leaves alone, the `limit` outcome) is the same in both and is asserted in
+//    `test/db/contract.ts`. Its caps are the smaller of the caller's and `app.settings`'
+//    `player_settings_groups_max` / `player_settings_bytes_max`. The byte cap counts the text
+//    jsonb prints, which the in-memory store reproduces (`jsonbTextBytes`) for ordinary values.
 //  * caps. The port passes the cap (`maxDecks`, `maxTrios`); the SQL applies the smaller of it and
 //    `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and
 //    `MAX_SAVED_TRIOS`). Equal today. Raising a cap in `src/config.ts` alone raises it only in

@@ -44,6 +44,7 @@ aws iam put-role-policy --role-name "$ROLE" --policy-name start-the-night-machin
      \"Resource\":\"arn:aws:ec2:${AWS_REGION}:${account}:instance/${INSTANCE_ID}\"},
     {\"Effect\":\"Allow\",\"Action\":\"ec2:DescribeInstances\",\"Resource\":\"*\"}]}"
 
+# 256 MB: a call peaks at about 107 MB (boto3 is most of it), too close to 128.
 cp "$here/starter.py" "$work/starter.py"
 (cd "$work" && zip -q starter.zip starter.py)
 token="${STARTER_GITHUB_TOKEN:-}"
@@ -52,12 +53,13 @@ if aws lambda get-function --function-name "$NAME" >/dev/null 2>&1; then
   aws lambda update-function-code --function-name "$NAME" \
     --zip-file "fileb://$work/starter.zip" >/dev/null
   aws lambda wait function-updated --function-name "$NAME"
-  aws lambda update-function-configuration --function-name "$NAME" --environment "$env" >/dev/null
+  aws lambda update-function-configuration --function-name "$NAME" --environment "$env" \
+    --memory-size 256 >/dev/null
   aws lambda wait function-updated --function-name "$NAME"
 else
   aws lambda create-function --function-name "$NAME" --runtime python3.13 \
     --handler starter.handler --role "$role_arn" --zip-file "fileb://$work/starter.zip" \
-    --timeout 60 --memory-size 128 --environment "$env" \
+    --timeout 60 --memory-size 256 --environment "$env" \
     --description "Starts the JackiOh night machine when a job waits for its runners" >/dev/null
   aws lambda wait function-active --function-name "$NAME"
 fi

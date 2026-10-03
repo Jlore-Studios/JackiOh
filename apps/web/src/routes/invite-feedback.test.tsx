@@ -739,7 +739,7 @@ describe("R194 a redemption the API refuses as unauthorised", () => {
     await screen.findByTestId(inviteTestid.redeemed);
     expect(vi.mocked(redeemCode).mock.calls.map(([token]) => token)).toEqual(["old", "new"]);
     expect(refreshes).toHaveLength(1);
-    expect(JSON.parse(window.localStorage.getItem(SESSION_STORAGE_KEY) ?? "{}").accessToken).toBe("new");
+    expect(JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "{}").accessToken).toBe("new");
     expect(screen.queryByText("sign in first")).toBeNull();
   });
 
