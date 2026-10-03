@@ -2,22 +2,29 @@
 //
 // CLAUDE.md rule 7: the client sends intent and renders `viewFor`. A session is not game state —
 // it is the bearer token every request and the match socket carry, so it lives in one module that
-// knows how to read it, write it and clear it, and no screen reaches into `localStorage` itself.
+// knows how to read it, write it and clear it, and no screen reaches into browser storage itself.
 //
-// STORAGE, NOT IN-PAGE STATE. `e2e/cypress/e2e/05-reconnect.cy.ts` calls `cy.reload()` mid-match
-// and requires the session to survive it, so the token is read from browser storage on every boot.
+// THIS TAB'S STORAGE (R632). A sign-in is kept in the tab's `sessionStorage`, never in
+// `localStorage`: a script that reads `localStorage` (a browser extension, a future XSS) finds no
+// token there, and a token does not outlive the tab on a shared computer. The cost is that a new
+// tab, or a browser that was closed, asks for the password again. `e2e/cypress/e2e/05-reconnect.cy.ts`
+// calls `cy.reload()` mid-match and requires the session to survive it, which `sessionStorage` does.
 //
-// THE KEY IS A CONTRACT. The M8 specs seed a session by writing
+// OLDER BUILDS. A build before R632 kept the session in `localStorage["jackioh.session"]`. The
+// first read moves such a value into this tab and deletes it, so a player who was signed in when
+// this shipped is not signed out by it.
+//
+// THE FIXTURE KEY IS A CONTRACT. The M8 specs seed a session by writing
 // `localStorage["jackioh.e2e.session"] = JSON.stringify({ accessToken })` in `onBeforeLoad`
-// (`visitAs` in specs 05, 06, 09 and 10). The specs are fixed, so that key is read here verbatim;
-// `jackioh.session` is the name a real sign-in writes (in sessionStorage) and is preferred when both
-// are present.
+// (`visitAs` in specs 05, 06, 09 and 10). The specs are fixed, so that key is read here verbatim,
+// from `localStorage`, and a session in this tab is preferred when both are present. Nothing writes
+// it: the server verifies every token, so a forged one opens nothing.
 // This is an ASSUMPTION beyond BUILD (e2e/README.md A6), made in exactly one place.
 //
 // Two more keys live here, `jackioh.auth.pendingEmail` and `jackioh.auth.pendingReset`: the address
 // a sign-up in this browser is waiting to confirm, and the one it asked to reset (see the section at
-// the end). A recovery session never touches `localStorage`; `auth/redirect.ts` holds it for this
-// tab only until a new password is saved (R193).
+// the end). Neither is a secret. A recovery session never touches `localStorage`; `auth/redirect.ts`
+// holds it for this tab only until a new password is saved (R193).
 
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "../../../server/src/config.ts";
 
@@ -27,9 +34,18 @@ export const SESSION_STORAGE_KEY = "jackioh.session";
 /** What the M8 specs write in `onBeforeLoad`. Read-only as far as the client is concerned. */
 export const E2E_SESSION_STORAGE_KEY = "jackioh.e2e.session";
 
-const LEGACY_KEYS: readonly string[] = [SESSION_STORAGE_KEY, E2E_SESSION_STORAGE_KEY];
+/** The tab's own storage, or null where the browser blocks it. Accessing it can throw. */
+function tabStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
-function localStorageOrNull(): Storage | null {
+/** The storage every tab shares: the older builds' session and the e2e fixture's, nothing new. */
+function sharedStorage(): Storage | null {
   if (typeof window === "undefined") return null;
   try {
     return window.localStorage;
@@ -38,12 +54,20 @@ function localStorageOrNull(): Storage | null {
   }
 }
 
-function sessionStorageOrNull(): Storage | null {
-  if (typeof window === "undefined") return null;
+function read(store: Storage | null, key: string): string | null {
   try {
-    return window.sessionStorage;
+    return store?.getItem(key) ?? null;
   } catch {
+    // A private window or blocked site data: there is simply no session.
     return null;
+  }
+}
+
+function remove(store: Storage | null, key: string): void {
+  try {
+    store?.removeItem(key);
+  } catch {
+    // Nothing to do: the key was not there to remove, or the storage is blocked.
   }
 }
 
@@ -80,55 +104,44 @@ function parse(raw: string | null): Session | null {
 /** The current session, or null when nobody is signed in. Never throws. */
 export function readSession(): Session | null {
   if (typeof window === "undefined") return null;
-  const tab = sessionStorageOrNull();
-  const local = localStorageOrNull();
-  // A session from older builds can still be in localStorage: move it to this tab and clear it.
-  const legacy = parse(local?.getItem(SESSION_STORAGE_KEY) ?? null);
-  if (legacy !== null) {
-    try {
-      tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(legacy));
-      local?.removeItem(SESSION_STORAGE_KEY);
-    } catch {
-      // If moving fails, keep using the parsed value in memory.
-    }
-    return legacy;
-  }
+  const tab = tabStorage();
+  const shared = sharedStorage();
 
-  const current = parse(tab?.getItem(SESSION_STORAGE_KEY) ?? null);
+  const current = parse(read(tab, SESSION_STORAGE_KEY));
   if (current !== null) return current;
 
-  return parse(local?.getItem(E2E_SESSION_STORAGE_KEY) ?? null);
+  // A session an older build kept in `localStorage` moves into this tab and out of `localStorage`.
+  const older = parse(read(shared, SESSION_STORAGE_KEY));
+  if (older !== null) {
+    try {
+      tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(older));
+      remove(shared, SESSION_STORAGE_KEY);
+    } catch {
+      // The tab's storage refused it: the session is used for this read, and moved on the next.
+    }
+    return older;
+  }
+
+  return parse(read(shared, E2E_SESSION_STORAGE_KEY));
 }
 
 export function writeSession(session: Session): void {
   if (typeof window === "undefined") return;
-  const tab = sessionStorageOrNull();
-  const local = localStorageOrNull();
   try {
-    tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    // S15: keep auth sessions out of localStorage.
-    local?.removeItem(SESSION_STORAGE_KEY);
+    tabStorage()?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   } catch {
-    // Nothing to do: the caller gets a session that lasts until the tab closes.
+    // Nothing to do: the caller gets a session that lasts until the page is left.
+    return;
   }
+  // R632: whatever an older build left in `localStorage` is stale now, and a token must not stay there.
+  remove(sharedStorage(), SESSION_STORAGE_KEY);
 }
 
 export function clearSession(): void {
   if (typeof window === "undefined") return;
-  const tab = sessionStorageOrNull();
-  const local = localStorageOrNull();
-  try {
-    tab?.removeItem(SESSION_STORAGE_KEY);
-  } catch {
-    // As above.
-  }
-  for (const key of LEGACY_KEYS) {
-    try {
-      local?.removeItem(key);
-    } catch {
-      // As above.
-    }
-  }
+  remove(tabStorage(), SESSION_STORAGE_KEY);
+  remove(sharedStorage(), SESSION_STORAGE_KEY);
+  remove(sharedStorage(), E2E_SESSION_STORAGE_KEY);
 }
 
 // --- the sign-up and the reset this browser started (R193) --------------------------------------

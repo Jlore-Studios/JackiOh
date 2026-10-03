@@ -13,7 +13,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-01";
+export const TERMS_LAST_UPDATED = "2026-10-03";
 
 export default function TermsRoute(): ReactElement {
   return (

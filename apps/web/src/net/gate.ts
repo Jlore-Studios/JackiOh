@@ -21,10 +21,12 @@
 // the session and reports an error with a retry. A session with no refresh token (the e2e
 // fixtures) is never renewed and behaves exactly as before.
 //
-// ANOTHER TAB. The session lives in `localStorage`, which every tab shares, so a sign-out (or a
-// renewal) in one tab changes what this one holds. `useAccount` listens for that (`storage`
-// events fire only in the OTHER tabs) and reads the account again, so a signed-out device is not
-// shown a gated screen from a token that is already gone.
+// ANOTHER TAB (R632). A session belongs to the tab that signed in (`net/session.ts`), so a sign-out
+// or a renewal in another tab does not change what this one holds. What tabs still share is
+// `localStorage`: the e2e fixture's session, and a session an older build left there. `useAccount`
+// listens for `storage` events on those keys (they fire only in the OTHER tabs) and reads the
+// account again, so a device whose fixture session was removed is not shown a gated screen from a
+// token that is already gone.
 //
 // THE BACK BUTTON. Sign-out leaves by a real page load, but browsers keep the page it left in the
 // back/forward cache, frozen with the account it had read, and a frozen page hears no `storage`
@@ -445,15 +447,6 @@ export function useAccount(): Account {
     // stays until the new answer arrives, so a renewal elsewhere does not flash "Checking…".
     const onStorage = (event: StorageEvent): void => {
       if (event.key !== null && event.key !== SESSION_STORAGE_KEY && event.key !== E2E_SESSION_STORAGE_KEY) return;
-      // The main session now lives in sessionStorage (S15), so another tab's sign-out can arrive as a
-      // removal signal on the legacy key with no token payload.
-      if (
-        event.key === SESSION_STORAGE_KEY &&
-        event.newValue === null &&
-        window.localStorage.getItem(SESSION_STORAGE_KEY) === null
-      ) {
-        clearSession();
-      }
       setAttempt((count) => count + 1);
     };
     const onChanged = (): void => {

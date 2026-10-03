@@ -13,7 +13,7 @@ export const accessibilityTestid = {
   updated: "accessibility-updated",
 } as const;
 
-export const ACCESSIBILITY_LAST_UPDATED = "2026-10-01";
+export const ACCESSIBILITY_LAST_UPDATED = "2026-10-03";
 
 export default function AccessibilityRoute(): ReactElement {
   return (
@@ -32,17 +32,17 @@ export default function AccessibilityRoute(): ReactElement {
         <section aria-labelledby="a11y-goal">
           <h3 id="a11y-goal">Our goal</h3>
           <p>
-            JackiOh aims to be playable with keyboard and screen readers. We continuously improve
-            clarity, focus order, labels, and motion controls.
+            We want JackiOh to be usable by as many players as we can make it. It has not had a formal
+            accessibility audit, and some parts are not yet fully accessible.
           </p>
         </section>
         <section aria-labelledby="a11y-features">
           <h3 id="a11y-features">Current support</h3>
           <ul>
-            <li>Keyboard navigation across menus and game controls.</li>
-            <li>Visible focus outlines and semantic headings.</li>
-            <li>Alternative text for card art using each card name.</li>
-            <li>Reduced-motion and audio controls in Settings.</li>
+            <li>Menus, the deck builder, and the board&rsquo;s cards, zones and prompts can be used from the keyboard.</li>
+            <li>Focused controls are marked, and each screen has headings.</li>
+            <li>Card art is decorative and hidden from screen readers; each card&rsquo;s name and text are on the card as text.</li>
+            <li>Reduce motion, effects and sound can be changed in Settings.</li>
           </ul>
         </section>
         <section aria-labelledby="a11y-help">

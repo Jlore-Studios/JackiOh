@@ -54,7 +54,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-01");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-03");
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
@@ -64,6 +64,17 @@ describe("the privacy policy", () => {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);
+  });
+
+  it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const device = within(page).getByRole("heading", { name: /what stays on your device/i }).closest("section");
+    const lists = [...(device?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
+    const tabOnly = lists.find((item) => /open tab only/i.test(item)) ?? "";
+    expect(tabOnly).toMatch(/sign-in session/);
+    expect(lists.filter((item) => /sign-in session/.test(item))).toEqual([tabOnly]);
+    expect(device?.textContent).toMatch(/sign in again in a new tab/i);
   });
 
   it("is served at /privacy, with no account needed", async () => {
@@ -85,6 +96,19 @@ describe("the legal pages", () => {
     expect(screen.getByTestId(accessibilityTestid.updated)).toHaveTextContent(
       `Last updated ${ACCESSIBILITY_LAST_UPDATED}`,
     );
+  });
+
+  it("open as drafts for the owner: their first source lines say so", () => {
+    for (const file of ["terms.tsx", "accessibility.tsx"]) {
+      const source = readFileSync(join(HERE, file), "utf8");
+      expect(source.split("\n")[0], file).toBe("// DRAFT — needs owner and legal review");
+    }
+  });
+
+  it("are in the sitemap", () => {
+    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/terms</loc>`);
+    expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/accessibility</loc>`);
   });
 
   it("serves /terms and /accessibility with no account needed", async () => {
