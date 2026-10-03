@@ -496,7 +496,9 @@
       "taken_asks": []
     },
     "63": {
-      "asks": [],
+      "asks": [
+        "c:5965999156"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -514,7 +516,7 @@
       "pending_request": false,
       "provider": "gpt",
       "question": "Can a human add the required `.github/workflows/patches-ship.yml` and the `patches check` CI step? Night-bot rules prohibit all `.github/` edits.",
-      "queued_at": "2026-10-03T04:30:14Z",
+      "queued_at": "2026-10-03T05:35:09Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37099014588",
       "started_at": "2026-10-03T05:12:56Z",
