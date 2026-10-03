@@ -904,6 +904,7 @@
     "168": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-03T23:37:05Z",
