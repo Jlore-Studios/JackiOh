@@ -888,9 +888,7 @@
       "source": "request",
       "started_at": "2026-10-03T23:26:26Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5974465299"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
