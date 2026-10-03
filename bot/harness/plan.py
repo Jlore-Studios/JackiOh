@@ -6,14 +6,29 @@ item at once, and a subscription holds one at a time), then one item and the sub
 takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
-Which subscription takes an item (`pairs`): items go in order of urgency (forced, then the
-priority tier, `difficult`, second reviews, revisions, the oldest builds), and each goes to the
-first subscription in `priority` that is free, available (`providers.availability`: switched on,
-its secret set, inside its hours unless the item is forced, under its limits) and allowed it: a
-`difficult` item only to one marked `difficult` (Opus), a second review only to a model family
-that has not approved the change yet, a `shitter` item only to a low-tier model. An item
-labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so an
-unforced run uses it only after the gate saw it quiet (`quiet_ok`).
+Who does what (`pairs`, `assign`): items go in order of urgency (forced, then the priority tier,
+the harder first, reviews, revisions, the oldest builds). An item's difficulty (`difficulty:easy`,
+`medium` or `hard`; medium without a label) sets the weakest tier that may build it (`MIN_TIER`).
+Among the seats (`providers.Seat`: one model on one subscription) whose subscription is free and
+available (`providers.availability`: switched on, its secret set, inside its hours unless the item
+is forced, under its limits):
+
+- **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
+  claude-1, then the medium models, then claude-2, Devin last) with a seat that meets the tier,
+  on its weakest such seat. claude-3 and claude-1 build an easy item with Sonnet, not Opus. A
+  builder above the item's tier (no seat of that tier free, or one comes later in the usage
+  order) is said in the run's log.
+- **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
+  seat, strong whenever one is free. When the builder's own subscription has a seat of that tier,
+  the plan and the build share one run; otherwise the planning is a run of its own, and the item
+  goes back to the queue to build from the plan.
+- **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
+  a weak seat never reviews, so a run with none hands the change to a review run.
+- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
+  one of a family that has not approved the head yet; a hard item waits for a strong one.
+
+An item labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so
+an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 """
 
 from __future__ import annotations
@@ -26,25 +41,27 @@ from typing import Any, Iterator
 from harness import asks, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING, NIGHT_WORKFLOW,
-                            STATE_BRANCH)
+from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR,
+                            LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING,
+                            MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
-from harness.providers import Provider
+from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
                            label_names, open_pull_for_branch, set_state_label)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
+#: What an assignment's run does: its action in the plan file.
+ACTIONS = ("plan", "build", "revise", "review")
 #: A run asked for and never taken up is dropped after this long.
 RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
 #: A run in one of these states is still going.
 LIVE = ("queued", "in_progress", "waiting", "pending", "requested")
 #: The role a provider must allow for each kind of item.
-ROLE_OF = {"build": "build", "revise": "revise", "review": "review"}
+ROLE_OF = {"build": "build", "revise": "revise", "review": "review", "plan": "plan"}
 #: `quiet_ok` that lets every provider through, for questions that start nothing.
 ANY_QUIET = "*"
 #: The gate's step that waits for the shared subscription to be quiet (`bot-night.yml`).
@@ -165,32 +182,168 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
                                       forced=forced) is None
 
 
+@dataclass
+class Assignment:
+    """One run's work: its subscription, and the seat each role runs on there. `action` is
+    `plan` (a planning run of its own), `build`, `revise` or `review` (a review run)."""
+
+    provider: Provider
+    action: str
+    difficulty: str
+    #: A planning session before the build, in this run.
+    plan: Seat | None = None
+    #: The builder (and its fixes).
+    build: Seat | None = None
+    #: The reviewer: in a build or revise run, its own adversarial reviewer (None hands the change
+    #: to a review run); in a review run, the one reviewing.
+    review: Seat | None = None
+    #: What the router decided that a reader should know: a step up in tier, and why.
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def self_check(self) -> bool:
+        return bool(self.build and self.build.self_check)
+
+    def describe(self) -> str:
+        parts = []
+        for role, seat in (("plan", self.plan), ("build", self.build), ("review", self.review)):
+            if seat is not None:
+                parts.append(f"{role} on {seat.describe()}")
+        if self.build is not None and self.review is None and self.action != "review":
+            parts.append("review in a review run" + (" after its self check"
+                                                       if self.self_check else ""))
+        return "; ".join(parts) or f"on {self.provider.describe()}"
+
+    def seats(self) -> dict[str, Any]:
+        """What the model job runs each role on (`work.py`)."""
+        return {"plan": self.plan.to_dict() if self.plan else None,
+                "build": self.build.to_dict() if self.build else None,
+                "review": self.review.to_dict() if self.review else None,
+                "self_check": self.self_check}
+
+
+def free_providers(ctx: Context, state: dict[str, Any], lanes: Lanes, role: str, *,
+                   forced: bool, quiet_ok: str) -> list[Provider]:
+    return [p for p in ctx.cfg.pool.ordered()
+            if _usable(ctx, state, p, lanes, role, forced=forced, quiet_ok=quiet_ok)]
+
+
+def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
+    """`seats` in the order the router tries them: the usage order (`priority`), then the
+    tier's own preference order."""
+    order = {name: i for i, name in enumerate(pool.priority)}
+    return sorted(seats, key=lambda seat: (order.get(seat.provider.id, len(order)), seat.rank))
+
+
+def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tuple[Seat | None, str]:
+    """Who builds an item of `difficulty`: the first free subscription in the usage order with a
+    seat that meets its tier, on its weakest such seat; with a note when that seat is above the
+    tier, saying why (none of that tier is free, or the usage order puts this one first)."""
+    floor = MIN_TIER[difficulty]
+    usable = [(provider, [seat for seat in pool.seats(provider) if tier_at_least(seat.tier, floor)])
+              for provider in providers]
+    for index, (provider, seats) in enumerate(usable):
+        if not seats:
+            continue
+        seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
+        if seat.tier == floor:
+            return seat, ""
+        later = [s.describe() for _, others in usable[index + 1:] for s in others
+                 if s.tier == floor]
+        if later:
+            return seat, (f"built on {seat.tier} though difficulty:{difficulty} allows {floor}: "
+                          f"the usage order puts `{provider.id}` before {', '.join(later)}")
+        models = ", ".join(e.model for e in pool.tiers.get(floor, ())) or "none listed"
+        return seat, (f"stepped up from {floor} to {seat.tier} to build it: no {floor}-tier "
+                      f"model ({models}) is free now")
+    return None, ""
+
+
+def planner_seat(pool: Pool, providers: list[Provider]) -> Seat | None:
+    """The planner: a strong seat whenever one is free (claude-3, claude-1, then claude-2, by
+    the usage order), else a medium one."""
+    seats = [seat for provider in providers for seat in pool.seats(provider)
+             if tier_at_least(seat.tier, "medium")]
+    strong = [seat for seat in seats if seat.tier == "strong"]
+    found = ranked(pool, strong or seats)
+    return found[0] if found else None
+
+
+def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
+    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium
+    (strong for a hard item), or None, and the change goes to a review run."""
+    if "review" not in provider.roles:
+        return None
+    return pool.best_seat(provider, "strong" if difficulty == "hard" else "medium")
+
+
+def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
+    """A review run's reviewer: strong whenever one is free; otherwise medium, of a family whose
+    approval the head does not have yet. Weak never reviews; a hard item takes strong only."""
+    seats = [seat for provider in providers for seat in pool.seats(provider)]
+    strong = ranked(pool, [seat for seat in seats if seat.tier == "strong"])
+    if strong:
+        return strong[0]
+    if candidate.difficulty == "hard":
+        return None
+    medium = ranked(pool, [seat for seat in seats if seat.tier == "medium"
+                           and seat.family not in candidate.approved])
+    return medium[0] if medium else None
+
+
+def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lanes, *,
+           force: bool, quiet_ok: str) -> Assignment | None:
+    """Who takes `candidate` now, and on which seats, or None when nobody can."""
+    pool = ctx.cfg.pool
+    forced = force or candidate.forced
+
+    def free(role: str) -> list[Provider]:
+        return free_providers(ctx, state, lanes, role, forced=forced, quiet_ok=quiet_ok)
+
+    if candidate.kind == "review":
+        seat = review_seat(pool, free("review"), candidate)
+        if seat is None:
+            return None
+        return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
+    builders = free(ROLE_OF[candidate.kind])
+    if candidate.kind == "revise" and not candidate.bot_pr:
+        # A person's pull request never gets a review run: its reviewer must be in this run.
+        builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
+    builder, note = builder_seat(pool, builders, candidate.difficulty)
+    if builder is None:
+        return None
+    notes = [f"#{candidate.number}: {note}"] if note else []
+    reviewer = run_reviewer(pool, builder.provider, candidate.difficulty)
+    if candidate.kind == "build" and not candidate.planned:
+        planners = free("plan")
+        target = planner_seat(pool, planners)
+        if target is None:
+            return None  # every build starts from a plan, and no medium or strong model is free
+        own = (pool.best_seat(builder.provider, target.tier)
+               if builder.provider in planners else None)
+        if own is None:
+            return Assignment(target.provider, "plan", candidate.difficulty, plan=target,
+                              notes=notes + [f"#{candidate.number}: planned on its own run, since "
+                                             f"its builder {builder.describe()} has no "
+                                             f"{target.tier}-tier model"])
+        return Assignment(builder.provider, "build", candidate.difficulty, plan=own,
+                          build=builder, review=reviewer, notes=notes)
+    return Assignment(builder.provider, candidate.kind, candidate.difficulty, build=builder,
+                      review=reviewer, notes=notes)
+
+
 def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: Lanes, *,
           force: bool, quiet_ok: str,
-          skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Provider]]:
-    """Every queued item that a subscription can take now, with the one that takes it, most
-    urgent first. A free subscription that passes over a `shitter` item because its model is
-    high-tier says so in `skipped`, when the caller keeps one."""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, not c.difficult,
+          skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Assignment]]:
+    """Every queued item that a subscription can take now, with who takes it on which seats,
+    most urgent first. (`skipped` is the queue's: the items labelled `human`.)"""
+    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority,
+                                         -DIFFICULTIES.index(c.difficulty),
                                          KIND_ORDER[c.kind], c.queued_at, c.number))
     for candidate in order:
-        forced = force or candidate.forced
-        for provider in ctx.cfg.pool.ordered():
-            if candidate.difficult and not provider.difficult:
-                continue
-            if candidate.kind == "review" and provider.family == candidate.builder:
-                continue
-            if not _usable(ctx, state, provider, lanes, ROLE_OF[candidate.kind], forced=forced,
-                           quiet_ok=quiet_ok):
-                continue
-            tier = providers_mod.model_tier(provider.model)
-            if candidate.low_tier_only and tier == providers_mod.HIGH_TIER:
-                if skipped is not None:
-                    skipped.append(f"#{candidate.number} skipped on `{provider.id}`: labelled "
-                                   f"`shitter`, and {provider.model} is {tier}-tier")
-                continue
-            yield candidate, provider
-            break
+        assignment = assign(ctx, state, candidate, lanes, force=force, quiet_ok=quiet_ok)
+        if assignment is not None:
+            yield candidate, assignment
 
 
 def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force: bool,
@@ -264,7 +417,7 @@ class Peek:
     quiet_secret: str = ""
     fallback: bool = False
     held: int = 0
-    #: Queued items passed over because of `human` or `shitter` (#96), one line each.
+    #: Queued items passed over because of `human` (#96), one line each.
     skipped: list[str] = field(default_factory=list)
 
 
@@ -298,11 +451,13 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
         return Peek(False, f"every lane is busy ({lanes.describe()})", held=len(lanes.held))
     queue = _queue(ctx, state, item, mode, skipped)
     found: tuple[Candidate | None, Provider, bool] | None = None
+    chosen: Assignment | None = None
     if mode != "suggest":
         top = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=ANY_QUIET,
                          skipped=skipped), None)
         if top is not None:
-            found = (top[0], top[1], force or top[0].forced)
+            chosen = top[1]
+            found = (top[0], top[1].provider, force or top[0].forced)
     # A survey only when nothing is queued (or one was asked for), as before: queued work that
     # must wait for its subscription does not turn the others into surveyors.
     if found is None and item is None and (mode == "suggest" or (mode == "auto" and not queue)) \
@@ -321,9 +476,9 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
                         f"{why_none(ctx, state, lanes)}", held=len(lanes.held))
         return Peek(False, "nothing is queued", held=len(lanes.held))
     candidate, provider, forced = found
-    what = (f"#{candidate.number} is queued to {candidate.kind}" if candidate
-            else "a suggestion survey is due")
-    reason = f"{what}, for `{provider.id}`"
+    what = (f"#{candidate.number} ({candidate.difficulty}) is queued to {candidate.kind}"
+            if candidate else "a suggestion survey is due")
+    reason = f"{what}, for `{provider.id}`" + (f": {chosen.describe()}" if chosen else "")
     if not (provider.quiet_check and ctx.cfg.quiet.enabled and not forced):
         return Peek(True, reason, forced, provider.id, held=len(lanes.held))
     # The best subscription for it is the shared one: wait for quiet, unless another run is
@@ -331,16 +486,17 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
     other = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=""), None) if (
         mode != "suggest") else None
     fallback = other is not None
-    if other is not None and other[1].family == provider.family:
+    if other is not None and other[1].provider.family == provider.family:
         # Another account of the same model can take work now: no reason to wait for this one.
-        return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
-                    f"`{other[1].id}`", force or other[0].forced, other[1].id,
-                    held=len(lanes.held))
+        return Peek(True, f"#{other[0].number} ({other[0].difficulty}) is queued to "
+                    f"{other[0].kind}, for `{other[1].provider.id}`: {other[1].describe()}",
+                    force or other[0].forced, other[1].provider.id, held=len(lanes.held))
     if quiet_waiting(ctx):
         if fallback:
-            return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
-                        f"`{other[1].id}` (another run waits for `{provider.id}`)", forced,
-                        other[1].id, held=len(lanes.held))
+            return Peek(True, f"#{other[0].number} ({other[0].difficulty}) is queued to "
+                        f"{other[0].kind}, for `{other[1].provider.id}` (another run waits for "
+                        f"`{provider.id}`)", forced, other[1].provider.id,
+                        held=len(lanes.held))
         return Peek(False, f"another run already waits for `{provider.id}` to be quiet",
                     held=len(lanes.held))
     return Peek(True, reason, forced, provider.id, quiet_provider=provider.id,
@@ -436,15 +592,15 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     skipped: list[str] = []
     queue = _queue(ctx, state, item, mode, skipped)
     if mode != "suggest":
-        for candidate, provider in pairs(ctx, state, queue, lanes, force=force, quiet_ok=quiet,
-                                         skipped=skipped):
-            planned = claim(ctx, candidate, provider)
+        for candidate, assignment in pairs(ctx, state, queue, lanes, force=force,
+                                           quiet_ok=quiet, skipped=skipped):
+            planned = claim(ctx, candidate, assignment)
             if planned is not None:
                 planned["housekeeping"] = notes
                 planned["forced"] = bool(force or candidate.forced)
                 planned["priority"] = PRIORITY_NAMES[candidate.priority]
                 planned["skipped"] = skipped
-                fill_lanes(ctx, lanes, candidate, provider, planned)
+                fill_lanes(ctx, lanes, candidate, assignment.provider, planned)
                 return taken(planned)
     if item is not None and mode != "suggest":
         return {**nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or "
@@ -543,9 +699,31 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
             "login": provider.login, "runs_on": provider.runs_on}
 
 
-def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, Any] | None:
+def _start_message(assignment: Assignment, cfg: Any) -> str:
+    """What a build or revision run says it does, by who runs each role."""
+    steps = []
+    if assignment.plan is not None:
+        steps.append(f"plan it on {assignment.plan.describe()}")
+    steps.append(f"build it on {assignment.build.describe()}" if assignment.build else "build it")
+    steps.append("run the repository's checks")
+    if assignment.self_check:
+        steps.append(f"have the builder check its own change, up to {cfg.max_self_check_rounds} "
+                     "times")
+    if assignment.review is not None:
+        steps.append(f"have {assignment.review.describe()} review the change adversarially, up "
+                     f"to {cfg.max_review_cycles} rounds")
+        end = "Only an approved change becomes a pull request."
+    else:
+        end = ("No weak model reviews, so the pull request then waits for a review run: one "
+               "strong model, or two medium ones of different families.")
+    return f"I {', '.join(steps[:-1])} and {steps[-1]}. {end}"
+
+
+def claim(ctx: Context, candidate: Candidate,
+          assignment: Assignment) -> dict[str, Any] | None:
     """Build the plan for one queued thread on one subscription, and mark it `bot:working`."""
     cfg = ctx.cfg
+    provider = assignment.provider
     number, kind = candidate.number, candidate.kind
     thread = ctx.gh.get_issue(number)
     names = label_names(thread)
@@ -557,7 +735,7 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
     who = provider.describe()
     if kind == "build":
         planned: dict[str, Any] = {
-            "action": "build",
+            "action": assignment.action,
             "number": number,
             "title": thread.get("title", ""),
             "branch": branch_for_issue(number),
@@ -565,9 +743,14 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
             "previous_findings": record.get("last_findings") or [],
             "previous_question": record.get("question") or "",
         }
-        message = (f"Starting work on this now{run_link(cfg)}, on {who}. I build it, run the "
-                   f"repository's checks, and have an adversarial reviewer read the change, up to "
-                   f"{cfg.max_review_cycles} rounds. Only an approved change becomes a pull request.")
+        if assignment.action == "plan":
+            message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()}: it is "
+                       f"difficulty:{candidate.difficulty}. The plan goes into the notes its "
+                       "builder starts from, and then it is queued to build on the cheapest model "
+                       "its difficulty allows.")
+        else:
+            message = (f"Starting work on this now{run_link(cfg)}: it is "
+                       f"difficulty:{candidate.difficulty}. {_start_message(assignment, cfg)}")
     else:
         pull = ctx.gh.get_pull(number)
         head = pull.get("head") or {}
@@ -593,15 +776,17 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
                 "branch": head.get("ref", ""),
                 "head": head.get("sha", ""),
                 "builder": candidate.builder,
+                "approved": list(candidate.approved),
                 "pull": pull_text,
                 "issue": issue_text,
                 "thread": "\n\n".join(p for p in (pull_text, issue_text) if p),
                 "bot_pr": True,
                 "issue_number": issue_number,
             }
-            message = (f"Starting a second review now{run_link(cfg)}, on {who}. The change was "
-                       f"built and approved by `{builder}`; it merges only once another model "
-                       "approves it too.")
+            message = (f"Starting a review now{run_link(cfg)}, on "
+                       f"{assignment.review.describe()}. `{builder}` built the change; it merges "
+                       "once one strong model, or two medium ones of different families, approve "
+                       "the same commit.")
         else:
             source = str(record.get("source") or "request")
             feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
@@ -625,9 +810,13 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
                 "bot_pr": LABEL_PR in names,
                 "issue_number": issue_number,
             }
-            message = (f"Starting a revision now{run_link(cfg)}, on {who}, because of: {source}. "
-                       "It goes through the same checks and adversarial review before I push it.")
+            message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. "
+                       f"{_start_message(assignment, cfg)}")
     planned.update(_provider_fields(ctx, provider))
+    planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
+                   routing=list(assignment.notes), assignment=assignment.describe())
+    if kind == "review" and record.get("self_check_findings"):
+        planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):
         planned["handoff"] = record["handoff"]
     set_state_label(ctx, number, names, LABEL_WORKING)
@@ -635,10 +824,11 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, number)
         entry.update(run_id=cfg.run_id, started_at=iso(ctx.now()), kind=kind,
-                     stop_requested=False, pending_request=False, provider=provider.id)
+                     action=assignment.action, stop_requested=False, pending_request=False,
+                     provider=provider.id)
         taken[:] = asks.take(entry)
         state["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url,
-                             "what": f"{kind} #{number} on {provider.id}"}
+                             "what": f"{assignment.action} #{number} on {provider.id}"}
     ctx.store.update(change, f"claim #{number}")
     ctx.gh.create_comment(number, message)
     asks.react(ctx.gh, taken, asks.WORKING)

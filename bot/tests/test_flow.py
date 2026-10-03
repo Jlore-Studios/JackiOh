@@ -36,11 +36,19 @@ class Harness:
                **(env or {})}
         overrides = {"gates": GATES, "install": {"run": "true", "timeout_minutes": 1},
                      "max_review_cycles": 2, **cfg_overrides}
+        self._setup = (env, machine, overrides, at)
         self.cfg = make_config(env=env, machine=machine, **overrides)
         self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
         self.gh.branch_checks = set(self.cfg.required_checks)
         self.deliver_repo = self.root / "deliver"
         git(self.root, "clone", "-q", str(self.origin), str(self.deliver_repo))
+
+    def committed_hours(self) -> None:
+        """From now on, the subscriptions keep the hours providers.json commits (claude-2 and
+        claude-3 all day), with the same GitHub and state."""
+        env, machine, overrides, at = self._setup
+        self.cfg = make_config(env=env, machine=machine, committed_hours=True, **overrides)
+        self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
 
     def night(self, runner: FakeRunner, **plan_args) -> tuple[dict, dict]:
         planned = plan_mod.make(self.ctx, **plan_args)
@@ -123,7 +131,8 @@ class PlanTests(unittest.TestCase):
         by_hand = make_ctx(self.gh, cfg=make_config(env={"GITHUB_RUN_ID": ""}))
         self.gh.add_issue(5, labels=(LABEL_BUILD,))
         plan_mod.make(by_hand, item=5)
-        self.assertIn("Starting work on this now, on `claude-1` (claude, opus). I build it",
+        self.assertIn("Starting work on this now: it is difficulty:medium. I plan it on `claude-1` "
+                      "(claude, `opus`, strong), build it on `claude-1` (claude, `opus`, strong)",
                       self.gh.bot_comments(5)[-1])
         self.assertEqual(self.ctx.store.load()["items"]["4"]["run_id"], "777")
 

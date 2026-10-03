@@ -14,7 +14,8 @@ from harness.plan import run_status, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
-DOING = {"build": "building", "revise": "revising", "review": "giving a second review to"}
+DOING = {"plan": "planning", "build": "building", "revise": "revising",
+         "review": "reviewing"}
 
 
 def _numbers(items: list[dict[str, Any]]) -> str:
@@ -78,7 +79,8 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
         if number:
-            what = f"{DOING.get(str(record.get('kind')), 'working on')} #{number}"
+            doing = "plan" if record.get("action") == "plan" else str(record.get("kind"))
+            what = f"{DOING.get(doing, 'working on')} #{number}"
             since = parse_iso(record.get("started_at"))
         else:
             what = "a suggestion survey"
@@ -109,7 +111,10 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
             now_doing = "free"
         else:
             now_doing = reason
-        lines.append(f"  - `{provider.id}` ({provider.cli}, `{provider.model}`, "
+        seats = ", ".join(f"`{seat.model}` {seat.tier}" + (", self-check" if seat.self_check
+                                                         else "")
+                          for seat in cfg.pool.seats(provider))
+        lines.append(f"  - `{provider.id}` ({provider.cli}: {seats}; "
                      f"{provider.schedule.describe(cfg.timezone)}): {now_doing}. "
                      f"Usage: {_usage_text(provider, entry, ctx)}.")
     return lines
@@ -157,7 +162,7 @@ def report(ctx: Context) -> str:
                     if ended else "") + ".")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
-                 f"for a second review: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
+                 f"for a review run: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
     lines.append(f"- Waiting for a person: {_numbers(labelled(LABEL_BLOCKED))}.")
     lines.append(f"- Open bot pull requests: {_numbers(labelled(LABEL_PR, prs=True))}.")
     suggestions = labelled(LABEL_SUGGESTION, prs=False)
@@ -166,8 +171,11 @@ def report(ctx: Context) -> str:
     last = state.get("last_run") or {}
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
-    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item. A change "
-                 "merges on its builder's model's approval when that model is enough by itself "
-                 "(Opus), else after a second model approves it too; auto-merge "
+    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
+                 "plan by a medium or strong model. An item's `difficulty:easy|medium|hard` (medium "
+                 "without one) sets the weakest tier that may build it. A change merges once one "
+                 "strong model approves it, or two medium models of different families do (a hard "
+                 "one takes a strong approval); weak models never review. A self-checking builder "
+                 f"checks itself up to {cfg.max_self_check_rounds} times first. Auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")
     return "\n".join(lines)

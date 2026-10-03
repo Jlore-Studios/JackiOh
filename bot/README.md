@@ -5,11 +5,13 @@ free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through th
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to seven items run at once: the Claude accounts' on
-GitHub's runners, and at most three on the bot's own machine. Each run
-builds its item, runs the repository's checks, and has a second, independent session of the same
-model review the change adversarially, going round that loop until the reviewer approves. Opus's
-approval is enough; a change another model built also needs a second model's approval. Then the
-pull request merges itself into `main` once CI passes. When it has nothing to do, it proposes
+GitHub's runners, and at most three on the bot's own machine. Every model has a tier (weak,
+medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
+build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
+each item first; the cheapest builder the owner's usage order allows builds it, runs the
+repository's checks, and an adversarial reviewer reads the change, going round until the reviewer
+approves. A change merges itself into `main` once CI passes and one strong model, or two medium
+models of different families, approved the same commit. When it has nothing to do, it proposes
 improvements to the game as issues, at most four open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
@@ -34,13 +36,16 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?<br/>for the shared Claude account: is it quiet?"]
     GA -- "quiet, the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
-    PL --> B["work, on that subscription's own runner<br/>(its login only) builder: Claude, Codex, agy or Muse"]
+    PL --> PN["planner (medium or strong)<br/>writes the plan into the notes"]
+    PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the cheapest the item's difficulty allows"]
     B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
-    G --> R["adversarial reviewer<br/>a fresh session of the same model"]
+    G -- "a self-checking builder (Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
+    SC --> R
+    G --> R["adversarial reviewer<br/>the run's own medium or strong model"]
     R -- "blocking findings or red checks<br/>(up to 10 rounds)" --> F["a fresh builder<br/>fixes the findings"]
     F --> G
-    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge when the two-model rule holds"]
-    D -- "built by a model other than Opus" --> X["second review (bot:cross-review)<br/>another model family, its own run"]
+    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval,<br/>or two medium ones of different families"]
+    D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, or another medium family"]
     X -- "approved" --> CI
     PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues"]
   end
@@ -74,10 +79,11 @@ another pass to answer it. Auto-merge waits for that pass.
 Add **`--force`** to `build`, `revise` or `suggest` to start now, on a subscription outside its
 hours if need be (its usage caps still hold). A forced item stays forced until it is done.
 
-Label an issue **`difficult`** to keep it for Opus: only a Claude account builds, revises and
-reviews it, and Opus takes `difficult` items before anything else in their priority tier.
+Label an issue **`difficulty:easy`**, **`difficulty:medium`** or **`difficulty:hard`** to say
+how hard it is ([Difficulty and tiers](#difficulty-and-tiers)); with none it counts as medium.
+`difficulty:hard` keeps it for Opus: planning, building, every revision and every review.
 
-### Priority, `human` and `shitter`
+### Priority and `human`
 
 Three labels set the order queued work is picked up in: **`priority:high`** first, then
 **`priority:medium`**, then work with no priority label, then **`priority:low`**. On a thread with
@@ -85,21 +91,17 @@ more than one, the highest counts, and any other `priority:*` label counts as no
 the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
 every tier. A priority label never makes work eligible or ineligible.
 
-Two labels take work away from models:
-
-- **`human`**: a person will do it. No model picks it up, whatever else it is labelled, forced or
-  not.
-- **`shitter`**: low-tier models only. A high-tier model, Claude Opus or OpenAI Astra (any
-  version: `opus` or `astra` anywhere in the `model` in `providers.json`), never picks it up; any
-  other model may, an unknown one included. With `difficult` as well, no model can take it.
+**`human`** takes work away from every model: a person will do it. No model picks it up,
+whatever else it is labelled, forced or not.
 
 Label names match whatever their case. Labels are read afresh at every pickup, so a change counts
 at the next run, and a run already going is never stopped. The pull request the bot opens for an
-issue, a draft or not, starts with the issue's `shitter` and priority labels, so its revisions and
-its second review follow the same rules. A label changed on the issue after that, `human`
-included, does not reliably reach the pull request (a later build of the issue copies added
-labels again, never removed ones): change it there too. The `peek` and `plan` steps of a night run
-log the chosen item's tier and every item passed over because of `human` or `shitter`.
+issue, a draft or not, starts with the issue's difficulty and priority labels, so its revisions and
+its reviews follow the same rules. A label changed on the issue after that, `human` included, does
+not reliably reach the pull request (a later build of the issue copies added labels again, never
+removed ones): change it there too. The `peek` and `plan` steps of a night run log the chosen
+item's priority tier and difficulty, the model and tier picked for each role, any step up in tier
+and why, and every item passed over because of `human`.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
@@ -217,17 +219,16 @@ needs level 3.
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
 | `bot:revise` | a pull request waiting for a revision |
-| `bot:cross-review` | a bot pull request its builder's model approved, waiting for a second model's review before auto-merge |
+| `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
-| `difficult` | Opus only, and Opus takes it first (`difficult_label` in `providers.json`) |
-| `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-human-and-shitter)) |
+| `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong; none counts as medium, and with several the hardest counts ([below](#difficulty-and-tiers)) |
+| `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | a person will do it; no model picks it up |
-| `shitter` | low-tier models only: never Opus or Astra |
 
 ## Subscriptions
 
@@ -256,6 +257,11 @@ each one and whether it could start now, and `/harness status` does the same on 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
   carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
+- `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)).
+- `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
+  and `tier`. claude-3 and claude-1 run Sonnet (weak) for weak-tier builds as well as Opus.
+- `self_check: true`: its builds check themselves before any review (Devin;
+  [the self-check loop](#the-self-check-loop)).
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
   leaves it. agy logs in only on the machine.
@@ -270,11 +276,9 @@ each one and whether it could start now, and `/harness status` does the same on 
     (Claude, and Codex through its session log);
   - `five_hour_minutes` and `seven_day_minutes`: minutes of model time the bot counts itself, for
     agy and Muse, which report none.
-- `self_review: true`: its own approval is enough to merge (Opus).
-- `difficult: true`: it may take `difficult` items.
 - `quiet_check: true`: it waits until nobody else is spending it
   ([below](#it-waits-for-the-subscription-to-be-quiet)).
-- `roles`: what it may do (`build`, `fix`, `revise`, `review`, `suggest`).
+- `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
 - `env`: non-secret environment for its CLI.
 - `enabled: false`: turns it off.
 - `off_from` (a date) and `off_reason`: from that day, in the bot's time zone, it takes no new
@@ -283,36 +287,97 @@ each one and whether it could start now, and `/harness status` does the same on 
 
 At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
 may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
-and no such limit), and `priority` the order they are tried in. A subscription's own `lanes`
+and no such limit), `priority` the usage order (below), and `tiers` each tier's models in the
+order the router tries them after `priority`. A subscription's own `lanes`
 (default 1) is how many items it may work on at once; Devin's is 2, on two runners. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
-**Who takes what.** Each run takes one item on one subscription, and a subscription works on one
-item at a time. Items go in this order: forced, the priority tier, `difficult`, second reviews,
-revisions, then the oldest builds. Each goes to the first subscription in `priority` that is free,
-set up, inside its hours (unless the item is forced) and under its limits, and that may take it
-(`difficult` and `shitter`). A run that claims an item starts another
-run while a lane and more work are free, and a run that finishes starts the next, so the lanes
-fill up. By night that is usually Opus; by day, whoever else is set up. A run that could not work
-at all (its login refused, its CLI would not install or start) leaves its subscription alone for
-50 minutes, and the item goes to another one meanwhile.
+**Who takes what.** Each run takes one item on one subscription, and a subscription works on as
+many items at a time as its `lanes`. Items go in this order: forced, the priority tier, the harder
+difficulty, reviews, revisions, then the oldest builds. Which subscription and model take each role
+is [Difficulty and tiers](#difficulty-and-tiers); on top of that, a subscription must be free, set
+up, inside its hours (unless the item is forced) and under its limits. A run that claims an item
+starts another run while a lane and more work are free, and a run that finishes starts the next,
+so the lanes fill up. A run that could not work at all (its login refused, its CLI would not
+install or start) leaves its subscription alone for 50 minutes, and the item goes to another one
+meanwhile.
 
-**The two-model rule.** Every run reviews its own work with a fresh session of its own model.
-- **Built by Opus:** its approval is enough, and auto-merge turns on.
-- **Built by another model:** the pull request is labelled `bot:cross-review`, and a later run on
-  a different model family reads it from scratch.
-  - The second reviewer reads the change but installs and runs nothing: it holds another
-    subscription's login, which the builder's code must never run beside. CI runs every check.
-  - If that second model approves the same commit, auto-merge turns on, pinned to that commit:
-    GitHub will not merge a head that moved after the approval.
-  - If it has blocking findings, a revision is queued, and the revision goes round the same way.
-    Its rejection stands against that commit until the same model approves it or the commit
-    changes. After three such rounds the bot stops and asks you.
-  - Whenever the rule is not met, auto-merge is off, even if an earlier Opus approval had turned
-    it on for an older commit.
-  - A second review of a commit that moved in the meantime does not count.
-  - If no subscription of another family is set up, such a change waits in `bot:cross-review`
-    until one is, or until you merge it yourself.
+### Difficulty and tiers
+
+Every model is a tier, set by `tier` in providers.json and nothing else (a model's name means
+nothing):
+
+| Tier | Models |
+|---|---|
+| strong | Claude Opus, on every Claude account |
+| medium | Codex (`gpt`), Gemini through agy, Muse |
+| weak | Claude Sonnet (on claude-3 and claude-1 only), Devin |
+
+Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:medium` or
+`difficulty:hard`. No label counts as medium; with several, the hardest counts. A bot pull request
+keeps its issue's. The difficulty sets the weakest tier that may build it:
+
+| Difficulty | Builds it | Reviews it |
+|---|---|---|
+| easy | weak or stronger | one strong, or two medium of different families |
+| medium | medium or stronger | the same |
+| hard | strong only | strong only |
+
+**The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
+caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
+planning and reviewing; and Devin last, only when nothing else is free. claude-4 sits with claude-1
+until it is set up.
+
+- **Planning.** Every build starts from a plan. The planner is a medium or strong model, strong
+  whenever one is free (claude-3, claude-1, then claude-2). It reads the task and the code, writes
+  nothing, and its plan goes to the top of the builder's `.bot-notes.md` and into the handoff. When
+  the builder's own subscription has a model of the planner's tier, the plan and the build share
+  one run (claude-3 plans on Opus, then builds an easy item on Sonnet); otherwise the planning is a
+  run of its own, and the item goes back to the queue to build from its plan, on any subscription.
+  A revision is not planned again.
+- **Building, fixing, revising.** The first free subscription in the usage order with a model that
+  meets the item's tier builds it, on its weakest such model: claude-3 builds an easy item with
+  Sonnet, never Opus, and a medium one with Opus, since it has no medium model. When that is above
+  the item's tier (none of that tier is free, or the usage order puts a stronger one first), the
+  run's log says so and why. claude-2 never builds with Sonnet, and Sonnet builds only while
+  claude-3 or claude-1 is free; otherwise an easy item goes to the medium models, claude-2, and
+  Devin last.
+- **Reviewing in the run.** The run's own strongest model of at least medium (strong for a hard
+  item) reviews the change adversarially, in a fresh session. Weak models never review: a run
+  with none (Devin's) hands the change to a review run.
+- **Review runs.** A strong model whenever one is free, else a medium one of a family whose
+  approval the commit does not have yet. A hard item waits for a strong one.
+
+**The review rule.** A commit ships when one strong model approved it, or two medium models of
+different families did (a hard item takes the strong approval), and no model's rejection of it
+stands.
+- Votes are kept per commit and per family, with the tier of the model that cast them, from the
+  plan job's own record of who ran, never from the model job.
+- A change still short of the rule is labelled `bot:cross-review`, and a review run reads it from
+  scratch. The reviewer reads the change but installs and runs nothing: it holds another
+  subscription's login, which the builder's code must never run beside. CI runs every check.
+- When the rule holds, auto-merge turns on, pinned to that commit: GitHub will not merge a head
+  that moved after the approval.
+- Blocking findings queue a revision, built by the building rule above (through the self-check
+  loop again if that builder checks itself), which goes round the same way. A rejection stands
+  against that commit until the same model approves it or the commit changes. After three such
+  rounds the bot stops and asks you.
+- Whenever the rule is not met, auto-merge is off, even if an earlier strong approval had turned
+  it on for an older commit. A review of a commit that moved in the meantime does not count.
+- If no subscription that could give the missing review is set up, the change waits in
+  `bot:cross-review` until one is, or until you merge it yourself.
+
+### The self-check loop
+
+A builder with `self_check` (Devin) checks its own change before any reviewer sees it: build,
+the repository's checks, then a **self check**, a fresh session of the same model allowed to read
+and run things but not edit, told to find every reason its own change should not ship, in the
+review's prompt and verdict format. If it flags anything (or a check this change turned red), the
+same model fixes it, the checks run, and the self check goes again, until one comes back clean.
+`max_self_check_rounds` in `.harness/config.json` (3) caps it; at the cap the change goes to review
+anyway, with the self check's open findings attached for the reviewer. A clean self check is never
+an approval and never counts toward the review rule. Devin has no model that may review, so its
+change then waits for a review run; its pull request opens ready, not a draft.
 
 **Handing work over.** A run can stop half-way: its subscription runs out, the clock runs out, or
 the bot is halted. Its work so far is pushed to the branch, as always. Every builder also keeps
@@ -406,14 +471,19 @@ GitHub Actions, such as the harness's local `bb` container.
    already sits in its user's home; a Claude token is written only into a private directory for
    the job ([setting up](#setting-up-each-subscription)). After the job, the runner deletes its
    working files and package store. A worktree on `bot/issue-<n>` (or the pull
-   request's own branch, with `main` merged in), then `pnpm install`. Then up to ten rounds:
-   - a builder session on that CLI (`claude --model opus --effort xhigh`, say) that can read,
-     edit and run commands;
+   request's own branch, with `main` merged in), then `pnpm install`. A build with no plan yet
+   starts with a planning session on the planner's model. Then up to ten rounds:
+   - a builder session on the builder's model (`claude --model sonnet --effort xhigh`, say) that
+     can read, edit and run commands;
    - the repository's checks from `.harness/config.json`, with any check that is also red on
      untouched `main` marked as not this change's fault;
-   - a reviewer session with the same model, allowed to read and run things but not to edit, told
-     to find every reason the change should not ship;
+   - for a self-checking builder, [the self-check loop](#the-self-check-loop);
+   - a reviewer session on the run's reviewing model, allowed to read and run things but not to
+     edit, told to find every reason the change should not ship (or, with none, the change goes to
+     a review run);
    - on blocking findings or red checks, a **fresh** builder gets both and fixes them.
+
+   A planning run of its own plans and builds nothing; its plan goes back as the item's handoff.
 
    The harness also puts back anything the builder changed under `.github/`, `.harness/` or
    `bot/`, and records that as a blocking finding. Between steps it checks for a halt, a `stop`,
@@ -428,16 +498,16 @@ GitHub Actions, such as the harness's local `bb` container.
    must be the head the result names and descend from where the work started, the branch on
    GitHub must not have moved meanwhile, and no forbidden path may change. Only then does it push
    (never with force) and open or update the pull request. It turns on auto-merge only when the
-   two-model rule holds, no review-only path changed and `main`'s protection requires every CI
-   check; otherwise the change waits for a second model (`bot:cross-review`) or for you. A change
+   review rule holds, no review-only path changed and `main`'s protection requires every CI
+   check; otherwise the change waits for a review run (`bot:cross-review`) or for you. A change
    the reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, and
    never merges by itself. It records the subscription's usage and minutes, keeps a refreshed
    login and a handoff, and starts the next run if a lane is free and there is work.
 
 ## Safety
 
-- **Two gates before `main`.** An independent reviewer approves the change inside the run (and,
-  for a change a model other than Opus built, a second model in a run of its own). Then
+- **Two gates before `main`.** Independent reviewers approve the change: one strong model, or
+  two medium models of different families, the second in a run of its own. Then
   every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
@@ -532,8 +602,9 @@ days.
 | see each subscription | `/harness status`, or `python3 -m harness providers` in `bot/` |
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
-| keep an item for Opus | label it `difficult` |
-| keep an item from Opus and Astra, or from every model | label it `shitter`, or `human` |
+| set how hard an item is | label it `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` (Opus only) |
+| keep an item from every model | label it `human` |
+| change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
 | drop an item it is working on | close the issue or pull request: the run goes on until it ends, holding its lane, but nothing it made is delivered or queued again |
@@ -554,8 +625,8 @@ python3 -m harness --help                     # every command
 ```
 
 `bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
-workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `fix`, `revise`,
-`review` and `suggest`. The bot cannot edit anything in `bot/`, `.harness/` or
+workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
+`review` and `suggest` (the self check runs `review` with a header saying it is a self check). The bot cannot edit anything in `bot/`, `.harness/` or
 `.github/workflows/`, so changes there come from people.
 
 | Module | Job |
