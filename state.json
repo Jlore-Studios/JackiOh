@@ -396,10 +396,10 @@
       "issue": 57,
       "kind": "review",
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "muse",
       "queued_at": "2026-10-03T12:29:03Z",
-      "run_id": "37123028343",
-      "started_at": "2026-10-03T12:30:32Z",
+      "run_id": "37123150841",
+      "started_at": "2026-10-03T12:32:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -843,9 +843,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T12:30:32Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123028343",
-    "what": "review #143 on gpt"
+    "at": "2026-10-03T12:32:14Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123150841",
+    "what": "review #143 on muse"
   },
   "last_sweep": {
     "at": "2026-10-03T10:47:50Z",
