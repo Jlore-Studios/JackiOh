@@ -5,12 +5,15 @@
 // glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { VOICE_PRIORITY } from "../../audio/constants.ts";
+import { setAudioEngineForTests } from "../../audio/engine.ts";
+import type { AudioEngine } from "../../audio/types.ts";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
@@ -60,6 +63,8 @@ afterEach(() => {
   });
   cleanup();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
+  setAudioEngineForTests(null);
+  vi.restoreAllMocks();
 });
 
 describe("CardDetail (B29)", () => {
@@ -252,4 +257,87 @@ describe("CardDetail (B29)", () => {
     }
     // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
   }, 30_000);
+});
+
+describe("VoicePreview (R630)", () => {
+  /** A stand-in for the audio singleton: records every call, plays nothing. */
+  function fakeEngine(playVoice: Mock<AudioEngine["playVoice"]>): AudioEngine {
+    return {
+      state: vi.fn<AudioEngine["state"]>(() => "running"),
+      unlock: vi.fn<AudioEngine["unlock"]>(),
+      preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
+      setBusy: vi.fn<AudioEngine["setBusy"]>(),
+      log: vi.fn<AudioEngine["log"]>(() => []),
+      clearLog: vi.fn<AudioEngine["clearLog"]>(),
+      contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
+      speaking: vi.fn<AudioEngine["speaking"]>(() => false),
+      subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
+      musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+      subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
+      dispose: vi.fn<AudioEngine["dispose"]>(),
+      playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
+      playVoice,
+    };
+  }
+
+  function optionsOf(select: HTMLElement): string[] {
+    return within(select as HTMLSelectElement)
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+  }
+
+  it("R630 a unit offers its play and death lines, and choosing one plays it at the summon priority", () => {
+    const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
+    setAudioEngineForTests(fakeEngine(playVoice));
+    render(<CardDetail def={defOf("core-008")} onClose={() => undefined} />);
+
+    const select = screen.getByTestId("voice-preview");
+    expect(select.tagName).toBe("SELECT");
+    expect(optionsOf(select)).toEqual(["", "play", "death"]);
+
+    fireEvent.change(select, { target: { value: "death" } });
+    expect(playVoice).toHaveBeenCalledWith("core-008", "death", 0, VOICE_PRIORITY.summon);
+    expect((select as HTMLSelectElement).value, "the dropdown resets to its placeholder").toBe("");
+  });
+
+  it("R630 a spell offers only its cast line", () => {
+    const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
+    setAudioEngineForTests(fakeEngine(playVoice));
+    render(<CardDetail def={defOf("core-023")} onClose={() => undefined} />);
+
+    const select = screen.getByTestId("voice-preview");
+    expect(optionsOf(select)).toEqual(["", "cast"]);
+
+    fireEvent.change(select, { target: { value: "cast" } });
+    expect(playVoice).toHaveBeenCalledWith("core-023", "cast", 0, VOICE_PRIORITY.summon);
+  });
+
+  it("R630 the dropdown sits in the pinned actions row before Close, and a card with no lines has none", () => {
+    const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
+    setAudioEngineForTests(fakeEngine(playVoice));
+    render(
+      <CardDetail
+        def={defOf("core-008")}
+        onClose={() => undefined}
+        actions={
+          <button type="button" data-testid="caller-action">
+            Add
+          </button>
+        }
+      />,
+    );
+    const detail = screen.getByTestId(INSPECT_DETAIL);
+    const voice = within(detail).getByTestId("voice-preview");
+    const action = within(detail).getByTestId("caller-action");
+    const close = within(detail).getByTestId(INSPECT_CLOSE);
+    expect(precedes(action, voice), "the caller's actions come first").toBe(true);
+    expect(precedes(voice, close), "the dropdown comes before inspect-close").toBe(true);
+    expect(playVoice).not.toHaveBeenCalled();
+
+    // A card the voice table never heard of renders no dropdown at all.
+    cleanup();
+    const lineless: CardDef = { ...defOf("core-008"), id: "x-no-voice" };
+    render(<CardDetail def={lineless} onClose={() => undefined} />);
+    expect(within(screen.getByTestId(INSPECT_DETAIL)).queryByTestId("voice-preview")).toBeNull();
+  });
 });

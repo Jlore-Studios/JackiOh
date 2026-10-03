@@ -15,27 +15,27 @@
       "handoff": null
     },
     "tavern-1": {
-      "hash": "72e70934149742bf",
-      "bytes": 1468155,
-      "bpm": 96,
+      "hash": "11f05b9875db2e56",
+      "bytes": 1465547,
+      "bpm": 110,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 143.5,
+      "duration": 143.136364,
       "loopStart": 3,
-      "loopEnd": 143,
+      "loopEnd": 142.636364,
       "handoff": null
     },
     "tavern-2": {
-      "hash": "78c76d32683d723b",
-      "bytes": 1357528,
-      "bpm": 104,
+      "hash": "4d13636401bf5418",
+      "bytes": 1391385,
+      "bpm": 116,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 132.730769,
+      "duration": 135.913793,
       "loopStart": 3,
-      "loopEnd": 132.230769,
+      "loopEnd": 135.413793,
       "handoff": null
     },
     "tavern-danger": {
@@ -63,27 +63,27 @@
       "handoff": 7.5
     },
     "edm-1": {
-      "hash": "919a81f6138ddb98",
-      "bytes": 1269639,
-      "bpm": 112,
+      "hash": "67e10c6483eeedcb",
+      "bytes": 1330277,
+      "bpm": 122,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 123.5,
+      "duration": 129.401639,
       "loopStart": 3,
-      "loopEnd": 123,
+      "loopEnd": 128.901639,
       "handoff": null
     },
     "edm-2": {
-      "hash": "da3585a31e2ea3eb",
-      "bytes": 1318153,
-      "bpm": 108,
+      "hash": "ca1d4f5c52a573e9",
+      "bytes": 1353877,
+      "bpm": 120,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 127.944444,
+      "duration": 131.5,
       "loopStart": 3,
-      "loopEnd": 127.444444,
+      "loopEnd": 131,
       "handoff": null
     },
     "edm-danger": {
@@ -111,27 +111,27 @@
       "handoff": 6.428571
     },
     "lofi-1": {
-      "hash": "e4c8af2415ff6b55",
-      "bytes": 1368671,
-      "bpm": 82,
+      "hash": "7f5d10c3f7252794",
+      "bytes": 1408520,
+      "bpm": 94,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 132.280488,
+      "duration": 136.265957,
       "loopStart": 3,
-      "loopEnd": 131.780488,
+      "loopEnd": 135.765957,
       "handoff": null
     },
     "lofi-2": {
-      "hash": "034d780818a26412",
-      "bytes": 1306587,
-      "bpm": 86,
+      "hash": "2a98ed509157eaf9",
+      "bytes": 1351640,
+      "bpm": 98,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 126.290698,
+      "duration": 130.846939,
       "loopStart": 3,
-      "loopEnd": 125.790698,
+      "loopEnd": 130.346939,
       "handoff": null
     },
     "lofi-danger": {
@@ -159,27 +159,27 @@
       "handoff": 8.780488
     },
     "epic-1": {
-      "hash": "7a9c17ea8989d068",
-      "bytes": 1372800,
-      "bpm": 88,
+      "hash": "20f21886d71dc4a7",
+      "bytes": 1408738,
+      "bpm": 100,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 134.409091,
+      "duration": 137.9,
       "loopStart": 3,
-      "loopEnd": 133.909091,
+      "loopEnd": 137.4,
       "handoff": null
     },
     "epic-2": {
-      "hash": "9fb3369c398d302a",
-      "bytes": 1314518,
-      "bpm": 92,
+      "hash": "a12c204c18d9b7c5",
+      "bytes": 1355515,
+      "bpm": 104,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 128.717391,
+      "duration": 132.730769,
       "loopStart": 3,
-      "loopEnd": 128.217391,
+      "loopEnd": 132.230769,
       "handoff": null
     },
     "epic-danger": {
@@ -336,6 +336,30 @@
       "duration": 28.045455,
       "loopStart": 5.727273,
       "loopEnd": 27.545455,
+      "handoff": null
+    },
+    "legendary-1": {
+      "hash": "17cef050a63d98dd",
+      "bytes": 295744,
+      "bpm": 132,
+      "beatsPerBar": 4,
+      "loop": true,
+      "intro": 3.636364,
+      "duration": 28.954545,
+      "loopStart": 6.636364,
+      "loopEnd": 28.454545,
+      "handoff": null
+    },
+    "legendary-2": {
+      "hash": "2d7d951262eeb59a",
+      "bytes": 295596,
+      "bpm": 132,
+      "beatsPerBar": 4,
+      "loop": true,
+      "intro": 3.636364,
+      "duration": 28.954545,
+      "loopStart": 6.636364,
+      "loopEnd": 28.454545,
       "handoff": null
     }
   }
