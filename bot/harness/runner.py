@@ -33,8 +33,13 @@ from harness.redact import redact
 
 RATE_LIMIT_WORDS = re.compile(
     r"(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:\w+ )?limit"
-    r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror)"
+    r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror"
+    # agy, once its plan's allowance is spent: "Individual quota reached. Please upgrade your
+    # subscription to increase your limits. Resets in 1h44m44s."
+    r"|quota reached|upgrade your subscription to increase your limits)"
 )
+#: "Resets in 1h44m44s" (agy), "resets in 3h", "resets in 12m": how long a refusal lasts.
+RESETS_IN = re.compile(r"(?i)resets? in\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m(?!s))?\s*(?:(\d+)\s*s)?")
 AUTH_WORDS = re.compile(
     r"(?i)(invalid api key|authentication[_ ]error|oauth token|not logged in|please run /login"
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
@@ -57,6 +62,17 @@ EXIT_TIMEOUT = 124
 EXIT_NOT_FOUND = 127
 #: When a refusal names no reset time: try again after this long.
 DEFAULT_PARK = "+PT60M"
+
+
+def park_for(error: str | None) -> str:
+    """How long a refused CLI is left alone: until the reset its message names, plus a minute,
+    or an hour when it names none."""
+    match = RESETS_IN.search(error or "")
+    if not match or not any(match.groups()):
+        return DEFAULT_PARK
+    hours, minutes, seconds = (int(g or 0) for g in match.groups())
+    total = hours * 60 + minutes + (1 if seconds else 0)
+    return f"+PT{max(1, total) + 1}M"
 #: How much of a transcript the next agent is shown (`trail`).
 TRAIL_ENTRIES = 40
 TRAIL_CHARS = 6000
@@ -508,7 +524,7 @@ class AgyCli(_Cli):
         if not ok:
             error = redact((str(result.get("error") or "") or launch.stderr
                             or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at)
 
     def trail(self, transcript: Path) -> str:
@@ -565,7 +581,7 @@ class MuseCli(_Cli):
         if not ok:
             last = [line for line in stderr.splitlines() if line.strip()]
             error = redact((last[-1] if last else f"muse exited {launch.code}")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
                          infra_hint=launch.code == 2)
 
@@ -648,7 +664,7 @@ class DevinCli(_Cli):
         if not ok:
             last = [line for line in stderr.splitlines() if line.strip()]
             error = redact((last[-1] if last else f"devin exited {launch.code}")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at)
 
 
