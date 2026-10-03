@@ -35,6 +35,8 @@ function makeGameRecord(
     winner?: "p1" | "p2" | "draw";
     p1Played?: string[];
     p2Played?: string[];
+    p1PlayedTurns?: number[];
+    p2PlayedTurns?: number[];
     turns?: number;
   } = {},
 ): GameRecord {
@@ -43,6 +45,9 @@ function makeGameRecord(
   const source = options.source ?? "live";
   const patch = options.patch ?? PATCH;
   const recordId = source === "dev" ? (id.startsWith("dev:") ? id : `dev:${patch}:${id}`) : id;
+
+  const p1Played = options.p1Played ?? p1Deck.slice(0, 2);
+  const p2Played = options.p2Played ?? p2Deck.slice(0, 2);
 
   return {
     id: recordId,
@@ -60,13 +65,15 @@ function makeGameRecord(
           deck: p1Deck,
           opening: p1Deck.slice(0, 3),
           drawn: p1Deck.slice(3),
-          played: options.p1Played ?? p1Deck.slice(0, 2),
+          played: p1Played,
+          playedTurns: options.p1PlayedTurns ?? p1Played.map((_, idx) => idx + 1),
         },
         p2: {
           deck: p2Deck,
           opening: p2Deck.slice(0, 3),
           drawn: p2Deck.slice(3),
-          played: options.p2Played ?? p2Deck.slice(0, 2),
+          played: p2Played,
+          playedTurns: options.p2PlayedTurns ?? p2Played.map((_, idx) => idx + 1),
         },
       },
     },
@@ -117,6 +124,28 @@ beforeEach(() => {
       attack: 5,
       health: 5,
       text: "Chaos",
+    } as unknown as CardDef,
+    "core-005": {
+      id: "core-005",
+      name: "High Roller",
+      cost: 6,
+      rarity: "Epic",
+      set: "Core",
+      type: "Unit",
+      attack: 6,
+      health: 6,
+      text: "Big",
+    } as unknown as CardDef,
+    "core-006": {
+      id: "core-006",
+      name: "Colossus",
+      cost: 10,
+      rarity: "Legendary",
+      set: "Core",
+      type: "Unit",
+      attack: 10,
+      health: 10,
+      text: "Colossal",
     } as unknown as CardDef,
   };
 
@@ -260,26 +289,51 @@ describe("R640: public card and player stats", () => {
     expect(data.summary.worstCard?.winRate).toBe(10 / 44);
   });
 
-  it("R640 filters cards by set, rarity, cost, and card id", async () => {
+  it("R640 filters cards by set, rarity, cost, source, and card id", async () => {
     const resAll = await router(jsonRequest("GET", "/api/stats/cards"));
     const all = await readJson<PublicStatsCardsResponse>(resAll);
-    expect(all.cards.length).toBe(4);
+    expect(all.cards.length).toBe(6);
 
     const resSet = await router(jsonRequest("GET", "/api/stats/cards?set=Core"));
     const setCards = await readJson<PublicStatsCardsResponse>(resSet);
-    expect(setCards.cards.length).toBe(4);
+    expect(setCards.cards.length).toBe(6);
 
     const resRarity = await router(jsonRequest("GET", "/api/stats/cards?rarity=Legendary"));
     const rarityCards = await readJson<PublicStatsCardsResponse>(resRarity);
-    expect(rarityCards.cards.map((c) => c.id)).toEqual(["core-004"]);
+    expect(rarityCards.cards.map((c) => c.id).sort()).toEqual(["core-004", "core-006"]);
 
     const resCost = await router(jsonRequest("GET", "/api/stats/cards?cost=3"));
     const costCards = await readJson<PublicStatsCardsResponse>(resCost);
     expect(costCards.cards.map((c) => c.id)).toEqual(["core-002"]);
 
+    // Cost 6+ bucket includes both 6-cost and 10-cost cards
+    const resCost6 = await router(jsonRequest("GET", "/api/stats/cards?cost=6"));
+    const cost6Cards = await readJson<PublicStatsCardsResponse>(resCost6);
+    expect(cost6Cards.cards.map((c) => c.id).sort()).toEqual(["core-005", "core-006"]);
+
+    const resCost6Plus = await router(jsonRequest("GET", "/api/stats/cards?cost=6%2B"));
+    const cost6PlusCards = await readJson<PublicStatsCardsResponse>(resCost6Plus);
+    expect(cost6PlusCards.cards.map((c) => c.id).sort()).toEqual(["core-005", "core-006"]);
+
     const resCard = await router(jsonRequest("GET", "/api/stats/cards?card=core-001"));
     const singleCard = await readJson<PublicStatsCardsResponse>(resCard);
     expect(singleCard.cards.map((c) => c.id)).toEqual(["core-001"]);
+
+    // Source filtering
+    const resLive = await router(jsonRequest("GET", "/api/stats/cards?source=live"));
+    const liveStats = await readJson<PublicStatsCardsResponse>(resLive);
+    expect(liveStats.source).toBe("live");
+    expect(liveStats.sourceLabel).toBe("Live games");
+
+    const resDev = await router(jsonRequest("GET", "/api/stats/cards?source=dev"));
+    const devStats = await readJson<PublicStatsCardsResponse>(resDev);
+    expect(devStats.source).toBe("dev");
+    expect(devStats.sourceLabel).toBe("AI development games");
+
+    const resProvisional = await router(jsonRequest("GET", "/api/stats/cards?source=provisional"));
+    const provisionalStats = await readJson<PublicStatsCardsResponse>(resProvisional);
+    expect(provisionalStats.source).toBe("provisional");
+    expect(provisionalStats.sourceLabel).toBe("AI games + live games (provisional)");
   });
 
   it("R640 GET /api/stats/cards/:id returns drill-down with turn played and co-played cards", async () => {
@@ -289,6 +343,7 @@ describe("R640: public card and player stats", () => {
           source: "live",
           p1Deck: ["core-001", "core-002"],
           p1Played: i % 2 === 0 ? ["core-002", "core-001"] : ["core-001"],
+          p1PlayedTurns: i % 2 === 0 ? [2, 3] : [1],
           turns: 4,
           winner: i <= 20 ? "p1" : "p2",
         }),
@@ -308,8 +363,13 @@ describe("R640: public card and player stats", () => {
     expect(coPlayed).toBeDefined();
     expect(coPlayed?.games).toBe(30);
 
-    // Turn played distribution
-    expect(drill.byTurn.length).toBeGreaterThan(0);
+    // Turn played distribution: core-001 was played on turn 1 in 15 games, and turn 3 in 15 games
+    const turn1 = drill.byTurn.find((t) => t.turn === 1);
+    const turn3 = drill.byTurn.find((t) => t.turn === 3);
+    expect(turn1).toBeDefined();
+    expect(turn1?.games).toBe(15);
+    expect(turn3).toBeDefined();
+    expect(turn3?.games).toBe(15);
 
     // 404 on missing card
     const notFoundRes = await router(jsonRequest("GET", "/api/stats/cards/nonexistent-card"));
@@ -418,20 +478,20 @@ describe("R640: public card and player stats", () => {
     const data = await readJson<{ players: PublicPlayerSummary[] }>(res);
     // Charlie is private, so only Bob and Alice appear
     expect(data.players.map((p) => p.profileId)).toEqual(["p-bob", "p-alice"]);
-    expect(data.players[0].displayName).toBe("Bob Builder");
-    expect(data.players[1].displayName).toBe("Alice Wonder");
+    const [bob, alice] = data.players;
+    expect(bob?.displayName).toBe("Bob Builder");
+    expect(alice?.displayName).toBe("Alice Wonder");
 
     // Elo/rating must NOT be exposed
-    expect((data.players[0] as unknown as Record<string, unknown>).rating).toBeUndefined();
-    expect((data.players[1] as unknown as Record<string, unknown>).rating).toBeUndefined();
+    expect((bob as unknown as Record<string, unknown> | undefined)?.rating).toBeUndefined();
+    expect((alice as unknown as Record<string, unknown> | undefined)?.rating).toBeUndefined();
 
     // Alice's favourite cards and fun stats
-    const alice = data.players[1];
-    expect(alice.favouriteCards).toEqual([
+    expect(alice?.favouriteCards).toEqual([
       { id: "core-001", count: 25 },
       { id: "core-002", count: 15 },
     ]);
-    expect(alice.funStats).toEqual({
+    expect(alice?.funStats).toEqual({
       nemesisCardId: "core-nemesis",
       totalDestroyed: 2,
       totalDefeated: 4,

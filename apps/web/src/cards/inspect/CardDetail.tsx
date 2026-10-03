@@ -50,6 +50,8 @@ export type CardDetailProps = {
   meta?: ReactNode;
   /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
   historyOpen?: boolean;
+  /** SPEC §9.11, R640: render the compact card statistics block (deckbuilder); omitted in almanac (R630). */
+  showStats?: boolean;
 };
 
 /**
@@ -100,7 +102,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta, historyOpen = false }: CardDetailProps): ReactElement {
+export function CardDetail({ def, onClose, actions, meta, historyOpen = false, showStats = false }: CardDetailProps): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -156,7 +158,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
-              <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} />
+              {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
             </div>

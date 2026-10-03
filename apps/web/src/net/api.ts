@@ -660,7 +660,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     minLiveGames: number;
   };
-  source: "provisional" | "live";
+  source: "provisional" | "live" | "dev";
   sourceLabel: string;
   minSample: number;
   totalGames: number;
@@ -669,7 +669,7 @@ export type PublicStatsCardsResponse = {
     totalGames: number;
     liveGames: number;
     activePatch: string;
-    source: "provisional" | "live";
+    source: "provisional" | "live" | "dev";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -688,6 +688,7 @@ export type CardDrillDownResponse = {
 };
 
 export type CardStatsOptions = {
+  source?: string;
   patch?: string;
   set?: string;
   rarity?: string;
@@ -698,6 +699,7 @@ export type CardStatsOptions = {
 
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
   const params = new URLSearchParams();
+  if (options.source) params.set("source", options.source);
   if (options.patch) params.set("patch", options.patch);
   if (options.set) params.set("set", options.set);
   if (options.rarity) params.set("rarity", options.rarity);

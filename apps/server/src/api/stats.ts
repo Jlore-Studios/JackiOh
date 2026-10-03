@@ -12,6 +12,7 @@
 import { cardStats, winRate, type GameRecord } from "@jackioh/shared";
 import {
   CARD_STATS_CACHE_TTL_SECONDS,
+  CARD_STATS_CURVE_TOP,
   CARD_STATS_MIN_SAMPLE,
   PLAYER_STATS_BYTES_MAX,
   PLAYER_STATS_CACHE_TTL_SECONDS,
@@ -46,7 +47,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     minLiveGames: number;
   };
-  source: "provisional" | "live";
+  source: "provisional" | "live" | "dev";
   sourceLabel: string;
   minSample: number;
   totalGames: number;
@@ -55,7 +56,7 @@ export type PublicStatsCardsResponse = {
     totalGames: number;
     liveGames: number;
     activePatch: string;
-    source: "provisional" | "live";
+    source: "provisional" | "live" | "dev";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -96,6 +97,7 @@ export function createStatsRoutes(): Route[] {
       const versions = await loadPatchVersions();
       const currentPatch = deps.games?.patch ?? deps.catalog.version;
       const requestedPatch = req.url.searchParams.get("patch")?.trim() || currentPatch;
+      const sourceParam = req.url.searchParams.get("source")?.trim().toLowerCase();
 
       const patchIdx = versions.indexOf(requestedPatch);
       const previousPatch = patchIdx > 0 ? versions[patchIdx - 1] ?? null : null;
@@ -113,16 +115,32 @@ export function createStatsRoutes(): Route[] {
 
       // R640 publication gate: exactly 1000 live games required to clear the gate
       const cleared = liveGamesCount >= PUBLIC_STATS_MIN_LIVE_GAMES;
-      const source: "provisional" | "live" = cleared ? "live" : "provisional";
-      const sourceLabel = cleared ? "Live games" : "AI games + live games (provisional)";
 
-      // When cleared, strictly ignore AI development games (no toggle to bring them back)
-      const recordsToCount: GameRecord[] = cleared
-        ? liveRecords
-        : patchRecords.filter((r) => (r.mode as string) !== "tutorial");
+      let source: "provisional" | "live" | "dev";
+      let sourceLabel: string;
+      let recordsToCount: GameRecord[];
+
+      if (cleared) {
+        // When cleared, strictly ignore AI development games (no toggle to bring them back)
+        source = "live";
+        sourceLabel = "Live games";
+        recordsToCount = liveRecords;
+      } else if (sourceParam === "live") {
+        source = "live";
+        sourceLabel = "Live games";
+        recordsToCount = liveRecords;
+      } else if (sourceParam === "dev" || sourceParam === "ai") {
+        source = "dev";
+        sourceLabel = "AI development games";
+        recordsToCount = patchRecords.filter((r) => r.source === "dev" && (r.mode as string) !== "tutorial");
+      } else {
+        source = "provisional";
+        sourceLabel = "AI games + live games (provisional)";
+        recordsToCount = patchRecords.filter((r) => (r.mode as string) !== "tutorial");
+      }
 
       const report = cardStats(recordsToCount, {
-        source: cleared ? "live" : "all",
+        source: source === "live" ? "live" : source === "dev" ? "dev" : "all",
         mode: null,
         patch: requestedPatch,
         pilot: "unified",
@@ -143,7 +161,16 @@ export function createStatsRoutes(): Route[] {
         if (setParam && def.set?.toLowerCase() !== setParam && !id.toLowerCase().startsWith(setParam)) continue;
         if (rarityParam && def.rarity?.toLowerCase() !== rarityParam) continue;
         const numericCost = typeof def.cost === "number" ? def.cost : typeof def.cost === "object" ? def.cost.base : 0;
-        if (costParam !== null && costParam !== "" && numericCost !== Number(costParam)) continue;
+        if (costParam !== null && costParam !== "") {
+          const parsedCost = Number(costParam.replace("+", ""));
+          if (!Number.isNaN(parsedCost)) {
+            if (parsedCost >= CARD_STATS_CURVE_TOP) {
+              if (numericCost < CARD_STATS_CURVE_TOP) continue;
+            } else {
+              if (numericCost !== parsedCost) continue;
+            }
+          }
+        }
 
         const stat = statsMap.get(id);
         const inDeckGames = stat?.inDeck.games ?? 0;
@@ -275,10 +302,19 @@ export function createStatsRoutes(): Route[] {
 
           const won = record.game.winner === seat;
 
-          // Check if and when card was played
-          const playIndex = summary.played.indexOf(cardId);
-          if (playIndex >= 0) {
-            const turn = Math.max(1, Math.min(record.game.turns, playIndex + 1));
+          // Check turns on which this card was played (from recorded playedTurns)
+          const turnsPlayedInGame = new Set<number>();
+          if (summary.playedTurns && summary.playedTurns.length === summary.played.length) {
+            for (let i = 0; i < summary.played.length; i++) {
+              if (summary.played[i] === cardId) {
+                const turn = summary.playedTurns[i];
+                if (turn !== undefined && turn > 0) {
+                  turnsPlayedInGame.add(turn);
+                }
+              }
+            }
+          }
+          for (const turn of turnsPlayedInGame) {
             let t = turnTallies.get(turn);
             if (!t) {
               t = { games: 0, wins: 0 };

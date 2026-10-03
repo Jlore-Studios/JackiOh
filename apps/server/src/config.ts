@@ -518,6 +518,12 @@ export const PUBLIC_STATS_MIN_LIVE_GAMES = 1000;
  */
 export const CARD_STATS_MIN_SAMPLE = 20;
 
+/**
+ * SPEC §11 R640: cost bucket boundary for card statistics filters.
+ * Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
+ */
+export const CARD_STATS_CURVE_TOP = 6;
+
 /** Cache-Control max-age in seconds for public card statistics endpoints. */
 export const CARD_STATS_CACHE_TTL_SECONDS = 300;
 
@@ -633,6 +639,7 @@ export const SERVER_CONFIG = Object.freeze({
   PLAYER_SETTINGS_BYTES_MAX,
   PUBLIC_STATS_MIN_LIVE_GAMES,
   CARD_STATS_MIN_SAMPLE,
+  CARD_STATS_CURVE_TOP,
   CARD_STATS_CACHE_TTL_SECONDS,
   PLAYER_STATS_CACHE_TTL_SECONDS,
   PLAYER_STATS_PAGE_LIMIT,

@@ -570,6 +570,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           }
           onInspect={openDetail}
           detail={detail}
+          showStats
           onCloseDetail={() => {
             setDetailCardId(null);
           }}
