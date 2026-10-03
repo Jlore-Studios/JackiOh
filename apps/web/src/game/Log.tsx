@@ -444,7 +444,8 @@ type Line = { key: string; type: GameEvent["type"]; text: string; face: FaceMode
 /** One line; a line about a card is a button that opens it (see the header). */
 function LogLine({ line }: { line: Line }): ReactElement {
   const face = line.face;
-  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face });
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { showLoc: false });
   if (face === null) {
     return (
       <li className="log-line" data-event={line.type}>

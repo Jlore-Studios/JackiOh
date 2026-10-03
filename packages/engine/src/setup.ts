@@ -12,7 +12,7 @@ import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import { findDef } from "./catalog";
 import { COIN_DEF_ID, OPENING_COINS, OPENING_DRAW } from "./config";
-import { addToHand, draw } from "./draw";
+import { addToHand, castsOnDraw, draw } from "./draw";
 import type { EngineSink } from "./resolve";
 import { flagsOf } from "./scripts";
 import { runStartOfGame } from "./prompts";
@@ -156,6 +156,20 @@ function isQuickdraw(card: CardInstance): boolean {
  * tell from none of it — #100's price, the deal's events, the hand and library counts while a cast
  * the opening draw made is asking (R224) — whether the opening hand holds one (§9.1).
  */
+/**
+ * R641: cast-on-draw cards wait at the bottom of the library while the opening deal and the
+ * mulligan replacements draw, so neither ever sees one while other cards remain. The partition is
+ * stable and draws no rng, so any seed's other order is unchanged; with nothing else to draw the
+ * bottom is reached and they come (and cast) as usual. Quickdraw's guarantee is untouched: those
+ * cards still wait past the cast cards and still go straight to the hand (never cast, as before).
+ */
+function deferCastOnDraw(state: GameState, cards: CardInstance[]): CardInstance[] {
+  const cast: CardInstance[] = [];
+  const other: CardInstance[] = [];
+  for (const card of cards) (castsOnDraw(state, card) ? cast : other).push(card);
+  return [...other, ...cast];
+}
+
 function dealFrom(sink: EngineSink, seat: number): void {
   const state = sink.state;
 
@@ -164,7 +178,8 @@ function dealFrom(sink: EngineSink, seat: number): void {
     const side = state.players[player];
     const shuffled = sink.rng.shuffle(side.library);
     const quickdraw = shuffled.filter(isQuickdraw);
-    side.library = [...shuffled.filter((card) => !isQuickdraw(card)), ...quickdraw];
+    const rest = shuffled.filter((card) => !isQuickdraw(card));
+    side.library = [...deferCastOnDraw(state, rest), ...quickdraw];
 
     // R182: a handicapped seat's extra opening cards are part of the same total Quickdraw replaces.
     draw(sink, player, Math.max(0, openingHandSize(state, player) - quickdraw.length));
@@ -250,6 +265,8 @@ function resolveFrom(sink: EngineSink, sealed: readonly SealedMulligan[]): void 
     if (at >= 0) side.hand.splice(at, 1);
   }
 
+  // R641: the replacements draw past cast-on-draw cards too, as the deal did.
+  side.library = deferCastOnDraw(state, side.library);
   draw(sink, next.player, returned.length);
   // A replacement's cast is asking (§2.4, R70, R224): the shuffle-back, the seats after this one and
   // the game wait for the answer, and the returned cards wait with them, in the owed item — they are

@@ -63,20 +63,28 @@ const NONE: readonly never[] = [];
 export function printedValue(entry: PreviewValue): string {
   return entry.display !== undefined && entry.display !== "" ? entry.display : String(entry.value);
 }
-/** R280: each value after its label's nth occurrence for the nth entry with that label, else at the end. */
+/**
+ * R280: each value after its label's nth occurrence for the nth entry with that label. A label that
+ * occurs fewer times keeps its values together: past its last occurrence they join it there, in one
+ * helper block — a Radiant Lizard's Breath shows both largest piles together, not one mid-text and
+ * one at the end. A label the text never names still falls to the end, as does an empty label.
+ */
 function insertsOf(text: string, values: readonly PreviewValue[]): Insert[] {
   const seen = new Map<string, number>();
   return values.map((entry) => {
     const nth = seen.get(entry.label) ?? 0;
     seen.set(entry.label, nth + 1);
     let found = -1;
+    let last = -1;
     if (entry.label !== "") {
       for (let at = 0; at <= nth; at += 1) {
         found = text.indexOf(entry.label, found + 1);
         if (found < 0) break;
+        last = found;
       }
     }
-    return { at: found < 0 ? text.length : found + entry.label.length, text: printedValue(entry), label: entry.label };
+    const at = found >= 0 ? found : last;
+    return { at: at < 0 ? text.length : at + entry.label.length, text: printedValue(entry), label: entry.label };
   });
 }
 

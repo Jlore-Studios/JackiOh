@@ -475,6 +475,11 @@ export type ActivationDecl = {
     discardRandom?: number;
     tribute?: number;
     tributeSelf?: boolean;
+    /**
+     * A Tribute cost that may not take the card itself, even when it is a Unit (Classic #21
+     * Turtinator, which cannot Tribute itself; R642).
+     */
+    tributeExcludesSelf?: boolean;
   };
   targets?: TargetDecl[];
   modes?: ModeDecl[];

@@ -184,7 +184,7 @@ describe("C #65 Ace in the Hole", () => {
       s.expectInZone(ACE, "graveyard");
     });
 
-    it("tails: it Recruits 1 without firing, and stays set face-down, never named in the opponent's view", () => {
+    it("R645 tails: it Recruits 1 without firing, and stays set Revealed — readable, still armed", () => {
       const s = withCoin("tails", { radiant: true });
       const ace = s.card(ACE);
       s.endTurn();
@@ -192,11 +192,11 @@ describe("C #65 Ace in the Hole", () => {
       expect(units(s)).toEqual([VANILLA, null, null, null, null]);
       s.expectInZone(ace, "field");
       expect(s.card(ace).faceUp).not.toBe(true);
+      // R645: Revealed regardless of the coin flip — the opponent reads its face, but it never fired.
+      expect(s.card(ace).revealed).toBe(true);
       const theirs = s.view("p2");
-      // Neither its name nor its id: the recruit's event says nothing of what recruited.
-      expect(JSON.stringify(theirs)).not.toContain(ACE);
-      expect(JSON.stringify(theirs)).not.toContain(`"${ace.id}"`);
-      expect(theirs.opponent.backrow[0]).toMatchObject({ faceDown: true });
+      expect(JSON.stringify(theirs)).toContain(ACE);
+      expect(theirs.opponent.backrow[0]).toMatchObject({ faceDown: false });
     });
 
     it("tails: a recruited Trap lands face-down (R33), and the set trap flips again at your next end of turn", () => {

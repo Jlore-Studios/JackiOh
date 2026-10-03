@@ -56,6 +56,12 @@ export type InspectOptions = {
   onContextMenu?: () => void;
   /** Which side of the card the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
+  /**
+   * Default true: the overlays end with the card's lines of code (E36). Lines of code is a hidden
+   * stat in matches, so every in-match trigger passes false and the preview and the sheet show no
+   * LocLine; the collection keeps it.
+   */
+  showLoc?: boolean;
 };
 
 export type InspectHandlers = {
@@ -333,11 +339,13 @@ export function useInspectTrigger(
     if ("render" in subject) {
       overlay = subject.render({ mode: active.mode, anchor: active.anchor, close });
     } else {
+      // Lines of code is a hidden stat in matches: an in-match trigger shows no LocLine.
+      const face = options?.showLoc === false ? { ...subject.face, loc: null } : subject.face;
       overlay =
         active.mode === "hover" ? (
-          <HoverPreview face={subject.face} anchor={active.anchor} prefer={options?.prefer} note={subject.note} />
+          <HoverPreview face={face} anchor={active.anchor} prefer={options?.prefer} note={subject.note} />
         ) : (
-          <InspectSheet face={subject.face} onClose={close} note={subject.note} />
+          <InspectSheet face={face} onClose={close} note={subject.note} />
         );
     }
   }

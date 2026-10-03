@@ -1,17 +1,17 @@
 // C #64 Malzahar's Recycler (SPEC §8.6 row 64, BUILD M9 Classic row C 64). (2) Field Spell, Rare.
 //   Base:    "End of turn: Discard 2 cards. / Whenever you discard cards, draw that many."
 //   Radiant: "End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck."
-//   Engine:  "The end-of-turn discard is your choice (R16), a hand pick of 2 (fewer in hand: all of
-//            them). The draw answers your `discarded` events one effect at a time: an effect that
-//            discards 2 draws 2. Radiant: 'draw your deck' (R58, the deck's size as it starts) once per
-//            discarding effect. Every discard of yours counts: your own, C #15 Nose Hunter's random one,
-//            C #8 Pickle's, C #37 Last Hurrah's; a card crumbling from Brittle (§6.1, R385) is not a
-//            discard. Tunes: none."
+//   Engine:  "The end-of-turn discard is 2 random cards (R640; fewer in hand: all of them). The draw
+//            answers your `discarded` events one effect at a time: an effect that discards 2 draws 2.
+//            Radiant: 'draw your deck' (R58, the deck's size as it starts) once per discarding effect.
+//            Every discard of yours counts: your own, C #15 Nose Hunter's random one, C #8 Pickle's,
+//            C #37 Last Hurrah's; a card crumbling from Brittle (§6.1, R385) is not a discard.
+//            Tunes: none."
 //
 // Readings:
 //   - The end-of-turn discard is §6.2's end-of-turn hook (its controller's turn, while it acts on the
-//     field): a `hand` pick of 2 by its controller (R16), all of a smaller hand, nothing from an empty
-//     one; the picks are discarded in the order the prompt offered them.
+//     field): 2 random cards of its controller's hand (R640), all of a smaller hand, nothing from an
+//     empty one.
 //   - "Whenever you discard cards" answers the `discarded` events of cards its controller owned in
 //     hand as they went — whoever's effect discarded them (an opponent's C #8 Pickle makes you
 //     discard), never the opponent's discards. The trigger answers each discarded card, one draw each,
@@ -24,22 +24,16 @@
 
 import type { Effect, EffectContext, Script, TriggerDef } from "@jackioh/engine";
 import { zoneCount } from "@jackioh/engine";
-import { chooseFromHand, discard, draw } from "@jackioh/engine/effects";
+import { discardRandom, draw } from "@jackioh/engine/effects";
 import type { GameEvent } from "@jackioh/shared";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-064");
 
-/** "End of turn: Discard 2 cards." — the size of the pick (R16). */
+/** "End of turn: Discard 2 cards." — random (R640). */
 const END_OF_TURN_DISCARDS = 2;
 
-const DISCARD_STEP = "discard";
-
-const endOfTurn = (): Effect[] => [chooseFromHand({ step: DISCARD_STEP, count: END_OF_TURN_DISCARDS, prompt: "Discard 2 cards" })];
-
-/** The picks the answered prompt carried, each discarded in turn. */
-const discardPicks = (ctx: EffectContext): Effect[] =>
-  ctx.targets.map((_, index) => discard({ target: { of: "chosen", index } }));
+const endOfTurn = (): Effect[] => [discardRandom({ count: END_OF_TURN_DISCARDS })];
 
 /** Whether this event is a card its controller discarded. */
 function yourDiscard(ctx: EffectContext & { event: GameEvent }): boolean {
@@ -63,12 +57,10 @@ const drawDeck = (ctx: EffectContext): Effect[] => [draw({ count: zoneCount(ctx.
 
 export const base: Script = {
   endOfTurn,
-  resume: { [DISCARD_STEP]: discardPicks },
   triggers: [answer(drawOne)],
 };
 
 export const radiant: Script = {
   endOfTurn,
-  resume: { [DISCARD_STEP]: discardPicks },
   triggers: [answer(drawDeck)],
 };

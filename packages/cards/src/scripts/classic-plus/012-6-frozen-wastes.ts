@@ -1,7 +1,8 @@
-// C+ #12.6 Frozen Wastes (SPEC §8.7 row 12.6, R408): (2) Field Spell, Pancake, Token (printed Legendary).
+// C+ #12.6 Frozen Wastes (SPEC §8.7 row 12.6, R408): (2) Spell, Pancake, Token (printed Legendary;
+// balance patch 1: a Spell, not a Field Spell).
 //   Base:    "Cry: Destroy all Units. Exile the top card of your deck for each one destroyed."
 //   Radiant: "… Exile the top card of your opponent's deck for each one destroyed."
-// A Field Spell's unlabelled one-time text is its Cry; the card then stays with no further text (R408).
+// A Spell's unlabelled one-time text is its Cry; the card then goes to the graveyard (R408).
 // "Each one" is the Units the destroy dooms, read as it resolves (the exile follows in the same list,
 // before the state check, R59): an Indestructible one isn't, a Reborn one is. A short deck exiles
 // what it has, with no fatigue. The preview (R280) is how many cards it would exile now.

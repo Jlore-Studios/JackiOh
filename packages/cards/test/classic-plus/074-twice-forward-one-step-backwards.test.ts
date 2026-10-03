@@ -1,16 +1,17 @@
 // C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74: "A Field Trap
-// (R425) set face-down with printed Brittle 4, the count starting as it is set (R385); it counts the
+// (R425) set face-down with printed Brittle 2 and no count while unrevealed (R646); it counts the
 // opponent's plays from then on (`memory.plays`; a cast counts, R70; a countered play doesn't) and on
 // every second one, after that card resolves, the card, if it still exists (a Unit on the field, a Spell
 // in the graveyard, a trap in the backrow), is fused into this (R77, R102): this is the kept instance and
-// stays a Field Trap, the opponent's card ceases to exist; then this gains +1 Brittle, even when there
-// was no card left to fuse; fused texts act for you where they can (an end-of-turn line or an aura on
-// your side) and a fused Cry never runs; it turns face-up at its first fuse (R33), and until then the
-// opponent's view shows neither its Brittle count nor its play count; with no fuse, set on your turn t,
-// it ticks to 3 at the start of your turn t + 2 and crumbles at the start of t + 8; its memory and fused
-// definition survive JSON and replay; Brittle, the every-2 step (never below 2) and Brittle gained read
-// through `param()`; radiant Brittle 10, and a Radiant copy of the card is fused in, the original staying
-// where it is".
+// stays a Field Trap, the opponent's card ceases to exist; the first activation reveals it and starts
+// its Brittle, then this gains +1 Brittle, even when there was no card left to fuse (revealing first);
+// fused texts act for you where they can (an end-of-turn line or an aura on your side) and a fused Cry
+// never runs; it turns face-up at its first activation (R33, R646), and until then the opponent's view
+// shows neither the card nor its play count, while a card destroyed unrevealed reads public in its
+// graveyard (R97); with no fuse it holds no Brittle and never crumbles; its memory and fused definition
+// survive JSON and replay; Brittle, the every-2 step (never below 2) and Brittle gained read through
+// `param()`; radiant Brittle 4, and a Radiant copy of the card is fused in, the original staying where
+// it is".
 //
 // p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays. The machinery is proved
 // through fixtures in `packages/engine/test/twiceForward.test.ts`.
@@ -35,6 +36,7 @@ const TIGER_DOJO = "core-014"; // (4) Field Spell: Aura: your Units have +4 atta
 const HIT_JOB = "core-016"; // (3) Spell: Destroy target Unit.
 const HINDER = "core-021"; // (0) Spell, cast on draw
 const TIMMY = "core-011"; // (1) Unit
+const GUY_ATT = "classicplus-005"; // (2) Unit: Cry: Destroy every backrow card you control.
 
 const deck = (n: number, card = TIMMY): PileSetup[] => Array.from({ length: n }, () => card);
 
@@ -65,12 +67,12 @@ function fusedEvents(s: Scenario): number {
 }
 
 describe("C+ #74 Twice Forward One Step Backwards", () => {
-  it("is a (2) Mythic Field Trap printing Brittle 4 (Radiant 10), declaring every 2 (min 2) and Brittle gained 1", () => {
+  it("is a (2) Mythic Field Trap printing Brittle 2 (Radiant 4), declaring every 2 (min 2) and Brittle gained 1", () => {
     expect(def.type).toBe("Field Trap");
     expect(def.cost).toBe(2);
     expect(def.rarity).toBe("Mythic");
-    expect(def.base.keywords).toEqual([{ kind: "Brittle", n: 4 }]);
-    expect(def.radiant.keywords).toEqual([{ kind: "Brittle", n: 10 }]);
+    expect(def.base.keywords).toEqual([{ kind: "Brittle", n: 2 }]);
+    expect(def.radiant.keywords).toEqual([{ kind: "Brittle", n: 4 }]);
     expect(def.params).toEqual([
       { key: "plays", base: 2, radiant: 2, better: "down", step: 1, min: 2 },
       { key: "brittleGain", base: 1, radiant: 1, better: "up", step: 1, min: 1 },
@@ -80,16 +82,31 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
   });
 
   describe("base", () => {
-    it("R385 R425 set face-down, its printed Brittle 4 starts as it is set; only its controller reads it", () => {
+    it("R646 R425 set face-down, it holds no Brittle; only its controller reads the back", () => {
       const s = setThenTheirTurn();
       const trap = trapOf(s);
       expect(trap.faceUp === true).toBe(false);
-      expect(activeBrittleCount(trap)).toBe(4);
-      expect(trap.brittle?.since).toBe(9);
-      expect((s.view("p1").you.backrow[1] as CardView | null)?.brittle).toBe(4);
+      expect(activeBrittleCount(trap)).toBeNull();
+      expect(trap.brittle).toBeUndefined();
+      expect((s.view("p1").you.backrow[1] as CardView | null)?.brittle).toBeUndefined();
       const theirs = JSON.stringify(s.view("p2"));
       expect(theirs).not.toContain(FORWARD);
       expect(theirs).not.toContain(trap.id);
+    });
+
+    it("R646 R97 destroyed while unrevealed, it is shown to the opponent: their view names it", () => {
+      const s = scenario({
+        p1: { hand: [FORWARD, GUY_ATT], backrow: [], library: deck(10), mana: 10 },
+        p2: { hand: [VANILLA], library: deck(10) },
+      });
+      s.play(FORWARD, { zone: 2 });
+      const trap = trapOf(s);
+      expect(trap.faceUp === true).toBe(false);
+      s.play(GUY_ATT, { zone: 1 });
+      s.expectInZone(trap, "graveyard");
+      const seen = JSON.stringify(s.view("p2"));
+      expect(seen).toContain(trap.id);
+      expect(seen).toContain(FORWARD);
     });
 
     it("R425 R99 their 1st play is counted and leaves it face-down and unfired", () => {
@@ -99,7 +116,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
     });
 
-    it("R33 R385 until it fuses the opponent reads neither its Brittle count nor its play count", () => {
+    it("R33 R646 until it activates the opponent reads neither the card nor its play count", () => {
       const s = setThenTheirTurn().play(RAPID);
       const trap = trapOf(s);
       const seen = s.view("p2").opponent.backrow[1];
@@ -108,10 +125,10 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       const theirs = JSON.stringify(s.view("p2"));
       expect(theirs).not.toContain(trap.id);
       expect(theirs).not.toContain(FORWARD);
-      expect((s.view("p1").you.backrow[1] as CardView | null)?.brittle).toBe(4);
+      expect((s.view("p1").you.backrow[1] as CardView | null)?.brittle).toBeUndefined();
     });
 
-    it("R425 R77 the 2nd, a Unit, is fused into this after it resolves: still a Field Trap, the Unit gone, +1 Brittle, face-up (R33)", () => {
+    it("R425 R77 R646 the 2nd, a Unit, is fused into this after it resolves: still a Field Trap, the Unit gone, revealed with Brittle 2 + 1, face-up (R33)", () => {
       const s = setThenTheirTurn().play(RAPID);
       const unit = s.card(VANILLA);
       s.play(VANILLA, { zone: 1 });
@@ -120,7 +137,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       s.expectInZone(unit, "gone");
       expect(defOf(s.state, trap.defId).type).toBe("Field Trap");
       expect(trap.zone).toMatchObject({ z: "field", row: "backrow", lane: 2, player: "p1" });
-      expect(activeBrittleCount(trap)).toBe(5);
+      expect(activeBrittleCount(trap)).toBe(3);
       expect(trap.faceUp).toBe(true);
       s.expectEvents("cardResolved", "trapFired", "fused");
       expect(JSON.stringify(s.view("p2"))).toContain(trap.defId);
@@ -130,7 +147,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       const s = setThenTheirTurn().play(RAPID).play(STOCKPILE);
       expect(s.pile("p2", "graveyard").some((card) => card.defId === STOCKPILE)).toBe(false);
       expect(fusedEvents(s)).toBe(1);
-      expect(activeBrittleCount(trapOf(s))).toBe(5);
+      expect(activeBrittleCount(trapOf(s))).toBe(3);
     });
 
     it("R425 a trap is fused from its owner's backrow", () => {
@@ -139,17 +156,15 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(fusedEvents(s)).toBe(1);
     });
 
-    it("R589 R425 with nothing left to fuse (a Spell that exiles itself) it still gains +1 Brittle, face-down and unfired", () => {
+    it("R646 R589 R425 with nothing left to fuse (a Spell that exiles itself) it reveals and still gains +1 Brittle, unfired", () => {
       const s = setThenTheirTurn({ p2: { hand: [RAPID, TRUE_STRIKE, VANILLA] } }).play(RAPID);
       s.play(TRUE_STRIKE, { targets: [{ pick: "hero", player: "p1" }] });
       s.expectInZone(TRUE_STRIKE, "exile");
       expect(fusedEvents(s)).toBe(0);
-      expect(activeBrittleCount(trapOf(s))).toBe(5);
-      expect(trapOf(s).faceUp === true).toBe(false);
-      // R385: the opponent reads the change only as the sentinel's.
-      const brittle = s.view("p2").events.filter((event) => event.type === "counterChanged");
-      expect(brittle.length).toBeGreaterThan(0);
-      expect(JSON.stringify(brittle)).not.toContain(trapOf(s).id);
+      // No Brittle sits on an unrevealed card: the gain reveals it first, then lands on the started 2.
+      expect(activeBrittleCount(trapOf(s))).toBe(3);
+      expect(trapOf(s).faceUp).toBe(true);
+      expect(JSON.stringify(s.view("p2"))).toContain(trapOf(s).id);
     });
 
     it("R70 a cast is a play: the cast-on-draw card their turn's draw casts is their 1st, so the next play is fused", () => {
@@ -224,22 +239,22 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       for (let i = 0; i < 4; i += 1) s.play(RAPID);
       expect(playsOf(s)).toBe(4);
       expect(fusedEvents(s)).toBe(2);
-      expect(activeBrittleCount(trapOf(s))).toBe(6);
+      expect(activeBrittleCount(trapOf(s))).toBe(4);
     });
 
-    it("R385 with no fuse, set on your turn 9, it ticks to 3 at the start of turn 11 and crumbles at the start of turn 17", () => {
+    it("R646 with no fuse it holds no Brittle and never crumbles: turns pass with no count and no crumble", () => {
       const s = setThenTheirTurn({ p1: { library: deck(12) }, p2: { library: deck(12) } });
       const trap = trapOf(s);
       s.endTurn();
       expect(s.state.turn).toBe(11);
-      expect(activeBrittleCount(trapOf(s))).toBe(3);
+      expect(activeBrittleCount(trapOf(s))).toBeNull();
       s.endTurn().endTurn().endTurn().endTurn();
       expect(s.state.turn).toBe(15);
-      expect(activeBrittleCount(trapOf(s))).toBe(1);
+      expect(activeBrittleCount(trapOf(s))).toBeNull();
       s.endTurn().endTurn();
       expect(s.state.turn).toBe(17);
-      s.expectInZone(trap, "graveyard");
-      expect(s.events.some((event) => event.type === "crumbled")).toBe(true);
+      expect(s.backrow("p1", 2)?.id).toBe(trap.id);
+      expect(s.events.some((event) => event.type === "crumbled")).toBe(false);
     });
 
     it("R179 its count and fused definition survive JSON, and the round trip plays on exactly as the live game", () => {
@@ -270,22 +285,25 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(fusedEvents(slow)).toBe(0);
       slow.play(RAPID);
       expect(fusedEvents(slow)).toBe(1);
-      expect(activeBrittleCount(trapOf(slow))).toBe(6);
+      expect(activeBrittleCount(trapOf(slow))).toBe(4);
     });
 
-    it("R386 its Brittle is its numbered keyword: an Upgrade's X change before it is set starts it at 5", () => {
+    it("R646 R386 its Brittle is its numbered keyword: an Upgrade's X change starts it at 3 on its first fuse, +1 gained", () => {
       const s = setThenTheirTurn({ tune: (s0) => {
         const card = s0.card(FORWARD);
         card.tuning = { ...(card.tuning ?? {}), x: { ...(card.tuning?.x ?? {}), Brittle: 1 } };
       } });
-      expect(activeBrittleCount(trapOf(s))).toBe(5);
+      // Face-down it holds nothing, tuned or not; the first fuse reveals it and starts the tuned 3.
+      expect(activeBrittleCount(trapOf(s))).toBeNull();
+      s.play(RAPID).play(VANILLA, { zone: 1 });
+      expect(activeBrittleCount(trapOf(s))).toBe(4);
     });
   });
 
   describe("radiant", () => {
-    it("R385 Brittle 10, set face-down", () => {
+    it("R646 Brittle 4, set face-down with no count", () => {
       const s = setThenTheirTurn({ radiantFace: true });
-      expect(activeBrittleCount(trapOf(s))).toBe(10);
+      expect(activeBrittleCount(trapOf(s))).toBeNull();
       expect(trapOf(s).faceUp === true).toBe(false);
     });
 
@@ -296,7 +314,7 @@ describe("C+ #74 Twice Forward One Step Backwards", () => {
       expect(trap.defId).not.toBe(FORWARD);
       expect(defOf(s.state, trap.defId).type).toBe("Field Trap");
       expect(defOf(s.state, trap.defId).ingredients?.find((part) => part.defId === VANILLA)).toEqual({ defId: VANILLA, radiant: true });
-      expect(activeBrittleCount(trap)).toBe(11);
+      expect(activeBrittleCount(trap)).toBe(5);
       expect(trap.faceUp).toBe(true);
     });
 

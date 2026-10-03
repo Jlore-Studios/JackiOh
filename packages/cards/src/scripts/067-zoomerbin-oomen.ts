@@ -11,10 +11,11 @@
 // row from the def's type (`rowOf`: everything but a Unit and a Spell goes to the backrow), so
 // naming the lane is the whole placement.
 //
-// R47: a lane-targeted summon into an occupied or Locked zone fizzles, and §8's Conventions keep
+// R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep
 // the unit on the field regardless — "the unit still enters". `summon`'s `zoneFor`/`canPlace`
-// already implements exactly that (Locked, reserved or occupied → no zone → nothing created), so
-// this card needs no check of its own and must not grow one.
+// already implements exactly that (reserved or occupied → no zone → nothing created). A Locked
+// zone is this card's own override of R647 (summons enter Locked zones unless the card says
+// otherwise; §8: "zone occupied or Locked → fizzles"), so the script checks the Lock itself.
 //
 // §3.2 and R33: `summonOnto` leaves anything that is not a Field Spell face-down, and only the
 // current controller may read a face-down trap. R1: a summon fires no Cry and pays nothing, so the
@@ -37,7 +38,7 @@
 // library (CLAUDE.md rules 4 and 5).
 
 import type { Effect, Script } from "@jackioh/engine";
-import { slotOf } from "@jackioh/engine";
+import { isLocked, slotOf } from "@jackioh/engine";
 import { summonRandom } from "@jackioh/engine/effects";
 import { cardDef } from "../catalog-data";
 import { TRAP_TYPES, type CardQuery } from "../query";
@@ -65,6 +66,8 @@ function oomen(pool: CardQuery, radiant: boolean): Script {
       const at = slotOf(ctx.state, self);
       // Off the field there is no "this lane" to summon into, so nothing happens (§3.1).
       if (at === null) return [];
+      // R647's card-specific override: a Locked zone fizzles this summon (§8 row 67).
+      if (isLocked(ctx.state, { player: ctx.controller, row: "backrow", lane: at.lane })) return [];
       return [summonRandom({ query: pool, player: "self", lane: at.lane, radiant })];
     },
   };

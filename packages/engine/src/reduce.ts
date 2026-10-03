@@ -142,11 +142,9 @@ function activateCard(sink: EngineSink, player: PlayerId, action: ActivationActi
   const named = action.type === "activate" ? action.ability : undefined;
   const modes = action.type === "activate" ? action.modes : undefined;
   const tributes = action.type === "activate" ? action.tributes : undefined;
-  const discards = action.type === "activate" ? action.discards : undefined;
   if (card !== undefined && powerOf(card) !== null && named === undefined) {
     if ((modes?.length ?? 0) > 0) return "that power takes no mode choices";
     if ((tributes?.length ?? 0) > 0) return "that power needs no Tribute";
-    if ((discards?.length ?? 0) > 0) return "that power takes no discards";
     return activatePower(sink, player, {
       instanceId: action.instanceId,
       ...(action.targets === undefined ? {} : { targets: action.targets }),
@@ -159,7 +157,6 @@ function activateCard(sink: EngineSink, player: PlayerId, action: ActivationActi
     ...(action.targets === undefined ? {} : { targets: action.targets }),
     ...(modes === undefined ? {} : { modes }),
     ...(tributes === undefined ? {} : { tributes }),
-    ...(discards === undefined ? {} : { discards }),
   });
 }
 

@@ -25,7 +25,6 @@ import {
   freshFaceDownId,
   landsFaceDown,
   isEmpty,
-  isLocked,
   isReserved,
   isUnitToken,
   placeOnField,
@@ -82,9 +81,12 @@ function isPermanentType(type: CardType): boolean {
   return type !== "Spell";
 }
 
-/** What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). */
+/**
+ * What `placeOnField` will accept, checked before the card leaves the zone it is in (§3.2). R647: a
+ * named summon enters a Locked zone — only plays refuse one — so this checks the reservation alone.
+ */
 function canPlace(ctx: EffectContext, ref: ZoneSlot, stack: boolean): boolean {
-  if (isLocked(ctx.state, ref) || isReserved(ctx.state, ref)) return false;
+  if (isReserved(ctx.state, ref)) return false;
   if (isEmpty(ctx.state, ref)) return true;
   return ref.row === "units" && stack;
 }

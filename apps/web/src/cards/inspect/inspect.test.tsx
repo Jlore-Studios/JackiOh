@@ -32,6 +32,7 @@ import {
   INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
+  INSPECT_LOC,
   INSPECT_SCRIM,
   INSPECT_SHEET,
 } from "./testids.ts";
@@ -335,6 +336,25 @@ describe("hover preview (B22)", () => {
     expect(within(preview).getByTestId(INSPECT_FACE)).toBeInTheDocument();
     expect(nameIn(preview)).toBe(defOf("core-043").name);
     expect(screen.getByTestId("a-open")).toHaveTextContent("hover");
+  });
+
+  it("lines of code is a hidden stat in matches: showLoc false shows no LocLine, the default shows it", () => {
+    render(
+      <Scene>
+        <Trigger id="a" subject={subjectOf("loc-a", "core-043")} options={{ showLoc: false }} />
+        <Trigger id="b" subject={subjectOf("loc-b", "core-043")} />
+      </Scene>,
+    );
+
+    enter(screen.getByTestId("a"), "mouse");
+    advance(HOVER_DELAY_MS);
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    expect(screen.queryByTestId(INSPECT_LOC)).toBeNull();
+    leave(screen.getByTestId("a"), "mouse");
+
+    enter(screen.getByTestId("b"), "mouse");
+    advance(HOVER_DELAY_MS);
+    expect(screen.getByTestId(INSPECT_LOC)).toHaveTextContent(/lines of code/);
   });
 
   it("B22 a pen resting on the card opens the preview too", () => {

@@ -14,6 +14,12 @@ export const UNIT_LANES = 5;
 export const BACKROW_LANES = 5;
 
 /**
+ * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
+ * while it offers this many options or fewer; more options keep the plain mode list.
+ */
+export const DISCOVER_OPTION_LIMIT = 5;
+
+/**
  * Lanes are 1-based, because the engine's are: `packages/engine/src/zones.ts` builds slots with
  * `lane: i + 1` and reads `side.units[ref.lane - 1]`, and `e2e/support/types.ts` declares
  * `Lane = 1 | 2 | 3 | 4 | 5`. A `ZoneChoice` inside a `play` action therefore carries 1..5, so

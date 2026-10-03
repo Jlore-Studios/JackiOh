@@ -1,18 +1,17 @@
 // C #47 Recurring Felinor — SPEC §8.6 row 47, BUILD M9 Classic row C 47: "Cry: cast a generated Ancient
-// Acquisition (C #34, base face), free and counted as played (R70), with your picks, the Spell going to
-// your graveyard afterwards (R87); while this card is in your graveyard, whenever one of your Traps or
-// Field Traps fires (`trapFired`), it returns to your hand (a graveyard trigger, R68); an opponent's
-// trap doesn't, and in a hand or on the field it doesn't; the returned card follows R97 in the
-// opponent's view; radiant 6/4: it returns and costs (0) (`costOverride`); its tuned number (radiant
-// cost) reads through `param()` (R386)".
+// Acquisition (C #34, base face), free and counted as played (R70), returning 2 at random (R643), the
+// Spell going to your graveyard afterwards (R87); while this card is in your graveyard, whenever one
+// of your Traps or Field Traps fires (`trapFired`), Bounce this (a graveyard trigger, R68); an
+// opponent's trap doesn't, and in a hand or on the field it doesn't; the returned card follows R97 in
+// the opponent's view; radiant 6/4: it returns and costs (0) (`costOverride`); its tuned number
+// (radiant cost) reads through `param()` (R386)".
 //
-// C #34 Ancient Acquisition ("Return 2 cards from your graveyard to your hand", a `pick` prompt) has its
+// C #34 Ancient Acquisition ("Bounce 2 random cards from your graveyard") has its
 // own tests. The traps that fire are Core's Sheepish (a Trap answering a played Unit) and Bread and
 // Butter (a Field Trap answering a turn's end with mana unspent), and C #52 Final Gambit (a Trap that
 // fires as it replaces a lethal hit).
 
-import { cardsPlayedThisTurn, effectiveCost, reduce, stepParam, type GameState } from "@jackioh/engine";
-import type { Action } from "@jackioh/shared";
+import { cardsPlayedThisTurn, effectiveCost, stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/047-recurring-felinor";
@@ -49,7 +48,7 @@ describe("C #47 Recurring Felinor", () => {
   });
 
   describe("base", () => {
-    it("R70 Cry: casts a generated Ancient Acquisition, free and counted as played, with your picks; R87 it then lands in your graveyard", () => {
+    it("R70 Cry: casts a generated Ancient Acquisition, free and counted as played, returning 2 at random; R87 it then lands in your graveyard", () => {
       const s = scenario({
         p1: { hand: [FELINOR, FILLER], graveyard: [LUNAR, GARY, VANILLA] },
         p2: { hand: [FILLER] },
@@ -60,12 +59,10 @@ describe("C #47 Recurring Felinor", () => {
       const played = s.events.flatMap((event) => (event.type === "cardPlayed" ? [event.defId] : []));
       expect(played).toEqual([FELINOR, ACQUISITION]);
 
-      const pending = s.state.pending;
-      expect(pending?.playerId).toBe("p1");
-      expect(pending?.kind).toBe("pick");
-      expect(pending?.max).toBe(2);
-      s.answer([s.card(LUNAR).id, s.card(GARY).id]);
-      s.expectInZone(LUNAR, "hand").expectInZone(GARY, "hand").expectInZone(VANILLA, "graveyard");
+      // R643: no prompt — two random cards return, one stays.
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(3);
+      expect(s.pile("p1", "graveyard")).toHaveLength(2);
 
       const acquisition = s.pile("p1", "graveyard").find((card) => card.defId === ACQUISITION);
       expect(acquisition?.radiant).toBe(false);
@@ -80,25 +77,16 @@ describe("C #47 Recurring Felinor", () => {
       expect(s.pile("p1", "graveyard").map((card) => card.defId)).toEqual([ACQUISITION]);
     });
 
-    it("a pick the cast asks survives a round trip: the frozen state answers to the same game", () => {
-      const s = scenario({ p1: { hand: [FELINOR, FILLER], graveyard: [LUNAR, GARY] }, p2: { hand: [FILLER] } });
-      s.play(FELINOR);
-      const pending = s.state.pending;
-      expect(pending).not.toBeNull();
-      const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
-      const answer = {
-        type: "answer",
-        choiceId: pending?.id ?? "",
-        selection: [{ pick: "instance", instanceId: s.card(GARY).id }],
-        playerId: "p1",
-        nonce: "felinor-roundtrip",
-      } as Action;
-      const live = reduce(s.state, answer);
-      const frozen = reduce(thawed, answer);
-      expect(live.error).toBeUndefined();
-      expect(frozen.state).toEqual(live.state);
-      expect(frozen.events).toEqual(live.events);
-      expect(live.state.players.p1.hand.map((card) => card.defId)).toContain(GARY);
+    it("R643 the generated cast returns at random: the same game returns the same cards", () => {
+      const mk = (): Scenario =>
+        scenario({ p1: { hand: [FELINOR, FILLER], graveyard: [LUNAR, GARY, VANILLA] }, p2: { hand: [FILLER] } });
+      const first = mk();
+      first.play(FELINOR);
+      const second = mk();
+      second.play(FELINOR);
+      const ids = (s: Scenario): string[] =>
+        s.events.flatMap((event) => (event.type === "addedToHand" && event.player === "p1" ? [event.instanceId] : []));
+      expect(ids(first)).toEqual(ids(second));
     });
 
     it("R68 in your graveyard: when one of your Traps fires, it returns to your hand", () => {
@@ -171,14 +159,14 @@ describe("C #47 Recurring Felinor", () => {
   });
 
   describe("radiant", () => {
-    it("R70 Cry: casts Ancient Acquisition on its base face — 2 picks, not the Radiant's 4", () => {
+    it("R70 Cry: casts Ancient Acquisition on its base face — 2 random returns, not the Radiant's 4", () => {
       const s = scenario({
         p1: { hand: [{ def: FELINOR, radiant: true }, FILLER], graveyard: [LUNAR, GARY, VANILLA] },
         p2: { hand: [FILLER] },
       });
       s.play(FELINOR);
-      expect(s.state.pending?.max).toBe(2);
-      s.answer([s.card(LUNAR).id]);
+      expect(s.state.pending).toBeNull();
+      expect(s.hand("p1")).toHaveLength(3);
       expect(s.pile("p1", "graveyard").find((card) => card.defId === ACQUISITION)?.radiant).toBe(false);
       s.expectStats(FELINOR, { attack: 6, health: 4 });
     });

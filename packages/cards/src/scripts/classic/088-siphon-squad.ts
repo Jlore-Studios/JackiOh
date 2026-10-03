@@ -1,8 +1,10 @@
 // C #88 Siphon Squad (SPEC §8.6 row 88). (2) Field Trap, Rare.
-//   Base:    "Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent
+//   Base:    "Start of Turn: Reveal.
+//            Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent
 //            controls.
 //            When your opponent controls no Units, Tribute this." — ×2
-//   Radiant: "Aura: Enemy Units have 0 Attack.
+//   Radiant: "Start of Turn: Reveal.
+//            Aura: Enemy Units have 0 Attack.
 //            When your opponent controls no Units, Tribute this."
 //   Engine:  "A layer-5 aura (§10.4), attack floored at 0; the Radiant's "0 attack" sets attack last, after
 //            every other layer. The self-Tribute is a condition checked at every state check, the one right
@@ -15,6 +17,7 @@
 
 import { activeUnitsOf, param, type CardInstance, type GameState, type Script, type StatMod } from "@jackioh/engine";
 import { opponentOf, type PreviewValue } from "@jackioh/shared";
+import { reveal } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classic-088");
@@ -28,6 +31,10 @@ const xNow = (read: Read): number => param(read, "multiplier") * enemyUnits(read
 
 function siphon(mod: (read: Read) => StatMod, preview: (read: Read) => PreviewValue[]): Script {
   return {
+    // "Start of Turn: Reveal" (balance patch 1, R645): at its controller's start of turn the card
+    // shows its face to both players. The aura keeps working — revealed is not face-up, and a Field
+    // Trap fires face-down or up alike.
+    startOfTurn: () => [reveal()],
     aura: (read) => [{ applies: (unit) => unit.zone.z === "field" && unit.controller !== read.self.controller, mod: mod(read) }],
     tributeWhen: (read) => enemyUnits(read) === 0,
     preview,

@@ -1,6 +1,7 @@
 // C #25 Lag in the System (SPEC §8.6 row 25, §6.3 Exile; R13, R65, R66, R113, R135, R396). Spell,
 // cost 0, Common.
-//   Base:    "Exile every card on the field, in hands and in decks that costs ({threshold}) or less."
+//   Base:    "Exile every card on the field that costs ({threshold}) or less." (balance patch 1: the
+//            Field alone, the whole board)
 //   Radiant: "Exile every enemy card on the field, in their hand and in their deck that costs
 //            ({threshold}) or less."
 //   Engine:  "C #18 with the numbers fixed at 0 and 1: the same zones, the same cost reading (R65 at
@@ -30,21 +31,26 @@ export const def = cardDef("classic-025");
 
 type Whose = "any" | "enemy";
 
-/** Every card on the field and in the hands and decks of `whose` sides, in the order the header gives. */
-function reachable(ctx: EffectContext, whose: Whose): CardInstance[] {
+/**
+ * Every card on the field and in the hands and decks of `whose` sides, in the order the header
+ * gives — or the field alone (the whole board) when `fieldOnly`, which is the base face's scope
+ * (balance patch 1).
+ */
+function reachable(ctx: EffectContext, whose: Whose, fieldOnly: boolean): CardInstance[] {
   const field = cardsInScope(ctx, { side: whose, rows: ["units", "backrow"] });
+  if (fieldOnly) return field;
   const players = whose === "enemy" ? sidesOf(ctx, "enemy") : [ctx.controller, ...sidesOf(ctx, "enemy")];
   const piles = players.flatMap((player) => [...zoneCards(ctx.state, player, "hand"), ...zoneCards(ctx.state, player, "library")]);
   return [...field, ...piles];
 }
 
-function lag(whose: Whose): Script {
+function lag(whose: Whose, fieldOnly: boolean): Script {
   return {
     cry: (ctx) => {
       const threshold = param(ctx, "threshold");
       return [
         forEachCard({
-          cards: (read) => reachable(read, whose).filter((card) => costNow(read.state, card) <= threshold),
+          cards: (read) => reachable(read, whose, fieldOnly).filter((card) => costNow(read.state, card) <= threshold),
           each: (instanceId) => exile({ target: { of: "instance", instanceId } }),
         }),
       ];
@@ -52,6 +58,6 @@ function lag(whose: Whose): Script {
   };
 }
 
-export const base: Script = lag("any");
+export const base: Script = lag("any", true);
 
-export const radiant: Script = lag("enemy");
+export const radiant: Script = lag("enemy", false);
