@@ -205,6 +205,12 @@
       "lines": [
         "/harness skip the vercel check"
       ]
+    },
+    "c:5970226112": {
+      "at": "2026-10-03T14:46:18Z",
+      "lines": [
+        "/harness pick up the dead bots burden"
+      ]
     }
   },
   "items": {
