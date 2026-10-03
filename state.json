@@ -406,12 +406,12 @@
       "issue": 57,
       "kind": "revise",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-10-03T12:42:09Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37123150841",
+      "run_id": "37123836227",
       "source": "ci",
-      "started_at": "2026-10-03T12:32:14Z",
+      "started_at": "2026-10-03T12:45:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -858,9 +858,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T12:37:23Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123442904",
-    "what": "build #45 on agy"
+    "at": "2026-10-03T12:45:01Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123836227",
+    "what": "revise #143 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-03T10:47:50Z",
