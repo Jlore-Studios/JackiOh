@@ -1342,7 +1342,9 @@
     },
     "88": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5973893841"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1363,7 +1365,7 @@
       "pr": 166,
       "provider": "muse",
       "question": "Continue the build from .bot-notes.md session 3: R647 Locked engine work is implemented and tested but its SPEC \u00a711 row is not yet written; plague single-target and recruit X-skip are not started; typecheck/eslint/validate:catalog/rulings:coverage were not re-run. Continue on this branch?",
-      "queued_at": "2026-10-03T19:10:49Z",
+      "queued_at": "2026-10-03T21:59:58Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37153400434",
       "started_at": "2026-10-03T20:58:38Z",
