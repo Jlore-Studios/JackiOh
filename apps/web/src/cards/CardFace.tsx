@@ -49,7 +49,13 @@ import { MINUS } from "./tuning.ts";
 import "./cards.css";
 import "./setmark.css";
 
-export type CardFaceProps = { face: FaceModel; layout?: "full" | "compact"; className?: string };
+export type CardFaceProps = {
+  face: FaceModel;
+  layout?: "full" | "compact";
+  className?: string;
+  /** One face of a long grid: its art is drawn once it is near the screen (CardArt `lazy`). */
+  lazyArt?: boolean;
+};
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
 const ART_SHAPE: Readonly<Record<CardType, ArtShape>> = {
@@ -143,7 +149,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className }: CardFaceProps): ReactElement {
+export function CardFace({ face, layout = "full", className, lazyArt = false }: CardFaceProps): ReactElement {
   const settings = useCardSettings();
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -197,6 +203,7 @@ export function CardFace({ face, layout = "full", className }: CardFaceProps): R
             type={face.type}
             name={face.name}
             shape={ART_SHAPE[face.type]}
+            lazy={lazyArt}
           />
         </span>
 

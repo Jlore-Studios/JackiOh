@@ -365,6 +365,10 @@ export function textTier(text: string): LengthTier;   // ≤40 s, ≤90 m, ≤16
  * layout (clientWidth and clientHeight both 0, which is every element in jsdom).
  */
 export function useFitText(ref: RefObject<HTMLElement | null>, content: string): void;
+/** Queues a fit for the batched pass; returns the function that drops it (see "The rendering pass"). */
+export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: (box: string) => void): () => void;
+/** Runs every queued fit now. The queue otherwise runs on the microtask after the commit. */
+export function flushFits(): void;
 
 // constants.ts
 export const FACE_ASPECT = 5 / 7;
@@ -1339,3 +1343,40 @@ base text (B7, B14, and the model's `text: { base, radiant }`) describe the code
 - **Computed values** (R280). A face in play takes `CardView.preview` through `game/faces.ts` into
   `FaceModel.values`, and `RulesText` prints each as "{n}" (`.cf-value`) after its label. The
   collection prints none.
+
+## Addendum: the rendering pass (2026-10-03, #115, #117)
+
+Two costs made a hand of Radiant cards and the Almanac (318 faces) lag, and both are fixed in the
+card layer alone; no rule changed.
+
+- **The foil sweep painted every frame.** The animated foil (Mythic and Radiant faces) moved a
+  gradient with `background-position` under `mix-blend-mode: overlay`, which the compositor cannot
+  do: each frame re-rasterized every foil face, and a hand of fourteen Radiant cards held a core
+  busy for nothing. The gradient is now a pseudo-element three faces wide, clipped by the face
+  (`overflow: clip`), moved with `transform: translateX` on its own layer (`will-change:
+  transform`). The picture is the same sweep (the old and new frames differ by under a pixel's worth
+  of anti-aliasing); idle frames no longer rasterize at all.
+- **Fitting the text forced a layout per step.** `useFitText` binary-searched `--cf-fit` one
+  element at a time, writing a custom property and reading `scrollHeight` back eight or more times
+  per box, so the Almanac's 636 boxes paid some 700 layouts (about 2.4 of its 3.7 seconds on a
+  fast machine). A fit is now a generator that yields each read, and one scheduler (`scheduleFit`,
+  `flushFits` in `fit.ts`) steps every queued fit through a round of writes and then reads all of the
+  round's boxes together, so the page lays out about thirty times however many cards it holds. The
+  queue runs on the microtask after the commit, before the browser paints, so no face is ever seen
+  unfitted; the result is what the one-at-a-time search gave, step for step (`fit.test.tsx` fits
+  twelve cards and one and compares them). A test that renders a face and reads the fit calls
+  `flushFits()` first.
+- **A long grid drew every picture at load.** A procedural picture is a data-URI SVG on the art
+  window's background, which the browser parses when the window is first styled and laid out (about
+  1.3 ms a card). `CardArt` takes a `lazy` prop, which `CardFace` passes on as `lazyArt` and the pool
+  grid (the deck builder's and the Almanac's) sets: the window stays its dark ground
+  (`data-art-pending="true"`) until it is within `ART_NEAR_MARGIN_PX` of the box that scrolls it,
+  then draws and keeps its picture (`art/near.ts`: one `IntersectionObserver` per scrolling box,
+  rooted at the nearest `overflow-y: auto | scroll` ancestor, because a margin widens the root and
+  nothing else). Real art is an `<img loading="lazy">` already. Where nothing can be watched
+  (jsdom) a window draws at once, and a face outside a grid is never lazy.
+- **What is left** is the first layout of the faces themselves: about 0.6 s for 318 on the
+  reference machine. Skipping the off-screen ones with `content-visibility: auto` would remove most
+  of it, but a skipped face has no layout for the fitter to read, and reading one anyway lays it out
+  alone (5 s of layout across the Almanac in a trial), so the fit would have to wait for the face to
+  come into view. That is not done here.
