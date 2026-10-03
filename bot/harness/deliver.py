@@ -20,11 +20,12 @@ from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_REVIEW,
-                            LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION, STATE_BRANCH)
+                            LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, LABEL_SHITTER,
+                            LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
-from harness.queue import (branch_for_issue, label_names, open_pull_for_branch,
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, label_names, open_pull_for_branch,
                            set_state_label)
 from harness.state import item as state_item
 from harness.redact import redact
@@ -486,7 +487,7 @@ class Deliverer:
                 merge_note = ("A comment arrived during the run, so auto-merge waits for the "
                               "revision that answers it.")
             if pr:
-                self._carry_difficult(number, pr)
+                self._carry_labels(number, pr)
                 rule = self._approved(pr, str(self.result.get("head") or ""),
                                       merge=not merge_note)
                 merge_note = merge_note or rule
@@ -663,12 +664,18 @@ class Deliverer:
                    and (p.login == "machine" or secrets.has(p.secret) is not False)
                    for p in self.cfg.pool.ordered())
 
-    def _carry_difficult(self, issue: int, pr: int) -> None:
-        """A `difficult` issue's pull request stays Opus-only for its revisions."""
+    def _carry_labels(self, issue: int, pr: int) -> None:
+        """A `difficult` issue's pull request stays Opus-only for its revisions, a `shitter` one
+        stays a low-tier model's (#96), and a priority label keeps the issue's tier (#90)."""
+        labels = self._labels(issue)
         label = self.cfg.pool.difficult_label
-        if label in self._labels(issue):
+        if label in labels:
             self.gh.add_labels(pr, [label])
             self._remember(pr, difficult=True)
+        carried = sorted(name for name in labels
+                         if name.lower() in {LABEL_SHITTER, *PRIORITY_TIERS})
+        if carried:
+            self.gh.add_labels(pr, carried)
 
     def _second_review(self, number: int, status: str) -> None:
         """Act on a second model's verdict on a bot pull request."""

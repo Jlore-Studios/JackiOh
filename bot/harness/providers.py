@@ -144,6 +144,18 @@ class Provider:
         return f"`{self.id}` ({self.cli}, {self.model})"
 
 
+HIGH_TIER = "high"
+LOW_TIER = "low"
+_HIGH_TIER_FAMILIES = re.compile(r"(?<![a-z])(?:astra|opus)(?![a-z])", re.IGNORECASE)
+
+
+def model_tier(model: str) -> str:
+    """`high` for OpenAI's Astra and Claude Opus, any version, read off the family name in the
+    model's name whatever its case (`opus`, `claude-opus-4-1`, `gpt-5.6-astra`); `low` for every
+    other model, an unknown or empty name included. Only `shitter` asks (#96)."""
+    return HIGH_TIER if _HIGH_TIER_FAMILIES.search(model or "") else LOW_TIER
+
+
 @dataclass(frozen=True)
 class Pool:
     max_parallel: int

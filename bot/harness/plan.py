@@ -6,13 +6,14 @@ item at once, and a subscription holds one at a time), then one item and the sub
 takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
-Which subscription takes an item (`pairs`): items go in order of urgency (forced, then
-`difficult`, second reviews, revisions, the oldest builds), and each goes to the first
-subscription in `priority` that is free, available (`providers.availability`: switched on, its
-secret set, inside its hours unless the item is forced, under its limits) and allowed it: a
+Which subscription takes an item (`pairs`): items go in order of urgency (forced, then the
+priority tier, `difficult`, second reviews, revisions, the oldest builds), and each goes to the
+first subscription in `priority` that is free, available (`providers.availability`: switched on,
+its secret set, inside its hours unless the item is forced, under its limits) and allowed it: a
 `difficult` item only to one marked `difficult` (Opus), a second review only to a model family
-that has not approved the change yet. `claude-1` is shared with its owner, so an unforced run
-uses it only after the gate saw it quiet (`quiet_ok`).
+that has not approved the change yet, a `shitter` item only to a low-tier model. An item
+labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so an
+unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 """
 
 from __future__ import annotations
@@ -32,8 +33,8 @@ from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import Provider
-from harness.queue import (KIND_ORDER, Candidate, branch_for_issue, candidates, label_names,
-                           open_pull_for_branch, set_state_label)
+from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
+                           label_names, open_pull_for_branch, set_state_label)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
@@ -145,10 +146,12 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
 
 
 def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: Lanes, *,
-          force: bool, quiet_ok: str) -> Iterator[tuple[Candidate, Provider]]:
+          force: bool, quiet_ok: str,
+          skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Provider]]:
     """Every queued item that a subscription can take now, with the one that takes it, most
-    urgent first."""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), not c.difficult,
+    urgent first. A free subscription that passes over a `shitter` item because its model is
+    high-tier says so in `skipped`, when the caller keeps one."""
+    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, not c.difficult,
                                          KIND_ORDER[c.kind], c.queued_at, c.number))
     for candidate in order:
         forced = force or candidate.forced
@@ -157,10 +160,17 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
                 continue
             if candidate.kind == "review" and provider.family == candidate.builder:
                 continue
-            if _usable(ctx, state, provider, lanes, ROLE_OF[candidate.kind], forced=forced,
-                       quiet_ok=quiet_ok):
-                yield candidate, provider
-                break
+            if not _usable(ctx, state, provider, lanes, ROLE_OF[candidate.kind], forced=forced,
+                           quiet_ok=quiet_ok):
+                continue
+            tier = providers_mod.model_tier(provider.model)
+            if candidate.low_tier_only and tier == providers_mod.HIGH_TIER:
+                if skipped is not None:
+                    skipped.append(f"#{candidate.number} skipped on `{provider.id}`: labelled "
+                                   f"`shitter`, and {provider.model} is {tier}-tier")
+                continue
+            yield candidate, provider
+            break
 
 
 def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force: bool,
@@ -186,8 +196,9 @@ def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
     return "; ".join(parts)
 
 
-def _queue(ctx: Context, state: dict[str, Any], item: int | None, mode: str) -> list[Candidate]:
-    queue = candidates(ctx, state)
+def _queue(ctx: Context, state: dict[str, Any], item: int | None, mode: str,
+           skipped: list[str] | None = None) -> list[Candidate]:
+    queue = candidates(ctx, state, skipped)
     if item is not None:
         queue = [c for c in queue if c.number == int(item)]
     if mode in ("build", "revise", "review"):
@@ -225,6 +236,8 @@ class Peek:
     quiet_secret: str = ""
     fallback: bool = False
     held: int = 0
+    #: Queued items passed over because of `human` or `shitter` (#96), one line each.
+    skipped: list[str] = field(default_factory=list)
 
 
 def peek(ctx: Context, *, force: bool = False, item: int | None = None,
@@ -232,6 +245,13 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
     """Whether a run would find work, why, and with which subscription. Changes nothing.
 
     The gate asks this before it spends anything on reading the subscription's usage."""
+    skipped: list[str] = []
+    look = _peek(ctx, force, item, mode, skipped)
+    look.skipped = skipped
+    return look
+
+
+def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[str]) -> Peek:
     if mode not in MODES:
         return Peek(False, f"unknown mode {mode!r}")
     state = ctx.store.load()
@@ -248,10 +268,11 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
         if tidy:
             return Peek(True, tidy, force, held=len(lanes.held))
         return Peek(False, f"every lane is busy ({lanes.describe()})", held=len(lanes.held))
-    queue = _queue(ctx, state, item, mode)
+    queue = _queue(ctx, state, item, mode, skipped)
     found: tuple[Candidate | None, Provider, bool] | None = None
     if mode != "suggest":
-        top = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=ANY_QUIET), None)
+        top = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=ANY_QUIET,
+                         skipped=skipped), None)
         if top is not None:
             found = (top[0], top[1], force or top[0].forced)
     # A survey only when nothing is queued (or one was asked for), as before: queued work that
@@ -356,25 +377,31 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     lanes = read_lanes(ctx, state)
     if lanes.free <= 0:
         return {**nothing(f"every lane is busy ({lanes.describe()})"), "housekeeping": notes}
-    queue = _queue(ctx, state, item, mode)
+    skipped: list[str] = []
+    queue = _queue(ctx, state, item, mode, skipped)
     if mode != "suggest":
-        for candidate, provider in pairs(ctx, state, queue, lanes, force=force, quiet_ok=quiet):
+        for candidate, provider in pairs(ctx, state, queue, lanes, force=force, quiet_ok=quiet,
+                                         skipped=skipped):
             planned = claim(ctx, candidate, provider)
             if planned is not None:
                 planned["housekeeping"] = notes
                 planned["forced"] = bool(force or candidate.forced)
+                planned["priority"] = PRIORITY_NAMES[candidate.priority]
+                planned["skipped"] = skipped
                 fill_lanes(ctx, lanes, candidate, provider, planned)
                 return taken(planned)
     if item is not None and mode != "suggest":
-        return nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or no "
-                       f"subscription can take it now: {why_none(ctx, state, lanes)}")
+        return {**nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or "
+                          f"no subscription can take it now: {why_none(ctx, state, lanes)}"),
+                "skipped": skipped}
     if mode == "suggest" or (mode == "auto" and not queue):
         planned = suggestion_plan(ctx, lanes, force=mode == "suggest", quiet_ok=quiet)
         if planned is not None:
+            planned["skipped"] = skipped
             return taken(planned)
     reason = ("nothing is queued" if not queue else
               f"no subscription can take the queue now: {why_none(ctx, state, lanes)}")
-    return {**nothing(reason), "housekeeping": notes}
+    return {**nothing(reason), "housekeeping": notes, "skipped": skipped}
 
 
 def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
