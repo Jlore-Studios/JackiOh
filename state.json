@@ -1329,8 +1329,10 @@
     "what": "build #131 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-03T20:07:29Z",
-    "notes": [],
+    "at": "2026-10-03T20:18:19Z",
+    "notes": [
+      "started a night run, as a lane was free: #131 (medium) is queued to build, for `agy`: plan on `agy` (agy, `gemini-3.8-flash-high`, medium); build on `agy` (agy, `gemini-3.8-flash-high`, medium); review on `agy` (agy, `gemini-3.8-flash-high`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
