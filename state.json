@@ -333,6 +333,7 @@
     },
     "136": {
       "asks": [],
+      "closed_at": "2026-10-03T10:21:36Z",
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T08:05:57Z",
@@ -341,6 +342,7 @@
       "issue": 85,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-2",
       "question": "",
