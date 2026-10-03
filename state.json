@@ -942,7 +942,9 @@
     },
     "68": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:5964126592"
+      ],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -954,9 +956,7 @@
       "run_id": "37138371404",
       "started_at": "2026-10-03T16:51:43Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5964126592"
-      ]
+      "taken_asks": []
     },
     "75": {
       "asks": [],
