@@ -37,7 +37,7 @@ class ParseTests(unittest.TestCase):
     def test_the_committed_file(self):
         pool = providers.load(ROOT)
         self.assertEqual(pool.priority[0], "claude-1")
-        self.assertEqual(pool.max_parallel, 3)
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (7, 3))
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 4)
         first = pool.get("claude-1")
@@ -67,9 +67,13 @@ class ParseTests(unittest.TestCase):
     def test_logins_and_runners(self):
         pool = providers.load(ROOT)
         for provider in pool.ordered():
-            # Every subscription has a runner of its own on the machine (bot/machine/README.md).
-            self.assertEqual(provider.runs_on, f"night-vm-{provider.id}")
-            self.assertEqual(provider.login, "secret" if provider.cli == "claude" else "machine")
+            # The Claude accounts run on GitHub's runners; every other subscription has a runner
+            # of its own on the machine (bot/machine/README.md).
+            claude = provider.cli == "claude"
+            self.assertEqual(provider.runs_on,
+                             "ubuntu-latest" if claude else f"night-vm-{provider.id}")
+            self.assertEqual(provider.login, "secret" if claude else "machine")
+            self.assertEqual(pool.on_machine(provider.id), not claude)
         self.assertEqual(pool.get("gpt").secret, "")
 
         def broken(change, words) -> None:
@@ -84,8 +88,11 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["providers"]["agy"].update(login="secret", secret="MUSE_AUTH",
                                                       runs_on="ubuntu-latest"), "on the machine only")
         broken(lambda r: r["providers"]["muse"].update(runs_on="night-vm-gpt"), "share the runner")
-        broken(lambda r: r["providers"]["claude-2"].update(runs_on="night-vm-claude-1"),
+        broken(lambda r: r["providers"]["claude-2"].update(runs_on="night-vm-gpt"),
                "share the runner")
+        broken(lambda r: r["providers"]["devin"].update(lanes=0), "at least 1")
+        broken(lambda r: r["providers"]["devin"].update(lanes="two"), "not a number")
+        broken(lambda r: r.update(machine_parallel=8), "machine_parallel")
         # A secret login may still run on GitHub's runners, and those are shared by design.
         raw = raw_providers()
         for name in ("claude-1", "claude-2"):
@@ -293,9 +300,53 @@ class MatchingTests(unittest.TestCase):
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
         self.assertEqual(taken, [(3, "gpt"), (4, "agy"), (5, "muse")])
-        self.assertIn("every lane is busy", planned["reason"])
+        # By day the Claude accounts are closed, and each machine subscription holds its lane.
+        self.assertIn("`muse` is busy", planned["reason"])
         # Each claim with work and a lane left started the next run.
         self.assertEqual(len(gh.dispatches), 2)
+
+    def test_the_machine_holds_three_and_github_takes_the_claude_accounts(self):
+        """Machine runs stop at `machine_parallel`; a Claude account on GitHub's runners still
+        takes work, up to `max_parallel` in all."""
+        gh = FakeGitHub()
+        for n in (3, 4, 5, 6):
+            gh.add_issue(n, labels=(LABEL_BUILD,))
+        ctx = ctx_for(gh, at=NIGHT, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE)
+        for n, provider in ((40, "gpt"), (41, "agy"), (42, "muse")):
+            gh.add_issue(n, labels=(LABEL_WORKING,))
+            gh.runs[str(n)] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=n, p=provider: state_item(s, n).update(run_id=str(n),
+                                                                             provider=p))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["provider"], planned["runs_on"]), ("claude-2", "ubuntu-latest"))
+        # With the Claude account busy too, the next item waits for the machine.
+        gh.runs["1"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, planned["number"]).update(run_id="1"))
+        again = plan_mod.make(ctx)
+        self.assertEqual(again["action"], "none")
+        self.assertIn("`claude-2` is busy", again["reason"])
+
+    def test_devin_works_on_two_items_at_once(self):
+        """`lanes: 2`: Devin takes a second item while it holds one (two runners carry its
+        label), and a third waits; the machine's limit still counts both."""
+        gh = FakeGitHub()
+        for n in (3, 4, 5):
+            gh.add_issue(n, labels=(LABEL_BUILD,))
+        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
+        self.assertEqual(ctx.cfg.pool.get("devin").lanes, 2)
+        taken = []
+        for _ in range(3):
+            planned = plan_mod.make(ctx)
+            if planned["action"] == "none":
+                break
+            gh.runs[str(planned["number"])] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
+                run_id=str(n)))
+            taken.append((planned["number"], planned["provider"]))
+        self.assertEqual(taken, [(3, "devin"), (4, "devin")])
+        self.assertIn("`devin` is busy", planned["reason"])
+        lanes = plan_mod.read_lanes(ctx, ctx.store.load())
+        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (2, 2))
 
     def test_a_second_review_goes_to_another_model_family(self):
         gh = FakeGitHub()

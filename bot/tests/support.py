@@ -67,6 +67,13 @@ def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False) -> p
     return providers_mod.parse(raw)
 
 
+def with_lanes(cfg: Any, max_parallel: int, machine_parallel: int | None = None) -> Any:
+    """`cfg` with other run limits, for a test about lanes filling up."""
+    machine = max_parallel if machine_parallel is None else machine_parallel
+    pool = dataclasses.replace(cfg.pool, max_parallel=max_parallel, machine_parallel=machine)
+    return dataclasses.replace(cfg, pool=pool)
+
+
 def secret_login(provider: providers_mod.Provider, secret: str) -> providers_mod.Provider:
     """`provider` logged in from a secret on GitHub's runners instead of on the machine."""
     return dataclasses.replace(provider, login="secret", secret=secret, runs_on="ubuntu-latest")

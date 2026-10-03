@@ -4,7 +4,8 @@
 free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
-and limits ([Subscriptions](#subscriptions)). Up to three items run at once, one per subscription. Each run
+and limits ([Subscriptions](#subscriptions)). Up to seven items run at once: the Claude accounts' on
+GitHub's runners, and at most three on the bot's own machine. Each run
 builds its item, runs the repository's checks, and has a second, independent session of the same
 model review the change adversarially, going round that loop until the reviewer approves. Opus's
 approval is enough; a change another model built also needs a second model's approval. Then the
@@ -244,7 +245,9 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
-Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
+The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
+CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
+A Claude account
 works only once its secret is set (Settings → Secrets and variables → Actions), so the ones you
 have not set up yet sit out. A login on the machine has no secret to check, so the bot counts it
 as set up; turn one off with `enabled: false`. `python3 -m harness providers` in `bot/` prints
@@ -278,8 +281,10 @@ each one and whether it could start now, and `/harness status` does the same on 
   work, and the planner opens one issue with the reason, asking a person what it should do now.
   Devin's is 2026-10-15, the day before SWE-2 stops being free on its CLI.
 
-At the top level, `max_parallel` is how many run at once and `priority` the order they are tried
-in. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
+may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
+and no such limit), and `priority` the order they are tried in. A subscription's own `lanes`
+(default 1) is how many items it may work on at once; Devin's is 2, on two runners. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on one

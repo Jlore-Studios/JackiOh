@@ -33,9 +33,9 @@ class ClosedWhileWorkingTests(unittest.TestCase):
                                     for n, p, r in RUNS])
         planned = plan_mod.make(ctx)
         self.assertEqual(planned["action"], "none")
-        self.assertIn("every lane is busy", planned["reason"])
+        self.assertIn("`gpt` is busy", planned["reason"])  # its lane is still the closed #5's
         text = report(ctx)
-        self.assertIn("3 of 3 lanes", text)
+        self.assertIn("3 of 7 lanes, 4 free; 3 of 3 on the machine", text)
         self.assertIn("`gpt` (codex", text)
 
     def test_its_work_is_not_delivered(self):

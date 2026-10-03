@@ -144,6 +144,9 @@ class Provider:
     #: ends, say. On that day the planner also opens one issue asking a person to decide.
     off_from: date | None = None
     off_reason: str = ""
+    #: How many items it may work on at once. On the machine each needs a runner of its own
+    #: with its `runs_on` label (`register-runners.sh` registers that many).
+    lanes: int = 1
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -167,6 +170,13 @@ class Pool:
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]
     difficult_label: str
+    #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
+    #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
+    machine_parallel: int = 0
+
+    def on_machine(self, provider_id: str) -> bool:
+        provider = self.get(provider_id)
+        return provider is not None and not hosted(provider.runs_on)
 
     def ordered(self) -> list[Provider]:
         """Every provider, in `priority` order."""
@@ -227,7 +237,7 @@ def _limits(raw: Any, where: str) -> Limits:
 
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "secret", "schedule", "limits",
                   "self_review", "difficult", "quiet_check", "roles", "env", "note", "login",
-                  "runs_on", "off_from", "off_reason"}
+                  "runs_on", "off_from", "off_reason", "lanes"}
 
 
 def _provider(name: str, raw: Any) -> Provider:
@@ -291,6 +301,7 @@ def _provider(name: str, raw: Any) -> Provider:
         runs_on=runs_on,
         off_from=_off_from(raw.get("off_from"), f"{where}.off_from"),
         off_reason=str(raw.get("off_reason") or ""),
+        lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
     )
 
 
@@ -321,7 +332,11 @@ def parse(raw: Any) -> Pool:
     lanes = int(raw.get("max_parallel", 1))
     if lanes < 1:
         raise ConfigError(f"{PROVIDERS_PATH}: max_parallel must be at least 1")
-    return Pool(lanes, priority, providers, str(raw.get("difficult_label", "difficult")))
+    machine = int(raw.get("machine_parallel", lanes))
+    if not 0 <= machine <= lanes:
+        raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
+    return Pool(lanes, priority, providers, str(raw.get("difficult_label", "difficult")),
+                machine_parallel=machine)
 
 
 def load(root: Path) -> Pool:
@@ -449,6 +464,16 @@ class Secrets:
         if name in self.present:
             return True
         return False if self.known else None
+
+
+def _lanes(raw: Any, where: str) -> int:
+    try:
+        lanes = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{where}: {raw!r} is not a number") from exc
+    if lanes < 1:
+        raise ConfigError(f"{where}: must be at least 1")
+    return lanes
 
 
 def _off_from(raw: Any, where: str) -> date | None:

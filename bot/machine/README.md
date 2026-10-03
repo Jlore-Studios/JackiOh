@@ -1,16 +1,19 @@
 # The night bot's machine
 
-Every model session of the night bot runs here: one virtual machine on AWS, where each
-subscription in [`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is
-`night-vm-<id>` has a Linux user of its own and a GitHub runner of its own. `gate`, `plan` and
-`deliver`, the jobs that hold a GitHub write token, stay on GitHub's runners.
+The night bot's model sessions for the subscriptions that log in here run on this machine: one
+virtual machine on AWS, where each subscription in
+[`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is `night-vm-<id>`
+(Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
+The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
+public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
+GitHub write token.
 
 | | |
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-devin`): a home only it can read, no `sudo`, no Docker |
-| Runners | `~agent-<id>/actions-runner`, registered as `night-vm-<id>` with that one label, a systemd service under that user |
+| Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
 | CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
@@ -21,7 +24,8 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. Jobs can run three at once (`max_parallel`), each as its own user.
+the home. At most `machine_parallel` (3) jobs run here at once, each as its own user; Devin has
+`"lanes": 2`, so two of them can be Devin's, on its two runners.
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -85,11 +89,13 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
   logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
   at all, since the bot's checks never run e2e.
-- **How many at once:** three (`max_parallel`) is as many as this machine holds. Measured on
-  2026-10-02 with three jobs running (a Claude build in typecheck and the web tests, Muse and
-  agy): load average 14 on 2 vCPUs, 6.1 of 7.8 GB in use and 1.5 GB swapped, about 4 GB for the
-  Claude job alone. More jobs need a bigger machine, and the Free plan's largest are the
-  2-vCPU `m7i-flex.large` and `c7i-flex.large`.
+- **How many at once:** three machine jobs (`machine_parallel`) is as many as this machine
+  holds, whoever the builder is: the load is each job's checks (typecheck and the unit tests),
+  not the model. Measured on 2026-10-02 with three jobs running: load average 14 on 2 vCPUs, 6.1
+  of 7.8 GB in use and 1.5 GB swapped, about 4 GB for one job in typecheck and the web tests.
+  So the Claude accounts run on GitHub's runners instead, which takes `max_parallel` to 7: three
+  here and up to four Claude jobs there. More machine jobs need a bigger machine, and the Free
+  plan's largest are the 2-vCPU `m7i-flex.large` and `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
