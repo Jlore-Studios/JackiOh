@@ -30,6 +30,8 @@
   --kw-period-shock: 2.2s;
   --kw-period-swing: 2.2s;
   --kw-period-thrust: 1.8s;
+  --kw-period-gust: 1.4s;
+  --kw-period-sand: 2.2s;
   --kw-period-rune-turn: 14s;
   --kw-period-clock: 6s;
   --kw-period-cog: 8s;
@@ -356,6 +358,14 @@
   animation: kw-spear-thrust var(--kw-period-thrust) ease-in-out infinite;
 }
 
+.cf .kw-fx[data-keyword-fx="Windfury"][data-kw-motion="on"] .kw-anim {
+  animation: kw-gust-sway var(--kw-period-gust) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Temporary"][data-kw-motion="on"] .kw-anim {
+  animation: kw-sand-fall var(--kw-period-sand) linear infinite;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -550,6 +560,30 @@
   }
   45% {
     transform: translateY(-8%);
+  }
+}
+
+@keyframes kw-gust-sway {
+  from {
+    transform: translateX(-6%);
+  }
+  to {
+    transform: translateX(6%);
+  }
+}
+
+@keyframes kw-sand-fall {
+  0% {
+    transform: translateY(-4%);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(8%);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(8%);
+    opacity: 0;
   }
 }
 

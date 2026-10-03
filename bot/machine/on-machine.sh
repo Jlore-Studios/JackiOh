@@ -3,7 +3,7 @@
 # The machine has no inbound ports and no key pair; this is the way in for scripts (an
 # interactive shell is `aws ssm start-session --target <instance>`).
 #
-#   bot/machine/on-machine.sh bot/machine/setup.sh claude-1 gpt agy muse
+#   bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
 #
 # Starts the machine first if it is stopped. Needs the AWS CLI signed in to the project.
 set -euo pipefail

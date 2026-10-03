@@ -5,11 +5,12 @@
   "bot_user_id": 324324626,
   "operator": "jgoetzmann",
   "timezone": "America/Chicago",
-  "max_turns": { "build": 400, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
+  "max_turns": { "plan": 150, "build": 400, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
   "call_timeout_minutes": 150,
   "job_budget_minutes": 330,
   "min_minutes_for_a_call": 25,
   "max_review_cycles": 10,
+  "max_self_check_rounds": 3,
   "max_failures": 3,
   "auto_merge": true,
   "merge_method": "squash",
@@ -73,7 +74,7 @@
   "upload_transcripts": false,
   "install": { "run": "pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
-    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15 },
+    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15, "machine": false },
     { "name": "typecheck", "run": "pnpm typecheck", "timeout_minutes": 15 },
     { "name": "catalog", "run": "pnpm validate:catalog", "timeout_minutes": 5 },
     {
@@ -82,6 +83,6 @@
       "timeout_minutes": 5
     },
     { "name": "rulings coverage", "run": "pnpm rulings:coverage", "timeout_minutes": 5 },
-    { "name": "unit and integration", "run": "pnpm test", "timeout_minutes": 40 }
+    { "name": "unit and integration", "run": "pnpm test", "timeout_minutes": 40, "machine": false }
   ]
 }

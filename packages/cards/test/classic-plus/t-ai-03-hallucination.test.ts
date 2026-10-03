@@ -1,7 +1,8 @@
 // T-AI-3 Hallucination — SPEC §8.7 row T-AI-3, BUILD M9 row T-AI-3: adds a copy of a random card of the
 // opponent's deck to your hand, a new card you own (the original stays), carrying the original's radiant
-// flag, `statsOverride` and `tuning` (R57), and gives it Brittle 2: made on your turn t it ticks to 1 at
-// the start of your turn t + 2 and crumbles at the start of t + 4 (R385); an empty deck, nothing and no
+// flag, `statsOverride` and `tuning` (R57), and gives it Brittle 2: held in your hand without ticking
+// (R638), then on the field, entered on your turn t, it ticks to 1 at the start of your turn t + 2 and
+// crumbles at the start of t + 4 (R385); an empty deck, nothing and no
 // random draw (R129); only you learn what it copied — the opponent's view shows a card added under the
 // sentinel and their library list does not change (R97, R310); radiant copies of 2 different random
 // cards, both Brittle 2.
@@ -69,17 +70,26 @@ describe("T-AI-3 Hallucination", () => {
       expect(seen.size).toBeGreaterThan(2);
     });
 
-    it("R385 Brittle 2: made on your turn t, it ticks to 1 at the start of t + 2 and crumbles at the start of t + 4, not a discard", () => {
+    it("R385 R638 Brittle 2: held in the hand without ticking; on the field it ticks to 1 at t + 2 and crumbles at t + 4, not a discard", () => {
       const s = cast({ library: [UNIT], hand: [FILLER, FILLER, FILLER] });
       const t = s.state.turn;
       const [copy] = played(s);
       expect(copy?.brittle).toEqual({ count: 2, since: t });
-      s.endTurn().endTurn();
-      expect(s.state.turn).toBe(t + 2);
-      expect(s.card(copy!).brittle?.count).toBe(1);
-      expect(s.card(copy!).zone.z).toBe("hand");
-      s.endTurn().endTurn();
+      // R638: two whole rounds in the hand and the count has not moved, nothing crumbled.
+      s.endTurn().endTurn().endTurn().endTurn();
       expect(s.state.turn).toBe(t + 4);
+      expect(s.card(copy!).brittle).toEqual({ count: 2, since: t });
+      s.expectInZone(copy!, "hand");
+      expect(s.events.some((event) => event.type === "crumbled")).toBe(false);
+
+      // Entering the field starts its cycle: a count of 2 at turn t + 4 ticks at t + 6 and crumbles at t + 8.
+      s.play(copy!);
+      expect(s.card(copy!).brittle).toEqual({ count: 2, since: t + 4 });
+      s.endTurn().endTurn();
+      expect(s.state.turn).toBe(t + 6);
+      expect(s.card(copy!).brittle?.count).toBe(1);
+      s.endTurn().endTurn();
+      expect(s.state.turn).toBe(t + 8);
       s.expectInZone(copy!, "graveyard");
       expect(s.events.some((event) => event.type === "crumbled" && event.instanceId === copy!.id)).toBe(true);
       expect(s.events.some((event) => event.type === "discarded")).toBe(false);

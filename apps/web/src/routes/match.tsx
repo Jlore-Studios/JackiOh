@@ -270,6 +270,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={
