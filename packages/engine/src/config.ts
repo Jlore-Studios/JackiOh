@@ -107,8 +107,14 @@ export const HERO_ARMOR = {
 export const QUICKSTRIKER_COMBO_MULTIPLE = { base: 1, radiant: 2 } as const;
 
 /**
+ * R636: the attacks a Unit with Windfury may declare in one turn, where every other Unit has one.
+ */
+export const WINDFURY_ATTACKS = 2;
+
+/**
  * R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
- * patch v0.1.1 added Pierce, at the end.
+ * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Temporary (R637) stays out,
+ * since a card on the field is never in a hand to be discarded.
  */
 export const RANDOM_KEYWORD_POOL = [
   "Taunt",
@@ -123,6 +129,7 @@ export const RANDOM_KEYWORD_POOL = [
   "Trample",
   "Cleave",
   "Pierce",
+  "Windfury",
 ] as const;
 
 /**

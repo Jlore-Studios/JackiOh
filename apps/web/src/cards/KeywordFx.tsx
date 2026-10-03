@@ -310,6 +310,28 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Windfury: () => (
+    <Part className="kw-glyph-art kw-gust" anim fit="contain">
+      <path d="M8 36 H62 C84 36 84 12 66 14" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
+      <path d="M8 36 H62 C84 36 84 12 66 14" fill="none" stroke="#bfe8ff" strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M8 66 H70 C94 66 94 90 74 88" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
+      <path d="M8 66 H70 C94 66 94 90 74 88" fill="none" stroke="#bfe8ff" strokeWidth="4.5" strokeLinecap="round" />
+    </Part>
+  ),
+
+  Temporary: () => (
+    <>
+      <Part className="kw-glyph-art" fit="contain">
+        <path d="M24 8 H76 L76 20 L56 50 L76 80 L76 92 H24 L24 80 L44 50 L24 20 Z" fill="#f3e3b4" stroke="#0b0d12" strokeWidth="4" strokeLinejoin="round" />
+        <path d="M34 20 H66 L50 44 Z" fill="#d9a441" />
+      </Part>
+      <Part className="kw-sand" anim fit="contain">
+        <path d="M50 56 V84" stroke="#d9a441" strokeWidth="4" strokeLinecap="round" />
+        <path d="M34 84 H66 L50 66 Z" fill="#d9a441" />
+      </Part>
+    </>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

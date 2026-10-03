@@ -145,7 +145,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -170,6 +170,8 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
+  Windfury: "WF",
+  Temporary: "TE",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -197,6 +199,17 @@ describe("B10: tokenizeRules and termsIn", () => {
   it("B10 'Cry: deal 2' is the term 'Cry:' followed by plain text", () => {
     expect(termsOf("Cry: deal 2")).toEqual([{ text: "Cry:", term: "Cry" }]);
     expect(joined("Cry: deal 2")).toBe("Cry: deal 2");
+  });
+
+  it("R636 R637 Windfury and Temporary are terms in a card's text, each with the glossary entry the SPEC row gives", () => {
+    expect(termsOf("Windfury. Temporary")).toEqual([
+      { text: "Windfury", term: "Windfury" },
+      { text: "Temporary", term: "Temporary" },
+    ]);
+    expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
+      ["§6.1", "Can attack twice each turn"],
+      ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+    ]);
   });
 
   it("B10 'Armor 2' is one term", () => {
