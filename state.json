@@ -280,6 +280,12 @@
       "lines": [
         "@jgoetzmann-bot requeue"
       ]
+    },
+    "c:5972573157": {
+      "at": "2026-10-03T19:10:44Z",
+      "lines": [
+        "@jgoetzmann-bot try again. The issue was Gemini running out of credits"
+      ]
     }
   },
   "items": {
