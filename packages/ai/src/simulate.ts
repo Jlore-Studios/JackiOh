@@ -199,7 +199,7 @@ export function searchSignature(state: GameState, seat: PlayerId): string {
   ];
   for (const player of PLAYER_IDS) {
     for (const unit of activeUnitsOf(state, player)) {
-      const exerted = `${unit.exertion.attacked ? 1 : 0}${unit.exertion.switched ? 1 : 0}`;
+      const exerted = `${unit.exertion.attacks ?? (unit.exertion.attacked ? 1 : 0)}${unit.exertion.switched ? 1 : 0}`;
       parts.push(
         `${unit.id}:${unit.damage}:${unit.buffs.attack}/${unit.buffs.health}:${exerted}:${unit.position ?? "ATK"}`,
       );

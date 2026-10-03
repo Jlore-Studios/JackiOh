@@ -324,8 +324,8 @@ export type GameEvent =
     }
   /** B3.1, R383: an "Animated on your turn" card went back to its backrow zone. */
   | { type: "deanimated"; player: PlayerId; instanceId: string; defId: string; unitLane: number; backrowLane: number }
-  /** B3.3, R385: a Brittle count reached 0 and the card was destroyed (on the field) or went to its graveyard. */
-  | { type: "crumbled"; instanceId: string; defId: string; owner: PlayerId; zone: "field" | "hand" | "library" }
+  /** B3.3, R385, R638: a Brittle count on the field reached 0 and the card was destroyed. */
+  | { type: "crumbled"; instanceId: string; defId: string; owner: PlayerId; zone: "field" }
   /**
    * B3.4, R386: one Degrade or Upgrade change. `hiddenFrom` (R177) names the players who could not
    * read the card where it changed — both for a library card, the other player for a hand card — so a

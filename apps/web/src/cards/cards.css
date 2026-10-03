@@ -1386,6 +1386,8 @@
 .cf .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
 .cf .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
 .cf .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
+.cf .keyword[data-keyword="Windfury"] { --kw: #2b86c5; }
+.cf .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
 .cf .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
 .cf .keyword[data-keyword="Immutable"] { --kw: #52607a; }
 .cf .keyword[data-keyword="Stack"] { --kw: #2f55c2; }

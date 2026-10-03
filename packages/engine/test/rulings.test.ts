@@ -534,10 +534,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the twelve-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -551,8 +551,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Trample",
       "Cleave",
       "Pierce",
+      "Windfury",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(12);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3709,6 +3710,27 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // "R634 …" (load, push-up, debounce, one request at a time, failures dropped, a clock running ahead).
   it("R634 replaces a group of the account's settings only with a strictly later one, and merges the device's the same way", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
+  });
+
+  // Proved by windfury.test.ts "R636 …" (the second attack in `legalActions` and the reducer, the switch
+  // the first one spends, the count read at the second declaration, Deft Duelist beside it) and
+  // config.test.ts / rulings-a.test.ts "R21 …" (Windfury in the random keyword pool).
+  it("R636 lets a Unit with Windfury attack twice each turn", () => {
+    provenIn(636, "windfury.test.ts");
+  });
+
+  // Proved by temporary.test.ts "R637 …" (the end-of-turn discard in hand order, the other player's hand,
+  // a played card, a deck, granted and Vanilla) and the card side in packages/cards
+  // test/classic-plus/054-book-of-books.test.ts "R637 …" (the Books Book of Books adds).
+  it("R637 discards a Temporary card from its owner's hand at the end of their turn", () => {
+    provenIn(637, "temporary.test.ts", "../../cards/test/classic-plus/054-book-of-books.test.ts");
+  });
+
+  // Proved by brittle.test.ts "R638 …" (a held count never ticks or crumbles in a hand or a deck, starts
+  // its cycle as the card enters the field, is no arrival on a move between field zones, and is kept
+  // through leaving the field), and the card side in packages/cards (Dropshipping's and Hallucination's tests).
+  it("R638 ticks a Brittle count on the field only", () => {
+    provenIn(638, "brittle.test.ts");
   });
 });
 
