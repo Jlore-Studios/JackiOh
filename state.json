@@ -828,11 +828,11 @@
       "planned_at": "2026-10-03T18:22:24Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-10-03T23:12:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37161711879",
-      "started_at": "2026-10-03T23:25:50Z",
+      "run_id": "37161891878",
+      "started_at": "2026-10-03T23:29:11Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -1507,9 +1507,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T23:26:26Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37161750591",
-    "what": "revise #167 on agy"
+    "at": "2026-10-03T23:29:11Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37161891878",
+    "what": "build #160 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T23:24:05Z",
