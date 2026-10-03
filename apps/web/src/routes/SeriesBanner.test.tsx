@@ -129,7 +129,7 @@ describe("the series banner", () => {
         gameNo: 2,
         currentMatchId: null,
         you: { ...series().you, wins: SERIES_WINS_NEEDED },
-        result: { outcome: "win", endReason: "decided", ratingBefore: 1000, ratingAfter: 1016 },
+        result: { outcome: "win", endReason: "decided", ranked: true },
       }),
     });
     render(<Harness gameOver />);

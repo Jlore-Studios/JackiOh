@@ -91,6 +91,20 @@ one account per code unless its mint says otherwise). The script loads the *whol
 rather than the two variables it reads, because a `CODE_PEPPER` that differs from the running
 server's mints a well-formed code that nobody can ever redeem, and nothing would report it.
 
+Beside those, one script belongs to a deploy that bumps the game's minor version: R609's season
+open, which the boot path would otherwise run cold on the first request it sees. Ahead of such a
+deploy, run it against a copy of the live data first:
+
+```
+pnpm --filter @jackioh/server db:season-start -- --dry-run
+```
+
+`--dry-run` walks the identical path — open the season, soft-reset every rated player — and rolls
+the transaction back, printing the report a real run would write (season id, players reset, the
+ratings before and after). Without the flag the writes commit, and the next build's boot finds
+the season already open. Re-running it is safe: an already-open season reports `opened: false`
+and writes nothing.
+
 ### Environment
 
 The contract is `ServerEnv` in `src/env.ts`; `loadEnv()` validates it and refuses to start on a
@@ -203,6 +217,9 @@ top of every handler:
 | `POST` | `/api/series/:id/pick` | active | Seal the next game's deck from the frozen trio, one that has not won (R330, R331); final once in, the same slot again answers 200; the game starts when both have picked |
 | `POST` | `/api/series/:id/forfeit` | active | Leave the series between games; the other side wins it (R334) |
 | `GET` | `/api/matches/:id/series` | active | The series a match is a game of, for the board's banner |
+| `GET` | `/api/ranked` | active | The caller's own season, tag, rank, streak, record and season badges; never the hidden rating (R612) |
+| `GET` | `/api/leaderboard` | active | Jlorious #1–#100, then every other placed player by Grape tier, then the placing count (R608, R612) |
+| `GET` | `/api/matches/:id/ranks` | active | Both seats' ranks for the match screen, and whether the game moves them; 404 unless the caller plays it (R604, R612) |
 | `GET` | `/api/tutorial` | active | The account's tutorial progress (R320): completed lesson ids and the newest Hide/Show choice; empty before the first write |
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
 | `GET` | `/api/settings` | active | The account's game settings (R633): groups (`gameplay`, `audio`, `fx`, `cards`), each `{ at, values }`; empty before the first write |
