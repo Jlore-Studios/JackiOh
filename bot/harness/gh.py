@@ -260,6 +260,16 @@ class GitHub:
     def list_labels(self) -> list[dict]:
         return self.paginate(f"{self._r}/labels")
 
+    def list_issue_types(self) -> list[dict]:
+        """The owning organisation's issue types (none for a user's repository)."""
+        owner = self.repo.split("/", 1)[0]
+        try:
+            return list(self.request("GET", f"/orgs/{owner}/issue-types") or [])
+        except GitHubError as exc:
+            if exc.status in (403, 404):
+                return []
+            raise
+
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         """Create the label unless it exists. True when it was created."""
         quoted = urllib.parse.quote(name, safe="")
