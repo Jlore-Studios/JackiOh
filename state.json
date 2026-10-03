@@ -1512,10 +1512,8 @@
     "what": "build #160 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-03T23:24:05Z",
-    "notes": [
-      "started a night run, as a lane was free: #44 (easy) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-03T23:34:38Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
