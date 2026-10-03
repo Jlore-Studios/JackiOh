@@ -56,8 +56,8 @@ const SECOND_POWER: HeroPowerView = {
 /**
  * `act1` Brother Ping (one ability, its damage moved to 3), `act2` a Turtinator listing two
  * abilities, `fs1` a Field Spell whose ability is spent (greyed), `fs2` one with modes; `u1`, `u2`
- * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; a selected Heroic Power (`power`, with
- * `over.power` in its place when given) and a second retained one that game UI must not render.
+ * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; two Heroic Powers (the first `power`, with
+ * `over.power` in its place when given, its card in the backrow).
  */
 function activateView(over: { fs1?: ActivationView[]; power?: HeroPowerView } = {}): PlayerView {
   const first = over.power ?? heroPower;
@@ -102,7 +102,7 @@ const TURTLE_U1: ActionBody = { type: "activate", instanceId: "act2", ability: "
 const TURTLE_U2: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u2"], targets: [at("e1")] };
 
 /**
- * Patch v0.2.1 (R43, R606): a Ping Heroic Power, whose power is the card's one Activate ability
+ * Patch v0.2.1 (R43, R635): a Ping Heroic Power, whose power is the card's one Activate ability
  * `ping`, its target (any unit or hero) declared in the `activate` that `legalActions` lists — one
  * body per target, as the engine lists them.
  */
@@ -250,7 +250,7 @@ describe("R510 the Activate control on the card", () => {
     expect(el(testid.activate("act1"))).toHaveAttribute("data-flash", "activated");
     expect(el(testid.activate("fs2"))).not.toHaveAttribute("data-flash");
     expect(el(testid.power)).toHaveAttribute("data-flash", "activated");
-    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
+    expect(el(testid.powerOf("power-2"))).not.toHaveAttribute("data-flash");
   });
 
   it("R510 an ability's words read the card's declared numbers on the face it has", () => {
@@ -327,15 +327,17 @@ describe("R384 an activation is built through the board as a play is", () => {
 });
 
 describe("R384 Heroic Power works through the same build", () => {
-  it("R510 `power` sends its selected power's listed activatePower", () => {
+  it("R510 `power` sends its listed activatePower, and a further power is its own live control", () => {
     const first: ActionBody = { type: "activatePower", instanceId: "power-1" };
-    const { onAction } = renderGame([first]);
+    const second: ActionBody = { type: "activatePower", instanceId: "power-2" };
+    const { onAction } = renderGame([first, second]);
 
     expect(el(testid.power)).toHaveAttribute("data-glow", "ready");
     fireEvent.click(el(testid.power));
     expect(onAction).toHaveBeenLastCalledWith(first);
 
-    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
+    fireEvent.click(el(testid.powerOf("power-2")));
+    expect(onAction).toHaveBeenLastCalledWith(second);
   });
 
   it("R384 a power listed with targets waits for its target on the board", () => {
@@ -363,7 +365,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledWith(body);
   });
 
-  it("R606 Ping: a press waits for its target, the targets light, and a click on an enemy unit sends that `activate`", () => {
+  it("R635 Ping: a press waits for its target, the targets light, and a click on an enemy unit sends that `activate`", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -380,7 +382,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledWith(powerPing(at("e2")));
   });
 
-  it("R606 Ping: a click on either hero sends the `activate` naming that hero", () => {
+  it("R635 Ping: a click on either hero sends the `activate` naming that hero", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -393,7 +395,7 @@ describe("R384 Heroic Power works through the same build", () => {
     expect(onAction).toHaveBeenCalledTimes(2);
   });
 
-  it("R606 Ping: a second press on the power puts it down and sends nothing", () => {
+  it("R635 Ping: a second press on the power puts it down and sends nothing", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     fireEvent.click(el(testid.power));
@@ -405,7 +407,8 @@ describe("R384 Heroic Power works through the same build", () => {
   it("R384 a power legal does not list is disabled and sends nothing", () => {
     const { onAction } = renderGame([{ type: "endTurn" }]);
     expect(el(testid.power)).toBeDisabled();
-    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
+    expect(el(testid.powerOf("power-2"))).toHaveAttribute("data-legal", "false");
+    fireEvent.click(el(testid.powerOf("power-2")));
     expect(onAction).not.toHaveBeenCalled();
   });
 });
@@ -467,7 +470,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
     expect(onAction).toHaveBeenCalledWith(legal[0]);
   });
 
-  it("R606 patch v0.2.1: Ping is dragged from the power on the hero to an enemy unit, and the release sends that `activate`", () => {
+  it("R635 patch v0.2.1: Ping is dragged from the power on the hero to an enemy unit, and the release sends that `activate`", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     drag(el(testid.power), el(testid.card("e1")));
@@ -483,7 +486,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
     expect(onAction).toHaveBeenCalledWith(powerPing(at("e1")));
   });
 
-  it("R606 patch v0.2.1: Ping is dragged from the power to the enemy hero", () => {
+  it("R635 patch v0.2.1: Ping is dragged from the power to the enemy hero", () => {
     const { onAction } = renderGame(PING_POWER_LEGAL, activateView({ power: PING_POWER }));
 
     drag(el(testid.power), el(testid.hero("opponent")));

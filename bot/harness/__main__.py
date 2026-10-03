@@ -67,6 +67,11 @@ def _summary(text: str) -> None:
             handle.write(redact(text) + "\n")
 
 
+def _bullets(lines: list[str]) -> str:
+    """`lines` as a Markdown list after a blank line, or nothing when there are none."""
+    return "\n" + "".join(f"- {line}\n" for line in lines) if lines else ""
+
+
 def _dump(obj: Any) -> None:
     print(redact(json.dumps(obj, indent=2, default=str)))
 
@@ -93,8 +98,13 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
         f"{planned['action']} #{planned.get('number')}" if planned.get("number") else planned["action"])
     if planned.get("provider"):
         what += f" on {planned['provider']}"
-    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n")
+    if planned.get("priority"):
+        what += f", priority tier {planned['priority']}"
+    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n"
+             f"{_bullets(planned.get('skipped') or [])}")
     print(f"plan: {what} {planned.get('reason', '')}".strip())
+    for line in planned.get("skipped") or []:
+        print(f"plan: {line}")
     return 0
 
 
@@ -108,8 +118,11 @@ def cmd_peek(cfg: Config, args: argparse.Namespace) -> int:
              "fallback": str(look.fallback).lower()})
     then = (f" First, `{look.quiet_provider}` must be quiet"
             + (" (other work can go ahead if it is not)." if look.fallback else ".")) if check else ""
-    _summary(f"### Peek: {'work' if look.work else 'nothing to do'}\n\n{look.reason}.{then}\n")
+    _summary(f"### Peek: {'work' if look.work else 'nothing to do'}\n\n{look.reason}.{then}\n"
+             f"{_bullets(look.skipped)}")
     print(f"peek: {'work' if look.work else 'nothing'}: {look.reason}.{then}")
+    for line in look.skipped:
+        print(f"peek: {line}")
     return 0
 
 

@@ -1,6 +1,6 @@
 // Polish 6, slice C: the detail view (docs/polish/6-cards.md, B29).
 //
-// `<CardDetail def onClose actions? meta?>` is a centred dialog: both faces side by side, a meta
+// `<CardDetail def onClose actions? meta?>` is a centred dialog: its faces one at a time (issue #37), a meta
 // line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` and ` · N lines of code` (E36), the
 // glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.
@@ -17,11 +17,14 @@ import { CardDefsProvider } from "../refContext.tsx";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
+import { CAROUSEL_SWIPE_PX } from "./constants.ts";
 import { CardDetail, closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
+  INSPECT_CAROUSEL,
   INSPECT_CAROUSEL_NEXT,
   INSPECT_CAROUSEL_POSITION,
+  INSPECT_CAROUSEL_PREVIOUS,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
@@ -30,8 +33,11 @@ import {
 
 /** The meta line's separator, as the Surface spells it. */
 const SEP = " · ";
-/** Base, Radiant, Rush Token, Felinor Token and Ghoul Token (#98's direct references). */
-const HEROIC_POWER_CAROUSEL_FACE_COUNT = 5;
+/**
+ * #98's pages: its base and Radiant faces, then what each face names on the face it names it — the
+ * base text's Rush Token and Felinor Token, the Radiant text's Radiant Rush Token and Ghoul Token.
+ */
+const HEROIC_POWER_PAGES = ["Base", "Radiant", "Rush Token", "Felinor Token", "Radiant Rush Token", "Ghoul Token"];
 
 function defOf(id: string): CardDef {
   const def = CATALOG[id];
@@ -261,22 +267,68 @@ describe("CardDetail (B29)", () => {
     // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
   }, 30_000);
 
-  it("pages a card's base, Radiant, and directly related token faces one at a time", () => {
+  it("pages a card's base, Radiant, then each named card on the face its text names, one at a time", () => {
     const def = defOf("core-098");
     render(
       <CardDefsProvider defs={CATALOG}>
         <CardDetail def={def} onClose={() => undefined} />
       </CardDefsProvider>,
     );
+    const shown = (): HTMLElement[] =>
+      [...screen.getByTestId(INSPECT_CAROUSEL).querySelectorAll<HTMLElement>("figure")].filter((figure) => !figure.hidden);
+    const caption = (): string => shown()[0]?.querySelector("figcaption")?.textContent ?? "";
+    const count = HEROIC_POWER_PAGES.length;
 
-    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`1 of ${String(HEROIC_POWER_CAROUSEL_FACE_COUNT)}`);
+    expect(screen.getByTestId(INSPECT_CAROUSEL).querySelectorAll("figure")).toHaveLength(count);
+    expect(shown()).toHaveLength(1);
+    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`1 of ${String(count)}`);
     expect(screen.getByTestId(INSPECT_FACE_BASE).closest("figure")).not.toHaveAttribute("hidden");
     expect(screen.getByTestId(INSPECT_FACE_RADIANT).closest("figure")).toHaveAttribute("hidden");
 
-    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_NEXT));
-    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`2 of ${String(HEROIC_POWER_CAROUSEL_FACE_COUNT)}`);
-    expect(screen.getByTestId(INSPECT_FACE_BASE).closest("figure")).toHaveAttribute("hidden");
-    expect(screen.getByTestId(INSPECT_FACE_RADIANT).closest("figure")).not.toHaveAttribute("hidden");
+    const seen: string[] = [];
+    for (let n = 0; n < count; n += 1) {
+      seen.push(caption());
+      fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_NEXT));
+    }
+    expect(seen).toEqual(HEROIC_POWER_PAGES);
+    // It wraps: past the last page is the first again.
+    expect(caption()).toBe("Base");
+    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_PREVIOUS));
+    expect(caption()).toBe("Ghoul Token");
+    // The Radiant Rush Token page is the token's Radiant face.
+    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_PREVIOUS));
+    expect(shown()[0]).toHaveAttribute("data-related-id", "core-t-rush");
+    expect(shown()[0]?.querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
+  });
+
+  it("the arrow keys and a horizontal swipe page it too; a mouse drag does not", () => {
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <CardDetail def={defOf("core-098")} onClose={() => undefined} />
+      </CardDefsProvider>,
+    );
+    const carousel = screen.getByTestId(INSPECT_CAROUSEL);
+    const position = (): string => screen.getByTestId(INSPECT_CAROUSEL_POSITION).textContent ?? "";
+    const faces = carousel.querySelector<HTMLElement>(".inspect-detail-faces");
+    if (faces === null) throw new Error("no faces");
+    const swipe = (pointerType: string, from: number, to: number): void => {
+      fireEvent.pointerDown(faces, { pointerType, clientX: from, pointerId: 3 });
+      fireEvent.pointerUp(faces, { pointerType, clientX: to, pointerId: 3 });
+    };
+
+    fireEvent.keyDown(carousel, { key: "ArrowRight" });
+    expect(position()).toMatch(/^2 of /);
+    fireEvent.keyDown(carousel, { key: "ArrowLeft" });
+    expect(position()).toMatch(/^1 of /);
+
+    swipe("touch", 300, 300 - CAROUSEL_SWIPE_PX);
+    expect(position()).toMatch(/^2 of /);
+    swipe("touch", 100, 100 + CAROUSEL_SWIPE_PX);
+    expect(position()).toMatch(/^1 of /);
+    // Shorter than a swipe, or a mouse, pages nothing.
+    swipe("touch", 300, 300 - CAROUSEL_SWIPE_PX + 1);
+    swipe("mouse", 300, 100);
+    expect(position()).toMatch(/^1 of /);
   });
 
   it("offers every voice-line kind that the inspected card has and plays the selected line", () => {

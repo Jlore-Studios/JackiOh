@@ -1,0 +1,47 @@
+/* The padlock on a Locked zone (LockIcon.tsx). Imported by LockIcon.tsx only.
+ *
+ * An empty locked zone shows it large and centred, where it can't be missed. A locked zone with a
+ * card standing in it shrinks it into the corner so the card stays readable. The zone itself keeps
+ * its hatched fill and border (`.zone-locked`, board.css).
+ */
+
+.zone-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(62%, 34px);
+  height: auto;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%));
+}
+
+.zone:has(> .card) > .zone-lock {
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  transform: none;
+  z-index: 2;
+}
+
+.zone-lock-shackle {
+  fill: none;
+  stroke: #cbd2dc;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.zone-lock-body {
+  fill: var(--locked);
+  stroke: #cbd2dc;
+  stroke-width: 1.2;
+}
+
+.zone-lock-keyhole {
+  fill: #1c110a;
+  stroke: #1c110a;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}

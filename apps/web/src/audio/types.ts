@@ -143,13 +143,56 @@ export type PlayedCue =
       priority: VoicePriority;
     };
 
+/** A music station: the overall flavour of the in-game music (SPEC §10.11 "Music", R631). */
+export type MusicStation = "tavern" | "edm" | "lofi" | "epic";
+
 export type AudioSettings = {
   master: number; // 0..1
   sfx: number; // 0..1
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;
+  /** Patch v0.2.7 (R631): the music bus, 0..1. */
+  music: number;
+  /** The station a match starts on. A card may switch it for the rest of that match. */
+  station: MusicStation;
+  /** Off: the station's in-game track loops, and nothing in the game changes the music. */
+  dynamicMusic: boolean;
+  /** The music dips under voice lines and the important effects (MUSIC_DUCK_SFX). */
+  duckMusic: boolean;
+  /** The music falls silent while the page is hidden or the window has lost focus. */
+  pauseMusicOnBlur: boolean;
 };
+
+/** One rendered track (scripts/gen-music.mjs writes these into music-manifest.json). */
+export type MusicTrack = {
+  hash: string;
+  bytes: number;
+  bpm: number;
+  beatsPerBar: number;
+  /** false: a sting that plays once. */
+  loop: boolean;
+  /** Seconds of intro before the loop's music begins (a result's or a Mythic's sting); a sting's whole length. */
+  intro: number;
+  /** The file's length in seconds. */
+  duration: number;
+  /** Where the loop starts and ends in the file, in seconds; null for a sting. */
+  loopStart: number | null;
+  loopEnd: number | null;
+  /** A sting's last bar line, where the track it leads into starts; null for a loop. */
+  handoff: number | null;
+};
+
+export type MusicManifest = {
+  version: 1;
+  /** Informative: "aac-lc 44100 stereo 80k". */
+  format: string;
+  /** Keyed by track id, e.g. "menu", "tavern-1", "tavern-danger", "mythic-zephyrs". */
+  files: Record<string, MusicTrack>;
+};
+
+/** What a card does to the music when it is cast (music-cards.json, keyed by catalog id). */
+export type MusicCardEntry = { theme?: string; station?: MusicStation };
 
 /** What the director and the UI need from an engine. */
 export type SoundSink = {
@@ -184,5 +227,9 @@ export type AudioEngine = SoundSink & {
   speaking(): boolean;
   /** Called after every change of `speaking()`, never for a non-change. Returns the unsubscribe. */
   subscribeSpeaking(listener: () => void): () => void;
+  /** R631: the context and the music bus the music plays into, once the first unlock made them; else null. */
+  musicOutput(): { context: AudioContext; input: AudioNode } | null;
+  /** Called when the context is made and each time a resume settles. Returns the unsubscribe. */
+  subscribeState(listener: () => void): () => void;
   dispose(): void;
 };

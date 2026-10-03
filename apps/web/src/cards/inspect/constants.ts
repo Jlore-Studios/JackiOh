@@ -27,6 +27,10 @@ export const PREVIEW_GLOSSARY_GAP_PX = 10;
  * REF_PANEL_FACE_HEIGHT_PX, with the panel's padding. Mirrors `.inspect-hover .inspect-refs`.
  */
 export const PREVIEW_REFS_WIDTH_PX = 170;
+/** Issue #37: the hover preview shows one named card at a time, the next after this long. */
+export const REF_CYCLE_MS = 1600;
+/** Issue #37: a horizontal drag at least this long across the detail view's face pages it by one. */
+export const CAROUSEL_SWIPE_PX = 40;
 
 /** A pile's hover preview (CardList.tsx) shows at most this many faces, newest first; the sheet shows them all. */
 export const LIST_PREVIEW_MAX = 8;

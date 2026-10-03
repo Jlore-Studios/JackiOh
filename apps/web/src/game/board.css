@@ -300,6 +300,16 @@
   text-overflow: ellipsis;
 }
 
+/* A further Heroic Power the player controls (a stolen or copied one, R43) is its crest alone, so a
+   second power does not crowd the hero; its words are its tooltip and accessible name. */
+.hero .power-extra {
+  padding-right: 2px;
+}
+
+.hero .power-extra .power-title {
+  display: none;
+}
+
 .power-button[data-radiant="true"] .power-crest,
 .power-tag[data-radiant="true"] .power-crest {
   border-color: var(--radiant);

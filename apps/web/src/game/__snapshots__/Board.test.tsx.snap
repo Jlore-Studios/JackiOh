@@ -1046,11 +1046,38 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-side="opponent"
         data-testid="zone-opponent-units-2"
       >
-        <span
+        <svg
           aria-label="Locked zone"
-          class="lock-icon"
-          title="Locked zone"
-        />
+          class="zone-lock"
+          role="img"
+          viewBox="0 0 24 24"
+        >
+          <title>
+            Locked zone
+          </title>
+          <path
+            class="zone-lock-shackle"
+            d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"
+          />
+          <rect
+            class="zone-lock-body"
+            height="11"
+            rx="2.4"
+            width="15"
+            x="4.5"
+            y="10.5"
+          />
+          <circle
+            class="zone-lock-keyhole"
+            cx="12"
+            cy="15.2"
+            r="1.6"
+          />
+          <path
+            class="zone-lock-keyhole"
+            d="M12 15.6v3"
+          />
+        </svg>
         <div
           aria-disabled="true"
           class="card card-unit cf-host cf-host--minion"
@@ -2231,11 +2258,38 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-side="you"
         data-testid="zone-you-backrow-3"
       >
-        <span
+        <svg
           aria-label="Locked zone"
-          class="lock-icon"
-          title="Locked zone"
-        />
+          class="zone-lock"
+          role="img"
+          viewBox="0 0 24 24"
+        >
+          <title>
+            Locked zone
+          </title>
+          <path
+            class="zone-lock-shackle"
+            d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"
+          />
+          <rect
+            class="zone-lock-body"
+            height="11"
+            rx="2.4"
+            width="15"
+            x="4.5"
+            y="10.5"
+          />
+          <circle
+            class="zone-lock-keyhole"
+            cx="12"
+            cy="15.2"
+            r="1.6"
+          />
+          <path
+            class="zone-lock-keyhole"
+            d="M12 15.6v3"
+          />
+        </svg>
         <div
           aria-label="Face-down trap"
           class="card card-back card-facedown card-backrow"
@@ -3140,21 +3194,46 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </span>
       <button
         aria-disabled="true"
+        aria-label="Heroic Power: Activate: Spend (2): Witness Value: Discover a Unit."
         class="power-button"
         data-instance-id="power-1"
         data-legal="false"
+        data-power="discover"
         data-testid="power"
         data-used="false"
         data-x="2"
         disabled=""
-        title="Heroic Power (X 2)"
+        title="Activate: Spend (2): Witness Value: Discover a Unit."
         type="button"
       >
-        Heroic Power
         <span
-          class="power-x"
+          aria-hidden="true"
+          class="power-crest"
+          data-glyph="eye"
+          data-power-art="discover"
+          style="--power-light: hsl(168 78% 70%); --power-dark: hsl(174 70% 17%);"
         >
-          2
+          <svg
+            class="power-glyph"
+            focusable="false"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M1.4 12C5 5.8 19 5.8 22.6 12C19 18.2 5 18.2 1.4 12ZM7.2 12A4.8 4.8 0 1 0 16.8 12A4.8 4.8 0 1 0 7.2 12ZM9.9 12A2.1 2.1 0 1 0 14.1 12A2.1 2.1 0 1 0 9.9 12Z"
+              fill-rule="evenodd"
+            />
+          </svg>
+          <span
+            class="power-x"
+            data-x="2"
+          >
+            2
+          </span>
+        </span>
+        <span
+          class="power-title"
+        >
+          Witness Value
         </span>
       </button>
       <span

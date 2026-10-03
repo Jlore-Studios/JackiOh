@@ -1,12 +1,16 @@
-// The cards a face's text names, in a column beside it in the hover preview (SPEC §10.10, R279).
+// The cards a face's text names, beside it in the hover preview (SPEC §10.10, R279).
 //
 // The hover preview takes no pointer events and is hidden from assistive tech (B22), so a reference
-// inside its face cannot be hovered or focused: the names are marked there, and this column shows
-// each card they name, as a small printed face, so resting on any card on the board or in the
-// collection shows what it refers to. A name the text calls Radiant shows the Radiant face.
-// Presentation only: printed catalog faces (§5.1).
+// inside its face cannot be hovered or focused: the names are marked there, and this panel shows the
+// cards they name, as a small printed face, so resting on any card on the board or in the collection
+// shows what it refers to. A name the text calls Radiant shows the Radiant face.
+//
+// One named card at a time (issue #37, "don't show them all side by side"): a face that names
+// several pages through them while the pointer rests, one every REF_CYCLE_MS, its place ("2 of 3")
+// under it, since nothing inside a preview can be pressed. The deck builder's detail view pages
+// through the same cards by hand (CardDetail.tsx). Presentation only: printed catalog faces (§5.1).
 
-import type { ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -15,10 +19,8 @@ import { FACE_ASPECT, REF_PANEL_FACE_HEIGHT_PX } from "../constants.ts";
 import { faceModel, type FaceModel } from "../model.ts";
 import { RefsInteractive, useDefResolver } from "../refContext.tsx";
 import { findRefs } from "../refs.ts";
-import { INSPECT_REFS } from "./testids.ts";
-
-const FIRST_REFERENCE_INDEX = 0;
-const FIRST_REFERENCE_OFFSET = 1;
+import { REF_CYCLE_MS } from "./constants.ts";
+import { INSPECT_REFS, INSPECT_REFS_POSITION } from "./testids.ts";
 
 /**
  * The named cards of a face, in the order its text first names them, each once per face — the card
@@ -41,29 +43,39 @@ export function namedCards(face: FaceModel, resolve: (id: string) => CardDef | u
 
 export function References({ face }: { face: FaceModel }): ReactElement | null {
   const resolve = useDefResolver();
-  if (resolve === null) return null;
-  const named = namedCards(face, resolve);
-  if (named.length === 0) return null;
-  const first = named[FIRST_REFERENCE_INDEX];
-  if (first === undefined) return null;
-  const additional = named.length - FIRST_REFERENCE_OFFSET;
+  const named = resolve === null ? [] : namedCards(face, resolve);
+  const count = named.length;
+  const [at, setAt] = useState(0);
+  useEffect(() => {
+    setAt(0);
+    if (count < 2) return undefined;
+    const timer = window.setInterval(() => setAt((current) => (current + 1) % count), REF_CYCLE_MS);
+    return () => window.clearInterval(timer);
+  }, [count, face.defId, face.radiant]);
+  const shown = named[at % Math.max(count, 1)];
+  if (shown === undefined) return null;
   const width = REF_PANEL_FACE_HEIGHT_PX * FACE_ASPECT;
   return (
-    <div className="inspect-refs" data-testid={INSPECT_REFS}>
+    <div className="inspect-refs" data-testid={INSPECT_REFS} data-count={count}>
       <p className="inspect-refs-label">Mentions</p>
       <div className="inspect-refs-faces">
         <RefsInteractive enabled={false}>
           <div
+            key={`${shown.def.id}:${String(shown.radiant)}`}
             className="inspect-refs-face"
-            data-ref={first.def.id}
-            data-ref-face={first.radiant ? "radiant" : "base"}
+            data-ref={shown.def.id}
+            data-ref-face={shown.radiant ? "radiant" : "base"}
             style={{ width, height: REF_PANEL_FACE_HEIGHT_PX }}
           >
-            <CardFace face={faceModel({ defId: first.def.id, def: first.def, radiant: first.radiant })} layout="full" />
+            <CardFace face={faceModel({ defId: shown.def.id, def: shown.def, radiant: shown.radiant })} layout="full" />
           </div>
         </RefsInteractive>
       </div>
-      {additional > 0 && <p className="inspect-refs-more">+{additional} more in card detail</p>}
+      {count > 1 && (
+        <p className="inspect-refs-position" data-testid={INSPECT_REFS_POSITION}>
+          {at % count + 1} of {count}
+        </p>
+      )}
     </div>
   );
 }

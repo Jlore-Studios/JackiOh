@@ -192,7 +192,7 @@ export { cardsInCardScope, matchesCardScope, readersOf, unreadableBy } from "./c
 export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
 
 // Degrade and Upgrade (B3.4, R386, R440, R442), an Upgrade of a named number of the card's own (Core #98's
-// Steady Shot, R608), and KY's Constant's number set outright (Classic+ #41).
+// Steady Shot, R637), and KY's Constant's number set outright (Classic+ #41).
 export {
   NUMBER_CARD_KEY,
   applicableChanges,
@@ -336,7 +336,7 @@ export { destroyFieldSpellsAndHit, drawWhileCheap, fieldSpellsDoomed } from "./d
 export type { FieldSpellSide } from "./datacenter";
 
 // Classic+ #46–#61:
-// Armor a hero keeps for the game (C+ #46) or until its next turn (Core #98's Armor Up, R603), and a
+// Armor a hero keeps for the game (C+ #46) or until its next turn (Core #98's Armor Up, R632), and a
 // random hand card made cheaper (C+ #49).
 export { discountRandomInHand, gainHeroArmor, gainHeroArmorUntilNextTurn } from "./perks";
 

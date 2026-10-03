@@ -2,7 +2,8 @@
 // the enemy hero, N = the size of their exile as it resolves, so Armor applies once; an empty exile
 // deals no hit (R63); then draw 1; its preview is N (R280); radiant: the same hit and draw (the
 // Radiant keeps "Draw 1"), then Recruit from their exile its most recently exiled permanent card, under
-// your control with its owner unchanged, back to their piles when it leaves the field (§3.2); a Unit
+// your control, becoming yours as it reaches your side, so it goes to your piles when it leaves the
+// field (R12); a Unit
 // recruited that way makes one forced attack on the enemy hero at once, summoning sickness ignored
 // (R53); no permanent in their exile, or no open zone, → nothing recruited; a recruited trap is set
 // face-down and read by you alone (R33); its tuned numbers (damage per card, draw) read through

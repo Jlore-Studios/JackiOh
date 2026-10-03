@@ -117,7 +117,7 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     expect(glow?.has(testid.endTurn)).toBe(true);
   });
 
-  it("R510 a Heroic Power action lights only the selected power", () => {
+  it("R510 a Heroic Power's activatePower lights `power` for the first power and `power-<id>` for a further one", () => {
     const second = { ...heroPower, instanceId: "power-2", name: "draw", ability: "draw" };
     const view = activateView({
       you: { ...activateView().you, hero: { health: 30, armor: 0, powers: [heroPower, second], power: heroPower } },
@@ -130,9 +130,11 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     const { legal: lit, glow } = highlightFor(view, legal, IDLE);
 
     expect(lit.has(testid.power)).toBe(true);
-    expect(lit.has(testid.powerOf("power-2"))).toBe(false);
-    expect(glow?.has(testid.powerOf("power-2"))).toBe(false);
-    expect(activationControlTestids(view, { type: "activate", instanceId: "power-2", ability: "draw" })).toEqual([]);
+    expect(lit.has(testid.powerOf("power-2"))).toBe(true);
+    expect(glow?.has(testid.powerOf("power-2"))).toBe(true);
+    expect(activationControlTestids(view, { type: "activate", instanceId: "power-2", ability: "draw" })).toEqual([
+      testid.powerOf("power-2"),
+    ]);
   });
 
   it("R384 an activation of a card the view places nowhere lights the control its type has always meant", () => {
@@ -310,7 +312,7 @@ describe("R384 Heroic Power is built through the same activation", () => {
 
 describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built and aimed from the hero", () => {
   // As `viewFor` gives it: the power on the hero, and the #98 card in the backrow listing the one
-  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R606).
+  // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R635).
   const ping = { ...heroPower, name: "ping", ability: "ping", x: 1 };
   const PING_ABILITY: ActivationView = { ability: "ping", label: "Ping: Pierce. Deal 1 damage", usesLeft: 1, usable: true };
   const powerPing = (target: Selection): ActivationBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
@@ -340,7 +342,7 @@ describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built
     expect(activationControlTestids(pingView(), powerPing(heroP2))[0]).toBe(testid.power);
   });
 
-  it("R606 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
+  it("R635 the power's press waits for a target, and a click on one sends the listed `activate` with it", () => {
     const view = pingView();
     const pressed = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "power-1" });
     expect(pressed.action).toBeUndefined();

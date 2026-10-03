@@ -2,12 +2,13 @@
 // a round crest with its own art, keyed by the stored name the view gives it (R103), its X in a mana
 // gem, its printed title (Tank Up on Armor Up's Radiant face), a gold rim when Radiant, greyed when
 // spent, and its words — the power as the catalog prints it, `{shot}` filled — as its tooltip and
-// accessible name. The game displays only its selected power; the opponent's selected power is a
-// tag with the same crest. Every view is a fixture shaped as `viewFor` builds it.
+// accessible name. Each card prints only the power it rolled, and each power a player controls is its
+// own control (a further one, stolen or copied, its crest alone); the opponent's are tags with the
+// same crest. Every view is a fixture shaped as `viewFor` builds it.
 
 import { CATALOG } from "@jackioh/cards";
 import type { HeroPowerView, PlayerView } from "@jackioh/shared";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -101,7 +102,7 @@ describe("patch v0.2.1: each Heroic Power has its own art on the hero", () => {
     expect(screen.getByTestId(testid.power).querySelector(".power-title")).toHaveTextContent("Armor Up");
   });
 
-  it("R608 the tooltip and accessible name are the power as the catalog prints it, {shot} filled from the view", () => {
+  it("R637 the tooltip and accessible name are the power as the catalog prints it, {shot} filled from the view", () => {
     renderHero(viewWith([power({ name: "burn", ability: "burn", radiant: true, x: 1, params: { shot: 8 } })]));
     const button = screen.getByTestId(testid.power);
     const words = "Activate: Spend (1): Steady Shot: Deal 8 damage to the enemy hero. Upgrade this permanently by +2 damage.";
@@ -110,7 +111,7 @@ describe("patch v0.2.1: each Heroic Power has its own art on the hero", () => {
     expect(button.getAttribute("title")).not.toMatch(/[{}]/);
   });
 
-  it("R608 with no catalog loaded, the view's number still fills {shot}", () => {
+  it("R637 with no catalog loaded, the view's number still fills {shot}", () => {
     render(<Hero view={viewWith([power({ name: "burn", ability: "burn", x: 1, params: { shot: 2 } })])} side="you" />);
     expect(screen.getByTestId(testid.power).getAttribute("title")).toBe(
       "Activate: Spend (1): Steady Shot: Deal 2 damage to the enemy hero.",
@@ -126,25 +127,39 @@ describe("patch v0.2.1: each Heroic Power has its own art on the hero", () => {
   });
 });
 
-describe("R510 only the selected Heroic Power is on the hero", () => {
+describe("R510 each Heroic Power a player controls is its own control on the hero", () => {
   const stolen = power({ instanceId: "power-2", name: "pluck", ability: "pluck", x: 2 });
 
-  it("retains only the selected power in the game UI", () => {
-    renderHero(viewWith([heroPower, stolen]), "you", { highlight: highlight([testid.power]) });
+  it("a further power (a stolen one) is its own control, its crest alone, live by `legal` alone", () => {
+    const { onClick } = renderHero(viewWith([heroPower, stolen]), "you", {
+      highlight: highlight([testid.power, testid.powerOf("power-2")]),
+    });
 
     expect(screen.getByTestId(testid.power)).toHaveAttribute("data-instance-id", "power-1");
-    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
-    expect(screen.queryByText("Pluck")).toBeNull();
+    const extra = screen.getByTestId(testid.powerOf("power-2"));
+    expect(extra).toHaveClass("power-extra");
+    expect(extra).toHaveAttribute("data-power", "pluck");
+    expect(extra).toHaveAccessibleName("Heroic Power: Activate: Spend (2): Pluck: Add a random Fruit to your hand. It costs (0).");
+    expect(crestOf(extra)).toHaveAttribute("data-power-art", "pluck");
+    expect(extra).toBeEnabled();
+    fireEvent.click(extra);
+    expect(onClick.mock.calls.map((call) => call[0])).toEqual([{ on: "activate", instanceId: "power-2" }]);
   });
 
-  it("the opponent's selected power is a tag with the same crest and words, which nothing presses", () => {
+  it("a further power `legal` does not list is drawn and greyed, and sends nothing", () => {
+    renderHero(viewWith([heroPower, stolen]), "you", { highlight: highlight([testid.power]) });
+    expect(screen.getByTestId(testid.powerOf("power-2"))).toBeDisabled();
+  });
+
+  it("the opponent's powers are tags with the same crest and words, which nothing presses", () => {
     const theirs = power({ instanceId: "power-9", name: "insect", ability: "insect", radiant: true, x: 2 });
     renderHero(viewWith([], [theirs, power({ instanceId: "power-8", name: "felinor", ability: "felinor", x: 1 })]), "opponent");
 
     expect(screen.queryByTestId(testid.power)).toBeNull();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     const tags = screen.getAllByRole("img");
-    expect(tags.map((tag) => tag.getAttribute("data-power"))).toEqual(["insect"]);
+    expect(tags.map((tag) => tag.getAttribute("data-power"))).toEqual(["insect", "felinor"]);
+    expect(tags[1]).toHaveClass("power-extra");
     expect(tags[0]).toHaveAttribute("data-radiant", "true");
     expect(tags[0]).toHaveAccessibleName("Opponent's Heroic Power: Activate: Spend (2): Die Insect: Lucky 1. Deal 8 damage to a random enemy.");
   });

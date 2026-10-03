@@ -1,4 +1,4 @@
-// Heroic Power (SPEC §8 #98, R43, R103, R352, patch v0.2.1's R603–R610): the thirteen powers, the roll
+// Heroic Power (SPEC §8 #98, R43, R103, R352, patch v0.2.1's R632–R639): the thirteen powers, the roll
 // that picks one, and each power as an Activate ability.
 //
 // R43 puts everything about the card on its instance: `memory.power` is the power it rolled, and its
@@ -34,6 +34,7 @@ import {
   LIFE_TAP_DRAW,
   PING_DAMAGE,
   PLUCK_COST,
+  STEADY_SHOT_STEP_DAMAGE,
   STEADY_SHOT_UPGRADE_STEPS,
 } from "../config";
 import {
@@ -92,13 +93,13 @@ export const GHOUL_TOKEN_INDEX = "T-ghoul";
 /** B2.2: the set whose indices those are, since an index is unique only within its set. */
 const TOKEN_SET = "Core";
 
-/** R608: Steady Shot's damage, the number #98 declares (`params`) so its Radiant face can Upgrade it. */
+/** R637: Steady Shot's damage, the number #98 declares (`params`) so its Radiant face can Upgrade it. */
 export const STEADY_SHOT_PARAM = "shot";
 
-/** R606: Ping's declared target — any unit or hero, either side — carried in the `activate` action (R81). */
+/** R635: Ping's declared target — any unit or hero, either side — carried in the `activate` action (R81). */
 const PING_TARGETS: TargetDecl[] = [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }];
 
-/** R609: "a Trap" — a Field Trap is a Trap that stays (§5.1), so the pool holds both. */
+/** R638: "a Trap" — a Field Trap is a Trap that stays (§5.1), so the pool holds both. */
 const TRAP_TYPES: CardType[] = ["Trap", "Field Trap"];
 
 export type HeroPowerName =
@@ -153,18 +154,18 @@ function recruitEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * Life Tap, R607: "Draw 1. Take 2 damage" — damage now, a hit on its own hero from the card through
+ * Life Tap, R636: "Draw 1. Take 2 damage" — damage now, a hit on its own hero from the card through
  * §4.4, where v0.2.0's "lose 2 health" was a loss (R18). The Radiant face, "Draw 1 from each player's
  * deck", draws the top of its own deck and then the top of the opponent's, a draw of its own taken
  * from their deck (§6.3 Draw, C #58), which becomes its card (R12); it takes no damage.
  */
 function drawEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
-  if (radiant) return [draw({ count: LIFE_TAP_DRAW }), drawFromOpponent({ end: "top" })];
+  if (radiant) return [draw({ count: LIFE_TAP_DRAW }), ...Array.from({ length: LIFE_TAP_DRAW }, () => drawFromOpponent({ end: "top" }))];
   return [draw({ count: LIFE_TAP_DRAW }), damage({ to: { of: "selfHero" }, amount: LIFE_TAP_DAMAGE })];
 }
 
 /**
- * R606: what Radiant Ping's hit did to its target, read as the hit lands and kept as the rider's part
+ * R635: what Radiant Ping's hit did to its target, read as the hit lands and kept as the rider's part
  * memo, so a Death that asks — whose answer comes in a later action, with an event list of its own —
  * still finds it (§9.3, R113). `from` is the field's departures then (R174).
  */
@@ -200,7 +201,7 @@ function pingKillOf(ctx: EffectContext, targetId: string | null, sourceId: strin
 }
 
 /**
- * Ping, R606: "Pierce. Deal 1 damage" to the target the activation declared (R81), any unit or hero.
+ * Ping, R635: "Pierce. Deal 1 damage" to the target the activation declared (R81), any unit or hero.
  * The Radiant face adds "If this kills a Unit, summon a Ghoul Token with its stats": the hit's kill
  * is read as it lands (`pingKillOf`), the check runs right after it (§4.5, as `afterStateCheck` runs
  * one), and a target that hit doomed and that check took off the field (R174; an Indestructible one
@@ -216,7 +217,7 @@ function pingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
   const targetId = target?.pick === "instance" ? target.instanceId : null;
   return [
     hit,
-    // R606: the part is built once the hit has landed, and a resume rebuilds it from its memo.
+    // R635: the part is built once the hit has landed, and a resume rebuilds it from its memo.
     lazyPart("pingKill", (landed, memo) => {
       const kill = isPingKill(memo) ? memo : pingKillOf(landed, targetId, sourceId);
       return {
@@ -237,7 +238,7 @@ function pingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * Steady Shot, R608: "Deal {shot} damage to the enemy hero" (2, Radiant 4, the card's declared
+ * Steady Shot, R637: "Deal {shot} damage to the enemy hero" (2, Radiant 4, the card's declared
  * number). The Radiant face then Upgrades that number by one step, +2, kept in the card's `tuning` in
  * every zone (R386), so each Radiant shot hits 2 harder than the last.
  */
@@ -310,18 +311,18 @@ function stitchingEffects(ctx: EffectContext, radiant: boolean): Effect[] {
     discoverFromCatalog({
       step: POWER_RESUME,
       query: { type: "Unit", costRange: { max: STITCHING_MAX_COST } },
-      prompt: radiant ? "Discover a Radiant Unit that costs (2) or less" : "Discover a Unit that costs (2) or less",
+      prompt: `Discover a ${radiant ? "Radiant " : ""}Unit that costs (${STITCHING_MAX_COST}) or less`,
       data: { [POWER_DATA_KEY]: "stitching", [STITCHING_PICKS_KEY]: picks },
     }),
   ];
 }
 
 /**
- * Armor Up, R603: "Your hero gains 2 Armor until your next turn" — §4.4 step 2's per-hit reduction,
+ * Armor Up, R632: "Your hero gains 2 Armor until your next turn" — §4.4 step 2's per-hit reduction,
  * held until the start of the activating player's next turn. The Radiant face, Tank Up, "Your hero
  * gains 4 Armor", names no end: the designer writes each power's Radiant face out in full (Life Tap's
  * drops its damage the same way), so its 4 is the hero's for the rest of the game, as C+ #46's Armor
- * is. It then refreshes the power into a different one (R604), whose Radiant face the card runs from
+ * is. It then refreshes the power into a different one (R633), whose Radiant face the card runs from
  * then on.
  */
 function armorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
@@ -329,10 +330,10 @@ function armorEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
   return [gainHeroArmor({ amount: ARMOR_UP.radiant }), refreshPower()];
 }
 
-/** R605: one pick for Die Insect, an enemy unit acting on the field or the enemy hero. */
+/** R634: one pick for Die Insect, an enemy unit acting on the field or the enemy hero. */
 type InsectPick = { kind: "unit"; unit: CardInstance } | { kind: "hero" };
 
-/** R605's documented Lucky ordering: a lethal hero, a destroyed Unit, then a damaged hero, then a surviving Unit. */
+/** R634's documented Lucky ordering: a lethal hero, a destroyed Unit, then a damaged hero, then a surviving Unit. */
 const INSECT_PRIORITY = {
   survives: 0,
   heroDamage: 1,
@@ -341,7 +342,7 @@ const INSECT_PRIORITY = {
 } as const;
 
 /**
- * R605: Lucky's "best" for Die Insect (§6.1: a comparator per effect). A pick the hit would finish
+ * R634: Lucky's "best" for Die Insect (§6.1: a comparator per effect). A pick the hit would finish
  * beats one it would not — the enemy hero when the hit is lethal, then a Unit it destroys — and
  * otherwise the hero, which takes the whole hit, beats a Unit that survives it. Two Units of one kind
  * are ordered as R414 orders Soul Shot's: the higher attack plus current health, then the higher
@@ -378,7 +379,7 @@ function betterInsectPick(state: GameState, enemy: PlayerId): (a: InsectPick, b:
 }
 
 /**
- * Die Insect, R605: "Deal 8 damage to a random enemy" — one pick, uniform over the enemy hero and the
+ * Die Insect, R634: "Deal 8 damage to a random enemy" — one pick, uniform over the enemy hero and the
  * enemy Units acting on the field (§3.2, R13), drawn from the match rng as the effect applies; the
  * Radiant face's "Lucky 1" draws a second pick and keeps the better (`betterInsectPick`).
  */
@@ -409,7 +410,7 @@ function insectEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * KY Brainstorm, R610: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand
+ * KY Brainstorm, R639: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand
  * by (1)" — the KY pool of every set (R380), Radiant on the Radiant face; then every Spell in the hand
  * as it stands, the card just added included, takes `costMod` −1 (an X-cost Spell, which no modifier
  * reaches, R65, is left out).
@@ -428,7 +429,7 @@ function brainstormEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * Pluck, R610: "Add a random Fruit to your hand. It costs (0)" — R382's Fruit pool, the five Grapes
+ * Pluck, R639: "Add a random Fruit to your hand. It costs (0)" — R382's Fruit pool, the five Grapes
  * included; Radiant on the Radiant face.
  */
 function pluckEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
@@ -436,7 +437,7 @@ function pluckEffects(_ctx: EffectContext, radiant: boolean): Effect[] {
 }
 
 /**
- * Terminus Tricks, R609: "Discover a Trap to summon" — 1 of 3 Traps or Field Traps of any set, shown
+ * Terminus Tricks, R638: "Discover a Trap to summon" — 1 of 3 Traps or Field Traps of any set, shown
  * only to the chooser; the pick is summoned into its controller's backrow face-down (R64's leftmost
  * open zone), Radiant on the Radiant face. With no open backrow zone the summon fails silently (§3.2).
  */
@@ -495,7 +496,7 @@ export const HERO_POWERS: readonly HeroPower[] = [
     title: "Steady Shot",
     radiantTitle: "Steady Shot",
     label: `Deal {${STEADY_SHOT_PARAM}} damage to the enemy hero`,
-    radiantLabel: `Deal {${STEADY_SHOT_PARAM}} damage to the enemy hero. Upgrade this permanently by +2 damage`,
+    radiantLabel: `Deal {${STEADY_SHOT_PARAM}} damage to the enemy hero. Upgrade this permanently by +${STEADY_SHOT_STEP_DAMAGE} damage`,
     build: burnEffects,
   },
   {
@@ -646,7 +647,7 @@ export function rollPower(args: { instanceId?: string } = {}): Effect {
 }
 
 /**
- * R604, Tank Up: "then this power refreshes into a different Radiant one" — the card rolls again,
+ * R633, Tank Up: "then this power refreshes into a different Radiant one" — the card rolls again,
  * uniformly from the match rng over the twelve powers it does not have, and runs the new one's face
  * from then on (the card is Radiant, so its Radiant face). Its use this turn is spent already: the
  * Activate count is the card's, whichever ability spent it (R384), so the new power waits for the next

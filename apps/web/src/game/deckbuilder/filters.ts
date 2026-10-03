@@ -9,6 +9,10 @@
 // bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
 // hides cards from view; it never refuses one. Filter and sort state is deliberately not persisted:
 // a filter that survived a reload could hide cards and confuse a player (and spec 09).
+//
+// The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
+// catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
+// builds none, and its tag chips are `ALMANAC_TAGS`.
 
 import {
   SHIPPED_SETS,
@@ -55,6 +59,12 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Pancake",
 ];
 
+/**
+ * The almanac's tag chips (R630): the deck builder's, then the two only tokens carry, "AI" (the ten
+ * AI tokens) and "Token", since the almanac shows tokens. Every tag a catalog card carries.
+ */
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "AI", "Token"];
+
 /** The sets a deck may draw on (R380: one format, every set), in catalog order. */
 export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;
 
@@ -89,7 +99,7 @@ export type PoolSort = { key: SortKey; dir: "asc" | "desc" };
 
 export const DEFAULT_SORT: PoolSort = { key: "cost", dir: "asc" };
 
-/** Common < Rare < Epic < Legendary < Mythic. Token sorts after them (the pool never shows one). */
+/** Common < Rare < Epic < Legendary < Mythic. Token sorts after them (only the almanac shows one). */
 const RARITY_ORDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"];
 
 const TYPE_ORDER: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
@@ -247,7 +257,23 @@ export function visiblePool(
   filter: PoolFilter,
   sort: PoolSort,
 ): readonly string[] {
-  const shelf = poolFrom(catalog, filter.ownedOnly ? collection : null);
+  return filteredAndSorted(poolFrom(catalog, filter.ownedOnly ? collection : null), catalog, filter, sort);
+}
+
+/**
+ * What the almanac's grid shows (R630): every catalog card, tokens included, filtered, then sorted.
+ * There is no collection, so `filter.ownedOnly` is not read.
+ */
+export function almanacPool(catalog: CatalogSnapshot, filter: PoolFilter, sort: PoolSort): readonly string[] {
+  return filteredAndSorted(Object.keys(catalog.cards), catalog, filter, sort);
+}
+
+function filteredAndSorted(
+  shelf: readonly string[],
+  catalog: CatalogSnapshot,
+  filter: PoolFilter,
+  sort: PoolSort,
+): readonly string[] {
   const kept = shelf.filter((id) => {
     const def = catalog.cards[id];
     return def !== undefined && matchesFilter(def, filter);

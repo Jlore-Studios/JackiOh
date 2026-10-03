@@ -2,7 +2,7 @@
 // Unit first, then destroys all Units in one state check (§4.5), then gives 1 mana this turn per token
 // counted, an Indestructible survivor's tokens included; its preview is that mana (R280); radiant:
 // after that check, each non-token Unit card that had a token and now lies in a graveyard is summoned
-// to your side under your control, its owner unchanged, into your leftmost open zones in lane order,
+// to your side under your control, becoming yours there (R12), into your leftmost open zones in lane order,
 // without a Cry; a Reborn Unit already back is not summoned again; tokens are gone (R11); a full board
 // leaves the rest; a Unit exiled instead of dying into a graveyard (C #50) is not summoned; its tuned
 // number (mana per token) reads through `param()` (R386)".

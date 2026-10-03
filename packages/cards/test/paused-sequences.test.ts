@@ -1782,7 +1782,7 @@ function intoLibrary(s: Scenario, defId: string, at: number): CardInstance {
 
 
 describe("R102, R43: a fused Heroic Power's prompted power", () => {
-  it("R102 a Heroic Power fused onto a Heroic Power pings once when its target is picked at the prompt (R43, §10.6)", () => {
+  it("R102 a Heroic Power fused onto a Heroic Power Discovers once when its prompt is answered (R43, §10.6)", () => {
     const g = scenario({
       p1: { hand: [HEROIC_POWER], library: [RENO, RENO] },
       p2: {
@@ -1800,27 +1800,32 @@ describe("R102, R43: a fused Heroic Power's prompted power", () => {
     );
     played.memory[subsystems.POWER_KEY] = "burn";
     const kept: CardInstance = must(g.backrow("p2", 2), "p2's Heroic Power");
-    kept.memory[subsystems.POWER_KEY] = "ping";
+    kept.memory[subsystems.POWER_KEY] = "discover";
 
-    // p1 plays its Heroic Power (burn, 2 to p2's hero), and p2's #85 fuses it onto p2's own.
+    // p1 plays its Heroic Power (since patch v0.2.1 a play that activates nothing, R43), and p2's #85
+    // fuses it onto p2's own.
     g.play(played, { zone: 1 });
     const fused = g.card(kept.id);
     expect(fused.defId.startsWith("t-")).toBe(true);
-    expect(subsystems.powerOf(fused)?.name).toBe("ping");
+    expect(subsystems.powerOf(fused)?.name).toBe("discover");
 
     if (g.state.active === "p1") g.endTurn();
     expect(g.state.active).toBe("p2");
     expect(g.state.phase).toBe("main");
-    const before = g.state.players.p1.hero.health;
-    // R43: one activation of the card's one power. With no target named, the ping asks (R103).
-    g.activate(fused);
-    expect(g.state.pending?.kind).toBe("target");
-    g.answer([{ pick: "hero", player: "p1" }]);
+    const hand = g.state.players.p2.hand.length;
+    // R43: Witness Value, "Discover a Unit", which asks (R103). The fused card carries both texts, so
+    // it has the one power it rolled once from each, and names which of the two this is (R102, R384).
+    expect(subsystems.abilitiesOf(g.state, fused).map((ability) => ability.id)).toEqual(["discover", "discover#2"]);
+    g.activate(fused, { ability: "discover" });
+    const pending = must(g.state.pending, "the Discover prompt");
+    expect(pending.kind).toBe("discover");
+    const option = must(pending.options[0], "a Unit on offer");
+    g.answer(option.selection.pick === "mode" ? option.selection.option : "");
 
-    // "Deal 1 damage to a target", once — as the same activation with the target named does.
-    const hits = g.lastEvents.filter((event) => event.type === "damage" && event.sourceId === fused.id);
-    expect(hits.map((event) => (event.type === "damage" ? event.amount : 0))).toEqual([1]);
-    expect(g.state.players.p1.hero.health).toBe(before - 1);
+    // The answer comes back to the first ingredient that has the step, once: one Unit, not two.
+    expect(g.state.pending).toBeNull();
+    expect(g.lastEvents.filter((event) => event.type === "addedToHand")).toHaveLength(1);
+    expect(g.state.players.p2.hand).toHaveLength(hand + 1);
   });
 });
 

@@ -660,7 +660,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(victim.zone).toEqual({ z: "graveyard", player: "p1" });
   });
 
-  it("R611 routes every later departure by a field card's current owner", () => {
+  it("R640 routes every later departure by a field card's current owner", () => {
     for (const zone of ["hand", "library", "graveyard", "exile"] as const) {
       const state = game(`r611-${zone}`);
       const victim = put(state, body.id, slot("p2", "units", 2));

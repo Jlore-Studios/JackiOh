@@ -17,8 +17,9 @@ Every issue carries at least one type label:
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. `difficult`
-(only Claude Opus works on it) and the `bot:*` labels are separate. Never add `bot:build` while
-retitling or relabelling, because it queues a build.
+(only Claude Opus works on it), `human` (no model does), `shitter` (never Opus or Astra), the
+`priority:*` labels (the bot's pickup order) and the `bot:*` labels are separate. Never add
+`bot:build` while retitling or relabelling, because it queues a build.
 
 ## Titles
 
@@ -64,7 +65,7 @@ titles, so retitle one when you accept it.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to card data goes live through
-  `pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
+  `pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
   catalog, appends the version to `patches.json` and bumps `CATALOG_VERSION` everywhere it lives
   (`packages/cards/README.md` §8), and the next deploy reseeds the database. The PR that runs it is
   the last part, and the patch is live when that PR merges. A patch with no card data change is

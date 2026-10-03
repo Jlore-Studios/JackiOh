@@ -378,24 +378,24 @@ describe("C+ #35 Rollback — base: both sides", () => {
     ]);
   });
 
-  it("R419 step 2: a card that left for the opponent's hand comes back out of it", () => {
+  it("R419 step 2: a card that left the field for a hand comes back out of it", () => {
     const s = onTurn11({ p1: { hand: [ROLLBACK, MIND_CONTROL], field: [VANILLA] }, p2: { hand: [FLOOD], field: [TIMMY] } });
     const vanilla = s.unit("p1", 1)!;
     const timmy = s.unit("p2", 1)!;
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     s.endTurn(); // turn 12's snapshot holds Timmy on p1's side
-    s.play(FLOOD); // back to its owner, p2; the turn has nothing left (R82)
+    s.play(FLOOD); // back to its current owner, p1, since the steal (R640); the turn has nothing left (R82)
     s.expectInZone(timmy, "hand");
-    expect(s.hand("p2").map((card) => card.id)).toContain(timmy.id);
+    expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
     expect(s.state.turn).toBe(13);
 
     s.play(ROLLBACK, { modes: ["1"] });
     expect(s.unit("p1", 1)?.id).toBe(vanilla.id);
     expect(s.unit("p1", 2)?.id).toBe(timmy.id);
-    expect(s.hand("p2").map((card) => card.id)).not.toContain(timmy.id);
-    expect(s.card(timmy)).toMatchObject({ controller: "p1", owner: "p2" });
-    // It is public on the field again, so both views name it.
-    expect(ofType(s.view("p2").events, "controlChanged").map((event) => event.instanceId)).toContain(timmy.id);
+    expect(s.hand("p1").map((card) => card.id)).not.toContain(timmy.id);
+    expect(s.card(timmy)).toMatchObject({ controller: "p1", owner: "p1" });
+    // It is public on the field again, so the other seat's view names it there.
+    expect(s.view("p2").opponent.units.flatMap((pile) => (pile === null ? [] : [pile.instanceId]))).toContain(timmy.id);
   });
 
   it("R419 step 2: a card transformed since is recreated as it was, and what replaced it leaves (R35)", () => {
@@ -642,8 +642,10 @@ describe("C+ #35 Rollback — Radiant: your side, your opponent's or both", () =
     s.play(MIND_CONTROL, { targets: target(timmy.id) });
     toTurn13(s);
     s.play(ROLLBACK, { modes: ["2", "your side"] });
-    // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its owner's hand.
-    expect(s.hand("p2").map((card) => card.id)).toContain(timmy.id);
+    // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its owner's hand,
+    // p1's since the steal (R640).
+    expect(s.hand("p1").map((card) => card.id)).toContain(timmy.id);
+    expect(s.hand("p2").map((card) => card.id)).not.toContain(timmy.id);
   });
 });
 

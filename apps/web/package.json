@@ -11,7 +11,8 @@
     "build:e2e": "vite build --mode development",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "gen:voice": "node scripts/gen-voice.mjs"
+    "gen:voice": "node scripts/gen-voice.mjs",
+    "gen:music": "node scripts/gen-music.mjs"
   },
   "dependencies": {
     "@jackioh/ai": "workspace:*",

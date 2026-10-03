@@ -9,8 +9,8 @@
 
 import { useSyncExternalStore } from "react";
 
-import { AUDIO_SETTINGS_KEY } from "./constants.ts";
-import type { AudioSettings } from "./types.ts";
+import { AUDIO_SETTINGS_KEY, MUSIC_STATIONS } from "./constants.ts";
+import type { AudioSettings, MusicStation } from "./types.ts";
 
 export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   master: 0.8,
@@ -18,6 +18,11 @@ export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   voice: 1,
   muted: false,
   voiceOn: true,
+  music: 0.5,
+  station: "tavern",
+  dynamicMusic: true,
+  duckMusic: true,
+  pauseMusicOnBlur: true,
 });
 
 function level(value: unknown, fallback: number): number {
@@ -29,8 +34,14 @@ function flag(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function station(value: unknown, fallback: MusicStation): MusicStation {
+  return MUSIC_STATIONS.find((s) => s === value) ?? fallback;
+}
+
 /** Total: any input → valid settings. Each field independently: a finite number is clamped to [0,1],
- *  anything else takes the default; a boolean field that is not a boolean takes the default. */
+ *  anything else takes the default; a boolean field that is not a boolean takes the default, and a
+ *  station that is not one of MUSIC_STATIONS takes the default. Settings saved before the music
+ *  existed read with the music's defaults. */
 export function parseAudioSettings(raw: unknown): AudioSettings {
   const o: Record<string, unknown> =
     typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
@@ -40,6 +51,11 @@ export function parseAudioSettings(raw: unknown): AudioSettings {
     voice: level(o.voice, DEFAULT_AUDIO_SETTINGS.voice),
     muted: flag(o.muted, DEFAULT_AUDIO_SETTINGS.muted),
     voiceOn: flag(o.voiceOn, DEFAULT_AUDIO_SETTINGS.voiceOn),
+    music: level(o.music, DEFAULT_AUDIO_SETTINGS.music),
+    station: station(o.station, DEFAULT_AUDIO_SETTINGS.station),
+    dynamicMusic: flag(o.dynamicMusic, DEFAULT_AUDIO_SETTINGS.dynamicMusic),
+    duckMusic: flag(o.duckMusic, DEFAULT_AUDIO_SETTINGS.duckMusic),
+    pauseMusicOnBlur: flag(o.pauseMusicOnBlur, DEFAULT_AUDIO_SETTINGS.pauseMusicOnBlur),
   };
 }
 

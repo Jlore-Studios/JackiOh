@@ -1,7 +1,7 @@
 // Activate abilities in the AI's search (docs/classic-sets.md B3.2, R384). `candidateActions` puts an
-// `activate` in the same tier as a play and Heroic Power's `activatePower` (R43), round-robin by source
-// instance and ordered by the ability's mana price, so the beam and the lethal solver try abilities as
-// early as plays. Activate N and ♾️ need nothing of their own: the AI re-plans after every action, so a
+// `activate` (Heroic Power's power among them since patch v0.2.1, R43) in the same tier as a play,
+// round-robin by source instance and ordered by the ability's mana price, so the beam and the lethal
+// solver try abilities as early as plays. Activate N and ♾️ need nothing of their own: the AI re-plans after every action, so a
 // second use is simply the next decision's candidate. Every board below is built from the real Classic
 // cards (`packages/cards/src/scripts/classic/`); one test-only card carries a mana price, which no
 // Classic ability has yet.
@@ -164,7 +164,7 @@ describe("B3.2: activations are first-class candidates", () => {
   });
 });
 
-describe("B3.2 rule 10: Heroic Power's activatePower is decided as before", () => {
+describe("B3.2 rule 10: Heroic Power's power is decided as any Activate ability (patch v0.2.1)", () => {
   function heroicBoard(seed: string, p2Health: number): GameState {
     const s = scenario({
       seed,
@@ -178,23 +178,24 @@ describe("B3.2 rule 10: Heroic Power's activatePower is decided as before", () =
     return s.state;
   }
 
-  it("R43 activatePower is listed in the plays' tier and is the lethal when it is one", { timeout: PUZZLE_TIMEOUT }, () => {
+  it("R43 R384 the power's activate is listed in the plays' tier and is the lethal when it is one", { timeout: PUZZLE_TIMEOUT }, () => {
     const state = heroicBoard("activate-heroic", 2);
     const power = state.players.p1.backrow[0];
     const reno = state.players.p1.hand[0];
     if (power === null || power === undefined || reno === undefined) throw new Error("setup");
-    const alias: ActionBody = { type: "activatePower", instanceId: power.id };
+    const activation: ActionBody = { type: "activate", instanceId: power.id, ability: "burn" };
     // Round-robin as ever: Reno's first lane (3), the power (its X, 1), Reno's second lane.
     const candidates = candidateActions(state, AI);
     expect(candidates.slice(0, 3).map(sourceOf)).toEqual([reno.id, power.id, reno.id]);
-    expect(actionKey(candidates[1] as ActionBody)).toBe(actionKey(alias));
-    // No `activate` for #98 in v0.2.0: its power is reached by the alias alone (reduce.ts).
-    expect(candidates.some((action) => action.type === "activate")).toBe(false);
+    expect(actionKey(candidates[1] as ActionBody)).toBe(actionKey(activation));
+    // Since patch v0.2.1 the power is the card's one Activate ability (R43); `activatePower` is the
+    // name old logs carry, never listed (R384).
+    expect(candidates.some((action) => action.type === "activatePower")).toBe(false);
 
     // The solver's first lethal may play Reno first; the power is in it either way, and legal now.
     const decision = decide(state, AI, { rng: createRng("activate-heroic") });
     expect(decision?.reason).toBe("lethal");
-    expect(decision?.line.map(actionKey)).toContain(actionKey(alias));
-    expect(isLegal(state, AI, alias)).toBe(true);
+    expect(decision?.line.map(actionKey)).toContain(actionKey(activation));
+    expect(isLegal(state, AI, activation)).toBe(true);
   });
 });

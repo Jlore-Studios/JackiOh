@@ -56,7 +56,7 @@ describe("E24 the cards beneath a Stack become copies of its top (Classic+ #4)",
     const state = start.state;
     const [bottom, middle] = pile(state, [fuseA.id, body.id], "p2");
     // The bottom card came from the opponent onto p1's lane long ago, which made p1 its current
-    // owner (R611): the copy keeps that owner.
+    // owner (R640): the copy keeps that owner.
     const bottomCard = must(bottom, "the bottom card");
     expect(bottomCard.owner).toBe("p1");
     const middleCard = must(middle, "the middle card");

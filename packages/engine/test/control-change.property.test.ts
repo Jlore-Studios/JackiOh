@@ -10,7 +10,7 @@
 //   P1 bookkeeping: a card that got a `controlChanged` and is still on the field took this turn and
 //      a fresh exertion; every other card on the field kept exactly what it started with; a card's
 //      controller only changes with a `controlChanged`; a card's current owner is always the player
-//      whose side or pile holds it, so it changes only with a `controlChanged` (R12, R611).
+//      whose side or pile holds it, so it changes only with a `controlChanged` (R12, R640).
 //   P2 the §6.1 oracle: a unit that crossed, or started the turn freshly entered, is sick, so with
 //      neither Rush nor Charge it has no target and without Charge it cannot aim at the hero; one
 //      that crossed with Charge and nothing else stopping it has a target (the fresh exertion).
@@ -201,7 +201,7 @@ function run({ board, verbs }: Case): { state: GameState; start: Map<string, Sna
 // ---------------------------------------------------------------------------
 
 describe("R171 over random boards and random control changes (fast-check)", () => {
-  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and its current owner follows its side (R611)", () => {
+  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and its current owner follows its side (R640)", () => {
     fc.assert(
       fc.property(caseArb, (sample) => {
         const { state, start, crossed } = run(sample);

@@ -83,7 +83,8 @@ describe("C+ #4 Juhan Biggest Bat", () => {
 
       const copy = beneathAt(s.state, { player: "p1", row: "units", lane: lane.lane })[0];
       expect(copy?.defId).toBe(JUHAN);
-      expect(copy?.owner).toBe("p2");
+      // The stolen Vanilla has been p1's since the steal (R640), and its copy is too.
+      expect(copy?.owner).toBe("p1");
       expect(copy?.controller).toBe("p1");
     });
 

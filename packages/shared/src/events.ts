@@ -101,8 +101,8 @@ export type GameEvent =
       defId: string;
       owner: PlayerId;
       /**
-       * The player who controlled it as it died. R172: a stolen unit dies as its controller's, though
-       * it goes to its owner's graveyard — Classic #14 Shadowstep's "your Units" reads this.
+       * The player who controlled it as it died. R172: a stolen unit dies as its controller's, who is
+       * its current owner too since patch v0.2.1 (R640) — Classic #14 Shadowstep's "your Units" reads this.
        */
       controller: PlayerId;
       attack: number;

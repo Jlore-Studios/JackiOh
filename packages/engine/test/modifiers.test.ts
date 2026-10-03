@@ -515,7 +515,7 @@ describe("delayed effects (§10.1, R62, R68)", () => {
     expect(state.turn).toBe(3);
     const stolen = state.players.p1.units[0]?.[0];
     expect(stolen?.id).toBe(prize.id);
-    // R611: control moved, and current ownership with it.
+    // R640: control moved, and current ownership with it.
     expect(stolen?.controller).toBe("p1");
     expect(stolen?.owner).toBe("p1");
     expect(state.players.p2.units[0]).toBeNull();

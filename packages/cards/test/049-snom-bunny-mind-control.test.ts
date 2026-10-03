@@ -44,9 +44,9 @@ describe("#49 Snom Bunny Mind Control", () => {
 
     expect(g.unit("p1", 3)?.id).toBe(prey.id);
     expect(g.unit("p2", 3)).toBeNull();
-    // R12: control is a field-only notion; ownership never moves.
+    // R12, R640: the thief is its controller and its current owner.
     expect(g.card(prey).controller).toBe("p1");
-    expect(g.card(prey).owner).toBe("p2");
+    expect(g.card(prey).owner).toBe("p1");
     g.expectEvents("cardPlayed", "controlChanged", "enteredGraveyard");
     // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
     g.expectMana("p1", 0);
@@ -108,7 +108,7 @@ describe("#49 Snom Bunny Mind Control", () => {
     expect(g.backrow("p1", 2)?.id).toBe(trap.id);
     expect(g.backrow("p2", 2)).toBeNull();
     expect(g.card(trap).controller).toBe("p1");
-    expect(g.card(trap).owner).toBe("p2");
+    expect(g.card(trap).owner).toBe("p1");
     // R33: `faceUp` is untouched — who may READ it follows the controller, in `viewFor`.
     expect(g.card(trap).faceUp).not.toBe(true);
   });

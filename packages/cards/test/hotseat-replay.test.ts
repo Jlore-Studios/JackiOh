@@ -111,8 +111,13 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * C+ #35 Rollback's history (R419) moved it once more and not the game: every turn's start now records
  * the field in `state.boardHistory`. The same fold with that field deleted hashes to "2d6aab2a", the
  * value before it.
+ *
+ * Patch v0.2.1 moved it and not the game: the state and every instance record the catalog version
+ * their scripts are pinned to (`catalogVersion`, R388), so a match an older patch began replays on
+ * that patch's scripts. The same fold with that field deleted everywhere hashes to "a798906b", the
+ * value before it; the decks hold no #98 and no card that changes control.
  */
-const EXPECTED_HASH = "a798906b";
+const EXPECTED_HASH = "a501d067";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;

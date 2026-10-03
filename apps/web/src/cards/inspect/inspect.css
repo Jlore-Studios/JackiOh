@@ -128,7 +128,7 @@
   margin: 0 auto;
 }
 
-.inspect-refs-more {
+.inspect-refs-position {
   margin: 6px 0 0;
   color: var(--text-dim, #9aa1b8);
   font-size: 11px;
@@ -308,8 +308,10 @@
   gap: 8px;
 }
 
+/* A horizontal swipe pages the faces (CardDetail.tsx); a vertical one still scrolls the dialog. */
 .inspect-detail-faces {
   width: 100%;
+  touch-action: pan-y;
 }
 
 .inspect-detail-face {

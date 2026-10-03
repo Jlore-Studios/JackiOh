@@ -87,12 +87,15 @@ function sideMana(view: PlayerView, player: PlayerId): number {
 
 /**
  * `card` is the public catalog (`useGameAudio` reads the board's `CatalogContext`), asked only for
- * a defId the viewer can read; without it every card makes its type's plain sounds.
+ * a defId the viewer can read; without it every card makes its type's plain sounds. `observe` hears
+ * every event as it is resolved, with the view it was planned against, in the same step as its cues:
+ * the music director's casts and hero hits (R631).
  */
 export function createSoundDirector(
   sink: SoundSink,
   lines: VoiceLineTable = VOICE_LINES,
   card?: (defId: string) => CueCard | undefined,
+  observe?: (event: GameEvent, view: PlayerView) => void,
 ): SoundDirector {
   let seen: PlayerView | null = null;
   let owed: Owed[] = [];
@@ -167,6 +170,7 @@ export function createSoundDirector(
     if (event.type === "manaChanged") lastMana.set(event.player, event.current);
     if (event.type === "cardPlayed" && event.instanceId !== HIDDEN_DEF_ID) played.add(event.instanceId);
     follow(event, cast !== null);
+    observe?.(event, view);
     return cues;
   }
 

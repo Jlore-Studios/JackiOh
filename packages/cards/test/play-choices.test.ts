@@ -61,7 +61,7 @@ function playsOf(state: GameState, card: CardInstance): PlayAction[] {
 }
 
 describe("R43, R151: a Heroic Power created on the field rolls its power", () => {
-  it("R151 a Heroic Power #95 Call to Chaos summons straight into the backrow rolls a power, so activatePower is offered and accepted for it (R43)", () => {
+  it("R151 a Heroic Power #95 Call to Chaos summons straight into the backrow rolls a power, so its power's activate is offered and accepted for it (R43)", () => {
     // R43: "one created later rolls when it is created"; R151: it rolls "as it arrives anywhere a
     // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
     // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
@@ -99,15 +99,23 @@ describe("R43, R151: a Heroic Power created on the field rolls its power", () =>
     // Each one rolled its power as it arrived (R151).
     for (const power of powers) expect(typeof power.memory[subsystems.POWER_KEY]).toBe("string");
 
+    // Since patch v0.2.1 the power is the card's one Activate ability, named by the power it rolled
+    // (R43, R384).
     const offered = legalActions(g.state, "p1")
-      .filter((action) => action.type === "activatePower")
-      .map((action) => (action.type === "activatePower" ? action.instanceId : ""));
+      .filter((action) => action.type === "activate")
+      .map((action) => (action.type === "activate" ? action.instanceId : ""));
     const affordable = powers.filter((power) => subsystems.powerCostOf(power) <= g.state.players.p1.mana.current);
     expect(affordable.length).toBeGreaterThanOrEqual(1);
     expect(offered.sort()).toEqual(expect.arrayContaining(affordable.map((power) => power.id)));
 
     const first = must(affordable[0], "an affordable power");
-    const used = act(g.state, { type: "activatePower", playerId: "p1", instanceId: first.id });
+    const listed = must(
+      legalActions(g.state, "p1").find((action) => action.type === "activate" && action.instanceId === first.id),
+      "the power's listed activation",
+    );
+    if (listed.type !== "activate") throw new Error("not an activation");
+    expect(listed.ability).toBe(subsystems.powerOf(first)?.name);
+    const used = act(g.state, { ...listed, playerId: "p1" });
     expect(used.error).toBeUndefined();
   });
 });

@@ -186,7 +186,7 @@ describe("destroy (§6.3, M3-T1)", () => {
     expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
   });
 
-  it("R611 a unit placed on the other side, destroyed, goes to its current owner's graveyard", () => {
+  it("R640 a unit placed on the other side, destroyed, goes to its current owner's graveyard", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
@@ -312,7 +312,7 @@ describe("sacrifice (§6.3, M3-T1)", () => {
     expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
   });
 
-  it("R611 a sacrificed unit placed on the other side goes to its current owner's graveyard", () => {
+  it("R640 a sacrificed unit placed on the other side goes to its current owner's graveyard", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);

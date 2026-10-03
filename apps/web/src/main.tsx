@@ -91,6 +91,7 @@ const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
+const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -400,6 +401,8 @@ function screenNameFor(path: string): string | null {
       return "Privacy";
     case paths.patchNotes:
       return "Patch notes";
+    case paths.almanac:
+      return "Almanac";
     case paths.hotseat:
       return DEV_ONLY ? "Hotseat" : null;
   }
@@ -490,6 +493,8 @@ export function App(): ReactElement {
     if (path === paths.privacy) return <PrivacyRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) return <PatchNotesRoute />;
+    // R630: the Card Almanac is public, like the catalog it shows.
+    if (path === paths.almanac) return <AlmanacRoute />;
 
     const matchId = matchIdOf(path);
     if (matchId !== null) {

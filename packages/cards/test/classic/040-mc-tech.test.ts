@@ -56,8 +56,9 @@ describe("C #40 MC Tech", () => {
       const stolen = stolenIds(s);
       expect(stolen).toHaveLength(1);
       const card = s.card(stolen[0] ?? "");
+      // R640: "which is now yours" — its controller and current owner.
       expect(card.controller).toBe("p1");
-      expect(card.owner).toBe("p2");
+      expect(card.owner).toBe("p1");
     });
 
     it("R15 a stolen Unit lands in the same lane of your row when it is free", () => {

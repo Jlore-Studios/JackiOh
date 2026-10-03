@@ -36,7 +36,9 @@ src/
                         differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
+                        "Mentions" panel, one named card at a time, is inspect/References.tsx, and the
+                        detail view pages its faces and named cards one at a time, issue #37), and
+                        "{n}" values (R280). A card's marks
                         (R437, #50's pending steal) are read through marks.ts (`marksOf`, `markEventOf`, the
                         colour key → palette and mark → words tables) and drawn by CardMarks.tsx (marks.css):
                         a corruption aura in the mark's colours and a badge with its words, still under
@@ -105,6 +107,10 @@ src/
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
     voice-lines.json voice-manifest.json     every card's lines and personas; the generated hash and size of each file
+    music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
+    musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
+    musicData.ts music-manifest.json         the rendered tracks (loop points, tempo) and music-cards.json, the
+    music-cards.json                         Mythic themes and station switches by card id
   fx/                   the effects layer (docs/polish/1-animations.md; SPEC §10.10, R200–R202)
     types.ts constants.ts   the cue contract and every FX number
     settings.ts         effects speed, intensity and motion (localStorage, jackioh.fx.v1)
@@ -130,11 +136,16 @@ src/
   routes/dev/hotseat.tsx  the dev hotseat route
   routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
                         R388, R507); the site footer (routes/SiteFooter.tsx) links it
+  routes/almanac.tsx    /almanac: the public Card Almanac (R630), every card with tokens, read-only through
+                        the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
+                        catalog, no API call; the site footer links it beside Patch notes
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
 scripts/
   gen-voice.mjs         renders voice-lines.json to public/audio/voice/<card-id>-<play|death|cast>.m4a
+  gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
+  music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
 ```
 
 ## Three flows at the table
@@ -209,9 +220,9 @@ otherwise it is greyed and its tooltip gives the view's `reason`. A press report
 `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
 listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
-in the inline picker. Heroic Power is built the same way: `power` (the first power) and
-`power-<instanceId>` (any further one) report the power's activation, whichever of `activatePower`
-or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
+in the inline picker. Heroic Power is built the same way from the hero panel, its only control (its
+card wears none): `power` (the first power) and `power-<instanceId>` (any further one, drawn as its
+crest alone) report the power's activation, whichever of `activatePower` or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
 reduced motion) while the `activated` row plays on its card.
 
 **A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting
@@ -247,7 +258,8 @@ queue, and the server's refusal, when it comes, is shown in its own words (rule 
 ```
 routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser, the trio editor that marks every card two of its decks share (R251),
+                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
+                        the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
@@ -369,6 +381,30 @@ src/tutorial/
   one Show tutorial button in its place; focus moves to the button that undoes the press. The choice
   is stored with the progress, so it holds on the next visit and on the account; a finished path
   folds to its header by itself and offers no Hide.
+
+## Regenerating the music
+
+The music is composed as code (R631): `scripts/music/tracks.mjs` holds every track's score, built
+on the toolkit in `compose.mjs` and `theory.mjs`. That means keys, tempos, progressions,
+arrangements, and melodies on one shared motif. `scripts/gen-music.mjs` turns each score into MIDI,
+renders it with FluidSynth and the FluidR3 GM SoundFont, and encodes it with ffmpeg to stereo AAC at
+44.1 kHz and 80 kbps. The tracks are committed with `src/audio/music-manifest.json`, so CI never
+renders. After editing a score, run `pnpm --filter @jackioh/web gen:music` on a machine with
+`fluidsynth`, `ffmpeg` and the SoundFont (Debian or Ubuntu: `apt install fluidsynth
+fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
+
+- It renders only the tracks whose input hash changed: the MIDI, the render and post settings, and
+  the encoding.
+- It deletes orphan files, rewrites the manifest, and fails if the set passes `MUSIC_BUDGET_BYTES`.
+- `--only <id>` renders one track, and `--force` renders everything.
+- A looping track's file holds its intro, one pass of the body, and a short tail. The loop points
+  live in the manifest. The renderer crossfades into the audio before the loop's start, ending 0.1 s
+  before the loop's end, and copies the loop's start from there to the file's end. So the jump is
+  sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
+- `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
+  `music-assets.test.ts` calls.
+- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme or a station switch is
+  an entry in `src/audio/music-cards.json`, and the music system needs no change for it.
 
 ## Regenerating the voice lines
 

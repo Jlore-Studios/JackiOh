@@ -603,20 +603,18 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
       if (handle.seat !== "p1") cy.handOver();
     });
 
-    // #98: one power, the one it rolled, with its X on the gem and in the text; not the eight.
-    cy.get(`${inHand("core-098")} .cost-gem`)
+    // #98 (patch v0.2.1): the card costs (0), and prints one power, the one it rolled, as its Activate
+    // ability with that power's own X; not the thirteen.
+    cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
+    cy.get(`${inHand("core-098")} .card-text`)
       .invoke("text")
-      .then((gem) => {
-        expect(gem, "the gem shows the rolled power's X, not X").to.match(/^\d+$/);
-        cy.get(`${inHand("core-098")} .card-text`)
-          .should("contain.text", `Once per turn, spend ${gem}:`)
-          .and("not.contain.text", "8 random powers");
-      });
+      .should("match", /Activate: Spend \(\d\): /)
+      .and("not.contain", "13 random powers");
     // Its hover preview holds the printed card beside it, in a real layout: visible, on screen.
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "Gain one of 8 random powers");
+      .and("contain.text", "Gain one of 13 random powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 

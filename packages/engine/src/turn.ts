@@ -297,7 +297,7 @@ export function startTurn(sink: EngineSink, player: PlayerId): void {
   resetExertion(sink, player);
 
   sink.events.push({ type: "turnStarted", player, turn: state.turn });
-  // R603: "until your next turn" ends as the turn begins (#98's Armor Up).
+  // R632: "until your next turn" ends as the turn begins (#98's Armor Up).
   expireAtTurnStart(sink, player);
   const rider = side.mana.nextTurnMod;
   refreshMana(side);

@@ -67,7 +67,7 @@ describe("#52 Silly Silas — base, rotating right", () => {
     s.expectEvents("cardPlayed", "rotated", "controlChanged");
   });
 
-  it("R12 a card that crosses the centre line changes controller and never owner", () => {
+  it("R12 R640 a card that crosses the centre line changes controller, and its current owner with it", () => {
     const s = scenario({
       p1: { hand: ["core-052"], field: [{ def: "core-053", lane: 5 }] },
       p2: { field: [{ def: "core-t-felinor", lane: 1 }] },
@@ -78,9 +78,9 @@ describe("#52 Silly Silas — base, rotating right", () => {
     s.play("core-052", { zone: 1, modes: ["right"] });
 
     expect(s.card(reno).controller).toBe("p2");
-    expect(s.card(reno).owner).toBe("p1");
+    expect(s.card(reno).owner).toBe("p2");
     expect(s.card(felinor).controller).toBe("p1");
-    expect(s.card(felinor).owner).toBe("p2");
+    expect(s.card(felinor).owner).toBe("p1");
     // Silas did not cross, so nothing about him changed but the lane.
     expect(s.card("core-052").controller).toBe("p1");
   });
@@ -112,7 +112,7 @@ describe("#52 Silly Silas — base, rotating right", () => {
     // Identity follows `controller` and nothing else, so the flip is not a flip: `faceUp` is
     // untouched and p1 now sees the card because p1 controls it.
     expect(s.card(stimmy).controller).toBe("p1");
-    expect(s.card(stimmy).owner).toBe("p2");
+    expect(s.card(stimmy).owner).toBe("p1");
     expect(s.card(stimmy).faceUp).not.toBe(true);
     expect(slotOf(s.card(stimmy))).toBe("p1 backrow 1");
   });
@@ -207,10 +207,10 @@ describe("#52 Silly Silas — radiant", () => {
     expect(s.card(reno).costOverride).toBe(0);
     // Midrange Menace moves from p2's lane 1 to p1's — to Silas's controller, not to the opponent —
     // so the radiant clause leaves it alone and the base clause holds: it crosses and changes
-    // control, still owned by p2 and at its printed cost (§8 Conventions, R14, R171).
+    // control and current owner, at its printed cost (§8 Conventions, R14, R171, R640).
     expect(unitAt(s, "p1", 1).id).toBe(menace);
     expect(s.card(menace).controller).toBe("p1");
-    expect(s.card(menace).owner).toBe("p2");
+    expect(s.card(menace).owner).toBe("p1");
     expect(s.card(menace).costOverride).toBeUndefined();
     expect(s.lastEvents.filter((event) => event.type === "controlChanged").map((event) => event.instanceId)).toEqual([
       menace,

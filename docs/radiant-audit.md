@@ -462,10 +462,10 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 
 Patch v0.2.1 changed one card's rules: #98 Heroic Power now costs (0), and its eight powers became
 thirteen Activate abilities, each "Activate: Spend (X)", whose base and Radiant faces the designer
-wrote (SPEC §8 #98, R603–R610). Its row above is re-audited and still meets R275: each Radiant power
+wrote (SPEC §8 #98, R632–R639). Its row above is re-audited and still meets R275: each Radiant power
 doubles its number or adds Radiant, a second card or a rider. Expedition Map, Ranching, Witness
 Value, Stitching, KY Brainstorm, Pluck and Terminus Tricks make what they make Radiant; Life Tap
 draws a second card, from the opponent's deck, and takes no damage; Steady Shot deals 4 and grows by
-2 a shot (R608); Cat Cafe summons a random Felinor Unit in place of the 1/1 token; Ping adds a Ghoul
-for a kill (R606); Armor Up's 2 until the next turn becomes Tank Up's 4 for the game, then a new power
-(R603, R604); Die Insect gains Lucky 1 (R605). The designer's word stands for each.
+2 a shot (R637); Cat Cafe summons a random Felinor Unit in place of the 1/1 token; Ping adds a Ghoul
+for a kill (R635); Armor Up's 2 until the next turn becomes Tank Up's 4 for the game, then a new power
+(R632, R633); Die Insect gains Lucky 1 (R634). The designer's word stands for each.

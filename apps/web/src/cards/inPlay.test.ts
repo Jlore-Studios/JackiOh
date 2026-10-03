@@ -75,7 +75,7 @@ describe("#98 Heroic Power's rolled power, in words", () => {
     expect(powerLine({ name: "armor", x: 1 }, true)).toBe("Activate: Spend (1): Tank Up: Your hero gains 4 Armor. Refresh this power.");
   });
 
-  it("R608 Steady Shot's {shot} is filled from the view's number, else the printed one, and never shows raw", () => {
+  it("R637 Steady Shot's {shot} is filled from the view's number, else the printed one, and never shows raw", () => {
     const line = powerLine({ name: "burn", x: 1 }, true) ?? "";
     expect(line).toContain("{shot}");
     expect(fillPowerParams(line, true, heroic().params, { shot: 8 })).toBe(

@@ -1110,18 +1110,37 @@
 
 /* --- positionSwitched: rotate 90 deg / back (250 ms) --------------------------------- */
 
+/* Both ends are the card's resting transforms (Card.tsx: ATK has none, DEF is
+   `rotate(90deg) scale(0.72)`). While this plays the board draws the card in the pose it turns
+   from, so its own `data-position` is where it starts: ATK turns into DEF, DEF back to ATK. Once the
+   entry ends the board draws it in the pose it turned to for the rest of the burst
+   (`withSwitchPoses`, Game.tsx), which is the last frame, so nothing moves again. */
 @keyframes jk-rotate-def {
   0% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(1);
   }
   100% {
-    transform: rotate(90deg);
+    transform: rotate(90deg) scale(0.72);
+  }
+}
+
+@keyframes jk-rotate-atk {
+  0% {
+    transform: rotate(90deg) scale(0.72);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
   }
 }
 
 [data-animating="positionSwitched"] {
   animation-name: jk-rotate-def;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-animating="positionSwitched"][data-position="DEF"] {
+  animation-name: jk-rotate-atk;
 }
 
 /* --- controlChanged: card slides across the centre line (450 ms) --------------------- */
@@ -1372,9 +1391,13 @@
   animation-duration: calc(150ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
-[data-animating="promptAnswered"] {
+/* The modal stays gone once it has faded: Game takes it down as the next entry starts, and `forwards`
+   covers the frame between. Its scrim goes with it rather than waiting for that (#37). */
+[data-animating="promptAnswered"],
+.prompt-scrim:has([data-animating="promptAnswered"]) {
   animation-name: jk-fade-out;
   animation-duration: calc(150ms * var(--anim-scale) * var(--anim-squeeze, 1));
+  animation-fill-mode: forwards;
 }
 
 /* --- drawOffered / drawAnswered: the offer toast (150 ms / 300 ms) ------------------- */

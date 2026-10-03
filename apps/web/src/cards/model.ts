@@ -407,7 +407,7 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
  * R43: a #98 Heroic Power's rules box in play — its keyword line, then the one power it rolled as the
  * catalog prints it (inPlay.ts `powerText`). Its `{key}`s are filled as every face's are (B3.4 rule
  * 5): with the numbers the view gives the card, a moved one marked where it stands (`tuned`, R386:
- * Radiant Steady Shot's Upgraded `{shot}`, R608). A Radiant power is marked against the same power's
+ * Radiant Steady Shot's Upgraded `{shot}`, R637). A Radiant power is marked against the same power's
  * base words as printed (R277). Null for a power the table does not know.
  */
 function powerInPlay(

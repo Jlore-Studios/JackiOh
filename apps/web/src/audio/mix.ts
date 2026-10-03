@@ -1,7 +1,11 @@
 // The mix bus (docs/polish/2-sound.md, "engine.ts"; B4, B51): the graph every cue plays through.
 //
-//   per-cue gain ─▶ sfx bus ──┐
-//   persona gain ─▶ voice bus ┴─▶ master ─▶ limiter ─▶ destination
+//   per-cue gain ─▶ sfx bus ──────────────────┐
+//   persona gain ─▶ voice bus ────────────────┤
+//   music player ─▶ music bus ─▶ music duck ──┴─▶ master ─▶ limiter ─▶ destination
+//
+// The music bus carries the music volume (R631); the duck under it is the engine's, which dips it
+// under a voice line or an important effect while `duckMusic` is on.
 //
 // The limiter is a DynamicsCompressor set as a peak catcher for the sum: a hard knee at LIMITER's
 // threshold, so a lone sound passes through at one fixed gain and only a pile-up (a board wipe's
@@ -23,11 +27,18 @@ import type { AudioSettings } from "./types.ts";
 /** The master limiter: catches a board wipe's pile-up before it clips, and leaves a lone cue alone. */
 export const LIMITER = { thresholdDb: -6, kneeDb: 0, ratio: 20, attackS: 0.003, releaseS: 0.25 } as const;
 
-export type Mix = { master: GainNode; sfx: GainNode; voice: GainNode; limiter: DynamicsCompressorNode };
+export type Mix = {
+  master: GainNode;
+  sfx: GainNode;
+  voice: GainNode;
+  music: GainNode;
+  musicDuck: GainNode;
+  limiter: DynamicsCompressorNode;
+};
 
 /** Bus levels for a settings value: mute silences master, and voice lines off silence the voice bus. */
-export function mixLevels(s: AudioSettings): { master: number; sfx: number; voice: number } {
-  return { master: s.muted ? 0 : s.master, sfx: s.sfx, voice: s.voiceOn ? s.voice : 0 };
+export function mixLevels(s: AudioSettings): { master: number; sfx: number; voice: number; music: number } {
+  return { master: s.muted ? 0 : s.master, sfx: s.sfx, voice: s.voiceOn ? s.voice : 0, music: s.music };
 }
 
 /** Builds the buses and the limiter into `ctx.destination`, at `settings`' levels. */
@@ -35,6 +46,8 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   const master = ctx.createGain();
   const sfx = ctx.createGain();
   const voice = ctx.createGain();
+  const music = ctx.createGain();
+  const musicDuck = ctx.createGain();
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = LIMITER.thresholdDb;
   limiter.knee.value = LIMITER.kneeDb;
@@ -43,11 +56,14 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   limiter.release.value = LIMITER.releaseS;
   sfx.connect(master);
   voice.connect(master);
+  music.connect(musicDuck);
+  musicDuck.connect(master);
   master.connect(limiter);
   limiter.connect(ctx.destination);
   const levels = mixLevels(settings);
   master.gain.value = levels.master;
   sfx.gain.value = levels.sfx;
   voice.gain.value = levels.voice;
-  return { master, sfx, voice, limiter };
+  music.gain.value = levels.music;
+  return { master, sfx, voice, music, musicDuck, limiter };
 }

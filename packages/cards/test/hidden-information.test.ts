@@ -90,6 +90,8 @@ const GIFTED = "core-064";
 const SORCERER = "core-068";
 const MASK = "core-065";
 const HONEYPOT = "core-060";
+/** C #60 Pile On, a (5) Spell: "Recruit every permanent in your deck". */
+const PILE_ON = "classic-060";
 const CALL_TO_ARMS = "core-069";
 const MOTHS = "core-009";
 const BLOOD_RIDDEN = "core-027";
@@ -1044,16 +1046,16 @@ describe("R177: #23's chance on a hidden hand", () => {
 
 describe("R119: the arrivals a play's cardResolved names stay the engine's", () => {
   it("R119 cardResolved's arrivedDuring, which can name a face-down trap the play's Recruit set, reaches neither seat's view (§9.1, §10.8, R33, R97)", () => {
+    // C #60 Pile On, "Recruit every permanent in your deck" (#98's Recruit is an Activate since patch
+    // v0.2.1, R43, and an activation is no play).
     const s = scenario({
-      seed: "edge-r8-hp-honeypot",
-      p1: { hand: [HEROIC_POWER, MR_VANILLA], library: [HONEYPOT, MR_VANILLA, MR_VANILLA, MR_VANILLA], mana: 8 },
+      seed: "edge-r8-pile-on-honeypot",
+      p1: { hand: [PILE_ON, MR_VANILLA], library: [HONEYPOT, MR_VANILLA], mana: 8 },
       p2: { hand: [MR_VANILLA], library: [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA] },
     });
-    // R43: the power lives on the instance; "(3) Recruit a permanent".
-    const power = must(s.hand("p1")[0], "p1's Heroic Power");
-    power.memory[subsystems.POWER_KEY] = "recruit";
+    const pileOn = must(s.hand("p1")[0], "p1's Pile On");
 
-    s.play(power);
+    s.play(pileOn);
 
     // The Recruit set the Bear Honeypot face-down on p1's backrow while the play resolved, so the
     // raw cardResolved names it among the play's arrivals.
@@ -1064,9 +1066,9 @@ describe("R119: the arrivals a play's cardResolved names stay the engine's", () 
     expect(honeypot.faceUp).not.toBe(true);
     const resolved = s.events.filter(
       (event): event is Extract<GameEvent, { type: "cardResolved" }> =>
-        event.type === "cardResolved" && event.instanceId === power.id,
+        event.type === "cardResolved" && event.instanceId === pileOn.id,
     );
-    expect(resolved.map((event) => event.arrivedDuring)).toEqual([[honeypot.id]]);
+    expect(resolved.map((event) => event.arrivedDuring?.includes(honeypot.id))).toEqual([true]);
 
     // Neither seat's view carries the field, and p2's does not name p1's face-down trap through it.
     for (const seat of ["p1", "p2"] as const) {
@@ -1384,8 +1386,8 @@ describe("R243: what the view carries of a card beyond its printed face", () => 
     const power = must(g.hand("p1").find((card) => card.defId === HEROIC_POWER), "the drawn Heroic Power");
     const rolled = must(subsystems.powerOf(power), "a rolled power on the drawn Heroic Power");
     const entry = handEntry(g.view("p1"), power.id);
-    // Four powers cost 1 and two cost 2 (§8 #98), so the cost in the view does not say which it is.
-    expect(entry["cost"]).toBe(rolled.x);
+    // The card costs (0) whatever it rolled (patch v0.2.1), so the cost in the view does not say which it is.
+    expect(entry["cost"]).toBe(0);
     expect(entry["power"], "p1's view of the card names its power").toBe(rolled.name);
   });
 

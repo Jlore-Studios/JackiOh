@@ -1,5 +1,5 @@
 // #98 Heroic Power, patch v0.2.1 — SPEC §8 #98, §6.2 ("Start of Game", Activate, Quickdraw), §10.6,
-// §10.8, R43, R46, R103, R151, R352, R380, R384, R603–R610.
+// §10.8, R43, R46, R103, R151, R352, R380, R384, R632–R639.
 //
 // BUILD M4-T4 row 98, as patch v0.2.1 reads it: in the opening hand (Quickdraw); a power rolled from
 // the match rng, by a copy at the start of the game and by one that arrives later (R43, R151); the
@@ -34,7 +34,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
-import { HERO_POWER_COST, effectiveCost, legalActions, reduce, subsystems } from "@jackioh/engine";
+import { HERO_POWER_COST, STEADY_SHOT_STEP_DAMAGE, effectiveCost, legalActions, reduce, subsystems } from "@jackioh/engine";
 import type { CardInstance } from "@jackioh/engine";
 import { cardDef } from "../src/catalog-data";
 import { query } from "../src/query";
@@ -169,7 +169,7 @@ const felinorUnits = (): string[] => query({ type: "Unit", tags: ["Felinor"] }).
 const kyCards = (): string[] => query({ tags: ["KY"] }).map((card) => card.id);
 const fruitCards = (): string[] => query({ tags: ["Fruit"] }).map((card) => card.id);
 
-/** R605: what Die Insect hit in one game — the enemy hero, an enemy Unit, or something else. */
+/** R634: what Die Insect hit in one game — the enemy hero, an enemy Unit, or something else. */
 function insectHit(s: Scenario, enemyUnitIds: readonly string[]): "hero" | "unit" {
   const hits = eventsOf(s, "damage");
   expect(hits).toHaveLength(1);
@@ -416,7 +416,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.recruit);
   });
 
-  it("R607 Life Tap (1): draws 1, then deals 2 ordinary damage to its own hero", () => {
+  it("R636 Life Tap (1): draws 1, then deals 2 ordinary damage to its own hero", () => {
     const { s, power } = onField("draw", { p1: { library: [MENACE, JAMMED] } });
     s.activate(power);
 
@@ -427,13 +427,13 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.draw);
   });
 
-  it("R607 Life Tap's damage is ordinary damage, so its hero's Armor reduces it", () => {
+  it("R636 Life Tap's damage is ordinary damage, so its hero's Armor reduces it", () => {
     const { s, power } = onField("draw", { p1: { library: [MENACE], armor: 1 } });
     s.activate(power);
     s.expectHealth("p1", 29);
   });
 
-  it("R608 Steady Shot (1): 2 damage to the enemy hero only, and 2 again next turn", () => {
+  it("R637 Steady Shot (1): 2 damage to the enemy hero only, and 2 again next turn", () => {
     const { s, power } = onField("burn", { p1: { library: [SPARE, SPARE] } });
     s.activate(power);
     s.expectHealth("p2", 28);
@@ -466,7 +466,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.felinor);
   });
 
-  it("R606 Ping (1): Pierce — 1 damage to a Unit in Defense Position through its +2 Armor", () => {
+  it("R635 Ping (1): Pierce — 1 damage to a Unit in Defense Position through its +2 Armor", () => {
     const { s, power } = onField("ping", { p2: { field: [{ def: DFENDER, position: "DEF" }] } });
     const wall = must(s.unit("p2", 1), "the enemy Big D-fender");
     expect(s.stats(wall).armor).toBeGreaterThanOrEqual(2);
@@ -477,7 +477,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.ping);
   });
 
-  it("R606 Ping reaches a hero too, ignoring the hero's Armor, and a friendly unit as well", () => {
+  it("R635 Ping reaches a hero too, ignoring the hero's Armor, and a friendly unit as well", () => {
     const hero = onField("ping", { p2: { armor: 3 } });
     hero.s.activate(hero.power, { targets: ENEMY_HERO });
     hero.s.expectHealth("p2", 29);
@@ -501,7 +501,7 @@ describe("#98 Heroic Power — base", () => {
     expect(targets).toContainEqual({ pick: "hero", player: "p2" });
   });
 
-  it("R606 base Ping that kills a Unit summons nothing", () => {
+  it("R635 base Ping that kills a Unit summons nothing", () => {
     const { s, power } = onField("ping", { p2: { field: [{ def: MENACE, damage: 8 }] } });
     const victim = must(s.unit("p2", 1), "the enemy #19 at 1 health");
     s.activate(power, { targets: pick(victim) });
@@ -585,7 +585,7 @@ describe("#98 Heroic Power — base", () => {
     expect(() => s.activate(power)).toThrow(USED);
   });
 
-  it("R603 Armor Up (1): +2 Armor on its hero that still cuts a hit in the opponent's turn, gone on its next turn", () => {
+  it("R632 Armor Up (1): +2 Armor on its hero that still cuts a hit in the opponent's turn, gone on its next turn", () => {
     const { s, power } = onField("armor", {
       p1: { library: [SPARE, SPARE] },
       p2: { hand: [SPARE], library: [SPARE, SPARE], field: [MENACE] },
@@ -606,7 +606,7 @@ describe("#98 Heroic Power — base", () => {
     expect(s.view("p1").you.hero.armor).toBe(0);
   });
 
-  it("R605 Die Insect (2): 8 damage to the enemy hero when it has no Units", () => {
+  it("R634 Die Insect (2): 8 damage to the enemy hero when it has no Units", () => {
     const { s, power } = onField("insect", { p1: { field: [MENACE] } });
     s.activate(power);
     s.expectHealth("p2", 22);
@@ -615,7 +615,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.insect);
   });
 
-  it("R605 Die Insect's one pick is uniform over the enemy hero and the enemy Units, never a friendly one", () => {
+  it("R634 Die Insect's one pick is uniform over the enemy hero and the enemy Units, never a friendly one", () => {
     const seen = new Set<string>();
     for (let n = 0; n < 12; n += 1) {
       const { s, power } = onField("insect", {
@@ -632,7 +632,7 @@ describe("#98 Heroic Power — base", () => {
     expect(seen).toEqual(new Set(["hero", "unit"]));
   });
 
-  it("R610 KY Brainstorm (2): a random KY card to hand, then every non-X Spell in hand costs 1 less", () => {
+  it("R639 KY Brainstorm (2): a random KY card to hand, then every non-X Spell in hand costs 1 less", () => {
     const { s, power } = onField("brainstorm", { p1: { hand: [SPARE, STOCKPILE, DIVIDEND] } });
     const before = s.hand("p1");
     s.activate(power);
@@ -652,7 +652,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.brainstorm);
   });
 
-  it("R610 Pluck (2): a random Fruit to hand that costs (0)", () => {
+  it("R639 Pluck (2): a random Fruit to hand that costs (0)", () => {
     const { s, power } = onField("pluck");
     const before = s.hand("p1");
     s.activate(power);
@@ -667,7 +667,7 @@ describe("#98 Heroic Power — base", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.pluck);
   });
 
-  it("R609 Terminus Tricks (3): Discover a Trap or Field Trap, summoned face-down into its backrow", () => {
+  it("R638 Terminus Tricks (3): Discover a Trap or Field Trap, summoned face-down into its backrow", () => {
     const { s, power } = onField("terminus");
     s.activate(power);
 
@@ -735,7 +735,7 @@ describe("#98 Heroic Power — radiant", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.recruit);
   });
 
-  it("R607 Life Tap: draws its own top card and the opponent's top card into its hand, and takes no damage", () => {
+  it("R636 Life Tap: draws its own top card and the opponent's top card into its hand, and takes no damage", () => {
     const { s, power } = onField("draw", {
       radiantFace: true,
       p1: { library: [MENACE, SPARE] },
@@ -754,7 +754,7 @@ describe("#98 Heroic Power — radiant", () => {
     s.expectMana("p1", 8 - HERO_POWER_COST.draw);
   });
 
-  it("R608 Steady Shot: 4 damage, then +2 permanently — the next turn's shot is 6", () => {
+  it("R637 Steady Shot: 4 damage, then +2 permanently — the next turn's shot is 6", () => {
     const { s, power } = onField("burn", { radiantFace: true, p1: { library: [SPARE, SPARE] } });
     s.activate(power);
     s.expectHealth("p2", 26);
@@ -763,6 +763,15 @@ describe("#98 Heroic Power — radiant", () => {
     s.startTurn();
     s.activate(power);
     s.expectHealth("p2", 20);
+  });
+
+  it("R637 the Radiant clause's \"+2 damage\" is one step of the card's declared `shot`", () => {
+    const shot = must(
+      def.params?.find((entry) => entry.key === subsystems.STEADY_SHOT_PARAM),
+      "#98 declares `shot`",
+    );
+    expect(shot.step).toBe(STEADY_SHOT_STEP_DAMAGE);
+    expect(must(subsystems.powerByName("burn"), "burn").radiantLabel).toContain(`+${String(STEADY_SHOT_STEP_DAMAGE)} damage`);
   });
 
   it("R43 Ranching: a Radiant Rush Token, §7's 6/6 Rush Cleave", () => {
@@ -792,7 +801,7 @@ describe("#98 Heroic Power — radiant", () => {
     }
   });
 
-  it("R606 Ping: a kill summons a Ghoul Token for its controller with the Unit's attack and max health", () => {
+  it("R635 Ping: a kill summons a Ghoul Token for its controller with the Unit's attack and max health", () => {
     const { s, power } = onField("ping", { radiantFace: true, p2: { field: [{ def: MENACE, damage: 8 }] } });
     const victim = must(s.unit("p2", 1), "the enemy #19 at 1 health");
     s.activate(power, { targets: pick(victim) });
@@ -808,7 +817,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(unitsOf(s, "p2")).toEqual([]);
   });
 
-  it("R606 Ping: a hit that kills nothing summons no Ghoul", () => {
+  it("R635 Ping: a hit that kills nothing summons no Ghoul", () => {
     const unit = onField("ping", { radiantFace: true, p2: { field: [MENACE] } });
     const victim = must(unit.s.unit("p2", 1), "the enemy #19");
     unit.s.activate(unit.power, { targets: pick(victim) });
@@ -852,7 +861,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(result.costOverride).toBeUndefined();
   });
 
-  it("R603 Tank Up: +4 Armor on its hero for the rest of the game, through the opponent's turn and past its own next one", () => {
+  it("R632 Tank Up: +4 Armor on its hero for the rest of the game, through the opponent's turn and past its own next one", () => {
     const { s, power } = onField("armor", {
       radiantFace: true,
       p1: { library: [SPARE, SPARE] },
@@ -871,7 +880,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(s.view("p1").you.hero.armor).toBe(4);
   });
 
-  it("R604 Tank Up then refreshes into a different power, which waits for the next turn", () => {
+  it("R633 Tank Up then refreshes into a different power, which waits for the next turn", () => {
     const refreshed = new Set<unknown>();
     for (let n = 0; n < 6; n += 1) {
       const { s, power } = onField("armor", { radiantFace: true, seed: `hp-tank-${n}`, p1: { library: [SPARE, SPARE] } });
@@ -882,8 +891,12 @@ describe("#98 Heroic Power — radiant", () => {
       expect(NAMES).toContain(now);
       refreshed.add(now);
       expect(subsystems.abilitiesOf(s.state, s.card(power)).map((ability) => ability.id)).toEqual([now]);
+      // The card is still Radiant, so the new power runs its Radiant clause.
+      const after = must(subsystems.powerByName(String(now)), String(now));
+      expect(subsystems.abilitiesOf(s.state, s.card(power))[0]?.label).toBe(`${after.radiantTitle}: ${after.radiantLabel}`);
       expect(() => s.activate(power, { targets: ENEMY_HERO })).toThrow(USED);
       expect(s.view("p1").you.hero.powers[0]?.name).toBe(now);
+      expect(s.view("p1").you.hero.powers[0]?.radiant).toBe(true);
 
       s.startTurn();
       expect(subsystems.whyCannotActivateAbility(s.state, "p1", power.id)).toBeNull();
@@ -891,7 +904,21 @@ describe("#98 Heroic Power — radiant", () => {
     expect(refreshed.size).toBeGreaterThan(1);
   });
 
-  it("R605 Die Insect Lucky 1: a lethal hit on the enemy hero beats hitting a Unit", () => {
+  it("R633 the power Tank Up refreshes into runs its Radiant face: a Steady Shot hits for 4", () => {
+    // Seeds are tried in order until one refreshes into Steady Shot (1 in 12 each), so the test is fixed.
+    for (let n = 0; n < 60; n += 1) {
+      const { s, power } = onField("armor", { radiantFace: true, seed: `hp-tank-burn-${n}`, p1: { library: [SPARE, SPARE] } });
+      s.activate(power);
+      if (s.card(power).memory[subsystems.POWER_KEY] !== "burn") continue;
+      s.startTurn();
+      s.activate(power);
+      s.expectHealth("p2", 26);
+      return;
+    }
+    throw new Error("no seed refreshed Tank Up into Steady Shot");
+  });
+
+  it("R634 Die Insect Lucky 1: a lethal hit on the enemy hero beats hitting a Unit", () => {
     let baseLethal = 0;
     let radiantLethal = 0;
     for (let n = 0; n < 16; n += 1) {
@@ -917,7 +944,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(radiantLethal).toBeGreaterThan(baseLethal);
   });
 
-  it("R605 Die Insect Lucky 1: a Unit it destroys beats a hero hit that is not lethal", () => {
+  it("R634 Die Insect Lucky 1: a Unit it destroys beats a hero hit that is not lethal", () => {
     let baseKills = 0;
     let radiantKills = 0;
     for (let n = 0; n < 16; n += 1) {
@@ -943,7 +970,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(radiantKills).toBeGreaterThan(baseKills);
   });
 
-  it("R610 KY Brainstorm: the KY card is Radiant, and the Spells in hand still cost 1 less", () => {
+  it("R639 KY Brainstorm: the KY card is Radiant, and the Spells in hand still cost 1 less", () => {
     const { s, power } = onField("brainstorm", { radiantFace: true, p1: { hand: [SPARE, STOCKPILE] } });
     const before = s.hand("p1");
     s.activate(power);
@@ -955,7 +982,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(effectiveCost(s.state, stockpile)).toBe(0);
   });
 
-  it("R610 Pluck: the Fruit is Radiant and costs (0)", () => {
+  it("R639 Pluck: the Fruit is Radiant and costs (0)", () => {
     const { s, power } = onField("pluck", { radiantFace: true });
     const before = s.hand("p1");
     s.activate(power);
@@ -966,7 +993,7 @@ describe("#98 Heroic Power — radiant", () => {
     expect(effectiveCost(s.state, fruit)).toBe(0);
   });
 
-  it("R609 Terminus Tricks: the summoned Trap is Radiant and face-down", () => {
+  it("R638 Terminus Tricks: the summoned Trap is Radiant and face-down", () => {
     const { s, power } = onField("terminus", { radiantFace: true });
     s.activate(power);
     expect(s.state.pending?.prompt).toBe("Discover a Radiant Trap to summon");

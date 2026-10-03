@@ -14,8 +14,8 @@ import { CardFace } from "./CardFace.tsx";
 import { REF_HOVER_DELAY_MS } from "./constants.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { closeInspect } from "./inspect/store.ts";
-import { INSPECT_DETAIL, INSPECT_HOVER, INSPECT_REFS } from "./inspect/testids.ts";
-import { HOVER_DELAY_MS } from "./inspect/constants.ts";
+import { INSPECT_DETAIL, INSPECT_HOVER, INSPECT_REFS, INSPECT_REFS_POSITION } from "./inspect/testids.ts";
+import { HOVER_DELAY_MS, REF_CYCLE_MS } from "./inspect/constants.ts";
 import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider, RefsInteractive } from "./refContext.tsx";
@@ -201,7 +201,7 @@ describe("R279 a reference that is a control opens the card it names", () => {
   });
 });
 
-describe("R279 the hover preview lists the named cards beside the face", () => {
+describe("R279 the hover preview shows the named cards beside the face, one at a time", () => {
   function Trigger({ subject }: { subject: { key: string; face: FaceModel } }) {
     const inspect = useInspectTrigger(subject);
     return (
@@ -214,7 +214,7 @@ describe("R279 the hover preview lists the named cards beside the face", () => {
     );
   }
 
-  it("R279 resting on a card previews one named face and directs related-card browsing to detail", () => {
+  it("R279 resting on a card shows its named cards one at a time, each once, the next every REF_CYCLE_MS", () => {
     vi.useFakeTimers();
     render(
       <CardDefsProvider defs={CATALOG}>
@@ -225,16 +225,40 @@ describe("R279 the hover preview lists the named cards beside the face", () => {
     act(() => vi.advanceTimersByTime(HOVER_DELAY_MS));
     const preview = screen.getByTestId(INSPECT_HOVER);
     const column = within(preview).getByTestId(INSPECT_REFS);
-    const named = [...column.querySelectorAll(".inspect-refs-face")].map((entry) => [
-      entry.getAttribute("data-ref"),
-      entry.getAttribute("data-ref-face"),
-    ]);
+    const showing = (): (string | null)[][] =>
+      [...column.querySelectorAll(".inspect-refs-face")].map((entry) => [entry.getAttribute("data-ref"), entry.getAttribute("data-ref-face")]);
+    const named: (string | null)[][] = [];
+    for (let n = 0; n < 3; n += 1) {
+      expect(showing()).toHaveLength(1);
+      expect(within(column).getByTestId(INSPECT_REFS_POSITION)).toHaveTextContent(`${String(n + 1)} of 3`);
+      named.push(...showing());
+      act(() => vi.advanceTimersByTime(REF_CYCLE_MS));
+    }
     // The card itself ("cast a random Call to Chaos") is left out: the preview already shows it. The
     // Classic+ Edition, which the same words can cast (R423), is named beside the tokens.
-    expect(named).toEqual([["core-t-rush", "radiant"]]);
-    expect(column).toHaveTextContent("+2 more in card detail");
+    expect(named).toEqual([
+      ["core-t-rush", "radiant"],
+      ["core-095-1", "base"],
+      ["classicplus-073", "base"],
+    ]);
+    // Then round again.
+    expect(showing()).toEqual([["core-t-rush", "radiant"]]);
     // Inside the preview a reference is only a mark: the preview takes no pointer events.
     expect(preview.querySelector(".cf-ref[tabindex]")).toBeNull();
+  });
+
+  it("R279 a face that names one card shows it with no place line", () => {
+    vi.useFakeTimers();
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <Trigger subject={{ key: "refs-90", face: face("core-090", false) }} />
+      </CardDefsProvider>,
+    );
+    fireEvent.pointerEnter(screen.getByTestId("trigger"), { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(HOVER_DELAY_MS));
+    const column = within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_REFS);
+    expect(column.querySelectorAll(".inspect-refs-face")).toHaveLength(1);
+    expect(within(column).queryByTestId(INSPECT_REFS_POSITION)).toBeNull();
   });
 
   it("R279 a card whose text names nothing has no Mentions column", () => {

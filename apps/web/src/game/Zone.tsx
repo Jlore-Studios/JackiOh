@@ -30,6 +30,7 @@ import Backrow from "./Backrow.tsx";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
 import { laneIndex, sideView, testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
+import LockIcon from "./LockIcon.tsx";
 
 export type ZoneProps = {
   view: PlayerView;
@@ -86,7 +87,7 @@ export default function Zone(props: ZoneProps): ReactElement {
         props.onClick?.(target);
       }}
     >
-      {locked && <span className="lock-icon" aria-label="Locked zone" title="Locked zone" />}
+      {locked && <LockIcon />}
       {reserved && !locked && <span className="lock-icon reserved-icon" aria-label="Reserved zone" title="Held for a Reborn unit" />}
       {unit !== null && (
         <Card
