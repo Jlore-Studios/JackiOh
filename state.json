@@ -592,7 +592,9 @@
     },
     "143": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5971008062"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "b3273c49cc8be2e716fc91a03e529faa1d446e62": 1
@@ -625,9 +627,7 @@
       "source": "request",
       "started_at": "2026-10-03T19:51:50Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5971008062"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "gemini",
