@@ -827,7 +827,9 @@
     },
     "167": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5974465299"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "2fe1dea4a657d860e9ce809da8fa1f02851b5f2b": 1
@@ -845,11 +847,11 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-03T19:43:05Z",
-      "requested_by": "jgoetzmann-bot",
+      "queued_at": "2026-10-03T23:10:11Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "37150100001",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "request",
       "started_at": "2026-10-03T20:03:49Z",
       "stop_requested": false,
       "taken_asks": [],
