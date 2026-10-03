@@ -860,6 +860,7 @@
       "feedback_since": "2026-10-03T16:52:25Z",
       "issue": 49,
       "kind": "revise",
+      "queued_at": "2026-10-03T21:26:22Z",
       "self_check_findings": [
         {
           "claim": "The forfeit confirmation unconditionally asserts 'your rating moves as for a loss', which is now false for unranked room Conquest series, and the pre-result SeriesView exposes no ranked flag for the client to distinguish.",
