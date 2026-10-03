@@ -628,7 +628,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it is doing | the pinned issue **Night bot status**, which every sweep rewrites (every ten minutes) with a timeline of the runs going now, the lanes in use, each subscription's usage as bars, the queue and the last runs; or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
@@ -678,4 +678,5 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `triage.py` | labels, assigns and titles a new issue or pull request from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
+| `dashboard.py` | the pinned status issue: opened and pinned once, rewritten after every sweep (`harness dashboard`) |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
