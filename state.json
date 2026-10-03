@@ -427,10 +427,20 @@
       "stop_requested": false
     },
     "142": {
+      "asks": [
+        "c:5970229268"
+      ],
       "failures": 0,
       "feedback_since": "2026-10-03T11:03:50Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 124,
-      "kind": "revise"
+      "kind": "revise",
+      "pending_request": false,
+      "queued_at": "2026-10-03T14:47:02Z",
+      "requested_by": "MaxGoetzmann",
+      "source": "request",
+      "stop_requested": false
     },
     "143": {
       "asks": [
