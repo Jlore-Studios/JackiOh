@@ -12,7 +12,7 @@ GitHub write token.
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
-| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-devin`): a home only it can read, no `sudo`, no Docker |
+| Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
 | CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
@@ -53,7 +53,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 2. **Set it up**, with the ids from `providers.json`:
 
    ```sh
-   bot/machine/on-machine.sh bot/machine/setup.sh claude-1 claude-2 claude-3 claude-4 gpt agy muse
+   bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
    ```
 3. **Log in** each machine subscription, once, as its own user
    (`aws ssm start-session --target <instance>`):

@@ -425,8 +425,8 @@ None of these is an API key: each is the login of one account.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 
   `claude-1` is the existing `CLAUDE_CODE_OAUTH_TOKEN`; each further account gets its own secret.
-  The token reaches only that account's model job, which runs as `agent-claude-<n>` on the
-  machine, and is never written to its home.
+  The token reaches only that account's model job, which runs on GitHub's runners, and is
+  written only into a private directory for that job.
 - **ChatGPT, Google and Meta** (`gpt`, `agy`, `muse`), once, on the machine, as each one's own
   user. Open a shell with `aws ssm start-session --target <instance>` and run:
   - `sudo -iu agent-gpt codex login --device-auth`, then Sign in with ChatGPT;
