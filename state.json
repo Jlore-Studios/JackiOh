@@ -643,7 +643,7 @@
       "action": "build",
       "asks": [],
       "died": 0,
-      "failures": 2,
+      "failures": 3,
       "forced": false,
       "handoff": {
         "at": "2026-10-03T18:48:47Z",
