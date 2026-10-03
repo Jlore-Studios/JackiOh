@@ -111,6 +111,20 @@ describe("B3.4 rule 5: declared numbers (R386)", () => {
     expect(paramsView(state, fused)).toEqual({ damage: 2, threshold: 3, big: 8, huge: 20, times: 3 });
   });
 
+  it("R102 a part path that names no ingredient is an error, not the numbers of the card it stopped at", () => {
+    const state = game();
+    const kept = put(state, body.id, slot("p1", "units", 1));
+    const [a] = inHand(state, numbered.id, "p1");
+    const [b] = inHand(state, nerfer.id, "p1");
+    if (a === undefined || b === undefined) throw new Error("no card");
+    const fused = fuse(sinkFor(state), { ingredients: [a, b], target: kept });
+    if (fused === null) throw new Error("expected a fusion");
+    const ctx = makeContext(sinkFor(state), fused);
+    // Three ingredients: index 3 is past them, and ingredient 0 is a catalog card with no ingredients of its own.
+    expect(() => param({ ...ctx, data: { [PART_KEY]: [3] } }, "damage")).toThrow(/no ingredient 3 on the part path 3/);
+    expect(() => param({ ...ctx, data: { [PART_KEY]: [0, 0] } }, "damage")).toThrow(/no ingredient 0 on the part path 0\.0/);
+  });
+
   it("R386 a card that declares no number carries no `params` in its view", () => {
     const state = game();
     put(state, body.id, slot("p1", "units", 1));

@@ -126,9 +126,10 @@ export function param(
   if (defId === undefined) throw new Error(`param "${key}": no card to read it on (B3.4 rule 5)`);
   const path = ctx.data === undefined ? null : partPathOf(ctx.data);
   for (const index of path ?? []) {
-    const parts = fusedIdParts(defId);
-    const part = parts?.[index];
-    if (part === undefined) break;
+    const part: string | undefined = fusedIdParts(defId)?.[index];
+    if (part === undefined) {
+      throw new Error(`param "${key}": ${defId} has no ingredient ${index} on the part path ${(path ?? []).join(".")} (R102, R468)`);
+    }
     defId = part;
   }
   return paramValue(ctx.state, ctx.self, key, { defId, radiant: ctx.radiant });
