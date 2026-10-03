@@ -563,7 +563,7 @@
       "asks": [],
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-03T19:19:30Z",
+      "feedback_since": "2026-10-03T19:58:45Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-03T19:24:37Z",
@@ -580,10 +580,12 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-03T19:31:10Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37149747763",
-      "source": "request",
+      "self_check_findings": [],
+      "source": "",
       "started_at": "2026-10-03T19:58:45Z",
       "stop_requested": false,
       "taken_asks": [
