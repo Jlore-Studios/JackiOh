@@ -22,17 +22,15 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEven
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardDetail, closeInspect } from "../../cards/index.ts";
+import { closeInspect } from "../../cards/index.ts";
+import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import FilterBar from "./FilterBar.tsx";
 import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
-import PoolGrid from "./PoolGrid.tsx";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import {
   DB_DETAIL_ADD,
-  DB_EMPTY,
   DECK_CODE_OUTPUT,
   DECK_COMPARE_SELECT,
   DECK_CONFLICTS,
@@ -287,12 +285,37 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const inTrios = triosHolding(deck.id, trios);
   const others = decks.filter((candidate) => candidate.id !== deck.id);
   const errors = verdict.ok ? [] : verdict.errors;
-  const detailDef = detailCardId === null ? undefined : catalog.cards[detailCardId];
   const detailPlace: "deck" | Holder | null =
     detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (holders.get(detailCardId) ?? null);
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
   const triosNamingIt = inTrios.length;
+  const detail: BrowserDetail | null =
+    detailCardId === null
+      ? null
+      : {
+          cardId: detailCardId,
+          meta: (
+            <span className="db-detail-meta">
+              {detailPlace === null ? "Not in this deck" : detailPlace === "deck" ? "In this deck" : `In ${detailPlace.name}`}
+              {detailOwned === false ? " · not in your collection" : ""}
+            </span>
+          ),
+          actions: (
+            <button
+              type="button"
+              className="db-detail-add"
+              data-testid={DB_DETAIL_ADD}
+              // The same refusals the "+" and a drop get, so the action says so by being unavailable.
+              disabled={detailPlace !== null || full}
+              onClick={() => {
+                add(detailCardId);
+              }}
+            >
+              {`Add to ${label}`}
+            </button>
+          ),
+        };
 
   const head = (
     <div className="ws-editor-head">
@@ -494,74 +517,39 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           ) : null}
         </DeckSidebar>
 
-        <section className="db-browse" aria-label="Browse cards">
-          <FilterBar
-            filter={filter}
-            onFilter={onFilter}
-            sort={sort}
-            onSort={onSort}
-            count={pool.length}
-            ownedUnavailable={collection === null}
-          />
-          {/* What the last add, removal or refusal did, as a toast at the foot of the screen: deep in
-              the pool on a phone, the deck's own count has scrolled away. Polite, so a screen reader
-              hears each one too. It ignores the pointer, so it never covers a card (deckbuilder.css). */}
-          <p className="db-deck-status" data-testid={DECK_STATUS} role="status" aria-live="polite">
-            {status ?? ""}
-          </p>
-          {/* The frame is what the pool's cards are sized against on a desktop (deckbuilder.css): its
-              height is whatever the filters above leave, and two rows of cards fill it. */}
-          <div className="db-pool-frame">
-            <PoolGrid
-              ids={pool}
-              deckName={label}
-              catalog={catalog}
-              collection={collection}
-              inDeck={inDeck}
-              holders={holders}
-              refusedCardId={refusedCardId}
-              onAdd={add}
-              onInspect={openDetail}
-              onDragStart={startDrag}
-              onDragEnd={endDrag}
-            />
-            {pool.length === 0 ? (
-              <p className="db-empty" data-testid={DB_EMPTY}>
-                No card matches these filters.
-              </p>
-            ) : null}
-          </div>
-        </section>
-      </div>
-
-      {detailCardId === null || detailDef === undefined ? null : (
-        <CardDetail
-          def={detailDef}
-          onClose={() => {
+        <CardBrowser
+          catalog={catalog}
+          pool={pool}
+          filter={filter}
+          onFilter={onFilter}
+          sort={sort}
+          onSort={onSort}
+          ownedUnavailable={collection === null}
+          deck={{
+            deckName: label,
+            collection,
+            inDeck,
+            holders,
+            refusedCardId,
+            onAdd: add,
+            onDragStart: startDrag,
+            onDragEnd: endDrag,
+          }}
+          status={
+            // What the last add, removal or refusal did, as a toast at the foot of the screen: deep in
+            // the pool on a phone, the deck's own count has scrolled away. Polite, so a screen reader
+            // hears each one too. It ignores the pointer, so it never covers a card (deckbuilder.css).
+            <p className="db-deck-status" data-testid={DECK_STATUS} role="status" aria-live="polite">
+              {status ?? ""}
+            </p>
+          }
+          onInspect={openDetail}
+          detail={detail}
+          onCloseDetail={() => {
             setDetailCardId(null);
           }}
-          meta={
-            <span className="db-detail-meta">
-              {detailPlace === null ? "Not in this deck" : detailPlace === "deck" ? "In this deck" : `In ${detailPlace.name}`}
-              {detailOwned === false ? " · not in your collection" : ""}
-            </span>
-          }
-          actions={
-            <button
-              type="button"
-              className="db-detail-add"
-              data-testid={DB_DETAIL_ADD}
-              // The same refusals the "+" and a drop get, so the action says so by being unavailable.
-              disabled={detailPlace !== null || full}
-              onClick={() => {
-                add(detailCardId);
-              }}
-            >
-              {`Add to ${label}`}
-            </button>
-          }
         />
-      )}
+      </div>
     </section>
   );
 }

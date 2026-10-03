@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
 
 import {
+  ALMANAC_TAGS,
   COST_BUCKETS,
   CURVE_TOP,
   DEFAULT_FILTER,
@@ -22,6 +23,7 @@ import {
   FILTER_TAGS,
   FILTER_TYPES,
   SORT_KEYS,
+  almanacPool,
   costBucket,
   costOrder,
   deckListOrder,
@@ -609,5 +611,58 @@ describe("the Jlockeed tag (R278)", () => {
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
     // docs/classic-sets.md B2.4: one faction, one tag, Classic+ #48, #51 and #52 beside Core's two.
     expect([...kept].sort()).toEqual(["classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R630: the Card Almanac's shelf and tag chips
+// ---------------------------------------------------------------------------------------------
+
+describe("the almanac's pool (R630)", () => {
+  const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
+
+  it("R630 shows every catalog card, the token included, filtered and sorted like the pool", () => {
+    // The token costs 1 and sorts after Bramble Cat, the other 1-cost card, by name.
+    expect(almanacPool(CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).toEqual(["x-01", "x-02", TOKEN, ...SORTED.cost.asc.slice(2)]);
+    const f = filter({ costs: new Set<CostBucket>(["3", "4"]) });
+    expect(almanacPool(CATALOG, f, { key: "name", dir: "desc" })).toEqual(
+      visiblePool(CATALOG, null, f, { key: "name", dir: "desc" }),
+    );
+  });
+
+  it("R630 owns nothing: ownedOnly is not read, and an unowned card is on the shelf", () => {
+    expect(almanacPool(CATALOG, filter({ ownedOnly: true }), DEFAULT_SORT)).toEqual(
+      almanacPool(CATALOG, filter({ ownedOnly: false }), DEFAULT_SORT),
+    );
+    expect(almanacPool(CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).toContain(UNOWNED);
+  });
+
+  it("R630 the Token chip keeps the tokens and nothing else", () => {
+    expect(almanacPool(CATALOG, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT)).toEqual([TOKEN]);
+    const tokens = almanacPool(REAL, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT);
+    const realTokens = Object.values(CORE_CATALOG).filter((d) => d.token);
+    expect(tokens).toHaveLength(realTokens.length);
+    expect(new Set(tokens)).toEqual(new Set(realTokens.map((d) => d.id)));
+  });
+
+  it("R630 the AI chip keeps the AI tokens", () => {
+    const ai = almanacPool(REAL, filter({ tags: new Set<Tag>(["AI"]) }), DEFAULT_SORT);
+    expect(ai.length).toBeGreaterThan(0);
+    for (const id of ai) expect(CORE_CATALOG[id]?.tags, id).toContain("AI");
+  });
+
+  it("R630 shows the whole real catalog, the deck builder's pool plus every token", () => {
+    const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
+    expect([...all].sort()).toEqual(Object.keys(CORE_CATALOG).sort());
+    const deckable = visiblePool(REAL, null, DEFAULT_FILTER, DEFAULT_SORT);
+    expect(all.length - deckable.length).toBe(Object.values(CORE_CATALOG).filter((d) => d.token).length);
+  });
+
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then AI and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "AI", "Token"]);
+    const carried = new Set(Object.values(CORE_CATALOG).flatMap((d) => d.tags));
+    expect(new Set(ALMANAC_TAGS)).toEqual(carried);
+    expect(filterTagId("Token")).toBe("db-filter-tag-token");
+    expect(filterTagId("AI")).toBe("db-filter-tag-ai");
   });
 });

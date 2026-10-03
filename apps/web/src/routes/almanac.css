@@ -1,0 +1,19 @@
+/* The Card Almanac (routes/almanac.tsx, R630). Everything it draws is the deck builder's
+   (deckbuilder.css); these rules only stand the browse pane at full width with no deck sidebar
+   beside it, which the deck editor's grid (`.db-layout`) otherwise does. Nothing here is a rule. */
+
+.almanac-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Desktop: the page is one screen tall (deckbuilder.css), and the pane takes whatever height the
+   title leaves, so the pool scrolls inside its own frame as it does in the deck editor. */
+@media (min-width: 761px) and (min-height: 501px) {
+  .almanac-main,
+  .almanac-main > .db-browse {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
