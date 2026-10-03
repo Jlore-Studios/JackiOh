@@ -266,10 +266,18 @@ def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
 
 def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
-    `bot-status` loop). A failure is only a warning: it never fails the sweep or the loop."""
+    `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
+    for GitHub's late schedules to start its next run when its chain of runs breaks. A failure is
+    only a warning: it never fails the sweep or the loop."""
     every = max(0, int(getattr(args, "every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     while True:
+        if getattr(args, "sweep", False):
+            try:
+                for line in sweep_mod.sweep(_ctx(cfg)) or ["nothing was left unanswered"]:
+                    print(redact(f"sweep: {line}"), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the sweep failed: {exc}"), flush=True)
         try:
             note = dashboard_mod.update(_ctx(cfg))
             print(redact(f"dashboard: {note}"), flush=True)
@@ -536,6 +544,8 @@ def parser() -> argparse.ArgumentParser:
                            help="seconds between rewrites; 0 rewrites it once")
     dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
                            help="how long to keep rewriting it, in seconds")
+    dashboard.add_argument("--sweep", action="store_true",
+                           help="sweep before each rewrite, as the ten-minute sweep does")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")

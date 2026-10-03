@@ -140,6 +140,39 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("::warning::the status issue was not updated: network down", out.getvalue())
         self.assertEqual(out.getvalue().count("dashboard: rewrote #148"), 2)
 
+    def test_the_loop_sweeps_before_each_rewrite(self):
+        """`--sweep`: each tick runs the sweep first (it starts a night run when a lane and work
+        are free), so a broken chain of runs restarts within ten minutes; a failed sweep is only
+        a warning and the rewrite still happens."""
+        from unittest import mock
+        import harness.__main__ as main_mod
+        clock = [0.0]
+        order = []
+
+        def sweep(ctx):
+            order.append(("sweep", clock[0]))
+            if len(order) == 1:
+                raise RuntimeError("rate limited")
+            return ["started a night run"]
+
+        def update(ctx):
+            order.append(("rewrite", clock[0]))
+            return "rewrote #148"
+
+        out = io.StringIO()
+        with mock.patch.object(main_mod.sweep_mod, "sweep", sweep), \
+                mock.patch.object(dashboard, "update", update), \
+                mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(main_mod.time, "sleep",
+                                  lambda s: clock.__setitem__(0, clock[0] + s)), \
+                contextlib.redirect_stdout(out):
+            cmd_dashboard(make_config(), argparse.Namespace(every=600, for_seconds=600,
+                                                            sweep=True))
+        self.assertEqual(order, [("sweep", 0.0), ("rewrite", 0.0),
+                                 ("sweep", 600.0), ("rewrite", 600.0)])
+        self.assertIn("::warning::the sweep failed: rate limited", out.getvalue())
+        self.assertIn("sweep: started a night run", out.getvalue())
+
     def test_a_cell_stays_one_line_without_pipes(self):
         self.assertEqual(dashboard._cell("a | b\nc"), "a \\| b c")
         self.assertEqual(dashboard.bar(None), "—")
