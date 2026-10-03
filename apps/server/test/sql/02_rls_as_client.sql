@@ -823,4 +823,116 @@ end $$;
 reset role;
 rollback;
 
+\echo '### R633: a player reads only its own settings and writes none of them ###'
+begin;
+
+-- 0018's table, one row for EACH profile: profile 2's is the row to hide from profile 1 (and
+-- profile 1's from profile 2). Raw inserts, as superuser, because the point is what RLS shows.
+insert into public.player_settings (profile_id, groups) values
+  ('11111111-1111-1111-1111-111111111111', '{"audio": {"at": 1, "values": {"master": 0.5}}}'),
+  ('22222222-2222-2222-2222-222222222222', '{"gameplay": {"at": 2, "values": {"dragToPlay": false}}}');
+
+-- Preflight, as in R320's block: every write the client is about to be refused is one the owner can
+-- make, inside a subtransaction rolled back at once.
+do $$
+begin
+  begin
+    insert into public.player_settings (profile_id, groups)
+    values ('11111111-1111-1111-1111-111111111111', '{}')
+    on conflict (profile_id) do update set groups = excluded.groups;
+    update public.player_settings set groups = '{}';
+    delete from public.player_settings;
+    perform app.merge_player_settings('11111111-1111-1111-1111-111111111111',
+                                      '{"fx": {"at": 3, "values": {"speed": 2}}}', now(), 8, 4096);
+    raise exception 'owner-control-rollback';
+  exception when others then
+    if sqlerrm <> 'owner-control-rollback' then
+      raise exception
+        'FAIL (R633): the owner could not run the writes the client is about to be refused ("%", %) — the refusals below would prove nothing about privileges',
+        sqlerrm, sqlstate;
+    end if;
+  end;
+  perform set_config('rls6.total', (select count(*) from public.player_settings)::text, true);
+end $$;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+
+do $$
+declare
+  caller constant uuid := '11111111-1111-1111-1111-111111111111';
+  total  bigint := coalesce(nullif(current_setting('rls6.total', true), ''), '-1')::bigint;
+  seen   bigint;
+  probe  text;
+  probes constant text[][] := array[
+    ['player_settings INSERT',
+     $q$insert into public.player_settings (profile_id, groups)
+        values ('11111111-1111-1111-1111-111111111111', '{}')
+        on conflict (profile_id) do update set groups = excluded.groups$q$,
+     'player_settings'],
+    ['player_settings UPDATE', $q$update public.player_settings set groups = '{}'$q$, 'player_settings'],
+    ['player_settings DELETE', $q$delete from public.player_settings$q$, 'player_settings'],
+    ['app.merge_player_settings',
+     $q$select app.merge_player_settings('11111111-1111-1111-1111-111111111111',
+                                         '{"fx": {"at": 3, "values": {"speed": 2}}}', now(), 8, 4096)$q$,
+     'merge_player_settings']];
+  i int;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FAIL (R633): running as %, not authenticated — SET LOCAL did not take', current_user;
+  end if;
+  if total <> 2 then
+    raise exception 'FAIL (R633): % player_settings rows to measure against, expected 2 (one per profile)', total;
+  end if;
+
+  select count(*) into seen from public.player_settings;
+  if seen <> 1 or exists (select 1 from public.player_settings where profile_id <> caller) then
+    raise exception 'FAIL (R633): profile 1 saw % of % player_settings rows — another profile''s settings leaked',
+      seen, total;
+  end if;
+  if (select groups -> 'audio' ->> 'at' from public.player_settings) <> '1' then
+    raise exception 'FAIL (R633): profile 1''s own row reads back as %', (select groups from public.player_settings);
+  end if;
+
+  for i in 1 .. array_length(probes, 1) loop
+    probe := probes[i][1];
+    begin
+      execute probes[i][2];
+      raise exception 'FAIL (R633): % succeeded as a client — settings are written by the server alone', probe;
+    exception
+      when insufficient_privilege then
+        if sqlerrm not like '%' || probes[i][3] || '%' then
+          raise exception 'FAIL (R633): % was refused by "%" (%), which does not name %',
+            probe, sqlerrm, sqlstate, probes[i][3];
+        end if;
+        raise notice 'OK (R633): % refused — % (%)', probe, sqlerrm, sqlstate;
+      when others then
+        if sqlerrm like 'FAIL%' then raise; end if;
+        raise exception 'FAIL (R633): % raised "%" (%), not insufficient_privilege', probe, sqlerrm, sqlstate;
+    end;
+  end loop;
+
+  raise notice 'OK (R633): profile 1 sees its own settings row and not profile 2''s, and 3 writes and the merge were refused';
+end $$;
+
+select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', true);
+do $$
+declare
+  seen bigint;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FAIL (R633): running as %, not authenticated', current_user;
+  end if;
+  select count(*) into seen from public.player_settings;
+  if seen <> 1 or exists (
+    select 1 from public.player_settings where profile_id <> '22222222-2222-2222-2222-222222222222'
+  ) then
+    raise exception 'FAIL (R633): profile 2 saw % player_settings rows, expected only its own', seen;
+  end if;
+  raise notice 'OK (R633): profile 2 sees only its own settings row';
+end $$;
+
+reset role;
+rollback;
+
 \echo '### ALL RLS CHECKS RAN ###'

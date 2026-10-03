@@ -25,6 +25,7 @@ import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
 import { useAccount, type Account } from "../net/gate.ts";
+import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
@@ -407,6 +408,8 @@ export type LandingRouteProps = {
 
 export default function LandingRoute({ random = Math.random }: LandingRouteProps = {}): ReactElement {
   const account = useAccount();
+  // R634: the first screen most visits see keeps an active account's settings level with this device's.
+  useSettingsAccountSync(account);
   const motion = useMotion();
   // R374: one deal per visit — per mount of the page — so the hand holds still while it is shown.
   const [hand] = useState(() => dealLandingFan(random));

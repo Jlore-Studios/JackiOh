@@ -489,6 +489,58 @@
   outline-offset: 0;
 }
 
+/* --- the Account tab (AccountSettings.tsx) ------------------------------------------------- */
+
+.settings-account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.settings-account__status {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.settings-account[data-phase="error"] .settings-account__status {
+  color: #fca5a5;
+}
+
+.settings-account__status time {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-account__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.settings-account__action:hover {
+  border-color: var(--text-dim);
+}
+
+.settings-account__action:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
 .settings-foot {
   flex: none;
   display: flex;
