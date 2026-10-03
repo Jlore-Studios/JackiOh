@@ -357,10 +357,11 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last, only when nothing else is free. claude-4 sits with claude-1
-until it is set up. For building alone, claude-2 is `build_last`: it builds only when no other
-subscription that may is free, Devin included, so Devin is the default builder once claude-3,
-claude-1 and the medium models are busy.
+planning and reviewing; and Devin last. claude-4 sits with claude-1 until it is set up. For
+building alone, claude-2 is `build_last`: it builds only when no other subscription that may is
+free, Devin included. Devin is `easy_first`: it may build only easy items, so it takes them ahead
+of everyone while it has a free lane, and the stronger models keep the medium and hard items only
+they may build. With its six lanes it fills whatever room on the machine the medium models leave.
 
 - **Planning.** Every build starts from a plan. The planner is a medium or strong model, strong
   whenever one is free (claude-3, claude-1, then claude-2). It reads the task and the code, writes
@@ -368,15 +369,17 @@ claude-1 and the medium models are busy.
   the builder's own subscription has a model of the planner's tier, the plan and the build share
   one run (claude-3 plans on Opus, then builds an easy item on Sonnet); otherwise the planning is a
   run of its own, and the item goes back to the queue to build from its plan, on any subscription.
-  A revision is not planned again.
+  Such a run is a short read-only session, so it starts before any long run: a free planner plans
+  Devin's next easy item before it takes an item of its own, even a more urgent one. A revision is
+  not planned again.
 - **Building, fixing, revising.** The first free subscription in the usage order with a model that
   meets the item's tier builds it, on its weakest such model: claude-3 builds an easy item with
   Sonnet, never Opus, and a medium one with Opus, since it has no medium model. When that is above
   the item's tier (none of that tier is free, or the usage order puts a stronger one first), the
-  run's log says so and why. claude-2 never builds with Sonnet, and Sonnet builds only while
-  claude-3 or claude-1 is free; otherwise an easy item goes to the medium models, then Devin, and
-  claude-2 (with Opus) only when Devin's two lanes are taken too. A medium item passes Devin by,
-  so claude-2 builds it once the medium models are busy.
+  run's log says so and why. An easy item goes to Devin first while it has a free lane. Otherwise
+  claude-3 or claude-1 builds it with Sonnet (Sonnet builds only while one of them is free), then
+  the medium models, and claude-2 (with Opus, never Sonnet) only when Devin's six lanes are taken
+  too. A medium item passes Devin by, so claude-2 builds it once the medium models are busy.
 - **Reviewing in the run.** The run's own strongest model of at least medium (strong for a hard
   item) reviews the change adversarially, in a fresh session. Weak models never review: a run
   with none (Devin's) hands the change to a review run.
