@@ -1026,6 +1026,7 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "queued_at": "2026-10-01T19:19:16Z",
