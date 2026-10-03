@@ -1394,9 +1394,7 @@
     },
     "88": {
       "action": "build",
-      "asks": [
-        "c:5973893841"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1415,14 +1413,16 @@
       "pending_request": false,
       "planned_at": "2026-10-03T16:39:41Z",
       "pr": 166,
-      "provider": "muse",
+      "provider": "agy",
       "question": "Continue the build from .bot-notes.md session 3: R647 Locked engine work is implemented and tested but its SPEC \u00a711 row is not yet written; plague single-target and recruit X-skip are not started; typecheck/eslint/validate:catalog/rulings:coverage were not re-run. Continue on this branch?",
       "queued_at": "2026-10-03T21:59:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37153400434",
-      "started_at": "2026-10-03T20:58:38Z",
+      "run_id": "37157132505",
+      "started_at": "2026-10-03T22:04:53Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5973893841"
+      ]
     },
     "90": {
       "failures": 0,
@@ -1450,9 +1450,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T21:51:25Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37156195736",
-    "what": "revise #171 on devin"
+    "at": "2026-10-03T22:04:53Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37157132505",
+    "what": "build #88 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T21:57:50Z",
