@@ -4442,7 +4442,7 @@
     "date": "2026-10-02",
     "title": "Heroic Power rework and cosmetic fixes",
     "source": "Issue #37",
-    "notes": "Heroic Power Activate rework, current-owner zone destinations, and associated client polish.",
+    "notes": "Heroic Powers use Activate, cost no card mana, and offer the v0.2.1 power pool.",
     "changes": [
       {
         "id": "core-098",
@@ -4451,6 +4451,7 @@
         "fields": [
           "cost",
           "refs",
+          "loc",
           "base.text",
           "radiant.text",
           "params"

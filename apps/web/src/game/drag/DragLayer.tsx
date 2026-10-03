@@ -333,15 +333,17 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
         const { view, legal, onInteraction, onAction } = latest.current;
         const stack = hits(event.clientX, event.clientY);
         const spot = pickDropSpot(stack, flight.plan.dropTestids);
-        const result = resolveDrop(view, legal, flight.plan, spot);
         const { plan } = flight;
+        // A free drop is a convenience for a legal board drop, never permission to redirect a
+        // release over a server-locked zone to a different legal lane (B38, R47).
+        const blockedZone = plan.kind === "play" ? lockedZoneAt(stack) : null;
+        const result = blockedZone === null ? resolveDrop(view, legal, plan, spot) : { interaction: IDLE };
         // Where the card lands: the middle of the zone or target it was dropped on, or the pointer
         // for a drop anywhere on the board.
         const reticle = reticleFor(spot);
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
         stopDragging();
         onInteraction(result.interaction);
-        const blockedZone = plan.kind === "play" && result.action === undefined ? lockedZoneAt(stack) : null;
         if (blockedZone !== null) {
           setBlocked({
             at: centreOf(blockedZone) ?? { x: event.clientX, y: event.clientY },

@@ -112,7 +112,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "loc": 13,
+    "loc": 11,
     "base": {
       "attack": 1,
       "health": 1,
@@ -2594,7 +2594,7 @@
       "core-t-rush",
       "core-t-felinor"
     ],
-    "loc": 11,
+    "loc": 13,
     "base": {
       "keywords": [
         {

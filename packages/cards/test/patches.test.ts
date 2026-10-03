@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0", "v0.2.1"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.0");
+    expect(CATALOG_VERSION).toBe("v0.2.1");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -101,6 +101,18 @@ describe("R388 card patch history (B4.2)", () => {
     expect([16, 17, 34, 43, 49, 65, 88].map((n) => cost(after, `core-0${String(n).padStart(2, "0")}`))).toEqual([3, 4, 4, 4, 4, 1, 4]);
     const changed = changesOf("v0.2.0").find((change) => change.id === "core-016");
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
+  });
+
+  it("R388 records patch v0.2.1's Heroic Power rewrite without rewriting v0.2.0's data", () => {
+    const before = readSnapshot("v0.2.0");
+    const after = readSnapshot("v0.2.1");
+    expect(before["core-004"]?.["loc"]).toBe(11);
+    expect(before["core-098"]?.["loc"]).toBe(13);
+    const changed = changesOf("v0.2.1").find((change) => change.id === "core-098");
+    expect(changed?.kind === "changed" ? changed.fields : []).toEqual(
+      expect.arrayContaining(["cost", "refs", "base.text", "radiant.text", "params", "loc"]),
+    );
+    expect(after["core-098"]?.["loc"]).toBe(CATALOG["core-098"]?.loc);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

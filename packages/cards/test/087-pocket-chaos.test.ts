@@ -93,7 +93,7 @@ describe("#87 Pocket Chaos — base", () => {
     expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER]);
   });
 
-  it("R73 swaps the board lane by lane in both rows: control changes, ownership does not", () => {
+  it("R73 swaps the board lane by lane in both rows: control and current ownership change together", () => {
     const s = scenario({
       seed: SEED,
       p1: {
@@ -124,13 +124,13 @@ describe("#87 Pocket Chaos — base", () => {
     expect(s.backrow("p1", 4)?.id).toBe(well.id);
     expect(s.backrow("p2", 4)).toBeNull();
 
-    // R12, R73: control changed for everything; ownership changed for nothing.
+    // R12, R73, R611: current ownership follows every field control change.
     expect(s.card(gary).controller).toBe("p2");
-    expect(s.card(gary).owner).toBe("p1");
+    expect(s.card(gary).owner).toBe("p2");
     expect(s.card(reno).controller).toBe("p1");
-    expect(s.card(reno).owner).toBe("p2");
+    expect(s.card(reno).owner).toBe("p1");
     expect(s.card(trap).controller).toBe("p2");
-    expect(s.card(trap).owner).toBe("p1");
+    expect(s.card(trap).owner).toBe("p2");
   });
 
   it("R33 a swapped face-down trap stays face-down and only its new controller may read it", () => {

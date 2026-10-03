@@ -268,10 +268,10 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
   }
 
   it("R388 serves every patch in patches.json, whole, to a caller with no account", async () => {
-    const catalog = await loadCatalog({ version: "v0.2.0" });
+    const catalog = await loadCatalog({ version: "v0.2.1" });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0", "v0.2.1"]);
 
     for (const { version } of patches) {
       const response = await router(jsonRequest("GET", `/api/catalog/${version}`));
@@ -282,10 +282,10 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     }
   });
 
-  it("R388 shows what a patch changed: v0.1.0 knew 109 entries and Hit Job at (2); v0.2.0 knows 317 and (3)", async () => {
+  it("R388 shows what a patch changed: v0.1.0 knew 109 entries and Hit Job at (2); v0.2.1 knows 317 and (3)", async () => {
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog: await loadCatalog() }));
     const first = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/v0.1.0")));
-    const now = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/v0.2.0")));
+    const now = await readJson<CatalogBody>(await router(jsonRequest("GET", "/api/catalog/v0.2.1")));
     expect(Object.keys(first.defs)).toHaveLength(109);
     expect(first.defs["core-016"]?.cost).toBe(2);
     expect(Object.keys(now.defs)).toHaveLength(317);

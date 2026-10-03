@@ -25,6 +25,7 @@ import type { CardDef } from "@jackioh/shared";
 // runs, so `cardDef` is callable at that point either way. Card files should still prefer
 // `import { cardDef } from "../catalog-data";` — no cycle at all.
 import { CATALOG, CATALOG_IDS, CATALOG_VERSION, cardDef, cardDefByIndex } from "./catalog-data";
+import * as heroicPowerV020 from "./legacy/098-heroic-power-v0.2.0";
 import { SCRIPT_MODULES } from "./scripts/_generated";
 
 export { CATALOG, CATALOG_IDS, CATALOG_VERSION, cardDef, cardDefByIndex };
@@ -72,11 +73,11 @@ export const CARDS: Record<string, CardModule> = buildRegistry(SCRIPT_MODULES);
  * The registry as the engine wants it. Built once, at load: `registerAll` compares identities to
  * stay cheap, and the harness calls it before every card test.
  */
-const SCRIPTS: Readonly<Record<string, CardScripts>> = Object.freeze(
-  Object.fromEntries(
-    Object.entries(CARDS).map(([id, mod]) => [id, { base: mod.base, radiant: mod.radiant }]),
-  ),
-);
+const SCRIPTS: Readonly<Record<string, CardScripts>> = Object.freeze({
+  ...Object.fromEntries(Object.entries(CARDS).map(([id, mod]) => [id, { base: mod.base, radiant: mod.radiant }])),
+  // R388: #98's v0.2.1 semantic rewrite keeps the shipped v0.2.0 script for pinned replays.
+  "core-098@v0.2.0": { base: heroicPowerV020.base, radiant: heroicPowerV020.radiant },
+});
 
 export function scriptsOf(): Readonly<Record<string, CardScripts>> {
   return SCRIPTS;

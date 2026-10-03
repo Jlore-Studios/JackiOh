@@ -10,9 +10,11 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_SCRIPT,
   catalogVersion,
+  newInstance,
   registerCatalog,
   registerScripts,
   registeredCatalog,
+  scriptOf,
   scriptsFor,
 } from "@jackioh/engine";
 import {
@@ -144,6 +146,22 @@ describe("registry (BUILD M4-T2)", () => {
     registerAll();
     expect(registeredCatalog()).toBe(CATALOG);
     expect(catalogVersion()).toBe(CATALOG_VERSION);
+  });
+
+  it("R388 selects Heroic Power's v0.2.0 script for a match pinned to that catalog", () => {
+    registerCatalog(CATALOG, "v0.2.0");
+    registerScripts(scriptsOf());
+    const historic = newInstance({ nextId: 1 }, "core-098", "p1", { z: "hand", player: "p1" });
+    historic.memory.power = "draw";
+    const script = scriptOf(historic);
+    expect(script.cost).toBeDefined();
+    expect(script.cry).toBeDefined();
+
+    registerAll();
+    const current = newInstance({ nextId: 1 }, "core-098", "p1", { z: "hand", player: "p1" });
+    current.memory.power = "draw";
+    expect(scriptOf(current).cost).toBeUndefined();
+    expect(scriptOf(current).cry).toBeUndefined();
   });
 
   it("gives the engine each module's own base and radiant script", () => {

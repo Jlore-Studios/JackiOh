@@ -2,6 +2,7 @@
 // register fixtures (BUILD §0). Like the catalog this is static data, not game state.
 
 import type { CardInstance } from "./state";
+import { catalogVersion } from "./catalog";
 import { EMPTY_SCRIPT, type CardScripts, type Script } from "./script";
 
 let registered: Readonly<Record<string, CardScripts>> = {};
@@ -30,7 +31,10 @@ export function scriptsFor(defId: string): CardScripts {
  */
 export function scriptOf(instance: CardInstance): Script {
   if (instance.vanilla === true) return EMPTY_SCRIPT;
-  const entry = scriptsFor(instance.defId);
+  // R388: a semantic patch registers its former implementation under `<id>@<version>`.
+  // Registries are scoped to the catalog a match started with, so this selection is stable for a
+  // folded replay and falls back to the current script for cards unchanged at that version.
+  const entry = registered[`${instance.defId}@${catalogVersion()}`] ?? scriptsFor(instance.defId);
   return instance.radiant ? entry.radiant : entry.base;
 }
 

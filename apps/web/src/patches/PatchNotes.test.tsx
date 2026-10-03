@@ -191,11 +191,13 @@ describe("R388 the Patch notes page", () => {
 });
 
 describe("R388 the Patch notes page over the real history", () => {
-  it("R388 lists the six patches newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
+  it("R388 lists the seven patches newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
     renderPage();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0-r3", "v0.1.0-r2", "v0.1.0-r1", "v0.1.0"]);
-    await within(patchEntry("v0.2.0")).findByTestId(patchTestid.cards, undefined, SLOW);
+    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.1", "v0.2.0", "v0.1.1", "v0.1.0-r3", "v0.1.0-r2", "v0.1.0-r1", "v0.1.0"]);
+    const classicPatch = patchEntry("v0.2.0");
+    fireEvent.click(within(classicPatch).getByTestId(patchTestid.toggle));
+    await within(classicPatch).findByTestId(patchTestid.cards, undefined, SLOW);
     const mask = byCard(patchTestid.changedCard, "core-065");
     expect(mask).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(mask.querySelector(".cost-gem")).toHaveAttribute("data-cost", "1");
@@ -204,12 +206,12 @@ describe("R388 the Patch notes page over the real history", () => {
     // Every card v0.2.0 records as changed is on the page once: a face, or a name in the data-only list.
     const record = (await realPatchSource.patches()).find((patch) => patch.version === "v0.2.0");
     const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
-    const shown = [...screen.getAllByTestId(patchTestid.changedCard), ...screen.getAllByTestId(patchTestid.dataOnly)].map(
+    const shown = [...within(classicPatch).getAllByTestId(patchTestid.changedCard), ...within(classicPatch).getAllByTestId(patchTestid.dataOnly)].map(
       (element) => element.dataset.card,
     );
     expect(shown.sort()).toEqual([...changedIds].sort());
-    expect(screen.getAllByTestId(patchTestid.dataOnly).length).toBeGreaterThan(0);
-    const groups = screen.getAllByTestId(patchTestid.addedGroup);
+    expect(within(classicPatch).getAllByTestId(patchTestid.dataOnly).length).toBeGreaterThan(0);
+    const groups = within(classicPatch).getAllByTestId(patchTestid.addedGroup);
     expect(groups.map((group) => [group.dataset.group, within(group).getAllByTestId(patchTestid.openCard).length])).toEqual([
       ["Classic", 90],
       ["Classic+", 78],
