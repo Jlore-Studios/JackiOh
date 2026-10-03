@@ -16,7 +16,7 @@ from typing import Any
 
 from harness import providers as providers_mod
 from harness import status as status_mod
-from harness.clock import parse_iso, zone
+from harness.clock import human_delta, parse_iso, zone
 from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_REVISE, NIGHT_WORKFLOW
 from harness.context import Context
 from harness.errors import GitHubError
@@ -72,6 +72,38 @@ def _what(state: dict[str, Any], number: int) -> tuple[str, datetime | None]:
         return "survey", parse_iso(record.get("last_run"))
     doing = "plan" if record.get("action") == "plan" else str(record.get("kind") or "work")
     return f"item {number} {doing}", parse_iso(record.get("started_at"))
+
+
+def running_table(ctx: Context, state: dict[str, Any], live: dict[int, str],
+                  issues: list[dict[str, Any]]) -> list[str]:
+    """What each lane is doing now, with a link to the run doing it."""
+    if not live:
+        return []
+    cfg = ctx.cfg
+    titles = {int(issue["number"]): issue.get("title") for issue in issues}
+    order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
+    rows = []
+    for number, provider_id in sorted(live.items(),
+                                      key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
+        record = status_mod.record_of(state, number)
+        if number:
+            kind = "plan" if record.get("action") == "plan" else str(record.get("kind"))
+            doing = status_mod.DOING.get(kind, "working on")
+            item, since = f"#{number}", parse_iso(record.get("started_at"))
+        else:
+            doing, item, since = "suggestion survey", "—", parse_iso(record.get("last_run"))
+        where = "machine" if cfg.pool.on_machine(provider_id) else "GitHub"
+        provider = cfg.pool.get(provider_id)
+        model = f" `{provider.model}`" if provider else ""
+        elapsed = human_delta(ctx.now() - since) if since else ""
+        run_id = record.get("run_id")
+        run = (f"[run {run_id}]({cfg.server_url}/{cfg.repo}/actions/runs/{run_id})"
+               if run_id else "—")
+        rows.append(f"| {item} | {_cell(titles.get(number, ''), 50)} | {doing} "
+                    f"| `{provider_id}`{model} ({where}) "
+                    f"| {'just started' if elapsed in ('', 'now') else elapsed} | {run} |")
+    return (["| Item | Title | Doing | Subscription | For | Run |",
+             "|---|---|---|---|---|---|"] + rows)
 
 
 def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
@@ -180,10 +212,12 @@ def render(ctx: Context) -> str:
     updated = _local(ctx, ctx.now()).strftime("%Y-%m-%d %H:%M %Z")
     halted = state.get("halted") or ctx.repo_halted()
     lines = [f"# 🤖 {TITLE}", "",
-             f"{'🛑 **Halted.** ' if halted else ''}_Updated {updated} by the sweep, which "
-             "rewrites this issue every ten minutes. `/harness status` gives the same facts on "
-             "demand._", "",
+             f"{'🛑 **Halted.** ' if halted else ''}_Updated {updated} by `bot-status`, "
+             "which rewrites this issue every ten minutes. `/harness status` gives the same facts "
+             "on demand._", "",
              "## What it is working on", ""]
+    running = running_table(ctx, state, live, issues)
+    lines += (running + [""] if running else [])
     lines += timeline(ctx, state, live) + [""] + lanes_chart(ctx, live) + [""]
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
     lines += ["## Queue", ""] + queue_table(issues) + [""]

@@ -265,14 +265,19 @@ def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
-    """The pinned status issue. A failure here is only a warning: it must never fail the sweep."""
-    try:
-        note = dashboard_mod.update(_ctx(cfg))
-    except GitHubError as exc:
-        print(redact(f"::warning::the status issue was not updated: {exc}"))
-        return 0
-    print(redact(f"dashboard: {note}"))
-    return 0
+    """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
+    `bot-status` loop). A failure is only a warning: it never fails the sweep or the loop."""
+    every = max(0, int(getattr(args, "every", 0) or 0))
+    deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
+    while True:
+        try:
+            note = dashboard_mod.update(_ctx(cfg))
+            print(redact(f"dashboard: {note}"), flush=True)
+        except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+            print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        if not every or time.monotonic() + every > deadline:
+            return 0
+        time.sleep(every)
 
 
 def cmd_halt(cfg: Config, args: argparse.Namespace) -> int:
@@ -525,7 +530,12 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="")
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
-    sub.add_parser("dashboard", help="rewrite the pinned status issue (each sweep runs it)")
+    dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
+                               "runs it every ten minutes; each sweep runs it once)")
+    dashboard.add_argument("--every", type=int, default=0,
+                           help="seconds between rewrites; 0 rewrites it once")
+    dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
+                           help="how long to keep rewriting it, in seconds")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
