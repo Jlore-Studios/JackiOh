@@ -857,6 +857,14 @@
         "status": "allowed"
       }
     },
+    "claude-3": {
+      "spent": [
+        {
+          "at": "2026-10-03T10:13:19Z",
+          "minutes": 0.1
+        }
+      ]
+    },
     "gpt": {
       "refused_until": "2026-10-03T10:32:25Z",
       "spent": [
