@@ -647,6 +647,10 @@
   },
   "providers": {
     "agy": {
+      "infra": {
+        "at": "2026-10-03T05:54:02Z",
+        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+      },
       "spent": [
         {
           "at": "2026-10-03T02:02:07Z",
