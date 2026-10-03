@@ -431,7 +431,9 @@
       "run_id": "37062549920",
       "source": "request",
       "started_at": "2026-10-02T20:45:26Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-03T04:51:49Z",
+      "stopped_by": "MaxGoetzmann",
       "taken_asks": []
     },
     "54": {
