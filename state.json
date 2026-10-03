@@ -641,9 +641,7 @@
     },
     "160": {
       "action": "build",
-      "asks": [
-        "c:5972198034"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -662,13 +660,15 @@
       "planned_at": "2026-10-03T18:22:24Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-10-03T18:31:28Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37145147691",
-      "started_at": "2026-10-03T18:42:18Z",
+      "run_id": "37145236766",
+      "started_at": "2026-10-03T18:43:51Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5972198034"
+      ]
     },
     "165": {
       "failures": 0,
@@ -1171,9 +1171,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T18:43:18Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37145207692",
-    "what": "build #68 on devin"
+    "at": "2026-10-03T18:43:51Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37145236766",
+    "what": "build #160 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T18:40:51Z",
