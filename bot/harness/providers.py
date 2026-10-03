@@ -590,8 +590,12 @@ def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetim
 
 
 def _duration(text: str) -> timedelta:
-    amount = int("".join(ch for ch in text if ch.isdigit()) or "30")
-    return timedelta(hours=amount) if text.upper().endswith("H") else timedelta(minutes=amount)
+    """`+PT90M`, `+PT2H`, `+PT1H30M`: how long a relative refusal lasts (30 minutes if unread)."""
+    match = re.fullmatch(r"\+?PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", text.strip().upper())
+    if not match or not any(match.groups()):
+        return timedelta(minutes=30)
+    hours, minutes, seconds = (int(g or 0) for g in match.groups())
+    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
 def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
