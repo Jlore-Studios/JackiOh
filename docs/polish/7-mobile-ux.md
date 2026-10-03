@@ -325,6 +325,13 @@ export function __resetSettingsForTests(): void;
   while at least one subscriber exists.
 - `<html data-reduce-motion="true">` is set whenever `reduceMotion` is true and removed
   otherwise, on first load and on every change.
+- Issue #128 (v0.2.X): the dialog's sections are tabs (`role="tablist"`, a `tabpanel` each, the
+  arrow keys, Home and End), in the order Gameplay, Visuals, Audio. Every panel stays in the
+  document and only the open one is shown; a section with no switch and no slot has no tab. The
+  dialog opens on `initialTab` (the gear's `tab` prop) or else the tab the player used last on this
+  device (`tabs.ts`, `localStorage["jackioh.settings.tab"]`, not a setting and not synced). The foot
+  has "Reset this tab" beside "Reset all". Test ids: `settings-tablist`, `settings-tab-<id>`,
+  `settings-section-<id>` (the panel), `settings-reset-tab`, `settings-reset`.
 
 ```ts
 // slots.ts: the integration seam for tasks 1 and 2
