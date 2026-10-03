@@ -394,6 +394,7 @@
       "feedback_since": "2026-10-03T09:33:15Z",
       "issue": 57,
       "kind": "revise",
+      "queued_at": "2026-10-03T12:29:03Z",
       "votes": {
         "approvals": [
           "gemini"
