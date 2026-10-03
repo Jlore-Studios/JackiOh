@@ -21,8 +21,8 @@
 // Like the engine, nothing is scheduled on a context that is not running, and the player never
 // throws. A turn or focus change that arrives while the context is suspended is applied the moment
 // it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed) and decoded only
-// to play (MUSIC_DECODED_MAX kept); one that cannot be fetched or decoded is tried again only when
-// a request next names it. No file is fetched
+// to play (MUSIC_DECODED_MAX kept); one that cannot be fetched or decoded is tried again when a
+// request next names it or at the next turn boundary, never at every idle. No file is fetched
 // or decoded while the board animates (B58): a preload fetches bytes only, and both wait for the
 // burst to end. A sting whose file cannot be had is skipped, never waited on.
 
@@ -166,7 +166,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   const bytes = new Map<string, Promise<ArrayBuffer | null>>();
   const decoded = new Map<string, AudioBuffer>();
   const decoding = new Map<string, Promise<AudioBuffer | null>>();
-  /** Tracks whose file could not be fetched or decoded: not tried again until a request names them anew. */
+  /** Tracks whose file could not be fetched or decoded: tried again when a request names them anew, or at a turn boundary. */
   const failed = new Set<string>();
   let heldPreload: string[] = [];
   let watched: AudioEngine | null = null;
@@ -497,11 +497,16 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         if (intro !== null) failed.delete(intro);
       }
       const turn = request.opponentTurn ?? false;
+      let retry = false;
       if (turn !== opponent) {
         opponent = turn;
         quietly(applyTurn);
+        // A turn boundary is when a track that failed to load (a passing network error) is tried
+        // again: often enough to recover within a match, rarely enough to cost nothing.
+        retry = failed.size > 0;
+        failed.clear();
       }
-      if (changed) sync();
+      if (changed || retry) sync();
     },
     resetResume() {
       resumeAt.clear();

@@ -378,6 +378,21 @@ describe("R631 the turn mix, focus and audibility", () => {
     expect(r.audio.decodeCalls).toHaveLength(1);
   });
 
+  it("R631 a track that failed once (a passing network error) is tried again at the next turn boundary", async () => {
+    const r = await rig();
+    r.fetch.mode = "reject";
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.fetch.mode = "resolve";
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    expect(started(r)).toEqual([]);
+    r.player.request({ track: "tavern-1", opponentTurn: true });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a", "/audio/music/tavern-1.m4a"]);
+  });
+
   it("R631 a sting that cannot be fetched is skipped, and the track it leads into still plays", async () => {
     const r = await rig();
     r.fetch.modes.set("/audio/music/tavern-start.m4a", "reject");
