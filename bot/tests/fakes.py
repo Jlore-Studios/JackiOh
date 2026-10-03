@@ -167,6 +167,10 @@ class FakeGitHub:
             raise GitHubError("a repository pins at most three issues", 422)
         self.pinned.append(node_id)
 
+    def set_issue_body(self, number: int, body: str) -> dict[str, Any]:
+        self.threads[number]["body"] = str(body)
+        return copy.deepcopy(self.threads[number])
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         self.threads[number].update(fields)
         return copy.deepcopy(self.threads[number])
@@ -188,6 +192,11 @@ class FakeGitHub:
 
     def list_labels(self) -> list[dict]:
         return list(self.labels.values())
+
+    def list_issue_types(self) -> list[dict]:
+        return [{"name": "Task", "description": "A specific piece of work"},
+                {"name": "Bug", "description": "An unexpected problem or behavior"},
+                {"name": "Feature", "description": "A request, idea, or new functionality"}]
 
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         if name in self.labels:

@@ -167,7 +167,7 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
-                                        ctx.now())
+                                        ctx.now(), ctx.cfg.timezone)
         if refusal:
             return (f"`{provider.id}` stops: {refusal}", "usage")
         return None
@@ -329,7 +329,7 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         seats = ", ".join(f"{seat.model} {seat.tier}" + (" self-check" if seat.self_check else "")
                           for seat in cfg.pool.seats(provider))
         print(f"{provider.id:10} {provider.cli:7} {seats:36} "
-              f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
+              f"hours: {provider.hours(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
     print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
     # A tier's entries name models; whether one checks itself is its subscription's seat's.
@@ -413,7 +413,7 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
             warnings.append(f"halted: {state.get('halt')}")
         for provider in cfg.pool.ordered():
             refusal = providers_mod.refusal(provider, providers_mod.peek_record(
-                state, provider.id), ctx.now())
+                state, provider.id), ctx.now(), cfg.timezone)
             if refusal:
                 warnings.append(f"{provider.id}: {refusal}")
         if ctx.repo_halted():
@@ -463,7 +463,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             ctx = _ctx(cfg, write=False)
             thread = ctx.gh.get_issue(number)
             text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
-                                     triage_mod.conventions_text(cfg.root))
+                                     triage_mod.conventions_text(cfg.root),
+                                     triage_mod.issue_types(ctx.gh))
             answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
             verdict = triage_mod.parse(answer)
         except Exception as exc:  # noqa: BLE001 - any failure skips
@@ -486,7 +487,7 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
         thread = ctx.gh.get_issue(number)
         repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
         plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
-                                 repo_labels, cfg.bot_login)
+                                 repo_labels, cfg.bot_login, triage_mod.issue_types(ctx.gh))
         done = triage_mod.apply(ctx.gh, number, plan)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))

@@ -244,9 +244,9 @@ describe("C #64 Malzahar's Recycler", () => {
       expect(drawnBy(s.lastEvents, "p2")).toHaveLength(0);
     });
 
-    it("§6.1 a Brittle crumble in your hand is no discard: it draws nothing", () => {
+    it("§6.1 R638 a Brittle crumble is no discard: it draws nothing (and a card in your hand never crumbles)", () => {
       const s = scenario({
-        p1: { hand: [MENACE, FILLER], backrow: [RECYCLER], library: [VANILLA, VANILLA, VANILLA] },
+        p1: { hand: [FILLER], field: [{ def: MENACE, lane: 1 }], backrow: [RECYCLER], library: [VANILLA, VANILLA, VANILLA] },
         p2: { hand: [FILLER], library: [VANILLA, VANILLA] },
         active: "p2",
       });

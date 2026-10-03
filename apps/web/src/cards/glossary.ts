@@ -209,6 +209,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit"),
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
+  // R636, R637: the keyword rules patch (SPEC §6.1).
+  Windfury: keyword("Windfury", "Can attack twice each turn"),
+  Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", [
     "Cannot be in Defense Position",
@@ -302,4 +305,6 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
+  Windfury: "WF",
+  Temporary: "TE",
 };

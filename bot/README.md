@@ -218,6 +218,7 @@ needs level 3.
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
+| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a strong model's plan, which goes into its description |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
@@ -232,8 +233,8 @@ needs level 3.
 
 ## Triage
 
-`triage.yml` labels, assigns and titles every issue or pull request that someone trusted opens,
-from a Devin call (`triage.py`):
+`triage.yml` labels, assigns, titles and types every issue or pull request that someone trusted
+opens, from a Devin call (`triage.py`):
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
@@ -252,7 +253,10 @@ from a Devin call (`triage.py`):
   - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
     doesn't already, and only if every version number survives. A pull request keeps its title,
     which becomes the squash commit's subject, and is never assigned to the bot.
-- **It only adds.** A person's labels, assignees and conventional title stay. A priority or a model
+  - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
+    the org, or those three when the token can't read them) if it has none. A pull request has no
+    type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
+- **It only adds.** A person's labels, assignees, conventional title and type stay. A priority or a model
   tier a person chose gets no second one.
 - **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
 - **Waiting:** `classify` shares `night-vm-devin` with Devin's bot jobs, so it waits while one runs.
@@ -264,7 +268,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | any time | 98% of 5 hours, 90% of the week |
+| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | 98% of 5 hours, 90% of the week |
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
@@ -307,6 +311,8 @@ each one and whether it could start now, and `/harness status` does the same on 
   ([below](#it-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
 - `env`: non-secret environment for its CLI.
+- `off_hours` (`{"five_hour": 0.4}`, say): with a `window` schedule, it may also work outside the
+  window, but only under these tighter caps; a run there stops once past them.
 - `enabled: false`: turns it off.
 - `off_from` (a date) and `off_reason`: from that day, in the bot's time zone, it takes no new
   work, and the planner opens one issue with the reason, asking a person what it should do now.
@@ -314,7 +320,8 @@ each one and whether it could start now, and `/harness status` does the same on 
 
 At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
 may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
-and no such limit), `priority` the usage order (below), and `tiers` each tier's models in the
+and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
+lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
 (default 1) is how many items it may work on at once; Devin's is 6, on six runners, so it can fill the machine's six alone. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
@@ -352,26 +359,37 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last, only when nothing else is free. claude-4 sits with claude-1
-until it is set up. For building alone, claude-2 is `build_last`: it builds only when no other
-subscription that may is free, Devin included, so Devin is the default builder once claude-3,
-claude-1 and the medium models are busy.
+planning and reviewing; and Devin last. claude-4 sits with claude-1 until it is set up. For
+building alone, claude-2 is `build_last`: it builds only when no other subscription that may is
+free, Devin included. Devin is `easy_first`: it may build only easy items, so it takes them ahead
+of everyone while it has a free lane, and the stronger models keep the medium and hard items only
+they may build. With its six lanes it fills whatever room on the machine the medium models leave.
 
-- **Planning.** Every build starts from a plan. The planner is a medium or strong model, strong
-  whenever one is free (claude-3, claude-1, then claude-2). It reads the task and the code, writes
-  nothing, and its plan goes to the top of the builder's `.bot-notes.md` and into the handoff. When
-  the builder's own subscription has a model of the planner's tier, the plan and the build share
-  one run (claude-3 plans on Opus, then builds an easy item on Sonnet); otherwise the planning is a
-  run of its own, and the item goes back to the queue to build from its plan, on any subscription.
-  A revision is not planned again.
+- **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
+  carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong
+  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-2) plans those first, on
+  the **planning lane**: `plan_lanes` runs on top of `max_parallel`, which take no build lane, so a
+  Claude account plans one item while it builds another. claude-1 is the exception: the quiet
+  check cannot tell a second run of the bot's from its owner, so it plans only while it holds
+  nothing else, and builds nothing while it plans. The lane takes the easy items first (Devin
+  waits on those), then the rest in the usual order, ahead of every build. The planner reads the
+  task and the code, writes nothing, and must leave a weak builder no gap to fill
+  (`bot/prompts/plan.md`): the files to touch by path, the steps in order, the tests and commands,
+  and a checklist for done. Its plan goes into the issue's description, in a **Plan** section
+  (`harness/issueplan.py`), and into the handoff. The builder starts from that section as it
+  stands then, so a person can correct the plan in the description before anyone builds it.
+  Devin, which cannot plan, builds only from a strong model's plan. When no strong model is free
+  on the lane and a medium or strong builder takes an unplanned item, it plans it first in its own
+  run, on its strongest model; that plan goes into the description too. A revision is not planned
+  again.
 - **Building, fixing, revising.** The first free subscription in the usage order with a model that
   meets the item's tier builds it, on its weakest such model: claude-3 builds an easy item with
   Sonnet, never Opus, and a medium one with Opus, since it has no medium model. When that is above
   the item's tier (none of that tier is free, or the usage order puts a stronger one first), the
-  run's log says so and why. claude-2 never builds with Sonnet, and Sonnet builds only while
-  claude-3 or claude-1 is free; otherwise an easy item goes to the medium models, then Devin, and
-  claude-2 (with Opus) only when Devin's two lanes are taken too. A medium item passes Devin by,
-  so claude-2 builds it once the medium models are busy.
+  run's log says so and why. An easy item goes to Devin first while it has a free lane. Otherwise
+  claude-3 or claude-1 builds it with Sonnet (Sonnet builds only while one of them is free), then
+  the medium models, and claude-2 (with Opus, never Sonnet) only when Devin's six lanes are taken
+  too. A medium item passes Devin by, so claude-2 builds it once the medium models are busy.
 - **Reviewing in the run.** The run's own strongest model of at least medium (strong for a hard
   item) reviews the change adversarially, in a fresh session. Weak models never review: a run
   with none (Devin's) hands the change to a review run.
@@ -676,7 +694,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, assigns and titles a new issue or pull request from a Devin call (`triage.yml`) |
+| `triage.py` | labels, assigns, titles and types a new issue or pull request from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue: opened and pinned once, rewritten every ten minutes by `bot-status.yml` (`harness dashboard --sweep --every 600 --for 19800`, which sweeps first each time) and after every sweep |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |

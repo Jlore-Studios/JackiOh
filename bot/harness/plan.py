@@ -15,14 +15,16 @@ is forced, under its limits):
 
 - **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
   claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
-  all of them) with a seat that meets the tier, on its weakest such seat. claude-3 and claude-1
-  build an easy item with Sonnet, not Opus. A
+  all of them) with a seat that meets the tier, on its weakest such seat. An easy item goes to
+  an `easy_first` subscription (Devin) ahead of that order while it has a free lane; otherwise
+  claude-3 and claude-1 build it with Sonnet, not Opus. A
   builder above the item's tier (no seat of that tier free, or one comes later in the usage
   order) is said in the run's log.
 - **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
   seat, strong whenever one is free. When the builder's own subscription has a seat of that tier,
   the plan and the build share one run; otherwise the planning is a run of its own, and the item
-  goes back to the queue to build from the plan.
+  goes back to the queue to build from the plan. Such a planning run is short and starts before
+  any long run, so a planner plans Devin's next item before it builds one of its own.
 - **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
   a weak seat never reviews, so a run with none hands the change to a review run.
 - **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
@@ -39,18 +41,20 @@ from datetime import timedelta
 from itertools import islice
 from typing import Any, Iterator
 
-from harness import asks, threads
+from harness import asks, issueplan, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
-from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR,
-                            LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING,
+from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+                            LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_WORKING,
                             MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           label_names, open_pull_for_branch, set_state_label)
+                           label_names, needs_plan, open_pull_for_branch, set_state_label,
+                           strong_plan)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
@@ -118,22 +122,35 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
 
 @dataclass
 class Lanes:
-    """The runs that hold work now: item number (0 for a suggestion survey) -> provider id."""
+    """The runs that hold work now: item number (0 for a suggestion survey) -> provider id.
+    `planning` are the items whose run is a planning run: those hold the planning lane
+    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
+    planning: set[int] = field(default_factory=set)
+    plan_limit: int = 0
 
     @property
     def busy(self) -> set[str]:
         return set(self.held.values())
 
     def count(self, provider_id: str) -> int:
-        """How many runs this provider holds now."""
-        return sum(1 for held in self.held.values() if held == provider_id)
+        """How many runs this provider holds now, its planning runs aside."""
+        return sum(1 for number, held in self.held.items()
+                   if held == provider_id and number not in self.planning)
+
+    def planning_by(self, provider_id: str) -> int:
+        """How many planning runs this provider holds now."""
+        return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
     def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`."""
-        return self.count(provider.id) >= provider.lanes
+        """It holds as many runs as its `lanes`. A subscription the quiet check guards counts its
+        planning run too: the check cannot tell a second run of the bot's from its owner."""
+        held = self.count(provider.id)
+        if provider.quiet_check:
+            held += self.planning_by(provider.id)
+        return held >= provider.lanes
 
     def on_machine(self, pool: providers_mod.Pool) -> int:
         """How many of the held runs are on the bot's machine."""
@@ -141,10 +158,20 @@ class Lanes:
 
     @property
     def free(self) -> int:
-        return max(0, self.limit - len(self.held))
+        return max(0, self.limit - (len(self.held) - len(self.planning)))
+
+    @property
+    def plan_free(self) -> int:
+        return max(0, self.plan_limit - len(self.planning))
+
+    def with_run(self, number: int, provider_id: str, action: str) -> "Lanes":
+        """These lanes with one more run held."""
+        planning = self.planning | ({number} if action == "plan" else set())
+        return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit)
 
     def describe(self) -> str:
-        return ", ".join(f"#{n} with `{p}`" if n else f"a survey with `{p}`"
+        return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
+                         if n else f"a survey with `{p}`"
                          for n, p in sorted(self.held.items())) or "none"
 
 
@@ -157,12 +184,14 @@ def working_threads(ctx: Context) -> list[dict[str, Any]]:
 def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     """The lanes held by runs that are still going. A run that ended without delivering holds
     nothing: housekeeping requeues its item."""
-    lanes = Lanes(ctx.cfg.pool.max_parallel)
+    lanes = Lanes(ctx.cfg.pool.max_parallel, plan_limit=ctx.cfg.pool.plan_lanes)
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         if run_alive(ctx, record.get("run_id")):
             lanes.held[number] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
+            if record.get("action") == "plan":
+                lanes.planning.add(number)
     survey = state.get("suggest") or {}
     if survey.get("provider") and run_alive(ctx, survey.get("run_id")):
         lanes.held[0] = str(survey["provider"])
@@ -241,8 +270,10 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tupl
     seat that meets its tier, on its weakest such seat; with a note when that seat is above the
     tier, saying why (none of that tier is free, or the usage order puts this one first)."""
     floor = MIN_TIER[difficulty]
-    # A subscription marked `build_last` (claude-2) builds only after every other one.
-    order = sorted(providers, key=lambda provider: provider.build_last)
+    # An easy item goes first to a subscription marked `easy_first` (Devin), which may build
+    # nothing harder; one marked `build_last` (claude-2) builds only after every other one.
+    order = sorted(providers, key=lambda provider: (
+        not (provider.easy_first and difficulty == "easy"), provider.build_last))
     usable = [(provider, [seat for seat in pool.seats(provider) if tier_at_least(seat.tier, floor)])
               for provider in order]
     for index, (provider, seats) in enumerate(usable):
@@ -262,14 +293,35 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tupl
     return None, ""
 
 
-def planner_seat(pool: Pool, providers: list[Provider]) -> Seat | None:
-    """The planner: a strong seat whenever one is free (claude-3, claude-1, then claude-2, by
-    the usage order), else a medium one."""
-    seats = [seat for provider in providers for seat in pool.seats(provider)
-             if tier_at_least(seat.tier, "medium")]
-    strong = [seat for seat in seats if seat.tier == "strong"]
-    found = ranked(pool, strong or seats)
-    return found[0] if found else None
+def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: bool,
+                  quiet_ok: str) -> list[Seat]:
+    """The planning lane's planners: one strong seat of each subscription that may plan now, in
+    the usage order. A planning run there takes no build lane, so a subscription plans one item
+    while it builds another; one the quiet check guards plans only when it holds nothing else."""
+    if lanes.plan_free <= 0:
+        return []
+    cfg = ctx.cfg
+    seats = []
+    for provider in cfg.pool.ordered():
+        seat = cfg.pool.best_seat(provider, "strong")
+        if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
+            continue
+        if provider.quiet_check and lanes.count(provider.id):
+            continue
+        if machine_full(cfg.pool, provider, lanes):
+            continue
+        if (provider.quiet_check and cfg.quiet.enabled and not forced
+                and quiet_ok not in (ANY_QUIET, provider.id)):
+            continue
+        if providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
+                                      forced=forced) is None:
+            seats.append(seat)
+    return ranked(cfg.pool, seats)
+
+
+def can_plan(pool: Pool, provider: Provider) -> bool:
+    """It may plan: a seat of at least medium, and the role."""
+    return "plan" in provider.roles and pool.best_seat(provider, "medium") is not None
 
 
 def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
@@ -309,6 +361,10 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
             return None
         return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
     builders = free(ROLE_OF[candidate.kind])
+    if candidate.kind == "build" and not strong_plan(candidate):
+        # A builder that cannot plan (Devin) builds only from a strong model's plan, which the
+        # planning lane writes (the Needs plan stage).
+        builders = [p for p in builders if can_plan(pool, p)]
     if candidate.kind == "revise" and not candidate.bot_pr:
         # A person's pull request never gets a review run: its reviewer must be in this run.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
@@ -318,17 +374,12 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     notes = [f"#{candidate.number}: {note}"] if note else []
     reviewer = run_reviewer(pool, builder.provider, candidate.difficulty)
     if candidate.kind == "build" and not candidate.planned:
-        planners = free("plan")
-        target = planner_seat(pool, planners)
-        if target is None:
-            return None  # every build starts from a plan, and no medium or strong model is free
-        own = (pool.best_seat(builder.provider, target.tier)
-               if builder.provider in planners else None)
+        # No strong model was free on the planning lane: the builder plans it first in its own
+        # run, on its strongest model (strong for a hard item).
+        own = pool.best_seat(builder.provider, "strong" if candidate.difficulty == "hard"
+                             else "medium") if "plan" in builder.provider.roles else None
         if own is None:
-            return Assignment(target.provider, "plan", candidate.difficulty, plan=target,
-                              notes=notes + [f"#{candidate.number}: planned on its own run, since "
-                                             f"its builder {builder.describe()} has no "
-                                             f"{target.tier}-tier model"])
+            return None
         return Assignment(builder.provider, "build", candidate.difficulty, plan=own,
                           build=builder, review=reviewer, notes=notes)
     return Assignment(builder.provider, candidate.kind, candidate.difficulty, build=builder,
@@ -343,10 +394,26 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
     order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority,
                                          -DIFFICULTIES.index(c.difficulty),
                                          KIND_ORDER[c.kind], c.queued_at, c.number))
-    for candidate in order:
-        assignment = assign(ctx, state, candidate, lanes, force=force, quiet_ok=quiet_ok)
-        if assignment is not None:
-            yield candidate, assignment
+    # The Needs plan stage first: a strong model plans on the planning lane, which takes no build
+    # lane, the items a builder that cannot plan (Devin) waits on before the rest.
+    planning: list[tuple[Candidate, Assignment]] = []
+    planners = lane_planners(ctx, state, lanes, forced=force, quiet_ok=quiet_ok)
+    if planners:
+        for candidate in sorted((c for c in order if needs_plan(c)),
+                                key=lambda c: (not (force or c.forced), c.difficulty != "easy")):
+            seat = planners[0]
+            planning.append((candidate, Assignment(
+                seat.provider, "plan", candidate.difficulty, plan=seat,
+                notes=[f"#{candidate.number}: needs a plan; {seat.describe()} writes it on the "
+                       "planning lane"])))
+    found: list[tuple[Candidate, Assignment]] = []
+    if lanes.free > 0:
+        found = [(candidate, assignment) for candidate in order
+                 if (assignment := assign(ctx, state, candidate, lanes, force=force,
+                                          quiet_ok=quiet_ok)) is not None]
+    planning.sort(key=lambda pair: not (force or pair[0].forced))
+    yield from planning
+    yield from found
 
 
 def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force: bool,
@@ -448,7 +515,7 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
         return Peek(False, stop)
     tidy = housekeeping_due(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0:
+    if lanes.free <= 0 and lanes.plan_free <= 0:
         if tidy:
             return Peek(True, tidy, force, held=len(lanes.held))
         return Peek(False, f"every lane is busy ({lanes.describe()})", held=len(lanes.held))
@@ -589,8 +656,9 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
             ctx.store.update(lambda s: s.update(run_requested=None), "run request taken")
         return planned
     state = ctx.store.load()
+    notes += sync_needs_plan(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0:
+    if lanes.free <= 0 and lanes.plan_free <= 0:
         return {**nothing(f"every lane is busy ({lanes.describe()})"), "housekeeping": notes}
     skipped: list[str] = []
     queue = _queue(ctx, state, item, mode, skipped)
@@ -603,7 +671,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
                 planned["forced"] = bool(force or candidate.forced)
                 planned["priority"] = PRIORITY_NAMES[candidate.priority]
                 planned["skipped"] = skipped
-                fill_lanes(ctx, lanes, candidate, assignment.provider, planned)
+                fill_lanes(ctx, lanes, candidate, assignment, planned)
                 return taken(planned)
     if item is not None and mode != "suggest":
         return {**nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or "
@@ -619,12 +687,12 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     return {**nothing(reason), "housekeeping": notes, "skipped": skipped}
 
 
-def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
+def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignment,
                planned: dict[str, Any]) -> None:
-    """Start one more run when, with this item claimed, a lane and more work are still free.
-    That run does the same, so the lanes fill one run at a time."""
-    after = Lanes(lanes.limit, {**lanes.held, taken.number: provider.id})
-    if after.free <= 0:
+    """Start one more run when, with this item claimed, a lane (or the planning lane) and more
+    work are still free. That run does the same, so the lanes fill one run at a time."""
+    after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
+    if after.free <= 0 and after.plan_free <= 0:
         return
     state = ctx.store.load()
     rest = [c for c in candidates(ctx, state) if c.number != taken.number]
@@ -635,6 +703,30 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
         planned["filled"] = "started another run for the next free lane"
     except GitHubError as exc:
         planned["filled"] = f"could not start another run: {exc}"
+
+
+def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
+    """Keep `bot:needs-plan` on exactly the queued items in the Needs plan stage, and on the ones
+    being planned now."""
+    notes: list[str] = []
+    try:
+        wanted = {c.number for c in candidates(ctx, state) if needs_plan(c)}
+        labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
+    except GitHubError as exc:
+        return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
+    have = set()
+    for thread in labelled:
+        number = int(thread["number"])
+        have.add(number)
+        record = state["items"].get(str(number), {})
+        planning = LABEL_WORKING in label_names(thread) and record.get("action") == "plan"
+        if number not in wanted and not planning:
+            ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)
+            notes.append(f"#{number} left the Needs plan stage")
+    for number in sorted(wanted - have):
+        ctx.gh.add_labels(number, [LABEL_NEEDS_PLAN])
+        notes.append(f"#{number} needs a plan")
+    return notes
 
 
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
@@ -746,11 +838,16 @@ def claim(ctx: Context, candidate: Candidate,
             "previous_findings": record.get("last_findings") or [],
             "previous_question": record.get("question") or "",
         }
+        written = issueplan.plan_of(thread.get("body"))
+        if written and assignment.action == "build":
+            # A person may have edited the plan in the description: the builder starts from that.
+            planned["plan_in_issue"] = written
         if assignment.action == "plan":
-            message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()}: it is "
-                       f"difficulty:{candidate.difficulty}. The plan goes into the notes its "
-                       "builder starts from, and then it is queued to build on the cheapest model "
-                       "its difficulty allows.")
+            message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()} "
+                       f"(`{LABEL_NEEDS_PLAN}`): it is difficulty:{candidate.difficulty}. The plan "
+                       "goes into this issue's description, under **Plan**, and the builder starts "
+                       "from it; then it is queued to build on the cheapest model its difficulty "
+                       "allows.")
         else:
             message = (f"Starting work on this now{run_link(cfg)}: it is "
                        f"difficulty:{candidate.difficulty}. {_start_message(assignment, cfg)}")
@@ -822,7 +919,15 @@ def claim(ctx: Context, candidate: Candidate,
         planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):
         planned["handoff"] = record["handoff"]
+    if planned.get("plan_in_issue"):
+        handoff = planned.get("handoff") if isinstance(planned.get("handoff"), dict) else {}
+        if not handoff or handoff.get("kind") == "plan":
+            planned["handoff"] = {**handoff, "kind": "plan",
+                                  "provider": handoff.get("provider") or record.get("planned_by")
+                                  or "?", "notes": planned["plan_in_issue"]}
     set_state_label(ctx, number, names, LABEL_WORKING)
+    if LABEL_NEEDS_PLAN in names and assignment.action != "plan":
+        ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)  # this run plans it first, in the run
     taken: list[str] = []
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, number)

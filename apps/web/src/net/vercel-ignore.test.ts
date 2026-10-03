@@ -82,13 +82,23 @@ describe("scripts/vercel-ignore.sh", () => {
       "vercel.json",
       "assets/music/a.mid",
       "tsconfig.base.json",
+      "apps/web/vite.config.ts",
+      "apps/web/index.html",
+      "packages/ai/src/decide.ts",
+      "packages/shared/src/index.ts",
+      "packages/cards/patches/patches.json",
+      // The card scripts are bundled: a package's scripts/ is tooling, but src/scripts/ is not.
+      "packages/cards/src/scripts/001-bigot.ts",
+      // Named like test support, but not a *.test.* file or a test/ directory, so not proved unread.
+      "apps/web/src/game/deckbuilder/testkit.ts",
+      "apps/web/src/patches/fixtures.ts",
     ]) {
       commits([file]);
       expect(builds(), file).toBe(true);
     }
   });
 
-  it("skips main when only the night bot, architecture, docs, the server, tests or CI changed", () => {
+  it("skips main when only the night bot, architecture, docs, the server, CI, tests or tooling changed", () => {
     for (const files of [
       ["bot/harness/state.py", ".harness/config.json"],
       [".github/workflows/ci.yml", ".github/actions/setup/action.yml"],
@@ -96,6 +106,12 @@ describe("scripts/vercel-ignore.sh", () => {
       ["apps/server/src/index.ts", "apps/server/package.json", "render.yaml"],
       ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", "reviews/2026-10-03.md"],
       ["scripts/ci-scope.sh", "JackiOh_Core_Cards.md", "ARCHITECTURE-CCG.md"],
+      // Tests and tooling inside the client and the packages are never imported by the bundle.
+      ["apps/web/src/game/Board.test.tsx", "apps/web/src/net/x.test.ts", "apps/web/src/test/setup.ts"],
+      ["packages/cards/test/002-bigot.test.ts", "packages/engine/test/reduce.test.ts", "packages/ai/test/_support.ts"],
+      ["packages/validator/test/x.test.ts", "packages/shared/test/y.test.ts", "packages/engine/src/z.test.ts"],
+      ["packages/cards/scripts/patch.ts", "packages/ai/scripts/sweep.ts", "apps/web/scripts/gen-voice.mjs"],
+      ["packages/cards/README.md", "packages/shared/README.md", "apps/web/README.md"],
     ]) {
       commits(files);
       expect(builds(), files.join(", ")).toBe(false);
@@ -114,7 +130,21 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds()).toBe(true);
     commits(["docs-copy/x.md"]);
     expect(builds()).toBe(true);
-    commits(["packages/shared/README.md"]);
+    // A test or tooling file beside a source file the bundle reads is still a build.
+    commits(["apps/web/src/game/Board.test.tsx", "apps/web/src/game/Board.tsx"]);
+    expect(builds()).toBe(true);
+    commits(["packages/cards/test/002-bigot.test.ts", "packages/cards/src/scripts/002-bigot.ts"]);
+    expect(builds()).toBe(true);
+    commits(["packages/cards/scripts/patch.ts", "packages/cards/catalog.json"]);
+    expect(builds()).toBe(true);
+    // Paths that only look like tests or tooling: a test/ or scripts/ below src, another suffix.
+    commits(["packages/cards/src/test/x.ts"]);
+    expect(builds()).toBe(true);
+    commits(["packages/cards/src/scripts/scripts/x.ts"]);
+    expect(builds()).toBe(true);
+    commits(["apps/web/src/game/Board.tsx.test"]);
+    expect(builds()).toBe(true);
+    commits(["apps/web/src/net/test.ts"]);
     expect(builds()).toBe(true);
   });
 

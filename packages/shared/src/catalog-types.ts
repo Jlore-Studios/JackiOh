@@ -76,7 +76,11 @@ export type Keyword =
   /** §4.4: a Spell its controller casts deals N more damage per hit (E6). Printed "Spell Damage +N". */
   | { kind: "Spell Damage"; n: number }
   /** E35: a Spell can't target this and doesn't affect it. */
-  | { kind: "Immune to Spells" };
+  | { kind: "Immune to Spells" }
+  /** R636: a Unit may attack twice each turn. */
+  | { kind: "Windfury" }
+  /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
+  | { kind: "Temporary" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -104,6 +108,8 @@ export const KEYWORD_KINDS = [
   "Brittle",
   "Spell Damage",
   "Immune to Spells",
+  "Windfury",
+  "Temporary",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

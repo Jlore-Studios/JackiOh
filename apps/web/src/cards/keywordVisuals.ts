@@ -220,6 +220,20 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-edge-shift", when: "always" },
     numbered: false,
   },
+  Windfury: {
+    layer: "glyph",
+    priority: 23,
+    shape: "two curved gusts, one above the other",
+    motion: { keyframes: "kw-gust-sway", when: "always" },
+    numbered: false,
+  },
+  Temporary: {
+    layer: "glyph",
+    priority: 24,
+    shape: "an hourglass, its sand running out",
+    motion: { keyframes: "kw-sand-fall", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */
