@@ -1092,10 +1092,8 @@
     "what": "plan #44 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-03T16:55:04Z",
-    "notes": [
-      "started a night run, as a lane was free: #68 (easy) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-03T17:03:55Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
