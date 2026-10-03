@@ -750,7 +750,7 @@
       "action": "review",
       "asks": [],
       "difficulty": "medium",
-      "failures": 0,
+      "failures": 1,
       "feedback_since": "2026-10-03T18:22:45Z",
       "issue": 75,
       "kind": "review",
