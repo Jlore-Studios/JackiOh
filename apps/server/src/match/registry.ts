@@ -74,7 +74,12 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
     // `beginGame` from `(seed, decks)` before it applies a single action (§9.3).
     const state = deps.engine.beginGame(
-      deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match) }),
+      deps.engine.createGame({
+        seed: match.seed,
+        decks: match.decks,
+        catalogVersion: match.catalogVersion,
+        ...lastBoardsOf(match),
+      }),
     ).state;
 
     actors.set(match.id, createMatchActor(deps, { match, state }));
@@ -90,6 +95,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       seed: match.seed,
       decks: match.decks,
       log: log.map((row) => row.action),
+      catalogVersion: match.catalogVersion,
       ...lastBoardsOf(match),
     });
     if (folded.errors.length > 0) {

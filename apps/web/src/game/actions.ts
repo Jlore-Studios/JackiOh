@@ -295,15 +295,18 @@ export function activationsOnField(view: PlayerView, instanceId: string): readon
 
 /**
  * R384, R510: every control an activation lights. A Heroic Power the viewer controls is its hero
- * panel button (`power` for the first, `power-<id>` for the rest); a card listing `activations` is
+ * panel button (`power`); a card listing `activations` is
  * its own Activate control. A body the view places nowhere lights the control its type has always
  * meant: `power` for `activatePower`, `activate-<id>` for `activate`.
  */
 export function activationControlTestids(view: PlayerView, body: ActivationBody): string[] {
   const out: string[] = [];
-  const powers = view.you.hero.powers ?? [];
-  if (view.you.hero.power?.instanceId === body.instanceId) out.push(testid.power);
-  else if (powers.some((power) => power.instanceId === body.instanceId)) out.push(testid.powerOf(body.instanceId));
+  const heldPower = (view.you.hero.powers ?? []).find((power) => power.instanceId === body.instanceId);
+  if (heldPower !== undefined) {
+    // R510: a retained but unselected Heroic Power has no control to light or press; the selected
+    // one has its hero-panel control even though its card may also be in the backrow.
+    return view.you.hero.power?.instanceId === body.instanceId ? [testid.power] : [];
+  }
   if (body.type === "activate") {
     const listed = activationsOnField(view, body.instanceId);
     if (listed !== null && listed.length > 0) {

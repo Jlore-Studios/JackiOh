@@ -56,8 +56,8 @@ const SECOND_POWER: HeroPowerView = {
 /**
  * `act1` Brother Ping (one ability, its damage moved to 3), `act2` a Turtinator listing two
  * abilities, `fs1` a Field Spell whose ability is spent (greyed), `fs2` one with modes; `u1`, `u2`
- * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; two Heroic Powers (`power` the first,
- * `over.power` in its place when given).
+ * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; a selected Heroic Power (`power`, with
+ * `over.power` in its place when given) and a second retained one that game UI must not render.
  */
 function activateView(over: { fs1?: ActivationView[]; power?: HeroPowerView } = {}): PlayerView {
   const first = over.power ?? heroPower;
@@ -80,7 +80,7 @@ function activateView(over: { fs1?: ActivationView[]; power?: HeroPowerView } = 
       backrow: [
         faceUpBackrow("p1", { instanceId: "fs1", defId: "classic-020", activations: over.fs1 ?? [USED] }),
         faceUpBackrow("p1", { instanceId: "fs2", defId: "classic-020", activations: [PUNISH] }),
-        null,
+        faceUpBackrow("p1", { instanceId: "power-1", defId: "core-098", activations: [PING] }),
         null,
         null,
       ],
@@ -218,6 +218,13 @@ describe("R510 the Activate control on the card", () => {
     expect(onClick).toHaveBeenCalledWith({ on: "activate", instanceId: "act1" });
   });
 
+  it("R510 Heroic Power's card wears no Activate control because its one control is on the hero", () => {
+    renderBoard([{ type: "activatePower", instanceId: "power-1" }]);
+
+    expect(within(el(testid.card("power-1"))).queryByRole("button", { name: /Activate/ })).toBeNull();
+    expect(el(testid.power)).toBeInTheDocument();
+  });
+
   it("R510 the keyboard presses it with Enter and Space, and the card under it does not take the key", async () => {
     const user = userEvent.setup();
     const { onClick } = renderBoard([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
@@ -243,7 +250,7 @@ describe("R510 the Activate control on the card", () => {
     expect(el(testid.activate("act1"))).toHaveAttribute("data-flash", "activated");
     expect(el(testid.activate("fs2"))).not.toHaveAttribute("data-flash");
     expect(el(testid.power)).toHaveAttribute("data-flash", "activated");
-    expect(el(testid.powerOf("power-2"))).not.toHaveAttribute("data-flash");
+    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
   });
 
   it("R510 an ability's words read the card's declared numbers on the face it has", () => {
@@ -320,17 +327,15 @@ describe("R384 an activation is built through the board as a play is", () => {
 });
 
 describe("R384 Heroic Power works through the same build", () => {
-  it("R510 `power` sends its listed activatePower, and a further power is its own live control", () => {
+  it("R510 `power` sends its selected power's listed activatePower", () => {
     const first: ActionBody = { type: "activatePower", instanceId: "power-1" };
-    const second: ActionBody = { type: "activatePower", instanceId: "power-2" };
-    const { onAction } = renderGame([first, second]);
+    const { onAction } = renderGame([first]);
 
     expect(el(testid.power)).toHaveAttribute("data-glow", "ready");
     fireEvent.click(el(testid.power));
     expect(onAction).toHaveBeenLastCalledWith(first);
 
-    fireEvent.click(el(testid.powerOf("power-2")));
-    expect(onAction).toHaveBeenLastCalledWith(second);
+    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
   });
 
   it("R384 a power listed with targets waits for its target on the board", () => {
@@ -400,8 +405,7 @@ describe("R384 Heroic Power works through the same build", () => {
   it("R384 a power legal does not list is disabled and sends nothing", () => {
     const { onAction } = renderGame([{ type: "endTurn" }]);
     expect(el(testid.power)).toBeDisabled();
-    expect(el(testid.powerOf("power-2"))).toHaveAttribute("data-legal", "false");
-    fireEvent.click(el(testid.powerOf("power-2")));
+    expect(screen.queryByTestId(testid.powerOf("power-2"))).toBeNull();
     expect(onAction).not.toHaveBeenCalled();
   });
 });

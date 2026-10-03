@@ -40,6 +40,8 @@ export type CreateGameArgs = {
   /** Two decks of card ids in library order; the engine shuffles them with the match rng. */
   decks: [string[], string[]];
   catalog?: CardDefs;
+  /** R388: the match record's pinned catalog version for versioned card scripts. */
+  catalogVersion?: string;
   lastBoards?: LastBoards;
 };
 
@@ -48,6 +50,8 @@ export type FoldArgs = {
   decks: [string[], string[]];
   log: readonly Action[];
   catalog?: CardDefs;
+  /** R388: the same script catalog version the live game started with. */
+  catalogVersion?: string;
   /** R417: the boards the match was created with, so the fold is the same game. */
   lastBoards?: LastBoards;
 };

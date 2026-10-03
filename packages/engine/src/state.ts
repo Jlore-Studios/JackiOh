@@ -28,7 +28,7 @@ import {
   UNIT_ZONES,
   type Handicap,
 } from "./config";
-import { registerCatalog, registeredCatalog } from "./catalog";
+import { catalogVersion, registerCatalog, registeredCatalog } from "./catalog";
 import type { CostRule } from "./costRules";
 import { showToOwner } from "./ownLibrary";
 import { freezeLastBoards } from "./subsystems/lastBoards";
@@ -40,6 +40,8 @@ export type Position = "ATK" | "DEF";
 export type CardInstance = {
   id: string;
   defId: string;
+  /** R388: the catalog version whose script this instance runs, frozen when the game starts. */
+  catalogVersion?: string;
   owner: PlayerId;
   controller: PlayerId;
   radiant: boolean;
@@ -242,6 +244,8 @@ export type DelayedEffect = {
 
 export type Resume = {
   defId: string;
+  /** R388: the catalog version whose script this continuation re-enters. */
+  catalogVersion?: string;
   hook: string;
   /** A named step, so a continuation reads as the script wrote it (§10.6). */
   step: string;
@@ -443,6 +447,8 @@ export type PlayerState = {
 
 export type GameState = {
   seed: string;
+  /** R388: the catalog version pinned when this game began, including on a replay. */
+  catalogVersion?: string;
   rngCursor: number;
   /** Player-turn counter, 1-based, capped by TURN_CAP_PLAYER_TURNS (§2.5, R2). */
   turn: number;
@@ -663,6 +669,8 @@ export function createPlayerState(): PlayerState {
 export type CreateGameOptions = {
   seed: string;
   decks: [string[], string[]];
+  /** R388: the catalog version pinned by the match record for script selection on every replay. */
+  catalogVersion?: string;
   /** Registers the catalog for this process; omit when it is already registered. */
   catalog?: CardDefs;
   /** R180: per-seat handicaps. An omitted seat, or one equal to HUMAN_HANDICAP, stores nothing. */
@@ -765,7 +773,7 @@ export function validateDeck(
 }
 
 export function newInstance(
-  state: Pick<GameState, "nextId">,
+  state: Pick<GameState, "nextId" | "catalogVersion">,
   defId: string,
   owner: PlayerId,
   zone: Zone,
@@ -773,6 +781,7 @@ export function newInstance(
   const instance: CardInstance = {
     id: `c${state.nextId}`,
     defId,
+    ...(state.catalogVersion === undefined ? {} : { catalogVersion: state.catalogVersion }),
     owner,
     controller: owner,
     radiant: false,
@@ -815,6 +824,7 @@ export function createGame(options: CreateGameOptions): GameState {
 
   const state: GameState = {
     seed: options.seed,
+    catalogVersion: options.catalogVersion ?? catalogVersion(),
     rngCursor: 0,
     turn: SETUP_TURN,
     active: "p1",

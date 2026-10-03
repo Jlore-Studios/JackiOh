@@ -17,6 +17,9 @@ import { RefsInteractive, useDefResolver } from "../refContext.tsx";
 import { findRefs } from "../refs.ts";
 import { INSPECT_REFS } from "./testids.ts";
 
+const FIRST_REFERENCE_INDEX = 0;
+const FIRST_REFERENCE_OFFSET = 1;
+
 /**
  * The named cards of a face, in the order its text first names them, each once per face — the card
  * itself left out, since the preview already shows it (#3's "base Right-house defender", #95's
@@ -41,25 +44,26 @@ export function References({ face }: { face: FaceModel }): ReactElement | null {
   if (resolve === null) return null;
   const named = namedCards(face, resolve);
   if (named.length === 0) return null;
+  const first = named[FIRST_REFERENCE_INDEX];
+  if (first === undefined) return null;
+  const additional = named.length - FIRST_REFERENCE_OFFSET;
   const width = REF_PANEL_FACE_HEIGHT_PX * FACE_ASPECT;
   return (
     <div className="inspect-refs" data-testid={INSPECT_REFS}>
       <p className="inspect-refs-label">Mentions</p>
       <div className="inspect-refs-faces">
         <RefsInteractive enabled={false}>
-          {named.map(({ def, radiant }) => (
-            <div
-              key={`${def.id}:${String(radiant)}`}
-              className="inspect-refs-face"
-              data-ref={def.id}
-              data-ref-face={radiant ? "radiant" : "base"}
-              style={{ width, height: REF_PANEL_FACE_HEIGHT_PX }}
-            >
-              <CardFace face={faceModel({ defId: def.id, def, radiant })} layout="full" />
-            </div>
-          ))}
+          <div
+            className="inspect-refs-face"
+            data-ref={first.def.id}
+            data-ref-face={first.radiant ? "radiant" : "base"}
+            style={{ width, height: REF_PANEL_FACE_HEIGHT_PX }}
+          >
+            <CardFace face={faceModel({ defId: first.def.id, def: first.def, radiant: first.radiant })} layout="full" />
+          </div>
         </RefsInteractive>
       </div>
+      {additional > 0 && <p className="inspect-refs-more">+{additional} more in card detail</p>}
     </div>
   );
 }

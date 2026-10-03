@@ -245,7 +245,14 @@ function runCry(sink: EngineSink, run: CryRun, card: CardInstance): void {
     return;
   }
   // Out of a graveyard "this" finds nothing: the Cry runs as its definition's, with no card (R127).
-  const resume = resumeAt({ defId: card.defId, hook: "cry", step: "", radiant: card.radiant, data });
+  const resume = resumeAt({
+    defId: card.defId,
+    hook: "cry",
+    step: "",
+    radiant: card.radiant,
+    catalogVersion: card.catalogVersion ?? sink.state.catalogVersion,
+    data,
+  });
   runResume(sink, { ...resume, data: { ...resume.data, [RUN_MARKS_KEY]: { exitsFrom } } }, {
     controller: run.controller,
     targets: run.targets,

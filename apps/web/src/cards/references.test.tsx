@@ -214,7 +214,7 @@ describe("R279 the hover preview lists the named cards beside the face", () => {
     );
   }
 
-  it("R279 resting on a card shows a Mentions column with each named card's face, once", () => {
+  it("R279 resting on a card previews one named face and directs related-card browsing to detail", () => {
     vi.useFakeTimers();
     render(
       <CardDefsProvider defs={CATALOG}>
@@ -231,11 +231,8 @@ describe("R279 the hover preview lists the named cards beside the face", () => {
     ]);
     // The card itself ("cast a random Call to Chaos") is left out: the preview already shows it. The
     // Classic+ Edition, which the same words can cast (R423), is named beside the tokens.
-    expect(named).toEqual([
-      ["core-t-rush", "radiant"],
-      ["core-095-1", "base"],
-      ["classicplus-073", "base"],
-    ]);
+    expect(named).toEqual([["core-t-rush", "radiant"]]);
+    expect(column).toHaveTextContent("+2 more in card detail");
     // Inside the preview a reference is only a mark: the preview takes no pointer events.
     expect(preview.querySelector(".cf-ref[tabindex]")).toBeNull();
   });

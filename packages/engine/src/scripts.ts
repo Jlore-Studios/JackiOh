@@ -2,7 +2,6 @@
 // register fixtures (BUILD §0). Like the catalog this is static data, not game state.
 
 import type { CardInstance } from "./state";
-import { catalogVersion } from "./catalog";
 import { EMPTY_SCRIPT, type CardScripts, type Script } from "./script";
 
 let registered: Readonly<Record<string, CardScripts>> = {};
@@ -15,7 +14,11 @@ export function registeredScripts(): Readonly<Record<string, CardScripts>> {
   return registered;
 }
 
-export function scriptsFor(defId: string): CardScripts {
+export function scriptsFor(defId: string, version?: string): CardScripts {
+  if (version !== undefined) {
+    const historic = registered[`${defId}@${version}`];
+    if (historic !== undefined) return historic;
+  }
   return registered[defId] ?? { base: EMPTY_SCRIPT, radiant: EMPTY_SCRIPT };
 }
 
@@ -32,9 +35,10 @@ export function scriptsFor(defId: string): CardScripts {
 export function scriptOf(instance: CardInstance): Script {
   if (instance.vanilla === true) return EMPTY_SCRIPT;
   // R388: a semantic patch registers its former implementation under `<id>@<version>`.
-  // Registries are scoped to the catalog a match started with, so this selection is stable for a
-  // folded replay and falls back to the current script for cards unchanged at that version.
-  const entry = registered[`${instance.defId}@${catalogVersion()}`] ?? scriptsFor(instance.defId);
+  // The version rides the instance, so another match registering or selecting the current catalog
+  // cannot change a folded replay. An older hand-built test instance without one still reads the
+  // current script.
+  const entry = scriptsFor(instance.defId, instance.catalogVersion);
   return instance.radiant ? entry.radiant : entry.base;
 }
 
@@ -126,7 +130,7 @@ export function textsOf(instance: CardInstance): { flags: NonNullable<Script["st
   const walk = (list: readonly IngredientRecord[]): { flags: NonNullable<Script["staticFlags"]>; embiggened: boolean }[] =>
     list.flatMap((record) => {
       if (record.parts !== undefined) return walk(record.parts);
-      const entry = scriptsFor(record.defId);
+      const entry = scriptsFor(record.defId, instance.catalogVersion);
       const face = instance.radiant ? entry.radiant : entry.base;
       return [{ flags: face.staticFlags ?? {}, embiggened: record.embiggened }];
     });

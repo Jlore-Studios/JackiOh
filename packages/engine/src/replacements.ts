@@ -296,6 +296,7 @@ function finish(sink: DamageSink, cand: Candidate, def: ReplacementDef, record: 
     hook: "resume",
     step: def.then,
     radiant: card.radiant,
+    ...(card.catalogVersion === undefined ? {} : { catalogVersion: card.catalogVersion }),
     instanceId: card.id,
     data: { [REPLACED_KEY]: JSON.parse(JSON.stringify(record)) as ReplacementRecord },
   };

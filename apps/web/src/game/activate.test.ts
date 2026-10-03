@@ -117,7 +117,7 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     expect(glow?.has(testid.endTurn)).toBe(true);
   });
 
-  it("R510 a Heroic Power's activatePower lights `power` for the first power and `power-<id>` for a further one", () => {
+  it("R510 a Heroic Power action lights only the selected power", () => {
     const second = { ...heroPower, instanceId: "power-2", name: "draw", ability: "draw" };
     const view = activateView({
       you: { ...activateView().you, hero: { health: 30, armor: 0, powers: [heroPower, second], power: heroPower } },
@@ -130,11 +130,9 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     const { legal: lit, glow } = highlightFor(view, legal, IDLE);
 
     expect(lit.has(testid.power)).toBe(true);
-    expect(lit.has(testid.powerOf("power-2"))).toBe(true);
-    expect(glow?.has(testid.powerOf("power-2"))).toBe(true);
-    expect(activationControlTestids(view, { type: "activate", instanceId: "power-2", ability: "draw" })).toEqual([
-      testid.powerOf("power-2"),
-    ]);
+    expect(lit.has(testid.powerOf("power-2"))).toBe(false);
+    expect(glow?.has(testid.powerOf("power-2"))).toBe(false);
+    expect(activationControlTestids(view, { type: "activate", instanceId: "power-2", ability: "draw" })).toEqual([]);
   });
 
   it("R384 an activation of a card the view places nowhere lights the control its type has always meant", () => {
@@ -334,11 +332,11 @@ describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built
     });
   }
 
-  it("R510 its `activate`s light the power on the hero as well as the card's own control", () => {
+  it("R510 its `activate`s light the power only on the hero", () => {
     const { legal: lit, glow } = highlightFor(pingView(), legal, IDLE);
     expect(lit.has(testid.power)).toBe(true);
     expect(glow?.has(testid.power)).toBe(true);
-    expect(lit.has(testid.activate("power-1"))).toBe(true);
+    expect(lit.has(testid.activate("power-1"))).toBe(false);
     expect(activationControlTestids(pingView(), powerPing(heroP2))[0]).toBe(testid.power);
   });
 

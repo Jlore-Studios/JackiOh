@@ -35,7 +35,7 @@ function faceCost(script: Script, state: GameState, self: CardInstance): number 
 function fusedCost(state: GameState, self: CardInstance, defId: string): number {
   const parts = fusedIdParts(defId);
   if (parts === null) {
-    const entry = scriptsFor(defId);
+    const entry = scriptsFor(defId, self.catalogVersion ?? state.catalogVersion);
     return faceCost(self.radiant ? entry.radiant : entry.base, state, self);
   }
   return Math.max(0, ...parts.map((part) => fusedCost(state, self, part)));

@@ -108,7 +108,7 @@ export function textFaceOf(state: GameState, card: CardInstance): CardInstance {
 export function runningScriptOf(state: GameState, card: CardInstance): Script {
   const copy = copiedTextOf(state, card);
   if (copy === null) return scriptOf(card);
-  const entry = scriptsFor(copy.defId);
+  const entry = scriptsFor(copy.defId, card.catalogVersion ?? state.catalogVersion);
   return (copy.radiant ? entry.radiant : entry.base) ?? EMPTY_SCRIPT;
 }
 

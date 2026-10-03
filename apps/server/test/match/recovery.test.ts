@@ -83,7 +83,9 @@ type Harness = {
   recordResult: ReturnType<typeof vi.fn>;
 };
 
-async function startMatch(options: { engine?: EnginePort; decks?: [string[], string[]] } = {}): Promise<Harness> {
+async function startMatch(
+  options: { engine?: EnginePort; decks?: [string[], string[]]; catalogVersion?: string } = {},
+): Promise<Harness> {
   const deps = createTestDeps();
   const recordResult = vi.fn(
     async (input: RecordResultInput): Promise<ResultRow> => ({
@@ -113,7 +115,7 @@ async function startMatch(options: { engine?: EnginePort; decks?: [string[], str
   await registry.start({
     matchId: MATCH_ID,
     seed: "seed-recovery",
-    catalogVersion: TEST_CATALOG_VERSION,
+    catalogVersion: options.catalogVersion ?? TEST_CATALOG_VERSION,
     seats: [
       { profileId: "profile-1", player: "p1", deck: decks[0] },
       { profileId: "profile-2", player: "p2", deck: decks[1] },
@@ -123,6 +125,18 @@ async function startMatch(options: { engine?: EnginePort; decks?: [string[], str
 }
 
 describe("M6-T4 crash recovery", () => {
+  it("R388 creates and rebuilds a match with its recorded catalog version", async () => {
+    const engine = createFakeEngine();
+    const createGame = vi.spyOn(engine, "createGame");
+    const fold = vi.spyOn(engine, "fold");
+    const { registry } = await startMatch({ engine, catalogVersion: "v0.2.0" });
+
+    expect(createGame).toHaveBeenCalledWith(expect.objectContaining({ catalogVersion: "v0.2.0" }));
+    await registry.stop(MATCH_ID);
+    await registry.actorFor(MATCH_ID);
+    expect(fold).toHaveBeenCalledWith(expect.objectContaining({ catalogVersion: "v0.2.0" }));
+  });
+
   it("killing the actor mid-game and reconnecting yields the same viewFor for both players", async () => {
     const { deps, registry, engine, recordResult } = await startMatch();
     const actor = await registry.actorFor(MATCH_ID);

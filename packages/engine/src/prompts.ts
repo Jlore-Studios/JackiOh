@@ -191,6 +191,7 @@ export function resumeOf(holder: { resume: Resume }): Resume {
     hook: raw.hook ?? RESUME_HOOK,
     step: String(raw.step ?? ""),
     radiant: raw.radiant === true,
+    ...(raw.catalogVersion === undefined ? {} : { catalogVersion: raw.catalogVersion }),
     ...(raw.instanceId === undefined ? {} : { instanceId: raw.instanceId }),
     data: raw.data ?? {},
   };
@@ -202,6 +203,7 @@ export function resumeAt(args: {
   step: string;
   hook?: string;
   radiant?: boolean;
+  catalogVersion?: string;
   instanceId?: string;
   data?: Record<string, unknown>;
 }): Resume {
@@ -210,6 +212,7 @@ export function resumeAt(args: {
     hook: args.hook ?? RESUME_HOOK,
     step: args.step,
     radiant: args.radiant === true,
+    ...(args.catalogVersion === undefined ? {} : { catalogVersion: args.catalogVersion }),
     ...(args.instanceId === undefined ? {} : { instanceId: args.instanceId }),
     data: cardData(args.data ?? {}),
   };
@@ -236,6 +239,7 @@ export function resumeSelf(
     defId: ctx.defId ?? self?.defId ?? "",
     step,
     radiant: ctx.radiant,
+    catalogVersion: self?.catalogVersion ?? ctx.state.catalogVersion,
     ...(self === null ? {} : { instanceId: self.id }),
     // B5 E18, R465: the owner and the answer key belong to the prompt that asked, not to the run.
     data: { ...withoutPromptKeys(cardData(ctx.data)), ...data },
@@ -632,8 +636,8 @@ function pickAnswers(pending: PendingChoice): Extract<ActionBody, { type: "answe
 // Re-entering a script
 // ---------------------------------------------------------------------------
 
-function faceOf(defId: string, radiant: boolean): Script {
-  const scripts = scriptsFor(defId);
+function faceOf(defId: string, radiant: boolean, version?: string): Script {
+  const scripts = scriptsFor(defId, version);
   return radiant ? scripts.radiant : scripts.base;
 }
 
@@ -780,6 +784,7 @@ export function runResume(
   resume: Resume,
   options: ResumeOptions = {},
 ): boolean {
+  const version = resume.catalogVersion ?? sink.state.catalogVersion;
   const paused = pausedOf(resume.data);
   // R113: an answered step (`resumeSelf`) and a parked tail (`PausedStep`) are the run continued.
   const run = runMarksOf(resume.data);
@@ -796,7 +801,7 @@ export function runResume(
   const found = resume.instanceId === undefined ? null : findInstance(sink.state, resume.instanceId) ?? null;
   const instance = selfSnapshotOf(data) ?? (resolving && found?.zone.z !== "resolving" ? null : found);
 
-  const hook = hookFor(faceOf(resume.defId, resume.radiant), resume);
+  const hook = hookFor(faceOf(resume.defId, resume.radiant, version), resume);
   if (hook === undefined) return true;
 
   const ctx: EffectContext = {
@@ -819,7 +824,7 @@ export function runResume(
     ...(eventStay === undefined ? {} : { eventStay }),
   };
 
-  const plan: ResumePlan = { ...resume, data, owner: ctx.controller };
+  const plan: ResumePlan = { ...resume, ...(version === undefined ? {} : { catalogVersion: version }), data, owner: ctx.controller };
   // A composed list (a fused hook, R102) continues in the part it stood in, then the rest.
   return applyResumable(sink, ctx, plan, hook(ctx), paused);
 }
@@ -831,7 +836,7 @@ export function runResume(
  */
 export function runHookResumable(
   sink: EngineSink,
-  instance: { id: string; defId: string; controller: PlayerId; radiant: boolean },
+  instance: { id: string; defId: string; controller: PlayerId; radiant: boolean; catalogVersion?: string },
   hookName: string,
   options: {
     controller?: PlayerId;
@@ -851,6 +856,7 @@ export function runHookResumable(
     hook: hookName,
     step: "",
     radiant: instance.radiant,
+    catalogVersion: instance.catalogVersion ?? sink.state.catalogVersion,
     instanceId: instance.id,
     data: options.data ?? {},
   });

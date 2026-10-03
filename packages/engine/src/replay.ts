@@ -36,6 +36,8 @@ export type ReplayInput = {
   seed: string;
   decks: [string[], string[]];
   log: readonly Action[];
+  /** R388: the match-pinned script catalog version. */
+  catalogVersion?: string;
   catalog?: CardDefs;
   /** R180, R187: the same handicaps the live createGame had. */
   handicaps?: Partial<Record<PlayerId, Handicap>>;
@@ -56,6 +58,7 @@ export function fold(input: ReplayInput): ReplayResult {
   const start = createGame({
     seed: input.seed,
     decks: input.decks,
+    ...(input.catalogVersion === undefined ? {} : { catalogVersion: input.catalogVersion }),
     ...(input.catalog === undefined ? {} : { catalog: input.catalog }),
     ...(input.handicaps === undefined ? {} : { handicaps: input.handicaps }),
     ...(input.dealt === undefined ? {} : { dealt: input.dealt }),

@@ -354,6 +354,7 @@ export function parkWork(sink: EngineSink, plan: WorkPlan, step: PausedStep): Wo
     hook: plan.hook,
     step: plan.step,
     radiant: plan.radiant,
+    ...(plan.catalogVersion === undefined ? {} : { catalogVersion: plan.catalogVersion }),
     ...(plan.instanceId === undefined ? {} : { instanceId: plan.instanceId }),
     data: { ...cardData(plan.data), [PAUSE_KEY]: { ...step } },
   };
@@ -479,7 +480,7 @@ export function scriptStepFor(script: Script, resume: Resume): Hook | undefined 
 
 /** The step a card's script registers for this continuation, on the face the pause recorded. */
 function cardStepFor(resume: Resume): Hook | undefined {
-  const scripts = scriptsFor(resume.defId);
+  const scripts = scriptsFor(resume.defId, resume.catalogVersion);
   const script: Script = resume.radiant ? scripts.radiant : scripts.base;
   return scriptStepFor(script, resume);
 }

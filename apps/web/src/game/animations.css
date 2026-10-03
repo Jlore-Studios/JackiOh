@@ -1110,39 +1110,18 @@
 
 /* --- positionSwitched: rotate 90 deg / back (250 ms) --------------------------------- */
 
-/* The card turns from the pose it is drawn in to the other one, in either direction, and ends
-   exactly on the pose the next view draws: Defense is Card.tsx's inline `rotate(90deg) scale(0.72)`,
-   Attack no transform at all. While a switch plays, Game draws the unit in the pose it turns from,
-   and once it has played, in the pose it turned to (Game.tsx `withSwitchPoses`), so the card never
-   snaps back between the end of the rotation and the view swap. A fast start and a soft landing make
-   the rotation read as a snap. */
-
 @keyframes jk-rotate-def {
   0% {
-    transform: rotate(0deg) scale(1);
+    transform: rotate(0deg);
   }
   100% {
-    transform: rotate(90deg) scale(0.72);
-  }
-}
-
-@keyframes jk-rotate-atk {
-  0% {
-    transform: rotate(90deg) scale(0.72);
-  }
-  100% {
-    transform: rotate(0deg) scale(1);
+    transform: rotate(90deg);
   }
 }
 
 [data-animating="positionSwitched"] {
   animation-name: jk-rotate-def;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-
-[data-position="DEF"][data-animating="positionSwitched"] {
-  animation-name: jk-rotate-atk;
 }
 
 /* --- controlChanged: card slides across the centre line (450 ms) --------------------- */

@@ -808,9 +808,9 @@ function fusedTributeWhen(scripts: readonly Script[]): Script["tributeWhen"] | u
  * One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
  * whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
  */
-function fusedScript(specs: readonly FusedIngredient[], radiant: boolean): Script {
+function fusedScript(state: GameState, specs: readonly FusedIngredient[], radiant: boolean): Script {
   const faces: Face[] = specs.map((spec) => {
-    const pair = scriptsFor(spec.defId);
+    const pair = scriptsFor(spec.defId, state.catalogVersion);
     return { defId: spec.defId, script: radiant || spec.radiant === true ? pair.radiant : pair.base };
   });
   const scripts = faces.map((face) => face.script);
@@ -844,14 +844,21 @@ function fusedScript(specs: readonly FusedIngredient[], radiant: boolean): Scrip
  * names its scripts; one that is missing is rebuilt from the id. `seen` stops a malformed id that
  * names itself.
  */
-function ensureFused(defId: string, seen: ReadonlySet<string> = new Set()): void {
-  if (registeredScripts()[defId] !== undefined || seen.has(defId)) return;
+function ensureFused(state: GameState, defId: string, seen: ReadonlySet<string> = new Set()): void {
+  const versionedId = state.catalogVersion === undefined ? defId : `${defId}@${state.catalogVersion}`;
+  if (registeredScripts()[versionedId] !== undefined || seen.has(defId)) return;
   const from = fusedIngredientSpecs(defId);
   if (from === null) return;
   const inside = new Set([...seen, defId]);
-  for (const ingredient of from) ensureFused(ingredient.defId, inside);
-  const scripts: CardScripts = { base: fusedScript(from, false), radiant: fusedScript(from, true) };
-  registerScripts({ ...registeredScripts(), [defId]: scripts });
+  for (const ingredient of from) ensureFused(state, ingredient.defId, inside);
+  const scripts: CardScripts = {
+    base: fusedScript(state, from, false),
+    radiant: fusedScript(state, from, true),
+  };
+  // R388: the same fused definition can carry a semantic-patch ingredient in two simultaneous
+  // matches. Its normal key keeps older unpinned fixture states working; its versioned key is what
+  // every created game instance selects, so one match cannot replace another's implementation.
+  registerScripts({ ...registeredScripts(), [defId]: scripts, [versionedId]: scripts });
 }
 
 /**
@@ -867,7 +874,7 @@ export function syncFusedScripts(state: GameState): void {
   for (const def of defs) {
     if (def.ingredients !== undefined) registerFusedIngredients(def.id, def.ingredients);
   }
-  for (const def of defs) ensureFused(def.id);
+  for (const def of defs) ensureFused(state, def.id);
 }
 
 /**
@@ -894,7 +901,7 @@ export function rebuildFusedDef(state: GameState, defId: string, owner: PlayerId
   const ingredients = defs.map((def) => newInstance(scratch, def.id, owner, { z: "gone", player: owner }));
   const def = buildDef(state, ingredients, defs, null, specs.map((spec) => spec.radiant === true), null, defId);
   state.transientDefs[defId] = def;
-  ensureFused(defId);
+  ensureFused(state, defId);
   return def;
 }
 
@@ -1056,7 +1063,7 @@ export function fuse(sink: EngineSink, args: FuseArgs): CardInstance | null {
   // a digest id's list joins the process's table of them (R468).
   state.transientDefs[def.id] = def;
   registerFusedIngredients(def.id, def.ingredients ?? []);
-  ensureFused(def.id);
+  ensureFused(state, def.id);
 
   let result: CardInstance;
   if (target !== null) {

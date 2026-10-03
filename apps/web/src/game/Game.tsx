@@ -7,8 +7,7 @@
 //    engine handed us. Nothing here asks whether a card is affordable or a target is reachable.
 //  - `queue` — the animation runner. BUILD M5-T4 says the view updates after the animation for an
 //    event completes, so the view this component renders is the one the events were planned
-//    against; it swaps to the newest view when the queue settles, or earlier at a turn boundary
-//    (`turnBoundary`), so a new turn never plays over the old one's board.
+//    against; it swaps to the newest view when the queue settles.
 //  - `shown` — that held-back view.
 //
 // Everything else is `props.view` and `props.legal`. `onAction` goes straight out to the caller,
@@ -34,7 +33,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
+import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
@@ -58,89 +57,15 @@ import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
 
-/** The events a turn banner plays for, and where a batch crosses into a new turn (`turnBoundary`). */
-function isTurnEvent(event: GameEvent): boolean {
-  return event.type === "turnStarted" || event.type === "turnAutoEnded";
-}
-
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
  * `turn-banner` in the tree, and the shell owns it (M5-T4, `e2e/support/testids.ts` BANNER).
- * `playing` is a turn event the runner has in flight: it names its own turn, whatever the board
- * under it still shows (an auto-ended turn plays its banner before the board swaps, `turnBoundary`).
  */
-function bannerText(view: PlayerView, last: GameEvent | undefined, playing: GameEvent | undefined): string | null {
+function bannerText(view: PlayerView, lastType: string | undefined): string | null {
   if (view.result !== null) return "Game over";
-  const turn = playing ?? last;
-  if (turn?.type === "turnAutoEnded") return "No moves left. Turn ended.";
-  if (playing?.type === "turnStarted") return playing.player === view.viewer ? "Your turn" : "Opponent's turn";
+  if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
   if (view.phase === "mulligan") return "Mulligan";
   return view.active === view.viewer ? "Your turn" : "Opponent's turn";
-}
-
-/**
- * Where one view's new events cross into a new turn: the index of the last `turnStarted` or
- * `turnAutoEnded` among them, or -1.
- *
- * The runner plays a view's events over the board as it stood before them, and the board swaps
- * when the queue settles (BUILD M5-T4). A batch that crosses a turn — a unit switched to Defense as
- * the player's last move, which R345 follows with the turn's end and the next turn's start; the
- * second mulligan answer, which resolves both and starts turn 1 — then played the new turn's banner
- * and draw over the old board, the unit still upright and the opening hand still up, and swapped
- * only afterwards. So Game splits such a batch here: what comes before the boundary plays over the
- * board it happened on, the board swaps to the new view at a runner `checkpoint`, and the boundary
- * event and everything after it play over that view. Nothing is dropped. The last boundary, not the
- * first: an auto-ended turn's "No moves left" belongs to the turn that ended.
- */
-export function turnBoundary(events: readonly GameEvent[]): number {
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const event = events[i];
-    if (event !== undefined && isTurnEvent(event)) return i;
-  }
-  return -1;
-}
-
-/**
- * The board drawn while a burst plays: `shown`, with each unit a `positionSwitched` of the burst
- * turns drawn in the pose that switch leaves it in — the one it turns FROM while the entry is in
- * flight, the one it turned TO once the entry has finished.
- *
- * animations.css picks the rotation's direction from the pose the card is drawn in and ends it on
- * the other pose, the one the next view draws. Drawn straight from `shown`, a unit snapped back to
- * its old pose for the rest of the burst once its switch had played (the board swaps only when the
- * burst does, and the auto-ended turn's banner follows the switch), and a switch planned past a
- * turn boundary, over a view that already has the new pose, turned the wrong way. A switch always
- * changes the position (R91), so the pose it turns from is the other one. Presentation only: the
- * event has happened, and the newest view says so.
- */
-function withSwitchPoses(
-  shown: PlayerView,
-  burst: readonly AnimationEntry[],
-  inFlight: AnimationEntry | null,
-): PlayerView {
-  const poses = new Map<string, "ATK" | "DEF">();
-  for (const entry of burst) {
-    for (const event of entry.events) {
-      if (event.type !== "positionSwitched") continue;
-      const from = event.position === "DEF" ? "ATK" : "DEF";
-      poses.set(event.instanceId, entry === inFlight ? from : event.position);
-    }
-  }
-  if (poses.size === 0) return shown;
-  const pose = (units: SideView["units"]): SideView["units"] => {
-    let changed = false;
-    const next = units.map((unit) => {
-      const position = unit === null ? undefined : poses.get(unit.instanceId);
-      if (unit === null || position === undefined || unit.position === position) return unit;
-      changed = true;
-      return { ...unit, position };
-    });
-    return changed ? next : units;
-  };
-  const you = pose(shown.you.units);
-  const opponent = pose(shown.opponent.units);
-  if (you === shown.you.units && opponent === shown.opponent.units) return shown;
-  return { ...shown, you: { ...shown.you, units: you }, opponent: { ...shown.opponent, units: opponent } };
 }
 
 export type GameProps = {
@@ -313,31 +238,12 @@ export default function Game({
     // still has the card it destroys. Planning against the new view leaves `damage` and
     // `destroyed` with no element for the unit that just died, so nothing shakes and no number
     // pops on the very card the event is about.
-    //
-    // Except across a turn (`turnBoundary`): the new turn's banner, and whatever follows it, play
-    // over the new view, which the board swaps to at a checkpoint once everything before the
-    // boundary has played. The swap ends the burst, so its numbers become the cards' own stats.
-    // A view arriving later queues its events behind all of this, in order.
-    if (fresh.length > 0 && previous !== null) {
-      const boundary = turnBoundary(fresh);
-      if (boundary < 0) {
-        runner.enqueue(fresh, previous);
-      } else {
-        if (boundary > 0) runner.enqueue(fresh.slice(0, boundary), previous);
-        runner.checkpoint(() => {
-          setShown(view);
-          setBurst([]);
-        });
-        runner.enqueue(fresh.slice(boundary), view);
-      }
-    }
+    if (fresh.length > 0 && previous !== null) runner.enqueue(fresh, previous);
     if (runner.idle()) setShown(view);
   }, [view, runner]);
 
-  // The moves `offered` are the newest view's; they apply once the board shows it (see the header)
-  // and has finished animating it: past a turn boundary the board shows the new view while that
-  // turn's banner and draw still play, and those hold the moves as the older view's entries did.
-  const legal = shown === view && inFlight === null ? offered : NOTHING_LEGAL;
+  // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
+  const legal = shown === view ? offered : NOTHING_LEGAL;
 
   // A seat hand-over or a game over must not sit behind a queue of animations.
   const settleNow = useCallback(() => {
@@ -403,10 +309,9 @@ export default function Game({
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
-  const board = useMemo(() => withSwitchPoses(shown, burst, inFlight), [shown, burst, inFlight]);
 
-  const lastTurnEvent = [...shown.events].reverse().find(isTurnEvent);
-  const banner = bannerText(shown, lastTurnEvent, inFlight?.events.find(isTurnEvent));
+  const lastTurnEvent = [...shown.events].reverse().find((e) => e.type === "turnStarted" || e.type === "turnAutoEnded");
+  const banner = bannerText(shown, lastTurnEvent?.type);
 
   return (
     <div
@@ -447,7 +352,7 @@ export default function Game({
       />
 
       <Board
-        view={board}
+        view={shown}
         highlight={highlight}
         animating={animating}
         animated={animated}

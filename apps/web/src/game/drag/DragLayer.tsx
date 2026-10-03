@@ -72,8 +72,6 @@ type Flight = {
  * `view` (the one showing when it was dropped).
  */
 type Landed = { instanceId: string; card: CardView | null; at: Point; view: PlayerView };
-/** A local presentation response to a server-view lock; it never changes drag legality. */
-type BlockedDrop = { at: Point; zoneTestid: string };
 
 const BOARD = '[data-testid="board"]';
 /**
@@ -104,8 +102,6 @@ const ARROW_BEND_MAX_PX = 90;
 /** The glow's blur, and the margin its filter region keeps round the arrow so the blur is not cut. */
 const ARROW_GLOW_BLUR_PX = 4;
 const ARROW_GLOW_MARGIN_PX = 40;
-/** How long a locked-zone refusal stays visible after the card snaps back. */
-const BLOCKED_DROP_FEEDBACK_MS = 420;
 
 function round(n: number): number {
   return Math.round(n * 10) / 10;
@@ -160,7 +156,6 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
 
   const [drawn, setDrawn] = useState<Flight | null>(null);
   const [landed, setLanded] = useState<Landed | null>(null);
-  const [blocked, setBlocked] = useState<BlockedDrop | null>(null);
 
   // The landed card goes as soon as the board shows any view newer than the one it was dropped
   // on, or after LANDING_TIMEOUT_MS, and never outlives the layer.
@@ -173,12 +168,6 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
     const timer = setTimeout(() => setLanded(null), LANDING_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [landed, props.view]);
-
-  useEffect(() => {
-    if (blocked === null) return undefined;
-    const timer = setTimeout(() => setBlocked(null), BLOCKED_DROP_FEEDBACK_MS);
-    return () => clearTimeout(timer);
-  }, [blocked]);
 
   // A layout effect, so the card leaves the fan in the same frame the landed copy is drawn.
   useLayoutEffect(() => {
@@ -206,15 +195,6 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
 
     function spotAt(plan: DragPlan, x: number, y: number): DropSpot {
       return pickDropSpot(hits(x, y), plan.dropTestids);
-    }
-
-    /** The locked lane under a release, if any. This only reads the lock the server exposed on Zone. */
-    function lockedZoneAt(stack: readonly Element[]): Element | null {
-      for (const element of stack) {
-        const zone = element.closest('[data-locked="true"][data-testid^="zone-"]');
-        if (zone !== null && zone.closest(BOARD) !== null) return zone;
-      }
-      return null;
     }
 
     function stopDragging(): void {
@@ -331,25 +311,15 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
       if (flight !== null) {
         if (event.pointerId !== flight.pointerId) return;
         const { view, legal, onInteraction, onAction } = latest.current;
-        const stack = hits(event.clientX, event.clientY);
-        const spot = pickDropSpot(stack, flight.plan.dropTestids);
+        const spot = spotAt(flight.plan, event.clientX, event.clientY);
+        const result = resolveDrop(view, legal, flight.plan, spot);
         const { plan } = flight;
-        // A free drop is a convenience for a legal board drop, never permission to redirect a
-        // release over a server-locked zone to a different legal lane (B38, R47).
-        const blockedZone = plan.kind === "play" ? lockedZoneAt(stack) : null;
-        const result = blockedZone === null ? resolveDrop(view, legal, plan, spot) : { interaction: IDLE };
         // Where the card lands: the middle of the zone or target it was dropped on, or the pointer
         // for a drop anywhere on the board.
         const reticle = reticleFor(spot);
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
         stopDragging();
         onInteraction(result.interaction);
-        if (blockedZone !== null) {
-          setBlocked({
-            at: centreOf(blockedZone) ?? { x: event.clientX, y: event.clientY },
-            zoneTestid: blockedZone.getAttribute("data-testid") ?? "zone",
-          });
-        }
         if (result.action !== undefined) {
           if (plan.kind === "play" && plan.source.on === "hand") {
             const instanceId = plan.source.instanceId;
@@ -454,28 +424,20 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
   }, []);
 
   if (drawn === null) {
-    if (landed === null && blocked === null) return null;
+    if (landed === null) return null;
     return (
-      <div
-        className={`drag-layer${landed === null ? "" : " drag-landing"}`}
-        data-testid={landed === null ? "drag-blocked-layer" : "drag-landing"}
-        aria-hidden="true"
-        style={{ pointerEvents: "none" }}
-      >
-        {landed === null ? null : (
-          <MatchCardsProvider view={props.view}>
-            <DragGhost
-              testId="drag-landing-card"
-              card={landed.card}
-              instanceId={landed.instanceId}
-              at={landed.at}
-              touch={false}
-              valid
-              landing
-            />
-          </MatchCardsProvider>
-        )}
-        {blocked === null ? null : <BlockedDropMark blocked={blocked} />}
+      <div className="drag-layer drag-landing" data-testid="drag-landing" aria-hidden="true" style={{ pointerEvents: "none" }}>
+        <MatchCardsProvider view={props.view}>
+          <DragGhost
+            testId="drag-landing-card"
+            card={landed.card}
+            instanceId={landed.instanceId}
+            at={landed.at}
+            touch={false}
+            valid
+            landing
+          />
+        </MatchCardsProvider>
       </div>
     );
   }
@@ -521,19 +483,6 @@ export default function DragLayer(props: DragLayerProps): ReactElement | null {
         <Reticle testid={spot.testid} box={drawn.reticle} shape={shape} />
       ) : null}
     </div>
-  );
-}
-
-function BlockedDropMark({ blocked }: { blocked: BlockedDrop }): ReactElement {
-  return (
-    <span
-      className="drag-blocked"
-      data-testid="drag-blocked"
-      data-zone={blocked.zoneTestid}
-      style={{ left: blocked.at.x, top: blocked.at.y }}
-    >
-      ×
-    </span>
   );
 }
 

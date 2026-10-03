@@ -10,7 +10,6 @@
 :root {
   /* The arrow and ghost colour over a spot that would do nothing on release. */
   --drag-invalid: #ff5a36;
-  --drag-blocked-duration: 420ms;
 }
 
 /* ---- The board while drag to play is on ------------------------------------------------- */
@@ -407,44 +406,6 @@
   );
 }
 
-/* A rejected summon lands a single red X on the lock the server rendered, then clears. It is an
-   outcome cue, not a local legality calculation; DragLayer only mounts it after an invalid release
-   over `[data-locked]`. */
-.drag-blocked {
-  position: absolute;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 3px solid #ff6347;
-  border-radius: 50%;
-  background: rgb(41 8 7 / 78%);
-  box-shadow: 0 0 18px rgb(255 88 62 / 72%);
-  color: #fff3ef;
-  font-family: system-ui, sans-serif;
-  font-size: 38px;
-  font-weight: 900;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  animation: drag-blocked var(--drag-blocked-duration) cubic-bezier(0.18, 0.78, 0.26, 1) both;
-}
-
-@keyframes drag-blocked {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.45) rotate(-16deg);
-  }
-  38% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.12) rotate(5deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9) rotate(0deg);
-  }
-}
-
 .drag-reticle::after {
   width: calc(100% + 2 * var(--drag-reticle-out));
   height: 3px;
@@ -471,18 +432,13 @@
     animation: none;
   }
 
-  .drag-blocked {
-    animation: none;
-  }
-
   .drag-ghost {
     transition: none;
   }
 }
 
 :root[data-reduce-motion="true"] .drag-arrow-pulse,
-:root[data-reduce-motion="true"] .drag-reticle,
-:root[data-reduce-motion="true"] .drag-blocked {
+:root[data-reduce-motion="true"] .drag-reticle {
   animation: none;
 }
 

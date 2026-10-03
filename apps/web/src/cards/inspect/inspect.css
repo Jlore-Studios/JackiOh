@@ -66,11 +66,6 @@
   overflow: hidden;
 }
 
-.inspect-hover .inspect-refs-faces {
-  flex-direction: column;
-  align-items: center;
-}
-
 /* ---- Printed text (SPEC §10.10) ---------------------------------------------------------------- */
 
 .inspect-printed {
@@ -126,13 +121,18 @@
 }
 
 .inspect-refs-faces {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: block;
 }
 
 .inspect-refs-face {
-  flex: none;
+  margin: 0 auto;
+}
+
+.inspect-refs-more {
+  margin: 6px 0 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 11px;
+  text-align: center;
 }
 
 /* ---- Glossary -------------------------------------------------------------------------------- */
