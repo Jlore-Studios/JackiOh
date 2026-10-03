@@ -28,6 +28,7 @@ from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
 from harness.git import Git, Identity, worktree_add
 from harness.prompts import data
+from harness.providers import hosted
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
 from harness.verdicts import Finding
@@ -125,6 +126,10 @@ class Worker:
         self.templates = {name: prompts.load(name) for name in prompts.NAMES}
         self.system = self.templates["system"].substitute(bot=cfg.bot_login, repo=cfg.repo)
         self.provider = cfg.pool.get(plan.get("provider")) or cfg.pool.ordered()[0]
+        #: The checks this run runs. On the bot's machine, only those marked for it (`Gate.machine`):
+        #: every job there shares two vCPUs, and CI on the pull request runs the rest anyway.
+        self.on_machine = not hosted(str(plan.get("runs_on") or self.provider.runs_on))
+        self.gates = [gate for gate in cfg.gates if gate.machine or not self.on_machine]
         main = cfg.pool.seats(self.provider)[0]
         seats = plan.get("seats") if isinstance(plan.get("seats"), dict) else None
         #: The model each role runs on. A plan from before seats runs every role on the
@@ -412,9 +417,17 @@ class Worker:
     def _gate_list(self) -> str:
         lines = ["The harness's checks, run in this order after you stop:"]
         lines.append(f"- install: `{self.cfg.install.run}` (again whenever a manifest changed)")
-        lines += [f"- {g.name}: `{g.run}`" for g in self.cfg.gates]
+        lines += [f"- {g.name}: `{g.run}`" for g in self.gates]
         lines.append("CI on the pull request also runs the fuzz gate, coverage, the AI gates, "
                      "the Postgres suites and the Cypress e2e specs before anything merges.")
+        left = [f"{g.name} (`{g.run}`)" for g in self.cfg.gates if g not in self.gates]
+        if left:
+            lines.append(
+                "This run is on the bot's shared machine, so the harness leaves "
+                f"{', '.join(left)} to CI on the pull request, which runs before anything merges. "
+                "Don't run whole suites yourself either (`pnpm test`, `pnpm lint`, `pnpm fuzz`, "
+                "`pnpm ai:gate`, coverage, e2e): check only what you changed, such as "
+                "`pnpm vitest run <test file>` or `pnpm exec eslint <files>`.")
         return "\n".join(lines)
 
     def _findings_text(self, findings: list[Finding], label: str = "Blocking findings") -> str:
@@ -533,9 +546,9 @@ class Worker:
             if not install.ok:
                 results += [gates_mod.GateResult(g.name, g.run, False, -1, 0.0, "",
                                                  skipped="the install failed")
-                            for g in self.cfg.gates]
+                            for g in self.gates]
                 return results
-        results += gates_mod.run_all(self.cfg.gates, self.wt.cwd, self.env, self.seconds_left)
+        results += gates_mod.run_all(self.gates, self.wt.cwd, self.env, self.seconds_left)
         self._mark_pre_existing(results)
         return results
 
@@ -543,7 +556,7 @@ class Worker:
         for result in results:
             if result.ok or result.skipped or result.name == self.cfg.install.name:
                 continue
-            gate = next((g for g in self.cfg.gates if g.name == result.name), None)
+            gate = next((g for g in self.gates if g.name == result.name), None)
             if gate is None:
                 continue
             if result.name not in self._base_gate_cache:

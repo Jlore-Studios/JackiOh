@@ -84,8 +84,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("    section muse (machine)\n    item 49 revise :active, ", body)
         self.assertEqual(body.count("section "), 2)
         # The lanes in use.
-        self.assertIn('pie showData title Lanes (7, at most 3 on the machine)', body)
-        self.assertIn('    "On the machine" : 1\n    "On GitHub\'s runners" : 1\n    "Free" : 5',
+        self.assertIn('pie showData title Lanes (10, at most 6 on the machine)', body)
+        self.assertIn('    "On the machine" : 1\n    "On GitHub\'s runners" : 1\n    "Free" : 8',
                       body)
         # Each subscription, with its usage as a bar.
         self.assertIn("| `claude-1` |", body)
@@ -101,7 +101,7 @@ class DashboardTests(unittest.TestCase):
     def test_nothing_running(self):
         body = dashboard.render(self.ctx)
         self.assertIn("Nothing is running right now.", body)
-        self.assertIn('    "Free" : 7', body)
+        self.assertIn('    "Free" : 10', body)
         self.assertIn("Nothing is queued.", body)
 
     def test_a_cell_stays_one_line_without_pipes(self):
