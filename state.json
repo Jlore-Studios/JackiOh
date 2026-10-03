@@ -330,7 +330,15 @@
       "failures": 0,
       "feedback_since": "2026-10-03T04:26:33Z",
       "issue": 85,
-      "kind": "revise"
+      "kind": "revise",
+      "votes": {
+        "approvals": [
+          "claude-opus"
+        ],
+        "builder": "claude-opus",
+        "rejections": [],
+        "sha": "207b43b8f868497b6972ccd2202d5aaa1f209111"
+      }
     },
     "31": {
       "failures": 0,
