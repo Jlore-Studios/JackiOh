@@ -357,6 +357,27 @@ describe("R631 the turn mix, focus and audibility", () => {
     expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a", "/audio/music/tavern-1.m4a"]);
   });
 
+  it("R631 a track that cannot be had is not tried again at every idle, only when a request names it anew", async () => {
+    const r = await rig();
+    r.fetch.mode = "reject";
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    for (let i = 0; i < 5; i += 1) {
+      r.player.setBusy(true);
+      r.player.setBusy(false);
+      await settle();
+    }
+    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a"]);
+    r.audio.decodeMode = "reject";
+    r.fetch.mode = "resolve";
+    r.player.request({ track: "tavern-danger" });
+    await settle();
+    r.player.setBusy(true);
+    r.player.setBusy(false);
+    await settle();
+    expect(r.audio.decodeCalls).toHaveLength(1);
+  });
+
   it("R631 a sting that cannot be fetched is skipped, and the track it leads into still plays", async () => {
     const r = await rig();
     r.fetch.modes.set("/audio/music/tavern-start.m4a", "reject");

@@ -20,8 +20,9 @@
 //
 // Like the engine, nothing is scheduled on a context that is not running, and the player never
 // throws. A turn or focus change that arrives while the context is suspended is applied the moment
-// it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed; a failed fetch
-// is tried again next time) and decoded only to play (MUSIC_DECODED_MAX kept). No file is fetched
+// it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed) and decoded only
+// to play (MUSIC_DECODED_MAX kept); one that cannot be fetched or decoded is tried again only when
+// a request next names it. No file is fetched
 // or decoded while the board animates (B58): a preload fetches bytes only, and both wait for the
 // burst to end. A sting whose file cannot be had is skipped, never waited on.
 
@@ -165,6 +166,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   const bytes = new Map<string, Promise<ArrayBuffer | null>>();
   const decoded = new Map<string, AudioBuffer>();
   const decoding = new Map<string, Promise<AudioBuffer | null>>();
+  /** Tracks whose file could not be fetched or decoded: not tried again until a request names them anew. */
+  const failed = new Set<string>();
   let heldPreload: string[] = [];
   let watched: AudioEngine | null = null;
   let unwatch: (() => void) | null = null;
@@ -421,12 +424,15 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       const intro = want.intro !== null && manifest.files[want.intro] !== undefined && sting === null && (lead === null || !isStationTrack(lead.id)) ? want.intro : null;
 
       const missing = (intro === null ? [target] : [intro, target]).filter((id) => !decoded.has(id));
+      // A track that failed waits for the next request that names it, not every idle (setBusy).
+      if (missing.includes(target) && failed.has(target)) return;
       if (missing.length > 0) {
         // Nothing is fetched or decoded during an animation burst (B58); setBusy(false) comes back here.
         if (busy) return;
         for (const id of missing) {
           void decode(id).then((buffer) => {
             // A sting that cannot be had is skipped, so the track it leads into still plays.
+            if (buffer === null) failed.add(id);
             if (buffer === null && id === want.intro) want = { ...want, intro: null };
             if (buffer !== null || id === intro) sync();
           });
@@ -485,7 +491,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       if (disposed) return;
       const intro = request.intro ?? null;
       const changed = request.track !== want.track;
-      if (changed) want = { track: request.track, intro };
+      if (changed) {
+        want = { track: request.track, intro };
+        if (request.track !== null) failed.delete(request.track);
+        if (intro !== null) failed.delete(intro);
+      }
       const turn = request.opponentTurn ?? false;
       if (turn !== opponent) {
         opponent = turn;
