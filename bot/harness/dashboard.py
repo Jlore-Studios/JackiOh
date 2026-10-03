@@ -83,13 +83,16 @@ def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[
     lines = ["```mermaid", "gantt", "    title Running now (Central time)",
              "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M"]
     order = {provider_id: i for i, provider_id in enumerate(ctx.cfg.pool.priority)}
+    section = None
     for number, provider_id in sorted(live.items(),
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         what, since = _what(state, number)
         start = _local(ctx, since) if since else now
-        where = "machine" if ctx.cfg.pool.on_machine(provider_id) else "GitHub"
-        lines += [f"    section {provider_id} ({where})",
-                  f"    {what} :active, {start.strftime(fmt)}, {now.strftime(fmt)}"]
+        if provider_id != section:  # one section per subscription, its lanes under it
+            where = "machine" if ctx.cfg.pool.on_machine(provider_id) else "GitHub"
+            lines.append(f"    section {provider_id} ({where})")
+            section = provider_id
+        lines.append(f"    {what} :active, {start.strftime(fmt)}, {now.strftime(fmt)}")
     lines.append("```")
     return lines
 

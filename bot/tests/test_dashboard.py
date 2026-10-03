@@ -82,6 +82,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("```mermaid\ngantt", body)
         self.assertIn("    section claude-1 (GitHub)\n    item 37 build :active, ", body)
         self.assertIn("    section muse (machine)\n    item 49 revise :active, ", body)
+        self.assertEqual(body.count("section "), 2)
         # The lanes in use.
         self.assertIn('pie showData title Lanes (7, at most 3 on the machine)', body)
         self.assertIn('    "On the machine" : 1\n    "On GitHub\'s runners" : 1\n    "Free" : 5',
