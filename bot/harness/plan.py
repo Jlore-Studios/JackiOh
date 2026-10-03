@@ -109,6 +109,18 @@ class Lanes:
     def busy(self) -> set[str]:
         return set(self.held.values())
 
+    def count(self, provider_id: str) -> int:
+        """How many runs this provider holds now."""
+        return sum(1 for held in self.held.values() if held == provider_id)
+
+    def full(self, provider: Provider) -> bool:
+        """It holds as many runs as its `lanes`."""
+        return self.count(provider.id) >= provider.lanes
+
+    def on_machine(self, pool: providers_mod.Pool) -> int:
+        """How many of the held runs are on the bot's machine."""
+        return sum(1 for provider_id in self.held.values() if pool.on_machine(provider_id))
+
     @property
     def free(self) -> int:
         return max(0, self.limit - len(self.held))
@@ -142,7 +154,9 @@ def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
 def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lanes, role: str,
             *, forced: bool, quiet_ok: str) -> bool:
     cfg = ctx.cfg
-    if provider.id in lanes.busy or role not in provider.roles:
+    if lanes.full(provider) or role not in provider.roles:
+        return False
+    if machine_full(cfg.pool, provider, lanes):
         return False
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
@@ -187,15 +201,23 @@ def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force:
     return None
 
 
+def machine_full(pool: providers_mod.Pool, provider: Provider, lanes: Lanes) -> bool:
+    """`provider` runs on the bot's machine, and the machine already holds `machine_parallel`
+    runs. GitHub's runners have no such limit beyond `max_parallel`."""
+    return pool.on_machine(provider.id) and lanes.on_machine(pool) >= pool.machine_parallel
+
+
 def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
     """Why each subscription cannot take work now, for the run's summary and `status`."""
     cfg = ctx.cfg
     parts = []
     for provider in cfg.pool.ordered():
-        if provider.id in lanes.busy:
+        if lanes.full(provider):
             parts.append(f"`{provider.id}` is busy")
             continue
         reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
+        if reason is None and machine_full(cfg.pool, provider, lanes):
+            reason = f"waits for room on the machine ({cfg.pool.machine_parallel} at once)"
         if reason is None and provider.quiet_check and cfg.quiet.enabled:
             reason = "waits for its owner to be quiet"
         parts.append(f"`{provider.id}` {reason or 'is free'}")

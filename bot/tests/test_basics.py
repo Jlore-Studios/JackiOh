@@ -22,7 +22,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual((first.id, first.cli, first.model, first.effort, first.secret),
                          ("claude-1", "claude", "opus", "xhigh", "CLAUDE_CODE_OAUTH_TOKEN"))
         self.assertEqual((first.schedule.start, first.schedule.end), ("21:00", "07:00"))
-        self.assertEqual(cfg.pool.max_parallel, 3)
+        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (7, 3))
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)
