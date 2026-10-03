@@ -205,6 +205,42 @@ class CommandsWorkflowTests(unittest.TestCase):
         self.assertNotRegex(self.text, r"^  pull_request:", )
 
 
+class TriageWorkflowTests(unittest.TestCase):
+    text = read("triage.yml")
+
+    def grants(self, name: str) -> dict[str, str]:
+        block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", job(self.text, name)).group(1)
+        return dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
+
+    def test_only_new_threads_and_never_pull_request_code(self):
+        self.assertRegex(self.text, r"issues:\n\s+types: \[opened\]")
+        self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
+        self.assertNotRegex(self.text, r"^  pull_request:", "would run the pull request's code")
+        refs = re.findall(r"ref: (.*)", self.text)
+        self.assertEqual(len(refs), 3)
+        self.assertTrue(all("default_branch" in ref for ref in refs), refs)
+        self.assertEqual(self.text.count("persist-credentials: false"), 3)
+        self.assertNotIn("secrets.", self.text)
+
+    def test_the_model_runs_on_devins_runner_and_cannot_write(self):
+        classify = job(self.text, "classify")
+        self.assertIn("runs-on: night-vm-devin", classify)
+        self.assertIn("if: needs.gate.outputs.go == 'true'", classify)
+        self.assertEqual(self.grants("classify"),
+                         {"contents": "read", "issues": "read", "pull-requests": "read"})
+        for name in ("gate", "apply"):
+            self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
+        self.assertEqual(self.grants("gate"), {"contents": "read"})
+        self.assertEqual(self.grants("apply"),
+                         {"contents": "read", "issues": "write", "pull-requests": "write"})
+        self.assertIn("always() && needs.gate.outputs.go == 'true'", job(self.text, "apply"))
+
+    def test_every_job_has_a_timeout_and_actionlint_reads_it(self):
+        for name in ("gate", "classify", "apply"):
+            self.assertIn("timeout-minutes:", job(self.text, name), name)
+        self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
+
+
 class RequiredChecksTests(unittest.TestCase):
     def test_every_required_check_is_a_job_that_runs_on_every_pull_request(self):
         cfg = config.load(env={})

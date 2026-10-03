@@ -228,6 +228,33 @@ needs level 3.
 | `human` | a person will do it; no model picks it up |
 | `shitter` | low-tier models only: never Opus or Astra |
 
+## Triage
+
+`triage.yml` labels, assigns and titles every issue or pull request that someone trusted opens,
+from a Devin call (`triage.py`):
+
+- **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
+  the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
+  the machine.
+- **Three jobs:**
+  - **`gate`**, on GitHub's runner, decides whether to triage.
+  - **`classify`**, on Devin's own runner (`night-vm-devin`), reads the title and body through the
+    API with a read-only token. It fences them as data in a prompt and runs Devin read-only in an
+    empty directory.
+  - **`apply`**, on GitHub's runner, holds the write token and runs no model.
+- **What `apply` changes:**
+  - **Labels:** only the repository's own, never a `bot:` one.
+  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, so the night
+    bot skips it. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
+    the assignment).
+  - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
+    doesn't already, and only if every version number survives. A pull request keeps its title,
+    which becomes the squash commit's subject, and is never assigned to the bot.
+- **It only adds.** A person's labels, assignees and conventional title stay. A priority or a model
+  tier a person chose gets no second one.
+- **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
+- **Waiting:** `classify` shares `night-vm-devin` with Devin's bot jobs, so it waits while one runs.
+
 ## Subscriptions
 
 The bot spends whichever of your subscriptions is free. They are listed in
@@ -567,5 +594,6 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
+| `triage.py` | labels, assigns and titles a new issue or pull request from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
