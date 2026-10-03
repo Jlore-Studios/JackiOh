@@ -757,6 +757,9 @@
     "167": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "2fe1dea4a657d860e9ce809da8fa1f02851b5f2b": 1
+      },
       "difficulty": "medium",
       "failures": 1,
       "feedback_since": "2026-10-03T18:22:45Z",
