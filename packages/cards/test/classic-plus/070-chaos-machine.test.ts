@@ -221,4 +221,22 @@ describe("C+ #70 Chaos Machine: Animated (patch v0.2.10)", () => {
   it("R383 radiant: a 4/4 Unit", () => {
     expectAnimated({ def: "classicplus-070", radiant: true, stats: { attack: 4, health: 4 } });
   });
+
+  it("R383 played, it keeps its text as a Unit: at the end of your turn one Upgrade among your cards, one Degrade among theirs", () => {
+    const s = scenario({
+      p1: { hand: [MACHINE, FILLER], field: [UNIT] },
+      p2: { hand: [FILLER], field: [UNIT] },
+    });
+
+    s.play(MACHINE, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(MACHINE);
+    s.endTurn();
+
+    const up = tunes(s.lastEvents, "upgraded");
+    const down = tunes(s.lastEvents, "degraded");
+    expect(up).toHaveLength(1);
+    expect(down).toHaveLength(1);
+    expect(ownerOf(s, up[0]!.instanceId)).toBe("p1");
+    expect(ownerOf(s, down[0]!.instanceId)).toBe("p2");
+  });
 });

@@ -164,4 +164,20 @@ describe("#65 Masochism Mask: Animated (patch v0.2.10)", () => {
   it("R383 radiant: a 2/4 Unit", () => {
     expectAnimated({ def: "core-065", radiant: true, stats: { attack: 2, health: 4 } });
   });
+
+  it("R383 played, it keeps its text as a Unit: the start of your next turn opens its mode prompt", () => {
+    const s = scenario({
+      p1: { hand: [MASK, TIMMY], library: LIBRARY },
+      p2: { hand: [TIMMY], library: LIBRARY },
+    });
+
+    s.play(MASK, { zone: 3 });
+    expect(unitAt(s, "p1", 3).defId).toBe(MASK);
+    s.endTurn().endTurn();
+
+    expect(s.state.pending).toMatchObject({ kind: "mode", playerId: "p1" });
+    expect(optionLabels(s)).toEqual([EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW]);
+    s.answer(LOSE_THREE);
+    s.expectHealth("p1", 27);
+  });
 });

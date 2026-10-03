@@ -1,7 +1,8 @@
 // C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61: "Field Spell with no effect
-// while it sits; its Death fires as it goes from its backrow zone to your graveyard (§4.5: destroyed by
-// Guy Att, Crushing Walls, Twisting Nether) and adds 2 Stockpiles (Core #5) that cost (0) to your hand;
-// exile, a bounce or a Transform adds nothing; Carnivorous Cube can't eat it (R428: Units only); a full
+// while it sits; its Death fires as it goes from either zone to your graveyard (§4.5: destroyed by
+// Crushing Walls or Twisting Nether, by Guy Att only while it stands in its backrow zone) and adds 2
+// Stockpiles (Core #5) that cost (0) to your hand; exile, a bounce or a Transform adds nothing;
+// Carnivorous Cube can eat it once it has animated, never in the backrow (R428: Units only); a full
 // hand burns; hidden from the opponent (R97); the count reads through `param()`; radiant the
 // Stockpiles are Radiant".
 
@@ -127,7 +128,7 @@ describe("C+ #61 Bauble Bubble", () => {
       expect(s.events.some((event) => event.type === "addedToHand" && event.defId === STOCKPILE)).toBe(false);
     });
 
-    it("R428 Carnivorous Cube can't eat it: Units only", () => {
+    it("R428 Carnivorous Cube can't eat it in the backrow: Units only", () => {
       const s = bubble({ hand: [CUBE, FILLER], field: [VANILLA] });
       const cube = s.card(CUBE);
       const offered = legalActions(s.state, "p1").flatMap((action) =>
@@ -195,5 +196,40 @@ describe("C+ #61 Bauble Bubble: Animated (patch v0.2.10)", () => {
 
   it("R383 radiant: a 2/2 Unit", () => {
     expectAnimated({ def: "classicplus-061", radiant: true, stats: { attack: 2, health: 2 } });
+  });
+
+  it("R383 played, it keeps its Death as a Unit: killed in combat, it adds 2 Stockpiles that cost (0)", () => {
+    const s = scenario({
+      p1: { hand: [BAUBLE, FILLER], library: [FILLER, FILLER, FILLER] },
+      p2: { hand: [FILLER], field: [VANILLA], library: [FILLER, FILLER] },
+    });
+
+    s.play(BAUBLE, { zone: 3 });
+    const bauble = s.unit("p1", 3)!;
+    expect(bauble.defId).toBe(BAUBLE);
+    s.endTurn().attack(s.unit("p2", 1)!, bauble);
+
+    s.expectInZone(BAUBLE, "graveyard");
+    const added = stockpiles(s).map((event) => s.card(event.instanceId));
+    expect(added).toHaveLength(2);
+    for (const card of added) {
+      expect(card.zone.z).toBe("hand");
+      expect(card.costOverride).toBe(0);
+    }
+  });
+
+  it("R428 animated, it is a Unit Carnivorous Cube can eat, and its Death fires", () => {
+    const s = scenario({
+      p1: { hand: [BAUBLE, CUBE, FILLER], library: [FILLER, FILLER, FILLER], mana: 10 },
+      p2: { hand: [FILLER], library: [FILLER, FILLER] },
+    });
+
+    s.play(BAUBLE, { zone: 3 });
+    const bauble = s.unit("p1", 3)!;
+    expect(bauble.defId).toBe(BAUBLE);
+    s.play(CUBE, { targets: [{ pick: "instance", instanceId: bauble.id }] });
+
+    s.expectInZone(BAUBLE, "graveyard");
+    expect(stockpiles(s)).toHaveLength(2);
   });
 });

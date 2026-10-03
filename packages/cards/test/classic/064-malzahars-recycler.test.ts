@@ -326,4 +326,22 @@ describe("C #64 Malzahar's Recycler: Animated (patch v0.2.10)", () => {
   it("R383 radiant: a 4/6 Unit", () => {
     expectAnimated({ def: "classic-064", radiant: true, stats: { attack: 4, health: 6 } });
   });
+
+  it("R383 played, it keeps its text as a Unit: its end-of-turn discard of 2 draws 2", () => {
+    const s = scenario({
+      p1: { hand: [RECYCLER, MENACE, VANILLA, FILLER], library: [VANILLA, VANILLA, VANILLA, VANILLA] },
+      p2: { hand: [FILLER], library: [VANILLA, VANILLA, VANILLA] },
+    });
+
+    s.play(RECYCLER, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(RECYCLER);
+    s.endTurn();
+    expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand", min: 2, max: 2 });
+    s.answer(pick(s, MENACE, VANILLA));
+
+    const events = s.lastEvents;
+    const p2Starts = events.findIndex((event) => event.type === "turnStarted");
+    expect(discardedBy(events, "p1")).toHaveLength(2);
+    expect(drawnBy(events.slice(0, p2Starts), "p1")).toHaveLength(2);
+  });
 });

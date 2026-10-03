@@ -324,4 +324,18 @@ describe("#33 Unstable Clone Machine: Animated (patch v0.2.10)", () => {
   it("R383 radiant: a 4/6 Unit", () => {
     expectAnimated({ def: "core-033", radiant: true, stats: { attack: 4, health: 6 } });
   });
+
+  it("R383 played, it keeps its text as a Unit: the next play still shuffles 3 copies in", () => {
+    const s = scenario({
+      seed: "clone-animated",
+      p1: { hand: ["33", "15"], library: [] },
+      p2: { field: ["15"] },
+    });
+
+    s.play("33", { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe("core-033");
+    s.play("15");
+
+    expect(copiesIn(s.pile("p1", "library"), "core-015")).toHaveLength(3);
+  });
 });

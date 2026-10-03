@@ -7,6 +7,7 @@
 // lose 5 health", read against the RADIANT cap of 3: 5 is below the base cap of 5, so only the
 // radiant face can tell a clamp apart from a bypass.
 
+import { ANTI_ONESHOT_CAP } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
 import { expectAnimated } from "./_animated";
@@ -235,5 +236,25 @@ describe("#73 Anti-oneshot Armor: Animated (patch v0.2.10)", () => {
 
   it("R383 radiant: a 2/10 Unit", () => {
     expectAnimated({ def: "core-073", radiant: true, stats: { attack: 2, health: 10 } });
+  });
+
+  // R383: an animated card keeps all of its text, so the cap holds from the unit zone it stands in.
+  function animatedThenHit(radiant: boolean): Scenario {
+    const s = scenario({
+      seed: "core-073-animated-cap",
+      p1: { hand: [{ def: "core-073", radiant }, "core-005"], library: ["core-035", "core-036"] },
+      p2: { field: [{ def: "core-002", radiant: true }], hand: ["core-005"], library: ["core-005", "core-005"] },
+    });
+    s.play("core-073", { zone: 2 });
+    expect(s.unit("p1", 2)?.defId).toBe("core-073");
+    return s.endTurn().attack(s.unit("p2", 1)!, "hero");
+  }
+
+  it("R383 played and animated into a unit zone, it still caps its hero: a 12 hit costs 5", () => {
+    expect(damageTo(animatedThenHit(false), "hero-p1")).toEqual([ANTI_ONESHOT_CAP.base]);
+  });
+
+  it("R383 radiant, animated into a unit zone, it still caps at 3", () => {
+    expect(damageTo(animatedThenHit(true), "hero-p1")).toEqual([ANTI_ONESHOT_CAP.radiant]);
   });
 });

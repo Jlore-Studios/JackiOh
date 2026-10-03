@@ -237,7 +237,7 @@ export function needsZone(state: GameState, card: CardInstance): boolean {
 /**
  * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's keywords as they stand
  * where it is (§10.4, `layers.unitHas`): its face's, the ones granted to it in hand (B5 E38) and the
- * ones an aura gives the cards in a hand (Classic+ #33 Ivory Tower's "Your cards have Stack"). A backrow
+ * ones an aura gives the cards in a hand (a "Your cards have Stack" aura). A backrow
  * card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
  */
 export function playsOnStack(state: GameState, card: CardInstance): boolean {
