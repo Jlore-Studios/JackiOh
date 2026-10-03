@@ -855,6 +855,8 @@
       "stop_requested": false
     },
     "171": {
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "f4216c2945c3879a40cce6307e596f0a8f6b6962": 1
@@ -869,8 +871,10 @@
       "issue": 49,
       "kind": "revise",
       "pending_request": false,
+      "provider": "devin",
       "queued_at": "2026-10-03T21:40:23Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "37156195736",
       "self_check_findings": [
         {
           "claim": "The forfeit confirmation unconditionally asserts 'your rating moves as for a loss', which is now false for unranked room Conquest series, and the pre-result SeriesView exposes no ranked flag for the client to distinguish.",
@@ -886,7 +890,9 @@
         }
       ],
       "source": "ci",
+      "started_at": "2026-10-03T21:51:25Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -1384,9 +1390,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T21:49:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37156232782",
-    "what": "revise #142 on muse"
+    "at": "2026-10-03T21:51:25Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37156195736",
+    "what": "revise #171 on devin"
   },
   "last_sweep": {
     "at": "2026-10-03T21:45:20Z",
