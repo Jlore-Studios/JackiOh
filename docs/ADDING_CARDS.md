@@ -132,8 +132,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   update the comment beside the seed.
 - **The fuzz gates** play 1000 seeded games each and may now draw a game nobody has played. Two latent engine bugs came out this way: a fused
   card of two ingredients that define `targetChecks` threw from `legalActions` (fixed, #104), and a client table made the animation runner replay a
-  whole event window (fixed, #106). Open ones: #105 (a deeply nested fusion resumes Final Gambit against the wrong ingredient), #107
-  (`determinize` can put a Siphon Squad in a hidden slot the seat's own view rules out). If a gate fails at a seed that has nothing to do with
+  whole event window (fixed, #106). A third, `determinize` putting a Siphon Squad in a hidden slot the seat's own view rules out, is fixed
+  too (#107). The open one is #105 (a deeply nested fusion resumes Final Gambit against the wrong ingredient). If a gate fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the throw or the diff names, and file it rather than editing the test.
 
 ## 5. Do not read
