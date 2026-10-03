@@ -989,9 +989,11 @@
     },
     "88": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5971227964"
+      ],
       "died": 0,
-      "failures": 2,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-03T16:37:09Z",
@@ -1009,7 +1011,7 @@
       "planned_at": "2026-10-03T16:39:41Z",
       "provider": "muse",
       "question": "Issue #88 is ~70 checkboxes; one session completed the catalog data pass, ~25 card scripts, the Reveal mechanic (R638), the Twice Forward rework (R639), Mid Runner midlane (R637), Turtinator exclusion (R635), Acquisition random (R636), and client work (Discover rule, Confirm sticky, LOC hidden, vanilla backrow, punish mode order, Tower click, Breath grouping) \u2014 but the tree is mid-refactor on discard-random-default (engine does not typecheck: activate.ts still references deleted targeting fns) and engine globals R641-R645 plus SPEC/R-rows/tests are untouched. Continue the build from .bot-notes.md HANDOFF (exact resume list) rather than merging: do not ship this tree as-is.",
-      "queued_at": "2026-10-02T17:42:45Z",
+      "queued_at": "2026-10-03T16:45:59Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37134496670",
       "started_at": "2026-10-03T15:48:23Z",
