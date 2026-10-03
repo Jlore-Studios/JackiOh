@@ -157,6 +157,9 @@ class Provider:
     lanes: int = 1
     #: Its builds check themselves before any review (`work.py`'s self-check loop).
     self_check: bool = False
+    #: It builds, fixes and revises only after every other subscription that may (claude-2, kept
+    #: for planning and review); it plans and reviews in its `priority` place.
+    build_last: bool = False
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()
 
@@ -317,7 +320,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes"}
+                  "lanes", "build_last"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -434,6 +437,7 @@ def _provider(name: str, raw: Any) -> Provider:
         off_reason=str(raw.get("off_reason") or ""),
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
         self_check=bool(raw.get("self_check", False)),
+        build_last=bool(raw.get("build_last", False)),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )

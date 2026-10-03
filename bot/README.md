@@ -326,7 +326,9 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
 planning and reviewing; and Devin last, only when nothing else is free. claude-4 sits with claude-1
-until it is set up.
+until it is set up. For building alone, claude-2 is `build_last`: it builds only when no other
+subscription that may is free, Devin included, so Devin is the default builder once claude-3,
+claude-1 and the medium models are busy.
 
 - **Planning.** Every build starts from a plan. The planner is a medium or strong model, strong
   whenever one is free (claude-3, claude-1, then claude-2). It reads the task and the code, writes
@@ -340,8 +342,9 @@ until it is set up.
   Sonnet, never Opus, and a medium one with Opus, since it has no medium model. When that is above
   the item's tier (none of that tier is free, or the usage order puts a stronger one first), the
   run's log says so and why. claude-2 never builds with Sonnet, and Sonnet builds only while
-  claude-3 or claude-1 is free; otherwise an easy item goes to the medium models, claude-2, and
-  Devin last.
+  claude-3 or claude-1 is free; otherwise an easy item goes to the medium models, then Devin, and
+  claude-2 (with Opus) only when Devin's two lanes are taken too. A medium item passes Devin by,
+  so claude-2 builds it once the medium models are busy.
 - **Reviewing in the run.** The run's own strongest model of at least medium (strong for a hard
   item) reviews the change adversarially, in a fresh session. Weak models never review: a run
   with none (Devin's) hands the change to a review run.

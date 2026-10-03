@@ -14,8 +14,9 @@ available (`providers.availability`: switched on, its secret set, inside its hou
 is forced, under its limits):
 
 - **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
-  claude-1, then the medium models, then claude-2, Devin last) with a seat that meets the tier,
-  on its weakest such seat. claude-3 and claude-1 build an easy item with Sonnet, not Opus. A
+  claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
+  all of them) with a seat that meets the tier, on its weakest such seat. claude-3 and claude-1
+  build an easy item with Sonnet, not Opus. A
   builder above the item's tier (no seat of that tier free, or one comes later in the usage
   order) is said in the run's log.
 - **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
@@ -240,8 +241,10 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tupl
     seat that meets its tier, on its weakest such seat; with a note when that seat is above the
     tier, saying why (none of that tier is free, or the usage order puts this one first)."""
     floor = MIN_TIER[difficulty]
+    # A subscription marked `build_last` (claude-2) builds only after every other one.
+    order = sorted(providers, key=lambda provider: provider.build_last)
     usable = [(provider, [seat for seat in pool.seats(provider) if tier_at_least(seat.tier, floor)])
-              for provider in providers]
+              for provider in order]
     for index, (provider, seats) in enumerate(usable):
         if not seats:
             continue

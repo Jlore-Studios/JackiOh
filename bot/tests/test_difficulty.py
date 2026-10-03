@@ -112,7 +112,8 @@ class BuilderTests(unittest.TestCase):
         self.assertIn("no subscription can take the queue now", planned["reason"])
 
     def test_the_usage_order(self):
-        """claude-3, then claude-1, then the medium models, then claude-2, and Devin last."""
+        """claude-3, then claude-1, then the medium models, then Devin, and claude-2 builds only
+        after all of them (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 12):
@@ -136,8 +137,8 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(order, [("claude-3", "sonnet"), ("claude-1", "sonnet"),
                                  ("claude-4", "opus"), ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
-                                 ("gpt", "gpt-5.6-terra"), ("claude-2", "opus"),
-                                 ("devin", "swe-2-max")])
+                                 ("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
+                                 ("claude-2", "opus")])
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
         # claude-3 busy, claude-1 open: claude-1 builds the easy item with Sonnet, not Devin.
@@ -146,8 +147,8 @@ class BuilderTests(unittest.TestCase):
         busy(gh, ctx, ("claude-3", 50))
         queue(gh, ctx, 3, EASY)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "weak"))
-        # Neither open, the medium models busy, claude-2 kept back but free: claude-2 builds
-        # with Opus (it has no Sonnet), and Devin only when nothing else is free.
+        # Neither open and the medium models busy: Devin builds it, the default, while claude-2
+        # (build_last, kept for planning and review) stays free.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53))
@@ -155,12 +156,25 @@ class BuilderTests(unittest.TestCase):
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
         busy(gh, ctx, ("muse", 54), ("gpt", 55))
         queue(gh, ctx, 3, EASY)
-        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
-        gh.threads[3]["state"] = "open"
-        busy(gh, ctx, ("claude-2", 56))
-        gh.threads[3]["labels"] = [{"name": LABEL_BUILD}, {"name": EASY}]
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["provider"], seats(planned)["build"][1]), ("devin", "swe-2-max"))
+        # Only with both of Devin's lanes taken does claude-2 build it, with Opus (no Sonnet).
+        gh.threads[3]["state"] = "open"
+        gh.threads[3]["labels"] = [{"name": LABEL_BUILD}, {"name": EASY}]
+        busy(gh, ctx, ("devin", 56), ("devin", 57))
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
+
+    def test_claude_2_builds_a_medium_item_devin_may_not(self):
+        """Devin is weak, so a medium item passes it by: with only claude-2 and Devin free,
+        claude-2 builds it."""
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, machine=ALL_MACHINE)
+        ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
+            ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
+        busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53),
+             ("muse", 54), ("gpt", 55))
+        queue(gh, ctx, 3, MEDIUM)
+        self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 
     def test_with_no_model_of_its_tier_free_it_steps_up_and_says_why(self):
         gh = FakeGitHub()
