@@ -42,8 +42,12 @@
 --   5. Carves the hidden rating out of what an authenticated client can read.
 --      R612: "No read carries the hidden rating, deviation or volatility --
 --      not even to its owner." 0001 granted `authenticated` SELECT on all of
---      public.profiles, which until now covered the old int `rating` too;
---      a column-level revoke takes the triple back. The four new tables get
+--      public.profiles, which until now covered the old int `rating` too, and
+--      0004 granted it on all of public.tickets and public.results, whose
+--      rating columns now hold the hidden Glicko rating (tickets.rating is the
+--      queueing player's own; a results row carries BOTH players' before/after,
+--      so its four columns are the opponent's hidden rating as well). A column
+--      whitelist takes every one of them back. The four new tables get
 --      no client grant at all: the client reads its rank through the API
 --      (GET /api/ranked, /api/leaderboard), never the table.
 --
@@ -116,11 +120,12 @@ comment on column public.series.ranked is
 -- The same function as 0004's, verbatim except for the two types that follow
 -- the widened columns: the p_*_rating_after arguments and the
 -- v_*_rating_before locals move to double precision. A signature change
--- cannot be `create or replace`d, so the old one is dropped first. Its only
--- remaining caller is 0004's app.reap_stale_matches, whose
--- `(select rating ...)` arguments now arrive in the type this signature asks
--- for; the server's own ending is results.ts's one-transaction write set and
--- never calls this function (db/store.ts's matches.finish comment).
+-- cannot be `create or replace`d, so the old one is dropped first. Its
+-- remaining callers are 0004's app.reap_stale_matches and the e2e onlineReset
+-- task, whose `(select rating ...)` arguments now arrive in the type this
+-- signature asks for; the server's own ending is results.ts's
+-- one-transaction write set and never calls this function (db/store.ts's
+-- matches.finish comment).
 drop function if exists app.end_match(uuid, uuid, text, int, int, int);
 
 create or replace function app.end_match(
@@ -222,11 +227,12 @@ comment on table public.seasons is
 
 -- ----------------------------------------------------------------------------
 -- 4b. public.season_ranks (R605, R607, R608): a player's visible state for one
---     season. `ladder` is the flat position (0..74) the tier, division and
---     pips decode from -- null while the placements run; `floor` the lowest
+--     season. `ladder` is the flat position (0..44 = five tiers of three
+--     divisions of three pips, less one) the tier, division and pips decode
+--     from -- null while the placements run; `floor` the lowest
 --     ladder slot the season guarantees; `peak_ladder`/`peak_jlorious` the
 --     season's best. `streak` is the consecutive-win count the streak rule
---     reads (negative while losing).
+--     reads (a loss resets it to 0; a draw holds it).
 -- ----------------------------------------------------------------------------
 create table if not exists public.season_ranks (
   season_id     text        not null references public.seasons(id),
@@ -308,7 +314,9 @@ create table if not exists public.rated_games (
   constraint rated_games_reason_check check (
     (kind = 'match' and reason in ('hero-death', 'both-heroes-dead', 'concede',
       'draw-accepted', 'turn-cap', 'disconnect', 'match-ceiling'))
-    or (kind = 'series' and reason in ('decided', 'exhausted', 'forfeit', 'abandoned')))
+    -- 'abandoned' is a SeriesEnd too, but an abandoned series moves nothing
+    -- (R604), so no rated game is ever recorded with it.
+    or (kind = 'series' and reason in ('decided', 'exhausted', 'forfeit')))
 );
 
 comment on table public.rated_games is
@@ -335,6 +343,23 @@ revoke select on public.profiles from authenticated;
 grant select (id, status, display_name, current_match_id,
               created_at, updated_at, activated_at)
   on public.profiles to authenticated;
+
+-- 0004 gave `tickets` and `results` the same table-level grant (own ticket,
+-- own results), and it silently covered `tickets.rating` and the four
+-- `results.*_rating_*` columns once they came to hold the hidden rating
+-- (parts 1 and 3). Same carve-out: a column whitelist that grants every
+-- column a client legitimately reads and not one rating column — an own
+-- ticket's rating is the caller's hidden rating, an own result's the
+-- opponent's as well, and R612 bars both.
+revoke select on public.tickets from authenticated;
+grant select (id, profile_id, slot, mode, frozen_deck, frozen_trio,
+              catalog_version, status, enqueued_at, claimed_at, match_id)
+  on public.tickets to authenticated;
+
+revoke select on public.results from authenticated;
+grant select (match_id, p1_profile_id, p2_profile_id, winner_profile_id,
+              reason, turns, ended_at)
+  on public.results to authenticated;
 
 -- The four ranked tables: no grant at all for anon/authenticated, matching
 -- matches/match_actions. What a client may see arrives through the API --

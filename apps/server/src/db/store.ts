@@ -839,6 +839,14 @@ const RATED_GAME_COLUMNS = `id, kind, season_id, patch_version, catalog_version,
   p2_profile_id, p2_bot_id, p2_pilot, p2_before, p2_after, p2_rank_before, p2_rank_after,
   winner_side, reason, ended_at`;
 
+/**
+ * Advisory lock id for `ranked.lockSeasons` — every season open takes it, so two opens racing
+ * in different transactions (even for different season ids) serialize instead of both
+ * soft-resetting off a seasons list that lacks the other's row. Distinct from migrate.ts's
+ * "jack" id so a deploy and a season open never wait on each other.
+ */
+const SEASON_LOCK_ID = 0x73656173; // "seas"
+
 /** A Glicko triple as `rated_games.p*_before` / `p*_after` jsonb holds it — this file wrote it. */
 function glickoOf(value: unknown): Glicko {
   const entry = (value ?? {}) as { rating?: unknown; deviation?: unknown; volatility?: unknown };
@@ -1198,9 +1206,9 @@ function buildStore(session: Session): Store {
 
     /**
      * Migration 0004's write, which rated a match by moving `rating` alone. R603's rated path
-     * writes the whole triple through `setGlicko` instead; the port keeps this for the paths
-     * migration 0004's SQL still serves (`app.end_match`, called only by the reaper) and for
-     * tests that exercise the column directly.
+     * writes the whole triple through `setGlicko` instead; the port keeps this for the SQL
+     * still serving `app.end_match` (which the e2e `onlineReset` task calls) and for tests
+     * that exercise the column directly.
      */
     setRating: async (profileId, rating) => {
       const { rowCount } = await session.query(
@@ -1734,7 +1742,7 @@ function buildStore(session: Session): Store {
      * `src/api/results.ts` already does through `results.insert`, `profiles.setRating`,
      * `profiles.setInMatch` and `tickets.cancel`, inside one `Store.tx` that this call joins. So
      * the ending is still one transaction with the same five writes; calling `app.end_match` here
-     * would do the other four a second time. See the report.
+     * would do the other four a second time.
      */
     finish: async (matchId, at) =>
       session.run(null, async (q) => {
@@ -2389,6 +2397,15 @@ function buildStore(session: Session): Store {
   // -------------------------------------------------------------------------
 
   const ranked: RankedStore = {
+    /**
+     * One advisory lock for every season open, transaction-scoped like migrate.ts's LOCK_ID:
+     * two opens — same season or different seasons — run one after the other, so the second
+     * reads a seasons list that already holds the first's row.
+     */
+    lockSeasons: async () => {
+      await session.query(null, `select pg_advisory_xact_lock(${SEASON_LOCK_ID})`, []);
+    },
+
     /** Every season, oldest first, as `createMemoryRankedStore` answers it. */
     seasons: async () => {
       const { rows } = await session.query<SeasonDbRow>(
@@ -2512,7 +2529,10 @@ function buildStore(session: Session): Store {
            games = excluded.games, wins = excluded.wins, losses = excluded.losses,
            draws = excluded.draws, ladder = excluded.ladder, floor = excluded.floor,
            streak = excluded.streak, peak_ladder = excluded.peak_ladder,
-           peak_jlorious = excluded.peak_jlorious, updated_at = excluded.updated_at`,
+           -- least() like notePeakJlorious: a bystander's notePeakJlorious can land between
+           -- this tx's rankFor read and this upsert, and an absolute write would lose it.
+           peak_jlorious = least(season_ranks.peak_jlorious, excluded.peak_jlorious),
+           updated_at = excluded.updated_at`,
         [
           row.seasonId,
           row.profileId,

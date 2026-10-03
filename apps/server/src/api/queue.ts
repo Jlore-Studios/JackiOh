@@ -303,7 +303,28 @@ async function startPairedMatch(
   });
 
   // R604: a match the queue pairs is ranked.
-  await deps.matches.start({ matchId, seed, catalogVersion: deps.catalog.version, ranked: true, seats });
+  try {
+    await deps.matches.start({ matchId, seed, catalogVersion: deps.catalog.version, ranked: true, seats });
+  } catch (error) {
+    // The `setInMatch` transaction above has already committed, so a failed start leaves the
+    // `open` skeleton `claimPair` wrote with both profiles pointing at it — and nothing reaps
+    // `open` rows, so the two would stay locked out of the queue, rooms and account deletion
+    // forever. Undo it before the error stands: the tickets are claimed either way (the pair
+    // is lost), but the players must come free.
+    try {
+      await deps.store.tx(async (t) => {
+        await t.profiles.setInMatch(a.profileId, null);
+        await t.profiles.setInMatch(b.profileId, null);
+      });
+      await deps.store.matches.discardOpen(matchId);
+    } catch (cleanupError) {
+      deps.log.alert("queue.pair_cleanup_failed", {
+        matchId,
+        message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      });
+    }
+    throw error;
+  }
   deps.log.info("queue.paired", {
     mode: a.mode,
     matchId,

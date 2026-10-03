@@ -823,6 +823,13 @@ export type RatedGameRow = {
 };
 
 export type RankedStore = {
+  /**
+   * Serializes season opens: `openSeasonInTx` takes it before reading `seasons()`, so two
+   * opens racing in different transactions — even under different season ids — run one after
+   * the other and the second sees the first's row (and never soft-resets off a snapshot that
+   * predates it). Released when the transaction ends; a no-op where one process owns the store.
+   */
+  lockSeasons: () => Promise<void>;
   /** Every season, oldest first. */
   seasons: () => Promise<Season[]>;
   /** False, writing nothing, when a season of that id exists already (another process opened it). */
@@ -839,7 +846,12 @@ export type RankedStore = {
   rank: (seasonId: string, profileId: string) => Promise<SeasonRank | null>;
   /** Every season row this profile has, oldest season first: the profile's badges (R607). */
   ranksOf: (profileId: string) => Promise<SeasonRank[]>;
-  /** Insert or replace one player's season row. Only that player's own rated games call it. */
+  /**
+   * Insert or replace one player's season row. Only that player's own rated games call it.
+   * `peakJlorious` merges rather than replaces — keeps the better (lower) of the stored and
+   * written positions — because a bystander's `notePeakJlorious` can land between this writer's
+   * read of the row and its write.
+   */
   putRank: (row: SeasonRank) => Promise<void>;
   /**
    * R608: records that a player has held this Jlorious position, keeping the best. One targeted

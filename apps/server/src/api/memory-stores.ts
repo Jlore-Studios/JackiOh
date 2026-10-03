@@ -568,6 +568,10 @@ export function createMemoryRankedStore(
 ): RankedStore {
   const profileOf = (profileId: string): Profile | undefined => tables().profiles.find((row) => row.id === profileId);
   return {
+    // One process owns these tables: there is no second opener to serialize with.
+    lockSeasons: async () => {
+      call("ranked.lockSeasons");
+    },
     seasons: async () => {
       call("ranked.seasons");
       return [...tables().seasons].sort((a, b) => a.startedAt - b.startedAt || (a.id < b.id ? -1 : 1)).map(clone);
@@ -630,8 +634,18 @@ export function createMemoryRankedStore(
       call("ranked.putRank");
       const rows = tables().seasonRanks;
       const at = rows.findIndex((rank) => rank.seasonId === row.seasonId && rank.profileId === row.profileId);
-      if (at < 0) rows.push(clone(row));
-      else rows[at] = clone(row);
+      const existing = rows[at];
+      if (existing === undefined) rows.push(clone(row));
+      else {
+        // Same merge as Postgres' upsert: a notePeakJlorious that landed since the writer read
+        // the row is not lost.
+        const peak = existing.peakJlorious;
+        rows[at] = {
+          ...clone(row),
+          peakJlorious:
+            peak === null ? row.peakJlorious : row.peakJlorious === null ? peak : Math.min(peak, row.peakJlorious),
+        };
+      }
     },
     notePeakJlorious: async (seasonId, profileId, position) => {
       call("ranked.notePeakJlorious");

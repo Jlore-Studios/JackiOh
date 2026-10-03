@@ -287,7 +287,8 @@ on action frame:
    5. if error -> ack { ok: false, reason: error }; log the rejection with its reason (SPEC §9.8)
    6. append the action to match_actions via app.append_match_action  (SPEC §9.3)
    7. push viewFor(state, 'p1') to p1 and viewFor(state, 'p2') to p2  (SPEC §10.8)
-   8. reset the clocks from the new state; if state.result -> app.end_match and close
+   8. reset the clocks from the new state; if state.result -> deps.recordResult
+      (src/api/results.ts) and close
 ```
 
 Notes that matter:
@@ -317,7 +318,7 @@ Notes that matter:
 | One socket drops | start the grace timer, write `grace_deadline_at`, push the countdown to the other player; **the clock keeps running** (SPEC §9.5) |
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
-| Terminal state | `app.end_match` writes one `results` row, updates both ratings, clears both `profiles.current_match_id` and any queued ticket, then the actor is dropped from the map |
+| Terminal state | `recordResult` (`src/api/results.ts`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction — then the actor is dropped from the map |
 | Process boot | `app.live_matches()`, then for each: `fold({ seed, decks, log })` and re-arm the clocks from the stored deadlines |
 | Idle | The Node process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
 
@@ -574,8 +575,9 @@ step that is not yet implemented says which BUILD task delivers it.
    the bring-up. 0019 is the ranked ladder (R603–R612): Glicko ratings go fractional and gain the
    deviation and volatility columns, `matches` and `series` gain their `ranked` flag, and the four
    server-only tables land — `seasons`, `season_ranks`, `bot_ratings`, `rated_games`. On a project
-   that already has players it also narrows `profiles`' client grant to a column whitelist, because
-   the hidden rating may never reach the client (R612); nothing else in the bring-up changes.
+   that already has players it also narrows the client grants on `profiles`, `tickets` and
+   `results` to column whitelists, because the hidden rating may never reach the client (R612);
+   nothing else in the bring-up changes.
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -659,7 +661,7 @@ instead, so an unnumbered marker never reads as an unrecorded gap.
 | R109 | Rate limits for action flooding | Per-match actions per second and per-account API requests per minute. SPEC §9.8 requires both limits and names no numbers. |
 | R110 | Room-code reuse | A room code is unique among matches that are not `over`, so codes are reusable once a match ends. SPEC says codes are 6 characters and nothing about their lifetime. |
 | R111 | Launch grant quantity | One copy of every non-token card, which with `MAX_COPIES = 1` and 3 decks of 20 is exactly enough for a legal loadout, and keeps the ledger shape scarcity will need later. Granted by a trigger on the `pending → active` transition, idempotent by skipping cards that already carry a `launch` grant. |
-| R112 | A match the reaper resolves, not the actor | `app.reap_stale_matches()` finishes a stuck match itself rather than flagging it for a server that may be the crashed component. The consequence: a ceiling draw resolved by the reaper records `turns = 0` (the turn counter lives only in the actor's in-memory `GameState`) and leaves both ratings unchanged, where a draw resolved by a live actor applies the real Elo update. SPEC §9.5 requires the reaper and says nothing about either value. |
+| R112 | A match the reaper resolves, not the actor | `reapStuckMatches` (`src/api/results.ts`) finishes a stuck match itself rather than flagging it for a server that may be the crashed component. The consequence: a ceiling draw resolved by the reaper records `turns = 0` (the turn counter lives only in the actor's in-memory `GameState`) and leaves both ratings unchanged, where a draw resolved by a live actor applies the real rating update. SPEC §9.5 requires the reaper and says nothing about either value. |
 
 ---
 

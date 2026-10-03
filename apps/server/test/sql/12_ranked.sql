@@ -294,11 +294,29 @@ rollback;
 
 \echo '### R612: an authenticated client cannot select the hidden rating ###'
 begin;
+-- Fixtures as the migration role, before the authenticated switch: profile 1 has a
+-- queued ticket and a finished result against profile 2 — the two rows whose own-side
+-- columns used to carry the hidden rating to the client (and the opponent's on results).
+insert into public.tickets (id, profile_id, slot, rating, frozen_deck, catalog_version, status)
+  values ('bbbbbbbb-0000-4000-8000-000000000001',
+          '11111111-1111-1111-1111-111111111111', 1, 1000.5, '[]'::jsonb, 'core-1', 'queued');
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, started_at, ceiling_at)
+  values ('cccccccc-0000-4000-8000-000000000001', 'over', 'seed',
+          '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+          '[]'::jsonb, '[]'::jsonb, 'core-1', now(), now());
+insert into public.results (match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason,
+                            turns, p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after)
+  values ('cccccccc-0000-4000-8000-000000000001',
+          '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+          '11111111-1111-1111-1111-111111111111', 'concede', 12,
+          1000.5, 1016.25, 1200.75, 1184.5);
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
 do $$
 declare
   seen bigint;
+  denied text;
 begin
   if current_user <> 'authenticated' then
     raise exception 'FAIL (R612): running as %, not authenticated — SET LOCAL did not take', current_user;
@@ -345,6 +363,52 @@ begin
   end;
 
   raise notice 'OK (R612): the whole hidden triple is refused to the client while its own row stays readable';
+
+  -- Same carve-out on the two tables 0004 granted wholesale: an own ticket's rating and a
+  -- results row's before/after ratings (the p2_* columns are the OPPONENT's hidden rating).
+  -- Vacuity first: the row must still come back through an allowed column, or a rating
+  -- refusal proves nothing.
+  select count(*) into seen
+    from public.tickets
+   where id = 'bbbbbbbb-0000-4000-8000-000000000001' and status = 'queued' and match_id is null;
+  if seen <> 1 then
+    raise exception 'FAIL (R612): profile 1''s own ticket did not come back through the allowed columns';
+  end if;
+
+  begin
+    perform rating from public.tickets where id = 'bbbbbbbb-0000-4000-8000-000000000001';
+    raise exception 'FAIL (R612): authenticated read tickets.rating — a client''s own ticket leaks its hidden rating';
+  exception
+    when insufficient_privilege then
+      raise notice 'OK (R612): tickets.rating refused (insufficient_privilege)';
+    when others then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      raise exception 'FAIL (R612): tickets.rating raised "%" (%), not insufficient_privilege', sqlerrm, sqlstate;
+  end;
+
+  select count(*) into seen
+    from public.results
+   where match_id = 'cccccccc-0000-4000-8000-000000000001' and reason = 'concede' and turns = 12;
+  if seen <> 1 then
+    raise exception 'FAIL (R612): profile 1''s own result did not come back through the allowed columns';
+  end if;
+
+  foreach denied in array array['p1_rating_before', 'p1_rating_after', 'p2_rating_before', 'p2_rating_after']
+  loop
+    begin
+      execute format('select count(%I) from public.results where match_id = %L', denied, 'cccccccc-0000-4000-8000-000000000001')
+        into seen;
+      raise exception 'FAIL (R612): authenticated read results.% — a shared results row leaks the hidden rating', denied;
+    exception
+      when insufficient_privilege then
+        raise notice 'OK (R612): results.% refused (insufficient_privilege)', denied;
+      when others then
+        if sqlerrm like 'FAIL%' then raise; end if;
+        raise exception 'FAIL (R612): results.% raised "%" (%), not insufficient_privilege', denied, sqlerrm, sqlstate;
+    end;
+  end loop;
+
+  raise notice 'OK (R612): tickets and results refuse every rating column while their own rows stay readable';
 end $$;
 rollback;
 

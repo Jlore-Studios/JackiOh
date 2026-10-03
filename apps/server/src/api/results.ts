@@ -92,6 +92,14 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
     const ratingPolicy: RatingPolicy =
       series === null && match !== null && match.ranked ? input.ratingPolicy : "unchanged";
 
+    // A ranked series reaches its rating move — and so openSeasonInTx's `lockSeasons` — inside
+    // `advanceSeriesInTx` below, AFTER `results.insert`, `setInMatch` and the rest have already
+    // taken row locks. Take the season lock first: a tx that waits on it while holding profile
+    // locks deadlocks with the season opener holding it, whose `resetRatings` update wants those
+    // very rows. Every other path to `lockSeasons` already takes it before writing, and the
+    // advisory lock is re-entrant, so `openSeasonInTx`'s own take costs nothing here.
+    if (series?.ranked === true) await t.ranked.lockSeasons();
+
     const [seatA, seatB] = input.seats;
     const profiles = await t.profiles.getMany([seatA.profileId, seatB.profileId]);
     const byId = new Map<string, Profile>(profiles.map((profile) => [profile.id, profile]));

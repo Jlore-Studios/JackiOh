@@ -82,11 +82,14 @@ export type OpenedSeason = { season: Season; opened: boolean; reset: ResetReport
  * R609: the build's season, opened inside `t` when it does not exist yet. The first season of all
  * resets nothing — there is no season before it to come back from — and every later one runs the
  * soft reset over every rated player in the same transaction as the season row, so a season is
- * either open and reset or neither. Two processes opening it at once both try the insert; the
- * loser's writes nothing and it reads the winner's season.
+ * either open and reset or neither. Opens serialize on `ranked.lockSeasons`: two processes
+ * opening at once — the same season or, racing deploys, two different ones — run one after the
+ * other, so the second sees the first's row (or resets over a world that already holds it) and
+ * never soft-resets off a snapshot that predates it.
  */
 export async function openSeasonInTx(t: Store, deps: SeasonDeps): Promise<OpenedSeason> {
   const id = buildSeasonId(deps);
+  await t.ranked.lockSeasons();
   const seasons = await t.ranked.seasons();
   const existing = seasons.find((season) => season.id === id);
   if (existing !== undefined) return { season: existing, opened: false, reset: null };
@@ -418,7 +421,11 @@ export async function leaderboard(deps: ServerDeps, viewerId: string): Promise<L
 
 /** `GET /api/matches/:matchId/ranks`: both seats' ranks for the match screen (R612). */
 export type MatchRanksBody = {
-  /** R604: whether this game moves the rating and the ladder. */
+  /**
+   * R604: whether the match is ranked. A ranked match's end moves the rating and the ladder
+   * itself; a ranked series' games carry the flag while the series moves the rating once,
+   * when it ends.
+   */
   ranked: boolean;
   seats: Record<PlayerId, { tag: string; rank: VisibleRank; you: boolean }>;
 };

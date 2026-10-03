@@ -1662,6 +1662,9 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         const now = harness.now();
         const older = season("v0.1", now);
         const newer = season("v0.2", now + 1_000);
+        // The open serializer: a no-op where one process owns the store, a real advisory lock
+        // under Postgres — callable either way.
+        await store.ranked.lockSeasons();
         expect(await store.ranked.createSeason(newer)).toBe(true);
         expect(await store.ranked.createSeason(older)).toBe(true);
         // A second opener of the same id writes nothing and answers false.
@@ -1731,6 +1734,17 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         // A player with no season row is noted nowhere — the write is a no-op.
         await store.ranked.notePeakJlorious("v0.1", id(), 1);
         await store.ranked.notePeakJlorious("v0.2", a.id, 1);
+
+        // putRank merges the peak rather than replacing it: a rank row the player's own game
+        // wrote cannot undo a better position a bystander's game already recorded, and a null
+        // never erases — but a better position the writer computed still lands.
+        const row = must(await store.ranked.rank("v0.1", a.id), "the rank");
+        await store.ranked.putRank({ ...row, peakJlorious: 90 });
+        expect(must(await store.ranked.rank("v0.1", a.id), "the rank").peakJlorious).toBe(4);
+        await store.ranked.putRank({ ...row, peakJlorious: null });
+        expect(must(await store.ranked.rank("v0.1", a.id), "the rank").peakJlorious).toBe(4);
+        await store.ranked.putRank({ ...row, peakJlorious: 2 });
+        expect(must(await store.ranked.rank("v0.1", a.id), "the rank").peakJlorious).toBe(2);
       });
 
       it("R610 keeps each bot's own rating, upserted", async () => {
