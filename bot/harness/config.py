@@ -63,9 +63,12 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:pr": ("c5def5", "A pull request the night bot opened"),
     "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
-    "bot:cross-review": ("0052cc", "A night bot pull request waiting for a second model's review"),
+    "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
+    "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
     "human": ("ededed", "A human will do this. Night bot skips it."),
-    "shitter": ("c2e0c6", "Low-tier models only (anything except OpenAI Astra or Claude Opus)."),
+    "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
+    "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
+    "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
     "priority:high": ("d73a4a", "The night bot picks this up first"),
     "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
     "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
@@ -80,11 +83,20 @@ LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
 LABEL_CROSS = "bot:cross-review"
-#: No model takes a thread labelled `human`; only a low-tier one takes a `shitter` one (#96).
+#: The Needs plan stage: a queued item (still `bot:build`) waiting for a strong model's plan, which
+#: goes into its description (`issueplan.py`). Not a state label: it sits beside `bot:build`.
+LABEL_NEEDS_PLAN = "bot:needs-plan"
+#: No model takes a thread labelled `human` (#96).
 LABEL_HUMAN = "human"
-LABEL_SHITTER = "shitter"
+#: An item's difficulty decides which models may plan, build and review it; no label counts as
+#: medium, and with several the hardest counts. Like `human`, these match whatever their case.
+DIFFICULTIES = ("easy", "medium", "hard")
+DIFFICULTY_LABELS = {f"difficulty:{name}": name for name in DIFFICULTIES}
+DEFAULT_DIFFICULTY = "medium"
+#: The weakest tier that may build an item of each difficulty (`providers.TIERS`).
+MIN_TIER = {"easy": "weak", "medium": "medium", "hard": "strong"}
 #: The pickup tiers, first to last; a thread with no priority label sits between medium and low
-#: (#90). Like `human` and `shitter`, these match whatever their case.
+#: (#90). Like `human`, these match whatever their case.
 LABEL_PRIORITY_HIGH = "priority:high"
 LABEL_PRIORITY_MEDIUM = "priority:medium"
 LABEL_PRIORITY_LOW = "priority:low"
@@ -95,6 +107,9 @@ class Gate:
     name: str
     run: str
     timeout_minutes: int
+    #: Runs in a model job on the bot's machine too. `false` leaves it to CI on the pull request
+    #: there: the machine's two vCPUs are shared by every job on it, GitHub's runners are not.
+    machine: bool = True
 
 
 @dataclass(frozen=True)
@@ -147,6 +162,8 @@ class Config:
     gates: tuple[Gate, ...]
     #: The subscriptions, from `.harness/providers.json`.
     pool: Pool
+    #: Self checks a self-checking builder gets before its change goes to review anyway.
+    max_self_check_rounds: int = 3
     # From the environment.
     bot_token: str = field(default="", repr=False)
     actions_token: str = field(default="", repr=False)
@@ -212,14 +229,17 @@ _REQUIRED = (
     "gates",
 )
 
-_ROLES = ("build", "fix", "revise", "review", "suggest")
+_ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
+#: Keys `.harness/config.json` may leave out, with their defaults.
+_OPTIONAL = {"max_self_check_rounds": 3}
 
 
 def _gate(raw: Any, where: str) -> Gate:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{where}: expected an object")
     try:
-        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]))
+        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]),
+                    machine=bool(raw.get("machine", True)))
     except (KeyError, TypeError, ValueError) as exc:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
 
@@ -253,7 +273,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
     missing = [key for key in _REQUIRED if key not in raw]
     if missing:
         raise ConfigError(f"{CONFIG_PATH}: missing keys {', '.join(missing)}")
-    unknown = sorted(set(raw) - set(_REQUIRED))
+    unknown = sorted(set(raw) - set(_REQUIRED) - set(_OPTIONAL))
     if unknown:
         raise ConfigError(f"{CONFIG_PATH}: unknown keys {', '.join(unknown)}")
     turns = {str(k): int(v) for k, v in dict(raw["max_turns"]).items()}
@@ -266,6 +286,9 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
     gates = tuple(_gate(g, f"gates[{i}]") for i, g in enumerate(raw["gates"]))
     if not gates:
         raise ConfigError("gates: at least one gate is required")
+    self_checks = int(raw.get("max_self_check_rounds", _OPTIONAL["max_self_check_rounds"]))
+    if self_checks < 1:
+        raise ConfigError("max_self_check_rounds: must be at least 1")
     repo = env.get("GITHUB_REPOSITORY") or str(raw["repo"])
     backend = env.get("HARNESS_BACKEND", "cli") or "cli"
     if backend not in ("cli", "fake"):
@@ -299,6 +322,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         install=_gate(raw["install"] | {"name": "install"}, "install"),
         gates=gates,
         pool=pool if pool is not None else providers_mod.load(root),
+        max_self_check_rounds=self_checks,
         bot_token=env.get("BOT_GITHUB_TOKEN", ""),
         actions_token=env.get("GITHUB_TOKEN", "") or env.get("GH_TOKEN", ""),
         backend=backend,

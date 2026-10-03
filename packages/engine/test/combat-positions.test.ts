@@ -86,7 +86,7 @@ describe("positions and exertion (M2-T1)", () => {
     state = act(state, { type: "switchPosition", instanceId: unitAt(state, "p1", 1).id, playerId: "p1" });
     let unit = unitAt(state, "p1", 1);
     expect(unitView(state, unit).position).toBe("DEF");
-    expect(hasExertion(unit, "attack")).toBe(false);
+    expect(hasExertion(state, unit, "attack")).toBe(false);
     expect(attackTargets(state, unit)).toEqual([]);
     expect(attempt(state, { type: "attack", attackerId: unit.id, targetId: "hero-p2", playerId: "p1" }).error).toMatch(
       /already acted/,
@@ -100,7 +100,7 @@ describe("positions and exertion (M2-T1)", () => {
     state = act(state, { type: "switchPosition", instanceId: unit.id, playerId: "p1" });
     unit = unitAt(state, "p1", 1);
     expect(unitView(state, unit).position).toBe("ATK");
-    expect(hasExertion(unit, "attack")).toBe(false);
+    expect(hasExertion(state, unit, "attack")).toBe(false);
     expect(attackTargets(state, unit)).toEqual([]);
     expect(attempt(state, { type: "attack", attackerId: unit.id, targetId: "hero-p2", playerId: "p1" }).error).toMatch(
       /already acted/,
@@ -122,7 +122,7 @@ describe("positions and exertion (M2-T1)", () => {
 
     const unit = unitAt(state, "p1", 1);
     expect(unit.exertion.attacked).toBe(true);
-    expect(hasExertion(unit, "switch")).toBe(false);
+    expect(hasExertion(state, unit, "switch")).toBe(false);
     expect(legalActions(state, "p1").some((a) => a.type === "switchPosition")).toBe(false);
     expect(attempt(state, { type: "switchPosition", instanceId: unit.id, playerId: "p1" }).error).toMatch(
       /already acted/,
@@ -147,8 +147,8 @@ describe("positions and exertion (M2-T1)", () => {
 
     state = endTurns(state, 1); // the opponent's turn: p1's units stay spent
     expect(state.active).toBe("p2");
-    expect(hasExertion(unitAt(state, "p1", 1), "switch")).toBe(false);
-    expect(hasExertion(unitAt(state, "p1", 2), "attack")).toBe(false);
+    expect(hasExertion(state, unitAt(state, "p1", 1), "switch")).toBe(false);
+    expect(hasExertion(state, unitAt(state, "p1", 2), "attack")).toBe(false);
 
     state = endTurns(state, 1); // p1's own turn start resets both
     expect(state.active).toBe("p1");
@@ -156,7 +156,7 @@ describe("positions and exertion (M2-T1)", () => {
     expect(unitAt(state, "p1", 2).exertion).toEqual({ attacked: false, switched: false });
 
     const attacker = unitAt(state, "p1", 1);
-    expect(hasExertion(attacker, "attack")).toBe(true);
+    expect(hasExertion(state, attacker, "attack")).toBe(true);
     expect(attackTargets(state, attacker).some((t) => t.kind === "hero")).toBe(true);
     state = act(state, { type: "attack", attackerId: attacker.id, targetId: "hero-p2", playerId: "p1" });
     expect(state.players.p2.hero.health).toBe(24);
@@ -179,8 +179,8 @@ describe("positions and exertion (M2-T1)", () => {
     expect(state.players.p2.hero.health).toBe(26);
 
     let duelist = unitAt(state, "p1", 1);
-    expect(hasExertion(duelist, "switch")).toBe(true);
-    expect(hasExertion(duelist, "attack")).toBe(false);
+    expect(hasExertion(state, duelist, "switch")).toBe(true);
+    expect(hasExertion(state, duelist, "attack")).toBe(false);
 
     state = act(state, { type: "switchPosition", instanceId: duelist.id, playerId: "p1" });
     duelist = unitAt(state, "p1", 1);
@@ -188,7 +188,7 @@ describe("positions and exertion (M2-T1)", () => {
     expect(duelist.exertion).toEqual({ attacked: true, switched: true });
 
     // Two of the same kind is still refused: one attack and one switch, not two switches.
-    expect(hasExertion(duelist, "switch")).toBe(false);
+    expect(hasExertion(state, duelist, "switch")).toBe(false);
     expect(attempt(state, { type: "switchPosition", instanceId: duelist.id, playerId: "p1" }).error).toMatch(
       /already acted/,
     );
@@ -224,8 +224,8 @@ describe("positions and exertion (M2-T1)", () => {
     // Switched back by a second effect, it can still take its own exertion this turn.
     expect(switchByEffect(state, unit, "ATK").error).toBeUndefined();
     expect(unitView(state, unit).position).toBe("ATK");
-    expect(hasExertion(unit, "attack")).toBe(true);
-    expect(hasExertion(unit, "switch")).toBe(true);
+    expect(hasExertion(state, unit, "attack")).toBe(true);
+    expect(hasExertion(state, unit, "switch")).toBe(true);
 
     const events: GameEvent[] = [];
     expect(declareAttack(sinkFor(state, events), unit, { kind: "hero", player: "p2" }).error).toBeUndefined();

@@ -128,6 +128,11 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(result.infra)
         self.assertFalse(result.rate_limited)
         self.assertFalse(RunResult(False, "", 1, error="max turns reached").infra)
+        # Claude Code with a revoked or mistyped token (CLAUDE_CODE_OAUTH_TOKEN_3, 2026-10-03):
+        # it ran a whole revision's checks and a review on it before this counted as a login.
+        revoked = "Failed to authenticate. API Error: 401 OAuth access token is invalid."
+        self.assertTrue(RunResult(False, "", 1, error=revoked).infra)
+        self.assertFalse(RunResult(False, "", 1, error=revoked).rate_limited)
 
     def test_missing_binary(self):
         result = ClaudeCli(str(self.tmp / "nope")).run(self.request())

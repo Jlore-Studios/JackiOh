@@ -1838,11 +1838,27 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   IS
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Windfury"
+                  title="Windfury"
+                >
+                  WF
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Temporary"
+                  title="Temporary"
+                >
+                  TE
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary"
                 >
                   +
-                  17
+                  19
                 </span>
               </span>
               <span

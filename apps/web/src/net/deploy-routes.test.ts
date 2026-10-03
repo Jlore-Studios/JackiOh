@@ -21,6 +21,8 @@ const WEB_CONFIG = join(HERE, "../../vercel.json");
 const ROOT_CONFIG = join(HERE, "../../../../vercel.json");
 
 type VercelConfig = {
+  git: { deploymentEnabled: Record<string, boolean> };
+  ignoreCommand: string;
   rewrites: { source: string; destination: string }[];
   headers: { source: string; headers: { key: string; value: string }[] }[];
 };
@@ -118,6 +120,54 @@ describe("vercel.json", () => {
         "https://jackioh-server.onrender.com",
         "wss://jackioh-server.onrender.com",
       ]),
+    );
+  });
+});
+
+// Vercel's free plan allows 100 deployments a day and counts every push to every branch, [skip ci]
+// or not (the night bot's `bot-state` commits alone used it up). `git.deploymentEnabled` stops the
+// deployment from being created at all for the branches machines push to; `ignoreCommand` is the
+// flag for the rest (scripts/vercel-ignore.sh, held by vercel-ignore.test.ts). The config is read
+// from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
+
+/** `bot/**` -> every branch under `bot/`; anything else is a branch name taken literally. Nothing else. */
+function branchRegex(pattern: string): RegExp {
+  const family = /^([a-z-]+)\/\*\*$/u.exec(pattern);
+  if (family !== null) return new RegExp(`^${family[1] ?? ""}/.+$`, "u");
+  if (/^[a-z-]+$/u.test(pattern)) return new RegExp(`^${pattern}$`, "u");
+  throw new Error(`deploy-routes.test.ts cannot read this branch pattern: ${pattern}`);
+}
+
+function deploys(branch: string): boolean {
+  const off = Object.entries(config.git.deploymentEnabled).some(
+    ([pattern, enabled]) => !enabled && branchRegex(pattern).test(branch),
+  );
+  return !off;
+}
+
+describe("vercel.json deployment flag", () => {
+  it("creates no deployment for the branches machines push to, and never for main", () => {
+    for (const branch of [
+      "bot-state",
+      "bot/issue-63",
+      "claude/stoic-tesla-837kse",
+      "copilot/fix-1",
+      "dependabot/npm_and_yarn/vite-7",
+      "patch/v0.1.1",
+      "patches/ship-74c8823",
+      "polish/3-ai",
+      "wt/engine",
+    ]) {
+      expect(deploys(branch), branch).toBe(false);
+    }
+    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany"]) {
+      expect(deploys(branch), branch).toBe(true);
+    }
+  });
+
+  it("hands the build decision to scripts/vercel-ignore.sh, and builds unless that exits 0", () => {
+    expect(config.ignoreCommand).toBe(
+      'sh "$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh" && exit 0; exit 1',
     );
   });
 });

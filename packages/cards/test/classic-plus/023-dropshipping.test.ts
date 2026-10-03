@@ -1,11 +1,10 @@
 // C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23: "Adds 3 random cards drawn from
 // every card and token of every set but Dropshipping (R382, R387; repeats allowed, R60), so a Grape, a
 // Loser, an AI generated card or a unit-token card (R11) can arrive, each at its printed cost and
-// given Brittle 2 (R385): added on your turn t, each ticks to 1 at the start of your turn t + 2 and
-// crumbles at the start of your turn t + 4 wherever it is (from hand to your graveyard, not a discard,
-// a unit-token card ceasing to exist; on the field an ordinary destroy that Indestructible ignores,
-// the count staying 0); the count rides the card from hand to field; the owner sees the counts, the
-// opponent sees three cards added and each hand `crumbled` under the sentinel (R97); a full hand burns
+// given Brittle 2 (R385): held in your hand, where it does not tick (R638), and started as the card enters
+// the field, where it ticks to 1 at the start of your turn t + 2 and crumbles at t + 4 (an ordinary
+// destroy that Indestructible ignores, the count staying 0); the count rides the card from hand to
+// field; the owner sees the counts, the opponent sees three cards added under the sentinel (R97); a full hand burns
 // the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
 
 import { HAND_CAP, hashState, query, reduce, stepParam, type GameState } from "@jackioh/engine";
@@ -110,50 +109,17 @@ describe("C+ #23 Dropshipping", () => {
       for (const id of ids) expect(text).not.toContain(id);
     });
 
-    it("R385 added on turn t, each ticks to 1 at the start of turn t + 2 and crumbles at t + 4: to the graveyard, no discard", () => {
-      const s = shop("drop-tick");
+    it("R385 R638 the cards hold Brittle 2 in the hand: it never ticks there and nothing crumbles, however long they wait", () => {
+      const s = shop("drop-hold");
       s.play(DROP);
       const ids = added(s);
       const turn = s.state.turn;
       nextOwnTurn(s);
-      expect(s.state.turn).toBe(turn + 2);
-      expect(ownHand(s).filter((card) => ids.includes(card.instanceId)).map((card) => card.brittle)).toEqual([1, 1, 1]);
       nextOwnTurn(s);
       expect(s.state.turn).toBe(turn + 4);
-      const crumbled = s.events.filter((event) => event.type === "crumbled");
-      expect(crumbled.map((event) => event.instanceId).sort()).toEqual([...ids].sort());
-      expect(s.events.some((event) => event.type === "discarded")).toBe(false);
-      for (const id of ids) expect(["graveyard", "gone"]).toContain(s.card(id).zone.z);
-      // R97, R385: the ticks in the hand were silent to the opponent, while a crumble lands the card in
-      // a graveyard, which is public, so it names the card there (a unit-token card, gone, names none).
-      const view = s.view("p2");
-      const theirs = view.events.filter((event) => event.type === "crumbled");
-      expect(theirs).toHaveLength(3);
-      for (const event of theirs) {
-        expect(event).toMatchObject({ owner: "p1", zone: "hand" });
-        if (event.instanceId !== "hidden") expect(s.card(event.instanceId).zone.z).toBe("graveyard");
-      }
-      // The only counts reported are the three gives (R97 judges them where the cards are now); no tick.
-      const counts = view.events.filter((event) => event.type === "counterChanged" && ids.includes(event.instanceId));
-      expect(counts.map((event) => (event.type === "counterChanged" ? event.value : null))).toEqual([2, 2, 2]);
-    });
-
-    it("R11 R385 a unit-token card that crumbles in the hand ceases to exist", () => {
-      // A seed whose adds include a unit token (a Loser, a Grape, a Rush Token ...).
-      for (let seed = 1; seed <= 200; seed += 1) {
-        const s = shop(`drop-token-${seed}`);
-        s.play(DROP);
-        const token = added(s).find((id) => {
-          const card = s.card(id);
-          return query({ defId: card.defId, withTokens: true })[0]?.type === "Unit" && query({ defId: card.defId, token: true }).length === 1;
-        });
-        if (token === undefined) continue;
-        nextOwnTurn(s);
-        nextOwnTurn(s);
-        s.expectInZone(token, "gone");
-        return;
-      }
-      throw new Error("no seed handed out a unit-token card");
+      expect(ownHand(s).filter((card) => ids.includes(card.instanceId)).map((card) => card.brittle)).toEqual([2, 2, 2]);
+      expect(s.events.some((event) => event.type === "crumbled" || event.type === "discarded")).toBe(false);
+      for (const id of ids) s.expectInZone(id, "hand");
     });
 
     it("R385 the count rides the card onto the field, and there it is an ordinary destroy Indestructible ignores", () => {

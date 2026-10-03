@@ -26,6 +26,8 @@ type HandRiders = {
   radiant?: boolean;
   costOverride?: number;
   costMod?: number;
+  /** R637: the card is Temporary (a granted keyword) while it is in a hand. */
+  temporary?: boolean;
 };
 
 /**
@@ -44,6 +46,10 @@ function applyRadiantRider(card: CardInstance, riders: HandRiders): void {
 function applyCostRiders(card: CardInstance, riders: HandRiders): void {
   if (riders.costOverride !== undefined) card.costOverride = riders.costOverride;
   if (riders.costMod !== undefined) card.costMod += riders.costMod;
+  // R637: a keyword for the card's stay in the hand, so it goes on with the prices, once it is there.
+  if (riders.temporary === true && !card.grantedKeywords.some((keyword) => keyword.kind === "Temporary")) {
+    card.grantedKeywords.push({ kind: "Temporary" });
+  }
 }
 
 /** §2.4's pipeline, with the riders applied around it as `applyRadiantRider` explains. */
@@ -84,6 +90,7 @@ export function addToHand(args: {
   radiant?: boolean;
   costOverride?: number;
   costMod?: number;
+  temporary?: boolean;
 }): Effect {
   return {
     kind: "addToHand",
@@ -132,6 +139,7 @@ export function addRandomFromCatalog(args: {
   radiant?: boolean;
   costOverride?: number;
   costMod?: number;
+  temporary?: boolean;
 }): Effect {
   return {
     kind: "addRandomFromCatalog",

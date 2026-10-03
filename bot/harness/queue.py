@@ -1,7 +1,7 @@
 """The work queue, kept as labels on issues and pull requests plus a record in the state file.
 
 `bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:cross-review` on a
-bot pull request means it waits for a second model's review; `bot:working` means a run holds it;
+bot pull request means it waits for a review run; `bot:working` means a run holds it;
 `bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
 apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
 """
@@ -15,9 +15,10 @@ from harness import asks
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR,
-                            LABEL_PR_OPEN, LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW,
-                            LABEL_PRIORITY_MEDIUM, LABEL_REVISE, LABEL_SHITTER, LABEL_WORKING)
+from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
+                            LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -57,13 +58,23 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
 
 
 def _label_note(names: set[str]) -> str:
-    """What `human` or `shitter` on the thread changes about who takes it (#96)."""
+    """What `human` or `difficulty:hard` on the thread changes about who takes it."""
     lowered = {name.lower() for name in names}
     if LABEL_HUMAN in lowered:
         return " It is labelled `human`, though, so no model takes it until that label comes off."
-    if LABEL_SHITTER in lowered:
-        return " It is labelled `shitter`, so only a low-tier model takes it, never Opus or Astra."
+    if difficulty_of(names) == "hard":
+        return " It is labelled `difficulty:hard`, so only Opus plans, builds and reviews it."
     return ""
+
+
+def difficulty_of(names: set[str], carried: str = "") -> str:
+    """The thread's difficulty: the hardest `difficulty:*` label on it (whatever its case) or
+    `carried` (what its issue had, kept on a bot PR's record), and `medium` with neither."""
+    found = [DIFFICULTY_LABELS[name.lower()] for name in names
+             if name.lower() in DIFFICULTY_LABELS]
+    if carried in DIFFICULTIES:
+        found.append(carried)
+    return max(found, key=DIFFICULTIES.index, default=DEFAULT_DIFFICULTY)
 
 
 def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
@@ -205,22 +216,42 @@ def priority_tier(names: set[str]) -> int:
 @dataclass
 class Candidate:
     number: int
-    kind: str  # "build" | "revise" | "review" (a second model's review of a bot PR)
+    kind: str  # "build" | "revise" | "review" (a review run on a bot PR)
     title: str
     forced: bool
     queued_at: str
-    #: Labelled `difficult` (on the thread, or on the issue a bot PR was built for): Opus only.
-    difficult: bool = False
-    #: For a review: the model family whose approval it already has, which may not review again.
+    #: `easy`, `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
+    difficulty: str = DEFAULT_DIFFICULTY
+    #: For a review: the family of the model that built the change.
     builder: str = ""
     #: Its pickup tier (`priority_tier`), which comes before everything but `forced`.
     priority: int = NO_PRIORITY
-    #: Labelled `shitter`: a low-tier model's only (`providers.model_tier`).
-    low_tier_only: bool = False
+    #: For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
+    planned: bool = False
+    #: The tier of the model that wrote that plan ("" if none, or if not recorded).
+    plan_tier: str = ""
+    #: For a review: the families whose approval the head already has, which may not give it again.
+    approved: tuple[str, ...] = ()
+    #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
+    #: its revision needs a reviewer in the same run.
+    bot_pr: bool = False
 
 
-#: The order of urgency after forced items and the priority tier (`pairs` in plan.py puts
-#: `difficult` ones next).
+def strong_plan(candidate: Candidate) -> bool:
+    """A strong model wrote its plan. A plan from before planners' tiers were recorded counts:
+    the planner was strong whenever one was free."""
+    return candidate.planned and candidate.plan_tier in ("strong", "")
+
+
+def needs_plan(candidate: Candidate) -> bool:
+    """The Needs plan stage: a build with no plan yet, or an easy one whose plan no strong model
+    wrote (a builder that cannot plan, Devin, builds only from a strong model's plan)."""
+    return candidate.kind == "build" and (
+        not candidate.planned or (candidate.difficulty == "easy" and not strong_plan(candidate)))
+
+
+#: The order of urgency after forced items, the priority tier and the difficulty (`pairs` in
+#: plan.py puts harder items first, since only the stronger models can take them).
 KIND_ORDER = {"review": 0, "revise": 1, "build": 2}
 
 
@@ -236,7 +267,6 @@ def candidates(ctx: Context, state: dict[str, Any],
     would take it, with a line in `skipped` when the caller keeps one."""
     found: dict[int, Candidate] = {}
     human: set[int] = set()
-    difficult = ctx.cfg.pool.difficult_label
     for label in (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS):
         for thread in ctx.gh.list_issues(labels=label):
             number = int(thread["number"])
@@ -252,15 +282,18 @@ def candidates(ctx: Context, state: dict[str, Any],
                 continue
             record = state["items"].get(str(number), {})
             kind = "review" if label == LABEL_CROSS else "revise" if is_pr else "build"
+            votes = record.get("votes") or {}
             found[number] = Candidate(
                 number, kind, str(thread.get("title", "")), bool(record.get("forced")),
                 str(record.get("queued_at") or thread.get("created_at") or ""),
-                difficult=difficult in names or bool(record.get("difficult")),
-                builder=str((record.get("votes") or {}).get("builder") or ""),
-                priority=priority_tier(names), low_tier_only=LABEL_SHITTER in lowered)
+                difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
+                builder=str(votes.get("builder") or ""),
+                priority=priority_tier(names), planned=bool(record.get("planned_at")),
+                plan_tier=str(record.get("planned_tier") or "") if record.get("planned_at") else "",
+                approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
     if skipped is not None:
-        skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, high-tier or "
-                       "low-tier" for number in sorted(human))
+        skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
+                       "tier" for number in sorted(human))
     return sorted(found.values(), key=lambda c: (not c.forced, c.priority, KIND_ORDER[c.kind],
                                                  c.queued_at, c.number))
 

@@ -3,14 +3,15 @@
 # run it again to update the CLIs or to add a subscription. Arguments: the ids of the
 # subscriptions that run there (providers.json entries whose runs_on is night-vm-<id>):
 #
-#   bash setup.sh claude-1 claude-2 claude-3 claude-4 gpt agy muse
+#   bash setup.sh gpt agy muse devin
 #
 # Each subscription gets a Linux user of its own, agent-<id>, with a home no other user can read,
 # where its CLI login lives and where its GitHub runner (unpacked here, registered by
 # register-runners.sh) runs its jobs. No agent user has sudo or Docker.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
-[ "$#" -gt 0 ] || set -- claude-1 claude-2 claude-3 claude-4 gpt agy muse
+# The Claude accounts log in from secrets and run on GitHub's runners, so none has a user here.
+[ "$#" -gt 0 ] || set -- gpt agy muse devin
 export DEBIAN_FRONTEND=noninteractive HOME=/root
 date +%s > /run/night-vm-last-busy  # a long setup is not idle time
 
