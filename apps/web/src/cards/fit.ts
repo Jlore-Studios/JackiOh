@@ -16,6 +16,16 @@
 //     the lines the box holds). The detail view and the hover preview print the text whole.
 // A face too small to print even full-size text at the floor (a hand card, a Discover option) is
 // fitted as before: the floor is for faces that can reach it.
+//
+// BATCHED. A fit is a search: write `--cf-fit`, read whether the box spills, write again. Run one
+// element at a time that is a forced layout per step, and 318 cards in the Almanac (two boxes each)
+// spent most of a second and a half of its first paint in them. So a fit is a generator
+// that yields each read as a thunk, and one scheduler runs every pending fit in rounds: all the
+// writes of a round, then all its reads, so the whole page lays out once per round (about a dozen
+// times) instead of once per element step. `useFitText` queues its fit from the layout effect and
+// the scheduler runs on the microtask that follows the commit, before the browser paints, so no card
+// is ever seen unfitted. `flushFits` runs the queue now (a test's, or anything that must read the
+// result at once).
 
 import { useLayoutEffect, type RefObject } from "react";
 
@@ -83,23 +93,33 @@ function fontPx(element: HTMLElement): number {
   return parseFloat(getComputedStyle(element).fontSize);
 }
 
+/** One read of layout, which the scheduler runs with every other fit's reads of the same round. */
+type Probe = () => unknown;
+/** A fit in progress: its writes run as it is stepped, each `yield` hands over a read and waits for it. */
+type Steps<T> = Generator<Probe, T, unknown>;
+
+/** Asks for one read of layout and waits for its answer, which is the probe's own result. */
+function* read<T>(probe: () => T): Steps<T> {
+  return (yield probe) as T;
+}
+
 /**
  * Binary-searches the largest `--cf-fit` in FIT_MIN..1 that fits and leaves it set. Returns it, or
  * null when even FIT_MIN spills (FIT_MIN is left set).
  */
-function search(element: HTMLElement): number | null {
+function* search(element: HTMLElement): Steps<number | null> {
   setFit(element, 1);
-  if (!overflows(element)) return 1;
+  if (!(yield* read(() => overflows(element)))) return 1;
 
   setFit(element, FIT_MIN);
-  if (overflows(element)) return null;
+  if (yield* read(() => overflows(element))) return null;
 
   let fits = FIT_MIN;
   let spills = 1;
   for (let step = 0; step < FIT_STEPS; step += 1) {
     const middle = (fits + spills) / 2;
     setFit(element, middle);
-    if (overflows(element)) spills = middle;
+    if (yield* read(() => overflows(element))) spills = middle;
     else fits = middle;
   }
   setFit(element, fits);
@@ -107,15 +127,15 @@ function search(element: HTMLElement): number | null {
 }
 
 /** The search found a size, and it is at least the floor. */
-function readable(element: HTMLElement, best: number | null, floorPx: number): boolean {
-  return best !== null && fontPx(element) >= floorPx - FLOOR_SLACK_PX;
+function* readable(element: HTMLElement, best: number | null, floorPx: number): Steps<boolean> {
+  return best !== null && (yield* read(() => fontPx(element))) >= floorPx - FLOOR_SLACK_PX;
 }
 
 /** The largest font this rules box can print at all: full size, no tier scale, no shrink. */
-function fullSizePx(element: HTMLElement): number {
+function* fullSizePx(element: HTMLElement): Steps<number> {
   element.style.setProperty(SCALE_PROPERTY, "1");
   setFit(element, 1);
-  const px = fontPx(element);
+  const px = yield* read(() => fontPx(element));
   element.style.removeProperty(SCALE_PROPERTY);
   return px;
 }
@@ -126,19 +146,23 @@ function fullSizePx(element: HTMLElement): number {
  * (cards.css), so nothing past the last line is painted; a line is kept back for the gap above a
  * radiant clause.
  */
-function clampAtFloor(element: HTMLElement, floorPx: number): void {
-  const current = fontPx(element);
+function* clampAtFloor(element: HTMLElement, floorPx: number): Steps<void> {
+  const current = yield* read(() => fontPx(element));
   const factor = Number(element.style.getPropertyValue(FIT_PROPERTY)) || 1;
   // Rounded up, so setFit's three decimals never land a hair under the floor.
   const atFloor = current > 0 ? Math.ceil(((factor * floorPx) / current) * 1000) / 1000 : 1;
   setFit(element, Math.min(1, atFloor));
   element.setAttribute(CLAMPED, "true");
 
-  const style = getComputedStyle(element);
-  const font = parseFloat(style.fontSize);
-  const lineHeight = parseFloat(style.lineHeight) || font * FALLBACK_LINE_HEIGHT;
-  const box = parseFloat(style.maxHeight) || element.clientHeight;
-  const inner = box - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);
+  const { lineHeight, box, padding } = yield* read(() => {
+    const style = getComputedStyle(element);
+    return {
+      lineHeight: parseFloat(style.lineHeight) || parseFloat(style.fontSize) * FALLBACK_LINE_HEIGHT,
+      box: parseFloat(style.maxHeight) || element.clientHeight,
+      padding: (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0),
+    };
+  });
+  const inner = box - padding;
   const splitByRule = element.querySelector(RADIANT_SELECTOR) !== null && element.querySelector(BASE_SELECTOR)?.textContent !== "";
   const lines = Math.max(1, Math.floor(inner / lineHeight) - (splitByRule ? 1 : 0));
   element.style.setProperty(CLAMP_LINES_PROPERTY, String(lines));
@@ -149,9 +173,9 @@ function clampAtFloor(element: HTMLElement, floorPx: number): void {
  * it only drops a stale `data-clamped` and `data-long`, which are absent in jsdom, so there it
  * changes nothing.
  */
-function fit(element: HTMLElement, options: FitOptions): void {
+function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   const face = options.floorPx === undefined ? null : element.closest<HTMLElement>(FACE_SELECTOR);
-  if (element.clientWidth === 0 && element.clientHeight === 0) {
+  if (yield* read(() => element.clientWidth === 0 && element.clientHeight === 0)) {
     if (element.hasAttribute(CLAMPED)) element.removeAttribute(CLAMPED);
     if (face?.hasAttribute(LONG_ATTRIBUTE) === true) face.removeAttribute(LONG_ATTRIBUTE);
     element.style.removeProperty(SCALE_PROPERTY);
@@ -165,26 +189,113 @@ function fit(element: HTMLElement, options: FitOptions): void {
 
   const { floorPx } = options;
   // No floor, or a face too small to reach it: shrink to fit, and clamp only past FIT_MIN.
-  if (floorPx === undefined || fullSizePx(element) < floorPx - FLOOR_SLACK_PX) {
+  if (floorPx === undefined || (yield* fullSizePx(element)) < floorPx - FLOOR_SLACK_PX) {
     // Even the smallest font spills: the CSS line-clamps with an ellipsis instead.
-    if (search(element) === null) element.setAttribute(CLAMPED, "true");
+    if ((yield* search(element)) === null) element.setAttribute(CLAMPED, "true");
     return;
   }
 
-  if (readable(element, search(element), floorPx)) return;
+  if (yield* readable(element, yield* search(element), floorPx)) return;
 
   // 1. The tier's head start undersold it: its own box, from full size.
   element.style.setProperty(SCALE_PROPERTY, "1");
-  if (readable(element, search(element), floorPx)) return;
+  if (yield* readable(element, yield* search(element), floorPx)) return;
 
   // 2. The long layout gives the text more room.
   if (face !== null) {
     face.setAttribute(LONG_ATTRIBUTE, "true");
-    if (readable(element, search(element), floorPx)) return;
+    if (yield* readable(element, yield* search(element), floorPx)) return;
   }
 
   // 3. The floor, clamped.
-  clampAtFloor(element, floorPx);
+  yield* clampAtFloor(element, floorPx);
+}
+
+/** The box a pass settled at, as `useFitText` compares it with the next notice of a resize. */
+function boxOf(element: HTMLElement): string {
+  return `${element.clientWidth}x${element.clientHeight}`;
+}
+
+/**
+ * A fit, then one more read of the box it left. Reading it from the pass's own callback would force
+ * a layout per element (the pass's last write is behind it); as a step of the pass it is read with
+ * everyone else's.
+ */
+function* fitThenMeasure(element: HTMLElement, options: FitOptions): Steps<string> {
+  yield* fit(element, options);
+  return yield* read(() => boxOf(element));
+}
+
+type Job = {
+  steps: Steps<string>;
+  /** What the job's last read answered, which its next step receives. */
+  reading: unknown;
+  onDone: ((box: string) => void) | undefined;
+  cancelled: boolean;
+};
+
+const queue = new Set<Job>();
+let flushQueued = false;
+
+/**
+ * Runs every queued fit to the end, in rounds. A round steps each fit up to its next read (so every
+ * write of the round lands first), then runs all of those reads together, which is one layout for
+ * the lot. A fit's boxes never depend on another's (each face sizes its text from its own
+ * container), so the order they run in changes nothing. One fit throwing ends only that fit; the
+ * first error is rethrown once the rest are done.
+ */
+export function flushFits(): void {
+  flushQueued = false;
+  let live = [...queue];
+  queue.clear();
+  let failure: unknown;
+  let failed = false;
+  const fail = (error: unknown): void => {
+    if (!failed) failure = error;
+    failed = true;
+  };
+
+  while (live.length > 0) {
+    const reading: Array<[Job, Probe]> = [];
+    for (const job of live) {
+      if (job.cancelled) continue;
+      try {
+        const step = job.steps.next(job.reading);
+        if (step.done === true) job.onDone?.(step.value);
+        else reading.push([job, step.value]);
+      } catch (error) {
+        fail(error);
+      }
+    }
+    live = [];
+    for (const [job, probe] of reading) {
+      try {
+        job.reading = probe();
+        live.push(job);
+      } catch (error) {
+        fail(error);
+      }
+    }
+  }
+  if (failed) throw failure;
+}
+
+/**
+ * Queues one fitting pass for `element`, to run with every other queued pass on the next microtask
+ * (which is before the browser paints what the caller just committed). `onDone` runs when the pass
+ * has finished, with the box (`<width>x<height>`) the element was left at. Returns the function that drops it, for a pass the element no longer needs.
+ */
+export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: (box: string) => void): () => void {
+  const job: Job = { steps: fitThenMeasure(element, options), reading: undefined, onDone, cancelled: false };
+  queue.add(job);
+  if (!flushQueued) {
+    flushQueued = true;
+    queueMicrotask(flushFits);
+  }
+  return () => {
+    job.cancelled = true;
+    queue.delete(job);
+  };
 }
 
 /**
@@ -194,7 +305,8 @@ function fit(element: HTMLElement, options: FitOptions): void {
  * `data-clamped="true"` and the CSS line-clamps with an ellipsis. With `floorPx` (the rules box)
  * it also keeps the text readable: the long layout first, then a clamp at the floor (see the
  * header). A no-op when the element has no layout (clientWidth and clientHeight both 0, which is
- * every element in jsdom).
+ * every element in jsdom). The pass runs batched with the rest of the page's, on the microtask
+ * after the commit (`scheduleFit`).
  */
 export function useFitText(ref: RefObject<HTMLElement | null>, content: string, options: FitOptions = {}): void {
   const { floorPx } = options;
@@ -203,19 +315,28 @@ export function useFitText(ref: RefObject<HTMLElement | null>, content: string, 
     if (element === null) return undefined;
 
     const fitOptions: FitOptions = floorPx === undefined ? {} : { floorPx };
-    fit(element, fitOptions);
-
-    if (typeof ResizeObserver === "undefined") return undefined;
     // The observed box is sized by its container, never by its font. The long layout does resize
-    // it, but a refit lands on the same layout again, so the size it settles at is stable.
-    let last = `${element.clientWidth}x${element.clientHeight}`;
+    // it, but a refit lands on the same layout again, so the size it settles at is stable. Unknown
+    // until the first pass has run: a notice before that has nothing to compare with, and that
+    // pass measures the box as it is anyway.
+    let last: string | undefined;
+    const queueFit = (): (() => void) =>
+      scheduleFit(element, fitOptions, (box) => {
+        last = box;
+      });
+    let cancel = queueFit();
+
+    if (typeof ResizeObserver === "undefined") return () => cancel();
     const observer = new ResizeObserver(() => {
-      const size = `${element.clientWidth}x${element.clientHeight}`;
-      if (size === last) return;
-      fit(element, fitOptions);
-      last = `${element.clientWidth}x${element.clientHeight}`;
+      if (last === undefined || boxOf(element) === last) return;
+      cancel();
+      last = undefined;
+      cancel = queueFit();
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      cancel();
+    };
   }, [ref, content, floorPx]);
 }
