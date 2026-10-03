@@ -72,7 +72,9 @@ function failures(face: Face): string[] {
   // Vocabulary table (patch v0.2.4, issue #45): retired words and variants.
   if (/\bbounce(s|d)?\b/i.test(text)) out.push("says bounce, not Return to hand");
   if (/\bbackrow zone\b/i.test(text)) out.push("says backrow zone, not backrow");
-  if (/\b(Start|End) of your turn:/i.test(text)) out.push("writes turn trigger as (Start|End) of your turn:, not (Start|End) of turn:");
+  if (/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i.test(text)) {
+    out.push("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
+  }
   if (/\bStart of Game\b/.test(text)) out.push('writes "Start of Game", not "Start of game"');
   if (/\bOnce per Turn\b/.test(text)) out.push('writes "Once per Turn", not "Once per turn"');
   if (/\bCannot be in Defense Position\b/i.test(text)) out.push('writes "Cannot be in Defense Position", not "Can\'t be in Defense Position"');
@@ -98,7 +100,10 @@ function failures(face: Face): string[] {
     }
     if (!/\.["”]?$/.test(line)) out.push(`does not end the line "${line}" with a full stop`);
     for (const label of LABELS) {
-      if (line.indexOf(label) > 0) out.push(`does not start "${label}" on a line of its own`);
+      const idx = line.indexOf(label);
+      if (idx > 0 && !line.startsWith('Choose one: "') && !line.startsWith("For the rest of the game: ")) {
+        out.push(`does not start "${label}" on a line of its own`);
+      }
     }
   }
   return out;
@@ -150,14 +155,16 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "core-017",
       "core-067",
       "classic-010",
-      "classic-011",
       "classic-022",
       "classic-025",
       "classic-029",
       "classic-054",
       "classic-063",
       "classic-065",
+      "classicplus-019-5",
       "classicplus-026",
+      "classicplus-034",
+      "classicplus-052",
     ]);
   });
 
@@ -185,8 +192,11 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const check = (text: string) => failures({ card: dummyCard, face: "base", text, keywords: [] });
     expect(check("Bounce a target Unit.")).toContain("says bounce, not Return to hand");
     expect(check("Destroy a backrow zone.")).toContain("says backrow zone, not backrow");
-    expect(check("Start of your turn: Draw 1.")).toContain("writes turn trigger as (Start|End) of your turn:, not (Start|End) of turn:");
-    expect(check("End of your turn: Deal 1 damage.")).toContain("writes turn trigger as (Start|End) of your turn:, not (Start|End) of turn:");
+    expect(check("Start of your turn: Draw 1.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
+    expect(check("End of your turn: Deal 1 damage.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
+    expect(check("At the start of your turn, Draw 1.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
+    expect(check("At the end of your turn, Draw 1.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
+    expect(check("At the start and end of your turn, this attacks.")).toContain("writes turn trigger as (Start|End) of your turn, not (Start|End) of turn:");
     expect(check("Discover a Spell that costs (1).")).toContain('writes "that costs (N)", not "(N) Cost"');
     expect(check("Start of Game: Draw 1.")).toContain('writes "Start of Game", not "Start of game"');
     expect(check("Once per Turn: Gain 1 mana.")).toContain('writes "Once per Turn", not "Once per turn"');

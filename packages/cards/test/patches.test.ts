@@ -106,7 +106,7 @@ describe("R388 card patch history (B4.2)", () => {
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
     expect(idsOf("v0.2.4", "added")).toHaveLength(0);
     expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
-    expect(idsOf("v0.2.4", "changed")).toHaveLength(11);
+    expect(idsOf("v0.2.4", "changed")).toHaveLength(13);
     expect(changesOf("v0.2.4").every((change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"))).toBe(true);
   });
 

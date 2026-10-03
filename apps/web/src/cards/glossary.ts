@@ -17,10 +17,12 @@
 // which R428 removed). SHORT_REMINDERS holds the two lines, and rules.test.ts pins them.
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
-// are empty since patch v0.2.4 (issue #45): the catalog only uses each term's label.
+// are the other spellings cards use. Patch v0.2.4 (issue #45) retired spelled variants ("Start of
+// your turn", "End of your turn", "Start of Game", "Once per Turn", "Cannot be in Defense Position",
+// "Trigger the Cry", "Set a hero's health", "End your turn"), keeping only grammatical plurals
+// ("Plague Tokens") and specific prompts ("Look at your opponent's hand").
 //
-// Patch v0.2.0 added the §6 rows its card texts print (R512), and patch v0.2.4 aligned card texts
-// to only use each term's label, emptying aliases across the glossary:
+// Patch v0.2.0 added the §6 rows its card texts print (R512):
 // - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position",
 //   "Can't be attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
 //   gets no row: the one card that names it (Classic+ #33 Ivory Tower) writes it mid-sentence in
@@ -28,9 +30,10 @@
 //   "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
-// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token, Redirect, Set health, End the turn,
-//   Trigger a Cry and Look at a hand: each label is SPEC's row name and the words cards print.
-//   Only capitalised spellings match, so "steal it" mid-sentence stays plain.
+// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health,
+//   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
+//   SPEC's row name and each alias the words cards print. Only capitalised spellings match, so "steal
+//   it" mid-sentence stays plain.
 // - §6.3's one row "Degrade / Upgrade" is two terms, since a card prints one word or the other: its
 //   Rule column "Weaken / strengthen a card: …" pairs the words before and after the slash, and each
 //   term's rule is its own word (capitalised) with the shared rest of the sentence: "Weaken a card:
@@ -257,12 +260,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),
-  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field"),
+  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field", ["Plague Tokens"]),
   "Set health": verb("Set health", "A hero's health becomes N"),
   Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another"),
   "End the turn": verb("End the turn", "The turn ends from an effect"),
   "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again"),
-  "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt"),
+  "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", ["Look at your opponent's hand"]),
 
   // §5.2 Radiant
   Radiant: {

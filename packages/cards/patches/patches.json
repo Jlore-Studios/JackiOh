@@ -4472,15 +4472,6 @@
         ]
       },
       {
-        "id": "classic-011",
-        "name": "Mind Melt",
-        "kind": "changed",
-        "fields": [
-          "base.text",
-          "radiant.text"
-        ]
-      },
-      {
         "id": "classic-022",
         "name": "Mid Runner",
         "kind": "changed",
@@ -4535,11 +4526,36 @@
         ]
       },
       {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
         "id": "classicplus-026",
         "name": "Tommy Tempo",
         "kind": "changed",
         "fields": [
           "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockheed's Permanent Defense Contract",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
         ]
       }
     ]

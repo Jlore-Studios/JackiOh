@@ -3245,11 +3245,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Look at a hand (your opponent's). Exile {cards|card|cards} from it."
+      "text": "Look at your opponent's hand. Exile {cards|card|cards} from it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Look at a hand (your opponent's). Choose a cost. Exile every card of that cost from it."
+      "text": "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
     }
   },
   "classic-012": {
@@ -7036,7 +7036,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nWhile Berserk: At the start and end of your turn, this attacks your hero."
+      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
       "attack": 10,
@@ -7558,7 +7558,7 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Choose one: \"At the end of your turn, Lock a random zone on your opponent's side\"; or \"After your opponent plays a Unit or Field Spell, Lock its zone.\""
+      "text": "Choose one: \"End of turn: Lock a random zone on your opponent's side\"; or \"After your opponent plays a Unit or Field Spell, Lock its zone.\""
     },
     "radiant": {
       "keywords": [],
@@ -8334,11 +8334,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game: At the start of your turn, add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
+      "text": "For the rest of the game: Start of turn: Add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game: At the start of your turn, add {cards|random Radiant Jlockheed card|random Radiant Jlockheed cards} to your hand. Each costs ({discount}) less."
+      "text": "For the rest of the game: Start of turn: Add {cards|random Radiant Jlockheed card|random Radiant Jlockheed cards} to your hand. Each costs ({discount}) less."
     }
   },
   "classicplus-053": {

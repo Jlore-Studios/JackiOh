@@ -564,7 +564,7 @@ export const script: LessonScript = {
     tip({
       id: "spent",
       title: "Spells are spent",
-      text: "Lunar Eclipse went to your graveyard: a spell works once. It also made your next spell this turn costs (1) less.",
+      text: "Lunar Eclipse went to your graveyard: a spell works once. It also made your next spell this turn cost (1) less.",
       anchor: { kind: "graveyard", side: "you" },
       when: (ctx) => ctx.view.you.graveyard.some((card) => card.defId === LUNAR),
     }),

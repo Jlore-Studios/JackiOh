@@ -483,9 +483,15 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("B11 the glossary's aliases are empty: the catalog only uses each term's label", () => {
+  it("B11 the glossary's aliases for retired variants are empty", () => {
     for (const [key, entry] of Object.entries(GLOSSARY)) {
-      expect(entry.aliases, key).toEqual([]);
+      if (key === "Plague Token") {
+        expect(entry.aliases, key).toEqual(["Plague Tokens"]);
+      } else if (key === "Look at a hand") {
+        expect(entry.aliases, key).toEqual(["Look at your opponent's hand"]);
+      } else {
+        expect(entry.aliases, key).toEqual([]);
+      }
     }
   });
 });
@@ -523,12 +529,12 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Flicker", "classic-014", "radiant", "Flicker"],
       ["Degrade", "classicplus-008", "base", "Degrade"],
       ["Upgrade", "classicplus-071", "base", "Upgrade"],
-      ["Plague Token", "classic-069", "base", "Plague Token"],
+      ["Plague Token", "classic-039", "base", "Plague Tokens"],
       ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "classic-052", "base", "Redirect"],
       ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
-      ["Look at a hand", "classic-011", "base", "Look at a hand"],
+      ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
     ];
     for (const [term, id, face, spelling] of cases) {
       // As for any term, a number right after it is taken with it ("Degrade 4 random cards").
