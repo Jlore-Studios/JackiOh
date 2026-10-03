@@ -707,9 +707,8 @@
       "merged": true
     },
     "44": {
-      "asks": [
-        "c:5961370035"
-      ],
+      "action": "plan",
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -717,12 +716,16 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "provider": "muse",
       "question": "Issue #44 depends on #40 (Patch v0.2.0), and #40 isn't on main yet. main's catalog.json has only the 111 Core entries, its patch history stops at v0.1.1, and the Classic and Classic+ cards exist only on the unmerged origin/v0.2.0 branch. Which should happen? (a) Merge #40 / v0.2.0 into main, then queue #44 again. (b) Fold these rarity and text changes into #40's branch before it merges. (c) Have the bot only update docs/classic-sets.md now. Whichever you choose, please also settle the family conflict the issue raises. Either the ___ Glowy Jelly Bean and ___ of the Forgotten families become Common, or Core #27 Blood Ridden, #28 Knockoff Temu and #40 Echoes of the Forgotten become Rare, which breaks the issue's 'Core: no changes'.",
       "queued_at": "2026-10-03T01:36:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "36804467291",
-      "started_at": "2026-10-01T02:19:39Z",
-      "stop_requested": false
+      "run_id": "37138858377",
+      "started_at": "2026-10-03T16:59:55Z",
+      "stop_requested": false,
+      "taken_asks": [
+        "c:5961370035"
+      ]
     },
     "45": {
       "asks": [],
@@ -1084,9 +1087,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T16:56:08Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138634387",
-    "what": "build #125 on devin"
+    "at": "2026-10-03T16:59:55Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138858377",
+    "what": "plan #44 on muse"
   },
   "last_sweep": {
     "at": "2026-10-03T16:55:04Z",
