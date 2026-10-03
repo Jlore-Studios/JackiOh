@@ -21,7 +21,7 @@ import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { damageFeel } from "../game/damageFeel.ts";
+import { damageFeel, damageTier } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
@@ -40,7 +40,6 @@ import {
   FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
-  FX_HERO_TRAUMA_MULT,
   FX_LEGENDARY_TRAUMA,
   FX_LETHAL_LEAD_MAX_MS,
   FX_MANA_MAX_SPARKS,
@@ -56,8 +55,6 @@ import {
   FX_RESULT_TRAUMA,
   FX_REWIND_TRAUMA,
   FX_RING_MS,
-  FX_SHAKE_MAX_TRAUMA,
-  FX_SHAKE_MIN_DAMAGE,
   FX_SLAM_AT,
   FX_SLAM_MAX_TRAUMA,
   FX_SLAM_STATS_MIN,
@@ -66,7 +63,6 @@ import {
   FX_TEXT,
   FX_TRAP_BURST_AT,
   FX_TRAP_TRAUMA,
-  FX_TRAUMA_PER_DAMAGE,
 } from "./constants.ts";
 import type {
   FxAnchor,
@@ -107,6 +103,8 @@ const TUNING = {
   summonGold: { count: 40, power: 1.3 },
   summonPrismatic: { count: 44, power: 1.3 },
   impactSpark: { count: 24, power: 1.2 },
+  impactHeavy: { count: 44, power: 1.45 },
+  impactDust: { count: 22, power: 0.9 },
   impactPoison: { count: 20, power: 0.8 },
   drainVoid: { count: 16, power: 0.8 },
   healHoly: { count: 26, power: 0.9 },
@@ -198,8 +196,6 @@ function viewportCenter(): FxAnchor {
 
 const isCard = (tgt: string): boolean => tgt.startsWith("card-");
 const isHandCard = (tgt: string): boolean => tgt.startsWith("hand-card-");
-const isHero = (tgt: string): boolean => tgt.startsWith("hero-");
-
 /* ------------------------------------------------------------------------------------------- *
  * Cue builders
  * ------------------------------------------------------------------------------------------- */
@@ -404,7 +400,9 @@ const summon: Recipe = (event, p) => {
 const impact: Recipe = (event, p) => {
   if (event.type !== "damage") return [];
   const i = p.env.intensity;
-  const particleIntensity = i * damageFeel(event.amount).particleScale;
+  const feel = damageFeel(event.amount);
+  const tier = damageTier(event.amount);
+  const particleIntensity = i * feel.particleScale;
   const at = anchor(p.tgt);
   const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
@@ -419,12 +417,14 @@ const impact: Recipe = (event, p) => {
       hit = flight;
     }
   }
-  cues.push(burst(particleIntensity, "spark", at, "point", hit, "impactSpark"));
+  cues.push(burst(particleIntensity, "spark", at, "point", hit, tier === "big" || tier === "giga" ? "impactHeavy" : "impactSpark"));
   if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
   if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
-  const base =
-    event.amount < FX_SHAKE_MIN_DAMAGE ? 0 : Math.min(FX_SHAKE_MAX_TRAUMA, event.amount * FX_TRAUMA_PER_DAMAGE);
-  pushShake(cues, i, isHero(p.tgt) ? base * FX_HERO_TRAUMA_MULT : base, hit);
+  if (tier === "moderate" || tier === "big" || tier === "giga") {
+    cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
+  }
+  // The board-level tier styling owns its exact shake; this keeps Normal hits visually still.
+  if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
   return cues;
 };
 

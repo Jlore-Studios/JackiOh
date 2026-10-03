@@ -507,6 +507,18 @@ describe("B6 SFX limits", () => {
     expect(r.engine.log()).toHaveLength(2);
   });
 
+  it("accepts every rapid sand tap without consuming ordinary SFX polyphony", () => {
+    const r = rig();
+    unlocked(r);
+    const taps = SFX_MAX_VOICES + 3;
+
+    for (let tap = 0; tap < taps; tap += 1) {
+      expect(r.engine.playSfx("sand", { sandVariant: tap % 4, sandBuild: tap + 1 }), `sand tap ${String(tap)}`).toBe(true);
+    }
+    expect(r.engine.log().filter((cue) => cue.kind === "sfx" && cue.id === "sand")).toHaveLength(taps);
+    expect(r.engine.playSfx("draw"), "sand must not spend the ordinary SFX voice budget").toBe(true);
+  });
+
   it("B6 with SFX_MAX_VOICES cues still sounding the next cue is refused, and accepted once they end", () => {
     const r = rig();
     unlocked(r);

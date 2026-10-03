@@ -189,7 +189,7 @@ export class FakeBuffer {
   }
 }
 
-export type FakeNodeKind = "destination" | "gain" | "oscillator" | "biquad" | "bufferSource" | "compressor";
+export type FakeNodeKind = "destination" | "gain" | "oscillator" | "biquad" | "bufferSource" | "compressor" | "stereoPanner";
 
 export class FakeNode {
   readonly kind: FakeNodeKind;
@@ -289,6 +289,7 @@ const CONTEXT_KEYS = [
   "createGain",
   "createOscillator",
   "createBiquadFilter",
+  "createStereoPanner",
   "createBufferSource",
   "createBuffer",
   "createDynamicsCompressor",
@@ -427,6 +428,7 @@ export class FakeAudio {
       createGain: (): GainNode => this.createNode("gain").proxy as GainNode,
       createOscillator: (): OscillatorNode => this.createNode("oscillator").proxy as OscillatorNode,
       createBiquadFilter: (): BiquadFilterNode => this.createNode("biquad").proxy as BiquadFilterNode,
+      createStereoPanner: (): StereoPannerNode => this.createNode("stereoPanner").proxy as StereoPannerNode,
       createBufferSource: (): AudioBufferSourceNode => this.createNode("bufferSource").proxy as AudioBufferSourceNode,
       createDynamicsCompressor: (): DynamicsCompressorNode => this.createNode("compressor").proxy as DynamicsCompressorNode,
       createBuffer: (channels: unknown, length: unknown, sampleRate: unknown): AudioBuffer => {
@@ -645,6 +647,9 @@ export class FakeAudio {
         param("frequency", 350);
         param("Q", 1);
         param("gain", 0);
+        break;
+      case "stereoPanner":
+        param("pan", 0);
         break;
       case "bufferSource":
         param("playbackRate", 1);

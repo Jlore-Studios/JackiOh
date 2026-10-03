@@ -448,18 +448,26 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
         return true;
       }
 
+      // Sand is a fidget surface: every physical tap gets its own crunch, even in a burst faster
+      // than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still disconnect
+      // through the normal delayed cleanup below.
+      const rapid = id === "sand";
       const last = lastSfxAt.get(id);
-      if (last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
+      if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
-      if (sfxEnds.length >= SFX_MAX_VOICES) return false;
+      if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
       const cue = ctx.createGain();
       cue.gain.value = spec.gain;
       cue.connect(buses.sfx);
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;
 
-      lastSfxAt.set(id, t);
-      sfxEnds.push(t + delay + lengthMs);
+      if (!rapid) {
+        lastSfxAt.set(id, t);
+        // The fidget surface has its own deliberately unbounded short-voice path. Do not let a
+        // burst of sand grains consume the gameplay/SFX polyphony budget.
+        sfxEnds.push(t + delay + lengthMs);
+      }
       if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
       later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
       pushLog(logged());

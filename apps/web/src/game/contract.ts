@@ -172,6 +172,10 @@ export type BoardProps = {
   turnClock?: ReactNode;
   /** A route status line, mounted on the board rail rather than a floating match bar. */
   matchStatus?: ReactNode;
+  /** Route chrome carved into the same physical side rail as the controls. */
+  boardRail?: ReactNode;
+  /** Alerts and offers inset into the board rail, never rendered as page overlays. */
+  boardNotices?: ReactNode;
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
   onClick?: (target: ClickTarget) => void;

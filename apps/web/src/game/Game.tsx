@@ -97,6 +97,10 @@ export type GameProps = {
   turnClock?: ReactNode;
   /** Route connection status, rendered on the board rail rather than above it. */
   matchStatus?: ReactNode;
+  /** Route navigation and match-series information, mounted in the board rail. */
+  boardRail?: ReactNode;
+  /** A route warning mounted in the board rail. */
+  boardNotice?: ReactNode;
 };
 
 /** What the board is offered while it is still showing an older view than `legal` describes. */
@@ -112,6 +116,8 @@ export default function Game({
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   matchStatus,
+  boardRail,
+  boardNotice,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -144,9 +150,14 @@ export default function Game({
   const inFlightDamage = inFlight?.events.find(
     (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
   );
-  const impactTier: DamageTier | undefined = inFlightDamage === undefined ? undefined : damageTier(inFlightDamage.amount);
-  const impactFeel = inFlightDamage === undefined ? undefined : damageFeel(inFlightDamage.amount);
-  const hitStopMs = inFlightDamage === undefined ? 0 : damageFeel(inFlightDamage.amount).hitStopMs;
+  const [lingering, setLingering] = useState<readonly AnimationEntry[]>([]);
+  const lingerTimers = useRef(new Map<AnimationEntry, number>());
+  const visibleDamage = [
+    ...(inFlightDamage === undefined ? [] : [inFlightDamage]),
+    ...lingering.flatMap((entry) => entry.events.filter((event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage")),
+  ].sort((left, right) => right.amount - left.amount)[0];
+  const impactTier: DamageTier | undefined = visibleDamage === undefined ? undefined : damageTier(visibleDamage.amount);
+  const impactFeel = visibleDamage === undefined ? undefined : damageFeel(visibleDamage.amount);
   const [hitStop, setHitStop] = useState(false);
   /**
    * Every entry the runner has started since the board last caught up.
@@ -161,6 +172,26 @@ export default function Game({
    */
   const [burst, setBurst] = useState<readonly AnimationEntry[]>([]);
   const queue = useRef<AnimationQueue | null>(null);
+  const reducedMotion = useSetting("reduceMotion") || prefersReducedMotion();
+  const hitStopTimer = useRef<number | null>(null);
+  const triggerHitStop = useCallback((amount: number): void => {
+    const durationMs = damageFeel(amount).hitStopMs;
+    if (durationMs <= 0) return;
+    if (hitStopTimer.current !== null) window.clearTimeout(hitStopTimer.current);
+    setHitStop(true);
+    hitStopTimer.current = window.setTimeout(() => {
+      hitStopTimer.current = null;
+      setHitStop(false);
+    }, durationMs);
+  }, []);
+  useEffect(
+    () => () => {
+      if (hitStopTimer.current !== null) window.clearTimeout(hitStopTimer.current);
+      for (const timer of lingerTimers.current.values()) window.clearTimeout(timer);
+      lingerTimers.current.clear();
+    },
+    [],
+  );
 
   // R345: "End turn automatically" is the player's intent for R82, and the engine holds it, so it
   // goes out as an action whenever it differs from what this seat's view says. It is sent once per
@@ -185,18 +216,11 @@ export default function Game({
   // is 0 and the queue drains synchronously (BUILD M5-T4). The queue reads it once, when it is
   // built, so a change of setting builds a new queue; the subscription effect below tears the old
   // one down and shows the newest view.
-  const reducedMotion = useSetting("reduceMotion") || prefersReducedMotion();
   // Hit-stop is a visual pause only. It never delays the queue, network, engine or turn clock;
   // reduced-motion suppresses shake/wobble but intentionally leaves this tactile pause in place.
   useEffect(() => {
-    if (hitStopMs === 0) {
-      setHitStop(false);
-      return undefined;
-    }
-    setHitStop(true);
-    const timer = window.setTimeout(() => setHitStop(false), hitStopMs);
-    return () => window.clearTimeout(timer);
-  }, [inFlight, hitStopMs]);
+    if (!reducedMotion && inFlightDamage !== undefined) triggerHitStop(inFlightDamage.amount);
+  }, [inFlightDamage, reducedMotion, triggerHitStop]);
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
@@ -225,6 +249,20 @@ export default function Game({
         if (entry === null) return prev.length === 0 ? prev : [];
         return prev.includes(entry) ? prev : [...prev, entry];
       });
+      if (entry !== null) {
+        const giga = entry.events.find(
+          (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage" && damageTier(event.amount) === "giga",
+        );
+        if (giga !== undefined && !lingerTimers.current.has(entry)) {
+          const lingerMs = damageFeel(giga.amount).numberLingerMs;
+          setLingering((previous) => [...previous, entry]);
+          const timer = window.setTimeout(() => {
+            lingerTimers.current.delete(entry);
+            setLingering((previous) => previous.filter((candidate) => candidate !== entry));
+          }, lingerMs);
+          lingerTimers.current.set(entry, timer);
+        }
+      }
     });
     // A queue rebuilt for a new reduced-motion value starts empty; the one it replaced was reset
     // below without settling, so catch up with it here (a no-op on the first build).
@@ -272,9 +310,17 @@ export default function Game({
     // still has the card it destroys. Planning against the new view leaves `damage` and
     // `destroyed` with no element for the unit that just died, so nothing shakes and no number
     // pops on the very card the event is about.
-    if (fresh.length > 0 && previous !== null) runner.enqueue(fresh, previous);
+    if (fresh.length > 0 && previous !== null) {
+      if (reducedMotion) {
+        const largest = fresh
+          .filter((event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage")
+          .reduce((amount, event) => Math.max(amount, event.amount), 0);
+        triggerHitStop(largest);
+      }
+      runner.enqueue(fresh, previous);
+    }
     if (runner.idle()) setShown(view);
-  }, [view, runner]);
+  }, [view, runner, reducedMotion, triggerHitStop]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -342,7 +388,10 @@ export default function Game({
   }, [dispatch, refocusConcede]);
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
-  const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
+  const animated = useMemo(
+    () => [...burst, ...lingering].map((entry) => ({ frames: entry.frames, events: entry.events })),
+    [burst, lingering],
+  );
 
   // The newest turn event the burst has reached, the one in flight included: the board is still the
   // view from before it, and the banner must not fall back to that view's turn between its entry and
@@ -365,17 +414,12 @@ export default function Game({
         "--impact-shake-px": `${String(impactFeel.shakePx)}px`,
         "--impact-shake-ms": `${String(impactFeel.shakeMs)}ms`,
         "--impact-number-scale": String(impactFeel.numberScale),
+        "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
       } as CSSProperties}
     >
       {inFlight === null ? null : (
         <span data-testid="animation-queue" data-animating={inFlight.type} hidden aria-hidden="true" />
       )}
-      {error != null && error !== "" ? (
-        <p key={error} className="game-error" data-testid="action-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-
       {banner !== null ? (
         <div
           className="turn-banner"
@@ -387,16 +431,6 @@ export default function Game({
         </div>
       ) : null}
 
-      {/* BUILD M5-T4 `drawOffered` / `drawAnswered` play on this notice's `draw-toast`. It reads the
-          newest view: an offer moves nothing on the board, and its answers take `legal` as the
-          board does, so they are live only once the board has caught up (DrawOffer.tsx). */}
-      <DrawOfferNotice
-        view={view}
-        legal={legal}
-        animating={animating.get(animTestid.drawToast)}
-        onAction={dispatch}
-      />
-
       <Board
         view={shown}
         highlight={highlight}
@@ -404,13 +438,32 @@ export default function Game({
         animated={animated}
         turnClock={turnClock}
         matchStatus={matchStatus}
+        boardRail={boardRail}
+        boardNotices={
+          <>
+            {error != null && error !== "" ? (
+              <p key={error} className="game-error" data-testid="action-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {boardNotice}
+            {/* `view` is newest for this notice: it changes no board position, and its actions use
+                the same held-back legal list as every other board control. */}
+            <DrawOfferNotice
+              view={view}
+              legal={legal}
+              animating={animating.get(animTestid.drawToast)}
+              onAction={dispatch}
+            />
+          </>
+        }
         sandDisabled={interaction.stage !== "idle"}
         onClick={handleClick}
         onControl={handleControl}
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
-      <FxLayer queue={runner} view={shown} latest={view} />
+      <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
       <CardShowcase view={view} queue={runner} />
 
       {promptOver(shown, burst, inFlight) ? null : (

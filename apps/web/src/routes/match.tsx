@@ -304,25 +304,24 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           ) : null}
         </>
       }
+      boardRail={
+        <>
+          <BackLink showSettings={false} />
+          <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
+        </>
+      }
+      boardNotice={
+        readOnly ? (
+          <p className="board-read-only" data-testid={matchTestid.missingLegal} role="alert">
+            Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
+          </p>
+        ) : null
+      }
     />
   );
 
   return (
     <div className="app-shell app-shell--wide">
-      {/*
-        Leaving does NOT end the match — §9.5's clocks and the reaper still own that, and the
-        socket reconnects if you come back. Being unable to leave at all was the worse failure:
-        nav.tsx names this screen as trapped and it was the one that never got a way out.
-      */}
-      <BackLink />
-      <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
-
-      {readOnly ? (
-        <p className="notice" data-testid={matchTestid.missingLegal} role="alert">
-          Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
-        </p>
-      ) : null}
-
       {/*
         The provider is ALWAYS rendered, `value={null}` included. `GET /api/catalog` resolves
         asynchronously, and conditionally wrapping the board changes the element type at this

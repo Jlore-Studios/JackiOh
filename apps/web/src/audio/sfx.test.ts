@@ -15,7 +15,7 @@ import type { SfxId, SfxParams } from "./types.ts";
 const UNION_ORDER: SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
-  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
+  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
 ];
@@ -46,6 +46,8 @@ const DURATION_MS: Record<SfxId, number> = {
   radiant: 900,
   lock: 400,
   poof: 450,
+  sand: 240,
+  endTurn: 180,
   notify: 300,
   drain: 600,
   cancel: 260,
@@ -207,7 +209,7 @@ function rampProblems(run: Run): string[] {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
-  it("B14 SFX_IDS lists all 38 ids, in the order of the SfxId union", () => {
+  it("B14 SFX_IDS lists every id, in the order of the SfxId union", () => {
     expect([...SFX_IDS]).toEqual(UNION_ORDER);
   });
 
@@ -220,6 +222,16 @@ describe("B14 the SFX table", () => {
       expect(spec.gain, id).toBeGreaterThan(0);
       expect(spec.gain, id).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("gives Big and GIGA impacts different escalating low-end recipes", () => {
+    const big = runRecipe("big impact", SFX.impact.recipe, SFX.impact.durationMs, { impactTier: "big", variation: 0.5 });
+    const giga = runRecipe("giga impact", SFX.impact.recipe, SFX.impact.durationMs, { impactTier: "giga", variation: 0.5 });
+    const bigThump = big.made.find((node) => node.kind === "oscillator");
+    const gigaThump = giga.made.find((node) => node.kind === "oscillator");
+
+    expect(big.returned as number).toBeLessThan(giga.returned as number);
+    expect(bigThump?.param("frequency").events.at(0)).not.toEqual(gigaThump?.param("frequency").events.at(0));
   });
 });
 

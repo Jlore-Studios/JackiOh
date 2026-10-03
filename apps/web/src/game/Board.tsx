@@ -50,6 +50,7 @@ import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
+import { getAudioEngine } from "../audio/engine.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
 import "./board.css";
@@ -431,6 +432,7 @@ function ControlButton({
   animating,
   confirm,
   turnState,
+  pressed = false,
   onPress,
 }: {
   control: BoardControl;
@@ -442,6 +444,8 @@ function ControlButton({
   confirm?: "armed";
   /** End-turn's physical housing state; this is presentation over engine-provided legality. */
   turnState?: "ready" | "waiting" | "enemy" | "locked";
+  /** A dispatched turn-end stays visibly depressed until the next rendered view takes over. */
+  pressed?: boolean;
   onPress: () => void;
 }): ReactElement {
   const legal = isLegal(highlight, testId);
@@ -454,6 +458,7 @@ function ControlButton({
       data-glow={glowAttr(highlight, testId)}
       data-confirm={confirm}
       data-turn-state={turnState}
+      data-pressed={pressed ? "true" : undefined}
       data-selected={isSelected(highlight, testId) ? "true" : undefined}
       data-animating={animating?.get(testId)}
       aria-disabled={legal ? undefined : "true"}
@@ -477,6 +482,8 @@ export default function Board({
   animated,
   turnClock,
   matchStatus,
+  boardRail,
+  boardNotices,
   sandDisabled = false,
   onClick,
   onControl,
@@ -495,10 +502,12 @@ export default function Board({
   // B25: the confirm is armed FOR a view. Any new view (the engine moved, the turn changed, an
   // animation caught up) is a different object, so it disarms without an effect.
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
+  const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const actionsRemain = hasMovesLeft(highlight);
   const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
+  const pressed = pressedFor === view;
   const endTurnLegal = isLegal(highlight, testid.endTurn);
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
@@ -509,6 +518,8 @@ export default function Board({
       return;
     }
     setArmedFor(null);
+    setPressedFor(view);
+    getAudioEngine().playSfx("endTurn");
     onControl?.("end-turn");
   }
 
@@ -563,6 +574,8 @@ export default function Board({
         <Hand side="you" hand={yourHand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label="Controls">
+          {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
+          {boardNotices === undefined ? null : <div className="board-notices">{boardNotices}</div>}
           {/* Whose turn, above End turn wherever the controls have a column of their own (board.css
               hides it on a phone held upright, where the shell's banner says it). The banner is the
               live region, so this copy stays out of the accessibility tree. */}
@@ -592,6 +605,7 @@ export default function Board({
               animating={animating}
               confirm={armed ? "armed" : undefined}
               turnState={endTurnState}
+              pressed={pressed}
               onPress={pressEndTurn}
             />
             {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{Math.ceil(view.clockMs / 1000)}s</span>)}

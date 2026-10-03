@@ -243,12 +243,9 @@ function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, ctx: Cu
   return [sfx("notify")];
 }
 
-/** A stable per-hit offset, so rapid repeated impacts do not share exactly the same pitch. */
-function impactVariation(event: Extract<GameEvent, { type: "damage" }>): number {
-  const text = `${event.sourceId ?? "none"}:${event.targetId}:${String(event.amount)}`;
-  let hash = 0;
-  for (const char of text) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return (hash % 101) / 100;
+/** Each impact gets an independent ±5% pitch sample, including repeated hits on the same target. */
+function impactVariation(_event: Extract<GameEvent, { type: "damage" }>): number {
+  return Math.random();
 }
 
 export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {

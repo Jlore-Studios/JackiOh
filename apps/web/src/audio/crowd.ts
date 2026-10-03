@@ -24,6 +24,7 @@ export type CrowdDirectorOptions = {
 const DB_TO_GAIN = 10 ** (-CROWD_FEEL.ambientDuckDb / 20);
 const PATRON_VARIANTS = [0.82, 0.94, 1.06, 1.18] as const;
 const BED_SEAM_SAMPLES = 128;
+type ReactionKind = keyof typeof CROWD_FEEL.reactionMs;
 const venueBuffers = new WeakMap<BaseAudioContext, Map<number, AudioBuffer>>();
 
 function defaultLater(ms: number, run: () => void): Cancel {
@@ -105,8 +106,16 @@ function makeBed(output: CrowdOutput, cycleSeconds: number, colour: number): Can
   };
 }
 
-function patron(output: CrowdOutput, variant: number): void {
-  const { context, crowd } = output;
+function spatialGain(output: CrowdOutput, gain: GainNode, pan: number): StereoPannerNode {
+  const panner = output.context.createStereoPanner();
+  panner.pan.value = pan;
+  gain.connect(panner);
+  panner.connect(output.crowd);
+  return panner;
+}
+
+function patron(output: CrowdOutput, variant: number, pan: number): void {
+  const { context } = output;
   const length = 0.34;
   const source = context.createBufferSource();
   const filter = context.createBiquadFilter();
@@ -120,45 +129,52 @@ function patron(output: CrowdOutput, variant: number): void {
   gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + length);
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(crowd);
+  const panner = spatialGain(output, gain, pan);
   source.start();
   source.stop(context.currentTime + length);
   source.onended = () => {
     source.disconnect();
     filter.disconnect();
     gain.disconnect();
+    panner.disconnect();
   };
 }
 
-function reaction(output: CrowdOutput, kind: Exclude<ReturnType<typeof damageFeel>["crowd"], "none">): void {
-  const { context, crowd, ambienceDuck } = output;
-  const durationMs = CROWD_FEEL.reactionMs[kind];
+function reaction(output: CrowdOutput, kind: ReactionKind, pan: number): number {
+  const { context } = output;
+  const durationMs = kind === "applause" ? CROWD_FEEL.applauseTailMs : CROWD_FEEL.reactionMs[kind];
   const seconds = durationMs / 1000;
   const source = context.createBufferSource();
   const filter = context.createBiquadFilter();
   const gain = context.createGain();
-  const baseHz = kind === "ooh" ? 620 : kind === "gasp" ? 430 : 270;
+  const baseHz = kind === "ooh" ? 620 : kind === "gasp" ? 430 : kind === "cheer" ? 510 : kind === "roar" ? 270 : 360;
   source.buffer = noiseBuffer(context);
   filter.type = "bandpass";
   filter.frequency.value = baseHz;
   filter.Q.value = 0.8;
   gain.gain.setValueAtTime(0.0001, context.currentTime);
-  gain.gain.linearRampToValueAtTime(kind === "roar" ? 0.42 : 0.24, context.currentTime + 0.06);
+  gain.gain.linearRampToValueAtTime(kind === "roar" ? 0.42 : kind === "applause" ? 0.3 : 0.24, context.currentTime + 0.06);
   gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + seconds);
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(crowd);
+  const panner = spatialGain(output, gain, pan);
   source.start();
   source.stop(context.currentTime + seconds);
   source.onended = () => {
     source.disconnect();
     filter.disconnect();
     gain.disconnect();
+    panner.disconnect();
   };
-  const now = context.currentTime;
-  ambienceDuck.gain.cancelScheduledValues(now);
-  ambienceDuck.gain.setTargetAtTime(DB_TO_GAIN, now, 0.01);
-  ambienceDuck.gain.setTargetAtTime(1, now + seconds, 0.08);
+  return durationMs;
+}
+
+function duckAmbience(output: CrowdOutput, durationMs: number): void {
+  const now = output.context.currentTime;
+  const seconds = durationMs / 1000;
+  output.ambienceDuck.gain.cancelScheduledValues(now);
+  output.ambienceDuck.gain.setTargetAtTime(DB_TO_GAIN, now, 0.01);
+  output.ambienceDuck.gain.setTargetAtTime(1, now + seconds, 0.08);
 }
 
 export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirector {
@@ -170,6 +186,7 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   let cleanup: Cancel[] = [];
   let timer: Cancel | null = null;
   let debounce: Cancel | null = null;
+  const reactionTimers = new Set<Cancel>();
   let largest = 0;
 
   const clearTimers = (): void => {
@@ -179,6 +196,16 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
     debounce = null;
   };
 
+  const clearReactionTimers = (): void => {
+    for (const cancel of reactionTimers) cancel();
+    reactionTimers.clear();
+  };
+
+  const stopBeds = (): void => {
+    cleanup.forEach((stop) => stop());
+    cleanup = [];
+  };
+
   const startBed = (): void => {
     if (!running || ending || output !== null) return;
     output = (options.engine as Partial<AmbienceCapableEngine>).ambienceOutput?.() ?? null;
@@ -186,6 +213,9 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       output = null;
       return;
     }
+    const now = output.context.currentTime;
+    output.ambienceDuck.gain.cancelScheduledValues(now);
+    output.ambienceDuck.gain.setValueAtTime(1, now);
     cleanup = [
       makeBed(output, CROWD_FEEL.bedLoopSeconds[0], 480),
       makeBed(output, CROWD_FEEL.bedLoopSeconds[1], 920),
@@ -195,7 +225,13 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       const span = CROWD_FEEL.patronMaxMs - CROWD_FEEL.patronMinMs;
       const wait = CROWD_FEEL.patronMinMs + Math.round(next() * span);
       timer = later(wait, () => {
-        if (output !== null) patron(output, PATRON_VARIANTS[Math.floor(next() * PATRON_VARIANTS.length)] ?? PATRON_VARIANTS[0]);
+        if (output !== null) {
+          patron(
+            output,
+            PATRON_VARIANTS[Math.floor(next() * PATRON_VARIANTS.length)] ?? PATRON_VARIANTS[0],
+            next() * 2 - 1,
+          );
+        }
         schedulePatron();
       });
     };
@@ -213,33 +249,50 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       const feel = damageFeel(amount);
       if (!running || ending || feel.crowd === "none") return;
       largest = Math.max(largest, amount);
-      if (debounce !== null) return;
+      // Damage entries begin one after another in the animation queue. Resetting this quiet period
+      // makes one multi-hit resolution settle on its final, largest hit rather than cheering midway.
+      debounce?.();
       debounce = later(CROWD_FEEL.reactionDebounceMs, () => {
         debounce = null;
         const reactionFeel = damageFeel(largest);
         largest = 0;
-        if (output !== null && reactionFeel.crowd !== "none") reaction(output, reactionFeel.crowd);
+        if (output === null || reactionFeel.crowd === "none") return;
+        const kind = reactionFeel.crowd;
+        let durationMs = reaction(output, kind, next() * 2 - 1);
+        const addTail = (delayMs: number, tail: ReactionKind): void => {
+          let cancel: Cancel = () => undefined;
+          cancel = later(delayMs, () => {
+            reactionTimers.delete(cancel);
+            if (running && !ending && output !== null) reaction(output, tail, next() * 2 - 1);
+          });
+          reactionTimers.add(cancel);
+          const tailDurationMs = tail === "applause" ? CROWD_FEEL.applauseTailMs : CROWD_FEEL.reactionMs[tail];
+          durationMs = Math.max(durationMs, delayMs + tailDurationMs);
+        };
+        if (kind === "gasp") addTail(CROWD_FEEL.cheerDelayMs, "cheer");
+        if (kind === "roar") addTail(CROWD_FEEL.applauseDelayMs, "applause");
+        duckAmbience(output, durationMs);
       });
     },
     end() {
       if (ending) return;
       ending = true;
       clearTimers();
+      clearReactionTimers();
       if (output !== null) {
         const now = output.context.currentTime;
         output.ambienceDuck.gain.cancelScheduledValues(now);
-        output.ambienceDuck.gain.setTargetAtTime(0.0001, now, CROWD_FEEL.ambientFadeOutMs / 1000 / 3);
+        output.ambienceDuck.gain.setValueAtTime(output.ambienceDuck.gain.value, now);
+        output.ambienceDuck.gain.linearRampToValueAtTime(0.0001, now + CROWD_FEEL.ambientFadeOutMs / 1000);
       }
-      const stops = cleanup;
-      cleanup = [];
-      timer = later(CROWD_FEEL.ambientFadeOutMs, () => stops.forEach((stop) => stop()));
+      timer = later(CROWD_FEEL.ambientFadeOutMs, stopBeds);
     },
     dispose() {
       running = false;
       clearTimers();
+      clearReactionTimers();
       stateOff();
-      cleanup.forEach((stop) => stop());
-      cleanup = [];
+      stopBeds();
       output = null;
     },
   };

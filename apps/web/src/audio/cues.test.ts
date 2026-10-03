@@ -6,7 +6,7 @@
 // "Readable" is the design's word: the defId is not the sentinel and the table has an entry for it.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type UnitView } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -599,6 +599,14 @@ describe("B21 amounts", () => {
       const drain = onlySfx({ type: "healthLost", player: "p2", amount: n });
       expect([drain.id, drain.params?.amount, drain.delayMs]).toEqual(["drain", n, 0]);
     }
+  });
+
+  it("B21 gives repeated identical impacts independent ±5% pitch samples", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(1);
+    const event: GameEvent = { type: "damage", sourceId: "u1", targetId: "u2", amount: 15, combat: true };
+    expect(onlySfx(event).params?.variation).toBe(0);
+    expect(onlySfx(event).params?.variation).toBe(1);
+    random.mockRestore();
   });
 
   it("B21 buffed gives buff when attack + health is 0 or more", () => {

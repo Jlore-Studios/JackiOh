@@ -14,9 +14,12 @@ export const SAND_FEEL = {
   settleMs: 650,
   maximumBuild: 6,
   baseGrains: 4,
+  grainVariation: 3,
+  grainSpreadPercent: 2,
+  crunchVariants: 4,
 } as const;
 
-type SandMark = { id: number; x: number; y: number; trail: boolean; build: number; variation: number };
+type SandMark = { id: number; x: number; y: number; trail: boolean; grain: boolean; build: number; variation: number };
 
 export type SandSurfaceProps = {
   field: RefObject<HTMLElement | null>;
@@ -62,14 +65,35 @@ export default function SandSurface({ field, disabled }: SandSurfaceProps): Reac
         ? 1
         : Math.min(SAND_FEEL.maximumBuild, build.current + 1);
       lastTap.current = now;
-      markId.current += 1;
-      const variation = variationFor(x, y, markId.current);
-      const mark: SandMark = { id: markId.current, x, y, trail, build: build.current, variation };
-      setMarks((previous) => [...previous, mark].slice(-SAND_FEEL.maximumMarks));
-      // `poof` is the existing low, filtered-grain recipe. Variation makes rapid taps feel less
-      // mechanical without touching gameplay RNG; the visual mark is never rate limited.
+      const nextMark = (markX: number, markY: number, grain: boolean): SandMark => {
+        markId.current += 1;
+        return {
+          id: markId.current,
+          x: markX,
+          y: markY,
+          trail,
+          grain,
+          build: build.current,
+          variation: variationFor(markX, markY, markId.current),
+        };
+      };
+      const dimple = nextMark(x, y, false);
+      const grains: SandMark[] = [];
+      const grainCount = SAND_FEEL.baseGrains + Math.floor(dimple.variation * SAND_FEEL.grainVariation);
+      for (let grain = 0; grain < grainCount; grain += 1) {
+        const angle = variationFor(x, y, dimple.id + grain) * Math.PI * 2;
+        const distance = SAND_FEEL.grainSpreadPercent * (0.35 + variationFor(y, x, dimple.id + grain + 1));
+        grains.push(nextMark(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance, true));
+      }
+      setMarks((previous) => [...previous, dimple, ...grains].slice(-SAND_FEEL.maximumMarks));
+      // Sand has its own low-gain, polyphonic crunch path: taps are never rate-limited by normal
+      // UI SFX protection, and its variant/build values make a rapid pile sound fuller.
       try {
-        getAudioEngine().playSfx("poof", { variation });
+        getAudioEngine().playSfx("sand", {
+          variation: dimple.variation,
+          sandVariant: Math.floor(dimple.variation * SAND_FEEL.crunchVariants),
+          sandBuild: build.current,
+        });
       } catch {
         // Web Audio can be unavailable before a gesture unlock; the cosmetic mark still appears.
       }
@@ -107,7 +131,7 @@ export default function SandSurface({ field, disabled }: SandSurfaceProps): Reac
     <span className="sand-surface" aria-hidden="true">
       {marks.map((mark) => (
         <span
-          className={mark.trail ? "sand-mark sand-mark--trail" : "sand-mark"}
+          className={mark.grain ? "sand-mark sand-mark--grain" : mark.trail ? "sand-mark sand-mark--trail" : "sand-mark"}
           key={mark.id}
           style={{
             "--sand-x": `${String(mark.x)}%`,

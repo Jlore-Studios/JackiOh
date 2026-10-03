@@ -4,7 +4,7 @@
 export type SfxId =
   | "draw" | "play" | "summon" | "attack" | "impact" | "shieldShatter" | "heal" | "buff" | "debuff"
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
-  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "notify" | "drain"
+  | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "sand" | "endTurn" | "notify" | "drain"
   | "cancel" | "entrance" | "fatigue" | "refuse"
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick";
@@ -39,10 +39,13 @@ export type SfxParams = {
   urgent?: boolean;
   /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
   release?: boolean;
-  /** Match-feel impact and sand variations. A deterministic caller supplies 0 through 1. */
+  /** Match-feel impact and sand variations. The caller supplies a sample from 0 through 1. */
   variation?: number;
   /** The public damage tier that selected this impact recipe. */
   impactTier?: "tiny" | "normal" | "moderate" | "big" | "giga";
+  /** Sand's rolling four-way grain texture and the amount built up by sustained tapping. */
+  sandVariant?: number;
+  sandBuild?: number;
 };
 
 export type VoiceLineKind = "play" | "death" | "cast";
