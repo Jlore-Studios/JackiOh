@@ -529,12 +529,16 @@
       }
     },
     "144": {
-      "asks": [],
+      "asks": [
+        "c:5971027039"
+      ],
       "failures": 0,
       "feedback_since": "2026-10-03T09:24:23Z",
       "issue": 63,
       "kind": "revise",
-      "pending_request": false,
+      "pending_at": "2026-10-03T16:22:09Z",
+      "pending_by": "MaxGoetzmann",
+      "pending_request": true,
       "provider": "devin",
       "queued_at": "2026-10-03T12:54:47Z",
       "run_id": "37124390190",
