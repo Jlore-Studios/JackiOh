@@ -12,7 +12,7 @@ Three steps, each its own job, so the model never holds a GitHub write token:
    it (`decide`): labels only from the repository's own set (no `bot:*`), assignees only the two
    people or the bot, a title only when the old one breaks the convention and the new one keeps it
    and every version number. It adds, never removes: a label or an assignee a person set stays, and
-   a group a person already chose from (a priority, a model tier) gets nothing more.
+   a group a person already chose from (a priority, a difficulty) gets nothing more.
 
 A human task is assigned to both people and labelled `human`, so the night bot skips it. A bot task
 on an issue is assigned to the bot, which queues it (the sweep answers the assignment). A pull
@@ -165,8 +165,9 @@ Decide:
   an account, a secret, a design call, anything outside the repository, or any change to `bot/`,
   `.harness/` or `.github/`, which the bot may not touch.
 - "labels": every label that fits, at least one type label (patch, major version, architecture,
-  night bot); a priority or model-tier label only if the text clearly asks for one. Never a `bot:`
-  label.
+  night bot); a priority label, or a difficulty label (difficulty:easy, difficulty:medium,
+  difficulty:hard: how strong a model the work needs), only if the text clearly asks for one.
+  Never a `bot:` label.
 - "title": the title the conventions give it (keep every version number exactly as written), or
   "" if the current title already follows them.
 - "reason": one sentence.
