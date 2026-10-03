@@ -29,7 +29,8 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
-      "schedule": { "mode": "always" },
+      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "off_hours": { "five_hour": 0.4 },
       "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
       "quiet_check": true
     },

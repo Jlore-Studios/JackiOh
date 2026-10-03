@@ -64,6 +64,7 @@ def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False) -> p
             provider["enabled"] = False
         if provider.get("cli") == "claude" and not committed_hours:
             provider["schedule"] = dict(NIGHT_WINDOW)
+            provider.pop("off_hours", None)
     return providers_mod.parse(raw)
 
 
