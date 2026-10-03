@@ -870,11 +870,13 @@
     "169": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-03T22:36:36Z",
       "difficulty": "medium",
       "failures": 3,
       "feedback_since": "2026-10-03T19:28:28Z",
       "issue": 118,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-10-03T19:54:56Z",
