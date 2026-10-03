@@ -91,6 +91,20 @@ one account per code unless its mint says otherwise). The script loads the *whol
 rather than the two variables it reads, because a `CODE_PEPPER` that differs from the running
 server's mints a well-formed code that nobody can ever redeem, and nothing would report it.
 
+Beside those, one script belongs to a deploy that bumps the game's minor version: R609's season
+open, which the boot path would otherwise run cold on the first request it sees. Ahead of such a
+deploy, run it against a copy of the live data first:
+
+```
+pnpm --filter @jackioh/server db:season-start -- --dry-run
+```
+
+`--dry-run` walks the identical path — open the season, soft-reset every rated player — and rolls
+the transaction back, printing the report a real run would write (season id, players reset, the
+ratings before and after). Without the flag the writes commit, and the next build's boot finds
+the season already open. Re-running it is safe: an already-open season reports `opened: false`
+and writes nothing.
+
 ### Environment
 
 The contract is `ServerEnv` in `src/env.ts`; `loadEnv()` validates it and refuses to start on a

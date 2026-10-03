@@ -508,7 +508,11 @@ Notes:
 - **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every Render
   boot, so a deploy that ships new migrations or a new card patch applies them and reseeds at its
   `CATALOG_VERSION` before the server listens. Both are idempotent, and a failure keeps the new
-  instance from passing its health check, so the previous deploy keeps serving.
+  instance from passing its health check, so the previous deploy keeps serving. A deploy that bumps
+  the game's **minor** version also opens a new ranked season (R609): the first boot opens it and
+  runs the soft reset itself, so the operator's part is only the rehearsal —
+  `db:season-start -- --dry-run` against a copy of the live data beforehand, which prints the
+  report and rolls back (apps/server's README has the command).
 - **Exposed schemas.** Confirm `app` is not in the Data API's exposed schema list — `[api] schemas`
   in `supabase/config.toml` locally, Project Settings → Data API in the dashboard. The default
   (`public`, `graphql_public`) is correct. If `app` is ever exposed, every `SECURITY DEFINER` function
@@ -553,7 +557,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0008_queue_modes.sql` → `0009_series.sql` → `0010_jlockeed_tag.sql` →
    `0011_tutorial_progress.sql` → `0012_account_deletion.sql` → `0013_retention_purge.sql` →
    `0014_game_records.sql` → `0015_classic_sets_tags.sql` → `0016_catalog_growth_grants.sql` →
-   `0017_last_boards.sql` → `0018_player_settings.sql` — and records them in `app.migrations`. Expected result: 20 tables
+   `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_ranked_ladder.sql` — and records them
+   in `app.migrations`. Expected result: 24 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `db:seed-catalog` can
@@ -566,7 +571,11 @@ step that is not yet implemented says which BUILD task delivers it.
    server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
    R565). 0018 adds `player_settings` and its one write path, `app.merge_player_settings` (R633,
    R634), which keeps a player's game settings on the account; like 0011 it needs nothing else from
-   the bring-up.
+   the bring-up. 0019 is the ranked ladder (R603–R612): Glicko ratings go fractional and gain the
+   deviation and volatility columns, `matches` and `series` gain their `ranked` flag, and the four
+   server-only tables land — `seasons`, `season_ranks`, `bot_ratings`, `rated_games`. On a project
+   that already has players it also narrows `profiles`' client grant to a column whitelist, because
+   the hidden rating may never reach the client (R612); nothing else in the bring-up changes.
 5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

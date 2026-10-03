@@ -429,7 +429,7 @@ export async function matchRanks(deps: ServerDeps, matchId: string, viewerId: st
   const standings = await deps.store.ranked.standings(buildSeasonId(deps));
   const jlorious = jloriousOrder(standings);
   const seat = (profileId: string) => ({ tag: playerTag(profileId), rank: rankIn(standings, jlorious, profileId), you: profileId === viewerId });
-  // Absent on Postgres rows (no ranked column yet): unranked, so this game moves nothing.
+  // A missing flag is unranked (a pre-0019 row, or a room's), so this game moved nothing.
   return { ranked: match.ranked ?? false, seats: { p1: seat(match.players[0]), p2: seat(match.players[1]) } };
 }
 

@@ -493,9 +493,8 @@ export type MatchRow = {
   catalogVersion: string;
   /**
    * R604: a match the queue paired (or a game of a series it paired) is ranked; a room challenge
-   * is not. Only a ranked game moves a rating or a rank. Absent on rows read from Postgres, which
-   * has no ranked column until the ranked-ladder migration lands: they read as unranked and never
-   * rate.
+   * is not. Only a ranked game moves a rating or a rank. Carried on `matches.ranked` since
+   * migration 0019; the store reads a false flag back as an absent one.
    */
   ranked?: boolean;
   status: MatchStatus;
@@ -721,7 +720,7 @@ export type SeriesRow = {
   id: string;
   sides: [SeriesSide, SeriesSide];
   catalogVersion: string;
-  /** R604: a series the queue paired is ranked and moves the rating when it ends; a room's is not. Absent on rows read from Postgres (no ranked column yet): they never rate. */
+  /** R604: a series the queue paired is ranked and moves the rating when it ends; a room's is not. Carried on `series.ranked` since migration 0019; the store reads a false flag back as an absent one. */
   ranked?: boolean;
   /** Each game's seed is `${seedBase}:${gameNo}` (R335). The server mints it; R143's e2e override feeds it. */
   seedBase: string;

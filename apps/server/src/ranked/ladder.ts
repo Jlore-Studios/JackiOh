@@ -11,7 +11,8 @@
  *
  * The hidden rating pulls the visible rank toward itself gently (R606): the rating's percentile
  * among the season's placed players, read off `RANK_TIER_PERCENTS`, is the rank it calls for (the
- * target), and a game played a division or more away from its target leans one pip toward it.
+ * target), and a game a division or more away from its target leans one pip further toward it on a
+ * move already heading that way — a win below the target or a loss above it.
  *
  * Pure: every function here takes what it reads and returns what it decides. `src/api/ranked.ts`
  * reads the season from the store, calls these, and writes the result back.

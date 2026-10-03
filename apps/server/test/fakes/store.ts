@@ -517,8 +517,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     },
   };
 
-  // SPEC §9.12's ranked ladder, shared with `src/api/e2e-store.ts` (the Postgres migration has
-  // not landed — `db/store.ts` throws until it does).
+  // SPEC §9.12's ranked ladder, shared with `src/api/e2e-store.ts`; `db/store.ts` carries the
+  // same tables since migration 0019.
   store.ranked = createMemoryRankedStore(() => tables, call);
 
   return store;
