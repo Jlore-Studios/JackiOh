@@ -871,9 +871,16 @@
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-03T19:25:12Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 113,
       "kind": "revise",
-      "self_check_findings": []
+      "pending_request": false,
+      "queued_at": "2026-10-03T23:10:54Z",
+      "requested_by": "MaxGoetzmann",
+      "self_check_findings": [],
+      "source": "request",
+      "stop_requested": false
     },
     "169": {
       "action": "review",
