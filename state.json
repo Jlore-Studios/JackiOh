@@ -810,7 +810,7 @@
       "action": "review",
       "asks": [],
       "difficulty": "medium",
-      "failures": 1,
+      "failures": 2,
       "feedback_since": "2026-10-03T19:28:28Z",
       "issue": 118,
       "kind": "review",
