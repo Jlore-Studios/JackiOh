@@ -469,7 +469,7 @@ class Deliverer:
                 self._try(lambda: self.gh.mark_ready(pull["node_id"]))
         pr = int(pull.get("number") or 0)
         if pr:
-            self.gh.add_labels(pr, [LABEL_PR])
+            self.gh.add_labels(pr, [LABEL_PR, *self._carried(number)])
             self._remember(pr, issue=number, feedback_since=started, failures=0, kind="revise")
         issue_labels = self._labels(number)
         if approved:
@@ -487,7 +487,7 @@ class Deliverer:
                 merge_note = ("A comment arrived during the run, so auto-merge waits for the "
                               "revision that answers it.")
             if pr:
-                self._carry_labels(number, pr)
+                self._carry_difficult(number, pr)
                 rule = self._approved(pr, str(self.result.get("head") or ""),
                                       merge=not merge_note)
                 merge_note = merge_note or rule
@@ -647,7 +647,9 @@ class Deliverer:
                else "Its head has not been approved by the model that built it")
         line = (f"{who}, so it waits for a second model's review (`{LABEL_CROSS}`) before "
                 "auto-merge turns on.")
-        if not self._other_family_set_up(str(votes.get("builder") or "")):
+        if not self._other_family_set_up(str(votes.get("builder") or ""),
+                                         low_tier_only=LABEL_SHITTER in {
+                                             name.lower() for name in labels}):
             line += (" No subscription of another model family is set up, so it waits for you "
                      "to merge it, or for one to be set up.")
         return line
@@ -658,24 +660,28 @@ class Deliverer:
         self._remember(pr, votes=votes)
         return votes
 
-    def _other_family_set_up(self, family: str) -> bool:
+    def _other_family_set_up(self, family: str, low_tier_only: bool = False) -> bool:
+        """Whether another model family may give the second review: for a `shitter` pull
+        request, only a low-tier one (#96)."""
         secrets = self.cfg.secrets
         return any(p.enabled and p.family != family and "review" in p.roles
                    and (p.login == "machine" or secrets.has(p.secret) is not False)
+                   and not (low_tier_only and providers_mod.model_tier(p.model)
+                            == providers_mod.HIGH_TIER)
                    for p in self.cfg.pool.ordered())
 
-    def _carry_labels(self, issue: int, pr: int) -> None:
-        """A `difficult` issue's pull request stays Opus-only for its revisions, a `shitter` one
-        stays a low-tier model's (#96), and a priority label keeps the issue's tier (#90)."""
-        labels = self._labels(issue)
+    def _carried(self, issue: int) -> list[str]:
+        """The issue's labels its pull request starts with, approved or a draft: `shitter`, so
+        no high-tier model revises or second-reviews it (#96), and its priority tier (#90)."""
+        return sorted(name for name in self._labels(issue)
+                      if name.lower() in {LABEL_SHITTER, *PRIORITY_TIERS})
+
+    def _carry_difficult(self, issue: int, pr: int) -> None:
+        """A `difficult` issue's pull request stays Opus-only for its revisions."""
         label = self.cfg.pool.difficult_label
-        if label in labels:
+        if label in self._labels(issue):
             self.gh.add_labels(pr, [label])
             self._remember(pr, difficult=True)
-        carried = sorted(name for name in labels
-                         if name.lower() in {LABEL_SHITTER, *PRIORITY_TIERS})
-        if carried:
-            self.gh.add_labels(pr, carried)
 
     def _second_review(self, number: int, status: str) -> None:
         """Act on a second model's verdict on a bot pull request."""

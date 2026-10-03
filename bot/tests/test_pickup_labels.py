@@ -15,7 +15,7 @@ from harness.state import item as state_item
 from tests.fakes import FakeGitHub
 from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx
 from tests.test_flow import Harness
-from tests.test_work import APPROVE, builder, reviewer
+from tests.test_work import APPROVE, builder, changes, reviewer
 
 ALL = {"HARNESS_SECRETS_SET": " ".join(providers.SECRETS)}
 HIGH, MEDIUM, LOW = "priority:high", "priority:medium", "priority:low"
@@ -198,11 +198,10 @@ class HumanAndShitterTests(unittest.TestCase):
     def test_the_tier_of_a_model(self):
         tier = providers.model_tier
         for name in ("opus", "OPUS", "claude-opus-4-1", "Claude Opus 5.5", "claude-opus",
-                     "gpt-5.6-astra", "OpenAI Astra", "astra-2"):
+                     "opusplan", "gpt-5.6-astra", "OpenAI Astra", "astra-2"):
             self.assertEqual(tier(name), providers.HIGH_TIER, name)
         for name in ("gpt-5.6-terra", "gemini-3.8-flash-high", "muse-spark-1.3-contributor",
-                     "sonnet", "claude-haiku-4-5", "", "mystery-model-9", "astral",
-                     "opuscule", "pastra"):
+                     "sonnet", "claude-sonnet-4-5", "claude-haiku-4-5", "", "mystery-model-9"):
             self.assertEqual(tier(name), providers.LOW_TIER, name)
 
     def test_the_committed_subscriptions_tiers(self):
@@ -360,6 +359,32 @@ class LabelsTests(unittest.TestCase):
         planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
                          ("review", pr, "agy"))
+
+    def test_a_draft_pull_request_keeps_them_too(self):
+        h = Harness(self, env=ALL, machine=MACHINE)
+        h.gh.add_issue(12, labels=(LABEL_BUILD, "shitter", LOW))
+        planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                              "review": reviewer(changes("Still wrong."))}))
+        self.assertEqual((planned["provider"], result["status"]), ("gpt", "not_approved"))
+        pull = h.gh.list_pulls(head="bot/issue-12")[0]
+        self.assertTrue(pull["draft"])
+        self.assertEqual(h.gh.label_names(int(pull["number"])),
+                         {LABEL_PR, "bot:blocked", "shitter", LOW})
+        # Its revision, asked for on the draft by night, goes past Opus.
+        queue_mod.queue_revise(h.ctx, int(pull["number"]), by="MaxGoetzmann")
+        planned = plan_mod.make(h.ctx)
+        self.assertEqual((planned["action"], planned["provider"]), ("revise", "gpt"))
+
+    def test_a_shitter_pull_request_with_no_low_tier_reviewer_says_it_waits_for_a_person(self):
+        for labels, waits in (((LABEL_BUILD, "shitter"), True), ((LABEL_BUILD,), False)):
+            # Opus and gpt only: by day gpt builds both, and only Opus could review.
+            h = Harness(self, env=ALL, machine=("gpt",), at=DAY)
+            h.gh.add_issue(12, labels=labels)
+            planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                                  "review": reviewer(APPROVE)}))
+            self.assertEqual((planned["provider"], result["status"]), ("gpt", "approved"))
+            self.assertEqual("No subscription of another model family is set up" in
+                             h.gh.bot_comments(12)[-1], waits, labels)
 
 
 if __name__ == "__main__":

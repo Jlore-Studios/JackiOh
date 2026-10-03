@@ -73,7 +73,7 @@ Add **`--force`** to `build`, `revise` or `suggest` to start now, on a subscript
 hours if need be (its usage caps still hold). A forced item stays forced until it is done.
 
 Label an issue **`difficult`** to keep it for Opus: only a Claude account builds, revises and
-reviews it, and Opus takes `difficult` items before anything else.
+reviews it, and Opus takes `difficult` items before anything else in their priority tier.
 
 ### Priority, `human` and `shitter`
 
@@ -88,14 +88,15 @@ Two labels take work away from models:
 - **`human`**: a person will do it. No model picks it up, whatever else it is labelled, forced or
   not.
 - **`shitter`**: low-tier models only. A high-tier model, Claude Opus or OpenAI Astra (any
-  version, read off the `model` in `providers.json`), never picks it up; any other model may, an
-  unknown one included. With `difficult` as well, no model can take it.
+  version: `opus` or `astra` anywhere in the `model` in `providers.json`), never picks it up; any
+  other model may, an unknown one included. With `difficult` as well, no model can take it.
 
 Label names match whatever their case. Labels are read afresh at every pickup, so a change counts
 at the next run, and a run already going is never stopped. The pull request the bot opens for an
-issue carries the issue's `shitter` and priority labels, so its revisions and its second review
-follow the same rules. The `peek` and `plan` steps of a night run log the chosen item's tier and
-every item passed over because of `human` or `shitter`.
+issue, a draft or not, starts with the issue's `shitter` and priority labels, so its revisions and
+its second review follow the same rules. A label changed on the issue after that, `human`
+included, does not reach the pull request: change it there too. The `peek` and `plan` steps of a
+night run log the chosen item's tier and every item passed over because of `human` or `shitter`.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from

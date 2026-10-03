@@ -128,7 +128,8 @@ class Provider:
     limits: Limits
     #: Its own approval is enough to merge (Opus); otherwise a second model must approve too.
     self_review: bool
-    #: May take issues labelled `difficult`, and takes them before anything else.
+    #: May take issues labelled `difficult`, and takes them before anything else in their
+    #: priority tier.
     difficult: bool
     #: Wait until nobody else is spending the subscription before an unforced run (`quiet.py`).
     quiet_check: bool
@@ -146,13 +147,13 @@ class Provider:
 
 HIGH_TIER = "high"
 LOW_TIER = "low"
-_HIGH_TIER_FAMILIES = re.compile(r"(?<![a-z])(?:astra|opus)(?![a-z])", re.IGNORECASE)
+_HIGH_TIER_FAMILIES = re.compile(r"astra|opus", re.IGNORECASE)
 
 
 def model_tier(model: str) -> str:
-    """`high` for OpenAI's Astra and Claude Opus, any version, read off the family name in the
-    model's name whatever its case (`opus`, `claude-opus-4-1`, `gpt-5.6-astra`); `low` for every
-    other model, an unknown or empty name included. Only `shitter` asks (#96)."""
+    """`high` for OpenAI's Astra and Claude Opus, any version: the family name anywhere in the
+    model's name, whatever its case (`opus`, `opusplan`, `claude-opus-4-1`, `gpt-5.6-astra`);
+    `low` for every other model, an unknown or empty name included. Only `shitter` asks (#96)."""
     return HIGH_TIER if _HIGH_TIER_FAMILIES.search(model or "") else LOW_TIER
 
 
