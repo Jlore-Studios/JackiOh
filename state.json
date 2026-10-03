@@ -666,9 +666,7 @@
       "run_id": "37145236766",
       "started_at": "2026-10-03T18:43:51Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972198034"
-      ]
+      "taken_asks": []
     },
     "165": {
       "failures": 0,
