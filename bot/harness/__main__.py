@@ -307,8 +307,11 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
               f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
     print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
+    # A tier's entries name models; whether one checks itself is its subscription's seat's.
+    checking = {seat.model for provider in cfg.pool.ordered() for seat in cfg.pool.seats(provider)
+                if seat.self_check}
     for tier in providers_mod.TIERS:
-        order = ", ".join(e.model + (" (self-check)" if e.self_check else "")
+        order = ", ".join(e.model + (" (self-check)" if e.model in checking else "")
                           for e in cfg.pool.tiers.get(tier, ()))
         print(f"{tier} tier, tried in this order: {order or 'none'}")
     return 0

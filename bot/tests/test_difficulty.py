@@ -4,6 +4,7 @@ who may plan, build and review it, in the owner's usage order; and a self-checki
 
 from __future__ import annotations
 
+import argparse
 import dataclasses
 import json
 import tempfile
@@ -468,6 +469,19 @@ class ConfigTests(unittest.TestCase):
         text = report(ctx_for(gh, machine=ALL_MACHINE))
         self.assertIn("`devin` (devin: `swe-2-max` weak, self-check;", text)
         self.assertIn("`claude-3` (claude: `opus` strong, `sonnet` weak;", text)
+        # `harness providers` (and `window`, the same command), as bot selftest runs it.
+        import contextlib
+        import io
+        from harness.__main__ import cmd_providers
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cmd_providers(make_config(env=secrets(*providers.SECRETS),
+                                                       machine=ALL_MACHINE),
+                                           argparse.Namespace(offline=True)), 0)
+        printed = out.getvalue()
+        self.assertIn("swe-2-max weak self-check", printed)
+        self.assertIn("weak tier, tried in this order:", printed)
+        self.assertIn("swe-2-max (self-check)", printed)
 
     def test_peek_shows_the_difficulty_and_each_roles_tier(self):
         gh = FakeGitHub()
