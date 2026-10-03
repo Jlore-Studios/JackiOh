@@ -873,7 +873,14 @@
           "severity": "blocking",
           "where": "apps/server/src/api/ranked.ts:434"
         }
-      ]
+      ],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "f4216c2945c3879a40cce6307e596f0a8f6b6962",
+        "tiers": {}
+      }
     },
     "31": {
       "failures": 0,
