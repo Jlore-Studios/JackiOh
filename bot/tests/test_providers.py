@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from harness import clock, plan as plan_mod, providers
 from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_WORKING
@@ -200,6 +200,41 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
         self.assertEqual((planned["provider"], planned["cli"], planned["runs_on"]),
                          ("devin", "devin", "night-vm-devin"))
+
+    def test_devin_is_switched_off_from_october_15(self):
+        """`off_from`: from that day (Central time) Devin takes no new work, forced or not, and
+        the planner opens one issue asking a person what it should do now."""
+        pool = providers.load(ROOT)
+        devin = pool.get("devin")
+        self.assertEqual(str(devin.off_from), "2026-10-15")
+        self.assertIn("free on Devin's CLI only through 2026-10-16", devin.off_reason)
+        everyone = Secrets.of(secrets(*providers.SECRETS))
+        late_on_the_14th = datetime(2026, 10, 15, 4, 59, tzinfo=timezone.utc)  # 23:59 CDT
+        self.assertIsNone(providers.availability(devin, {}, late_on_the_14th, "America/Chicago",
+                                                 everyone))
+        on_the_15th = datetime(2026, 10, 15, 5, 0, tzinfo=timezone.utc)
+        for forced in (False, True):
+            self.assertIn("switched off from 2026-10-15", providers.availability(
+                devin, {}, on_the_15th, "America/Chicago", everyone, forced=forced))
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        ctx = make_ctx(gh, at=on_the_15th + timedelta(hours=12),
+                       cfg=make_config(env=secrets(*providers.SECRETS), machine=ALL_MACHINE))
+        planned = plan_mod.make(ctx)
+        self.assertNotEqual(planned.get("provider"), "devin")
+        opened = [n for n, t in gh.threads.items() if "`devin` is switched off" in t["title"]]
+        self.assertEqual(len(opened), 1)
+        body = gh.threads[opened[0]]["body"]
+        self.assertIn("off_from: 2026-10-15", body)
+        self.assertIn("free on Devin's CLI only through 2026-10-16", body)
+        self.assertEqual(gh.label_names(opened[0]), {"night bot"})
+        plan_mod.make(ctx)  # once only
+        self.assertEqual(len([t for t in gh.threads.values()
+                              if "`devin` is switched off" in t["title"]]), 1)
+        raw = raw_providers()
+        raw["providers"]["devin"]["off_from"] = "mid-October"
+        with self.assertRaises(ConfigError):
+            providers.parse(raw)
 
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-2 and claude-3 run all day, claude-2 under its 90% caps

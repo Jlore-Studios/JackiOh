@@ -96,10 +96,19 @@ FAKE_DEVIN = PRELUDE + textwrap.dedent('''\
         print("Not logged in. Run `devin auth login` to authenticate.", file=sys.stderr)
         sys.exit(1)
     with open(argv[argv.index("--export") + 1], "w") as f:
-        f.write("user: THE TASK\\nassistant: ran pnpm test\\n")
+        json.dump({{"schema_version": 1, "steps": [
+            {{"source": "system", "message": "You are Devin"}},
+            {{"source": "user", "message": "THE TASK"}},
+            {{"source": "agent", "message": "", "tool_calls": [{{"tool_call_id": "1",
+              "function_name": "exec", "arguments": {{"command": "pnpm test"}}}}]}},
+            {{"source": "agent", "message": "", "tool_calls": [{{"tool_call_id": "2",
+              "function_name": "read_file", "arguments": {{"path": "src/game.txt"}}}}]}},
+            {{"source": "agent", "message": "All green.", "tool_calls": []}}]}}, f)
     if mode == "limit":
         print("Error: usage limit reached for swe-2-max", file=sys.stderr)
         sys.exit(1)
+    print("\\x1b[1mWelcome to Devin CLI!\\x1b[0m")
+    print()
     print("<!-- bot: {{\\"status\\": \\"done\\", \\"title\\": \\"D\\"}} -->")
     print("report")
 ''')
@@ -297,11 +306,14 @@ class DevinTests(Base):
         self.assertTrue(seen["prompt"].startswith("SYSTEM TEXT"))
         self.assertTrue(seen["prompt"].endswith("THE TASK"))
         self.assert_only_its_own_login()
+        self.assertNotIn("Welcome", result.text)  # the banner and its colour codes are gone
         transcript = (self.tmp / "t" / "01.jsonl").read_text()
-        self.assertIn("ran pnpm test", transcript)  # the exported conversation
         self.assertIn("report", transcript)
+        self.assertNotIn("You are Devin", transcript)  # only what its agent did
         self.assertFalse((self.tmp / "t" / "01.export").exists())
-        self.assertIn("ran pnpm test", backend.trail(self.tmp / "t" / "01.jsonl"))
+        trail = backend.trail(self.tmp / "t" / "01.jsonl")
+        for line in ("ran `pnpm test`", 'read_file: {"path": "src/game.txt"}', "said: All green."):
+            self.assertIn(line, trail)
 
     def test_a_missing_login_is_infrastructure(self):
         result = self.run_fake(self.backend(), "auth")

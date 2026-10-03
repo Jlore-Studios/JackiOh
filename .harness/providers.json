@@ -105,6 +105,8 @@
       "effort": "",
       "login": "machine",
       "runs_on": "night-vm-devin",
+      "off_from": "2026-10-15",
+      "off_reason": "SWE-2 is free on Devin's CLI only through 2026-10-16 (devin.ai/pricing). After that it draws on the Devin plan's daily and weekly allowance, at 6x (medium) to 12x (max) credits, so Devin needs a new model, caps, or to stay off.",
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "self_review": false,

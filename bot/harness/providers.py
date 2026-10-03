@@ -20,12 +20,12 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
 from harness import clock
-from harness.clock import human_delta, iso, parse_iso
+from harness.clock import human_delta, iso, parse_iso, zone
 from harness.errors import ConfigError
 
 PROVIDERS_PATH = Path(".harness") / "providers.json"
@@ -140,6 +140,10 @@ class Provider:
     login: str = "secret"
     #: The runner label its model job runs on.
     runs_on: str = "ubuntu-latest"
+    #: The first day (in the bot's time zone) it takes no new work, and why: a free offer that
+    #: ends, say. On that day the planner also opens one issue asking a person to decide.
+    off_from: date | None = None
+    off_reason: str = ""
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -223,7 +227,7 @@ def _limits(raw: Any, where: str) -> Limits:
 
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "secret", "schedule", "limits",
                   "self_review", "difficult", "quiet_check", "roles", "env", "note", "login",
-                  "runs_on"}
+                  "runs_on", "off_from", "off_reason"}
 
 
 def _provider(name: str, raw: Any) -> Provider:
@@ -285,6 +289,8 @@ def _provider(name: str, raw: Any) -> Provider:
         env={str(k): str(v) for k, v in env.items()},
         login=login,
         runs_on=runs_on,
+        off_from=_off_from(raw.get("off_from"), f"{where}.off_from"),
+        off_reason=str(raw.get("off_reason") or ""),
     )
 
 
@@ -445,11 +451,27 @@ class Secrets:
         return False if self.known else None
 
 
+def _off_from(raw: Any, where: str) -> date | None:
+    if raw in (None, ""):
+        return None
+    try:
+        return date.fromisoformat(str(raw))
+    except ValueError as exc:
+        raise ConfigError(f"{where}: {raw!r} is not a date (YYYY-MM-DD)") from exc
+
+
+def switched_off_by_date(provider: Provider, at: datetime, zone_name: str) -> bool:
+    """Whether `provider`'s `off_from` day has come, in the bot's time zone."""
+    return provider.off_from is not None and at.astimezone(zone(zone_name)).date() >= provider.off_from
+
+
 def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
                  secrets: Secrets, *, forced: bool = False) -> str | None:
     """Why `provider` may not start a run now, or None when it may. Busy-ness is the caller's."""
     if not provider.enabled:
         return "switched off in providers.json"
+    if switched_off_by_date(provider, at, zone_name):
+        return f"switched off from {provider.off_from} (`off_from` in providers.json)"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
     if not forced and not provider.schedule.is_open(zone_name, at):

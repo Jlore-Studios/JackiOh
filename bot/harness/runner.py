@@ -567,6 +567,41 @@ class MuseCli(_Cli):
                          infra_hint=launch.code == 2)
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _devin_answer(stdout: str) -> str:
+    """Devin's printed answer without colour codes or the welcome line it prints first."""
+    text = _ANSI.sub("", stdout).strip()
+    if text.startswith("Welcome to Devin CLI!"):
+        text = text.split("\n", 1)[1].strip() if "\n" in text else ""
+    return text
+
+
+def _devin_steps(export: str) -> list[str]:
+    """Devin's exported conversation as one line per thing its agent did: `ran <command>`, a
+    tool with its arguments, or what it said."""
+    try:
+        steps = json.loads(export).get("steps") or []
+    except (ValueError, AttributeError):
+        return [line for line in export.splitlines() if line.strip()]
+    lines: list[str] = []
+    for step in steps:
+        if not isinstance(step, dict) or step.get("source") != "agent":
+            continue
+        for call in step.get("tool_calls") or []:
+            if not isinstance(call, dict):
+                continue
+            args = call.get("arguments") if isinstance(call.get("arguments"), dict) else {}
+            if args.get("command"):
+                lines.append(f"ran `{_clip(str(args['command']), 200)}`")
+            else:
+                lines.append(f"{call.get('function_name')}: {_clip(json.dumps(args), 200)}")
+        if str(step.get("message") or "").strip():
+            lines.append(f"said: {_clip(str(step['message']))}")
+    return lines
+
+
 class DevinCli(_Cli):
     """Cognition's Devin CLI (`devin -p`), signed in on the machine with a Devin account.
 
@@ -593,12 +628,13 @@ class DevinCli(_Cli):
                               raw)
         if isinstance(launch, RunResult):
             return launch
-        text = _read(raw).strip()
+        text = _devin_answer(_read(raw))
         stderr = launch.stderr
-        session = _read(export)
+        steps = _devin_steps(_read(export))
         export.unlink(missing_ok=True)
-        raw.write_text((session.rstrip() + "\n\n--- answer ---\n" if session.strip() else "")
-                       + text + ("\n\n--- stderr ---\n" + stderr if stderr.strip() else ""),
+        raw.write_text("".join(f"{line}\n" for line in steps)
+                       + ("\n--- answer ---\n" if steps else "") + text
+                       + ("\n\n--- stderr ---\n" + stderr if stderr.strip() else ""),
                        encoding="utf-8")
         self._keep(launch, transcript)
         if launch.timed_out:
