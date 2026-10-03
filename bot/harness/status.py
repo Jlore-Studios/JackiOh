@@ -10,7 +10,7 @@ from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING)
 from harness.context import Context
-from harness.plan import run_status
+from harness.plan import run_status, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
@@ -138,7 +138,7 @@ def report(ctx: Context) -> str:
         return found
 
     held: dict[int, str] = {}
-    for issue in labelled(LABEL_WORKING):
+    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
         record = state["items"].get(str(issue["number"]), {})
         held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
     survey = state.get("suggest") or {}
