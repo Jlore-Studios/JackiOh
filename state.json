@@ -556,7 +556,9 @@
     },
     "142": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5972730471"
+      ],
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T19:19:30Z",
@@ -576,7 +578,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-03T19:07:04Z",
+      "queued_at": "2026-10-03T19:31:10Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37147433945",
       "source": "request",
