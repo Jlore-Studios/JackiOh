@@ -475,9 +475,7 @@
       "stop_requested": false
     },
     "63": {
-      "asks": [
-        "c:5965533265"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -493,14 +491,16 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "gpt",
       "question": "Please add the two .github/ files from the snippets below (patches-ship.yml workflow + patches check in ci.yml). Bot rules (prompt Never #1, CLAUDE.md) forbid bot edits under .github/ \u2014 the harness reverts them \u2014 so a person must land these two small files before this can merge.",
       "queued_at": "2026-10-03T04:30:14Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37089106384",
-      "started_at": "2026-10-03T02:14:55Z",
+      "run_id": "37099014588",
+      "started_at": "2026-10-03T05:12:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5965533265"
+      ]
     },
     "66": {
       "asks": [],
@@ -615,9 +615,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T05:11:15Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37098986287",
-    "what": "build #37 on claude-1"
+    "at": "2026-10-03T05:12:56Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37099014588",
+    "what": "build #63 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-03T00:52:14Z",
