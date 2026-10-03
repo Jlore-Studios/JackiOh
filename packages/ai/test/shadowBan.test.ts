@@ -228,16 +228,26 @@ describe("the sweep judges a card at every tier (R186)", () => {
     expect(affordableOnlyAtHard.unswept).toBe(false);
   });
 
+  // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
+  // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
+  // for two seeds, Hard's two take 12 s). Whether a card is affordable at four crystals follows from
+  // its cost, never from the seed, so Easy's check plays one game.
   it(
-    "R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals and judged at Hard's seven",
+    "R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals",
     { timeout: 300_000 },
     () => {
-      const easy = sweepCard("core-029", { seeds: 2, tier: "easy" });
+      const easy = sweepCard("core-029", { seeds: 1, tier: "easy" });
       expect(easy.tier).toBe("easy");
       expect(easy.affordableTurns).toBe(0);
       expect(easy.unswept).toBe(true);
       expect(easy.flags).toEqual([]);
+    },
+  );
 
+  it(
+    "R186 GIGA Glowy Jelly Bean (6 mana) is judged at Hard's seven crystals",
+    { timeout: 300_000 },
+    () => {
       const hard = sweepCard("core-029", { seeds: 2, tier: "hard" });
       expect(hard.tier).toBe("hard");
       expect(hard.errors).toBe(0);

@@ -21,10 +21,12 @@ class ConfigTests(unittest.TestCase):
         first = cfg.pool.get("claude-1")
         self.assertEqual((first.id, first.cli, first.model, first.effort, first.secret),
                          ("claude-1", "claude", "opus", "xhigh", "CLAUDE_CODE_OAUTH_TOKEN"))
-        self.assertEqual((first.schedule.start, first.schedule.end), ("21:00", "07:00"))
+        self.assertEqual(first.schedule.mode, "always")  # any hour, under its caps
+        fourth = cfg.pool.get("claude-4")
+        self.assertEqual((fourth.schedule.start, fourth.schedule.end), ("21:00", "07:00"))
         self.assertEqual(cfg.max_self_check_rounds, 3)
         self.assertIn("plan", cfg.max_turns)
-        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (7, 3))
+        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (10, 6))
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)

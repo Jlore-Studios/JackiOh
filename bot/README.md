@@ -4,8 +4,8 @@
 free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
-and limits ([Subscriptions](#subscriptions)). Up to seven items run at once: the Claude accounts' on
-GitHub's runners, and at most three on the bot's own machine. Every model has a tier (weak,
+and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
+GitHub's runners, and at most six on the bot's own machine. Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
 each item first; the cheapest builder the owner's usage order allows builds it, runs the
@@ -264,7 +264,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
+| `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | any time | 98% of 5 hours, 90% of the week |
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
@@ -316,7 +316,7 @@ At the top level, `max_parallel` is how many run at once, `machine_parallel` how
 may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
 and no such limit), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once; Devin's is 2, on two runners. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+(default 1) is how many items it may work on at once; Devin's is 6, on six runners, so it can fill the machine's six alone. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -506,7 +506,10 @@ GitHub Actions, such as the harness's local `bb` container.
    - a builder session on the builder's model (`claude --model sonnet --effort xhigh`, say) that
      can read, edit and run commands;
    - the repository's checks from `.harness/config.json`, with any check that is also red on
-     untouched `main` marked as not this change's fault;
+     untouched `main` marked as not this change's fault. On the bot's machine a run skips the
+     checks marked `"machine": false` (lint and the full unit tests), which CI on the pull
+     request runs anyway, and its builder and reviewer are told to check only what they changed:
+     every job there shares two vCPUs, so the heavy suites run on GitHub's runners instead;
    - for a self-checking builder, [the self-check loop](#the-self-check-loop);
    - a reviewer session on the run's reviewing model, allowed to read and run things but not to
      edit, told to find every reason the change should not ship (or, with none, the change goes to
