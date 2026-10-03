@@ -324,14 +324,19 @@
       "stop_requested": false
     },
     "52": {
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-01T03:03:20Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "37088366492",
+      "started_at": "2026-10-03T02:02:52Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "53": {
       "asks": [],
@@ -514,9 +519,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-02T23:46:15Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37078968047",
-    "what": "build #37 on gpt"
+    "at": "2026-10-03T02:02:52Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37088366492",
+    "what": "build #52 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T00:52:14Z",
