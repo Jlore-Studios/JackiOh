@@ -491,9 +491,7 @@
       "source": "request",
       "started_at": "2026-10-03T14:59:59Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5969836811"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "gemini",
