@@ -34,7 +34,7 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 | `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or add a subscription |
 | `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, starting the machine first if it is stopped |
 | `register-runners.sh` | on your computer | registers each `night-vm-*` subscription's runner with GitHub and starts it as a service |
-| `starter.py` | AWS Lambda | starts the machine when a bot-night job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
+| `starter.py` | AWS Lambda | starts the machine when a bot-night or triage job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
 | `deploy-starter.sh` | on your computer | creates or updates the starter, its role and its five-minute schedule |
 
 The scripts on your computer need the AWS CLI signed in to the project (`aws login`) and, for the

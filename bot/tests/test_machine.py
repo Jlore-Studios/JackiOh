@@ -43,6 +43,14 @@ class StarterTests(unittest.TestCase):
             8: [job("work", "waiting", ["night-vm-agy"])]})           # an approval, not a runner
         self.assertEqual(starter.waiting_jobs("123", ["bot-night.yml"], get, NOW), [])
 
+    def test_triage_wakes_it_too(self):
+        self.assertEqual(starter.DEFAULT_WORKFLOWS.split(","), ["bot-night.yml", "triage.yml"])
+        get, calls = fake_api({"in_progress": [{"id": 9}]}, {9: [
+            job("classify", "queued", ["night-vm-devin"])]})
+        found = starter.waiting_jobs("123", starter.DEFAULT_WORKFLOWS.split(","), get, NOW)
+        self.assertEqual(found[0]["label"], "night-vm-devin")
+        self.assertTrue(any("/workflows/triage.yml/" in c for c in calls))
+
     def test_a_job_whose_runner_is_missing_stops_waking_it(self):
         get, _ = fake_api({"in_progress": [{"id": 7}]}, {7: [
             job("work", "queued", ["night-vm-muse"], created="2026-10-02T14:00:00Z")]})
