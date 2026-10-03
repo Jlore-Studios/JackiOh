@@ -652,7 +652,11 @@
   display: none;
 }
 
-.cf .cf-term {
+/* A term takes the ink of the line it stands in, whatever screen holds the face. The deck builder,
+   the Card Almanac and Patch notes are tavern screens, whose `.tavern.app-shell strong` (one element
+   over two classes, auth/tavern.css) paints the screen's own bold words pale gold; on the parchment
+   that gold all but vanished, and with it every keyword (#85). Three classes outrank it. */
+.cf .card-text .cf-term {
   font-weight: 800;
   color: inherit;
 }

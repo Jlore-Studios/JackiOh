@@ -19,7 +19,7 @@ function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, L
 
 describe("R388 the patch source", () => {
   it("R388 names a file by its stem, whatever the path the glob hands out", () => {
-    expect(fileStem("../../../../packages/cards/patches/v0.1.0-r3.json")).toBe("v0.1.0-r3");
+    expect(fileStem("../../../../packages/cards/patches/v0.1.0d.json")).toBe("v0.1.0d");
     expect(fileStem("/patches/patches.json")).toBe("patches");
     expect(Object.keys(loadersByStem({ "../a/v1.json": () => Promise.resolve(1), "../a/index.json": () => Promise.resolve(2) }))).toEqual([
       "v1",
@@ -70,9 +70,9 @@ describe("R388 the patch source", () => {
 
   it("R388 the real source reads packages/cards/patches/: six patches in the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     const index = await realPatchSource.index();
-    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);
       expect(snapshot, patch.version).not.toBeNull();

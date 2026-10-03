@@ -226,7 +226,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Cry: trigger("Cry", SHORT_REMINDERS.Cry),
   Death: trigger("Death", "When sent from the field to the GY"),
   "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw", ["Start of your turn"]),
-  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup"),
+  // Classic #65 prints "End of your turn:", as Start of turn's alias does its half (#85).
+  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup", ["End of your turn"]),
   "Start of game": trigger("Start of game", "After mulligan, before turn 1", ["Start of Game"]),
   "Once per turn": trigger("Once per turn", "Activated ability limit", ["Once per Turn"]),
   Aura: trigger("Aura", "Effect while in play"),

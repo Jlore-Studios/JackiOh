@@ -562,6 +562,10 @@ git. Proposal:
    The designer's balance notes behind v0.1.0-r1 landed first, as `ba45d13` (2026-09-20, merged
    in PR #2), in the source notes rather than the catalog. The "-rN" labels are proposals:
    **⚠ designer** may prefer other names for the pre-v0.1.1 changes.
+
+   > **Renamed (#85).** This table is the brief's record and keeps the names it proposed. Revisions
+   > now take a letter (`docs/issues-and-patches.md`), so the patch history ships v0.1.0-r1, -r2 and
+   > -r3 as v0.1.0b, v0.1.0c and v0.1.0d (R375, R388).
 5. **Reading old versions.**
    - The collection's card detail view gets a History section: each patch in which the card changed,
      its faces as they were (drawn from the snapshot), and the words and numbers that changed marked
