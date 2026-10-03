@@ -248,7 +248,12 @@ type VoiceChannel = {
   stop: (() => void) | null;
 };
 
-export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine {
+/** The concrete browser engine exposes the room buses; generic test sinks remain plain AudioEngine. */
+export type MatchFeelAudioEngine = AudioEngine & {
+  ambienceOutput(): { context: AudioContext; ambience: AudioNode; crowd: AudioNode; ambienceDuck: GainNode } | null;
+};
+
+export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAudioEngine {
   const factory = options.createContext === undefined ? defaultContextFactory() : options.createContext;
   const speech = options.speech === undefined ? browserSpeechPort() : options.speech;
   const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
@@ -326,6 +331,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const t = ctx.currentTime;
     buses.master.gain.setTargetAtTime(levels.master, t, GAIN_SMOOTHING_S);
     buses.sfx.gain.setTargetAtTime(levels.sfx, t, GAIN_SMOOTHING_S);
+    buses.crowd.gain.setTargetAtTime(levels.crowd, t, GAIN_SMOOTHING_S);
+    buses.ambience.gain.setTargetAtTime(levels.ambience, t, GAIN_SMOOTHING_S);
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
     buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
@@ -441,18 +448,26 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         return true;
       }
 
+      // Sand is a fidget surface: every physical tap gets its own crunch, even in a burst faster
+      // than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still disconnect
+      // through the normal delayed cleanup below.
+      const rapid = id === "sand";
       const last = lastSfxAt.get(id);
-      if (last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
+      if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
-      if (sfxEnds.length >= SFX_MAX_VOICES) return false;
+      if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
       const cue = ctx.createGain();
       cue.gain.value = spec.gain;
       cue.connect(buses.sfx);
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;
 
-      lastSfxAt.set(id, t);
-      sfxEnds.push(t + delay + lengthMs);
+      if (!rapid) {
+        lastSfxAt.set(id, t);
+        // The fidget surface has its own deliberately unbounded short-voice path. Do not let a
+        // burst of sand grains consume the gameplay/SFX polyphony budget.
+        sfxEnds.push(t + delay + lengthMs);
+      }
       if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
       later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
       pushLog(logged());
@@ -893,6 +908,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    ambienceOutput: () =>
+      ctx === null || buses === null || disposed
+        ? null
+        : { context: ctx, ambience: buses.ambience, crowd: buses.crowd, ambienceDuck: buses.ambienceDuck },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {

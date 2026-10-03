@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { KEYWORD_KINDS } from "@jackioh/shared";
 
 import Board from "./Board.tsx";
+import { SAND_FEEL } from "./SandSurface.tsx";
 import { LANES, NO_HIGHLIGHT, testid, type ClickTarget, type Highlight } from "./contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 
@@ -48,6 +49,54 @@ describe("Board", () => {
   it("renders the full board from a PlayerView", () => {
     const { container } = render(<Board view={fullBoardView()} />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it("builds End turn into its rail and reflects existing legality without deciding a move", () => {
+    const view = fullBoardView();
+    const active = render(<Board view={view} highlight={highlightOf([testid.endTurn])} />);
+    const endTurn = screen.getByTestId(testid.endTurn);
+    expect(endTurn.closest(".turn-mechanism")?.getAttribute("data-turn-state")).toBe("waiting");
+    expect(endTurn).not.toBeDisabled();
+
+    active.rerender(<Board view={view} highlight={{ ...highlightOf([testid.endTurn, testid.hero("you")]), glow: new Set([testid.power]) }} />);
+    expect(screen.getByTestId(testid.endTurn).getAttribute("data-turn-state")).toBe("ready");
+
+    active.rerender(<Board view={{ ...view, active: view.opponent.player }} highlight={NO_HIGHLIGHT} />);
+    expect(screen.getByTestId(testid.endTurn)).toHaveTextContent("Enemy turn");
+    expect(screen.getByTestId(testid.endTurn)).toBeDisabled();
+  });
+
+  it("depresses the physical End turn mechanism only when it dispatches", () => {
+    const view = fullBoardView();
+    const onControl = vi.fn();
+    render(<Board view={view} highlight={highlightOf([testid.endTurn])} onControl={onControl} />);
+
+    fireEvent.click(screen.getByTestId(testid.endTurn));
+    expect(onControl).toHaveBeenCalledWith("end-turn");
+    expect(screen.getByTestId(testid.endTurn)).toHaveAttribute("data-pressed", "true");
+    expect(boardCss).toContain("end-turn-turnover");
+  });
+
+  it("leaves every pointer gesture with a card or active interaction alone, while empty sand marks immediately", () => {
+    const view = fullBoardView();
+    const mounted = render(<Board view={view} />);
+    const field = mounted.container.querySelector<HTMLElement>(".field");
+    if (field === null) throw new Error("fixture must draw a field");
+    Object.defineProperty(field, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ left: 0, top: 0, width: 100, height: 100 }),
+    });
+
+    fireEvent.pointerDown(field, { clientX: 30, clientY: 40, pointerId: 1 });
+    const firstTapMarks = field.querySelectorAll(".sand-mark").length;
+    expect(firstTapMarks).toBeGreaterThanOrEqual(SAND_FEEL.baseGrains + 1);
+    expect(field.querySelectorAll(".sand-mark--grain")).toHaveLength(firstTapMarks - 1);
+    fireEvent.pointerDown(screen.getByTestId(testid.card(view.you.units[0]?.instanceId ?? "")), { clientX: 35, clientY: 45, pointerId: 2 });
+    expect(field.querySelectorAll(".sand-mark")).toHaveLength(firstTapMarks);
+
+    mounted.rerender(<Board view={view} sandDisabled />);
+    fireEvent.pointerDown(field, { clientX: 40, clientY: 50, pointerId: 3 });
+    expect(field.querySelectorAll(".sand-mark")).toHaveLength(firstTapMarks);
   });
 
   it("is given the fixture BUILD M5-T1 asks for: 10 units, 10 backrow cards and a stacked pile", () => {

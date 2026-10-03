@@ -17,7 +17,7 @@
 // there and shows `log-toggle` instead, which opens it over the top of the board
 // (`data-log="open"`) until it is pressed again.
 
-import { useContext, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
@@ -41,6 +41,7 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import SandSurface from "./SandSurface.tsx";
 import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
@@ -49,6 +50,7 @@ import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
+import { getAudioEngine } from "../audio/engine.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
 import "./board.css";
@@ -429,6 +431,8 @@ function ControlButton({
   highlight,
   animating,
   confirm,
+  turnState,
+  pressed = false,
   onPress,
 }: {
   control: BoardControl;
@@ -438,6 +442,10 @@ function ControlButton({
   animating?: AnimatingMap;
   /** `"armed"` while End turn is waiting for its confirming second click (B25). */
   confirm?: "armed";
+  /** End-turn's physical housing state; this is presentation over engine-provided legality. */
+  turnState?: "ready" | "waiting" | "enemy" | "locked";
+  /** A dispatched turn-end stays visibly depressed until the next rendered view takes over. */
+  pressed?: boolean;
   onPress: () => void;
 }): ReactElement {
   const legal = isLegal(highlight, testId);
@@ -449,6 +457,8 @@ function ControlButton({
       data-legal={legalAttr(legal)}
       data-glow={glowAttr(highlight, testId)}
       data-confirm={confirm}
+      data-turn-state={turnState}
+      data-pressed={pressed ? "true" : undefined}
       data-selected={isSelected(highlight, testId) ? "true" : undefined}
       data-animating={animating?.get(testId)}
       aria-disabled={legal ? undefined : "true"}
@@ -470,6 +480,11 @@ export default function Board({
   highlight = NO_HIGHLIGHT,
   animating,
   animated,
+  turnClock,
+  matchStatus,
+  boardRail,
+  boardNotices,
+  sandDisabled = false,
   onClick,
   onControl,
 }: BoardProps): ReactElement {
@@ -482,13 +497,20 @@ export default function Board({
   const yourHand: CardView[] | { count: number } = view.you.hand;
   const dragToPlay = useSetting("dragToPlay");
   const confirmEndTurn = useSetting("confirmEndTurn");
+  const field = useRef<HTMLDivElement>(null);
 
   // B25: the confirm is armed FOR a view. Any new view (the engine moved, the turn changed, an
   // animation caught up) is a different object, so it disarms without an effect.
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
+  const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  const needsConfirm = confirmEndTurn && hasMovesLeft(highlight);
+  const actionsRemain = hasMovesLeft(highlight);
+  const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
+  const pressed = pressedFor === view;
+  const endTurnLegal = isLegal(highlight, testid.endTurn);
+  const ownTurn = view.result === null && view.active === view.viewer;
+  const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -496,6 +518,8 @@ export default function Board({
       return;
     }
     setArmedFor(null);
+    setPressedFor(view);
+    getAudioEngine().playSfx("endTurn");
     onControl?.("end-turn");
   }
 
@@ -525,7 +549,8 @@ export default function Board({
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label="Field">
+        <div className="field" aria-label="Field" ref={field}>
+          <SandSurface field={field} disabled={sandDisabled} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
               {FIELD_ROWS.map((slot) => (
@@ -549,6 +574,8 @@ export default function Board({
         <Hand side="you" hand={yourHand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label="Controls">
+          {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
+          {boardNotices === undefined ? null : <div className="board-notices">{boardNotices}</div>}
           {/* Whose turn, above End turn wherever the controls have a column of their own (board.css
               hides it on a phone held upright, where the shell's banner says it). The banner is the
               live region, so this copy stays out of the accessibility tree. */}
@@ -568,15 +595,21 @@ export default function Board({
                     : "Opponent's turn"}
             </span>
           </div>
-          <ControlButton
-            control="end-turn"
-            testId={testid.endTurn}
-            label={armed ? "Confirm end turn" : "End turn"}
-            highlight={highlight}
-            animating={animating}
-            confirm={armed ? "armed" : undefined}
-            onPress={pressEndTurn}
-          />
+          {matchStatus === undefined ? null : <div className="board-status">{matchStatus}</div>}
+          <div className="turn-mechanism" data-turn-state={endTurnState}>
+            <ControlButton
+              control="end-turn"
+              testId={testid.endTurn}
+              label={endTurnState === "enemy" ? "Enemy turn" : armed ? "Confirm end turn" : "End turn"}
+              highlight={highlight}
+              animating={animating}
+              confirm={armed ? "armed" : undefined}
+              turnState={endTurnState}
+              pressed={pressed}
+              onPress={pressEndTurn}
+            />
+            {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{Math.ceil(view.clockMs / 1000)}s</span>)}
+          </div>
           <ControlButton
             control="offer-draw"
             testId={testid.offerDraw}
@@ -593,7 +626,6 @@ export default function Board({
             animating={animating}
             onPress={() => onControl?.("concede")}
           />
-          {view.clockMs !== null && <span className="clock">{Math.ceil(view.clockMs / 1000)}s</span>}
           {/* Phones only (board.css): the log's own place on the board is hidden there. */}
           <button
             type="button"
