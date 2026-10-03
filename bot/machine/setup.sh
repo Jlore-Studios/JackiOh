@@ -77,7 +77,10 @@ set +e
 if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
 fi
-rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" 2>/dev/null
+rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
+  "$HOME/.cache/Cypress" 2>/dev/null
+# What this user's jobs left in /tmp; one job at a time per user, so an hour old is this job's.
+find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +60 -exec rm -rf {} + 2>/dev/null
 if [ -d "$HOME/.codex/sessions" ]; then
   find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
 fi
@@ -119,6 +122,7 @@ GEMINI_FORCE_FILE_STORAGE=true
 TBH_CREDENTIAL_BACKEND=file
 MUSE_NO_AUTO_UPDATE=1
 COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+CYPRESS_INSTALL_BINARY=0
 ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/night-vm-job-done.sh
 EOF
   echo "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin" | sudo -u "$user" tee "$dir/.path" >/dev/null
