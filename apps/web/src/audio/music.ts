@@ -19,8 +19,11 @@
 // it can be heard again.
 //
 // Like the engine, nothing is scheduled on a context that is not running, and the player never
-// throws. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed) and decoded only to
-// play (MUSIC_DECODED_MAX kept); a preload fetches bytes only, and waits while the board animates.
+// throws. A turn or focus change that arrives while the context is suspended is applied the moment
+// it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed; a failed fetch
+// is tried again next time) and decoded only to play (MUSIC_DECODED_MAX kept). No file is fetched
+// or decoded while the board animates (B58): a preload fetches bytes only, and both wait for the
+// burst to end. A sting whose file cannot be had is skipped, never waited on.
 
 import {
   MUSIC_BAR_WAIT_MAX_S,
@@ -152,6 +155,9 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   let voices: Voice[] = [];
   let want: { track: string | null; intro: string | null } = { track: null, intro: null };
   let opponent = false;
+  /** The turn mix and focus level the graph was last set to; null until the graph exists. */
+  let appliedTurn: boolean | null = null;
+  let appliedFocus: number | null = null;
   let busy = false;
   let disposed = false;
   let entries: MusicLogEntry[] = [];
@@ -216,6 +222,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     turn.connect(focus);
     focus.connect(out.input);
     graph = { ctx, filter, turn, focus };
+    appliedTurn = opponent;
+    appliedFocus = focus.gain.value;
     return graph;
   }
 
@@ -228,13 +236,19 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return focusPort.focused() ? 1 : 0;
   }
 
+  /** Ramps the focus level to where it should be, once the context runs (`sync` calls it again after a resume). */
   function applyFocus(): void {
     if (graph === null || !running()) return;
-    graph.focus.gain.setTargetAtTime(focusTarget(), graph.ctx.currentTime, MUSIC_FOCUS_TC_S);
+    const target = focusTarget();
+    if (target === appliedFocus) return;
+    appliedFocus = target;
+    graph.focus.gain.setTargetAtTime(target, graph.ctx.currentTime, MUSIC_FOCUS_TC_S);
   }
 
+  /** Ramps the turn mix to where it should be, once the context runs (`sync` calls it again after a resume). */
   function applyTurn(): void {
-    if (graph === null || !running()) return;
+    if (graph === null || !running() || appliedTurn === opponent) return;
+    appliedTurn = opponent;
     const t = graph.ctx.currentTime;
     graph.filter.frequency.setTargetAtTime(opponent ? MUSIC_OPPONENT_LOWPASS_HZ : MUSIC_OPEN_LOWPASS_HZ, t, MUSIC_TURN_TC_S);
     graph.turn.gain.setTargetAtTime(opponent ? MUSIC_OPPONENT_GAIN : 1, t, MUSIC_TURN_TC_S);
@@ -257,6 +271,10 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       }
     })();
     bytes.set(id, pending);
+    // A failure is not kept: the next time the track is wanted, it is fetched again.
+    void pending.then((raw) => {
+      if (raw === null && bytes.get(id) === pending) bytes.delete(id);
+    });
     while (bytes.size > MUSIC_BYTES_MAX) {
       const oldest = bytes.keys().next().value;
       if (oldest === undefined) break;
@@ -380,6 +398,9 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     if (disposed) return;
     quietly(() => {
       if (ensureGraph() === null || !running() || graph === null) return;
+      // Whatever changed while the context was suspended lands now.
+      applyTurn();
+      applyFocus();
       const now = graph.ctx.currentTime;
       const soon = now + MUSIC_LEAD_S;
       const target = want.track;
@@ -401,9 +422,13 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
 
       const missing = (intro === null ? [target] : [intro, target]).filter((id) => !decoded.has(id));
       if (missing.length > 0) {
+        // Nothing is fetched or decoded during an animation burst (B58); setBusy(false) comes back here.
+        if (busy) return;
         for (const id of missing) {
           void decode(id).then((buffer) => {
-            if (buffer !== null) sync();
+            // A sting that cannot be had is skipped, so the track it leads into still plays.
+            if (buffer === null && id === want.intro) want = { ...want, intro: null };
+            if (buffer !== null || id === intro) sync();
           });
         }
         return;
@@ -412,25 +437,32 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       let at: number;
       let fadeIn: number;
       let offset = 0;
-      if (waiting.length > 0 || sting !== null) {
+      if (sting !== null) {
         // A sting plays on: the new track takes the place of whatever was to follow it.
-        at = waiting[0]?.startAt ?? Math.max(soon, (sting?.origin ?? 0) + (sting?.track.handoff ?? 0));
+        at = waiting[0]?.startAt ?? Math.max(soon, sting.origin + (sting.track.handoff ?? 0));
         for (const v of waiting) fadeOut(v, at, MUSIC_FADE_S);
         fadeIn = MUSIC_HANDOFF_FADE_S;
       } else {
-        at = lead === null ? soon : nextBar(lead, now, soon);
-        for (const v of sounding) fadeOut(v, at, MUSIC_FADE_S);
-        if (intro !== null) {
-          const introBuffer = decoded.get(intro);
-          const started = introBuffer === undefined ? null : startVoice(intro, introBuffer, at, 0, MUSIC_HANDOFF_FADE_S);
-          want = { ...want, intro: null };
-          if (started !== null && started.track.handoff !== null) {
-            at += started.track.handoff;
-            fadeIn = MUSIC_HANDOFF_FADE_S;
-          } else {
-            offset = resumeAt.get(target) ?? 0;
-            fadeIn = fadeInFor(target, offset);
-          }
+        if (waiting.length > 0) {
+          // A change is already on its way to a bar line: this one takes its place there.
+          at = waiting[0]?.startAt ?? soon;
+          for (const v of waiting) fadeOut(v, at, MUSIC_FADE_S);
+        } else {
+          at = lead === null ? soon : nextBar(lead, now, soon);
+          for (const v of sounding) fadeOut(v, at, MUSIC_FADE_S);
+        }
+        const introBuffer = intro === null ? undefined : decoded.get(intro);
+        const started = intro === null || introBuffer === undefined ? null : startVoice(intro, introBuffer, at, 0, MUSIC_HANDOFF_FADE_S);
+        if (intro !== null) want = { ...want, intro: null };
+        // The target may be the very track fading out from `at` (a change undone before it landed):
+        // the new copy then starts exactly where the old one is, so the two crossfade into one.
+        const fading = voices.find((v) => v.stopping && v.id === target && Math.abs(v.fade.t0 - at) < 1e-6 && v.startAt < at);
+        if (started !== null && started.track.handoff !== null) {
+          at += started.track.handoff;
+          fadeIn = MUSIC_HANDOFF_FADE_S;
+        } else if (fading !== undefined) {
+          offset = trackTime(fading, at);
+          fadeIn = MUSIC_FADE_S;
         } else {
           offset = resumeAt.get(target) ?? 0;
           fadeIn = fadeInFor(target, offset);
@@ -470,7 +502,10 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     },
     setBusy(next) {
       busy = next;
-      if (!busy) pumpPreload();
+      if (!busy) {
+        pumpPreload();
+        sync();
+      }
     },
     current: () => top()?.id ?? null,
     wanted: () => want.track,

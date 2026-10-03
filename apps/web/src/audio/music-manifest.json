@@ -3,8 +3,8 @@
   "format": "aac-lc 44100 stereo 80k",
   "files": {
     "menu": {
-      "hash": "25df5259f2b856ce",
-      "bytes": 1637332,
+      "hash": "50981a2bd59546f3",
+      "bytes": 1637334,
       "bpm": 92,
       "beatsPerBar": 4,
       "loop": true,
@@ -15,8 +15,8 @@
       "handoff": null
     },
     "tavern-1": {
-      "hash": "fb153c264ffc0206",
-      "bytes": 1468149,
+      "hash": "72e70934149742bf",
+      "bytes": 1468155,
       "bpm": 96,
       "beatsPerBar": 4,
       "loop": true,
@@ -27,8 +27,8 @@
       "handoff": null
     },
     "tavern-2": {
-      "hash": "d7070e5f8734599c",
-      "bytes": 1357523,
+      "hash": "78c76d32683d723b",
+      "bytes": 1357528,
       "bpm": 104,
       "beatsPerBar": 4,
       "loop": true,
@@ -39,8 +39,8 @@
       "handoff": null
     },
     "tavern-danger": {
-      "hash": "88d07c8f6b2dec5b",
-      "bytes": 1263039,
+      "hash": "73d07b8b4e92e28e",
+      "bytes": 1263040,
       "bpm": 112,
       "beatsPerBar": 4,
       "loop": true,
@@ -51,7 +51,7 @@
       "handoff": null
     },
     "tavern-start": {
-      "hash": "03e4f0d731847eda",
+      "hash": "75b6288d89004876",
       "bytes": 102700,
       "bpm": 96,
       "beatsPerBar": 4,
@@ -63,8 +63,8 @@
       "handoff": 7.5
     },
     "edm-1": {
-      "hash": "af07a8f50cc257c5",
-      "bytes": 1269631,
+      "hash": "919a81f6138ddb98",
+      "bytes": 1269639,
       "bpm": 112,
       "beatsPerBar": 4,
       "loop": true,
@@ -75,8 +75,8 @@
       "handoff": null
     },
     "edm-2": {
-      "hash": "3ca5227d6ed9ddc2",
-      "bytes": 1318159,
+      "hash": "da3585a31e2ea3eb",
+      "bytes": 1318153,
       "bpm": 108,
       "beatsPerBar": 4,
       "loop": true,
@@ -87,8 +87,8 @@
       "handoff": null
     },
     "edm-danger": {
-      "hash": "30d7db4d242b71d3",
-      "bytes": 1315523,
+      "hash": "9c39106388000e6c",
+      "bytes": 1315651,
       "bpm": 124,
       "beatsPerBar": 4,
       "loop": true,
@@ -99,7 +99,7 @@
       "handoff": null
     },
     "edm-start": {
-      "hash": "fb10471f9c73c506",
+      "hash": "ca10548bcb4970e9",
       "bytes": 92098,
       "bpm": 112,
       "beatsPerBar": 4,
@@ -111,8 +111,8 @@
       "handoff": 6.428571
     },
     "lofi-1": {
-      "hash": "eb8c1c3aca03c30a",
-      "bytes": 1368673,
+      "hash": "e4c8af2415ff6b55",
+      "bytes": 1368671,
       "bpm": 82,
       "beatsPerBar": 4,
       "loop": true,
@@ -123,8 +123,8 @@
       "handoff": null
     },
     "lofi-2": {
-      "hash": "e0fc5403fc253a90",
-      "bytes": 1306609,
+      "hash": "034d780818a26412",
+      "bytes": 1306587,
       "bpm": 86,
       "beatsPerBar": 4,
       "loop": true,
@@ -135,8 +135,8 @@
       "handoff": null
     },
     "lofi-danger": {
-      "hash": "ef512068b651f856",
-      "bytes": 1273995,
+      "hash": "2c213ce3ed7b1edc",
+      "bytes": 1273984,
       "bpm": 88,
       "beatsPerBar": 4,
       "loop": true,
@@ -147,7 +147,7 @@
       "handoff": null
     },
     "lofi-start": {
-      "hash": "d83179d3da7204c0",
+      "hash": "40162e88444291fc",
       "bytes": 115808,
       "bpm": 82,
       "beatsPerBar": 4,
@@ -159,8 +159,8 @@
       "handoff": 8.780488
     },
     "epic-1": {
-      "hash": "4fcab946eb0f6308",
-      "bytes": 1372806,
+      "hash": "7a9c17ea8989d068",
+      "bytes": 1372800,
       "bpm": 88,
       "beatsPerBar": 4,
       "loop": true,
@@ -171,8 +171,8 @@
       "handoff": null
     },
     "epic-2": {
-      "hash": "4e2821a1b1ea7d55",
-      "bytes": 1314512,
+      "hash": "9fb3369c398d302a",
+      "bytes": 1314518,
       "bpm": 92,
       "beatsPerBar": 4,
       "loop": true,
@@ -183,8 +183,8 @@
       "handoff": null
     },
     "epic-danger": {
-      "hash": "194cf88c841eba14",
-      "bytes": 1261445,
+      "hash": "7c81636cba5263b4",
+      "bytes": 1261447,
       "bpm": 96,
       "beatsPerBar": 4,
       "loop": true,
@@ -195,7 +195,7 @@
       "handoff": null
     },
     "epic-start": {
-      "hash": "0d76cd67bd54c2d0",
+      "hash": "b50ce244e5e51546",
       "bytes": 109648,
       "bpm": 88,
       "beatsPerBar": 4,
@@ -207,8 +207,8 @@
       "handoff": 8.181818
     },
     "victory": {
-      "hash": "130d937785d4f3d8",
-      "bytes": 305550,
+      "hash": "d4100642a497cefb",
+      "bytes": 305559,
       "bpm": 100,
       "beatsPerBar": 4,
       "loop": true,
@@ -219,8 +219,8 @@
       "handoff": null
     },
     "defeat": {
-      "hash": "f75da462fba0c86f",
-      "bytes": 410046,
+      "hash": "d363b3cda025a6dc",
+      "bytes": 410050,
       "bpm": 72,
       "beatsPerBar": 4,
       "loop": true,
@@ -231,8 +231,8 @@
       "handoff": null
     },
     "draw": {
-      "hash": "9ef3712c79ec37e9",
-      "bytes": 357308,
+      "hash": "a2533fc9933ad73b",
+      "bytes": 357313,
       "bpm": 84,
       "beatsPerBar": 4,
       "loop": true,
@@ -243,8 +243,8 @@
       "handoff": null
     },
     "mythic-my-pawn": {
-      "hash": "d24f0d3c94bd6433",
-      "bytes": 248309,
+      "hash": "e56117c182db0e75",
+      "bytes": 248304,
       "bpm": 104,
       "beatsPerBar": 4,
       "loop": true,
@@ -255,8 +255,8 @@
       "handoff": null
     },
     "mythic-zephyrs": {
-      "hash": "989259bfb7511fec",
-      "bytes": 275614,
+      "hash": "5159df31a077342c",
+      "bytes": 275609,
       "bpm": 92,
       "beatsPerBar": 4,
       "loop": true,
@@ -267,8 +267,8 @@
       "handoff": null
     },
     "mythic-heroic-power": {
-      "hash": "e18076f81f2aabe4",
-      "bytes": 265668,
+      "hash": "0ad503a6424b33ca",
+      "bytes": 265671,
       "bpm": 96,
       "beatsPerBar": 4,
       "loop": true,
@@ -279,8 +279,8 @@
       "handoff": null
     },
     "mythic-craft-a-card": {
-      "hash": "a3bb4c2c851ffd65",
-      "bytes": 244410,
+      "hash": "41f98ca9834ecec9",
+      "bytes": 244246,
       "bpm": 108,
       "beatsPerBar": 4,
       "loop": true,
@@ -291,8 +291,8 @@
       "handoff": null
     },
     "mythic-ceaseless-void": {
-      "hash": "d28e15b54af2aa2f",
-      "bytes": 350976,
+      "hash": "38bf7c560cf86d1b",
+      "bytes": 350974,
       "bpm": 70,
       "beatsPerBar": 4,
       "loop": true,
@@ -303,8 +303,8 @@
       "handoff": null
     },
     "mythic-in-too-deep": {
-      "hash": "b56b0a36d7a74c7b",
-      "bytes": 325944,
+      "hash": "4df3d0d546508242",
+      "bytes": 325954,
       "bpm": 76,
       "beatsPerBar": 4,
       "loop": true,
@@ -315,8 +315,8 @@
       "handoff": null
     },
     "mythic-zephrys-zealotism": {
-      "hash": "fd65093b37ffceb4",
-      "bytes": 298576,
+      "hash": "bcf04544e8c64b2c",
+      "bytes": 298565,
       "bpm": 84,
       "beatsPerBar": 4,
       "loop": true,
@@ -327,8 +327,8 @@
       "handoff": null
     },
     "mythic-twice-forward": {
-      "hash": "b94c411b8ea977f5",
-      "bytes": 286330,
+      "hash": "1ad893f6ba23eb23",
+      "bytes": 286345,
       "bpm": 132,
       "beatsPerBar": 3,
       "loop": true,

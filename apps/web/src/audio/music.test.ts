@@ -198,6 +198,28 @@ describe("R631 changes land on a bar line and crossfade", () => {
     expect(r.audio.violations).toEqual([]);
   });
 
+  it("R631 a change undone before its bar line carries the playing track on from where it is, with no restart", async () => {
+    // The menu theme keeps no resume point (only a station's tracks do), so only this rule keeps it going.
+    const r = await rig();
+    r.player.request({ track: "menu" });
+    await settle();
+    r.audio.advance(3.1);
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.player.request({ track: "menu" });
+    await settle();
+    const bar = MUSIC_LEAD_S + 4;
+    const [old, next, again] = voices(r.audio).map((v) => v.source);
+    // The in-game track is called off before it is ever heard.
+    expect(next?.stopTime).toBeLessThanOrEqual(next?.startTime ?? 0);
+    // The new copy starts exactly where the old one is at the bar line, and the two crossfade.
+    expect(again?.startTime).toBeCloseTo(bar, 9);
+    expect(again?.startOffset).toBeCloseTo(bar - MUSIC_LEAD_S, 9);
+    expect(old?.stopTime).toBeGreaterThan(bar + MUSIC_FADE_S);
+    expect(rampsTo(voices(r.audio)[2]?.gain as FakeNode, 1)).toEqual([bar + MUSIC_FADE_S]);
+    expect(r.player.current()).toBe("menu");
+  });
+
   it("R631 never waits longer than MUSIC_BAR_WAIT_MAX_S for a bar line", async () => {
     const r = await rig();
     r.player.request({ track: "victory" });
@@ -320,13 +342,60 @@ describe("R631 the turn mix, focus and audibility", () => {
     expect(focusGain?.param("gain").targets().at(-1)?.value).toBe(1);
   });
 
-  it("R631 a file that cannot be fetched plays nothing and throws nothing", async () => {
+  it("R631 a file that cannot be fetched plays nothing, throws nothing, and is fetched again next time", async () => {
     const r = await rig();
     r.fetch.mode = "reject";
     r.player.request({ track: "tavern-1" });
     await settle();
     expect(started(r)).toEqual([]);
     expect(r.audio.violations).toEqual([]);
+    r.fetch.mode = "resolve";
+    r.player.request({ track: null });
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a", "/audio/music/tavern-1.m4a"]);
+  });
+
+  it("R631 a sting that cannot be fetched is skipped, and the track it leads into still plays", async () => {
+    const r = await rig();
+    r.fetch.modes.set("/audio/music/tavern-start.m4a", "reject");
+    r.player.request({ track: "tavern-1", intro: "tavern-start" });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+  });
+
+  it("R631 a turn or focus change made while the context is suspended lands when it runs again", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    const filter = filterOf(r.audio);
+    const turn = filter.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+    const focusGain = turn?.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+    r.audio.state = "interrupted";
+    r.player.request({ track: "tavern-1", opponentTurn: true });
+    r.focus.focused = false;
+    r.focus.fire();
+    expect(filter.param("frequency").targets()).toEqual([]);
+    expect(focusGain?.param("gain").targets()).toEqual([]);
+    r.engine.unlock();
+    await settle();
+    expect(filter.param("frequency").targets().at(-1)?.value).toBe(MUSIC_OPPONENT_LOWPASS_HZ);
+    expect(turn?.param("gain").targets().at(-1)?.value).toBe(MUSIC_OPPONENT_GAIN);
+    expect(focusGain?.param("gain").targets().at(-1)?.value).toBe(0);
+  });
+
+  it("R631 nothing is fetched while the board animates; the music loads when the burst ends", async () => {
+    const r = await rig();
+    r.player.setBusy(true);
+    r.player.request({ track: "tavern-1" });
+    r.player.preload(["tavern-danger"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual([]);
+    r.player.setBusy(false);
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    expect(r.fetch.urls()).toContain("/audio/music/tavern-danger.m4a");
   });
 });
 

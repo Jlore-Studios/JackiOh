@@ -396,9 +396,9 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 - It deletes orphan files, rewrites the manifest, and fails if the set passes `MUSIC_BUDGET_BYTES`.
 - `--only <id>` renders one track, and `--force` renders everything.
 - A looping track's file holds its intro, one pass of the body, and a short tail. The loop points
-  live in the manifest. The renderer crossfades the last moment before the loop's end into the audio
-  just before its start, so the jump is sample-exact, and the tail repeats the start, so a decoder's
-  AAC priming offset still loops cleanly.
+  live in the manifest. The renderer crossfades into the audio before the loop's start, ending 0.1 s
+  before the loop's end, and copies the loop's start from there to the file's end. So the jump is
+  sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme or a station switch is

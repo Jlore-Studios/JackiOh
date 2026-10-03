@@ -8,7 +8,8 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { DEFAULT_AUDIO_SETTINGS } from "./settings.ts";
 import type { MusicRequest } from "./music.ts";
-import { LOW_HEALTH_AT, createMusicDirector, type MusicDirector } from "./musicDirector.ts";
+import { MUSIC_ROTATION_KEY } from "./constants.ts";
+import { LOW_HEALTH_AT, createMusicDirector, rotationFor, type MusicDirector } from "./musicDirector.ts";
 import type { AudioSettings } from "./types.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 
@@ -102,7 +103,8 @@ describe("R631 a match's music opens on its station", () => {
     r.director.onView(opening());
     expect(r.last()).toEqual({ track: "tavern-2", intro: "tavern-start", opponentTurn: false });
     expect(r.resets).toBe(1);
-    expect(r.preloads[0]).toEqual(["tavern-danger", "tavern-1", "tavern-2"]);
+    // The sting and the in-game track are asked for; the urgency track and the result stings are fetched ahead.
+    expect(r.preloads[0]).toEqual(["tavern-danger", "victory", "defeat", "draw"]);
   });
 
   it("R631 starts on the station the settings name", () => {
@@ -115,6 +117,16 @@ describe("R631 a match's music opens on its station", () => {
     const r = rig();
     r.director.onView(midGame());
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: false });
+  });
+
+  it("R631 a board mounted twice on the same first view (StrictMode) moves the rotation once", () => {
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
+    const first = opening();
+    expect(rotationFor(first)).toBe(0);
+    expect(rotationFor(first)).toBe(0);
+    expect(localStorage.getItem(MUSIC_ROTATION_KEY)).toBe("1");
+    expect(rotationFor(opening())).toBe(1);
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
   });
 
   it("R631 later requests carry no sting", () => {
@@ -208,6 +220,19 @@ describe("R631 Mythic themes", () => {
     expect(r.last().track).toBe("mythic-my-pawn");
   });
 
+  it("R631 a Field Trap that fires again (Classic+ #74 on each fuse) plays its theme at its first firing only", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    const fires: GameEvent = { type: "trapFired", instanceId: "t5", defId: "classicplus-074", controller: "p1", row: "backrow", lane: 3 };
+    r.director.onEvent(fires, view);
+    expect(r.last().track).toBe("mythic-twice-forward");
+    r.director.onEvent(hitOn("p1"), view);
+    expect(r.last().track).toBe("tavern-1");
+    r.director.onEvent(fires, view);
+    expect(r.last().track).toBe("tavern-1");
+  });
+
   it("R631 the same Mythic again does not restart its theme", () => {
     const r = rig();
     const view = midGame();
@@ -295,7 +320,7 @@ describe("R631 station switches", () => {
     r.director.onView(view);
     r.director.onEvent(played(K_POP, "p1"), view);
     expect(r.last().track).toBe("edm-1");
-    expect(r.preloads.at(-1)).toEqual(["edm-danger", "edm-1", "edm-2"]);
+    expect(r.preloads.at(-1)).toEqual(["edm-danger"]);
     r.director.onView(withHealth(3));
     r.director.settle();
     expect(r.last().track).toBe("edm-danger");

@@ -16,11 +16,12 @@
 // span are the same moment of the music with the same reverb tails ringing (the start is far enough
 // into the first pass that the intro's tail has died, and the end is in the second pass, where the
 // first pass's tail is still ringing as it would after any loop), so the jump is silent. The file is
-// periodic for LOOP_TAIL_S past the loop's end as well, so a decoder that shifts the samples by a
-// few milliseconds of AAC priming still loops without a click. Lo-fi's wow and crackle are periodic
-// in the body's length for the same reason. FluidSynth times events to 64-sample blocks, so the two
-// passes differ by a block here and there; a short crossfade before the loop's end makes the jump
-// exact (`seam`).
+// periodic for LOOP_TAIL_S past the loop's end as well. Lo-fi's wow and crackle are periodic in
+// the body's length for the same reason. FluidSynth times events to 64-sample blocks, so the two
+// passes differ by a block here and there; a short crossfade that ends LOOP_GUARD_S before the
+// loop's end, and a copy of the loop's start from there on, make the file exactly periodic from
+// LOOP_GUARD_S before the loop's end to LOOP_TAIL_S after it (`seam`). So the jump is exact even on
+// a decoder that keeps AAC's encoder priming (2112 samples, about 48 ms, of delay) or trims more.
 //
 // It is idempotent by input: a track renders again only when its hash (the MIDI bytes, the render
 // and post settings and the encoding) differs from the manifest's, or its file is missing or has the
@@ -55,6 +56,8 @@ const LOOP_LEAD_S = 3;
 const LOOP_TAIL_S = 0.5;
 /** The crossfade that makes the loop's jump exact (see `seam`). */
 const SEAM_FADE_S = 0.12;
+/** How far before the loop's end the file is already exactly periodic: more than AAC's priming. */
+const LOOP_GUARD_S = 0.1;
 /** A sting keeps this long after its last bar, for the reverb to die. */
 const STING_TAIL_S = 2.5;
 /** Silence rendered after the MIDI's last note, so FluidSynth's reverb tail is not cut off. */
@@ -142,7 +145,7 @@ function trackHash(track, midi) {
     post: track.song.post,
     layout: layoutOf(track),
     loudness: [TARGET_RMS_DB, PEAK_DB],
-    seam: [LOOP_LEAD_S, LOOP_TAIL_S, SEAM_FADE_S],
+    seam: [LOOP_LEAD_S, LOOP_TAIL_S, SEAM_FADE_S, LOOP_GUARD_S],
   };
   return createHash("sha1").update(JSON.stringify(input)).digest("hex").slice(0, HASH_CHARS);
 }
@@ -338,20 +341,23 @@ function encode(track, audio, layout, outFile, scratch) {
 /**
  * Makes the loop's jump sample-exact. FluidSynth starts each MIDI event on a 64-sample block, so the
  * second pass of the body sits up to a block off the first, note by note, and the two are close but
- * not equal. The last SEAM_FADE_S before the loop's end fades into the audio just before its start,
- * so the jump lands where that audio leads, and the tail after the end is the audio after the start.
+ * not equal. SEAM_FADE_S of audio ending LOOP_GUARD_S before the loop's end fades into the matching
+ * audio before its start, and from there to the end of the file every sample is a copy of the one a
+ * loop's length earlier. A decoder that shifts the samples later by up to LOOP_GUARD_S, or earlier by
+ * up to LOOP_TAIL_S, still jumps between two identical samples.
  */
 function seam(audio, layout) {
   const a = Math.round(layout.loopStart * audio.rate);
   const b = Math.round(layout.loopEnd * audio.rate);
   const x = Math.round(SEAM_FADE_S * audio.rate);
+  const g = Math.round(LOOP_GUARD_S * audio.rate);
   const tail = Math.round(LOOP_TAIL_S * audio.rate) + 1;
   for (const data of [audio.left, audio.right]) {
     for (let i = 0; i < x; i += 1) {
       const w = 0.5 - 0.5 * Math.cos((Math.PI * (i + 1)) / x);
-      data[b - x + i] = (1 - w) * data[b - x + i] + w * data[a - x + i];
+      data[b - g - x + i] = (1 - w) * data[b - g - x + i] + w * data[a - g - x + i];
     }
-    for (let k = 0; k < tail; k += 1) data[b + k] = data[a + k];
+    for (let k = -g; k < tail; k += 1) data[b + k] = data[a + k];
   }
 }
 
