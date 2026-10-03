@@ -550,9 +550,7 @@
       "run_id": "37151097660",
       "started_at": "2026-10-03T20:19:46Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972563783"
-      ]
+      "taken_asks": []
     },
     "133": {
       "failures": 0,
