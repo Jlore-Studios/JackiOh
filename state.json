@@ -244,6 +244,12 @@
       "lines": [
         "@jgoetzmann-bot Use your best judgement. As long as the checklist is fulfilled, whether is happens on this branch or the functionality already exists, it does not matter."
       ]
+    },
+    "c:5972198034": {
+      "at": "2026-10-03T18:31:24Z",
+      "lines": [
+        "@jgoetzmann-bot override, I trust that you aren't touching anything that will blow up our pipelines"
+      ]
     }
   },
   "items": {
