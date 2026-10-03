@@ -334,8 +334,9 @@ export function revertPending(catalog: Catalog, newest: Catalog, claimed: Readon
  * Every way the pending fragments disagree with the newest shipped snapshot, each naming the
  * card (and the fragment) at fault, or [] when the tree is shippable: every catalog entry that
  * differs from the newest snapshot is claimed by exactly one fragment, every claimed card
- * differs, every fragment names a bare patch number, and every fragment file holds the version
- * its name says. Pure: `patches check` reads the files and prints what this returns.
+ * differs, every fragment names a bare patch number, every fragment file holds the version its
+ * name says, and every fragment carries a title, sources and notes — they become the shipped
+ * patch's. Pure: `patches check` reads the files and prints what this returns.
  */
 export function checkFragments(args: {
   files: readonly { name: string; fragment: PendingFragment }[];
@@ -349,6 +350,12 @@ export function checkFragments(args: {
     }
     if (name !== `${fragment.version}.json`) {
       problems.push(`pending/${name} holds version "${fragment.version}", not the version its file names`);
+    }
+    // The fragment's fields become the shipped patch's, which must carry all three (R388).
+    for (const field of ["title", "sources", "notes"] as const) {
+      if (fragment[field].trim() === "") {
+        problems.push(`pending/${name} has an empty ${field}, but a shipped patch needs one`);
+      }
     }
   }
   const differed = new Set(diffCatalogs(args.newest, args.catalog).map((change) => change.id));

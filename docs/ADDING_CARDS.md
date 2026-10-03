@@ -25,15 +25,15 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
 | 10 | `apps/web/src/audio/voice-lines.json` | the card's lines, in catalog order | `voiceData.test.ts` |
 | 11 | the count assertions below | the totals change by one | the tests named |
-| 12 | `packages/cards/patches/*` and four version sites | by `patch`, [§3](#3-the-patch-and-its-order) | `patches.test.ts`, `loc.test.ts` |
+| 12 | `packages/cards/patches/pending/<version>.json` | the fragment, `run patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the four version sites move at promotion, not here | `patches check`, `patches.test.ts`, `loc.test.ts` |
 
 **Count assertions** (`grep -rn "\b317\b\|\b268\b" --include=*.ts --include=*.tsx` finds most): `test/query.test.ts` (the
 non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SIZE`),
 `test/059-unbiased-immigration.test.ts` (the pool without #59), `apps/server/test/api/catalog.test.ts`,
 `apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
-size), `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`), and the patch list in
-`packages/cards/test/patches.test.ts`, `apps/web/src/patches/PatchNotes.test.tsx`, `apps/web/src/patches/source.test.ts` and
-`apps/web/src/routes/patch-notes.test.tsx`.
+size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). The patch-list tests
+(`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
+yours — a pending-claimed card needs no edits there (R635).
 
 Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
 `CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.

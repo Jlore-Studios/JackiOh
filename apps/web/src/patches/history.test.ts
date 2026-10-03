@@ -157,17 +157,23 @@ describe("R388 one card's history", () => {
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
     const entries = cardHistory("core-003", patches, index, snapshots);
-    expect(entries.map((entry) => entry.patch.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0b", "v0.1.0"]);
+    // Promotions only append to a card's index, so in this newest-first list they prepend:
+    // the five versions the brief checked are the tail.
+    expect(entries.map((entry) => entry.patch.version).slice(-5)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0b", "v0.1.0"]);
     expect(entries.at(-1)?.delta.kind).toBe("added");
   });
 
-  it("R388 a real Classic card is unchanged since v0.2.0", async () => {
+  it("R388 a real Classic card is unchanged since the patch that added it", async () => {
     const patches = await realPatchSource.patches();
     const index = await realPatchSource.index();
     const versions = versionsForCard("classic-001", patches, index);
-    expect(versions).toEqual(["v0.1.1", "v0.2.0"]);
+    expect(versions.slice(0, 2)).toEqual(["v0.1.1", "v0.2.0"]);
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
-    expect(unchangedSince(cardHistory("classic-001", patches, index, snapshots))).toBe("v0.2.0");
+    // Added in v0.2.0 and unchanged since — until a promoted patch touches it again (R635),
+    // which turns "unchanged since" off by adding a second history entry.
+    expect(unchangedSince(cardHistory("classic-001", patches, index, snapshots))).toBe(
+      (index["classic-001"] ?? []).length === 1 ? "v0.2.0" : null,
+    );
   });
 });

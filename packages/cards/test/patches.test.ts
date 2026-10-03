@@ -42,7 +42,9 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    // The table the brief checked is the prefix: promotions only ever append (R635), so the
+    // history the file holds today can grow past it but never move it.
+    expect(VERSIONS.slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -55,7 +57,6 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R635)", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.0");
     const snapshot = readSnapshot(CATALOG_VERSION);
     // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
     // cards (R635): reverted to the snapshot, the catalog is the snapshot. With no fragments
@@ -143,10 +144,12 @@ describe("R388 card patch history (B4.2)", () => {
     const index = buildIndex(PATCHES);
     expect(index["core-t-coin"]?.[0]).toBe("v0.1.0c");
     expect(index["core-t-ghoul"]?.[0]).toBe("v0.1.1");
-    expect(index["classic-001"]).toEqual(["v0.2.0"]);
+    expect(index["classic-001"]?.[0]).toBe("v0.2.0");
     expect(index["core-016"]).toContain("v0.2.0");
-    // Every catalog entry was added by some patch.
-    expect(Object.keys(CATALOG).filter((id) => index[id] === undefined)).toEqual([]);
+    // Every catalog entry was added by some patch, or is claimed by a pending fragment — which is
+    // not a shipped patch yet, so the index does not name it (R635).
+    const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
+    expect(Object.keys(CATALOG).filter((id) => index[id] === undefined && !claimed.has(id))).toEqual([]);
   });
 });
 

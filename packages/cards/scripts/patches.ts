@@ -14,8 +14,9 @@
  *   `index.json` or `shipped.json`. The optional `date` is checked and not stored: promotion
  *   dates the patch by the UTC date of the commit that added the fragment.
  * - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
- *   without exactly one fragment claiming it, when a claimed card does not differ, or when a
- *   fragment's version is not a bare patch number (`^v\d+\.\d+\.\d+$`). CI runs it in the
+ *   without exactly one fragment claiming it, when a claimed card does not differ, when a
+ *   fragment's version is not a bare patch number (`^v\d+\.\d+\.\d+$`), or when a fragment's
+ *   title, sources or notes is empty — they become the shipped patch's (R388). CI runs it in the
  *   `validate:catalog` step.
  * - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
  *   appends the patch (its version, or `<version>b`, then `c`, …, when that name already shipped;

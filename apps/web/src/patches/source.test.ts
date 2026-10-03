@@ -69,11 +69,13 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: six patches in the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads packages/cards/patches/: every patch in the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    // Promotions only ever append (R635): the six versions the brief checked stay the prefix,
+    // and a promoted patch that touches a card appends to that card's index entry.
+    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     const index = await realPatchSource.index();
-    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(index["core-065"]?.slice(0, 4)).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);
       expect(snapshot, patch.version).not.toBeNull();

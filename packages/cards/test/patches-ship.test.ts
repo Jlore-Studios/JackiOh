@@ -66,6 +66,18 @@ describe("R635 pending fragments and the check that proves them", () => {
     expect(checkFragments({ files: renamed, catalog, newest }).join("\n")).toContain("its file names");
   });
 
+  it("R635 holds a fragment to what a shipped patch carries: a title, a source and notes", () => {
+    const newest: Catalog = { aaa: card("aaa", 1) };
+    const empty = [
+      { name: "v0.2.5.json", fragment: { version: "v0.2.5", title: "", sources: " ", notes: "", cards: ["aaa"] } },
+    ];
+    expect(checkFragments({ files: empty, catalog: { aaa: card("aaa", 2) }, newest })).toEqual([
+      "pending/v0.2.5.json has an empty title, but a shipped patch needs one",
+      "pending/v0.2.5.json has an empty sources, but a shipped patch needs one",
+      "pending/v0.2.5.json has an empty notes, but a shipped patch needs one",
+    ]);
+  });
+
   it("R635 reverts the catalog to the newest snapshot on exactly the claimed cards", () => {
     const newest: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
     // Changed, added and removed entries all come back; unclaimed entries are untouched.

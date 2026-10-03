@@ -544,7 +544,8 @@ after it merges — never by editing the history on the branch.
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
   full clone (a shallow one stops early).
 - **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.0`, and a test
-  holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version. A
+  holds `catalog.json` equal to the latest snapshot (pending-claimed cards aside) and
+  `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
   (`apps/server/.env.example`, `render.yaml`); the client's `VITE_CATALOG_VERSION`; and the database,
   where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
@@ -555,8 +556,9 @@ after it merges — never by editing the history on the branch.
   notes, cards }`, where `cards` lists the catalog ids the patch creates, changes or removes
   (`--cards` lists them; otherwise they are diffed from the working catalog against the newest
   shipped snapshot). `patches check` (in CI, in the `validate:catalog` step) fails naming the card
-  when a catalog change is unclaimed or claimed twice, when a claimed card did not change, or
-  when a fragment's version is not a bare patch number. `patches ship` promotes each fragment in
+  when a catalog change is unclaimed or claimed twice, when a claimed card did not change, when a
+  fragment's version is not a bare patch number, or when a fragment's title, sources or notes is
+  empty. `patches ship` promotes each fragment in
   the order of the first-parent commit that added it — appending the patch (or `<version>b`,
   then `c`, … when that name already shipped), snapshotting that commit's catalog, recording
   `shipped.json`, deleting the fragment and bumping `CATALOG_VERSION`; with no fragments it
