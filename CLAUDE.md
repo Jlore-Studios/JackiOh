@@ -48,6 +48,7 @@ pnpm test:sql          # schema, RLS and trigger invariants: Docker only, starts
 pnpm test:db           # src/db/store.ts against a throwaway postgres:16 (Docker only; KEEP_DB=1 keeps it)
 pnpm test:deploy       # Render's deploy rehearsed: render.yaml's start command, migrating as a role that is not a superuser (as on Supabase), then a production boot (Docker only)
 pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines with macOS `say`/`afconvert` (idempotent); `--check` runs anywhere
+pnpm --filter @jackioh/web gen:music   # re-render changed music scores with FluidSynth and ffmpeg (R631, idempotent); `--check` runs anywhere
 ```
 
 Replay one failing fuzz seed: `JACKIOH_FUZZ_FROM=<seed> JACKIOH_FUZZ_SEEDS=1 pnpm fuzz`.
@@ -102,7 +103,7 @@ Workspace packages, from pure to impure:
 - `Game.tsx` is the one board for hotseat, online and practice, inside the route's `CatalogContext`, and mounts every client layer. None of them is a rule (rule 7) and each has one owning module:
   - `src/game/animations.ts` — the `ANIMATIONS` total map over `GameEventType` and the queue runner: the view swaps only when an event's entry ends, and `data-animating` marks what is in flight (`cy.settled()` and practice pacing both wait on it).
   - `src/fx/` — the effects layer: a pooled canvas overlay and DOM flourishes that decorate the runner's entries and never pace them (R200–R202).
-  - `src/audio/` — the WebAudio engine, procedural SFX and pre-rendered voice lines; `SOUND_CUES` is a total map over `GameEventType`, cues play when the runner starts their entry, and nothing sounds for a card behind the sentinel (R203, R204). The engine's `speaking()` becomes the board's `data-speaking`, which practice holds the AI on.
+  - `src/audio/` — the WebAudio engine, procedural SFX and pre-rendered voice lines; `SOUND_CUES` is a total map over `GameEventType`, cues play when the runner starts their entry, and nothing sounds for a card behind the sentinel (R203, R204). The engine's `speaking()` becomes the board's `data-speaking`, which practice holds the AI on. The music (R631) plays on its own bus. `music.ts` is the player, `musicScene.ts` picks the menu theme or the board's music, and `musicDirector.ts` follows the viewer's own view through the priority stack in `musicPlan.ts`. The tracks are scores in `scripts/music/tracks.mjs`, rendered by `gen:music`.
   - `src/cards/` — `CardFace`, the board's `MinionFace`, deterministic procedural art (real art is listed in `art/manifest.ts`), hover and long-press inspect. `RulesText` draws every face's text with its marks: a Radiant face's changes in gold (`radiantDiff.ts`, R277), the cards its `refs` name as references with a tooltip (`refs.ts`, `CardRef.tsx`, R279), and in play the numbers the view's `preview` carries, "{n}" (R280).
   - `src/game/drag/` plus `glow.ts` — drag to play (click-click always works too) and the green (`legalActions`) and yellow (`conditionActive`, R195) glows.
   - `src/settings/` — the store and panel. Tasks' own stores (`fx/settings.ts`, `audio/settings.ts`, `cards/settings.ts`) mount through `SETTINGS_SLOTS`; "Hover previews" and "Reduce motion" are the panel's own switches and gate the card preview and the effects too. Every store sits in `localStorage` inside try/catch and applies live.

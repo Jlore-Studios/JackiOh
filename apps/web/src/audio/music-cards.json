@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "cards": {
+    "core-004": { "station": "tavern" },
+    "core-050": { "station": "edm" },
+    "classicplus-039": { "station": "lofi" },
+    "classicplus-037": { "station": "epic" },
+    "core-096": { "theme": "mythic-my-pawn" },
+    "core-097": { "theme": "mythic-zephyrs" },
+    "core-098": { "theme": "mythic-heroic-power" },
+    "core-099": { "theme": "mythic-craft-a-card" },
+    "core-100": { "theme": "mythic-ceaseless-void" },
+    "classic-090": { "theme": "mythic-in-too-deep" },
+    "classicplus-027": { "theme": "mythic-zephrys-zealotism" },
+    "classicplus-074": { "theme": "mythic-twice-forward" }
+  }
+}
