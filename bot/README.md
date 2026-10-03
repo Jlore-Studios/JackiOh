@@ -218,6 +218,7 @@ needs level 3.
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
+| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a strong model's plan, which goes into its description |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
@@ -319,7 +320,8 @@ each one and whether it could start now, and `/harness status` does the same on 
 
 At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
 may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
-and no such limit), `priority` the usage order (below), and `tiers` each tier's models in the
+and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
+lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
 (default 1) is how many items it may work on at once; Devin's is 6, on six runners, so it can fill the machine's six alone. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
@@ -363,15 +365,23 @@ free, Devin included. Devin is `easy_first`: it may build only easy items, so it
 of everyone while it has a free lane, and the stronger models keep the medium and hard items only
 they may build. With its six lanes it fills whatever room on the machine the medium models leave.
 
-- **Planning.** Every build starts from a plan. The planner is a medium or strong model, strong
-  whenever one is free (claude-3, claude-1, then claude-2). It reads the task and the code, writes
-  nothing, and its plan goes to the top of the builder's `.bot-notes.md` and into the handoff. When
-  the builder's own subscription has a model of the planner's tier, the plan and the build share
-  one run (claude-3 plans on Opus, then builds an easy item on Sonnet); otherwise the planning is a
-  run of its own, and the item goes back to the queue to build from its plan, on any subscription.
-  Such a run is a short read-only session, so it starts before any long run: a free planner plans
-  Devin's next easy item before it takes an item of its own, even a more urgent one. A revision is
-  not planned again.
+- **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
+  carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong
+  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-2) plans those first, on
+  the **planning lane**: `plan_lanes` runs on top of `max_parallel`, which take no build lane, so a
+  Claude account plans one item while it builds another. claude-1 is the exception: the quiet
+  check cannot tell a second run of the bot's from its owner, so it plans only while it holds
+  nothing else, and builds nothing while it plans. The lane takes the easy items first (Devin
+  waits on those), then the rest in the usual order, ahead of every build. The planner reads the
+  task and the code, writes nothing, and must leave a weak builder no gap to fill
+  (`bot/prompts/plan.md`): the files to touch by path, the steps in order, the tests and commands,
+  and a checklist for done. Its plan goes into the issue's description, in a **Plan** section
+  (`harness/issueplan.py`), and into the handoff. The builder starts from that section as it
+  stands then, so a person can correct the plan in the description before anyone builds it.
+  Devin, which cannot plan, builds only from a strong model's plan. When no strong model is free
+  on the lane and a medium or strong builder takes an unplanned item, it plans it first in its own
+  run, on its strongest model; that plan goes into the description too. A revision is not planned
+  again.
 - **Building, fixing, revising.** The first free subscription in the usage order with a model that
   meets the item's tier builds it, on its weakest such model: claude-3 builds an easy item with
   Sonnet, never Opus, and a medium one with Opus, since it has no medium model. When that is above

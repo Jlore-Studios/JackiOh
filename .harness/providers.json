@@ -1,6 +1,7 @@
 {
   "max_parallel": 10,
   "machine_parallel": 6,
+  "plan_lanes": 2,
   "priority": ["claude-3", "claude-1", "claude-4", "agy", "muse", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [

@@ -166,32 +166,6 @@ class BuilderTests(unittest.TestCase):
         busy(gh, ctx, *[("devin", n) for n in range(56, 62)])
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 
-    def test_devin_fills_its_lanes_with_easy_items_planned_ahead_of_long_runs(self):
-        """With Devin's lanes free, a free planner plans an easy item for Devin on a short run of
-        its own before it takes a long build, even one of higher priority; Devin then builds it
-        while the planner goes back to the work only it may do."""
-        gh = FakeGitHub()
-        ctx = ctx_for(gh, machine=ALL_MACHINE)
-        busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
-        queue(gh, ctx, 3, "priority:high")             # medium, urgent: claude-1's
-        queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("plan", 4, "claude-1"))
-        self.assertEqual(seats(planned)["plan"], ("claude-1", "opus", "strong"))
-        # The plan delivered, the next runs: Devin builds #4, claude-1 builds #3.
-        gh.runs.clear()
-        ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT), run_id=None))
-        busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
-        taken = []
-        for _ in range(2):
-            planned = plan_mod.make(ctx)
-            gh.runs[str(planned["number"])] = {"status": "in_progress"}
-            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
-                run_id=str(n)))
-            taken.append((planned["action"], planned["number"], planned["provider"]))
-        self.assertEqual(sorted(taken), [("build", 3, "claude-1"), ("build", 4, "devin")])
-
     def test_claude_2_builds_a_medium_item_devin_may_not(self):
         """Devin is weak, so a medium item passes it by: with only claude-2 and Devin free,
         claude-2 builds it."""
@@ -246,17 +220,20 @@ class BuilderTests(unittest.TestCase):
 
 
 class PlannerTests(unittest.TestCase):
-    def test_a_strong_planner_is_preferred_and_plans_on_its_own_run_when_it_must(self):
-        """By day agy builds; claude-2, strong and kept for planning, plans it on its own run."""
+    def test_a_strong_planner_plans_on_the_planning_lane(self):
+        """By day claude-2, strong and kept for planning, plans it on the planning lane before
+        agy builds it."""
         gh = FakeGitHub()
-        ctx = ctx_for(gh, at=DAY, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), committed_hours=True)
+        ctx = make_ctx(gh, at=DAY, cfg=make_config(env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
+                                                   machine=MACHINE, committed_hours=True,
+                                                   plan_lanes=None))
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
         self.assertEqual(seats(planned), {"plan": ("claude-2", "opus", "strong"),
                                           "build": None, "review": None})
-        self.assertIn("planned on its own run, since its builder `agy`", planned["routing"][0])
-        self.assertIn("Planning this now", gh.bot_comments(3)[-1])
+        self.assertIn("needs a plan; `claude-2`", planned["routing"][0])
+        self.assertIn("goes into this issue's description", gh.bot_comments(3)[-1])
 
     def test_with_no_strong_model_free_a_medium_one_plans_in_the_same_run(self):
         gh = FakeGitHub()
@@ -274,9 +251,10 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(planned["action"], "none")
 
     def test_a_planning_run_hands_its_plan_to_the_builder(self):
-        h = Harness(self, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE, at=DAY)
+        h = Harness(self, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE, at=DAY,
+                    plan_lanes=None)
         h.committed_hours()
-        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        h.gh.add_issue(12, labels=(LABEL_BUILD,), body="Make the rules v2.")
         plan_text = "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; run the checks."
         planner = FakeRunner({"plan": lambda request: RunResult(True, plan_text)})
         planned, result = h.night(planner)
@@ -288,9 +266,17 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(record["handoff"]["kind"], "plan")
         self.assertIn("Rules v2", record["handoff"]["notes"])
         self.assertTrue(record["planned_at"])
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertEqual(record["planned_tier"], "strong")
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})  # out of the Needs plan stage
         self.assertIn("Planned on `claude-2` (claude, `opus`, strong)", h.gh.bot_comments(12)[-1])
+        self.assertIn("in this issue's description", h.gh.bot_comments(12)[-1])
+        body = h.gh.threads[12]["body"]
+        self.assertTrue(body.startswith("Make the rules v2.\n\n<!-- jackioh-bot:plan -->"))
+        self.assertIn("## Plan", body)
+        self.assertIn("Edit src/game.txt", body)
         self.assertIsNone(h.origin_sha("bot/issue-12"))  # nothing built yet
+        # A person corrects the plan in the description: the builder follows their version.
+        h.gh.threads[12]["body"] = body.replace("Edit src/game.txt", "Edit src/game.txt only")
         # The next run builds from it, on the cheapest model its difficulty allows.
         seen = {}
         def building(request):
@@ -302,8 +288,9 @@ class PlannerTests(unittest.TestCase):
                          ("build", "agy", "approved"))
         self.assertEqual([c.role for c in runner.calls], ["build", "review"])
         self.assertIn("## The plan", runner.calls[0].prompt)
-        self.assertIn("Edit src/game.txt", runner.calls[0].prompt)
-        self.assertIn("Rules v2", seen["notes"])
+        self.assertIn("**Plan** section of the issue's description", runner.calls[0].prompt)
+        self.assertIn("Edit src/game.txt only", runner.calls[0].prompt)
+        self.assertIn("Edit src/game.txt only", seen["notes"])
 
 
 class ReviewRunTests(unittest.TestCase):
