@@ -10,7 +10,7 @@ longer than `MAX_WAIT` is left alone: its runner is missing, and starting the ma
 would only keep it running for nothing until GitHub gives the job up (after 24 hours).
 
 Environment: `INSTANCE_ID`, `REPO_ID` (the repository's numeric id, which survives a rename or
-a transfer), optionally `WORKFLOWS` (comma-separated, default `bot-night.yml`) and
+a transfer), optionally `WORKFLOWS` (comma-separated, default `bot-night.yml,triage.yml`) and
 `GITHUB_TOKEN`. Deployed by `bot/machine/deploy-starter.sh`.
 """
 
@@ -28,6 +28,8 @@ LABEL_PREFIX = "night-vm-"
 #: A job waiting for a runner. (`waiting` is a deployment approval, not a runner.)
 QUEUED = ("queued", "pending", "requested")
 MAX_WAIT = timedelta(hours=3)
+#: The workflows whose jobs run on the machine: the night bot's, and triage's Devin call.
+DEFAULT_WORKFLOWS = "bot-night.yml,triage.yml"
 
 Get = Callable[[str], dict[str, Any]]
 
@@ -84,7 +86,7 @@ def handler(event: Any = None, context: Any = None) -> dict[str, Any]:
     state = reservations[0]["Instances"][0]["State"]["Name"]
     if state != "stopped":  # running, or on its way up or down: the next tick looks again
         return {"state": state, "started": False}
-    workflows = [w.strip() for w in os.environ.get("WORKFLOWS", "bot-night.yml").split(",")
+    workflows = [w.strip() for w in os.environ.get("WORKFLOWS", DEFAULT_WORKFLOWS).split(",")
                  if w.strip()]
     try:
         waiting = waiting_jobs(os.environ["REPO_ID"], workflows,
