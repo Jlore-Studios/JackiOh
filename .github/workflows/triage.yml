@@ -1,0 +1,128 @@
+# Triage (bot/harness/triage.py): a new issue or pull request from someone trusted gets its labels,
+# its assignees and a title that follows docs/issues-and-patches.md, from a Devin call.
+#
+# gate -> classify -> apply. Only classify runs a model, on Devin's own runner on the bot's machine
+# (night-vm-devin), and it holds no write token: it reads the thread's title and body through the
+# API and writes Devin's answer as an artifact. apply, on GitHub's runner, holds the write token
+# and runs no model; it checks the answer against the thread and the repository before changing
+# anything. None of the jobs checks out pull request code. A stranger's issue or pull request
+# stops at the gate, so its text never reaches the machine. Any failure skips quietly.
+name: triage
+
+on:
+  issues:
+    types: [opened]
+  # _target: this repository's workflow runs, never code from the pull request.
+  pull_request_target:
+    types: [opened]
+
+permissions: {}
+
+concurrency:
+  group: triage-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      go: ${{ steps.gate.outputs.go }}
+      number: ${{ steps.gate.outputs.number }}
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself,
+      # something left to do, and Devin switched on (providers.json).
+      - name: Should Devin triage this?
+        id: gate
+        working-directory: bot
+        run: python3 -m harness triage gate --payload "$GITHUB_EVENT_PATH"
+
+  classify:
+    name: classify
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
+    runs-on: night-vm-devin
+    timeout-minutes: 15
+    permissions:
+      contents: read         # the default branch's code and conventions
+      issues: read           # the thread's title, body and labels
+      pull-requests: read
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Ask Devin
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # read-only; never in Devin's environment
+          NUMBER: ${{ needs.gate.outputs.number }}
+        run: |
+          python3 -m harness triage classify --number "${NUMBER}" \
+            --verdict "$RUNNER_TEMP/triage/verdict.json"
+
+      - name: Keep the answer
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage
+          path: ${{ runner.temp }}/triage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  apply:
+    name: apply
+    needs: [gate, classify]
+    if: always() && needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch the answer
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: triage
+          path: ${{ runner.temp }}/triage
+
+      # Labels from the repository's own set (no bot:*), assignees only the two people or the
+      # bot, a title only when the old one breaks the convention; never removes anything.
+      - name: Label, assign and title
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NUMBER: ${{ needs.gate.outputs.number }}
+        run: |
+          python3 -m harness triage apply --number "${NUMBER}" \
+            --verdict "$RUNNER_TEMP/triage/verdict.json"

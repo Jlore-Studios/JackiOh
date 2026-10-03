@@ -53,6 +53,7 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import { useAccount, type Account } from "./net/gate.ts";
+import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   SITE_ORIGIN,
   currentPath,
@@ -334,6 +335,8 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
 
 export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R634: an active account's game settings are kept level with this device's, on every gated screen.
+  useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
 
   // In an effect, never during render: `navigate` dispatches an event that re-renders every

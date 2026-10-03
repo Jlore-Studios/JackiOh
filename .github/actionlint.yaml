@@ -1,0 +1,12 @@
+# The night bot's machine: one self-hosted runner per subscription, labelled night-vm-<id>
+# (bot/machine/README.md). A new subscription on the machine adds its label here.
+self-hosted-runner:
+  labels:
+    - night-vm-claude-1
+    - night-vm-claude-2
+    - night-vm-claude-3
+    - night-vm-claude-4
+    - night-vm-gpt
+    - night-vm-agy
+    - night-vm-muse
+    - night-vm-devin

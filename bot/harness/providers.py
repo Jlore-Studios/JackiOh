@@ -1,8 +1,8 @@
 """The subscriptions the bot can spend: `.harness/providers.json`, and whether each is usable now.
 
 A *provider* is one subscription behind one CLI: a Claude account (`claude`), ChatGPT through
-the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), or Meta through Muse Code
-(`muse`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
+the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), Meta through Muse Code
+(`muse`), or Cognition through the Devin CLI (`devin`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
 runs on (`runs_on`: GitHub's `ubuntu-latest`, or its own runner on the bot's machine,
 `night-vm-<id>`, which runs as a Linux user of its own; `bot/machine/README.md`), and its login
 (`login`): a `secret` the workflows hand to that model job and to nothing else, or a login made
@@ -20,20 +20,20 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
 from harness import clock
-from harness.clock import human_delta, iso, parse_iso
+from harness.clock import human_delta, iso, parse_iso, zone
 from harness.errors import ConfigError
 
 PROVIDERS_PATH = Path(".harness") / "providers.json"
 
-CLIS = ("claude", "codex", "agy", "muse")
+CLIS = ("claude", "codex", "agy", "muse", "devin")
 LOGINS = ("secret", "machine")
-#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy keeps its
-#: login only on the machine.
+#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy and Devin
+#: keep their logins only on the machine.
 SECRET_CLIS = ("claude", "codex", "muse")
 _LABEL = re.compile(r"^[A-Za-z0-9._-]+$")
 #: Labels of GitHub's own runners: a fresh virtual machine per job, with no login on it.
@@ -140,6 +140,13 @@ class Provider:
     login: str = "secret"
     #: The runner label its model job runs on.
     runs_on: str = "ubuntu-latest"
+    #: The first day (in the bot's time zone) it takes no new work, and why: a free offer that
+    #: ends, say. On that day the planner also opens one issue asking a person to decide.
+    off_from: date | None = None
+    off_reason: str = ""
+    #: How many items it may work on at once. On the machine each needs a runner of its own
+    #: with its `runs_on` label (`register-runners.sh` registers that many).
+    lanes: int = 1
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -163,6 +170,13 @@ class Pool:
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]
     difficult_label: str
+    #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
+    #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
+    machine_parallel: int = 0
+
+    def on_machine(self, provider_id: str) -> bool:
+        provider = self.get(provider_id)
+        return provider is not None and not hosted(provider.runs_on)
 
     def ordered(self) -> list[Provider]:
         """Every provider, in `priority` order."""
@@ -223,7 +237,7 @@ def _limits(raw: Any, where: str) -> Limits:
 
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "secret", "schedule", "limits",
                   "self_review", "difficult", "quiet_check", "roles", "env", "note", "login",
-                  "runs_on"}
+                  "runs_on", "off_from", "off_reason", "lanes"}
 
 
 def _provider(name: str, raw: Any) -> Provider:
@@ -285,6 +299,9 @@ def _provider(name: str, raw: Any) -> Provider:
         env={str(k): str(v) for k, v in env.items()},
         login=login,
         runs_on=runs_on,
+        off_from=_off_from(raw.get("off_from"), f"{where}.off_from"),
+        off_reason=str(raw.get("off_reason") or ""),
+        lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
     )
 
 
@@ -315,7 +332,11 @@ def parse(raw: Any) -> Pool:
     lanes = int(raw.get("max_parallel", 1))
     if lanes < 1:
         raise ConfigError(f"{PROVIDERS_PATH}: max_parallel must be at least 1")
-    return Pool(lanes, priority, providers, str(raw.get("difficult_label", "difficult")))
+    machine = int(raw.get("machine_parallel", lanes))
+    if not 0 <= machine <= lanes:
+        raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
+    return Pool(lanes, priority, providers, str(raw.get("difficult_label", "difficult")),
+                machine_parallel=machine)
 
 
 def load(root: Path) -> Pool:
@@ -445,11 +466,37 @@ class Secrets:
         return False if self.known else None
 
 
+def _lanes(raw: Any, where: str) -> int:
+    try:
+        lanes = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{where}: {raw!r} is not a number") from exc
+    if lanes < 1:
+        raise ConfigError(f"{where}: must be at least 1")
+    return lanes
+
+
+def _off_from(raw: Any, where: str) -> date | None:
+    if raw in (None, ""):
+        return None
+    try:
+        return date.fromisoformat(str(raw))
+    except ValueError as exc:
+        raise ConfigError(f"{where}: {raw!r} is not a date (YYYY-MM-DD)") from exc
+
+
+def switched_off_by_date(provider: Provider, at: datetime, zone_name: str) -> bool:
+    """Whether `provider`'s `off_from` day has come, in the bot's time zone."""
+    return provider.off_from is not None and at.astimezone(zone(zone_name)).date() >= provider.off_from
+
+
 def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
                  secrets: Secrets, *, forced: bool = False) -> str | None:
     """Why `provider` may not start a run now, or None when it may. Busy-ness is the caller's."""
     if not provider.enabled:
         return "switched off in providers.json"
+    if switched_off_by_date(provider, at, zone_name):
+        return f"switched off from {provider.off_from} (`off_from` in providers.json)"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
     if not forced and not provider.schedule.is_open(zone_name, at):

@@ -61,7 +61,7 @@ const RMS_TOLERANCE = 0.01;
 const EXPECTED_IDS = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
-  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
+  "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
 ] as const;
@@ -92,6 +92,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   radiant: 900,
   lock: 400,
   poof: 450,
+  sand: 240,
+  endTurn: 180,
   notify: 300,
   drain: 600,
   cancel: 260,

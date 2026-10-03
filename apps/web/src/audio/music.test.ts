@@ -112,7 +112,7 @@ const started = (r: Rig): string[] => r.player.log().filter((e) => e.kind === "s
 beforeEach(() => {
   localStorage.clear();
   resetAudioSettingsForTests();
-  writeAudioSettings({ muted: false, music: 0.5, duckMusic: true, pauseMusicOnBlur: true });
+  writeAudioSettings({ muted: false, music: 0.5, duckMusic: true, playMusicInBackground: false });
 });
 
 afterEach(() => {
@@ -324,7 +324,7 @@ describe("R631 the turn mix, focus and audibility", () => {
     expect(started(r)).toEqual(["tavern-1"]);
   });
 
-  it("R631 losing focus silences the music while pauseMusicOnBlur is on", async () => {
+  it("R631 losing focus silences the music unless playMusicInBackground is on", async () => {
     const r = await rig();
     r.player.request({ track: "tavern-1" });
     await settle();
@@ -334,9 +334,9 @@ describe("R631 the turn mix, focus and audibility", () => {
     r.focus.focused = false;
     r.focus.fire();
     expect(focusGain?.param("gain").targets().at(-1)?.value).toBe(0);
-    writeAudioSettings({ pauseMusicOnBlur: false });
+    writeAudioSettings({ playMusicInBackground: true });
     expect(focusGain?.param("gain").targets().at(-1)?.value).toBe(1);
-    writeAudioSettings({ pauseMusicOnBlur: true });
+    writeAudioSettings({ playMusicInBackground: false });
     r.focus.focused = true;
     r.focus.fire();
     expect(focusGain?.param("gain").targets().at(-1)?.value).toBe(1);

@@ -96,19 +96,25 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["audio", "audio"],
+      ["account", "account-sync"],
     ]);
-    for (const slot of SETTINGS_SLOTS) expect(typeof slot.reset, slot.id).toBe("function");
+    // Every store has a reset; the account's status is not a store.
+    for (const slot of SETTINGS_SLOTS.filter((entry) => entry.section !== "account")) {
+      expect(typeof slot.reset, slot.id).toBe("function");
+    }
   });
 
   it("the panel shows effects speed, intensity and foil after Reduce motion, and the audio controls in their section", () => {
     render(<SettingsPanel onClose={noop} />);
     const visuals = screen.getByTestId("settings-section-visuals");
     const audio = screen.getByTestId("settings-section-audio");
+    // One tab shows at a time (issue #128); the Visuals tab is where these controls are named.
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
 
     for (const id of ["setting-fxSpeed", "setting-fxIntensity", "setting-animatedFoil"]) {
       const control = screen.getByTestId(id);
@@ -118,14 +124,17 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
         `${id} follows the built-in switch`,
       ).toBeTruthy();
     }
-    const controls = within(audio).getByTestId("audio-controls");
-    for (const id of ["audio-master", "audio-sfx", "audio-voice", "audio-mute", "audio-voice-on"]) {
-      expect(controls.contains(screen.getByTestId(id)), id).toBe(true);
-    }
     // Every control has an accessible name, including the task-owned ones.
     expect(screen.getByRole("slider", { name: "Effects speed" })).toBe(slider("setting-fxSpeed"));
     expect(screen.getByRole("combobox", { name: "Effects intensity" })).toBe(select("setting-fxIntensity"));
     expect(screen.getByRole("switch", { name: "Animated foil" })).toBe(toggle("setting-animatedFoil"));
+
+    fireEvent.click(screen.getByTestId("settings-tab-audio"));
+    const controls = within(audio).getByTestId("audio-controls");
+    for (const id of ["audio-master", "audio-sfx", "audio-voice", "audio-mute", "audio-voice-on"]) {
+      expect(controls.contains(screen.getByTestId(id)), id).toBe(true);
+    }
+    expect(screen.getByRole("slider", { name: "Master volume" })).toBe(screen.getByTestId("audio-master"));
   });
 
   it("R435 the speed slider runs from 0.25x to 3x by its step, and shows the stored speed and its readout", () => {

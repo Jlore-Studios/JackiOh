@@ -46,6 +46,25 @@ curl -fsSL https://dev.meta.ai/install.sh -o "$work/muse-install.sh"
 MUSE_INSTALL_DIR=/usr/local/lib/muse MUSE_NO_AUTO_UPDATE=1 bash "$work/muse-install.sh" >/dev/null 2>&1
 ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse
 chmod -R a+rX /usr/local/lib/muse
+# Devin's CLI: the steps of cli.devin.ai/install.sh (its manifest, the bundle, the bundle's
+# checksum), into a shared directory instead of root's home, and without the per-user
+# `devin setup` it ends with. Each user's own login stays in that user's home.
+devin_manifest="$(curl -fsSL https://static.devin.ai/cli/current/manifest.json)"
+devin_version="$(jq -r .version <<<"$devin_manifest")"
+devin_dir="/usr/local/lib/devin/$devin_version"
+if [ ! -x "$devin_dir/bin/devin" ]; then
+  curl -fsSL -o "$work/devin.tgz" \
+    "$(jq -r '.platforms["x86_64-unknown-linux"].url' <<<"$devin_manifest")"
+  echo "$(jq -r '.platforms["x86_64-unknown-linux"].sha256' <<<"$devin_manifest")  $work/devin.tgz" \
+    | sha256sum -c --quiet -
+  rm -rf "$devin_dir.tmp" && mkdir -p "$devin_dir.tmp"
+  tar xzf "$work/devin.tgz" -C "$devin_dir.tmp"
+  rm -rf "$devin_dir" && mv "$devin_dir.tmp" "$devin_dir"
+fi
+echo curl-bash > "$devin_dir/distribution"
+ln -sfn "$devin_version" /usr/local/lib/devin/current
+ln -sf /usr/local/lib/devin/current/bin/devin /usr/local/bin/devin
+chmod -R a+rX /usr/local/lib/devin
 
 # After every job, as the runner's user: give back the disk the job used. The repo's packages
 # come back from the network next time; the checkout and the logins stay. The runner takes a hook
@@ -58,7 +77,10 @@ set +e
 if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
 fi
-rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" 2>/dev/null
+rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
+  "$HOME/.cache/Cypress" 2>/dev/null
+# What this user's jobs left in /tmp; one job at a time per user, so an hour old is this job's.
+find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +60 -exec rm -rf {} + 2>/dev/null
 if [ -d "$HOME/.codex/sessions" ]; then
   find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
 fi
@@ -100,6 +122,7 @@ GEMINI_FORCE_FILE_STORAGE=true
 TBH_CREDENTIAL_BACKEND=file
 MUSE_NO_AUTO_UPDATE=1
 COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+CYPRESS_INSTALL_BINARY=0
 ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/night-vm-job-done.sh
 EOF
   echo "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin" | sudo -u "$user" tee "$dir/.path" >/dev/null
@@ -151,6 +174,6 @@ systemctl daemon-reload
 systemctl enable --now night-vm-idle-stop.timer >/dev/null 2>&1
 apt-get clean
 
-for cli in claude codex agy muse; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done
+for cli in claude codex agy muse devin; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done
 echo "users: $(printf 'agent-%s ' "$@")"
 df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'

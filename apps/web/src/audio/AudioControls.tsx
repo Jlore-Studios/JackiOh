@@ -1,5 +1,6 @@
 // The full audio panel (SPEC §10.11 "Settings"): master, effects, voice and music volume, mute, voice
-// lines on or off, and the music's station, dynamic music, ducking and pause-on-blur (R631). Task 7's
+// lines on or off, and the music's station, dynamic music, ducking and whether it plays on in a
+// background tab (R631). Task 7's
 // settings panel mounts it at integration. Every control reads and writes the audio settings store,
 // which is the only place these values live.
 //
@@ -7,7 +8,7 @@
 // engine's retrigger guard keeps a drag from rattling), and letting go of the voice slider speaks a
 // sample line at the lowest priority, so it never talks over a card.
 
-import { useId, type ChangeEvent, type ReactElement } from "react";
+import { useId, type ChangeEvent, type ReactElement, type ReactNode } from "react";
 
 import { MUSIC_STATIONS, VOICE_PREVIEW_DEF_ID, VOICE_PRIORITY } from "./constants.ts";
 import { getAudioEngine } from "./engine.ts";
@@ -46,16 +47,31 @@ const STATION_LABELS: Record<MusicStation, string> = {
   epic: "Epic Orchestral",
 };
 
-type MusicFlag = "dynamicMusic" | "duckMusic" | "pauseMusicOnBlur";
+type MusicFlag = "dynamicMusic" | "duckMusic" | "playMusicInBackground";
 
-const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string }[] = [
+const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string; hint?: string }[] = [
   { key: "dynamicMusic", label: "Dynamic music", testid: "audio-dynamic-music" },
   { key: "duckMusic", label: "Lower music under voices and big moments", testid: "audio-duck-music" },
-  { key: "pauseMusicOnBlur", label: "Silence music when the game is in the background", testid: "audio-pause-music" },
+  { key: "playMusicInBackground", label: "Keep playing music when this tab is in the background", testid: "audio-music-background",
+    hint: "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way.",
+  },
 ];
 
 function percent(settings: AudioSettings, key: VolumeKey): number {
   return Math.round(settings[key] * RANGE_MAX);
+}
+
+/** A titled run of related controls (issue #128): Volume, Music and Voice in the settings dialog. */
+function Group({ title, children }: { title: string; children: ReactNode }): ReactElement {
+  const titleId = useId();
+  return (
+    <div className="audio-controls__group" role="group" aria-labelledby={titleId}>
+      <h3 className="audio-controls__group-title" id={titleId}>
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
 }
 
 export default function AudioControls({ className }: AudioControlsProps): ReactElement {
@@ -69,97 +85,109 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
     >
       <legend>Audio</legend>
 
-      {VOLUMES.map(({ key, label, testid }) => {
-        const inputId = `${id}-${key}`;
-        const value = percent(settings, key);
-        return (
-          <div className="audio-controls__row" key={key}>
-            <label htmlFor={inputId}>{label}</label>
-            <input
-              id={inputId}
-              type="range"
-              min={0}
-              max={RANGE_MAX}
-              step={RANGE_STEP}
-              value={value}
-              data-testid={testid}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                const patch: Partial<AudioSettings> = {};
-                patch[key] = Number(event.currentTarget.value) / RANGE_MAX;
-                writeAudioSettings(patch);
-                if (key !== "voice") preview(key);
-              }}
-              onPointerUp={key === "voice" ? () => preview(key) : undefined}
-              onKeyUp={key === "voice" ? () => preview(key) : undefined}
-            />
-            <output className="audio-controls__value" htmlFor={inputId} aria-hidden="true">
-              {value}%
-            </output>
-          </div>
-        );
-      })}
+      <Group title="Volume">
+        {VOLUMES.map(({ key, label, testid }) => {
+          const inputId = `${id}-${key}`;
+          const value = percent(settings, key);
+          return (
+            <div className="audio-controls__row" key={key}>
+              <label htmlFor={inputId}>{label}</label>
+              <input
+                id={inputId}
+                type="range"
+                min={0}
+                max={RANGE_MAX}
+                step={RANGE_STEP}
+                value={value}
+                data-testid={testid}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const patch: Partial<AudioSettings> = {};
+                  patch[key] = Number(event.currentTarget.value) / RANGE_MAX;
+                  writeAudioSettings(patch);
+                  if (key !== "voice") preview(key);
+                }}
+                onPointerUp={key === "voice" ? () => preview(key) : undefined}
+                onKeyUp={key === "voice" ? () => preview(key) : undefined}
+              />
+              <output className="audio-controls__value" htmlFor={inputId} aria-hidden="true">
+                {value}%
+              </output>
+            </div>
+          );
+        })}
 
-      <div className="audio-controls__row audio-controls__row--check">
-        <input
-          id={`${id}-mute`}
-          type="checkbox"
-          checked={settings.muted}
-          data-testid="audio-mute"
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            writeAudioSettings({ muted: event.currentTarget.checked });
-          }}
-        />
-        <label htmlFor={`${id}-mute`}>Mute all sound</label>
-      </div>
-
-      <div className="audio-controls__row audio-controls__row--check">
-        <input
-          id={`${id}-voice-on`}
-          type="checkbox"
-          checked={settings.voiceOn}
-          data-testid="audio-voice-on"
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            writeAudioSettings({ voiceOn: event.currentTarget.checked });
-          }}
-        />
-        <label htmlFor={`${id}-voice-on`}>Voice lines</label>
-      </div>
-
-      <div className="audio-controls__row">
-        <label htmlFor={`${id}-station`}>Music station</label>
-        <select
-          id={`${id}-station`}
-          value={settings.station}
-          data-testid="audio-station"
-          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-            const station = MUSIC_STATIONS.find((s) => s === event.currentTarget.value);
-            if (station !== undefined) writeAudioSettings({ station });
-          }}
-        >
-          {MUSIC_STATIONS.map((station) => (
-            <option key={station} value={station}>
-              {STATION_LABELS[station]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {MUSIC_FLAGS.map(({ key, label, testid }) => (
-        <div className="audio-controls__row audio-controls__row--check" key={key}>
+        <div className="audio-controls__row audio-controls__row--check">
           <input
-            id={`${id}-${key}`}
+            id={`${id}-mute`}
             type="checkbox"
-            checked={settings[key]}
-            data-testid={testid}
+            checked={settings.muted}
+            data-testid="audio-mute"
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const patch: Partial<AudioSettings> = {};
-              patch[key] = event.currentTarget.checked;
-              writeAudioSettings(patch);
+              writeAudioSettings({ muted: event.currentTarget.checked });
             }}
           />
-          <label htmlFor={`${id}-${key}`}>{label}</label>
+          <label htmlFor={`${id}-mute`}>Mute all sound</label>
         </div>
-      ))}
+      </Group>
+
+      <Group title="Music">
+        <div className="audio-controls__row">
+          <label htmlFor={`${id}-station`}>Music station</label>
+          <select
+            id={`${id}-station`}
+            value={settings.station}
+            data-testid="audio-station"
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+              const station = MUSIC_STATIONS.find((s) => s === event.currentTarget.value);
+              if (station !== undefined) writeAudioSettings({ station });
+            }}
+          >
+            {MUSIC_STATIONS.map((station) => (
+              <option key={station} value={station}>
+                {STATION_LABELS[station]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {MUSIC_FLAGS.map(({ key, label, testid, hint }) => (
+          <div className="audio-controls__row audio-controls__row--check" key={key}>
+            <input
+              id={`${id}-${key}`}
+              type="checkbox"
+              checked={settings[key]}
+              data-testid={testid}
+              aria-describedby={hint === undefined ? undefined : `${id}-${key}-hint`}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const patch: Partial<AudioSettings> = {};
+                patch[key] = event.currentTarget.checked;
+                writeAudioSettings(patch);
+              }}
+            />
+            <label htmlFor={`${id}-${key}`}>{label}</label>
+            {hint === undefined ? null : (
+              <p className="audio-controls__hint" id={`${id}-${key}-hint`}>
+                {hint}
+              </p>
+            )}
+          </div>
+        ))}
+      </Group>
+
+      <Group title="Voice">
+        <div className="audio-controls__row audio-controls__row--check">
+          <input
+            id={`${id}-voice-on`}
+            type="checkbox"
+            checked={settings.voiceOn}
+            data-testid="audio-voice-on"
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              writeAudioSettings({ voiceOn: event.currentTarget.checked });
+            }}
+          />
+          <label htmlFor={`${id}-voice-on`}>Voice lines</label>
+        </div>
+      </Group>
     </fieldset>
   );
 }

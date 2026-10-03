@@ -24,7 +24,7 @@ export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   station: "tavern",
   dynamicMusic: true,
   duckMusic: true,
-  pauseMusicOnBlur: true,
+  playMusicInBackground: false,
 });
 
 function level(value: unknown, fallback: number): number {
@@ -38,6 +38,15 @@ function flag(value: unknown, fallback: boolean): boolean {
 
 function station(value: unknown, fallback: MusicStation): MusicStation {
   return MUSIC_STATIONS.find((s) => s === value) ?? fallback;
+}
+
+/**
+ * Settings saved before `playMusicInBackground` named this switch the other way round
+ * (`pauseMusicOnBlur`, default on). A saved value is read inverted, so a player who had turned the old
+ * switch off keeps their music playing and nobody else hears a change.
+ */
+function legacyBackground(o: Record<string, unknown>): boolean {
+  return typeof o.pauseMusicOnBlur === "boolean" ? !o.pauseMusicOnBlur : DEFAULT_AUDIO_SETTINGS.playMusicInBackground;
 }
 
 /** Total: any input → valid settings. Each field independently: a finite number is clamped to [0,1],
@@ -59,7 +68,7 @@ export function parseAudioSettings(raw: unknown): AudioSettings {
     station: station(o.station, DEFAULT_AUDIO_SETTINGS.station),
     dynamicMusic: flag(o.dynamicMusic, DEFAULT_AUDIO_SETTINGS.dynamicMusic),
     duckMusic: flag(o.duckMusic, DEFAULT_AUDIO_SETTINGS.duckMusic),
-    pauseMusicOnBlur: flag(o.pauseMusicOnBlur, DEFAULT_AUDIO_SETTINGS.pauseMusicOnBlur),
+    playMusicInBackground: flag(o.playMusicInBackground, legacyBackground(o)),
   };
 }
 

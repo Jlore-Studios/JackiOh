@@ -13,7 +13,7 @@ from unittest import mock
 
 from harness import logins
 from harness.providers import load as load_pool
-from harness.runner import AgyCli, CodexCli, MuseCli, RunRequest
+from harness.runner import AgyCli, CodexCli, DevinCli, MuseCli, RunRequest
 
 from tests.support import ROOT, secret_login
 from tests.test_logins import CODEX_AUTH, MUSE_AUTH
@@ -86,6 +86,31 @@ FAKE_AGY = PRELUDE + textwrap.dedent('''\
     step(2, "agent_response", "DONE", text_delta=answer)
     emit({{"event": "result", "result": {{"status": "SUCCESS", "response": answer, "num_turns": 3,
           "error": "", "usage": {{"input_tokens": 10}}}}}})
+''')
+
+FAKE_DEVIN = PRELUDE + textwrap.dedent('''\
+    argv = sys.argv[1:]
+    prompt = open(argv[argv.index("--prompt-file") + 1]).read()
+    dump(prompt)
+    if mode == "auth":
+        print("Not logged in. Run `devin auth login` to authenticate.", file=sys.stderr)
+        sys.exit(1)
+    with open(argv[argv.index("--export") + 1], "w") as f:
+        json.dump({{"schema_version": 1, "steps": [
+            {{"source": "system", "message": "You are Devin"}},
+            {{"source": "user", "message": "THE TASK"}},
+            {{"source": "agent", "message": "", "tool_calls": [{{"tool_call_id": "1",
+              "function_name": "exec", "arguments": {{"command": "pnpm test"}}}}]}},
+            {{"source": "agent", "message": "", "tool_calls": [{{"tool_call_id": "2",
+              "function_name": "read_file", "arguments": {{"path": "src/game.txt"}}}}]}},
+            {{"source": "agent", "message": "All green.", "tool_calls": []}}]}}, f)
+    if mode == "limit":
+        print("Error: usage limit reached for swe-2-max", file=sys.stderr)
+        sys.exit(1)
+    print("\\x1b[1mWelcome to Devin CLI!\\x1b[0m")
+    print()
+    print("<!-- bot: {{\\"status\\": \\"done\\", \\"title\\": \\"D\\"}} -->")
+    print("report")
 ''')
 
 FAKE_MUSE = PRELUDE + textwrap.dedent('''\
@@ -258,6 +283,47 @@ class MuseTests(Base):
     def test_an_api_key_secret_is_handed_over_as_one(self):
         self.run_fake(self.backend("meta-key-" + "k" * 30))
         self.assertEqual(self.seen()["env"]["META_API_KEY"], "meta-key-" + "k" * 30)
+
+
+class DevinTests(Base):
+    fake, name = FAKE_DEVIN, "devin"
+
+    def backend(self):
+        login = logins.prepare(self.pool.get("devin"), "", "", self.tmp / "home")
+        return DevinCli(str(self.bin), login)
+
+    def test_print_mode_auto_approved_with_the_prompt_in_a_file(self):
+        backend = self.backend()
+        result = self.run_fake(backend)
+        self.assertTrue(result.ok, result.error)
+        self.assertTrue(result.text.startswith('<!-- bot: {"status": "done"'))
+        seen = self.seen()
+        argv = seen["argv"]
+        self.assertEqual(argv[0], "-p")
+        self.assertEqual(argv[argv.index("--model") + 1], "the-model")
+        self.assertEqual(argv[argv.index("--permission-mode") + 1], "dangerous")
+        self.assertEqual(argv[argv.index("--respect-workspace-trust") + 1], "false")
+        self.assertTrue(seen["prompt"].startswith("SYSTEM TEXT"))
+        self.assertTrue(seen["prompt"].endswith("THE TASK"))
+        self.assert_only_its_own_login()
+        self.assertNotIn("Welcome", result.text)  # the banner and its colour codes are gone
+        transcript = (self.tmp / "t" / "01.jsonl").read_text()
+        self.assertIn("report", transcript)
+        self.assertNotIn("You are Devin", transcript)  # only what its agent did
+        self.assertFalse((self.tmp / "t" / "01.export").exists())
+        trail = backend.trail(self.tmp / "t" / "01.jsonl")
+        for line in ("ran `pnpm test`", 'read_file: {"path": "src/game.txt"}', "said: All green."):
+            self.assertIn(line, trail)
+
+    def test_a_missing_login_is_infrastructure(self):
+        result = self.run_fake(self.backend(), "auth")
+        self.assertFalse(result.ok)
+        self.assertTrue(result.infra)
+
+    def test_a_usage_limit_parks_it(self):
+        result = self.run_fake(self.backend(), "limit")
+        self.assertTrue(result.rate_limited)
+        self.assertEqual(result.reset_at, "+PT60M")
 
 
 if __name__ == "__main__":

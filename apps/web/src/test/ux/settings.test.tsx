@@ -637,7 +637,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     const visuals = screen.getByTestId("settings-section-visuals");
     for (const section of [gameplay, visuals]) {
       expect(section.tagName).toBe("SECTION");
-      expect(within(section).getByRole("heading", { level: 2 })).toBeInTheDocument();
+      expect(within(section).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     }
     for (const key of ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"] as const) {
       expect(gameplay.contains(switchFor(key)), key).toBe(true);
@@ -651,6 +651,8 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     render(<SettingsPanel onClose={noop} />);
 
     for (const [key, label] of SWITCHES) {
+      // A switch is reachable on its own tab: Reduce motion is on Visuals, the rest on Gameplay.
+      fireEvent.click(screen.getByTestId(key === "reduceMotion" ? "settings-tab-visuals" : "settings-tab-gameplay"));
       const input = switchFor(key);
       expect(input.type, key).toBe("checkbox");
       expect(input, key).toHaveAttribute("role", "switch");
@@ -726,7 +728,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
 
     const audio = screen.getByTestId("settings-section-audio");
     expect(audio.tagName).toBe("SECTION");
-    expect(within(audio).getByRole("heading", { level: 2 })).toBeInTheDocument();
+    expect(within(audio).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     expect(audio.contains(screen.getByTestId("slot-master-volume"))).toBe(true);
     // The built-in sections are still there.
     expect(screen.getByTestId("settings-section-gameplay")).toBeInTheDocument();

@@ -74,6 +74,7 @@ import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import { DIFFICULTY_LABEL, TierCrest } from "../practice/Tier.tsx";
 import "../auth/tavern.css";
 import "../practice/practice.css";
+import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { useTutorialAccountSync, type TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { Coach } from "../tutorial/Coach.tsx";
 import type { LessonScript } from "../tutorial/coach.ts";
@@ -470,6 +471,8 @@ function PracticeScreen({
   const saved = useSavedDecks(account, loadDecks ?? getDecks);
   // R321: an active account's tutorial progress is merged with this device's and kept level with it.
   useTutorialAccountSync(account, tutorialAccount);
+  // R634: and so are its game settings.
+  useSettingsAccountSync(account);
 
   const initial = useMemo(() => {
     const stored = readStoredSetup();
