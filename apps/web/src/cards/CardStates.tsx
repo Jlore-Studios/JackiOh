@@ -17,12 +17,13 @@
 // On a small face (a hand card) the rail keeps its first STATE_BADGES_SMALL_MAX badges and folds the
 // rest into a "+n" chip (shown only there); its hover preview prints every one in words.
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 
 import { PILE_WORDS, stateBadges, type StateBadge, type StateBadgeKind } from "./cardState.ts";
 import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { Icon } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
+import { STACK_TITLE, STACK_UNKNOWN_NAME, default as StackSheet } from "./wheel/StackSheet.tsx";
 
 import "./cardstate.css";
 
@@ -69,14 +70,42 @@ export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement
 }
 
 /**
- * B5 E21: a backrow pile's depth — the face-down, dormant cards under the top one — beside the card in
- * its zone, read and drawn as a unit pile's is (`UnitView.buried`, game/Card.tsx). Nothing at none.
+ * B5 E21: a pile's depth — the face-down, dormant cards under the top one — beside the card in its
+ * zone, a backrow pile's as a unit pile's (`UnitView.buried`, game/Card.tsx). Nothing at none. A
+ * press opens the pile as a wheel (cards/wheel), the top with its face and every buried card as a
+ * back, so what is above and below what is obvious.
  */
-export function PileDepth({ buried }: { buried: number }): ReactElement | null {
+export function PileDepth({
+  buried,
+  top,
+  className = "buried-badge backrow-pile",
+}: {
+  buried: number;
+  /** The pile's top card with its face; null for a back on top (a face-down pile names nothing). */
+  top?: FaceModel | null;
+  className?: string;
+}): ReactElement | null {
+  const [open, setOpen] = useState(false);
   if (buried <= 0) return null;
+  const face = top ?? null;
   return (
-    <span className="buried-badge backrow-pile" data-buried={buried} title={PILE_WORDS}>
-      {buried}
-    </span>
+    <>
+      <button
+        type="button"
+        className={className}
+        data-buried={buried}
+        title={PILE_WORDS}
+        aria-label={`${PILE_WORDS}: show pile`}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        {buried}
+      </button>
+      {open ? (
+        <StackSheet title={STACK_TITLE} top={face} topName={face?.name ?? STACK_UNKNOWN_NAME} buried={buried} onClose={() => setOpen(false)} />
+      ) : null}
+    </>
   );
 }

@@ -27,11 +27,11 @@
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
-import { LANES, sideOf, testid, type Side } from "../game/contract.ts";
+import { sideOf, testid, type Side } from "../game/contract.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
-import { lookOf, TONE_LOOKS, ZONE_LOOKS, type FxLook } from "./looks.ts";
+import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -87,6 +87,7 @@ import type {
   FxAnchor,
   FxBannerTone,
   FxBurstCue,
+  FxCardFacts,
   FxCrackCue,
   FxCue,
   FxGhostCue,
@@ -239,6 +240,7 @@ function burst(
   spread: FxSpread,
   delayMs: number,
   key: TuningKey,
+  scale?: number,
 ): FxBurstCue {
   const tuning = TUNING[key];
   return {
@@ -249,6 +251,7 @@ function burst(
     count: Math.max(1, Math.round(tuning.count * intensity)),
     spread,
     power: tuning.power,
+    ...(scale === undefined || scale === 1 ? {} : { scale }),
   };
 }
 
@@ -888,6 +891,162 @@ const rewind: Recipe = (event, p) => {
   return cues;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one
+ * ------------------------------------------------------------------------------------------- */
+
+/** The public facts of a readable defId; undefined for R97's sentinel or an unknown id (R202). */
+function factsOf(defId: string, env: FxPlanEnv): FxCardFacts | undefined {
+  return defId === HIDDEN_ID ? undefined : env.card(defId);
+}
+
+/** The defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
+function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
+  for (const side of SIDES) {
+    const sv = side === "you" ? view.you : view.opponent;
+    for (const unit of sv.units) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const unit of sv.carried ?? []) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const slot of sv.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
+    }
+    for (const card of sv.resolving) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  const hand = view.you.hand;
+  if (Array.isArray(hand)) {
+    for (const card of hand) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  return undefined;
+}
+
+/** The public facts of the card a non-combat hit's source instance is (R202: undefined when hidden). */
+function sourceFacts(sourceId: string | null, view: PlayerView, env: FxPlanEnv): FxCardFacts | undefined {
+  if (sourceId === null || sourceId === HIDDEN_ID) return undefined;
+  const defId = defIdOfInstance(view, sourceId);
+  return defId === undefined ? undefined : factsOf(defId, env);
+}
+
+/**
+ * A card another card cast flares at its caster's hero, in the caster's family look (arcane when
+ * the view hides the caster), bigger with each cast of the burst.
+ */
+function castCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
+  const cast = entry.cast;
+  const played = entry.events.find((event) => event.type === "cardPlayed");
+  if (cast === undefined || played === undefined || played.type !== "cardPlayed") return [];
+  const at = anchor(testid.hero(sideOf(view, played.player)));
+  const look = lookOf(factsOf(cast.by, env)) ?? TONE_LOOKS.cast;
+  const scale = Math.min(FX_CAST_SCALE_MAX, 1 + (cast.ordinal - 1) * FX_CAST_SCALE_STEP);
+  const cues: FxCue[] = [
+    burst(env.intensity, look.preset, at, "area", 0, "multicastFlare", scale),
+    burst(env.intensity, look.preset, at, "ring", 0, "multicastMotes", scale),
+    ring(entry.durationMs, look.ring, at, 0),
+  ];
+  pushShake(cues, env.intensity, FX_CAST_TRAUMA, 0);
+  return cues;
+}
+
+/**
+ * A run that reached every card of one pile: one wave over the pile in the event's look, with the
+ * count it reached popping in its middle, instead of one flash per card.
+ */
+function zoneCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
+  const zone = entry.zone;
+  if (zone === undefined) return [];
+  const D = entry.durationMs;
+  const at = anchor(pileTestid(zone));
+  const first = entry.events[0];
+  const zl: ZoneLook = (first === undefined ? undefined : ZONE_LOOKS[first.type]) ?? ZONE_DEFAULT;
+  const pop = frac(FX_ZONE_COUNT_AT, D);
+  return [
+    {
+      kind: "zone",
+      at,
+      tint: zl.look.tint,
+      text: `×${String(zone.count)}`,
+      direction: zl.direction,
+      delayMs: 0,
+      durationMs: D + FX_ZONE_TAIL_MS,
+    },
+    burst(env.intensity, zl.look.preset, at, "area", pop, "zoneWave"),
+    burst(env.intensity, zl.look.preset, at, "ring", pop, "zoneMotes"),
+  ];
+}
+
+/**
+ * The instance ids of `side`'s units `entry` reached, in lane order, with the side's hero last
+ * when the sweep reached them too.
+ */
+function sweepOrder(entry: AnimationEntry, view: PlayerView, side: Side): string[] {
+  const sv = side === "you" ? view.you : view.opponent;
+  const reached = new Set<string>();
+  for (const event of entry.events) {
+    if (event.type === "damage" || event.type === "healed") reached.add(event.targetId);
+    else if (event.type === "divineShieldLost") reached.add(event.instanceId);
+  }
+  const ids: string[] = [];
+  for (const unit of sv.units) {
+    if (unit !== null && reached.has(unit.instanceId)) ids.push(unit.instanceId);
+  }
+  const hero = `hero-${sv.player}`;
+  if (reached.has(hero)) ids.push(hero);
+  return ids;
+}
+
+/**
+ * A run of hits or heals that swept a side: one fog rolling over each swept side's row, in the
+ * look of what cast it (fire and a flame for hits, holy light and a heart for heals, when nothing
+ * readable did), with each hit landing as the fog reaches its lane.
+ */
+function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
+  const sweep = entry.sweep;
+  if (sweep === undefined) return [];
+  const D = entry.durationMs;
+  const i = env.intensity;
+  const look = lookOf(sourceFacts(sweep.sourceId, view, env)) ?? TONE_LOOKS[sweep.tone];
+  const cues: FxCue[] = [];
+  const fraction = new Map<string, number>();
+  for (const side of sweep.sides) {
+    const order = sweepOrder(entry, view, side);
+    if (order.length === 0) continue;
+    const first = order[0];
+    const last = order[order.length - 1];
+    if (first === undefined || last === undefined) continue;
+    cues.push({
+      kind: "fog",
+      tone: sweep.tone,
+      from: idAnchor(view, first) ?? viewportCenter(),
+      to: idAnchor(view, last) ?? viewportCenter(),
+      tint: look.tint,
+      icon: look.icon,
+      delayMs: 0,
+      durationMs: D + FX_FOG_TAIL_MS,
+    });
+    order.forEach((id, k) => fraction.set(id, order.length > 1 ? k / (order.length - 1) : 0.5));
+  }
+  for (const event of entry.events) {
+    if (event.type !== "damage" && event.type !== "healed" && event.type !== "divineShieldLost") continue;
+    const target = event.type === "divineShieldLost" ? event.instanceId : event.targetId;
+    const at = idAnchor(view, target);
+    if (at === null) continue;
+    const hit = Math.round(D * (FX_FOG_HIT_FROM + (FX_FOG_HIT_TO - FX_FOG_HIT_FROM) * (fraction.get(target) ?? 0.5)));
+    if (event.type === "divineShieldLost") {
+      cues.push(ring(D, "gold", at, hit), burst(i, "shard", at, "ring", hit, "shieldShard"));
+    } else {
+      cues.push(burst(i, look.preset, at, "area", hit, "fogHit"));
+      if (event.amount > 0) cues.push(splat(D, event.type === "damage" ? "damage" : "heal", event.amount, at, hit));
+    }
+  }
+  return cues;
+}
+
 const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   cast,
   summon,
@@ -937,7 +1096,12 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
  */
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
+  // Issue #124: a sweep plays its fog and its timed hits, and a whole-pile impact its wave, instead
+  // of one recipe per event; a cast plays its card's cues as usual, plus the flare at its caster.
+  if (entry.sweep !== undefined) return sweepCues(entry, view, env);
+  if (entry.zone !== undefined) return zoneCues(entry, view, env);
   const cues: FxCue[] = [];
+  if (entry.cast !== undefined) cues.push(...castCues(entry, view, env));
   for (const event of entry.events) {
     const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
     if (signature !== null) {

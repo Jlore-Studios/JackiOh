@@ -136,7 +136,11 @@ export type ZoneImpact = Pile & { count: number; events: number };
  * deck its hidden changes are in.
  */
 export const HIDDEN_PILE_OF: Readonly<Record<string, "own" | "enemy">> = {
-  "classicplus-008": "enemy", // C+ #8 Withering Storm: "Degrade 4 random cards in your opponent's deck"
+  // C+ #8 Withering Storm: base "Degrade 4 random cards in your opponent's deck", radiant "Degrade
+  // every card in your opponent's deck".
+  "classicplus-008": "enemy",
+  // Core #42: "Exile 7 random cards from your deck".
+  "core-042": "own",
 };
 
 /** Events that change a card where it lies, and so land in whatever pile holds it. */
@@ -208,20 +212,22 @@ export function pileOf(
       const held = publicPileOf(view, event.instanceId);
       if (held !== null) return held.pile === "graveyard" ? held : null;
       if (shown(view, event.instanceId)) return null;
-      return { side: sideOf(view, event.owner), pile: "library", inferred: true };
+      // A card shown nowhere that left for exile: a library card, a hand card, or a face-down
+      // backrow card. The viewer's own hand and resolving cards are shown, so for the viewer's own
+      // cards this is their library (or, rarely, their face-down backrow); an opponent's hidden hand
+      // and backrow make the same guess unsound for opponent cards (e.g. an exiled hand card), so
+      // those stay unmapped and play singly.
+      const side = sideOf(view, event.owner);
+      return side === "you" ? { side, pile: "library", inferred: true } : null;
     }
-    case "shuffledIn": {
-      const graveyard: Pile = { side: sideOf(view, event.player), pile: "graveyard" };
-      if (event.instanceId === HIDDEN) return { ...graveyard, inferred: true };
-      const held = publicPileOf(view, event.instanceId);
-      return held !== null && held.side === graveyard.side && held.pile === "graveyard" ? graveyard : null;
-    }
+    case "shuffledIn":
+      // Every producer lands the card in `player`'s library (draw, setup, zones' graveyard landing),
+      // so the pile is certain even when the card is R97's sentinel — no inference.
+      return { side: sideOf(view, event.player), pile: "library" };
     case "stolen":
       return event.zone === "library" || event.zone === "graveyard" || event.zone === "exile"
         ? { side: sideOf(view, event.from), pile: event.zone }
         : null;
-    case "crumbled":
-      return event.zone === "library" ? { side: sideOf(view, event.owner), pile: "library" } : null;
     case "radiantSet": {
       const z = event.zone.z;
       return z === "library" || z === "graveyard" || z === "exile" ? { side: sideOf(view, event.zone.player), pile: z } : null;
