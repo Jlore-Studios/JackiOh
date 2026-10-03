@@ -1395,10 +1395,8 @@
     "what": "revise #171 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-03T21:45:20Z",
-    "notes": [
-      "started a night run, as a lane was free: #142 (medium) is queued to revise, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-03T21:57:50Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
