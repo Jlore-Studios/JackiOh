@@ -157,6 +157,12 @@
       "lines": [
         "/harness status"
       ]
+    },
+    "c:5965533265": {
+      "at": "2026-10-03T04:30:11Z",
+      "lines": [
+        "@jgoetzmann-bot Just add them yourself. MANUAL HUMAN OVERRIDE"
+      ]
     }
   },
   "items": {
