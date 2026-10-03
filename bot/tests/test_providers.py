@@ -292,6 +292,35 @@ class MatchingTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             providers.parse(raw)
 
+    def test_claude_1_works_outside_its_hours_up_to_40_percent(self):
+        """claude-1's window is 21:00–07:00 under 98%/90% caps; outside it, it still works while
+        its 5-hour usage is under 40% (`off_hours`), and a run there stops past 40%."""
+        claude_1 = providers.load(ROOT).get("claude-1")
+        self.assertEqual(claude_1.hours("America/Chicago"),
+                         "21:00–07:00 America/Chicago, outside them up to 40% of 5-hour")
+        later = clock.iso(DAY + timedelta(hours=12))  # past both checks below
+        everyone = Secrets.of(secrets(*providers.SECRETS))
+
+        def why(at, used):
+            entry = {"usage": {"five_hour": {"utilization": used, "resets_at": later}}}
+            state = {"providers": {"claude-1": entry}}
+            return providers.availability(claude_1, state, at, "America/Chicago", everyone)
+
+        night = DAY + timedelta(hours=10)  # 22:00 CDT, inside the window
+        self.assertIsNone(why(DAY, 0.3))
+        self.assertIn("5-hour usage is 45%, at or over its 40% cap outside its hours",
+                      why(DAY, 0.45))
+        self.assertIsNone(why(night, 0.45))
+        self.assertIn("at or over its 98% cap; ", why(night, 0.99))
+        # The mid-run stop holds the same caps.
+        entry = {"usage": {"five_hour": {"utilization": 0.41, "resets_at": later}}}
+        self.assertIsNotNone(providers.refusal(claude_1, entry, DAY, "America/Chicago"))
+        self.assertIsNone(providers.refusal(claude_1, entry, night, "America/Chicago"))
+        raw = raw_providers()
+        raw["providers"]["claude-1"]["off_hours"] = {"five_hours": 0.4}
+        with self.assertRaises(ConfigError):
+            providers.parse(raw)
+
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-1, claude-2 and claude-3 run all day, claude-1 under its
         98%/90% caps, claude-2 under 90% and claude-3 with none; claude-4 waits for the night.
@@ -299,7 +328,7 @@ class MatchingTests(unittest.TestCase):
         for the medium models."""
         pool = providers.load(ROOT)
         hours = {p.id: (p.schedule.mode, p.limits.mode) for p in pool.ordered() if p.cli == "claude"}
-        self.assertEqual(hours, {"claude-1": ("always", "caps"), "claude-2": ("always", "caps"),
+        self.assertEqual(hours, {"claude-1": ("window", "caps"), "claude-2": ("always", "caps"),
                                  "claude-3": ("always", "none"), "claude-4": ("window", "caps")})
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
