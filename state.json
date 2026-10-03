@@ -773,6 +773,14 @@
       "died": 0,
       "failures": 1,
       "forced": false,
+      "handoff": {
+        "at": "2026-10-03T11:02:45Z",
+        "family": "claude-opus",
+        "notes": "",
+        "provider": "claude-3",
+        "reason": "the reviewer's answer could not be read twice in a row",
+        "trail": "- said: Failed to authenticate. API Error: 401 OAuth access token is invalid."
+      },
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
