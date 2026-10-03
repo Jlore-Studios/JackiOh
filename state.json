@@ -283,6 +283,7 @@
     },
     "124": {
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
