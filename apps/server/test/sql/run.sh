@@ -113,7 +113,7 @@ done
 # check ever ran against. Refuse it rather than pass without it.
 for f in "$REPO"/apps/server/src/db/migrations/*.sql; do
   name=$(basename "$f" .sql)
-  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards " in
+  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards 0018_player_settings " in
     *" $name "*) ;;
     *) echo "!!! migration $name is not applied by this script; add it above"; failed=1 ;;
   esac
