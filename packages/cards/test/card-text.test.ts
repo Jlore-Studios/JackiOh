@@ -102,10 +102,7 @@ function failures(face: Face): string[] {
     }
     if (!/\.["”]?$/.test(line)) out.push(`does not end the line "${line}" with a full stop`);
     for (const label of LABELS) {
-      const idx = line.indexOf(label);
-      if (idx > 0 && !line.startsWith('Choose one: "') && !line.startsWith("For the rest of the game: ")) {
-        out.push(`does not start "${label}" on a line of its own`);
-      }
+      if (line.indexOf(label) > 0) out.push(`does not start "${label}" on a line of its own`);
     }
   }
   return out;

@@ -7558,7 +7558,7 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Choose one: \"End of turn: Lock a random zone on your opponent's side\"; or \"After your opponent plays a Unit or Field Spell, Lock its zone.\""
+      "text": "Choose one.\nEnd of turn: Lock a random zone on your opponent's side.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
     },
     "radiant": {
       "keywords": [],
@@ -8334,11 +8334,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game: Start of turn: Add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
+      "text": "For the rest of the game.\nStart of turn: Add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game: Start of turn: Add {cards|random Radiant Jlockheed card|random Radiant Jlockheed cards} to your hand. Each costs ({discount}) less."
+      "text": "For the rest of the game.\nStart of turn: Add {cards|random Radiant Jlockheed card|random Radiant Jlockheed cards} to your hand. Each costs ({discount}) less."
     }
   },
   "classicplus-053": {
