@@ -79,9 +79,11 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   login, and run `register-runners.sh`.
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
-- **Disk:** each job's files and the user's package store are deleted when the job ends
+- **Disk:** each job's files, the user's package store, Cypress's binary and what the job left in
+  `/tmp` are deleted when the job ends
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
-  logins stay.
+  logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
+  at all, since the bot's checks never run e2e.
 - **How many at once:** three (`max_parallel`) is as many as this machine holds. Measured on
   2026-10-02 with three jobs running (a Claude build in typecheck and the web tests, Muse and
   agy): load average 14 on 2 vCPUs, 6.1 of 7.8 GB in use and 1.5 GB swapped, about 4 GB for the
