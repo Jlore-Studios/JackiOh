@@ -466,7 +466,7 @@
       "ci_run_id": 37123012402,
       "ci_sha": "b3273c49cc8be2e716fc91a03e529faa1d446e62",
       "cross_rounds": 0,
-      "died": 1,
+      "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T14:59:59Z",
       "forced": false,
