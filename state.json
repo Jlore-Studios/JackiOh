@@ -381,6 +381,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-10-03T19:09:21Z",
