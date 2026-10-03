@@ -15,6 +15,8 @@ import type { AudioSettings, MusicStation } from "./types.ts";
 export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   master: 0.8,
   sfx: 0.8,
+  crowd: 0.5,
+  ambience: 0.05,
   voice: 1,
   muted: false,
   voiceOn: true,
@@ -48,6 +50,8 @@ export function parseAudioSettings(raw: unknown): AudioSettings {
   return {
     master: level(o.master, DEFAULT_AUDIO_SETTINGS.master),
     sfx: level(o.sfx, DEFAULT_AUDIO_SETTINGS.sfx),
+    crowd: level(o.crowd, DEFAULT_AUDIO_SETTINGS.crowd),
+    ambience: level(o.ambience, DEFAULT_AUDIO_SETTINGS.ambience),
     voice: level(o.voice, DEFAULT_AUDIO_SETTINGS.voice),
     muted: flag(o.muted, DEFAULT_AUDIO_SETTINGS.muted),
     voiceOn: flag(o.voiceOn, DEFAULT_AUDIO_SETTINGS.voiceOn),

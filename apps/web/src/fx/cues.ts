@@ -21,6 +21,7 @@ import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
+import { damageFeel } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
@@ -403,6 +404,7 @@ const summon: Recipe = (event, p) => {
 const impact: Recipe = (event, p) => {
   if (event.type !== "damage") return [];
   const i = p.env.intensity;
+  const particleIntensity = i * damageFeel(event.amount).particleScale;
   const at = anchor(p.tgt);
   const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
@@ -417,9 +419,9 @@ const impact: Recipe = (event, p) => {
       hit = flight;
     }
   }
-  cues.push(burst(i, "spark", at, "point", hit, "impactSpark"));
+  cues.push(burst(particleIntensity, "spark", at, "point", hit, "impactSpark"));
   if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
-  if (poisonous) cues.push(burst(i, "poison", at, "area", hit, "impactPoison"));
+  if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
   const base =
     event.amount < FX_SHAKE_MIN_DAMAGE ? 0 : Math.min(FX_SHAKE_MAX_TRAUMA, event.amount * FX_TRAUMA_PER_DAMAGE);
   pushShake(cues, i, isHero(p.tgt) ? base * FX_HERO_TRAUMA_MULT : base, hit);

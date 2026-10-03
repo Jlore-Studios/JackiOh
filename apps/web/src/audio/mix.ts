@@ -30,6 +30,9 @@ export const LIMITER = { thresholdDb: -6, kneeDb: 0, ratio: 20, attackS: 0.003, 
 export type Mix = {
   master: GainNode;
   sfx: GainNode;
+  crowd: GainNode;
+  ambience: GainNode;
+  ambienceDuck: GainNode;
   voice: GainNode;
   music: GainNode;
   musicDuck: GainNode;
@@ -37,14 +40,17 @@ export type Mix = {
 };
 
 /** Bus levels for a settings value: mute silences master, and voice lines off silence the voice bus. */
-export function mixLevels(s: AudioSettings): { master: number; sfx: number; voice: number; music: number } {
-  return { master: s.muted ? 0 : s.master, sfx: s.sfx, voice: s.voiceOn ? s.voice : 0, music: s.music };
+export function mixLevels(s: AudioSettings): { master: number; sfx: number; crowd: number; ambience: number; voice: number; music: number } {
+  return { master: s.muted ? 0 : s.master, sfx: s.sfx, crowd: s.crowd, ambience: s.ambience, voice: s.voiceOn ? s.voice : 0, music: s.music };
 }
 
 /** Builds the buses and the limiter into `ctx.destination`, at `settings`' levels. */
 export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   const master = ctx.createGain();
   const sfx = ctx.createGain();
+  const crowd = ctx.createGain();
+  const ambience = ctx.createGain();
+  const ambienceDuck = ctx.createGain();
   const voice = ctx.createGain();
   const music = ctx.createGain();
   const musicDuck = ctx.createGain();
@@ -55,6 +61,9 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   limiter.attack.value = LIMITER.attackS;
   limiter.release.value = LIMITER.releaseS;
   sfx.connect(master);
+  crowd.connect(master);
+  ambience.connect(ambienceDuck);
+  ambienceDuck.connect(master);
   voice.connect(master);
   music.connect(musicDuck);
   musicDuck.connect(master);
@@ -63,7 +72,9 @@ export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   const levels = mixLevels(settings);
   master.gain.value = levels.master;
   sfx.gain.value = levels.sfx;
+  crowd.gain.value = levels.crowd;
+  ambience.gain.value = levels.ambience;
   voice.gain.value = levels.voice;
   music.gain.value = levels.music;
-  return { master, sfx, voice, music, musicDuck, limiter };
+  return { master, sfx, crowd, ambience, ambienceDuck, voice, music, musicDuck, limiter };
 }

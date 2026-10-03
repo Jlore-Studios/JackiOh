@@ -41,6 +41,7 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
+import { damageTier } from "../game/damageFeel.ts";
 import {
   BLOOD_BEAN_DEF_ID,
   CHAOS_REVEAL_MAX,
@@ -242,6 +243,14 @@ function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, ctx: Cu
   return [sfx("notify")];
 }
 
+/** A stable per-hit offset, so rapid repeated impacts do not share exactly the same pitch. */
+function impactVariation(event: Extract<GameEvent, { type: "damage" }>): number {
+  const text = `${event.sourceId ?? "none"}:${event.targetId}:${String(event.amount)}`;
+  let hash = 0;
+  for (const char of text) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return (hash % 101) / 100;
+}
+
 export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R204: a unit's play line and a spell's cast line ride its `cardPlayed`, casts included. R203:
   // the viewer's own trap set makes the set sound and says nothing; a hidden card is a plain whoosh.
@@ -269,7 +278,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   summoned: { sfx: "summon", cues: summonCues },
   damage: {
     sfx: "impact",
-    cues: (event) => (event.amount > 0 ? [sfx("impact", { amount: event.amount })] : NONE),
+    cues: (event) =>
+      event.amount > 0
+        ? [sfx("impact", { amount: event.amount, impactTier: damageTier(event.amount), variation: impactVariation(event) })]
+        : NONE,
   },
   healthLost: {
     sfx: "drain",

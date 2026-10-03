@@ -457,14 +457,17 @@ const attack: SfxRecipe = (ctx, out, at) => {
 
 /** A hit that grows louder, darker and longer with the amount, up to IMPACT_AMOUNT_CAP. */
 const impact: SfxRecipe = (ctx, out, at, params) => {
-  const t = amountT(params);
+  const tier = params.impactTier ?? "normal";
+  const tierT = { tiny: 0.1, normal: 0.34, moderate: 0.54, big: 0.76, giga: 1 }[tier];
+  const t = Math.max(amountT(params), tierT);
+  const pitch = 0.95 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.1;
   const len = 0.12 + 0.33 * t;
   const peak = 0.5 + 0.5 * t;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
   chain(noise, biquad(k, "lowpass", 5000 - 3800 * t, 0), envelope(k, 0, 0.004, 1.1 * peak, len), out);
   run(k, noise, 0, len);
-  const thumpHz = 110 - 50 * t;
+  const thumpHz = (110 - 50 * t) * pitch;
   const thump = tone(k, out, "sine", thumpHz, 0, 0.004, 0.75 * peak, len);
   glide(k, thump.frequency, thumpHz * 0.6, len);
   return len;
@@ -782,13 +785,16 @@ const lock: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card vanishes (exile, transform, fuse): a soft dark puff. */
-const poof: SfxRecipe = (ctx, out, at) => {
+/** A card vanishes (exile, transform, fuse), or sand compresses: a soft dark puff. */
+const poof: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.43;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
-  const filter = biquad(k, "lowpass", 900, 0);
-  glide(k, filter.frequency, 300, len);
+  // Sand passes a deterministic 0..1 variation, mapping to the requested ±8% crunch pitch;
+  // absent callers retain the original neutral recipe exactly.
+  const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
+  const filter = biquad(k, "lowpass", 900 * pitch, 0);
+  glide(k, filter.frequency, 300 * pitch, len);
   chain(noise, filter, envelope(k, 0, 0.04, 1.43, len), out);
   run(k, noise, 0, len);
   return len;

@@ -5,6 +5,8 @@
 // was clicked, `actions.ts` turns that into an `ActionBody` chosen from `legalActions`, and the
 // engine decides. `Highlight` is a set of `data-testid`s the engine has already blessed.
 
+import type { ReactNode } from "react";
+
 import type { GameEvent, GameEventType, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
@@ -166,6 +168,12 @@ export type BoardProps = {
    * together rather than each vanishing as the next entry starts.
    */
   animated?: readonly AnimationFrames[];
+  /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
+  turnClock?: ReactNode;
+  /** A route status line, mounted on the board rail rather than a floating match bar. */
+  matchStatus?: ReactNode;
+  /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
+  sandDisabled?: boolean;
   onClick?: (target: ClickTarget) => void;
   onControl?: (control: BoardControl) => void;
 };

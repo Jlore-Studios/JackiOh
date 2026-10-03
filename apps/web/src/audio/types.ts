@@ -39,6 +39,10 @@ export type SfxParams = {
   urgent?: boolean;
   /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
   release?: boolean;
+  /** Match-feel impact and sand variations. A deterministic caller supplies 0 through 1. */
+  variation?: number;
+  /** The public damage tier that selected this impact recipe. */
+  impactTier?: "tiny" | "normal" | "moderate" | "big" | "giga";
 };
 
 export type VoiceLineKind = "play" | "death" | "cast";
@@ -149,6 +153,10 @@ export type MusicStation = "tavern" | "edm" | "lofi" | "epic";
 export type AudioSettings = {
   master: number; // 0..1
   sfx: number; // 0..1
+  /** Match reactions, above the room bed. */
+  crowd: number;
+  /** Low procedural venue bed, about -24 dB relative to the default SFX bus. */
+  ambience: number;
   voice: number; // 0..1
   muted: boolean;
   voiceOn: boolean;

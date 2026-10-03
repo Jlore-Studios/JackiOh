@@ -282,6 +282,28 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           </button>
         </>
       }
+      turnClock={
+        <Clock
+          youMs={inMulligan ? mulliganMs : activeIsYou ? turnMs : null}
+          opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
+          graceMs={graceMs}
+          mulligan={inMulligan}
+          frame={clock}
+          viewer={view.viewer}
+          activePlayer={view.result === null ? view.active : null}
+          promptHolder={view.result === null ? promptHolderOf(view.pending, view.viewer) : null}
+        />
+      }
+      matchStatus={
+        <>
+          Online match · <ConnectionLine state={match.connection} />
+          {DEV_ONLY ? (
+            <>
+              {" "}· match <code>{matchId}</code> · seat <code>{view.viewer}</code>
+            </>
+          ) : null}
+        </>
+      }
     />
   );
 
@@ -293,31 +315,6 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         nav.tsx names this screen as trapped and it was the one that never got a way out.
       */}
       <BackLink />
-      <header className="match-bar">
-        <span>
-          Online match · Turn {view.turn} · <ConnectionLine state={match.connection} />
-          {DEV_ONLY ? (
-            <>
-              {" "}
-              · match <code>{matchId}</code> · seat <code>{view.viewer}</code>
-            </>
-          ) : null}
-        </span>
-        <Clock
-          youMs={inMulligan ? mulliganMs : activeIsYou ? turnMs : null}
-          opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
-          graceMs={graceMs}
-          mulligan={inMulligan}
-          // R268, R439: the readout counts down off the frame's own deadlines between the server's
-          // frames — the mulligan window can pass with none, and a turn's last 30 seconds must tick.
-          frame={clock}
-          viewer={view.viewer}
-          // R79: the turn clock is the active player's, and a prompt held by the other seat runs its
-          // own. A finished game runs neither.
-          activePlayer={view.result === null ? view.active : null}
-          promptHolder={view.result === null ? promptHolderOf(view.pending, view.viewer) : null}
-        />
-      </header>
       <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
 
       {readOnly ? (

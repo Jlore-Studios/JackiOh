@@ -24,6 +24,7 @@ import { retainAppAudio } from "./appAudio.ts";
 import { exposeAudioDebug } from "./debug.ts";
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { getAudioEngine } from "./engine.ts";
+import { createCrowdDirector, type CrowdDirector } from "./crowd.ts";
 import { getMusicPlayer } from "./music.ts";
 import { createMusicDirector, type MusicDirector } from "./musicDirector.ts";
 import { enterGameMusic } from "./musicScene.ts";
@@ -61,6 +62,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   // 1. The music director (R631), made when the board mounts (effect 7) and dropped when it leaves;
   //    the sound director below reaches it through the ref, so it only ever hears this board's.
   const musicRef = useRef<MusicDirector | null>(null);
+  const crowdRef = useRef<CrowdDirector | null>(null);
 
   // 1b. The sound director, created once per mounted Game against the singleton engine.
   const directorRef = useRef<SoundDirector | null>(null);
@@ -68,7 +70,10 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     getAudioEngine(),
     VOICE_LINES,
     (defId) => cueCard(lookupRef.current, defId),
-    (event, planned) => quietly(() => musicRef.current?.onEvent(event, planned)),
+    (event, planned) => {
+      quietly(() => musicRef.current?.onEvent(event, planned));
+      if (event.type === "damage") quietly(() => crowdRef.current?.observeDamage(event.amount));
+    },
   );
   const director = directorRef.current;
 
@@ -126,6 +131,22 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       for (const remove of removers) remove();
     };
   }, []);
+
+  // The venue belongs to this mounted match, not the page-level menu audio. It starts as soon as
+  // Web Audio is unlocked, fades on an ordinary match end, and is fully released on route leave.
+  useEffect(() => {
+    const crowd = createCrowdDirector({ engine: getAudioEngine() });
+    crowdRef.current = crowd;
+    crowd.start();
+    return () => {
+      crowd.dispose();
+      if (crowdRef.current === crowd) crowdRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view.result !== null) crowdRef.current?.end();
+  }, [view.result]);
 
   // 7. The board's music: entered on mount, with the view it mounted on, and handed back to the menu
   //    on unmount. A layout effect, so the first view reaches it before anything is drawn.

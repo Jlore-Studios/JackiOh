@@ -248,7 +248,12 @@ type VoiceChannel = {
   stop: (() => void) | null;
 };
 
-export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine {
+/** The concrete browser engine exposes the room buses; generic test sinks remain plain AudioEngine. */
+export type MatchFeelAudioEngine = AudioEngine & {
+  ambienceOutput(): { context: AudioContext; ambience: AudioNode; crowd: AudioNode; ambienceDuck: GainNode } | null;
+};
+
+export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAudioEngine {
   const factory = options.createContext === undefined ? defaultContextFactory() : options.createContext;
   const speech = options.speech === undefined ? browserSpeechPort() : options.speech;
   const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
@@ -326,6 +331,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const t = ctx.currentTime;
     buses.master.gain.setTargetAtTime(levels.master, t, GAIN_SMOOTHING_S);
     buses.sfx.gain.setTargetAtTime(levels.sfx, t, GAIN_SMOOTHING_S);
+    buses.crowd.gain.setTargetAtTime(levels.crowd, t, GAIN_SMOOTHING_S);
+    buses.ambience.gain.setTargetAtTime(levels.ambience, t, GAIN_SMOOTHING_S);
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
     buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
@@ -893,6 +900,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    ambienceOutput: () =>
+      ctx === null || buses === null || disposed
+        ? null
+        : { context: ctx, ambience: buses.ambience, crowd: buses.crowd, ambienceDuck: buses.ambienceDuck },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {

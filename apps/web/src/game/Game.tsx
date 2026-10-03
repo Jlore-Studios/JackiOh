@@ -29,6 +29,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -51,6 +52,7 @@ import {
   type AnimationQueue,
 } from "./animations.ts";
 import { testid, type BoardControl, type ClickTarget } from "./contract.ts";
+import { damageFeel, damageTier, type DamageTier } from "./damageFeel.ts";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
@@ -91,6 +93,10 @@ export type GameProps = {
    * setting says. The tutorial pins it on, since its lessons are written around R82.
    */
   autoEndTurn?: boolean;
+  /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
+  turnClock?: ReactNode;
+  /** Route connection status, rendered on the board rail rather than above it. */
+  matchStatus?: ReactNode;
 };
 
 /** What the board is offered while it is still showing an older view than `legal` describes. */
@@ -104,6 +110,8 @@ export default function Game({
   resultActions,
   resultForm = "panel",
   autoEndTurn: pinnedAutoEndTurn,
+  turnClock,
+  matchStatus,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -133,6 +141,13 @@ export default function Game({
    * exactly as long as the runner has one, and it is `hidden`, so it animates nothing itself.
    */
   const [inFlight, setInFlight] = useState<AnimationEntry | null>(null);
+  const inFlightDamage = inFlight?.events.find(
+    (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
+  );
+  const impactTier: DamageTier | undefined = inFlightDamage === undefined ? undefined : damageTier(inFlightDamage.amount);
+  const impactFeel = inFlightDamage === undefined ? undefined : damageFeel(inFlightDamage.amount);
+  const hitStopMs = inFlightDamage === undefined ? 0 : damageFeel(inFlightDamage.amount).hitStopMs;
+  const [hitStop, setHitStop] = useState(false);
   /**
    * Every entry the runner has started since the board last caught up.
    *
@@ -171,6 +186,17 @@ export default function Game({
   // built, so a change of setting builds a new queue; the subscription effect below tears the old
   // one down and shows the newest view.
   const reducedMotion = useSetting("reduceMotion") || prefersReducedMotion();
+  // Hit-stop is a visual pause only. It never delays the queue, network, engine or turn clock;
+  // reduced-motion suppresses shake/wobble but intentionally leaves this tactile pause in place.
+  useEffect(() => {
+    if (hitStopMs === 0) {
+      setHitStop(false);
+      return undefined;
+    }
+    setHitStop(true);
+    const timer = window.setTimeout(() => setHitStop(false), hitStopMs);
+    return () => window.clearTimeout(timer);
+  }, [inFlight, hitStopMs]);
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
@@ -332,6 +358,14 @@ export default function Game({
       data-testid="game"
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
+      data-impact-tier={impactTier}
+      data-hit-stop={hitStop ? "true" : undefined}
+      data-reduced-motion={reducedMotion ? "true" : undefined}
+      style={impactFeel === undefined ? undefined : {
+        "--impact-shake-px": `${String(impactFeel.shakePx)}px`,
+        "--impact-shake-ms": `${String(impactFeel.shakeMs)}ms`,
+        "--impact-number-scale": String(impactFeel.numberScale),
+      } as CSSProperties}
     >
       {inFlight === null ? null : (
         <span data-testid="animation-queue" data-animating={inFlight.type} hidden aria-hidden="true" />
@@ -368,6 +402,9 @@ export default function Game({
         highlight={highlight}
         animating={animating}
         animated={animated}
+        turnClock={turnClock}
+        matchStatus={matchStatus}
+        sandDisabled={interaction.stage !== "idle"}
         onClick={handleClick}
         onControl={handleControl}
       />
