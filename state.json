@@ -427,7 +427,7 @@
     "131": {
       "action": "build",
       "asks": [],
-      "failures": 2,
+      "failures": 3,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
