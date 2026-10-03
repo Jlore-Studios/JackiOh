@@ -18,6 +18,7 @@ from typing import Any
 
 from harness import config as config_mod
 from harness import context as context_mod
+from harness import dashboard as dashboard_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import logins as logins_mod
@@ -260,6 +261,17 @@ def cmd_sweep(cfg: Config, args: argparse.Namespace) -> int:
 
 def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
     print(status_mod.report(_ctx(cfg)))
+    return 0
+
+
+def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
+    """The pinned status issue. A failure here is only a warning: it must never fail the sweep."""
+    try:
+        note = dashboard_mod.update(_ctx(cfg))
+    except GitHubError as exc:
+        print(redact(f"::warning::the status issue was not updated: {exc}"))
+        return 0
+    print(redact(f"dashboard: {note}"))
     return 0
 
 
@@ -513,6 +525,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="")
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
+    sub.add_parser("dashboard", help="rewrite the pinned status issue (each sweep runs it)")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -548,6 +561,7 @@ COMMANDS = {
     "event": cmd_event,
     "sweep": cmd_sweep,
     "status": cmd_status,
+    "dashboard": cmd_dashboard,
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,

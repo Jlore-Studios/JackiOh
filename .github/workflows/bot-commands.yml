@@ -2,7 +2,8 @@
 # results of CI on its pull requests. No model runs here; model work is queued for the night run,
 # or started at once when an operator adds --force. Every ten minutes a sweep reads the last three
 # days back and answers anything an event never delivered or a handler failed to answer, then
-# starts a night run if one should be going and none is (GitHub drops scheduled bot-night runs).
+# starts a night run if one should be going and none is (GitHub drops scheduled bot-night runs),
+# then rewrites the pinned "Night bot status" issue.
 name: bot-commands
 
 on:
@@ -102,3 +103,22 @@ jobs:
           else
             python -m harness event
           fi
+
+      # The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten after every
+      # sweep: what each lane runs, the subscriptions' usage, the queue and the last runs. Editing
+      # its body notifies nobody; a failure only warns.
+      - name: Rewrite the pinned status issue
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_SECRETS_SET: >-
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
+            ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+        run: python -m harness dashboard

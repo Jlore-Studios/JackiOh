@@ -205,6 +205,21 @@ class CommandsWorkflowTests(unittest.TestCase):
         self.assertNotRegex(self.text, r"^  pull_request:", )
 
 
+class StatusIssueStepTests(unittest.TestCase):
+    """The pinned status issue is rewritten after every sweep, and never fails the sweep."""
+
+    def test_after_the_sweep_on_the_sweeps_schedule_only(self):
+        text = read("bot-commands.yml")
+        step = text[text.index("- name: Rewrite the pinned status issue"):]
+        self.assertLess(text.index("python -m harness sweep"),
+                        text.index("- name: Rewrite the pinned status issue"))
+        self.assertIn("if: github.event_name == 'schedule' || github.event_name == "
+                      "'workflow_dispatch'", step)
+        self.assertIn("continue-on-error: true", step)
+        self.assertIn("run: python -m harness dashboard", step)
+        self.assertIn("BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}", step)
+
+
 class TriageWorkflowTests(unittest.TestCase):
     text = read("triage.yml")
 
