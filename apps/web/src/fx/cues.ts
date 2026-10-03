@@ -16,18 +16,29 @@
 //
 // CLAUDE.md rule 9: particle counts live in `TUNING`, the game-over timings in `RESULT_TUNING`, and
 // every other number in `constants.ts`.
+//
+// Issue #124: the runner gives three new shapes of entry (`game/runs.ts`), and each plans as one: a
+// whole pile reached at once washes one wave over the pile (`zoneCues`), a sweep rolls a fog over each
+// row it swept and lands each hit as the fog reaches its lane (`sweepCues`), and a card another card
+// cast flares at its caster's hero, bigger with each cast of the burst (`castCues`). A readable card's
+// family lends its look (looks.ts) to those and, as an accent, to a play, a summon and a spell's hit:
+// the same recipe in the colours, particles and emblem of what made it.
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
-import { ANIMATIONS, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
-import { sideOf, testid, type Side } from "../game/contract.ts";
+import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { LANES, sideOf, testid, type Side } from "../game/contract.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { lookOf, TONE_LOOKS, ZONE_LOOKS, type FxLook } from "./looks.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
+  FX_CAST_SCALE_MAX,
+  FX_CAST_SCALE_STEP,
+  FX_CAST_TRAUMA,
   FX_CENTER,
   FX_COUNTER_TRAUMA,
   FX_CRACK_TAIL_MS,
@@ -36,6 +47,9 @@ import {
   FX_FATIGUE_FLIGHT_FRACTION,
   FX_FATIGUE_STREAK_AT,
   FX_FLICKER_RETURN_AT,
+  FX_FOG_HIT_FROM,
+  FX_FOG_HIT_TO,
+  FX_FOG_TAIL_MS,
   FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
@@ -66,6 +80,8 @@ import {
   FX_TRAP_BURST_AT,
   FX_TRAP_TRAUMA,
   FX_TRAUMA_PER_DAMAGE,
+  FX_ZONE_COUNT_AT,
+  FX_ZONE_TAIL_MS,
 } from "./constants.ts";
 import type {
   FxAnchor,
@@ -162,6 +178,15 @@ const TUNING = {
   resultSmoke: { count: 24, power: 0.9 },
   resultEmber: { count: 30, power: 1 },
   resultDust: { count: 16, power: 0.8 },
+  // Issue #124: the looks (looks.ts) a card's family lends a recipe, and the runner's new shapes.
+  castAccent: { count: 14, power: 0.9 },
+  summonAccent: { count: 16, power: 1 },
+  impactAccent: { count: 12, power: 1 },
+  multicastFlare: { count: 28, power: 1.2 },
+  multicastMotes: { count: 12, power: 0.7 },
+  zoneWave: { count: 22, power: 0.9 },
+  zoneMotes: { count: 10, power: 0.6 },
+  fogHit: { count: 10, power: 0.8 },
 } as const;
 
 type TuningKey = keyof typeof TUNING;
@@ -356,10 +381,13 @@ const cast: Recipe = (event, p) => {
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
   const at = anchor(p.tgt);
+  // Issue #124: a card the viewer reads flares in its family's look as well.
+  const look = lookOf(factsOf(event.defId, p.env));
+  const accent = look === undefined ? [] : [burst(p.env.intensity, look.preset, at, "ring", 0, "castAccent")];
   if (isCard(p.tgt) || isHandCard(p.tgt)) {
-    return [burst(p.env.intensity, "arcane", at, "area", 0, "cast"), ring(p.D, "arcane", at, 0)];
+    return [burst(p.env.intensity, "arcane", at, "area", 0, "cast"), ring(p.D, "arcane", at, 0), ...accent];
   }
-  return [burst(p.env.intensity, "arcane", at, "point", 0, "castOpponent")];
+  return [burst(p.env.intensity, "arcane", at, "point", 0, "castOpponent"), ...accent];
 };
 
 const summon: Recipe = (event, p) => {
@@ -391,6 +419,9 @@ const summon: Recipe = (event, p) => {
     cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", slam, "summonPrismatic"));
     entrance = FX_LEGENDARY_TRAUMA;
   }
+  // Issue #124: the unit lands in its family's look as well: its ring and its particles at the slam.
+  const look = lookOf(facts);
+  if (look !== undefined) cues.push(ring(p.D, look.ring, at, slam), burst(i, look.preset, at, "area", slam, "summonAccent"));
   const stats = (facts.attack ?? 0) + (facts.health ?? 0);
   const slamTrauma =
     stats >= FX_SLAM_STATS_MIN
@@ -420,6 +451,11 @@ const impact: Recipe = (event, p) => {
   cues.push(burst(i, "spark", at, "point", hit, "impactSpark"));
   if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
   if (poisonous) cues.push(burst(i, "poison", at, "area", hit, "impactPoison"));
+  // Issue #124: a spell's or a card's hit lands in its family's look as well.
+  if (!event.combat) {
+    const look = lookOf(sourceFacts(event.sourceId, p.view, p.env));
+    if (look !== undefined) cues.push(burst(i, look.preset, at, "area", hit, "impactAccent"));
+  }
   const base =
     event.amount < FX_SHAKE_MIN_DAMAGE ? 0 : Math.min(FX_SHAKE_MAX_TRAUMA, event.amount * FX_TRAUMA_PER_DAMAGE);
   pushShake(cues, i, isHero(p.tgt) ? base * FX_HERO_TRAUMA_MULT : base, hit);
