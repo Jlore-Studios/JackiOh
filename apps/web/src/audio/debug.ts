@@ -2,6 +2,7 @@
 // production builds only, like `window.__jackioh`. It reports what the engine accepted, never what
 // the speakers did, because a headless browser has no output device.
 
+import { getMusicPlayer } from "./music.ts";
 import type { AudioEngine, AudioState, PlayedCue } from "./types.ts";
 
 export type AudioDebugHandle = {
@@ -9,6 +10,8 @@ export type AudioDebugHandle = {
   log(): readonly PlayedCue[];
   clearLog(): void;
   contextsCreated(): number;
+  /** R631: the track the music last asked for, the one playing or about to, and the turn mix. */
+  music(): { wanted: string | null; current: string | null; opponentTurn: boolean };
 };
 
 declare global {
@@ -28,6 +31,10 @@ export function exposeAudioDebug(engine: AudioEngine): () => void {
       engine.clearLog();
     },
     contextsCreated: () => engine.contextsCreated(),
+    music: () => {
+      const player = getMusicPlayer();
+      return { wanted: player.wanted(), current: player.current(), opponentTurn: player.opponentTurn() };
+    },
   };
   window.__jackiohAudio = handle;
   return () => {

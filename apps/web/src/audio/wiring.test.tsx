@@ -44,6 +44,8 @@ function fakeEngine(): FakeEngine {
         listeners.delete(listener);
       };
     }),
+    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
     playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),

@@ -105,6 +105,10 @@ src/
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
     voice-lines.json voice-manifest.json     every card's lines and personas; the generated hash and size of each file
+    music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
+    musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
+    musicData.ts music-manifest.json         the rendered tracks (loop points, tempo) and music-cards.json, the
+    music-cards.json                         Mythic themes and station switches by card id
   fx/                   the effects layer (docs/polish/1-animations.md; SPEC §10.10, R200–R202)
     types.ts constants.ts   the cue contract and every FX number
     settings.ts         effects speed, intensity and motion (localStorage, jackioh.fx.v1)
@@ -138,6 +142,8 @@ src/
     fixtures.ts         fixture PlayerViews; every test renders one of these
 scripts/
   gen-voice.mjs         renders voice-lines.json to public/audio/voice/<card-id>-<play|death|cast>.m4a
+  gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
+  music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
 ```
 
 ## Three flows at the table
@@ -373,6 +379,30 @@ src/tutorial/
   one Show tutorial button in its place; focus moves to the button that undoes the press. The choice
   is stored with the progress, so it holds on the next visit and on the account; a finished path
   folds to its header by itself and offers no Hide.
+
+## Regenerating the music
+
+The music is composed as code (R631): `scripts/music/tracks.mjs` holds every track's score, built
+on the toolkit in `compose.mjs` and `theory.mjs`. That means keys, tempos, progressions,
+arrangements, and melodies on one shared motif. `scripts/gen-music.mjs` turns each score into MIDI,
+renders it with FluidSynth and the FluidR3 GM SoundFont, and encodes it with ffmpeg to stereo AAC at
+44.1 kHz and 80 kbps. The tracks are committed with `src/audio/music-manifest.json`, so CI never
+renders. After editing a score, run `pnpm --filter @jackioh/web gen:music` on a machine with
+`fluidsynth`, `ffmpeg` and the SoundFont (Debian or Ubuntu: `apt install fluidsynth
+fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
+
+- It renders only the tracks whose input hash changed: the MIDI, the render and post settings, and
+  the encoding.
+- It deletes orphan files, rewrites the manifest, and fails if the set passes `MUSIC_BUDGET_BYTES`.
+- `--only <id>` renders one track, and `--force` renders everything.
+- A looping track's file holds its intro, one pass of the body, and a short tail. The loop points
+  live in the manifest. The renderer crossfades the last moment before the loop's end into the audio
+  just before its start, so the jump is sample-exact, and the tail repeats the start, so a decoder's
+  AAC priming offset still loops cleanly.
+- `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
+  `music-assets.test.ts` calls.
+- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme or a station switch is
+  an entry in `src/audio/music-cards.json`, and the music system needs no change for it.
 
 ## Regenerating the voice lines
 

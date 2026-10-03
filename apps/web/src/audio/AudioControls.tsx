@@ -1,6 +1,7 @@
-// The full audio panel (SPEC §10.11 "Settings"): master, effects and voice volume, mute, and voice
-// lines on or off. Task 7's settings panel mounts it at integration. Every control reads and writes
-// the audio settings store, which is the only place these values live.
+// The full audio panel (SPEC §10.11 "Settings"): master, effects, voice and music volume, mute, voice
+// lines on or off, and the music's station, dynamic music, ducking and pause-on-blur (R631). Task 7's
+// settings panel mounts it at integration. Every control reads and writes the audio settings store,
+// which is the only place these values live.
 //
 // A volume is set by ear (B54): moving the master or effects slider ticks at the new level (the
 // engine's retrigger guard keeps a drag from rattling), and letting go of the voice slider speaks a
@@ -8,10 +9,10 @@
 
 import { useId, type ChangeEvent, type ReactElement } from "react";
 
-import { VOICE_PREVIEW_DEF_ID, VOICE_PRIORITY } from "./constants.ts";
+import { MUSIC_STATIONS, VOICE_PREVIEW_DEF_ID, VOICE_PRIORITY } from "./constants.ts";
 import { getAudioEngine } from "./engine.ts";
 import { useAudioSettings, writeAudioSettings } from "./settings.ts";
-import type { AudioSettings } from "./types.ts";
+import type { AudioSettings, MusicStation } from "./types.ts";
 import "./audio.css";
 
 export type AudioControlsProps = { className?: string };
@@ -20,17 +21,35 @@ export type AudioControlsProps = { className?: string };
 const RANGE_MAX = 100;
 const RANGE_STEP = 5;
 
-type VolumeKey = "master" | "sfx" | "voice";
+type VolumeKey = "master" | "sfx" | "voice" | "music";
 
 function preview(key: VolumeKey): void {
   if (key === "voice") getAudioEngine().playVoice(VOICE_PREVIEW_DEF_ID, "play", 0, VOICE_PRIORITY.summon);
-  else getAudioEngine().playSfx("uiClick");
+  // The music is its own preview: whatever plays changes level as the slider moves.
+  else if (key !== "music") getAudioEngine().playSfx("uiClick");
 }
 
 const VOLUMES: readonly { key: VolumeKey; label: string; testid: string }[] = [
   { key: "master", label: "Master volume", testid: "audio-master" },
   { key: "sfx", label: "Effects volume", testid: "audio-sfx" },
   { key: "voice", label: "Voice volume", testid: "audio-voice" },
+  { key: "music", label: "Music volume", testid: "audio-music" },
+];
+
+/** R631: what each station sounds like, as the picker names it. */
+const STATION_LABELS: Record<MusicStation, string> = {
+  tavern: "Tavern",
+  edm: "EDM",
+  lofi: "Lo-fi",
+  epic: "Epic Orchestral",
+};
+
+type MusicFlag = "dynamicMusic" | "duckMusic" | "pauseMusicOnBlur";
+
+const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string }[] = [
+  { key: "dynamicMusic", label: "Dynamic music", testid: "audio-dynamic-music" },
+  { key: "duckMusic", label: "Lower music under voices and big moments", testid: "audio-duck-music" },
+  { key: "pauseMusicOnBlur", label: "Silence music when the game is in the background", testid: "audio-pause-music" },
 ];
 
 function percent(settings: AudioSettings, key: VolumeKey): number {
@@ -103,6 +122,42 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
         />
         <label htmlFor={`${id}-voice-on`}>Voice lines</label>
       </div>
+
+      <div className="audio-controls__row">
+        <label htmlFor={`${id}-station`}>Music station</label>
+        <select
+          id={`${id}-station`}
+          value={settings.station}
+          data-testid="audio-station"
+          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+            const station = MUSIC_STATIONS.find((s) => s === event.currentTarget.value);
+            if (station !== undefined) writeAudioSettings({ station });
+          }}
+        >
+          {MUSIC_STATIONS.map((station) => (
+            <option key={station} value={station}>
+              {STATION_LABELS[station]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {MUSIC_FLAGS.map(({ key, label, testid }) => (
+        <div className="audio-controls__row audio-controls__row--check" key={key}>
+          <input
+            id={`${id}-${key}`}
+            type="checkbox"
+            checked={settings[key]}
+            data-testid={testid}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              const patch: Partial<AudioSettings> = {};
+              patch[key] = event.currentTarget.checked;
+              writeAudioSettings(patch);
+            }}
+          />
+          <label htmlFor={`${id}-${key}`}>{label}</label>
+        </div>
+      ))}
     </fieldset>
   );
 }

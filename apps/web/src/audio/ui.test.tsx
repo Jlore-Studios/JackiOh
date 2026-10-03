@@ -54,6 +54,8 @@ function fakeEngine(options: { state?: AudioState; contexts?: number; log?: Play
     contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => options.contexts ?? 0),
     speaking: vi.fn<AudioEngine["speaking"]>(() => false),
     subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
+    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
     playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
@@ -598,6 +600,7 @@ describe("B32 window.__jackiohAudio", () => {
       log: () => [],
       clearLog: () => undefined,
       contextsCreated: () => 1,
+      music: () => ({ wanted: null, current: null, opponentTurn: false }),
     };
     window.__jackiohAudio = other;
 

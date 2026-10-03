@@ -3,7 +3,8 @@
 // `FakeAudio` implements exactly the permitted Web Audio subset the design names, and nothing else:
 // `currentTime`, `sampleRate`, `destination`, `createGain`, `createOscillator` (sine, square,
 // sawtooth, triangle; `frequency`, `detune`), `createBiquadFilter` (lowpass, highpass, bandpass;
-// `frequency`, `Q`, `gain`), `createBufferSource` (`buffer`, `playbackRate`, `loop`), `createBuffer`,
+// `frequency`, `Q`, `gain`), `createBufferSource` (`buffer`, `playbackRate`, `loop`, and the music
+// player's `loopStart` and `loopEnd`), `createBuffer`,
 // `connect(node | AudioParam)` / `disconnect`, `start` / `stop` / `onended`, and the AudioParam
 // `value`, `setValueAtTime`, `linearRampToValueAtTime`, `exponentialRampToValueAtTime`,
 // `setTargetAtTime` and `cancelScheduledValues`. The engine's extras are there too:
@@ -202,6 +203,10 @@ export class FakeNode {
   type: string | null = null;
   buffer: FakeBuffer | null = null;
   loop = false;
+  loopStart = 0;
+  loopEnd = 0;
+  /** The `offset` passed to a buffer source's `start`, or null. */
+  startOffset: number | null = null;
   /** The `when` passed to `start`, raw, or null while not started. */
   startTime: number | null = null;
   /** `currentTime` at the moment `start` was called. */
@@ -599,7 +604,7 @@ export class FakeAudio {
         const t = time(v, `${where}.start`, when, "when");
         if (offset !== undefined) {
           if (kind !== "bufferSource") refuse(v, `${where}.start`, "an oscillator's start takes only `when`");
-          time(v, `${where}.start`, offset, "offset");
+          rec.startOffset = time(v, `${where}.start`, offset, "offset");
         }
         if (duration !== undefined) {
           if (kind !== "bufferSource") refuse(v, `${where}.start`, "an oscillator's start takes only `when`");
@@ -664,8 +669,17 @@ export class FakeAudio {
           },
           enumerable: true,
         });
-        readable.push("buffer", "loop");
-        writable.push("buffer", "loop");
+        for (const key of ["loopStart", "loopEnd"] as const) {
+          Object.defineProperty(surface, key, {
+            get: () => rec[key],
+            set: (value: unknown) => {
+              rec[key] = time(v, `${where}.${key}`, value, key);
+            },
+            enumerable: true,
+          });
+        }
+        readable.push("buffer", "loop", "loopStart", "loopEnd");
+        writable.push("buffer", "loop", "loopStart", "loopEnd");
         source();
         break;
       case "compressor":

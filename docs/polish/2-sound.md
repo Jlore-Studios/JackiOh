@@ -1004,7 +1004,8 @@ charged to the burst, and that holds for a slow phone as much as for Cypress.
 
 - Attack voice lines, emotes, hero voices, and a player-chosen voice pack.
 - Music and ambient loops (tavern music, board ambience). (The UI ticks and the unlock do reach every
-  screen since the review fixes, B52.)
+  screen since the review fixes, B52.) Patch v0.2.7 (#51) added the music later, as R631: SPEC §10.11
+  "Music", `apps/web/src/audio/music*.ts` and `apps/web/scripts/gen-music.mjs`.
 - A bespoke sound per card: SFX are per event type, and personality comes from the voice lines. A
   summon is sized by the unit and a Radiant unit glints (B56); a rarity sting would need the rarity,
   which neither the view nor the client's card lookup carries.

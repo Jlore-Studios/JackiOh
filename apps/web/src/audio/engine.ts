@@ -3,11 +3,14 @@
 // Lazily built: no AudioContext exists until the first `unlock()`, which the unlock listeners call
 // inside a user gesture (autoplay policy, and iOS's resume-plus-silent-buffer rule). The graph is
 //
-//   per-cue gain ─▶ sfx bus ──┐
-//   persona gain ─▶ voice bus ┴─▶ master ─▶ limiter ─▶ destination
+//   per-cue gain ─▶ sfx bus ──────────────────┐
+//   persona gain ─▶ voice bus ────────────────┤
+//   music player ─▶ music bus ─▶ music duck ──┴─▶ master ─▶ limiter ─▶ destination
 //
 // with bus gains read from the settings store and smoothed on change (mix.ts builds it). Both play
-// calls go through one acceptance gate and never throw.
+// calls go through one acceptance gate and never throw. The music player (music.ts) plays into the
+// music bus `musicOutput()` hands out, and the engine ducks it under every voice line and the
+// effects MUSIC_DUCK_SFX names while `duckMusic` is on (R631).
 //
 // NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING. A suspended (or Safari "interrupted")
 // context's clock stands still, so everything scheduled on it would start together the moment it
@@ -43,6 +46,10 @@ import {
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
   LOG_LIMIT,
+  MUSIC_DUCK_ATTACK_TC_S,
+  MUSIC_DUCK_GAIN,
+  MUSIC_DUCK_RELEASE_TC_S,
+  MUSIC_DUCK_SFX,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
   VOICE_DECODED_MAX,
@@ -268,6 +275,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   /** What `speaking()` last reported to its subscribers. */
   let spoke = false;
   const speakingListeners = new Set<() => void>();
+  const stateListeners = new Set<() => void>();
+  /** The context time the music's current duck lets go at. */
+  let duckUntil = 0;
   let waiting: VoiceLine[] = [];
   let prefetchScheduled = false;
   /** The keys the prefetch has still to fetch: null until VOICE_PREFETCH_DELAY_MS after it was scheduled. */
@@ -317,6 +327,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     buses.master.gain.setTargetAtTime(levels.master, t, GAIN_SMOOTHING_S);
     buses.sfx.gain.setTargetAtTime(levels.sfx, t, GAIN_SMOOTHING_S);
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
+    buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
     // cannot reach the browser's speech synthesis.
     if (s.muted || !s.voiceOn) silenceVoice();
@@ -340,6 +351,17 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     source.start(0);
   }
 
+  /** Tells the music player the context was made or may have changed state. */
+  function notifyState(): void {
+    for (const listener of [...stateListeners]) {
+      try {
+        listener();
+      } catch {
+        // One listener's failure must not stop the others.
+      }
+    }
+  }
+
   function unlock(): void {
     if (factory === null || broken || disposed) return;
     if (ctx === null) {
@@ -352,14 +374,29 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       created += 1;
       buses = buildMix(ctx, readAudioSettings());
       unsubscribe = subscribeAudioSettings(applySettings);
+      notifyState();
     }
     if (ctx.state === "running") return;
     try {
-      void ctx.resume().catch(() => {});
+      void ctx.resume().then(notifyState, () => {});
     } catch {
       // resume() on a closed context throws in some browsers; the gesture carries on.
     }
     playSilentFrame(ctx);
+  }
+
+  /**
+   * R631: dips the music bus for `lengthS` from `startAt` (context time), when `duckMusic` is on.
+   * Overlapping ducks hold the dip until the last of them ends.
+   */
+  function duck(startAt: number, lengthS: number): void {
+    if (ctx === null || buses === null || !readAudioSettings().duckMusic) return;
+    const gain = buses.musicDuck.gain;
+    const t = Math.max(ctx.currentTime, startAt);
+    duckUntil = Math.max(duckUntil, t + lengthS);
+    gain.cancelScheduledValues(t);
+    gain.setTargetAtTime(MUSIC_DUCK_GAIN, t, MUSIC_DUCK_ATTACK_TC_S);
+    gain.setTargetAtTime(1, duckUntil, MUSIC_DUCK_RELEASE_TC_S);
   }
 
   /* ----- log ----- */
@@ -416,6 +453,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
       lastSfxAt.set(id, t);
       sfxEnds.push(t + delay + lengthMs);
+      if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
       later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
       pushLog(logged());
       return true;
@@ -602,6 +640,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       speech.cancel();
     };
     setOutcome(ch.line, "speech");
+    if (ctx !== null) duck(ctx.currentTime, VOICE_SPEECH_MAX_MS / 1000);
     later(VOICE_SPEECH_MAX_MS, () => release(ch));
     const volume = Math.min(1, Math.max(0, settings.master * settings.voice));
     try {
@@ -655,6 +694,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       }
     };
     source.start(startAt, span.offsetS, span.lengthS);
+    duck(startAt, span.lengthS);
     setOutcome(line, "file");
     later(lengthMs, () => release(ch));
   }
@@ -818,6 +858,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
     setChannel(null);
     speakingListeners.clear();
+    stateListeners.clear();
     waiting = [];
     heldPreload = null;
     prefetchRest = null;
@@ -849,6 +890,13 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       speakingListeners.add(listener);
       return () => {
         speakingListeners.delete(listener);
+      };
+    },
+    musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    subscribeState: (listener) => {
+      stateListeners.add(listener);
+      return () => {
+        stateListeners.delete(listener);
       };
     },
     dispose,
