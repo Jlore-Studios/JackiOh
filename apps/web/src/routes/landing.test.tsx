@@ -12,13 +12,16 @@ import { DECK_SIZE, MAX_MANA, UNIT_ZONES } from "@jackioh/engine/config";
 import { LOADOUT_DECKS } from "@jackioh/validator";
 
 import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
+import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { seeded } from "../test/random.ts";
+import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES } from "../stats/config.ts";
+import { dropPlayerStatsCache } from "../stats/store.ts";
 import LandingRoute from "./landing.tsx";
-import { dealLandingFan } from "./landingFan.ts";
+import { ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -104,6 +107,7 @@ async function expectLeadsTo(element: HTMLElement, path: string): Promise<void> 
 
 beforeEach(() => {
   window.localStorage.clear();
+  dropPlayerStatsCache();
   setReducedMotion(false);
   serve("active");
   at("/");
@@ -273,14 +277,18 @@ describe("B38 the hero", () => {
     expect(wordmarks.length).toBeGreaterThan(0);
   });
 
-  it("B38 the fan holds exactly five cards, landing-fan-card-0 to -4, all hidden from assistive tech", () => {
+  it("B38 R639 the fan holds exactly five cards, landing-fan-card-0 to -4: four faces that are buttons, and a back hidden from assistive tech", () => {
     render(<LandingRoute />);
     const fan = within(landing()).getByTestId(landingTestid.fan);
 
-    for (let index = 0; index < FAN_CARDS; index += 1) {
+    for (let index = 0; index < FAN_CARDS - 1; index += 1) {
       const card = within(fan).getByTestId(landingFanCardTestid(index));
-      expect(card.closest('[aria-hidden="true"]'), `${landingFanCardTestid(index)} is aria-hidden`).not.toBeNull();
+      expect(card, `${landingFanCardTestid(index)} is a button`).toHaveAttribute("role", "button");
+      expect(card.getAttribute("aria-label")).toMatch(/^Read /);
+      expect(card.closest('[aria-hidden="true"]'), `${landingFanCardTestid(index)} is readable`).toBeNull();
     }
+    const back = within(fan).getByTestId(landingFanCardTestid(FAN_CARDS - 1));
+    expect(back.closest('[aria-hidden="true"]'), "the card back is aria-hidden").not.toBeNull();
     expect(screen.queryByTestId(landingFanCardTestid(FAN_CARDS))).toBeNull();
   });
 
@@ -388,5 +396,153 @@ describe("B38 the hero", () => {
       expect(icon.textContent).toBe("");
       expect(icon.getAttribute("aria-hidden")).toBe("true");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R639: the fan rotates through every set once the device has logged enough games, a face opens at
+// full size, and the device's statistics are shown
+// ---------------------------------------------------------------------------------------------
+
+/** A device with this many logged games (the store's own shape, read back as the page would). */
+function withGames(games: number, cards: Record<string, Record<string, number>> = {}): void {
+  window.localStorage.setItem(
+    PLAYER_STATS_KEY,
+    JSON.stringify({ v: PLAYER_STATS_VERSION, games, wins: games, losses: 0, draws: 0, cards }),
+  );
+  dropPlayerStatsCache();
+}
+
+function shownIds(): string[] {
+  return [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
+}
+
+describe("R639 the homescreen rotation", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    dropPlayerStatsCache();
+  });
+
+  it("R639 below the threshold the fan keeps its fixed deal of Core cards and never swaps", () => {
+    vi.useFakeTimers();
+    withGames(ROTATION_MIN_GAMES - 1);
+    render(<LandingRoute random={seeded(5)} />);
+    const hand = shownIds();
+    expect(hand).toEqual(dealLandingFan(seeded(5)).map(({ def }) => def.id));
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS * 6);
+    });
+    expect(shownIds()).toEqual(hand);
+  });
+
+  it("R639 at the threshold the fan deals from every set and swaps one slot a step, left to right", () => {
+    vi.useFakeTimers();
+    withGames(ROTATION_MIN_GAMES);
+    render(<LandingRoute random={seeded(5)} />);
+
+    // The same source, the same draws: the deal, then the swaps the page makes.
+    const mirror = seeded(5);
+    let expected = dealLandingFan(mirror, ROTATION_POOL, featureWeight);
+    expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
+
+    for (const slot of [0, 1, 2, 3, 0]) {
+      const before = shownIds();
+      act(() => {
+        vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+      });
+      expected = rotateFan(expected, slot, mirror);
+      const after = shownIds();
+      expect(after).toEqual(expected.map(({ def }) => def.id));
+      // One card moved, in the slot due, and it is a card of the same rarity the fan was not showing.
+      expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
+      expect(after[slot]).not.toBe(before[slot]);
+      expect(new Set(after).size).toBe(after.length);
+    }
+  });
+
+  it("R639 across a long visit the fan shows cards of Classic and Classic+ as well as Core", () => {
+    vi.useFakeTimers();
+    withGames(ROTATION_MIN_GAMES + 40);
+    render(<LandingRoute random={seeded(11)} />);
+    const sets = new Set<string>();
+    const poolById = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+    for (let step = 0; step < 60; step += 1) {
+      for (const id of shownIds()) sets.add(poolById.get(id)?.set ?? "?");
+      act(() => {
+        vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+      });
+    }
+    expect(sets.has("Core")).toBe(true);
+    expect(sets.has("Classic")).toBe(true);
+    expect(sets.has("Classic+")).toBe(true);
+    expect(sets.has("?")).toBe(false);
+  });
+
+  it("R639 the hand holds still under reduced motion, while a pointer or focus is on it, and while a card is open", async () => {
+    vi.useFakeTimers();
+    withGames(ROTATION_MIN_GAMES);
+    setReducedMotion(true);
+    const reduced = render(<LandingRoute random={seeded(5)} />);
+    const dealt = shownIds();
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS * 3);
+    });
+    expect(shownIds()).toEqual(dealt);
+    reduced.unmount();
+
+    setReducedMotion(false);
+    render(<LandingRoute random={seeded(5)} />);
+    const fan = screen.getByTestId(landingTestid.fan);
+    fireEvent.mouseEnter(fan);
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS * 3);
+    });
+    expect(shownIds()).toEqual(dealt);
+    fireEvent.mouseLeave(fan);
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+    });
+    expect(shownIds()).not.toEqual(dealt);
+  });
+});
+
+describe("R639 a fan card opens at full size", () => {
+  it("R639 a click opens the card's detail dialog and Close puts it away", async () => {
+    render(<LandingRoute random={seeded(3)} />);
+    const face = screen.getByTestId(landingFanCardTestid(1));
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    fireEvent.click(face);
+    const detail = await screen.findByTestId(INSPECT_DETAIL, undefined, SLOW);
+    expect(detail.textContent).toContain(face.querySelector(".card-name")?.textContent ?? "(no name)");
+    fireEvent.keyDown(detail, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    });
+  });
+
+  it("R639 Enter and Space on a focused face open it too, for a keyboard or a screen reader", async () => {
+    render(<LandingRoute random={seeded(3)} />);
+    const face = screen.getByTestId(landingFanCardTestid(0));
+    fireEvent.keyDown(face, { key: "Tab" });
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    fireEvent.keyDown(face, { key: "Enter" });
+    expect(await screen.findByTestId(INSPECT_DETAIL, undefined, SLOW)).toBeInTheDocument();
+  });
+});
+
+describe("R639 your table", () => {
+  it("R639 draws nothing before the first logged game", () => {
+    render(<LandingRoute />);
+    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+  });
+
+  it("R639 shows the record and the favourites the device kept, and Clear forgets them", () => {
+    withGames(4, { "core-004": { seen: 4, played: 9, playedAgainst: 0, destroyed: 0, defeated: 0 } });
+    render(<LandingRoute />);
+    const table = screen.getByTestId(landingTestid.stats);
+    expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
+    expect(table.querySelector('[data-stat="played"]')?.textContent).toContain("played 9×");
+    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
+    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });
 });
