@@ -186,8 +186,7 @@ type SeriesView = {
   result: {
     outcome: "win" | "loss" | "draw" | "abandoned";
     endReason: string;
-    ratingBefore: number | null;
-    ratingAfter: number | null;
+    ranked: boolean;
   } | null;
 };
 
@@ -632,8 +631,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       .and("have.attr", "data-opponent", "0");
 
     // --- the rating moved once: by the series' own move, not by its games (R262, R604) ---------------
-    // R612: the hidden rating never reaches the client, so the move is read off the series' own
-    // result row and the profile's move is counted in rated games, not in rating points.
+    // R612: the hidden rating never reaches the client, so the move is read off the series'
+    // `ranked` flag and the season record, not off rating points.
     cy.then(() => {
       seriesAs(seatOne, seriesId).then((view) => {
         expect(view.status).to.eq("over");
@@ -644,8 +643,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         const result = view.result;
         expect(result?.outcome).to.eq("win");
         expect(result?.endReason).to.eq("decided");
-        const moved = (result?.ratingAfter ?? 0) - (result?.ratingBefore ?? 0);
-        expect(moved, "a won series moves the rating up").to.be.greaterThan(0);
+        expect(result?.ranked, "a won queue-paired series moved the rating").to.eq(true);
         profile(seatOne).should((after) => {
           expect(after.record.wins - before.record.wins, "R262: every game is recorded as a win").to.eq(SERIES_WINS_NEEDED);
         });

@@ -106,12 +106,16 @@ export function endReasonWords(
   }
 }
 
-/** The rating line: "Rating 1000 → 1016", or why nothing moved (R262). */
+/**
+ * Whether the series moved the viewer's rank (R262, R604): a ranked series counts as one rated
+ * game. The hidden rating never reaches the client (R612), so there are no numbers here — the
+ * rank it left is `GET /api/ranked`'s.
+ */
 export function ratingWords(result: SeriesResult): string {
-  if (result.outcome === "abandoned" || result.ratingBefore === null || result.ratingAfter === null) {
+  if (result.outcome === "abandoned" || !result.ranked) {
     return "Unrated: no rating changed.";
   }
-  return `Rating ${String(result.ratingBefore)} → ${String(result.ratingAfter)}`;
+  return "Ranked series: counted as one rated game.";
 }
 
 function messageOf(cause: unknown): string {

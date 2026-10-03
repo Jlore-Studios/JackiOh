@@ -558,12 +558,14 @@ export type SeriesView = {
     result: "win" | "loss" | "draw" | null;
     reason: GameOverReason | null;
   }[];
-  /** Null until the series is over. */
+  /**
+   * Null until the series is over. `ranked`: the series moved your rank (R604); the rating it
+   * moved is never sent (R612), and the rank it left is `GET /api/ranked`'s.
+   */
   result: {
     outcome: "win" | "loss" | "draw" | "abandoned";
     endReason: SeriesEnd;
-    ratingBefore: number | null;
-    ratingAfter: number | null;
+    ranked: boolean;
   } | null;
 };
 
