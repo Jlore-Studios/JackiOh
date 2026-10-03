@@ -455,14 +455,16 @@
     },
     "131": {
       "action": "build",
-      "asks": [],
-      "failures": 3,
+      "asks": [
+        "c:5972563783"
+      ],
+      "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-03T07:26:18Z",
+      "queued_at": "2026-10-03T19:09:47Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37146267361",
       "started_at": "2026-10-03T19:00:16Z",
