@@ -373,7 +373,10 @@
       "merged": true
     },
     "37": {
-      "asks": [],
+      "asks": [
+        "c:5946888700",
+        "c:5957930923"
+      ],
       "died": 0,
       "failures": 0,
       "forced": true,
@@ -396,10 +399,7 @@
       "run_id": "37098986287",
       "started_at": "2026-10-03T05:11:15Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5946888700",
-        "c:5957930923"
-      ]
+      "taken_asks": []
     },
     "39": {
       "died": 0,
