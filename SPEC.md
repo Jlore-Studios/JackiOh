@@ -1267,6 +1267,10 @@ R630. It edits §10.11.
 account's settings follow it to another device, as its tutorial progress does (R320, R321). They take
 the next numbers after R632. They edit §9.1, §9.4 and §10.11.
 
+**R636 to R638 are the keyword rules of the v0.2.X patch's first part (issue #123, 2026-10-03)**: Windfury,
+Temporary, and Brittle ticking on the field only. They take the next numbers after R634, R635 being held
+by the card patch history's pending fragments (issue #63). They edit §2.2, §4.1, §6.1 and §6.3.
+
 | # | Topic | Recommended ruling | Cards affected |
 | --- | --- | --- | --- |
 | R1 | When does Cry fire? (decide) | When the card is played — from hand, or, since patch v0.2.0, from a graveyard while a permission lets its player play from there (§6.3 Play) — or cast by an effect (R70). A summon fires it only when it names the card it summons (C+ #19 League of Losers summoning C+ #19.3 Mid Loser, R411); copies, Recruit, Reborn, Transform, Flicker and every other summon, a token's included, never fire it. "Trigger a Cry" (§6.3) runs one by effect, on the field or in a graveyard, without the card being played. A countered card is never played and fires none (§10.5) | #12 would fill the board for 2 mana otherwise; #3, #22, #61, #69; C #28, C #54, C #90, C+ #19, C+ #19.3; R70, R411 |
