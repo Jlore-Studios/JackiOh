@@ -277,11 +277,11 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "claude-1",
       "queued_at": "2026-10-03T05:24:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37134541856",
-      "started_at": "2026-10-03T15:49:11Z",
+      "run_id": "37134462819",
+      "started_at": "2026-10-03T15:57:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -997,9 +997,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T15:49:11Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37134541856",
-    "what": "build #113 on gpt"
+    "at": "2026-10-03T15:57:51Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37134462819",
+    "what": "build #113 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-03T15:47:21Z",
