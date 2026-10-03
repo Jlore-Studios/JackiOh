@@ -486,7 +486,9 @@
     },
     "131": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5972563783"
+      ],
       "failures": 1,
       "forced": false,
       "interruptions": 0,
@@ -498,9 +500,7 @@
       "run_id": "37150463699",
       "started_at": "2026-10-03T20:09:13Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972563783"
-      ]
+      "taken_asks": []
     },
     "133": {
       "failures": 0,
