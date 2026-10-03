@@ -6,7 +6,7 @@
 // happened on, the board swaps to the new view, and the boundary and everything after it play over
 // that view. Nothing is dropped, and a view arriving meanwhile queues behind the whole of it.
 
-import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
+import type { ActionBody, GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

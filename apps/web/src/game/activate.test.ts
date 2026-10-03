@@ -19,6 +19,7 @@ import {
   pickInPlay,
   playSourceTestid,
   plagueKey,
+  type ActivationBody,
   type Interaction,
 } from "./actions.ts";
 import { namedAbility, testid } from "./contract.ts";
@@ -314,7 +315,7 @@ describe("R43 patch v0.2.1: a Heroic Power is its card's Activate ability, built
   // ability it rolled (R384). `legalActions` lists one `activate` per target Ping may declare (R606).
   const ping = { ...heroPower, name: "ping", ability: "ping", x: 1 };
   const PING_ABILITY: ActivationView = { ability: "ping", label: "Ping: Pierce. Deal 1 damage", usesLeft: 1, usable: true };
-  const powerPing = (target: Selection): ActionBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
+  const powerPing = (target: Selection): ActivationBody => ({ type: "activate", instanceId: "power-1", ability: "ping", targets: [target] });
   const legal: ActionBody[] = [powerPing(at("e1")), powerPing(at("e2")), powerPing(heroP2), { type: "endTurn" }];
 
   function pingView(): PlayerView {

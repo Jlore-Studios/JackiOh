@@ -23,9 +23,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { CardDef, VoiceLineKind } from "@jackioh/shared";
-import { VOICE_PRIORITY } from "../../audio/constants.ts";
+import type { CardDef } from "@jackioh/shared";
+import { INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY } from "../../audio/constants.ts";
 import { getAudioEngine } from "../../audio/engine.ts";
+import type { VoiceLineKind } from "../../audio/types.ts";
 import { VOICE_LINES, lineFor } from "../../audio/voiceData.ts";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
@@ -175,7 +176,7 @@ function VoiceLineButtons({ defId }: { defId: string }): ReactElement | null {
           onClick={() => {
             const audio = getAudioEngine();
             audio.unlock();
-            audio.playVoice(defId, kind, 0, VOICE_PRIORITY.summon);
+            audio.playVoice(defId, kind, INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY.summon);
           }}
         >
           {label}

@@ -8,7 +8,7 @@
 
 import type { PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
-import { activeUnitsOf, cloneState, query, unitView, type CardInstance, type GameState, type Rng } from "@jackioh/engine";
+import { activeUnitsOf, cloneState, query, scriptOf, unitView, type CardInstance, type GameState, type Rng } from "@jackioh/engine";
 import { AI_DETERMINIZE } from "./config";
 import { HIDDEN_DEF_ID } from "./observe";
 
@@ -87,7 +87,13 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   const keepsBoard =
     (card: CardInstance) =>
     (id: string): boolean => {
+      // Only an aura can change another Unit's stats from a backrow slot. Avoid rebuilding every
+      // Unit's layered view for ordinary traps: determinize runs inside every simulated AI branch.
       card.defId = id;
+      if (scriptOf(card).aura === undefined) {
+        card.defId = HIDDEN_DEF_ID;
+        return true;
+      }
       const same = shownStats(next) === board;
       card.defId = HIDDEN_DEF_ID;
       return same;

@@ -4436,5 +4436,26 @@
         "kind": "added"
       }
     ]
+  },
+  {
+    "version": "v0.2.1",
+    "date": "2026-10-02",
+    "title": "Heroic Power rework and cosmetic fixes",
+    "source": "Issue #37",
+    "notes": "Heroic Power Activate rework, current-owner zone destinations, and associated client polish.",
+    "changes": [
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "refs",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
   }
 ]

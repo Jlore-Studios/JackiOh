@@ -5,18 +5,23 @@
 // glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY } from "../../audio/constants.ts";
+import { getAudioEngine } from "../../audio/engine.ts";
+import { CardDefsProvider } from "../refContext.tsx";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
 import { CardDetail, closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
+  INSPECT_CAROUSEL_NEXT,
+  INSPECT_CAROUSEL_POSITION,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
@@ -25,6 +30,8 @@ import {
 
 /** The meta line's separator, as the Surface spells it. */
 const SEP = " · ";
+/** Base, Radiant, Rush Token, Felinor Token and Ghoul Token (#98's direct references). */
+const HEROIC_POWER_CAROUSEL_FACE_COUNT = 5;
 
 function defOf(id: string): CardDef {
   const def = CATALOG[id];
@@ -59,6 +66,7 @@ afterEach(() => {
     closeInspect();
   });
   cleanup();
+  vi.restoreAllMocks();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
@@ -252,4 +260,41 @@ describe("CardDetail (B29)", () => {
     }
     // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
   }, 30_000);
+
+  it("pages a card's base, Radiant, and directly related token faces one at a time", () => {
+    const def = defOf("core-098");
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <CardDetail def={def} onClose={() => undefined} />
+      </CardDefsProvider>,
+    );
+
+    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`1 of ${String(HEROIC_POWER_CAROUSEL_FACE_COUNT)}`);
+    expect(screen.getByTestId(INSPECT_FACE_BASE).closest("figure")).not.toHaveAttribute("hidden");
+    expect(screen.getByTestId(INSPECT_FACE_RADIANT).closest("figure")).toHaveAttribute("hidden");
+
+    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_NEXT));
+    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`2 of ${String(HEROIC_POWER_CAROUSEL_FACE_COUNT)}`);
+    expect(screen.getByTestId(INSPECT_FACE_BASE).closest("figure")).toHaveAttribute("hidden");
+    expect(screen.getByTestId(INSPECT_FACE_RADIANT).closest("figure")).not.toHaveAttribute("hidden");
+  });
+
+  it("offers every voice-line kind that the inspected card has and plays the selected line", () => {
+    const playVoice = vi.spyOn(getAudioEngine(), "playVoice");
+    const unlock = vi.spyOn(getAudioEngine(), "unlock");
+    const unit = defOf("core-004");
+    const { rerender } = render(<CardDetail def={unit} onClose={() => undefined} />);
+
+    expect(screen.getByRole("button", { name: "Play voice line" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Death voice line" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cast voice line" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Death voice line" }));
+    expect(unlock).toHaveBeenCalledOnce();
+    expect(playVoice).toHaveBeenCalledWith(unit.id, "death", INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY.summon);
+
+    rerender(<CardDetail def={defOf("core-005")} onClose={() => undefined} />);
+    expect(screen.queryByRole("button", { name: "Play voice line" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Death voice line" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cast voice line" })).toBeInTheDocument();
+  });
 });
