@@ -452,7 +452,9 @@
       "stop_requested": false
     },
     "63": {
-      "asks": [],
+      "asks": [
+        "c:5965533265"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -470,7 +472,7 @@
       "pending_request": false,
       "provider": "muse",
       "question": "Please add the two .github/ files from the snippets below (patches-ship.yml workflow + patches check in ci.yml). Bot rules (prompt Never #1, CLAUDE.md) forbid bot edits under .github/ \u2014 the harness reverts them \u2014 so a person must land these two small files before this can merge.",
-      "queued_at": "2026-10-01T14:52:17Z",
+      "queued_at": "2026-10-03T04:30:14Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37089106384",
       "started_at": "2026-10-03T02:14:55Z",
