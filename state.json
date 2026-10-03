@@ -512,9 +512,7 @@
       "source": "request",
       "started_at": "2026-10-03T18:03:29Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5970229268"
-      ]
+      "taken_asks": []
     },
     "143": {
       "action": "revise",
