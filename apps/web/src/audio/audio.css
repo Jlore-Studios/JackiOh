@@ -118,3 +118,13 @@
   height: 20px;
   margin: 12px;
 }
+
+/* A switch's one-line explanation sits under the pair, across the whole row. */
+.audio-controls__hint {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-dim, inherit);
+}

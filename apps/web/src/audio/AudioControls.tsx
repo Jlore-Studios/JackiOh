@@ -1,5 +1,6 @@
 // The full audio panel (SPEC §10.11 "Settings"): master, effects, voice and music volume, mute, voice
-// lines on or off, and the music's station, dynamic music, ducking and pause-on-blur (R631). Task 7's
+// lines on or off, and the music's station, dynamic music, ducking and whether it plays on in a
+// background tab (R631). Task 7's
 // settings panel mounts it at integration. Every control reads and writes the audio settings store,
 // which is the only place these values live.
 //
@@ -44,12 +45,14 @@ const STATION_LABELS: Record<MusicStation, string> = {
   epic: "Epic Orchestral",
 };
 
-type MusicFlag = "dynamicMusic" | "duckMusic" | "pauseMusicOnBlur";
+type MusicFlag = "dynamicMusic" | "duckMusic" | "playMusicInBackground";
 
-const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string }[] = [
+const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string; hint?: string }[] = [
   { key: "dynamicMusic", label: "Dynamic music", testid: "audio-dynamic-music" },
   { key: "duckMusic", label: "Lower music under voices and big moments", testid: "audio-duck-music" },
-  { key: "pauseMusicOnBlur", label: "Silence music when the game is in the background", testid: "audio-pause-music" },
+  { key: "playMusicInBackground", label: "Keep playing music when this tab is in the background", testid: "audio-music-background",
+    hint: "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way.",
+  },
 ];
 
 function percent(settings: AudioSettings, key: VolumeKey): number {
@@ -142,13 +145,14 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
         </select>
       </div>
 
-      {MUSIC_FLAGS.map(({ key, label, testid }) => (
+      {MUSIC_FLAGS.map(({ key, label, testid, hint }) => (
         <div className="audio-controls__row audio-controls__row--check" key={key}>
           <input
             id={`${id}-${key}`}
             type="checkbox"
             checked={settings[key]}
             data-testid={testid}
+            aria-describedby={hint === undefined ? undefined : `${id}-${key}-hint`}
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
               const patch: Partial<AudioSettings> = {};
               patch[key] = event.currentTarget.checked;
@@ -156,6 +160,11 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
             }}
           />
           <label htmlFor={`${id}-${key}`}>{label}</label>
+          {hint === undefined ? null : (
+            <p className="audio-controls__hint" id={`${id}-${key}-hint`}>
+              {hint}
+            </p>
+          )}
         </div>
       ))}
     </fieldset>
