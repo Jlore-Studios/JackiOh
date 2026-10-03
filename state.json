@@ -567,9 +567,7 @@
       "source": "request",
       "started_at": "2026-10-03T19:19:30Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972540839"
-      ]
+      "taken_asks": []
     },
     "143": {
       "action": "revise",
