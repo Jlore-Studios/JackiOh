@@ -63,8 +63,13 @@ import {
 } from "../../support/testids.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
 
-/** Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. */
-const SEED = seedFor("13-practice");
+/**
+ * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. The human here only ends turns,
+ * so the seed has to be a game the Easy AI takes more than `HUMAN_TURNS` of its turns to win: with a
+ * random deck, R635 re-dealt the old seed (`13-practice`) into a game the human lost after its third
+ * turn. This one survives six, found by playing each candidate through the practice core.
+ */
+const SEED = seedFor("13-practice-n");
 
 /** Human turns played through the UI before the concede. */
 const HUMAN_TURNS = 3;
