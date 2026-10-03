@@ -73,7 +73,31 @@ Add **`--force`** to `build`, `revise` or `suggest` to start now, on a subscript
 hours if need be (its usage caps still hold). A forced item stays forced until it is done.
 
 Label an issue **`difficult`** to keep it for Opus: only a Claude account builds, revises and
-reviews it, and Opus takes `difficult` items before anything else.
+reviews it, and Opus takes `difficult` items before anything else in their priority tier.
+
+### Priority, `human` and `shitter`
+
+Three labels set the order queued work is picked up in: **`priority:high`** first, then
+**`priority:medium`**, then work with no priority label, then **`priority:low`**. On a thread with
+more than one, the highest counts, and any other `priority:*` label counts as none. Inside a tier
+the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
+every tier. A priority label never makes work eligible or ineligible.
+
+Two labels take work away from models:
+
+- **`human`**: a person will do it. No model picks it up, whatever else it is labelled, forced or
+  not.
+- **`shitter`**: low-tier models only. A high-tier model, Claude Opus or OpenAI Astra (any
+  version: `opus` or `astra` anywhere in the `model` in `providers.json`), never picks it up; any
+  other model may, an unknown one included. With `difficult` as well, no model can take it.
+
+Label names match whatever their case. Labels are read afresh at every pickup, so a change counts
+at the next run, and a run already going is never stopped. The pull request the bot opens for an
+issue, a draft or not, starts with the issue's `shitter` and priority labels, so its revisions and
+its second review follow the same rules. A label changed on the issue after that, `human`
+included, does not reliably reach the pull request (a later build of the issue copies added
+labels again, never removed ones): change it there too. The `peek` and `plan` steps of a night run
+log the chosen item's tier and every item passed over because of `human` or `shitter`.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
@@ -199,6 +223,9 @@ needs level 3.
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 | `difficult` | Opus only, and Opus takes it first (`difficult_label` in `providers.json`) |
+| `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-human-and-shitter)) |
+| `human` | a person will do it; no model picks it up |
+| `shitter` | low-tier models only: never Opus or Astra |
 
 ## Subscriptions
 
@@ -250,9 +277,10 @@ in. A `secret` must be one of the names the workflows hand over (the four Claude
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on one
-item at a time. Items go in this order: forced, `difficult`, second reviews, revisions, then the
-oldest builds. Each goes to the first subscription in `priority` that is free, set up, inside its
-hours (unless the item is forced) and under its limits. A run that claims an item starts another
+item at a time. Items go in this order: forced, the priority tier, `difficult`, second reviews,
+revisions, then the oldest builds. Each goes to the first subscription in `priority` that is free,
+set up, inside its hours (unless the item is forced) and under its limits, and that may take it
+(`difficult` and `shitter`). A run that claims an item starts another
 run while a lane and more work are free, and a run that finishes starts the next, so the lanes
 fill up. By night that is usually Opus; by day, whoever else is set up. A run that could not work
 at all (its login refused, its CLI would not install or start) leaves its subscription alone for
@@ -492,6 +520,8 @@ days.
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | keep an item for Opus | label it `difficult` |
+| keep an item from Opus and Astra, or from every model | label it `shitter`, or `human` |
+| have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
 | retry something it gave up on | fix what it asked about, then `/harness build`; `python3 -m harness forget <n>` clears the failure count |
 | read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |

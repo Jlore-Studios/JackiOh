@@ -64,6 +64,11 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
     "bot:cross-review": ("0052cc", "A night bot pull request waiting for a second model's review"),
+    "human": ("ededed", "A human will do this. Night bot skips it."),
+    "shitter": ("c2e0c6", "Low-tier models only (anything except OpenAI Astra or Claude Opus)."),
+    "priority:high": ("d73a4a", "The night bot picks this up first"),
+    "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
+    "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
 }
 
 LABEL_BUILD = "bot:build"
@@ -75,6 +80,14 @@ LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
 LABEL_CROSS = "bot:cross-review"
+#: No model takes a thread labelled `human`; only a low-tier one takes a `shitter` one (#96).
+LABEL_HUMAN = "human"
+LABEL_SHITTER = "shitter"
+#: The pickup tiers, first to last; a thread with no priority label sits between medium and low
+#: (#90). Like `human` and `shitter`, these match whatever their case.
+LABEL_PRIORITY_HIGH = "priority:high"
+LABEL_PRIORITY_MEDIUM = "priority:medium"
+LABEL_PRIORITY_LOW = "priority:low"
 
 
 @dataclass(frozen=True)

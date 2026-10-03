@@ -17,8 +17,9 @@ Every issue carries at least one type label:
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. `difficult`
-(only Claude Opus works on it) and the `bot:*` labels are separate. Never add `bot:build` while
-retitling or relabelling, because it queues a build.
+(only Claude Opus works on it), `human` (no model does), `shitter` (never Opus or Astra), the
+`priority:*` labels (the bot's pickup order) and the `bot:*` labels are separate. Never add
+`bot:build` while retitling or relabelling, because it queues a build.
 
 ## Titles
 
