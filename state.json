@@ -599,6 +599,14 @@
         },
         "status": "allowed"
       }
+    },
+    "muse": {
+      "spent": [
+        {
+          "at": "2026-10-03T02:14:16Z",
+          "minutes": 240.6
+        }
+      ]
     }
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
