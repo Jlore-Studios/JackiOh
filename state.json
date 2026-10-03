@@ -370,7 +370,7 @@
       "taken_asks": []
     },
     "125": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -388,11 +388,11 @@
       "pending_request": false,
       "planned_at": "2026-10-03T16:53:57Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "provider": "muse",
+      "provider": "devin",
       "queued_at": "2026-10-03T07:02:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37138332276",
-      "started_at": "2026-10-03T16:51:04Z",
+      "run_id": "37138634387",
+      "started_at": "2026-10-03T16:56:08Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -1073,9 +1073,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T16:55:26Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138554295",
-    "what": "plan #68 on muse"
+    "at": "2026-10-03T16:56:08Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138634387",
+    "what": "build #125 on devin"
   },
   "last_sweep": {
     "at": "2026-10-03T16:55:04Z",
