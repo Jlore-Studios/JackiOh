@@ -220,6 +220,12 @@
       "lines": [
         "/harness pick up the dead bots burden"
       ]
+    },
+    "c:5970513515": {
+      "at": "2026-10-03T15:20:28Z",
+      "lines": [
+        "/harness status"
+      ]
     }
   },
   "items": {
