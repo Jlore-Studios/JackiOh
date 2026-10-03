@@ -310,6 +310,12 @@
       "lines": [
         "/harness continue"
       ]
+    },
+    "c:5974465299": {
+      "at": "2026-10-03T23:10:07Z",
+      "lines": [
+        "@jgoetzmann-bot retry"
+      ]
     }
   },
   "items": {
