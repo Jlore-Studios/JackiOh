@@ -95,8 +95,9 @@ Label names match whatever their case. Labels are read afresh at every pickup, s
 at the next run, and a run already going is never stopped. The pull request the bot opens for an
 issue, a draft or not, starts with the issue's `shitter` and priority labels, so its revisions and
 its second review follow the same rules. A label changed on the issue after that, `human`
-included, does not reach the pull request: change it there too. The `peek` and `plan` steps of a
-night run log the chosen item's tier and every item passed over because of `human` or `shitter`.
+included, does not reliably reach the pull request (a later build of the issue copies added
+labels again, never removed ones): change it there too. The `peek` and `plan` steps of a night run
+log the chosen item's tier and every item passed over because of `human` or `shitter`.
 
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
