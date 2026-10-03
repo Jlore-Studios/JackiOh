@@ -393,7 +393,15 @@
       "failures": 0,
       "feedback_since": "2026-10-03T09:33:15Z",
       "issue": 57,
-      "kind": "revise"
+      "kind": "revise",
+      "votes": {
+        "approvals": [
+          "gemini"
+        ],
+        "builder": "gemini",
+        "rejections": [],
+        "sha": "b3273c49cc8be2e716fc91a03e529faa1d446e62"
+      }
     },
     "31": {
       "failures": 0,
