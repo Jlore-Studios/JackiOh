@@ -1,6 +1,6 @@
 /**
  * The loadout rules L1–L6, as SPEC §9.4 states them, and the draft rules D1–D5 and T1–T3 that a
- * saved deck and a saved trio obey (R250, R252, R635).
+ * saved deck and a saved trio obey (R250, R252, R640).
  *
  * Since R250 a player keeps up to ten named decks and builds up to five trios from them. A trio is
  * what §9.4 first called a loadout: three decks with no card in common, and L1–L6 are its rules
@@ -318,7 +318,7 @@ export function trioConflicts(decks: readonly { readonly cards: readonly CardId[
  *  D2 — at most `DECK_SIZE` cards;
  *  D3 — every card a deckable card of the catalog (it exists and is not a Token);
  *  D4 — at most `MAX_COPIES` copies of a card;
- *  D5 — `portrait` is `null` or a known portrait id (R635).
+ *  D5 — `portrait` is `null` or a known portrait id (R640).
  */
 export type DraftRule = "D1" | "D2" | "D3" | "D4" | "D5";
 
@@ -391,7 +391,7 @@ export type DeckDraftInput = {
    * definitions; both answer the same question.
    */
   isDeckable: (cardId: CardId) => boolean;
-  /** R635's D5: the deck's hero portrait, `null` (the default, `vanilla`) or a known id. */
+  /** R640's D5: the deck's hero portrait, `null` (the default, `vanilla`) or a known id. */
   portrait?: string | null;
   /**
    * Whether an id is a known portrait, answered like `isDeckable` by the caller against
@@ -401,7 +401,7 @@ export type DeckDraftInput = {
   isPortrait?: (portrait: string) => boolean;
 } & NameLimits;
 
-/** R250's D1–D4 and R635's D5, every failure at once. Empty when the draft may be saved. */
+/** R250's D1–D4 and R640's D5, every failure at once. Empty when the draft may be saved. */
 export function checkDeckDraft(input: DeckDraftInput): DraftIssue[] {
   const issues: DraftIssue[] = [];
   const named = nameIssue("D1", "deck", input.name, input);
@@ -429,7 +429,7 @@ export function checkDeckDraft(input: DeckDraftInput): DraftIssue[] {
     }
   }
 
-  // D5 (R635): the portrait is cosmetic and a draft may carry none (`null`, which every deck
+  // D5 (R640): the portrait is cosmetic and a draft may carry none (`null`, which every deck
   // saved before portraits reads back as `vanilla`) or one of the roster the caller knows.
   if (input.portrait !== undefined && input.portrait !== null && input.isPortrait !== undefined && !input.isPortrait(input.portrait)) {
     issues.push({

@@ -606,18 +606,18 @@ describe("R264 — rooms carry a mode (§9.5, R257)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R636 — the portraits on a room's match (§9.5)
+// R641 — the portraits on a room's match (§9.5)
 // ---------------------------------------------------------------------------
 
 /**
- * R636, the room half: a Best-of-1 room freezes the host deck's portrait at `POST /api/rooms`,
+ * R641, the room half: a Best-of-1 room freezes the host deck's portrait at `POST /api/rooms`,
  * with the deck, and an All Random room deals each seat's portrait off the match seed — the same
  * `pickPortraitFromSeed` the queue uses (R258's dealing, one layer down).
  *
  * The match row these tests read is the real write: `createFakeMatchDirectory(deps.store)` writes
  * it exactly as `createMatchRegistry.start` does, seat order and `portraitOrDefault` included.
  */
-describe("R636 — the portraits on a room's match (§9.5)", () => {
+describe("R641 — the portraits on a room's match (§9.5)", () => {
   /** The default harness, with the match row written where production writes it. */
   async function portraitHarness(options: { e2e?: boolean } = {}) {
     const h = await harness(options);
@@ -625,7 +625,7 @@ describe("R636 — the portraits on a room's match (§9.5)", () => {
     return h;
   }
 
-  it("R636 deals an All Random room's portraits from the seed, seat by seat like the decks", async () => {
+  it("R641 deals an All Random room's portraits from the seed, seat by seat like the decks", async () => {
     const h = await portraitHarness({ e2e: true });
     const code = (await readJson<{ code: string }>(
       await create(h.router, h.host, { mode: "random", seed: "room-portraits" }),
@@ -648,7 +648,7 @@ describe("R636 — the portraits on a room's match (§9.5)", () => {
     expect(h.deps.store.tables.matches[0]?.portraits).toEqual(expected);
   });
 
-  it("R636 freezes both seats' portraits: the host's with the room, the joiner's with the join", async () => {
+  it("R641 freezes both seats' portraits: the host's with the room, the joiner's with the join", async () => {
     const h = await portraitHarness();
     const router = createRouter([...createRoomRoutes(), ...createDeckRoutes()], h.deps);
     const putPortrait = async (token: string, deckId: string, portrait: string): Promise<Response> =>
@@ -687,9 +687,9 @@ describe("R636 — the portraits on a room's match (§9.5)", () => {
     expect(h.deps.store.tables.matches[0]?.portraits).toEqual(["gary", "shredder"]);
   });
 
-  it("R636 reads a room made before portraits — `hostPortrait` null — as vanilla on the row", async () => {
+  it("R641 reads a room made before portraits — `hostPortrait` null — as vanilla on the row", async () => {
     const h = await portraitHarness();
-    // The harness's saved decks carry `portrait: null`: R635's default, and what every deck saved
+    // The harness's saved decks carry `portrait: null`: R640's default, and what every deck saved
     // before portraits existed holds.
     await playThrough(h);
 

@@ -815,16 +815,16 @@ describe("R258 — All Random (§9.5)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R636 — the portrait on the ticket and the seat
+// R641 — the portrait on the ticket and the seat
 // ---------------------------------------------------------------------------
 
 /**
- * R636, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8),
+ * R641, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8),
  * an All Random match deals each seat's portrait from the match seed the way it deals the deck
  * (R258), and either way the pair lands on the match row seat-ordered — which is what the actor's
  * `portraits` frame reads back.
  */
-describe("R636 — the portrait the ticket freezes and the seed deals (§9.5)", () => {
+describe("R641 — the portrait the ticket freezes and the seed deals (§9.5)", () => {
   /** Queue and deck routes on one router, the same trick the §9.8 block uses. */
   function fullRouter(target: TestDeps): Router {
     return createRouter([...createQueueRoutes(), ...createDeckRoutes()], target);
@@ -848,7 +848,7 @@ describe("R636 — the portrait the ticket freezes and the seed deals (§9.5)", 
     );
   }
 
-  it("R636 freezes the deck's portrait into the ticket, and the edit after cannot reach it", async () => {
+  it("R641 freezes the deck's portrait into the ticket, and the edit after cannot reach it", async () => {
     const route = fullRouter(deps);
     const swapper = activeProfile(deps, "swapper");
     const rival = activeProfile(deps, "rival");
@@ -885,10 +885,10 @@ describe("R636 — the portrait the ticket freezes and the seed deals (§9.5)", 
     expect(row?.portraits).toEqual(["gary", "shredder"]);
   });
 
-  it("R636 reads a Best-of-1 ticket with no portrait as vanilla on the seat and the row", async () => {
+  it("R641 reads a Best-of-1 ticket with no portrait as vanilla on the seat and the row", async () => {
     const one = activeProfile(deps, "plain-one");
     const two = activeProfile(deps, "plain-two");
-    // `saveDeckFor` writes `portrait: null` — R635's default, and what a deck saved before
+    // `saveDeckFor` writes `portrait: null` — R640's default, and what a deck saved before
     // portraits existed holds.
     const a = await saveDeckFor(deps, "plain-one");
     const b = await saveDeckFor(deps, "plain-two");
@@ -901,7 +901,7 @@ describe("R636 — the portrait the ticket freezes and the seed deals (§9.5)", 
     expect(deps.store.tables.matches.at(-1)?.portraits).toEqual([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT]);
   });
 
-  it("R636 deals an All Random match's portraits from the seed, seat by seat like the decks", async () => {
+  it("R641 deals an All Random match's portraits from the seed, seat by seat like the decks", async () => {
     deps.e2e = true;
     const one = activeProfile(deps, "rng-p1");
     const two = activeProfile(deps, "rng-p2");

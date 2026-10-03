@@ -192,7 +192,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
 
   const view = match.view;
 
-  // R637–R638: the match's emote session. The local seat's sends emit through the socket
+  // R642–R643: the match's emote session. The local seat's sends emit through the socket
   // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
   // frame so the same emote twice still notifies. The device setting mutes the opponent live.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
@@ -294,6 +294,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       legal={match.legal}
       onAction={match.send}
       emotes={emotes}
+      trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
       resultActions={

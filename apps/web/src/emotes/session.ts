@@ -1,11 +1,11 @@
-// The emote session (R637, R638): what is on screen, who is muted, and when the next send is
+// The emote session (R642, R643): what is on screen, who is muted, and when the next send is
 // admitted — pure data plus a notify, so the unit tests run the same object the routes drive.
 //
 //   - `send` is the local player's emote: the shared `emoteGate` judges it, and an admitted emote
 //     shows at once, without waiting for the server's relay (issue §7: "the sender sees their own
 //     emote locally"). The gate is the ONLY limiter — the same function the actor runs — so a menu
 //     that reads its `retryAfterMs` for the grey-out and a server that drops on it can never
-//     disagree (R637).
+//     disagree (R642).
 //   - `receive` is an emote arriving from the peer (the actor's relay, or the practice AI's
 //     persona): it is shown unless that player is muted — by the one-item "Mute emotes" menu
 //     (`mute`), or by the "Mute opponent emotes" device setting (`globalMute`). A muted emote is
@@ -34,7 +34,7 @@ export type EmoteSession = {
   /**
    * The local seat at `player` asked for `emote`. Admitted: it shows and returns true — the caller
    * then transmits it (net send, or the AI's `onPlayerEmote`). Dropped by the gate: false, nothing
-   * shown, nothing sent — the same silent drop the server gives (R637).
+   * shown, nothing sent — the same silent drop the server gives (R642).
    */
   send: (player: PlayerId, emote: EmoteId, text: string | null, holdMs: number) => boolean;
   /** An emote arrived from `player`: shown unless muted; returns whether it was shown. */

@@ -235,7 +235,7 @@ jobs:
   work:
     name: work
     needs: plan
-    if: contains(fromJSON('["build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
     # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm
     # and Python are installed already, and a login there never leaves it.
     runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}
@@ -342,7 +342,7 @@ jobs:
   deliver:
     name: deliver
     needs: [plan, work]
-    if: always() && contains(fromJSON('["build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: always() && contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

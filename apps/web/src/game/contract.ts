@@ -165,7 +165,7 @@ export type AnimatingMap = ReadonlyMap<string, GameEventType>;
 export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent[] };
 
 /**
- * The emote surface one hero carries (R637–R638, issue §1–§5): its portrait, what it is showing,
+ * The emote surface one hero carries (R642–R643, issue §1–§5): its portrait, what it is showing,
  * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
  * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
  * (the legal branch still goes to `onClick`), which is what opens a menu (issue §2: targeting

@@ -115,7 +115,7 @@ describe("#128 the tablist", () => {
   });
 
   it("a section with no switch and no slot has no tab", () => {
-    // Audio always draws now (R637's "Mute opponent emotes" is a built-in switch of it); the
+    // Audio always draws now (R642's "Mute opponent emotes" is a built-in switch of it); the
     // section with nothing in it is account, which only exists when an account slot is mounted.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
@@ -213,7 +213,7 @@ describe("#128 the dialog around the tabs", () => {
 
     // The account section is the one a slot alone fills: its probe is no `role="switch"` input,
     // so with nothing to land on, focus falls to the tab itself. (Audio used to play this part;
-    // since R637's "Mute opponent emotes" switch it has one, and focuses it.)
+    // since R642's "Mute opponent emotes" switch it has one, and focuses it.)
     const slots: SettingsSlot[] = [
       ...slotsWith(),
       { section: "account", id: "probe-account", render: () => <input aria-label="account probe" data-testid="probe-account" /> },

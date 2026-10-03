@@ -1,6 +1,6 @@
 // The emote session (session.ts) driven through its injected clock — no timers, no React.
 //
-// R637 is what is proved here: an admitted send shows for that player at once, a send the shared
+// R642 is what is proved here: an admitted send shows for that player at once, a send the shared
 // `emoteGate` drops shows nothing (and notifies nobody — the same silent drop the server gives),
 // a received emote shows unless its player is muted, one emote per player stands at a time, and
 // `expire` clears only the show it was armed for. The state is keyed by PlayerId throughout, so a
@@ -31,8 +31,8 @@ function harness(): { session: EmoteSession; now: (value: number) => void; tick:
 
 const HOLD = 3_000;
 
-describe("R637 the emote session", () => {
-  it("R637 an admitted send shows for that player immediately, before any relay could come back", () => {
+describe("R642 the emote session", () => {
+  it("R642 an admitted send shows for that player immediately, before any relay could come back", () => {
     const { session, tick } = harness();
 
     const sent = session.send("p1", "greetings", "Hello.", HOLD);
@@ -46,7 +46,7 @@ describe("R637 the emote session", () => {
     });
   });
 
-  it("R637 a send inside the cooldown is dropped silently: nothing new shows and nobody is told", () => {
+  it("R642 a send inside the cooldown is dropped silently: nothing new shows and nobody is told", () => {
     const { session, now } = harness();
     const listener = vi.fn();
     session.subscribe(listener);
@@ -65,7 +65,7 @@ describe("R637 the emote session", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it("R637 the gate re-admits once the cooldown has passed, and the other seat's limiter is untouched", () => {
+  it("R642 the gate re-admits once the cooldown has passed, and the other seat's limiter is untouched", () => {
     const { session, now } = harness();
 
     expect(session.send("p1", "greetings", "Hello.", HOLD)).toBe(true);
@@ -78,7 +78,7 @@ describe("R637 the emote session", () => {
     expect(session.send("p1", "oops", "Oops.", HOLD)).toBe(true);
   });
 
-  it("R637 the window cap drops the sixth emote of a rolling window and re-admits once it rolls off", () => {
+  it("R642 the window cap drops the sixth emote of a rolling window and re-admits once it rolls off", () => {
     const { session, now } = harness();
 
     // Five sends, each past the previous one's cooldown but all inside one window.
@@ -101,14 +101,14 @@ describe("R637 the emote session", () => {
     expect(session.send("p1", "laugh", null, HOLD)).toBe(true);
   });
 
-  it("R637 an emote received from the opponent shows", () => {
+  it("R642 an emote received from the opponent shows", () => {
     const { session, tick } = harness();
 
     expect(session.receive("p2", "sob", null, HOLD)).toBe(true);
     expect(session.visible("p2")).toEqual({ key: 1, emote: "sob", text: null, until: tick() + HOLD });
   });
 
-  it("R637 a muted player's emote never lands — not shown, not kept, nobody notified", () => {
+  it("R642 a muted player's emote never lands — not shown, not kept, nobody notified", () => {
     const { session } = harness();
     const listener = vi.fn();
     session.subscribe(listener);
@@ -122,7 +122,7 @@ describe("R637 the emote session", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("R637 muting a player takes their current emote off the board too", () => {
+  it("R642 muting a player takes their current emote off the board too", () => {
     const { session } = harness();
     const listener = vi.fn();
 
@@ -136,7 +136,7 @@ describe("R637 the emote session", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it("R637 a second emote from the same player replaces the first at once", () => {
+  it("R642 a second emote from the same player replaces the first at once", () => {
     const { session } = harness();
 
     expect(session.receive("p2", "sob", null, HOLD)).toBe(true);
@@ -148,7 +148,7 @@ describe("R637 the emote session", () => {
     expect(second?.key).not.toBe(first?.key);
   });
 
-  it("R637 a send replaces that player's own standing emote too", () => {
+  it("R642 a send replaces that player's own standing emote too", () => {
     const { session, now } = harness();
 
     expect(session.send("p1", "greetings", "Hello.", HOLD)).toBe(true);
@@ -158,7 +158,7 @@ describe("R637 the emote session", () => {
     expect(session.visible("p1")).toMatchObject({ emote: "thanks", text: "Thanks." });
   });
 
-  it("R637 expire clears only the show it was armed for — a newer one stands", () => {
+  it("R642 expire clears only the show it was armed for — a newer one stands", () => {
     const { session } = harness();
 
     session.receive("p2", "sob", null, HOLD);
@@ -175,7 +175,7 @@ describe("R637 the emote session", () => {
     expect(session.visible("p2")).toBeNull();
   });
 
-  it("R637 the state is keyed by PlayerId: one seat's emote never touches the other's", () => {
+  it("R642 the state is keyed by PlayerId: one seat's emote never touches the other's", () => {
     const { session } = harness();
     const players: PlayerId[] = ["p1", "p2"];
 

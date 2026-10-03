@@ -418,7 +418,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-    // R636: absent when neither seat carried a portrait (a match from before 0019); both then
+    // R641: absent when neither seat carried a portrait (a match from before 0019); both then
     // read as `vanilla` wherever `MatchRow.portraits` is consumed.
     ...(row.p1_portrait !== null || row.p2_portrait !== null
       ? { portraits: [portraitOrDefault(row.p1_portrait), portraitOrDefault(row.p2_portrait)] as [PortraitId, PortraitId] }
@@ -535,7 +535,7 @@ function toRoom(row: RoomRow): Room {
     // could only ever have been a Best-of-1 room. See KNOWN DIVERGENCES (rooms).
     mode: row.room_mode === null ? "bo1" : queueModeOf(row.room_mode),
     hostDeck: cardListOf(row.p1_deck),
-    // R636: the host's portrait waits in the open row beside the host's deck (migration 0019).
+    // R641: the host's portrait waits in the open row beside the host's deck (migration 0019).
     hostPortrait: row.p1_portrait,
     hostTrio: trioOrNull(row.room_trio),
     catalogVersion: row.catalog_version,
@@ -569,7 +569,7 @@ function toDeck(row: DeckRow): SavedDeck {
     name: row.name,
     // A jsonb array keeps the order it was written in, so this is the player's order (R250).
     cards: cardListOf(row.cards),
-    // R635: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
+    // R640: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
     portrait: row.portrait,
     catalogVersion: row.catalog_version,
     createdAt: msOf(row.created_at),

@@ -395,7 +395,7 @@ export type SavedDeck = {
   name: string;
   /** Catalog ids in the order the player put them in; at most `DECK_SIZE` (R250 D2). */
   cards: string[];
-  /** R635: the deck's hero portrait, or `null` — the default, `vanilla` (D5). */
+  /** R640: the deck's hero portrait, or `null` — the default, `vanilla` (D5). */
   portrait: string | null;
   /** The catalog version the client held at the last save. Informational: the queue re-validates (R253). */
   catalogVersion: string;
@@ -469,7 +469,7 @@ export type QueueMode = "bo1" | "bo3" | "random";
 
 /**
  * One deck as a match or a series freezes it: the cards and the name the player gave them.
- * `portrait` freezes the deck's hero portrait with them (R636: "the queued deck's portrait ...
+ * `portrait` freezes the deck's hero portrait with them (R641: "the queued deck's portrait ...
  * frozen into the ticket or room with the deck"); absent on rows frozen before portraits existed.
  */
 export type FrozenDeck = { name: string; cards: string[]; portrait?: string | null };
@@ -498,7 +498,7 @@ export type MatchRow = {
    */
   lastBoards?: [LastBoardEntry[], LastBoardEntry[]];
   /**
-   * R636: the hero portraits dealt to the seats, seat order like `decks`. Cosmetic only — it is
+   * R641: the hero portraits dealt to the seats, seat order like `decks`. Cosmetic only — it is
    * sent in the `portraits` frame, never part of `PlayerView`. Absent on matches started before
    * portraits existed; both seats then read as `vanilla`.
    */
@@ -557,7 +557,7 @@ export type Room = {
   mode: QueueMode;
   /** The host's frozen Best-of-1 deck; `[]` in the other two modes. */
   hostDeck: string[];
-  /** R636: the host deck's portrait, frozen with it. */
+  /** R641: the host deck's portrait, frozen with it. */
   hostPortrait?: string | null;
   /** The host's frozen trio in a Conquest room; null otherwise. */
   hostTrio: FrozenTrio | null;
@@ -593,7 +593,7 @@ export type Ticket = {
    * change it. `[]` for a Conquest or an All Random ticket.
    */
   deck: string[];
-  /** R636: the Bo1 deck's portrait, frozen with it (R635's `null` — `vanilla` — otherwise). */
+  /** R641: the Bo1 deck's portrait, frozen with it (R640's `null` — `vanilla` — otherwise). */
   portrait?: string | null;
   /** R259: a Conquest ticket's frozen trio; null in the other two modes. */
   trio: FrozenTrio | null;
@@ -947,7 +947,7 @@ export type MatchSeat = {
   profileId: string;
   player: PlayerId;
   deck: string[];
-  /** R636: the portrait dealt to this seat at match creation. Absent reads as `vanilla`. */
+  /** R641: the portrait dealt to this seat at match creation. Absent reads as `vanilla`. */
   portrait?: string;
 };
 

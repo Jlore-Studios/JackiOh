@@ -96,7 +96,7 @@ function holdsEverywhere(
  * mode of a wide hand) cost the best-first walk more than simulating its moves did.
  */
 function hasAttack(state: GameState, unit: CardInstance): boolean {
-  if (!hasExertion(unit, "attack")) return false;
+  if (!hasExertion(state, unit, "attack")) return false;
   const enemy = opponentOf(unit.controller);
   if (canAttack(state, unit, { kind: "hero", player: enemy })) return true;
   return activeUnitsOf(state, enemy).some((instance) => canAttack(state, unit, { kind: "unit", instance }));

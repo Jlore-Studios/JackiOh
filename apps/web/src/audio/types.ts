@@ -10,7 +10,7 @@ export type SfxId =
   | "cancel" | "entrance" | "fatigue" | "refuse"
   // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
-  // Patch v0.2.X (R638): the five emoji emotes (issue §4), synthesized on the effects channel.
+  // Patch v0.2.X (R643): the five emoji emotes (issue §4), synthesized on the effects channel.
   | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah";
 
 /**
@@ -47,7 +47,7 @@ export type SfxParams = {
 
 export type VoiceLineKind = "play" | "death" | "cast";
 /**
- * What `playVoice` accepts: a card's line, or R638's portrait emote line (`emote-<portrait>-<id>`
+ * What `playVoice` accepts: a card's line, or R643's portrait emote line (`emote-<portrait>-<id>`
  * files). The split-from-the-end VoiceKey convention holds either way.
  */
 export type PlayableLineKind = VoiceLineKind | VoiceEmoteId;
@@ -98,7 +98,7 @@ export type VoiceLineEntry =
   | ({ kind: "unit"; persona: string; play: string; death: string } & Overrides)
   | ({ kind: "spell" | "trap"; persona: string; cast: string } & Overrides);
 
-/** R638: one portrait's five issue-§3 lines. Keyed by portrait id in `VoiceLineTable.emotes`. */
+/** R643: one portrait's five issue-§3 lines. Keyed by portrait id in `VoiceLineTable.emotes`. */
 export type EmoteLineEntry = {
   persona: string;
   greetings: string;
@@ -223,7 +223,7 @@ export type MusicCardEntry = { theme?: string; station?: MusicStation };
 export type SoundSink = {
   /** true when accepted (and logged); false when refused. Never throws. */
   playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean;
-  /** `priority` defaults to VOICE_PRIORITY.play. `defId` may be an `emote-<portrait>` id (R638). */
+  /** `priority` defaults to VOICE_PRIORITY.play. `defId` may be an `emote-<portrait>` id (R643). */
   playVoice(defId: string, line: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean;
 };
 

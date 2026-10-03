@@ -161,7 +161,7 @@ async function enqueue(
     // that lands in the ticket and, later, in the match or the series — the saved deck is never
     // read again.
     deck: frozen.mode === "bo1" ? frozen.deck.cards : [],
-    // R636: the deck's portrait freezes with it.
+    // R641: the deck's portrait freezes with it.
     portrait: frozen.mode === "bo1" ? (frozen.deck.portrait ?? null) : null,
     trio: frozen.mode === "bo3" ? frozen.trio : null,
     catalogVersion: deps.catalog.version,
@@ -263,7 +263,7 @@ async function startPairedSeries(
  * Best of 1 plays the two decks the tickets froze. All Random (R258) deals both from the match
  * seed and the seat, `${seed}:p1-deck` and `${seed}:p2-deck`, and the dealt decks go into the match
  * row like any frozen deck, so `(seed, decks, log)` replays it as ever. Portraits ride the same
- * way (R636): the ticket's own for Best of 1, a uniform pick dealt from the seed for All Random.
+ * way (R641): the ticket's own for Best of 1, a uniform pick dealt from the seed for All Random.
  */
 async function startPairedMatch(
   deps: ServerDeps,

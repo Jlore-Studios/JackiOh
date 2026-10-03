@@ -1,4 +1,4 @@
-// A hero portrait (issue §1, R635): the portrait's card drawn in `CardArt`'s `oval` shape, with
+// A hero portrait (issue §1, R640): the portrait's card drawn in `CardArt`'s `oval` shape, with
 // health badged on its lower right and armor on its lower left, the way Hearthstone mounts them.
 // The portrait is presentation only — it lives inside the existing `hero-<side>` element, which
 // keeps the testid, the ClickTarget and every glow/highlight/damage-shake it always had, so a

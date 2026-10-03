@@ -65,7 +65,7 @@ const JOBS = 2;
 const SAPI_BATCH = 60;
 const LINES_BY_KIND = { unit: ["play", "death"], spell: ["cast"], trap: ["cast"] };
 const KIND_OF_TYPE = { Unit: "unit", Spell: "spell", "Field Spell": "spell", Trap: "trap", "Field Trap": "trap" };
-// R638's hero-portrait emotes (issue §3): the `emotes` table of voice-lines.json, one entry per
+// R643's hero-portrait emotes (issue §3): the `emotes` table of voice-lines.json, one entry per
 // portrait id, each with the five voice lines below. Files are keyed `emote-<portrait>-<line>`.
 const EMOTE_PORTRAITS = ["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"];
 const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"];

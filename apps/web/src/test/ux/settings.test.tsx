@@ -639,7 +639,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
 
   it("B24 shows gameplay (drag, confirm, auto end, hover), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
     // Integration mounts tasks 1, 2 and 6's controls through SETTINGS_SLOTS (settings-wiring.test.tsx);
-    // with no slots the panel is task 7's alone. The audio section still draws: R637's device-wide
+    // with no slots the panel is task 7's alone. The audio section still draws: R642's device-wide
     // "Mute opponent emotes" is a built-in switch of it. A section with nothing in it — account,
     // here — is not drawn.
     render(<SettingsPanel onClose={noop} slots={[]} />);
@@ -732,7 +732,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(reduceMotionAttr()).toBeNull();
   });
 
-  it("R637 the Mute opponent emotes switch lives on the Audio tab, defaults off, and persists like every setting", () => {
+  it("R642 the Mute opponent emotes switch lives on the Audio tab, defaults off, and persists like every setting", () => {
     render(<SettingsPanel onClose={noop} />);
     fireEvent.click(screen.getByTestId("settings-tab-audio"));
 
@@ -748,7 +748,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(toggleEl.checked).toBe(true);
     expect(persisted()).toMatchObject({ muteOpponentEmotes: true });
 
-    // Stored per device like the rest of this store: a reload reads it back (R637, issue §5).
+    // Stored per device like the rest of this store: a reload reads it back (R642, issue §5).
     __resetSettingsForTests();
     expect(readSettings().muteOpponentEmotes).toBe(true);
   });
@@ -791,7 +791,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
       expect(switchFor(key).compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING, key).toBeTruthy();
     }
     // No account slot and no account controls, so still no account section. (Audio stays drawn
-    // without a slot: "Mute opponent emotes" is a built-in switch of it, since R637.)
+    // without a slot: "Mute opponent emotes" is a built-in switch of it, since R642.)
     expect(screen.queryByTestId("settings-section-account")).toBeNull();
     expect(screen.getByTestId("settings-section-audio").contains(switchFor("muteOpponentEmotes"))).toBe(true);
   });

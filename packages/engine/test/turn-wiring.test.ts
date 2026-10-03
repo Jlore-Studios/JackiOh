@@ -210,7 +210,7 @@ describe("R62's start of a turn with the Brittle and Animated stages (B3.1, B3.3
       write(sink.state, `brittle:${player}`);
       const card = sink.state.players[player].hand[0];
       if (player !== "p1" || card === undefined) return;
-      sink.events.push({ type: "crumbled", instanceId: card.id, defId: card.defId, owner: player, zone: "hand" });
+      sink.events.push({ type: "crumbled", instanceId: card.id, defId: card.defId, owner: player, zone: "field" });
     });
     const before = notes(state).length;
     const paused = toTurnThree(state).state;

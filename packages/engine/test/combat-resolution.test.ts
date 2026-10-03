@@ -203,7 +203,7 @@ describe("forced attacks (R53, M2-T4)", () => {
 
     // No exertion spent: the unit is still free to act on its own turn (§4.2, R53).
     expect(sick.exertion).toEqual({ attacked: false, switched: false });
-    expect(hasExertion(sick, "attack")).toBe(true);
+    expect(hasExertion(state, sick, "attack")).toBe(true);
   });
 
   it("R53 a forced attack ignores position, sickness and the Taunt rule", () => {
@@ -250,12 +250,12 @@ describe("forced attacks (R53, M2-T4)", () => {
     const sink = sinkFor(state);
     expect(declareAttack(sink, ordinary, onUnit(first)).error).toBeUndefined();
     expect(ordinary.exertion.attacked).toBe(true);
-    expect(hasExertion(ordinary, "attack")).toBe(false);
+    expect(hasExertion(state, ordinary, "attack")).toBe(false);
     expect(declareAttack(sink, ordinary, onUnit(second)).error).toBe("that unit has already acted this turn");
 
     forceAttack(sink, forced, onUnit(second));
     expect(forced.exertion).toEqual({ attacked: false, switched: false });
-    expect(hasExertion(forced, "attack")).toBe(true);
+    expect(hasExertion(state, forced, "attack")).toBe(true);
 
     // The exertion is still there, so the same unit can still make its own attack this turn.
     expect(declareAttack(sink, forced, onUnit(third)).error).toBeUndefined();

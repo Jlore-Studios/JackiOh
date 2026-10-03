@@ -152,7 +152,7 @@ describe("saved decks (§9.4, R250, R256)", () => {
       id: uuid(1),
       name: "Aggro",
       cards: cards(deps, 4),
-      // R635: a body that names no portrait saves `null` — `vanilla` wherever it is shown.
+      // R640: a body that names no portrait saves `null` — `vanilla` wherever it is shown.
       portrait: null,
       catalogVersion: deps.catalog.version,
       createdAt: deps.timers.now(),
@@ -354,10 +354,10 @@ describe("saved decks (§9.4, R250, R256)", () => {
 });
 
 /**
- * R635's `portrait` field and D5's check on it (§9.4): a saved deck may name one of the portrait
+ * R640's `portrait` field and D5's check on it (§9.4): a saved deck may name one of the portrait
  * ids — or `null`, `vanilla` wherever the deck is shown — and nothing else.
  */
-describe("the deck's portrait (R635, D5)", () => {
+describe("the deck's portrait (R640, D5)", () => {
   it("D5 saves every portrait id and echoes it on the deck", async () => {
     for (const [index, portrait] of PORTRAIT_IDS.entries()) {
       const saved = await putDeck(
@@ -373,7 +373,7 @@ describe("the deck's portrait (R635, D5)", () => {
     expect(deps.store.tables.decks).toHaveLength(PORTRAIT_IDS.length);
   });
 
-  it("R635 accepts `portrait: null` and absent alike — both read back `null`", async () => {
+  it("R640 accepts `portrait: null` and absent alike — both read back `null`", async () => {
     for (const [index, body] of [
       { ...deckBody(deps), portrait: null },
       deckBody(deps),
@@ -408,7 +408,7 @@ describe("the deck's portrait (R635, D5)", () => {
     expect(deps.store.tables.decks).toEqual([]);
   });
 
-  it("R635 refuses a portrait that is not a string, and keeps a saved one on re-save", async () => {
+  it("R640 refuses a portrait that is not a string, and keeps a saved one on re-save", async () => {
     const odd = await putDeck(deckBody(deps, { portrait: 42 }));
     expect(odd.status).toBe(400);
     const body = await readJson<ErrorBody>(odd);
@@ -849,7 +849,7 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
 
     const frozen = await freezeChoice(deps, PROFILE, { mode: "bo1", deckId: uuid(1) });
 
-    // R636: the deck's portrait freezes with it (R635's `null` here — `vanilla` when dealt).
+    // R641: the deck's portrait freezes with it (R640's `null` here — `vanilla` when dealt).
     expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3), portrait: null } });
     expect(seen).toEqual([
       {
@@ -870,7 +870,7 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
     expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3), portrait: null } });
   });
 
-  it("R636 freezes the deck's portrait with it: a later re-save cannot reach the copy", async () => {
+  it("R641 freezes the deck's portrait with it: a later re-save cannot reach the copy", async () => {
     const garyDeck = { ...savedDeck(uuid(1), "Gary's", cards(deps, 3)), portrait: "gary" };
     await deps.store.decks.upsert(garyDeck, MAX_SAVED_DECKS);
 

@@ -161,7 +161,7 @@ function roomSeats(
 ): [MatchSeat, MatchSeat] {
   if (room.mode === "random") {
     // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
-    // R636: the portraits are dealt the same way, uniformly and seat by seat.
+    // R641: the portraits are dealt the same way, uniformly and seat by seat.
     return [
       {
         profileId: room.hostProfileId,

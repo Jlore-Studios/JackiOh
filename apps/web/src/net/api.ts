@@ -282,7 +282,7 @@ export type SavedDeck = {
   name: string;
   cards: string[];
   catalogVersion: string;
-  /** R635: the deck's hero portrait, `null` meaning `vanilla` (D5). */
+  /** R640: the deck's hero portrait, `null` meaning `vanilla` (D5). */
   portrait: string | null;
   createdAt: number;
   updatedAt: number;

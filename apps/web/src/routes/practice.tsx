@@ -678,7 +678,7 @@ function PracticeScreen({
     [controller],
   );
 
-  // R636–R639: the game's emote half — the dealt portraits, the AI's persona and its replies —
+  // R641–R644: the game's emote half — the dealt portraits, the AI's persona and its replies —
   // driven off the controller's snapshots (practice/emotes.ts). With no game it deals nothing.
   const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat);
 
@@ -778,6 +778,8 @@ function PracticeScreen({
       error={snapshot.error}
       resultForm="chip"
       emotes={emotes}
+      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not.
+      trackStats={config.lesson === undefined}
       {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
     />
   );

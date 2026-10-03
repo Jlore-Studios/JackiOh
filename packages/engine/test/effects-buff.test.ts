@@ -33,6 +33,7 @@ const POOL_KEYWORDS: Keyword[] = [
   { kind: "Trample" },
   { kind: "Cleave" },
   { kind: "Pierce" },
+  { kind: "Windfury" },
 ];
 
 const everyKeyword: CardDef = {

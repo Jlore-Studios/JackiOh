@@ -604,7 +604,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.decks.list(profile.id)).toEqual([deck]);
       });
 
-      it("R635 round-trips the portrait — `null` and a known id — and re-saves it in place", async () => {
+      it("R640 round-trips the portrait — `null` and a known id — and re-saves it in place", async () => {
         const profile = await activeProfile();
         const portraitless = savedDeck(profile.id);
         // One tick later, so "oldest first" below asks a real ordering question, not a tie.

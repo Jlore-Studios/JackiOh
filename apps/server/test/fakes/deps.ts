@@ -349,7 +349,7 @@ export function createFakeMatchDirectory(store?: Store): FakeMatchDirectory {
           status: "live",
           createdAt: 0,
           finishedAt: null,
-          // R636: as registry.start does, so tests reading the row see the same field.
+          // R641: as registry.start does, so tests reading the row see the same field.
           portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
           clocks: {
             turnDeadline: null,

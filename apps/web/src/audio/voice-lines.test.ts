@@ -376,8 +376,8 @@ describe("every voice line is short, plain flavour (B34)", () => {
   });
 });
 
-/** R638: the emotes table — the six portraits' five issue-§3 voice-line emotes each. */
-describe("voice-lines.json emotes (R638)", () => {
+/** R643: the emotes table — the six portraits' five issue-§3 voice-line emotes each. */
+describe("voice-lines.json emotes (R643)", () => {
   const EMOTE_PORTRAITS = ["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"] as const;
   const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
   /** B34's charset plus digits, which "SHREDDER-10" needs and cards may not have. */
@@ -388,11 +388,11 @@ describe("voice-lines.json emotes (R638)", () => {
       ) as Record<string, Json>)
     : {};
 
-  it("R638 names exactly the six portraits", () => {
+  it("R643 names exactly the six portraits", () => {
     expect(Object.keys(EMOTES).sort()).toEqual([...EMOTE_PORTRAITS].sort());
   });
 
-  it("R638 gives every portrait all five lines, non-empty and inside the emote charset", () => {
+  it("R643 gives every portrait all five lines, non-empty and inside the emote charset", () => {
     const wrong: string[] = [];
     for (const portrait of EMOTE_PORTRAITS) {
       const entry = EMOTES[portrait] ?? {};
@@ -410,7 +410,7 @@ describe("voice-lines.json emotes (R638)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R638 names only personas that exist, one per portrait", () => {
+  it("R643 names only personas that exist, one per portrait", () => {
     const personas = EMOTE_PORTRAITS.map((portrait) => EMOTES[portrait]?.persona);
     expect(personas.every((name) => typeof name === "string" && isRecord(PERSONAS[name]))).toBe(true);
     expect(new Set(personas).size, "each portrait's own voice").toBe(EMOTE_PORTRAITS.length);

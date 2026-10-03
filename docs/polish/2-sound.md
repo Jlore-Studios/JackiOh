@@ -1003,7 +1003,7 @@ charged to the burst, and that holds for a slow phone as much as for Cypress.
 ## Out of scope
 
 - Attack voice lines and a player-chosen voice pack. (Emotes and hero voices shipped later, in the
-  emotes patch — SPEC R635–R639: hero portraits and their voice lines, the emoji emote sounds on the
+  emotes patch — SPEC R640–R644: hero portraits and their voice lines, the emoji emote sounds on the
   effects channel, `apps/web/src/emotes/` and the `emote-*` keys in `voice-lines.json`.)
 - Music and ambient loops (tavern music, board ambience). (The UI ticks and the unlock do reach every
   screen since the review fixes, B52.) Patch v0.2.7 (#51) added the music later, as R631: SPEC §10.11

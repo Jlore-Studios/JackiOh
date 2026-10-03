@@ -238,7 +238,7 @@ export const AI_DETERMINIZE = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// R639: the AI's emote personas. Every weight, chance, pool, cap, threshold and delay in the
+// R644: the AI's emote personas. Every weight, chance, pool, cap, threshold and delay in the
 // issue's §6 table, in one config object keyed by persona so a persona can be tuned — or a new
 // one added — without touching personas.ts. Cosmetic only: none of this reaches the engine, the
 // action log or a game record, and `decide`/`search.ts` never import it.

@@ -88,7 +88,7 @@ const EXPECTED_CARD_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([
   card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
 );
 const LINES = readJson(LINES_PATH);
-/** R638: the emotes table's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
+/** R643: the emotes table's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
 const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
 const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
   isRecord(LINES.emotes) ? LINES.emotes : {},
@@ -288,7 +288,7 @@ describe("the committed voice files (B35)", () => {
     expect(EXPECTED_KEYS.filter((key) => key.startsWith("core-")), "Core's own lines").toHaveLength(CORE_FILE_COUNT);
   });
 
-  it("R638 renders all five voice emotes of every portrait, on disk and in the manifest", () => {
+  it("R643 renders all five voice emotes of every portrait, on disk and in the manifest", () => {
     expect(EXPECTED_EMOTE_KEYS).toHaveLength(30);
     const missing = EXPECTED_EMOTE_KEYS.filter(
       (key) => !existsSync(voicePath(key)) || MANIFEST_FILES[key] === undefined,

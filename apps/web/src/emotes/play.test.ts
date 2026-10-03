@@ -1,4 +1,4 @@
-// What a shown emote sounds and reads like (play.ts, R638): a voice-line emote is its portrait's
+// What a shown emote sounds and reads like (play.ts, R643): a voice-line emote is its portrait's
 // own line — played on the voice channel as the `emote-<portrait>` defId at react priority, the
 // way R204's death line cuts in — and captioned by a bubble holding that line's text for the
 // line's audible span, two to four seconds. An emoji emote is one of the five synthesized effects
@@ -48,8 +48,8 @@ const EMOJI_RECIPE: Record<EmojiEmoteId, SfxId> = {
   wahWah: "emoteWahWah",
 };
 
-describe("R638 the voice emotes", () => {
-  it("R638 every VOICE_EMOTE_IDS id plays on the voice channel as emote-<portrait>, at react priority", () => {
+describe("R643 the voice emotes", () => {
+  it("R643 every VOICE_EMOTE_IDS id plays on the voice channel as emote-<portrait>, at react priority", () => {
     const engine = sink();
 
     for (const portrait of PORTRAIT_IDS) {
@@ -73,7 +73,7 @@ describe("R638 the voice emotes", () => {
     expect(engine.playSfx).not.toHaveBeenCalled();
   });
 
-  it("R638 a voice emote's bubble carries its portrait's own line text and holds its audible span", () => {
+  it("R643 a voice emote's bubble carries its portrait's own line text and holds its audible span", () => {
     for (const portrait of PORTRAIT_IDS) {
       const entry = VOICE_LINES.emotes[portrait];
       if (entry === undefined) throw new Error(`voice-lines.json has no emotes.${portrait}`);
@@ -90,7 +90,7 @@ describe("R638 the voice emotes", () => {
     }
   });
 
-  it("R638 a line the voice table cannot resolve shows no text and holds the bubble minimum", () => {
+  it("R643 a line the voice table cannot resolve shows no text and holds the bubble minimum", () => {
     const nobody = "nobody" as PortraitId;
     expect(emoteLineCheck(nobody)).toBeUndefined();
     expect(voiceBubbleText(nobody, "oops")).toBeNull();
@@ -104,8 +104,8 @@ function emoteLineCheck(portrait: string): unknown {
   return VOICE_LINES.emotes[portrait];
 }
 
-describe("R638 the emoji emotes", () => {
-  it("R638 every EMOJI_EMOTE_IDS id plays its own synthesized effect on the effects channel", () => {
+describe("R643 the emoji emotes", () => {
+  it("R643 every EMOJI_EMOTE_IDS id plays its own synthesized effect on the effects channel", () => {
     const engine = sink();
 
     for (const emote of EMOJI_EMOTE_IDS) {
@@ -121,7 +121,7 @@ describe("R638 the emoji emotes", () => {
     expect(engine.playVoice).not.toHaveBeenCalled();
   });
 
-  it("R638 an emoji's show is the sticker's two seconds and no text — the same for every portrait", () => {
+  it("R643 an emoji's show is the sticker's two seconds and no text — the same for every portrait", () => {
     for (const portrait of PORTRAIT_IDS) {
       for (const emote of EMOJI_EMOTE_IDS) {
         expect(emoteShowInfo(portrait, emote), `${portrait}.${emote}`).toEqual({
@@ -133,7 +133,7 @@ describe("R638 the emoji emotes", () => {
     expect(EMOTE_EMOJI_MS).toBe(2000);
   });
 
-  it("R638 playVoice is handed the emote-<portrait> defId the voice table resolves", () => {
+  it("R643 playVoice is handed the emote-<portrait> defId the voice table resolves", () => {
     // The SoundSink receives the defId verbatim; voiceData's lineFor splits it back off the end.
     for (const portrait of PORTRAIT_IDS) {
       expect(emoteVoiceDef(portrait)).toBe(`emote-${portrait}`);

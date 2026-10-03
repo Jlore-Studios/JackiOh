@@ -1119,7 +1119,7 @@ const clockTick: SfxRecipe = (ctx, out, at, params) => {
 };
 
 /* ------------------------------------------------------------------------------------------- *
- * R638's emoji emotes (issue §4): five animated-sticker sounds, all synthesized, on the effects
+ * R643's emoji emotes (issue §4): five animated-sticker sounds, all synthesized, on the effects
  * channel like every other SFX. Wah Wah is the sad-trombone sting.
  * ------------------------------------------------------------------------------------------- */
 

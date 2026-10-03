@@ -1,5 +1,5 @@
 /**
- * R639: the AI's emote personas — Balanced, Polite, BM and Silent, and the cosmetic chatter each
+ * R644: the AI's emote personas — Balanced, Polite, BM and Silent, and the cosmetic chatter each
  * produces (issue §6).
  *
  * This module is deliberately OUT OF the game:
@@ -168,7 +168,7 @@ export function createEmotePersona(opts: {
   const { persona, seat, rng } = opts;
   const spec = AI_PERSONAS[persona];
 
-  // §6's bookkeeping: the player's own rate limit (R637), the turn and match caps, the reply
+  // §6's bookkeeping: the player's own rate limit (R642), the turn and match caps, the reply
   // rules already spent, and the per-turn counters the kill triggers accumulate into.
   const sentAt: number[] = [];
   let sentMatch = 0;
@@ -183,10 +183,10 @@ export function createEmotePersona(opts: {
   let lastMoment: { active: PlayerId; phase: PlayerView["phase"] } | null = null;
 
   /**
-   * Whether `roll` may go out: §6's caps and R637's limiter, in order, minus the two rows §6
+   * Whether `roll` may go out: §6's caps and R642's limiter, in order, minus the two rows §6
    * exempts from the per-match cap (the mulligan greeting and the end-of-match emotes). A blocked
    * emote is dropped, never queued — `emoteGate` is exactly the function the client and the
-   * server run (R637), judged at the instant the page would fire it (`now + delayMs`).
+   * server run (R642), judged at the instant the page would fire it (`now + delayMs`).
    */
   function admit(
     roll: AiEmote | null,

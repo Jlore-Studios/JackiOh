@@ -230,6 +230,13 @@ const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
 const SERVER_SETTINGS_API_TEST = "../../../apps/server/test/api/settings.test.ts";
 const SERVER_SETTINGS_SQL = "../../../apps/server/test/sql/11_player_settings.sql";
 const WEB_SETTINGS_SYNC_TEST = "../../../apps/web/src/settings/accountSync.test.tsx";
+/** R639's proofs (SPEC §9.11, §10.10): the player statistics and the homescreen's rotation. */
+const WEB_STATS_MODEL_TEST = "../../../apps/web/src/stats/model.test.ts";
+const WEB_STATS_TRACK_TEST = "../../../apps/web/src/stats/track.test.ts";
+const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
+const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
+const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
+const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -534,10 +541,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the twelve-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -551,8 +558,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Trample",
       "Cleave",
       "Pierce",
+      "Windfury",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(12);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3711,8 +3719,45 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
   });
 
+  // Proved by windfury.test.ts "R636 …" (the second attack in `legalActions` and the reducer, the switch
+  // the first one spends, the count read at the second declaration, Deft Duelist beside it) and
+  // config.test.ts / rulings-a.test.ts "R21 …" (Windfury in the random keyword pool).
+  it("R636 lets a Unit with Windfury attack twice each turn", () => {
+    provenIn(636, "windfury.test.ts");
+  });
+
+  // Proved by temporary.test.ts "R637 …" (the end-of-turn discard in hand order, the other player's hand,
+  // a played card, a deck, granted and Vanilla) and the card side in packages/cards
+  // test/classic-plus/054-book-of-books.test.ts "R637 …" (the Books Book of Books adds).
+  it("R637 discards a Temporary card from its owner's hand at the end of their turn", () => {
+    provenIn(637, "temporary.test.ts", "../../cards/test/classic-plus/054-book-of-books.test.ts");
+  });
+
+  // Proved by brittle.test.ts "R638 …" (a held count never ticks or crumbles in a hand or a deck, starts
+  // its cycle as the card enters the field, is no arrival on a move between field zones, and is kept
+  // through leaving the field), and the card side in packages/cards (Dropshipping's and Hallucination's tests).
+  it("R638 ticks a Brittle count on the field only", () => {
+    provenIn(638, "brittle.test.ts");
+  });
+
+  // Proved by apps/web stats/model.test.ts, stats/track.test.ts (what the viewer was shown and what the
+  // events count), stats/store.test.ts (localStorage, tolerant), stats/useGameStats.test.tsx (once, at the
+  // end), routes/landingFan.test.ts (the pool, the weighting, one rotation step) and routes/landing.test.tsx
+  // (the threshold, the interval, holding still, a face that opens, "Your table").
+  it("R639 keeps the player's statistics on the device and rotates the homescreen through every set once there are enough games", () => {
+    provenIn(
+      639,
+      WEB_STATS_MODEL_TEST,
+      WEB_STATS_TRACK_TEST,
+      WEB_STATS_STORE_TEST,
+      WEB_STATS_HOOK_TEST,
+      WEB_LANDING_FAN_TEST,
+      WEB_LANDING_TEST,
+    );
+  });
+
   // ---------------------------------------------------------------------------------------------
-  // R635–R639: the emotes patch (issue #75) — hero portraits, voice-line and emoji emotes, the
+  // R640–R644: the emotes patch (issue #75) — hero portraits, voice-line and emoji emotes, the
   // shared rate limit, the mutes, and the AI's emote personas. Cosmetic end to end.
   // ---------------------------------------------------------------------------------------------
 
@@ -3731,9 +3776,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // refuses an unknown one naming the field), apps/server decks.test.ts and db/contract.ts (the
   // column round-trips, the view echoes it) and apps/web emotes/portraits.test.ts (every roster
   // id resolves to its catalog card by name).
-  it("R635 gives a deck a hero portrait from the six-id roster, checked as D5, null reading vanilla", () => {
+  it("R640 gives a deck a hero portrait from the six-id roster, checked as D5, null reading vanilla", () => {
     provenIn(
-      635,
+      640,
       SHARED_EMOTES_TEST,
       VALIDATOR_DRAFTS_TEST,
       SERVER_DECKS_TEST,
@@ -3746,32 +3791,31 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // determinism), apps/server queue.test.ts and rooms.test.ts (the ticket's and room's frozen
   // portraits, All Random's per-seat deal) and match/actor.test.ts (the frame on join and on
   // reconnect, vanilla for a match that predates it), apps/web net.test.ts (the frame parses).
-  it("R636 fixes a match's portraits when its seats are fixed and sends them on join and reconnect", () => {
-    provenIn(636, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, SERVER_QUEUE_TEST, SERVER_ROOMS_TEST, WEB_NET_TEST);
+  it("R641 fixes a match's portraits when its seats are fixed and sends them on join and reconnect", () => {
+    provenIn(641, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, SERVER_QUEUE_TEST, SERVER_ROOMS_TEST, WEB_NET_TEST);
   });
 
   // Proved by packages/shared emotes.test.ts (the ten wire ids; the gate's cooldown, window and
   // cap), apps/server match/actor.test.ts (relay to the opponent alone, malformed unknown ids,
   // silent drops), apps/web emotes/session.test.ts (local show on admit, mute, one emote per
   // player) and net.test.ts (the relay parses, sendEmote's frame).
-  it("R637 keeps emotes out of the game, relays them to the opponent, and limits both ends alike", () => {
-    provenIn(637, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, WEB_SESSION_EMOTES_TEST, WEB_NET_TEST);
+  it("R642 keeps emotes out of the game, relays them to the opponent, and limits both ends alike", () => {
+    provenIn(642, SHARED_EMOTES_TEST, SERVER_ACTOR_TEST, WEB_SESSION_EMOTES_TEST, WEB_NET_TEST);
   });
 
   // Proved by apps/web audio/voice-lines.test.ts and voice-assets.test.ts (every portrait's five
   // lines with text and files inside the budget), emotes/play.test.ts (each emote's channel:
   // voice for lines, effects for emoji) and emotes/ui.test.tsx (bubble and sticker shows).
-  it("R638 shows a voice emote's line as a bubble on the voice channel and an emoji as a synth sticker", () => {
-    provenIn(638, WEB_VOICE_LINES_TEST, WEB_VOICE_ASSETS_TEST, WEB_EMOTE_PLAY_TEST, WEB_EMOTE_UI_TEST);
+  it("R643 shows a voice emote's line as a bubble on the voice channel and an emoji as a synth sticker", () => {
+    provenIn(643, WEB_VOICE_LINES_TEST, WEB_VOICE_ASSETS_TEST, WEB_EMOTE_PLAY_TEST, WEB_EMOTE_UI_TEST);
   });
 
   // Proved by packages/ai personas.test.ts (the weighted deal at every boundary, the tutorial's
   // Silent, the whole trigger and reply tables, reply-once and the caps, the shared gate, and
   // the import isolation that keeps the module out of engine and search).
-  it("R639 deals each AI an emote persona whose rolls never touch the engine or the search", () => {
-    provenIn(639, AI_PERSONAS_TEST);
-  });
-});
+  it("R644 deals each AI an emote persona whose rolls never touch the engine or the search", () => {
+    provenIn(644, AI_PERSONAS_TEST);
+  });});
 
 describe("SPEC §11 index completeness", () => {
   /**

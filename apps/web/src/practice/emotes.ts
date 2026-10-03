@@ -1,4 +1,4 @@
-// Practice's emote driver (R636–R639): the AI's persona, both portraits, and the wiring that
+// Practice's emote driver (R641–R644): the AI's persona, both portraits, and the wiring that
 // turns the worker's snapshots into persona triggers — all on the page side, since the persona
 // is presentation, not part of the AI's decisions (issue §6: "a separate RNG outside the engine
 // and AI search").
@@ -6,10 +6,10 @@
 // The split mirrors the match route's: `useEmotes` owns what every route shares (the session,
 // the sounds, the shared gate, the mutes), and this hook owns what only practice has:
 //
-//   - The portraits (R636): the human's from their deck — saved deck's stored id, `vanilla` for
+//   - The portraits (R641): the human's from their deck — saved deck's stored id, `vanilla` for
 //     a preset (a preset is not a saved deck, so it carries none) or a lesson — and a random one
 //     when the deck itself is random; the AI's always random except the tutorial's `vanilla`.
-//   - The persona (R639): dealt once per game from §6's weights — the tutorial is always Silent —
+//   - The persona (R644): dealt once per game from §6's weights — the tutorial is always Silent —
 //     fed `onEvents` deltas off the snapshot's redacted event window (`newEventsSince`, the same
 //     function the board's animation runner uses), `onPlayerEmote` from the player's sends, and
 //     `onPlayerTurnLong` off a timer armed each time the player's turn starts.
@@ -29,7 +29,7 @@ import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
 import type { PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
 
-/** The portraits one game deals (R636), before seats are assigned: `[human, ai]`. */
+/** The portraits one game deals (R641), before seats are assigned: `[human, ai]`. */
 function dealPortraits(config: PracticeStartConfig): { human: PortraitId; ai: PortraitId } {
   // The tutorial's rule is both `vanilla` (issue §1), whatever deck the lesson hands it.
   if (config.lesson !== undefined) return { human: "vanilla", ai: "vanilla" };
@@ -42,7 +42,7 @@ function dealPortraits(config: PracticeStartConfig): { human: PortraitId; ai: Po
   return { human, ai: pickPortrait(Math.random) };
 }
 
-/** The persona one game plays (R639): the tutorial is always Silent (issue §6). */
+/** The persona one game plays (R644): the tutorial is always Silent (issue §6). */
 function dealPersona(config: PracticeStartConfig, seat: PlayerId): EmotePersona {
   const persona = config.lesson === undefined ? pickPersona(Math.random) : "silent";
   return createEmotePersona({ persona, seat, rng: Math.random });

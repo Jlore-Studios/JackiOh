@@ -1,19 +1,19 @@
 -- ============================================================================
--- Migration 0019: hero portraits (patch v0.2.X, R635–R637)
+-- Migration 0019: hero portraits (patch v0.2.X, R640–R642)
 -- ============================================================================
--- Serves SPEC.md §9.4 D5, §9.5, §10.10 and SPEC §11 R635, R636. A hero
+-- Serves SPEC.md §9.4 D5, §9.5, §10.10 and SPEC §11 R640, R641. A hero
 -- portrait is a cosmetic pick each saved deck carries: one of the six ids in
 -- @jackioh/shared's PORTRAIT_IDS ('vanilla', 'gary', 'timmy', 'dfender',
 -- 'felinors', 'shredder'), or NULL, which every reader takes as 'vanilla'.
 -- Portraits are never part of PlayerView, the action log, a replay hash or a
--- game record (R637).
+-- game record (R642).
 --
 --   * public.decks.portrait          -- the pick a save carries (D5);
 --   * public.tickets.portrait        -- a Best-of-1 ticket's frozen pick
---                                       (R636: "frozen into the ticket");
+--                                       (R641: "frozen into the ticket");
 --   * public.matches.p1_portrait /
 --     p2_portrait                    -- the pair dealt to a match's seats at
---                                       creation (R636). On an `open` row --
+--                                       creation (R641). On an `open` row --
 --                                       a waiting room -- p1_portrait holds
 --                                       the host's pick beside p1_deck, the
 --                                       same trick room_trio plays; a queue
@@ -49,7 +49,7 @@ alter table public.decks add constraint decks_portrait_check
   check (portrait is null or portrait ~ '^[a-z][a-z0-9-]{0,31}$');
 
 comment on column public.decks.portrait is
-  $$R635: the deck's hero portrait -- a PORTRAIT_IDS id (@jackioh/shared),
+  $$R640: the deck's hero portrait -- a PORTRAIT_IDS id (@jackioh/shared),
   NULL meaning 'vanilla'. D5 checks the roster in @jackioh/validator before a
   save; this CHECK pins only the slug shape, like 0007 leaves D3 to the
   server.$$;
@@ -61,7 +61,7 @@ alter table public.tickets add constraint tickets_portrait_check
   check (portrait is null or portrait ~ '^[a-z][a-z0-9-]{0,31}$');
 
 comment on column public.tickets.portrait is
-  $$R636: a Best-of-1 ticket's frozen hero portrait, written beside
+  $$R641: a Best-of-1 ticket's frozen hero portrait, written beside
   frozen_deck at enqueue; NULL in the other two modes and on tickets from
   before this migration (reads as 'vanilla').$$;
 
@@ -76,13 +76,13 @@ alter table public.matches add constraint matches_portraits_check
   );
 
 comment on column public.matches.p1_portrait is
-  $$R636: p1's hero portrait, dealt at match creation; on an `open` row the
+  $$R641: p1's hero portrait, dealt at match creation; on an `open` row the
   host's, waiting beside p1_deck (rooms.ts reads it as Room.hostPortrait).
   NULL on a match from before this migration, read as 'vanilla'. p2_portrait
   is p2's.$$;
 
 -- ----------------------------------------------------------------------------
--- app.upsert_deck -- p_portrait joins the one write path (R250, R256, R635).
+-- app.upsert_deck -- p_portrait joins the one write path (R250, R256, R640).
 -- ----------------------------------------------------------------------------
 -- The function is what migration 0007 wrote plus one write: `portrait` on
 -- insert and on update (created_at still kept), and a shape check with the
@@ -156,7 +156,7 @@ begin
     raise exception 'deck: D4 a card appears more than % time(s)', v_max_copies;
   end if;
 
-  -- R635 D5, shape only: the roster is @jackioh/shared's, checked by
+  -- R640 D5, shape only: the roster is @jackioh/shared's, checked by
   -- @jackioh/validator before this is ever called.
   if p_portrait is not null and p_portrait !~ '^[a-z][a-z0-9-]{0,31}$' then
     raise exception 'deck: the portrait is not a portrait id';
@@ -195,7 +195,7 @@ end;
 $$;
 
 comment on function app.upsert_deck(uuid, uuid, text, jsonb, text, timestamptz, int, text) is
-  $$R250 / R256 / R635: the one write path for a saved deck, with the deck's
+  $$R250 / R256 / R640: the one write path for a saved deck, with the deck's
   hero portrait (NULL = 'vanilla'). Creates the deck or updates the profile's
   own (created_at kept), returning 'created', 'updated', 'limit' or
   'not_owner'. The cap is counted under the profile row lock. Shape checks

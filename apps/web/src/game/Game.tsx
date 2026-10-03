@@ -59,6 +59,7 @@ import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
+import { useGameStats } from "../stats/useGameStats.ts";
 
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
@@ -94,11 +95,17 @@ export type GameProps = {
    */
   autoEndTurn?: boolean;
   /**
-   * The route's emote session (R637–R638): portraits for both seats, what each is showing, the
+   * The route's emote session (R642–R643): portraits for both seats, what each is showing, the
    * send that admits through the shared gate, and the mutes. Absent, the heroes still draw their
    * default portraits and simply open no menus — tests that render a bare board get that.
    */
   emotes?: GameEmotes;
+  /**
+   * R639: log this game in the device's statistics when it ends. The routes that play the player's
+   * own game (an online match, a practice game) set it; a tutorial lesson, a hotseat game on one
+   * screen and a test fixture leave it off.
+   */
+  trackStats?: boolean;
 };
 
 /**
@@ -127,6 +134,7 @@ export default function Game({
   resultForm = "panel",
   autoEndTurn: pinnedAutoEndTurn,
   emotes,
+  trackStats = false,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -212,6 +220,7 @@ export default function Game({
     });
   }
   const runner = queue.current;
+  useGameStats(view, trackStats);
   useGameAudio(runner, view); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9); hotseat and online play simply carry it.
@@ -360,7 +369,7 @@ export default function Game({
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 
   /**
-   * One hero's emote surface, built per side (R637–R638). The picker opens only on your own
+   * One hero's emote surface, built per side (R642–R643). The picker opens only on your own
    * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
    * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
    * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.

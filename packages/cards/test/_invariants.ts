@@ -21,8 +21,9 @@
 //      open, a unit of the acting player that entered on this turn has no attack target unless it
 //      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
 //      checked the same way. It reads `attackTargets`, which is what `legalActions` enumerates with.
-//   I2 one declared attack per stint per turn. A unit that re-entered may attack again within its
-//      keywords (R83, R171); forced attacks are not declarations and are skipped (R53).
+//   I2 one declared attack per stint per turn, two for a unit that had Windfury in that stint (R636).
+//      A unit that re-entered may attack again within its keywords (R83, R171); forced attacks are not
+//      declarations and are skipped (R53).
 //   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
 //   I4 the bookkeeping matches the shadow (white-box R171): (a) `summonedTurn` is the turn of the
 //      latest entry, or absent on a `readied` stint (R424); (b) a spent attack exertion belongs to
@@ -36,7 +37,15 @@
 
 import type { ActionBody, GameEvent, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, hasKeyword } from "@jackioh/shared";
-import { activeUnitsOf, attackTargets, findInstance, unitView, type CardInstance, type GameState } from "@jackioh/engine";
+import {
+  WINDFURY_ATTACKS,
+  activeUnitsOf,
+  attackTargets,
+  findInstance,
+  unitView,
+  type CardInstance,
+  type GameState,
+} from "@jackioh/engine";
 
 export type InvariantMonitor = {
   /** I1 and I3 on the state the next action is chosen in. [] when clean. */
@@ -45,7 +54,7 @@ export type InvariantMonitor = {
   after(events: readonly GameEvent[], state: GameState): string[];
 };
 
-type AttackMark = { turn: number; stint: number };
+type AttackMark = { turn: number; stint: number; count: number };
 
 /** Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2). */
 function fieldCards(state: GameState): CardInstance[] {
@@ -67,9 +76,18 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
   const entered = new Map<string, number>();
   const stint = new Map<string, number>();
   const lastAttack = new Map<string, AttackMark>();
+  // R636: the stint in which each instance was last seen with Windfury. Read from the states between
+  // actions and after each one, so a unit that dies on its second attack was seen with it before.
+  const windfury = new Map<string, number>();
   const readied = new Set<string>();
   // R424: the latest declared attack, and whether its attacker destroyed its target (R42).
   let attack: { attackerId: string; targetId: string; killed: boolean } | null = null;
+
+  function noteWindfury(state: GameState): void {
+    for (const card of fieldCards(state)) {
+      if (hasKeyword(unitView(state, card).keywords, "Windfury")) windfury.set(card.id, stint.get(card.id) ?? 0);
+    }
+  }
 
   /** R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it. */
   function isReadied(card: CardInstance): boolean {
@@ -104,6 +122,7 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
   return {
     before(state, player, action): string[] {
       const found: string[] = [];
+      noteWindfury(state);
 
       // I3: nothing is on the field that no event put there.
       for (const card of fieldCards(state)) {
@@ -176,14 +195,17 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
             // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
             attack = null;
             if (event.forced) break;
-            const mark: AttackMark = { turn, stint: stint.get(event.attackerId) ?? 0 };
+            const current = stint.get(event.attackerId) ?? 0;
             const previous = lastAttack.get(event.attackerId);
-            if (previous !== undefined && previous.turn === mark.turn && previous.stint === mark.stint) {
+            const repeat = previous !== undefined && previous.turn === turn && previous.stint === current;
+            const mark: AttackMark = { turn, stint: current, count: repeat ? previous.count + 1 : 1 };
+            const allowed = windfury.get(event.attackerId) === current ? WINDFURY_ATTACKS : 1;
+            if (mark.count > allowed) {
               const unit = findInstance(state, event.attackerId);
               const who = unit === undefined ? event.attackerId : nameOf(unit);
               found.push(
-                `I2 second attack: ${who} declared a second attack on turn ${turn} without re-entering ` +
-                  `the field (§4.1 one exertion per turn, R171)`,
+                `I2 extra attack: ${who} declared attack number ${mark.count} on turn ${turn} without re-entering ` +
+                  `the field (§4.1 one exertion per turn, R171; Windfury two, R636)`,
               );
             }
             lastAttack.set(event.attackerId, mark);
@@ -194,6 +216,8 @@ export function createInvariantMonitor(start: GameState): InvariantMonitor {
             break;
         }
       }
+
+      noteWindfury(state);
 
       // I4: the engine's bookkeeping agrees with the shadow.
       for (const card of fieldCards(state)) {

@@ -122,12 +122,12 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   /** One window per seat; see `floodExceeded`. */
   const recentActions: Record<PlayerId, number[]> = { p1: [], p2: [] };
   /**
-   * R637: each seat's recent emote sends, the one input the shared `emoteGate` decides on. The
+   * R642: each seat's recent emote sends, the one input the shared `emoteGate` decides on. The
    * client runs the same gate against its own copy, so the two can never disagree about the
    * limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
    */
   const emoteHistory: Record<PlayerId, number[]> = { p1: [], p2: [] };
-  /** R636: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
+  /** R641: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
   const portraits = match.portraits ?? [portraitOrDefault(null), portraitOrDefault(null)];
   /**
    * A rebuilt actor whose log already ends in a result and whose row is already `finished` has
@@ -469,13 +469,13 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
         fireAndForget(async () => {
           pushView(player);
           pushClock(player);
-          // R636: portraits ride again on a reconnect, as on join.
+          // R641: portraits ride again on a reconnect, as on join.
           send(player, portraitsMessage(portraits[0], portraits[1]));
         }, "hello");
         return;
 
       case "emote": {
-        // R637: same gate the client ran. A fail is a silent drop — no error, no rejected-action
+        // R642: same gate the client ran. A fail is a silent drop — no error, no rejected-action
         // log; a pass relays to the opponent only (the sender already showed it locally).
         const gate = emoteGate(emoteHistory[player], deps.timers.now());
         if (!gate.ok) return;
@@ -562,7 +562,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     fireAndForget(async () => {
       clock.clearGrace(player);
       await persistClocks();
-      // §9.5: a fresh full view, never a log replay. R636: the portraits ride with it.
+      // §9.5: a fresh full view, never a log replay. R641: the portraits ride with it.
       pushView(player);
       pushClock(player);
       send(player, portraitsMessage(portraits[0], portraits[1]));

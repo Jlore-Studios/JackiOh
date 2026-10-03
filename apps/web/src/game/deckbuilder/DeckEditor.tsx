@@ -92,7 +92,7 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
-  /** R635, issue §8: the deck's hero portrait changed; saved through the same upsert. */
+  /** R640, issue §8: the deck's hero portrait changed; saved through the same upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
@@ -327,7 +327,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
         ← All decks
       </button>
       {/* Issue §8: the deck's portrait. The picker holds the whole roster and the previews;
-          picking one saves like any edit. `null` in the store reads `vanilla` (R635). */}
+          picking one saves like any edit. `null` in the store reads `vanilla` (R640). */}
       <PortraitPicker
         portrait={portraitOrDefault(deck.portrait)}
         onPick={(next) => {
