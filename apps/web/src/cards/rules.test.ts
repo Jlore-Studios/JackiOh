@@ -204,21 +204,17 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect(joined("Armor 2")).toBe("Armor 2");
   });
 
-  it("B10 'Start of your turn:' is the Start of turn term, through its alias", () => {
-    expect(termsOf("Start of your turn:")).toEqual([{ text: "Start of your turn:", term: "Start of turn" }]);
+  it("B10 'Start of turn:' is the Start of turn term", () => {
     expect(termsOf("Start of turn: gain 1 mana")).toEqual([{ text: "Start of turn:", term: "Start of turn" }]);
   });
 
-  it("B10 'End of your turn:' is the End of turn term, through its alias (Classic #65, #85)", () => {
-    expect(termsOf("End of your turn: Flip a coin.")).toEqual([{ text: "End of your turn:", term: "End of turn" }]);
+  it("B10 'End of turn:' is the End of turn term", () => {
     expect(termsOf("End of turn: heal to full")).toEqual([{ text: "End of turn:", term: "End of turn" }]);
     expect(termsIn(played("classic-065"))[0]).toBe("End of turn");
   });
 
-  it("B10 'Start of Game' and 'Once per Turn' are aliases of Start of game and Once per turn", () => {
-    expect(termsOf("Start of Game: gain a power")).toEqual([{ text: "Start of Game:", term: "Start of game" }]);
+  it("B10 'Start of game' and 'Once per turn' match their exact labels", () => {
     expect(termsOf("Start of game: gain a power")).toEqual([{ text: "Start of game:", term: "Start of game" }]);
-    expect(termsOf('each "Once per Turn, spend X"')).toEqual([{ text: "Once per Turn", term: "Once per turn" }]);
     expect(termsOf('each "Once per turn, spend X"')).toEqual([{ text: "Once per turn", term: "Once per turn" }]);
   });
 
@@ -432,8 +428,10 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
     // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
+    // Patch v0.2.4: backrow zone becomes backrow in players' words.
+    expect(inPlayerWords("steps from its backrow zone into a unit zone")).toBe("steps from its backrow into a unit zone");
     for (const entry of Object.values(GLOSSARY)) {
-      expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific/i);
+      expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific|\bbounce\b|\bbackrow zone\b/i);
     }
   });
 
@@ -445,8 +443,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry.section, id).toBe("§6.1");
       expect(entry.rule, id).toBe(inPlayerWords(specRule("6.1", id)));
     }
-    // The catalog writes "Can't"; SPEC's row says "Cannot", which stays an alias.
-    expect(GLOSSARY["Can't be in Defense Position"].aliases).toContain("Cannot be in Defense Position");
+    // The catalog writes "Can't"; aliases are empty (patch v0.2.4, issue #45).
+    expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 
   it("R512 SPEC's one row \"Degrade / Upgrade\" is two terms, each its own word with the row's shared rest", () => {
@@ -485,11 +483,10 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("B11 the four spelled variants are aliases: Start of your turn, End of your turn, Start of Game, Once per Turn", () => {
-    expect(GLOSSARY["Start of turn"].aliases).toContain("Start of your turn");
-    expect(GLOSSARY["End of turn"].aliases).toContain("End of your turn");
-    expect(GLOSSARY["Start of game"].aliases).toContain("Start of Game");
-    expect(GLOSSARY["Once per turn"].aliases).toContain("Once per Turn");
+  it("B11 the glossary's aliases are empty: the catalog only uses each term's label", () => {
+    for (const [key, entry] of Object.entries(GLOSSARY)) {
+      expect(entry.aliases, key).toEqual([]);
+    }
   });
 });
 
@@ -526,13 +523,12 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Flicker", "classic-014", "radiant", "Flicker"],
       ["Degrade", "classicplus-008", "base", "Degrade"],
       ["Upgrade", "classicplus-071", "base", "Upgrade"],
-      ["Plague Token", "classic-039", "base", "Plague Tokens"],
       ["Plague Token", "classic-069", "base", "Plague Token"],
-      ["Set health", "classic-029", "base", "Set a hero's health"],
+      ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "classic-052", "base", "Redirect"],
-      ["End the turn", "classicplus-026", "base", "End your turn"],
-      ["Trigger a Cry", "classic-054", "base", "Trigger the Cry"],
-      ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
+      ["End the turn", "classicplus-026", "base", "End the turn"],
+      ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
+      ["Look at a hand", "classic-011", "base", "Look at a hand"],
     ];
     for (const [term, id, face, spelling] of cases) {
       // As for any term, a number right after it is taken with it ("Degrade 4 random cards").
@@ -552,8 +548,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn(played("classicplus-038"))).toContain("Spell Damage");
     expect(termsIn(played("classic-005"))).toContain("Animated");
     expect(termsIn(played("classicplus-012-8"))).toContain("Animated on your turn");
-    // SPEC's own spelling is an alias.
-    expect(termsOf("Cannot be in Defense Position.")).toEqual([{ text: "Cannot be in Defense Position", term: "Can't be in Defense Position" }]);
+    // Aliases are empty: SPEC's "Cannot" is plain words without the alias.
+    expect(termsOf("Cannot be in Defense Position.")).toEqual([]);
   });
 
   it("R512 matching stays case-sensitive: a lower-case \"steal it\" or \"can't attack or be attacked\" is plain words", () => {

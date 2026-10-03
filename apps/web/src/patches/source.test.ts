@@ -68,9 +68,9 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: six patches in the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads packages/cards/patches/: seven patches in the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4"]);
     const index = await realPatchSource.index();
     expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {
@@ -80,7 +80,7 @@ describe("R388 the patch source", () => {
         expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
       }
     }
-    expect(Object.keys((await realPatchSource.snapshot("v0.2.0")) ?? {})).toHaveLength(317);
+    expect(Object.keys((await realPatchSource.snapshot("v0.2.4")) ?? {})).toHaveLength(317);
   });
 
   it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {

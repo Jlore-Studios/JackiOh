@@ -126,3 +126,32 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
     expect(costPhrase(0)).toBe("(0) Cost");
   });
 });
+
+/** Vocabulary table (patch v0.2.4, issue #45): retired words and variants. */
+const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
+  { name: "bounce", pattern: /\bbounce(s|d)?\b/i },
+  { name: "backrow zone", pattern: /\bbackrow zone\b/i },
+  { name: "cost 1 less", pattern: /\bcosts? 1 less\b/i },
+];
+
+describe("patch v0.2.4 vocabulary table (SPEC §11 R366)", () => {
+  it("no tutorial script line uses a word the vocabulary table retired", () => {
+    const tutorialFiles = sources(join(SRC, "tutorial/scripts"));
+    expect(tutorialFiles.length).toBeGreaterThan(0);
+    const words = tutorialFiles.flatMap(wordsIn);
+    for (const { name, pattern } of RETIRED_VOCABULARY) {
+      const found = words.filter(({ text }) => pattern.test(text)).map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+      expect(found, `tutorial scripts should not say ${name}`).toEqual([]);
+    }
+  });
+
+  it("the retired vocabulary guard catches retired terms", () => {
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Bounce that unit"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("in the backrow zone"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("cost 1 less"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("costs (1) less"))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("in the backrow"))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("return that unit to hand"))).toBe(false);
+  });
+});
+

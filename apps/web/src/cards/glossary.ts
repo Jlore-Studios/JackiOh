@@ -17,21 +17,20 @@
 // which R428 removed). SHORT_REMINDERS holds the two lines, and rules.test.ts pins them.
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
-// are the other spellings the catalog uses for the same term.
+// are empty since patch v0.2.4 (issue #45): the catalog only uses each term's label.
 //
-// Patch v0.2.0 adds the §6 rows its card texts print (R512):
-// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
-//   catalog's spelling of SPEC's "Cannot be in Defense Position", which stays an alias), "Can't be
-//   attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
+// Patch v0.2.0 added the §6 rows its card texts print (R512), and patch v0.2.4 aligned card texts
+// to only use each term's label, emptying aliases across the glossary:
+// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position",
+//   "Can't be attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
 //   gets no row: the one card that names it (Classic+ #33 Ivory Tower) writes it mid-sentence in
 //   lower case ("That Unit can't attack or be attacked"), and matching stays case-sensitive, as
 //   "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
-// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health
-//   ("Set a hero's health"), End the turn ("End your turn"), Trigger a Cry ("Trigger the Cry") and
-//   Look at a hand ("Look at your opponent's hand"): each label is SPEC's row name and each alias
-//   the words a card prints. Only capitalised spellings match, so "steal it" mid-sentence stays plain.
+// - §6.3's Counter, Steal, Unlock, Flicker, Plague Token, Redirect, Set health, End the turn,
+//   Trigger a Cry and Look at a hand: each label is SPEC's row name and the words cards print.
+//   Only capitalised spellings match, so "steal it" mid-sentence stays plain.
 // - §6.3's one row "Degrade / Upgrade" is two terms, since a card prints one word or the other: its
 //   Rule column "Weaken / strengthen a card: …" pairs the words before and after the slash, and each
 //   term's rule is its own word (capitalised) with the shared rest of the sentence: "Weaken a card:
@@ -125,6 +124,8 @@ const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
   [/\bLibrary\b/g, "Deck"],
   [/\bsacrific(e|es|ed|ing)\b/g, "tribut$1"],
   [/\bSacrific(e|es|ed|ing)\b/g, "Tribut$1"],
+  [/\bbackrow zone\b/g, "backrow"],
+  [/\bBackrow zone\b/g, "Backrow"],
 ];
 
 /** A SPEC row's citation of its ruling, " (R384)" or " (R41, R428)": no player's word. */
@@ -211,9 +212,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit"),
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
-  "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", [
-    "Cannot be in Defense Position",
-  ]),
+  "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense"),
   "Can't be attacked": status("Can't be attacked", "No attack may target it"),
   "Only Units in this lane can attack this": status(
     "Only Units in this lane can attack this",
@@ -225,11 +224,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // §6.2's ruling, not its Rule column, and short (R500; see the header).
   Cry: trigger("Cry", SHORT_REMINDERS.Cry),
   Death: trigger("Death", "When sent from the field to the GY"),
-  "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw", ["Start of your turn"]),
-  // Classic #65 prints "End of your turn:", as Start of turn's alias does its half (#85).
-  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup", ["End of your turn"]),
-  "Start of game": trigger("Start of game", "After mulligan, before turn 1", ["Start of Game"]),
-  "Once per turn": trigger("Once per turn", "Activated ability limit", ["Once per Turn"]),
+  "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw"),
+  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup"),
+  "Start of game": trigger("Start of game", "After mulligan, before turn 1"),
+  "Once per turn": trigger("Once per turn", "Activated ability limit"),
   Aura: trigger("Aura", "Effect while in play"),
   Combo: trigger("Combo", "Extra effect if X or more cards were played earlier this turn"),
   Echo: trigger("Echo", "Recast this card X more times"),
@@ -259,12 +257,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
   Degrade: verb("Degrade", DEGRADE_RULE),
   Upgrade: verb("Upgrade", UPGRADE_RULE),
-  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field", ["Plague Tokens"]),
-  "Set health": verb("Set health", "A hero's health becomes N", ["Set a hero's health"]),
+  "Plague Token": verb("Plague Token", "Counter on a permanent, any number, reset on leaving the field"),
+  "Set health": verb("Set health", "A hero's health becomes N"),
   Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another"),
-  "End the turn": verb("End the turn", "The turn ends from an effect", ["End your turn"]),
-  "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again", ["Trigger the Cry"]),
-  "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", ["Look at your opponent's hand"]),
+  "End the turn": verb("End the turn", "The turn ends from an effect"),
+  "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again"),
+  "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt"),
 
   // §5.2 Radiant
   Radiant: {

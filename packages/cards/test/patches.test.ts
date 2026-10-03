@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.0");
+    expect(CATALOG_VERSION).toBe("v0.2.4");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -101,6 +101,13 @@ describe("R388 card patch history (B4.2)", () => {
     expect([16, 17, 34, 43, 49, 65, 88].map((n) => cost(after, `core-0${String(n).padStart(2, "0")}`))).toEqual([3, 4, 4, 4, 4, 1, 4]);
     const changed = changesOf("v0.2.0").find((change) => change.id === "core-016");
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
+  });
+
+  it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
+    expect(idsOf("v0.2.4", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "changed")).toHaveLength(11);
+    expect(changesOf("v0.2.4").every((change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"))).toBe(true);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {
