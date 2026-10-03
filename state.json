@@ -298,6 +298,12 @@
       "lines": [
         "@jgoetzmann-bot try again. The issue was Gemini running out of credits."
       ]
+    },
+    "c:5972730471": {
+      "at": "2026-10-03T19:31:05Z",
+      "lines": [
+        "@jgoetzmann-bot the issue was gemini running out of usage. Retry"
+      ]
     }
   },
   "items": {
