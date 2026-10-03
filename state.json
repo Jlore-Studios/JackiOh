@@ -487,6 +487,7 @@
     "142": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T18:03:29Z",
       "forced": false,
