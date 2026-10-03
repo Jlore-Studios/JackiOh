@@ -224,6 +224,10 @@ class Deliverer:
         self._close_asks(number)
 
     def _deliver_item(self, number: int) -> None:
+        thread = self.gh.get_issue(number)
+        if thread.get("state") != "open":
+            self._closed(number, thread)
+            return
         status = self._late_stop(number, str(self.result.get("status")))
         if self.plan["action"] == "review":
             self._second_review(number, status)
@@ -242,6 +246,16 @@ class Deliverer:
         else:
             self._build(number, status)
         self._settle(number)
+
+    def _closed(self, number: int, thread: dict[str, Any]) -> None:
+        """Someone closed the issue or pull request while the run worked on it: its work is not
+        pushed, no pull request opens, and nothing queues it again."""
+        set_state_label(self.ctx, number, label_names(thread), None)
+        where = "pull request" if "pull_request" in thread else "issue"
+        self.gh.create_comment(number, f"This {where} was closed while a run was working on it "
+                               f"({self._link()}), so that run's work was not delivered. Reopen "
+                               f"it and ask again (`/harness build`) to have it done.")
+        self.log.append(f"#{number} was closed during the run: nothing delivered")
 
     def _close_asks(self, number: int) -> None:
         """Settle the asks this run took (`asks`): 🎉 when it answered them, 😕 when it ended

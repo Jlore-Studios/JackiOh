@@ -225,7 +225,8 @@ function visitSignedIn(path: string): void {
 
 function sessionKeysIn(win: Window): { real: string | null; fixture: string | null } {
   return {
-    real: win.localStorage.getItem(SESSION_STORAGE_KEY),
+    // R632: a real sign-in is kept in the tab's sessionStorage; an older build kept it in localStorage.
+    real: win.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? win.localStorage.getItem(SESSION_STORAGE_KEY),
     fixture: win.localStorage.getItem(FIXTURE_SESSION_KEY),
   };
 }
@@ -466,7 +467,7 @@ describe("B23 the invite screen's way out", () => {
     cy.visit(routes.invite(), {
       onBeforeLoad(win) {
         win.localStorage.setItem(FIXTURE_SESSION_KEY, JSON.stringify({ accessToken: TOKEN }));
-        win.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
+        win.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
       },
     });
     codeInput().should("be.visible");
@@ -509,6 +510,7 @@ describe("B29 a confirmation link", () => {
     expectScrubbed(jwt);
     cy.window().then((win) => {
       expect(sessionKeysIn(win)).to.deep.equal({ real: null, fixture: null });
+      expect(win.sessionStorage.getItem(SESSION_STORAGE_KEY)).to.eq(null);
       expect(win.localStorage.getItem(SESSION_STORAGE_KEY)).to.eq(null);
     });
   });

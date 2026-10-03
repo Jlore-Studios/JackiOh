@@ -20,7 +20,7 @@ declare
   v_row  record;
 begin
   -- A player with everything a real account collects: activated (so the launch grant wrote the
-  -- append-only ledger), a code attempt, a code it minted, a deck and a trio, tutorial progress,
+  -- append-only ledger), a code attempt, a code it minted, a deck and a trio, tutorial progress, settings,
   -- a queue ticket, an open room nobody joined, and a finished match with its log, its result
   -- and a finished series against profile 2.
   insert into auth.users (id, email, email_confirmed_at) values (gone, 'gone@example.test', now());
@@ -36,6 +36,7 @@ begin
   values (deck, gone, 'Mine', '[]', 'core-1');
   insert into public.trios (id, profile_id, name, deck1_id) values (trio, gone, 'Trio', deck);
   insert into public.tutorial_progress (profile_id, completed) values (gone, '{basics}');
+  insert into public.player_settings (profile_id, groups) values (gone, '{"audio": {"at": 1, "values": {}}}');
   insert into public.tickets (profile_id, slot, rating, frozen_deck, catalog_version, mode)
   values (gone, null, 1000, '[]', 'core-1', 'bo1');
 
@@ -65,6 +66,7 @@ begin
        + (select count(*) from public.decks where profile_id = gone)
        + (select count(*) from public.trios where profile_id = gone)
        + (select count(*) from public.tutorial_progress where profile_id = gone)
+       + (select count(*) from public.player_settings where profile_id = gone)
        + (select count(*) from public.tickets where profile_id = gone)
        + (select count(*) from public.code_attempts where profile_id = gone)
        + (select count(*) from public.invite_codes where created_by = gone)

@@ -26,7 +26,7 @@ import {
   TEXT_TIER_MAX,
   TIER_SCALE,
 } from "./constants.ts";
-import { nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
+import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
@@ -59,6 +59,7 @@ function def(id: string): CardDef {
 
 function renderFace(source: FaceSource, layout: "full" | "compact" = "full"): HTMLElement {
   const { container } = render(<CardFace face={faceModel(source)} layout={layout} />);
+  flushFits();
   const cf = container.querySelector<HTMLElement>(".cf");
   if (cf === null) throw new Error(`CardFace rendered no .cf for ${source.defId}`);
   expect(container.firstElementChild).toBe(cf);
@@ -604,11 +605,13 @@ describe("B15: length tiers, and useFitText without layout", () => {
 
   it("B15 useFitText is a no-op on an element with no layout: no --cf-fit, no data-clamped, on content change too", () => {
     const { container, rerender } = render(<FitProbe content="A long line of rules text that would overflow" />);
+    flushFits();
     const probe = one(container, "[data-probe]");
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
 
     rerender(<FitProbe content={stringOf(400)} />);
+    flushFits();
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
   });
@@ -629,6 +632,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
     vi.stubGlobal("ResizeObserver", StubResizeObserver);
 
     const { container } = render(<FitProbe content={stringOf(300)} />);
+    flushFits();
     const probe = one(container, "[data-probe]");
     act(() => {
       for (const callback of callbacks) {
@@ -636,6 +640,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
         callback(entries as unknown as ResizeObserverEntry[], {} as ResizeObserver);
       }
     });
+    flushFits();
     expect(probe.style.getPropertyValue("--cf-fit")).toBe("");
     expect(probe.hasAttribute("data-clamped")).toBe(false);
   });

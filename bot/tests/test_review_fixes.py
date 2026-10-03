@@ -16,7 +16,7 @@ from harness.state import item as state_item
 from harness.work import Worker
 
 from tests.fakes import FakeGitHub, push_branch
-from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx
+from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx, with_lanes
 from tests.test_cross import ALL, timed_builder
 from tests.test_flow import Harness
 from tests.test_providers import raw_providers, secrets
@@ -165,7 +165,7 @@ class InfraTests(unittest.TestCase):
         for n in (5, 6, 7):
             gh.add_issue(n, labels=(LABEL_WORKING,))
             gh.runs[str(n)] = {"status": "in_progress"}
-        ctx = make_ctx(gh, at=DAY, cfg=make_config(env=ALL, machine=MACHINE))
+        ctx = make_ctx(gh, at=DAY, cfg=with_lanes(make_config(env=ALL, machine=MACHINE), 3))
         ctx.store.update(lambda s: (s.update(run_requested={"at": "2026-09-29T16:59:00Z",
                                                             "item": None}),
                                     *[state_item(s, n).update(run_id=str(n), provider=p)

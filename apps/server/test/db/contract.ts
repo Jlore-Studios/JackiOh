@@ -25,6 +25,9 @@ import type {
   LastBoardEntry,
   MatchClocks,
   MatchRow,
+  PlayerSettingsGroup,
+  PlayerSettingsMergeOutcome,
+  PlayerSettingsRow,
   Profile,
   SavedDeck,
   SavedTrio,
@@ -812,6 +815,119 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
       });
     });
 
+    describe("playerSettings", () => {
+      /** A whole-millisecond instant, as the handler hands the store (and as Postgres keeps it). */
+      function instant(offset = 0): number {
+        return Math.floor(harness.now()) + offset;
+      }
+
+      const LIMITS = { maxGroups: 8, maxBytes: 4096 };
+
+      function merged(outcome: PlayerSettingsMergeOutcome): PlayerSettingsRow {
+        if (outcome.kind !== "merged") throw new Error(`expected merged, got ${outcome.kind}`);
+        return outcome.settings;
+      }
+
+      function write(profileId: string, groups: Record<string, PlayerSettingsGroup>, limits = LIMITS) {
+        return store.playerSettings.merge({ profileId, groups, at: instant() }, limits);
+      }
+
+      it("R633 holds no row before the first write, and the first write makes one", async () => {
+        const profile = await activeProfile();
+        expect(await store.playerSettings.get(profile.id)).toBeNull();
+
+        const row = merged(
+          await write(profile.id, {
+            audio: { at: 1_000, values: { master: 0.5, muted: false, station: "tavern" } },
+            gameplay: { at: 1_000, values: { dragToPlay: true } },
+          }),
+        );
+        expect(row).toEqual({
+          profileId: profile.id,
+          groups: {
+            audio: { at: 1_000, values: { master: 0.5, muted: false, station: "tavern" } },
+            gameplay: { at: 1_000, values: { dragToPlay: true } },
+          },
+        });
+        expect(await store.playerSettings.get(profile.id)).toEqual(row);
+      });
+
+      it("R634 a strictly later group replaces the stored one whole; an older or tied one changes nothing", async () => {
+        const profile = await activeProfile();
+        merged(await write(profile.id, { audio: { at: 2_000, values: { master: 0.5, muted: true } } }));
+
+        // Later: replaced whole, so a key the new group lacks is gone.
+        expect(merged(await write(profile.id, { audio: { at: 3_000, values: { master: 0.9 } } })).groups["audio"]).toEqual({
+          at: 3_000,
+          values: { master: 0.9 },
+        });
+        // Older, and tied: the stored group stays.
+        expect(merged(await write(profile.id, { audio: { at: 2_500, values: { master: 0.1 } } })).groups["audio"]).toEqual({
+          at: 3_000,
+          values: { master: 0.9 },
+        });
+        expect(merged(await write(profile.id, { audio: { at: 3_000, values: { master: 0.2 } } })).groups["audio"]).toEqual({
+          at: 3_000,
+          values: { master: 0.9 },
+        });
+        // Zero is a time like any other.
+        expect(merged(await write(profile.id, { fx: { at: 0, values: { speed: 1 } } })).groups["fx"]).toEqual({
+          at: 0,
+          values: { speed: 1 },
+        });
+      });
+
+      it("R634 a group a write does not name stays, and one write can win one group and lose another", async () => {
+        const profile = await activeProfile();
+        merged(
+          await write(profile.id, {
+            gameplay: { at: 5_000, values: { dragToPlay: false } },
+            audio: { at: 1_000, values: { master: 0.4 } },
+          }),
+        );
+
+        const row = merged(
+          await write(profile.id, {
+            audio: { at: 2_000, values: { master: 0.7 } },
+            gameplay: { at: 4_000, values: { dragToPlay: true } },
+            cards: { at: 1, values: { animatedFoil: false } },
+          }),
+        );
+        expect(row.groups).toEqual({
+          gameplay: { at: 5_000, values: { dragToPlay: false } },
+          audio: { at: 2_000, values: { master: 0.7 } },
+          cards: { at: 1, values: { animatedFoil: false } },
+        });
+        // A write naming nothing is the row as it stands.
+        expect(merged(await write(profile.id, {}))).toEqual(row);
+      });
+
+      it("R633 refuses a result past either cap and writes nothing, and keeps each profile's row apart", async () => {
+        const [owner, other] = [await activeProfile(), await activeProfile()];
+        const small = { maxGroups: 2, maxBytes: 4096 };
+
+        merged(await write(owner.id, { a: { at: 1, values: { x: true } }, b: { at: 1, values: { x: true } } }, small));
+        expect(await write(owner.id, { c: { at: 9, values: { x: true } } }, small)).toEqual({ kind: "limit" });
+        expect(Object.keys(must(await store.playerSettings.get(owner.id), "the owner's row").groups)).toEqual(["a", "b"]);
+        // A group already held may still be replaced at the cap.
+        expect(merged(await write(owner.id, { a: { at: 9, values: { x: false } } }, small)).groups["a"]).toEqual({
+          at: 9,
+          values: { x: false },
+        });
+
+        // The byte cap counts the text the stored groups come to; keep well clear of the boundary.
+        const text = "x".repeat(40);
+        const wide = Object.fromEntries(Array.from({ length: 12 }, (_, at) => [`key${String(at)}`, text]));
+        expect(await write(other.id, { big: { at: 1, values: wide } }, { maxGroups: 8, maxBytes: 300 })).toEqual({ kind: "limit" });
+        expect(await store.playerSettings.get(other.id)).toBeNull();
+        expect(merged(await write(other.id, { big: { at: 1, values: wide } }, { maxGroups: 8, maxBytes: 4096 })).groups["big"]).toEqual({
+          at: 1,
+          values: wide,
+        });
+        expect(Object.keys(must(await store.playerSettings.get(owner.id), "the owner's row").groups)).toEqual(["a", "b"]);
+      });
+    });
+
     // -----------------------------------------------------------------------
     // The Best-of-3 series (SPEC §9.5, R259–R263)
     // -----------------------------------------------------------------------
@@ -1459,6 +1575,10 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         const now = harness.now();
         await store.decks.upsert(savedDeck(gone.id), 10);
         await store.tutorial.merge({ profileId: gone.id, completed: ["basics"], hiddenChoice: null, at: now }, 32);
+        await store.playerSettings.merge(
+          { profileId: gone.id, groups: { audio: { at: 1, values: { master: 0.5 } } }, at: now },
+          { maxGroups: 8, maxBytes: 4096 },
+        );
         await store.tickets.insert({
           id: id(),
           profileId: gone.id,
@@ -1506,6 +1626,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.profiles.getById(gone.id)).toBeNull();
         expect(await store.decks.list(gone.id)).toEqual([]);
         expect(await store.tutorial.get(gone.id)).toBeNull();
+        expect(await store.playerSettings.get(gone.id)).toBeNull();
         expect(await store.collection.get(gone.id)).toEqual([]);
         expect(await store.tickets.openForProfile(gone.id)).toBeNull();
         expect(await store.rooms.get("QWERTZ")).toBeNull();

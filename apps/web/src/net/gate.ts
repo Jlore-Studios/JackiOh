@@ -21,10 +21,12 @@
 // the session and reports an error with a retry. A session with no refresh token (the e2e
 // fixtures) is never renewed and behaves exactly as before.
 //
-// ANOTHER TAB. The session lives in `localStorage`, which every tab shares, so a sign-out (or a
-// renewal) in one tab changes what this one holds. `useAccount` listens for that (`storage`
-// events fire only in the OTHER tabs) and reads the account again, so a signed-out device is not
-// shown a gated screen from a token that is already gone.
+// ANOTHER TAB (R632). A session belongs to the tab that signed in (`net/session.ts`), so a sign-out
+// or a renewal in another tab does not change what this one holds. What tabs still share is
+// `localStorage`: the e2e fixture's session, and a session an older build left there. `useAccount`
+// listens for `storage` events on those keys (they fire only in the OTHER tabs) and reads the
+// account again, so a device whose fixture session was removed is not shown a gated screen from a
+// token that is already gone.
 //
 // THE BACK BUTTON. Sign-out leaves by a real page load, but browsers keep the page it left in the
 // back/forward cache, frozen with the account it had read, and a frozen page hears no `storage`

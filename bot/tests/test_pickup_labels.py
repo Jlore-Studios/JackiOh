@@ -13,7 +13,7 @@ from harness.runner import FakeRunner
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx
+from tests.support import ALL_MACHINE, DAY, MACHINE, NIGHT, make_config, make_ctx
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, builder, changes, reviewer
 
@@ -48,7 +48,7 @@ def picks(ctx, gh: FakeGitHub, **plan_args: Any) -> list[int]:
 
 def every_model() -> Iterator[providers.Provider]:
     """Each committed subscription, and Astra and an unknown model in `gpt`'s place."""
-    pool = make_config(env=ALL, machine=MACHINE).pool
+    pool = make_config(env=ALL, machine=ALL_MACHINE).pool
     yield from pool.ordered()
     yield dataclasses.replace(pool.get("gpt"), model="gpt-5.6-astra")
     yield dataclasses.replace(pool.get("gpt"), model="mystery-model-9")

@@ -2,8 +2,10 @@
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
 free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
-Google through the Antigravity CLI (`agy`) and Meta through Muse Code, each with its own hours
-and limits ([Subscriptions](#subscriptions)). Up to three items run at once, one per subscription. Each run
+Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
+Devin CLI, each with its own hours
+and limits ([Subscriptions](#subscriptions)). Up to seven items run at once: the Claude accounts' on
+GitHub's runners, and at most three on the bot's own machine. Each run
 builds its item, runs the repository's checks, and has a second, independent session of the same
 model review the change adversarially, going round that loop until the reviewer approves. Opus's
 approval is enough; a change another model built also needs a second model's approval. Then the
@@ -227,6 +229,33 @@ needs level 3.
 | `human` | a person will do it; no model picks it up |
 | `shitter` | low-tier models only: never Opus or Astra |
 
+## Triage
+
+`triage.yml` labels, assigns and titles every issue or pull request that someone trusted opens,
+from a Devin call (`triage.py`):
+
+- **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
+  the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
+  the machine.
+- **Three jobs:**
+  - **`gate`**, on GitHub's runner, decides whether to triage.
+  - **`classify`**, on Devin's own runner (`night-vm-devin`), reads the title and body through the
+    API with a read-only token. It fences them as data in a prompt and runs Devin read-only in an
+    empty directory.
+  - **`apply`**, on GitHub's runner, holds the write token and runs no model.
+- **What `apply` changes:**
+  - **Labels:** only the repository's own, never a `bot:` one.
+  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, so the night
+    bot skips it. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
+    the assignment).
+  - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
+    doesn't already, and only if every version number survives. A pull request keeps its title,
+    which becomes the squash commit's subject, and is never assigned to the bot.
+- **It only adds.** A person's labels, assignees and conventional title stay. A priority or a model
+  tier a person chose gets no second one.
+- **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
+- **Waiting:** `classify` shares `night-vm-devin` with Devin's bot jobs, so it waits while one runs.
+
 ## Subscriptions
 
 The bot spends whichever of your subscriptions is free. They are listed in
@@ -235,13 +264,17 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
 | `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
-| `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | 21:00–07:00 | 90% of 5 hours, 90% of the week |
-| `claude-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_3`, `_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
+| `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
+| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
-Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
+The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
+CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
+A Claude account
 works only once its secret is set (Settings → Secrets and variables → Actions), so the ones you
 have not set up yet sit out. A login on the machine has no secret to check, so the bot counts it
 as set up; turn one off with `enabled: false`. `python3 -m harness providers` in `bot/` prints
@@ -271,9 +304,14 @@ each one and whether it could start now, and `/harness status` does the same on 
 - `roles`: what it may do (`build`, `fix`, `revise`, `review`, `suggest`).
 - `env`: non-secret environment for its CLI.
 - `enabled: false`: turns it off.
+- `off_from` (a date) and `off_reason`: from that day, in the bot's time zone, it takes no new
+  work, and the planner opens one issue with the reason, asking a person what it should do now.
+  Devin's is 2026-10-15, the day before SWE-2 stops being free on its CLI.
 
-At the top level, `max_parallel` is how many run at once and `priority` the order they are tried
-in. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
+may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
+and no such limit), and `priority` the order they are tried in. A subscription's own `lanes`
+(default 1) is how many items it may work on at once; Devin's is 2, on two runners. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on one
@@ -325,7 +363,9 @@ None of these is an API key: each is the login of one account.
   user. Open a shell with `aws ssm start-session --target <instance>` and run:
   - `sudo -iu agent-gpt codex login --device-auth`, then Sign in with ChatGPT;
   - `sudo -iu agent-agy agy`, then sign in with the Google account and quit;
-  - `sudo -iu agent-muse muse login`.
+  - `sudo -iu agent-muse muse login`;
+  - `sudo -iu agent-devin devin auth login --force-manual-token-flow`, then paste the token the
+    page gives you.
 
   Each CLI refreshes its own login in that home from then on, so don't copy those files
   anywhere else. [`machine/README.md`](machine/README.md) has the rest: building the machine,
@@ -523,6 +563,7 @@ days.
 | keep an item from Opus and Astra, or from every model | label it `shitter`, or `human` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
+| drop an item it is working on | close the issue or pull request: the run goes on until it ends, holding its lane, but nothing it made is delivered or queued again |
 | retry something it gave up on | fix what it asked about, then `/harness build`; `python3 -m harness forget <n>` clears the failure count |
 | read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |
 | change the rounds, budgets or checks | edit `.harness/config.json` in a pull request |
@@ -558,5 +599,6 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `build`, `
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
+| `triage.py` | labels, assigns and titles a new issue or pull request from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |

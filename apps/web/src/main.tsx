@@ -53,6 +53,7 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import { useAccount, type Account } from "./net/gate.ts";
+import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   SITE_ORIGIN,
   currentPath,
@@ -90,6 +91,8 @@ const MatchRoute = lazy(() => import("./routes/match.tsx"));
 const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
+const TermsRoute = lazy(() => import("./routes/terms.tsx"));
+const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 
@@ -332,6 +335,8 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
 
 export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R634: an active account's game settings are kept level with this device's, on every gated screen.
+  useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
 
   // In an effect, never during render: `navigate` dispatches an event that re-renders every
@@ -399,6 +404,10 @@ function screenNameFor(path: string): string | null {
       return "Practice";
     case paths.privacy:
       return "Privacy";
+    case paths.terms:
+      return "Terms";
+    case paths.accessibility:
+      return "Accessibility";
     case paths.patchNotes:
       return "Patch notes";
     case paths.almanac:
@@ -491,6 +500,8 @@ export function App(): ReactElement {
 
     if (path === paths.practice) return <PracticeRoute />;
     if (path === paths.privacy) return <PrivacyRoute />;
+    if (path === paths.terms) return <TermsRoute />;
+    if (path === paths.accessibility) return <AccessibilityRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) return <PatchNotesRoute />;
     // R630: the Card Almanac is public, like the catalog it shows.

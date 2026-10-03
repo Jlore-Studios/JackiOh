@@ -10,7 +10,7 @@ from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING)
 from harness.context import Context
-from harness.plan import run_status
+from harness.plan import run_status, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
@@ -71,7 +71,9 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
     if not live:
         return [f"- Running now: nothing ({free} of {lanes} lanes free)."]
     order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
-    lines = [f"- **Running now** ({len(live)} of {lanes} lanes, {free} free):"]
+    on_machine = sum(1 for provider_id in live.values() if cfg.pool.on_machine(provider_id))
+    lines = [f"- **Running now** ({len(live)} of {lanes} lanes, {free} free; {on_machine} of "
+             f"{cfg.pool.machine_parallel} on the machine, the rest on GitHub's runners):"]
     for number, provider_id in sorted(live.items(),
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
@@ -138,7 +140,7 @@ def report(ctx: Context) -> str:
         return found
 
     held: dict[int, str] = {}
-    for issue in labelled(LABEL_WORKING):
+    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
         record = state["items"].get(str(issue["number"]), {})
         held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
     survey = state.get("suggest") or {}
@@ -146,7 +148,8 @@ def report(ctx: Context) -> str:
         held[0] = str(survey["provider"])
     live = live_lanes(ctx, state, held)
     lines += running_lines(ctx, state, live)
-    lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, one item each):")
+    lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, "
+                 f"{cfg.pool.machine_parallel} of them on the machine):")
     lines += provider_lines(ctx, state, live)
     ended = ", ".join(f"#{n}" for n in sorted(held) if n and n not in live)
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"

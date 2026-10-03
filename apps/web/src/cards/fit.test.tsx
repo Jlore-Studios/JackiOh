@@ -6,14 +6,15 @@
 // layout, as cards.css has it), and text that needs `need × font²` pixels of height. That is enough
 // to drive every branch of the floor: fits as it is, fits once the tier's head start is dropped,
 // fits in the long layout, clamps at the floor, and a face too small for the floor at all. The
-// component specs (card-faces B15, deckbuilder-layout) prove the same thing on real layout.
+// component specs (card-faces B15, deckbuilder-layout) prove the same thing on real layout. The last
+// describe is the scheduler: fits queued together are read together, round by round.
 
-import { render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FIT_FLOOR_PX, FIT_MIN } from "./constants.ts";
-import { LONG_ATTRIBUTE, useFitText } from "./fit.ts";
+import { flushFits, LONG_ATTRIBUTE, scheduleFit, useFitText } from "./fit.ts";
 
 type Model = {
   /** The font at full size (4.4cqh on a real face), in px. */
@@ -47,8 +48,21 @@ function boxOf(element: HTMLElement, model: Model): number {
   return element.closest(".cf")?.getAttribute(LONG_ATTRIBUTE) === "true" ? model.longBox : model.box;
 }
 
+/** Counts the layouts a run pays for: a write dirties layout, and the next read of it pays once. */
+const meter = { dirty: false, paid: 0 };
+
 /** Wires the model into the one element the probe renders. */
 function modelLayout(model: Model): void {
+  meter.dirty = false;
+  meter.paid = 0;
+  const setProperty = CSSStyleDeclaration.prototype.setProperty;
+  vi.spyOn(CSSStyleDeclaration.prototype, "setProperty").mockImplementation(function (
+    this: CSSStyleDeclaration,
+    ...args: Parameters<typeof setProperty>
+  ) {
+    meter.dirty = true;
+    setProperty.apply(this, args);
+  });
   const text = (element: Element): element is HTMLElement =>
     element instanceof HTMLElement && element.dataset.probe === "text";
   const real = window.getComputedStyle.bind(window);
@@ -75,6 +89,10 @@ function modelLayout(model: Model): void {
   });
   vi.spyOn(proto, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
     if (!text(this)) return 0;
+    if (meter.dirty) {
+      meter.dirty = false;
+      meter.paid += 1;
+    }
     const font = fontOf(this, model);
     const needed = model.need * font * font + 2 * PADDING;
     // A clamped box shows its clamped lines only.
@@ -98,6 +116,7 @@ function Probe({ content }: { content: string }): ReactElement {
 function fitted(model: Model): { text: HTMLElement; face: HTMLElement; font: number } {
   modelLayout(model);
   const { container } = render(<Probe content="rules" />);
+  flushFits();
   const text = container.querySelector<HTMLElement>('[data-probe="text"]');
   const face = container.querySelector<HTMLElement>(".cf");
   if (text === null || face === null) throw new Error("probe did not render");
@@ -152,5 +171,148 @@ describe("the rules box's reading floor", () => {
     expect(text.hasAttribute("data-clamped")).toBe(false);
     expect(fitOf(text)).toBeGreaterThanOrEqual(FIT_MIN);
     expect(fitOf(text)).toBeLessThan(1);
+  });
+});
+
+/** A flat set of probe elements that share the model, each with a box of its own. */
+function renderProbes(count: number, content: string): HTMLElement[] {
+  const { container } = render(
+    <>
+      {Array.from({ length: count }, (_, index) => (
+        <Probe key={String(index)} content={content} />
+      ))}
+    </>,
+  );
+  return [...container.querySelectorAll<HTMLElement>('[data-probe="text"]')];
+}
+
+describe("the batched scheduler", () => {
+  const model: Model = { basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 };
+
+  it("leaves a card unfitted until the queue runs, and fitted once it has", () => {
+    modelLayout(model);
+    const [text] = renderProbes(1, "rules");
+    expect(text?.style.getPropertyValue("--cf-fit")).toBe("");
+    flushFits();
+    expect(text?.closest(".cf")?.getAttribute(LONG_ATTRIBUTE)).toBe("true");
+    expect(Number(text?.style.getPropertyValue("--cf-fit"))).toBeGreaterThan(0);
+  });
+
+  it("runs the queue on the microtask after the commit, before anything can paint", async () => {
+    modelLayout(model);
+    const [text] = renderProbes(1, "rules");
+    expect(text?.style.getPropertyValue("--cf-fit")).toBe("");
+    await Promise.resolve();
+    expect(text?.style.getPropertyValue("--cf-fit")).not.toBe("");
+  });
+
+  it("fits many cards to exactly what fitting them one at a time gives", () => {
+    modelLayout(model);
+    const alone = renderProbes(1, "rules");
+    flushFits();
+    const expected = {
+      fit: alone[0]?.style.getPropertyValue("--cf-fit"),
+      scale: alone[0]?.style.getPropertyValue("--cf-text-scale"),
+      long: alone[0]?.closest(".cf")?.getAttribute(LONG_ATTRIBUTE),
+    };
+    cleanup();
+
+    const probes = renderProbes(12, "rules");
+    flushFits();
+    expect(probes).toHaveLength(12);
+    for (const probe of probes) {
+      expect(probe.style.getPropertyValue("--cf-fit")).toBe(expected.fit);
+      expect(probe.style.getPropertyValue("--cf-text-scale")).toBe(expected.scale);
+      expect(probe.closest(".cf")?.getAttribute(LONG_ATTRIBUTE)).toBe(expected.long);
+    }
+  });
+
+  it("reads layout once per round for every card at once, not once per card", () => {
+    // The layouts a run pays for must not grow with the number of cards.
+    const layouts = (count: number): number => {
+      modelLayout(model);
+      renderProbes(count, "rules");
+      flushFits();
+      const paid = meter.paid;
+      cleanup();
+      vi.restoreAllMocks();
+      return paid;
+    };
+    const one = layouts(1);
+    const many = layouts(40);
+    expect(one).toBeGreaterThan(0);
+    expect(many).toBe(one);
+  });
+
+  it("drops a queued pass that is cancelled, and a pass's element is left as it was", () => {
+    modelLayout(model);
+    const { container } = render(<Probe content="rules" />);
+    const text = container.querySelector<HTMLElement>('[data-probe="text"]');
+    if (text === null) throw new Error("probe did not render");
+    cleanup();
+    const spare = document.createElement("span");
+    spare.dataset.probe = "text";
+    const done = vi.fn();
+    const cancel = scheduleFit(spare, {}, done);
+    cancel();
+    flushFits();
+    expect(done).not.toHaveBeenCalled();
+    expect(spare.style.getPropertyValue("--cf-fit")).toBe("");
+  });
+
+  it("calls onDone when a pass has finished, with the fit already written", () => {
+    modelLayout(model);
+    const element = document.createElement("span");
+    element.dataset.probe = "text";
+    document.body.append(element);
+    let seen = "";
+    scheduleFit(element, {}, () => {
+      seen = element.style.getPropertyValue("--cf-fit");
+    });
+    expect(seen).toBe("");
+    flushFits();
+    expect(seen).not.toBe("");
+    element.remove();
+  });
+
+  it("hands onDone the box the element was left at, read with the rest of the batch", () => {
+    modelLayout(model);
+    const element = document.createElement("span");
+    element.dataset.probe = "text";
+    document.body.append(element);
+    const done = vi.fn();
+    scheduleFit(element, {}, done);
+    flushFits();
+    expect(done).toHaveBeenCalledExactlyOnceWith(`${String(WIDTH)}x${String(model.box)}`);
+    element.remove();
+  });
+
+  it("lets one failing pass end alone: the rest finish and the first error is rethrown", () => {
+    modelLayout(model);
+    const good = document.createElement("span");
+    good.dataset.probe = "text";
+    document.body.append(good);
+    const bad = document.createElement("span");
+    bad.dataset.probe = "text";
+    document.body.append(bad);
+    // On the element itself: the model's getter is on the prototype, and is every element's.
+    Object.defineProperty(bad, "clientWidth", {
+      get() {
+        throw new Error("detached mid-pass");
+      },
+    });
+    const goodDone = vi.fn();
+    scheduleFit(bad, {}, vi.fn());
+    scheduleFit(good, {}, goodDone);
+    expect(() => {
+      flushFits();
+    }).toThrow("detached mid-pass");
+    expect(goodDone).toHaveBeenCalledTimes(1);
+    // The queue is empty again: a later flush has nothing left to throw.
+    expect(() => {
+      flushFits();
+    }).not.toThrow();
+    good.remove();
+    bad.remove();
   });
 });

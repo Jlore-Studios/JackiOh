@@ -1,18 +1,19 @@
 #!/bin/bash
-# Registers each machine subscription's runner with GitHub and runs it as a service under that
+# Registers each machine subscription's runners with GitHub and runs them as services under that
 # subscription's own user (README.md). The subscriptions are the providers.json entries whose
-# runs_on is night-vm-<id>; each runner is named and labelled with its runs_on and nothing else,
-# so only that subscription's jobs land on it. Run from the repository's root, signed in to gh
+# runs_on is night-vm-<id>; each gets one runner per lane (`lanes`, default 1), all labelled with
+# its runs_on and nothing else, so only that subscription's jobs land on them. The first is named
+# after the label and lives in ~/actions-runner; a second is <label>-2 in ~/actions-runner-2. Run from the repository's root, signed in to gh
 # as a repository admin and to the AWS CLI:
 #
 #   bot/machine/register-runners.sh OWNER/REPO
 #
-# Safe to run again: a runner already registered is only restarted.
+# Safe to run again: a runner already registered and running is left alone, job and all.
 set -euo pipefail
 repo="${1:?OWNER/REPO, the repository the runners serve}"
 here="$(cd "$(dirname "$0")" && pwd)"
 labels="$(jq -r '.providers | to_entries[] | select(.value.runs_on // "" | startswith("night-vm-"))
-  | "\(.key)=\(.value.runs_on)"' .harness/providers.json)"
+  | "\(.key)=\(.value.runs_on)=\(.value.lanes // 1)"' .harness/providers.json)"
 [ -n "$labels" ] || { echo "no provider in .harness/providers.json runs on night-vm-*" >&2; exit 1; }
 token="$(gh api -X POST "repos/$repo/actions/runners/registration-token" --jq .token)"
 
@@ -20,32 +21,44 @@ remote="$(mktemp)"
 trap 'rm -f "$remote"' EXIT
 cat > "$remote" <<'EOF'
 #!/bin/bash
-# On the machine, as root: $1 the repository, $2 the registration token, then id=label pairs.
+# On the machine, as root: $1 the repository, $2 the registration token, then id=label=lanes.
 set -uo pipefail
 date +%s > /run/night-vm-last-busy
 repo="$1"; token="$2"; shift 2
 failed=0
-for pair in "$@"; do
-  id="${pair%%=*}"; label="${pair#*=}"; user="agent-$id"; dir="/home/$user/actions-runner"
-  if [ ! -x "$dir/config.sh" ]; then
+for entry in "$@"; do
+  id="${entry%%=*}"; rest="${entry#*=}"; label="${rest%%=*}"; lanes="${rest#*=}"
+  user="agent-$id"; first="/home/$user/actions-runner"
+  if [ ! -x "$first/config.sh" ]; then
     echo "$label: no runner unpacked for $user; run setup.sh with $id first"; failed=1; continue
   fi
-  cd "$dir" || continue
-  if [ ! -f .runner ]; then
-    if ! out="$(sudo -u "$user" ./config.sh --unattended --url "https://github.com/$repo" \
-        --token "$token" --name "$label" --labels "$label" --no-default-labels --work _work \
-        --replace 2>&1)"; then
-      echo "$label: registration failed:"; echo "$out" | grep -iv token | tail -4; failed=1
-      continue
+  for lane in $(seq 1 "$lanes"); do
+    dir="$first"; name="$label"
+    if [ "$lane" -gt 1 ]; then
+      dir="$first-$lane"; name="$label-$lane"
+      if [ ! -x "$dir/config.sh" ]; then  # a fresh copy of the unpacked runner, no registration
+        sudo -u "$user" mkdir -p "$dir"
+        (cd "$first" && sudo -u "$user" cp -a bin externals ./*.sh ./*.template .env .path "$dir/")
+      fi
     fi
-  fi
-  [ -f .service ] || ./svc.sh install "$user" >/dev/null
-  ./svc.sh stop >/dev/null 2>&1; ./svc.sh start >/dev/null
-  echo "$label: $(systemctl is-active "$(cat .service)") as $user"
+    cd "$dir" || continue
+    if [ ! -f .runner ]; then
+      if ! out="$(sudo -u "$user" ./config.sh --unattended --url "https://github.com/$repo" \
+          --token "$token" --name "$name" --labels "$label" --no-default-labels --work _work \
+          --replace 2>&1)"; then
+        echo "$name: registration failed:"; echo "$out" | grep -iv token | tail -4; failed=1
+        continue
+      fi
+    fi
+    [ -f .service ] || ./svc.sh install "$user" >/dev/null
+    # Started only if it isn't running: a restart would kill the job a running one holds.
+    systemctl is-active --quiet "$(cat .service)" || ./svc.sh start >/dev/null
+    echo "$name: $(systemctl is-active "$(cat .service)") as $user"
+  done
 done
 exit "$failed"
 EOF
-# shellcheck disable=SC2086  # one argument per id=label pair
+# shellcheck disable=SC2086  # one argument per id=label=lanes entry
 "$here/on-machine.sh" "$remote" "$repo" "$token" $labels
 echo
 gh api "repos/$repo/actions/runners" \
