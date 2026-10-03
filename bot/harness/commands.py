@@ -234,7 +234,7 @@ HELP = """\
 
 Anything else after `/harness` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
-Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficult` to keep it for Opus.
+Add `--force` (level 3) to `build`, `revise` or `suggest` to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.
 Labels do the same as the verbs: `bot:build` on an issue, `bot:revise` on a PR; assigning @{bot} queues the thread.
 On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.
 """

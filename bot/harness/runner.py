@@ -778,6 +778,10 @@ def _write_redacted(source: Path, target: Path) -> None:
             dst.write(redact(line))
 
 
+#: What a scripted planning call answers when the script gives it no handler of its own.
+FAKE_PLAN = "1. **Goal.** Do what the issue asks.\n2. **Steps.** Change it, test it."
+
+
 class FakeRunner:
     """Replays scripted calls. Each handler receives the request and returns a RunResult."""
 
@@ -793,6 +797,8 @@ class FakeRunner:
     def run(self, request: RunRequest) -> RunResult:
         self.calls.append(request)
         queue = self.handlers.get(request.role) or []
+        if not queue and request.role == "plan":
+            return RunResult(True, FAKE_PLAN)  # every build plans first; most scripts skip it
         if not queue:
             return RunResult(False, "", 1, error=f"fake runner has no handler for {request.role}")
         handler = queue.pop(0) if len(queue) > 1 else queue[0]

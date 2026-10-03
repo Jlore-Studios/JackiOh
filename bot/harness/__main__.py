@@ -102,10 +102,14 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
         what += f" on {planned['provider']}"
     if planned.get("priority"):
         what += f", priority tier {planned['priority']}"
-    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n"
-             f"{_bullets(planned.get('skipped') or [])}")
+    if planned.get("difficulty"):
+        what += f", difficulty {planned['difficulty']}"
+    if planned.get("assignment"):
+        what += f" ({planned['assignment']})"
+    notes = [*(planned.get("routing") or []), *(planned.get("skipped") or [])]
+    _summary(f"### Plan: {what}\n\n{planned.get('reason', '')}\n{_bullets(notes)}")
     print(f"plan: {what} {planned.get('reason', '')}".strip())
-    for line in planned.get("skipped") or []:
+    for line in notes:
         print(f"plan: {line}")
     return 0
 
@@ -297,10 +301,19 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         limits = provider.limits
         caps = ", ".join([f"{k} {v:.0%}" for k, v in limits.stops.items()]
                          + [f"{k} {v} min" for k, v in limits.budgets.items()]) or "none"
-        print(f"{provider.id:10} {provider.cli:7} {provider.model:16} "
+        seats = ", ".join(f"{seat.model} {seat.tier}" + (" self-check" if seat.self_check else "")
+                          for seat in cfg.pool.seats(provider))
+        print(f"{provider.id:10} {provider.cli:7} {seats:36} "
               f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
     print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
+    # A tier's entries name models; whether one checks itself is its subscription's seat's.
+    checking = {seat.model for provider in cfg.pool.ordered() for seat in cfg.pool.seats(provider)
+                if seat.self_check}
+    for tier in providers_mod.TIERS:
+        order = ", ".join(e.model + (" (self-check)" if e.model in checking else "")
+                          for e in cfg.pool.tiers.get(tier, ()))
+        print(f"{tier} tier, tried in this order: {order or 'none'}")
     return 0
 
 

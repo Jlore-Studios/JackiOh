@@ -106,9 +106,10 @@ class CommentTests(unittest.TestCase):
         self.send("/harness status")
         text = self.reply()
         self.assertIn("Queued to build: #6", text)
-        self.assertIn("`claude-1` (claude, `opus`, 21:00–07:00 America/Chicago): outside its "
+        self.assertIn("`claude-1` (claude: `opus` strong, `sonnet` weak; 21:00–07:00 "
+                      "America/Chicago): outside its "
                       "hours", text)
-        self.assertIn("`claude-2` (claude, `opus`, 21:00–07:00 America/Chicago): its secret "
+        self.assertIn("`claude-2` (claude: `opus` strong; 21:00–07:00 America/Chicago): its secret "
                       "`CLAUDE_CODE_OAUTH_TOKEN_2` is not set", text)
 
     def test_free_text_on_an_issue_asks_for_a_build(self):
@@ -407,7 +408,8 @@ class StatusTests(unittest.TestCase):
         ]), text)
         # A run that ended holds nothing, and its subscription says why it is or is not free.
         self.assertNotIn("`gpt` (codex", text.split("- Subscriptions")[0])
-        self.assertIn("  - `claude-1` (claude, `opus`, 21:00–07:00 America/Chicago): "
+        self.assertIn("  - `claude-1` (claude: `opus` strong, `sonnet` weak; 21:00–07:00 "
+                      "America/Chicago): "
                       "**working on #37**.", text)
         self.assertNotIn("`gpt` (codex, `gpt-5.6-terra`, any time): **working", text)
         self.assertIn("- Working on: #37, #49, #50 (no run is going for #50 any more; the next "

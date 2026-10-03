@@ -271,7 +271,7 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     const catalog = await loadCatalog({ version: "v0.2.0" });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
 
     for (const { version } of patches) {
       const response = await router(jsonRequest("GET", `/api/catalog/${version}`));

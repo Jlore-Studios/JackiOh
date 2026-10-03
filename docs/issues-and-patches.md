@@ -16,9 +16,10 @@ Every issue carries at least one type label:
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
-patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. `difficult`
-(only Claude Opus works on it), `human` (no model does), `shitter` (never Opus or Astra), the
-`priority:*` labels (the bot's pickup order) and the `bot:*` labels are separate. Never add
+patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
+`difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; none is
+medium, and `hard` is Claude Opus's alone), `human` (no model does it), the `priority:*` labels
+(the bot's pickup order) and the `bot:*` labels are separate. Never add
 `bot:build` while retitling or relabelling, because it queues a build.
 
 ## Titles
@@ -44,8 +45,8 @@ titles, so retitle one when you accept it.
   of name order (#63). The order is `packages/cards/patches/patches.json`'s, and nothing parses or
   compares a version string (R105, R388).
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
-  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix, so v0.1.0-r1 becomes v0.1.0b
-  and v0.1.0-r3 becomes v0.1.0d. The patch history still uses the old names until #85 renames them.
+  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
+  v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
 
 ## A patch that takes several pull requests
 
