@@ -855,15 +855,22 @@
       "stop_requested": false
     },
     "171": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "f4216c2945c3879a40cce6307e596f0a8f6b6962": 1
       },
+      "ci_run_id": 37155093268,
+      "ci_sha": "f4216c2945c3879a40cce6307e596f0a8f6b6962",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-03T16:52:25Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 49,
       "kind": "revise",
-      "queued_at": "2026-10-03T21:26:22Z",
+      "pending_request": false,
+      "queued_at": "2026-10-03T21:40:23Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [
         {
           "claim": "The forfeit confirmation unconditionally asserts 'your rating moves as for a loss', which is now false for unranked room Conquest series, and the pre-result SeriesView exposes no ranked flag for the client to distinguish.",
@@ -878,6 +885,8 @@
           "where": "apps/server/src/api/ranked.ts:434"
         }
       ],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [],
         "builder": "cognition",
