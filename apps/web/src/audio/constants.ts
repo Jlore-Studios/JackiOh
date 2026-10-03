@@ -55,6 +55,13 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "Flicker", "Plague Token",
 ];
 
+/**
+ * B34: the share of voice lines that may restate rules vocabulary (`BANNED_RULES_WORDS`) before the
+ * test fails. A line is "Taunt" for a Taunt unit only by accident; the designer allows the odd one
+ * to stand (issue #115), but never as many as two in a hundred.
+ */
+export const BANNED_WORDS_MAX_SHARE = 0.02;
+
 // ---- Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506) ----
 /** #21 Hinder: its rider on the victim's next refresh is heard as a mana crack (cues.ts, R506). */
 export const HINDER_DEF_ID = "core-021";
