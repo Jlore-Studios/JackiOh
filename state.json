@@ -953,7 +953,9 @@
     },
     "68": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:5964126592"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -976,9 +978,7 @@
       "run_id": "37138554295",
       "started_at": "2026-10-03T16:55:26Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5964126592"
-      ]
+      "taken_asks": []
     },
     "75": {
       "asks": [],
