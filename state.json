@@ -561,6 +561,9 @@
     "142": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "4207c0a988b0876c8b2ea793b6a94b440a38238e": 1
+      },
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T19:58:45Z",
