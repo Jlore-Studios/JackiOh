@@ -346,6 +346,7 @@
       "planned_at": "2026-10-03T19:09:28Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 168,
       "provider": "agy",
       "queued_at": "2026-10-03T05:24:41Z",
       "requested_by": "jgoetzmann",
