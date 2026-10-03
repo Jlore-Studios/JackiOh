@@ -616,9 +616,7 @@
       "taken_asks": []
     },
     "63": {
-      "asks": [
-        "c:5965999156"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -634,14 +632,16 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "devin",
       "question": "Can a human add the required `.github/workflows/patches-ship.yml` and the `patches check` CI step? Night-bot rules prohibit all `.github/` edits.",
       "queued_at": "2026-10-03T05:35:09Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37099014588",
-      "started_at": "2026-10-03T05:12:56Z",
+      "run_id": "37112911948",
+      "started_at": "2026-10-03T09:24:23Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5965999156"
+      ]
     },
     "66": {
       "asks": [],
@@ -760,9 +760,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T09:23:52Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37112879404",
-    "what": "build #37 on claude-3"
+    "at": "2026-10-03T09:24:23Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37112911948",
+    "what": "build #63 on devin"
   },
   "last_sweep": {
     "at": "2026-10-03T05:54:16Z",
