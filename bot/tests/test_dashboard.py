@@ -78,6 +78,14 @@ class DashboardTests(unittest.TestCase):
                                "event": "schedule", "created_at": ago(30), "run_number": 812,
                                "html_url": "https://github.com/x/y/actions/runs/200"}
         body = dashboard.render(self.ctx)
+        # What each lane is doing, with a link to the run doing it.
+        runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
+        self.assertIn("| Item | Title | Doing | Subscription | For | Run |", body)
+        self.assertIn(f"| #37 | An issue | building | `claude-1` `opus` (GitHub) | 47m "
+                      f"| [run 101]({runs}/101) |", body)
+        self.assertIn(f"| #49 | An issue | revising | `muse` `muse-spark-1.3-contributor` "
+                      f"(machine) | 2h 03m | [run 102]({runs}/102) |", body)
+        self.assertIn("by `bot-status`, which rewrites this issue every ten minutes", body)
         # A timeline of the runs going now, by subscription and where each runs.
         self.assertIn("```mermaid\ngantt", body)
         self.assertIn("    section claude-1 (GitHub)\n    item 37 build :active, ", body)
@@ -103,6 +111,67 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Nothing is running right now.", body)
         self.assertIn('    "Free" : 10', body)
         self.assertIn("Nothing is queued.", body)
+
+    def test_the_loop_rewrites_it_every_ten_minutes_and_outlives_a_bad_tick(self):
+        """`harness dashboard --every 600 --for 1200`, as bot-status runs it (with longer
+        figures): a rewrite now and every ten minutes until the time is up, and a tick that fails
+        is only a warning."""
+        from unittest import mock
+        import harness.__main__ as main_mod
+        clock = [1000.0]
+        ticks = []
+
+        def update(ctx):
+            ticks.append(clock[0])
+            if len(ticks) == 2:
+                raise RuntimeError("network down")
+            return "rewrote #148"
+
+        def sleep(seconds):
+            clock[0] += seconds
+
+        out = io.StringIO()
+        with mock.patch.object(dashboard, "update", update), \
+                mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(main_mod.time, "sleep", sleep), contextlib.redirect_stdout(out):
+            code = cmd_dashboard(make_config(), argparse.Namespace(every=600, for_seconds=1200))
+        self.assertEqual(code, 0)
+        self.assertEqual(ticks, [1000.0, 1600.0, 2200.0])
+        self.assertIn("::warning::the status issue was not updated: network down", out.getvalue())
+        self.assertEqual(out.getvalue().count("dashboard: rewrote #148"), 2)
+
+    def test_the_loop_sweeps_before_each_rewrite(self):
+        """`--sweep`: each tick runs the sweep first (it starts a night run when a lane and work
+        are free), so a broken chain of runs restarts within ten minutes; a failed sweep is only
+        a warning and the rewrite still happens."""
+        from unittest import mock
+        import harness.__main__ as main_mod
+        clock = [0.0]
+        order = []
+
+        def sweep(ctx):
+            order.append(("sweep", clock[0]))
+            if len(order) == 1:
+                raise RuntimeError("rate limited")
+            return ["started a night run"]
+
+        def update(ctx):
+            order.append(("rewrite", clock[0]))
+            return "rewrote #148"
+
+        out = io.StringIO()
+        with mock.patch.object(main_mod.sweep_mod, "sweep", sweep), \
+                mock.patch.object(dashboard, "update", update), \
+                mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(main_mod.time, "sleep",
+                                  lambda s: clock.__setitem__(0, clock[0] + s)), \
+                contextlib.redirect_stdout(out):
+            cmd_dashboard(make_config(), argparse.Namespace(every=600, for_seconds=600,
+                                                            sweep=True))
+        self.assertEqual(order, [("sweep", 0.0), ("rewrite", 0.0),
+                                 ("sweep", 600.0), ("rewrite", 600.0)])
+        self.assertIn("::warning::the sweep failed: rate limited", out.getvalue())
+        self.assertIn("sweep: started a night run", out.getvalue())
 
     def test_a_cell_stays_one_line_without_pipes(self):
         self.assertEqual(dashboard._cell("a | b\nc"), "a \\| b c")
