@@ -1,11 +1,11 @@
 // C+ #14 Forever& — SPEC §8.7 row 14, R410, BUILD M9 Classic+ row C+ 14: "Leaves a waiting player
 // modifier, not turn-scoped (it survives cleanup), that stamps the next Spell you play, never Forever&
-// itself, with "After this resolves, return it to your hand. This can't cost less than (2)": the Spell
+// itself, with "After this resolves, Bounce it. This can't cost less than (2)": the Spell
 // resolves and comes back to your hand, and does so after every later play too, the enchantment riding
 // the card in every zone; its floor applies after every discount; a discarded or countered stamped
 // Spell does not come back (R410); a Unit, Field Spell or Trap play leaves the modifier waiting; a full
 // hand burns the returning card (R4); the floor reads through `param()` and never drops below 1;
-// radiant the floor is (1) and you draw 1".
+// radiant the floor is (1) with no draw (balance patch 1)".
 
 import { HAND_CAP, HERO_HEALTH, effectiveCost, stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -17,9 +17,8 @@ const STOCKPILE = "core-005"; // (1) Spell: draw 2, heal 2
 const MENACE = "core-019"; // a Unit
 const MANA_WELL = "core-006"; // a Field Spell
 const SHEEPISH = "core-041"; // a Trap
-const RAPID_DRAW = "classic-026"; // (0) Spell: draw 4, then discard 4 of your choice
+const RAPID_DRAW = "classic-026"; // (0) Spell: draw 4, then discard 4 at random
 const COUNTERSPELL = "classic-017"; // Trap: counters the opponent's Spell
-const SOLARIUS = "classicplus-038"; // a Unit, Cry: draw 1
 const JELLY_BEAN = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 5 health
 const FILLER = "core-008"; // Mr. Vanilla: a Unit, inert
 
@@ -77,9 +76,9 @@ describe("C+ #14 Forever&", () => {
     });
 
     it("R70 a cast is a play: a Spell cast as the next one is stamped and comes back to your hand", () => {
-      // Solarius is a Unit play (the modifier waits); its Cry draws the Jelly Bean, which casts itself.
-      const s = forever(false, [SOLARIUS], { library: [JELLY_BEAN, STOCKPILE, STOCKPILE] });
-      s.play(SOLARIUS, { zone: 1 });
+      // No Spell is played: the turn's draw takes the Jelly Bean, which casts itself (R70).
+      const s = forever(false, [FILLER], { library: [JELLY_BEAN, STOCKPILE, STOCKPILE] });
+      s.endTurn().endTurn();
       const jelly = s.card(JELLY_BEAN);
       s.expectHealth("p1", HERO_HEALTH - 5);
       expect(jelly.zone.z).toBe("hand");
@@ -108,13 +107,13 @@ describe("C+ #14 Forever&", () => {
     });
 
     it("R410 a discarded stamped Spell does not come back", () => {
-      const s = forever(false, [LUNAR, RAPID_DRAW]);
+      // Only two cards come back from the library: all three in hand go, the stamped Lunar among them.
+      const s = forever(false, [LUNAR, RAPID_DRAW], { library: [FILLER, FILLER] });
       const id = lunarIn(s);
       s.play(id, { targets: AT_HERO }); // stamped: back in hand
       expect(s.card(id).zone.z).toBe("hand");
-      s.play(RAPID_DRAW); // draws 4, then discards 4 of p1's choice: the stamped Lunar among them
-      const others = s.hand("p1").filter((card) => card.id !== id).slice(0, 3).map((card) => card.id);
-      s.answer([id, ...others]);
+      s.play(RAPID_DRAW); // draws 2, then discards all 3 at random (R640)
+      expect(s.state.pending).toBeNull();
       expect(s.card(id).zone.z).toBe("graveyard");
       s.endTurn().endTurn();
       expect(s.card(id).zone.z).toBe("graveyard");
@@ -154,9 +153,10 @@ describe("C+ #14 Forever&", () => {
   });
 
   describe("radiant", () => {
-    it("the floor is (1), and you draw 1", () => {
+    it("the floor is (1), with no draw", () => {
       const s = forever(true, [LUNAR]);
-      expect(s.hand("p1").map((card) => card.defId)).toContain(STOCKPILE);
+      // Balance patch 1: the Radiant face draws nothing.
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([LUNAR]);
       const id = lunarIn(s);
       s.play(id, { targets: AT_HERO });
       expect(s.card(id).zone.z).toBe("hand");
@@ -164,11 +164,13 @@ describe("C+ #14 Forever&", () => {
       expect(effectiveCost(s.state, s.card(id))).toBe(1);
     });
 
-    it("R386 the draw reads through param(): an Upgrade draws 2", () => {
-      const s = scenario({ p1: { hand: [{ def: FOREVER, radiant: true }, FILLER], library: [STOCKPILE, STOCKPILE, STOCKPILE], mana: 10 }, p2: { hand: [STOCKPILE] } });
-      stepParam(s.card(FOREVER), "draw", 1);
+    it("R386 the floor reads through param(): a Degrade keeps it at (2)", () => {
+      const s = scenario({ p1: { hand: [{ def: FOREVER, radiant: true }, LUNAR, FILLER], mana: 10 }, p2: { hand: [STOCKPILE] } });
+      stepParam(s.card(FOREVER), "floor", 1);
       s.play(FOREVER);
-      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER, STOCKPILE, STOCKPILE]);
+      const id = lunarIn(s);
+      s.play(id, { targets: AT_HERO });
+      expect(s.card(id).enchantments).toContainEqual({ kind: "returnAfterResolve", floor: 2 });
     });
   });
 });

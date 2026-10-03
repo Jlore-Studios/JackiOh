@@ -16,9 +16,9 @@
 //      controller's units (the card itself allowed) or the card itself — and an ability whose cost
 //      cannot be paid cannot be activated (`whyCannotActivateAbility`).
 //   5. The targets and modes the ability declares travel in the action, as a play's do (R81), checked
-//      by `playChoices` against the ability's declarations (R90), and so do the discards a declared
-//      target costs (B5 E5, R450, Classic #89), paid with the costs. Choices made during resolution
-//      are ordinary prompts, which the card's `resume` table answers.
+//      by `playChoices` against the ability's declarations (R90); the discards a declared target
+//      costs (B5 E5, R450, Classic #89) are random at pay time (R640) and travel nowhere. Choices
+//      made during resolution are ordinary prompts, which the card's `resume` table answers.
 //   6. Not a play: nothing that counts plays sees it (no turn log, no `counters.played`, no
 //      `cardPlayed`). What the effect plays or casts counts as usual (R70).
 //   8. `legalActions` lists `activate` exactly as it lists a Heroic Power's `activatePower`: the
@@ -43,8 +43,8 @@ import { manaEvent, spendMana } from "../mana";
 import {
   inDeclaredOrder,
   playChoiceCombinations,
-  targetingDiscardsRequired,
   whyDeclaredChoicesRefused,
+  targetingDiscardsRequired,
   type DeclaredChoices,
 } from "../playChoices";
 import { isFaceDown } from "../preview";
@@ -55,7 +55,7 @@ import { scriptOf } from "../scripts";
 import { sacrificeTogether, stateCheck } from "../stateCheck";
 import { findInstance, type CardInstance, type GameState, type Resume, type WorkItem } from "../state";
 import { exitMark } from "../stays";
-import { targetingDiscardSets, whyTargetingDiscardsRefused } from "../targeting";
+import { whyTargetingDiscardsUnpayable } from "../targeting";
 import { payTargetingDiscards } from "../targetingPoint";
 import { tunedCount } from "../tuning";
 import { paused, pushWork, registerWorkHandler } from "../work";
@@ -166,7 +166,7 @@ function markUse(state: GameState, card: CardInstance): void {
 function tributeUnitsFor(state: GameState, player: PlayerId, card: CardInstance, decl: ActivationDecl): CardInstance[] {
   const units = activeUnitsOf(state, player);
   // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
-  // R635: a cost that excludes itself (Classic #21) never lists the card either.
+  // R642: a cost that excludes itself (Classic #21) never lists the card either.
   if (decl.cost?.tributeSelf === true || decl.cost?.tributeExcludesSelf === true) {
     return units.filter((unit) => unit.id !== card.id);
   }
@@ -265,7 +265,9 @@ export function whyActivateRefused(state: GameState, player: PlayerId, action: A
   return (
     whyDeclaredChoicesRefused(state, player, card, declaredOf(decl), targets, modes) ??
     refuseTributes(state, player, card, decl, action.tributes ?? []) ??
-    whyTargetingDiscardsRefused(state, player, discardsOwed(state, player, card, decl, targets, modes), action.discards ?? [], handPicks(targets))
+    // B5 E5, R450, R640: a declared target that costs discards needs that many other cards held —
+    // the discards are random at pay time, so the action carries none.
+    whyTargetingDiscardsUnpayable(state, player, discardsOwed(state, player, card, decl, targets, modes), handPicks(targets))
   );
 }
 
@@ -304,18 +306,19 @@ export function activateActionsFor(state: GameState, player: PlayerId, card: Car
     const choices = playChoiceCombinations(state, player, card, declaredOf(decl));
     for (const tributes of tributeSets) {
       for (const choice of choices) {
-        // B5 E5, R450: each set of hand cards that pays the targets' discard cost, listed whole.
+        // B5 E5, R450, R640: the targets' discard cost is random at pay time, so it lists no
+        // paying sets — one action, offered only when the cost can be paid at all.
         const owed = discardsOwed(state, player, card, decl, choice.targets ?? [], choice.modes ?? []);
-        for (const discards of targetingDiscardSets(state, player, owed, handPicks(choice.targets ?? []))) {
-          out.push({
-            type: "activate",
-            instanceId: card.id,
-            ability: decl.id,
-            ...(tributes.length === 0 ? {} : { tributes }),
-            ...choice,
-            ...(discards.length === 0 ? {} : { discards }),
-          });
+        if (whyTargetingDiscardsUnpayable(state, player, owed, handPicks(choice.targets ?? [])) !== null) {
+          continue;
         }
+        out.push({
+          type: "activate",
+          instanceId: card.id,
+          ability: decl.id,
+          ...(tributes.length === 0 ? {} : { tributes }),
+          ...choice,
+        });
       }
     }
   }
@@ -403,7 +406,6 @@ function payCosts(
   card: CardInstance,
   decl: ActivationDecl,
   tributes: readonly string[],
-  discards: readonly string[],
 ): void {
   const state = sink.state;
   const side = state.players[run.player];
@@ -414,7 +416,10 @@ function payCosts(
     sink.events.push(manaEvent(run.player, side));
   }
 
-  payTargetingDiscards(sink, run.player, discards);
+  // B5 E5, R450, R640: a targeting cost is part of the price, paid with it (Classic #89) — random
+  // cards from the hand, drawn at pay time. Never a hand card the activation picks.
+  const owed = discardsOwed(sink.state, run.player, card, decl, run.targets, run.modes);
+  if (owed > 0) payTargetingDiscards(sink, run.player, owed, handPicks(run.targets));
 
   const random = Math.max(0, decl.cost?.discardRandom ?? 0);
   if (random > 0) discardRandom({ count: random }).apply(makeContext(sink, card, { controller: run.player }));
@@ -528,7 +533,7 @@ export function activateAbility(sink: EngineSink, player: PlayerId, action: Acti
 
   markUse(state, card);
   sink.events.push({ type: "activated", player, instanceId: card.id, defId: card.defId, ability: decl.id });
-  payCosts(sink, run, card, decl, action.tributes ?? [], action.discards ?? []);
+  payCosts(sink, run, card, decl, action.tributes ?? []);
   if (paused(sink)) {
     if (state.result === null) oweEffect(sink, run);
     return null;

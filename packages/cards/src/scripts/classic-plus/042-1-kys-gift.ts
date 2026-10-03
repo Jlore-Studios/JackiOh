@@ -5,13 +5,13 @@
 //   They cost (0). Radiant: 2 mana, 2 discards, heal 10, and the four cards are Radiant.
 //
 // Its controller's start of turn (R62), in the order written. The mana is temporary (§2.3). The discard
-// is the opponent's choice (R16): a hand prompt they hold on your turn, fewer cards than asked taking
-// what they have and none asking nothing; the rest of the list waits for the answer (R113). The four
-// cards come from non-token pools of every set (R380), each at `costOverride` 0; the hand cap burns.
-// The numbers are the declared `mana`, `discards` and `heal` (R386); one script runs both faces.
+// is random from the opponent's hand (R640): fewer cards than asked taking what they have and none
+// taking nothing. The four cards come from non-token pools of every set (R380), each at `costOverride`
+// 0; the hand cap burns. The numbers are the declared `mana`, `discards` and `heal` (R386); one script
+// runs both faces.
 
 import { param, type Script } from "@jackioh/engine";
-import { addRandomFromCatalog, chooseFromHand, discard, gainMana, heal } from "@jackioh/engine/effects";
+import { addRandomFromCatalog, discardRandom, gainMana, heal } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classicplus-042-1");
@@ -22,11 +22,10 @@ const POOLS = [{ tags: ["Book" as const] }, { tags: ["KY" as const] }, { rarity:
 export const base: Script = {
   startOfTurn: (ctx) => [
     gainMana({ amount: param(ctx, "mana") }),
-    chooseFromHand({ of: "enemy", by: "enemy", count: param(ctx, "discards"), step: "discard", prompt: "Discard" }),
+    discardRandom({ count: param(ctx, "discards"), player: "enemy" }),
     heal({ target: { of: "selfHero" }, amount: param(ctx, "heal") }),
     ...POOLS.map((query) => addRandomFromCatalog({ query, costOverride: 0, radiant: ctx.radiant })),
   ],
-  resume: { discard: (ctx) => ctx.targets.map((_, index) => discard({ target: { of: "chosen", index } })) },
 };
 
 // The same script: the Radiant face's 2, 2 and 10 are its declared numbers, and `ctx.radiant` makes the cards Radiant.

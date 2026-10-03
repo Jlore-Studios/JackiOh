@@ -553,7 +553,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "loc": 16,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Your opponent has 1 less mana next turn. Discard 1."
@@ -2978,7 +2978,7 @@
         "min": 1
       }
     ],
-    "loc": 57,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, Tribute this to steal it."
@@ -3146,7 +3146,7 @@
         "min": 1
       }
     ],
-    "loc": 97,
+    "loc": 84,
     "base": {
       "keywords": [],
       "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
@@ -3484,7 +3484,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "loc": 32,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Choose a number. Exile every card on the field that costs that much."
@@ -3576,7 +3576,7 @@
         "min": 1
       }
     ],
-    "loc": 44,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
@@ -3650,7 +3650,7 @@
         "min": 1
       }
     ],
-    "loc": 29,
+    "loc": 33,
     "base": {
       "attack": 2,
       "health": 1,
@@ -3687,7 +3687,7 @@
         "min": 1
       }
     ],
-    "loc": 35,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
@@ -3749,7 +3749,7 @@
         "min": 1
       }
     ],
-    "loc": 23,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Exile every card on the field that costs ({threshold}) or less."
@@ -3787,7 +3787,7 @@
         "min": 1
       }
     ],
-    "loc": 17,
+    "loc": 13,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Then discard {discard|card|cards}."
@@ -4041,14 +4041,14 @@
         "min": 1
       }
     ],
-    "loc": 15,
+    "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard to your hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard or exile to your hand."
+      "text": "Bounce {cards|random card|random cards} from your graveyard or exile."
     }
   },
   "classic-035": {
@@ -4506,13 +4506,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to your hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, Bounce this."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to your hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, Bounce this. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -5043,7 +5043,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 29,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
@@ -5073,7 +5073,7 @@
         "min": 1
       }
     ],
-    "loc": 16,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "End of your turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}."
@@ -5374,7 +5374,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "Activate: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
@@ -5878,7 +5878,7 @@
         "min": 1
       }
     ],
-    "loc": 16,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Start of Turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
@@ -5952,7 +5952,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nQuest: Draw 2 cards. Each quest you complete offers rewards; the reward you choose sets your next quest."
+      "text": "Indestructible\nEach quest you complete offers rewards; the reward you choose sets your next quest."
     },
     "radiant": {
       "keywords": [
@@ -5960,7 +5960,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nQuest: Draw 2 cards. Each quest you complete gives every reward it offers, and you follow every path."
+      "text": "Indestructible\nEach quest you complete gives every reward it offers, and you follow every path."
     }
   },
   "classicplus-001": {
@@ -6654,14 +6654,14 @@
         "min": 1
       }
     ],
-    "loc": 10,
+    "loc": 9,
     "base": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     },
     "radiant": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, Bounce it. This can't cost less than ({floor}).\""
     }
   },
   "classicplus-015": {
@@ -7705,7 +7705,7 @@
     "refs": [
       "classicplus-038-1"
     ],
-    "loc": 10,
+    "loc": 9,
     "base": {
       "attack": 3,
       "health": 2,
@@ -7908,7 +7908,7 @@
         "min": 1
       }
     ],
-    "loc": 12,
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost (0)."
@@ -8014,7 +8014,7 @@
         "min": 1
       }
     ],
-    "loc": 27,
+    "loc": 26,
     "base": {
       "attack": 4,
       "health": 4,
@@ -8316,7 +8316,7 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 7,
+    "loc": 14,
     "base": {
       "keywords": [],
       "text": "Summon 1-2 Rush Tokens."
@@ -8412,7 +8412,7 @@
         "min": 1
       }
     ],
-    "loc": 19,
+    "loc": 5,
     "base": {
       "keywords": [],
       "text": "Your opponent discards {discards|card|cards}."
@@ -8552,7 +8552,7 @@
         "min": 1
       }
     ],
-    "loc": 8,
+    "loc": 13,
     "base": {
       "keywords": [],
       "text": "Activate: Add {apples|All Purpose Apple|All Purpose Apples} to your hand."
@@ -8632,7 +8632,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Start of Turn: Add a random Fruit to your hand. It costs (0)."
@@ -9169,7 +9169,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 4,
-    "loc": 11,
+    "loc": 20,
     "base": {
       "attack": 10,
       "health": 10,
@@ -9439,7 +9439,7 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 2,
-    "loc": 12,
+    "loc": 13,
     "base": {
       "keywords": [],
       "text": "End of Turn: Add a random AI Generated card to your hand. It costs (0)."

@@ -3755,6 +3755,58 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       WEB_LANDING_TEST,
     );
   });
+
+  // Proved by targeting.test.ts "R640 …" (no play carries discards, the exact cost pays both with no
+  // prompt, the kept cards never pay) and the card side in packages/cards
+  // test/classic/089-paul-allens-ghost.test.ts "R640 …" (one play, two random others, the interception
+  // stays paid).
+  it("R640 discards are random by default, paid at pay time with no choice", () => {
+    provenIn(640, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
+  });
+
+  // Proved by setup.test.ts "R641 …" (the deal and the mulligan wait past cast-on-draw cards, and the
+  // fallback still casts) and the card side in packages/cards/test/021-hinder.test.ts "R641 …" (no
+  // opening deal holds the Hinder).
+  it("R641 keeps a cast-on-draw card out of the opening draw and the mulligan while other cards remain", () => {
+    provenIn(641, "setup.test.ts", "../../cards/test/021-hinder.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R642 …" (alone, no
+  // activation is listed and naming itself is refused, on both faces).
+  it("R642 lets Turtinator Tribute anything but itself", () => {
+    provenIn(642, "../../cards/test/classic/021-turtinator.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/034-ancient-acquisition.test.ts "R643 …"
+  // (two random returns with no prompt, the same game returning the same cards).
+  it("R643 returns Ancient Acquisition's cards at random, with no pick", () => {
+    provenIn(643, "../../cards/test/classic/034-ancient-acquisition.test.ts");
+  });
+
+  // Proved by the card side in packages/cards/test/classic/022-mid-runner.test.ts "R644 …" (the lane
+  // count's center, odd and even, and the Radiant three bounces).
+  it("R644 computes Mid Runner's midlane from the lane count", () => {
+    provenIn(644, "../../cards/test/classic/022-mid-runner.test.ts");
+  });
+
+  // Proved by effects-reveal.test.ts "R645 …" (a revealed Trap reads face-up but still fires) and the
+  // card side in packages/cards/test/classic/065-ace-in-the-hole.test.ts and
+  // test/classic/088-siphon-squad.test.ts "R645 …" (Revealed on tails, revealed at the start of turn).
+  it("R645 reveals a backrow card's face without firing it", () => {
+    provenIn(
+      645,
+      "effects-reveal.test.ts",
+      "../../cards/test/classic/065-ace-in-the-hole.test.ts",
+      "../../cards/test/classic/088-siphon-squad.test.ts",
+    );
+  });
+
+  // Proved by twiceForward.test.ts "R646 …" (no count while face-down, shown when destroyed
+  // unrevealed) and the card side in packages/cards
+  // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R646 …".
+  it("R646 starts no Brittle count while a backrow Trap is unrevealed", () => {
+    provenIn(646, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

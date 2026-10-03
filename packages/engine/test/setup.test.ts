@@ -7,7 +7,7 @@ import { mulliganOwed, mulliganPromptFor } from "../src/setup";
 import { createGame, type GameState } from "../src/state";
 import { vanillaDeck } from "./fixtures/catalog";
 import { newGame, setupCatalog } from "./fixtures/harness";
-import { goingLong, heroicPower, HERO_POWERS } from "./fixtures/scripts";
+import { goingLong, heroicPower, HERO_POWERS, hinder } from "./fixtures/scripts";
 
 function started(seed = "setup", decks?: [string[], string[]]): GameState {
   return beginGame(newGame(seed, decks)).state;
@@ -58,6 +58,48 @@ describe("setup (M1-T5)", () => {
     const quickdrawDeck = [goingLong.id, heroicPower.id, ...vanillaDeck(DECK_SIZE - 2, 1)];
     const state = started("qd-full", [vanillaDeck(DECK_SIZE, 21), quickdrawDeck]);
     expect(state.players.p2.hand).toHaveLength(OPENING_DRAW[1] as number);
+  });
+
+  it("R641 a cast-on-draw card waits out the opening deal while other cards remain", () => {
+    const deck = [hinder.id, ...vanillaDeck(DECK_SIZE - 1, 1)];
+    for (const seed of ["r641-a", "r641-b", "r641-c"]) {
+      const state = started(seed, [deck, vanillaDeck(DECK_SIZE, 21)]);
+      // No cast asks during the deal: both mulligans open at once, on every seed.
+      expect(state.pending).toBeNull();
+      expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
+      expect(state.players.p1.hand.some((c) => c.defId === hinder.id)).toBe(false);
+      expect(state.players.p1.hand).toHaveLength(OPENING_DRAW[0] as number);
+      // It waits at the bottom of the library, behind every other card.
+      const library = state.players.p1.library.map((c) => c.defId);
+      expect(library[library.length - 1]).toBe(hinder.id);
+    }
+  });
+
+  it("R641 with nothing else to draw, the deferred card still comes — and casts", () => {
+    const deck = [hinder.id, ...vanillaDeck(DECK_SIZE - 1, 1)];
+    const state = started("r641-fallback", [deck, vanillaDeck(DECK_SIZE, 21)]);
+    // Rig the library down to its cast card: the only thing a replacement can draw.
+    const side = state.players.p1;
+    side.library = side.library.filter((c) => c.defId === hinder.id);
+    expect(side.library).toHaveLength(1);
+
+    // p1 returns one card, so its replacement draw takes the Hinder and casts it (no prompt).
+    const returned = side.hand.slice(0, 1).map((c) => c.id);
+    const kept = side.hand.slice(1).map((c) => c.id);
+    let next = reduce(state, { type: "mulligan", keep: kept, playerId: "p1", nonce: "r641-m1" }).state;
+    next = reduce(next, {
+      type: "mulligan",
+      keep: next.players.p2.hand.map((c) => c.id),
+      playerId: "p2",
+      nonce: "r641-m2",
+    }).state;
+
+    expect(next.pending).toBeNull();
+    expect(next.turn).toBe(1);
+    expect(next.players.p1.graveyard.map((c) => c.defId)).toContain(hinder.id);
+    expect(next.players.p2.mana.nextTurnMod).toBe(-1);
+    // The returned card went back, then turn 1's draw took it again.
+    expect(next.players.p1.hand.map((c) => c.id)).toContain(returned[0]);
   });
 
   it("R9: replacements are drawn before the returned cards are shuffled back", () => {

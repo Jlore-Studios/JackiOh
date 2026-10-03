@@ -1329,7 +1329,7 @@ export function whyChoicesRefused(
 }
 
 /** R450: the hand cards a play itself uses — the card played and any hand card it picks — which pay no cost. */
-function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
+export function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
   return [card.id, ...targets.flatMap((selection) => (selection.pick === "instance" ? [selection.instanceId] : []))];
 }
 

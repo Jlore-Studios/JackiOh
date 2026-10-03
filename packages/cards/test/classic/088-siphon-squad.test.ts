@@ -1,11 +1,12 @@
 // C #88 Siphon Squad — SPEC §8.6 row 88, BUILD M9 Classic row C 88: "Live while face-down (R403): its aura
-// works from the moment it is set and it stays face-down until something reveals it; enemy Units have −X
-// Attack, X twice the number of Units the opponent controls, recomputed on every change and floored at 0;
-// whenever the opponent controls no Units, at any state check including the one right after it is set,
-// it Tributes itself; the opponent's view shows their attack drop and never names the card (R33); its
-// preview is X, for its controller only while it is face-down and for both players once it is face-up
-// (R280, §10.8); radiant: enemy Units have 0 Attack, set after every other layer (§10.4), so their hits
-// are no hits (R63); its tuned number (multiplier) reads through `param()` (R386)".
+// works from the moment it is set; Start of Turn: Reveal (R645) shows its face at its controller's next
+// start of turn, still armed; enemy Units have −X Attack, X twice the number of Units the opponent
+// controls, recomputed on every change and floored at 0; whenever the opponent controls no Units, at any
+// state check including the one right after it is set, it Tributes itself; until it reveals, the
+// opponent's view shows their attack drop and never names the card (R33); its preview is X, for its
+// controller only while it is face-down and for both players once it is face-up (R280, §10.8); radiant:
+// enemy Units have 0 Attack, set after every other layer (§10.4), so their hits are no hits (R63); its
+// tuned number (multiplier) reads through `param()` (R386)".
 //
 // The preview's proofs are in `test/preview.test.ts`.
 
@@ -57,6 +58,21 @@ describe("C #88 Siphon Squad", () => {
 
       expect(s.card(siphon).faceUp).not.toBe(true);
       expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+      expect(attackOf(s, "p2", 1)).toBe(0);
+      expect(attackOf(s, "p2", 2)).toBe(5);
+    });
+
+    it("R645 Start of Turn: Reveal — at its controller's next start of turn it shows its face, still armed", () => {
+      const s = setAgainst([VANILLA, MENACE]);
+      expect(s.card(SIPHON).revealed).not.toBe(true);
+      s.endTurn(); // p2's turn: not its controller's, nothing shows.
+      expect(s.card(SIPHON).revealed).not.toBe(true);
+      s.endTurn(); // p1's turn: the start of turn reveals it.
+      expect(s.card(SIPHON).revealed).toBe(true);
+      expect(s.card(SIPHON).faceUp).not.toBe(true);
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+      // The opponent reads its face now, and the aura keeps working.
+      expect(JSON.stringify(s.view("p2"))).toContain(SIPHON);
       expect(attackOf(s, "p2", 1)).toBe(0);
       expect(attackOf(s, "p2", 2)).toBe(5);
     });

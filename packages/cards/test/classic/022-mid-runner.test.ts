@@ -9,7 +9,7 @@
 //
 // The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
 
-import { MID_LANE, stepParam } from "@jackioh/engine";
+import { midlaneLanes, stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
 import { base, def, radiant } from "../../src/scripts/classic/022-mid-runner";
@@ -43,10 +43,18 @@ function enemyBoardIds(s: Scenario): string[] {
 }
 
 describe("C #22 Mid Runner", () => {
-  it("runs one script on both faces, and midlane is MID_LANE, lane 3", () => {
+  it("runs one script on both faces, and midlane of 5 lanes is lane 3 (R644)", () => {
     expect(def.id).toBe(RUNNER);
     expect(radiant).toBe(base);
-    expect(MID_LANE).toBe(3);
+    expect(midlaneLanes(5)).toEqual([3]);
+  });
+
+  it("R644 computes midlane from the lane count: odd counts center, even counts both centers", () => {
+    expect(midlaneLanes(5)).toEqual([3]);
+    expect(midlaneLanes(3)).toEqual([2]);
+    expect(midlaneLanes(1)).toEqual([1]);
+    expect(midlaneLanes(4)).toEqual([2, 3]);
+    expect(midlaneLanes(6)).toEqual([3, 4]);
   });
 
   describe("base", () => {
@@ -201,13 +209,13 @@ describe("C #22 Mid Runner", () => {
       expect(def.radiant.text).toBe(def.base.text);
     });
 
-    it("in lane 3 it Tributes itself, and with 4 mana it bounces two", () => {
+    it("in lane 3 it Tributes itself, and with 4 mana it bounces three", () => {
       const s = scenario({ p1: { hand: [{ def: RUNNER, radiant: true }, ANCHOR] }, p2: { hand: [ANCHOR], field: [VANILLA, MENACE, TEMPO] } });
 
       s.play(RUNNER, { zone: 3 });
 
       s.expectInZone(RUNNER, "graveyard");
-      expect(new Set(bouncedIds(s)).size).toBe(2);
+      expect(new Set(bouncedIds(s)).size).toBe(3);
     });
 
     it("with 3 mana it stays out of lane 3 and bounces nothing", () => {

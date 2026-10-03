@@ -67,8 +67,10 @@ import {
   legalSelectionsFor,
   playMadeRadiant,
   playsOnStack,
+  playUses,
   resolvingFace,
   targetingDeclsOf,
+  targetingDiscardsRequired,
   targetsFollowModes,
   whyChoicesRefused,
 } from "./playChoices";
@@ -179,6 +181,12 @@ export type PlayRun = {
   targets: Selection[];
   modes: string[];
   tributes: string[];
+  /**
+   * B5 E5, R450, R640: the targeting cost step 1 checked, owed whatever the step-1 interception did
+   * (Classic #33: the targeting happened). Step 2 pays this count at random — never recomputed off
+   * the redirected picks, whose costs nobody owes.
+   */
+  targetingOwed: number;
   /** Index into `PLAY_STEPS` of the step to run next. */
   at: number;
   /** Step 3's cursor: how many `onPlayHook` holders have run. */
@@ -467,6 +475,9 @@ export function validatePlay(
       targets,
       modes,
       tributes: [...(action.tributes ?? [])],
+      // B5 E5, R450, R640: read against the picks as checked, before the step-1 interception moves
+      // any of them — a cost the targeting owes whatever answers it.
+      targetingOwed: targetingDiscardsRequired(state, player, resolvingFace(state, player, card, cost), targets, modes),
       at: 1,
       hookAt: 0,
       resolveAt: 0,
@@ -597,9 +608,9 @@ function payStep(sink: EngineSink, run: PlayRun): void {
     if (holder !== undefined) spendPlagueTokens(sink, holder, run.plague.tokens);
   }
   // B5 E5, R450, R640: a targeting cost is part of the price, paid with it (Classic #89) — random
-  // cards from the hand, drawn at pay time.
-  const owed = targetingDiscardsRequired(sink.state, run.player, resolvingFace(sink.state, run.player, card, run.costPaid), run.targets, run.modes);
-  if (owed > 0) payTargetingDiscards(sink, run.player, owed);
+  // cards from the hand, drawn at pay time. Never the card being played or a hand card it picks.
+  // The count is step 1's, owed whatever the interception did to the picks.
+  if (run.targetingOwed > 0) payTargetingDiscards(sink, run.player, run.targetingOwed, playUses(card, run.targets));
   // R210: the zone step 1 accepted is the play's until step 4 puts the card in it. A Tribute is
   // paid here, and a tributed unit's Death — #3 radiant's summon, #22's copies, #86's steals — lands
   // cards by R64 and R15 in the very row the play is going to; held like a Reborn zone (R64), the
@@ -1912,6 +1923,8 @@ function castThroughPipeline(sink: EngineSink, instance: CardInstance, options: 
     ...(random ? { random: true } : {}),
     ...(targetEnemies ? { targetEnemies: true } : {}),
     manaBefore: state.players[player].mana.current,
+    // A cast starts past the pay step, so it owes no targeting cost (as before: casts never paid one).
+    targetingOwed: 0,
   });
 }
 

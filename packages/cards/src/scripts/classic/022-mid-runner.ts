@@ -3,13 +3,13 @@
 //            played this, bounce {bounces|random enemy permanent|random enemy permanents}." — 4, 2
 //   Radiant: the same text but bounce 3; its Radiant face is its doubled stats, the designer's word,
 //            recorded against R275 in `docs/radiant-audit.md`.
-//   Engine:  "Two independent checks. Midlane is computed from the lane count (R637: an odd count's
+//   Engine:  "Two independent checks. Midlane is computed from the lane count (R644: an odd count's
 //            center lane, an even count's both center lanes). "When you played this" is the
 //            mana before paying for it, recorded as the play begins (§10.5 step 1). Two different
 //            random enemy permanents (R60; Radiant: three) go to their owners' hands (Bounce, §6.3:
 //            the hand cap applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
 //
-// The two checks are read as the Cry begins and act in the text's order. In `MID_LANE` the card
+// The two checks are read as the Cry begins and act in the text's order. In midlane the card
 // Tributes itself: §6.3's Sacrifice, a death (Death, Reborn and the destroyed count), which bypasses
 // Indestructible. Anywhere else it stays.
 //
@@ -57,7 +57,7 @@ function manaWhenPlayed(ctx: EffectContext): number {
 const cry = (ctx: EffectContext): Effect[] => {
   const self = ctx.self;
   if (self === null) return [];
-  // R637: midlane is computed from the lane count, never hardcoded — the lanes come from the board.
+  // R644: midlane is computed from the lane count, never hardcoded — the lanes come from the board.
   const lanes = ctx.state.players[ctx.controller].units.length;
   const inMidlane =
     midlaneLanes(lanes).includes(slotOf(ctx.state, self)?.lane ?? -1) &&

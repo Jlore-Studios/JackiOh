@@ -14,9 +14,10 @@
 //     waiting on an answer, and what they submit is a `play`, never an `answer`. §10.6 keeps the
 //     `x`, `embiggen`, `zone`, `tribute` and `direction` prompt kinds for later sets, so both
 //     routes render the same picker with the same `data-prompt-kind`. An activation (R384) is
-//     built on this route too — its targets, modes and Tribute — and submits an `activate`; so are
-//     a play's payments: the cards a targeting cost discards (Classic #89, the `hand` picker) and
-//     the Plague Tokens paying a graveyard play (Classic #74, a `number` picker of chips).
+//     built on this route too — its targets, modes and Tribute — and submits an `activate`; so is
+//     a play's payment: the Plague Tokens paying a graveyard play (Classic #74, a `number` picker
+//     of chips). A targeting cost's discards (Classic #89) are random at pay time (R640) and need
+//     no picker.
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
@@ -469,16 +470,6 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         },
       };
     }
-    case "discard":
-      // B5 E5 (Classic #89 Paul Allen's Ghost): the hand cards a targeting cost discards, picked from
-      // the sets the engine listed; the discarding player picks them (R16).
-      return {
-        ...common,
-        chrome: "hand",
-        title: need.min === need.max ? `Discard ${cardsWord(need.min)} to target it` : "Choose cards to discard",
-        items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
-        submit: (keys) => play({ discards: [...keys] }),
-      };
     case "mode": {
       // The card being played (or activated, R384) is the one asking; its options read as that
       // card's words, on the face it is played with (#24's radiant 2X, 4X and X).

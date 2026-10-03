@@ -39,7 +39,7 @@ function fusionLab(radiant: boolean): Script {
     label: "Choose a card in your hand. Fuse a random card into it",
     uses: 1,
     targets: HAND_PICK,
-    run: () => fuseRandomInto({ into: { target: { of: "chosen" } }, radiant, keepCost: true }),
+    run: () => [fuseRandomInto({ into: { target: { of: "chosen" } }, radiant, keepCost: true })],
   };
   return {
     targetChecks: {

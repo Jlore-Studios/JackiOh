@@ -38,22 +38,6 @@ export function activeBrittleCount(card: Pick<CardInstance, "brittle" | "vanilla
 }
 
 /**
-<<<<<<< HEAD
- * B3.3 rule 1: "a printed Brittle starts when the card enters the field" — called where every field
- * arrival passes (`zones.placeOnField`, `zones.replaceInZone`). A card that already has a count keeps
- * it (a count is kept in every zone, so a card that left the field and came back ticks on), and one
- * that prints no Brittle starts nothing.
- *
- * R639: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
- * while it is unrevealed (Classic+ #74). The count starts when the card reveals: its own subsystem
- * starts it with its first activation, and the `reveal` effect starts one for any card it shows.
- */
-export function startPrintedBrittle(state: GameState, card: CardInstance): void {
-  if (card.brittle !== undefined) return;
-  if (card.zone.z === "field" && card.zone.row === "backrow") {
-    const type = cardTypeOf(state, card);
-    if ((type === "Trap" || type === "Field Trap") && card.faceUp !== true && card.revealed !== true) return;
-=======
  * B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field" — called where every
  * field arrival passes (`zones.placeOnField`, `zones.replaceInZone`). A card that already has a count
  * keeps it (a count is kept in every zone, so a card that left the field and came back ticks on), and
@@ -61,12 +45,19 @@ export function startPrintedBrittle(state: GameState, card: CardInstance): void 
  * deck, a graveyard or the resolving zone rather than from another field zone: a count it held
  * there never ticked, so its turn cycle starts now, and its first tick waits for a whole round on the
  * field (`BRITTLE_FIRST_TICK_TURNS`) however long it was held.
+ *
+ * R646: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
+ * while it is unrevealed (Classic+ #74). The count starts when the card reveals: its own subsystem
+ * starts it with its first activation, and the `reveal` effect starts one for any card it shows.
  */
 export function startBrittleOnField(state: GameState, card: CardInstance, fromOffField: boolean): void {
   if (card.brittle !== undefined) {
     if (fromOffField) card.brittle = { ...card.brittle, since: state.turn };
     return;
->>>>>>> origin/main
+  }
+  if (card.zone.z === "field" && card.zone.row === "backrow") {
+    const type = cardTypeOf(state, card);
+    if ((type === "Trap" || type === "Field Trap") && card.faceUp !== true && card.revealed !== true) return;
   }
   const printed = printedBrittleOf(state, card);
   if (printed === null || printed <= 0) return;

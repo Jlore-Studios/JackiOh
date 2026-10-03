@@ -419,30 +419,20 @@ describe("R510 an activation is dragged from its control onto its target", () =>
 // The play's payments in the pickers
 // ---------------------------------------------------------------------------------------------
 
-describe("B5 E5 a target that costs discards (Classic #89): the hand picker takes the cards", () => {
+describe("B5 E5 R640 a target that costs discards (Classic #89): no picker — the cost is random at pay time", () => {
   const legal: ActionBody[] = [
     { type: "play", instanceId: "h1", targets: [at("e1")] },
-    { type: "play", instanceId: "h1", targets: [at("e2")], discards: ["h2", "h3"] },
-    { type: "play", instanceId: "h1", targets: [at("e2")], discards: ["h2", "h4"] },
+    { type: "play", instanceId: "h1", targets: [at("e2")] },
   ];
 
-  it("after the target, the hand picker offers the listed cards, and two picks confirm the listed body", () => {
+  it("after the target, the listed body sends at once with no discards carried", () => {
     const { onAction } = renderGame(legal);
 
     fireEvent.click(el(testid.handCard("h1")));
     fireEvent.click(el(testid.card("e2")));
-    const modal = el("prompt-modal");
-    expect(modal).toHaveAttribute("data-prompt-kind", "hand");
-    expect(modal).toHaveTextContent("Discard 2 cards to target it");
-    expect(screen.getByTestId("prompt-option-h2")).toBeInTheDocument();
-    expect(screen.getByTestId("prompt-option-h4")).toBeInTheDocument();
-    expect(screen.queryByTestId("prompt-option-h1")).toBeNull();
 
-    fireEvent.click(el("prompt-option-h4"));
-    fireEvent.click(el("prompt-option-h2"));
-    fireEvent.click(el("prompt-submit"));
-
-    expect(onAction).toHaveBeenCalledWith(legal[2]);
+    expect(screen.queryByTestId("prompt-modal")).toBeNull();
+    expect(onAction).toHaveBeenCalledWith(legal[1]);
   });
 });
 

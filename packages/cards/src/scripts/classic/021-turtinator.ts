@@ -4,7 +4,7 @@
 //
 // Activate ♾️ (R384): any number of uses a turn, bounded by `ACTIVATE_UNLIMITED_CAP` and, in
 // practice, by the units there are to Tribute. The cost is "sacrifice one of your units", a pick
-// carried in the `activate` action (`tributes`) — never Turtinator itself (R635,
+// carried in the `activate` action (`tributes`) — never Turtinator itself (R642,
 // `cost.tributeExcludesSelf`), paid as the ability is activated (`cost.tribute`); the Tribute is a
 // Sacrifice, so it is a death (Death fires, §6.3) and it bypasses Indestructible. One unit is one
 // Tribute here: a Sheep Token's "worth 2" counts only toward a play's Tribute X (§6.3), and an
@@ -13,8 +13,8 @@
 // The hit's amount is the tributed unit's Attack as it stood when it was paid — its last-known
 // state (R78), which the activation records (`subsystems.activationPaid`), since the unit is in a
 // graveyard, reset, by the time the effect runs — times the multiplier. The hit comes from Turtinator
-// even when Turtinator tributed itself (the source is the card as it last stood, §4.4). An amount of
-// 0 is no hit at all (R63), so nothing is dealt and nothing is reported.
+// (the source is the card as it last stood, §4.4). An amount of 0 is no hit at all (R63), so nothing
+// is dealt and nothing is reported.
 
 import type { ActivationDecl, Script } from "@jackioh/engine";
 import { param, subsystems } from "@jackioh/engine";

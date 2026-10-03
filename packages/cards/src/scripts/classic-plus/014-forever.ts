@@ -1,5 +1,5 @@
 // C+ #14 Forever& (SPEC §8.7 row 14, R410): (1) Spell, Epic.
-//   Base:    "The next Spell you play gains "After this resolves, return it to your hand. This can't
+//   Base:    "The next Spell you play gains "After this resolves, Bounce it. This can't
 //            cost less than ({floor})."" — floor 2.
 //   Radiant: floor 1, no Draw (balance patch 1).
 // A player modifier that waits until used (not turn-scoped) stamps E39's enchantment on the next Spell

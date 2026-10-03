@@ -31,7 +31,7 @@ const xNow = (read: Read): number => param(read, "multiplier") * enemyUnits(read
 
 function siphon(mod: (read: Read) => StatMod, preview: (read: Read) => PreviewValue[]): Script {
   return {
-    // "Start of Turn: Reveal" (balance patch 1, R638): at its controller's start of turn the card
+    // "Start of Turn: Reveal" (balance patch 1, R645): at its controller's start of turn the card
     // shows its face to both players. The aura keeps working — revealed is not face-up, and a Field
     // Trap fires face-down or up alike.
     startOfTurn: () => [reveal()],

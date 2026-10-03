@@ -84,12 +84,19 @@ export function interceptTargeting(sink: EngineSink, args: InterceptArgs): Selec
 
 /**
  * R450, R640, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
- * player's hand, drawn through the match rng. Fewer cards than the cost ends it; a cost nobody can
- * pay is never listed or offered (`canPayToTarget`, `whyTargetingDiscardsUnpayable`).
+ * player's hand outside `keep`, drawn through the match rng. Fewer cards than the cost ends it; a
+ * cost nobody can pay is never listed or offered (`canPayToTarget`, `whyTargetingDiscardsUnpayable`),
+ * so the keep is what the refusal kept: the card a play is taking out of that hand, and any hand
+ * card the same play or activation picks. A prompt answer keeps nothing, as its refusal does.
  */
-export function payTargetingDiscards(sink: EngineSink, player: PlayerId, count: number): void {
+export function payTargetingDiscards(
+  sink: EngineSink,
+  player: PlayerId,
+  count: number,
+  keep: readonly string[] = [],
+): void {
   for (let i = 0; i < Math.max(0, Math.trunc(count)); i += 1) {
-    const hand = sink.state.players[player].hand;
+    const hand = sink.state.players[player].hand.filter((card) => !keep.includes(card.id));
     if (hand.length === 0) return;
     const card = sink.rng.pick(hand);
     if (card === undefined) return;

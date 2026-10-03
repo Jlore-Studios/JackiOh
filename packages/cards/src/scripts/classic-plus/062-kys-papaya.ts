@@ -4,8 +4,10 @@
 //
 // The curve is the engine's (`subsystems/papaya.ts`, E32): the player picks 1 to 4 cells in different
 // lanes, one board-cell prompt at a time, the curve is the lowest-degree polynomial through them in
-// exact rationals, and the top card at every cell on it is exiled. The running face decides the rows:
-// `papayaAnswered` reads `ctx.radiant` and keeps to the enemy's rows 2 and 3 on the Radiant one.
+// exact rationals, and the top card at every cell on it is exiled. The picks are board cells, not
+// cards, so they keep the cell chrome: the Discover rule is for card selections, and twenty cells
+// are past its five-option limit either way. The running face decides the rows: `papayaAnswered`
+// reads `ctx.radiant` and keeps to the enemy's rows 2 and 3 on the Radiant one.
 
 import { subsystems, type Script } from "@jackioh/engine";
 import { cardDef } from "../../catalog-data";
