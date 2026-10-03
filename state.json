@@ -321,9 +321,7 @@
       "stop_requested": false
     },
     "46": {
-      "asks": [
-        "c:5965682507"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -336,7 +334,9 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "36806498901",
       "started_at": "2026-10-01T02:45:28Z",
-      "stop_requested": false
+      "stop_requested": true,
+      "stopped_at": "2026-10-03T04:51:43Z",
+      "stopped_by": "MaxGoetzmann"
     },
     "48": {
       "died": 0,
