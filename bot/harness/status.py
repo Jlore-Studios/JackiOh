@@ -7,8 +7,8 @@ from typing import Any
 
 from harness import providers as providers_mod
 from harness.clock import human_delta, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_WORKING)
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_PR,
+                            LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING)
 from harness.context import Context
 from harness.plan import run_status, working_threads
 from harness.providers import Provider
@@ -84,13 +84,19 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
     """Which subscriptions are running now: on what, for how long, and in which run."""
     cfg = ctx.cfg
     lanes = cfg.pool.max_parallel
-    free = max(0, lanes - len(live))
+    planning = sum(1 for number in live if number and _record(state, number).get("action") == "plan")
+    free = max(0, lanes - (len(live) - planning))
+    planning_text = (f"; {planning} of {cfg.pool.plan_lanes} planning lanes"
+                     if cfg.pool.plan_lanes else "")
     if not live:
-        return [f"- Running now: nothing ({free} of {lanes} lanes free)."]
+        return [f"- Running now: nothing ({free} of {lanes} lanes free"
+                + (f", and {cfg.pool.plan_lanes} for planning" if cfg.pool.plan_lanes else "")
+                + ")."]
     order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
     on_machine = sum(1 for provider_id in live.values() if cfg.pool.on_machine(provider_id))
-    lines = [f"- **Running now** ({len(live)} of {lanes} lanes, {free} free; {on_machine} of "
-             f"{cfg.pool.machine_parallel} on the machine, the rest on GitHub's runners):"]
+    lines = [f"- **Running now** ({len(live) - planning} of {lanes} lanes, {free} free; "
+             f"{on_machine} of {cfg.pool.machine_parallel} on the machine, the rest on GitHub's "
+             f"runners{planning_text}):"]
     for number, provider_id in sorted(live.items(),
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
@@ -131,7 +137,7 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
                                                          else "")
                           for seat in cfg.pool.seats(provider))
         lines.append(f"  - `{provider.id}` ({provider.cli}: {seats}; "
-                     f"{provider.schedule.describe(cfg.timezone)}): {now_doing}. "
+                     f"{provider.hours(cfg.timezone)}): {now_doing}. "
                      f"Usage: {_usage_text(provider, entry, ctx)}.")
     return lines
 
@@ -169,6 +175,8 @@ def report(ctx: Context) -> str:
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"
                  + (f" (no run is going for {ended} any more; the next plan requeues it)"
                     if ended else "") + ".")
+    lines.append(f"- **Needs plan** (a strong model plans these first, into the description): "
+                 f"{_numbers(labelled(LABEL_NEEDS_PLAN, prs=False))}.")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
                  f"for a review run: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
@@ -181,7 +189,8 @@ def report(ctx: Context) -> str:
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
     lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
-                 "plan by a medium or strong model. An item's `difficulty:easy|medium|hard` (medium "
+                 "plan by a strong model on the planning lane (or by its builder when none is "
+                 "free), which goes into the issue's description. An item's `difficulty:easy|medium|hard` (medium "
                  "without one) sets the weakest tier that may build it. A change merges once one "
                  "strong model approves it, or two medium models of different families do (a hard "
                  "one takes a strong approval); weak models never review. A self-checking builder "

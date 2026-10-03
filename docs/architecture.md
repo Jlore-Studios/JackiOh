@@ -218,8 +218,11 @@ file can hold a comment, and three things in them are not obvious:
   any branch (the flag for a preview); any other branch is cancelled; and main builds unless every
   file changed since the last commit Vercel built (`VERCEL_GIT_PREVIOUS_SHA`, and only when that
   commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.github/`,
-  `docs/`, `reviews/`, `e2e/`, `apps/server/`, `scripts/`, `render.yaml` and the root docs (the
-  bundle imports `packages/*` and nothing else). Diffing against the last build, not the previous
+  `docs/`, `reviews/`, `e2e/`, `apps/server/`, `scripts/`, `render.yaml`, the root docs, and inside
+  the client and the packages their test files (`*.test.ts(x)`, a package's `test/`,
+  `apps/web/src/test/`), each package's own `scripts/` tooling and READMEs (the bundle imports
+  `packages/*` and nothing else, and none of those; `packages/cards/src/scripts/` is the card
+  scripts and is bundled, so the list names each package's `scripts/` and never a wildcard). Diffing against the last build, not the previous
   commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
   no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
   still counts against the 100, which is why the machine branches are switched off outright rather

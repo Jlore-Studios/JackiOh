@@ -896,7 +896,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(whyCannotAttack(state, unit, { kind: "hero", player: "p2" })).toBeNull();
   });
 
-  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
     expect([...RANDOM_KEYWORD_POOL]).toEqual([
       "Taunt",
       "Armor 1",
@@ -910,6 +910,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
       "Trample",
       "Cleave",
       "Pierce",
+      "Windfury",
     ]);
 
     const state = game("r21");

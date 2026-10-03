@@ -19,13 +19,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness import asks
+from harness import asks, issueplan
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+                            LABEL_NEEDS_PLAN,
                             LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
@@ -239,7 +240,10 @@ class Deliverer:
         number = int(self.plan["number"])
         if self.plan.get("action") == "build" and isinstance(self.result.get("plan"), dict):
             # The run planned it first: a later run builds from that plan, never plans again.
-            self._remember(number, planned_at=iso(self.ctx.now()))
+            who, tier = self._planner()
+            self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                           planned_tier=tier)
+            self._plan_into_issue(number, who)
         self._deliver_item(number)
         self._keep_handoff(number)
         self._close_asks(number)
@@ -289,16 +293,51 @@ class Deliverer:
                 return
             self._fail(number, "build")
             return
+        who, tier = self._planner()
+        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who, planned_tier=tier)
+        self._requeue_label(number, "build")
+        if self._plan_into_issue(number, who):
+            self.gh.create_comment(number, f"Planned on {who} ({self._link()}). The plan is in "
+                                   "this issue's description, under **Plan**: the builder starts "
+                                   "from that section, so edit it there to change the plan. It "
+                                   "is queued to build, on the cheapest model its difficulty "
+                                   "allows.")
+            return
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        text = redact(str(plan.get("text") or ""))[:PLAN_COMMENT_CHARS]
+        self.gh.create_comment(number, f"Planned on {who} ({self._link()}), but the description "
+                               "could not take the plan, so it is here. It is queued to build "
+                               "from this plan, on the cheapest model its difficulty allows.\n\n"
+                               f"<details><summary>The plan</summary>\n\n{text}\n\n</details>")
+
+    def _planner(self) -> tuple[str, str]:
+        """Who wrote this run's plan, and that model's tier."""
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
         seat = plan.get("seat") if isinstance(plan.get("seat"), dict) else {}
         planner = self.cfg.pool.seat(self.provider.id, str(seat.get("model") or ""))
-        who = planner.describe() if planner else self.provider.describe()
-        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who)
-        self._requeue_label(number, "build")
-        text = redact(str(plan.get("text") or ""))[:PLAN_COMMENT_CHARS]
-        self.gh.create_comment(number, f"Planned on {who} ({self._link()}). It is queued to build "
-                               "from this plan, on the cheapest model its difficulty allows.\n\n"
-                               f"<details><summary>The plan</summary>\n\n{text}\n\n</details>")
+        if planner is None:
+            return self.provider.describe(), str(seat.get("tier") or "")
+        return planner.describe(), planner.tier
+
+    def _plan_into_issue(self, number: int, who: str) -> bool:
+        """Put this run's plan into the issue's description, in place of an earlier one, and
+        take the item out of the Needs plan stage. False when the description could not take it."""
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        text = redact(str(plan.get("text") or "")).strip()
+        if not text:
+            return False
+        try:
+            thread = self.gh.get_issue(number)
+            self.gh.set_issue_body(number, issueplan.with_plan(thread.get("body"), text, who,
+                                                               self._link()))
+        except GitHubError:
+            return False
+        if LABEL_NEEDS_PLAN in self._labels(number):
+            try:
+                self.gh.remove_label(number, LABEL_NEEDS_PLAN)
+            except GitHubError:
+                pass  # the next plan job's sync takes it off
+        return True
 
     def _closed(self, number: int, thread: dict[str, Any]) -> None:
         """Someone closed the issue or pull request while the run worked on it: its work is not

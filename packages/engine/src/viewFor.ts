@@ -362,7 +362,7 @@ function canAct(state: GameState, card: CardInstance): boolean {
   if (state.result !== null || state.phase !== "main") return false;
   if (state.pending !== null) return false;
   if (state.active !== card.controller) return false;
-  return hasExertion(card, "attack") || hasExertion(card, "switch");
+  return hasExertion(state, card, "attack") || hasExertion(state, card, "switch");
 }
 
 /**

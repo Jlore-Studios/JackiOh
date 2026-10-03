@@ -56,7 +56,12 @@ export type CardInstance = {
   embiggened?: boolean;
   counters: { plague?: number; grade?: number };
   memory: Record<string, unknown>;
-  exertion: { attacked: boolean; switched: boolean };
+  /**
+   * §4.1: `attacked` and `switched` spend the turn's exertion. R636: `attacks` counts the attacks
+   * declared this turn once there is a second one (absent, it is 1 when `attacked` and 0 otherwise)
+   * against `combat.attacksPerTurn`, two with Windfury.
+   */
+  exertion: { attacked: boolean; switched: boolean; attacks?: number };
   statsOverride?: { attack: number; health: number };
   /**
    * §7: the Bread Token's radiant face prints "Armor X", where X is the same unspent-mana X its
@@ -103,9 +108,11 @@ export type CardInstance = {
    */
   tuning?: Tuning;
   /**
-   * B3.3, R385: the card's Brittle count and the turn it started, which the first tick waits two
-   * player-turns behind (`brittle.ts`). Kept in every zone; a copy never inherits it (R57), and a
-   * count that has crumbled its card (0) is spent and goes with R78's reset (R441). `printed` marks a
+   * B3.3, R385, R638: the card's Brittle count and the turn it started, which the first tick waits two
+   * player-turns behind (`brittle.ts`). Kept in every zone but ticking on the field only: a card in a
+   * hand or a deck holds its count, and `since` is set again as the card enters the field from one. A
+   * copy never inherits it (R57), and a count that has crumbled its card (0) is spent and goes with
+   * R78's reset (R441). `printed` marks a
    * count its printed Brittle started as the card entered the field, which a Vanilla switches off
    * while a given one stays (B3.3 rule 5).
    */

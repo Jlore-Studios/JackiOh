@@ -229,29 +229,40 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual((planned["provider"], planned["runs_on"]), ("gpt", "night-vm-gpt"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "gpt")
 
-    def test_devin_is_the_last_resort(self):
-        """Devin (SWE-2) logs in on the machine, works any hour with no caps, is weak, checks its
-        own builds, and is last in the usage order: any other free model builds first."""
+    def test_devin_takes_easy_items_first_and_nothing_harder(self):
+        """Devin (SWE-2) logs in on the machine, works any hour with no caps, is weak and checks
+        its own builds. It is last in the usage order, but an easy item goes to it first while it
+        has a free lane (`easy_first`), planned by a free medium or strong model on its own run."""
         pool = providers.load(ROOT)
         devin = pool.get("devin")
         self.assertEqual((devin.cli, devin.family, devin.login, devin.runs_on),
                          ("devin", "cognition", "machine", "night-vm-devin"))
         self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
-        self.assertEqual((devin.tier, devin.self_check), ("weak", True))
+        self.assertEqual((devin.tier, devin.self_check, devin.easy_first), ("weak", True, True))
         self.assertEqual(pool.priority[-1], "devin")
+        # Unplanned, Devin cannot take it: it builds only from a strong model's plan. By day no
+        # strong model is free (the Claude accounts keep to the night here), so agy plans it in
+        # its own run and builds it.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
-        self.assertEqual(planned["provider"], "agy")
-        self.assertEqual(planned["routing"], [
-            "#3: built on medium though difficulty:easy allows weak: the usage order puts `agy` "
-            "before `devin` (devin, `swe-2-max`, weak)"])
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
+        self.assertIn("#3 needs a plan", planned["housekeeping"])
+        # A medium item passes Devin by.
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
         # With nothing else free, Devin builds an easy item another model already planned.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         ctx = ctx_for(gh, at=DAY, machine=("devin",))
         self.assertEqual(plan_mod.make(ctx)["action"], "none")  # no planner is free
-        ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY)))
+        # A medium model's plan is not enough for Devin; a strong one's is.
+        ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY),
+                                                            planned_tier="medium"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        ctx.store.update(lambda s: state_item(s, 3).update(planned_tier="strong"))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
         self.assertEqual(planned["seats"]["self_check"], True)
@@ -292,6 +303,35 @@ class MatchingTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             providers.parse(raw)
 
+    def test_claude_1_works_outside_its_hours_up_to_40_percent(self):
+        """claude-1's window is 21:00–07:00 under 98%/90% caps; outside it, it still works while
+        its 5-hour usage is under 40% (`off_hours`), and a run there stops past 40%."""
+        claude_1 = providers.load(ROOT).get("claude-1")
+        self.assertEqual(claude_1.hours("America/Chicago"),
+                         "21:00–07:00 America/Chicago, outside them up to 40% of 5-hour")
+        later = clock.iso(DAY + timedelta(hours=12))  # past both checks below
+        everyone = Secrets.of(secrets(*providers.SECRETS))
+
+        def why(at, used):
+            entry = {"usage": {"five_hour": {"utilization": used, "resets_at": later}}}
+            state = {"providers": {"claude-1": entry}}
+            return providers.availability(claude_1, state, at, "America/Chicago", everyone)
+
+        night = DAY + timedelta(hours=10)  # 22:00 CDT, inside the window
+        self.assertIsNone(why(DAY, 0.3))
+        self.assertIn("5-hour usage is 45%, at or over its 40% cap outside its hours",
+                      why(DAY, 0.45))
+        self.assertIsNone(why(night, 0.45))
+        self.assertIn("at or over its 98% cap; ", why(night, 0.99))
+        # The mid-run stop holds the same caps.
+        entry = {"usage": {"five_hour": {"utilization": 0.41, "resets_at": later}}}
+        self.assertIsNotNone(providers.refusal(claude_1, entry, DAY, "America/Chicago"))
+        self.assertIsNone(providers.refusal(claude_1, entry, night, "America/Chicago"))
+        raw = raw_providers()
+        raw["providers"]["claude-1"]["off_hours"] = {"five_hours": 0.4}
+        with self.assertRaises(ConfigError):
+            providers.parse(raw)
+
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-1, claude-2 and claude-3 run all day, claude-1 under its
         98%/90% caps, claude-2 under 90% and claude-3 with none; claude-4 waits for the night.
@@ -299,7 +339,7 @@ class MatchingTests(unittest.TestCase):
         for the medium models."""
         pool = providers.load(ROOT)
         hours = {p.id: (p.schedule.mode, p.limits.mode) for p in pool.ordered() if p.cli == "claude"}
-        self.assertEqual(hours, {"claude-1": ("always", "caps"), "claude-2": ("always", "caps"),
+        self.assertEqual(hours, {"claude-1": ("window", "caps"), "claude-2": ("always", "caps"),
                                  "claude-3": ("always", "none"), "claude-4": ("window", "caps")})
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
@@ -318,10 +358,11 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
         gh.add_issue(5, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
-        # #5 builds on agy, which has no strong model to plan it: claude-2 plans it first.
+        # #5 builds on agy; with the planning lane off here (test_needs_plan.py has it), it plans
+        # in its own run, on its medium model.
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (5, "claude-2", "plan"))
-        self.assertEqual(planned["seats"]["plan"]["tier"], "strong")
+                         (5, "agy", "build"))
+        self.assertEqual(planned["seats"]["plan"]["tier"], "medium")
         # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
         later = clock.iso(DAY + timedelta(days=2))
         full = {"five_hour": {"utilization": 0.99, "resets_at": later},
