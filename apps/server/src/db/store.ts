@@ -49,6 +49,7 @@ import type {
   CodeAttempt,
   CollectionEntry,
   CollectionGrant,
+  FrozenDeck,
   FrozenTrio,
   InviteCode,
   LastBoardEntry,
@@ -166,8 +167,12 @@ function frozenTrioOf(value: unknown): FrozenTrio {
   const trio = value as { name?: unknown; decks?: unknown };
   if (!Array.isArray(trio.decks)) throw new Error("expected a frozen trio's decks array");
   const [first, second, third, ...rest] = trio.decks.map((deck: unknown) => {
-    const entry = (deck ?? {}) as { name?: unknown; cards?: unknown };
-    return { name: textOf(entry.name), cards: cardListOf(entry.cards) };
+    const entry = (deck ?? {}) as { name?: unknown; cards?: unknown; portrait?: unknown };
+    const frozen: FrozenDeck = { name: textOf(entry.name), cards: cardListOf(entry.cards) };
+    // R641: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
+    // portraits existed, so absence stays absent and reads as `vanilla` downstream.
+    if (entry.portrait !== undefined) frozen.portrait = entry.portrait === null ? null : textOf(entry.portrait);
+    return frozen;
   });
   if (first === undefined || second === undefined || third === undefined || rest.length > 0) {
     throw new Error("expected a frozen trio of exactly three decks");

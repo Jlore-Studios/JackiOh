@@ -1307,6 +1307,8 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
           rating: 1000,
           mode: "bo1" as const,
           deck: deckOf(harness, 0),
+          // R641: the Bo1 deck's frozen portrait; `null` reads as `vanilla`.
+          portrait: null,
           trio: null,
           catalogVersion: harness.catalogVersion,
           enqueuedAt: harness.now(),
@@ -1340,6 +1342,23 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.tickets.countOpenByMode()).toEqual({ bo1: 1, bo3: 1, random: 1 });
         await store.tickets.cancel(random.id, harness.now());
         expect(await store.tickets.countOpenByMode()).toEqual({ bo1: 1, bo3: 1, random: 0 });
+      });
+
+      it("R641 keeps a Best-of-3 ticket's per-deck portraits, and absence stays absent", async () => {
+        const profile = await activeProfile();
+        const trio = frozenTrio(harness);
+        trio.decks[0].portrait = "gary";
+        trio.decks[1].portrait = null;
+        trio.decks[2].portrait = "timmy";
+        const bo3 = await ticket(profile.id, { mode: "bo3", deck: [], trio });
+        await store.tickets.insert(bo3);
+        expect(await store.tickets.get(bo3.id)).toEqual(bo3);
+
+        const legacy = frozenTrio(harness);
+        delete legacy.decks[0].portrait;
+        const old = await ticket((await activeProfile()).id, { mode: "bo3", deck: [], trio: legacy });
+        await store.tickets.insert(old);
+        expect(await store.tickets.get(old.id)).toEqual(old);
       });
 
       /** `tickets_profile_queued_key`: the race-proof half of §9.5's "not already queued". */
