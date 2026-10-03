@@ -437,7 +437,15 @@
       "failures": 0,
       "feedback_since": "2026-10-03T09:24:23Z",
       "issue": 63,
-      "kind": "revise"
+      "kind": "revise",
+      "votes": {
+        "approvals": [
+          "cognition"
+        ],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "f499d14764aec796a5d3837074c8109d76d3bbaa"
+      }
     },
     "31": {
       "failures": 0,
