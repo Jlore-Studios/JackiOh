@@ -161,9 +161,9 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIsNone(self.why("claude-1", state))
 
 
-def ctx_for(gh, at=NIGHT, env=None, machine=MACHINE):
+def ctx_for(gh, at=NIGHT, env=None, machine=MACHINE, committed_hours=False):
     return make_ctx(gh, at=at, cfg=make_config(env=env or secrets(*providers.SECRETS),
-                                               machine=machine))
+                                               machine=machine, committed_hours=committed_hours))
 
 
 class MatchingTests(unittest.TestCase):
@@ -181,6 +181,23 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx_for(gh2, at=DAY, machine=("agy",)))
         self.assertEqual((planned["provider"], planned["runs_on"]), ("agy", "night-vm-agy"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "agy")
+
+    def test_claude_3_works_any_hour_without_caps(self):
+        """The committed hours: claude-3 runs all day with no caps, so by day it takes Opus's
+        work, `difficult` first, ahead of the other models; the rest of the Claude accounts wait
+        for the night."""
+        claude_3 = providers.load(ROOT).get("claude-3")
+        self.assertEqual((claude_3.schedule.mode, claude_3.limits.mode), ("always", "none"))
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        gh.add_issue(4, labels=(LABEL_BUILD, "difficult"))
+        planned = plan_mod.make(ctx_for(gh, at=DAY, committed_hours=True))
+        self.assertEqual((planned["number"], planned["provider"]), (4, "claude-3"))
+        # Its readings never stop it; only a refusal does, until its reset.
+        state = {"providers": {"claude-3": {"usage": {"five_hour": {"utilization": 0.99},
+                                                       "seven_day": {"utilization": 0.99}}}}}
+        self.assertIsNone(providers.availability(claude_3, state, DAY, "America/Chicago",
+                                                 Secrets.of(secrets(*providers.SECRETS))))
 
     def test_difficult_work_waits_for_opus_and_opus_takes_it_first(self):
         gh = FakeGitHub()
