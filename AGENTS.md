@@ -18,6 +18,7 @@ disagrees with `SPEC.md`, `SPEC.md` wins and the doc is the bug.
 | `BUILD.md` | Work order, milestones, acceptance criteria, definition of done |
 | `REVIEW.md` | Audit procedure |
 | `CLAUDE.md` | Repo layout, rules of engagement, commands (applies to all agents, not just Claude) |
+| `docs/ADDING_CARDS.md` | Before any card work: the files a card touches, templates, order, gates |
 | `bot/README.md` | Night-bot workflow (issues, labels, safety) |
 
 Package contracts live in the READMEs of `packages/cards`, `packages/ai`,

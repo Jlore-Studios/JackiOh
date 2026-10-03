@@ -514,7 +514,7 @@ pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
-pnpm --filter @jackioh/cards patch <version> "<title>"   # record a patch (§8)
+pnpm --filter @jackioh/cards run patch <version> "<title>"   # record a patch (§8)
 ```
 
 ## 8. Patches and the catalog version (R388)
@@ -540,7 +540,7 @@ still be read.
   where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
   version stays opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s.
-- **Making one.** `pnpm --filter @jackioh/cards patch <version> "<title>"` (in `scripts/`, where fs
+- **Making one.** `pnpm --filter @jackioh/cards run patch <version> "<title>"` (in `scripts/`, where fs
   is allowed) snapshots `catalog.json`, diffs it against the previous snapshot and writes the
   patch-notes entry, card by card.
 - **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its

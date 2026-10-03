@@ -23,6 +23,7 @@ Supporting docs: `docs/architecture.md` (server deployment: Supabase, match acto
 7. The client sends intent and renders `viewFor`; it never enforces rules and never sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session and attach the report.
 9. Every number is a named constant: rules numbers in `packages/engine/src/config.ts` (BUILD §2; the "decide" rulings R1, R4, R5, R14, R26, R39 included, and R2's turn cap), server numbers such as clocks, Elo and rate limits in `apps/server/src/config.ts`. Nothing else states a number.
+10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`: every file a card touches, in order, with templates, the gates and what a new card breaks that is not its fault.
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
@@ -43,7 +44,7 @@ pnpm ai:stats          # an AI development run for the card statistics (R378): A
 pnpm validate:catalog  # catalog.json data checks (268 cards and 49 tokens across Core, Classic, Classic+; rarity counts per set)
 pnpm rulings:coverage  # SPEC §11 rows vs named tests vs R-ids cited in code (rule 3)
 pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, and the path each one expects
-pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>   # the card patch history, packages/cards/patches/ (R388): snapshots the catalog and bumps CATALOG_VERSION everywhere
+pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD>   # the card patch history, packages/cards/patches/ (R388): snapshots the catalog and bumps CATALOG_VERSION everywhere
 pnpm test:sql          # schema, RLS and trigger invariants: Docker only, starts a throwaway postgres:16
 pnpm test:db           # src/db/store.ts against a throwaway postgres:16 (Docker only; KEEP_DB=1 keeps it)
 pnpm test:deploy       # Render's deploy rehearsed: render.yaml's start command, migrating as a role that is not a superuser (as on Supabase), then a production boot (Docker only)
