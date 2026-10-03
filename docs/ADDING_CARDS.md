@@ -102,7 +102,7 @@ describe("C+ #6 Wrong-House Attacker", () => {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388, R632). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a
+A change to card data is a patch (R388, R635). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a
 shipped one. A branch claims its card changes with a pending fragment:
 
 ```
@@ -133,10 +133,10 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   `tributes`, `pools-and-randomness`, `098-heroic-power` (Stitching), and `ai/test/shadowBan.test.ts`. Re-pin by looping seeds in a
   throwaway test (`for n … scenario({ seed: \`craft-${n}\`, … })`, `g.play(…)`, `g.answer(…)` in a `try`) until the offers match, and
   update the comment beside the seed.
-- **The fuzz gates** play 1000 seeded games each and may now draw a game nobody has played. Two latent engine bugs came out this way: a fused
-  card of two ingredients that define `targetChecks` threw from `legalActions` (fixed, #104), and a client table made the animation runner replay a
-  whole event window (fixed, #106). A third, `determinize` putting a Siphon Squad in a hidden slot the seat's own view rules out, is fixed
-  too (#107). The open one is #105 (a deeply nested fusion resumes Final Gambit against the wrong ingredient). If a gate fails at a seed that has nothing to do with
+- **The fuzz gates** play 1000 seeded games each and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused
+  card of two ingredients that define `targetChecks` threw from `legalActions` (#104), a client table made the animation runner replay a
+  whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
+  fusion resumed Final Gambit's step against the wrong ingredient (#105). If a gate fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the throw or the diff names, and file it rather than editing the test.
 
 ## 5. Do not read

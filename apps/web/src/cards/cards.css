@@ -1417,13 +1417,26 @@
 
 /* ------------------------------------------------------------------------------ foil ------- */
 
+/* The sheen is a gradient layer wider than the card, laid behind a clip, and the sweep moves the layer
+   with `transform`, which the compositor does on its own. Sliding `background-position` instead
+   repainted every foil card on every frame, and with `mix-blend-mode` each repaint blended: ten
+   Radiant cards in a hand rastered for more than a second of every second (issue #117). The layer
+   is 260% of the card wide and rests 48% of the card to its left, which is where a 260% background
+   at 30% sat. Everything a face prints is inside `.cf-scale`, which clips already, so clipping the
+   root changes nothing but the sheen. */
+.cf[data-foil] {
+  overflow: clip;
+}
+
 .cf[data-foil="static"]::after,
 .cf[data-foil="animated"]::after {
   content: "";
   position: absolute;
   z-index: 5;
-  inset: 0;
-  border-radius: inherit;
+  top: 0;
+  bottom: 0;
+  left: -48%;
+  width: 260%;
   background: linear-gradient(
     115deg,
     transparent 20%,
@@ -1432,8 +1445,6 @@
     rgb(255 214 110 / 0.35) 58%,
     transparent 72%
   );
-  background-position: 30% 0;
-  background-size: 260% 100%;
   mix-blend-mode: overlay;
   pointer-events: none;
 }
@@ -1449,27 +1460,31 @@
     rgb(255 230 109 / 0.35) 58%,
     transparent 72%
   );
-  background-position: 30% 0;
-  background-size: 260% 100%;
 }
 
+/* The sweep starts with the layer 208% of the card to the left and ends 48% to its right: 256% of
+   the card, which is 98.4615% of the layer's own width, the unit `translate` counts in. */
 .cf[data-foil="animated"]::after {
+  left: -208%;
+  will-change: transform;
   animation: cf-foil-sweep 5.5s linear infinite;
 }
 
 @keyframes cf-foil-sweep {
   from {
-    background-position: 130% 0;
+    transform: translateX(0);
   }
   to {
-    background-position: -30% 0;
+    transform: translateX(98.4615%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cf[data-foil]::after,
   .cf[data-foil="animated"]::after {
+    left: -48%;
     animation: none;
+    will-change: auto;
   }
 }
 

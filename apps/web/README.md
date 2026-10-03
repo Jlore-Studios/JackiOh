@@ -131,6 +131,11 @@ src/
                         gear opens from the game's control bar and the nav
     slots.ts controls.tsx   the other tasks' controls the panel mounts (effects speed and
                         intensity, animated foil, the audio panel), each with its reset
+    tabs.ts             the dialog's sections are tabs (Gameplay, Visuals, Audio, Account); the tab used
+                        last is kept on the device (jackioh.settings.tab)
+    groups.ts accountSync.ts AccountSettings.tsx   an active account's copy of the settings (R633,
+                        R634): the four stores as groups, the sync that takes the newer side of each
+                        and sends changes up (GET/PUT /api/settings), and the Account tab's status
   routes/dev/hotseat.tsx  the dev hotseat route
   routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
                         R388, R507); the site footer (routes/SiteFooter.tsx) links it

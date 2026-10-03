@@ -521,7 +521,7 @@ pnpm --filter @jackioh/cards run patches check            # prove every catalog 
 pnpm --filter @jackioh/cards run patches ship             # promote pending fragments in ship order
 ```
 
-## 8. Patches and the catalog version (R388, R632)
+## 8. Patches and the catalog version (R388, R635)
 
 Every change to card data is a patch, and every patch is kept, so an older version of any card can
 still be read. Several patches are built at once, so a patch is claimed on its branch and shipped
@@ -554,7 +554,7 @@ after it merges — never by editing the history on the branch.
   where fs is allowed) writes `patches/pending/<version>.json` — `{ version, title, sources,
   notes, cards }`, where `cards` lists the catalog ids the patch creates, changes or removes
   (`--cards` lists them; otherwise they are diffed from the working catalog against the newest
-  shipped snapshot). `patches check` (in CI beside `validate:catalog`) fails naming the card
+  shipped snapshot). `patches check` (in CI, in the `validate:catalog` step) fails naming the card
   when a catalog change is unclaimed or claimed twice, when a claimed card did not change, or
   when a fragment's version is not a bare patch number. `patches ship` promotes each fragment in
   the order of the first-parent commit that added it — appending the patch (or `<version>b`,

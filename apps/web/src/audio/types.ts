@@ -160,8 +160,12 @@ export type AudioSettings = {
   dynamicMusic: boolean;
   /** The music dips under voice lines and the important effects (MUSIC_DUCK_SFX). */
   duckMusic: boolean;
-  /** The music falls silent while the page is hidden or the window has lost focus. */
-  pauseMusicOnBlur: boolean;
+  /**
+   * The music keeps playing while the page is hidden or the window has lost focus. Off (the default):
+   * it fades out then, and back in when the player returns. Settings saved before this key read the
+   * old `pauseMusicOnBlur` inverted (`parseAudioSettings`).
+   */
+  playMusicInBackground: boolean;
 };
 
 /** One rendered track (scripts/gen-music.mjs writes these into music-manifest.json). */

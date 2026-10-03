@@ -1,5 +1,5 @@
 /**
- * Card patches with several in flight at once (R632): pending fragments, the check that proves
+ * Card patches with several in flight at once (R635): pending fragments, the check that proves
  * them, and the promotion that ships them, in ship order.
  *
  *   pnpm --filter @jackioh/cards run patches <version> <date> "<title>" \
@@ -11,13 +11,12 @@
  *   title, sources, notes, cards }`, where `cards` lists the catalog ids the patch creates,
  *   changes or removes (`--cards` says them; otherwise they are diffed from the working catalog
  *   against the newest shipped snapshot). Branches never edit `patches.json`, the snapshots,
- *   `index.json` or `shipped.json`. The optional `date` is accepted for the old calling shape
- *   and not stored: promotion dates the patch by the UTC date of the commit that added the
- *   fragment.
+ *   `index.json` or `shipped.json`. The optional `date` is checked and not stored: promotion
+ *   dates the patch by the UTC date of the commit that added the fragment.
  * - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
  *   without exactly one fragment claiming it, when a claimed card does not differ, or when a
- *   fragment's version is not a bare patch number (`^v\d+\.\d+\.\d+$`). CI runs it beside
- *   `validate:catalog`.
+ *   fragment's version is not a bare patch number (`^v\d+\.\d+\.\d+$`). CI runs it in the
+ *   `validate:catalog` step.
  * - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
  *   appends the patch (its version, or `<version>b`, then `c`, …, when that name already shipped;
  *   a shipped version never reopens), snapshots `catalog.json` as that commit left it, records
@@ -165,7 +164,7 @@ export type ShipResult = { shipped: string[] };
 
 /**
  * Promotes every pending fragment to a shipped patch, in the order of the first-parent commit
- * that added it (ship order, R632). One commit per fragment is assumed — the squash-merge shape
+ * that added it (ship order, R635). One commit per fragment is assumed — the squash-merge shape
  * the bot's pull requests land in — so the snapshot is `catalog.json` as that commit left it.
  * Idempotent: with no fragments it changes nothing.
  */
@@ -246,7 +245,7 @@ function parseFragmentArgs(argv: readonly string[]): FragmentArgs {
   }
   const [version, second, third] = positional;
   if (version === undefined || second === undefined || positional.length > 3) {
-    throw new Error('usage: patches <version> "<title>" [date] [--source …] [--notes …] [--cards <id,...>]');
+    throw new Error('usage: patches <version> [date] "<title>" [--source …] [--notes …] [--cards <id,...>]');
   }
   if (!FRAGMENT_VERSION.test(version)) {
     throw new Error(`"${version}" is not a bare patch number (^v\\d+\\.\\d+\\.\\d+$), the only shape a fragment takes`);
@@ -254,7 +253,7 @@ function parseFragmentArgs(argv: readonly string[]): FragmentArgs {
   // The old calling shape kept the date between the version and the title; promotion dates the
   // patch by its merge commit instead, so a given date is validated and not stored.
   const [title, date] = third === undefined ? [second, flags["date"]] : [third, second];
-  if (title === undefined) throw new Error('usage: patches <version> "<title>" [date] [--source …] [--notes …] [--cards <id,...>]');
+  if (title === undefined) throw new Error('usage: patches <version> [date] "<title>" [--source …] [--notes …] [--cards <id,...>]');
   if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`"${date}" is not a YYYY-MM-DD date`);
   }
@@ -286,7 +285,7 @@ function main(): void {
     return;
   }
   if (command === undefined) {
-    throw new Error('usage: patches <version> "<title>" [date] [--source …] [--notes …] [--cards <id,...>] | patches check | patches ship');
+    throw new Error('usage: patches <version> [date] "<title>" [--source …] [--notes …] [--cards <id,...>] | patches check | patches ship');
   }
   const args = parseFragmentArgs([command, ...rest]);
   const fragment = writeFragment(REPO_ROOT, args);

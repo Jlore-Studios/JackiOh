@@ -1,12 +1,12 @@
 /**
- * Every file that carries the catalog version (B4.2, R388, R632), and how to rewrite it there.
+ * Every file that carries the catalog version (B4.2, R388, R635), and how to rewrite it there.
  * `patches.ts`'s promotion bumps them to the newest shipped patch; `test/patches.test.ts` holds
  * all of them to it. A deployment then reseeds: `db:seed-catalog` stamps every `cards` row and
  * `app.settings.catalog_version` with the new version.
  *
  * Patches used to be made by this module (`pnpm --filter @jackioh/cards patch …`), which snapshotted
  * the catalog and appended to `patches.json` directly. Several patches are now built at once, so
- * branches add a fragment under `patches/pending/` instead (`patches.ts`, R632) and nothing here
+ * branches add a fragment under `patches/pending/` instead (`patches.ts`, R635) and nothing here
  * writes the history anymore.
  */
 
@@ -48,7 +48,7 @@ export function versionsAtSites(): { file: string; version: string | undefined }
   });
 }
 
-/** Rewrites `CATALOG_VERSION` everywhere the string lives (promotion bumps it, R632). */
+/** Rewrites `CATALOG_VERSION` everywhere the string lives (promotion bumps it, R635). */
 export function bumpSites(version: string, repoRoot: string = REPO_ROOT): void {
   for (const site of VERSION_SITES) {
     const path = `${repoRoot}/${site.file}`;

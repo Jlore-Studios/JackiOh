@@ -2,6 +2,7 @@
 // and the animation table needs for `prefers-reduced-motion` (BUILD M5-T4).
 
 import "@testing-library/jest-dom/vitest";
+import { beforeEach } from "vitest";
 
 let reducedMotion = false;
 
@@ -34,3 +35,11 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
       }) as unknown as MediaQueryList,
   });
 }
+
+beforeEach(() => {
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    // Some tests stub storage getters to throw.
+  }
+});

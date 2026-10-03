@@ -63,8 +63,9 @@ function me(status: "pending" | "active", email = "player@example.test") {
 
 const UNAUTHORIZED = jsonResponse(401, { error: { code: "unauthorized", message: "sign in first" } });
 
+/** What a sign-in writes (R632): the tab's own storage. A second call is the session changing under a request. */
 function store(accessToken: string, refreshToken: string, expiresAt: number): void {
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken, refreshToken, expiresAt }));
+  window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken, refreshToken, expiresAt }));
 }
 
 function tokens(accessToken: string, refreshToken: string) {
@@ -158,14 +159,14 @@ describe("R194 a renewal the device outlived", () => {
     expect(call).toHaveBeenCalledTimes(1);
   });
 
-  it("R194 an account signed in in another tab while the renewal was out is not overwritten", async () => {
+  it("R194 an account signed in as someone else while the renewal was out is not overwritten", async () => {
     const xExpired = tokenFor("user-x", "expired");
     const yLive = tokenFor("user-y", "live");
     store(xExpired, "x-rt-1", Date.now() - 60_000);
     const provider = heldRefresh();
 
     const renewal = renewAfterUnauthorized(xExpired);
-    // Another tab signs out of X and signs in as Y.
+    // The device signs out of X and signs in as Y.
     store(yLive, "y-rt", Date.now() + 3_600_000);
     provider.answer(tokens(tokenFor("user-x", "renewed"), "x-rt-2"));
 
@@ -344,7 +345,7 @@ function sessionToken(sub: string, sessionId: string, tag: string): string {
   ].join(".");
 }
 
-/** What another tab's write to the session key looks like from here. */
+/** The `storage` event for a write to the session key, which is how the gate is told to read it again. */
 function otherTabWrote(): void {
   window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY }));
 }
@@ -388,7 +389,7 @@ function activeMe(currentMatchId: string | null = "m-1") {
 }
 
 describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, () => {
-  it("R194 another tab's renewal of the same session does not close and reopen an in-progress match socket", async () => {
+  it("R194 a renewal of the same session written elsewhere does not close and reopen an in-progress match socket", async () => {
     const first = sessionToken("user-x", "session-1", "first");
     const renewed = sessionToken("user-x", "session-1", "renewed");
     store(first, "rt-1", Date.now() + 3_600_000);
@@ -405,7 +406,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       expect(sockets).toHaveLength(1);
     }, SLOW);
 
-    // Another tab renewed the (still good) session and wrote it.
+    // The (still good) session was renewed and written.
     store(renewed, "rt-2", Date.now() + 3_600_000);
     await act(async () => {
       otherTabWrote();
@@ -491,7 +492,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     }, SLOW);
   });
 
-  it("R194 a re-read that fails after another tab's write leaves the code screen, and the typed code, in place", async () => {
+  it("R194 a re-read that fails after the session changed leaves the code screen, and the typed code, in place", async () => {
     const first = sessionToken("user-x", "session-1", "first");
     store(first, "rt-1", Date.now() + 3_600_000);
     let meCalls = 0;
@@ -501,7 +502,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
         const url = String(input);
         if (url === `${API}/api/auth/me`) {
           meCalls += 1;
-          // The first read works; the re-read after another tab's write hits a blip.
+          // The first read works; the re-read after the session changed hits a blip.
           return Promise.resolve(
             meCalls === 1
               ? jsonResponse(200, me("pending"))
@@ -559,7 +560,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     render(<App />);
     await screen.findByTestId(inviteTestid.input, undefined, SLOW);
 
-    // Another tab signed in as someone else.
+    // The device signed in as someone else.
     store(sessionToken("user-y", "session-9", "someone-else"), "rt-9", Date.now() + 3_600_000);
     act(() => {
       otherTabWrote();

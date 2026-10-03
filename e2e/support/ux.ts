@@ -72,7 +72,12 @@ export const SETTINGS_PANEL = "settings-panel";
 /** The full-screen scrim behind it; a click on it closes the panel. */
 export const SETTINGS_SCRIM = "settings-scrim";
 export const SETTINGS_CLOSE = "settings-close";
+/** "Reset all": every tab back to its defaults. */
 export const SETTINGS_RESET = "settings-reset";
+/** "Reset this tab": only the open tab's controls (issue #128). */
+export const SETTINGS_RESET_TAB = "settings-reset-tab";
+/** The tab strip (issue #128). */
+export const SETTINGS_TABLIST = "settings-tablist";
 
 export type SettingKey = "dragToPlay" | "confirmEndTurn" | "hoverPreviews" | "reduceMotion";
 export type SettingsSection = "gameplay" | "visuals" | "audio";
@@ -82,8 +87,14 @@ export function settingId(key: SettingKey): string {
   return `setting-${key}`;
 }
 
+/** The panel of one tab. Every panel is in the document; only the open tab's is shown. */
 export function settingsSectionId(section: SettingsSection): string {
   return `settings-section-${section}`;
+}
+
+/** The tab that opens a section: click it before reaching for a control that is not on Gameplay. */
+export function settingsTabId(section: SettingsSection): string {
+  return `settings-tab-${section}`;
 }
 
 // ---------------------------------------------------------------------------------------------

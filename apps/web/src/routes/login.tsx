@@ -1047,6 +1047,10 @@ export default function LoginRoute(): ReactElement {
             {signingUp ? (
               <p className="auth-hint" data-testid={signUpPrivacyTestid}>
                 By creating an account you agree to the{" "}
+                <a href={paths.terms} onClick={followInApp(paths.terms)}>
+                  Terms
+                </a>{" "}
+                and{" "}
                 <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
                   Privacy Policy
                 </a>

@@ -84,7 +84,6 @@ describe("vercel.json", () => {
       "/assets/does-not-exist.js",
       "/favicon.ico",
       "/dev/hotseat",
-      "/terms",
       "/Login",
       "/loginx",
       "/almanac/extra",
@@ -99,7 +98,7 @@ describe("vercel.json", () => {
     }
   });
 
-  it("sends the security headers on every response, the CSP as report-only", () => {
+  it("sends the security headers on every response, with an enforced CSP", () => {
     const all = config.headers.find((block) => block.source === "/(.*)");
     expect(all).toBeDefined();
     const headers = new Map((all?.headers ?? []).map(({ key, value }) => [key.toLowerCase(), value]));
@@ -107,8 +106,7 @@ describe("vercel.json", () => {
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
-    expect(headers.has("content-security-policy"), "not enforced yet").toBe(false);
-    const csp = headers.get("content-security-policy-report-only") ?? "";
+    const csp = headers.get("content-security-policy") ?? "";
     expect(csp).toMatch(/script-src 'self'(;|$)/u);
     expect(csp).toMatch(/frame-ancestors 'none'/u);
     // The three origins the bundle talks to: Supabase Auth, and the API and match socket on Render.

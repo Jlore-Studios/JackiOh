@@ -225,6 +225,12 @@ const WEB_AUDIO_DIRECTOR_TEST = "../../../apps/web/src/audio/director.test.ts";
 const WEB_MUSIC_PLAN_TEST = "../../../apps/web/src/audio/musicPlan.test.ts";
 const WEB_MUSIC_DIRECTOR_TEST = "../../../apps/web/src/audio/musicDirector.test.ts";
 const WEB_MUSIC_PLAYER_TEST = "../../../apps/web/src/audio/music.test.ts";
+/** R632's proof (SPEC §9.2): where the browser keeps a session. */
+const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
+/** R633 and R634's proofs (SPEC §9.1): the account's settings, the routes, both stores and the client sync. */
+const SERVER_SETTINGS_API_TEST = "../../../apps/server/test/api/settings.test.ts";
+const SERVER_SETTINGS_SQL = "../../../apps/server/test/sql/11_player_settings.sql";
+const WEB_SETTINGS_SYNC_TEST = "../../../apps/web/src/settings/accountSync.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3685,11 +3691,32 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
   });
 
-  // Proved by cards patches-ship.test.ts "R632 …" (the fragment rules on fixtures, the promotion on
+  // R632 is a client ruling (SPEC §9.2): proved by apps/web net/session.test.ts "R632 …" (the tab's
+  // storage, an older build's session moved, the fixture's key, blocked storage, sign-out) and
+  // routes/shell-gate.test.tsx "R632 …" (another tab's sign-out leaves this tab signed in).
+  it("R632 keeps a session in its tab's storage and never in localStorage", () => {
+    provenIn(632, WEB_SESSION_TEST, "../../../apps/web/src/routes/shell-gate.test.tsx");
+  });
+
+  // Proved by apps/server test/api/settings.test.ts (the routes: active only, the caps, the body's
+  // checks), test/db/contract.ts (both stores), and the SQL suite's 11 (the merge function) and 02
+  // (a player reads only its own row and writes none) headings.
+  it("R633 keeps an active account's game settings on the server, in groups with the time each changed", () => {
+    provenIn(633, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, SERVER_RLS_SQL);
+  });
+
+  // Proved by apps/server test/api/settings.test.ts "R634 …" and test/db/contract.ts (a group replaces
+  // the stored one only when strictly later), the SQL suite's 11, and apps/web settings/accountSync.test.tsx
+  // "R634 …" (load, push-up, debounce, one request at a time, failures dropped, a clock running ahead).
+  it("R634 replaces a group of the account's settings only with a strictly later one, and merges the device's the same way", () => {
+    provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
+  });
+
+  // Proved by cards patches-ship.test.ts "R635 …" (the fragment rules on fixtures, the promotion on
   // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
-  // patches.test.ts "R632 …" (shipped.json lists every shipped patch with its commit and blob).
-  it("R632 builds card patches as pending fragments and ships them in ship order", () => {
-    provenIn(632, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
+  // patches.test.ts "R635 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R635 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(635, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
   });
 });
 

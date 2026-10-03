@@ -86,6 +86,10 @@ export const paths = {
   practice: "/practice",
   /** The privacy policy (routes/privacy.tsx). Public, like the landing page. */
   privacy: "/privacy",
+  /** The terms (routes/terms.tsx). Public, like the privacy policy. */
+  terms: "/terms",
+  /** The accessibility statement (routes/accessibility.tsx). Public, like the privacy policy. */
+  accessibility: "/accessibility",
   /** R388: every patch and the cards it touched (routes/patch-notes.tsx). Public, like the landing page. */
   patchNotes: "/patch-notes",
   /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */

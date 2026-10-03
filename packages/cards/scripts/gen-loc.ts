@@ -11,7 +11,7 @@
  * stale. A card with no script file yet carries no `loc`. A catalog entry is rewritten only when its
  * `loc` changes, so running this twice is a no-op.
  *
- * Shipped snapshots are never amended (R632): a change that moves a card's `loc` is a catalog
+ * Shipped snapshots are never amended (R635): a change that moves a card's `loc` is a catalog
  * change like any other, so claim it with a pending fragment (`pnpm --filter @jackioh/cards
  * patches <version> "<title>"`) and let `patches ship` snapshot it. `patches check` fails until
  * the moved card is claimed.
@@ -134,7 +134,7 @@ export type LocResult = { changed: readonly string[] };
 
 /**
  * Rewrites `loc` in catalog.json; returns the ids it moved. The snapshots are shipped history
- * and are never amended (R632): a moved `loc` is a catalog change for a pending fragment to
+ * and are never amended (R635): a moved `loc` is a catalog change for a pending fragment to
  * claim, and `patches ship` snapshots it.
  */
 export function generateLoc(): LocResult {

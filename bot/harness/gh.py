@@ -242,6 +242,13 @@ class GitHub:
         if names:
             self.request("POST", f"{self._r}/issues/{int(number)}/labels", {"labels": names})
 
+    def add_assignees(self, number: int, logins: Iterable[str]) -> None:
+        """Adds to whoever is assigned; GitHub skips an account it cannot assign."""
+        logins = [login for login in logins if login]
+        if logins:
+            self.request("POST", f"{self._r}/issues/{int(number)}/assignees",
+                         {"assignees": logins})
+
     def remove_label(self, number: int, name: str) -> None:
         quoted = urllib.parse.quote(name, safe="")
         try:
