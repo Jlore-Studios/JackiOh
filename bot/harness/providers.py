@@ -1,8 +1,8 @@
 """The subscriptions the bot can spend: `.harness/providers.json`, and whether each is usable now.
 
 A *provider* is one subscription behind one CLI: a Claude account (`claude`), ChatGPT through
-the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), or Meta through Muse Code
-(`muse`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
+the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), Meta through Muse Code
+(`muse`), or Cognition through the Devin CLI (`devin`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
 runs on (`runs_on`: GitHub's `ubuntu-latest`, or its own runner on the bot's machine,
 `night-vm-<id>`, which runs as a Linux user of its own; `bot/machine/README.md`), and its login
 (`login`): a `secret` the workflows hand to that model job and to nothing else, or a login made
@@ -30,10 +30,10 @@ from harness.errors import ConfigError
 
 PROVIDERS_PATH = Path(".harness") / "providers.json"
 
-CLIS = ("claude", "codex", "agy", "muse")
+CLIS = ("claude", "codex", "agy", "muse", "devin")
 LOGINS = ("secret", "machine")
-#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy keeps its
-#: login only on the machine.
+#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy and Devin
+#: keep their logins only on the machine.
 SECRET_CLIS = ("claude", "codex", "muse")
 _LABEL = re.compile(r"^[A-Za-z0-9._-]+$")
 #: Labels of GitHub's own runners: a fresh virtual machine per job, with no login on it.

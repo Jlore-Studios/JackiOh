@@ -2,7 +2,8 @@
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
 free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
-Google through the Antigravity CLI (`agy`) and Meta through Muse Code, each with its own hours
+Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
+Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to three items run at once, one per subscription. Each run
 builds its item, runs the repository's checks, and has a second, independent session of the same
 model review the change adversarially, going round that loop until the reviewer approves. Opus's
@@ -240,6 +241,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
 
 Each one's model job runs on its own runner on the machine, `night-vm-<id>`. A Claude account
@@ -326,7 +328,9 @@ None of these is an API key: each is the login of one account.
   user. Open a shell with `aws ssm start-session --target <instance>` and run:
   - `sudo -iu agent-gpt codex login --device-auth`, then Sign in with ChatGPT;
   - `sudo -iu agent-agy agy`, then sign in with the Google account and quit;
-  - `sudo -iu agent-muse muse login`.
+  - `sudo -iu agent-muse muse login`;
+  - `sudo -iu agent-devin devin auth login --force-manual-token-flow`, then paste the token the
+    page gives you.
 
   Each CLI refreshes its own login in that home from then on, so don't copy those files
   anywhere else. [`machine/README.md`](machine/README.md) has the rest: building the machine,

@@ -13,7 +13,7 @@ from harness.providers import Secrets
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import DAY, MACHINE, NIGHT, ROOT, make_config, make_ctx, test_pool
+from tests.support import ALL_MACHINE, DAY, MACHINE, NIGHT, ROOT, make_config, make_ctx, test_pool
 
 ALL = " ".join(providers.SECRETS)
 
@@ -183,6 +183,23 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx_for(gh2, at=DAY, machine=("agy",)))
         self.assertEqual((planned["provider"], planned["runs_on"]), ("agy", "night-vm-agy"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "agy")
+
+    def test_devin_takes_the_first_lane_after_the_claude_accounts(self):
+        """Devin (SWE-2, free on the CLI until 2026-10-16) logs in on the machine, works any
+        hour with no caps, is low-tier, and comes right after the Claude accounts in `priority`:
+        by day, with them closed, it takes work ahead of GPT, agy and Muse."""
+        pool = providers.load(ROOT)
+        devin = pool.get("devin")
+        self.assertEqual((devin.cli, devin.family, devin.login, devin.runs_on),
+                         ("devin", "cognition", "machine", "night-vm-devin"))
+        self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
+        self.assertEqual(providers.model_tier(devin.model), providers.LOW_TIER)
+        self.assertEqual(pool.priority.index("devin"), pool.priority.index("claude-4") + 1)
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
+        self.assertEqual((planned["provider"], planned["cli"], planned["runs_on"]),
+                         ("devin", "devin", "night-vm-devin"))
 
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-2 and claude-3 run all day, claude-2 under its 90% caps

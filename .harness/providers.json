@@ -1,7 +1,7 @@
 {
   "max_parallel": 3,
   "difficult_label": "difficult",
-  "priority": ["claude-1", "claude-2", "claude-3", "claude-4", "gpt", "agy", "muse"],
+  "priority": ["claude-1", "claude-2", "claude-3", "claude-4", "devin", "gpt", "agy", "muse"],
   "providers": {
     "claude-1": {
       "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness, so it waits for quiet.",
@@ -90,6 +90,21 @@
       "effort": "high",
       "login": "machine",
       "runs_on": "night-vm-agy",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
+      "self_review": false,
+      "difficult": false,
+      "quiet_check": false
+    },
+    "devin": {
+      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models.",
+      "enabled": true,
+      "cli": "devin",
+      "family": "cognition",
+      "model": "swe-2-max",
+      "effort": "",
+      "login": "machine",
+      "runs_on": "night-vm-devin",
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "self_review": false,

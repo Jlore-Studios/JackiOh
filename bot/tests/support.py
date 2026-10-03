@@ -36,9 +36,13 @@ def raw_providers() -> dict[str, Any]:
     return json.loads((ROOT / providers_mod.PROVIDERS_PATH).read_text(encoding="utf-8"))
 
 
-#: The subscriptions logged in on the machine, which no secret switches on or off.
-MACHINE: tuple[str, ...] = tuple(name for name, p in raw_providers()["providers"].items()
-                                 if p.get("login") == "machine")
+#: The machine subscriptions the tests switch on by default: no secret switches them on or off.
+#: Devin (`devin`, ahead of them in `priority`) is named by the tests about it, so the tests of
+#: the others stay about them.
+MACHINE: tuple[str, ...] = ("gpt", "agy", "muse")
+#: Every subscription logged in on the machine, Devin's included.
+ALL_MACHINE: tuple[str, ...] = tuple(name for name, p in raw_providers()["providers"].items()
+                                     if p.get("login") == "machine")
 
 
 #: The hours every Claude account has in tests unless a test asks for the committed ones.

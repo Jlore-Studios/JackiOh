@@ -9,9 +9,9 @@ subscription in [`.harness/providers.json`](../../.harness/providers.json) whose
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
-| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-muse`): a home only it can read, no `sudo`, no Docker |
+| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner`, registered as `night-vm-<id>` with that one label, a systemd service under that user |
-| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
 
@@ -58,6 +58,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    sudo -iu agent-gpt codex login --device-auth   # Sign in with ChatGPT
    sudo -iu agent-agy agy                         # sign in with Google, then quit
    sudo -iu agent-muse muse login
+   sudo -iu agent-devin devin auth login --force-manual-token-flow   # paste the page's token
    ```
 4. **Register the runners**, from the repository's root:
 

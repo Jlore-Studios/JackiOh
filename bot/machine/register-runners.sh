@@ -7,7 +7,7 @@
 #
 #   bot/machine/register-runners.sh OWNER/REPO
 #
-# Safe to run again: a runner already registered is only restarted.
+# Safe to run again: a runner already registered and running is left alone, job and all.
 set -euo pipefail
 repo="${1:?OWNER/REPO, the repository the runners serve}"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -40,7 +40,8 @@ for pair in "$@"; do
     fi
   fi
   [ -f .service ] || ./svc.sh install "$user" >/dev/null
-  ./svc.sh stop >/dev/null 2>&1; ./svc.sh start >/dev/null
+  # Started only if it isn't running: a restart would kill the job a running one holds.
+  systemctl is-active --quiet "$(cat .service)" || ./svc.sh start >/dev/null
   echo "$label: $(systemctl is-active "$(cat .service)") as $user"
 done
 exit "$failed"
