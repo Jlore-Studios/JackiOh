@@ -132,7 +132,7 @@ export function memoryHarness(): StoreHarness {
  * wrote one by hand leaves nothing behind.
  */
 const TRUNCATE = `truncate
-  public.game_records, public.tutorial_progress,
+  public.game_records, public.tutorial_progress, public.player_settings,
   public.series, public.results, public.match_actions, public.tickets, public.matches,
   public.trios, public.decks,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,

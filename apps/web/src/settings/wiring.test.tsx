@@ -96,13 +96,17 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset, and the account's status", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["audio", "audio"],
+      ["account", "account-sync"],
     ]);
-    for (const slot of SETTINGS_SLOTS) expect(typeof slot.reset, slot.id).toBe("function");
+    // Every store has a reset; the account's status is not a store.
+    for (const slot of SETTINGS_SLOTS.filter((entry) => entry.section !== "account")) {
+      expect(typeof slot.reset, slot.id).toBe("function");
+    }
   });
 
   it("the panel shows effects speed, intensity and foil after Reduce motion, and the audio controls in their section", () => {
