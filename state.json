@@ -509,9 +509,7 @@
       "stop_requested": false
     },
     "45": {
-      "asks": [
-        "c:5946889038"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -519,12 +517,16 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "provider": "agy",
       "question": "Issue #45 says not to start until #40 (Patch v0.2.0) ships, and it hasn't: main's newest patch is v0.1.1, its catalog has only Core (100 cards and 11 tokens), and R366 still uses \"Cost (N)\". Should the bot (a) wait and build #45 after #40 merges into main (recommended), or (b) do a Core-only text pass on main now with today's \"Cost (N)\" wording and leave Classic, Classic+ and the \"(N) Cost\" switch to a later patch?",
       "queued_at": "2026-10-02T06:44:26Z",
       "requested_by": "squishy-squooby",
-      "run_id": "36805522167",
-      "started_at": "2026-10-01T02:32:56Z",
-      "stop_requested": false
+      "run_id": "37123442904",
+      "started_at": "2026-10-03T12:37:23Z",
+      "stop_requested": false,
+      "taken_asks": [
+        "c:5946889038"
+      ]
     },
     "46": {
       "asks": [],
@@ -848,9 +850,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T12:32:14Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123150841",
-    "what": "review #143 on muse"
+    "at": "2026-10-03T12:37:23Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37123442904",
+    "what": "build #45 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T10:47:50Z",
