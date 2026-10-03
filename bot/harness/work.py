@@ -62,7 +62,7 @@ dead ends you hit. Update it as you go, not only at the end. Your session can be
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
 #: How much of a planner's answer becomes the plan.
-PLAN_CHARS = 12_000
+PLAN_CHARS = 20_000
 SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
 this change, in a fresh session, and nothing you say here approves it: an independent reviewer
 judges it afterwards. Adversarially find every reason your own change should not ship, as that
@@ -389,6 +389,13 @@ class Worker:
         if handoff.get("kind") == "plan":
             if not str(handoff.get("notes") or "").strip():
                 return ""
+            if self.plan.get("plan_in_issue"):
+                return ("\n\n## The plan\n\nA strong model planned this before anyone built it. "
+                        "The plan is the **Plan** section of the issue's description above (a "
+                        "person may have edited it since, and that version is the plan), and it is "
+                        f"at the top of `{NOTES_FILE}`, which you keep going. Follow it step by "
+                        "step unless the code shows it is wrong, and say where you departed from "
+                        "it and why.")
             return ("\n\n## The plan\n\nA planning run on "
                     f"`{handoff.get('provider', '?')}` ({handoff.get('family', '?')}) wrote the plan "
                     f"below before anyone built this; it is also at the top of `{NOTES_FILE}`, "

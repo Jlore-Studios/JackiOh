@@ -167,6 +167,10 @@ class FakeGitHub:
             raise GitHubError("a repository pins at most three issues", 422)
         self.pinned.append(node_id)
 
+    def set_issue_body(self, number: int, body: str) -> dict[str, Any]:
+        self.threads[number]["body"] = str(body)
+        return copy.deepcopy(self.threads[number])
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         self.threads[number].update(fields)
         return copy.deepcopy(self.threads[number])

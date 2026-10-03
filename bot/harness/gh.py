@@ -232,6 +232,12 @@ class GitHub:
         payload = {"title": redact(title)[:250], "body": with_marker(body), "labels": list(labels)}
         return self.request("POST", f"{self._r}/issues", payload)
 
+    def set_issue_body(self, number: int, body: str) -> dict[str, Any]:
+        """Replace an issue's description as it is: no redaction of a person's text and no bot
+        marker, which would make the whole description read as the bot's (the plan section,
+        `issueplan.py`, is redacted before it gets here)."""
+        return self.request("PATCH", f"{self._r}/issues/{int(number)}", {"body": str(body)})
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         if "body" in fields:
             fields["body"] = with_marker(fields["body"])

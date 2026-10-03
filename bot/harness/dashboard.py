@@ -17,7 +17,7 @@ from typing import Any
 from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
-from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_REVISE, NIGHT_WORKFLOW
+from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_REVISE, NIGHT_WORKFLOW
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.queue import difficulty_of, label_names
@@ -130,13 +130,21 @@ def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[
 
 
 def lanes_chart(ctx: Context, live: dict[int, str]) -> list[str]:
-    """A Mermaid pie of the lanes: on the machine, on GitHub's runners, free."""
+    """A Mermaid pie of the lanes: planning, on the machine, on GitHub's runners, free."""
     pool = ctx.cfg.pool
-    machine = sum(1 for provider_id in live.values() if pool.on_machine(provider_id))
-    slices = [("On the machine", machine), ("On GitHub's runners", len(live) - machine),
-              ("Free", max(0, pool.max_parallel - len(live)))]
+    state = ctx.store.load()
+    planning = sum(1 for number in live if number
+                   and state["items"].get(str(number), {}).get("action") == "plan")
+    building = {n: p for n, p in live.items()
+                if not (n and state["items"].get(str(n), {}).get("action") == "plan")}
+    machine = sum(1 for provider_id in building.values() if pool.on_machine(provider_id))
+    slices = [("Planning", planning), ("On the machine", machine),
+              ("On GitHub's runners", len(building) - machine),
+              ("Free", max(0, pool.max_parallel - len(building))
+               + max(0, pool.plan_lanes - planning))]
+    planning_lanes = f", and {pool.plan_lanes} for planning" if pool.plan_lanes else ""
     return (["```mermaid", f"pie showData title Lanes ({pool.max_parallel}, at most "
-             f"{pool.machine_parallel} on the machine)"]
+             f"{pool.machine_parallel} on the machine{planning_lanes})"]
             + [f'    "{name}" : {count}' for name, count in slices if count > 0] + ["```"])
 
 
@@ -164,11 +172,13 @@ def subscription_table(ctx: Context, state: dict[str, Any], live: dict[int, str]
 
 def queue_table(issues: list[dict[str, Any]]) -> list[str]:
     rows = []
+    # The Needs plan stage first: the planning lane takes those before anything else.
+    issues = sorted(issues, key=lambda issue: LABEL_NEEDS_PLAN not in label_names(issue))
     for issue in issues:
         names = label_names(issue)
         is_pr = "pull_request" in issue
         if LABEL_BUILD in names and not is_pr:
-            kind = "build"
+            kind = "**needs plan**" if LABEL_NEEDS_PLAN in names else "build"
         elif LABEL_REVISE in names and is_pr:
             kind = "revise"
         elif LABEL_CROSS in names and is_pr:

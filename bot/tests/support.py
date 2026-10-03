@@ -49,7 +49,8 @@ ALL_MACHINE: tuple[str, ...] = tuple(name for name, p in raw_providers()["provid
 NIGHT_WINDOW = {"mode": "window", "start": "21:00", "end": "07:00"}
 
 
-def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False) -> providers_mod.Pool:
+def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False,
+              plan_lanes: int | None = 0) -> providers_mod.Pool:
     """The committed subscriptions, with the machine's (`"login": "machine"`) switched off
     unless named in `machine`. A machine login has no secret to be missing, so it counts as set
     up in every run; tests start, as before the machine, with only the subscriptions whose
@@ -57,8 +58,14 @@ def test_pool(machine: tuple[str, ...] = (), committed_hours: bool = False) -> p
 
     Every Claude account keeps to the night window, whatever hours the owner commits for it
     (`claude-3` runs all day), so a test of the other subscriptions by day stays about them;
-    `committed_hours` keeps the committed ones."""
+    `committed_hours` keeps the committed ones.
+
+    The planning lane (`plan_lanes`) is off, so a test of building finds the builder planning in
+    its own run as before; a test of the Needs plan stage turns it on (`plan_lanes=None` keeps the
+    committed number)."""
     raw = raw_providers()
+    if plan_lanes is not None:
+        raw["plan_lanes"] = plan_lanes
     for name, provider in raw["providers"].items():
         if provider.get("login") == "machine" and name not in machine:
             provider["enabled"] = False
@@ -81,11 +88,12 @@ def secret_login(provider: providers_mod.Provider, secret: str) -> providers_mod
 
 
 def make_config(root: Path | None = None, env: dict[str, str] | None = None,
-                machine: tuple[str, ...] = (), committed_hours: bool = False, **overrides: Any):
+                machine: tuple[str, ...] = (), committed_hours: bool = False,
+                plan_lanes: int | None = 0, **overrides: Any):
     raw = raw_config()
     raw.update(overrides)
     return config_mod.parse(raw, root or ROOT, {**TEST_ENV, **(env or {})},
-                            pool=test_pool(machine, committed_hours))
+                            pool=test_pool(machine, committed_hours, plan_lanes))
 
 
 class Clock:

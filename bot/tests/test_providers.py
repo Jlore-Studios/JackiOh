@@ -240,11 +240,14 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
         self.assertEqual((devin.tier, devin.self_check, devin.easy_first), ("weak", True, True))
         self.assertEqual(pool.priority[-1], "devin")
+        # Unplanned, Devin cannot take it: it builds only from a strong model's plan. By day no
+        # strong model is free (the Claude accounts keep to the night here), so agy plans it in
+        # its own run and builds it.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
-        self.assertEqual((planned["action"], planned["provider"]), ("plan", "agy"))
-        self.assertIn("planned on its own run, since its builder `devin`", planned["routing"][0])
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
+        self.assertIn("#3 needs a plan", planned["housekeeping"])
         # A medium item passes Devin by.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
@@ -255,7 +258,11 @@ class MatchingTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         ctx = ctx_for(gh, at=DAY, machine=("devin",))
         self.assertEqual(plan_mod.make(ctx)["action"], "none")  # no planner is free
-        ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY)))
+        # A medium model's plan is not enough for Devin; a strong one's is.
+        ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY),
+                                                            planned_tier="medium"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        ctx.store.update(lambda s: state_item(s, 3).update(planned_tier="strong"))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
         self.assertEqual(planned["seats"]["self_check"], True)
@@ -351,10 +358,11 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
         gh.add_issue(5, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
-        # #5 builds on agy, which has no strong model to plan it: claude-2 plans it first.
+        # #5 builds on agy; with the planning lane off here (test_needs_plan.py has it), it plans
+        # in its own run, on its medium model.
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (5, "claude-2", "plan"))
-        self.assertEqual(planned["seats"]["plan"]["tier"], "strong")
+                         (5, "agy", "build"))
+        self.assertEqual(planned["seats"]["plan"]["tier"], "medium")
         # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
         later = clock.iso(DAY + timedelta(days=2))
         full = {"five_hour": {"utilization": 0.99, "resets_at": later},
