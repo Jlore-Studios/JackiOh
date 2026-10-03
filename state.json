@@ -508,9 +508,7 @@
       "run_id": "37099014588",
       "started_at": "2026-10-03T05:12:56Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5965533265"
-      ]
+      "taken_asks": []
     },
     "66": {
       "asks": [],
