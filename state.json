@@ -590,7 +590,18 @@
       "stop_requested": false,
       "taken_asks": [
         "c:5972730471"
-      ]
+      ],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "sha": "4207c0a988b0876c8b2ea793b6a94b440a38238e",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "143": {
       "action": "revise",
