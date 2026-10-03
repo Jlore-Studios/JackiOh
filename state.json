@@ -711,9 +711,7 @@
       "run_id": "37146802644",
       "started_at": "2026-10-03T19:08:49Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5972554835"
-      ]
+      "taken_asks": []
     },
     "165": {
       "failures": 0,
