@@ -1133,6 +1133,7 @@
     "75": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -1144,7 +1145,7 @@
         "reason": "`gpt` reached its usage limit",
         "trail": ""
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
