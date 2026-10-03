@@ -811,7 +811,7 @@
       "action": "build",
       "asks": [],
       "died": 0,
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-10-03T19:55:37Z",
