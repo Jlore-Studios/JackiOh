@@ -463,7 +463,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             ctx = _ctx(cfg, write=False)
             thread = ctx.gh.get_issue(number)
             text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
-                                     triage_mod.conventions_text(cfg.root))
+                                     triage_mod.conventions_text(cfg.root),
+                                     triage_mod.issue_types(ctx.gh))
             answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
             verdict = triage_mod.parse(answer)
         except Exception as exc:  # noqa: BLE001 - any failure skips
@@ -486,7 +487,7 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
         thread = ctx.gh.get_issue(number)
         repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
         plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
-                                 repo_labels, cfg.bot_login)
+                                 repo_labels, cfg.bot_login, triage_mod.issue_types(ctx.gh))
         done = triage_mod.apply(ctx.gh, number, plan)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))

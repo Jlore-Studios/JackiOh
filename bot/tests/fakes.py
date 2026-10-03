@@ -189,6 +189,11 @@ class FakeGitHub:
     def list_labels(self) -> list[dict]:
         return list(self.labels.values())
 
+    def list_issue_types(self) -> list[dict]:
+        return [{"name": "Task", "description": "A specific piece of work"},
+                {"name": "Bug", "description": "An unexpected problem or behavior"},
+                {"name": "Feature", "description": "A request, idea, or new functionality"}]
+
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         if name in self.labels:
             return False

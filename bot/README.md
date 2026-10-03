@@ -232,8 +232,8 @@ needs level 3.
 
 ## Triage
 
-`triage.yml` labels, assigns and titles every issue or pull request that someone trusted opens,
-from a Devin call (`triage.py`):
+`triage.yml` labels, assigns, titles and types every issue or pull request that someone trusted
+opens, from a Devin call (`triage.py`):
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
@@ -252,7 +252,10 @@ from a Devin call (`triage.py`):
   - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
     doesn't already, and only if every version number survives. A pull request keeps its title,
     which becomes the squash commit's subject, and is never assigned to the bot.
-- **It only adds.** A person's labels, assignees and conventional title stay. A priority or a model
+  - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
+    the org, or those three when the token can't read them) if it has none. A pull request has no
+    type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
+- **It only adds.** A person's labels, assignees, conventional title and type stay. A priority or a model
   tier a person chose gets no second one.
 - **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
 - **Waiting:** `classify` shares `night-vm-devin` with Devin's bot jobs, so it waits while one runs.
@@ -678,7 +681,7 @@ workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `b
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, assigns and titles a new issue or pull request from a Devin call (`triage.yml`) |
+| `triage.py` | labels, assigns, titles and types a new issue or pull request from a Devin call (`triage.yml`) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue: opened and pinned once, rewritten every ten minutes by `bot-status.yml` (`harness dashboard --sweep --every 600 --for 19800`, which sweeps first each time) and after every sweep |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
