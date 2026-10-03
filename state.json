@@ -378,22 +378,22 @@
     },
     "118": {
       "action": "build",
-      "asks": [
-        "c:5972560496"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "muse",
       "queued_at": "2026-10-03T19:09:21Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37147815883",
-      "started_at": "2026-10-03T19:26:18Z",
+      "run_id": "37147970854",
+      "started_at": "2026-10-03T19:28:28Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5972560496"
+      ]
     },
     "123": {
       "failures": 0,
@@ -1254,9 +1254,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T19:26:18Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37147815883",
-    "what": "build #118 on gpt"
+    "at": "2026-10-03T19:28:28Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37147970854",
+    "what": "build #118 on muse"
   },
   "last_sweep": {
     "at": "2026-10-03T19:23:56Z",
