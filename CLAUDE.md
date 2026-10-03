@@ -43,7 +43,7 @@ pnpm ai:stats          # an AI development run for the card statistics (R378): A
 pnpm validate:catalog  # catalog.json data checks (268 cards and 49 tokens across Core, Classic, Classic+; rarity counts per set)
 pnpm rulings:coverage  # SPEC §11 rows vs named tests vs R-ids cited in code (rule 3)
 pnpm --filter @jackioh/cards missing-tests   # catalog ids with no test file, and the path each one expects
-pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>   # the card patch history, packages/cards/patches/ (R388): snapshots the catalog and bumps CATALOG_VERSION everywhere
+pnpm --filter @jackioh/cards patches <version> "<title>"                # the card patch history, packages/cards/patches/ (R388, R631): a branch's catalog change goes live as a pending fragment; `patches check` proves it, `patches ship` promotes it after merge and bumps CATALOG_VERSION everywhere
 pnpm test:sql          # schema, RLS and trigger invariants: Docker only, starts a throwaway postgres:16
 pnpm test:db           # src/db/store.ts against a throwaway postgres:16 (Docker only; KEEP_DB=1 keeps it)
 pnpm test:deploy       # Render's deploy rehearsed: render.yaml's start command, migrating as a role that is not a superuser (as on Supabase), then a production boot (Docker only)

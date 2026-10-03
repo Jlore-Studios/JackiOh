@@ -38,9 +38,10 @@ describe("R388 the patch source", () => {
     await source.snapshot("b");
     expect(calls).toEqual(["patches", "b"]);
     expect(await source.snapshot("missing")).toBeNull();
-    // patches.json and index.json are never snapshots.
+    // patches.json, index.json and shipped.json are never snapshots.
     expect(await source.snapshot("index")).toBeNull();
     expect(await source.snapshot("patches")).toBeNull();
+    expect(await source.snapshot("shipped")).toBeNull();
   });
 
   it("R388 forgets a failed load, so asking again retries it", async () => {

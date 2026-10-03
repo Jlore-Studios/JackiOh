@@ -1,17 +1,35 @@
-// R388 (B4.2): card patches are data. `packages/cards/patches/patches.json` lists every patch in
-// order, each `<version>.json` is the whole catalog as that patch left it, and `index.json` says in
-// which versions each card changed. The catalog version is the patch: `CATALOG_VERSION` is the
-// newest patch's version, everywhere the string lives, and catalog.json is its snapshot. A version
-// is opaque (R105): its order is patches.json's, never a comparison of strings.
+// R388 (B4.2): card patches are data. `packages/cards/patches/patches.json` lists every shipped
+// patch in ship order, each `<version>.json` is the whole catalog as that patch left it,
+// `index.json` says in which versions each card changed, and `shipped.json` carries each patch's
+// shipping commit and snapshot blob. The catalog version is the patch: `CATALOG_VERSION` is the
+// newest patch's version, everywhere the string lives. A version is opaque (R105): its order is
+// patches.json's, never a comparison of strings.
 //
-// The history before v0.2.0 was rebuilt from `git log --follow packages/cards/catalog.json` with
-// `pnpm --filter @jackioh/cards patch <version> "<title>" --date … --from-git <rev>`; the table the
-// brief checked on 2026-09-30 is asserted below, card by card where it names cards.
+// Several patches are built at once (R631), so branches change `catalog.json` and add one
+// fragment under `patches/pending/` instead of editing the history: while a fragment is pending,
+// the catalog differs from the newest snapshot on exactly the claimed cards, and `patches ship`
+// promotes each fragment after it merges.
+//
+// The history before v0.2.0 was rebuilt from `git log --follow packages/cards/catalog.json`; the
+// table the brief checked on 2026-09-30 is asserted below, card by card where it names cards.
 
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CATALOG, CATALOG_VERSION } from "../src/catalog-data";
-import { INDEX_JSON, buildIndex, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
+import {
+  INDEX_JSON,
+  buildIndex,
+  diffCatalogs,
+  gitBlobHash,
+  readFragments,
+  readPatches,
+  readShipped,
+  readSnapshot,
+  revertPending,
+  sameCatalog,
+  snapshotPath,
+  type Catalog,
+} from "../scripts/patches-io";
 import { versionsAtSites } from "../scripts/patch";
 
 const PATCHES = readPatches();
@@ -38,16 +56,37 @@ describe("R388 card patch history (B4.2)", () => {
     expect(dates).toEqual([...dates].sort());
   });
 
-  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
+  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R631)", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
     expect(CATALOG_VERSION).toBe("v0.2.0");
     const snapshot = readSnapshot(CATALOG_VERSION);
-    const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
-      (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
-    );
-    const cut = `pnpm --filter @jackioh/cards patch ${CATALOG_VERSION} "<title>" (it amends the newest patch)`;
-    expect(differ, `catalog.json is the newest snapshot: run ${cut}`).toEqual([]);
-    expect(JSON.stringify(Object.keys(snapshot))).toBe(JSON.stringify(Object.keys(CATALOG)));
+    // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
+    // cards (R631): reverted to the snapshot, the catalog is the snapshot. With no fragments
+    // pending this is the old equality, entry for entry.
+    const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
+    const catalog = CATALOG as unknown as Catalog;
+    const reverted = revertPending(catalog, snapshot, claimed);
+    expect(
+      sameCatalog(reverted, snapshot),
+      "catalog.json with every pending-claimed entry reverted is the newest snapshot: " +
+        "claim the difference with `pnpm --filter @jackioh/cards patches <version> \"<title>\"`",
+    ).toBe(true);
+    if (claimed.size === 0) {
+      expect(JSON.stringify(Object.keys(snapshot))).toBe(JSON.stringify(Object.keys(catalog)));
+    }
+  });
+
+  it("R631 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
+    const shipped = readShipped();
+    expect(shipped.map((entry) => entry.version)).toEqual(VERSIONS);
+    expect(new Set(shipped.map((entry) => entry.version)).size).toBe(shipped.length);
+    for (const entry of shipped) {
+      expect(entry.commit, `${entry.version} commit`).toMatch(/^[0-9a-f]{40}$/);
+      expect(entry.blob, `${entry.version} blob`).toMatch(/^[0-9a-f]{40}$/);
+      // The blob is the snapshot file's bytes as git hashes them, so a rewritten snapshot fails.
+      const bytes = readFileSync(snapshotPath(entry.version), "utf8");
+      expect(entry.blob, `${entry.version}.json`).toBe(gitBlobHash(bytes));
+    }
   });
 
   it("R388 bumps the version everywhere the string lives: the server's env example, render.yaml and its end-to-end default", () => {

@@ -64,12 +64,14 @@ titles, so retitle one when you accept it.
   rest.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
-- **Going live.** A change to card data goes live through
-  `pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
-  catalog, appends the version to `patches.json` and bumps `CATALOG_VERSION` everywhere it lives
-  (`packages/cards/README.md` §8), and the next deploy reseeds the database. The PR that runs it is
-  the last part, and the patch is live when that PR merges. A patch with no card data change is
-  live when its last part merges.
+- **Going live.** A change to card data goes live through a pending fragment:
+  `pnpm --filter @jackioh/cards patches <version> "<title>"` writes
+  `packages/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
+  the branch merges `patches ship` promotes it — appending the version to `patches.json` and
+  bumping `CATALOG_VERSION` everywhere it lives (`packages/cards/README.md` §8) — and the next
+  deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
+  live when the promotion PR merges. A patch with no card data change is live when its last part
+  merges.
 - **Until then, players see nothing new.** Every earlier part leaves main playable and unchanged
   for players. Code nothing reaches yet is fine. A changed card, rule or screen waits for the last
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the

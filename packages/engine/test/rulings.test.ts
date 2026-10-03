@@ -193,6 +193,7 @@ const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 /** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
 const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
 const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PATCHES_SHIP_TEST = "../../cards/test/patches-ship.test.ts";
 const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
 /** R481's SQL evidence: migration 0016's grant for a catalog that grows. */
 const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/09_catalog_growth.sql";
@@ -3669,6 +3670,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // game/deckbuilder/filters.test.ts "R630 …" (the almanac's pool and tag chips).
   it("R630 opens a public, read-only Card Almanac of every card, tokens included", () => {
     provenIn(630, "../../../apps/web/src/routes/almanac.test.tsx", WEB_FILTERS_TEST);
+  });
+
+  // Proved by cards patches-ship.test.ts "R631 …" (the fragment rules on fixtures, the promotion on
+  // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
+  // patches.test.ts "R631 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R631 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(631, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
   });
 });
 
