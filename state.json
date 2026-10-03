@@ -474,9 +474,7 @@
     },
     "142": {
       "action": "revise",
-      "asks": [
-        "c:5970229268"
-      ],
+      "asks": [],
       "failures": 0,
       "feedback_since": "2026-10-03T11:03:50Z",
       "forced": false,
@@ -494,14 +492,16 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "agy",
       "queued_at": "2026-10-03T14:47:02Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37131328105",
+      "run_id": "37142703312",
       "source": "request",
-      "started_at": "2026-10-03T14:55:17Z",
+      "started_at": "2026-10-03T18:03:29Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5970229268"
+      ]
     },
     "143": {
       "action": "revise",
@@ -1124,9 +1124,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T17:40:58Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37141229909",
-    "what": "revise #143 on claude-3"
+    "at": "2026-10-03T18:03:29Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37142703312",
+    "what": "revise #142 on agy"
   },
   "last_sweep": {
     "at": "2026-10-03T17:57:45Z",
