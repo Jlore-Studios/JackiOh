@@ -606,6 +606,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-10-01T13:33:46Z",
