@@ -316,6 +316,12 @@
       "lines": [
         "@jgoetzmann-bot retry"
       ]
+    },
+    "c:5974504575": {
+      "at": "2026-10-03T23:15:29Z",
+      "lines": [
+        "@jgoetzmann-bot  Do you have some way to stop using Gemini until @jgoetzmann fixes it? Right now, we're out of `agy` credits, but you don't have the ability to recognize that, and you just let reviews run to timeout while \"using\" the agent."
+      ]
     }
   },
   "items": {
