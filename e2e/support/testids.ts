@@ -720,6 +720,8 @@ export const INSPECT_GLOSSARY = "inspect-glossary";
 export const INSPECT_PRINTED = "inspect-printed";
 /** A14: R279, the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
+/** A14: card stats block in the inspect detail dialog (R640). */
+export const INSPECT_STATS = "inspect-stats";
 /** A14: R279, the tooltip a reference in a card's text opens (`[data-ref]` names the card). */
 export const CARD_REF_TOOLTIP = "card-ref-tooltip";
 /** A14: R279, one named card's face in the hover preview's references column (`[data-ref]`). */
@@ -999,3 +1001,27 @@ export const SITE_FOOTER_ALMANAC = "site-footer-almanac";
 export const SITE_FOOTER_PATCH_NOTES = "site-footer-patch-notes";
 /** A21: a screen's "← Back" in its top bar. */
 export const NAV_BACK = "nav-back";
+
+// ---------------------------------------------------------------------------------------------
+// A22: the public Statistics screen (`/stats`, R640) and links to it. Mirrors, name for name,
+// `statsTestid` in `apps/web/src/stats/testids.ts` and `SITE_FOOTER_STATS`.
+// ---------------------------------------------------------------------------------------------
+
+export const STATS_SCREEN = "stats-screen";
+export const STATS_TAB_CARDS = "stats-tab-cards";
+export const STATS_TAB_PLAYERS = "stats-tab-players";
+export const STATS_SUMMARY_TILES = "stats-summary-tiles";
+export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
+export const STATS_SUMMARY_LIVE_GAMES = "stats-summary-live-games";
+export const STATS_SUMMARY_SOURCE = "stats-summary-source";
+export const STATS_SUMMARY_BEST_CARD = "stats-summary-best-card";
+export const STATS_SUMMARY_WORST_CARD = "stats-summary-worst-card";
+export const STATS_PROVISIONAL_BANNER = "stats-provisional-banner";
+export const STATS_FALLBACK_TOGGLE = "stats-fallback-toggle";
+export const STATS_SEARCH_INPUT = "stats-search-input";
+export const STATS_CARDS_TABLE = "stats-cards-table";
+export const STATS_PLAYERS_TABLE = "stats-players-table";
+export const STATS_DRILL_DOWN_MODAL = "stats-drill-down-modal";
+export const STATS_DRILL_DOWN_CLOSE = "stats-drill-down-close";
+export const SITE_FOOTER_STATS = "site-footer-stats";
+

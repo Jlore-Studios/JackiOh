@@ -30,6 +30,8 @@ export type Settings = {
   hoverPreviews: boolean;
   /** Visuals. Force reduced motion on top of the OS preference (`--anim-scale: 0`). */
   reduceMotion: boolean;
+  /** Privacy. Share player statistics on the public stats page. Default true. */
+  publicStats: boolean;
 };
 
 export type SettingKey = keyof Settings;
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   autoEndTurn: true,
   hoverPreviews: true,
   reduceMotion: false,
+  publicStats: true,
 });
 
 /** The keys `parseSettings` keeps, in the order they are written to storage. */
@@ -51,6 +54,7 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "autoEndTurn",
   "hoverPreviews",
   "reduceMotion",
+  "publicStats",
 ];
 
 /** `<html data-reduce-motion="true">`; settings.css maps it to `--anim-scale: 0` (B22). */

@@ -32,6 +32,7 @@ import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
+import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -155,6 +156,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
+              <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} />
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
             </div>

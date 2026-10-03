@@ -388,7 +388,7 @@ declare
   t text;
   missing text := '';
 begin
-  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records'] loop
+  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -402,8 +402,9 @@ do $$
 declare
   -- `series` (0009, R263): both sides' frozen trios and both current picks, which R259 keeps
   -- hidden until both have picked — the same reason `matches` is here. `game_records` (0014,
-  -- R376): both hands and both decklists of every recorded game.
-  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records'];
+  -- R376): both hands and both decklists of every recorded game. `player_stats` (0019, R640):
+  -- each player's tracked stats and privacy settings, accessed solely via service_role.
+  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

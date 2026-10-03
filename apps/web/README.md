@@ -147,6 +147,9 @@ src/
   routes/almanac.tsx    /almanac: the public Card Almanac (R630), every card with tokens, read-only through
                         the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
                         catalog, no API call; the site footer links it beside Patch notes
+  routes/stats.tsx      /stats: the public card and player statistics page (R640), sortable cards table with
+                        confidence floor, card drill-down, public player aggregates, and provisional AI padding
+                        banner; the site footer links it
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these

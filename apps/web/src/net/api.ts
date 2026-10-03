@@ -631,3 +631,141 @@ export function forfeitSeries(token: string, seriesId: string): Promise<SeriesVi
     token,
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Public card and player statistics (SPEC §9.11, R640)
+// ---------------------------------------------------------------------------------------------
+
+export type PublicCardStat = {
+  id: string;
+  name: string;
+  cost: number;
+  rarity: string;
+  set: string;
+  games: number;
+  winRate: number | null;
+  drawnGames: number;
+  drawnWinRate: number | null;
+  playedGames: number;
+  playedWinRate: number | null;
+  playRate: number;
+  hasEnoughGames: boolean;
+};
+
+export type PublicStatsCardsResponse = {
+  patch: string;
+  previousPatch: string | null;
+  gate: {
+    cleared: boolean;
+    liveGames: number;
+    minLiveGames: number;
+  };
+  source: "provisional" | "live";
+  sourceLabel: string;
+  minSample: number;
+  totalGames: number;
+  cards: PublicCardStat[];
+  summary: {
+    totalGames: number;
+    liveGames: number;
+    activePatch: string;
+    source: "provisional" | "live";
+    bestCard: { id: string; name: string; winRate: number; games: number } | null;
+    worstCard: { id: string; name: string; winRate: number; games: number } | null;
+  };
+};
+
+export type CardDrillDownResponse = {
+  card: {
+    id: string;
+    name: string;
+    cost: number;
+    rarity: string;
+  };
+  patches: { patch: string; games: number; winRate: number | null }[];
+  byTurn: { turn: number; games: number; winRate: number | null }[];
+  coPlayed: { id: string; name: string; games: number; winRate: number | null }[];
+};
+
+export type CardStatsOptions = {
+  patch?: string;
+  set?: string;
+  rarity?: string;
+  cost?: number;
+  card?: string;
+  signal?: AbortSignal;
+};
+
+export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
+  const params = new URLSearchParams();
+  if (options.patch) params.set("patch", options.patch);
+  if (options.set) params.set("set", options.set);
+  if (options.rarity) params.set("rarity", options.rarity);
+  if (options.cost !== undefined) params.set("cost", String(options.cost));
+  if (options.card) params.set("card", options.card);
+  const query = params.toString();
+  return apiRequest<PublicStatsCardsResponse>(`/api/stats/cards${query ? `?${query}` : ""}`, {
+    signal: options.signal,
+  });
+}
+
+export function getCardDrillDown(cardId: string, signal?: AbortSignal): Promise<CardDrillDownResponse> {
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}`, {
+    signal,
+  });
+}
+
+export type PlayerStatsAccountResponse = {
+  stats: Record<string, unknown>;
+  isPrivate: boolean;
+  updatedAt: number | null;
+};
+
+export function getPlayerStats(token: string): Promise<PlayerStatsAccountResponse> {
+  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", { token });
+}
+
+export function putPlayerStats(
+  token: string,
+  data: { stats?: Record<string, unknown>; isPrivate?: boolean },
+): Promise<PlayerStatsAccountResponse> {
+  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", {
+    method: "PUT",
+    token,
+    body: data,
+  });
+}
+
+export type PublicPlayerSummary = {
+  profileId: string;
+  displayName: string | null;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+  favouriteCards: readonly { id: string; count: number }[];
+  funStats: {
+    nemesisCardId: string | null;
+    totalDestroyed: number;
+    totalDefeated: number;
+  };
+  updatedAt: number;
+};
+
+export type PublicPlayersResponse = {
+  players: PublicPlayerSummary[];
+  page: number;
+  limit: number;
+};
+
+export function getPublicPlayers(options: { search?: string; page?: number; signal?: AbortSignal } = {}): Promise<PublicPlayersResponse> {
+  const params = new URLSearchParams();
+  if (options.search) params.set("search", options.search);
+  if (options.page !== undefined) params.set("page", String(options.page));
+  const query = params.toString();
+  return apiRequest<PublicPlayersResponse>(`/api/stats/players${query ? `?${query}` : ""}`, {
+    signal: options.signal,
+  });
+}
+

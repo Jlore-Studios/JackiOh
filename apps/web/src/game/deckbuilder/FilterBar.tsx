@@ -69,6 +69,7 @@ const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   attack: "Attack",
   health: "Health",
   type: "Type",
+  winRate: "Win rate",
 };
 
 type ChipProps = {

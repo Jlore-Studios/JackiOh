@@ -58,6 +58,7 @@ import type {
   MatchStatus,
   PlayerSettingsGroup,
   PlayerSettingsRow,
+  PlayerStatsRow,
   Profile,
   ProfileStatus,
   QueueMode,
@@ -78,6 +79,7 @@ import type {
   TutorialProgressRow,
   UpsertOutcome,
 } from "../api/ports";
+import { toPublicPlayerSummary } from "../api/memory-stores";
 import { parseGameRecord, sourcesOf, type Action } from "@jackioh/shared";
 
 /**
@@ -333,9 +335,10 @@ type ProfileRow = {
   current_match_id: string | null;
   created_at: Date;
   email: string | null;
+  display_name: string | null;
 };
 
-const PROFILE_COLUMNS = `p.id, p.status, p.rating, p.current_match_id, p.created_at, u.email`;
+const PROFILE_COLUMNS = `p.id, p.status, p.rating, p.current_match_id, p.created_at, u.email, p.display_name`;
 const PROFILE_FROM = `from public.profiles p left join auth.users u on u.id = p.id`;
 
 function toProfile(row: ProfileRow): Profile {
@@ -350,6 +353,7 @@ function toProfile(row: ProfileRow): Profile {
     // managed-auth user id, so `getById` and `getByUserId` are the same lookup.
     userId: row.id,
     email: row.email ?? "",
+    displayName: row.display_name ?? null,
     status: status satisfies ProfileStatus,
     rating: row.rating,
     inMatchId: row.current_match_id,
@@ -625,6 +629,25 @@ const PLAYER_SETTINGS_COLUMNS = `profile_id, groups`;
 
 function toPlayerSettings(row: PlayerSettingsDbRow): PlayerSettingsRow {
   return { profileId: row.profile_id, groups: row.groups };
+}
+
+/** `public.player_stats` (migration 0019, R640): player stats and privacy flag. */
+type PlayerStatsDbRow = {
+  profile_id: string;
+  stats: unknown;
+  is_private: boolean;
+  updated_at: Date;
+};
+
+const PLAYER_STATS_COLUMNS = `profile_id, stats, is_private, updated_at`;
+
+function toPlayerStats(row: PlayerStatsDbRow): PlayerStatsRow {
+  return {
+    profileId: row.profile_id,
+    stats: (typeof row.stats === "object" && row.stats !== null ? row.stats : {}) as Record<string, unknown>,
+    isPrivate: row.is_private,
+    updatedAt: msOf(row.updated_at),
+  };
 }
 
 /**
@@ -980,12 +1003,12 @@ function buildStore(session: Session): Store {
      * fails with a foreign-key violation if that user does not exist, which is the honest answer:
      * a profile without a managed-auth identity is not a thing this schema can hold.
      */
-    create: async ({ userId, rating, at }) =>
+    create: async ({ userId, rating, at, displayName }) =>
       session.run(userId, async (q) => {
         await q(
-          `insert into public.profiles (id, status, rating, created_at)
-           values ($1::uuid, 'pending', $2::int, ${ts("$3")})`,
-          [userId, rating, at],
+          `insert into public.profiles (id, status, rating, created_at, display_name)
+           values ($1::uuid, 'pending', $2::int, ${ts("$3")}, $4::text)`,
+          [userId, rating, at, displayName ?? null],
         );
         const { rows } = await q<ProfileRow>(
           `select ${PROFILE_COLUMNS} ${PROFILE_FROM} where p.id = $1::uuid`,
@@ -1008,6 +1031,15 @@ function buildStore(session: Session): Store {
         profileId,
         `update public.profiles set status = $2::text where id = $1::uuid`,
         [profileId, status],
+      );
+      if (affected(rowCount) === 0) throw new Error(`no profile ${profileId}`);
+    },
+
+    setDisplayName: async (profileId, displayName) => {
+      const { rowCount } = await session.query(
+        profileId,
+        `update public.profiles set display_name = $2::text where id = $1::uuid`,
+        [profileId, displayName],
       );
       if (affected(rowCount) === 0) throw new Error(`no profile ${profileId}`);
     },
@@ -2166,6 +2198,64 @@ function buildStore(session: Session): Store {
         [sourcesOf(query.source), query.mode, query.patch],
       );
       return rows.map((row) => parseGameRecord(row.record));
+    },
+  };
+
+  // -------------------------------------------------------------------------
+  // Player statistics on the account (SPEC §9.11, R639, R640)
+  // -------------------------------------------------------------------------
+
+  store.playerStats = {
+    get: async (profileId) => {
+      if (!isUuid(profileId)) return null;
+      const { rows } = await session.query<PlayerStatsDbRow>(
+        profileId,
+        `select ${PLAYER_STATS_COLUMNS} from public.player_stats where profile_id = $1::uuid`,
+        [profileId],
+      );
+      const row = rows[0];
+      return row === undefined ? null : toPlayerStats(row);
+    },
+    put: async (profileId, stats, isPrivate, at) => {
+      if (!isUuid(profileId)) return;
+      await session.query(
+        profileId,
+        `insert into public.player_stats (profile_id, stats, is_private, created_at, updated_at)
+         values ($1::uuid, $2::jsonb, $3::boolean, ${ts("$4")}, ${ts("$4")})
+         on conflict (profile_id) do update set stats = excluded.stats, is_private = excluded.is_private, updated_at = excluded.updated_at`,
+        [profileId, json(stats), isPrivate, at],
+      );
+    },
+    listPublic: async ({ search, limit, offset }) => {
+      const term = search?.trim() ? search.trim() : null;
+      type PublicRow = {
+        profile_id: string;
+        display_name: string | null;
+        stats: unknown;
+        updated_at: Date;
+      };
+      const { rows } = await session.query<PublicRow>(
+        null,
+        `select ps.profile_id, p.display_name, ps.stats, ps.updated_at
+         from public.player_stats ps
+         join public.profiles p on p.id = ps.profile_id
+         where ps.is_private = false
+           and ($1::text is null or (p.display_name is not null and position(lower($1::text) in lower(p.display_name)) > 0))
+         order by
+           case when (ps.stats->>'games') ~ '^[0-9]+$' then (ps.stats->>'games')::bigint else 0 end desc,
+           ps.updated_at desc,
+           ps.profile_id asc
+         limit $2::int offset $3::int`,
+        [term, limit, offset],
+      );
+      return rows.map((r) =>
+        toPublicPlayerSummary(
+          r.profile_id,
+          r.display_name,
+          (typeof r.stats === "object" && r.stats !== null ? r.stats : {}) as Record<string, unknown>,
+          msOf(r.updated_at),
+        ),
+      );
     },
   };
 

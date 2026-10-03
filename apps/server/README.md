@@ -207,6 +207,11 @@ top of every handler:
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
 | `GET` | `/api/settings` | active | The account's game settings (R633): groups (`gameplay`, `audio`, `fx`, `cards`), each `{ at, values }`; empty before the first write |
 | `PUT` | `/api/settings` | active | Merge a device's changed groups into the account's (R634): `{ groups }`. A group replaces the stored one only when its `at` is strictly later (a time after the server's clock counts as now); groups the write does not name stay; 409 past `PLAYER_SETTINGS_GROUPS_MAX` groups or `PLAYER_SETTINGS_BYTES_MAX` bytes |
+| `GET` | `/api/stats/cards` | none | Public card aggregates with publication gate (1000 live games), sample floor (20 games), and optional patch/set/rarity/cost filters (R640) |
+| `GET` | `/api/stats/cards/:id` | none | Public card drill-down: cleared patch history, turn curve, co-played synergy cards (R640) |
+| `GET` | `/api/stats/player` | active | Signed-in player reads their own tracked statistics and privacy setting (R640) |
+| `PUT` | `/api/stats/player` | active | Signed-in player syncs their tracked statistics and privacy opt-out setting (R640) |
+| `GET` | `/api/stats/players` | none | Public player summaries (games, win rate, favourite cards, fun stats), excluding private players, keeping Elo and rankings separate (R640) |
 
 **Deck and trio codes, version 2.** A code is the client's business (no route reads one: an import
 is a new saved deck, and a trio import posts its decks), but the format versions are server numbers

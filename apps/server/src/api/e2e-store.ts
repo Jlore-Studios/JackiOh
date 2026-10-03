@@ -55,6 +55,7 @@ import {
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
   createMemoryPlayerSettingsStore,
+  createMemoryPlayerStatsStore,
   createMemoryTutorialStore,
   matchModeIn,
   purgeExpiredRows,
@@ -63,6 +64,7 @@ import {
   type GameRecordTables,
   type LastBoardTables,
   type PlayerSettingsTables,
+  type PlayerStatsTables,
   type TutorialTables,
 } from "./memory-stores";
 import type {
@@ -101,6 +103,7 @@ type Tables = {
   TutorialTables &
   PlayerSettingsTables &
   LastBoardTables &
+  PlayerStatsTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -121,6 +124,7 @@ function emptyTables(): Tables {
     tutorial: [],
     playerSettings: [],
     lastBoards: [],
+    playerStats: [],
     gameRecords: [],
   };
 }
@@ -434,7 +438,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
     },
     getMany: async (profileIds) =>
       tables.profiles.filter((profile) => profileIds.includes(profile.id)).map(clone),
-    create: async ({ userId, email, rating, at }) => {
+    create: async ({ userId, email, rating, at, displayName }) => {
       if (tables.profiles.some((profile) => profile.userId === userId)) {
         throw new Error(`profiles.user_id is unique: ${userId} already has a profile`);
       }
@@ -444,6 +448,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
         id: `profile-${String(nextProfile)}`,
         userId,
         email,
+        displayName: displayName ?? null,
         status: "pending",
         rating,
         inMatchId: null,
@@ -465,6 +470,11 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.rating = rating;
+    },
+    setDisplayName: async (profileId, displayName) => {
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.displayName = displayName;
     },
     setInMatch: async (profileId, matchId) => {
       const row = profileOf(profileId);
@@ -561,6 +571,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.lastBoards = createMemoryLastBoardStore(() => tables);
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables);
+  // R640: each profile's player statistics and privacy setting.
+  store.playerStats = createMemoryPlayerStatsStore(() => tables);
 
   // -------------------------------------------------------------------------
   // Matches (§9.3, §9.5)

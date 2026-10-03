@@ -237,6 +237,10 @@ const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
 const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
 const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
 const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
+/** R640's proofs (SPEC §9.11): public card and player statistics page. */
+const SERVER_STATS_API_TEST = "../../../apps/server/test/api/stats.test.ts";
+const SERVER_STATS_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_STATS_ROUTE_TEST = "../../../apps/web/src/routes/stats.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3753,6 +3757,21 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       WEB_STATS_HOOK_TEST,
       WEB_LANDING_FAN_TEST,
       WEB_LANDING_TEST,
+    );
+  });
+
+  // Proved by apps/server test/api/stats.test.ts (publication gate at exactly 1000 live games, AI padding
+  // below gate, ignored at/above gate, tutorial exclusion, sample floor, filtering, drill-down, player sync),
+  // apps/server test/db/contract.ts (store.playerStats contract, privacy filtering, cascade on account delete),
+  // apps/web src/game/deckbuilder/filters.test.ts (sort by win rate, sample floor), and apps/web
+  // src/routes/stats.test.tsx (cards and players tabs, provisional banner, drill-down modal, personal stats).
+  it("R640 publishes card win rates with AI padding until the patch reaches 1000 live games and shows public player statistics", () => {
+    provenIn(
+      640,
+      SERVER_STATS_API_TEST,
+      SERVER_STATS_CONTRACT_TEST,
+      WEB_FILTERS_TEST,
+      WEB_STATS_ROUTE_TEST,
     );
   });
 });

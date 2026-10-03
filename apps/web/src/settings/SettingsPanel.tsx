@@ -30,6 +30,7 @@ import {
   type Settings,
 } from "./store.ts";
 import { readRememberedTab, rememberTab } from "./tabs.ts";
+import { syncPlayerStats } from "../stats/sync.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
@@ -48,7 +49,11 @@ type SectionSpec = {
 };
 
 const SECTIONS: readonly SectionSpec[] = [
-  { id: "gameplay", title: "Gameplay", controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"] },
+  {
+    id: "gameplay",
+    title: "Gameplay",
+    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "publicStats"],
+  },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
   { id: "audio", title: "Audio", controls: [] },
   { id: "account", title: "Account", controls: [] },
@@ -77,6 +82,10 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   reduceMotion: {
     label: "Reduce motion",
     hint: "Turn animations off, whatever your system setting says.",
+  },
+  publicStats: {
+    label: "Public player statistics",
+    hint: "Share your games, win rate and favourite cards on the public stats page. Off: visible only to you when signed in.",
   },
 };
 
@@ -109,6 +118,9 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
             const patch: Partial<Settings> = {};
             patch[setting] = event.currentTarget.checked;
             writeSettings(patch);
+            if (setting === "publicStats") {
+              void syncPlayerStats();
+            }
           }}
         />
       </label>

@@ -50,8 +50,9 @@ const DEFAULTS: Settings = {
   autoEndTurn: true,
   hoverPreviews: true,
   reduceMotion: false,
+  publicStats: true,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "reduceMotion"];
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "publicStats", "reduceMotion"];
 
 afterEach(() => {
   cleanup();

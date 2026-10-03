@@ -91,9 +91,11 @@ export const DEFAULT_FILTER: PoolFilter = {
   ownedOnly: true,
 };
 
-export type SortKey = "cost" | "name" | "rarity" | "attack" | "health" | "type";
+export type SortKey = "cost" | "name" | "rarity" | "attack" | "health" | "type" | "winRate";
 
-export const SORT_KEYS: readonly SortKey[] = ["cost", "name", "rarity", "attack", "health", "type"];
+export const SORT_KEYS: readonly SortKey[] = ["cost", "name", "rarity", "attack", "health", "type", "winRate"];
+
+export type CardWinRateInfo = { winRate: number | null; hasEnoughGames: boolean };
 
 export type PoolSort = { key: SortKey; dir: "asc" | "desc" };
 
@@ -221,13 +223,32 @@ function statOf(def: CardDef, key: "attack" | "health"): number | undefined {
  * Sorts pool ids. `dir` flips only the primary key; ties then break ascending by cost, name and
  * catalog index. For attack and health, a card with no stats goes last in both directions.
  */
-export function sortPool(ids: readonly string[], catalog: CatalogSnapshot, sort: PoolSort): string[] {
+export function sortPool(
+  ids: readonly string[],
+  catalog: CatalogSnapshot,
+  sort: PoolSort,
+  winRates?: ReadonlyMap<string, CardWinRateInfo>,
+): string[] {
   const flip = sort.dir === "desc" ? -1 : 1;
   return [...ids].sort((leftId, rightId) => {
     const left = catalog.cards[leftId];
     const right = catalog.cards[rightId];
     // `visiblePool` hands this only ids the catalog knows.
     if (left === undefined || right === undefined) return 0;
+
+    if (sort.key === "winRate") {
+      const leftRate = winRates?.get(leftId);
+      const rightRate = winRates?.get(rightId);
+      const leftQualifies = leftRate !== undefined && leftRate.hasEnoughGames && leftRate.winRate !== null;
+      const rightQualifies = rightRate !== undefined && rightRate.hasEnoughGames && rightRate.winRate !== null;
+      if (leftQualifies && !rightQualifies) return -1;
+      if (!leftQualifies && rightQualifies) return 1;
+      if (leftQualifies && rightQualifies && leftRate.winRate !== null && rightRate.winRate !== null) {
+        const byRate = compareNumbers(leftRate.winRate, rightRate.winRate) * flip;
+        if (byRate !== 0) return byRate;
+      }
+      return compareTies(left, right);
+    }
 
     if (sort.key === "attack" || sort.key === "health") {
       const leftStat = statOf(left, sort.key);
@@ -256,16 +277,22 @@ export function visiblePool(
   collection: Collection | null,
   filter: PoolFilter,
   sort: PoolSort,
+  winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  return filteredAndSorted(poolFrom(catalog, filter.ownedOnly ? collection : null), catalog, filter, sort);
+  return filteredAndSorted(poolFrom(catalog, filter.ownedOnly ? collection : null), catalog, filter, sort, winRates);
 }
 
 /**
  * What the almanac's grid shows (R630): every catalog card, tokens included, filtered, then sorted.
  * There is no collection, so `filter.ownedOnly` is not read.
  */
-export function almanacPool(catalog: CatalogSnapshot, filter: PoolFilter, sort: PoolSort): readonly string[] {
-  return filteredAndSorted(Object.keys(catalog.cards), catalog, filter, sort);
+export function almanacPool(
+  catalog: CatalogSnapshot,
+  filter: PoolFilter,
+  sort: PoolSort,
+  winRates?: ReadonlyMap<string, CardWinRateInfo>,
+): readonly string[] {
+  return filteredAndSorted(Object.keys(catalog.cards), catalog, filter, sort, winRates);
 }
 
 function filteredAndSorted(
@@ -273,12 +300,13 @@ function filteredAndSorted(
   catalog: CatalogSnapshot,
   filter: PoolFilter,
   sort: PoolSort,
+  winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
   const kept = shelf.filter((id) => {
     const def = catalog.cards[id];
     return def !== undefined && matchesFilter(def, filter);
   });
-  return sortPool(kept, catalog, sort);
+  return sortPool(kept, catalog, sort, winRates);
 }
 
 /** Per-bucket card counts for a deck's mana curve. Ids the catalog does not know are skipped. */
