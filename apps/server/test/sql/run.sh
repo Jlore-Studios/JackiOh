@@ -47,10 +47,13 @@ failed=0
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER" -e POSTGRES_PASSWORD=postgres postgres:16 >/dev/null
+# Ready means the real server. The image's entrypoint first starts a temporary one for its own
+# setup, which answers on the socket but not on TCP and then shuts down, cutting off whatever is
+# connected (#100). Asked over TCP, pg_isready hears only the real server.
 i=0
 ready=0
 while [ "$i" -lt 60 ]; do
-  if docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then
+  if docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then
     ready=1
     break
   fi
