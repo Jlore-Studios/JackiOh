@@ -181,6 +181,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:5965999156": {
+      "at": "2026-10-03T05:35:05Z",
+      "lines": [
+        "@jgoetzmann-bot force override, you can commit this"
+      ]
     }
   },
   "items": {
