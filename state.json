@@ -991,6 +991,7 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "planned_at": "2026-10-03T16:39:41Z",
       "provider": "muse",
       "queued_at": "2026-10-02T17:42:45Z",
       "requested_by": "MaxGoetzmann",
