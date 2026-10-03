@@ -656,12 +656,11 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "cognition"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "sha": "f499d14764aec796a5d3837074c8109d76d3bbaa"
+        "sha": "b885cf702733e95b7db29879b08e3f086930f2be",
+        "tiers": {}
       }
     },
     "145": {
