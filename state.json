@@ -1086,8 +1086,8 @@
     },
     "claude-3": {
       "infra": {
-        "at": "2026-10-03T14:56:10Z",
-        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+        "at": "2026-10-03T15:48:06Z",
+        "reason": "the claude CLI could not run: Failed to authenticate. API Error: 401 OAuth access token is invalid."
       },
       "spent": [
         {
