@@ -315,6 +315,9 @@
       "stop_requested": false
     },
     "46": {
+      "asks": [
+        "c:5965682507"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -323,8 +326,8 @@
       "last_findings": [],
       "pending_request": false,
       "question": "Issue #46 says not to start until #40 (Patch v0.2.0) has shipped, and it hasn't: main (0e5800e) has only the Core set, and the v0.2.0 work is still on the unmerged origin/v0.2.0 branch (newest commit fb6a927). Should I (a) wait and re-queue #46 once v0.2.0 is merged into main, (b) build only the repo-side items now against Core-only main (move the session out of localStorage for S15, add a Terms page and an accessibility page for L04, enforce the CSP for W05, add server tests for G1\u2013G6), and leave the Classic/Classic+ checks for later, or (c) split #46 into a repo-only code issue plus an owner checklist for everything that needs a person or a live service?",
-      "queued_at": "2026-10-01T13:41:00Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-03T04:51:26Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "36806498901",
       "started_at": "2026-10-01T02:45:28Z",
       "stop_requested": false
