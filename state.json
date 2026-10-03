@@ -1000,8 +1000,11 @@
     "what": "build #88 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-03T14:56:58Z",
-    "notes": [],
+    "at": "2026-10-03T15:47:21Z",
+    "notes": [
+      "queued #152 from an assignment nothing answered",
+      "started a night run, as a lane was free: #113 (medium) is queued to build, for `muse` (another run waits for `claude-1`)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
