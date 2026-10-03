@@ -1,7 +1,7 @@
 // #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: "Pool exactly #31, #51, #82 with repeats allowed;
 // radiant 2 base + 2 radiant"). The Engine cell is "KY pool = #31, #51, #82 (no tokens, not #57);
-// repeats allowed", so the pool itself is asserted twice: once against §5.1's query directly, and
-// once through seeded play.
+// repeats allowed" — and, since patch v0.2.0's one format (R380), the KY cards of every set — so the
+// pool itself is asserted twice: once against §5.1's query directly, and once through seeded play.
 //
 // Rulings proved here: R60 (catalog-generated cards may repeat), R4 (hand cap 10, extras burned),
 // R74/§5.2 (a generated Radiant card carries the instance flag), §5.1 (no tokens, never the
@@ -16,20 +16,23 @@ function handDefs(g: Scenario): string[] {
   return g.hand("p1").map((card) => card.defId);
 }
 
-const KY_POOL = ["core-031", "core-051", "core-082"];
+/** R380: the KY tag of every set — Core #31, #51, #82 and Classic+ #41, #42, #62 — no token, never #57. */
+const KY_POOL = ["core-031", "core-051", "core-082", "classicplus-041", "classicplus-042", "classicplus-062"];
 
 describe("#57 Conjure KY — the pool", () => {
-  it("§5.1 the KY pool is exactly #31, #51 and #82", () => {
-    expect(pool("57", { tags: ["KY"] }).map((def) => def.id)).toEqual(KY_POOL);
+  it("R380 §5.1 the KY pool is exactly Core #31, #51, #82 and Classic+ #41, #42, #62", () => {
+    expect(pool("core-057", { tags: ["KY"] }).map((def) => def.id)).toEqual(KY_POOL);
   });
 
   it("§5.1 the pool never offers the Token-tagged KY card (#51.1) nor #57 itself", () => {
-    const ids = pool("57", { tags: ["KY"] }).map((def) => def.id);
+    const ids = pool("core-057", { tags: ["KY"] }).map((def) => def.id);
 
     expect(ids).not.toContain("core-051-1");
+    expect(ids).not.toContain("classicplus-042-1");
     expect(ids).not.toContain("core-057");
-    // The token is only reachable by naming the token pool, which this card never does.
-    expect(query({ tags: ["KY", "Token"] }).map((def) => def.id)).toEqual(["core-051-1"]);
+    // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift) are only reachable by naming the token
+    // pool, which this card never does.
+    expect(query({ tags: ["KY", "Token"] }).map((def) => def.id)).toEqual(["core-051-1", "classicplus-042-1"]);
   });
 });
 

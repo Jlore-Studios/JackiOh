@@ -16,10 +16,16 @@
 -- every RETENTION_PURGE_INTERVAL_SECONDS, next to the match reaper. No pg_cron.
 --
 -- match_actions is append-only (0004, app.deny_row_mutation). The purge is the
--- one path that deletes from it: app.purge_expired_rows runs with the
--- function-local setting `jackioh.retention_purge = 'on'`, and the guard lets a
--- DELETE through only while that is set. The setting ends with the function,
--- so no other statement in the same transaction inherits it.
+-- one path that deletes from it: app.purge_expired_rows sets
+-- `jackioh.retention_purge = 'on'` for its own deletes, and the guard lets a
+-- DELETE through only while that is set. The function clears it again before it
+-- returns, so no other statement in the same transaction inherits it.
+--
+-- It is set with set_config() in the body, never with a `set` clause on the
+-- function: since Postgres 15 only a superuser may attach a parameter Postgres
+-- does not know to a function, and the role db:migrate runs as on Supabase is not
+-- one ("permission denied to set parameter"). That clause was this file's first
+-- version, which src/db/migrate.ts still accepts as applied (REWRITTEN).
 -- ============================================================================
 
 
@@ -72,12 +78,14 @@ create or replace function app.purge_expired_rows(
 ) returns table (code_attempts bigint, match_actions bigint)
 language plpgsql
 set search_path = ''
-set jackioh.retention_purge = 'on'
 as $$
 declare
   v_attempts bigint;
   v_actions  bigint;
 begin
+  -- Transaction-local, and cleared below; a failed delete aborts the transaction.
+  perform set_config('jackioh.retention_purge', 'on', true);
+
   delete from public.code_attempts a
    where a.at < p_code_attempts_before;
   get diagnostics v_attempts = row_count;
@@ -89,6 +97,7 @@ begin
      and m.ended_at < p_match_actions_before;
   get diagnostics v_actions = row_count;
 
+  perform set_config('jackioh.retention_purge', 'off', true);
   return query select v_attempts, v_actions;
 end;
 $$;

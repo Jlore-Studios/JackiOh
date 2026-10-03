@@ -26,7 +26,12 @@ const GREED = "core-094";
 /** Even, cost 2 — what the draw clause names. */
 const TWO_COST = ["core-020", "core-045", "core-056"] as const; // Pointmaster, Deft Duelist, Jilliax
 /** Odd — what the exile clause names. */
-const ODD_COST = ["core-008", "core-005", "core-043", "core-019"] as const; // 1, 1, 3, 3
+const ODD_COST = ["core-008", "core-005", "core-053", "core-019"] as const; // 1, 1, 3, 3
+/**
+ * A (2) Cost Spell on top of a library the test does not look at: Greed draws it. (#16 Hit Job was it
+ * until patch v0.2.0 made it (3), which Greed exiles.)
+ */
+const FILLER_SPELL = "core-069"; // #69 Call to Arms
 /** Even and not 2, so neither clause touches it. */
 const FOUR_COST = "core-025";
 /** X-cost, exempt from both clauses (R66). */
@@ -63,7 +68,7 @@ function greedBoard(seed: string, radiant = false): Scenario {
       library: [TWO_COST[0], ODD_COST[0], ODD_COST[2], X_COST, FOUR_COST],
       graveyard: [ODD_COST[3], TWO_COST[1]],
     },
-    p2: { hand: ["core-005"], library: ["core-016"] },
+    p2: { hand: ["core-005"], library: [FILLER_SPELL] },
   });
 }
 
@@ -75,7 +80,7 @@ describe("#94 Genn's Greed — mana", () => {
   it("§2.3 base gains 2 temporary mana after paying its own 4", () => {
     const s = scenario({
       seed: "core-094-mana-base",
-      p1: { hand: [GREED, "core-005"], library: ["core-016"] },
+      p1: { hand: [GREED, "core-005"], library: [FILLER_SPELL] },
       p2: { hand: ["core-005"] },
     });
     s.expectMana("p1", 4);
@@ -90,7 +95,7 @@ describe("#94 Genn's Greed — mana", () => {
   it("§2.3 the gain may take current mana ABOVE max", () => {
     const s = scenario({
       seed: "core-094-mana-above-max",
-      p1: { hand: [GREED, "core-005"], library: ["core-016"], mana: 4 },
+      p1: { hand: [GREED, "core-005"], library: [FILLER_SPELL], mana: 4 },
       p2: { hand: ["core-005"] },
     });
 
@@ -104,7 +109,7 @@ describe("#94 Genn's Greed — mana", () => {
   it("§3.2 the spell reaches the graveyard and counts as a card played", () => {
     const s = scenario({
       seed: "core-094-graveyard",
-      p1: { hand: [GREED, "core-005"], library: ["core-016"] },
+      p1: { hand: [GREED, "core-005"], library: [FILLER_SPELL] },
       p2: { hand: ["core-005"] },
     });
 
@@ -118,7 +123,7 @@ describe("#94 Genn's Greed — mana", () => {
   it("the mana goes to the CASTER, not the opponent", () => {
     const s = scenario({
       seed: "core-094-mana-side",
-      p1: { hand: [GREED, "core-005"], library: ["core-016"] },
+      p1: { hand: [GREED, "core-005"], library: [FILLER_SPELL] },
       p2: { hand: ["core-005"], mana: 4 },
     });
 
@@ -133,7 +138,7 @@ describe("#94 Genn's Greed — radiant mana", () => {
   it('§8 "Gain 6": only the number changes, and 6 takes current mana past MAX_MANA', () => {
     const s = scenario({
       seed: "core-094-mana-radiant",
-      p1: { hand: [{ def: GREED, radiant: true }, "core-005"], library: ["core-016"] },
+      p1: { hand: [{ def: GREED, radiant: true }, "core-005"], library: [FILLER_SPELL] },
       p2: { hand: ["core-005"] },
     });
 
@@ -147,7 +152,7 @@ describe("#94 Genn's Greed — radiant mana", () => {
   it("radiant keeps the same cost of 4 (§8 Conventions: only the gain moved)", () => {
     const s = scenario({
       seed: "core-094-radiant-cost",
-      p1: { hand: [{ def: GREED, radiant: true }, "core-005"], library: ["core-016"], mana: 3 },
+      p1: { hand: [{ def: GREED, radiant: true }, "core-005"], library: [FILLER_SPELL], mana: 3 },
       p2: { hand: ["core-005"] },
     });
 
@@ -182,7 +187,7 @@ describe("#94 Genn's Greed — the 2-cost draw (R66)", () => {
         hand: [GREED],
         library: [TWO_COST[0], TWO_COST[1], FOUR_COST],
       },
-      p2: { hand: ["core-005"], library: ["core-016"] },
+      p2: { hand: ["core-005"], library: [FILLER_SPELL] },
     });
     const drawnBefore = s.state.counters.drawn;
 
@@ -204,7 +209,7 @@ describe("#94 Genn's Greed — the 2-cost draw (R66)", () => {
         // A printed 3 discounted to 2, and a printed 2 pushed to 3.
         library: [ODD_COST[2], TWO_COST[0]],
       },
-      p2: { hand: ["core-005"], library: ["core-016"] },
+      p2: { hand: ["core-005"], library: [FILLER_SPELL] },
     });
     const library = s.pile("p1", "library");
     const discounted = library[0];
@@ -226,7 +231,7 @@ describe("#94 Genn's Greed — the 2-cost draw (R66)", () => {
     const s = scenario({
       seed: "core-094-x-draw",
       p1: { field: [KEEP_TURN], hand: [GREED], library: [X_COST, "core-024"] },
-      p2: { hand: ["core-005"], library: ["core-016"] },
+      p2: { hand: ["core-005"], library: [FILLER_SPELL] },
     });
 
     s.play(GREED);
@@ -257,7 +262,7 @@ describe("#94 Genn's Greed — the 2-cost draw (R66)", () => {
         ],
         library: [TWO_COST[0], TWO_COST[1]],
       },
-      p2: { hand: ["core-005"], library: ["core-016"] },
+      p2: { hand: ["core-005"], library: [FILLER_SPELL] },
     });
 
     s.play(GREED);
@@ -395,7 +400,7 @@ describe("#94 Genn's Greed — which cards are odd-cost is decided once (R66, R1
     const s = scenario({
       seed: "r7-card-genn-void",
       p1: { field: ["core-008"], hand: [GREED, "core-100"], library: ["core-005"] },
-      p2: { hand: ["core-005"], library: ["core-016"], field: ["core-008"] },
+      p2: { hand: ["core-005"], library: [FILLER_SPELL], field: ["core-008"] },
     });
     const c = s.state.counters;
     const before = c.drawn + c.played + c.destroyed + c.exiled;

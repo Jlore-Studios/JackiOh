@@ -16,14 +16,20 @@
 // view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
 // it is the last N events (§10.8), so a badge could appear and never leave.
 //
-// SECOND FINDING, on `HeroView.powers`: the view now carries every Heroic Power a player
-// controls, each separately once-per-turn (R43), and each one's `instanceId`. `contract.ts` has
-// one `testid.power` and `BoardControl = "power"` carries no instance id, so only `power`
-// (`powers[0]`) is clickable; the rest are drawn as tags. Addressing the second power needs a
-// target that names it, e.g. `{ on: "power"; instanceId }` on `ClickTarget`.
+// The Heroic Powers (R43, R384, R510). The view carries every Heroic Power a player controls, each
+// separately once per turn, with its `instanceId`. Each of the viewer's own is a button that
+// reports `{ on: "activate", instanceId }`, the click every Activate control reports
+// (ActivateControl.tsx), so `actions.ts` builds a power exactly as it builds any activation:
+// whichever of `activatePower` (R43's alias) or `activate` `legalActions` lists for it, sent at
+// once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
+// when there are several. The first keeps the `power` testid the e2e specs press; any further one
+// is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
+// `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
+// `activated` row, which plays on its card (`card-<instanceId>`).
 
 import type { ReactElement } from "react";
 
+import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { animTestid } from "./animations.ts";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
 import {
@@ -36,7 +42,7 @@ import {
   type Side,
 } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
-import type { PlayerView } from "@jackioh/shared";
+import type { HeroPowerView, PlayerView } from "@jackioh/shared";
 
 export type HeroProps = {
   view: PlayerView;
@@ -57,8 +63,6 @@ export default function Hero(props: HeroProps): ReactElement {
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
   const target: ClickTarget = { on: "hero", side };
-
-  const powerLegal = isLegal(props.highlight, testid.power);
 
   const modifiersId = animTestid.modifiers(side);
   const modifiers = seat.modifiers ?? [];
@@ -100,31 +104,8 @@ export default function Hero(props: HeroProps): ReactElement {
 
       {hero.power !== null &&
         (side === "you" ? (
-          // The one `power` testid in the DOM. `usedThisTurn` is drawn, not obeyed: the engine
-          // decides through `legalActions`, which is what `props.highlight` carries.
-          <button
-            type="button"
-            className="power-button"
-            data-testid={testid.power}
-            data-instance-id={hero.power.instanceId}
-            data-legal={legalAttr(powerLegal)}
-            data-selected={isSelected(props.highlight, testid.power) ? "true" : undefined}
-            data-animating={props.animating?.get(testid.power)}
-            data-glow={glowAttr(props.highlight, testid.power)}
-            data-used={hero.power.usedThisTurn ? "true" : "false"}
-            data-x={hero.power.x}
-            aria-disabled={powerLegal ? undefined : "true"}
-            disabled={!powerLegal}
-            title={`${hero.power.name} (X ${hero.power.x})`}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (!powerLegal) return;
-              props.onControl?.("power");
-            }}
-          >
-            {hero.power.name}
-            <span className="power-x">{hero.power.x}</span>
-          </button>
+          // The one `power` testid in the DOM.
+          <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
           <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
             {hero.power.name}
@@ -132,21 +113,25 @@ export default function Hero(props: HeroProps): ReactElement {
           </span>
         ))}
 
-      {/* Any further power this player controls (R43). Drawn, not clickable: see the note above. */}
+      {/* Any further power this player controls (R43), each its own control on your side. */}
       {(hero.powers ?? [])
         .filter((power) => power.instanceId !== hero.power?.instanceId)
-        .map((power) => (
-          <span
-            key={power.instanceId}
-            className="power-tag power-extra"
-            data-instance-id={power.instanceId}
-            data-used={power.usedThisTurn ? "true" : "false"}
-            data-x={power.x}
-          >
-            {power.name}
-            <span className="power-x">{power.x}</span>
-          </span>
-        ))}
+        .map((power) =>
+          side === "you" ? (
+            <PowerButton key={power.instanceId} power={power} testId={testid.powerOf(power.instanceId)} extra props={props} />
+          ) : (
+            <span
+              key={power.instanceId}
+              className="power-tag power-extra"
+              data-instance-id={power.instanceId}
+              data-used={power.usedThisTurn ? "true" : "false"}
+              data-x={power.x}
+            >
+              {power.name}
+              <span className="power-x">{power.x}</span>
+            </span>
+          ),
+        )}
 
       {/* R169: one badge per `SideView.modifiers` entry, in the view's order. Always present, so
           `modifierChanged` has an element to fade even when the badge that changed is the one that
@@ -172,5 +157,51 @@ export default function Hero(props: HeroProps): ReactElement {
 
       <PopLayer pops={props.pops} />
     </div>
+  );
+}
+
+/**
+ * One of the viewer's Heroic Powers. A press reports the power's instance as an activation
+ * (`{ on: "activate" }`), never the `power` board control, so a power with targets is built like any
+ * activation; `data-instance-id` is also what a drag from it reads (game/drag/targets.ts).
+ */
+function PowerButton({
+  power,
+  testId,
+  extra = false,
+  props,
+}: {
+  power: HeroPowerView;
+  testId: string;
+  extra?: boolean;
+  props: HeroProps;
+}): ReactElement {
+  const live = isLegal(props.highlight, testId);
+  const flashing = props.animating?.get(testid.card(power.instanceId)) === ACTIVATED_EVENT;
+  return (
+    <button
+      type="button"
+      className={cx("power-button", extra && "power-extra")}
+      data-testid={testId}
+      data-instance-id={power.instanceId}
+      data-legal={legalAttr(live)}
+      data-selected={isSelected(props.highlight, testId) ? "true" : undefined}
+      data-animating={props.animating?.get(testId)}
+      data-glow={glowAttr(props.highlight, testId)}
+      data-used={power.usedThisTurn ? "true" : "false"}
+      data-x={power.x}
+      data-flash={flashing ? ACTIVATED_EVENT : undefined}
+      aria-disabled={live ? undefined : "true"}
+      disabled={!live}
+      title={`${power.name} (X ${power.x})`}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!live) return;
+        props.onClick?.({ on: "activate", instanceId: power.instanceId });
+      }}
+    >
+      {power.name}
+      <span className="power-x">{power.x}</span>
+    </button>
   );
 }

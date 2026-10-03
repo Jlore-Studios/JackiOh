@@ -39,24 +39,39 @@ import type {
   TargetFilter,
   ZoneChoice,
 } from "@jackioh/shared";
-import { hasKeyword, opponentOf } from "@jackioh/shared";
+import { opponentOf } from "@jackioh/shared";
 import { defOf } from "./catalog";
+import { cardTypeOf } from "./faces";
 import { MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X } from "./config";
-import { faceOf } from "./layers";
-import { effectiveCost, isXCost } from "./mana";
+import { whyPlayBanned } from "./costRules";
+import { graveyardPaymentsFor, playableFromGraveyard, type PlayPayment } from "./graveyardPlay";
+import { unitHas } from "./layers";
+import { effectiveCost, isXCost, playCost } from "./mana";
+import { paramDeclOf, paramValue } from "./params";
 import type { StaticFlags } from "./script";
 import { flagsOf, scriptOf } from "./scripts";
-import type { CardInstance, GameState } from "./state";
+import { findInstance, type CardInstance, type GameState } from "./state";
+import { spellCannotReach } from "./restrictions";
+import { copiedChoosesX, copiesText, textFaceOf } from "./subsystems/copiedText";
 import {
+  canPayToTarget,
+  targetingDiscardSets,
+  targetingDiscardsOf,
+  whyTargetingDiscardsRefused,
+} from "./targeting";
+import {
+  acceptsStackCard,
   activeUnitsOf,
   cardAt,
+  carrierZonesFor,
   firstFreeZone,
-  isLocked,
   isOpen,
+  isLocked,
   isReserved,
-  openZones,
+  pileAt,
   rowSize,
   slotsOf,
+  whyCannotCarry,
   type ZoneSlot,
 } from "./zones";
 
@@ -82,7 +97,7 @@ const ROWS: readonly Row[] = ["units", "backrow"];
 
 /** The pick kinds a `TargetFilter.of` may name, in the order selections are offered in. */
 type PickKind = NonNullable<TargetFilter["of"]>[number];
-const PICK_KIND_ORDER: readonly PickKind[] = ["unit", "backrow", "hand", "zone", "hero"];
+const PICK_KIND_ORDER: readonly PickKind[] = ["unit", "backrow", "hand", "graveyard", "zone", "hero"];
 
 // ---------------------------------------------------------------------------
 // What the card asked for
@@ -161,18 +176,48 @@ export function giftedMakesRadiant(state: GameState, player: PlayerId, costPaid:
  * face step 5 will run, which is known at step 1: the cost it pays is.
  */
 export function resolvingFace(state: GameState, player: PlayerId, card: CardInstance, costPaid: number): CardInstance {
-  if (card.radiant || !giftedMakesRadiant(state, player, costPaid)) return card;
-  return { ...card, radiant: true };
+  const face = card.radiant || !playMadeRadiant(state, player, card, costPaid) ? card : { ...card, radiant: true };
+  // B5 E14, R399: a copier (Classic #57 Echo) declares the choices of the Spell whose text it has, on
+  // the face that Spell was played on — its own face only adds its Echo (`subsystems/copiedText.ts`).
+  return textFaceOf(state, face);
 }
 
-/** What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65). */
+/**
+ * Classic+ #68 Organic Produce, R449: whether a permanent on this player's side makes every card carrying
+ * one of its tags Radiant as the player plays it (`radiantPlaysTagged`) — R213's rule by tag, on every
+ * such play (a cast included, R70) rather than the first cheap one. The card's text is its
+ * controller's (§8 Conventions), a Vanilla one has none (`flagsOf`), and it never catches its own
+ * play: step 3 runs before step 4 puts it on the field (R119).
+ */
+export function taggedPlayRadiant(state: GameState, player: PlayerId, card: CardInstance): boolean {
+  const tags = defOf(state, card.defId).tags;
+  if (tags.length === 0) return false;
+  return permanentsOf(state, player).some((held) => {
+    const wanted = flagsOf(held).radiantPlaysTagged;
+    return wanted !== undefined && wanted.some((tag) => tags.includes(tag));
+  });
+}
+
+/**
+ * §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
+ * card (R213) or a tag rule's (Classic+ #68). Step 1 reads it to know the face the play's choices
+ * answer (R214), and step 3 applies it.
+ */
+export function playMadeRadiant(state: GameState, player: PlayerId, card: CardInstance, costPaid: number): boolean {
+  return giftedMakesRadiant(state, player, costPaid) || taggedPlayRadiant(state, player, card);
+}
+
+/**
+ * What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as
+ * a play wherever the card lies, so a play from a graveyard pays the player's prices (E11, R454).
+ */
 function costWith(state: GameState, card: CardInstance, x: number | undefined, embiggen: boolean | undefined): number {
   const probe: CardInstance = {
     ...card,
     x: choosesX(state, card) ? (x ?? 0) : card.x,
     embiggened: hasEmbiggenPrice(state, card) ? embiggen === true : card.embiggened,
   };
-  return effectiveCost(state, probe);
+  return playCost(state, probe);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,48 +226,90 @@ function costWith(state: GameState, card: CardInstance, x: number | undefined, e
 
 /** §5.1: a Unit goes in the unit row, every other permanent in the backrow. */
 export function rowForCard(state: GameState, card: CardInstance): Row {
-  return defOf(state, card.defId).type === "Unit" ? "units" : "backrow";
+  return cardTypeOf(state, card) === "Unit" ? "units" : "backrow";
 }
 
 /** §10.5 step 4: permanents take a zone, a Spell resolves without one. */
 export function needsZone(state: GameState, card: CardInstance): boolean {
-  return defOf(state, card.defId).type !== "Spell";
+  return cardTypeOf(state, card) !== "Spell";
 }
 
 /**
- * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's printed face,
- * because at play time the card is still in hand: `unitView` is the *field* reading — it adds
- * `grantedKeywords` and layer-5 auras, and no effect reaches a card in a hand with either — while
- * `faceOf` is the radiant-aware printed text, which is what a card in hand has (§5.2, §10.4 layer
- * 1). Only the unit row holds a pile (§3.2's zone table), so a backrow card never stacks.
+ * §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's keywords as they stand
+ * where it is (§10.4, `layers.unitHas`): its face's, the ones granted to it in hand (B5 E38) and the
+ * ones an aura gives the cards in a hand (Classic+ #33 Ivory Tower's "Your cards have Stack"). A backrow
+ * card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
  */
 export function playsOnStack(state: GameState, card: CardInstance): boolean {
-  if (!needsZone(state, card) || rowForCard(state, card) !== "units") return false;
-  return hasKeyword(faceOf(state, card).keywords, "Stack");
+  if (!needsZone(state, card)) return false;
+  return unitHas(state, card, "Stack");
 }
 
 /**
  * §3.2: the zone a Stack card may enter. Occupancy is exactly the refusal Stack lifts, so what is
- * left is the two that occupancy never covered: a Locked zone "accepts no summons until the game
- * ends" and a zone reserved for a dying Reborn unit "counts as occupied for every other card that
- * would enter it" (R64). Neither takes a Stack card either.
+ * left is what occupancy never covered: a Locked zone "accepts no summons until the game ends", a
+ * zone reserved for a dying Reborn unit "counts as occupied for every other card that would enter it"
+ * (R64) — and a backrow zone carrying a Unit takes nothing more (R446). `zones.acceptsStackCard`.
  */
 function acceptsStack(state: GameState, ref: ZoneSlot): boolean {
-  return ref.row === "units" && !isLocked(state, ref) && !isReserved(state, ref);
+  return acceptsStackCard(state, ref);
 }
 
 /**
  * §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
- * the occupied unit zones for a Stack card (§6.2). `refuseZone` below reads the same two rules off
- * the same pair of predicates, so the client's greyed-out button and `reduce`'s refusal agree.
+ * the occupied zones of that row for a Stack card (§6.2, B5 E21), plus, for a Unit, the backrow zones
+ * of a carrier that holds none yet (R446, `zones.carrierZonesFor`). `refuseZone` below reads the same
+ * rules off the same predicates, so the client's greyed-out button and `reduce`'s refusal agree.
+ *
+ * R391 (B4.5): with the Tribute a play pays (`tributes`), also every zone that Tribute empties
+ * (`freedByTribute`), in lane order with the open ones — the zone is judged once the Tribute is paid,
+ * since §10.5 pays at step 2 and places at step 4.
  */
-export function legalZonesFor(state: GameState, player: PlayerId, card: CardInstance): ZoneChoice[] {
+export function legalZonesFor(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  tributes: readonly string[] = [],
+): ZoneChoice[] {
   if (!needsZone(state, card)) return [];
   const row = rowForCard(state, card);
   const refs = playsOnStack(state, card)
     ? slotsOf(player, row).filter((ref) => acceptsStack(state, ref))
-    : openZones(state, player, row);
-  return refs.map((ref) => ({ row: ref.row, lane: ref.lane }));
+    : slotsOf(player, row).filter((ref) => isOpen(state, ref) || freedByTribute(state, ref, tributes));
+  const carriers = row === "units" ? carrierZonesFor(state, player) : [];
+  return [...refs, ...carriers].map((ref) => ({ row: ref.row, lane: ref.lane }));
+}
+
+/**
+ * R391 (B4.5): whether the Tribute a play pays empties this zone for it — a zone whose pile is exactly
+ * one card, and that card one the Tribute takes (a Stack pile's next card would resume, R13, so
+ * tributing its top frees nothing), without Reborn (its zone would be reserved for the return, R64),
+ * in a zone neither Locked nor reserved for anything else. A zone that is open anyway is not "freed".
+ * The rule is the row's, not the Unit row's alone: a backrow card with a Tribute cost reads it the
+ * same way, though a Tribute pays with units and so empties a backrow zone only when a unit sits in
+ * one. An Activate cost needs no zone and never comes here (B3.2).
+ */
+export function freedByTribute(state: GameState, ref: ZoneSlot, tributes: readonly string[]): boolean {
+  if (tributes.length === 0) return false;
+  if (isLocked(state, ref) || isReserved(state, ref)) return false;
+  const held = cardAt(state, ref);
+  if (held === null || !tributes.includes(held.id)) return false;
+  if (ref.row === "units" && (pileAt(state, ref)?.length ?? 0) !== 1) return false;
+  return !unitHas(state, held, "Reborn");
+}
+
+/**
+ * R64, R391: the zone a play that names none takes — the leftmost open zone of its row, else, on a
+ * full row, the leftmost zone its own Tribute empties. Null when there is neither.
+ */
+export function defaultZoneFor(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  tributes: readonly string[] = [],
+): ZoneSlot | null {
+  const row = rowForCard(state, card);
+  return firstFreeZone(state, player, row) ?? slotsOf(player, row).find((ref) => freedByTribute(state, ref, tributes)) ?? null;
 }
 
 /**
@@ -231,6 +318,8 @@ export function legalZonesFor(state: GameState, player: PlayerId, card: CardInst
  * its cost hook answers the X, so there is nothing to choose and no X travels in its play.
  */
 export function choosesX(state: GameState, instance: CardInstance): boolean {
+  // B5 E14, R545: a copier pays its own price and chooses the X of an X-cost text it copies.
+  if (copiesText(instance)) return copiedChoosesX(state, instance);
   return isXCost(state, instance) && scriptOf(instance).cost === undefined;
 }
 
@@ -240,20 +329,35 @@ export function choosesX(state: GameState, instance: CardInstance): boolean {
  * the values this passes and `refuseX` refuses exactly the ones it names, so the picker and the
  * reducer's refusal cannot disagree.
  */
-export function whyXRefused(state: GameState, player: PlayerId, value: number): string | null {
+export function whyXRefused(
+  state: GameState,
+  player: PlayerId,
+  value: number,
+  most: number = state.players[player].mana.current,
+): string | null {
   if (!Number.isInteger(value)) return "X must be a whole number";
   if (value < 0) return "X cannot be negative";
   if (value < MIN_CHOSEN_X) return `X must be at least ${MIN_CHOSEN_X}`;
-  if (value > state.players[player].mana.current) return "X is above your current mana";
+  if (value > most) return most < state.players[player].mana.current ? "X is above your mana after paying" : "X is above your current mana";
   return null;
+}
+
+/**
+ * The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
+ * copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
+ */
+function mostX(state: GameState, player: PlayerId, card: CardInstance): number {
+  const mana = state.players[player].mana.current;
+  if (!copiesText(card)) return mana;
+  return mana - playCost(state, card);
 }
 
 /** §2.3, R348: every X `whyXRefused` passes, lowest first. Not an X-cost card, no X values. */
 export function legalXValues(state: GameState, player: PlayerId, card: CardInstance): number[] {
   if (!choosesX(state, card)) return [];
-  const mana = state.players[player].mana.current;
-  return Array.from({ length: Math.max(0, mana) + 1 }, (_, i) => i).filter(
-    (x) => whyXRefused(state, player, x) === null,
+  const most = mostX(state, player, card);
+  return Array.from({ length: Math.max(0, most) + 1 }, (_, i) => i).filter(
+    (x) => whyXRefused(state, player, x, most) === null,
   );
 }
 
@@ -307,8 +411,12 @@ export const SHEEP_TRIBUTE_VALUE = 2;
  * an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
  * take the larger worth, as they take the larger Tribute.
  */
-export function tributeValueOf(_state: GameState, unit: CardInstance): number {
-  const worth = flagsOf(unit).tributeWorth;
+export function tributeValueOf(state: GameState, unit: CardInstance): number {
+  const flag = flagsOf(unit).tributeWorth;
+  // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
+  // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
+  const worth =
+    typeof flag === "number" && paramDeclOf(state, unit.defId, "worth") !== undefined ? paramValue(state, unit, "worth") : flag;
   return typeof worth === "number" && worth > 1 ? worth : 1;
 }
 
@@ -428,15 +536,69 @@ function cardAllowed(
   filter: TargetFilter | undefined,
   held: CardInstance,
   self: CardInstance,
+  player: PlayerId,
 ): boolean {
   if (filter?.excludeSelf === true && held.id === self.id) return false;
   const def = defOf(state, held.defId);
-  return typeAllows(filter, def.type) && tagsAllow(filter, def.tags);
+  if (!typeAllows(filter, cardTypeOf(state, held)) || !tagsAllow(filter, def.tags)) return false;
+  // §10.6, B5: the v0.2.0 filter fields. The cost is R65's where the card is now (a hand card at its
+  // hand cost; an X card on the field at the X it was played for, which it keeps there).
+  const range = filter?.costRange;
+  if (range !== undefined) {
+    const cost = effectiveCost(state, held);
+    if (range.min !== undefined && cost < range.min) return false;
+    if (range.max !== undefined && cost > range.max) return false;
+  }
+  if (filter?.damaged === true && held.damage <= 0) return false;
+  if (filter?.plague === true && (held.counters.plague ?? 0) <= 0) return false;
+  return checkAllows(state, filter, self, player, held, { pick: "instance", instanceId: held.id });
 }
 
-/** A hero has no card type and no tags, so a filter that names either cannot reach one. */
-function heroAllowed(filter: TargetFilter | undefined): boolean {
-  return filter?.type === undefined && filter?.tags === undefined;
+/**
+ * §10.6: a filter's named predicate (`TargetFilter.check`), the declaring card's own `targetChecks`
+ * entry, asked with the candidate — null for a hero or a zone. A name the script does not hold admits
+ * nothing, so a misspelt check never widens a declaration.
+ */
+function checkAllows(
+  state: GameState,
+  filter: TargetFilter | undefined,
+  self: CardInstance,
+  player: PlayerId,
+  candidate: CardInstance | null,
+  selection: Selection,
+): boolean {
+  const name = filter?.check;
+  if (name === undefined) return true;
+  const check = scriptOf(self).targetChecks?.[name];
+  if (check === undefined) return false;
+  return check({ state, self, player, radiant: self.radiant, candidate, selection });
+}
+
+/**
+ * A hero has no card type, no tags, no cost, no damage count and no Plague Tokens, so a filter that
+ * names any of them cannot reach one; a named predicate is asked.
+ */
+function heroAllowed(
+  state: GameState,
+  filter: TargetFilter | undefined,
+  self: CardInstance,
+  player: PlayerId,
+  selection: Selection,
+): boolean {
+  if (filter?.type !== undefined || filter?.tags !== undefined) return false;
+  if (filter?.costRange !== undefined || filter?.damaged === true || filter?.plague === true) return false;
+  return checkAllows(state, filter, self, player, null, selection);
+}
+
+/**
+ * B5 E5, E35, R450: whether a declaration may pick a card acting on the field on top of its filter —
+ * a Spell's declarations never offer a card Immune to Spells, and a `target` declaration never offers
+ * a card whose targeting cost (Classic #89) its chooser cannot pay from the rest of their hand.
+ */
+function reachable(state: GameState, player: PlayerId, card: CardInstance, decl: TargetDecl, candidate: CardInstance): boolean {
+  if (decl.kind === "tribute") return true;
+  if (spellCannotReach(state, card, candidate)) return false;
+  return decl.kind !== "target" || canPayToTarget(state, player, candidate, card.id);
 }
 
 /**
@@ -465,19 +627,23 @@ export function legalSelectionsFor(
     out.push(selection);
   };
 
+  // B5 E5, E35, R450: a card on the field is offered only where the declaring card may reach it.
+  const onField = (held: CardInstance): boolean =>
+    cardAllowed(state, filter, held, card, player) && reachable(state, player, card, decl, held);
+
   for (const side of sidesFor(player, decl)) {
     for (const kind of kinds) {
       switch (kind) {
         case "unit":
           for (const unit of activeUnitsOf(state, side)) {
-            if (cardAllowed(state, filter, unit, card)) offer({ pick: "instance", instanceId: unit.id });
+            if (onField(unit)) offer({ pick: "instance", instanceId: unit.id });
           }
           break;
         case "backrow":
           for (const ref of slotsOf(side, "backrow")) {
             const held = cardAt(state, ref);
             if (held === null) continue;
-            if (cardAllowed(state, filter, held, card)) offer({ pick: "instance", instanceId: held.id });
+            if (onField(held)) offer({ pick: "instance", instanceId: held.id });
           }
           break;
         case "hand":
@@ -485,24 +651,103 @@ export function legalSelectionsFor(
           if (side !== player) break;
           for (const held of state.players[player].hand) {
             if (held.id === card.id) continue;
-            if (cardAllowed(state, filter, held, card)) offer({ pick: "instance", instanceId: held.id });
+            if (cardAllowed(state, filter, held, card, player)) offer({ pick: "instance", instanceId: held.id });
+          }
+          break;
+        case "graveyard":
+          // B5 (Classic #54's "on the field or in your graveyard"): a graveyard is public (§3), so
+          // either side's may be named; the card being played is never in one.
+          for (const held of state.players[side].graveyard) {
+            if (held.id === card.id) continue;
+            if (cardAllowed(state, filter, held, card, player)) offer({ pick: "instance", instanceId: held.id });
           }
           break;
         case "zone":
           for (const row of ROWS) {
             for (const ref of slotsOf(side, row)) {
-              if (isOpen(state, ref)) offer({ pick: "zone", player: ref.player, row: ref.row, lane: ref.lane });
+              if (!isOpen(state, ref)) continue;
+              const selection: Selection = { pick: "zone", player: ref.player, row: ref.row, lane: ref.lane };
+              if (checkAllows(state, filter, card, player, null, selection)) offer(selection);
             }
           }
           break;
-        case "hero":
-          if (heroAllowed(filter)) offer({ pick: "hero", player: side });
+        case "hero": {
+          const selection: Selection = { pick: "hero", player: side };
+          if (heroAllowed(state, filter, card, player, selection)) offer(selection);
           break;
+        }
       }
     }
   }
 
   return out;
+}
+
+/**
+ * B5 E5, R450: which of a play's flat `targets` are targetings — each pick's declaration when it is a
+ * `target` declaration, null for a Tribute, hand or zone pick (R90's reading of the list). The
+ * targeting point reads it: a cost is owed, and an interception answers, only for these. `declared`
+ * is the card's own declarations by default; an activation passes its ability's (B3.2, R384).
+ */
+export function targetingDeclsOf(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  selections: readonly Selection[],
+  modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
+): (TargetDecl | null)[] {
+  const decls = activeTargetDecls(declared, modes);
+  if (decls.length === 0) return selections.map(() => null);
+  const offered = decls.map((decl) => legalSelectionsFor(state, player, card, decl));
+  const slices = splitSelections(decls, offered, selections);
+  return slices.flatMap((slice, index) => {
+    const decl = decls[index];
+    return slice.map(() => (decl !== undefined && decl.kind === "target" ? decl : null));
+  });
+}
+
+/**
+ * B5 E5, R450: the discards a play's declared targets cost it (Classic #89), read against the face
+ * the play resolves (R214) — or an activation's, against its ability's declarations. 0 for choices
+ * that target nothing costly.
+ */
+export function targetingDiscardsRequired(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  selections: readonly Selection[],
+  modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
+): number {
+  const decls = targetingDeclsOf(state, player, card, selections, modes, declared);
+  let total = 0;
+  selections.forEach((selection, index) => {
+    if (decls[index] === null || decls[index] === undefined || selection.pick !== "instance") return;
+    const candidate = findInstance(state, selection.instanceId);
+    if (candidate !== undefined) total += targetingDiscardsOf(state, candidate);
+  });
+  return total;
+}
+
+/**
+ * Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
+ * zone, would be a legal pick of `decl` — a declared pick moves to it only then (Hearthstone's
+ * Spellbender). Read with the card as it would stand there: its cost on the field, undamaged.
+ */
+export function interceptorFitsDecl(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  decl: TargetDecl,
+  interceptor: CardInstance,
+): boolean {
+  const defender = interceptor.controller;
+  if (!sidesFor(player, decl).includes(defender) || !pickKindsFor(decl).includes("unit")) return false;
+  const zone = firstFreeZone(state, defender, "units");
+  if (zone === null) return false;
+  const probe: CardInstance = { ...interceptor, zone: { z: "field", player: defender, row: "units", lane: zone.lane } };
+  return cardAllowed(state, decl.filter, probe, card, player) && !spellCannotReach(state, card, probe);
 }
 
 // ---------------------------------------------------------------------------
@@ -577,8 +822,9 @@ export function inDeclaredOrder(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  targetDecls: readonly TargetDecl[] = declaredTargets(card),
 ): Selection[] {
-  const decls = activeTargetDecls(declaredTargets(card), modes);
+  const decls = activeTargetDecls(targetDecls, modes);
   if (decls.length === 0) return [...selections];
   const offered = decls.map((decl) => legalSelectionsFor(state, player, card, decl));
   return splitSelections(decls, offered, selections).flatMap((slice, index) => {
@@ -747,9 +993,10 @@ export function playChoiceCombinations(
   state: GameState,
   player: PlayerId,
   card: CardInstance,
+  declared?: DeclaredChoices,
 ): PlayChoices[] {
-  const targetDecls = declaredTargets(card);
-  const modeDecls = declaredModes(card);
+  const targetDecls = declared?.targets ?? declaredTargets(card);
+  const modeDecls = declared?.modes ?? declaredModes(card);
   if (targetDecls.length === 0 && modeDecls.length === 0) return [{}];
 
   const targetCombosFor = (decls: readonly TargetDecl[]): Selection[][] => {
@@ -793,38 +1040,81 @@ export function playChoiceCombinations(
  * prices the player cannot pay. This is what `legalActions` lists for a card in hand.
  */
 export function playActionsFor(state: GameState, player: PlayerId, card: CardInstance): PlayAction[] {
+  const mana = state.players[player].mana.current;
+  return pricedPlayActions(state, player, card, (cost) => (cost <= mana ? [{}] : []));
+}
+
+/**
+ * E11, R454: every `play` action `legalActions` lists for a card in the player's graveyard — R81's
+ * choices crossed exactly as for a hand card, each with the ways a permission lets it be paid
+ * (`graveyardPlay.graveyardPaymentsFor`). Nothing without a permission that admits it.
+ */
+export function graveyardPlayActionsFor(state: GameState, player: PlayerId, card: CardInstance): PlayAction[] {
+  if (!playableFromGraveyard(state, card) || card.zone.player !== player) return [];
+  return pricedPlayActions(state, player, card, (price) => graveyardPaymentsFor(state, player, card, price));
+}
+
+/**
+ * R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
+ * choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
+ * `{}` for a price paid in mana alone. A hand card pays in mana (`playActionsFor`); a card a permission
+ * lets its player play from the graveyard may also pay with Plague Tokens (`graveyardPlay.ts`).
+ *
+ * R455: a price a ban forbids is never offered (`costRules.whyPlayBanned`). R391: each Tribute set is
+ * paired with the zones it leaves open, the open ones and the ones it empties itself, and never with a
+ * zone another set empties.
+ */
+export function pricedPlayActions(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  payments: (cost: number) => readonly PlayPayment[],
+): PlayAction[] {
   const out: PlayAction[] = [];
   const xValues: (number | undefined)[] = choosesX(state, card) ? legalXValues(state, player, card) : [undefined];
   const embiggens: (boolean | undefined)[] = hasEmbiggenPrice(state, card)
     ? legalEmbiggenChoices(state, card)
     : [undefined];
-  const zones: (ZoneChoice | undefined)[] = needsZone(state, card) ? legalZonesFor(state, player, card) : [undefined];
   const tributeSets = legalTributeSets(state, player, card);
 
   for (const x of xValues) {
     for (const embiggen of embiggens) {
       const probe: CardInstance = { ...card, x: x ?? card.x, embiggened: embiggen ?? card.embiggened };
-      const cost = effectiveCost(state, probe);
-      if (cost > state.players[player].mana.current) continue;
+      const cost = playCost(state, probe);
+      if (whyPlayBanned(state, player, probe, cost) !== null) continue;
+      const paid = payments(cost);
+      if (paid.length === 0) continue;
       // R214: the choices of the face step 5 will resolve, which this price decides (#64).
       const face = resolvingFace(state, player, card, cost);
       const bound = declaresBoundTribute(face);
       for (const tributes of tributeSets) {
+        const zones: (ZoneChoice | undefined)[] = needsZone(state, card)
+          ? legalZonesFor(state, player, card, tributes)
+          : [undefined];
         for (const zone of zones) {
           for (const choices of playChoiceCombinations(state, player, face)) {
             // R123: the declared Tribute's pick names the units this play tributes, and no others.
             if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
               continue;
             }
-            out.push({
-              type: "play",
-              instanceId: card.id,
-              ...(zone === undefined ? {} : { zone }),
-              ...(x === undefined ? {} : { x }),
-              ...(embiggen === undefined ? {} : { embiggen }),
-              ...(tributes.length === 0 ? {} : { tributes }),
-              ...choices,
-            });
+            // B5 E5, R450: each set of cards that pays the targets' discard cost, listed whole like a
+            // Tribute's paying sets (a price left off the list could never be paid).
+            const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
+            for (const discards of targetingDiscardSets(state, player, owed, playUses(card, choices.targets ?? []))) {
+              for (const payment of paid) {
+                out.push({
+                  type: "play",
+                  instanceId: card.id,
+                  ...(zone === undefined ? {} : { zone }),
+                  ...(x === undefined ? {} : { x }),
+                  ...(embiggen === undefined ? {} : { embiggen }),
+                  ...(tributes.length === 0 ? {} : { tributes }),
+                  ...choices,
+                  ...payment,
+                  ...(discards.length === 0 ? {} : { discards }),
+                });
+              }
+            }
           }
         }
       }
@@ -841,19 +1131,33 @@ function plural(count: number, one: string): string {
   return count === 1 ? `${count} ${one}` : `${count} ${one}s`;
 }
 
-function refuseZone(state: GameState, player: PlayerId, card: CardInstance, zone?: ZoneChoice): string | null {
+function refuseZone(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  zone?: ZoneChoice,
+  tributes: readonly string[] = [],
+): string | null {
   const name = defOf(state, card.defId).name;
   const needs = needsZone(state, card);
 
   if (zone === undefined) {
     if (!needs) return null;
     const row = rowForCard(state, card);
-    // §3.2: playing a permanent from hand requires an open zone in the right row.
-    return firstFreeZone(state, player, row) === null ? `no free ${row} zone` : null;
+    // §3.2: playing a permanent from hand requires an open zone in the right row — or, R391, one the
+    // play's own Tribute empties.
+    return defaultZoneFor(state, player, card, tributes) === null ? `no free ${row} zone` : null;
   }
   if (!needs) return `${name} takes no zone`;
 
   const row = rowForCard(state, card);
+  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower).
+  if (row === "units" && zone.row === "backrow") {
+    if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(zone.row)) {
+      return `there is no ${zone.row} zone ${zone.lane}`;
+    }
+    return whyCannotCarry(state, { player, row: zone.row, lane: zone.lane });
+  }
   if (zone.row !== row) return `${name} goes in the ${row} row`;
   // §3.2: a zone is one of the row's lanes, numbered 1 up — never a place between two of them.
   if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(row)) {
@@ -863,13 +1167,21 @@ function refuseZone(state: GameState, player: PlayerId, card: CardInstance, zone
   // §6.2 Stack: an occupied unit zone is a legal zone for a Stack card, and only occupancy is
   // waived — `acceptsStack` still refuses a Locked or Reborn-reserved zone (R64).
   const ref: ZoneSlot = { player, row: zone.row, lane: zone.lane };
-  const takesIt = playsOnStack(state, card) ? acceptsStack(state, ref) : isOpen(state, ref);
+  // R391: a zone the play's own Tribute empties is open for it once the Tribute is paid.
+  const takesIt = playsOnStack(state, card)
+    ? acceptsStack(state, ref)
+    : isOpen(state, ref) || freedByTribute(state, ref, tributes);
   if (!takesIt) return `that ${row} zone is not open`;
   return null;
 }
 
 function refuseX(state: GameState, player: PlayerId, card: CardInstance, x?: number): string | null {
   const name = defOf(state, card.defId).name;
+  // B5 E14, R545: a copier's X is its copied text's, up to the mana left once its own price is paid.
+  if (copiesText(card)) {
+    if (!choosesX(state, card)) return x === undefined ? null : `${name} has no X to choose now`;
+    return whyXRefused(state, player, x ?? 0, mostX(state, player, card));
+  }
   if (!isXCost(state, card)) return x === undefined ? null : `${name} does not cost X`;
   // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
   // action names is ignored — never recorded on the card, never read by the cost (`playSteps`).
@@ -919,9 +1231,9 @@ function refuseTargets(
   card: CardInstance,
   selections: readonly Selection[],
   modes: readonly string[],
+  declared: readonly TargetDecl[] = declaredTargets(card),
 ): string | null {
   const name = defOf(state, card.defId).name;
-  const declared = declaredTargets(card);
   // R90: a declaration that belongs to modes the play did not choose asks for nothing.
   const decls = activeTargetDecls(declared, modes);
   if (decls.length === 0 && declared.length > 0) {
@@ -957,9 +1269,13 @@ function refuseTargets(
   return null;
 }
 
-function refuseModes(state: GameState, card: CardInstance, modes: readonly string[]): string | null {
+function refuseModes(
+  state: GameState,
+  card: CardInstance,
+  modes: readonly string[],
+  decls: readonly ModeDecl[] = declaredModes(card),
+): string | null {
   const name = defOf(state, card.defId).name;
-  const decls = declaredModes(card);
   if (decls.length === 0) return modes.length === 0 ? null : `${name} takes no mode choices`;
   if (modes.length > decls.length) {
     return `${name} takes ${plural(decls.length, "mode choice")}, not ${modes.length}`;
@@ -991,7 +1307,7 @@ export function whyChoicesRefused(
   action: PlayAction,
 ): string | null {
   const price =
-    refuseZone(state, player, card, action.zone) ??
+    refuseZone(state, player, card, action.zone, action.tributes) ??
     refuseX(state, player, card, action.x) ??
     refuseEmbiggen(state, card, action.embiggen) ??
     refuseTributes(state, player, card, action.tributes);
@@ -1007,5 +1323,43 @@ export function whyChoicesRefused(
   if (!tributePicksAgree(state, player, face, action.targets ?? [], action.modes ?? [], action.tributes ?? [])) {
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
-  return null;
+  // B5 E5, R450: a declared target that costs discards carries them (Classic #89), as a Tribute
+  // carries its paying set (R101) — never the card being played.
+  const required = targetingDiscardsRequired(state, player, face, action.targets ?? [], action.modes ?? []);
+  return whyTargetingDiscardsRefused(state, player, required, action.discards ?? [], playUses(card, action.targets ?? []));
+}
+
+/** R450: the hand cards a play itself uses — the card played and any hand card it picks — which pay no cost. */
+function playUses(card: CardInstance, targets: readonly Selection[]): string[] {
+  return [card.id, ...targets.flatMap((selection) => (selection.pick === "instance" ? [selection.instanceId] : []))];
+}
+
+// ---------------------------------------------------------------------------
+// ---- v0.2.0: activate and turn (B3.2 activation choices, R384) ----
+// ---------------------------------------------------------------------------
+
+/**
+ * The declarations a set of choices answers when they are not the card's own play-time ones: an
+ * Activate ability's `targets` and `modes` (B3.2 rule 5, R384), which travel in the `activate` action
+ * as a play's travel in `play` (R81) and are read by the same rules (R90).
+ */
+export type DeclaredChoices = { targets: readonly TargetDecl[]; modes: readonly ModeDecl[] };
+
+/**
+ * R384, R90: the targets and modes an `activate` action carried, checked against the ability's
+ * declarations and the board exactly as a play's are (`refuseTargets`, `refuseModes`), so the two
+ * refusals cannot drift apart. `card` is the card whose ability it is: `excludeSelf` reads it.
+ */
+export function whyDeclaredChoicesRefused(
+  state: GameState,
+  player: PlayerId,
+  card: CardInstance,
+  declared: DeclaredChoices,
+  targets: readonly Selection[],
+  modes: readonly string[],
+): string | null {
+  return (
+    refuseTargets(state, player, card, targets, modes, declared.targets) ??
+    refuseModes(state, card, modes, declared.modes)
+  );
 }

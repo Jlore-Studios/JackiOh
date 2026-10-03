@@ -17,6 +17,7 @@ import {
   cardsPlayedThisTurn,
   heroOf,
   killerOf,
+  maxManaOf,
   playedEarlier,
   playedIdsThisTurn,
   wasPlayedThisTurn,
@@ -359,3 +360,13 @@ describe("R361 killerOf: the Unit that destroyed a card, as its Death hook reads
   });
 });
 
+
+describe("the Classic #1–#45 reads: max mana (C #36 Burn)", () => {
+  it("maxManaOf is §2.3's max mana, which temporary mana above it does not move", () => {
+    const state = playing("max-mana");
+    expect(maxManaOf(state, "p1")).toBe(state.players.p1.mana.max);
+    state.players.p1.mana.current = 9;
+    expect(maxManaOf(state, "p1")).toBe(1);
+    expect(maxManaOf(state, "p2")).toBe(0);
+  });
+});

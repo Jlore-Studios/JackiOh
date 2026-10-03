@@ -28,9 +28,11 @@ describe("#8 Mr. Vanilla — base", () => {
 
     s.expectStats("core-008", { attack: 4, health: 4, maxHealth: 4 });
     expect(keywordKinds(s, s.card("core-008"))).toEqual([]);
-    // No text: the play emits the play itself and nothing else — no Cry, no trigger.
+    // No text: the play emits the play itself and nothing else — no Cry, no trigger. Its announce
+    // (§10.5 step 3a, R448) is part of the play.
     expect(s.lastEvents.map((event) => event.type)).toEqual([
       "manaChanged",
+      "cardAnnounced",
       "cardPlayed",
       "summoned",
       "cardResolved",

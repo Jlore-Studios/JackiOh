@@ -45,6 +45,7 @@ import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./Ove
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
 import { glowAttr, hasMovesLeft } from "./glow.ts";
+import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
@@ -189,7 +190,9 @@ function ManaTray({ side, mana, animating }: { side: Side; mana: { current: numb
  * list without order the view carries for it (`SideView.ownLibrary`, R310): one face per entry with
  * its count, in the view's order, each printed on the face it went in with (R311), and a card back
  * for the cards the viewer was never shown (R312). The opponent's library is a count and nothing
- * else, so it has no `browse`. Nothing here reads a rule or a hidden card (CLAUDE.md rule 7).
+ * else, so it has no `browse`. Nothing here reads a rule or a hidden card (CLAUDE.md rule 7). While
+ * a permission lets the viewer play cards from their graveyard (B5 E11), their graveyard pile glows
+ * and its sheet offers "Play" on each card `legalActions` lists a play for (`PilePlays`).
  */
 type PileBrowse =
   | { kind: "pile"; title: string; cards: readonly CardView[]; view: PlayerView }
@@ -198,8 +201,31 @@ type PileBrowse =
 /** R313: what the library's list says of its order. */
 const LIBRARY_ORDER = "Order hidden";
 
+/**
+ * B5 E11: what the viewer's graveyard pile needs to offer "Play" on a card: the highlight (a card's
+ * `pile-play-<id>` is in `legal` exactly when `legalActions` lists a play for it) and the board's
+ * click, which reports `{ on: "graveyard", instanceId }` to `actions.ts`.
+ */
+type PilePlays = { highlight: Highlight; onClick?: BoardProps["onClick"] };
+
+/** The entry's "Play", when the highlight lists one for this card (CLAUDE.md rule 7). */
+function playFor(plays: PilePlays | undefined, instanceId: string): CardListEntry["play"] {
+  if (plays === undefined) return undefined;
+  const testId = testid.pilePlay(instanceId);
+  if (!isLegal(plays.highlight, testId)) return undefined;
+  return {
+    testId,
+    glow: glowAttr(plays.highlight, testId) !== undefined,
+    onPlay: () => plays.onClick?.({ on: "graveyard", instanceId }),
+  };
+}
+
 /** The list a pile opens: its entries in the order to show them, and what that order is. */
-function browseEntries(lookup: CardLookup | null, browse: PileBrowse): { entries: CardListEntry[]; order?: string } {
+function browseEntries(
+  lookup: CardLookup | null,
+  browse: PileBrowse,
+  plays?: PilePlays,
+): { entries: CardListEntry[]; order?: string } {
   const entries: CardListEntry[] = [];
   if (browse.kind === "library") {
     for (const entry of browse.library.cards) {
@@ -213,7 +239,9 @@ function browseEntries(lookup: CardLookup | null, browse: PileBrowse): { entries
   for (let at = browse.cards.length - 1; at >= 0; at -= 1) {
     const card = browse.cards[at];
     const face = card === undefined ? null : listedFace(lookup, browse.view, card);
-    if (card !== undefined && face !== null) entries.push({ key: card.instanceId, face });
+    if (card === undefined || face === null) continue;
+    const play = playFor(plays, card.instanceId);
+    entries.push(play === undefined ? { key: card.instanceId, face } : { key: card.instanceId, face, play });
   }
   return { entries };
 }
@@ -226,6 +254,7 @@ function Pile({
   fatigue,
   animating,
   browse,
+  plays,
   children,
 }: {
   label: string;
@@ -235,12 +264,14 @@ function Pile({
   fatigue?: number;
   animating?: AnimatingMap;
   browse?: PileBrowse;
+  /** B5 E11: the viewer's graveyard offers "Play" on the cards `legalActions` lists, and glows then. */
+  plays?: PilePlays;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
   children?: ReactNode;
 }): ReactElement {
   const lookup = useContext(CatalogContext);
   const hoverPreviews = useSetting("hoverPreviews");
-  const { entries, order } = browse === undefined ? { entries: [] } : browseEntries(lookup, browse);
+  const { entries, order } = browse === undefined ? { entries: [] } : browseEntries(lookup, browse, plays);
   const title = browse?.title ?? label;
   const browsable = entries.length > 0;
   const orderNote = order === undefined ? {} : { order };
@@ -272,6 +303,7 @@ function Pile({
         data-testid={regionId}
         data-fatigue={fatigue}
         data-animating={animating?.get(regionId)}
+        data-glow={plays === undefined ? undefined : glowAttr(plays.highlight, regionId)}
         data-browsable={browsable ? "true" : undefined}
         role={browsable ? "button" : undefined}
         tabIndex={browsable ? 0 : undefined}
@@ -358,6 +390,7 @@ function Seat({
           count={seat.graveyard.length}
           animating={animating}
           browse={{ kind: "pile", title: side === "you" ? "Your graveyard" : "Opponent's graveyard", cards: seat.graveyard, view }}
+          {...(side === "you" ? { plays: { highlight, onClick } } : {})}
         />
         <Pile
           label="Exile"
@@ -489,7 +522,8 @@ export default function Board({
           pops={pops}
           notices={notices}
         />
-        <Hand side="opponent" hand={view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
+        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label="Field">
           {LANES.map((lane) => (

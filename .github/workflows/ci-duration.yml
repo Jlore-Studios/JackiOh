@@ -1,0 +1,118 @@
+# Holds CI to its budget (#73): every job should finish under TARGET_MINUTES. After every run of CI,
+# bot selftest or deploy watch, this reads how long each of its jobs took and, if any went over
+# ALERT_MINUTES, opens an issue naming them, or comments on the one already open, so a slow job is
+# seen and split before it grows into the old 19-minute wait. The night bot's own workflows are
+# exempt: a build legitimately runs for hours.
+#
+# The report is handed to the night bot (.harness/config.json's bot_login): a new issue is assigned
+# to it and queued with bot:build, and an open one nobody is assigned to is handed over the same
+# way, so the bot starts on the split without anyone asking. A write by this job's token starts no
+# other workflow, so the label queues it directly (the planner reads its queue from the labels). A
+# run of a fork's pull request is reported but never handed over: its branch and job names are
+# outside text, and the bot would read them as its task. The bot cannot change .github/, so the
+# issue tells it what it can do when the split itself needs ci.yml.
+#
+# The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
+# few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
+# under the target, not just under the alert, so the fix has headroom and the alert stays quiet.
+#
+# It never checks out or runs code. `workflow_run` runs this file from the default branch with a
+# write token even for a fork's pull request, so it only reads job timings through the API, and the
+# job names it quotes reach the shell through env, never through `${{ }}` in a script.
+name: ci duration
+
+on:
+  workflow_run:
+    workflows: ["CI", "bot selftest", "deploy watch"]
+    types: [completed]
+
+env:
+  # What a fix or a new split aims for: every job finishes under this.
+  TARGET_MINUTES: "5"
+  # What gets reported: a job that ran longer than this.
+  ALERT_MINUTES: "7"
+  # Who fixes it: the night bot (.harness/config.json's bot_login).
+  BOT_LOGIN: jgoetzmann-bot
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  check:
+    name: flag CI jobs over the alert
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: time every job of the run, and report the slow ones
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          set -euo pipefail
+          export LIMIT_SECONDS=$((ALERT_MINUTES * 60))
+          export TITLE="CI: a job ran over $ALERT_MINUTES minutes"
+          # The latest attempt's jobs that ran to an end. A cancelled job (a newer push superseding
+          # the run) says nothing about how long the job takes. The filter's `$s` is jq's, not the shell's.
+          # shellcheck disable=SC2016
+          slow=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '
+            .jobs[]
+            | select(.started_at != null and .completed_at != null)
+            | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out")
+            | ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) as $s
+            | select($s > (env.LIMIT_SECONDS | tonumber))
+            | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \($s / 60 | floor)m \($s % 60)s | \(.conclusion) |"')
+          if [ -z "$slow" ]; then
+            echo "every job of $WORKFLOW run $RUN_ID finished within $LIMIT_SECONDS s"
+            exit 0
+          fi
+          echo "over $LIMIT_SECONDS s:"; echo "$slow"
+
+          body=$(printf '%s\n' \
+            "[$WORKFLOW run $RUN_ID]($RUN_URL) on \`$BRANCH\` (\`${SHA:0:7}\`, $EVENT) had jobs over the $ALERT_MINUTES-minute alert (#73):" \
+            "" \
+            "| Job | Time | Result |" \
+            "|---|---|---|" \
+            "$slow" \
+            "" \
+            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\`; for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`." \
+            "" \
+            "Night bot: you cannot change \`.github/\`. Make the part of the fix that lives elsewhere (the e2e \`WEIGHTS\`, a slow test made faster or split across files), and when the split needs \`ci.yml\`'s matrix, give the exact lines to change there and ask a person to make them." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/ci-duration.yml\`._")
+
+          # Hands an issue to the night bot: assigned to it and queued, as a person assigning it
+          # would. A failure here leaves the report standing for a person.
+          hand_over() {
+            if [ "$HEAD_REPO" != "$REPO" ]; then
+              echo "a run from $HEAD_REPO: #$1 is not handed to @$BOT_LOGIN"
+              return 0
+            fi
+            gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+              && echo "handed #$1 to @$BOT_LOGIN" \
+              || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+          }
+
+          # One open issue collects every report, so a slow job does not open one issue per run.
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+            echo "commented on #$open"
+            # Someone already on it, the bot or a person, keeps it.
+            if [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ]; then
+              hand_over "$open"
+            fi
+          else
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+            hand_over "${url##*/}"
+          fi

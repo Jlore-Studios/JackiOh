@@ -109,6 +109,7 @@ const destroyed = (defId: string, instanceId: string, owner: PlayerId = "p1"): G
   instanceId,
   defId,
   owner,
+  controller: owner,
   attack: 2,
   maxHealth: 2,
   killerId: null,
@@ -617,12 +618,15 @@ describe("B55 an event the last window carried is old news, even once R97 names 
   it("B55 should the runner replay the whole window, only the new action sounds", () => {
     const { sink, director } = rig();
     const first = firstView();
-    const view1 = withEvents(first, [turn2(), mana("p2", 5), hiddenDraw]);
+    // A draw lands in the hand (`addedToHand`), as every draw but a cast on draw does (R502, R506).
+    const hiddenAdded: GameEvent = { type: "addedToHand", player: "p2", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID };
+    const namedAdded: GameEvent = { type: "addedToHand", player: "p2", instanceId: "c26", defId: "core-004" };
+    const view1 = withEvents(first, [turn2(), mana("p2", 5), hiddenDraw, hiddenAdded]);
     director.onView(first);
     playLikeGame(director, first, view1);
     const before = sink.sent.length;
 
-    const view2 = withEvents(view1, [again(turn2()), again(mana("p2", 5)), namedDraw, played("core-004", "c26", "p2")]);
+    const view2 = withEvents(view1, [again(turn2()), again(mana("p2", 5)), namedDraw, namedAdded, played("core-004", "c26", "p2")]);
     replayWholeWindow(director, view1, view2);
 
     expect(sent(sink).slice(before)).toEqual(["sfx:play@0", `voice:core-004/play@${String(VOICE_DELAY_MS)}`]);

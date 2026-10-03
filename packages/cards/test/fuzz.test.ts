@@ -214,13 +214,16 @@ function playGame(seed: number): GameRun {
   const decks = decksForSeed(seed);
   registerAll();
 
-  let state = beginGame(createGame({ seed: gameSeed, decks })).state;
+  const begun = beginGame(createGame({ seed: gameSeed, decks }));
+  let state = begun.state;
   const policy = createRng(`jackioh-fuzz-policy-${seed}`);
   // R265: while both mulligans are open either seat may answer first; a stream of its own picks
   // which, so the fuzz plays both orders (the game is the same either way, R265).
   const order = createRng(`jackioh-fuzz-policy-order-${seed}`);
   const log: Action[] = [];
   const monitor = createInvariantMonitor(state);
+  // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
+  monitor.after(begun.events, state);
 
   while (state.result === null) {
     if (log.length >= MAX_ACTIONS_PER_GAME) {

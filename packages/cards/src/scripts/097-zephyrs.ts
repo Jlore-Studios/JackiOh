@@ -18,12 +18,12 @@
 // honours a `defId` list as "a pool a script builds from ids it already holds" (§5.1). So naming
 // the scorer's three ids offers exactly those three and nothing else. Tokens cannot slip in through
 // `asksForTokens`'s `defId` branch: `scorer.candidateDefs` is `query({ set: "Core",
-// excludeIndex: "97" })`, which already drops every token (§5.1), so the list can only hold
-// non-token Core cards. `count: 3` is R29's "the top 3" said out loud rather than left to a default.
+// excludeDefId: <#97's id> })`, which already drops every token (§5.1), so the list can only hold
+// non-token Core cards ("only from the core set" keeps it Core, B2.6). `count: 3` is R29's "the top 3" said out loud rather than left to a default.
 //
-// R29's "EXCEPT #97" COMES FOR FREE TWICE: `candidateDefs` passes `excludeIndex: ZEPHYRS_INDEX`,
-// and `discoverFromCatalog` adds `excludeIndex` for the running card's own index on top of it
-// (§5.1: "a random pool never offers the card that generated it").
+// R29's "EXCEPT #97" COMES FOR FREE TWICE: `candidateDefs` excludes #97's id, and
+// `discoverFromCatalog` adds `excludeDefId` for the running card's own id on top of it (§5.1: "a
+// random pool never offers the card that generated it", R387).
 //
 // WHY THE EXILE IS THE SECOND EFFECT AND NOT THE FIRST. §8.5's row reads "Discover …; exile this",
 // and `prompts.applyResumable` is built for exactly that shape: the effect after the one that

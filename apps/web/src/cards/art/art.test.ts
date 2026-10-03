@@ -18,6 +18,7 @@ import {
   artUrl,
   compositionFor,
   hashId,
+  motifFor,
   seededRandom,
   themeFor,
   type ArtManifest,
@@ -28,6 +29,8 @@ import {
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const SVG_PREFIX = "data:image/svg+xml,";
+/** B40: a theme-and-composition group this large draws every layout of its composition. */
+const GROUP_USES_EVERY_LAYOUT = 8;
 
 function def(id: string): CardDef {
   const found = CATALOG[id];
@@ -35,12 +38,14 @@ function def(id: string): CardDef {
   return found;
 }
 
+/** A card's two pictures as its face draws them: its theme, its composition and its name's motif (R503). */
 function specsOf(card: CardDef): { base: ArtSpec; radiant: ArtSpec } {
   const theme = themeFor(card.tags, card.type);
   const composition = compositionFor(card.type);
+  const motif = motifFor(card.name, theme);
   return {
-    base: artSpec(card.id, theme, composition, false),
-    radiant: artSpec(card.id, theme, composition, true),
+    base: artSpec(card.id, theme, composition, false, motif),
+    radiant: artSpec(card.id, theme, composition, true, motif),
   };
 }
 
@@ -62,9 +67,10 @@ describe("B1: artSpec is pure and deterministic", () => {
     for (const card of DEFS) {
       const theme = themeFor(card.tags, card.type);
       const composition = compositionFor(card.type);
+      const motif = motifFor(card.name, theme);
       for (const radiant of [false, true]) {
-        const first = artSpec(card.id, theme, composition, radiant);
-        const second = artSpec(card.id, theme, composition, radiant);
+        const first = artSpec(card.id, theme, composition, radiant, motif);
+        const second = artSpec(card.id, theme, composition, radiant, motif);
         expect(second, `${card.id} radiant=${String(radiant)}`).toEqual(first);
         expect(artDataUri(second)).toBe(artDataUri(first));
       }
@@ -153,6 +159,11 @@ describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
       expect(radiant.skyScheme, card.id).toBe(base.skyScheme);
       expect(radiant.accent?.glyph ?? null, card.id).toBe(base.accent?.glyph ?? null);
       expect(radiant.accent?.x ?? null, card.id).toBe(base.accent?.x ?? null);
+      // The motif and where its glyphs stand are the card's too (R503).
+      expect(radiant.motif, card.id).toBe(base.motif);
+      expect(radiant.motifGlyphs.map((placed) => [placed.glyph, placed.x, placed.y, placed.size]), card.id).toEqual(
+        base.motifGlyphs.map((placed) => [placed.glyph, placed.x, placed.y, placed.size]),
+      );
     }
   });
 
@@ -197,16 +208,21 @@ describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
 
 // A tribe or a type must not print one picture a hundred times: a theme only sets the palette and
 // the kind of picture. Within a theme every card draws its own layout, backdrop, sky and emblem,
-// and no two catalog cards of one theme share all four, so neighbours in a tribe (or two plain
-// Spells side by side in the deck builder) always differ in something seen at a glance, not just
-// in hash noise that makes their URIs differ.
+// and its name's motif (R503), and no two catalog cards of one theme share all five, so neighbours
+// in a tribe (or two plain Spells side by side in the deck builder) always differ in something seen
+// at a glance, not just in hash noise that makes their URIs differ.
+//
+// The catalog of v0.2.0 (Core, Classic and Classic+, 317 entries) mixes compositions inside a theme
+// (a Human Field Trap, a Pancake Field Spell), so the layout rule reads per theme and composition:
+// every such group of eight or more cards uses every layout of its composition. The smaller groups
+// (the families' figures and sigils, two to seven cards each) still spread under the per-theme rule.
 
 describe("per-card variety within a theme", () => {
   function signature(spec: ArtSpec): string {
-    return `${spec.layout}|${spec.backdrop}|${spec.skyScheme}|${spec.emblem.glyph}`;
+    return `${spec.layout}|${spec.backdrop}|${spec.skyScheme}|${spec.emblem.glyph}|${spec.motif ?? "-"}`;
   }
 
-  it("no two catalog cards of one theme share their layout, backdrop, sky and emblem", () => {
+  it("R503 no two catalog cards of one theme share their layout, backdrop, sky, emblem and motif", () => {
     const seen = new Map<string, string>();
     for (const card of DEFS) {
       const { base } = specsOf(card);
@@ -234,13 +250,21 @@ describe("per-card variety within a theme", () => {
     }
   });
 
-  it("B40 the largest themes use every layout of their composition", () => {
-    for (const theme of ["human", "spell", "unit", "field-spell"] as const) {
-      const specs = DEFS.map((card) => specsOf(card).base).filter((spec) => spec.theme === theme);
-      const composition = specs[0]?.composition;
-      expect(composition, theme).toBeDefined();
-      if (composition === undefined) continue;
-      expect(new Set(specs.map((spec) => spec.layout)), theme).toEqual(new Set(LAYOUTS[composition]));
+  it("B40 R503 every theme-and-composition group of eight or more cards uses every layout of its composition", () => {
+    const groups = new Map<string, ArtSpec[]>();
+    for (const card of DEFS) {
+      const { base } = specsOf(card);
+      const key = `${base.theme}|${base.composition}`;
+      groups.set(key, [...(groups.get(key) ?? []), base]);
+    }
+    const large = [...groups].filter(([, specs]) => specs.length >= GROUP_USES_EVERY_LAYOUT);
+    // The four largest Core themes are among them, and so is the Book family's.
+    expect(large.map(([key]) => key)).toEqual(
+      expect.arrayContaining(["human|figure", "spell|burst", "unit|figure", "field-spell|landscape", "book|burst"]),
+    );
+    for (const [key, specs] of large) {
+      const composition = specs[0]?.composition ?? "figure";
+      expect(new Set(specs.map((spec) => spec.layout)), key).toEqual(new Set(LAYOUTS[composition]));
     }
   });
 
@@ -305,7 +329,7 @@ describe("B3: artDataUri draws a clean, self-contained SVG for every card", () =
     for (const id of ids) {
       for (const type of types) {
         for (const radiant of [false, true]) {
-          const uri = artDataUri(artSpec(id, themeFor([], type), compositionFor(type), radiant));
+          const uri = artDataUri(artSpec(id, themeFor([], type), compositionFor(type), radiant, motifFor(id)));
           const where = `${JSON.stringify(id)} ${type} radiant=${String(radiant)}`;
           expect(uri.startsWith(SVG_PREFIX), where).toBe(true);
           const svg = svgOf(uri);
@@ -321,12 +345,15 @@ describe("B3: artDataUri draws a clean, self-contained SVG for every card", () =
 
 /* ------------------------------------------------------------------------------------------ B4 */
 
-/** Surface A's priority list, first match wins. */
+/** Surface A's priority list, first match wins, with v0.2.0's three families in their places (R503). */
 const PRIORITY: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
+  ["AI", "ai"],
   ["CN", "cn"],
   ["KY", "ky"],
+  ["Book", "book"],
   ["Felinor", "felinor"],
+  ["Pancake", "pancake"],
   ["Fruit", "fruit"],
   ["Quickdraw", "quickdraw"],
   ["Human", "human"],
@@ -401,6 +428,20 @@ describe("B4: themeFor and compositionFor", () => {
       ["core-006", "field-spell"],
       ["core-041", "trap"],
       ["core-018", "field-trap"],
+      // R503: the families, their tokens reading as the family and not as Token, and the mixes.
+      ["classic-003", "book"],
+      ["classicplus-054", "book"],
+      ["classicplus-012", "pancake"],
+      ["classicplus-012-1", "pancake"],
+      ["classicplus-013", "pancake"],
+      ["classicplus-t-ai-01", "ai"],
+      ["classicplus-t-ai-08", "ai"],
+      ["classicplus-062", "ky"],
+      ["classicplus-076", "cn"],
+      ["classicplus-076-1", "cn"],
+      ["classicplus-019-1", "token"],
+      ["classic-038", "human"],
+      ["classicplus-048", "unit"],
     ];
     for (const [id, theme] of expected) {
       const card = def(id);

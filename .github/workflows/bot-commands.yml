@@ -1,12 +1,13 @@
 # The night bot's ears (bot/README.md): comment commands, labels, assignment, reviews, and the
 # results of CI on its pull requests. No model runs here; model work is queued for the night run,
-# or started at once when an operator adds --force. Every half hour a sweep reads the last three
-# days back and answers anything an event never delivered or a handler failed to answer.
+# or started at once when an operator adds --force. Every ten minutes a sweep reads the last three
+# days back and answers anything an event never delivered or a handler failed to answer, then
+# starts a night run if one should be going and none is (GitHub drops scheduled bot-night runs).
 name: bot-commands
 
 on:
   schedule:
-    - cron: "11,41 * * * *"
+    - cron: "1,11,21,31,41,51 * * * *"
   workflow_dispatch: {}
   issue_comment:
     types: [created, edited]
@@ -86,6 +87,15 @@ jobs:
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          # Which provider secrets exist, never their values: replies say when a subscription
+          # can take the work, and the sweep starts a night run only for work one can take.
+          HARNESS_SECRETS_SET: >-
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
+            ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             python -m harness sweep

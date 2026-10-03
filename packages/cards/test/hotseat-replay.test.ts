@@ -97,8 +97,22 @@ const RECORDED = fileURLToPath(new URL("../../../e2e/artifacts/01-hotseat-full-g
  * Patch v0.1.1 (R360–R366) re-recorded it by the procedure above: its decks hold #1, #8, #20, #25,
  * #56, #77, #81 and #92, whose stats, keywords or rules the patch changed, so the same seed plays a
  * different game. 37 actions, still won by p1 by hero death.
+ *
+ * Patch v0.2.0 moved it three times more and not the game. Its draw count (B5 E4, R457): each player's
+ * state counts the draws they made on the turn running (`draws`). Its announce (R448) and play records
+ * (R451), under the exception above: every play now emits `cardAnnounced` before it moves, which the
+ * frontier numbers from `nextSeq`, so every id numbered after a play is one higher per play; and the
+ * state records each player's plays by type this turn (`turnLog.playedByType`), by tag this game and
+ * their last face-up play (`gameLog`), and the last Spell played (`lastSpell`). Its Core patch to #32
+ * Prem Panther (R426) made the Panther's text its attack's own hook rather than a trigger on every
+ * death, so the deaths it watched queue no entries numbered from `nextSeq`. The same 37 actions fold
+ * with no refusal to the same end, won by p1 by hero death.
+ *
+ * C+ #35 Rollback's history (R419) moved it once more and not the game: every turn's start now records
+ * the field in `state.boardHistory`. The same fold with that field deleted hashes to "2d6aab2a", the
+ * value before it.
  */
-const EXPECTED_HASH = "2d546ddf";
+const EXPECTED_HASH = "a798906b";
 
 /** What the recorded game ends in — a second anchor, so the hash is not the only witness. */
 const EXPECTED_RESULT = { winner: "p1", reason: "hero-death" } as const;

@@ -55,20 +55,38 @@ const PITCH_MOD_RANGE = [0, 127] as const;
 const WEB_PITCH_RANGE = [0, 2] as const;
 const WEB_RATE_RANGE = [0.1, 10] as const;
 const GAIN_RANGE = [0, 2] as const;
+/** R501's SAPI personas: SSML prosody rate in percent, and the ffmpeg pitch shift in semitones. */
+const SAPI_RATE_RANGE = [-50, 100] as const;
+const SAPI_SEMITONE_RANGE = [-12, 12] as const;
 
 function parsePersona(raw: unknown, path: string): Persona {
   const o = record(raw, path);
-  const web = record(o.web, `${path}.web`);
-  const persona: Persona = {
-    say: text(o.say, `${path}.say`),
-    rate: numberIn(o.rate, `${path}.rate`, ...RATE_RANGE),
-    pbas: numberIn(o.pbas, `${path}.pbas`, ...PITCH_BASE_RANGE),
-    pmod: numberIn(o.pmod, `${path}.pmod`, ...PITCH_MOD_RANGE),
-    web: {
-      pitch: numberIn(web.pitch, `${path}.web.pitch`, ...WEB_PITCH_RANGE),
-      rate: numberIn(web.rate, `${path}.web.rate`, ...WEB_RATE_RANGE),
-    },
+  const rawWeb = record(o.web, `${path}.web`);
+  const web = {
+    pitch: numberIn(rawWeb.pitch, `${path}.web.pitch`, ...WEB_PITCH_RANGE),
+    rate: numberIn(rawWeb.rate, `${path}.web.rate`, ...WEB_RATE_RANGE),
   };
+  let persona: Persona;
+  if (o.backend === "sapi") {
+    if (typeof o.filter !== "string") fail(`${path}.filter`, "must be a string");
+    persona = {
+      backend: "sapi",
+      voice: text(o.voice, `${path}.voice`),
+      rate: numberIn(o.rate, `${path}.rate`, ...SAPI_RATE_RANGE),
+      semitones: numberIn(o.semitones, `${path}.semitones`, ...SAPI_SEMITONE_RANGE),
+      filter: o.filter,
+      web,
+    };
+  } else {
+    if (o.backend !== undefined && o.backend !== "say") fail(`${path}.backend`, 'must be "say" or "sapi"');
+    persona = {
+      say: text(o.say, `${path}.say`),
+      rate: numberIn(o.rate, `${path}.rate`, ...RATE_RANGE),
+      pbas: numberIn(o.pbas, `${path}.pbas`, ...PITCH_BASE_RANGE),
+      pmod: numberIn(o.pmod, `${path}.pmod`, ...PITCH_MOD_RANGE),
+      web,
+    };
+  }
   if (o.gain !== undefined) persona.gain = numberIn(o.gain, `${path}.gain`, ...GAIN_RANGE);
   return persona;
 }
@@ -77,6 +95,9 @@ function parseEntry(raw: unknown, path: string, personas: Record<string, Persona
   const o = record(raw, path);
   const persona = text(o.persona, `${path}.persona`);
   if (!Object.hasOwn(personas, persona)) fail(`${path}.persona`, `unknown persona "${persona}"`);
+  if (personas[persona]?.backend === "sapi" && (o.rate !== undefined || o.pbas !== undefined || o.pmod !== undefined)) {
+    fail(path, "a SAPI persona's lines take no rate, pbas or pmod override (R501)");
+  }
   const overrides: { rate?: number; pbas?: number; pmod?: number } = {};
   if (o.rate !== undefined) overrides.rate = numberIn(o.rate, `${path}.rate`, ...RATE_RANGE);
   if (o.pbas !== undefined) overrides.pbas = numberIn(o.pbas, `${path}.pbas`, ...PITCH_BASE_RANGE);
@@ -162,12 +183,11 @@ export function lineFor(
   if (spoken === null) return null;
   const base = lines.personas[entry.persona];
   if (base === undefined) return null;
-  const persona: Persona = {
-    ...base,
-    rate: entry.rate ?? base.rate,
-    pbas: entry.pbas ?? base.pbas,
-    pmod: entry.pmod ?? base.pmod,
-  };
+  // A SAPI persona takes no per-card overrides (R501); a `say` one applies them.
+  const persona: Persona =
+    base.backend === "sapi"
+      ? base
+      : { ...base, rate: entry.rate ?? base.rate, pbas: entry.pbas ?? base.pbas, pmod: entry.pmod ?? base.pmod };
   return { text: spoken, persona };
 }
 

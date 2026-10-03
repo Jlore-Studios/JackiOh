@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from harness import commands
+from harness import asks, commands
 from datetime import timedelta
 
+from harness.asks import Ask
 from harness.clock import iso, parse_iso
 from harness.commands import Command
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
@@ -75,8 +76,9 @@ def _level(ctx: Context, user: dict[str, Any], association: str | None) -> int:
 
 
 #: The reaction the bot leaves once it has answered a comment. The sweep treats a command without
-#: it as never answered; nobody but the bot's own logins can leave it as the bot.
-ANSWERED = "rocket"
+#: it as never answered; nobody but the bot's own logins can leave it as the bot. The reactions
+#: for the later stages of model work are in `asks`.
+ANSWERED = asks.ANSWERED
 
 
 def answered(ctx: Context, comment_id: int, *, review_comment: bool = False) -> bool:
@@ -160,11 +162,15 @@ def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = 
     fresh = claim(ctx, key, lines)
     if not fresh:
         return ["ignored: already answered"]
-    ctx.gh.react(comment_id, "eyes", review_comment=review_comment)
+    ctx.gh.react(comment_id, asks.SEEN, review_comment=review_comment)
+    ask = Ask(asks.key(comment_id, review_comment=review_comment))
     if nudge:
         replies = [NUDGE.format(bot=ctx.cfg.bot_login)]
     else:
-        replies = run_commands(ctx, [c for c in found if c.line in fresh], thread, user, level)
+        replies = run_commands(ctx, [c for c in found if c.line in fresh], thread, user, level,
+                               ask=ask)
+    if ask.recorded:
+        ctx.gh.react(comment_id, asks.QUEUED, review_comment=review_comment)
     login = user.get("login", "")
     _reply(ctx, int(thread["number"]), f"@{login}\n\n" + "\n\n".join(replies))
     ctx.gh.react(comment_id, ANSWERED, review_comment=review_comment)
@@ -172,14 +178,17 @@ def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = 
 
 
 def run_commands(ctx: Context, found: list[Command], thread: dict[str, Any], user: dict[str, Any],
-                 level: int) -> list[str]:
+                 level: int, *, ask: Ask | None = None) -> list[str]:
+    """Run each command and return its reply. `ask` is the comment they came from: whatever
+    queues model work records it, so the later stages can react to it (`asks`)."""
     replies: list[str] = []
     for command in found:
         head = f"> {command.line}\n\n" if len(found) > 1 else ""
-        if command.verb.startswith("unknown:"):
-            word = command.verb.split(":", 1)[1]
-            replies.append(head + f"I do not know `{word}`. "
-                           + commands.HELP.format(bot=ctx.cfg.bot_login))
+        if command.verb == "typo":
+            word = command.args.split()[0] if command.args.split() else command.args
+            replies.append(head + f"`{word}` is not a command; did you mean `{command.meant}`? "
+                           "I did nothing. Say it again spelt that way, or with more words for a "
+                           "request. " + commands.POINTER.format(bot=ctx.cfg.bot_login))
             continue
         if level < command.level:
             need = LEVEL_NAMES.get(command.level, str(command.level))
@@ -189,20 +198,23 @@ def run_commands(ctx: Context, found: list[Command], thread: dict[str, Any], use
                            f"{have}. Nothing was done.")
             continue
         try:
-            replies.append(head + execute(ctx, command, thread, user))
+            replies.append(head + execute(ctx, command, thread, user, ask))
         except Exception as exc:  # noqa: BLE001 - a failure is answered, never dropped in silence
             replies.append(head + f"That failed ({type(exc).__name__}: {str(exc)[:300]}). "
                            "Nothing is lost by saying it again.")
     return replies
 
 
-def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[str, Any]) -> str:
+def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[str, Any],
+            ask: Ask | None = None) -> str:
     number = int(thread.get("number") or 0)
     is_pr = "pull_request" in thread
     by = str(user.get("login", ""))
     verb = command.verb
     if verb == "status":
-        return report(ctx) + "\n\n" + commands.HELP.format(bot=ctx.cfg.bot_login)
+        return report(ctx) + "\n\n" + commands.POINTER.format(bot=ctx.cfg.bot_login)
+    if verb == "help":
+        return commands.help_text(ctx.cfg.bot_login, command.args)
     if verb == "halt":
         reason = command.args or "no reason given"
         ctx.store.update(lambda s: s.update(halted=True, halt={
@@ -216,16 +228,20 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
             extra = " `.harness/HALT` is still on `main`, though, and it wins until it is deleted."
         if command.force:
             return "Started. " + _run_now(ctx, None) + extra
-        return "Started. The bot works in the next night window." + extra
+        return "Started. The bot takes work again as soon as a subscription is free." + extra
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
     if verb == "suggest":
-        ctx.store.update(lambda s: s["suggest"].update(requested=True), "suggest")
+        def wanted(state: dict[str, Any]) -> None:
+            state["suggest"].update(requested=True)
+            asks.note(state["suggest"], ask)
+        ctx.store.update(wanted, "suggest")
         if command.force:
             ctx.dispatch(force=True, mode="suggest")
             return "A suggestion survey is starting now."
-        return "I will survey for suggestions the next time the queue is empty in the window."
+        return ("I will survey for suggestions the next time the queue is empty and a "
+                "subscription is free.")
     if not number:
         return f"`{verb}` needs an issue or a pull request to act on."
     if verb == "stop":
@@ -233,14 +249,10 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     notes_line = ""
     if command.args:
         notes_line = " I will read your notes with the rest of the thread."
-    if verb == "build" or (verb == "request" and not is_pr):
+    if verb in ("build", "revise", "request"):
         if is_pr:
-            return queue_revise(ctx, number, by=by, force=command.force) + notes_line
-        return queue_build(ctx, number, by=by, force=command.force) + notes_line
-    if verb in ("revise", "request"):
-        if not is_pr:
-            return queue_build(ctx, number, by=by, force=command.force) + notes_line
-        return queue_revise(ctx, number, by=by, force=command.force) + notes_line
+            return queue_revise(ctx, number, by=by, force=command.force, ask=ask) + notes_line
+        return queue_build(ctx, number, by=by, force=command.force, ask=ask) + notes_line
     return f"`{verb}` is not something I can do here."
 
 
@@ -255,7 +267,7 @@ def _run_now(ctx: Context, item: int | None) -> str:
     except GitHubError as exc:
         return (f"Starting a run{which} failed ({str(exc)[:200]}); the next hourly run does it "
                 "instead.")
-    return f"A run{which} is starting now, outside the window if need be."
+    return f"A run{which} is starting now, outside a subscription's hours if need be."
 
 
 def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:

@@ -124,6 +124,212 @@ import * as mt_felinor from "./t-felinor";
 import * as mt_ghoul from "./t-ghoul";
 import * as mt_rush from "./t-rush";
 import * as mt_sheep from "./t-sheep";
+import * as mclassic_001_curse_of_the_forgotten_classic from "./classic/001-curse-of-the-forgotten-classic";
+import * as mclassic_002_the_trickster from "./classic/002-the-trickster";
+import * as mclassic_003_book_of_heal from "./classic/003-book-of-heal";
+import * as mclassic_004_palantir from "./classic/004-palantir";
+import * as mclassic_005_tesla from "./classic/005-tesla";
+import * as mclassic_006_cloaked_toe_cracker from "./classic/006-cloaked-toe-cracker";
+import * as mclassic_007_infiniscepter from "./classic/007-infiniscepter";
+import * as mclassic_008_pickle from "./classic/008-pickle";
+import * as mclassic_009_income_tax from "./classic/009-income-tax";
+import * as mclassic_010_exile from "./classic/010-exile";
+import * as mclassic_011_mind_melt from "./classic/011-mind-melt";
+import * as mclassic_012_book_of_blood from "./classic/012-book-of-blood";
+import * as mclassic_013_boots_on_the_ground from "./classic/013-boots-on-the-ground";
+import * as mclassic_014_shadowstep from "./classic/014-shadowstep";
+import * as mclassic_015_nose_hunter from "./classic/015-nose-hunter";
+import * as mclassic_016_book_of_flame from "./classic/016-book-of-flame";
+import * as mclassic_017_counterspell from "./classic/017-counterspell";
+import * as mclassic_018_glitch_in_the_system from "./classic/018-glitch-in-the-system";
+import * as mclassic_019_lizards_breath from "./classic/019-lizards-breath";
+import * as mclassic_020_the_power_to_punish from "./classic/020-the-power-to-punish";
+import * as mclassic_021_turtinator from "./classic/021-turtinator";
+import * as mclassic_022_mid_runner from "./classic/022-mid-runner";
+import * as mclassic_023_devils_pact from "./classic/023-devils-pact";
+import * as mclassic_024_book_of_knowledge from "./classic/024-book-of-knowledge";
+import * as mclassic_025_lag_in_the_system from "./classic/025-lag-in-the-system";
+import * as mclassic_026_rapid_draw from "./classic/026-rapid-draw";
+import * as mclassic_027_pestilent_slime from "./classic/027-pestilent-slime";
+import * as mclassic_028_second_wind from "./classic/028-second-wind";
+import * as mclassic_029_book_of_vital_kill from "./classic/029-book-of-vital-kill";
+import * as mclassic_030_recycle from "./classic/030-recycle";
+import * as mclassic_031_cookie_guild from "./classic/031-cookie-guild";
+import * as mclassic_032_felinor_feelings from "./classic/032-felinor-feelings";
+import * as mclassic_033_joro from "./classic/033-joro";
+import * as mclassic_034_ancient_acquisition from "./classic/034-ancient-acquisition";
+import * as mclassic_035_prep from "./classic/035-prep";
+import * as mclassic_036_burn from "./classic/036-burn";
+import * as mclassic_037_last_hurrah from "./classic/037-last-hurrah";
+import * as mclassic_038_jackiestan_auctioneer from "./classic/038-jackiestan-auctioneer";
+import * as mclassic_039_outbreak from "./classic/039-outbreak";
+import * as mclassic_040_mc_tech from "./classic/040-mc-tech";
+import * as mclassic_041_state_of_the_game from "./classic/041-state-of-the-game";
+import * as mclassic_042_transmutable_toxins from "./classic/042-transmutable-toxins";
+import * as mclassic_043_plague_nuke from "./classic/043-plague-nuke";
+import * as mclassic_044_back_from_the_gy from "./classic/044-back-from-the-gy";
+import * as mclassic_045_nature_titan from "./classic/045-nature-titan";
+import * as mclassic_046_divine_favor from "./classic/046-divine-favor";
+import * as mclassic_047_recurring_felinor from "./classic/047-recurring-felinor";
+import * as mclassic_048_hired_shrimp from "./classic/048-hired-shrimp";
+import * as mclassic_049_anti_greed_machine from "./classic/049-anti-greed-machine";
+import * as mclassic_050_voidwalker from "./classic/050-voidwalker";
+import * as mclassic_051_back_breaker from "./classic/051-back-breaker";
+import * as mclassic_052_final_gambit from "./classic/052-final-gambit";
+import * as mclassic_053_plague_crawler from "./classic/053-plague-crawler";
+import * as mclassic_054_rewind from "./classic/054-rewind";
+import * as mclassic_055_book_of_wildfire from "./classic/055-book-of-wildfire";
+import * as mclassic_056_spell_tyrant from "./classic/056-spell-tyrant";
+import * as mclassic_057_echo from "./classic/057-echo";
+import * as mclassic_058_common_resources from "./classic/058-common-resources";
+import * as mclassic_059_plague_doctor from "./classic/059-plague-doctor";
+import * as mclassic_060_pile_on from "./classic/060-pile-on";
+import * as mclassic_061_plague_bringer_goliath from "./classic/061-plague-bringer-goliath";
+import * as mclassic_062_living_bomb from "./classic/062-living-bomb";
+import * as mclassic_063_crop_dusting from "./classic/063-crop-dusting";
+import * as mclassic_064_malzahars_recycler from "./classic/064-malzahars-recycler";
+import * as mclassic_065_ace_in_the_hole from "./classic/065-ace-in-the-hole";
+import * as mclassic_066_eu_striker from "./classic/066-eu-striker";
+import * as mclassic_067_felinor_feeler from "./classic/067-felinor-feeler";
+import * as mclassic_068_small_card_lobbyist from "./classic/068-small-card-lobbyist";
+import * as mclassic_069_plague_charger from "./classic/069-plague-charger";
+import * as mclassic_070_book_of_plague from "./classic/070-book-of-plague";
+import * as mclassic_071_lane_eater from "./classic/071-lane-eater";
+import * as mclassic_072_grand_counterspell from "./classic/072-grand-counterspell";
+import * as mclassic_073_nurse_cleaver from "./classic/073-nurse-cleaver";
+import * as mclassic_074_corpse_plantation from "./classic/074-corpse-plantation";
+import * as mclassic_075_argusland from "./classic/075-argusland";
+import * as mclassic_076_plague_bringer from "./classic/076-plague-bringer";
+import * as mclassic_077_anti_magic_monkey from "./classic/077-anti-magic-monkey";
+import * as mclassic_078_mutate_spell from "./classic/078-mutate-spell";
+import * as mclassic_079_risky_die from "./classic/079-risky-die";
+import * as mclassic_080_boom_big_max from "./classic/080-boom-big-max";
+import * as mclassic_081_the_power_to_thrive from "./classic/081-the-power-to-thrive";
+import * as mclassic_082_sheeople from "./classic/082-sheeople";
+import * as mclassic_083_flame_lance from "./classic/083-flame-lance";
+import * as mclassic_084_lockdown from "./classic/084-lockdown";
+import * as mclassic_085_king_wagtoggle from "./classic/085-king-wagtoggle";
+import * as mclassic_086_genn from "./classic/086-genn";
+import * as mclassic_087_plague_chalice from "./classic/087-plague-chalice";
+import * as mclassic_088_siphon_squad from "./classic/088-siphon-squad";
+import * as mclassic_089_paul_allens_ghost from "./classic/089-paul-allens-ghost";
+import * as mclassic_090_in_too_deep from "./classic/090-in-too-deep";
+import * as mclassic_plus_001_doom_shroom from "./classic-plus/001-doom-shroom";
+import * as mclassic_plus_002_groom_shroom from "./classic-plus/002-groom-shroom";
+import * as mclassic_plus_003_second_amendment_snake from "./classic-plus/003-second-amendment-snake";
+import * as mclassic_plus_004_juhan_biggest_bat from "./classic-plus/004-juhan-biggest-bat";
+import * as mclassic_plus_005_guy_att from "./classic-plus/005-guy-att";
+import * as mclassic_plus_006_wrong_house_attacker from "./classic-plus/006-wrong-house-attacker";
+import * as mclassic_plus_007_the_house from "./classic-plus/007-the-house";
+import * as mclassic_plus_008_withering_storm from "./classic-plus/008-withering-storm";
+import * as mclassic_plus_009_silence from "./classic-plus/009-silence";
+import * as mclassic_plus_010_new_wraps from "./classic-plus/010-new-wraps";
+import * as mclassic_plus_011_anime_armor from "./classic-plus/011-anime-armor";
+import * as mclassic_plus_012_the_mother_pancake from "./classic-plus/012-the-mother-pancake";
+import * as mclassic_plus_012_1_devour from "./classic-plus/012-1-devour";
+import * as mclassic_plus_012_2_death_boil from "./classic-plus/012-2-death-boil";
+import * as mclassic_plus_012_3_fluffy_grip from "./classic-plus/012-3-fluffy-grip";
+import * as mclassic_plus_012_4_powder_spray from "./classic-plus/012-4-powder-spray";
+import * as mclassic_plus_012_5_anti_waffle_shell from "./classic-plus/012-5-anti-waffle-shell";
+import * as mclassic_plus_012_6_frozen_wastes from "./classic-plus/012-6-frozen-wastes";
+import * as mclassic_plus_012_7_legion_of_the_hungry from "./classic-plus/012-7-legion-of-the-hungry";
+import * as mclassic_plus_012_8_frostspatula from "./classic-plus/012-8-frostspatula";
+import * as mclassic_plus_013_mommy_barker from "./classic-plus/013-mommy-barker";
+import * as mclassic_plus_014_forever from "./classic-plus/014-forever";
+import * as mclassic_plus_015_conjure_rush_token from "./classic-plus/015-conjure-rush-token";
+import * as mclassic_plus_016_conjure_rush_token from "./classic-plus/016-conjure-rush-token";
+import * as mclassic_plus_017_conjure_rush_token from "./classic-plus/017-conjure-rush-token";
+import * as mclassic_plus_018_gullible_treatler from "./classic-plus/018-gullible-treatler";
+import * as mclassic_plus_019_league_of_losers from "./classic-plus/019-league-of-losers";
+import * as mclassic_plus_019_1_top_loser from "./classic-plus/019-1-top-loser";
+import * as mclassic_plus_019_2_jungle_loser from "./classic-plus/019-2-jungle-loser";
+import * as mclassic_plus_019_3_mid_loser from "./classic-plus/019-3-mid-loser";
+import * as mclassic_plus_019_4_support_loser from "./classic-plus/019-4-support-loser";
+import * as mclassic_plus_019_5_bot_loser from "./classic-plus/019-5-bot-loser";
+import * as mclassic_plus_020_mushroom_power from "./classic-plus/020-mushroom-power";
+import * as mclassic_plus_021_whirlwind from "./classic-plus/021-whirlwind";
+import * as mclassic_plus_022_blood_moon from "./classic-plus/022-blood-moon";
+import * as mclassic_plus_023_dropshipping from "./classic-plus/023-dropshipping";
+import * as mclassic_plus_024_crushing_walls from "./classic-plus/024-crushing-walls";
+import * as mclassic_plus_025_soul_shot from "./classic-plus/025-soul-shot";
+import * as mclassic_plus_026_tommy_tempo from "./classic-plus/026-tommy-tempo";
+import * as mclassic_plus_027_zephrys_zealotism from "./classic-plus/027-zephrys-zealotism";
+import * as mclassic_plus_028_nuestro_hogar_nuestras_tumbas from "./classic-plus/028-nuestro-hogar-nuestras-tumbas";
+import * as mclassic_plus_029_portal_to_the_past from "./classic-plus/029-portal-to-the-past";
+import * as mclassic_plus_030_felinor_fuser from "./classic-plus/030-felinor-fuser";
+import * as mclassic_plus_031_fusion_lab from "./classic-plus/031-fusion-lab";
+import * as mclassic_plus_032_otherworldly_removal from "./classic-plus/032-otherworldly-removal";
+import * as mclassic_plus_032_1_execute from "./classic-plus/032-1-execute";
+import * as mclassic_plus_032_2_brawl from "./classic-plus/032-2-brawl";
+import * as mclassic_plus_032_3_blade_storm from "./classic-plus/032-3-blade-storm";
+import * as mclassic_plus_033_ivory_tower from "./classic-plus/033-ivory-tower";
+import * as mclassic_plus_034_memory_leak from "./classic-plus/034-memory-leak";
+import * as mclassic_plus_035_rollback from "./classic-plus/035-rollback";
+import * as mclassic_plus_036_conjure_bones from "./classic-plus/036-conjure-bones";
+import * as mclassic_plus_036_1_bone_storm from "./classic-plus/036-1-bone-storm";
+import * as mclassic_plus_037_wardrum from "./classic-plus/037-wardrum";
+import * as mclassic_plus_038_solarius from "./classic-plus/038-solarius";
+import * as mclassic_plus_038_1_solarius_prime from "./classic-plus/038-1-solarius-prime";
+import * as mclassic_plus_039_book_worm from "./classic-plus/039-book-worm";
+import * as mclassic_plus_040_appropriations from "./classic-plus/040-appropriations";
+import * as mclassic_plus_041_kys_constant from "./classic-plus/041-kys-constant";
+import * as mclassic_plus_042_kys_test from "./classic-plus/042-kys-test";
+import * as mclassic_plus_042_1_kys_gift from "./classic-plus/042-1-kys-gift";
+import * as mclassic_plus_043_ai_slop from "./classic-plus/043-ai-slop";
+import * as mclassic_plus_044_simplicity_audit from "./classic-plus/044-simplicity-audit";
+import * as mclassic_plus_045_complexity_audit from "./classic-plus/045-complexity-audit";
+import * as mclassic_plus_046_felinor_flagbearer from "./classic-plus/046-felinor-flagbearer";
+import * as mclassic_plus_046_1_felinor_flagbearer_prime from "./classic-plus/046-1-felinor-flagbearer-prime";
+import * as mclassic_plus_047_joggs_box from "./classic-plus/047-joggs-box";
+import * as mclassic_plus_048_jlockheeds_lobbyist from "./classic-plus/048-jlockheeds-lobbyist";
+import * as mclassic_plus_049_jay_fungus from "./classic-plus/049-jay-fungus";
+import * as mclassic_plus_050_adaptive_growth from "./classic-plus/050-adaptive-growth";
+import * as mclassic_plus_051_jlockheeds_j15_fighter from "./classic-plus/051-jlockheeds-j15-fighter";
+import * as mclassic_plus_052_jlockheeds_permanent_defense_contract from "./classic-plus/052-jlockheeds-permanent-defense-contract";
+import * as mclassic_plus_053_book_of_tokens from "./classic-plus/053-book-of-tokens";
+import * as mclassic_plus_054_book_of_books from "./classic-plus/054-book-of-books";
+import * as mclassic_plus_055_book_of_greed from "./classic-plus/055-book-of-greed";
+import * as mclassic_plus_056_book_of_pain from "./classic-plus/056-book-of-pain";
+import * as mclassic_plus_057_book_of_stats from "./classic-plus/057-book-of-stats";
+import * as mclassic_plus_058_fruit_basket from "./classic-plus/058-fruit-basket";
+import * as mclassic_plus_059_all_purpose_apple from "./classic-plus/059-all-purpose-apple";
+import * as mclassic_plus_060_doctors_orders from "./classic-plus/060-doctors-orders";
+import * as mclassic_plus_061_bauble_bubble from "./classic-plus/061-bauble-bubble";
+import * as mclassic_plus_062_kys_papaya from "./classic-plus/062-kys-papaya";
+import * as mclassic_plus_063_fruit_tree from "./classic-plus/063-fruit-tree";
+import * as mclassic_plus_064_mulch_muncher from "./classic-plus/064-mulch-muncher";
+import * as mclassic_plus_065_two_grapes from "./classic-plus/065-two-grapes";
+import * as mclassic_plus_065_1_rotten_grape from "./classic-plus/065-1-rotten-grape";
+import * as mclassic_plus_065_2_normal_grape from "./classic-plus/065-2-normal-grape";
+import * as mclassic_plus_065_3_large_grape from "./classic-plus/065-3-large-grape";
+import * as mclassic_plus_065_4_golden_grape from "./classic-plus/065-4-golden-grape";
+import * as mclassic_plus_065_5_mythic_grape from "./classic-plus/065-5-mythic-grape";
+import * as mclassic_plus_066_vine_of_grapes from "./classic-plus/066-vine-of-grapes";
+import * as mclassic_plus_067_pear from "./classic-plus/067-pear";
+import * as mclassic_plus_068_organic_produce from "./classic-plus/068-organic-produce";
+import * as mclassic_plus_069_buff_billy from "./classic-plus/069-buff-billy";
+import * as mclassic_plus_070_chaos_machine from "./classic-plus/070-chaos-machine";
+import * as mclassic_plus_071_book_of_buff from "./classic-plus/071-book-of-buff";
+import * as mclassic_plus_072_book_of_nerf from "./classic-plus/072-book-of-nerf";
+import * as mclassic_plus_073_call_to_chaos_classic_edition from "./classic-plus/073-call-to-chaos-classic-edition";
+import * as mclassic_plus_073_1_classic_golem from "./classic-plus/073-1-classic-golem";
+import * as mclassic_plus_074_twice_forward_one_step_backwards from "./classic-plus/074-twice-forward-one-step-backwards";
+import * as mclassic_plus_075_j_lease_j_jungle_ex_plorer from "./classic-plus/075-j-lease-j-jungle-ex-plorer";
+import * as mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack from "./classic-plus/075-1-j-lease-j-jungle-ex-plorer-pack";
+import * as mclassic_plus_076_brother_lar from "./classic-plus/076-brother-lar";
+import * as mclassic_plus_076_1_brother_ping from "./classic-plus/076-1-brother-ping";
+import * as mclassic_plus_077_anti_softlock from "./classic-plus/077-anti-softlock";
+import * as mclassic_plus_078_claudes_datacenter from "./classic-plus/078-claudes-datacenter";
+import * as mclassic_plus_t_ai_01_helpful_assistant from "./classic-plus/t-ai-01-helpful-assistant";
+import * as mclassic_plus_t_ai_02_scaling_law from "./classic-plus/t-ai-02-scaling-law";
+import * as mclassic_plus_t_ai_03_hallucination from "./classic-plus/t-ai-03-hallucination";
+import * as mclassic_plus_t_ai_04_chain_of_thought from "./classic-plus/t-ai-04-chain-of-thought";
+import * as mclassic_plus_t_ai_05_autocomplete from "./classic-plus/t-ai-05-autocomplete";
+import * as mclassic_plus_t_ai_06_datacenter_fire from "./classic-plus/t-ai-06-datacenter-fire";
+import * as mclassic_plus_t_ai_07_alignment_tax from "./classic-plus/t-ai-07-alignment-tax";
+import * as mclassic_plus_t_ai_08_rate_limit from "./classic-plus/t-ai-08-rate-limit";
+import * as mclassic_plus_t_ai_09_refusal from "./classic-plus/t-ai-09-refusal";
+import * as mclassic_plus_t_ai_10_fine_tuning from "./classic-plus/t-ai-10-fine-tuning";
 
 export const SCRIPT_MODULES: readonly CardModule[] = [
   m001_big_d_fender,
@@ -237,4 +443,210 @@ export const SCRIPT_MODULES: readonly CardModule[] = [
   mt_ghoul,
   mt_rush,
   mt_sheep,
+  mclassic_001_curse_of_the_forgotten_classic,
+  mclassic_002_the_trickster,
+  mclassic_003_book_of_heal,
+  mclassic_004_palantir,
+  mclassic_005_tesla,
+  mclassic_006_cloaked_toe_cracker,
+  mclassic_007_infiniscepter,
+  mclassic_008_pickle,
+  mclassic_009_income_tax,
+  mclassic_010_exile,
+  mclassic_011_mind_melt,
+  mclassic_012_book_of_blood,
+  mclassic_013_boots_on_the_ground,
+  mclassic_014_shadowstep,
+  mclassic_015_nose_hunter,
+  mclassic_016_book_of_flame,
+  mclassic_017_counterspell,
+  mclassic_018_glitch_in_the_system,
+  mclassic_019_lizards_breath,
+  mclassic_020_the_power_to_punish,
+  mclassic_021_turtinator,
+  mclassic_022_mid_runner,
+  mclassic_023_devils_pact,
+  mclassic_024_book_of_knowledge,
+  mclassic_025_lag_in_the_system,
+  mclassic_026_rapid_draw,
+  mclassic_027_pestilent_slime,
+  mclassic_028_second_wind,
+  mclassic_029_book_of_vital_kill,
+  mclassic_030_recycle,
+  mclassic_031_cookie_guild,
+  mclassic_032_felinor_feelings,
+  mclassic_033_joro,
+  mclassic_034_ancient_acquisition,
+  mclassic_035_prep,
+  mclassic_036_burn,
+  mclassic_037_last_hurrah,
+  mclassic_038_jackiestan_auctioneer,
+  mclassic_039_outbreak,
+  mclassic_040_mc_tech,
+  mclassic_041_state_of_the_game,
+  mclassic_042_transmutable_toxins,
+  mclassic_043_plague_nuke,
+  mclassic_044_back_from_the_gy,
+  mclassic_045_nature_titan,
+  mclassic_046_divine_favor,
+  mclassic_047_recurring_felinor,
+  mclassic_048_hired_shrimp,
+  mclassic_049_anti_greed_machine,
+  mclassic_050_voidwalker,
+  mclassic_051_back_breaker,
+  mclassic_052_final_gambit,
+  mclassic_053_plague_crawler,
+  mclassic_054_rewind,
+  mclassic_055_book_of_wildfire,
+  mclassic_056_spell_tyrant,
+  mclassic_057_echo,
+  mclassic_058_common_resources,
+  mclassic_059_plague_doctor,
+  mclassic_060_pile_on,
+  mclassic_061_plague_bringer_goliath,
+  mclassic_062_living_bomb,
+  mclassic_063_crop_dusting,
+  mclassic_064_malzahars_recycler,
+  mclassic_065_ace_in_the_hole,
+  mclassic_066_eu_striker,
+  mclassic_067_felinor_feeler,
+  mclassic_068_small_card_lobbyist,
+  mclassic_069_plague_charger,
+  mclassic_070_book_of_plague,
+  mclassic_071_lane_eater,
+  mclassic_072_grand_counterspell,
+  mclassic_073_nurse_cleaver,
+  mclassic_074_corpse_plantation,
+  mclassic_075_argusland,
+  mclassic_076_plague_bringer,
+  mclassic_077_anti_magic_monkey,
+  mclassic_078_mutate_spell,
+  mclassic_079_risky_die,
+  mclassic_080_boom_big_max,
+  mclassic_081_the_power_to_thrive,
+  mclassic_082_sheeople,
+  mclassic_083_flame_lance,
+  mclassic_084_lockdown,
+  mclassic_085_king_wagtoggle,
+  mclassic_086_genn,
+  mclassic_087_plague_chalice,
+  mclassic_088_siphon_squad,
+  mclassic_089_paul_allens_ghost,
+  mclassic_090_in_too_deep,
+  mclassic_plus_001_doom_shroom,
+  mclassic_plus_002_groom_shroom,
+  mclassic_plus_003_second_amendment_snake,
+  mclassic_plus_004_juhan_biggest_bat,
+  mclassic_plus_005_guy_att,
+  mclassic_plus_006_wrong_house_attacker,
+  mclassic_plus_007_the_house,
+  mclassic_plus_008_withering_storm,
+  mclassic_plus_009_silence,
+  mclassic_plus_010_new_wraps,
+  mclassic_plus_011_anime_armor,
+  mclassic_plus_012_the_mother_pancake,
+  mclassic_plus_012_1_devour,
+  mclassic_plus_012_2_death_boil,
+  mclassic_plus_012_3_fluffy_grip,
+  mclassic_plus_012_4_powder_spray,
+  mclassic_plus_012_5_anti_waffle_shell,
+  mclassic_plus_012_6_frozen_wastes,
+  mclassic_plus_012_7_legion_of_the_hungry,
+  mclassic_plus_012_8_frostspatula,
+  mclassic_plus_013_mommy_barker,
+  mclassic_plus_014_forever,
+  mclassic_plus_015_conjure_rush_token,
+  mclassic_plus_016_conjure_rush_token,
+  mclassic_plus_017_conjure_rush_token,
+  mclassic_plus_018_gullible_treatler,
+  mclassic_plus_019_league_of_losers,
+  mclassic_plus_019_1_top_loser,
+  mclassic_plus_019_2_jungle_loser,
+  mclassic_plus_019_3_mid_loser,
+  mclassic_plus_019_4_support_loser,
+  mclassic_plus_019_5_bot_loser,
+  mclassic_plus_020_mushroom_power,
+  mclassic_plus_021_whirlwind,
+  mclassic_plus_022_blood_moon,
+  mclassic_plus_023_dropshipping,
+  mclassic_plus_024_crushing_walls,
+  mclassic_plus_025_soul_shot,
+  mclassic_plus_026_tommy_tempo,
+  mclassic_plus_027_zephrys_zealotism,
+  mclassic_plus_028_nuestro_hogar_nuestras_tumbas,
+  mclassic_plus_029_portal_to_the_past,
+  mclassic_plus_030_felinor_fuser,
+  mclassic_plus_031_fusion_lab,
+  mclassic_plus_032_otherworldly_removal,
+  mclassic_plus_032_1_execute,
+  mclassic_plus_032_2_brawl,
+  mclassic_plus_032_3_blade_storm,
+  mclassic_plus_033_ivory_tower,
+  mclassic_plus_034_memory_leak,
+  mclassic_plus_035_rollback,
+  mclassic_plus_036_conjure_bones,
+  mclassic_plus_036_1_bone_storm,
+  mclassic_plus_037_wardrum,
+  mclassic_plus_038_solarius,
+  mclassic_plus_038_1_solarius_prime,
+  mclassic_plus_039_book_worm,
+  mclassic_plus_040_appropriations,
+  mclassic_plus_041_kys_constant,
+  mclassic_plus_042_kys_test,
+  mclassic_plus_042_1_kys_gift,
+  mclassic_plus_043_ai_slop,
+  mclassic_plus_044_simplicity_audit,
+  mclassic_plus_045_complexity_audit,
+  mclassic_plus_046_felinor_flagbearer,
+  mclassic_plus_046_1_felinor_flagbearer_prime,
+  mclassic_plus_047_joggs_box,
+  mclassic_plus_048_jlockheeds_lobbyist,
+  mclassic_plus_049_jay_fungus,
+  mclassic_plus_050_adaptive_growth,
+  mclassic_plus_051_jlockheeds_j15_fighter,
+  mclassic_plus_052_jlockheeds_permanent_defense_contract,
+  mclassic_plus_053_book_of_tokens,
+  mclassic_plus_054_book_of_books,
+  mclassic_plus_055_book_of_greed,
+  mclassic_plus_056_book_of_pain,
+  mclassic_plus_057_book_of_stats,
+  mclassic_plus_058_fruit_basket,
+  mclassic_plus_059_all_purpose_apple,
+  mclassic_plus_060_doctors_orders,
+  mclassic_plus_061_bauble_bubble,
+  mclassic_plus_062_kys_papaya,
+  mclassic_plus_063_fruit_tree,
+  mclassic_plus_064_mulch_muncher,
+  mclassic_plus_065_two_grapes,
+  mclassic_plus_065_1_rotten_grape,
+  mclassic_plus_065_2_normal_grape,
+  mclassic_plus_065_3_large_grape,
+  mclassic_plus_065_4_golden_grape,
+  mclassic_plus_065_5_mythic_grape,
+  mclassic_plus_066_vine_of_grapes,
+  mclassic_plus_067_pear,
+  mclassic_plus_068_organic_produce,
+  mclassic_plus_069_buff_billy,
+  mclassic_plus_070_chaos_machine,
+  mclassic_plus_071_book_of_buff,
+  mclassic_plus_072_book_of_nerf,
+  mclassic_plus_073_call_to_chaos_classic_edition,
+  mclassic_plus_073_1_classic_golem,
+  mclassic_plus_074_twice_forward_one_step_backwards,
+  mclassic_plus_075_j_lease_j_jungle_ex_plorer,
+  mclassic_plus_075_1_j_lease_j_jungle_ex_plorer_pack,
+  mclassic_plus_076_brother_lar,
+  mclassic_plus_076_1_brother_ping,
+  mclassic_plus_077_anti_softlock,
+  mclassic_plus_078_claudes_datacenter,
+  mclassic_plus_t_ai_01_helpful_assistant,
+  mclassic_plus_t_ai_02_scaling_law,
+  mclassic_plus_t_ai_03_hallucination,
+  mclassic_plus_t_ai_04_chain_of_thought,
+  mclassic_plus_t_ai_05_autocomplete,
+  mclassic_plus_t_ai_06_datacenter_fire,
+  mclassic_plus_t_ai_07_alignment_tax,
+  mclassic_plus_t_ai_08_rate_limit,
+  mclassic_plus_t_ai_09_refusal,
+  mclassic_plus_t_ai_10_fine_tuning,
 ];

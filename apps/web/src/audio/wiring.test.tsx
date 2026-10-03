@@ -44,6 +44,8 @@ function fakeEngine(): FakeEngine {
         listeners.delete(listener);
       };
     }),
+    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
     playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
@@ -146,6 +148,17 @@ describe("the board's catalog reaches the sound director", () => {
     play([summoned(LEGENDARY_UNIT)], false);
     expect(sfx(engine, "entrance")).toEqual([]);
     expect(sfx(engine, "summon").every((params) => params?.timbre === undefined)).toBe(true);
+  });
+
+  it("R506 through the board: a token that prints Legendary enters with the sting, and the new tags' families reach the director", () => {
+    play([
+      summoned("classicplus-073-1", "u1"),
+      summoned("classicplus-012", "u2"),
+      { type: "cardPlayed", player: "p1", instanceId: "c3", defId: "classic-016", costPaid: 1 },
+    ]);
+    expect(sfx(engine, "entrance").length).toBeGreaterThanOrEqual(2);
+    expect(sfx(engine, "summon").map((params) => params?.timbre)).toContain("pancake");
+    expect(sfx(engine, "spell")).toContainEqual({ timbre: "book" });
   });
 
   it("R203 a unit behind the sentinel gets no sting and no family, whatever the catalog holds", () => {

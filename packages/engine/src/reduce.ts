@@ -8,7 +8,9 @@
 // can never disagree (§9.3):
 //
 //   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
-//                      `playChoices.playActionsFor` (R81, R90). Step 1's validation is
+//                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
+//                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
+//                      lets its player play (E11, R454). Step 1's validation is
 //                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
 //                      reads the cost, so the refusal a client's greyed-out button comes from and
@@ -19,16 +21,19 @@
 //                      can come back with a prompt open and the combat still owed on `state.work`
 //                      (R113): the answer action finishes it, exactly as it finishes a Cry.
 //   switchPosition   → `combat.switchPosition` (§4.1, R20, R49)
-//   activatePower    → `subsystems/heroPower.activatePower`, listed by `whyCannotActivate` (R43)
+//   activate         → `subsystems/activate.activateAbility`, listed by `activateActionsFor` (B3.2,
+//                      R384); on a Heroic Power, `subsystems/heroPower.activatePower` (R43)
+//   activatePower    → the alias of `activate` every old log carries: the same routing (R384)
 //   answer           → `prompts.answerPrompt`, which hands a prompt the play pipeline opened itself
 //                      to that pipeline's answerer (R122)
 //   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
-//   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `maybeAutoEndTurn` below (R82, R345)
+//   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
 //
 // After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
 // the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
-// pops the trigger queue until nothing is left or a prompt stops it.
+// pops the trigger queue until nothing is left or a prompt stops it. Then a turn an effect has cut
+// short ends (B5 E10, R456), and a turn with nothing left to do ends by itself (R82).
 
 import type { Action, ActionBody, ActionType, GameEvent, PlayerId } from "@jackioh/shared";
 import { NON_ACTIVE_ACTION_TYPES, PROMPT_OPEN_ACTION_TYPES, opponentOf } from "@jackioh/shared";
@@ -36,19 +41,21 @@ import { attackTargets, declareAttack, hasExertion, switchPosition, type AttackT
 import { NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS } from "./config";
 import { endGame } from "./gameOver";
 import { runPlaySteps } from "./playSteps";
-import { playActionsFor } from "./playChoices";
+import { graveyardPlayActionsFor, playActionsFor } from "./playChoices";
 import { answerPrompt, promptAnswers } from "./prompts";
 import { createRng, type Rng } from "./rng";
 import type { EngineSink } from "./resolve";
 import { answerMulligan, beginSetup, mulliganOwed, mulliganPromptFor, whyMulliganRefused } from "./setup";
 import { flagsOf } from "./scripts";
+import { removeModifier, turnEndsOf } from "./modifiers";
 import { cloneState, findInstance, type CardInstance, type GameState } from "./state";
+import { activateAbility, activateActionsFor } from "./subsystems/activate";
 import { playOutTurn } from "./subsystems/aiPolicy";
 import { syncFusedScripts } from "./subsystems/fuse";
-import { activatePower, whyCannotActivate } from "./subsystems/heroPower";
+import { activatePower, powerOf, whyCannotActivate } from "./subsystems/heroPower";
 import { settle } from "./triggers";
 import { answerDraw, canOfferDraw, concede, endTurn, hasStandingDrawOffer, offerDraw } from "./turn";
-import { activeUnitsOf } from "./zones";
+import { activeUnitsOf, cardAt, carriedUnitsOf, slotsOf } from "./zones";
 
 export type ReduceResult = { state: GameState; events: GameEvent[]; error?: string };
 
@@ -87,9 +94,10 @@ export function attackTargetId(target: AttackTarget): string {
  * failure here (R13).
  */
 function attackerOf(state: GameState, player: PlayerId, instanceId: string): CardInstance | undefined {
-  return state.players[player]
-    .units.flatMap((pile) => pile ?? [])
-    .find((card) => card.id === instanceId);
+  // R446: a Unit a carrier holds is one of the player's units too, which `combat` refuses to attack.
+  return [...state.players[player].units.flatMap((pile) => pile ?? []), ...carriedUnitsOf(state, player)].find(
+    (card) => card.id === instanceId,
+  );
 }
 
 /**
@@ -120,6 +128,55 @@ function switchAction(sink: EngineSink, player: PlayerId, instanceId: string): s
   return switchPosition(sink, unit).error ?? null;
 }
 
+type ActivationAction = Extract<ActionBody, { type: "activate" | "activatePower" }>;
+
+/**
+ * B3.2 rule 10, R384, R43: `activate` and its alias `activatePower`, one routing for both. A Heroic
+ * Power's power is its own activation in v0.2.0 (R43), so an action on a card with a power that names
+ * no ability of the card's own goes to `heroPower.activatePower` — every old log's `activatePower`
+ * replays exactly — and everything else to `activate.activateAbility`, which answers for any card's
+ * "Activate:" abilities.
+ */
+function activateCard(sink: EngineSink, player: PlayerId, action: ActivationAction): string | null {
+  const card = findInstance(sink.state, action.instanceId);
+  const named = action.type === "activate" ? action.ability : undefined;
+  const modes = action.type === "activate" ? action.modes : undefined;
+  const tributes = action.type === "activate" ? action.tributes : undefined;
+  const discards = action.type === "activate" ? action.discards : undefined;
+  if (card !== undefined && powerOf(card) !== null && named === undefined) {
+    if ((modes?.length ?? 0) > 0) return "that power takes no mode choices";
+    if ((tributes?.length ?? 0) > 0) return "that power needs no Tribute";
+    if ((discards?.length ?? 0) > 0) return "that power takes no discards";
+    return activatePower(sink, player, {
+      instanceId: action.instanceId,
+      ...(action.targets === undefined ? {} : { targets: action.targets }),
+    });
+  }
+  return activateAbility(sink, player, {
+    type: "activate",
+    instanceId: action.instanceId,
+    ...(named === undefined ? {} : { ability: named }),
+    ...(action.targets === undefined ? {} : { targets: action.targets }),
+    ...(modes === undefined ? {} : { modes }),
+    ...(tributes === undefined ? {} : { tributes }),
+    ...(discards === undefined ? {} : { discards }),
+  });
+}
+
+/**
+ * R43, R384: what `legalActions` offers for one card acting on the field — a Heroic Power's power as
+ * the `activatePower` it has always been listed as, and every usable "Activate:" ability with its
+ * choices (`activate.activateActionsFor`).
+ */
+function activationActions(state: GameState, player: PlayerId, card: CardInstance): ActionBody[] {
+  const out: ActionBody[] = [];
+  if (powerOf(card) !== null && whyCannotActivate(state, player, card.id) === null) {
+    out.push({ type: "activatePower", instanceId: card.id });
+  }
+  out.push(...activateActionsFor(state, player, card));
+  return out;
+}
+
 /** §4.1 and R49: whether this unit's own switch is on offer at all. */
 function canSwitch(unit: CardInstance): boolean {
   if (!hasExertion(unit, "switch")) return false;
@@ -144,10 +201,11 @@ function applyAction(sink: EngineSink, action: Action): string | null {
       return switchAction(sink, action.playerId, action.instanceId);
     case "attack":
       return attack(sink, action.playerId, action);
+    case "activate":
     case "activatePower":
-      // R43: the power lives on the instance and `heroPower.ts` owns every part of using it —
-      // the cost is the power's X, and using it is that turn's use.
-      return activatePower(sink, action.playerId, action);
+      // R43, R384: a power or an ability lives on the instance, and the module that owns it owns
+      // every part of using it — the costs, the choices, and that turn's use.
+      return activateCard(sink, action.playerId, action);
     case "answer":
       // §10.6: a card's continuation is re-entered through its script; a prompt an engine sequence
       // opened for itself (an Echo repeat's fresh pick, §10.5 step 6) goes to that sequence's
@@ -267,24 +325,78 @@ function answerForLockedOut(sink: EngineSink): void {
 }
 
 /**
- * §2.5, R82: when nothing but ending the turn is left, the turn ends by itself — unless the active
- * player has turned that off for themselves (R345), when the turn waits for their End turn.
+ * B5 E10, R456: the main-phase actions "one more action, then your turn ends" counts — a play, an
+ * attack, a position switch, an activation. An answer is part of the action that asked; ending the
+ * turn uses the rest up by ending it.
  */
-function maybeAutoEndTurn(sink: EngineSink): void {
+const TURN_ACTION_TYPES: readonly ActionType[] = ["play", "attack", "switchPosition", "activate", "activatePower"];
+
+/**
+ * B5 E10, R456: the rider an action counts against — the acting player's own "your turn ends" rider
+ * with actions still left, as it stood before the action. A rider the action itself puts in place
+ * (Classic+ #26 Radiant drawn by it) is counted from the next action on.
+ */
+function turnActionCounted(state: GameState, action: Action): string | null {
+  if (!TURN_ACTION_TYPES.includes(action.type)) return null;
+  if (action.playerId !== state.active) return null;
+  const rider = turnEndsOf(state, action.playerId);
+  return rider === null || rider.actionsLeft <= 0 ? null : rider.id;
+}
+
+/** R456: spend one of the actions a rider leaves, once the action it counted was accepted. */
+function countTurnAction(state: GameState, player: PlayerId, riderId: string): void {
+  const rider = turnEndsOf(state, player);
+  if (rider !== null && rider.id === riderId && rider.actionsLeft > 0) rider.actionsLeft -= 1;
+}
+
+/**
+ * B5 E10, R456: whether the active player's turn is due to end because an effect cut it short: its
+ * rider has no actions left, and what was resolving has resolved — no prompt open, the turn in its
+ * main phase (a rider set during the start of a turn, a cast on draw's, waits for it).
+ */
+function turnCutDue(state: GameState): ReturnType<typeof turnEndsOf> {
+  if (state.result !== null || state.pending !== null || state.phase !== "main") return null;
+  const rider = turnEndsOf(state, state.active);
+  return rider !== null && rider.actionsLeft <= 0 ? rider : null;
+}
+
+/**
+ * R82, R456: end every turn that is due to end once the action has resolved — one an effect cut
+ * short (`turnCutShort`, then every end-of-turn step, as if End turn were pressed), and one with
+ * nothing but ending it left to do, unless its player turned that off (R345). Either may start a
+ * turn that is due to end in its turn (a Tommy Tempo drawn at its start), hence the loop.
+ */
+function endDueTurns(sink: EngineSink): void {
   for (let guard = 0; guard <= TURN_CAP_PLAYER_TURNS; guard += 1) {
     const state = sink.state;
-    if (state.result !== null || state.pending !== null || state.phase !== "main") return;
-    const player = state.active;
-    if (state.players[player].autoEndTurn === false) return;
-    const actions = legalActions(state, player);
-    const meaningful = actions.filter(
-      (action) => action.type !== "endTurn" && action.type !== "concede" && action.type !== "offerDraw",
-    );
-    if (meaningful.length > 0) return;
-    sink.events.push({ type: "turnAutoEnded", player, turn: state.turn });
+    const cut = turnCutDue(state);
+    if (cut !== null) {
+      const player = state.active;
+      removeModifier(sink, player, cut.id);
+      sink.events.push({ type: "turnCutShort", player, byInstanceId: cut.byInstanceId });
+      endTurn(sink);
+      settle(sink);
+      continue;
+    }
+    if (!autoEndDue(state)) return;
+    sink.events.push({ type: "turnAutoEnded", player: state.active, turn: state.turn });
     endTurn(sink);
     settle(sink);
   }
+}
+
+/**
+ * §2.5, R82: when nothing but ending the turn is left, the turn ends by itself — unless the active
+ * player has turned that off for themselves (R345), when the turn waits for their End turn.
+ */
+function autoEndDue(state: GameState): boolean {
+  if (state.result !== null || state.pending !== null || state.phase !== "main") return false;
+  const player = state.active;
+  if (state.players[player].autoEndTurn === false) return false;
+  const meaningful = legalActions(state, player).filter(
+    (action) => action.type !== "endTurn" && action.type !== "concede" && action.type !== "offerDraw",
+  );
+  return meaningful.length === 0;
 }
 
 function rememberNonce(state: GameState, nonce: string, events: GameEvent[]): void {
@@ -334,14 +446,16 @@ export function reduce(state: GameState, action: Action, rng?: Rng): ReduceResul
   const events: GameEvent[] = [];
   const sink: EngineSink = { state: next, events, rng: rng ?? createRng(next.seed, next.rngCursor) };
 
+  const counted = turnActionCounted(next, action);
   const error = applyAction(sink, action);
   if (error !== null) return { state, events: [], error };
+  if (counted !== null) countTurnAction(next, action.playerId, counted);
 
   // §10.3: the resolution loop finishes the action — the events it emitted, the work a prompt left
   // owed, the state check and the trigger queue — and stops where a prompt is waiting.
   settle(sink);
   answerForLockedOut(sink);
-  maybeAutoEndTurn(sink);
+  endDueTurns(sink);
 
   next.rngCursor = sink.rng.cursor;
   rememberNonce(next, action.nonce, events);
@@ -418,6 +532,9 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
 
   const side = state.players[player];
   for (const card of side.hand) out.push(...playActionsFor(state, player, card));
+  // B5 E11, R454: a card in the player's graveyard, while a permission on their field lets them play
+  // it (`graveyardPlay.ts`) — the same `play` action, naming a graveyard card.
+  for (const card of side.graveyard) out.push(...graveyardPlayActionsFor(state, player, card));
 
   for (const unit of activeUnitsOf(state, player)) {
     for (const target of attackTargets(state, unit)) {
@@ -426,11 +543,12 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
     if (canSwitch(unit)) out.push({ type: "switchPosition", instanceId: unit.id });
   }
 
-  // R43: a power is the instance's, so every permanent the player controls is asked.
-  for (const ref of side.backrow) {
-    if (ref === null) continue;
-    if (whyCannotActivate(state, player, ref.id) === null) {
-      out.push({ type: "activatePower", instanceId: ref.id });
+  // R43, R384: a power or an ability is the instance's, so every card the player has acting on the
+  // field is asked — the top of each unit pile, then the backrow, lane by lane.
+  for (const row of ["units", "backrow"] as const) {
+    for (const ref of slotsOf(player, row)) {
+      const card = cardAt(state, ref);
+      if (card !== null) out.push(...activationActions(state, player, card));
     }
   }
 

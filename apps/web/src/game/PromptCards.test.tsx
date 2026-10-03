@@ -71,7 +71,7 @@ describe("card options are card faces", () => {
       expect(face?.querySelector(".cf-art"), defId).not.toBeNull();
       expect(option.querySelector(".prompt-card-name"), defId).toBeNull();
       // The name, then the cost its gem shows (integration: the cost is read out, not only drawn).
-      expect(option.getAttribute("aria-label"), defId).toBe(`${nameOf(defId)}, costs ${costOf(defId)}`);
+      expect(option.getAttribute("aria-label"), defId).toBe(`${nameOf(defId)}, costs (${costOf(defId)})`);
     }
   });
 
@@ -121,7 +121,7 @@ describe("card options are card faces", () => {
 
     expect(option("h1").querySelector(".cost-gem")?.getAttribute("data-cost")).toBe("0");
     expect(option("h2").querySelector(".cost-gem")?.getAttribute("data-cost")).toBe("5");
-    expect(option("h2").getAttribute("aria-label")).toBe(`${nameOf("core-019")}, costs 5`);
+    expect(option("h2").getAttribute("aria-label")).toBe(`${nameOf("core-019")}, costs (5)`);
 
     for (const key of ["h1", "h2"]) {
       expect(option(key)).toHaveAttribute("aria-pressed", "true");

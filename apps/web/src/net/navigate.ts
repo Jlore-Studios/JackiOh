@@ -90,8 +90,10 @@ export const paths = {
   terms: "/terms",
   /** The accessibility statement (routes/accessibility.tsx). Public, like the privacy policy. */
   accessibility: "/accessibility",
-  /** R375: every card patch, newest first (routes/patch-notes.tsx). Public, like the privacy policy. */
+  /** R388: every patch and the cards it touched (routes/patch-notes.tsx). Public, like the landing page. */
   patchNotes: "/patch-notes",
+  /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */
+  almanac: "/almanac",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

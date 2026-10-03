@@ -122,8 +122,9 @@ describe("R280 a computed value in a face in play", () => {
       defId: "core-031",
       def: def("core-031"),
       radiant: false,
+      // R429: played twice, so it costs (3) and its third play deals Fib(3 + 1) = 3.
       liveCost: 3,
-      inPlay: { preview: [{ label: "Fib(cost+1)", value: 3 }] },
+      inPlay: { preview: [{ label: "Fib(times played + 1)", value: 3 }] },
     });
     cy.mount(
       <div style={{ height: 380, width: 380 * (5 / 7), margin: 24 }}>
@@ -131,7 +132,7 @@ describe("R280 a computed value in a face in play", () => {
       </div>,
     );
     cy.get(".cf-value").should("have.text", "{3}");
-    cy.get(".card-text").should("contain.text", "Fib(cost+1) {3} damage").and(($text) => {
+    cy.get(".card-text").should("contain.text", "Fib(times played + 1) {3} damage").and(($text) => {
       const box = ($text[0] as Element).getBoundingClientRect();
       const value = ($text[0] as Element).querySelector(".cf-value")?.getBoundingClientRect();
       expect(value, "the value is drawn").to.not.equal(undefined);

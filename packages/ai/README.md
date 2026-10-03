@@ -25,9 +25,11 @@ sweep numbers live in their own modules' constants (`AI_DECK`, `AI_MATCH`, `AI_G
 `aiToAct` and `redact` (R185). `redact` blanks everything the seat may not know: the opponent's hand
 and library, the backrow cards it cannot read, the cards in its own library that came from the
 opponent's deck, the order of its own library, the seed and the event history. Every simulation runs
-on a `determinize`d copy, whose hidden cards are resampled from Core cards the opponent has not shown
-and whose seed is the AI's own. So two states that differ only in hidden cards give the same
-decision under the same rng, and no simulation can foresee a real draw or a real coin flip.
+on a `determinize`d copy, whose hidden cards are resampled from the non-token cards of every set
+(Core, Classic and Classic+, R185, R380) that the opponent has not shown, never from
+`AI_DETERMINIZE.excludeDefIds` (#98 Heroic Power, whose rolled power lives in its memory, R43), and
+whose seed is the AI's own. So two states that differ only in hidden cards give the same decision
+under the same rng, and no simulation can foresee a real draw or a real coin flip.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188).
 
@@ -64,6 +66,10 @@ card it held unseen, because those are samples. The best first actions are score
 the other determinizations, and the best mean is played. Only that first action is played; the AI
 re-plans after it.
 
+The turn cap comes from the engine's `TURN_CAP_PLAYER_TURNS` (60 player-turns since patch v0.2.0,
+R389), which is what the AI reads when it weighs face damage more as the cap nears, so the longer
+cap needs no change here.
+
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, in any
@@ -76,22 +82,25 @@ budget always give the same `Decision`. The browser adds a wall-clock safety cap
 
 ## Decks and the shadow ban
 
-`buildAiDeck(rng, size, options)` deals `size` distinct non-token Core ids by weighted sampling
-without replacement (`AI_DECK`): a mana curve that shifts toward expensive cards as the seat's
-`manaCap` rises, a floor on units, an optional tag theme, and a penalty for cards the seat could
-never cast. It leaves out `SHADOW_BAN_IDS` unless `banned` says otherwise (`banned: []` for a human's
-random deck).
+`buildAiDeck(rng, size, options)` deals `size` distinct non-token ids from every set, Core, Classic
+and Classic+ alike (R184, R380), by weighted sampling without replacement (`AI_DECK`): a mana curve
+that shifts toward expensive cards as the seat's `manaCap` rises, a floor on units, an optional tag
+theme, and a penalty for cards the seat could never cast. It leaves out `SHADOW_BAN_IDS` unless
+`banned` says otherwise (`banned: []` for a human's random deck). A tutorial lesson's fixed decks
+(R291) are not drawn and did not change.
 
 `src/shadowBan.ts` (R186) lists the cards the AI never deals to itself, each with a reason that
-starts with the sweep flags that put it there. It is decided by the sweep, never by hand:
+starts with the sweep flags that put it there, and `SHADOW_WATCH` beside it, the cards the last sweep
+found at risk and cleared (below). Both are decided by the sweep, never by hand:
 
 ```
-pnpm ai:sweep                      # every non-token Core card; prints flagged rows, writes nothing
-pnpm ai:sweep core-011 core-020    # only these ids
+pnpm ai:sweep                          # every non-token card of every set (268); prints rows, writes nothing
+pnpm ai:sweep core-011 classic-020     # only these ids
 ```
 
-For each card, `sweepCard` plays `AI_SWEEP.seedsPerCard` games of an Easy AI whose deck includes the
-card against the greedy baseline, and flags:
+**Pass 1.** For each card, `sweepCard` plays `AI_SWEEP.seedsPerCard` games at each tier in
+`AI_SWEEP.tiers` (Easy and Hard) of an AI whose deck includes the card against the greedy baseline,
+on seeds `sweep:<tier>:<id>:<n>`, and measures:
 
 - `error`: a throw, a refused AI action or a fallback decision.
 - `timeout`: a decision slower than `AI_SWEEP.decisionMs`, or a game still running at
@@ -101,11 +110,43 @@ card against the greedy baseline, and flags:
 - `selfHarm`: over at least `AI_SWEEP.minHarmPlays` plays, its plays lowered the AI's own
   evaluation by more than `AI_SWEEP.selfHarmDelta` on average.
 
-Copy the printed entries into `SHADOW_BAN` and the printed header line into the file's header. A
-later engine or AI change can make the ban stale, so rerun the sweep after one. `timeout` is the one
-wall-clock flag: sweep a card it flags again, alone, before banning it, because parallel sweeps on a
-busy machine slow every decision down. The unbanned pool
-must keep at least `AI_DECK.minPool` cards, so that a 30-card Hard deck can always be built.
+**Pass 2** (R390, patch v0.2.0). The AI is slow to ban a card and deals the cards on track to be
+banned far more often before it does:
+
+- **At risk.** A card is at risk when pass 1's numbers meet a flag's condition at half strength —
+  affordable in hand on `minAffordableTurns` turns and played at most once, or an average evaluation
+  change below half of `selfHarmDelta` — or when it is banned already or listed in `SHADOW_WATCH`.
+  The at-risk list is a pure function of pass 1's results.
+- **More games, more deals.** Pass 2 sweeps only the at-risk cards, `AI_SWEEP.seedsPerCardAtRisk`
+  (24) games each per tier, on named seeds `sweep2:<tier>:<id>:<n>`, so slices still run in parallel
+  and a sweep of record replays. In every pass-2 game the AI's filler draw multiplies each at-risk
+  card's weight by `AI_SWEEP.atRiskBoost` (4), the mechanism `buildAiDeck`'s `themeBoost` uses, so an
+  at-risk card is dealt as the forced card of its own games and as filler in everyone else's. A
+  card's numbers add up over every pass-2 game it was dealt in, forced or not: its filler games are
+  its own evidence.
+- **A ban needs pass-2 evidence.** `neverPlayed` needs 6 affordable turns (pass 1 reads 3) and no
+  play in any pass-2 game at that tier; `selfHarm` needs 8 plays (pass 1 reads 4). Pass 1 alone never
+  bans for either. `error` and `timeout` ban as they always have: they are bugs, not judgement.
+- **Filler and blame.** Pass 2's filler draw lifts the ban for at-risk cards banned for
+  `neverPlayed` or `selfHarm`, the judgements pass 2 exists to revisit, and keeps out cards banned for
+  `error` or `timeout`, so a known bug is never filler. An `error` or `timeout` still bans only the
+  game's forced card; one in a game that also dealt at-risk filler is listed against that filler too,
+  as a `suspect` line in the sweep's output, and bans the filler only if its own forced games repeat
+  it.
+- **Memory between sweeps.** `SHADOW_WATCH` holds the cards that were at risk and cleared, with their
+  numbers, and the next sweep counts them at risk from the start, so a card on track to be banned
+  stays watched from one sweep to the next.
+
+The ban's scope is unchanged (R186): it governs AI deck building and nothing else. The sweep never
+rewards the AI's search for playing an at-risk card, because that would measure a different AI from
+the one that plays.
+
+Copy the printed entries into `SHADOW_BAN` and `SHADOW_WATCH` and the printed header line into the
+file's header. A later engine, card or AI change can make the ban stale, so rerun the sweep after
+one; a patch that adds cards or changes pools (patch v0.2.0 did both) needs a sweep of record over
+every card. `timeout` is the one wall-clock flag: sweep a card it flags again, alone, before banning
+it, because parallel sweeps on a busy machine slow every decision down. The unbanned pool must keep
+at least `AI_DECK.minPool` cards, so that a 30-card Hard deck can always be built.
 
 ## Matches and the quality gates
 
@@ -130,6 +171,12 @@ one measured on fresh deals (`AI_GATE.measuredRate`) would miss that more often 
 | `ai-vs-random` | the AI on Easy | random policy on Easy | 95% | 94.5% ± 0.7 | 91 of 100 | 17 of 20 |
 | `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 70% | 68.0% ± 1.5 | 28 of 50 | 10 of 20 |
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 80% | 91.3% ± 1.6 | 40 of 50 | 16 of 20 |
+
+A change to what the decks can hold changes what the gates' frozen seeds deal. Patch v0.2.0 opened
+the pools to every set (R184, R185) and doubled the turn cap (R389), so its gates are re-run over the
+three sets (BUILD M9) and the counts they record replace this table's here and in SPEC §9.9, as the
+sweep of record replaces `shadowBan.ts`; `measuredRate` is measured again on fresh deals from the new
+pools, under the rule below.
 
 An AI at the measured rates fails any one of these runs by chance at most once in twenty. The price is
 that a gate this size sees only a broken AI: the full greedy run fails with 90% probability only
@@ -171,3 +218,30 @@ controller that threw) is `aborted`, never a draw. `oracle.ts <matchup> <from> <
 replays the games the AI did not win and runs the lethal solver on the true state, which `decide`
 may never read, at each of the AI's late turn starts, to tell a missed kill from a board with no
 kill on it; its header says what that search cannot see.
+
+## Development runs for the card statistics (R378)
+
+`pnpm ai:stats` (`scripts/stats.ts`) is the pre-release half of SPEC §9.11: AI-against-AI games played
+on the build in the checkout, each filed as a game record (R376) of source `dev`, under the patch the
+run tests. `devGameConfig(n, { series })` deals game n as All Random deals a live game (R258,
+`${seed}:p1-deck` and `${seed}:p2-deck`, nothing banned) to two AI seats on SPEC's resources (no
+handicap) at `AI_BUDGET`, and `devGameRecord(n, options)` plays it and reads its record off the log
+with the engine's `summarizeGame`; a game with no result is no record. Seeds are
+`${series}:${n}`, the series `AI_DEV_RUN.series` unless the run names another, and no gate or tuning
+run plays them. A record's id is `dev:<patch>:<seed>` (`devRecordId`), so the next patch's run on the
+same seeds files new records, which `stats:import` adds rather than skipping. The shadow ban does not apply, since All Random bans nothing, so a banned card's
+figures are the figures of a card the AI is known to misplay.
+
+```
+pnpm ai:stats                                      AI_DEV_RUN.games games, tagged with the newest patch
+pnpm ai:stats --games=50 --from=51                 games 51–100, so slices of a run go in parallel
+pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl   a pre-release run of v0.2.5, kept in a file
+```
+
+It prints the run's card win rates when it ends (progress goes to stderr). A game takes seconds at
+the browser's budget, so a run of a few hundred takes the better part of an hour on one core. The
+file, written a line per game as the run goes, is what `pnpm --filter @jackioh/server stats:import`
+loads, so that `stats:cards --source=dev --patch=<version>` reads the run and
+`stats:cards --patch=<version>` that patch's live games, two queries to compare
+(apps/server/README.md, "Card statistics"). This is the one script here that writes a file, and only
+the one `--out` names.

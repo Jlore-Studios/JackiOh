@@ -4,12 +4,17 @@
 import type {
   CardDef,
   CardDefs,
+  CardType,
+  Enchantment,
   Keyword,
   PlayerId,
   PromptKind,
   Row,
   Selection,
+  Tag,
+  Tuning,
   Zone,
+  ZoneRef,
 } from "@jackioh/shared";
 import { PLAYER_IDS } from "@jackioh/shared";
 import type { GameEvent, GameOverReason } from "@jackioh/shared";
@@ -24,7 +29,9 @@ import {
   type Handicap,
 } from "./config";
 import { registerCatalog, registeredCatalog } from "./catalog";
+import type { CostRule } from "./costRules";
 import { showToOwner } from "./ownLibrary";
+import { freezeLastBoards } from "./subsystems/lastBoards";
 import { createRng } from "./rng";
 
 export type Phase = "setup" | "mulligan" | "start" | "main" | "end" | "over";
@@ -83,10 +90,63 @@ export type CardInstance = {
    * this record as it was.
    */
   knownAs?: { defId: string; radiant: boolean };
+  // ---- Patch v0.2.0: what rides a card through every zone (R78's reset leaves these alone) ----
+  /**
+   * B3.4, R386: what Degrade, Upgrade and KY's Constant have changed on this card (`tuning.ts`). Kept
+   * in every zone and through leaving the field; a copy keeps it, a Transform makes a card without
+   * it, a Fuse sums it (R57, R102).
+   */
+  tuning?: Tuning;
+  /**
+   * B3.3, R385: the card's Brittle count and the turn it started, which the first tick waits two
+   * player-turns behind (`brittle.ts`). Kept in every zone; a copy never inherits it (R57), and a
+   * count that has crumbled its card (0) is spent and goes with R78's reset (R441). `printed` marks a
+   * count its printed Brittle started as the card entered the field, which a Vanilla switches off
+   * while a given one stays (B3.3 rule 5).
+   */
+  brittle?: { count: number; since: number; printed?: true };
+  /** B5 E39: lasting instructions riding the card through every zone (`enchantments.ts`). */
+  enchantments?: Enchantment[];
+  // ---- v0.2.0 instance fields, by workstream: field (B3.1, E21, E22) ----
+  // ---- v0.2.0 instance fields, by workstream: play pipeline (E1, E2, E4, E5, E11, E12, E15) ----
+  // ---- v0.2.0 instance fields, by workstream: activate and turn (B3.2, E3, E10, E27, E28) ----
+  // ---- v0.2.0 instance fields, by workstream: damage and combat (E5, E6, E9, E35, E37) ----
+  /**
+   * B5 E35: this unit has gone Berserk (Classic+ #19.2 sends Classic+ #19.5 there) — a status an
+   * effect sets (`effects/statuses.goBerserk`), never text, so a Vanilla keeps it; R78's reset takes
+   * it off with the card leaving the field. Its own card makes the forced attacks it owes.
+   */
+  berserk?: true;
+  // ---- v0.2.0 instance fields, by workstream: prompts and generation (E13, E16–E19, E23–E26) ----
+  // ---- v0.2.0 instance fields, by workstream: Core patches (R426–R437) ----
+  /**
+   * R429: how many times this card has been played, the play under way included — counted at §10.5
+   * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
+   * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
+   * zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
+   * Transform is a new card with a count of its own (R57).
+   */
+  timesPlayed?: number;
+};
+
+/**
+ * B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
+ * its target picks to enemies when one is legal (`targetEnemies`), or both. `casts` counts the casts
+ * a random cast's resolution has made in all, itself included, against RANDOM_CAST_CHAIN_CAP.
+ */
+export type CastMode = {
+  instanceId: string;
+  player: PlayerId;
+  random: boolean;
+  targetEnemies: boolean;
+  casts: number;
 };
 
 /** A unit zone holds a Stack pile, top card first (§3.2). */
 export type Pile = CardInstance[];
+
+/** B3.1 rule 6: an animated "Animated on your turn" card's backrow zone, held for its return (SPEC §10.1). */
+export type HomeZone = { instanceId: string; zone: ZoneRef };
 
 export type ModifierExpiry =
   | { until: "thisTurn"; turn: number }
@@ -105,6 +165,44 @@ export type PlayerModifier = {
   | { kind: "radiantFirstCheapCard"; maxCost: number; usedTurn?: number }
   | { kind: "comboDraw"; amount: number }
   | { kind: "quickstrikerDamage" }
+  // ---- v0.2.0 modifier kinds, by workstream: play pipeline (E15 costs, E39 stamping, Devil's Pact) ----
+  // play pipeline B (E15, E39; R455). A price rule on this player's cards (`costRules.ts`): Classic #2's
+  // "your next Trap or Field Spell costs (2) less" or "costs (0)" (until used, spent by the play it
+  // priced), AI Alignment Tax's "(1) more during their next turn" (R48's `nextTurnOf`).
+  | { kind: "costRule"; rule: CostRule }
+  /** Classic+ #14 Forever&: the next Spell its player plays gains this enchantment (E39), until used. */
+  | { kind: "enchantNextSpell"; enchantment: Enchantment }
+  /**
+   * Classic #23 Devil's Pact, R449: each card this player plays (a cast included, R70) is replaced at
+   * §10.5 step 3 by a new instance of `defId`, Radiant when `radiant` says so, which resolves as that
+   * play (`playSteps.replacePlayedCard`).
+   */
+  | { kind: "replacePlays"; defId: string; radiant: boolean }
+  // ---- v0.2.0 modifier kinds, by workstream: activate and turn (E28 rest of the game) ----
+  /**
+   * B5 E10, R456: this player's turn ends once `actionsLeft` more main-phase actions of theirs have
+   * resolved. 0 is "your turn ends" — as soon as what is resolving now has resolved (Classic+ #26's
+   * "End your turn", the AI card Rate Limit) — and 1 is "you may take one more action, then your turn
+   * ends" (Classic+ #26 Radiant). `byInstanceId` is the card whose effect it is. Expiry `thisTurn`:
+   * ending the turn any other way ends it too (`reduce.ts` counts the actions and ends the turn).
+   */
+  | { kind: "turnEnds"; actionsLeft: number; byInstanceId: string | null }
+  /**
+   * B5 E28, R458: "For the rest of the game: at the start of your turn, …" (Classic+ #52). `resume`
+   * re-enters the card's step at each start of this player's turn, in R62's delayed-effect stage
+   * among the delayed effects in creation order (`seq`); `ranTurn` is the turn it last ran, so a
+   * prompt that pauses the stage never runs it twice. `label` is its badge (R169), the card's own
+   * words. Expiry `never`; several stack, each its own modifier.
+   */
+  | { kind: "startOfTurnEffect"; seq: number; resume: Resume; label: string; ranTurn?: number }
+  // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
+  /**
+   * B5 E8: a heal of X on one of this player's enemies — the enemy hero or an enemy unit — deals X
+   * Pierce damage to it instead, from the converting card (Classic+ #22 Blood Moon's base face, "for
+   * the rest of this turn"). `converterId` rather than `sourceId`: the converter is a Trap already in
+   * its graveyard, and `endOrphanedModifiers` ends a `sourceId` modifier whose card left the field.
+   */
+  | { kind: "healToDamage"; converterId: string }
 );
 
 export type DelayedEffect = {
@@ -113,6 +211,12 @@ export type DelayedEffect = {
   seq: number;
   owner: PlayerId;
   at: { phase: "start" | "end"; player: PlayerId };
+  /**
+   * B5 E27, R458: the first turn number whose boundary may run it — "at the end of your *next* turn"
+   * (Classic #37 Radiant) is made with the current turn plus one, so the end of the turn it was made
+   * on passes it by. Absent: the next such boundary.
+   */
+  notBefore?: number;
   /** A serializable continuation: script id, hook name, captured data (§10.6). */
   resume: Resume;
   /**
@@ -172,6 +276,10 @@ export type PromptOption = {
   key: string;
   label: string;
   selection: Selection;
+  /** B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies). */
+  cost?: number;
+  /** A face the option shows: the card it offers is Radiant, or a definition is offered Radiant. */
+  radiant?: true;
 };
 
 export type PendingChoice = {
@@ -182,6 +290,12 @@ export type PendingChoice = {
   options: PromptOption[];
   min: number;
   max: number;
+  /**
+   * B5 E18: a `pick` prompt's budget — the most its picked options' `cost`s may add up to (Classic
+   * #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
+   * as it did before the field existed.
+   */
+  budget?: number;
   resume: Resume;
 };
 
@@ -241,6 +355,12 @@ export type TurnLog = {
    * plays; `startTurn` rebuilds the log, which clears it.
    */
   costsPaid?: number[];
+  /**
+   * B5 E4: this turn's plays by the type each was played as (B2.7), casts included (R70), countered
+   * plays never — Classic+ #37 Wardrum counts Spells, Field Spells and Traps. `startTurn` rebuilds
+   * the log for both players, which clears it as it clears the rest of "this turn".
+   */
+  playedByType?: Partial<Record<CardType, number>>;
 };
 
 export type PlayerState = {
@@ -274,6 +394,39 @@ export type PlayerState = {
    * the setting hashes exactly as it did before this field existed.
    */
   autoEndTurn?: false;
+  // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
+  /**
+   * B5 E21: the dormant cards beneath each backrow zone's top card, top first, by lane (index lane −
+   * 1). The top stays in `backrow` and is the one card that acts there (§3.2, R13); these are face-down
+   * and not on the field for effects (`zones.isBuried`). Absent while no backrow zone holds a pile, so a
+   * game that never builds one hashes as it did before the field existed.
+   */
+  backrowPiles?: CardInstance[][];
+  /**
+   * B5 E21, R446: the Unit a carrier in each backrow zone holds, by lane — a Unit played on top of a
+   * backrow card whose static flag lets one (Classic+ #33 Ivory Tower). It stands in that backrow
+   * zone (its `zone.row` is "backrow"), is a Unit for every rule (`zones.activeUnitsOf`), and can
+   * neither attack nor be attacked (`zones.isCarried`). Absent while nothing is carried.
+   */
+  carried?: (CardInstance | null)[];
+  // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
+  /**
+   * B5 E4, R451: what this player's plays leave for the rest of the game, never reset
+   * (`playCounts.ts`): `playedByTag`, their plays by tag (Classic+ #64's Fruit, AI Scaling Law's AI),
+   * casts included (R70) and countered plays never; `lastFaceUpPlay`, the last face-up card they
+   * played (AI Autocomplete). Absent until their first play, so a game without one hashes as it did
+   * before this field existed.
+   */
+  gameLog?: GameLog;
+  // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
+  /**
+   * B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
+   * fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
+   * so it resets where the turn log does without anything clearing it (`draw.drawsThisTurn`).
+   */
+  draws?: { turn: number; count: number };
+  // ---- v0.2.0 player fields, by workstream: damage and combat (E5–E9, E35) ----
+  // ---- v0.2.0 player fields, by workstream: Core patches and cosmetics (R433, R434) ----
 };
 
 export type GameState = {
@@ -338,7 +491,95 @@ export type GameState = {
    * leaves the field.
    */
   fieldExits?: FieldExits;
+  // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
+  /**
+   * B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
+   * its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone
+   * (`zones.isReserved` reads both). Absent while no such card is animated.
+   */
+  homes?: HomeZone[];
+  // ---- v0.2.0 game fields, by workstream: play pipeline (E1 announce, E4 last plays, E12) ----
+  /**
+   * play pipeline B (E12, R452): the casts being driven right now that change how choices are made —
+   * a random cast (every choice its caster makes answered from the rng) or a cast that targets
+   * enemies when it can — innermost last. Present only while such a cast's steps run
+   * (`randomCast.withCastMode`), so a state at rest, a paused one included, never carries it.
+   */
+  castsResolving?: CastMode[];
+  /**
+   * B5 E1, R448: the plays whose announce window is open, innermost last (a cast a responder makes
+   * announces inside the window it answers). Present only while one is open (`announce.ts`).
+   */
+  announcing?: AnnounceRecord[];
+  /** B5 E4: the last Spell anyone played (Classic #57 Echo), overwritten by the next, never cleared. */
+  lastSpell?: PlayRecord;
+  /**
+   * R58: the cards a cast-on-draw draw is casting, by the id each was drawn under, whose `drawn` is
+   * held from every dispatch until that cast has resolved — the draw's "complete" point
+   * (`drawComplete.ts`). Present only while one is held.
+   */
+  heldDraws?: string[];
+  // ---- v0.2.0 game fields, by workstream: activate and turn (E10) ----
+  // ---- v0.2.0 game fields, by workstream: damage and combat (E5) ----
+  // ---- v0.2.0 game fields, by workstream: prompts and generation (E17, E18, E26) ----
+  // ---- v0.2.0 game fields, by workstream: Core patches and cosmetics (R433) ----
+  /**
+   * R437: the marks cards carry for an effect aimed at them that is still to come — #50 K-Pop
+   * Fanatic's pending steal on its target — one entry per mark, tied to the delayed effect that
+   * made it (`marks.ts`). `viewFor` puts them on the card in both views; the mark goes when its
+   * effect resolves or fizzles, or is dropped because its card left the field (R174), and a
+   * `marked` event says so each way. Absent when no card is marked, so a game without marks hashes
+   * as it did before the field existed.
+   */
+  marks?: MarkRecord[];
+  // ---- v0.2.0 game fields, by workstream: cards-plus-c (E30) ----
+  /**
+   * R417: each seat's last board, a `createGame` input frozen into the match and never written again
+   * (`subsystems/lastBoards`). Only a seat with one has a key, and a game with none has no field, so
+   * it hashes as it did before. `viewFor` never sends it.
+   */
+  lastBoards?: Partial<Record<PlayerId, LastBoardEntry[]>>;
+  /**
+   * C+ #35 Rollback, R419: the field as each of the last BOARD_HISTORY_DEPTH turns began, oldest first
+   * (`subsystems/boardHistory.ts`). Never in a view (§10.8). Absent until the first turn starts.
+   */
+  boardHistory?: BoardSnapshot[];
 };
+
+/** R417: one card of a last board — the card and its face, never stats, buffs or damage. */
+export type LastBoardEntry = { defId: string; radiant: boolean };
+
+/** R417: each seat's last board in seat order, as `createGame` and `replay.fold` take them. */
+export type LastBoardInput = readonly [readonly LastBoardEntry[], readonly LastBoardEntry[]];
+
+/** R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.ts`). */
+export type MarkRecord = { instanceId: string; mark: string; color: string; delayedId: string };
+
+/** R419: one side of the field as a turn began — its zones' cards whole, its Locks, the homes held then. */
+export type SideSnapshot = Pick<PlayerState, "units" | "backrow" | "backrowPiles" | "carried" | "locks"> & { homes?: HomeZone[] };
+
+/** R419: the field at the start of player-turn `turn` (`subsystems/boardHistory.ts`). */
+export type BoardSnapshot = { turn: number; sides: Record<PlayerId, SideSnapshot> };
+
+/** R419: every card one side of a snapshot holds. */
+export function sideSnapshotInstances(side: SideSnapshot): CardInstance[] {
+  return [
+    ...side.units.flatMap((pile) => pile ?? []),
+    ...side.backrow.flatMap((card) => (card === null ? [] : [card])),
+    ...(side.backrowPiles ?? []).flat(),
+    ...(side.carried ?? []).flatMap((card) => (card === null ? [] : [card])),
+  ];
+}
+
+/** R227, R419: a card that took a fresh id is still the card the history recorded, so the history follows it. */
+export function renameInBoardHistory(state: GameState, from: string, to: string): void {
+  for (const snapshot of state.boardHistory ?? []) {
+    for (const player of PLAYER_IDS) {
+      for (const card of sideSnapshotInstances(snapshot.sides[player])) if (card.id === from) card.id = to;
+      for (const home of snapshot.sides[player].homes ?? []) if (home.instanceId === from) home.instanceId = to;
+    }
+  }
+}
 
 /**
  * R174: `count` departures so far; `last` maps a card to the departure that was its latest.
@@ -354,6 +595,29 @@ export type FieldExits = { count: number; last: Record<string, number>; uncovere
  * card that left has moved zones again since (`stays.noteMoved`). The note goes once both are true.
  */
 export type UncoveredNote = { resumed: string; reported?: boolean; movedOn?: boolean };
+
+// ---- v0.2.0 play pipeline A (E1 announce, E4 records) ----
+
+/**
+ * B5 E1, R448: one play or cast between its announce and §10.5 step 4. `faceDown` is a card that
+ * will be set face-down (a Trap or Field Trap): while it waits in the resolving zone only `player`
+ * reads it (`viewFor`). `countered` is set by the Counter that cancelled it (`effects/move.counterPlay`).
+ */
+export type AnnounceRecord = {
+  instanceId: string;
+  player: PlayerId;
+  faceDown?: true;
+  countered?: true;
+};
+
+/** B5 E4: a card as a play record names it — the definition and the face it was played with. */
+export type PlayRecord = { defId: string; radiant: boolean };
+
+/** B5 E4: a face-up play's record, with the type it was played as (B2.7). */
+export type FaceUpRecord = PlayRecord & { type: CardType };
+
+/** B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`). */
+export type GameLog = { playedByTag: Partial<Record<Tag, number>>; lastFaceUpPlay?: FaceUpRecord };
 
 function emptyRow<T>(size: number): (T | null)[] {
   return Array.from({ length: size }, () => null);
@@ -391,6 +655,18 @@ export type CreateGameOptions = {
   catalog?: CardDefs;
   /** R180: per-seat handicaps. An omitted seat, or one equal to HUMAN_HANDICAP, stores nothing. */
   handicaps?: Partial<Record<PlayerId, Handicap>>;
+  /**
+   * R433: the seats whose deck their player was dealt rather than built — All Random's (R258),
+   * practice's fresh random deck. Their starting library is written no record of what its owner
+   * was shown (R311), so its cards list as unknown until they leave it (R312). Setup, not an
+   * action: a replay passes the same list (`replay.ReplayInput.dealt`). Omitted, every deck was built.
+   */
+  dealt?: readonly PlayerId[];
+  /**
+   * R417: each seat's last board (C+ #29). Setup, not an action: a replay passes the same boards
+   * (`replay.ReplayInput.lastBoards`). Omitted, both are empty (hotseat, practice, a first game).
+   */
+  lastBoards?: LastBoardInput;
 };
 
 /** The five fields of a handicap, in §9.9's order, so every reader walks the same list. */
@@ -561,10 +837,12 @@ export function createGame(options: CreateGameOptions): GameState {
     const side = state.players[player];
     side.library = deck.map((defId) => newInstance(state, defId, player, { z: "library", player }));
     const ids = numbering.shuffle(side.library.map((card) => card.id));
+    // R433: a dealt deck is not one its player built, so they know none of it yet.
+    const built = options.dealt?.includes(player) !== true;
     side.library.forEach((card, at) => {
       card.id = ids[at] ?? card.id;
       // R311: a player's own deck is the first thing they know of their library.
-      showToOwner(card);
+      if (built) showToOwner(card);
     });
 
     // R180: a copy of the five fields and nothing else, so no stray key reaches the state or its hash.
@@ -584,6 +862,10 @@ export function createGame(options: CreateGameOptions): GameState {
       side.hero.health = heroHealth;
     }
   });
+
+  // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
+  const lastBoards = freezeLastBoards(options.lastBoards, catalog);
+  if (lastBoards !== undefined) state.lastBoards = lastBoards;
 
   return state;
 }
@@ -620,7 +902,11 @@ export function activeUnits(side: PlayerState): CardInstance[] {
 }
 
 export function allZonesEmpty(side: PlayerState): boolean {
-  return side.units.every((pile) => pile === null) && side.backrow.every((card) => card === null);
+  return (
+    side.units.every((pile) => pile === null) &&
+    side.backrow.every((card) => card === null) &&
+    (side.carried ?? []).every((card) => card === null)
+  );
 }
 
 /**
@@ -644,6 +930,9 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
       ...side.exile,
       ...inPiles,
       ...side.backrow,
+      // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
+      ...(side.backrowPiles ?? []).flat(),
+      ...(side.carried ?? []),
       // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
       // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
       ...side.resolving,

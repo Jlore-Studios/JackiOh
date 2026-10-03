@@ -19,21 +19,26 @@ import {
   buildAiDeck,
   gameConfig,
   gateNeeded,
-  runGate,
+  runGateGames,
   type GateReport,
   type Matchup,
 } from "../src/index";
+import { gamesToPlay, gateShard, writeShard } from "./_shard";
 
 const MATCHUP: Matchup = "ai-vs-random";
 const FULL = process.env["JACKIOH_AI_GATE"] === "full";
 const GAMES = FULL ? AI_GATE.fullSeeds[MATCHUP] : AI_GATE.smokeSeeds;
 const NEEDED = gateNeeded(MATCHUP, GAMES);
+const SHARD = gateShard();
+/** The games this process plays: all of them, or its shard's when CI splits the run (./_shard.ts). */
+const PLAYED = gamesToPlay(GAMES, SHARD);
+const SHARD_LABEL = SHARD === undefined ? "" : `, shard ${String(SHARD.index)}/${String(SHARD.count)}: ${String(PLAYED.length)} played`;
 /** Per-game allowance under load (the machine is shared), plus a fixed margin. */
 const TIMEOUT = 60_000 + GAMES * 45_000;
 
 let cached: GateReport | undefined;
 function report(): GateReport {
-  cached ??= runGate(MATCHUP, GAMES, AI_GATE_BUDGET);
+  cached ??= runGateGames(MATCHUP, PLAYED, AI_GATE_BUDGET);
   return cached;
 }
 
@@ -46,7 +51,7 @@ function losingSeeds(gate: GateReport): string {
 
 const MATCHUPS: readonly Matchup[] = ["ai-vs-random", "ai-vs-greedy", "hard-vs-easy"];
 
-describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
+describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games${SHARD_LABEL})`, () => {
   it("B28: gameConfig seats the Easy AI against the random policy, alternating seats, with the specified decks", () => {
     for (const n of [1, 2, 3]) {
       const config = gameConfig(MATCHUP, n, AI_GATE_BUDGET);
@@ -101,16 +106,25 @@ describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
   it(`B28: the Easy AI wins at least ${NEEDED} of ${GAMES} games against the random policy`, { timeout: TIMEOUT }, () => {
     const gate = report();
     expect(gate.matchup).toBe(MATCHUP);
-    expect(gate.games).toHaveLength(GAMES);
+    expect(gate.games).toHaveLength(PLAYED.length);
     gate.games.forEach((game, at) => {
-      expect(game.seed).toBe(`${AI_GATE.seedSeries}:${MATCHUP}:${at + 1}`);
-      expect(game.subjectSeat).toBe(at % 2 === 0 ? "p1" : "p2");
+      expect(game.seed).toBe(`${AI_GATE.seedSeries}:${MATCHUP}:${String(PLAYED[at])}`);
+      expect(game.subjectSeat).toBe((PLAYED[at] ?? 0) % 2 === 1 ? "p1" : "p2");
       expect(game.won).toBe(game.record.result?.winner === game.subjectSeat);
     });
     expect(gate.wins).toBe(gate.games.filter((game) => game.won).length);
     const capped = gate.games.filter((game) => game.record.result?.winner === "draw" && game.record.result.reason === "turn-cap");
     expect(gate.turnCapDraws).toBe(capped.length);
-    expect(gate.rate).toBeCloseTo(gate.wins / GAMES, 10);
+    expect(gate.rate).toBeCloseTo(gate.wins / PLAYED.length, 10);
+    // A shard's wins are a share of the run's, so `pnpm ai:gate:merge` holds them against NEEDED
+    // together with the other shards'. The games' cleanliness is still checked here (B31).
+    if (SHARD !== undefined) {
+      const path = writeShard(gate, GAMES, SHARD, PLAYED);
+      process.stdout.write(
+        `[gate ${MATCHUP}${SHARD_LABEL}] ${String(gate.wins)} wins and ${String(gate.turnCapDraws)} turn-cap draws, written to ${path}\n`,
+      );
+      return;
+    }
     // Written to stdout, as the fuzz suite writes its numbers: vitest's default reporter swallows
     // console output from a passing test, and a green gate should still show how it passed.
     process.stdout.write(
@@ -124,7 +138,7 @@ describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games)`, () => {
 
   it("B31: every game is clean: nothing rejected or thrown, no fallback, a result, and a replay that matches", { timeout: TIMEOUT }, () => {
     const gate = report();
-    expect(gate.games).toHaveLength(GAMES);
+    expect(gate.games).toHaveLength(PLAYED.length);
     for (const game of gate.games) {
       const label = `${game.seed} (${game.subjectSeat})`;
       expect(game.record.rejected, label).toEqual([]);

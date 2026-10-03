@@ -325,7 +325,7 @@ describe("Heroic Power: the eight powers and their X (R43, R352, §8 #98)", () =
   });
 
   it("R43 the token powers summon one Rush or Felinor Token, and two when Radiant (§7)", () => {
-    const rushDef = must(defByIndex("T-rush"), "a Rush Token definition");
+    const rushDef = must(defByIndex("Core", "T-rush"), "a Rush Token definition");
 
     const state = game("r43-tokens");
     const card = powered(state, "rush");

@@ -24,6 +24,12 @@
 // A finished game drains the runner (Game.tsx settles at once), which would clear the killing blow
 // before it drew. The layer keeps the entries the drain cut short and replays the lethal one ahead of
 // the game-over sequence (`planLethal`).
+//
+// R502: `latest` is the newest view (Game's `view`), which the planner reads for a number the events
+// do not carry (how far #21 Hinder lowered the next refresh, `env.next`). The same view marks the
+// crystals that refresh will not fill (`manaMarks.ts`) from the moment the runner reaches the
+// `modifierChanged` that lays or spends the rider, and the shown view keeps the mark after that. The
+// mark is information, so it is drawn whether or not the layer is on, still under reduced motion.
 
 import {
   useContext,
@@ -44,7 +50,7 @@ import {
 } from "../game/animations.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "./constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
@@ -52,6 +58,8 @@ import { createFxMemory } from "./memory.ts";
 import { useFxSettings } from "./settings.ts";
 import { useSetting } from "../settings/store.ts";
 import { createSurface, type FxSurface } from "./surface.ts";
+import { applyManaMarks, manaMarks } from "./manaMarks.ts";
+import { sideOf, type Side } from "../game/contract.ts";
 import type {
   FxAnchor,
   FxBox,
@@ -83,6 +91,8 @@ export type FxLayerProps = {
   queue: AnimationQueue;
   /** The view the board is SHOWING (Game's `shown`), not the newest one. */
   view: PlayerView;
+  /** The newest view (Game's `view`), which the burst in flight is heading to. Absent: `view`. */
+  latest?: PlayerView;
   /** Test seams; production passes none. */
   seams?: Partial<FxSeams>;
 };
@@ -124,11 +134,18 @@ function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFacts | u
   return { rarity: info.rarity, attack: info.attack, health: info.health };
 }
 
+/** R502: the sides whose next-refresh rider this entry lays or spends. */
+function riderSides(entry: AnimationEntry): Side[] {
+  return entry.events.flatMap((event) =>
+    event.type === "modifierChanged" && event.modifierId === FX_NEXT_REFRESH_MODIFIER_ID ? [sideOf(entry.view, event.player)] : [],
+  );
+}
+
 function removeSqueeze(root: HTMLElement | null): void {
   root?.parentElement?.style.removeProperty(SQUEEZE);
 }
 
-export function FxLayer({ queue, view, seams }: FxLayerProps): ReactElement {
+export function FxLayer({ queue, view, latest, seams }: FxLayerProps): ReactElement {
   const [settings] = useFxSettings();
   // The settings panel's "Reduce motion" is read through its hook so a change re-renders the layer;
   // `reducedMotionNow` reads the same switch for callers outside React.
@@ -147,8 +164,8 @@ export function FxLayer({ queue, view, seams }: FxLayerProps): ReactElement {
 
   // What the runner's listener reads when a signal arrives. It is a ref, not a dependency, so the
   // subscription is made once per queue and never torn down between two entries of one burst.
-  const live = useRef({ enabled, intensity, lookup, seams });
-  live.current = { enabled, intensity, lookup, seams };
+  const live = useRef({ enabled, intensity, lookup, seams, view, latest: latest ?? view });
+  live.current = { enabled, intensity, lookup, seams, view, latest: latest ?? view };
 
   const planEnv = (): FxPlanEnv => {
     const current = live.current;
@@ -157,7 +174,16 @@ export function FxLayer({ queue, view, seams }: FxLayerProps): ReactElement {
       intensity: current.intensity,
       card: override ?? ((defId: string) => catalogFacts(live.current.lookup, defId)),
       memory: memory.current!,
+      next: current.latest,
     };
+  };
+
+  /** R502: the sides whose next-refresh rider the runner has reached in this burst (see the header). */
+  const riderReached = useRef(new Set<Side>());
+  const markMana = (): void => {
+    const current = live.current;
+    const sides = riderReached.current;
+    applyManaMarks(document, manaMarks(current.view, sides.size > 0 ? { view: current.latest, sides } : undefined));
   };
 
   // The director lives exactly as long as the canvas and the DOM root it draws into.
@@ -216,6 +242,11 @@ export function FxLayer({ queue, view, seams }: FxLayerProps): ReactElement {
           if (parent !== null) {
             parent.style.setProperty(SQUEEZE, (entry.durationMs / table).toFixed(3));
           }
+          const reached = riderSides(entry);
+          if (reached.length > 0) {
+            for (const side of reached) riderReached.current.add(side);
+            markMana();
+          }
           const target = director.current;
           if (!live.current.enabled || target === null) return;
           const env = planEnv();
@@ -261,6 +292,23 @@ export function FxLayer({ queue, view, seams }: FxLayerProps): ReactElement {
     if (releasedFor.current !== null && releasedFor.current !== view) director.current?.release();
     releasedFor.current = view;
   }, [view]);
+
+  // R502: the crystals the next refresh will not fill, from the view the board now shows. A LAYOUT
+  // effect, after the board has drawn that view's trays, so the mark and the crystals land together.
+  useLayoutEffect(() => {
+    riderReached.current.clear();
+    markMana();
+    // `markMana` reads refs only, so the effect depends on the view alone.
+  }, [view]);
+  useLayoutEffect(
+    () => () => {
+      applyManaMarks(document, [
+        { side: "you", run: { from: 0, count: 0 } },
+        { side: "opponent", run: { from: 0, count: 0 } },
+      ]);
+    },
+    [],
+  );
 
   // The turn banner says its piece until the player acts: the first pointer down anywhere, or a
   // prompt opening for the viewer, takes it (and its rays) away, so it never sits over the zones a

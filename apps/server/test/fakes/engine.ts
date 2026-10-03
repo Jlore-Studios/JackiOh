@@ -13,7 +13,8 @@
  *  - `reduce` is pure, returns `{ state, events, error? }` and refuses illegal actions itself;
  *  - a reused nonce returns the original events and does not advance the state (SPEC §9.3);
  *  - `viewFor` shows the viewer's hand in full and the opponent's as a count (§10.8);
- *  - `fold({ seed, decks, log })` rebuilds the same state, so crash recovery is testable;
+ *  - `fold({ seed, decks, log })` rebuilds the same state, so crash recovery is testable, and
+ *    `summarizeGame` folds the same way to a finished game's record (R376);
  *  - a prompt is state, answered by another action (§9.3);
  *  - with `{ mulligan: true }`, the game opens on the concurrent mulligan (R265): both seats' prompts
  *    open at once outside `pending`, either seat answers first, an answer is sealed until the other
@@ -38,6 +39,7 @@
  */
 
 import type { Action, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
+import type { LastBoardEntry } from "../../src/api/ports";
 import type { EnginePort, EngineState, MatchSnapshot } from "../../src/match/engine";
 
 export const FAKE_HAND_SIZE = 3;
@@ -59,6 +61,8 @@ type FakeState = {
   mulligan: Record<PlayerId, { id: string; keep: string[] | null }> | null;
   applied: { nonce: string; events: GameEvent[] }[];
   nextChoice: number;
+  /** R417: the last boards it was created with, kept so a fold is the same game. */
+  lastBoards: [LastBoardEntry[], LastBoardEntry[]];
 };
 
 export type FakeEngineOptions = {
@@ -155,7 +159,7 @@ function emptySide(player: PlayerId, fake: FakeState, viewer: PlayerId): SideVie
 
 export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
   const port: EnginePort = {
-    createGame: ({ seed, decks }) => {
+    createGame: ({ seed, decks, lastBoards }) => {
       const state: FakeState = {
         seed,
         decks: [[...decks[0]], [...decks[1]]],
@@ -170,6 +174,7 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         mulligan: null,
         applied: [],
         nextChoice: 1,
+        lastBoards: [[...(lastBoards?.[0] ?? [])], [...(lastBoards?.[1] ?? [])]],
       };
       return asEngine(state);
     },
@@ -442,8 +447,8 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
       };
     },
 
-    fold: ({ seed, decks, log }) => {
-      let state = port.beginGame(port.createGame({ seed, decks })).state;
+    fold: ({ seed, decks, log, lastBoards }) => {
+      let state = port.beginGame(port.createGame({ seed, decks, ...(lastBoards === undefined ? {} : { lastBoards }) })).state;
       const errors: { nonce: string; error: string }[] = [];
       for (const action of log) {
         const result = port.reduce(state, action);
@@ -473,12 +478,49 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
       };
     },
 
+    // R376's port method, scripted: the fake draws nothing after the deal, so a seat's record is its
+    // deck, its hand once the game reached turn 1, nothing drawn, and the cards it played.
+    summarizeGame: ({ seed, decks, log }) => {
+      let state = port.beginGame(port.createGame({ seed, decks })).state;
+      const openingOf = (fake: FakeState): Record<PlayerId, string[]> | null =>
+        fake.mulligan === null && fake.turn >= 1 ? clone(fake.hands) : null;
+      let opening = openingOf(asFake(state));
+      for (const action of log) {
+        const result = port.reduce(state, action);
+        if (result.error !== undefined) continue;
+        state = result.state;
+        opening ??= openingOf(asFake(state));
+      }
+      const fake = asFake(state);
+      if (fake.result === null) return null;
+      const seat = (player: PlayerId, at: 0 | 1) => ({
+        deck: [...decks[at]],
+        opening: opening?.[player] ?? [],
+        drawn: [],
+        played: [...fake.played[player]],
+      });
+      return {
+        first: "p1",
+        winner: fake.result.winner,
+        reason: fake.result.reason,
+        turns: fake.turn,
+        seats: { p1: seat("p1", 0), p2: seat("p2", 1) },
+      };
+    },
+
     // R258's port method, scripted: `fakeDeck()` rotated by a hash of the seed, so the same seed
     // deals the same deck and two seeds (almost always) deal two orders of it.
     dealRandomDeck: (seed) => {
       const deck = fakeDeck();
       const offset = seedHash(seed) % deck.length;
       return [...deck.slice(offset), ...deck.slice(0, offset)];
+    },
+
+    // R417: the scripted cards are all face-up, so both seats read every card played as the field.
+    lastBoards: (state) => {
+      const fake = asFake(state);
+      const field = [...fake.played.p1, ...fake.played.p2].map((defId) => ({ defId, radiant: false }));
+      return [field, field.map((entry) => ({ ...entry }))];
     },
   };
 
@@ -558,5 +600,34 @@ export function decksTheEngineAccepts(
   }
   throw new Error(
     `the real engine refused every deck size built from the catalog:\n  ${[...refusals].join("\n  ")}`,
+  );
+}
+
+/**
+ * `decksTheEngineAccepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
+ * onto both mulligans (§2.1, R265) — what a test about the window both seats share needs from its
+ * very first frame.
+ *
+ * A card the deal casts on draw (§2.4) may ask its caster something, and setup waits for that answer
+ * before it opens the mulligans (R224): #21 Hinder's base face asks for a discard since patch v0.2.0
+ * (R431). Which cards the deal draws is the seed's to say, so whether a deal asks is read off the
+ * real engine, not off card text. The first deck stays the pool's first slice; the second slides
+ * along the pool a card at a time until the deal asks nothing, so a seed whose deal already opened
+ * on the mulligans keeps exactly the decks `decksTheEngineAccepts` gives it.
+ */
+export function decksThatOpenOnTheMulligans(
+  port: EnginePort,
+  pool: readonly string[],
+  seed: string,
+): { decks: [string[], string[]] } {
+  const [first] = decksTheEngineAccepts(port, pool, seed).decks;
+  const size = first.length;
+  for (let from = size; from + size <= pool.length; from += 1) {
+    const decks: [string[], string[]] = [first, pool.slice(from, from + size)];
+    const { phase, mulliganOwed } = port.snapshot(port.beginGame(port.createGame({ seed, decks })).state);
+    if (phase === "mulligan" && mulliganOwed.length === 2) return { decks };
+  }
+  throw new Error(
+    `under seed ${seed} no second deck lets the deal open on both mulligans: p1's own deal asks first (R224)`,
   );
 }

@@ -1,0 +1,65 @@
+/*
+ * The set mark (R503, cards/setMark.ts): a small round plate on the frame holding the card's set
+ * glyph. It sits in the band between the name ribbon and the rules box, right of the rarity gem, so
+ * it clears the cost gem (top left), the crest (top centre), the name, the gem, the stats (bottom
+ * corners) and every Radiant mark (the gold text and stats). It moves with the gem in the long and
+ * compact layouts, sits under the gem in the small layout (a hand card), and hides on the smallest
+ * faces, where it would be noise. It never moves, so reduced motion needs nothing here.
+ */
+
+.cf .cf-set {
+  position: absolute;
+  z-index: 3;
+  top: 49.9cqh;
+  right: 11cqw;
+  display: block;
+  width: 5.2cqh;
+  height: 5.2cqh;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3b404d, #14161c 72%);
+  box-shadow:
+    0 0 0 0.35cqh color-mix(in srgb, var(--cf-bezel, #b89a5a) 80%, #000),
+    0 0.3cqh 0.6cqh rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+
+.cf .cf-set-glyph {
+  position: absolute;
+  inset: 14%;
+  display: block;
+  width: 72%;
+  height: 72%;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* The long layout moves the gem up after the shorter art window; the mark goes with it. */
+.cf[data-long="true"] .cf-set {
+  top: 32.9cqh;
+}
+
+/* A face-up backrow card at a size that has room: level with its gem. */
+.cf[data-layout="compact"] .cf-set {
+  top: 70.7cqh;
+}
+
+/* A small face (a hand card; 149 mirrors FACE_TEXT_MIN_HEIGHT_PX) moves its gem to the top-right
+   corner; the mark sits just under it at the gem's size, below the turned gem's corner (the gem is
+   a 7.5cqh square at 2.2cqh turned 45deg, so its lowest point is at 11.25cqh). */
+@container cardface (max-height: 149px) {
+  .cf:not([data-layout="minion"]) .cf-set,
+  .cf:not([data-layout="minion"])[data-layout] .cf-set {
+    top: 12cqh;
+    right: 4.5cqw;
+    width: 7.5cqh;
+    height: 7.5cqh;
+  }
+}
+
+/* The smallest faces (99 is one under SET_MARK_MIN_FACE_PX, setMark.ts): no mark. */
+@container cardface (max-height: 99px) {
+  .cf:not([data-layout="minion"]) .cf-set,
+  .cf:not([data-layout="minion"])[data-layout] .cf-set {
+    display: none;
+  }
+}

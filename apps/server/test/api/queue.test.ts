@@ -686,6 +686,8 @@ describe("R257 — queue modes (§9.5)", () => {
     expect(second.mode).toBe("bo1");
     expect(second.seriesId).toBeNull();
     expect(second.matchId).toBe(deps.matches.started[0]?.matchId);
+    // R376: the mode its game record is filed under is read off the tickets it was paired from.
+    expect(await deps.store.matches.modeOf(second.matchId ?? "")).toBe("bo1");
 
     expect(seatDeck(deps, "modern")).toEqual(one);
     expect(seatDeck(deps, "legacy")).toEqual(two);
@@ -784,6 +786,7 @@ describe("R258 — All Random (§9.5)", () => {
 
     const started = deps.matches.started[0];
     expect(started?.matchId).toBe(second.matchId);
+    expect(await deps.store.matches.modeOf(second.matchId ?? "")).toBe("random");
     const seed = started?.seed ?? "";
     expect(seatDeck(deps, "rng-one")).toEqual(deps.dealRandomDeck(`${seed}:p1-deck`));
     expect(seatDeck(deps, "rng-two")).toEqual(deps.dealRandomDeck(`${seed}:p2-deck`));

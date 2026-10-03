@@ -1,11 +1,13 @@
-// The deck builder's filter bar: text search, toggle chips for cost, type, tag and rarity, the
-// "owned only" checkbox, the sort key and direction, a clear control and the result count.
+// The deck builder's filter bar: text search, toggle chips for set, cost, type, tag and rarity, the
+// "owned only" checkbox, the sort key and direction, a clear control and the result count. The Card
+// Almanac (R630) renders the same bar with no "owned only" control and its own tag chips; without
+// those two props the bar is the deck builder's.
 //
 // Controlled and dumb: the filter and the sort live in `Deckbuilder`, and what they mean lives in
 // filters.ts. Chips are real toggle buttons (`aria-pressed`), so a keyboard and a screen reader
 // get the same control a pointer does.
 //
-// The cost chips are always on show, as Hearthstone's mana crystals are. The type, tag and rarity
+// The cost chips are always on show, as Hearthstone's mana crystals are. The set, type, tag and rarity
 // rows fold behind a "Filters" toggle wherever they would crowd the pool: a phone, and any screen
 // under about 860 px tall, where they left a 1280x720 desktop one row of cards (deckbuilder.css
 // shows the toggle and hides the folded rows only there). The fold is the one piece of state this
@@ -13,12 +15,13 @@
 
 import { useId, useState, type ReactElement } from "react";
 
-import type { CardType, Rarity, Tag } from "@jackioh/shared";
+import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 
 import {
   COST_BUCKETS,
   DEFAULT_FILTER,
   FILTER_RARITIES,
+  FILTER_SETS,
   FILTER_TAGS,
   FILTER_TYPES,
   SORT_KEYS,
@@ -39,6 +42,7 @@ import {
   DB_SORT_DIR,
   filterCostId,
   filterRarityId,
+  filterSetId,
   filterTagId,
   filterTypeId,
 } from "./testids.ts";
@@ -51,7 +55,11 @@ type FilterBarProps = {
   /** How many pool cards the current filter shows. */
   count: number;
   /** True when the collection could not be read: ownership is unknown, so the toggle is inert. */
-  ownedUnavailable: boolean;
+  ownedUnavailable?: boolean;
+  /** False leaves the "owned only" control out altogether (the almanac has no collection). */
+  ownedControl?: boolean;
+  /** The tag chips, in order; the deck builder's `FILTER_TAGS` when absent. */
+  tags?: readonly Tag[];
 };
 
 const SORT_LABELS: Readonly<Record<SortKey, string>> = {
@@ -91,8 +99,11 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 }
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
-  const { filter, onFilter, sort, onSort, count, ownedUnavailable } = props;
+  const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = FILTER_TAGS } = props;
 
+  const setSets = (set: SetName) => {
+    onFilter({ ...filter, sets: toggled(filter.sets, set) });
+  };
   const setCosts = (bucket: CostBucket) => {
     onFilter({ ...filter, costs: toggled(filter.costs, bucket) });
   };
@@ -110,7 +121,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
   const [expanded, setExpanded] = useState(false);
   const chipsId = useId();
   // The toggle counts what it hides: the cost chips are never folded away.
-  const active = filter.types.size + filter.tags.size + filter.rarities.size;
+  const active = filter.sets.size + filter.types.size + filter.tags.size + filter.rarities.size;
 
   return (
     <div
@@ -132,18 +143,20 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             onFilter({ ...filter, search: event.target.value });
           }}
         />
-        <label className="db-owned">
-          <input
-            type="checkbox"
-            data-testid={DB_FILTER_OWNED}
-            checked={filter.ownedOnly}
-            disabled={ownedUnavailable}
-            onChange={(event) => {
-              onFilter({ ...filter, ownedOnly: event.target.checked });
-            }}
-          />
-          <span>Owned only</span>
-        </label>
+        {ownedControl ? (
+          <label className="db-owned">
+            <input
+              type="checkbox"
+              data-testid={DB_FILTER_OWNED}
+              checked={filter.ownedOnly}
+              disabled={ownedUnavailable}
+              onChange={(event) => {
+                onFilter({ ...filter, ownedOnly: event.target.checked });
+              }}
+            />
+            <span>Owned only</span>
+          </label>
+        ) : null}
         {/* The sort and its direction wrap as one, so the arrow never ends up alone on a row. */}
         <span className="db-sort-group">
           <label className="db-sort">
@@ -228,7 +241,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
               className="db-chip--cost"
               pressed={filter.costs.has(bucket)}
               label={bucket}
-              title={`Cost ${bucket}`}
+              title={`(${bucket}) Cost`}
               onToggle={() => {
                 setCosts(bucket);
               }}
@@ -239,6 +252,23 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
 
       <div className="db-filter-chips" id={chipsId}>
         <div className="db-filter-row">
+          <div className="db-chip-group" role="group" aria-label="Set">
+            <span className="db-group-label" aria-hidden="true">
+              Set
+            </span>
+            {FILTER_SETS.map((set) => (
+              <Chip
+                key={set}
+                testId={filterSetId(set)}
+                className="db-chip--set"
+                pressed={filter.sets.has(set)}
+                label={set}
+                onToggle={() => {
+                  setSets(set);
+                }}
+              />
+            ))}
+          </div>
           <div className="db-chip-group" role="group" aria-label="Type">
             <span className="db-group-label" aria-hidden="true">
               Type
@@ -263,7 +293,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             <span className="db-group-label" aria-hidden="true">
               Tag
             </span>
-            {FILTER_TAGS.map((tag) => (
+            {tags.map((tag) => (
               <Chip
                 key={tag}
                 testId={filterTagId(tag)}

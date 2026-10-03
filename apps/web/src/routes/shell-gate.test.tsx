@@ -241,7 +241,11 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    await screen.findByTestId(shellTestid.error, undefined, SLOW);
+    // Every step here runs on promises and faked timers (/account is in the entry chunk and the
+    // stubbed fetch answers at once), so flushing them settles the screen without waiting on the
+    // wall clock, however loaded the machine is.
+    await flushMicrotasks();
+    expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
 
     // A phone freezes a background tab's timers: the clock moves on, one tick arrives on return.
@@ -266,8 +270,10 @@ describe("B40 the gate's error panel", () => {
     });
     at(paths.account);
     render(<App />);
+    // As above: promises and faked timers only, so the test never waits on the wall clock.
+    await flushMicrotasks();
 
-    const panel = await screen.findByTestId(shellTestid.error, undefined, SLOW);
+    const panel = screen.getByTestId(shellTestid.error);
     expect(panel.textContent).toMatch(/42 s/);
     expect(panel.textContent).not.toContain("too many requests; slow down");
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
@@ -279,9 +285,8 @@ describe("B40 the gate's error panel", () => {
     expect(retry).toBeEnabled();
     limited = false;
     fireEvent.click(retry);
-    await waitFor(() => {
-      expect(screen.queryByTestId(shellTestid.error)).toBeNull();
-    }, SLOW);
+    await flushMicrotasks();
+    expect(screen.queryByTestId(shellTestid.error)).toBeNull();
   });
 });
 

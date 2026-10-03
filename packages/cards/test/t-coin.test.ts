@@ -105,7 +105,7 @@ describe("T-coin The Coin — card data (§7)", () => {
     expect(query({}).map((card) => card.id)).not.toContain(COIN_DEF_ID);
     expect(query({ type: "Spell", cost: 0 }).map((card) => card.id)).not.toContain(COIN_DEF_ID);
     expect(query({ tags: ["Token"] }).map((card) => card.id)).toContain(COIN_DEF_ID);
-    expect(query({ index: "T-coin" }).map((card) => card.id)).toEqual([COIN_DEF_ID]);
+    expect(query({ defId: "core-t-coin" }).map((card) => card.id)).toEqual([COIN_DEF_ID]);
   });
 });
 

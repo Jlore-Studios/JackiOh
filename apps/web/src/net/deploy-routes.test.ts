@@ -60,6 +60,8 @@ describe("vercel.json", () => {
       .filter(([name]) => name !== "hotseat")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
+    // R630: the Card Almanac is a public screen like the privacy policy.
+    expect(fixed).toContain(paths.almanac);
     for (const path of fixed) {
       expect(servedByApp(path), path).toBe(true);
       // `currentPath` drops a trailing slash, so the app serves the same screen at both.
@@ -84,6 +86,7 @@ describe("vercel.json", () => {
       "/dev/hotseat",
       "/Login",
       "/loginx",
+      "/almanac/extra",
       "/login/extra",
       "/match",
       "/match/",

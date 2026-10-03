@@ -2,9 +2,11 @@
 
 The authority for everything that is not presentation. It owns identity and the invite gate, the
 collection ledger, saved decks and trios, an active account's copy of its tutorial progress (R320),
-matchmaking in three modes, the Conquest series, and the match itself: one actor per match holding the
-`GameState` in memory, one WebSocket per player, `reduce` on every action and `viewFor` pushed to
-each player after every change (SPEC §9.1–§9.5, §10.8).
+each profile's last board for C+ #29 Portal to the Past (R417), matchmaking in three modes, the
+Conquest series, and the match itself: one actor per match holding the `GameState` in memory, one
+WebSocket per player, `reduce` on every action and `viewFor` pushed to each player after every
+change (SPEC §9.1–§9.5, §10.8). Every match that ends leaves a game record for the card statistics
+(SPEC §9.11, R376–R378).
 
 The client sends intent and renders `viewFor`. It never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7).
@@ -41,11 +43,14 @@ in `src/api/ports.ts` is the contract between this half of the server and `src/d
 1. `src/match/engine.ts` — the `EnginePort`. The only path to `@jackioh/engine`. `EngineState` is
    opaque: it holds both hands and both libraries, so nothing outside the port inspects it, and
    every per-player payload is a `viewFor`.
-2. `src/api/catalog.ts` — reads `packages/cards/catalog.json` (111 entries) and derives
-   `CatalogInfo`, including the catalog version §9.4 checks at save and at queue.
+2. `src/api/catalog.ts` — reads `packages/cards/catalog.json` (317 entries: 268 cards and 49 tokens
+   in three sets, Core, Classic and Classic+) and derives `CatalogInfo`, including the catalog version
+   §9.4 checks at save and at queue, which is the latest patch's (R388). It also serves the patch
+   snapshots in `packages/cards/patches/`.
 3. `src/api/loadout-validator.ts` — the only path to `@jackioh/validator` for the queue rules
    (L1–L6 for a trio, L2, L3, L5 and L6 for a Best-of-1 deck, R253), and `src/api/decks.ts` calls
-   the same package's draft checks (D1–D4, T1–T3, R250, R252). No rule is restated here.
+   the same package's draft checks (D1–D4, T1–T3, R250, R252). No rule is restated here. There is one
+   format (R380): a deck may mix the three sets, and a trio's 60 distinct cards come from all 268.
 
 ## Running it against a Supabase project
 
@@ -58,7 +63,7 @@ cp apps/server/.env.example apps/server/.env    # then fill it in
 # 1. Schema. Applies src/db/migrations/*.sql in order.
 pnpm --filter @jackioh/server db:migrate
 
-# 2. The card catalog, so loadout rule L6 has something to check against.
+# 2. The card catalog, so loadout rule L6 has something to check against. Again after every patch.
 pnpm --filter @jackioh/server db:seed-catalog
 
 # 3. An invite code, so an account can get past `pending`.
@@ -73,6 +78,9 @@ Every script above runs under `--env-file-if-exists=.env`, so `apps/server/.env`
 without a dotenv dependency, a missing file is not an error, and a variable set in the shell
 still wins over the file — `DATABASE_URL='postgresql://...' pnpm --filter @jackioh/server
 db:migrate` does what it looks like.
+
+`release` runs steps 1 and 2 together, and Render's start command runs it before every boot
+(`render.yaml`), so a deploy migrates and reseeds the database itself. Both steps are idempotent.
 
 Step 3 mints one code. Every account starts `pending` and a pending account can do nothing but
 look at the code screen (§9.4). `src/db/mint-code.ts` is a thin wrapper over `mintInviteCode` in
@@ -94,7 +102,7 @@ missing or malformed value rather than failing later at the first request.
 | `SUPABASE_SECRET_KEY` | yes | `sb_secret_…` (or the legacy `service_role` JWT). **Server only** — it bypasses every RLS policy. Never give it a `VITE_` alias |
 | `DATABASE_URL` | yes | Postgres connection string for the transactional work in §9.4 and §9.5 |
 | `CODE_PEPPER` | yes | ≥32 chars. Keys the HMAC over invite codes and IP addresses, so a stolen table cannot be brute-forced and no raw address is ever stored |
-| `CATALOG_VERSION` | yes | Must match what the client ships and what `cards.catalog_version` holds |
+| `CATALOG_VERSION` | yes | The latest patch's version, `v0.2.0` (R388). Must match what the client ships (`VITE_CATALOG_VERSION`), `CATALOG_VERSION` in `packages/cards`, and what `db:seed-catalog` stamped on `cards.catalog_version` and `app.settings` |
 | `SUPABASE_JWKS_URL` | no | Defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_JWT_SECRET` | no | HS256 fallback, for a project not yet on asymmetric signing keys. Discouraged |
 | `PORT` | no | Defaults to 8787 |
@@ -109,6 +117,38 @@ The client's half of the contract is `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISH
 
 Two peppers are derived from the one `CODE_PEPPER` at the composition root — `${CODE_PEPPER}:code`
 and `${CODE_PEPPER}:ip` — so an invite-code hash and an IP hash can never collide.
+
+### Catalog versions: the version is the patch (R388)
+
+Every change to card data is a patch (`packages/cards/README.md` §8).
+`packages/cards/patches/patches.json` lists the patches in order, and `CATALOG_VERSION` is the
+latest one's version, `v0.2.0`. R105, rewritten with R388, still makes a version an opaque string compared for equality
+only, never parsed or ordered, so the order of patches comes from `patches.json` and never from
+comparing two versions.
+
+- **A patch bumps the version everywhere it lives**: `packages/cards/src/catalog-data.ts`,
+  `.env.example`, `render.yaml`, the client's `VITE_CATALOG_VERSION`, and the database. So every
+  patch reseeds: `db:seed-catalog` stamps every `cards` row with the new version and writes it to
+  `app.settings`' `catalog_version` (migration 0001 seeded the first one, `core-1`). The server's
+  `CATALOG_VERSION` and the database's must match (§9.4), so a patch's deploy and its reseed go
+  together.
+- **A stale client** is refused `update_required` when it saves a deck (§9.4). At the queue a deck or
+  trio is checked against the current catalog by L6, whatever version it was saved under (R253), so a
+  patch invalidates no saved deck by itself: only one that holds a card the new catalog lacks.
+- **Old versions stay readable.** `GET /api/catalog/:version` serves the snapshot a patch left
+  (`packages/cards/patches/<version>.json`), unauthenticated like `GET /api/catalog` and for the same
+  reason (R163); a version `patches.json` does not list is `not_found`. A match stores the version it
+  started under (`matches.catalog_version`).
+
+**The v0.2.0 migrations.** `cards_tags_check` (0002, widened by 0010 for `Jlockeed`, R278) admits
+only the tags it names, and `db:seed-catalog` writes the whole catalog in one transaction, so a card
+with an unlisted tag refuses all of it. Patch v0.2.0 adds a migration that puts the same check back
+with `Book`, `Pancake` and `AI` added and nothing else changed, as 0010 did, and `test:sql` proves it
+admits every catalog tag and refuses an unknown one. The collection is a ledger (§9.4): R111's
+launch grant gives an account one copy of every non-token card when it becomes active, which now
+means all 268, but an account activated before the new cards were seeded owns none of them. A grant
+migration gives each such account one copy of every new non-token card through `collection_grants`,
+written with `collection` in one transaction as every collection change is.
 
 ### Supabase specifics worth knowing
 
@@ -143,6 +183,8 @@ top of every handler:
 | `POST` | `/api/auth/signup` | none | Convenience only; requires a publishable key to be configured. Normally the browser does this itself |
 | `POST` | `/api/auth/signin` | none | Same |
 | `GET` | `/api/auth/me` | user | Profile status, and whether an invite code is still needed |
+| `GET` | `/api/catalog` | none | The current catalog, `{ version, defs }`: the same bytes the client ships, whole (R163) |
+| `GET` | `/api/catalog/:version` | none | One patch's snapshot of the catalog, as `packages/cards/patches/<version>.json` holds it (R388); a version `patches.json` does not list is `not_found` |
 | `DELETE` | `/api/account` | user | Deletes the caller's own account: the profile and every row only it owns, then the auth user. 204 with no body. 409 while the caller is in a live match (`already_in_match`) or a Conquest series (`conflict`); 503 when the auth provider cannot delete users. The other player's finished matches, results and series stay, with the deleted seat empty (migration 0012) |
 | `POST` | `/api/codes/redeem` | user | The six-step redemption of §9.4 |
 | `GET` | `/api/collection` | active | The entitlement ledger. There is deliberately no write route |
@@ -163,6 +205,14 @@ top of every handler:
 | `GET` | `/api/matches/:id/series` | active | The series a match is a game of, for the board's banner |
 | `GET` | `/api/tutorial` | active | The account's tutorial progress (R320): completed lesson ids and the newest Hide/Show choice; empty before the first write |
 | `PUT` | `/api/tutorial` | active | Merge a device's progress into the account's (R320): `{ completed, hiddenChoice? }`. The lessons become the union, a choice replaces the stored one only when it is newer (a time after the server's clock counts as now), nothing is ever removed, and the answer is the merged progress. Ids are checked for shape only (lower-case slugs, `TUTORIAL_LESSON_ID_MAX_LENGTH`, at most `TUTORIAL_LESSONS_MAX`); the lessons are the client's |
+
+**Deck and trio codes, version 2.** A code is the client's business (no route reads one: an import
+is a new saved deck, and a trio import posts its decks), but the format versions are server numbers
+and live in `src/config.ts` with the rest (CLAUDE.md rule 9): `DECK_CODE_VERSION` and
+`TRIO_CODE_VERSION` are 2 since patch v0.2.0. Version 2 writes each card's catalog number tagged with
+its set — Core n, Classic 1000 + n, Classic+ 2000 + n, still LEB128 — and every code minted before
+the patch is version 1, which still reads as Core numbers; any other version is refused (R255,
+R339). The codec is `packages/shared/src/codes.ts`.
 
 ## WebSocket surface
 
@@ -188,12 +238,31 @@ Properties the actor holds, each with a test named after it:
   other hand's card ids, or library order (§10.8).
 - Every resolved action is appended to `match_actions`. A crashed or evicted actor rebuilds itself
   by folding `(seed, decks, log)` — a reconnect gets a fresh full view, never a log replay (§9.5).
+  A match whose setup took last boards (below) folds with the boards frozen into it at its start.
+
+### Last boards (C+ #29 Portal to the Past, R417)
+
+Portal to the Past offers the cards of the board its player's last game ended with. Each seat's last
+board is a setup input of `createGame`, beside its deck and handicap, and it is frozen into the match
+at the start, so `(seed, decks, handicaps, lastBoards, log)` still folds exactly and a rebuilt actor
+gets the same boards back, never a newer one.
+
+- **What is stored.** The server keeps one last board per profile, replaced when a server match that
+  profile played ends, whatever ended it: every permanent on the field at that moment on both sides,
+  as `{ defId, radiant }` (a fused card by its R179 id), except the opponent's face-down cards, which
+  that player never saw. Stats, buffs and damage are not kept, only the card and its face.
+- **Which game counts.** "Your last game" is your last finished game of the same kind, so a server
+  match reads the board of the profile's last server match. Practice keeps its own on the device and
+  hotseat has none; an empty board makes the card find nothing.
+- **Who writes it.** Only the server, and it has RLS like every table in `public` (`test:sql`).
 
 ### Clocks (R79)
 
 All of R79's values come from `src/config.ts` and are stated nowhere else: turn clock 75 s, prompt
-clock 30 s, disconnect grace 60 s, match ceiling 60 minutes, Elo K = 32 from 1000. R268's mulligan
-clock, 45 s (`MULLIGAN_CLOCK_SECONDS`), lives beside them.
+clock 30 s, disconnect grace 60 s, match ceiling 120 minutes (`MATCH_CEILING_MINUTES`, since patch
+v0.2.0: the turn cap is 60 player-turns, and 60 turns at a full 75-second clock take 75 minutes,
+R389), Elo K = 32 from 1000. R268's mulligan clock, 45 s (`MULLIGAN_CLOCK_SECONDS`), lives beside
+them.
 
 The clock lives here, never in the engine: time reaches the engine only as action data (§9.3), so
 an expiry becomes an ordinary server-only action — `timeout`, `disconnectExpired` or
@@ -201,8 +270,10 @@ an expiry becomes an ordinary server-only action — `timeout`, `disconnectExpir
 `(seed, log)` sufficient to reconstruct a match.
 
 - The turn clock belongs to the active player. A prompt held by the **non-active** player (a trap
-  firing on your turn) pauses it and runs its own prompt clock; on expiry `timeout` answers only
-  that prompt. A prompt held by the active player does not pause their clock.
+  firing on your turn, a counter answering your play in §10.5's announce window) pauses it and runs
+  its own prompt clock; on expiry `timeout` answers only that prompt. A prompt held by the active
+  player does not pause their clock, and neither does a long one: C+ #42 KY's Test's problem is
+  answered on the turn clock like any other prompt.
 - The mulligan clock (R268) runs while both mulligans are open (R265): the snapshot's
   `mulliganOwed` is non-empty and no prompt is pending. It is **one** deadline for both seats, armed
   the first time the window is seen and never re-armed or extended when one seat answers, so the
@@ -246,6 +317,42 @@ the mulligan window included. Both go through the one results path (`api/results
 `createRecordResult`): one `results` row, Elo scored 0.5 each for a draw and 1/0 for a concede,
 both in-match flags cleared, once.
 
+## Card statistics (SPEC §9.11, R376–R378)
+
+Once a match's result has committed, `createRecordResult` (`src/api/results.ts`) files the game in
+`public.game_records` (migration 0014) through `src/api/game-records.ts`: the engine port's
+`summarizeGame` folds `(seed, decks, log)` into each seat's decklist, opening hand, draws and plays,
+who went first and who won, and the record is filed under the match's mode (`matches.modeOf`: a
+Conquest game's is its series', else its room's or its queue tickets'), the newest patch of `packages/cards/patches/patches.json` (`loadCurrentPatch`, read at boot) and two
+human pilots, as `source: "live"`. It never costs a result: a failure is logged as
+`game.record.failed` and the result stands, and a second write of the same match files nothing. The
+reaper's ceiling draws (R112) file none. The record names no account; only the server reads it.
+Nothing on a match's own path touches `game_records`, so until 0014 is applied each match end logs
+`game.record.failed` and plays on.
+
+```bash
+# Card win rates. With no option: live games of every mode, patch and pilot.
+pnpm --filter @jackioh/server stats:cards
+pnpm --filter @jackioh/server stats:cards --mode=random --patch=v0.2.5 --pilot=human
+pnpm --filter @jackioh/server stats:cards --card=core-002 --json
+
+# A pre-release AI run of a patch, loaded, then compared with the same patch's live games: one
+# query each, the same --patch on both, since no one query shows the two side by side.
+pnpm ai:stats --patch=v0.2.5 --out=v0.2.5-dev.jsonl
+pnpm --filter @jackioh/server stats:import v0.2.5-dev.jsonl
+pnpm --filter @jackioh/server stats:cards --source=dev --patch=v0.2.5
+pnpm --filter @jackioh/server stats:cards --patch=v0.2.5
+```
+
+`stats:cards` takes `--source=live|dev|all` (live unless told otherwise: a development run is read
+only by name, R378), `--mode=bo1|bo3|random`, `--patch=<version>`, `--pilot=human|ai|unified`,
+`--card=<id>` and `--json`, in any combination. Each card's row is its win rate in deck, in the
+opening hand, going first, going second, played and drawn but not played, every rate with its games
+beside it, and the played delta: the played rate minus the drawn-but-not-played rate, in points
+(R377 defines each). `stats:import` reads the file `pnpm ai:stats` wrote, a relative path from the
+directory the command was started in as `--out`'s is (pnpm's `INIT_CWD`), refuses it whole if any
+line is not a development record, and skips a game already imported. Both read `DATABASE_URL`.
+
 ## Tests
 
 ```bash
@@ -280,7 +387,7 @@ protocol, nonce dedupe, action log and log-folding recovery; room codes, in all 
 clock; results and Elo; matchmaking in three modes with frozen decks, opportunistic pairing, a
 sweeper, the widening window and the atomic claim; All Random's seeded decks; the Conquest series,
 its sealed picks and pick clock, its one rating move and its recovery after a restart; trio imports; the catalog loader against the
-real 111-entry `catalog.json`.
+real 317-entry `catalog.json` and the patch snapshots beside it.
 
 Stubbed or pending, and why:
 

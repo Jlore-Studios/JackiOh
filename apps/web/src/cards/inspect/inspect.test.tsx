@@ -17,6 +17,7 @@ import type { CardDef, PlayerView, UnitView } from "@jackioh/shared";
 import Board from "../../game/Board.tsx";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { testid, type ClickTarget, type Highlight } from "../../game/contract.ts";
+import { patchTestid } from "../../patches/testids.ts";
 import { fullBoardView } from "../../test/fixtures.ts";
 import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
 import { faceModel, type FaceModel } from "../model.ts";
@@ -30,7 +31,6 @@ import {
   INSPECT_FACE,
   INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
-  INSPECT_HISTORY_TOGGLE,
   INSPECT_HOVER,
   INSPECT_SCRIM,
   INSPECT_SHEET,
@@ -978,8 +978,8 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
-    // The first control is the History section's toggle (R375), at the end of the scrolling body.
-    const first = screen.getByTestId(INSPECT_HISTORY_TOGGLE);
+    // R388: the History section's control is the detail's first, before the caller's actions.
+    const first = screen.getByTestId(patchTestid.historyToggle);
     expect(close).toHaveFocus();
 
     expect(tabFrom(close)).toBe(false);

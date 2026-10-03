@@ -19,9 +19,10 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { Action } from "@jackioh/shared";
+import type { Action, GameRecord } from "@jackioh/shared";
 import type {
   FrozenTrio,
+  LastBoardEntry,
   MatchClocks,
   MatchRow,
   Profile,
@@ -815,6 +816,47 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
     // The Best-of-3 series (SPEC §9.5, R259–R263)
     // -----------------------------------------------------------------------
 
+    describe("lastBoards", () => {
+      const BOARD: LastBoardEntry[] = [
+        { defId: "core-012", radiant: false },
+        { defId: "t-1:core-012+core-025", radiant: true },
+      ];
+
+      it("R565 holds no board before a profile's first finished game, then the one written", async () => {
+        const profile = await activeProfile();
+        expect(await store.lastBoards.get(profile.id, "server")).toBeNull();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual(BOARD);
+      });
+
+      it("R565 a later game's board replaces it, and each kind is its own", async () => {
+        const profile = await activeProfile();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        await store.lastBoards.put(profile.id, "server", [], harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual([]);
+        await store.lastBoards.put(profile.id, "practice", BOARD, harness.now());
+        expect(await store.lastBoards.get(profile.id, "server")).toEqual([]);
+        expect(await store.lastBoards.get(profile.id, "practice")).toEqual(BOARD);
+        const other = await activeProfile();
+        expect(await store.lastBoards.get(other.id, "practice")).toBeNull();
+      });
+
+      it("R565 goes with the profile", async () => {
+        const profile = await activeProfile();
+        await store.lastBoards.put(profile.id, "server", BOARD, harness.now());
+        expect(await store.profiles.remove(profile.id)).toBe(true);
+        expect(await store.lastBoards.get(profile.id, "server")).toBeNull();
+      });
+
+      it("R417 a match row keeps the boards it started with", async () => {
+        const [p1, p2] = [await activeProfile(), await activeProfile()];
+        const row: MatchRow = { ...matchRow(id(), p1.id, p2.id, harness, harness.now()), lastBoards: [BOARD, []] };
+        await store.matches.create(row);
+        expect(await store.matches.get(row.id)).toEqual(row);
+        expect((await store.matches.live()).find((match) => match.id === row.id)?.lastBoards).toEqual([BOARD, []]);
+      });
+    });
+
     describe("series", () => {
       function seriesRow(p1: string, p2: string, over: Partial<SeriesRow> = {}): SeriesRow {
         const now = harness.now();
@@ -1214,6 +1256,145 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         const row = matchRow(matchId, a.id, b.id, harness, harness.now());
         await store.matches.create(row);
         expect(await store.matches.get(matchId)).toEqual(row);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Game records for the card statistics (SPEC §9.11, R376–R378)
+    // -----------------------------------------------------------------------
+
+    describe("gameRecords", () => {
+      function gameRecord(recordId: string, partial: Partial<GameRecord> = {}): GameRecord {
+        return {
+          id: recordId,
+          source: "live",
+          mode: "bo1",
+          patch: "v0.1.1",
+          pilots: { p1: "human", p2: "human" },
+          game: {
+            first: "p1",
+            winner: "p2",
+            reason: "concede",
+            turns: 6,
+            seats: {
+              p1: { deck: ["core-001", "core-002"], opening: ["core-001"], drawn: ["core-002"], played: ["core-001"] },
+              p2: { deck: ["core-003"], opening: ["core-003", "core-t-coin"], drawn: [], played: [] },
+            },
+          },
+          ...partial,
+        };
+      }
+
+      /** R376: the mode a record is filed under is read off what made the match. */
+      it("R376 reads a match's mode off its room, its queue tickets or its series", async () => {
+        const [a, b] = [await activeProfile(), await activeProfile()];
+        const now = harness.now();
+
+        // A room's match: the room's mode.
+        for (const [code, mode] of [["ABC234", "random"], ["BCD345", "bo1"]] as const) {
+          await store.rooms.create({
+            code,
+            hostProfileId: a.id,
+            mode,
+            hostDeck: mode === "bo1" ? deckOf(harness, 0) : [],
+            hostTrio: null,
+            catalogVersion: harness.catalogVersion,
+            createdAt: now,
+            expiresAt: now + 600_000,
+            guestProfileId: null,
+            matchId: null,
+          });
+          const roomMatch = id();
+          must(await store.rooms.claim(code, b.id, roomMatch, now), "the claim");
+          await store.matches.create(matchRow(roomMatch, a.id, b.id, harness, now));
+          expect(await store.matches.modeOf(roomMatch)).toBe(mode);
+          await store.matches.finish(roomMatch, now);
+        }
+
+        // A queue match: its tickets' mode.
+        const tickets = [a.id, b.id].map((profileId) => ({
+          id: id(),
+          profileId,
+          rating: 1000,
+          mode: "random" as const,
+          deck: [],
+          trio: null,
+          catalogVersion: harness.catalogVersion,
+          enqueuedAt: now,
+          status: "open" as const,
+          matchId: null,
+        }));
+        for (const row of tickets) await store.tickets.insert(row);
+        const queueMatch = id();
+        expect(await store.tickets.claimPair(tickets[0]!.id, tickets[1]!.id, queueMatch, now)).toBe(true);
+        await store.matches.create(matchRow(queueMatch, a.id, b.id, harness, now));
+        expect(await store.matches.modeOf(queueMatch)).toBe("random");
+
+        // A game of a Conquest series: bo3, whatever made the series.
+        const seriesGame = id();
+        await store.series.create({
+          id: id(),
+          sides: [
+            { profileId: a.id, trio: frozenTrio(harness, "Mine"), wins: 0, pick: null },
+            { profileId: b.id, trio: frozenTrio(harness, "Theirs"), wins: 0, pick: null },
+          ],
+          catalogVersion: harness.catalogVersion,
+          seedBase: "series-seed",
+          status: "playing",
+          games: [{ gameNo: 2, matchId: seriesGame, slots: [0, 1], first: "p2", winner: null, reason: null }],
+          nextMatchId: seriesGame,
+          pickDeadline: null,
+          winner: null,
+          endReason: null,
+          ratingBefore: null,
+          ratingAfter: null,
+          createdAt: now,
+          updatedAt: now,
+          endedAt: null,
+          version: 1,
+        });
+        await store.matches.create(matchRow(seriesGame, b.id, a.id, harness, now));
+        expect(await store.matches.modeOf(seriesGame)).toBe("bo3");
+
+        // Nothing made this one.
+        expect(await store.matches.modeOf(id())).toBeNull();
+      });
+
+      it("R376 writes one record per game and refuses a second with the same id", async () => {
+        const live = gameRecord(id());
+        expect(await store.gameRecords.insert(live)).toBe(true);
+        expect(await store.gameRecords.insert({ ...live, patch: "v0.2.0" })).toBe(false);
+        expect(await store.gameRecords.list({ source: "live", mode: null, patch: null })).toEqual([live]);
+      });
+
+      it("R378 reads development records only when asked, and filters by mode and patch", async () => {
+        const records = [
+          gameRecord("a-live", { mode: "bo1", patch: "v0.1.1" }),
+          gameRecord("b-live", { mode: "random", patch: "v0.2.5" }),
+          gameRecord("dev:c", { source: "dev", mode: "random", patch: "v0.2.5", pilots: { p1: "ai", p2: "ai" } }),
+          gameRecord("dev:d", { source: "dev", mode: "random", patch: "v0.1.1", pilots: { p1: "ai", p2: "ai" } }),
+        ];
+        // Written out of order: a read comes back in id order.
+        for (const record of [...records].reverse()) expect(await store.gameRecords.insert(record)).toBe(true);
+        const ids = async (query: Parameters<typeof store.gameRecords.list>[0]): Promise<string[]> =>
+          (await store.gameRecords.list(query)).map((record) => record.id);
+
+        expect(await ids({ source: "live", mode: null, patch: null })).toEqual(["a-live", "b-live"]);
+        expect(await ids({ source: "dev", mode: null, patch: null })).toEqual(["dev:c", "dev:d"]);
+        expect(await ids({ source: "all", mode: null, patch: null })).toEqual(["a-live", "b-live", "dev:c", "dev:d"]);
+        expect(await ids({ source: "all", mode: "random", patch: null })).toEqual(["b-live", "dev:c", "dev:d"]);
+        expect(await ids({ source: "all", mode: null, patch: "v0.2.5" })).toEqual(["b-live", "dev:c"]);
+        expect(await ids({ source: "dev", mode: "random", patch: "v0.1.1" })).toEqual(["dev:d"]);
+        expect(await ids({ source: "live", mode: "bo3", patch: null })).toEqual([]);
+        expect(await store.gameRecords.list({ source: "dev", mode: null, patch: "v0.2.5" })).toEqual([records[2]]);
+      });
+
+      /** R378: neither kind of record can take the other's place under the one id. */
+      it("R378 refuses a development record under a match id, and a live one under a development id", async () => {
+        const dev = { source: "dev" as const, pilots: { p1: "ai" as const, p2: "ai" as const } };
+        await expect(store.gameRecords.insert(gameRecord(id(), dev))).rejects.toThrow();
+        await expect(store.gameRecords.insert(gameRecord("dev:forged"))).rejects.toThrow();
+        expect(await store.gameRecords.list({ source: "all", mode: null, patch: null })).toEqual([]);
       });
     });
 

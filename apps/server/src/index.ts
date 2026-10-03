@@ -20,7 +20,7 @@ import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 
 import { createAuthRoutes, createSupabaseAuth } from "./api/auth";
-import { createCatalogRoutes, loadCatalog } from "./api/catalog";
+import { createCatalogRoutes, loadCatalog, loadCurrentPatch } from "./api/catalog";
 import { createCodesRoutes } from "./api/codes";
 import { createCollectionRoutes } from "./api/collection";
 import { VITE_DEV_ORIGINS, withCors } from "./api/cors";
@@ -125,7 +125,7 @@ const E2E_ENV_DEFAULTS: Readonly<Record<string, string>> = {
   DATABASE_URL: "memory://e2e-fixture-store",
   CODE_PEPPER: "e2e-fixture-code-pepper-not-a-secret-abcdefgh",
   PUBLIC_ORIGINS: VITE_DEV_ORIGINS.join(","),
-  CATALOG_VERSION: "core-1",
+  CATALOG_VERSION: "v0.2.0",
 };
 
 function e2eRequested(source: Record<string, string | undefined>): boolean {
@@ -212,6 +212,9 @@ export async function createRuntime(
     validateLoadout: overrides.validateLoadout ?? sharedLoadoutValidator,
     // R258: All Random's decks come from the engine port, the one path to the card catalog.
     dealRandomDeck: overrides.dealRandomDeck ?? engine.dealRandomDeck,
+    // R376: every finished match is filed for the card statistics under this build's patch (R388),
+    // its record read off the log by the engine port.
+    games: overrides.games ?? { patch: await loadCurrentPatch(), summarize: engine.summarizeGame },
     // Replaced two lines down; a placeholder rather than a lie, so a mistake is loud.
     matches: {
       start: async () => {

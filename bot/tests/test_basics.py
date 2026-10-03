@@ -18,9 +18,11 @@ class ConfigTests(unittest.TestCase):
     def test_committed_config_loads(self):
         cfg = config.load(env={})
         self.assertEqual(cfg.repo, "jgoetzmann/JackiOh")
-        self.assertEqual(cfg.model, "opus")
-        self.assertEqual(cfg.effort, "xhigh")
-        self.assertEqual((cfg.window_start, cfg.window_end), ("21:00", "07:00"))
+        first = cfg.pool.ordered()[0]
+        self.assertEqual((first.id, first.cli, first.model, first.effort, first.secret),
+                         ("claude-1", "claude", "opus", "xhigh", "CLAUDE_CODE_OAUTH_TOKEN"))
+        self.assertEqual((first.schedule.start, first.schedule.end), ("21:00", "07:00"))
+        self.assertEqual(cfg.pool.max_parallel, 3)
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)
@@ -37,11 +39,12 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             config.parse(raw, config.REPO_ROOT, {})
 
-    def test_usage_stop_must_be_a_fraction(self):
-        raw = raw_config()
-        raw["usage_stop"] = {"five_hour": 98}
-        with self.assertRaises(ConfigError):
-            config.parse(raw, config.REPO_ROOT, {})
+    def test_the_old_single_subscription_keys_are_gone(self):
+        for key in ("model", "effort", "window", "usage_stop"):
+            raw = raw_config()
+            raw[key] = 1
+            with self.assertRaises(ConfigError):
+                config.parse(raw, config.REPO_ROOT, {})
 
     def test_environment_supplies_tokens_and_run(self):
         cfg = make_config(env={"BOT_GITHUB_TOKEN": "bot-token-value", "GITHUB_TOKEN": "actions-token"})
@@ -131,7 +134,7 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(self.verbs("/harness work"), [("build", "", False)])
         self.assertEqual(self.verbs("/harness fix it"), [("revise", "it", False)])
         self.assertEqual(self.verbs("/harness resume"), [("start", "", False)])
-        self.assertEqual(self.verbs("/harness help"), [("status", "", False)])
+        self.assertEqual(self.verbs("/harness help"), [("help", "", False)])
 
     def test_force_flag(self):
         self.assertEqual(self.verbs("/harness build --force"), [("build", "", True)])
@@ -160,8 +163,50 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(len(found), commands.MAX_COMMANDS)
         self.assertEqual([c.verb for c in found[:2]], ["status", "build"])
 
-    def test_unknown_verb_is_reported(self):
-        self.assertEqual(self.verbs("/harness dance"), [("unknown:dance", "", False)])
+    def test_words_that_are_not_a_verb_are_a_request_after_either_prefix(self):
+        self.assertEqual(self.verbs("/harness dance"), [("request", "dance", False)])
+        self.assertEqual(self.verbs("/harness please make it shiny --force"),
+                         [("request", "please make it shiny", True)])
+        self.assertEqual(self.verbs("/harness"), self.verbs("@jgoetzmann-bot"))
+
+    def test_both_prefixes_read_every_verb_and_alias_the_same(self):
+        lines = [*commands.VERBS, *commands.ALIASES, "build make it spin", "revise tighten it",
+                 "run #12", "start --force", "help build", "please make the coin shinier",
+                 "stauts", "biuld --force"]
+        for line in lines:
+            forms = [f"/harness {line}", f"/harness-{line}", f"@{self.bot} {line}",
+                     f"@{self.bot} /harness {line}"]
+            read = [[(c.verb, c.args, c.force, c.meant) for c in commands.parse(f, self.bot)]
+                    for f in forms]
+            self.assertTrue(read[0] and all(r == read[0] for r in read), (line, read))
+
+    def test_a_misspelt_verb_runs_nothing(self):
+        def meant(body):
+            return [(c.verb, c.meant) for c in commands.parse(body, self.bot)]
+        self.assertEqual(meant("@jgoetzmann-bot stauts"), [("typo", "status")])
+        self.assertEqual(meant("/harness biuld --force"), [("typo", "build")])
+        self.assertEqual(meant("/harness rnu #5"), [("typo", "run")])
+        self.assertEqual(meant("@jgoetzmann-bot fit"), [("typo", "fix")])
+        self.assertEqual(commands.parse("/harness stauts", self.bot)[0].level, 1)
+        # More than one word is a request in plain words, near misses and all.
+        self.assertEqual(meant("@jgoetzmann-bot do the thing"), [("request", "")])
+        self.assertEqual(meant("/harness sparkle"), [("request", "")])
+
+    def test_a_colon_after_a_control_verb_makes_its_words_its_own(self):
+        self.assertEqual(self.verbs("@jgoetzmann-bot halt: away this week"),
+                         [("halt", "away this week", False)])
+        self.assertEqual(self.verbs("/harness halt: away this week"),
+                         [("halt", "away this week", False)])
+        self.assertEqual(self.verbs("@jgoetzmann-bot halt away this week")[0][0], "request")
+
+    def test_help_for_one_verb(self):
+        text = commands.help_text(self.bot, "fix")
+        self.assertIn("`revise <notes>`", text)
+        self.assertIn("`fix`, `update`", text)
+        self.assertIn("For example: `@jgoetzmann-bot revise", text)
+        self.assertIn("I do not know `dance`", commands.help_text(self.bot, "dance"))
+        self.assertIn("| `help [verb]` |", commands.help_text(self.bot))
+        self.assertEqual(set(commands.VERB_HELP), set(commands.VERBS))
 
     def test_help_mentions_every_verb(self):
         text = commands.HELP.format(bot=self.bot)
@@ -303,21 +348,6 @@ class StateTests(unittest.TestCase):
         gh.conflicts_to_inject = 99
         with self.assertRaises(StateConflict):
             store.update(lambda s: s.update(halted=True), "y")
-
-    def test_usage_refusal(self):
-        at = NIGHT
-        stops = {"five_hour": 0.98, "seven_day": 0.9}
-        s = state.default_state()
-        self.assertIsNone(state.usage_refusal(s, stops, at))
-        later = clock.iso(at + timedelta(hours=2))
-        s["usage"] = {"seven_day": {"utilization": 0.95, "resets_at": later}}
-        self.assertIn("7-day", state.usage_refusal(s, stops, at))
-        # Once that window has reset, the old reading no longer refuses.
-        self.assertIsNone(state.usage_refusal(s, stops, at + timedelta(hours=3)))
-        s = state.default_state()
-        state.record_usage(s, None, "+PT30M", at)
-        self.assertIn("refused", state.usage_refusal(s, stops, at))
-        self.assertIsNone(state.usage_refusal(s, stops, at + timedelta(minutes=31)))
 
 
 if __name__ == "__main__":

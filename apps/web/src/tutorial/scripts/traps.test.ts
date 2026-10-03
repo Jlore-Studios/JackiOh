@@ -14,7 +14,7 @@ import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView
 
 import { newEventsSince } from "../../game/animations.ts";
 import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
-import { playLesson, type LessonRun } from "../harness.ts";
+import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./traps.ts";
 
@@ -27,25 +27,24 @@ const COACH_TURNS_MAX = 8;
  * the 7th turn too.
  */
 const PASSIVE_TURNS_MAX = 8;
-/** The autopilot wins on its 7th turn. */
+/**
+ * The autopilot wins on its 8th turn: since patch v0.2.0 Hit Job costs (3), as much as Jlockeed
+ * Shredder-10, and on the 6th turn the autopilot plays it first.
+ */
 const AUTOPILOT_TURNS_MAX = 8;
 /** The most "Got it" bubbles the coach shows in a row, with no move of the player's between them. */
 const GOT_IT_RUN_MAX = 2;
 /**
  * Other seeds of the lesson's decks, `<seed>:alt:<n>`, that the autopilot wins too, which is how
- * forgiving the decks are rather than the seed. Measured: every one won, the player's hero on 15 or
- * more (7 to 12 turns); each costs well under 3 s.
+ * forgiving the decks are rather than the seed. Measured: every one of the first ten won, in 5 to
+ * 12 turns. Five, not ten, since patch v0.2.0 nearly doubled what a game costs (harness.ts).
  */
-const ALT_SEEDS = 10;
+const ALT_SEEDS = 5;
 /**
  * Policy seeds for the player who ignores the coach. The harness gives the AI a small budget under
- * the random policy, so each of these games costs a second or three.
+ * the random policy, so each of these games costs less than a lesson game (harness.ts).
  */
-const RANDOM_RUNS = 15;
-/** One lesson game through the real core takes a few seconds; generous, for a loaded machine. */
-const LESSON_TIMEOUT_MS = 60_000;
-/** The allowance for a test that plays many lesson games. */
-const MANY_TIMEOUT_MS = 240_000;
+const RANDOM_RUNS = 8;
 
 const GOING_LONG = "core-084";
 const HONEYPOT = "core-060";
@@ -218,7 +217,7 @@ describe("R293 lesson traps", () => {
   beforeAll(() => {
     coach = playLesson(LESSON, { policy: "coach" });
     steps = stepsOf(coach);
-  }, LESSON_TIMEOUT_MS);
+  }, LESSON_GAME_TIMEOUT_MS);
 
   it("R293 traps: following the coach wins the lesson, and every step shows and is done", () => {
     expect(coach.winner, "the human wins").toBe(human);
@@ -274,7 +273,7 @@ describe("R293 lesson traps", () => {
       // The AI sets its trap on this line too, and the beginner tests it with the bait.
       expectMechanics(run, stepsOf(run));
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -285,7 +284,7 @@ describe("R293 lesson traps", () => {
       expect(run.humanTurns).toBeLessThanOrEqual(AUTOPILOT_TURNS_MAX);
       expect(run.coach.finished).toBe(true);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 
   it(
@@ -298,7 +297,7 @@ describe("R293 lesson traps", () => {
         expect(run.coach.finished, `seed ${seed}: the coach is finished`).toBe(true);
       }
     },
-    MANY_TIMEOUT_MS,
+    ALT_SEEDS * LESSON_GAME_MS,
   );
 
   it(
@@ -314,7 +313,7 @@ describe("R293 lesson traps", () => {
         }
       }
     },
-    MANY_TIMEOUT_MS,
+    RANDOM_RUNS * RANDOM_GAME_MS,
   );
 
   it(
@@ -332,6 +331,6 @@ describe("R293 lesson traps", () => {
       expect(again.shown).toEqual(coach.shown);
       expect(again.tips).toEqual(coach.tips);
     },
-    LESSON_TIMEOUT_MS,
+    LESSON_GAME_TIMEOUT_MS,
   );
 });

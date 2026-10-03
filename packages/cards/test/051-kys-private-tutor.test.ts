@@ -36,7 +36,7 @@ const SPELL_0A = "core-039"; // Recycling Initiative — Spell, 0
 const SPELL_0B = "core-048"; // 5pek Controller      — Spell, 0
 const SPELL_1A = "core-005"; // Stockpile            — Spell, 1
 const SPELL_1B = "core-035"; // Lunar Eclipse        — Spell, 1
-const SPELL_2 = "core-016"; //  Hit Job              — Spell, 2
+const SPELL_2 = "core-069"; //  Call to Arms         — Spell, 2 (Hit Job costs 3 since patch v0.2.0)
 const UNIT_1 = "core-008"; //   Mr. Vanilla          — Unit, 1
 const UNIT_4 = "core-025"; //   4-mana 7/7           — Unit, 4
 const FIELD_3 = "core-006"; //  Mana Well            — Field Spell, 3
@@ -248,7 +248,7 @@ describe("#51 KY's Private Tutor — base", () => {
   it("§6.3 fewer than three matches reveal what exists", () => {
     const s = tutor({ library: [SPELL_2, UNIT_1] });
     s.play(TUTOR).answer("Spell");
-    // Hit Job is the only Spell, so "2" is the only bracket and it is the only reveal.
+    // Call to Arms is the only Spell, so "2" is the only bracket and it is the only reveal.
     expect(modeOptions(open(s))).toEqual(["2"]);
 
     s.answer("2");

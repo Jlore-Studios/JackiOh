@@ -450,8 +450,8 @@ describe("§2.2, R62: a 'this turn' effect made after cleanup ends with that tur
 // Round 9: a Spell's clauses belong to the turn it was played on (R155, R241, §6.2, R62)
 // ---------------------------------------------------------------------------
 
-const PREM_PANTHER = "core-032"; // 5/4 Rush; whenever this destroys a unit, draw 2
-const TIMMY = "core-011"; // Tempo Timmy, 3/3 Rush, First Strike
+const PREM_PANTHER = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
+const MOTHS = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
 
 
 
@@ -531,14 +531,14 @@ describe("R155: a return Spell cast after cleanup does not come back on a later 
 
 describe("R241: a Spell's end-of-turn clause belongs to the turn it was played on (§6.2, R155, R71)", () => {
   it("R241 a Spell cast on the opponent's turn with #78's 'at end of turn, exile your hand' does not exile its caster's hand at the end of the caster's next turn (§6.2, R155, R70)", () => {
-    // p2's Tempo Timmy (3/3 First Strike) attacks p1's Prem Panther (5/4): the Panther survives the
-    // first strike and kills Timmy, so p1 draws 2 on p2's turn (#32). The top card is a cast-on-draw
-    // Spell carrying /fullsend's clause verbatim in shape — `delay({ at: { phase: "end", player:
-    // "self" } })` re-entering an `exileHand` step — so p1 casts it on p2's turn (§2.4, R70).
+    // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther
+    // (5/4) attack it: the Panther kills it and survives, so p1 draws 2 on p2's turn (#32, R426). The
+    // top card is a cast-on-draw Spell carrying /fullsend's clause verbatim in shape — `delay({ at: {
+    // phase: "end", player: "self" } })` re-entering an `exileHand` step — so p1 casts it on p2's turn
+    // (§2.4, R70).
     const s = scenario({
-      active: "p2",
       p1: { field: [PREM_PANTHER], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
-      p2: { field: [TIMMY], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
+      p2: { field: [{ def: MOTHS, damage: 10 }], hand: [RENO], library: [RENO, RENO, RENO, RENO] },
     });
     fixture(s, "edge-r9-late-exile", "Spell", {
       staticFlags: { castOnDraw: true },
@@ -547,7 +547,8 @@ describe("R241: a Spell's end-of-turn clause belongs to the turn it was played o
     });
     const cod = onTopOfLibrary(s, "edge-r9-late-exile", "p1");
 
-    s.attack(TIMMY, PREM_PANTHER);
+    s.endTurn();
+    expect(s.state.active).toBe("p2");
     expect(s.events.some((event) => event.type === "cardPlayed" && event.instanceId === cod.id)).toBe(true);
 
     // p2's turn (the one the Spell was cast on) ends, and p1's next turn starts with its draw.
@@ -589,6 +590,8 @@ describe("R169, R240: what the start of a turn changes, it reports (§10.3)", ()
     });
     s.endTurn(); // p2's turn
     s.endTurn(); // p1's draw casts Hinder: p2's next refresh is 1 lower (§8 #21)
+    // R431: the base face then discards 1, p1's choice: the cast asks in the middle of the draw.
+    s.answer(s.card(HIT_JOB).id);
 
     // BUILD M5-T4: `modifierChanged` is the badge by the hero appearing or fading, and "badge list
     // equals the view's modifiers"; R169 puts that list on both seats under the id the event names.

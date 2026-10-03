@@ -14,7 +14,13 @@ import { Client } from "pg";
 
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "migrations");
 
-/** One advisory lock id for the whole runner, so two deploys cannot interleave migrations. */
+/**
+ * One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
+ * taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: Render's
+ * start command runs this runner on every deploy (render.yaml), over whatever `DATABASE_URL` the
+ * server uses, and behind a transaction-mode pooler a session lock stays held on whichever pooled
+ * backend took it, so the next deploy's lock could wait forever and the server never boot.
+ */
 const LOCK_ID = 0x6a61636b; // "jack"
 
 const LEDGER = `
@@ -27,6 +33,20 @@ create table if not exists app.migrations (
 comment on table app.migrations is
   'Which files in apps/server/src/db/migrations have been applied. Written by src/db/migrate.ts.';
 `;
+
+/**
+ * Files rewritten after some database had applied them, each with the checksums of its earlier
+ * versions. A database that applied an earlier version keeps it (the ledger is not rewritten); any
+ * other edit to an applied file is still refused. Add an entry only when the earlier version can
+ * stay where it was applied and the new one is what every database that has not applied it needs.
+ *
+ * 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set
+ * jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
+ * on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
+ */
+const REWRITTEN: Readonly<Record<string, readonly string[]>> = {
+  "0013_retention_purge.sql": ["16b93e4d"],
+};
 
 /** FNV-1a, so a changed file that was already applied is reported instead of silently skipped. */
 function checksum(text: string): string {
@@ -48,52 +68,62 @@ export async function migrate(connectionString: string): Promise<string[]> {
   await client.connect();
   const applied: string[] = [];
 
-  try {
-    await client.query("select pg_advisory_lock($1)", [LOCK_ID]);
-    await client.query(LEDGER);
+  /** One transaction under the lock; whatever `body` throws rolls it back. */
+  async function locked<T>(body: () => Promise<T>): Promise<T> {
+    await client.query("begin");
+    try {
+      await client.query("select pg_advisory_xact_lock($1)", [LOCK_ID]);
+      const result = await body();
+      await client.query("commit");
+      return result;
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    }
+  }
 
-    const done = new Map<string, string>();
-    const ledger = await client.query<{ filename: string; checksum: string }>(
-      "select filename, checksum from app.migrations",
-    );
-    for (const row of ledger.rows) done.set(row.filename, row.checksum);
+  try {
+    await locked(() => client.query(LEDGER));
 
     for (const filename of await listMigrations()) {
       const sql = await readFile(join(MIGRATIONS_DIR, filename), "utf8");
       const sum = checksum(sql);
-      const previous = done.get(filename);
 
-      if (previous !== undefined) {
-        if (previous !== sum) {
+      // One transaction per file: a migration either lands whole or not at all. The ledger is
+      // read under the lock, so a runner that waited on another sees what that one applied.
+      const ran = await locked(async () => {
+        const ledger = await client.query<{ checksum: string }>(
+          "select checksum from app.migrations where filename = $1",
+          [filename],
+        );
+        const previous = ledger.rows[0]?.checksum;
+        if (previous !== undefined) {
+          if (previous !== sum && !(REWRITTEN[filename] ?? []).includes(previous)) {
+            throw new Error(
+              `${filename} was already applied but its contents changed (${previous} -> ${sum}). ` +
+                `Migrations are append-only: add a new file instead of editing this one.`,
+            );
+          }
+          return false;
+        }
+        try {
+          await client.query(sql);
+        } catch (error) {
           throw new Error(
-            `${filename} was already applied but its contents changed (${previous} -> ${sum}). ` +
-              `Migrations are append-only: add a new file instead of editing this one.`,
+            `${filename} failed: ${error instanceof Error ? error.message : String(error)}`,
+            { cause: error },
           );
         }
-        continue;
-      }
-
-      // One transaction per file: a migration either lands whole or not at all.
-      await client.query("begin");
-      try {
-        await client.query(sql);
         await client.query("insert into app.migrations (filename, checksum) values ($1, $2)", [
           filename,
           sum,
         ]);
-        await client.query("commit");
-      } catch (error) {
-        await client.query("rollback");
-        throw new Error(
-          `${filename} failed: ${error instanceof Error ? error.message : String(error)}`,
-          { cause: error },
-        );
-      }
+        return true;
+      });
 
-      applied.push(filename);
+      if (ran) applied.push(filename);
     }
   } finally {
-    await client.query("select pg_advisory_unlock($1)", [LOCK_ID]).catch(() => undefined);
     await client.end();
   }
 

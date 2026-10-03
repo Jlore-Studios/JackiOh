@@ -47,10 +47,3 @@
   outline-offset: 3px;
   border-radius: 2px;
 }
-
-/* R375: the current version, under the links, linking to the patch notes. */
-.tavern .site-footer__version {
-  /* With the links' 12 px padding, 28 px between the rows, as between wrapped links (above). */
-  margin: 16px 0 0;
-  font-size: 13px;
-}

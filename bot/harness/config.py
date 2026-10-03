@@ -11,7 +11,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from harness import providers as providers_mod
 from harness.errors import ConfigError
+from harness.providers import Pool, Secrets
 
 #: The repository root: `bot/harness/config.py` sits two directories below it.
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -29,14 +31,24 @@ STATE_BRANCH = "bot-state"
 STATE_FILE = "state.json"
 NIGHT_WORKFLOW = "bot-night.yml"
 
+#: The environment key a run's model job receives its provider's secret in (`providers.py`).
+PROVIDER_SECRET_KEY = "HARNESS_PROVIDER_SECRET"
+
 #: Environment keys whose values are secrets. They are redacted from everything the harness
-#: writes and stripped from the model's environment.
+#: writes and stripped from the model's environment; a backend puts back only its own login.
 SECRET_KEYS: tuple[str, ...] = (
     "BOT_GITHUB_TOKEN",
     "GITHUB_TOKEN",
     "GH_TOKEN",
-    "CLAUDE_CODE_OAUTH_TOKEN",
+    PROVIDER_SECRET_KEY,
+    *providers_mod.SECRETS,
     "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "OPENAI_API_KEY",
+    "CODEX_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "META_API_KEY",
     "ACTIONS_RUNTIME_TOKEN",
     "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
 )
@@ -51,6 +63,12 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:pr": ("c5def5", "A pull request the night bot opened"),
     "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
+    "bot:cross-review": ("0052cc", "A night bot pull request waiting for a second model's review"),
+    "human": ("ededed", "A human will do this. Night bot skips it."),
+    "shitter": ("c2e0c6", "Low-tier models only (anything except OpenAI Astra or Claude Opus)."),
+    "priority:high": ("d73a4a", "The night bot picks this up first"),
+    "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
+    "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
 }
 
 LABEL_BUILD = "bot:build"
@@ -61,6 +79,15 @@ LABEL_BLOCKED = "bot:blocked"
 LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
+LABEL_CROSS = "bot:cross-review"
+#: No model takes a thread labelled `human`; only a low-tier one takes a `shitter` one (#96).
+LABEL_HUMAN = "human"
+LABEL_SHITTER = "shitter"
+#: The pickup tiers, first to last; a thread with no priority label sits between medium and low
+#: (#90). Like `human` and `shitter`, these match whatever their case.
+LABEL_PRIORITY_HIGH = "priority:high"
+LABEL_PRIORITY_MEDIUM = "priority:medium"
+LABEL_PRIORITY_LOW = "priority:low"
 
 
 @dataclass(frozen=True)
@@ -98,17 +125,12 @@ class Config:
     bot_user_id: int
     operator: str
     timezone: str
-    window_start: str
-    window_end: str
-    model: str
-    effort: str
     max_turns: Mapping[str, int]
     call_timeout_minutes: int
     job_budget_minutes: int
     min_minutes_for_a_call: int
     max_review_cycles: int
     max_failures: int
-    usage_stop: Mapping[str, float]
     auto_merge: bool
     merge_method: str
     ci_workflow: str
@@ -123,18 +145,33 @@ class Config:
     upload_transcripts: bool
     install: Gate
     gates: tuple[Gate, ...]
+    #: The subscriptions, from `.harness/providers.json`.
+    pool: Pool
     # From the environment.
     bot_token: str = field(default="", repr=False)
     actions_token: str = field(default="", repr=False)
     backend: str = "cli"
     dry_run: bool = False
-    claude_bin: str = "claude"
+    #: The binary of each CLI (`HARNESS_<CLI>_BIN` overrides it, for tests).
+    cli_bins: Mapping[str, str] = field(default_factory=dict)
     run_id: str = ""
     server_url: str = "https://github.com"
     now_override: str = ""
-    claude_token_present: bool = False
-    #: True when the workflow said whether the Claude secret exists (the plan job never sees it).
-    claude_ready_known: bool = False
+    #: Which provider secrets the workflow has; the plan job learns that, never their values.
+    secrets: Secrets = field(default_factory=lambda: Secrets(frozenset(), False))
+    #: The model job's one provider secret (`HARNESS_PROVIDER_SECRET`), or, run by hand, the
+    #: provider secrets this shell happens to hold, by name.
+    provider_secrets: Mapping[str, str] = field(default_factory=dict, repr=False)
+
+    def secret_for(self, name: str) -> str:
+        return self.provider_secrets.get(PROVIDER_SECRET_KEY) or self.provider_secrets.get(name, "")
+
+    def bin(self, cli: str) -> str:
+        return self.cli_bins.get(cli) or cli
+
+    @property
+    def claude_bin(self) -> str:
+        return self.bin("claude")
 
     @property
     def write_token(self) -> str:
@@ -155,16 +192,12 @@ _REQUIRED = (
     "bot_user_id",
     "operator",
     "timezone",
-    "window",
-    "model",
-    "effort",
     "max_turns",
     "call_timeout_minutes",
     "job_budget_minutes",
     "min_minutes_for_a_call",
     "max_review_cycles",
     "max_failures",
-    "usage_stop",
     "auto_merge",
     "merge_method",
     "ci_workflow",
@@ -213,23 +246,20 @@ def _quiet(raw: Any) -> Quiet:
     )
 
 
-def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
-    """A `Config` from the committed JSON and an environment mapping. Raises `ConfigError`."""
+def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
+          pool: Pool | None = None) -> Config:
+    """A `Config` from the committed JSON and an environment mapping. Raises `ConfigError`.
+    The subscriptions come from `pool`, or from `.harness/providers.json` under `root`."""
     missing = [key for key in _REQUIRED if key not in raw]
     if missing:
         raise ConfigError(f"{CONFIG_PATH}: missing keys {', '.join(missing)}")
     unknown = sorted(set(raw) - set(_REQUIRED))
     if unknown:
         raise ConfigError(f"{CONFIG_PATH}: unknown keys {', '.join(unknown)}")
-    window = raw["window"]
     turns = {str(k): int(v) for k, v in dict(raw["max_turns"]).items()}
     absent = [role for role in _ROLES if role not in turns]
     if absent:
         raise ConfigError(f"max_turns: missing {', '.join(absent)}")
-    stop = {str(k): float(v) for k, v in dict(raw["usage_stop"]).items()}
-    for name, value in stop.items():
-        if not 0.0 < value <= 1.0:
-            raise ConfigError(f"usage_stop.{name}: {value} is outside (0, 1]")
     if raw["merge_method"] not in ("squash", "merge", "rebase"):
         raise ConfigError(f"merge_method: {raw['merge_method']!r} is not squash, merge or rebase")
     suggestions = dict(raw["suggestions"])
@@ -248,17 +278,12 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
         bot_user_id=int(raw["bot_user_id"]),
         operator=str(raw["operator"]),
         timezone=str(raw["timezone"]),
-        window_start=str(window["start"]),
-        window_end=str(window["end"]),
-        model=str(raw["model"]),
-        effort=str(raw["effort"]),
         max_turns=turns,
         call_timeout_minutes=int(raw["call_timeout_minutes"]),
         job_budget_minutes=int(raw["job_budget_minutes"]),
         min_minutes_for_a_call=int(raw["min_minutes_for_a_call"]),
         max_review_cycles=int(raw["max_review_cycles"]),
         max_failures=int(raw["max_failures"]),
-        usage_stop=stop,
         auto_merge=bool(raw["auto_merge"]),
         merge_method=str(raw["merge_method"]),
         ci_workflow=str(raw["ci_workflow"]),
@@ -273,17 +298,19 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str]) -> Config:
         upload_transcripts=bool(raw["upload_transcripts"]),
         install=_gate(raw["install"] | {"name": "install"}, "install"),
         gates=gates,
+        pool=pool if pool is not None else providers_mod.load(root),
         bot_token=env.get("BOT_GITHUB_TOKEN", ""),
         actions_token=env.get("GITHUB_TOKEN", "") or env.get("GH_TOKEN", ""),
         backend=backend,
         dry_run=env.get("HARNESS_DRY_RUN", "").lower() in ("1", "true", "yes"),
-        claude_bin=env.get("HARNESS_CLAUDE_BIN", "claude") or "claude",
+        cli_bins={cli: env[f"HARNESS_{cli.upper()}_BIN"] for cli in providers_mod.CLIS
+                  if env.get(f"HARNESS_{cli.upper()}_BIN")},
         run_id=env.get("GITHUB_RUN_ID", ""),
         server_url=env.get("GITHUB_SERVER_URL", "https://github.com") or "https://github.com",
         now_override=env.get("HARNESS_NOW", ""),
-        claude_token_present=bool(env.get("CLAUDE_CODE_OAUTH_TOKEN"))
-        or env.get("HARNESS_CLAUDE_READY", "").lower() == "true",
-        claude_ready_known="HARNESS_CLAUDE_READY" in env,
+        secrets=Secrets.of(env),
+        provider_secrets={k: env[k] for k in (PROVIDER_SECRET_KEY, *providers_mod.SECRETS)
+                          if env.get(k)},
     )
 
 

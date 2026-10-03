@@ -1,7 +1,7 @@
 // The event union (SPEC §10.3). Every visible state change emits one, and BUILD M5-T4 animates each type.
 // Payloads carry ids and numbers only, so an event list serializes and replays exactly.
 
-import type { Keyword, PlayerId, PromptKind, Row, Zone } from "./catalog-types";
+import type { CardType, Keyword, PlayerId, PromptKind, Row, Zone } from "./catalog-types";
 
 export type GameEvent =
   /**
@@ -18,6 +18,8 @@ export type GameEvent =
       x?: number;
       embiggened?: boolean;
       formerId?: string;
+      /** B5 E11, R454: the card was played from its player's graveyard, not the hand. Public. */
+      from?: "graveyard";
       /**
        * R119: the permanents that arrived on the field during this play before §10.5 step 4
        * announced it — a tributed unit's Death at step 2 (#22's copies) — which do not answer it, as
@@ -98,9 +100,16 @@ export type GameEvent =
       instanceId: string;
       defId: string;
       owner: PlayerId;
+      /**
+       * The player who controlled it as it died. R172: a stolen unit dies as its controller's, though
+       * it goes to its owner's graveyard — Classic #14 Shadowstep's "your Units" reads this.
+       */
+      controller: PlayerId;
       attack: number;
       maxHealth: number;
       killerId: string | null;
+      /** R89: set when the unit died on its Radiant face (C+ #12.8 Frostspatula's memory, R409). */
+      radiant?: true;
     }
   | { type: "enteredGraveyard"; instanceId: string; defId: string; owner: PlayerId }
   | { type: "exiled"; instanceId: string; defId: string; owner: PlayerId }
@@ -145,7 +154,25 @@ export type GameEvent =
       copyOf?: string;
     }
   | { type: "discarded"; instanceId: string; defId: string; owner: PlayerId }
-  | { type: "drawn"; player: PlayerId; instanceId: string; defId: string }
+  /**
+   * `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
+   * is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
+   * the fatigue count already say as much. Absent during setup, which is no player's turn (§2.1), so
+   * the opening deal says nothing of which draw a Quickdraw card replaced (R225).
+   */
+  | {
+      type: "drawn";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      turnDraw?: number;
+      /**
+       * B5 E33: this draw took the last card of the drawer's own library — Classic #90's quest 9, "a
+       * draw of yours takes the last card of your deck". Present, and `true`, only then. Public: the
+       * library count already says as much.
+       */
+      emptied?: true;
+    }
   | { type: "addedToHand"; player: PlayerId; instanceId: string; defId: string }
   | { type: "shuffledIn"; player: PlayerId; instanceId: string; defId: string; position: number }
   | { type: "buffed"; instanceId: string; attack: number; health: number }
@@ -160,7 +187,18 @@ export type GameEvent =
        */
       lost?: true;
     }
-  | { type: "counterChanged"; instanceId: string; counter: "plague" | "grade"; value: number }
+  /**
+   * `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Tokens one placement put
+   * on the card — set on a placement only, so "whenever Plague Tokens are placed on this" answers the
+   * placement once however many tokens it placed, and never a removal.
+   */
+  | {
+      type: "counterChanged";
+      instanceId: string;
+      counter: "plague" | "grade" | "brittle";
+      value: number;
+      placed?: number;
+    }
   /**
    * R177: `hiddenFrom` is set on a change made to a card in a library — both players, who could not
    * read it there (§3) — so a view keeps the event hidden from them for good, even once the card
@@ -185,7 +223,11 @@ export type GameEvent =
     }
   | { type: "fused"; instanceIds: string[]; resultInstanceId: string; defId: string }
   | { type: "positionSwitched"; instanceId: string; position: "ATK" | "DEF" }
-  | { type: "controlChanged"; instanceId: string; controller: PlayerId; row: Row; lane: number }
+  /**
+   * `formerId` (R227): set when the move put the card face-down with a fresh id (C+ #35's restore,
+   * R419), as on `summoned`; a view that hides the card hides this too (R97).
+   */
+  | { type: "controlChanged"; instanceId: string; controller: PlayerId; row: Row; lane: number; formerId?: string }
   | { type: "rotated"; direction: "left" | "right" }
   | { type: "swapped"; what: "health" | "board" | "library" }
   | { type: "locked"; player: PlayerId; row: Row; lane: number }
@@ -213,7 +255,134 @@ export type GameEvent =
   | { type: "promptAnswered"; player: PlayerId; choiceId: string }
   | { type: "drawOffered"; player: PlayerId }
   | { type: "drawAnswered"; player: PlayerId; accept: boolean }
-  | { type: "gameOver"; winner: PlayerId | "draw"; reason: GameOverReason };
+  | { type: "gameOver"; winner: PlayerId | "draw"; reason: GameOverReason }
+  // -------------------------------------------------------------------------------------------
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5). Each has a BUILD M5-T4 row in the client's
+  // `ANIMATIONS` and a `SOUND_CUES` row, and follows R97 in `viewFor` like every event above.
+  // -------------------------------------------------------------------------------------------
+  /**
+   * B5 E1: a play or cast has been paid for and is about to move (§10.5 between steps 3 and 4). The
+   * window it opens is where a Counter answers. `cardType` is the type it is played as (a face's own
+   * type, B2.7); `targets` names what the play declared, a hero as `hero-<player>`. A card being set
+   * face-down shows the other player only the zone it is going to (`row`, `lane`), as `cardPlayed`
+   * would (R97, R227).
+   */
+  | {
+      type: "cardAnnounced";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      cardType: CardType;
+      costPaid: number;
+      targets: string[];
+      row?: Row;
+      lane?: number;
+      faceDown?: true;
+    }
+  /** B5 E1: an announced play was cancelled. `to` is where the card went (a steal sends it to a hand, E2). */
+  | {
+      type: "countered";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      byInstanceId: string | null;
+      to: "graveyard" | "exile" | "hand" | "gone";
+    }
+  /**
+   * B5 E2, E16, R466: a card changed owner as it moved to the thief's hand. `zone` is where it was
+   * taken from. A viewer reads the card if they could read it where it was taken from — the hand's
+   * holder, everyone for a public pile or a face-up zone, the controller of a face-down zone, nobody
+   * for a library — or can read it where it is now (R97). `readableFrom` names the first set, written
+   * as the card is taken; the view uses it and never forwards it.
+   */
+  | {
+      type: "stolen";
+      instanceId: string;
+      defId: string;
+      from: PlayerId;
+      to: PlayerId;
+      zone: "hand" | "library" | "resolving" | "graveyard" | "exile" | "field";
+      readableFrom?: PlayerId[];
+    }
+  /** B5 E20: a Locked zone opened again. */
+  | { type: "unlocked"; player: PlayerId; row: Row; lane: number }
+  /** B3.2, R384: a card's Activate ability was used. `ability` names it (`"activate"` when it has one). */
+  | { type: "activated"; player: PlayerId; instanceId: string; defId: string; ability: string }
+  /**
+   * B3.1, R383: a backrow card stepped into a unit zone as a Unit. `carried` (R446): it was a Unit a
+   * carrier held (Classic+ #33 Ivory Tower), stepping down because its zone no longer carries it — the
+   * same move, from a backrow zone to a unit zone without leaving the field.
+   */
+  | {
+      type: "animated";
+      player: PlayerId;
+      instanceId: string;
+      defId: string;
+      backrowLane: number;
+      unitLane: number;
+      carried?: true;
+    }
+  /** B3.1, R383: an "Animated on your turn" card went back to its backrow zone. */
+  | { type: "deanimated"; player: PlayerId; instanceId: string; defId: string; unitLane: number; backrowLane: number }
+  /** B3.3, R385: a Brittle count reached 0 and the card was destroyed (on the field) or went to its graveyard. */
+  | { type: "crumbled"; instanceId: string; defId: string; owner: PlayerId; zone: "field" | "hand" | "library" }
+  /**
+   * B3.4, R386: one Degrade or Upgrade change. `hiddenFrom` (R177) names the players who could not
+   * read the card where it changed — both for a library card, the other player for a hand card — so a
+   * view keeps it hidden from them for good. The view uses it and never forwards it.
+   */
+  | { type: "degraded"; instanceId: string; defId: string; change: TuningChange; hiddenFrom?: PlayerId[] }
+  | { type: "upgraded"; instanceId: string; defId: string; change: TuningChange; hiddenFrom?: PlayerId[] }
+  /**
+   * B3.4, Classic+ #41 KY's Constant: one of a card's numbers set outright (`key` as `numbersOn` names
+   * it: "cost", "attack", "health", a numbered keyword, a declared number's key). `hiddenFrom` as on
+   * `degraded`: the view uses it and never forwards it.
+   */
+  | { type: "numberChanged"; instanceId: string; defId: string; key: string; value: number; hiddenFrom?: PlayerId[] }
+  /** B5 E9: a damage instance, an attack or a chosen target moved to a new one. Ids as `damage` writes them. */
+  | {
+      type: "redirected";
+      what: "damage" | "attack" | "target";
+      fromId: string;
+      toId: string;
+      byInstanceId: string | null;
+    }
+  /** B5 E7: a hero's health was set — not damage, not a heal (R18's lose health is the nearest rule). */
+  | { type: "healthSet"; player: PlayerId; health: number; sourceId: string | null }
+  /** Classic #90 (E33): a quest's count moved, or a quest was completed. */
+  | { type: "questProgressed"; player: PlayerId; instanceId: string; quest: string; progress: number; goal: number }
+  | { type: "questCompleted"; player: PlayerId; instanceId: string; quest: string }
+  /** Classic+ #35 (E29): the board went back `turnsAgo` turns on the named sides. */
+  | { type: "rolledBack"; player: PlayerId; turnsAgo: number; sides: PlayerId[] }
+  /** R436: Call to Chaos names the effects it rolled, to both players, in the order they resolve. */
+  | { type: "chaosRolled"; player: PlayerId; instanceId: string; defId: string; effects: string[] }
+  /** B5 E22: a card left the field and came back into the same zone at once (R78's reset, no Cry, no Death). */
+  | { type: "flickered"; player: PlayerId; instanceId: string; defId: string; row: Row; lane: number }
+  /** B5 E3: a draw that a draw limit stopped — no card moved, no fatigue. Public: it names no card. */
+  | { type: "drawLimited"; player: PlayerId }
+  /** B5 E10: an effect ended `player`'s turn (the turn's own `turnEnded` follows). */
+  | { type: "turnCutShort"; player: PlayerId; byInstanceId: string | null }
+  /**
+   * R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
+   * (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
+   */
+  | { type: "marked"; instanceId: string; mark: string; color: string; added: boolean };
+
+/**
+ * B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
+ * the attack and health it moved (negative for a Degrade); `keyword` one keyword added or removed;
+ * `x` a numbered keyword's or an X's step (`key` names it: "Armor", "Echo", "Activate", "X", …);
+ * `number` a declared number's step (`key` is the catalog `params` key). `delta` is how far the value
+ * moved. `none` is R440's cue on a card someone may not read that nothing could change (Immutable, or
+ * no change applies), so the events over a hidden pile number the applications, never the changes.
+ */
+export type TuningChange =
+  | { kind: "cost"; delta: number }
+  | { kind: "stats"; attack: number; health: number }
+  | { kind: "keyword"; keyword: Keyword; added: boolean }
+  | { kind: "x"; key: string; delta: number }
+  | { kind: "number"; key: string; delta: number }
+  | { kind: "none" };
 
 export type GameEventType = GameEvent["type"];
 
@@ -281,6 +450,27 @@ export const GAME_EVENT_TYPES = [
   "drawOffered",
   "drawAnswered",
   "gameOver",
+  "cardAnnounced",
+  "countered",
+  "stolen",
+  "unlocked",
+  "activated",
+  "animated",
+  "deanimated",
+  "crumbled",
+  "degraded",
+  "upgraded",
+  "numberChanged",
+  "redirected",
+  "healthSet",
+  "questProgressed",
+  "questCompleted",
+  "rolledBack",
+  "chaosRolled",
+  "flickered",
+  "drawLimited",
+  "turnCutShort",
+  "marked",
 ] as const satisfies readonly GameEventType[];
 
 /**

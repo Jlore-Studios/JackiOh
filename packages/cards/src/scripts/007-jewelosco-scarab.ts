@@ -10,9 +10,10 @@
 //     number and nothing here reads a cost;
 //   - `notTags: ["Token"]` is stated because §8 states it, even though §5.1 already keeps tokens
 //     out of every pool that does not name them (`catalog.asksForTokens`);
-//   - `excludeIndex: 7` is NOT passed here on purpose: `discoverFromCatalog` adds the running
-//     card's own §5 index to every query it builds (§5.1, "a random pool never offers the card that
-//     generated it"), so repeating it would be duplicated rules, not safety.
+//   - the exclusion of #7 itself is NOT passed here on purpose: `discoverFromCatalog` adds the
+//     running card's own id (`excludeDefId`, R387) to every query it builds (§5.1, "a random pool
+//     never offers the card that generated it"), so repeating it would be duplicated rules, not
+//     safety. The pool reaches every set (R380).
 //
 // The prompt and the continuation (§10.6, R81): the Cry opens a `discover` prompt whose answer is a
 // `mode` selection carrying the chosen DEF ID, and the answer re-enters `resume.chosen` with that

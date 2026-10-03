@@ -38,6 +38,7 @@ import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared
 
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
+import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
 import type {
   PracticeDebug,
   PracticeRequestBody,
@@ -187,6 +188,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     if (snapshot.view.result !== null) {
+      // R508: a finished free game's board becomes the human's last practice board.
+      if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
       clearTimer();
       set({ ...extra, snapshot, phase: "over", thinking: false });
       return;
@@ -276,7 +279,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       set({ ...PRACTICE_IDLE_STATE, phase: "starting", config });
 
       return new Promise<void>((resolve) => {
-        send({ type: "start", config }, (response) => {
+        // R508: the human brings their last practice board (the worker ignores it for a lesson).
+        const board = readLastBoard();
+        send({ type: "start", config: board.length === 0 ? config : { ...config, lastBoard: board } }, (response) => {
           if (!disposed && gen === generation) {
             if (response.type === "started") {
               applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });

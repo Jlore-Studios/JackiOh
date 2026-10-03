@@ -8,6 +8,7 @@
     "./config": "./src/config.ts"
   },
   "scripts": {
+    "stats": "pnpm exec tsx scripts/stats.ts",
     "sweep": "pnpm exec tsx scripts/sweep.ts"
   },
   "dependencies": {

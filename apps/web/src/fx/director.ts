@@ -275,7 +275,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "splat":
       case "rays":
       case "sheen":
-      case "arrows": {
+      case "arrows":
+      case "fracture":
+      case "brand": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
@@ -289,7 +291,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         boxes = { from, to };
         break;
       }
-      // banner and result need no box: CSS places them on the viewport.
+      // banner, result and chaos need no box: CSS places them on the viewport.
     }
     // One banner at a time: a new one replaces any still fading, so two never read over each other.
     if (cue.kind === "banner") {
@@ -312,13 +314,16 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const zone = measure(cue.to);
         if (zone === null) return;
         const source = cue.from !== null && cue.from.kind === "testid" ? cardIn(element(cue.from.testid)) : null;
-        const from = source !== null ? boxOfElement(source) : null;
-        const copied = from !== null ? source : null;
+        const sourceBox = source !== null ? boxOfElement(source) : null;
+        const copied = sourceBox !== null ? source : null;
+        // R502: a `from` with no card to copy in it (a Deck pile a card was cast out of as it was
+        // drawn) still says where the stand-in, then a card-shaped light, sets out from.
+        const from = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
         const parent = copied?.parentElement ?? null;
         const font = parent !== null ? (parent.ownerDocument.defaultView?.getComputedStyle(parent).fontSize ?? null) : null;
         // Placed once, here. After that it moves only when the board under it does (a shake, a
         // scroll), and then by `translate`, which needs no layout; a new size (a resize) re-places it.
-        let placed = landingBox(zone, from);
+        let placed = landingBox(zone, sourceBox);
         let shown = placed;
         const hold = mountHold(domRoot, cue, { source: copied, from, land: placed, font });
         const carriedId = copied !== null && cue.from !== null && cue.from.kind === "testid" && copied === element(cue.from.testid)
@@ -336,7 +341,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           track: () => {
             const next = measure(cue.to);
             if (next === null) return;
-            const land = landingBox(next, from);
+            const land = landingBox(next, sourceBox);
             if (sameBox(land, shown)) return;
             shown = land;
             if (land.width !== placed.width || land.height !== placed.height) {

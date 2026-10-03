@@ -1,18 +1,29 @@
 /**
- * Structural validation of packages/cards/catalog.json against SPEC §5, §6.1, §7 and §8.
+ * Structural validation of packages/cards/catalog.json against SPEC §5, §6.1, §7 and §8, and
+ * patch v0.2.0's sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
  *
  * Run with: pnpm exec tsx packages/cards/scripts/validate-catalog.ts
  *
- * This checks the shape and the census of the catalog: that it holds every Core card and
- * every token exactly once, that every enum value is in the union `packages/shared` declares,
- * that stats sit on Units and nowhere else, and that the rarity distribution §8 prints is the
- * one the file carries. It does NOT re-read the §8 cells — `test/catalog.test.ts` does that
- * with an independent transcription.
+ * This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+): that
+ * it holds every card and every token exactly once, that every enum value is in the union
+ * `packages/shared` declares, that stats sit on Units (and Animated backrow cards, B3.1) and nowhere
+ * else, that the rarity distribution each set prints is the one the file carries, and that the
+ * v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and `xStats`) are well formed. It
+ * does NOT re-read the §8 cells — `test/catalog.test.ts` does that with an independent
+ * transcription.
  */
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { KEYWORD_KINDS, type CardType, type Keyword, type Rarity, type SetName, type Tag } from "@jackioh/shared";
+import {
+  KEYWORD_KINDS,
+  paramPlaceholders,
+  type CardType,
+  type Keyword,
+  type Rarity,
+  type SetName,
+  type Tag,
+} from "@jackioh/shared";
 
 /* ------------------------------------------------------------------ unions */
 
@@ -28,10 +39,13 @@ const TAGS = [
   "Call to Chaos",
   "Quickdraw",
   "Jlockeed",
+  "Book",
+  "Pancake",
+  "AI",
   "Token",
 ] as const satisfies readonly Tag[];
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"] as const satisfies readonly Rarity[];
-const SET_NAMES = ["Core", "Classic", "Boss", "Boss-X"] as const satisfies readonly SetName[];
+const SET_NAMES = ["Core", "Classic", "Classic+", "Boss", "Boss-X"] as const satisfies readonly SetName[];
 
 type Exhaustive<Union, Listed extends Union> = [Exclude<Union, Listed>] extends [never] ? true : never;
 const _typesExhaustive: Exhaustive<CardType, (typeof CARD_TYPES)[number]> = true;
@@ -43,52 +57,107 @@ void _tagsExhaustive;
 void _raritiesExhaustive;
 void _setsExhaustive;
 
-/** §6.1: the two keywords that carry a number; every other kind is bare. */
-const NUMBERED_KEYWORDS: ReadonlySet<string> = new Set(["Armor", "Lucky"]);
+/** §6.1, R385, E6: the keywords that carry a number; every other kind is bare. */
+const NUMBERED_KEYWORDS: ReadonlySet<string> = new Set(["Armor", "Lucky", "Brittle", "Spell Damage"]);
 
 /* ------------------------------------------------------------- expectations */
 
-/**
- * §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 6 named ones — the 4 tokens
- * several cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token, a card of its
- * own in patch v0.1.1 (R353).
- */
-const CARD_DEFINED_TOKEN_INDICES = ["51.1", "65.1", "90.1", "93.1", "95.1"] as const;
-const SHARED_TOKEN_INDICES = ["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"] as const;
-const EXPECTED_INDICES: readonly string[] = [
-  ...Array.from({ length: 100 }, (_, i) => String(i + 1)),
-  ...CARD_DEFINED_TOKEN_INDICES,
-  ...SHARED_TOKEN_INDICES,
+/** The id segment of each shipped set (B2.2: `classicplus` holds no hyphen). */
+type SetExpectation = {
+  set: SetName;
+  segment: string;
+  /** Non-token cards, indexed 1..cards. */
+  cards: number;
+  /** Tokens a card defines, indexed N.k after card N. */
+  cardDefinedTokens: readonly string[];
+  /** Tokens no one card defines, indexed T-name. */
+  sharedTokens: readonly string[];
+  rarities: Readonly<Record<string, number>>;
+};
+
+const range = (prefix: string, from: number, to: number): string[] =>
+  Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
+
+const SETS: readonly SetExpectation[] = [
+  {
+    // §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 6 named ones — the 4 tokens
+    // several cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token, a card of
+    // its own in patch v0.1.1 (R353). §8: "Distribution: 35 Common, 37 Rare, 16 Epic, 7 Legendary,
+    // 5 Mythic."
+    set: "Core",
+    segment: "core",
+    cards: 100,
+    cardDefinedTokens: ["51.1", "65.1", "90.1", "93.1", "95.1"],
+    sharedTokens: ["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"],
+    rarities: { Common: 35, Rare: 37, Epic: 16, Legendary: 7, Mythic: 5 },
+  },
+  {
+    // B2.1, B2.5: 90 cards and no tokens of its own; the designer's rarities.
+    set: "Classic",
+    segment: "classic",
+    cards: 90,
+    cardDefinedTokens: [],
+    sharedTokens: [],
+    rarities: { Common: 42, Rare: 25, Epic: 13, Legendary: 9, Mythic: 1 },
+  },
+  {
+    // B2.1, B2.3, B2.5, B8: 78 cards, 28 tokens a card defines and the ten AI generated cards.
+    set: "Classic+",
+    segment: "classicplus",
+    cards: 78,
+    cardDefinedTokens: [
+      ...range("12.", 1, 8),
+      ...range("19.", 1, 5),
+      ...range("32.", 1, 3),
+      "36.1",
+      "38.1",
+      "42.1",
+      "46.1",
+      ...range("65.", 1, 5),
+      "73.1",
+      "75.1",
+      "76.1",
+    ],
+    sharedTokens: range("T-AI-", 1, 10),
+    rarities: { Common: 13, Rare: 25, Epic: 25, Legendary: 13, Mythic: 2 },
+  },
 ];
 
-const EXPECTED_TOTAL = 111;
-const EXPECTED_NON_TOKEN = 100;
-const EXPECTED_TOKEN = 11;
+const expectedIndices = (set: SetExpectation): string[] => [
+  ...Array.from({ length: set.cards }, (_, i) => String(i + 1)),
+  ...set.cardDefinedTokens,
+  ...set.sharedTokens,
+];
 
-/** §8: "Distribution: 35 Common, 37 Rare, 16 Epic, 7 Legendary, 5 Mythic." */
-const EXPECTED_RARITY_COUNTS: Readonly<Record<string, number>> = {
-  Common: 35,
-  Rare: 37,
-  Epic: 16,
-  Legendary: 7,
-  Mythic: 5,
-};
+const EXPECTED_NON_TOKEN = SETS.reduce((n, set) => n + set.cards, 0);
+const EXPECTED_TOKEN = SETS.reduce((n, set) => n + set.cardDefinedTokens.length + set.sharedTokens.length, 0);
+const EXPECTED_TOTAL = EXPECTED_NON_TOKEN + EXPECTED_TOKEN;
 
 /**
- * §5, §7, §8: how many catalog entries carry each tag, tokens included — a census, so a tag that
- * drifts onto or off a card fails here (R278: Jlockeed is #13 and #14's and no other card's).
+ * §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included — a census, so a tag
+ * that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
+ * Classic+ Jlockheed cards').
  */
 const EXPECTED_TAG_COUNTS: Readonly<Record<(typeof TAGS)[number], number>> = {
-  Human: 20,
-  Felinor: 5,
-  KY: 5,
-  CN: 3,
-  Fruit: 1,
-  "Call to Chaos": 1,
-  Quickdraw: 3,
-  Jlockeed: 2,
-  Token: 11,
+  Human: 38,
+  Felinor: 11,
+  KY: 9,
+  CN: 7,
+  Fruit: 15,
+  "Call to Chaos": 2,
+  Quickdraw: 5,
+  Jlockeed: 5,
+  Book: 14,
+  Pancake: 10,
+  AI: 10,
+  Token: 49,
 };
+
+/** B2.5: a token's printed rarity is one a card could carry. */
+const PRINTED_RARITIES: readonly string[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
+
+/** B3.1: a backrow card that becomes a Unit prints the Unit's attack and health. */
+const ANIMATED_KEYWORDS: ReadonlySet<string> = new Set(["Animated", "Animated on your turn"]);
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -97,12 +166,18 @@ function fail(where: string, message: string): void {
   failures.push(`${where}: ${message}`);
 }
 
-/** §5: "43" → "core-043", "90.1" → "core-090-1", "T-rush" → "core-t-rush". */
-function idForIndex(index: string): string {
-  if (index.startsWith("T-")) return `core-${index.toLowerCase()}`;
+/**
+ * §5, B2.2: "43" → "core-043", "90.1" → "core-090-1", "T-rush" → "core-t-rush",
+ * "T-AI-1" → "classicplus-t-ai-01" (a shared token's trailing number is two digits).
+ */
+function idForIndex(segment: string, index: string): string {
+  if (index.startsWith("T-")) {
+    const name = index.toLowerCase().replace(/-(\d+)$/, (_, n: string) => `-${n.padStart(2, "0")}`);
+    return `${segment}-${name}`;
+  }
   const [main, sub] = index.split(".");
   const padded = String(main ?? "").padStart(3, "0");
-  return sub === undefined ? `core-${padded}` : `core-${padded}-${sub}`;
+  return sub === undefined ? `${segment}-${padded}` : `${segment}-${padded}-${sub}`;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -115,23 +190,53 @@ function describe(value: unknown): string {
 
 /* -------------------------------------------------------------------- faces */
 
-function validateFace(where: string, faceName: "base" | "radiant", face: unknown, isUnit: boolean): void {
+function validateFace(where: string, faceName: "base" | "radiant", face: unknown, cardType: unknown): void {
   const at = `${where}.${faceName}`;
   if (!isPlainObject(face)) {
     fail(at, `face is not an object (got ${describe(face)})`);
     return;
   }
 
-  // Stats: present on both faces of every Unit, absent on every non-Unit (§5, §8).
+  // B2.7: a face may carry a type of its own, a CardType that differs from the card's.
+  const faceType = face["type"];
+  if (faceType !== undefined) {
+    if (typeof faceType !== "string" || !(CARD_TYPES as readonly string[]).includes(faceType)) {
+      fail(at, `\`type\` is not a CardType (got ${describe(faceType)})`);
+    } else if (faceType === cardType) {
+      fail(at, `\`type\` repeats the card's own type ${describe(cardType)}; leave it out`);
+    }
+  }
+  const isUnit = (faceType ?? cardType) === "Unit";
+  const keywordKinds = Array.isArray(face["keywords"])
+    ? (face["keywords"] as unknown[]).map((k) => (isPlainObject(k) ? k["kind"] : undefined))
+    : [];
+  const animated = keywordKinds.some((kind) => typeof kind === "string" && ANIMATED_KEYWORDS.has(kind));
+
+  // Stats: present on both faces of every Unit and every Animated backrow card (B3.1), absent on
+  // every other non-Unit (§5, §8).
   for (const stat of ["attack", "health"] as const) {
     const value = face[stat];
-    if (isUnit) {
+    if (isUnit || animated) {
       if (typeof value !== "number" || !Number.isInteger(value)) {
-        fail(at, `Unit face must carry an integer \`${stat}\` (got ${describe(value)})`);
+        fail(at, `${isUnit ? "Unit" : "Animated"} face must carry an integer \`${stat}\` (got ${describe(value)})`);
       }
     } else if (value !== undefined) {
       fail(at, `non-Unit face must not carry \`${stat}\` (got ${describe(value)})`);
     }
+  }
+
+  // B2.7: "[3X/3X]" stats — a Unit's positive multiples of X, its printed attack and health 0.
+  const xStats = face["xStats"];
+  if (xStats !== undefined) {
+    if (!isUnit) fail(at, "`xStats` is a Unit face's (B2.7)");
+    if (
+      !isPlainObject(xStats) ||
+      Object.keys(xStats).sort().join(",") !== "attack,health" ||
+      ![xStats["attack"], xStats["health"]].every((n) => typeof n === "number" && Number.isInteger(n) && n > 0)
+    ) {
+      fail(at, `\`xStats\` must be { attack, health } of positive integers (got ${describe(xStats)})`);
+    }
+    if (face["attack"] !== 0 || face["health"] !== 0) fail(at, "a face with `xStats` prints 0/0 (B2.7)");
   }
 
   if (typeof face["text"] !== "string") {
@@ -167,6 +272,73 @@ function validateFace(where: string, faceName: "base" | "radiant", face: unknown
     // The narrowed object is assignable to Keyword only if the shape above held.
     void (keyword as unknown as Keyword);
   });
+
+  const unknownFields = Object.keys(face).filter(
+    (k) => !["type", "attack", "health", "xStats", "keywords", "text"].includes(k),
+  );
+  if (unknownFields.length > 0) fail(at, `unknown face field(s) ${unknownFields.join(", ")}`);
+}
+
+/**
+ * B3.4 rule 5: `params` — distinct camelCase keys, integer values within [min, max], a direction,
+ * a positive step — each written `{key}` in at least one face's text, and every `{key}` a text
+ * writes declared.
+ */
+function validateParams(where: string, value: Record<string, unknown>): void {
+  const params = value["params"];
+  const texts = ["base", "radiant"].map((face) => {
+    const f = value[face];
+    return isPlainObject(f) && typeof f["text"] === "string" ? f["text"] : "";
+  });
+  const declared = new Set<string>();
+  if (params !== undefined) {
+    if (!Array.isArray(params) || params.length === 0) {
+      fail(where, `\`params\` must be a non-empty array when present (got ${describe(params)})`);
+      return;
+    }
+    params.forEach((param: unknown, i: number) => {
+      const at = `${where}.params[${i}]`;
+      if (!isPlainObject(param)) {
+        fail(at, `param must be an object (got ${describe(param)})`);
+        return;
+      }
+      const { key, base, radiant, better, step, min, max } = param;
+      if (typeof key !== "string" || !/^[a-z][A-Za-z0-9]*$/.test(key)) {
+        fail(at, `\`key\` must be a camelCase word (got ${describe(key)})`);
+        return;
+      }
+      if (declared.has(key)) fail(at, `repeats the key "${key}"`);
+      declared.add(key);
+      const isInt = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n);
+      if (!isInt(base) || !isInt(radiant)) fail(at, `${key}: \`base\` and \`radiant\` must be integers`);
+      if (better !== "up" && better !== "down") fail(at, `${key}: \`better\` is "up" or "down" (got ${describe(better)})`);
+      if (step !== undefined && (!isInt(step) || step <= 0)) fail(at, `${key}: \`step\` must be a positive integer`);
+      if (min !== undefined && !isInt(min)) fail(at, `${key}: \`min\` must be an integer`);
+      if (max !== undefined && !isInt(max)) fail(at, `${key}: \`max\` must be an integer`);
+      for (const n of [base, radiant]) {
+        if (isInt(n) && isInt(min) && n < min) fail(at, `${key}: ${n} is below its min ${min}`);
+        if (isInt(n) && isInt(max) && n > max) fail(at, `${key}: ${n} is above its max ${max}`);
+      }
+      const extra = Object.keys(param).filter((k) => !["key", "base", "radiant", "better", "step", "min", "max"].includes(k));
+      if (extra.length > 0) fail(at, `unknown param field(s) ${extra.join(", ")}`);
+      if (!texts.some((text) => paramPlaceholders(text).some((placeholder) => placeholder.key === key))) {
+        fail(at, `${key}: no face's text writes {${key}}`);
+      }
+    });
+  }
+  for (const [i, text] of texts.entries()) {
+    const at = `${where}.${i === 0 ? "base" : "radiant"}.text`;
+    for (const placeholder of paramPlaceholders(text)) {
+      if (!declared.has(placeholder.key)) fail(at, `{${placeholder.key}} is not a declared param`);
+      // R482: `{key|singular|plural}` names two different, non-empty wordings.
+      if (placeholder.one !== undefined && (placeholder.one === "" || placeholder.one === placeholder.many)) {
+        fail(at, `{${placeholder.key}|…} needs a singular and a different plural wording`);
+      }
+    }
+    // A brace that is no placeholder is a typo in one.
+    const stripped = text.replace(/\{[A-Za-z][A-Za-z0-9]*(?:\|[^|{}]*\|[^|{}]*)?\}/g, "");
+    if (/[{}]/.test(stripped)) fail(at, "a brace that is not a param placeholder");
+  }
 }
 
 /** R349's fallback face, as `validateFallback` holds a `radiantFallback` entry's `radiant` to it. */
@@ -207,11 +379,15 @@ if (entries.length !== EXPECTED_TOTAL) {
 
 let nonTokenCount = 0;
 let tokenCount = 0;
-const rarityCounts = new Map<string, number>();
+/** Per set: rarity counts over its non-token cards. */
+const rarityCounts = new Map<string, Map<string, number>>();
 const tagCounts = new Map<string, number>();
 /** R279: every entry's `refs`, checked against the ids once the whole file has been read. */
 const refsByCard = new Map<string, unknown>();
-const seenIndices = new Map<string, string[]>();
+/** Per set: index -> the keys that carry it (an index is unique only within its set, B2.2). */
+const seenIndices = new Map<string, Map<string, string[]>>();
+let locCount = 0;
+let paramCount = 0;
 
 for (const [key, value] of entries) {
   const where = `catalog["${key}"]`;
@@ -230,15 +406,20 @@ for (const [key, value] of entries) {
     fail(where, `key does not match \`id\` "${id}"`);
   }
 
-  // 4. `id` follows the index convention (§5).
+  // 4. `id` follows the index convention of its set (§5, B2.2).
+  const setOf = SETS.find((expectation) => expectation.set === value["set"]);
   if (typeof index !== "string") {
     fail(where, `\`index\` must be a string (got ${describe(index)})`);
+  } else if (setOf === undefined) {
+    fail(where, `\`set\` ${describe(value["set"])} is not a set that ships (${SETS.map((x) => x.set).join(", ")})`);
   } else {
-    const expectedId = idForIndex(index);
+    const expectedId = idForIndex(setOf.segment, index);
     if (id !== expectedId) fail(where, `index "${index}" implies id "${expectedId}", found ${describe(id)}`);
-    const keys = seenIndices.get(index) ?? [];
+    const bySet = seenIndices.get(setOf.set) ?? new Map<string, string[]>();
+    const keys = bySet.get(index) ?? [];
     keys.push(key);
-    seenIndices.set(index, keys);
+    bySet.set(index, keys);
+    seenIndices.set(setOf.set, bySet);
   }
 
   if (typeof value["name"] !== "string" || value["name"] === "") {
@@ -247,7 +428,6 @@ for (const [key, value] of entries) {
 
   // 5. `type`, `tags`, `set`, `rarity` are in the unions shared/src/catalog-types.ts declares.
   const type = value["type"];
-  const isUnit = type === "Unit";
   if (typeof type !== "string" || !(CARD_TYPES as readonly string[]).includes(type)) {
     fail(where, `\`type\` is not a CardType (got ${describe(type)})`);
   }
@@ -292,7 +472,19 @@ for (const [key, value] of entries) {
     } else {
       nonTokenCount += 1;
       if (tagList.includes("Token")) fail(where, `non-token carries the "Token" tag`);
-      if (typeof rarity === "string") rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + 1);
+      if (typeof rarity === "string" && typeof value["set"] === "string") {
+        const bySet = rarityCounts.get(value["set"]) ?? new Map<string, number>();
+        bySet.set(rarity, (bySet.get(rarity) ?? 0) + 1);
+        rarityCounts.set(value["set"], bySet);
+      }
+    }
+    // B2.5: a token may print the rarity the designer gave it, for display only; a card never does.
+    const printed = value["printedRarity"];
+    if (printed !== undefined) {
+      if (!token) fail(where, "`printedRarity` is a token's (B2.5)");
+      if (typeof printed !== "string" || !PRINTED_RARITIES.includes(printed)) {
+        fail(where, `\`printedRarity\` is not a printed rarity (got ${describe(printed)})`);
+      }
     }
   }
 
@@ -313,9 +505,22 @@ for (const [key, value] of entries) {
     fail(where, `\`cost\` is not a CardCost (got ${describe(cost)})`);
   }
 
-  // 6, 7. Faces: valid keywords, stats on Units only.
-  validateFace(where, "base", value["base"], isUnit);
-  validateFace(where, "radiant", value["radiant"], isUnit);
+  // 6, 7. Faces: valid keywords, stats on Units (and Animated backrow cards) only.
+  validateFace(where, "base", value["base"], type);
+  validateFace(where, "radiant", value["radiant"], type);
+
+  // B3.4 rule 5: the numbers Degrade, Upgrade and KY's Constant may move.
+  validateParams(where, value);
+  if (value["params"] !== undefined) paramCount += 1;
+
+  // E36: generated lines of code (scripts/gen-loc.ts), a non-negative integer when present.
+  const loc = value["loc"];
+  if (loc !== undefined) {
+    locCount += 1;
+    if (typeof loc !== "number" || !Number.isInteger(loc) || loc < 0) {
+      fail(where, `\`loc\` must be a non-negative integer (got ${describe(loc)})`);
+    }
+  }
 
   if ("refs" in value) refsByCard.set(key, value["refs"]);
 
@@ -326,14 +531,32 @@ for (const [key, value] of entries) {
 
   const unknownFields = Object.keys(value).filter(
     (k) =>
-      !["id", "index", "name", "set", "type", "tags", "rarity", "token", "cost", "refs", "radiantFallback", "base", "radiant"].includes(
-        k,
-      ),
+      ![
+        "id",
+        "index",
+        "name",
+        "set",
+        "type",
+        "tags",
+        "rarity",
+        "printedRarity",
+        "token",
+        "cost",
+        "refs",
+        "params",
+        "loc",
+        "radiantFallback",
+        "base",
+        "radiant",
+      ].includes(k),
   );
   if (unknownFields.length > 0) fail(where, `unknown field(s) ${unknownFields.join(", ")}`);
 }
 
-// 2. 100 non-token and 11 token.
+// 1, 2. The totals: B2.1's 268 cards and 49 tokens, 317 entries.
+if (entries.length !== EXPECTED_TOTAL) {
+  fail("catalog", `expected ${EXPECTED_TOTAL} entries, found ${entries.length}`);
+}
 if (nonTokenCount !== EXPECTED_NON_TOKEN) {
   fail("catalog", `expected ${EXPECTED_NON_TOKEN} non-token cards, found ${nonTokenCount}`);
 }
@@ -341,24 +564,29 @@ if (tokenCount !== EXPECTED_TOKEN) {
   fail("catalog", `expected ${EXPECTED_TOKEN} tokens, found ${tokenCount}`);
 }
 
-// 3. Indices 1–100 each exactly once, plus the 11 token indices.
-for (const index of EXPECTED_INDICES) {
-  const keys = seenIndices.get(index);
-  if (keys === undefined) fail("catalog", `index "${index}" is missing`);
-  else if (keys.length > 1) fail("catalog", `index "${index}" appears ${keys.length} times (${keys.join(", ")})`);
-}
-for (const index of seenIndices.keys()) {
-  if (!EXPECTED_INDICES.includes(index)) fail("catalog", `unexpected index "${index}"`);
-}
+for (const expectation of SETS) {
+  // 3. Each set's indices each exactly once: 1..N plus its token indices.
+  const indices = expectedIndices(expectation);
+  const seen = seenIndices.get(expectation.set) ?? new Map<string, string[]>();
+  for (const index of indices) {
+    const keys = seen.get(index);
+    if (keys === undefined) fail(expectation.set, `index "${index}" is missing`);
+    else if (keys.length > 1) fail(expectation.set, `index "${index}" appears ${keys.length} times (${keys.join(", ")})`);
+  }
+  for (const index of seen.keys()) {
+    if (!indices.includes(index)) fail(expectation.set, `unexpected index "${index}"`);
+  }
 
-// 10. Rarity distribution across the 100 non-token cards (§8).
-for (const [rarity, expected] of Object.entries(EXPECTED_RARITY_COUNTS)) {
-  const found = rarityCounts.get(rarity) ?? 0;
-  if (found !== expected) fail("catalog", `expected ${expected} ${rarity} non-token cards, found ${found}`);
-}
-for (const [rarity, found] of rarityCounts) {
-  if (!(rarity in EXPECTED_RARITY_COUNTS)) {
-    fail("catalog", `${found} non-token card(s) carry rarity "${rarity}", which §8 does not distribute`);
+  // 10. The set's rarity distribution across its non-token cards (§8, B2.5).
+  const counted = rarityCounts.get(expectation.set) ?? new Map<string, number>();
+  for (const [rarity, expected] of Object.entries(expectation.rarities)) {
+    const found = counted.get(rarity) ?? 0;
+    if (found !== expected) fail(expectation.set, `expected ${expected} ${rarity} non-token cards, found ${found}`);
+  }
+  for (const [rarity, found] of counted) {
+    if (!(rarity in expectation.rarities)) {
+      fail(expectation.set, `${found} non-token card(s) carry rarity "${rarity}", which the set does not distribute`);
+    }
   }
 }
 
@@ -393,14 +621,17 @@ if (failures.length > 0) {
 
 console.log(`validate-catalog: OK`);
 console.log(`  ${entries.length} entries (${nonTokenCount} cards + ${tokenCount} tokens)`);
-console.log(`  indices 1-100 plus ${CARD_DEFINED_TOKEN_INDICES.join(", ")} and ${SHARED_TOKEN_INDICES.join(", ")}`);
+for (const expectation of SETS) {
+  const tokens = expectation.cardDefinedTokens.length + expectation.sharedTokens.length;
+  console.log(
+    `  ${expectation.set}: ${expectation.cards} cards + ${tokens} tokens; rarities ` +
+      Object.entries(expectation.rarities)
+        .map(([r, n]) => `${n} ${r}`)
+        .join(", "),
+  );
+}
 console.log(
   `  tags ${Object.entries(EXPECTED_TAG_COUNTS)
     .map(([tag, n]) => `${n} ${tag}`)
-    .join(", ")}; refs on ${refsByCard.size} entries`,
-);
-console.log(
-  `  rarities ${Object.entries(EXPECTED_RARITY_COUNTS)
-    .map(([r, n]) => `${n} ${r}`)
-    .join(", ")}`,
+    .join(", ")}; refs on ${refsByCard.size} entries, params on ${paramCount}, loc on ${locCount}`,
 );

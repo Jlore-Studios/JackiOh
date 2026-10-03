@@ -5,13 +5,14 @@
 //
 //   * a computed value (R280): #31 KY's Math Equation in hand carries what its formula comes to now
 //     in the view (`CardView.preview`), and its face prints it in braces after the formula —
-//     "Fib(cost+1) {1}" at its printed cost of 1 — in the hover preview a resting mouse opens;
+//     "Fib(times played + 1) {1}" before its first play (R429) — in the hover preview a resting
+//     mouse opens;
 //   * a reference (R279): #65 Masochism Mask's text names Spikey Pillow. Resting on the Mask shows
 //     the Pillow's face in the preview's "Mentions" column, and in the touch sheet a long press
 //     opens the name is a control: tapping it shows the Pillow's face in a tooltip;
 //   * a Radiant face's gold (R277): #26 Glowy Jelly Bean makes the Math Equation Radiant in hand,
-//     and its face then prints "Fib(cost+3)" with `cost+3` marked (gold, bold, underlined) and the
-//     value its Radiant formula comes to, {3}.
+//     and its face then prints "Fib(times played + 3)" with the `3` marked (gold, bold, underlined)
+//     and the value its Radiant formula comes to, {3}.
 //
 // House rules (BUILD M8): the seed comes from `seedFor`, there is no fixed `cy.wait(ms)` (a long
 // press is held until the sheet is asserted open, a retried assertion), and every selector comes
@@ -79,8 +80,8 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
     cy.get(`${ts(INSPECT_HOVER)} ${CARD_VALUE}`, { timeout: timeouts.view })
       .should("be.visible")
       .and("have.text", "{1}")
-      .and("have.attr", "data-label", "Fib(cost+1)");
-    cy.get(`${ts(INSPECT_HOVER)} .card-text`).should("contain.text", "Deal Fib(cost+1) {1} damage");
+      .and("have.attr", "data-label", "Fib(times played + 1)");
+    cy.get(`${ts(INSPECT_HOVER)} .card-text`).should("contain.text", "Deal Fib(times played + 1) {1} damage");
     leave(inHand(MATH_EQUATION));
   });
 
@@ -120,7 +121,7 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
     cy.get(ts(INSPECT_SHEET)).should("not.exist");
   });
 
-  it("R277 a Math Equation made Radiant prints Fib(cost+3) with cost+3 in gold, and its new value", () => {
+  it("R277 a Math Equation made Radiant prints Fib(times played + 3) with the 3 in gold, and its new value", () => {
     cy.advanceToTurn(THIRD_TURN);
     cy.jackioh().then((handle) => {
       if (handle.seat !== "p1") cy.handOver();
@@ -134,16 +135,16 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
 
       restOn(ts(handCardId(mathId)));
       cy.get(`${ts(INSPECT_HOVER)} .card-text`, { timeout: timeouts.view })
-        .should("contain.text", "Deal Fib(cost+3) {3} damage")
+        .should("contain.text", "Deal Fib(times played + 3) {3} damage")
         .find(RADIANT_MARK)
         .should("have.length", 1)
-        .and("have.text", "cost+3")
+        .and("have.text", "3")
         .and(($mark) => {
           const style = getComputedStyle($mark[0] as Element);
           expect(Number(style.fontWeight), "the mark is bold").to.be.at.least(700);
           expect(style.textDecorationLine, "the mark is underlined").to.contain("underline");
         });
-      cy.get(`${ts(INSPECT_HOVER)} ${CARD_VALUE}`).should("have.text", "{3}").and("have.attr", "data-label", "Fib(cost+3)");
+      cy.get(`${ts(INSPECT_HOVER)} ${CARD_VALUE}`).should("have.text", "{3}").and("have.attr", "data-label", "Fib(times played + 3)");
       leave(ts(handCardId(mathId)));
     });
   });

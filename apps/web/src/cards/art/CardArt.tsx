@@ -5,12 +5,19 @@
 // decoration: it is aria-hidden, holds no text and names nothing, so a face-down card can never
 // leak through it (CLAUDE.md rule 7). The span fills whatever box its parent gives it and clips
 // itself to `shape`; sizing it is the parent's job, so nothing here sets a width.
+//
+// R503: the procedural picture carries the card's motif, read from its printed name (motifs.ts). A
+// caller that holds the name passes it; one that does not gets it from the closest catalog
+// (`useDefResolver`: the deck builder's, else the board's), so a card draws the same picture in the
+// hand, on the board and in the deck list. With no name anywhere, the picture has no motif.
 
 import { useState, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import { useDefResolver } from "../refContext.tsx";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
+import { motifFor } from "./motifs.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
 
@@ -24,6 +31,8 @@ export type CardArtProps = {
   tags: readonly Tag[];
   type: CardType;
   shape: ArtShape;
+  /** The card's printed name, which picks its motif (R503). Absent: the closest catalog's, if any. */
+  name?: string;
   /** For tests. Defaults to ART_MANIFEST. */
   manifest?: ArtManifest;
   className?: string;
@@ -34,10 +43,12 @@ function classes(shape: ArtShape, className: string | undefined): string {
   return className === undefined || className === "" ? base : `${base} ${className}`;
 }
 
-export function CardArt({ defId, radiant, tags, type, shape, manifest = ART_MANIFEST, className }: CardArtProps): ReactElement {
+export function CardArt({ defId, radiant, tags, type, shape, name, manifest = ART_MANIFEST, className }: CardArtProps): ReactElement {
   // The src that failed to load, so a later src (another card, the other face) gets its own try.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const resolve = useDefResolver();
   const theme = themeFor(tags, type);
+  const motif = motifFor(name ?? resolve?.(defId)?.name, theme);
   const variant = radiant ? "radiant" : "base";
   const real = artUrl(defId, radiant, manifest);
 
@@ -65,13 +76,14 @@ export function CardArt({ defId, radiant, tags, type, shape, manifest = ART_MANI
     );
   }
 
-  const uri = proceduralArtUri(defId, theme, compositionFor(type), radiant);
+  const uri = proceduralArtUri(defId, theme, compositionFor(type), radiant, motif);
   return (
     <span
       className={classes(shape, className)}
       data-art="procedural"
       data-art-theme={theme}
       data-art-variant={variant}
+      data-art-motif={motif ?? undefined}
       aria-hidden="true"
       style={{ backgroundImage: `url("${uri}")`, backgroundSize: "cover" }}
     />

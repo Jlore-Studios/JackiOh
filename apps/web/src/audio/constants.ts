@@ -2,6 +2,8 @@
 // `animations.ts` names its durations). The frequencies and envelope times inside one SFX recipe are
 // that recipe's data and stay local to `sfx.ts`, the way keyframes are `animations.css`'s data.
 
+import type { SfxId } from "./types.ts";
+
 export const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 export const LOG_LIMIT = 100;
 export const SFX_MAX_VOICES = 12;        // concurrent sfx cues still sounding
@@ -36,7 +38,8 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-export const VOICE_BUDGET_BYTES = 3 * 1024 * 1024;
+/** R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+. */
+export const VOICE_BUDGET_BYTES = 6 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 export const VOICE_MAX_WORDS = { play: 8, death: 6, cast: 8 } as const;
 /** R97's sentinel as a redacted event carries it (packages/engine/src/viewFor.ts HIDDEN_ID). */
@@ -47,4 +50,73 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
   "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
+  // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5).
+  "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
+  "Flicker", "Plague Token",
 ];
+
+// ---- Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506) ----
+/** #21 Hinder: its rider on the victim's next refresh is heard as a mana crack (cues.ts, R506). */
+export const HINDER_DEF_ID = "core-021";
+/** #27 Blood Ridden Glowy Jelly Bean: each card it turns Radiant is a blood drain and a gold burst. */
+export const BLOOD_BEAN_DEF_ID = "core-027";
+/**
+ * The id `modifierChanged` names the next refresh's rider by (packages/engine/src/mana.ts
+ * NEXT_REFRESH_MODIFIER_ID, R169): the web reaches no engine module for a string, as HIDDEN_DEF_ID.
+ */
+export const NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";
+/** On #27's `radiantSet`, the gold burst lands this long after the blood drain begins. */
+export const GOLD_BURST_DELAY_MS = 280;
+/** Call to Chaos's roll dings once per effect it names (R436), at most this many: the Radiant face's three. */
+export const CHAOS_REVEAL_MAX = 3;
+/** Plays the director keeps open at once (a cast inside a play inside a play); the oldest is forgotten past it. */
+export const PLAY_STACK_MAX = 8;
+/** R439: the turn clock's alarm beats through the last this-many ms of the viewer's own turn clock. */
+export const CLOCK_ALARM_FROM_MS = 30_000;
+/** Within the last this-many ms each beat is a sharper tick (clockTick), sharper every second. */
+export const CLOCK_ALARM_SHARP_FROM_MS = 10_000;
+/** One beat each time the clock crosses a whole multiple of this. */
+export const CLOCK_ALARM_BEAT_MS = 1_000;
+/** A beat is scheduled once its moment is at most this far ahead (the Clock repaints every 200 ms). */
+export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
+/** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
+export const CLOCK_ALARM_LATE_MS = 250;
+
+// ---- Patch v0.2.7 music (SPEC §10.11 "Music", R631) ----
+/** The stations, in the order the picker lists them. */
+export const MUSIC_STATIONS = ["tavern", "edm", "lofi", "epic"] as const;
+/** The match counter that rotates each station's in-game tracks, kept per device. */
+export const MUSIC_ROTATION_KEY = "jackioh.music.rotation.v1";
+/** A crossfade between two tracks. */
+export const MUSIC_FADE_S = 1.5;
+/** A change waits for the playing track's next bar line, unless that is further off than this. */
+export const MUSIC_BAR_WAIT_MAX_S = 3;
+/** Scheduling lead: nothing starts sooner than this after it is asked for. */
+export const MUSIC_LEAD_S = 0.05;
+/** The track a sting hands off to fades in over this, under the sting's tail. */
+export const MUSIC_HANDOFF_FADE_S = 0.05;
+/** The opponent's turn: the default track through a low-pass at this cutoff, at this gain. */
+export const MUSIC_OPPONENT_LOWPASS_HZ = 1400;
+export const MUSIC_OPPONENT_GAIN = 0.75;
+/** The low-pass's cutoff on the viewer's own turn: open. */
+export const MUSIC_OPEN_LOWPASS_HZ = 20000;
+/** setTargetAtTime time constant for the turn mix (about three of these to settle). */
+export const MUSIC_TURN_TC_S = 0.3;
+/** Ducking: the music's gain under an important sound, and how fast it dips and recovers. */
+export const MUSIC_DUCK_GAIN = 0.6;
+export const MUSIC_DUCK_ATTACK_TC_S = 0.03;
+export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
+/** The effects the music ducks under, besides every voice line. */
+export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "entrance", "victory", "defeat"];
+/** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
+export const MUSIC_FOCUS_TC_S = 0.15;
+/** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */
+export const MUSIC_LOW_HEALTH_FRACTION = 0.25;
+/** A Mythic theme away from low health ends after it has played through this many times. */
+export const MUSIC_MYTHIC_PLAYS = 2;
+/** Decoded tracks kept in memory (a two-minute track decodes to about 45 MB), least recently used evicted. */
+export const MUSIC_DECODED_MAX = 3;
+/** Fetched files kept, compressed, least recently used evicted. */
+export const MUSIC_BYTES_MAX = 8;
+/** §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES). */
+export const MUSIC_BUDGET_BYTES = 24 * 1024 * 1024;
