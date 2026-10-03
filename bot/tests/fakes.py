@@ -33,6 +33,7 @@ class FakeGitHub:
         self.files: dict[tuple[str, str], tuple[str, str]] = {}
         self.branches: set[str] = {"main"}
         self.dispatches: list[dict[str, Any]] = []
+        self.pinned: list[str] = []
         self.runs: dict[str, dict[str, Any]] = {}
         self.jobs: dict[str, list[dict[str, Any]]] = {}
         self.reruns: list[Any] = []
@@ -158,7 +159,13 @@ class FakeGitHub:
     def create_issue(self, title: str, body: str, labels: Any = ()) -> dict[str, Any]:
         number = max(self.threads, default=0) + 1
         thread = self.add_issue(number, title, with_marker(body), tuple(labels), BOT)
+        thread["node_id"] = f"I_{number}"
         return copy.deepcopy(thread)
+
+    def pin_issue(self, node_id: str) -> None:
+        if len(self.pinned) >= 3:
+            raise GitHubError("a repository pins at most three issues", 422)
+        self.pinned.append(node_id)
 
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         self.threads[number].update(fields)

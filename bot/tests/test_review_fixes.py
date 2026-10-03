@@ -23,8 +23,9 @@ from tests.test_providers import raw_providers, secrets
 from tests.test_work import APPROVE, builder, changes, reviewer
 
 
-def gpt_pr(test, h):
-    """A pull request GPT built and approved by day, waiting for a second review."""
+def medium_pr(test, h):
+    """A pull request a medium model (agy, the first of them) built and approved by day, waiting
+    for its review run."""
     h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
     h.night(FakeRunner({"build": timed_builder({"src/game.txt": "rules v2\n"}),
                         "review": reviewer(APPROVE)}))
@@ -46,18 +47,19 @@ class AutoMergeTests(unittest.TestCase):
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)}))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)  # Opus: auto-merge on
-        # A revision is queued by a path that leaves auto-merge alone, and GPT does it by day.
+        # A revision is queued by a path that leaves auto-merge alone, and agy does it by day:
+        # its medium approval alone is not enough, so the strong approval of the old head is gone.
         h.gh.threads[pr]["labels"].append({"name": LABEL_REVISE})
         h.ctx.clock_fn.at = DAY
         planned, result = h.night(FakeRunner({"revise": builder({"src/game.txt": "v2.1\n"}),
                                               "review": reviewer(APPROVE)}))
-        self.assertEqual((planned["provider"], result["status"]), ("gpt", "approved"))
+        self.assertEqual((planned["provider"], result["status"]), ("agy", "approved"))
         self.assertNotIn(f"PR_{pr}", h.gh.auto_merge)
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
 
     def test_auto_merge_is_pinned_to_the_approved_commit(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
-        pr = gpt_pr(self, h)
+        pr = medium_pr(self, h)
         h.night(FakeRunner({"review": reviewer(APPROVE)}))
         votes = h.ctx.store.load()["items"][str(pr)]["votes"]
         self.assertEqual(h.gh.auto_merge_heads[f"PR_{pr}"], votes["sha"])
@@ -66,12 +68,13 @@ class AutoMergeTests(unittest.TestCase):
         h = Harness(self, env=ALL, machine=MACHINE)
         d = Deliverer(h.ctx, {"action": "review", "provider": "agy"}, empty_out(h, "o"),
                       h.deliver_repo)
-        self.assertTrue(d._rule_met({"builder": "gpt", "approvals": ["gpt", "muse"]}))
-        self.assertFalse(d._rule_met({"builder": "gpt", "approvals": ["gpt", "muse"],
+        medium = {"gpt": "medium", "muse": "medium", "gemini": "medium"}
+        self.assertTrue(d._rule_met({"approvals": ["gpt", "muse"], "tiers": medium}))
+        self.assertFalse(d._rule_met({"approvals": ["gpt", "muse"], "tiers": medium,
                                       "rejections": ["gemini"]}))  # votes are by family
-        self.assertTrue(d._rule_met({"builder": "gpt", "approvals": ["gpt", "gemini"],
+        self.assertTrue(d._rule_met({"approvals": ["gpt", "gemini"], "tiers": medium,
                                      "rejections": []}))
-        self.assertTrue(d._rule_met({"builder": "claude-opus", "approvals": ["claude-opus"]}))
+        self.assertTrue(d._rule_met({"approvals": ["claude"], "tiers": {"claude": "strong"}}))
 
     def test_only_the_bots_own_pull_requests_get_a_second_review(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
@@ -80,15 +83,17 @@ class AutoMergeTests(unittest.TestCase):
 
     def test_with_no_other_family_set_up_it_says_it_waits_for_a_person(self):
         h = Harness(self, env=secrets(), machine=("gpt",), at=DAY)
-        gpt_pr(self, h)
-        self.assertIn("No subscription of another model family is set up",
+        h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
+        h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                            "review": reviewer(APPROVE)}))
+        self.assertIn("No subscription that could give that review is set up",
                       h.gh.bot_comments(12)[-1])
 
 
 class SecondReviewTests(unittest.TestCase):
     def test_a_comment_during_the_review_gets_its_revision_before_any_merge(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
-        pr = gpt_pr(self, h)
+        pr = medium_pr(self, h)
 
         def commented(request):
             h.ctx.store.update(lambda s: state_item(s, pr).update(pending_request=True))
@@ -101,14 +106,14 @@ class SecondReviewTests(unittest.TestCase):
 
     def test_a_review_whose_run_dies_backs_off_its_subscription_and_is_counted(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
-        pr = gpt_pr(self, h)
+        pr = medium_pr(self, h)
         seen = []
         for attempt in (1, 2):
             planned = plan_mod.make(h.ctx)
             self.assertEqual((planned["action"], planned["number"]), ("review", pr))
             seen.append(planned["provider"])
             Deliverer(h.ctx, planned, empty_out(h, f"died-{attempt}"), h.deliver_repo).run()
-        self.assertEqual(seen, ["agy", "muse"])  # each death backs its subscription off
+        self.assertEqual(seen, ["muse", "gpt"])  # each death backs its subscription off
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED})
         self.assertIn("died 2 times", h.gh.bot_comments(pr)[-1])
 
@@ -122,7 +127,7 @@ class SecondReviewTests(unittest.TestCase):
                             install={"run": f"pwd >> {log}", "timeout_minutes": 1},
                             max_review_cycles=2)
         h.ctx = make_ctx(h.gh, cfg=h.cfg, at=DAY)
-        pr = gpt_pr(self, h)
+        pr = medium_pr(self, h)
         builds = log.read_text().count("\n")
         self.assertGreaterEqual(builds, 1)  # the build did install, so the log works
         planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
@@ -136,13 +141,13 @@ class InfraTests(unittest.TestCase):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         planned = plan_mod.make(h.ctx)
-        self.assertEqual(planned["provider"], "gpt")
+        self.assertEqual(planned["provider"], "agy")
         out = empty_out(h, "infra")
         (out / "result.json").write_text(json.dumps({"status": "infra",
-                                                     "reason": "gpt's secret is not a login"}))
+                                                     "reason": "agy's login is not a login"}))
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         planned = plan_mod.make(h.ctx)
-        self.assertEqual((planned["number"], planned["provider"]), (12, "agy"))
+        self.assertEqual((planned["number"], planned["provider"]), (12, "muse"))
 
     def test_a_run_github_cannot_read_keeps_its_lane_and_its_item(self):
         gh = FakeGitHub()
@@ -181,12 +186,12 @@ class VaultAndLoginTests(unittest.TestCase):
         planned = plan_mod.make(h.ctx)
         out = empty_out(h, "vault")
         (out / "result.json").write_text(json.dumps({"status": "failed", "reason": "boom"}))
-        sealed = vault.seal({"provider": "gpt", "files": {"auth.json": "{}"}}, "the-secret")
+        sealed = vault.seal({"provider": "agy", "files": {"auth.json": "{}"}}, "the-secret")
         (out / "vault.enc").write_text(sealed)
         h.gh.branches.add("bot-state")
         h.gh.conflicts_to_inject = 1
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
-        text, _ = h.gh.get_file("vault/gpt.enc", "bot-state")
+        text, _ = h.gh.get_file("vault/agy.enc", "bot-state")
         self.assertEqual(text.strip(), sealed)
 
     def test_every_model_call_hands_a_refreshed_login_on_at_once(self):

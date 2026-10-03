@@ -40,7 +40,10 @@ AUTH_WORDS = re.compile(
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
     r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
     r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
-    r"|run `?muse login|authentication required|devin auth login)"
+    r"|run `?muse login|authentication required|devin auth login"
+    # Claude Code's answer when its token is revoked or mistyped: "Failed to authenticate. API
+    # Error: 401 OAuth access token is invalid." A model never says that on its own.
+    r"|failed to authenticate|access token is invalid|api error: 401)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.
@@ -778,6 +781,10 @@ def _write_redacted(source: Path, target: Path) -> None:
             dst.write(redact(line))
 
 
+#: What a scripted planning call answers when the script gives it no handler of its own.
+FAKE_PLAN = "1. **Goal.** Do what the issue asks.\n2. **Steps.** Change it, test it."
+
+
 class FakeRunner:
     """Replays scripted calls. Each handler receives the request and returns a RunResult."""
 
@@ -793,6 +800,8 @@ class FakeRunner:
     def run(self, request: RunRequest) -> RunResult:
         self.calls.append(request)
         queue = self.handlers.get(request.role) or []
+        if not queue and request.role == "plan":
+            return RunResult(True, FAKE_PLAN)  # every build plans first; most scripts skip it
         if not queue:
             return RunResult(False, "", 1, error=f"fake runner has no handler for {request.role}")
         handler = queue.pop(0) if len(queue) > 1 else queue[0]

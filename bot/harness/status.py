@@ -14,7 +14,8 @@ from harness.plan import run_status, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
-DOING = {"build": "building", "revise": "revising", "review": "giving a second review to"}
+DOING = {"plan": "planning", "build": "building", "revise": "revising",
+         "review": "reviewing"}
 
 
 def _numbers(items: list[dict[str, Any]]) -> str:
@@ -56,6 +57,22 @@ def _record(state: dict[str, Any], number: int) -> dict[str, Any]:
     return state["items"].get(str(number), {})
 
 
+record_of = _record
+
+
+def lanes_now(ctx: Context, state: dict[str, Any]) -> tuple[dict[int, str], dict[int, str]]:
+    """The lanes the state file says are held (item number, 0 for a survey -> provider), and those
+    of them whose run GitHub has not seen end."""
+    held: dict[int, str] = {}
+    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
+        record = state["items"].get(str(issue["number"]), {})
+        held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
+    survey = state.get("suggest") or {}
+    if survey.get("provider"):
+        held[0] = str(survey["provider"])
+    return held, live_lanes(ctx, state, held)
+
+
 def live_lanes(ctx: Context, state: dict[str, Any], held: dict[int, str]) -> dict[int, str]:
     """`held` without the runs GitHub says have ended (the next plan requeues their items). A run
     GitHub cannot read counts as still going, as it does for the plan (`plan.read_lanes`)."""
@@ -78,7 +95,8 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
         if number:
-            what = f"{DOING.get(str(record.get('kind')), 'working on')} #{number}"
+            doing = "plan" if record.get("action") == "plan" else str(record.get("kind"))
+            what = f"{DOING.get(doing, 'working on')} #{number}"
             since = parse_iso(record.get("started_at"))
         else:
             what = "a suggestion survey"
@@ -109,7 +127,10 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
             now_doing = "free"
         else:
             now_doing = reason
-        lines.append(f"  - `{provider.id}` ({provider.cli}, `{provider.model}`, "
+        seats = ", ".join(f"`{seat.model}` {seat.tier}" + (", self-check" if seat.self_check
+                                                         else "")
+                          for seat in cfg.pool.seats(provider))
+        lines.append(f"  - `{provider.id}` ({provider.cli}: {seats}; "
                      f"{provider.schedule.describe(cfg.timezone)}): {now_doing}. "
                      f"Usage: {_usage_text(provider, entry, ctx)}.")
     return lines
@@ -139,14 +160,7 @@ def report(ctx: Context) -> str:
                 found.append(issue)
         return found
 
-    held: dict[int, str] = {}
-    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
-        record = state["items"].get(str(issue["number"]), {})
-        held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
-    survey = state.get("suggest") or {}
-    if survey.get("provider"):
-        held[0] = str(survey["provider"])
-    live = live_lanes(ctx, state, held)
+    held, live = lanes_now(ctx, state)
     lines += running_lines(ctx, state, live)
     lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, "
                  f"{cfg.pool.machine_parallel} of them on the machine):")
@@ -157,7 +171,7 @@ def report(ctx: Context) -> str:
                     if ended else "") + ".")
     lines.append(f"- Queued to build: {_numbers(labelled(LABEL_BUILD, prs=False))}; "
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
-                 f"for a second review: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
+                 f"for a review run: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
     lines.append(f"- Waiting for a person: {_numbers(labelled(LABEL_BLOCKED))}.")
     lines.append(f"- Open bot pull requests: {_numbers(labelled(LABEL_PR, prs=True))}.")
     suggestions = labelled(LABEL_SUGGESTION, prs=False)
@@ -166,8 +180,11 @@ def report(ctx: Context) -> str:
     last = state.get("last_run") or {}
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
-    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item. A change "
-                 "merges on its builder's model's approval when that model is enough by itself "
-                 "(Opus), else after a second model approves it too; auto-merge "
+    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
+                 "plan by a medium or strong model. An item's `difficulty:easy|medium|hard` (medium "
+                 "without one) sets the weakest tier that may build it. A change merges once one "
+                 "strong model approves it, or two medium models of different families do (a hard "
+                 "one takes a strong approval); weak models never review. A self-checking builder "
+                 f"checks itself up to {cfg.max_self_check_rounds} times first. Auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")
     return "\n".join(lines)
