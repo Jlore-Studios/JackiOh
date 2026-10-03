@@ -8,7 +8,6 @@
 // use one shape each, so this file reads them back into the regular expressions Vercel builds and
 // checks real paths against those.
 
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -127,9 +126,9 @@ describe("vercel.json", () => {
 
 // Vercel's free plan allows 100 deployments a day and counts every push to every branch, [skip ci]
 // or not (the night bot's `bot-state` commits alone used it up). `git.deploymentEnabled` stops the
-// deployment from being created at all, and `ignoreCommand` is the flag for every other branch: it
-// cancels the build unless the branch is main or the commit message says `[vercel]`. The config is
-// read from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
+// deployment from being created at all for the branches machines push to; `ignoreCommand` is the
+// flag for the rest (scripts/vercel-ignore.sh, held by vercel-ignore.test.ts). The config is read
+// from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
 
 /** `bot/**` -> every branch under `bot/`; anything else is a branch name taken literally. Nothing else. */
 function branchRegex(pattern: string): RegExp {
@@ -144,14 +143,6 @@ function deploys(branch: string): boolean {
     ([pattern, enabled]) => !enabled && branchRegex(pattern).test(branch),
   );
   return !off;
-}
-
-/** Whether the ignoreCommand lets Vercel build: it exits 1 to build and 0 to skip. */
-function builds(env: Record<string, string>): boolean {
-  const run = spawnSync("sh", ["-c", config.ignoreCommand], { env: { PATH: process.env.PATH ?? "", ...env } });
-  expect(run.error, "sh ran").toBeUndefined();
-  expect([0, 1], `exit status ${String(run.status)}`).toContain(run.status);
-  return run.status === 1;
 }
 
 describe("vercel.json deployment flag", () => {
@@ -174,15 +165,9 @@ describe("vercel.json deployment flag", () => {
     }
   });
 
-  it("builds main and production, and skips any other branch unless the commit message says [vercel]", () => {
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "main", VERCEL_GIT_COMMIT_MESSAGE: "A change" })).toBe(true);
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "release", VERCEL_ENV: "production" })).toBe(true);
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "A change" })).toBe(false);
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_ENV: "preview" })).toBe(false);
-    expect(builds({})).toBe(false);
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Final polish [vercel]" })).toBe(true);
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Final polish [Vercel]\n\nbody" })).toBe(true);
-    // The flag is the bracketed word: a message that only names Vercel does not turn builds on.
-    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Why vercel skips builds" })).toBe(false);
+  it("hands the build decision to scripts/vercel-ignore.sh, and builds unless that exits 0", () => {
+    expect(config.ignoreCommand).toBe(
+      'sh "$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh" && exit 0; exit 1',
+    );
   });
 });
