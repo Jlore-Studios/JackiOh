@@ -2,6 +2,12 @@
 // bottom sheet on phones (settings.css). `SettingsButton` renders it through a portal while open;
 // tests and integration can also render it directly.
 //
+// Its sections are tabs (issue #128): Gameplay, Visuals and Audio, each a `tabpanel` under one
+// `tablist`. Every panel stays in the document and only the chosen one is shown, so a control keeps
+// its state and a test can reach any of them by test id. A section with no switch and no slot has no
+// tab. The dialog opens on the tab the player used last on this device (`tabs.ts`), or the one a
+// caller names.
+//
 // Every switch reads the store and writes straight back to it, so there is no local draft and no
 // "save": a change applies at once, including to a board rendered behind the scrim.
 
@@ -9,24 +15,29 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactElement,
 } from "react";
 
 import { SETTINGS_SLOTS, type SettingsSectionId, type SettingsSlot } from "./slots.ts";
 import {
+  DEFAULT_SETTINGS,
   resetSettings,
   useSettings,
   writeSettings,
   type SettingKey,
   type Settings,
 } from "./store.ts";
+import { readRememberedTab, rememberTab } from "./tabs.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
   onClose: () => void;
   /** The controls other tasks mount. Defaults to `SETTINGS_SLOTS`. */
   slots?: readonly SettingsSlot[];
+  /** The tab to open on, ahead of the one the player used last. Ignored if the dialog has no such tab. */
+  initialTab?: SettingsSectionId;
 };
 
 type SectionSpec = {
@@ -69,7 +80,15 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
 };
 
 const FOCUSABLE =
-  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+  'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
+/** What "Reset this tab" does: the tab's own switches back to their defaults, and its slots' stores. */
+function resetSection(section: SectionSpec, slots: readonly SettingsSlot[]): void {
+  const patch: Partial<Settings> = {};
+  for (const setting of section.controls) patch[setting] = DEFAULT_SETTINGS[setting];
+  writeSettings(patch);
+  for (const slot of slots) if (slot.section === section.id) slot.reset?.();
+}
 
 function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boolean }): ReactElement {
   const hintId = useId();
@@ -102,17 +121,62 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
 export default function SettingsPanel({
   onClose,
   slots = SETTINGS_SLOTS,
+  initialTab,
 }: SettingsPanelProps): ReactElement {
   const settings = useSettings();
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
+  const base = useId();
 
-  // Focus the first switch on open, so a keyboard or screen-reader user lands inside the dialog.
+  // A section with nothing in it has no tab, so the dialog never shows an empty one.
+  const sections = SECTIONS.filter(
+    (section) => section.controls.length > 0 || slots.some((slot) => slot.section === section.id),
+  );
+  const ids = sections.map((section) => section.id);
+  const [chosen, setChosen] = useState<SettingsSectionId | null>(
+    () => ids.find((id) => id === initialTab) ?? readRememberedTab(ids),
+  );
+  // Slots can change under an open dialog; a tab that has gone falls back to the first one.
+  const active: SettingsSectionId | undefined = ids.find((id) => id === chosen) ?? ids[0];
+  const activeSection = sections.find((section) => section.id === active);
+
+  const choose = (id: SettingsSectionId): void => {
+    setChosen(id);
+    rememberTab(id);
+  };
+
+  // Focus the first switch of the open tab on open (or the tab itself when it has none), so a
+  // keyboard or screen-reader user lands inside the dialog.
   useEffect(() => {
     const panel = panelRef.current;
     if (panel === null) return;
-    const first = panel.querySelector<HTMLElement>('input[role="switch"]') ?? panel;
+    const first =
+      panel.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden]) input[role="switch"]') ??
+      panel.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ??
+      panel;
     first.focus({ preventScroll: true });
   }, []);
+
+  // A new tab starts at its top.
+  useEffect(() => {
+    if (bodyRef.current !== null) bodyRef.current.scrollTop = 0;
+  }, [active]);
+
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    const at = active === undefined ? -1 : ids.indexOf(active);
+    let to: number;
+    if (event.key === "ArrowRight") to = (at + 1) % ids.length;
+    else if (event.key === "ArrowLeft") to = (at - 1 + ids.length) % ids.length;
+    else if (event.key === "Home") to = 0;
+    else if (event.key === "End") to = ids.length - 1;
+    else return;
+    event.preventDefault();
+    const id = ids[to];
+    if (id === undefined) return;
+    choose(id);
+    tabRefs.current.get(id)?.focus();
+  };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === "Escape") {
@@ -123,9 +187,12 @@ export default function SettingsPanel({
     }
     if (event.key !== "Tab") return;
     // aria-modal: Tab and Shift+Tab cycle inside the dialog instead of walking off into the board.
+    // A hidden panel's controls are not reachable, so they are not the ends.
     const panel = panelRef.current;
     if (panel === null) return;
-    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (item) => item.closest("[hidden]") === null,
+    );
     const first = items[0];
     const last = items[items.length - 1];
     if (first === undefined || last === undefined) return;
@@ -169,17 +236,50 @@ export default function SettingsPanel({
             <span aria-hidden="true">✕</span>
           </button>
         </header>
-        <div className="settings-body">
-          {SECTIONS.map((section) => {
+        <div
+          className="settings-tabs"
+          role="tablist"
+          aria-label="Settings sections"
+          data-testid="settings-tablist"
+          onKeyDown={onTabKeyDown}
+        >
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              ref={(node) => {
+                if (node === null) tabRefs.current.delete(section.id);
+                else tabRefs.current.set(section.id, node);
+              }}
+              type="button"
+              role="tab"
+              id={`${base}-tab-${section.id}`}
+              className="settings-tab"
+              data-testid={`settings-tab-${section.id}`}
+              aria-selected={section.id === active}
+              aria-controls={`${base}-panel-${section.id}`}
+              tabIndex={section.id === active ? 0 : -1}
+              onClick={() => {
+                choose(section.id);
+              }}
+            >
+              {section.title}
+            </button>
+          ))}
+        </div>
+        <div className="settings-body" ref={bodyRef}>
+          {sections.map((section) => {
             const sectionSlots = slots.filter((slot) => slot.section === section.id);
-            if (section.controls.length === 0 && sectionSlots.length === 0) return null;
             return (
               <section
                 key={section.id}
+                id={`${base}-panel-${section.id}`}
                 className="settings-section"
+                role="tabpanel"
+                aria-labelledby={`${base}-tab-${section.id}`}
+                hidden={section.id !== active}
                 data-testid={`settings-section-${section.id}`}
               >
-                <h2>{section.title}</h2>
+                <h2 className="settings-section-title">{section.title}</h2>
                 {section.controls.map((setting) => (
                   <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
                 ))}
@@ -195,6 +295,17 @@ export default function SettingsPanel({
         <footer className="settings-foot">
           <button
             type="button"
+            className="settings-reset settings-reset--tab"
+            data-testid="settings-reset-tab"
+            disabled={activeSection === undefined}
+            onClick={() => {
+              if (activeSection !== undefined) resetSection(activeSection, slots);
+            }}
+          >
+            Reset this tab
+          </button>
+          <button
+            type="button"
             className="settings-reset"
             data-testid="settings-reset"
             onClick={() => {
@@ -203,7 +314,7 @@ export default function SettingsPanel({
               for (const slot of slots) slot.reset?.();
             }}
           >
-            Reset to defaults
+            Reset all
           </button>
         </footer>
       </div>

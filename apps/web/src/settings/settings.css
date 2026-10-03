@@ -100,10 +100,11 @@
   display: flex;
   flex-direction: column;
   width: min(380px, 100%);
-  max-height: 88vh;
-  max-height: 88dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  /* One height for every tab, so the dialog does not jump when the player changes tab. The body
+     scrolls inside it. */
+  height: min(560px, 88vh);
+  height: min(560px, 88dvh);
+  overflow: hidden;
   background: linear-gradient(
     180deg,
     var(--bg-raised),
@@ -118,32 +119,14 @@
   animation: settings-pop calc(180ms * var(--anim-scale)) ease-out;
 }
 
-/* The panel scrolls when it is taller than the screen (1280x720 cut it under "Effects intensity"),
-   so its foot fades into the panel's own colour: a section running on under the edge reads as
-   more to scroll, not as the end. A sticky strip, blind to the pointer. */
-.settings-panel::after {
-  content: "";
-  position: sticky;
-  bottom: 0;
-  flex: none;
-  display: block;
-  height: 28px;
-  margin-top: -28px;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg-raised) 72%, var(--bg)));
-  pointer-events: none;
-}
-
 .settings-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 8px 8px 6px 18px;
   background: var(--bg-raised);
-  border-bottom: 1px solid var(--line);
 }
 
 .settings-title {
@@ -171,27 +154,82 @@
   border-color: var(--line-bright);
 }
 
-.settings-body {
+/* --- the tabs (issue #128) ----------------------------------------------------------------- */
+
+.settings-tabs {
+  flex: none;
   display: flex;
-  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+
+.settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-tab {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab[aria-selected="true"] {
+  border-bottom-color: #7dd3fc;
+  color: var(--text);
+}
+
+.settings-tab:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: -2px;
+}
+
+.settings-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .settings-section {
   display: flex;
   flex-direction: column;
-  padding: 10px 18px 8px;
+  padding: 10px 18px 12px;
 }
 
-.settings-section + .settings-section {
-  border-top: 1px solid var(--line);
+/* `display: flex` above would win over the UA's [hidden] rule. */
+.settings-section[hidden] {
+  display: none;
 }
 
-.settings-section h2 {
-  margin: 0 0 2px;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text-dim);
+/* The tab already names the section; the heading stays for a screen reader. */
+.settings-section-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .settings-row {
@@ -452,8 +490,10 @@
 }
 
 .settings-foot {
+  flex: none;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px 18px 16px;
   border-top: 1px solid var(--line);
 }
@@ -478,8 +518,8 @@
 
   .settings-panel {
     width: 100%;
-    max-height: 85vh;
-    max-height: 85dvh;
+    height: min(560px, 85vh);
+    height: min(560px, 85dvh);
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
@@ -489,6 +529,11 @@
   .settings-head {
     padding-left: max(18px, env(safe-area-inset-left));
     padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .settings-tabs {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
   }
 
   .settings-section,
@@ -513,7 +558,7 @@
 
   .settings-panel {
     width: min(380px, 100%);
-    max-height: 100%;
+    height: 100%;
     border-right: 0;
     border-radius: 16px 0 0 16px;
     padding-right: env(safe-area-inset-right);
