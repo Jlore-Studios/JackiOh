@@ -438,7 +438,9 @@
       "feedback_since": "2026-10-03T09:24:23Z",
       "issue": 63,
       "kind": "revise",
-      "queued_at": "2026-10-03T12:54:06Z",
+      "queued_at": "2026-10-03T12:54:47Z",
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "cognition"
