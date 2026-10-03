@@ -2,13 +2,16 @@
 // an occupied backrow zone, only the top acts (a face-down trap under a pile never fires, an aura under
 // one is off), a pile travels whole; and a carrier (Classic+ #33 Ivory Tower) holds one Unit played on
 // top of it — a Unit for every rule that can neither attack nor be attacked, stepping down into a unit
-// zone when its zone stops carrying it. Pauses, a round trip, a replay and each seat's view included.
+// zone when its zone stops carrying it; a carrier that fuses its Unit (Classic+ #33 Ivory Tower, R635)
+// takes one a stay. Pauses, a round trip, a replay and each seat's view included.
 // Fixtures: `fixtures/field.ts`.
 
 import { describe, expect, it } from "vitest";
 import { attackTargets, canAttack } from "../src/combat";
 import { destroyAll } from "../src/effects/destroy";
+import { bounceCard } from "../src/effects/move";
 import { swapBoard } from "../src/effects/swap";
+import { transform } from "../src/effects/transform";
 import { cardsInScope } from "../src/effects/targets";
 import { legalZonesFor, playsOnStack } from "../src/playChoices";
 import { legalActions } from "../src/reduce";
@@ -28,6 +31,7 @@ import {
   lockZone,
   placeOnField,
   reserveZone,
+  stackedOnto,
 } from "../src/zones";
 import { indestructible, plain, taunter } from "./fixtures/combat";
 import {
@@ -36,6 +40,7 @@ import {
   banner,
   cover,
   flush,
+  fuser,
   mourner,
   notesOf,
   playing,
@@ -291,6 +296,17 @@ describe("B5 E21 a carrier and the Unit it holds (R446)", () => {
     expect(view.backrow[1]).toMatchObject({ defId: tower.id });
   });
 
+  it("R446 a Transform replaces a carried Unit where it stands, on its carrier", () => {
+    const { state, tower: holder, rider } = towerGame("carrier-transform");
+    const sink = sinkFor(state);
+    transform({ instanceId: rider, defId: taunter.id }).apply(makeContext(sink, null, { controller: "p2" }));
+    const now = carriedAt(sink.state, slot("p1", "backrow", 2));
+    expect(now?.defId).toBe(taunter.id);
+    expect(now?.id).not.toBe(rider);
+    expect(cardAt(sink.state, slot("p1", "backrow", 2))?.id).toBe(holder.id);
+    expect(eventsOfType(sink.events, "transformed")).toHaveLength(1);
+  });
+
   it("R446 when its carrier leaves, the Unit steps down into its lane's unit zone without leaving the field", () => {
     const { state, rider } = towerGame("carrier-step-down");
     const unit = byId(state, rider);
@@ -376,5 +392,47 @@ describe("B5 E21 a carrier and the Unit it holds (R446)", () => {
     const live = run("carrier-pause", false);
     expect(run("carrier-pause", true)).toEqual(live);
     expect(run("carrier-pause", false)).toEqual(live);
+  });
+});
+
+describe("R635 a carrier that fuses its Unit takes one Unit a stay", () => {
+  it("R635 the first Unit to stand on it is noted, and no other may name its zone, even once that one has gone", () => {
+    const state = playing("fuser-once");
+    const holder = put(state, fuser.id, slot("p1", "backrow", 2));
+    expect(stackedOnto(holder)).toBeNull();
+    const result = playFrom(state, plain.id, { row: "backrow", lane: 2 });
+    expect(result.error).toBeUndefined();
+    const rider = eventsOfType(result.events, "cardPlayed")[0]?.instanceId ?? "";
+    const next = result.state;
+    expect(carriedAt(next, slot("p1", "backrow", 2))?.id).toBe(rider);
+    expect(stackedOnto(byId(next, holder.id))).toBe(rider);
+    // The Unit goes (here: destroyed where it stands); the carrier stays, and takes no other.
+    const sink = sinkFor(next);
+    destroyAll({ side: "self", rows: ["units"] }).apply(makeContext(sink, null, { controller: "p1" }));
+    settle(sink);
+    expect(carriedAt(sink.state, slot("p1", "backrow", 2))).toBeNull();
+    const [held] = inHand(sink.state, plain.id, "p1");
+    if (held === undefined) return;
+    expect(legalZonesFor(sink.state, "p1", held)).not.toContainEqual({ row: "backrow", lane: 2 });
+    const refused = playFrom(sink.state, plain.id, { row: "backrow", lane: 2 });
+    expect(refused.error).toMatch(/taken its one Unit/);
+    // Leaving the field clears the note (R78): back on the field, it is a new arrival and takes one again.
+    const gone = byId(sink.state, holder.id);
+    bounceCard(sink, gone);
+    expect(gone.zone.z).toBe("hand");
+    expect(stackedOnto(gone)).toBeNull();
+  });
+
+  it("R635 an Immutable one takes none, since its text could not take the Unit in (R23)", () => {
+    const state = playing("fuser-immutable");
+    const holder = put(state, fuser.id, slot("p1", "backrow", 2));
+    holder.grantedKeywords.push({ kind: "Immutable" });
+    const [card] = inHand(state, plain.id, "p1");
+    if (card === undefined) return;
+    expect(legalZonesFor(state, "p1", card)).not.toContainEqual({ row: "backrow", lane: 2 });
+    const refused = playFrom(state, plain.id, { row: "backrow", lane: 2 });
+    expect(refused.error).toMatch(/Immutable/);
+    holder.grantedKeywords.length = 0;
+    expect(legalZonesFor(state, "p1", card)).toContainEqual({ row: "backrow", lane: 2 });
   });
 });

@@ -268,10 +268,10 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
   }
 
   it("R388 serves every patch in patches.json, whole, to a caller with no account", async () => {
-    const catalog = await loadCatalog({ version: "v0.2.0" });
+    const catalog = await loadCatalog({ version: "v0.2.10" });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.10"]);
 
     for (const { version } of patches) {
       const response = await router(jsonRequest("GET", `/api/catalog/${version}`));

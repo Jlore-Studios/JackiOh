@@ -18,7 +18,7 @@ const MY_PAWN = "core-096"; // (1) Trap: fires only on a lethal attack, so a pla
 const MANA_WELL = "core-006"; // (3) Field Spell.
 const HEROIC_POWER = "core-098"; // Indestructible Field Spell.
 const FROSTSPATULA = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
-const TOWER = "classicplus-033"; // Ivory Tower: a Unit may be played on top of it.
+const TOWER = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it.
 const VANILLA = "core-008"; // (1) 4/4.
 const COOKIE_GUILD = "classic-031"; // (2) Cry: Recruit 1 Unit of (2) Cost or less.
 const MR_TOKEN = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
@@ -83,16 +83,31 @@ describe("C+ #5 Guy Att", () => {
       s.expectInZone(MANA_WELL, "graveyard");
     });
 
-    it("R418 an Ivory Tower is a backrow card and is destroyed; the Unit it carried is not, and steps down", () => {
+    it("R418 an Ivory Tower is a backrow card and is destroyed, the Unit it fused in with it", () => {
       const s = setup({ hand: [VANILLA, { def: GUY }, FILLER], backrow: [{ def: TOWER, lane: 2 }] });
+      const tower = s.card(TOWER).id;
       const rider = s.card(VANILLA);
       s.play(rider, { zone: 2, row: "backrow" });
-      expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })?.id).toBe(rider.id);
+      // R635: once its play resolved, the Vanilla was fused into the Tower.
+      s.expectInZone(rider, "gone");
+      expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
 
       s.play(GUY, { zone: 1 });
 
-      s.expectInZone(TOWER, "graveyard");
-      expect(s.unit("p1", 2)?.id).toBe(rider.id);
+      s.expectInZone(tower, "graveyard");
+    });
+
+    it("R418 R635 a Guy Att stacked onto your Ivory Tower destroys it with its own Cry, and steps down unfused", () => {
+      const s = setup({ hand: [{ def: GUY }, FILLER], backrow: [{ def: TOWER, lane: 2 }] });
+      const tower = s.card(TOWER).id;
+      const guy = s.card(GUY).id;
+
+      s.play(guy, { zone: 2, row: "backrow" });
+
+      s.expectInZone(tower, "graveyard");
+      expect(s.unit("p1", 2)?.id).toBe(guy);
+      expect(s.card(guy).defId).toBe(GUY);
+      expect(s.events.some((event) => event.type === "fused")).toBe(false);
     });
 
     it("R1 a recruited Guy Att fires no Cry: your backrow stays", () => {

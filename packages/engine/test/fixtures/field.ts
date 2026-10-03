@@ -68,8 +68,11 @@ export const spatula = def("spatula", "Field Spell", {
 /** A plain Animated Field Spell, which animates as it enters the field (B3.1 rule 4). */
 export const golem = def("golem", "Field Spell", { base: face(3, 3, [ANIMATED]), radiant: face(6, 6, [ANIMATED]) });
 
-/** Classic+ #33 Ivory Tower's shape: a carrier whose aura gives its controller's cards Stack. */
+/** A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.10. */
 export const tower = def("tower", "Field Spell", { cost: 2 });
+
+/** Classic+ #33 Ivory Tower's shape since patch v0.2.10: a carrier that takes one Unit a stay (R635). */
+export const fuser = def("fuser", "Field Spell", { cost: 2 });
 
 /** A Field Spell that prints Stack, so it tops an occupied backrow zone without any aura (B5 E21). */
 export const cover = def("cover", "Field Spell", {
@@ -120,6 +123,7 @@ export const FIELD_DEFS: CardDef[] = [
   spatula,
   golem,
   tower,
+  fuser,
   cover,
   banner,
   watcher,
@@ -211,6 +215,7 @@ export const FIELD_SCRIPTS: Record<string, CardScripts> = {
     staticFlags: { carrier: true },
     aura: ({ self }) => [{ applies: (card) => card.controller === self.controller, mod: { keywords: [{ kind: "Stack" }] } }],
   }),
+  [fuser.id]: both({ staticFlags: { fusesCarried: true } }),
   [banner.id]: both({
     aura: ({ self }) => [
       { applies: (card) => card.controller === self.controller && card.zone.z === "field", mod: { attack: 2 } },

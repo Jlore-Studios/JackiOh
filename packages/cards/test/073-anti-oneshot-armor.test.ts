@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
+import { expectAnimated } from "./_animated";
 
 function damageTo(s: Scenario, targetId: string): number[] {
   return s.events
@@ -105,10 +106,10 @@ describe("#73 Anti-oneshot Armor (base)", () => {
     expect(s.hand("p1").map((card) => card.defId)).toContain("core-035");
     expect(s.pile("p1", "library")).toHaveLength(1);
     s.expectEvents("cardPlayed", "summoned", "drawn", "addedToHand");
-    // §5.1: a Field Spell with a Cry — it went to the backrow and stayed there.
-    // (§3.2 also makes a played Field Spell public, but `reduce.playCard` does not set `faceUp`
-    // the way `effects/summon.ts` does; that engine gap is reported, not asserted here.)
-    expect(s.backrow("p1", 1)?.defId).toBe("core-073");
+    // §5.1: a Field Spell with a Cry — since patch v0.2.10 an Animated one (R383): it went to backrow
+    // lane 1 and animated into unit lane 1 as it entered, before its Cry.
+    expect(s.unit("p1", 1)?.defId).toBe("core-073");
+    expect(s.backrow("p1", 1)).toBeNull();
   });
 
   it("R18: \"lose health\" is not damage, so the base cap of 5 never sees it", () => {
@@ -191,7 +192,7 @@ describe("#73 Anti-oneshot Armor (radiant)", () => {
     expect(s.pile("p1", "library").map((card) => card.defId)).toEqual(["core-037"]);
     expect(s.events.filter((event) => event.type === "drawn")).toHaveLength(2);
     s.expectEvents("cardPlayed", "summoned", "drawn", "drawn");
-    expect(s.backrow("p1", 1)?.radiant).toBe(true);
+    expect(s.unit("p1", 1)?.radiant).toBe(true);
   });
 
   it("the base Cry still draws exactly 1 beside the radiant's 2", () => {
@@ -224,5 +225,15 @@ describe("#73 Anti-oneshot Armor (radiant)", () => {
     s.expectHealth("p1", 25);
     s.expectEvents("healthLost");
     expect(damageTo(s, "hero-p1")).toEqual([]);
+  });
+});
+
+describe("#73 Anti-oneshot Armor: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/5 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "core-073", stats: { attack: 1, health: 5 } });
+  });
+
+  it("R383 radiant: a 2/10 Unit", () => {
+    expectAnimated({ def: "core-073", radiant: true, stats: { attack: 2, health: 10 } });
   });
 });

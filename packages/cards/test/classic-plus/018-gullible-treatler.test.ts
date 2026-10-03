@@ -17,7 +17,7 @@ const FIELD_SPELL = "core-064"; // Gifted Program
 const TRAP = "core-060"; // Bear Honeypot
 const FIELD_TRAP = "core-018"; // Bread and Butter
 const FROSTSPATULA = "classicplus-012-8"; // a Field Spell, "Animated on your turn"
-const TOWER = "classicplus-033"; // Ivory Tower, a Field Spell a Unit may top
+const TOWER = "classicplus-033"; // Ivory Tower, a Field Spell that fuses the first Unit stacked onto it
 const VANILLA = "core-008";
 const FILLER = "core-005";
 const DECK = ["core-005", "core-005", "core-005", "core-005"];
@@ -96,10 +96,14 @@ describe("C+ #18 Gullible Treatler", () => {
       s.expectInZone(treatler, "graveyard");
     });
 
-    it("R418 an Ivory Tower carrying a Unit is still a Field Spell you control: it keeps it", () => {
+    it("R418 an Ivory Tower that has fused a Unit in is still a Field Spell you control: it keeps it", () => {
       const s = board({ hand: [VANILLA, FILLER], field: [{ def: TREATLER, lane: 1 }], backrow: [{ def: TOWER, lane: 2 }] });
-      s.play(VANILLA, { zone: 2, row: "backrow" });
-      expect(s.card(VANILLA).zone).toMatchObject({ z: "field", row: "backrow", lane: 2 });
+      const tower = s.card(TOWER).id;
+      const rider = s.card(VANILLA).id;
+      s.play(rider, { zone: 2, row: "backrow" });
+      // R635: the Vanilla is fused into the Tower, which stays a Field Spell in its backrow zone.
+      s.expectInZone(rider, "gone");
+      expect(s.backrow("p1", 2)?.id).toBe(tower);
       expect(glows(s)).toBe(false);
       s.endTurn().endTurn();
       expect(treatlerAt(s)).not.toBeNull();

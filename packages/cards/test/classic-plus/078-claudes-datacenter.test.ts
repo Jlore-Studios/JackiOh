@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/catalog-data";
 import { query } from "../../src/query";
 import { scenario, type Scenario } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic-plus/078-claudes-datacenter";
 
 const DATACENTER = "classicplus-078";
@@ -124,5 +125,15 @@ describe("C+ #78 Claude's Datacenter", () => {
       const s = setup({ radiantFace: true }).endTurn();
       expect(JSON.stringify(s.view("p2"))).not.toContain(aiCardsIn(s)[0]?.id ?? "?");
     });
+  });
+});
+
+describe("C+ #78 Claude's Datacenter: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 0/5 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classicplus-078", stats: { attack: 0, health: 5 } });
+  });
+
+  it("R383 radiant: a 0/10 Unit", () => {
+    expectAnimated({ def: "classicplus-078", radiant: true, stats: { attack: 0, health: 10 } });
   });
 });

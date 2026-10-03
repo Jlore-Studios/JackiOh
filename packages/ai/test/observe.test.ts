@@ -436,8 +436,11 @@ describe("redact (B9)", () => {
 
 describe("determinize loses nothing the seat can see (B10)", () => {
   it("R185 B10: viewFor of a determinized redaction equals the true view, events aside, from both seats", { timeout: 120_000 }, () => {
-    expect(REAL_STATES.length).toBeGreaterThan(20);
+    // R434: a finished game shows both hands to both seats, which redaction hides by design and no
+    // decision reads (`aiToAct` is false once the game is over), so B10 holds over games in progress.
+    expect(REAL_STATES.filter((state) => state.result === null).length).toBeGreaterThan(20);
     REAL_STATES.forEach((state, at) => {
+      if (state.result !== null) return;
       for (const seat of PLAYER_IDS) {
         const det = determinize(redact(state, seat), seat, createRng(`observe-b10:${at}:${seat}`));
         expect(viewWithoutEvents(det, seat), `state ${at}, seat ${seat}`).toEqual(viewWithoutEvents(state, seat));

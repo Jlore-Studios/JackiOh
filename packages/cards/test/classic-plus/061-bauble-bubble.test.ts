@@ -9,6 +9,7 @@ import { legalActions, stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { def } from "../../src/scripts/classic-plus/061-bauble-bubble";
 
 const BAUBLE = "classicplus-061";
@@ -184,5 +185,15 @@ describe("C+ #61 Bauble Bubble", () => {
       s.play(COLLATERAL, { targets: [{ pick: "instance", instanceId: s.card(BAUBLE).id }] });
       expect(stockpiles(s)).toEqual([]);
     });
+  });
+});
+
+describe("C+ #61 Bauble Bubble: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/1 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classicplus-061", stats: { attack: 1, health: 1 } });
+  });
+
+  it("R383 radiant: a 2/2 Unit", () => {
+    expectAnimated({ def: "classicplus-061", radiant: true, stats: { attack: 2, health: 2 } });
   });
 });

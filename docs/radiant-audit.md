@@ -1,6 +1,6 @@
 # The Radiant audit
 
-2026-09-24 · the Radiant pass (SPEC §5.2, §11 R275–R283) · patch v0.2.0 of 2026-09-30 (Classic, Classic+, the Core patches; last section)
+2026-09-24 · the Radiant pass (SPEC §5.2, §11 R275–R283) · patch v0.2.0 of 2026-09-30 (Classic, Classic+, the Core patches) · patch v0.2.10 of 2026-10-03 (the Animated pass and Ivory Tower; last section)
 
 Every card's Radiant face held against one standard, and the ones below it raised. SPEC §8 (and §7
 for the tokens) is where the result lives; this document is the record of the judgement, one row
@@ -457,3 +457,46 @@ in v0.2.0. "Base" is the base face as v0.2.0 prints it.
 | T-AI-8 | Rate Limit | Trap | Activates when your opponent plays their 3rd card in a turn: After it resolves, their turn ends. | Activates when your opponent plays their 2nd card in a turn: After it resolves, their turn ends. | Meets | 3rd card → 2nd: it holds their turn to two cards, not three, and fires on turns the base face never would. |
 | T-AI-9 | Refusal | Trap | Activates when your opponent plays a Spell that targets one of your Units: Counter it. | Activates when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1. | Meets | Your Units → you or any of your cards, a broader scope, and adds a draw. |
 | T-AI-10 | Fine-Tuning | Field Spell | End of turn: Upgrade a random card in your hand. | End of turn: Upgrade 2 random cards in your hand. | Meets | One card → two (2×). |
+
+## Patch v0.2.10 (issue #113, 2026-10-03)
+
+The designer's patch gave eighteen Field Spells Animated and a unit face (SPEC §6.1, R383) and replaced
+C+ #33 Ivory Tower's text (R418, R635). Each Animated card's Radiant face doubles its unit face, as
+Tesla's, Jackiestan Auctioneer's and Frostspatula's do, which the stat half holds an Animated card to,
+and keeps the Radiant text it had: the effect half is the one the rows above judged, and every verdict
+stands. Ivory Tower's Radiant face is the designer's: the Unit it fuses in goes in on its Radiant face.
+"Base" and "Radiant" are the faces the catalog prints in v0.2.10.
+
+### Core
+
+| # | Card | Type | Base | Radiant | Verdict | Reasoning |
+| --- | --- | --- | --- | --- | --- | --- |
+| 14 | Jlockeed's Weapons | Field Spell | 1/4 · Animated / Aura: Your Units have +4 attack, Rush and First Strike. | 2/8 · Animated / Aura: Your Units have +10 attack, Rush and First Strike. | Meets | Its unit face doubled (R383). +4 attack → +10 (2.5×) on every Unit, itself included while it is one, as v0.2.0 audited it. |
+| 33 | Unstable Clone Machine | Field Spell | 2/3 · Animated / After you play a card, shuffle 3 copies of it into your deck. | 4/6 · Animated / After you play a card, shuffle 3 Radiant copies of it into your deck. | Meets | Its unit face doubled (R383). All three copies Radiant, each about twice a base copy, as before. |
+| 38 | Quickstriker | Field Spell | 3/2 · Animated / Your cards gain "Combo X: Deal X damage to the enemy hero." X = cards you played earlier this turn. | 6/4 · Animated / Your cards gain "Combo X: Deal 2X damage to the enemy hero." X = cards you played earlier this turn. | Meets | Its unit face doubled (R383). X → 2X damage as one hit (R281), as before. |
+| 65 | Masochism Mask | Field Spell | 1/2 · Animated / Start of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow. | 2/4 · Animated / Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow. | Meets | Its unit face doubled (R383). A forced pick → two picks with "nothing" among them, a lighter drawback (§5.2's drawback rule), as before. |
+| 73 | Anti-oneshot Armor | Field Spell | 1/5 · Animated / Your hero can't take more than 5 damage at once. / Cry: Draw 1. | 2/10 · Animated / Your hero can't take more than 3 damage at once. / Cry: Draw 2. | Meets | Its unit face doubled (R383). Cap 5 → 3 and Cry: draw 1 → 2, as before. |
+
+### Classic
+
+| # | Card | Type | Base | Radiant | Verdict | Reasoning |
+| --- | --- | --- | --- | --- | --- | --- |
+| 4 | Palantir | Field Spell | 0/3 · Animated / Aura: Your opponent can't draw more than 1 card each turn. / When your opponent plays a Book, you may Tribute this to steal it. | 0/6 · Animated / Aura: Your opponent can't draw more than 1 card each turn. / When your opponent plays a Spell, steal it. Once the Spells this has stolen cost (2) or more in total, Tribute this. | Meets | Its unit face doubled (R383). The steal widens from Books to every Spell with no Tribute to pay, as before. |
+| 7 | InfiniScepter | Field Spell | 1/2 · Animated / Cry: Exile a (1) Cost or less Spell from your hand. / Activate: Cast a copy of that Spell. | 2/4 · Animated / Cry: Exile a (2) Cost or less Spell from your hand. / Activate: Cast a copy of that Spell. | Meets | Its unit face doubled (R383). (1) Cost or less → (2) Cost or less, as before. |
+| 62 | Living Bomb | Field Spell | 2/1 · Animated / At the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it. | 4/2 · Animated / At the start of your opponent's turn: Destroy every permanent they control with a Plague Token on it. | Meets | Its unit face doubled (R383). Both players' turns → your opponent's only, as before. |
+| 64 | Malzahar's Recycler | Field Spell | 2/3 · Animated / End of turn: Discard 2 cards. / Whenever you discard cards, draw that many. | 4/6 · Animated / End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck. | Meets | Its unit face doubled (R383). A draw per card discarded → your whole deck, as before. |
+| 87 | Plague Chalice | Field Spell | 0/3 · Animated / This enters with X Plague Tokens on it. / Aura: Counter every card played whose cost equals the number of Plague Tokens on this. | 0/6 · Animated / This enters with X Plague Tokens on it. / Aura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this. | Meets | Its unit face doubled (R383). Both players → your opponent only, as before. |
+
+### Classic+
+
+| # | Card | Type | Base | Radiant | Verdict | Reasoning |
+| --- | --- | --- | --- | --- | --- | --- |
+| 7 | The House | Field Spell | 0/6 · Animated / Cry and start of turn: Summon a Right-house defender (2 in 3) or a Wrong-House Attacker (1 in 3). | 0/12 · Animated / Cry and start of turn: Summon a Right-house defender and a Wrong-House Attacker. | Meets | Its unit face doubled (R383). One Unit each time → both (2×) (R406), as before. |
+| 12.5 | Anti-Waffle Shell | Field Spell | 0/2 · Animated / Cry: Give your Units Divine Shield. / Aura: Your Units have +2/+2. | 0/4 · Animated / Cry: Give your Units Divine Shield. / Aura: Your Units have +4/+4. | Meets | Its unit face doubled (R383). +2/+2 → +4/+4 (2×), itself included while it is a Unit, as before. |
+| 12.7 | Legion of the Hungry | Field Spell | 2/2 · Animated / Cry: Exile 5 random cards from your deck. Summon the Units among them. | 4/4 · Animated / Cry: Exile 5 random cards from your deck. Summon the Units among them and make them Radiant. | Meets | Its unit face doubled (R383). The Units it summons are Radiant (about 2× each), as before. |
+| 31 | Fusion Lab | Field Spell | 1/3 · Animated / Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change. | 2/6 · Animated / Cry and end of turn: Choose a card in your hand. Fuse a random Radiant card into it. Its cost doesn't change. | Meets | Its unit face doubled (R383). Each card fused in is Radiant (about 2×), as before. |
+| 33 | Ivory Tower | Field Spell | The first Unit you stack onto this is fused into it. | The first Unit you stack onto this becomes Radiant and is fused into it. | Meets | The Unit it fuses in becomes Radiant first and goes in on its Radiant face (R469): the Unit's whole text, about 2×, lives on in the Tower (R635). |
+| 61 | Bauble Bubble | Field Spell | 1/1 · Animated / Death: Add 2 Stockpiles to your hand. Each costs (0). | 2/2 · Animated / Death: Add 2 Radiant Stockpiles to your hand. Each costs (0). | Meets | Its unit face doubled (R383). A Radiant #5 Stockpile draws 5 and heals 5 against 2 and 2 (2.5× each), as before. |
+| 63 | Fruit Tree | Field Spell | 1/4 · Animated / Start of turn: Add a random Fruit to your hand. Each costs (0). | 2/8 · Animated / Start of turn: Add a random Radiant Fruit to your hand. Each costs (0). | Meets | Its unit face doubled (R383). The Fruit is Radiant (about 2×), as before. |
+| 70 | Chaos Machine | Field Spell | 2/2 · Animated / Start of turn and end of turn: Upgrade a random card in your hand or on your side of the field. Degrade a random card in your opponent's hand or on their side of the field. | 4/4 · Animated / Start of turn and end of turn: Upgrade 2 random cards in your hand or on your side of the field. Degrade 2 random cards in your opponent's hand or on their side of the field. | Meets | Its unit face doubled (R383). One card each way → two (2×), as before. |
+| 78 | Claude's Datacenter | Field Spell | 0/5 · Animated / End of turn: Add a random AI generated card to your hand. Each costs (0). | 0/10 · Animated / End of turn: Add a random Radiant AI generated card to your hand. Each costs (0). | Meets | Its unit face doubled (R383). The AI generated card is Radiant (about 2×), as before. |

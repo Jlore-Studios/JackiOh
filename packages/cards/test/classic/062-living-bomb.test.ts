@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
+import { expectAnimated } from "../_animated";
 import { base, def, radiant } from "../../src/scripts/classic/062-living-bomb";
 
 const BOMB = "classic-062";
@@ -277,5 +278,15 @@ describe("C #62 Living Bomb", () => {
 
       s.expectInZone(ROCK, "field");
     });
+  });
+});
+
+describe("C #62 Living Bomb: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/1 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classic-062", stats: { attack: 2, health: 1 } });
+  });
+
+  it("R383 radiant: a 4/2 Unit", () => {
+    expectAnimated({ def: "classic-062", radiant: true, stats: { attack: 4, health: 2 } });
   });
 });

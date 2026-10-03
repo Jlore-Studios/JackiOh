@@ -8,6 +8,7 @@ import type { CardInstance } from "@jackioh/engine";
 import type { PlayerId } from "@jackioh/shared";
 import { base, radiant } from "../src/scripts/065-masochism-mask";
 import { scenario, type Scenario } from "./_harness";
+import { expectAnimated } from "./_animated";
 
 const MASK = "core-065"; // Field Spell, 2, Quickdraw
 const PILLOW = "core-065-1"; // #65.1, the token the third option summons
@@ -152,5 +153,15 @@ describe("#65 Masochism Mask", () => {
 
     s.expectInZone(POSTDOC, "exile");
     s.expectHealth("p1", 27);
+  });
+});
+
+describe("#65 Masochism Mask: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/2 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "core-065", stats: { attack: 1, health: 2 } });
+  });
+
+  it("R383 radiant: a 2/4 Unit", () => {
+    expectAnimated({ def: "core-065", radiant: true, stats: { attack: 2, health: 4 } });
   });
 });
