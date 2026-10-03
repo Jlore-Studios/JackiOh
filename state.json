@@ -169,6 +169,12 @@
       "lines": [
         "@jgoetzmann-bot stop` on both this issue and #53 follows, so the night bot doesn't queue a revision on the same branch while I'm working."
       ]
+    },
+    "c:5965685626": {
+      "at": "2026-10-03T04:51:39Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
