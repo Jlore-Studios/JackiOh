@@ -693,13 +693,17 @@
         {
           "at": "2026-10-03T05:10:33Z",
           "minutes": 149.3
+        },
+        {
+          "at": "2026-10-03T05:31:17Z",
+          "minutes": 16.8
         }
       ],
       "usage": {
-        "observed_at": "2026-10-03T05:10:33Z",
+        "observed_at": "2026-10-03T05:31:17Z",
         "seven_day": {
           "resets_at": "2026-10-09T23:47:06Z",
-          "utilization": 0.5
+          "utilization": 0.54
         },
         "status": "allowed"
       }
