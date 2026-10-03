@@ -1153,10 +1153,8 @@
     "what": "build #68 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-03T18:19:15Z",
-    "notes": [
-      "started a night run, as a lane was free: #75 (medium) is queued to build, for `gpt`: plan on `gpt` (codex, `gpt-5.6-terra`, medium); build on `gpt` (codex, `gpt-5.6-terra`, medium); review on `gpt` (codex, `gpt-5.6-terra`, medium)"
-    ],
+    "at": "2026-10-03T18:27:43Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
