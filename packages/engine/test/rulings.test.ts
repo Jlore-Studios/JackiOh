@@ -224,6 +224,8 @@ const WEB_AUDIO_DIRECTOR_TEST = "../../../apps/web/src/audio/director.test.ts";
 const WEB_MUSIC_PLAN_TEST = "../../../apps/web/src/audio/musicPlan.test.ts";
 const WEB_MUSIC_DIRECTOR_TEST = "../../../apps/web/src/audio/musicDirector.test.ts";
 const WEB_MUSIC_PLAYER_TEST = "../../../apps/web/src/audio/music.test.ts";
+/** R632's proof (SPEC §9.2): where the browser keeps a session. */
+const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3682,6 +3684,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // sting's hand-off, the turn mix, resuming, focus and nothing scheduled on a stopped context).
   it("R631 plays each viewer's own music from their own view, by the priority stack", () => {
     provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
+  });
+
+  // R632 is a client ruling (SPEC §9.2): proved by apps/web net/session.test.ts "R632 …" (the tab's
+  // storage, an older build's session moved, the fixture's key, blocked storage, sign-out) and
+  // routes/shell-gate.test.tsx "R632 …" (another tab's sign-out leaves this tab signed in).
+  it("R632 keeps a session in its tab's storage and never in localStorage", () => {
+    provenIn(632, WEB_SESSION_TEST, "../../../apps/web/src/routes/shell-gate.test.tsx");
   });
 });
 

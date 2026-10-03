@@ -18,6 +18,8 @@ export const CONTACT_URL = "https://github.com/jgoetzmann/JackiOh/issues";
 export const siteFooterTestid = {
   root: "site-footer",
   privacy: "site-footer-privacy",
+  terms: "site-footer-terms",
+  accessibility: "site-footer-accessibility",
   patchNotes: "site-footer-patch-notes",
   almanac: "site-footer-almanac",
   contact: "site-footer-contact",
@@ -29,6 +31,16 @@ export function SiteFooter(): ReactElement {
       <nav className="site-footer__links" aria-label="About JackiOh">
         <a href={paths.privacy} data-testid={siteFooterTestid.privacy} onClick={followInApp(paths.privacy)}>
           Privacy
+        </a>
+        <a href={paths.terms} data-testid={siteFooterTestid.terms} onClick={followInApp(paths.terms)}>
+          Terms
+        </a>
+        <a
+          href={paths.accessibility}
+          data-testid={siteFooterTestid.accessibility}
+          onClick={followInApp(paths.accessibility)}
+        >
+          Accessibility
         </a>
         <a href={paths.patchNotes} data-testid={siteFooterTestid.patchNotes} onClick={followInApp(paths.patchNotes)}>
           Patch notes
