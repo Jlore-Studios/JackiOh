@@ -941,17 +941,22 @@
       "stopped_by": "squishy-squooby"
     },
     "68": {
-      "asks": [
-        "c:5964126592"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-10-03T01:30:58Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "37138371404",
+      "started_at": "2026-10-03T16:51:43Z",
+      "stop_requested": false,
+      "taken_asks": [
+        "c:5964126592"
+      ]
     },
     "75": {
       "asks": [],
@@ -1057,9 +1062,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T16:51:04Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138332276",
-    "what": "plan #125 on muse"
+    "at": "2026-10-03T16:51:43Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138371404",
+    "what": "plan #68 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-03T16:44:39Z",
