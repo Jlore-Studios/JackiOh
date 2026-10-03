@@ -232,6 +232,12 @@ class GitHub:
         payload = {"title": redact(title)[:250], "body": with_marker(body), "labels": list(labels)}
         return self.request("POST", f"{self._r}/issues", payload)
 
+    def set_issue_body(self, number: int, body: str) -> dict[str, Any]:
+        """Replace an issue's description as it is: no redaction of a person's text and no bot
+        marker, which would make the whole description read as the bot's (the plan section,
+        `issueplan.py`, is redacted before it gets here)."""
+        return self.request("PATCH", f"{self._r}/issues/{int(number)}", {"body": str(body)})
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         if "body" in fields:
             fields["body"] = with_marker(fields["body"])
@@ -259,6 +265,16 @@ class GitHub:
 
     def list_labels(self) -> list[dict]:
         return self.paginate(f"{self._r}/labels")
+
+    def list_issue_types(self) -> list[dict]:
+        """The owning organisation's issue types (none for a user's repository)."""
+        owner = self.repo.split("/", 1)[0]
+        try:
+            return list(self.request("GET", f"/orgs/{owner}/issue-types") or [])
+        except GitHubError as exc:
+            if exc.status in (403, 404):
+                return []
+            raise
 
     def ensure_label(self, name: str, color: str, description: str) -> bool:
         """Create the label unless it exists. True when it was created."""
@@ -349,6 +365,13 @@ class GitHub:
         self.graphql(
             "mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id})"
             " { clientMutationId } }",
+            {"id": node_id},
+        )
+
+    def pin_issue(self, node_id: str) -> None:
+        """Pin an issue to the top of the issue list (at most three are pinned)."""
+        self.graphql(
+            "mutation($id: ID!) { pinIssue(input: {issueId: $id}) { issue { number } } }",
             {"id": node_id},
         )
 

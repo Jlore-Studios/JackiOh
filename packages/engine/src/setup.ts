@@ -4,7 +4,7 @@
 // Cast on draw cards sit out the deal (R635): the opening draw and the mulligan's replacements never
 // take one, so nothing is cast before turn 1, and once both mulligans are resolved they are shuffled
 // into their owner's library (`shuffleInSetAside`). A Quickdraw card replaces an opening draw, so a
-// seat is dealt at most as many as it has draws (R636).
+// seat is dealt at most as many as it has draws (R640).
 //
 // The mulligan is concurrent (R265): once the opening deal is done both seats' prompts open at
 // once, either seat may answer first, and an answer is sealed — it changes nothing until the other
@@ -164,7 +164,7 @@ function drawableCount(state: GameState, player: PlayerId): number {
 /**
  * §2.1 steps 1 and 2 for each seat from `seat` on, then both mulligans (R265).
  *
- * R225, R636: each Quickdraw card "replaces one of these draws" (§2.1, §6.2) — the last ones — and a
+ * R225, R640: each Quickdraw card "replaces one of these draws" (§2.1, §6.2) — the last ones — and a
  * card cannot replace a draw that does not exist, so a seat is dealt at most as many as its opening
  * hand holds (the first ones in the shuffle's order); the others stay in the library as ordinary
  * cards. The seat draws its other opening cards first, off the top of a library whose dealt Quickdraw
@@ -208,7 +208,7 @@ function dealFrom(sink: EngineSink, seat: number): void {
 }
 
 /**
- * R225, R636: the Quickdraw cards `dealFrom` left at the very bottom of the library, which are the
+ * R225, R640: the Quickdraw cards `dealFrom` left at the very bottom of the library, which are the
  * ones it deals: a run of them from the end, no longer than the opening hand. Read off the library
  * rather than remembered, so the owed `quickdraw` step (R113) names no card and the seat's Quickdraw
  * cards stay out of `state.work`, where the other seat's AI could read them (R185).

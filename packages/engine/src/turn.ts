@@ -45,6 +45,7 @@ import type { EngineSink, HookName } from "./resolve";
 import { scriptOf } from "./scripts";
 import { stateCheck } from "./stateCheck";
 import { recordBoardSnapshot } from "./subsystems/boardHistory";
+import { discardTemporaryCards } from "./temporary";
 import {
   findInstance,
   handicapOf,
@@ -520,6 +521,8 @@ function cleanup(sink: EngineSink, player: PlayerId): void {
   if (side.aiTurn) endHandedOverTurn(sink);
   side.aiTurn = false;
   clearReturnFlags(sink.state);
+  // R637: a Temporary card still in `player`'s hand is discarded now, after every end-of-turn step.
+  discardTemporaryCards(sink, player);
   // §2.2, B3.1 rule 4 (R383): cleanup's last step — `player`'s animated "on your turn" cards go back
   // to their backrow zones, after every end-of-turn step, so their own end-of-turn text ran while they
   // were Units. The move is `animated.ts`'s; its events are answered by the loop after cleanup

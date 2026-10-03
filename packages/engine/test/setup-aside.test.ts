@@ -1,10 +1,10 @@
-// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R636; issue #152).
+// What setup deals and what it sets aside (SPEC §2.1, §2.4, R9, R225, R635, R640; issue #152).
 //
 //  - R635: a card that casts on draw is not dealt by setup. The opening draw and the mulligan's
 //    replacement draws skip it, it stays in its owner's library, and once both mulligans are
 //    resolved it is shuffled in. So nothing is cast before turn 1; and a deck with few cards besides
 //    cast-on-draw ones deals a short hand, an empty one at worst, and never a fatigue draw.
-//  - R636: a Quickdraw card replaces one of the opening draws, so a seat is dealt at most as many as
+//  - R640: a Quickdraw card replaces one of the opening draws, so a seat is dealt at most as many as
 //    its opening hand holds, and the others are ordinary cards in the library.
 //
 // Decks hold a card once (§2.6 L3), so the cards below are fixtures, one def each: `fx-cod-N` casts on
@@ -342,10 +342,10 @@ describe("R635: a deck with few cards besides cast-on-draw ones", () => {
   });
 });
 
-describe("R636: a Quickdraw card replaces one of the opening draws", () => {
+describe("R640: a Quickdraw card replaces one of the opening draws", () => {
   const quickIn = (cards: readonly { defId: string }[]): number => cards.filter((card) => isQd(card.defId)).length;
 
-  it("R636 a seat holding all five Quickdraw cards is dealt only as many as it has draws, p1's three and p2's four", () => {
+  it("R640 a seat holding all five Quickdraw cards is dealt only as many as it has draws, p1's three and p2's four", () => {
     const hands = new Set<string>();
     for (let n = 0; n < 60; n += 1) {
       const { begun } = start(`r636-five-${n}`, [deckOf(5, 0), deckOf(5, 0)]);
@@ -372,7 +372,7 @@ describe("R636: a Quickdraw card replaces one of the opening draws", () => {
     expect(hands.size).toBeGreaterThan(3);
   });
 
-  it("R636 a handicapped seat is dealt up to its larger hand: four for p1 and five for p2 under Medium", () => {
+  it("R640 a handicapped seat is dealt up to its larger hand: four for p1 and five for p2 under Medium", () => {
     const medium = AI_DIFFICULTY.medium;
     const decks: [string[], string[]] = [deckOf(5, 0, medium.deckSize), deckOf(5, 0, medium.deckSize)];
     const { begun } = start("r636-medium", decks, { p1: medium, p2: medium });
@@ -387,7 +387,7 @@ describe("R636: a Quickdraw card replaces one of the opening draws", () => {
     expect(quickIn(p2.library)).toBe(0);
   });
 
-  it("R636 the opening hand is the table's size whether or not the deck holds Quickdraw cards", () => {
+  it("R640 the opening hand is the table's size whether or not the deck holds Quickdraw cards", () => {
     const typesOf = (state: GameState): string[] =>
       viewFor(state, "p1").events.map((event) => `${event.type}${"player" in event ? `:${event.player}` : ""}`);
 
@@ -402,7 +402,7 @@ describe("R636: a Quickdraw card replaces one of the opening draws", () => {
     }
   });
 
-  it("R636 a deck of nothing but Quickdraw cards deals the hand and burns nothing", () => {
+  it("R640 a deck of nothing but Quickdraw cards deals the hand and burns nothing", () => {
     const { begun } = start("r636-all", [deckOf(DECK_SIZE, 0), OTHER()]);
     const side = begun.state.players.p1;
     expect(side.hand).toHaveLength(OPENING_DRAW[0] as number);
@@ -411,7 +411,7 @@ describe("R636: a Quickdraw card replaces one of the opening draws", () => {
     expect(count(begun.events, "burned")).toBe(0);
   });
 
-  it("R636 the Quickdraw cards that were not dealt are ordinary cards: a mulligan's replacements can draw them", () => {
+  it("R640 the Quickdraw cards that were not dealt are ordinary cards: a mulligan's replacements can draw them", () => {
     let drawnSurplus = 0;
     for (let n = 0; n < 60; n += 1) {
       const { begun } = start(`r636-surplus-${n}`, [deckOf(5, 0), OTHER()]);
@@ -428,7 +428,7 @@ describe("R636: a Quickdraw card replaces one of the opening draws", () => {
     expect(drawnSurplus).toBeGreaterThan(0);
   });
 
-  it("R636 Quickdraw and cast-on-draw cards together: the hand is the Quickdraw cards, never short of a draw's worth of fatigue", () => {
+  it("R640 Quickdraw and cast-on-draw cards together: the hand is the Quickdraw cards, never short of a draw's worth of fatigue", () => {
     // Two Quickdraw cards, eighteen that cast on draw, and three draws: the two, and no third card.
     const { begun } = start("r636-mixed", [deckOf(2, 18), OTHER()]);
     const side = begun.state.players.p1;

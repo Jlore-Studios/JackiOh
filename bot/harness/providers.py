@@ -160,11 +160,36 @@ class Provider:
     #: It builds, fixes and revises only after every other subscription that may (claude-2, kept
     #: for planning and review); it plans and reviews in its `priority` place.
     build_last: bool = False
+    #: It builds and revises easy items ahead of every other subscription while it has a free lane
+    #: (Devin: it may build nothing harder, so the stronger models are kept for what only they can).
+    easy_first: bool = False
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()
+    #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
+    #: under these, and a run that goes past them there stops. No entry: it works in its hours only.
+    off_hours: Mapping[str, float] = field(default_factory=dict)
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
+
+    def hours(self, zone_name: str) -> str:
+        """Its hours, and how far it may go outside them."""
+        text = self.schedule.describe(zone_name)
+        if self.off_hours and self.schedule.mode == "window":
+            caps = " and ".join(f"{share:.0%} of {WINDOW_NAMES[window]}"
+                                for window, share in self.off_hours.items())
+            text += f", outside them up to {caps}"
+        return text
+
+    def caps_at(self, at: datetime, zone_name: str | None) -> dict[str, float]:
+        """The usage caps that hold at `at`: its own, and outside its window the tighter of
+        those and its `off_hours` ones."""
+        caps = dict(self.limits.stops)
+        if (self.off_hours and zone_name is not None
+                and not self.schedule.is_open(zone_name, at)):
+            for window, share in self.off_hours.items():
+                caps[window] = min(caps.get(window, 1.0), share)
+        return caps
 
 
 @dataclass(frozen=True)
@@ -217,6 +242,9 @@ class Pool:
     #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
     #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
+    #: How many planning runs may go at once on top of `max_parallel` (the planning lane): a
+    #: strong model plans the Needs plan stage there while the build lanes are full.
+    plan_lanes: int = 0
     #: Each tier's models, in the order the router tries them.
     tiers: Mapping[str, tuple[TierEntry, ...]] = field(default_factory=dict)
 
@@ -320,7 +348,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last"}
+                  "lanes", "build_last", "easy_first", "off_hours"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -438,6 +466,8 @@ def _provider(name: str, raw: Any) -> Provider:
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
+        easy_first=bool(raw.get("easy_first", False)),
+        off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )
@@ -474,7 +504,11 @@ def parse(raw: Any) -> Pool:
     machine = int(raw.get("machine_parallel", lanes))
     if not 0 <= machine <= lanes:
         raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
-    pool = Pool(lanes, priority, providers, machine_parallel=machine, tiers=tiers)
+    plan_lanes = int(raw.get("plan_lanes", 0))
+    if plan_lanes < 0:
+        raise ConfigError(f"{PROVIDERS_PATH}: plan_lanes must be 0 or more")
+    pool = Pool(lanes, priority, providers, machine_parallel=machine, plan_lanes=plan_lanes,
+                tiers=tiers)
     # Every model a provider runs has its place in its own tier's order, so the router always
     # knows which to try first, and a model never has two tiers.
     for provider in providers.values():
@@ -560,14 +594,18 @@ def _duration(text: str) -> timedelta:
     return timedelta(hours=amount) if text.upper().endswith("H") else timedelta(minutes=amount)
 
 
-def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime) -> str | None:
-    """Why this provider's usage says to start nothing now, or None."""
+def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
+            zone_name: str | None = None) -> str | None:
+    """Why this provider's usage says to start nothing now, or None. With the bot's time zone,
+    outside its window its `off_hours` caps hold too."""
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         return f"it refused a call; its limit resets at {iso(until)}"
     usage = entry.get("usage") or {}
     observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
-    for window, stop in provider.limits.stops.items():
+    caps = provider.caps_at(at, zone_name)
+    outside = caps != dict(provider.limits.stops)
+    for window, stop in caps.items():
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
@@ -578,8 +616,9 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime) -> str |
             continue  # that window has reset since the reading, or cannot be dated
         utilization = reading.get("utilization")
         if isinstance(utilization, (int, float)) and utilization >= stop:
+            where = " outside its hours" if outside else ""
             return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, at or over its "
-                    f"{stop:.0%} cap; it resets at {iso(resets)}")
+                    f"{stop:.0%} cap{where}; it resets at {iso(resets)}")
     for window, budget in provider.limits.budgets.items():
         used = minutes_spent(entry, at - WINDOWS[window])
         if used >= budget:
@@ -616,6 +655,17 @@ class Secrets:
         return False if self.known else None
 
 
+def _off_hours(raw: Any, where: str) -> dict[str, float]:
+    if raw in (None, {}):
+        return {}
+    if not isinstance(raw, Mapping):
+        raise ConfigError(f"{where}: expected an object such as {{\"five_hour\": 0.4}}")
+    unknown = sorted(set(raw) - set(WINDOWS))
+    if unknown:
+        raise ConfigError(f"{where}: unknown windows {', '.join(unknown)}")
+    return {str(window): _fraction(share, f"{where}.{window}") for window, share in raw.items()}
+
+
 def _lanes(raw: Any, where: str) -> int:
     try:
         lanes = int(raw)
@@ -649,7 +699,7 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
         return f"switched off from {provider.off_from} (`off_from` in providers.json)"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
-    if not forced and not provider.schedule.is_open(zone_name, at):
+    if not forced and not provider.off_hours and not provider.schedule.is_open(zone_name, at):
         window = provider.schedule.window(zone_name)
         opens = window.next_open(at) if window else at
         return f"outside its hours ({provider.schedule.describe(zone_name)}; opens in {human_delta(opens - at)})"
@@ -659,7 +709,7 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     if not forced and failed is not None and at - failed < INFRA_BACKOFF:
         return (f"its last run could not work ({str(infra.get('reason') or '')[:120]}); it is "
                 f"left alone until {iso(failed + INFRA_BACKOFF)}")
-    return refusal(provider, entry, at)
+    return refusal(provider, entry, at, zone_name)
 
 
 def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,

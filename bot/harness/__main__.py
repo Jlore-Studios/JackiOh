@@ -18,6 +18,7 @@ from typing import Any
 
 from harness import config as config_mod
 from harness import context as context_mod
+from harness import dashboard as dashboard_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import logins as logins_mod
@@ -166,7 +167,7 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
-                                        ctx.now())
+                                        ctx.now(), ctx.cfg.timezone)
         if refusal:
             return (f"`{provider.id}` stops: {refusal}", "usage")
         return None
@@ -263,6 +264,30 @@ def cmd_status(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
+    """The pinned status issue: once, or every `--every` seconds for `--for` seconds (the
+    `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
+    for GitHub's late schedules to start its next run when its chain of runs breaks. A failure is
+    only a warning: it never fails the sweep or the loop."""
+    every = max(0, int(getattr(args, "every", 0) or 0))
+    deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
+    while True:
+        if getattr(args, "sweep", False):
+            try:
+                for line in sweep_mod.sweep(_ctx(cfg)) or ["nothing was left unanswered"]:
+                    print(redact(f"sweep: {line}"), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the sweep failed: {exc}"), flush=True)
+        try:
+            note = dashboard_mod.update(_ctx(cfg))
+            print(redact(f"dashboard: {note}"), flush=True)
+        except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+            print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        if not every or time.monotonic() + every > deadline:
+            return 0
+        time.sleep(every)
+
+
 def cmd_halt(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
     reason = " ".join(args.reason) or "halted from the command line"
@@ -304,7 +329,7 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         seats = ", ".join(f"{seat.model} {seat.tier}" + (" self-check" if seat.self_check else "")
                           for seat in cfg.pool.seats(provider))
         print(f"{provider.id:10} {provider.cli:7} {seats:36} "
-              f"hours: {provider.schedule.describe(cfg.timezone):34} limits: {caps:28} "
+              f"hours: {provider.hours(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
     print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
     # A tier's entries name models; whether one checks itself is its subscription's seat's.
@@ -388,7 +413,7 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
             warnings.append(f"halted: {state.get('halt')}")
         for provider in cfg.pool.ordered():
             refusal = providers_mod.refusal(provider, providers_mod.peek_record(
-                state, provider.id), ctx.now())
+                state, provider.id), ctx.now(), cfg.timezone)
             if refusal:
                 warnings.append(f"{provider.id}: {refusal}")
         if ctx.repo_halted():
@@ -438,7 +463,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             ctx = _ctx(cfg, write=False)
             thread = ctx.gh.get_issue(number)
             text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
-                                     triage_mod.conventions_text(cfg.root))
+                                     triage_mod.conventions_text(cfg.root),
+                                     triage_mod.issue_types(ctx.gh))
             answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
             verdict = triage_mod.parse(answer)
         except Exception as exc:  # noqa: BLE001 - any failure skips
@@ -461,7 +487,7 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
         thread = ctx.gh.get_issue(number)
         repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
         plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
-                                 repo_labels, cfg.bot_login)
+                                 repo_labels, cfg.bot_login, triage_mod.issue_types(ctx.gh))
         done = triage_mod.apply(ctx.gh, number, plan)
     except GitHubError as exc:
         print(redact(f"triage: could not triage #{number}: {exc}"))
@@ -513,6 +539,14 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--payload", default="")
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
+    dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
+                               "runs it every ten minutes; each sweep runs it once)")
+    dashboard.add_argument("--every", type=int, default=0,
+                           help="seconds between rewrites; 0 rewrites it once")
+    dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
+                           help="how long to keep rewriting it, in seconds")
+    dashboard.add_argument("--sweep", action="store_true",
+                           help="sweep before each rewrite, as the ten-minute sweep does")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -548,6 +582,7 @@ COMMANDS = {
     "event": cmd_event,
     "sweep": cmd_sweep,
     "status": cmd_status,
+    "dashboard": cmd_dashboard,
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,

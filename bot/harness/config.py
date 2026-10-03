@@ -64,6 +64,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
     "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
+    "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
     "human": ("ededed", "A human will do this. Night bot skips it."),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
@@ -82,6 +83,9 @@ LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
 LABEL_CROSS = "bot:cross-review"
+#: The Needs plan stage: a queued item (still `bot:build`) waiting for a strong model's plan, which
+#: goes into its description (`issueplan.py`). Not a state label: it sits beside `bot:build`.
+LABEL_NEEDS_PLAN = "bot:needs-plan"
 #: No model takes a thread labelled `human` (#96).
 LABEL_HUMAN = "human"
 #: An item's difficulty decides which models may plan, build and review it; no label counts as
@@ -103,6 +107,9 @@ class Gate:
     name: str
     run: str
     timeout_minutes: int
+    #: Runs in a model job on the bot's machine too. `false` leaves it to CI on the pull request
+    #: there: the machine's two vCPUs are shared by every job on it, GitHub's runners are not.
+    machine: bool = True
 
 
 @dataclass(frozen=True)
@@ -231,7 +238,8 @@ def _gate(raw: Any, where: str) -> Gate:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{where}: expected an object")
     try:
-        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]))
+        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]),
+                    machine=bool(raw.get("machine", True)))
     except (KeyError, TypeError, ValueError) as exc:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
 

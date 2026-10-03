@@ -772,6 +772,8 @@ function PracticeScreen({
       onAction={onAction}
       error={snapshot.error}
       resultForm="chip"
+      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not.
+      trackStats={config.lesson === undefined}
       {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
     />
   );
