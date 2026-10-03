@@ -118,11 +118,17 @@ class Lanes:
                          for n, p in sorted(self.held.items())) or "none"
 
 
+def working_threads(ctx: Context) -> list[dict[str, Any]]:
+    """Every thread labelled `bot:working`, closed ones too: a run goes on after someone closes
+    its issue, and holds its lane until it ends (deliver then drops its work)."""
+    return ctx.gh.list_issues(labels=LABEL_WORKING, state="all")
+
+
 def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     """The lanes held by runs that are still going. A run that ended without delivering holds
     nothing: housekeeping requeues its item."""
     lanes = Lanes(ctx.cfg.pool.max_parallel)
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         if run_alive(ctx, record.get("run_id")):
@@ -328,9 +334,37 @@ def run_request(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
     return asked
 
 
+def announce_switched_off(ctx: Context, state: dict[str, Any]) -> list[str]:
+    """On the day a subscription's `off_from` comes, open one issue asking a person what it
+    should do now (the bot cannot change `.harness/`), and remember that it did."""
+    notes: list[str] = []
+    cfg = ctx.cfg
+    for provider in cfg.pool.ordered():
+        if not provider.enabled or not providers_mod.switched_off_by_date(
+                provider, ctx.now(), cfg.timezone):
+            continue
+        if providers_mod.peek_record(state, provider.id).get("off_announced"):
+            continue
+        reason = f"\n\n{provider.off_reason}" if provider.off_reason else ""
+        issue = ctx.gh.create_issue(
+            f"Night bot: `{provider.id}` is switched off from {provider.off_from}; decide what it "
+            "should do now",
+            f"`.harness/providers.json` gives `{provider.id}` ({provider.cli}, `{provider.model}`) "
+            f"`off_from: {provider.off_from}`, so from that day the night bot starts no new work "
+            f"on it.{reason}\n\nTo decide, in a pull request a person makes (the bot cannot "
+            "change `.harness/`):\n- keep it off: remove its entry, or set `\"enabled\": false`;"
+            "\n- point it at another model, or give it caps under `limits`;\n- or move `off_from` "
+            "later.", labels=["night bot"])
+        number = int(issue.get("number") or 0)
+        ctx.store.update(lambda s, p=provider.id, n=number: providers_mod.record(s, p).update(
+            off_announced=n), f"{provider.id} switched off")
+        notes.append(f"`{provider.id}` is switched off from {provider.off_from}: opened #{number}")
+    return notes
+
+
 def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
     """What `housekeeping` would requeue, read without changing anything, or None."""
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         run_id = state["items"].get(str(thread["number"]), {}).get("run_id")
         if run_status(ctx, run_id) == "dead":
             return f"#{thread['number']} was left working by a run that ended"
@@ -365,7 +399,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     stop = stops(ctx, state, force)
     if stop:
         return nothing(stop)
-    notes = housekeeping(ctx, state)
+    notes = housekeeping(ctx, state) + announce_switched_off(ctx, state)
 
     def taken(planned: dict[str, Any]) -> dict[str, Any]:
         # A `/harness run` is taken up by the run that claims something for it, never by one
@@ -425,13 +459,17 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Requeue items a dead run left working; queue a revision for conflicted bot PRs."""
     notes: list[str] = []
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         run_id = str(record.get("run_id") or "")
         if run_id and run_id == ctx.cfg.run_id:
             continue
         if run_status(ctx, run_id) != "dead":
+            continue
+        if thread.get("state") != "open":  # closed meanwhile: nothing to requeue
+            set_state_label(ctx, number, label_names(thread), None)
+            notes.append(f"#{number} was closed; its dead run's label is gone")
             continue
         if record.get("kind") == "review":
             wanted = LABEL_CROSS

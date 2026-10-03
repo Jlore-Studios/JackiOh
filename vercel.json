@@ -4,7 +4,7 @@
   "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|patch-notes|almanac){/}?", "destination": "/index.html" },
+    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|terms|accessibility|patch-notes|almanac){/}?", "destination": "/index.html" },
     { "source": "/(match|series)/([^/]+){/}?", "destination": "/index.html" }
   ],
   "headers": [
@@ -12,7 +12,7 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "Content-Security-Policy-Report-Only",
+          "key": "Content-Security-Policy",
           "value": "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://jackioh-server.onrender.com wss://jackioh-server.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         },
         { "key": "X-Frame-Options", "value": "DENY" },

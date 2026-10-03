@@ -4,7 +4,8 @@
 // is scrubbed and handed to `/login`.
 //
 // Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
-// mounts itself outside vitest), a session in localStorage and a stubbed `fetch`.
+// mounts itself outside vitest), a session and a stubbed `fetch`. A session is seeded in
+// `localStorage` under the key an older build used (R632 moves it into the tab on the first read).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +23,7 @@ import { inviteTestid, landingTestid, loginTestid, shellTestid } from "../auth/t
 import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { RETURN_TO_STORAGE_KEY, rememberReturnTo, takeReturnTo } from "../net/return-to.ts";
-import { SESSION_STORAGE_KEY } from "../net/session.ts";
+import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
 import { accountTestid } from "./account.tsx";
 
 const { App } = await import("../main.tsx");
@@ -137,7 +138,8 @@ describe("B40 one gate per screen", () => {
   });
 
   it("B40 after a sign-out in another tab, the next move to a gated screen is gated again", async () => {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+    // The fixtures' session is the one `localStorage` key the tabs still share (R632).
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
     stubFetch((url) => {
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
       return "hang";
@@ -148,7 +150,6 @@ describe("B40 one gate per screen", () => {
       expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     }, SLOW);
 
-    // localStorage is shared between tabs: the other tab's sign-out cleared it here too.
     window.localStorage.clear();
     window.history.pushState(null, "", paths.account);
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -159,7 +160,7 @@ describe("B40 one gate per screen", () => {
   });
 
   it("B40 a sign-out in another tab sends a screen that is already open to sign-in", async () => {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
     stubFetch((url) => (url === `${API}/api/auth/me` ? json(200, me("active")) : "hang"));
     at(paths.decks);
     render(<App />);
@@ -167,13 +168,36 @@ describe("B40 one gate per screen", () => {
       expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     }, SLOW);
 
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.localStorage.removeItem(E2E_SESSION_STORAGE_KEY);
     // What the browser fires in THIS tab when another one changes the shared storage.
-    window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY, newValue: null }));
+    window.dispatchEvent(new StorageEvent("storage", { key: E2E_SESSION_STORAGE_KEY, newValue: null }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.login);
     }, SLOW);
+  });
+
+  it("R632 a sign-out in another tab leaves this tab signed in, because its session is its own", async () => {
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+    stubFetch((url) => (url === `${API}/api/auth/me` ? json(200, me("active")) : "hang"));
+    at(paths.decks);
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
+    }, SLOW);
+
+    // The other tab signs out: it clears the shared storage, and this tab hears the storage event.
+    window.localStorage.clear();
+    window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY, newValue: null }));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    window.history.pushState(null, "", paths.account);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(window.location.pathname).toBe(paths.account);
+    expect(JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "null")).toEqual({
+      accessToken: "tok",
+    });
   });
 });
 
@@ -481,10 +505,10 @@ describe("the code screen when the device moves to another account", () => {
     return `${part({ alg: "HS256" })}.${part({ sub })}.sig`;
   }
 
-  it("after another tab signs B in over A, /invite starts again for B: none of A's rate limit, refusal or code", async () => {
+  it("after the device signs B in over A, /invite starts again for B: none of A's rate limit, refusal or code", async () => {
     const a = tokenFor("user-a");
     const b = tokenFor("user-b");
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: a }));
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: a }));
     vi.stubGlobal(
       "fetch",
       vi.fn((input: unknown, init?: RequestInit) => {
@@ -515,9 +539,9 @@ describe("the code screen when the device moves to another account", () => {
     fireEvent.click(screen.getByTestId(inviteTestid.submit));
     await screen.findByTestId(inviteTestid.rateLimited);
 
-    // Another tab signs B in over A: one storage event here.
+    // B is signed in over A: one storage event here.
     await act(async () => {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: b }));
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: b }));
       window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY }));
     });
     await waitFor(() => {

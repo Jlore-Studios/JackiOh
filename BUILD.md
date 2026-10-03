@@ -632,7 +632,7 @@ Acceptance:
 - `loc` equals the generator's count for every script file (a test re-runs the generator and diffs), and a fused card's is its ingredients' sum (§5).
 
 **M9-T2 Patch history.** Files: `cards/patches/`, `cards/scripts/patch.ts`, `cards/src/catalog-data.ts`, `apps/server/src/{env,config}.ts`, `apps/server/src/api/catalog.ts`, `render.yaml`, the `.env.example`s, a migration.
-`patches.json` and one snapshot per patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0); `pnpm --filter @jackioh/cards patch <version> "<title>"`; `CATALOG_VERSION` the latest patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388); `GET /api/catalog/:version`.
+`patches.json` and one snapshot per patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0); `pnpm --filter @jackioh/cards run patch <version> "<title>"`; `CATALOG_VERSION` the latest patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388); `GET /api/catalog/:version`.
 Acceptance:
 - A test holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version; `patches.json` lists every snapshot in order and nothing orders versions by comparing strings (R105).
 - The server serves each version's snapshot and refuses an unknown one; a stale version is refused at save and queue as before.

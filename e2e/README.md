@@ -156,7 +156,8 @@ for contract reasons rather than rules reasons.
 6. **The session key.** The client reads its access token from
    `localStorage["jackioh.e2e.session"] = { accessToken }` at boot, because spec 05 reloads
    mid-match and the session has to survive it. Already true:
-   `apps/web/src/net/session.ts` reads that key alongside the one a real sign-in writes.
+   `apps/web/src/net/session.ts` reads that key alongside the one a real sign-in writes (in the tab's
+   `sessionStorage`, R632).
    `cy.signIn` / `cy.visitAs` write it, and `support/config.ts` is the only place it is spelled.
 7. **The socket path.** `ws://<host>/ws/match` — `WS_PATH` in
    `apps/server/src/match/wsServer.ts`. A handshake off that path is never upgraded, so this is

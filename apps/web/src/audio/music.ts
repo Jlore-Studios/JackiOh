@@ -14,8 +14,8 @@
 // tracks pick up within a match where they left off, on a bar line.
 //
 // The opponent's turn is a mix, not a track: a low-pass and a little less level, ramped. Losing
-// focus (the page hidden, or the window blurred) fades the music out while `pauseMusicOnBlur` is
-// on. Muted, or with the music at zero, nothing new loads or starts; the music picks up the moment
+// focus (the page hidden, or the window blurred) fades the music out unless the player turned on
+// `playMusicInBackground`. Muted, or with the music at zero, nothing new loads or starts; the music picks up the moment
 // it can be heard again.
 //
 // Like the engine, nothing is scheduled on a context that is not running, and the player never
@@ -235,7 +235,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   }
 
   function focusTarget(): number {
-    if (!settings().pauseMusicOnBlur || focusPort === null) return 1;
+    if (settings().playMusicInBackground || focusPort === null) return 1;
     return focusPort.focused() ? 1 : 0;
   }
 

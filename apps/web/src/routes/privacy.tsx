@@ -29,7 +29,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-01";
+export const PRIVACY_LAST_UPDATED = "2026-10-03";
 
 export default function PrivacyRoute(): ReactElement {
   return (
@@ -135,7 +135,6 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-device">What stays on your device</h3>
           <p>JackiOh sets no cookies. It keeps these in your browser&rsquo;s own storage, and only to work:</p>
           <ul>
-            <li>Your sign-in session, so you stay signed in.</li>
             <li>
               The email address of a sign-up or password reset you are waiting on, and a one-time key that
               lets the emailed link sign in on this browser.
@@ -143,11 +142,14 @@ export default function PrivacyRoute(): ReactElement {
             <li>Your settings, such as sound and reduced motion.</li>
             <li>Your tutorial progress.</li>
             <li>
-              For the open tab only: the page to return to after you sign in, and a password-reset link you
-              opened.
+              For the open tab only, and gone when you close it: your sign-in session, the page to return to
+              after you sign in, and a password-reset link you opened.
             </li>
           </ul>
-          <p>Signing out removes your session from this browser.</p>
+          <p>
+            Your sign-in session stays in the tab you signed in on. You sign in again in a new tab, or after
+            you close the browser. Signing out removes your session from this browser.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-keep">

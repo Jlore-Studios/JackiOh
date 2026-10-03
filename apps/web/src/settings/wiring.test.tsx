@@ -109,6 +109,8 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
     render(<SettingsPanel onClose={noop} />);
     const visuals = screen.getByTestId("settings-section-visuals");
     const audio = screen.getByTestId("settings-section-audio");
+    // One tab shows at a time (issue #128); the Visuals tab is where these controls are named.
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
 
     for (const id of ["setting-fxSpeed", "setting-fxIntensity", "setting-animatedFoil"]) {
       const control = screen.getByTestId(id);
@@ -118,14 +120,17 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
         `${id} follows the built-in switch`,
       ).toBeTruthy();
     }
-    const controls = within(audio).getByTestId("audio-controls");
-    for (const id of ["audio-master", "audio-sfx", "audio-voice", "audio-mute", "audio-voice-on"]) {
-      expect(controls.contains(screen.getByTestId(id)), id).toBe(true);
-    }
     // Every control has an accessible name, including the task-owned ones.
     expect(screen.getByRole("slider", { name: "Effects speed" })).toBe(slider("setting-fxSpeed"));
     expect(screen.getByRole("combobox", { name: "Effects intensity" })).toBe(select("setting-fxIntensity"));
     expect(screen.getByRole("switch", { name: "Animated foil" })).toBe(toggle("setting-animatedFoil"));
+
+    fireEvent.click(screen.getByTestId("settings-tab-audio"));
+    const controls = within(audio).getByTestId("audio-controls");
+    for (const id of ["audio-master", "audio-sfx", "audio-voice", "audio-mute", "audio-voice-on"]) {
+      expect(controls.contains(screen.getByTestId(id)), id).toBe(true);
+    }
+    expect(screen.getByRole("slider", { name: "Master volume" })).toBe(screen.getByTestId("audio-master"));
   });
 
   it("R435 the speed slider runs from 0.25x to 3x by its step, and shows the stored speed and its readout", () => {

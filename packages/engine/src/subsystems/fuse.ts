@@ -626,6 +626,15 @@ function combineValues(values: readonly unknown[], key = "", parent = ""): unkno
   if (SUMMED_FLAGS.includes(key) && defined.every((value) => typeof value === "number" || typeof value === "boolean")) {
     return defined.reduce<number>((sum, value) => sum + (value === true ? 1 : typeof value === "number" ? value : 0), 0);
   }
+  // R102: the table of steps is combined even when one ingredient holds it, so every step of it is
+  // wrapped at this fusion's level and a part path (`work.PART_KEY`) counts each level of a nesting,
+  // as `param` walks it.
+  if (key === RESUME_KEY && defined.every((value) => isPlainObject(value))) {
+    return combineObjects(
+      values.map((value) => (isPlainObject(value) ? value : undefined)),
+      key,
+    );
+  }
   if (defined.length === 1) return defined[0];
   if (defined.every((value) => Array.isArray(value))) return (defined as unknown[][]).flat();
   if (defined.every((value) => typeof value === "boolean")) return defined.some((value) => value === true);

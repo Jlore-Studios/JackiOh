@@ -9,9 +9,9 @@ subscription in [`.harness/providers.json`](../../.harness/providers.json) whose
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 30 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
-| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-muse`): a home only it can read, no `sudo`, no Docker |
+| Users | `agent-<id>` per subscription (`agent-claude-1` … `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner`, registered as `night-vm-<id>` with that one label, a systemd service under that user |
-| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
 
@@ -58,6 +58,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    sudo -iu agent-gpt codex login --device-auth   # Sign in with ChatGPT
    sudo -iu agent-agy agy                         # sign in with Google, then quit
    sudo -iu agent-muse muse login
+   sudo -iu agent-devin devin auth login --force-manual-token-flow   # paste the page's token
    ```
 4. **Register the runners**, from the repository's root:
 
@@ -79,9 +80,11 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   login, and run `register-runners.sh`.
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
-- **Disk:** each job's files and the user's package store are deleted when the job ends
+- **Disk:** each job's files, the user's package store, Cypress's binary and what the job left in
+  `/tmp` are deleted when the job ends
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
-  logins stay.
+  logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
+  at all, since the bot's checks never run e2e.
 - **How many at once:** three (`max_parallel`) is as many as this machine holds. Measured on
   2026-10-02 with three jobs running (a Claude build in typecheck and the web tests, Muse and
   agy): load average 14 on 2 vCPUs, 6.1 of 7.8 GB in use and 1.5 GB swapped, about 4 GB for the
