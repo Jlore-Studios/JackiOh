@@ -136,6 +136,11 @@ src/
     groups.ts accountSync.ts AccountSettings.tsx   an active account's copy of the settings (R633,
                         R634): the four stores as groups, the sync that takes the newer side of each
                         and sends changes up (GET/PUT /api/settings), and the Account tab's status
+  stats/                the device's player statistics (R639): `track.ts` reads a game's log off the views the
+                        board is handed (only what the viewer was shown), `useGameStats.ts` adds the finished
+                        game to the totals `store.ts` keeps in localStorage (jackioh.stats.v1, in try/catch),
+                        `PlayerStatsCard.tsx` is "Your table" on the homescreen, and `config.ts` holds the
+                        numbers (the rotation threshold and interval, the card weights)
   routes/dev/hotseat.tsx  the dev hotseat route
   routes/patch-notes.tsx  /patch-notes: every card patch and the cards it touched (patches/PatchNotes.tsx,
                         R388, R507); the site footer (routes/SiteFooter.tsx) links it

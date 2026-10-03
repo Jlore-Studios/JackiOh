@@ -228,11 +228,26 @@ class Candidate:
     priority: int = NO_PRIORITY
     #: For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
     planned: bool = False
+    #: The tier of the model that wrote that plan ("" if none, or if not recorded).
+    plan_tier: str = ""
     #: For a review: the families whose approval the head already has, which may not give it again.
     approved: tuple[str, ...] = ()
     #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
     #: its revision needs a reviewer in the same run.
     bot_pr: bool = False
+
+
+def strong_plan(candidate: Candidate) -> bool:
+    """A strong model wrote its plan. A plan from before planners' tiers were recorded counts:
+    the planner was strong whenever one was free."""
+    return candidate.planned and candidate.plan_tier in ("strong", "")
+
+
+def needs_plan(candidate: Candidate) -> bool:
+    """The Needs plan stage: a build with no plan yet, or an easy one whose plan no strong model
+    wrote (a builder that cannot plan, Devin, builds only from a strong model's plan)."""
+    return candidate.kind == "build" and (
+        not candidate.planned or (candidate.difficulty == "easy" and not strong_plan(candidate)))
 
 
 #: The order of urgency after forced items, the priority tier and the difficulty (`pairs` in
@@ -274,6 +289,7 @@ def candidates(ctx: Context, state: dict[str, Any],
                 difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
                 builder=str(votes.get("builder") or ""),
                 priority=priority_tier(names), planned=bool(record.get("planned_at")),
+                plan_tier=str(record.get("planned_tier") or "") if record.get("planned_at") else "",
                 approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "

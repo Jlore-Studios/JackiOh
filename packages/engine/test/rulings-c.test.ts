@@ -655,7 +655,7 @@ describe("SPEC §11 R91–R96: positions and combat (M3 gate)", () => {
     expect(attackEvents).toEqual([]);
     expect(unit.position).toBe("ATK");
     expect(unit.exertion).toEqual({ attacked: false, switched: false });
-    expect(hasExertion(unit, "switch")).toBe(true);
+    expect(hasExertion(state, unit, "switch")).toBe(true);
 
     // The same on the other face: a real flip spends the exertion and emits, a repeat does neither.
     const flipEvents: GameEvent[] = [];

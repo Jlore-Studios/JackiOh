@@ -242,6 +242,9 @@ class Pool:
     #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
     #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
+    #: How many planning runs may go at once on top of `max_parallel` (the planning lane): a
+    #: strong model plans the Needs plan stage there while the build lanes are full.
+    plan_lanes: int = 0
     #: Each tier's models, in the order the router tries them.
     tiers: Mapping[str, tuple[TierEntry, ...]] = field(default_factory=dict)
 
@@ -501,7 +504,11 @@ def parse(raw: Any) -> Pool:
     machine = int(raw.get("machine_parallel", lanes))
     if not 0 <= machine <= lanes:
         raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
-    pool = Pool(lanes, priority, providers, machine_parallel=machine, tiers=tiers)
+    plan_lanes = int(raw.get("plan_lanes", 0))
+    if plan_lanes < 0:
+        raise ConfigError(f"{PROVIDERS_PATH}: plan_lanes must be 0 or more")
+    pool = Pool(lanes, priority, providers, machine_parallel=machine, plan_lanes=plan_lanes,
+                tiers=tiers)
     # Every model a provider runs has its place in its own tier's order, so the router always
     # knows which to try first, and a model never has two tiers.
     for provider in providers.values():

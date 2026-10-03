@@ -1,7 +1,7 @@
 // C+ #54 Book of Books — SPEC §8.7 row 54, BUILD M9 Classic+ row C+ 54: "Adds 2 random non-token Books
 // of any set, never Book of Books (R387), which cost (0) (`costOverride` 0); repeats allowed; a full
 // hand burns; hidden from the opponent (R97); the count reads through `param()`; radiant the Books are
-// Radiant".
+// Radiant". R637: each Book is Temporary, in both faces, and is discarded at the end of the turn.
 
 import { defOf, query, stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -83,7 +83,23 @@ describe("C+ #54 Book of Books", () => {
       const lost = s.card(burned[0]?.type === "burned" ? burned[0].instanceId : "");
       expect(lost.zone.z).toBe("graveyard");
       expect(lost.costOverride).toBeUndefined();
+      // R637: Temporary is for the card's stay in a hand, so a burned Book carries none.
+      expect(lost.grantedKeywords).toEqual([]);
       expect(added(s)).toHaveLength(1);
+    });
+
+    it("R637 each Book is Temporary: discarded from your hand at the end of your turn, the filler kept", () => {
+      const s = book();
+      s.play(BOOK);
+      const books = added(s).map((event) => s.card(event.instanceId));
+      expect(books).toHaveLength(2);
+      for (const card of books) expect(card.grantedKeywords).toEqual([{ kind: "Temporary" }]);
+      const view = s.view("p1").you.hand;
+      expect(Array.isArray(view) && books.every((card) => view.some((entry) => entry.instanceId === card.id && (entry.keywords ?? []).some((k) => k.kind === "Temporary")))).toBe(true);
+
+      s.endTurn();
+      for (const card of books) expect(s.card(card.id).zone.z).toBe("graveyard");
+      expect(s.hand("p1").map((card) => card.defId)).toEqual([FILLER]);
     });
 
     it("R97 the opponent sees the adds under the sentinel", () => {
@@ -123,6 +139,17 @@ describe("C+ #54 Book of Books", () => {
           expect(card.defId).not.toBe(BOOK);
         }
       }
+    });
+
+    it("R637 the Radiant Books are Temporary too", () => {
+      const s = book({ radiant: true, seed: "rtemporary" });
+      s.play(BOOK);
+      const books = added(s).map((event) => s.card(event.instanceId));
+      expect(books).toHaveLength(2);
+      for (const card of books) expect(card.grantedKeywords).toEqual([{ kind: "Temporary" }]);
+
+      s.endTurn();
+      for (const card of books) expect(s.card(card.id).zone.z).toBe("graveyard");
     });
 
     it("§9.3 the same seed adds the same Books", () => {

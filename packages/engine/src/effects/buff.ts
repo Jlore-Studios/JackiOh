@@ -35,6 +35,7 @@ const POOL_KEYWORDS: Record<(typeof RANDOM_KEYWORD_POOL)[number], Keyword> = {
   Trample: { kind: "Trample" },
   Cleave: { kind: "Cleave" },
   Pierce: { kind: "Pierce" },
+  Windfury: { kind: "Windfury" },
 };
 
 /** R21's pool as keywords, in the pool's order: what a random keyword is drawn from (B3.4's Upgrade too). */
