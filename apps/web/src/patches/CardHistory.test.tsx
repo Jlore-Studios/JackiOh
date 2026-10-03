@@ -163,7 +163,7 @@ describe("R388 the History section over the real history", () => {
     renderDetail(def);
     openHistory();
     const entries = await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW);
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0-r3", "v0.1.0"]);
+    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(entry("v0.1.0").dataset.kind).toBe("added");

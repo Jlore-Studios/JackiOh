@@ -560,8 +560,9 @@ git. Proposal:
    | v0.2.1 | | | Heroic Power as an Activate, with thirteen powers (B3.2 rule 10) |
 
    The designer's balance notes behind v0.1.0-r1 landed first, as `ba45d13` (2026-09-20, merged
-   in PR #2), in the source notes rather than the catalog. The "-rN" labels are proposals:
-   **⚠ designer** may prefer other names for the pre-v0.1.1 changes.
+   in PR #2), in the source notes rather than the catalog. The "-rN" labels were proposals:
+   the designer chose other names for the pre-v0.1.1 changes (issue #85, 2026-10-02): v0.1.0-r1 is now
+   v0.1.0b, v0.1.0-r2 v0.1.0c and v0.1.0-r3 v0.1.0d. The table keeps the names this brief proposed.
 5. **Reading old versions.**
    - The collection's card detail view gets a History section: each patch in which the card changed,
      its faces as they were (drawn from the snapshot), and the words and numbers that changed marked
@@ -3593,7 +3594,7 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 5 | B2.8 | Classic #55 is a second Book of Flame. Its real name and text? | Held back |
 | 6 | B2.8 | Classic #72 shares Counterspell's name. Rename? | "Grand Counterspell" suggested |
 | 7 | B3.4 | Upgrade's list was blank. Mirror of Degrade? | Yes |
-| 8 | B4.2 | Labels for the pre-v0.1.1 history | v0.1.0, v0.1.0-r1 … r3 |
+| 8 | B4.2 | Labels for the pre-v0.1.1 history | v0.1.0, v0.1.0-r1 … r3; renamed v0.1.0b … d by issue #85 |
 | 9 | B4.3 | "Double turn limit": the turn cap (30 → 60) or the turn clock (75 → 150 s)? At 60, two 20-card decks fatigue out at player-turn 48, so the cap is rarely reached | The cap; match ceiling 60 → 120 min |
 | 10 | C #1 | Does the Radiant keep "Draw 1"? | Yes |
 | 11 | C #4 | Is Palantir's base steal optional? | Yes ("Tribute this to …") |
