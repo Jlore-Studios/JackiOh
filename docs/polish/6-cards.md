@@ -33,7 +33,7 @@ The deck builder becomes a grid of full cards with:
 - cost, type, tag, rarity, text and owned filters;
 - six sorts;
 - a Hearthstone-style deck list with a mana curve and a 20/20 count;
-- a detail view with both faces side by side and a keyword glossary.
+- a detail view that pages its two faces and the cards they name one at a time (issue #37), and a keyword glossary.
 
 It is all presentation. No rule moves into the client (CLAUDE.md rule 7). `Card.tsx` keeps every
 `data-testid` and `data-*` attribute that tests, e2e and the animation table read, and the M5-T1
@@ -637,11 +637,12 @@ so the other cards do not re-render.
   `aria-label={name}`. It holds the face, the glossary and `inspect-close`, with an
   `inspect-scrim` backdrop.
 - `CardDetail` is a centred `role="dialog"` holding:
-  - `inspect-face-base` and `inspect-face-radiant`, side by side at every width;
+  - `inspect-face-base` and `inspect-face-radiant`, one at a time in a pager with the cards their
+    text names (issue #37: Marvel Snap's related cards, not side by side);
   - a meta line: `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` when there are any;
   - `.inspect-rules`, the base text and the radiant clause again at reading size, shown on screens
     ≤ 560 px wide and for any card whose printed text is tier `xl` or `xxl` (`data-long`), because
-    two faces side by side on a phone print a long card at about 5 px;
+    a phone prints a long card's face small, and so both faces' words read without paging;
   - the glossary of both faces;
   - the caller's `meta` and `actions`, then `inspect-close`, with an `inspect-scrim` backdrop.
 - Opening any overlay first calls `closeInspect()`. Closing the sheet or the detail restores focus
@@ -1009,7 +1010,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - `writeCardSettings` keeps working in memory when storage throws;
   - `useCardSettings` re-renders on every write.
 - **B29.** `<CardDetail def>` renders `inspect-detail` with `inspect-face-base` and
-  `inspect-face-radiant` side by side, a meta line with `#<index>`, the set, rarity, type and tags,
+  `inspect-face-radiant` one at a time, then each card either face's text names on the face it names
+  it, paged by `inspect-carousel`'s ‹ and ›, the arrow keys or a swipe (issue #37), a meta line with `#<index>`, the set, rarity, type and tags,
   the glossary of both faces, and the caller's `actions` (jsdom). The faces and the info column
   (meta, rules at reading size, glossary) scroll in `.inspect-detail-body`; the actions row with
   Close is pinned under it. On a wide screen up to 900 px tall the info column stands beside the

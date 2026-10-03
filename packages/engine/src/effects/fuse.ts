@@ -414,6 +414,7 @@ export function fuseOntoYourCard(args: {
           hook: FUSE_ONTO_HOOK,
           step: "onto",
           radiant: ctx.radiant,
+          catalogVersion: ctx.self?.catalogVersion ?? ctx.state.catalogVersion,
           ...(ctx.self === null ? {} : { instanceId: ctx.self.id }),
           data: { ingredient: ingredient.id },
         }),

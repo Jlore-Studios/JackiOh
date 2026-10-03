@@ -702,7 +702,7 @@ export const TUTORIAL_VIEW_BOARD = "tutorial-view-board";
 export const INSPECT_HOVER = "inspect-hover";
 /** A14: the touch long-press sheet (`role="dialog"`). */
 export const INSPECT_SHEET = "inspect-sheet";
-/** A14: the deck builder's detail view: both faces side by side and the glossary. */
+/** A14: the deck builder's detail view: its faces one at a time, the glossary. */
 export const INSPECT_DETAIL = "inspect-detail";
 /** A14: the backdrop behind the sheet or the detail; a click on it closes the overlay. */
 export const INSPECT_SCRIM = "inspect-scrim";
@@ -714,15 +714,25 @@ export const INSPECT_FACE = "inspect-face";
 export const INSPECT_FACE_BASE = "inspect-face-base";
 /** A14: the detail view's radiant face. */
 export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
+/** A14: issue #37, the detail view's pager: its faces and the cards they name, one at a time. */
+export const INSPECT_CAROUSEL = "inspect-carousel";
+/** A14: the pager's previous face. */
+export const INSPECT_CAROUSEL_PREVIOUS = "inspect-carousel-previous";
+/** A14: the pager's next face. */
+export const INSPECT_CAROUSEL_NEXT = "inspect-carousel-next";
+/** A14: the pager's place ("2 of 6"). */
+export const INSPECT_CAROUSEL_POSITION = "inspect-carousel-position";
 /** A14: the keyword glossary, one `li[data-glossary-term]` per term. */
 export const INSPECT_GLOSSARY = "inspect-glossary";
 /** A14: a face in play's printed text, beside it in the preview or the sheet where the two differ (SPEC §10.10). */
 export const INSPECT_PRINTED = "inspect-printed";
-/** A14: R279, the hover preview's column of the cards a face's text names. */
+/** A14: R279, the hover preview's panel of the cards a face's text names, one at a time. */
 export const INSPECT_REFS = "inspect-refs";
+/** A14: its place among them ("2 of 3"), when there are several. */
+export const INSPECT_REFS_POSITION = "inspect-refs-position";
 /** A14: R279, the tooltip a reference in a card's text opens (`[data-ref]` names the card). */
 export const CARD_REF_TOOLTIP = "card-ref-tooltip";
-/** A14: R279, one named card's face in the hover preview's references column (`[data-ref]`). */
+/** A14: R279, the named card's face the hover preview's references panel shows (`[data-ref]`). */
 export const INSPECT_REFS_FACE = ".inspect-refs-face";
 /** A14: R277, a stretch of a Radiant face's text its base face does not have (gold, bold, underlined). */
 export const RADIANT_MARK = ".cf-mark";

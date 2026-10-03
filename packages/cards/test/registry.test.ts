@@ -10,9 +10,12 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_SCRIPT,
   catalogVersion,
+  createGame,
+  newInstance,
   registerCatalog,
   registerScripts,
   registeredCatalog,
+  scriptOf,
   scriptsFor,
 } from "@jackioh/engine";
 import {
@@ -75,6 +78,11 @@ const scriptedIds = Object.keys(CARDS);
 const idsWithoutScript = CATALOG_IDS.filter((id) => CARDS[id] === undefined);
 /** Any real card, for the error-path tests. #1 Big D-fender is index 1 (SPEC §8). */
 const SOME_ID = CATALOG_IDS[0] ?? "core-001";
+const HEROIC_POWER_ID = "core-098";
+const HISTORIC_DECK = [
+  HEROIC_POWER_ID,
+  ...CATALOG_IDS.filter((id) => id !== HEROIC_POWER_ID && CATALOG[id]?.token !== true).slice(0, 19),
+];
 
 /** `CARDS[id]` under `noUncheckedIndexedAccess`, for an id the test already knows is present. */
 function moduleFor(id: string): CardModule {
@@ -144,6 +152,31 @@ describe("registry (BUILD M4-T2)", () => {
     registerAll();
     expect(registeredCatalog()).toBe(CATALOG);
     expect(catalogVersion()).toBe(CATALOG_VERSION);
+  });
+
+  it("R388 selects Heroic Power's v0.2.0 script for a match pinned to that catalog", () => {
+    registerAll();
+    const historicGame = createGame({
+      seed: "historic-hero-power",
+      decks: [HISTORIC_DECK, HISTORIC_DECK],
+      catalogVersion: "v0.2.0",
+    });
+    const historic = historicGame.players.p1.library.find((card) => card.defId === HEROIC_POWER_ID);
+    if (historic === undefined) throw new Error("historic deck must contain Heroic Power");
+    historic.memory.power = "draw";
+    const script = scriptOf(historic);
+    expect(script.cost).toBeDefined();
+    expect(script.cry).toBeDefined();
+    expect(historic.catalogVersion).toBe("v0.2.0");
+
+    // A current match starting after the historic one must not change its script selection.
+    const current = newInstance({ nextId: 1, catalogVersion: CATALOG_VERSION }, HEROIC_POWER_ID, "p1", {
+      z: "hand",
+      player: "p1",
+    });
+    current.memory.power = "draw";
+    expect(scriptOf(current).cost).toBeUndefined();
+    expect(scriptOf(current).cry).toBeUndefined();
   });
 
   it("gives the engine each module's own base and radiant script", () => {

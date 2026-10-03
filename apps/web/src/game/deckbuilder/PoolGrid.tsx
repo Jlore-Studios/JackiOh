@@ -10,7 +10,7 @@
 //   - `db-add-<id>`, the "+" that puts the card in the open deck in one tap.
 //
 // A click on the card opens its detail view, as the brief asks ("in the deck builder, a click opens
-// a detail view with both faces side by side and a glossary"), and the detail's "Add to <deck>"
+// a detail view"; since issue #37 it pages the faces one at a time), and the detail's "Add to <deck>"
 // adds it. So does a right-click, or a touch long-press, which is why the inspect trigger here
 // runs with `hover: false` and hands both gestures to `onInspect`. Adding takes one gesture still:
 // the "+", or a drag onto the deck.

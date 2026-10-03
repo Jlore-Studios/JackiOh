@@ -36,6 +36,7 @@ import {
   dropDelayed,
   dueDelayed,
   dueStartOfTurnEffects,
+  expireAtTurnStart,
   expireModifiers,
   type StartOfTurnEffectModifier,
 } from "./modifiers";
@@ -296,6 +297,8 @@ export function startTurn(sink: EngineSink, player: PlayerId): void {
   resetExertion(sink, player);
 
   sink.events.push({ type: "turnStarted", player, turn: state.turn });
+  // R632: "until your next turn" ends as the turn begins (#98's Armor Up).
+  expireAtTurnStart(sink, player);
   const rider = side.mana.nextTurnMod;
   refreshMana(side);
   sink.events.push(manaEvent(player, side));

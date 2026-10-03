@@ -166,8 +166,14 @@ export const DELAYED_DISCARD_HAND_HOOK = "@delayedDiscardHand";
  * A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
  * running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546).
  */
-function makerOf(ctx: EffectContext): { defId: string; radiant: boolean } {
-  return { defId: ctx.defId ?? ctx.self?.defId ?? "", radiant: ctx.radiant };
+function makerOf(ctx: EffectContext): { defId: string; radiant: boolean; catalogVersion?: string } {
+  return {
+    defId: ctx.defId ?? ctx.self?.defId ?? "",
+    radiant: ctx.radiant,
+    ...(ctx.self?.catalogVersion === undefined && ctx.state.catalogVersion === undefined
+      ? {}
+      : { catalogVersion: ctx.self?.catalogVersion ?? ctx.state.catalogVersion }),
+  };
 }
 
 /**

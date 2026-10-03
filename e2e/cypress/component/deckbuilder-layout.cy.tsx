@@ -36,6 +36,8 @@ import {
   DB_SIDEBAR,
   DECK_EDITOR,
   DECK_VERDICT,
+  INSPECT_CAROUSEL_NEXT,
+  INSPECT_CAROUSEL_POSITION,
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
@@ -158,35 +160,47 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // B29 is jsdom-only in CardDetail.test.tsx, which can prove DOM order but not "side by side at
-  // every width". Here the detail opens from a click on the pool card, as on /decks, and the two
-  // faces are measured: one row, base on the left, no overlap, both inside the viewport and drawn.
+  // B29 is jsdom-only in CardDetail.test.tsx, which can prove DOM order but not what is drawn. Here
+  // the detail opens from a click on the pool card, as on /decks, and shows one face at a time
+  // (issue #37): the base face drawn inside the viewport and the Radiant one not drawn, then the
+  // pager's next control draws the Radiant face where the base face stood, and hides the base.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 
-    it(`B29 the detail view shows the base and radiant faces side by side at ${where}`, () => {
+    it(`B29 the detail view pages the base and radiant faces one at a time at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       const first = DECKABLE[0];
       expect(first, "a deckable card to inspect").to.not.eq(undefined);
       if (first === undefined) return;
 
+      const drawn = (doc: Document, testid: string, label: string): DOMRect => {
+        const face = doc.querySelector(ts(testid));
+        expect(face, label).to.not.eq(null);
+        const box = (face as Element).getBoundingClientRect();
+        expect(box.width, `${label} has a size at ${where}`).to.be.greaterThan(0);
+        expect(Math.floor(box.left), `${label} starts inside ${where}`).to.be.at.least(0);
+        expect(Math.ceil(box.right), `${label} ends inside ${where}`).to.be.at.most(viewport.width);
+        return box;
+      };
+      const hidden = (doc: Document, testid: string, label: string): void => {
+        const face = doc.querySelector(ts(testid));
+        expect(face, label).to.not.eq(null);
+        expect((face as Element).getBoundingClientRect().width, `${label} is not drawn at ${where}`).to.eq(0);
+      };
+
       cy.get(ts(poolCardId(first.id))).click();
       cy.get(ts(INSPECT_DETAIL)).should("be.visible");
+      let base: DOMRect | undefined;
       cy.document().should((doc) => {
-        const base = doc.querySelector(ts(INSPECT_FACE_BASE));
-        const radiant = doc.querySelector(ts(INSPECT_FACE_RADIANT));
-        expect(base, "the base face").to.not.eq(null);
-        expect(radiant, "the radiant face").to.not.eq(null);
-        if (base === null || radiant === null) return;
-        const b = base.getBoundingClientRect();
-        const r = radiant.getBoundingClientRect();
-
-        expect(b.width, `the base face has a size at ${where}`).to.be.greaterThan(0);
-        expect(r.width, `the radiant face has a size at ${where}`).to.be.greaterThan(0);
-        expect(Math.abs(b.top - r.top), `both faces start on one row at ${where}`).to.be.at.most(1);
-        expect(b.right, `the base face ends before the radiant one starts at ${where}`).to.be.at.most(r.left + 1);
-        expect(Math.floor(b.left), `the base face starts inside ${where}`).to.be.at.least(0);
-        expect(Math.ceil(r.right), `the radiant face ends inside ${where}`).to.be.at.most(viewport.width);
+        base = drawn(doc, INSPECT_FACE_BASE, "the base face");
+        hidden(doc, INSPECT_FACE_RADIANT, "the radiant face");
+      });
+      cy.get(ts(INSPECT_CAROUSEL_NEXT)).click();
+      cy.get(ts(INSPECT_CAROUSEL_POSITION)).should("contain.text", "2 of ");
+      cy.document().should((doc) => {
+        const radiant = drawn(doc, INSPECT_FACE_RADIANT, "the radiant face");
+        hidden(doc, INSPECT_FACE_BASE, "the base face");
+        expect(Math.abs(radiant.left - (base?.left ?? radiant.left)), `in the base face's place at ${where}`).to.be.at.most(1);
       });
     });
   }

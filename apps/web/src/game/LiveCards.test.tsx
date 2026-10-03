@@ -204,20 +204,35 @@ describe("R243 a hand card shows the stats it has now", () => {
 /* ------------------------------------------------------------------------------- #98 Heroic Power */
 
 describe("R43 a Heroic Power in play prints the one power it rolled", () => {
-  it("in hand: only the rolled power and its X, on the text and on the gem", () => {
+  // Patch v0.2.1: the card costs (0), and its power is its Activate ability, "Activate: Spend (X): …".
+  it("in hand: only the rolled power, as the catalog prints it with its X; the gem is the card's (0)", () => {
     renderBoard(
-      baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-098", cost: 3, power: "recruit" })] }) }),
+      baseView({
+        you: emptySide("p1", {
+          hand: [card({ instanceId: "h1", defId: "core-098", cost: 0, power: "recruit", params: { shot: 2 } })],
+        }),
+      }),
     );
     const root = screen.getByTestId(testid.handCard("h1"));
-    expect(text(root, ".card-text")).toBe("Indestructible\nOnce per turn, spend 3: Recruit a permanent. Playing it activates it once.");
-    expect(text(root, ".card-text")).not.toContain("8 random powers");
-    expect(text(root, ".cost-gem")).toBe("3");
+    expect(text(root, ".cf-text-base")).toBe("Indestructible\nActivate: Spend (3): Expedition Map: Recruit a permanent.");
+    expect(text(root, ".card-text")).not.toContain("13 random powers");
+    expect(text(root, ".card-text")).not.toContain("Playing it");
+    expect(text(root, ".cost-gem")).toBe("0");
   });
 
-  it("on the field: the power the hero's list names for it, with the printed list of eight beside the face", () => {
+  it("on the field: the power the hero's list names for it, with the printed list of thirteen beside the face", () => {
     vi.useFakeTimers();
-    const power: HeroPowerView = { instanceId: "b1", defId: "core-098", name: "ping", x: 1, usedThisTurn: false };
-    const heroic: BackrowView = faceUpBackrow("p1", { instanceId: "b1", defId: "core-098", cost: 1 });
+    const power: HeroPowerView = {
+      instanceId: "b1",
+      defId: "core-098",
+      name: "ping",
+      ability: "ping",
+      radiant: false,
+      x: 1,
+      usedThisTurn: false,
+      params: { shot: 2 },
+    };
+    const heroic: BackrowView = faceUpBackrow("p1", { instanceId: "b1", defId: "core-098", cost: 0, params: { shot: 2 } });
     renderBoard(
       baseView({
         you: emptySide("p1", {
@@ -227,14 +242,44 @@ describe("R43 a Heroic Power in play prints the one power it rolled", () => {
       }),
     );
     const preview = hover(screen.getByTestId(testid.card("b1")));
-    expect(text(preview, ".card-text")).toBe("Indestructible\nOnce per turn, spend 1: Deal 1 damage to a target. Playing it activates it once.");
-    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 8 random powers");
+    expect(text(preview, ".cf-text-base")).toBe("Indestructible\nActivate: Spend (1): Ping: Pierce. Deal 1 damage.");
+    // SPEC §10.10: the inspect overlays hold the printed text beside a face whose text differs.
+    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 13 random powers");
   });
 
-  it("in the collection: the whole list of eight, base and radiant", () => {
+  it("R637 a Radiant Steady Shot prints its Radiant clause with the {shot} the view gives it, never a placeholder", () => {
+    vi.useFakeTimers();
+    const power: HeroPowerView = {
+      instanceId: "b1",
+      defId: "core-098",
+      name: "burn",
+      ability: "burn",
+      radiant: true,
+      x: 1,
+      usedThisTurn: true,
+      params: { shot: 8 },
+    };
+    const heroic: BackrowView = faceUpBackrow("p1", { instanceId: "b1", defId: "core-098", radiant: true, cost: 0, params: { shot: 8 } });
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          hero: { health: 30, armor: 0, powers: [power], power },
+          backrow: [heroic, null, null, null, null],
+        }),
+      }),
+    );
+    const face = screen.getByTestId(testid.card("b1"));
+    const preview = hover(face);
+    expect(text(preview, ".cf-text-base")).toBe(
+      "Indestructible\nActivate: Spend (1): Steady Shot: Deal 8 damage to the enemy hero. Upgrade this permanently by +2 damage.",
+    );
+    expect(preview.textContent).not.toMatch(/\{shot\}/);
+  });
+
+  it("in the collection: the whole list of thirteen, base and radiant", () => {
     render(<CardDetail def={def("core-098")} onClose={() => {}} />);
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Gain one of 8 random powers");
-    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Recruit a permanent and make it Radiant");
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Gain one of 13 random powers");
+    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("(1) Tank Up: Your hero gains 4 Armor. Refresh this power.");
   });
 });
 

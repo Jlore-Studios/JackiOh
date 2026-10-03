@@ -40,7 +40,7 @@ import { instanceOf, playerOf, resolveTarget, type PlayerSpec, type TargetSpec }
 export type StatsOverride = { attack: number; health: number };
 
 export type SummonPlacement = {
-  /** Who controls the summoned card; its owner too when the card is created here (R12). */
+  /** Who controls the summoned card; it becomes this card's current owner on the field (R12). */
   player?: PlayerSpec;
   /** A named lane ("this lane", Reborn's zone); it fails when that zone is occupied or Locked (R47). */
   lane?: number;
@@ -131,7 +131,7 @@ function summonOnto(
   // R43, R151: "one created later rolls when it is created", as it arrives anywhere a card can be
   // looked at, and the field is such a place. A #98 Heroic Power that #22's Death summons as a copy
   // or #95 summons into the backrow reaches neither a hand nor a library, the two arrivals
-  // `draw.ts` rolls on, and would otherwise hold no power and never be offered `activatePower`. The
+  // `draw.ts` rolls on, and would otherwise hold no power and never be offered its Activate. The
   // hook keeps a power the card already rolled (`heroPower.ensurePower`), so a card that arrives
   // with its answer takes no rng draw.
   // §9.3, R113: resumably, so a question in the clause pauses the rest of it (`runStartOfGame`).
@@ -430,8 +430,9 @@ function announceRadiant(ctx: EffectContext, recruited: CardInstance | null, rad
  *
  * B5 E25 extends where and how often: `from: "exile"` scans an exile newest first, and `whose` names
  * whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
- * Radiant) summons the opponent's card on the recruiting side, under its control, its owner unchanged,
- * so it goes back to its owner's piles when it leaves the field (§3.2, R12). `count` is "Recruit N"
+ * Radiant) summons the opponent's card on the recruiting side, under its control, and it becomes that
+ * side's card as it arrives, so it goes to the recruiting side's piles when it leaves the field (R12,
+ * R640). `count` is "Recruit N"
  * (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
  * so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
  * "three top-down scans; stops when the board is full").

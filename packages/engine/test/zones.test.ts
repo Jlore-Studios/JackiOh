@@ -185,16 +185,17 @@ describe("tokens leaving a zone (R11, M1-T4)", () => {
     expect(card.zone).toEqual({ z: "hand", player: "p1" });
   });
 
-  it("a card always goes to its owner's zone even under another controller (R12)", () => {
+  it("a card goes to its current owner's zone after its control changes (R12)", () => {
     const state = game();
     const card = newInstance(state, "fx-1", "p2", { z: "hand", player: "p2" });
     placeOnField(state, card, unitSlot("p1", 1));
     expect(card.controller).toBe("p1");
+    card.owner = "p1";
 
     moveToZone(state, card, "graveyard");
-    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([card.id]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
-    expect(card.controller).toBe("p2");
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
+    expect(card.controller).toBe("p1");
   });
 
   it("shuffles into a library at a chosen position", () => {

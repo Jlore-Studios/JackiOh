@@ -172,8 +172,8 @@ describe("#55 Lava Golem — R360 opposing Units used: summoned for your opponen
     expect(s.unit("p2", 3)?.id).toBe(golem.id);
     expect(s.unit("p1", 3)).toBeNull();
     expect(golem.controller).toBe("p2");
-    // Control, not ownership (§3.2): it is still p1's card, and it was p1's play.
-    expect(golem.owner).toBe("p1");
+    // R360, R640: the Golem is p2's as it reaches p2's side, though it was p1's play.
+    expect(golem.owner).toBe("p2");
     expect(s.events.find((event) => event.type === "cardPlayed")).toMatchObject({ player: "p1", instanceId: golem.id });
     // It entered p2's side this turn, sick and with its exertion fresh like any arrival (R171).
     expect(golem.summonedTurn).toBe(turn);

@@ -455,7 +455,7 @@ export type Script = {
  * B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"
  * ("unlimited", bounded by `ACTIVATE_UNLIMITED_CAP`); Degrade and Upgrade move a number by the tuning
  * key "Activate" (B3.4). `cost` is what the ability pays as it is activated — mana (Heroic Power's
- * "spend (X)", which v0.2.1 moves here), a random discard (Classic #15), a Tribute of the controller's
+ * "Spend (X)", here since patch v0.2.1), a random discard (Classic #15), a Tribute of the controller's
  * units (Classic #21, the card itself allowed), or the card itself (Classic #84). `targets` and
  * `modes` travel in the action as a play's do (R81). `canActivate` is a pure read for a condition the
  * text sets (Classic #7: "that Spell" must exist). `run` is the effect.
@@ -481,7 +481,7 @@ export type ActivationDecl = {
   canActivate?: ConditionHook;
   /**
    * Whether the card has this ability now, when that depends on the instance — an ability it lacks is
-   * neither listed, shown nor accepted. Patch v0.2.1's Heroic Power declares one ability per power and
+   * neither listed, shown nor accepted. Heroic Power (patch v0.2.1) declares one ability per power and
    * has only the one it rolled (B3.2 rule 10). Absent: always.
    */
   has?: (args: { state: GameState; self: CardInstance; radiant: boolean }) => boolean;

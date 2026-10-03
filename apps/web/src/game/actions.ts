@@ -302,8 +302,9 @@ export function activationsOnField(view: PlayerView, instanceId: string): readon
 export function activationControlTestids(view: PlayerView, body: ActivationBody): string[] {
   const out: string[] = [];
   const powers = view.you.hero.powers ?? [];
-  if (view.you.hero.power?.instanceId === body.instanceId) out.push(testid.power);
-  else if (powers.some((power) => power.instanceId === body.instanceId)) out.push(testid.powerOf(body.instanceId));
+  // R510: a Heroic Power's control is its hero-panel button alone, though its card is in the backrow.
+  if (view.you.hero.power?.instanceId === body.instanceId) return [testid.power];
+  if (powers.some((power) => power.instanceId === body.instanceId)) return [testid.powerOf(body.instanceId)];
   if (body.type === "activate") {
     const listed = activationsOnField(view, body.instanceId);
     if (listed !== null && listed.length > 0) {

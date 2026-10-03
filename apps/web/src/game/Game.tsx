@@ -33,7 +33,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, GameEvent, PlayerId, PlayerView, SideView } from "@jackioh/shared";
 
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
@@ -74,6 +74,48 @@ function bannerText(view: PlayerView, lastType: string | undefined, startedFor?:
   if (startedFor !== undefined) return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
   if (view.phase === "mulligan") return "Mulligan";
   return view.active === view.viewer ? "Your turn" : "Opponent's turn";
+}
+
+/**
+ * The board drawn while a burst plays: `shown`, with each unit a `positionSwitched` of the burst
+ * turns drawn in the pose that switch leaves it in — the one it turns FROM while the entry is in
+ * flight, the one it turned TO once the entry has finished (#37).
+ *
+ * animations.css picks the rotation's direction from the pose the card is drawn in and ends it on
+ * the other pose. Drawn straight from `shown`, a unit snapped back to its old pose for the rest of
+ * the burst once its switch had played, since the board swaps only when the whole burst has (an
+ * auto-ended turn and the next turn's start routinely follow a switch). A switch always changes the
+ * position (R91), so the pose it turns from is the other one. Presentation only: the event has
+ * happened, and the newest view says so.
+ */
+export function withSwitchPoses(
+  shown: PlayerView,
+  burst: readonly AnimationEntry[],
+  inFlight: AnimationEntry | null,
+): PlayerView {
+  const poses = new Map<string, "ATK" | "DEF">();
+  for (const entry of burst) {
+    for (const event of entry.events) {
+      if (event.type !== "positionSwitched") continue;
+      const from = event.position === "DEF" ? "ATK" : "DEF";
+      poses.set(event.instanceId, entry === inFlight ? from : event.position);
+    }
+  }
+  if (poses.size === 0) return shown;
+  const pose = (units: SideView["units"]): SideView["units"] => {
+    let changed = false;
+    const next = units.map((unit) => {
+      const position = unit === null ? undefined : poses.get(unit.instanceId);
+      if (unit === null || position === undefined || unit.position === position) return unit;
+      changed = true;
+      return { ...unit, position };
+    });
+    return changed ? next : units;
+  };
+  const you = pose(shown.you.units);
+  const opponent = pose(shown.opponent.units);
+  if (you === shown.you.units && opponent === shown.opponent.units) return shown;
+  return { ...shown, you: { ...shown.you, units: you }, opponent: { ...shown.opponent, units: opponent } };
 }
 
 export type GameProps = {
@@ -317,6 +359,7 @@ export default function Game({
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
+  const board = useMemo(() => withSwitchPoses(shown, burst, inFlight), [shown, burst, inFlight]);
 
   // The newest turn event the burst has reached, the one in flight included: the board is still the
   // view from before it, and the banner must not fall back to that view's turn between its entry and
@@ -364,7 +407,7 @@ export default function Game({
       />
 
       <Board
-        view={shown}
+        view={board}
         highlight={highlight}
         animating={animating}
         animated={animated}

@@ -151,15 +151,15 @@ describe("exile (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "exiled").map((e) => e.instanceId)).toEqual([token.id]);
   });
 
-  it("R12 a stolen unit is exiled to its owner's pile", () => {
+  it("R12 a controlled unit is exiled to its current owner's pile", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
 
     run(state, exile({ target: chosen }), theirs, { controller: "p1" });
 
-    expect(state.players.p2.exile.map((c) => c.id)).toEqual([theirs.id]);
-    expect(state.players.p1.exile).toHaveLength(0);
+    expect(state.players.p1.exile.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.exile).toHaveLength(0);
   });
 
   it("R78 exile resets the instance but keeps costMod and radiant", () => {
@@ -237,16 +237,17 @@ describe("bounce (§6.3, M3-T1)", () => {
     expect(eventsOfType(events, "enteredGraveyard").map((e) => e.instanceId)).toEqual([victim.id]);
   });
 
-  it("R12 a stolen unit bounces to its owner's hand, not the controller's", () => {
+  it("R640 a unit placed on the other side bounces to its current owner's hand, not its original owner's", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
 
     run(state, bounce({ target: chosen }), theirs, { controller: "p1" });
 
-    expect(state.players.p2.hand.map((c) => c.id)).toEqual([theirs.id]);
-    expect(state.players.p1.hand).toHaveLength(0);
-    expect(theirs.controller).toBe("p2");
+    expect(state.players.p1.hand.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.hand).toHaveLength(0);
+    expect(theirs.owner).toBe("p1");
+    expect(theirs.controller).toBe("p1");
   });
 
   it("§6.3 fires no Death trigger", () => {

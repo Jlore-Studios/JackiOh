@@ -158,7 +158,7 @@ const CORE: readonly SpecRow[] = [
   { index: "95.1", name: "Chaos Golem", cost: 4, type: "Unit", tags: ["Token"], rarity: "Token", base: [10, 10], radiant: [20, 20] },
   { index: "96", name: "My Pawn", cost: 1, type: "Trap", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "97", name: "Zephyrs", cost: 0, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
-  { index: "98", name: "Heroic Power", cost: "X", type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
+  { index: "98", name: "Heroic Power", cost: 0, type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "99", name: "Craft a Card", cost: 4, type: "Spell", tags: [], rarity: "Mythic", base: [null, null], radiant: [null, null] },
   { index: "100", name: "Ceaseless Void", cost: 100, type: "Unit", tags: [], rarity: "Mythic", base: [10, 10], radiant: [20, 20] },
   { index: "T-rush", name: "Rush Token", cost: 1, type: "Unit", tags: ["Token"], rarity: "Token", base: [3, 3], radiant: [6, 6] },

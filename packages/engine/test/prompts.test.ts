@@ -357,15 +357,18 @@ describe("prompts (§10.6, M3-T3)", () => {
     expect(state.work).toHaveLength(1);
     for (const value of deepValues(state.work)) expect(typeof value).not.toBe("function");
 
-    // "script id + step + captured data" (§10.6), and nothing else at all.
+    // "script id + step + captured data" (§10.6), with the catalog version that script is pinned to
+    // (R388), and nothing else at all.
     expect(pending.resume).toMatchObject({
       defId: midList.id,
       hook: "resume",
       step: "after",
       radiant: false,
       instanceId: card.id,
+      catalogVersion: state.catalogVersion,
     });
-    expect(Object.keys(pending.resume).sort()).toEqual(["data", "defId", "hook", "instanceId", "radiant", "step"]);
+    expect(typeof pending.resume.catalogVersion).toBe("string");
+    expect(Object.keys(pending.resume).sort()).toEqual(["catalogVersion", "data", "defId", "hook", "instanceId", "radiant", "step"]);
     expect(typeof pending.resume.step).toBe("string");
     expect(pending.resume.data).toBeTypeOf("object");
   });

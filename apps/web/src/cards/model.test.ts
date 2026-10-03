@@ -287,7 +287,7 @@ describe("B8: faceModel cost", () => {
     }
     // Radiant faces and other X cards alike.
     expect(face("core-074", true, { liveCost: 3 }).cost.tone).toBe("base");
-    expect(face("core-098", false, { liveCost: 2 }).cost.text).toBe("X");
+    expect(face("classic-087", false, { liveCost: 2 }).cost.text).toBe("X");
   });
 
   it("B8 an X card with no live cost has text and value X", () => {
@@ -447,34 +447,55 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.stats).toMatchObject({ attackTone: "base", healthTone: "base" });
   });
 
-  it("R43 a Heroic Power in play prints only the power it rolled, with its X on the gem", () => {
-    const f = face("core-098", false, { liveCost: 3, inPlay: { power: { name: "recruit", x: 3 } } });
+  it("R43 a Heroic Power in play prints only the power it rolled, as an Activate ability with its X; the gem is its (0)", () => {
+    const f = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "recruit", x: 3 } } });
     expect(f.text).toEqual({
-      full: "Indestructible\nOnce per turn, spend 3: Recruit a permanent. Playing it activates it once.",
+      full: "Indestructible\nActivate: Spend (3): Expedition Map: Recruit a permanent.",
       marks: [],
     });
-    expect(f.cost).toEqual({ text: "3", value: "3", tone: "base", alt: null });
-    for (const other of ["8 random powers", "Felinor Token", "Discover a Unit", "lose 2 health"]) {
+    expect(f.cost).toEqual({ text: "0", value: "0", tone: "base", alt: null });
+    for (const other of ["13 random powers", "Felinor Token", "Discover a Unit", "Take 2 damage", "Playing it"]) {
       expect(f.text.full).not.toContain(other);
     }
-    // The printed list of eight is held beside it for the inspect overlays.
-    expect(f.printed).toEqual({ full: def("core-098").base.text, marks: [] });
+    // The printed list of thirteen is held beside it for the inspect overlays (SPEC §10.10).
+    expect(f.printed).toEqual({ full: fillParams(def("core-098"), "base"), marks: [] });
   });
 
-  it("R43 a radiant Heroic Power prints its rolled power's radiant clause", () => {
-    const f = face("core-098", true, { liveCost: 1, inPlay: { power: { name: "felinor", x: 1 } } });
-    expect(f.text.full).toBe("Indestructible\nOnce per turn, spend 1: Summon two Felinor Tokens. Playing it activates it once.");
+  it("R43 a radiant Heroic Power prints its rolled power's Radiant title and clause, marked against the base power", () => {
+    const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "armor", x: 1 } } });
+    expect(f.text.full).toBe("Indestructible\nActivate: Spend (1): Tank Up: Your hero gains 4 Armor. Refresh this power.");
     // R277: the rolled power is marked against the same power's base words.
-    expect(markedText(f.text.full, f.text.marks)).toEqual(["two", "Tokens"]);
-    expect(f.printed?.full).toBe(def("core-098").radiant.text);
+    expect(markedText(f.text.full, f.text.marks).join(" ")).toContain("Tank");
+    expect(markedText(f.text.full, f.text.marks).join(" ")).toContain("Refresh this power");
+    expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
   });
 
-  it("a Heroic Power in the collection keeps the list of eight and the X on its gem", () => {
+  it("R637 Steady Shot's {shot} reads the view's number, and an Upgraded one is marked where it stands", () => {
+    const base = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "burn", x: 1 }, params: { shot: 2 } } });
+    expect(base.text.full).toBe("Indestructible\nActivate: Spend (1): Steady Shot: Deal 2 damage to the enemy hero.");
+    expect(base.text.tuned ?? []).toEqual([]);
+
+    const upgraded = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "burn", x: 1 }, params: { shot: 8 } } });
+    expect(upgraded.text.full).toBe(
+      "Indestructible\nActivate: Spend (1): Steady Shot: Deal 8 damage to the enemy hero. Upgrade this permanently by +2 damage.",
+    );
+    expect(upgraded.text.full).not.toMatch(/[{}]/);
+    const tuned = upgraded.text.tuned ?? [];
+    expect(tuned).toHaveLength(1);
+    expect(upgraded.text.full.slice(tuned[0]?.start, tuned[0]?.end)).toBe("8");
+    expect(tuned[0]).toMatchObject({ key: "shot", printed: 4, value: 8, way: "better" });
+
+    // With no number from the view, the printed one fills it.
+    expect(face("core-098", true, { inPlay: { power: { name: "burn", x: 1 } } }).text.full).toContain("Deal 4 damage");
+  });
+
+  it("a Heroic Power in the collection keeps the list of thirteen and its (0) on its gem", () => {
     const f = face("core-098", false);
-    expect(f.text.full).toContain("Gain one of 8 random powers");
-    expect(f.cost.text).toBe("X");
+    expect(f.text.full).toContain("Gain one of 13 random powers");
+    expect(f.text.full).not.toMatch(/[{}]/);
+    expect(f.cost.text).toBe("0");
     // In play with no power named (one that has not rolled, R43), it prints the card as printed.
-    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Gain one of 8 random powers");
+    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Gain one of 13 random powers");
   });
 
   it("Call to Chaos reads ??? in play on both faces, and keeps no printed text beside it", () => {

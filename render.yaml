@@ -45,7 +45,7 @@ services:
         value: production
       # R105's Core-set version. Must equal what db:seed-catalog stamped on public.cards.
       - key: CATALOG_VERSION
-        value: v0.2.0
+        value: v0.2.1
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the
       # per-IP limits key on the entry that many places from the right, never on what the caller
       # wrote to its left. The server's default is 0 (no proxy), so this must be set. 1 is a safe

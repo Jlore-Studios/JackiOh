@@ -133,7 +133,7 @@ export const RADIANT_FALLBACK_FACTOR = 2;
 
 /**
  * R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
- * Heroic Power's X is its power's and never chosen (R43), so this does not reach it.
+ * Heroic Power's (X) is the price of its power's Activate, never a play's X (R43), so this does not reach it.
  */
 export const MIN_CHOSEN_X = 1;
 
@@ -443,3 +443,48 @@ export const CHAOS_PLUS_DEGRADES = 3;
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /** T-AI-4: the repeats after the first draw, a termination bound: five draws at most. */
 export const CHAIN_OF_THOUGHT_REPEATS = 4;
+
+// Core #98 Heroic Power (SPEC §8.5 row 98, R43, R103, patch v0.2.1).
+/**
+ * R43, R103: each power's (X), the mana its "Activate: Spend (X)" pays (patch v0.2.1), by the name it
+ * is stored under on the instance (`memory.power`). The card itself costs (0) to play.
+ */
+export const HERO_POWER_COST = {
+  recruit: 3,
+  draw: 1,
+  ping: 1,
+  burn: 1,
+  rush: 2,
+  felinor: 1,
+  discover: 2,
+  stitching: 2,
+  armor: 1,
+  insect: 2,
+  brainstorm: 2,
+  pluck: 2,
+  terminus: 3,
+} as const;
+/** §8 #98 Life Tap: "Draw 1. Take 2 damage", and its Radiant face's draw from each player's deck. */
+export const LIFE_TAP_DRAW = 1;
+export const LIFE_TAP_DAMAGE = 2;
+/** §8 #98 Ping: "Pierce. Deal 1 damage", on both faces (R635). */
+export const PING_DAMAGE = 1;
+/**
+ * §8 #98 Armor Up, the hero's Armor until its controller's next turn, and its Radiant face Tank Up,
+ * the hero's Armor for the rest of the game (R632).
+ */
+export const ARMOR_UP = { base: 2, radiant: 4 } as const;
+/** §8 #98 Die Insect: "Deal 8 damage to a random enemy"; its Radiant face adds "Lucky 1" (R634). */
+export const DIE_INSECT_DAMAGE = 8;
+export const DIE_INSECT_LUCKY = 1;
+/** §8 #98 KY Brainstorm: "Reduce the cost of all Spells in your hand by (1)". */
+export const KY_BRAINSTORM_DISCOUNT = 1;
+/** §8 #98 Pluck: the Fruit it adds "costs (0)" (`costOverride`). */
+export const PLUCK_COST = 0;
+/** §8 #98 Steady Shot's Radiant face: "Upgrade this" by this many steps of its damage (`{shot}`, R637). */
+export const STEADY_SHOT_UPGRADE_STEPS = 1;
+/**
+ * §8 #98 Steady Shot's Radiant face: "… by +2 damage", the words for one step of `shot`. The step
+ * itself is the catalog's (`params`, R386); 098-heroic-power.test.ts holds the two equal.
+ */
+export const STEADY_SHOT_STEP_DAMAGE = 2;

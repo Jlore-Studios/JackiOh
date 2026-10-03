@@ -16,22 +16,35 @@
 // view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
 // it is the last N events (§10.8), so a badge could appear and never leave.
 //
-// The Heroic Powers (R43, R384, R510). The view carries every Heroic Power a player controls, each
-// separately once per turn, with its `instanceId`. Each of the viewer's own is a button that
-// reports `{ on: "activate", instanceId }`, the click every Activate control reports
-// (ActivateControl.tsx), so `actions.ts` builds a power exactly as it builds any activation:
-// whichever of `activatePower` (R43's alias) or `activate` `legalActions` lists for it, sent at
-// once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
-// when there are several. The first keeps the `power` testid the e2e specs press; any further one
-// is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
-// `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
-// `activated` row, which plays on its card (`card-<instanceId>`).
+// The Heroic Powers (R43, R384, R510, patch v0.2.1). Each Heroic Power card prints only the one
+// power it rolled (cards/inPlay.ts), and that power is drawn as a Hearthstone hero power is, on the
+// hero: a round crest with the power's own art
+// (cards/art/powerArt.ts, keyed by the stored name the view gives it, R103), its X in a mana gem on
+// the crest's rim, a gold ring when it runs its Radiant face, and its printed title beside it
+// (Armor Up's Radiant face is Tank Up). The tooltip and the accessible name are the power as the
+// catalog prints it, "Activate: Spend (X): <Title>: <clause>.", its `{shot}` filled with the number
+// the view gives it (cards/inPlay.ts). A spent power is drawn greyed, as Hearthstone turns its over.
+//
+// The view carries every Heroic Power a player controls, each separately once per turn, with its
+// `instanceId`: almost always one, and a second only when one was stolen or copied (R43). Each of the
+// viewer's own is a button, and the hero panel is its only control (the card in the backrow wears no
+// Activate control of its own, Card.tsx). A press reports `{ on: "activate", instanceId }`, the click
+// every Activate control reports (ActivateControl.tsx), so `actions.ts` builds a power exactly as it
+// builds any activation: the one `activate` `legalActions` lists for it is sent at once, and a power
+// with a target to declare (Ping, R635) waits for it on the board, clicked or dragged to (game/drag).
+// The first keeps the `power` testid the e2e specs press; a further one is `power-<instanceId>`, drawn
+// as its crest alone so it does not crowd the hero. The opponent's powers are tags with the same
+// crest, which nothing presses. Whether a button is live is `props.highlight.legal`; `usedThisTurn` is
+// drawn, never obeyed. A power flashes on the `activated` row, which plays on its card
+// (`card-<instanceId>`).
 
-import type { ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
 
+import { fillPowerParams, POWER_ART_BOX, powerArtOf, powerLine, powerTitle } from "../cards/index.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { animTestid } from "./animations.ts";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
+import { useCardInfo } from "./catalog.ts";
 import {
   sideView,
   testid,
@@ -53,6 +66,49 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
 };
+
+/** What a spent power's tooltip and accessible name add (`usedThisTurn`, drawn and never obeyed). */
+export const POWER_USED_NOTE = "Used this turn.";
+
+/**
+ * The power as the catalog prints it, "Activate: Spend (X): <Title>: <clause>.", on the face it runs,
+ * its declared numbers filled with the ones the view gives it (Steady Shot's `{shot}`, R637) and else
+ * the card's printed ones. A stored name the client's table does not know reads as itself.
+ */
+export function usePowerWords(power: HeroPowerView): string {
+  const info = useCardInfo(power.defId, power.radiant);
+  const line = powerLine({ name: power.name, x: power.x }, power.radiant);
+  if (line === null) return `${power.name} (${String(power.x)})`;
+  return fillPowerParams(line, power.radiant, info.def?.params, power.params);
+}
+
+/**
+ * A power's face on the hero: the crest with its own art (keyed by the stored name), the X in a mana
+ * gem on its rim, and the printed title (the Radiant face's on a Radiant power). Decoration only:
+ * its button or tag carries the words.
+ */
+function PowerFace({ power }: { power: HeroPowerView }): ReactElement {
+  const art = powerArtOf(power.name);
+  const style = { "--power-light": art.light, "--power-dark": art.dark } as CSSProperties;
+  return (
+    <>
+      <span className="power-crest" data-power-art={power.name} data-glyph={art.glyph} style={style} aria-hidden="true">
+        <svg className="power-glyph" viewBox={`0 0 ${String(POWER_ART_BOX)} ${String(POWER_ART_BOX)}`} focusable="false">
+          <path d={art.path.d} fillRule={art.path.rule} />
+        </svg>
+        <span className="power-x" data-x={power.x}>
+          {power.x}
+        </span>
+      </span>
+      <span className="power-title">{powerTitle(power.name, power.radiant) ?? power.name}</span>
+    </>
+  );
+}
+
+/** A power's tooltip: its words, and that it is spent when it is. */
+function powerTooltip(words: string, power: HeroPowerView): string {
+  return power.usedThisTurn ? `${words} ${POWER_USED_NOTE}` : words;
+}
 
 export default function Hero(props: HeroProps): ReactElement {
   const { view, side } = props;
@@ -107,29 +163,18 @@ export default function Hero(props: HeroProps): ReactElement {
           // The one `power` testid in the DOM.
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
-          <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
-            {hero.power.name}
-            <span className="power-x">{hero.power.x}</span>
-          </span>
+          <PowerTag power={hero.power} />
         ))}
 
-      {/* Any further power this player controls (R43), each its own control on your side. */}
+      {/* Any further Heroic Power this player controls (R43: a stolen or copied one), each its own
+          control on your side, as every power the view lists is legal on its own. */}
       {(hero.powers ?? [])
         .filter((power) => power.instanceId !== hero.power?.instanceId)
         .map((power) =>
           side === "you" ? (
             <PowerButton key={power.instanceId} power={power} testId={testid.powerOf(power.instanceId)} extra props={props} />
           ) : (
-            <span
-              key={power.instanceId}
-              className="power-tag power-extra"
-              data-instance-id={power.instanceId}
-              data-used={power.usedThisTurn ? "true" : "false"}
-              data-x={power.x}
-            >
-              {power.name}
-              <span className="power-x">{power.x}</span>
-            </span>
+            <PowerTag key={power.instanceId} power={power} extra />
           ),
         )}
 
@@ -176,14 +221,18 @@ function PowerButton({
   extra?: boolean;
   props: HeroProps;
 }): ReactElement {
+  const words = usePowerWords(power);
   const live = isLegal(props.highlight, testId);
   const flashing = props.animating?.get(testid.card(power.instanceId)) === ACTIVATED_EVENT;
+  const tooltip = powerTooltip(words, power);
   return (
     <button
       type="button"
       className={cx("power-button", extra && "power-extra")}
       data-testid={testId}
       data-instance-id={power.instanceId}
+      data-power={power.name}
+      data-radiant={power.radiant ? "true" : undefined}
       data-legal={legalAttr(live)}
       data-selected={isSelected(props.highlight, testId) ? "true" : undefined}
       data-animating={props.animating?.get(testId)}
@@ -192,16 +241,41 @@ function PowerButton({
       data-x={power.x}
       data-flash={flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={live ? undefined : "true"}
+      aria-label={`Heroic Power: ${tooltip}`}
       disabled={!live}
-      title={`${power.name} (X ${power.x})`}
+      title={tooltip}
       onClick={(event) => {
         event.stopPropagation();
         if (!live) return;
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
+      onKeyDown={(event) => {
+        // Enter and Space press the button natively; the hero it sits on must not take them too
+        // (its own handler would cancel the press), as an Activate control's card does not.
+        if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+      }}
     >
-      {power.name}
-      <span className="power-x">{power.x}</span>
+      <PowerFace power={power} />
     </button>
+  );
+}
+
+/** One of the opponent's Heroic Powers: the same crest, which nothing presses. */
+function PowerTag({ power, extra = false }: { power: HeroPowerView; extra?: boolean }): ReactElement {
+  const tooltip = powerTooltip(usePowerWords(power), power);
+  return (
+    <span
+      className={cx("power-tag", extra && "power-extra")}
+      data-instance-id={power.instanceId}
+      data-power={power.name}
+      data-radiant={power.radiant ? "true" : undefined}
+      data-used={power.usedThisTurn ? "true" : "false"}
+      data-x={power.x}
+      role="img"
+      aria-label={`Opponent's Heroic Power: ${tooltip}`}
+      title={tooltip}
+    >
+      <PowerFace power={power} />
+    </span>
   );
 }

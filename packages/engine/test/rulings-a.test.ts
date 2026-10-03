@@ -645,20 +645,33 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(state.players.p1.graveyard.map((card) => card.id)).toEqual([spellCard.id]);
   });
 
-  it("R12 keeps ownership off the field: a stolen unit dies to its owner's graveyard", () => {
+  it("R12 makes a stolen unit's controller its current owner, so it dies to that graveyard", () => {
     const state = game("r12");
     const victim = put(state, body.id, slot("p2", "units", 2));
 
     run(state, steal({ instanceId: victim.id }), { controller: "p1" });
     expect(victim.controller).toBe("p1");
-    expect(victim.owner).toBe("p2");
+    expect(victim.owner).toBe("p1");
 
     killAndCheck(state, victim);
-    expect(state.players.p2.graveyard.map((card) => card.id)).toEqual([victim.id]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
-    // Control means nothing off the field, so it goes back to the owner on the way out (R78).
-    expect(victim.controller).toBe("p2");
-    expect(victim.zone).toEqual({ z: "graveyard", player: "p2" });
+    expect(state.players.p1.graveyard.map((card) => card.id)).toEqual([victim.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
+    expect(victim.controller).toBe("p1");
+    expect(victim.zone).toEqual({ z: "graveyard", player: "p1" });
+  });
+
+  it("R640 routes every later departure by a field card's current owner", () => {
+    for (const zone of ["hand", "library", "graveyard", "exile"] as const) {
+      const state = game(`r611-${zone}`);
+      const victim = put(state, body.id, slot("p2", "units", 2));
+
+      run(state, steal({ instanceId: victim.id }), { controller: "p1" });
+      expect(victim.owner).toBe("p1");
+      expect(moveToZone(state, victim, zone)).toBe("moved");
+      expect(victim.zone).toEqual({ z: zone, player: "p1" });
+      expect(state.players.p1[zone].map((card) => card.id)).toContain(victim.id);
+      expect(state.players.p2[zone].map((card) => card.id)).not.toContain(victim.id);
+    }
   });
 
   it("R13 keeps a card under a Stack off the field: it neither acts nor can be targeted", () => {
@@ -709,7 +722,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     const result = rotateRings(sinkFor(state), { direction: "right", perspective: "p1" });
     expect(must(cardAt(state, slot("p2", "units", 5)), "crossed unit").id).toBe(crosser.id);
     expect(crosser.controller).toBe("p2");
-    expect(crosser.owner).toBe("p1");
+    expect(crosser.owner).toBe("p2");
     expect(crosser.damage).toBe(1);
     expect(crosser.buffs).toEqual({ attack: 2, health: 0 });
     expect(result.crossed).toEqual([crosser.id]);
@@ -1141,9 +1154,9 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
 
     run(state, steal({ instanceId: hidden.id }), { controller: "p1" });
     expect(hidden.controller).toBe("p1");
-    expect(hidden.owner).toBe("p2");
+    expect(hidden.owner).toBe("p1");
     expect(at(viewFor(state, "p1").you.backrow, 0)).toMatchObject({ faceDown: false, defId: trap.id });
-    // Its owner stops seeing it, even though ownership never moved.
+    // Its former owner stops seeing it after control and current ownership moved.
     expect(at(viewFor(state, "p2").opponent.backrow, 0)).toEqual({ faceDown: true, cost: 0 });
 
     const fired = put(state, fieldTrap.id, slot("p2", "backrow", 2));

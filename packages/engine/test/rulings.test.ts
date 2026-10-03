@@ -712,11 +712,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power: its card test proves the power list and the once-a-turn use.
-  // Proved by rulings-b.test.ts "R43 stores Heroic Power's power on the instance, costs its X, uses it once a
-  // turn and recruits a permanent"; setup.test.ts "R43: Heroic Power rolls its power during setup,
-  // deterministically from the seed", "R43 rolls a power for a Heroic Power the mulligan returned to the
-  // library"; mana.test.ts "R43 gives Heroic Power the cost of its power".
-  it("R43 stores Heroic Power's rolled power on the instance and costs its X", () => {
+  // Proved by rulings-b.test.ts "R43 stores Heroic Power's power on the instance, costs (0), activates it
+  // once a turn for its X and recruits a permanent"; setup.test.ts "R43: Heroic Power rolls its power
+  // during setup, deterministically from the seed", "R43 rolls a power for a Heroic Power the mulligan
+  // returned to the library"; mana.test.ts "R43 Heroic Power costs (0) to play whatever its power, which
+  // spends its X only when activated".
+  it("R43 stores Heroic Power's rolled power on the instance, costs (0) and makes the power its Activate", () => {
     provenIn(43, "rulings-b.test.ts", "setup.test.ts", "mana.test.ts");
   });
 
@@ -1169,10 +1170,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // M4 owns #98 Heroic Power; R43's own clauses are heroPower.test.ts.
-  // Proved by rulings-c.test.ts "R103 stores the eight power names and costs 0 for a power that has
-  // not rolled", "R103 checks once-per-turn before mana, turn and phase", "R103 marks the use before
-  // the effects run, and fizzles a token power in silence when the token is absent".
-  it("R103 fixes the Heroic Power surface: seven names, cost 0 unrolled, once-per-turn checked first", () => {
+  // Proved by rulings-c.test.ts "R103 stores the thirteen power names, and a power that has not rolled
+  // has no ability to use", "R103 checks once-per-turn before the power's mana, after the turn and the
+  // phase (R384)", "R103 marks the use before the effects run, and fizzles a token power in silence when
+  // the token is absent".
+  it("R103 fixes the Heroic Power surface: thirteen names, no ability unrolled, once-per-turn before mana", () => {
     provenIn(103, "rulings-c.test.ts");
   });
 
@@ -1474,7 +1476,8 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(138, "rulings-c.test.ts");
   });
 
-  // R103's priority is rulings-c.test.ts "R103 checks once-per-turn before mana, turn and phase".
+  // R103's priority is rulings-c.test.ts "R103 checks once-per-turn before the power's mana, after the
+  // turn and the phase (R384)".
   // Proved by rulings-c.test.ts "R139 lapses a once-per-turn limit at the turn boundary, so a later
   // turn is told whose turn it is".
   it("R139 lapses a once-per-turn limit at the turn boundary", () => {
@@ -2668,7 +2671,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by 098-heroic-power.test.ts "R352 …": the two Discovers, the fusion at R77's cost, the
   // radiant face, and the use spent once.
-  it("R352 gives Heroic Power its eighth power, Stitching", () => {
+  it("R352 gives Heroic Power its Stitching power", () => {
     provenIn(352, CARDS_HEROIC_POWER_TEST);
   });
 
@@ -3690,6 +3693,64 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
   });
 
+<<<<<<< HEAD
+  // Patch v0.2.1's rows (issue #37, from R632): Heroic Power's thirteen powers and the current owner.
+
+  // Proved by heroPower.test.ts "R632 …" and 098-heroic-power.test.ts "R632 …" (Armor Up's 2 holds
+  // through the opponent's turn and ends as its player's turn starts; Tank Up's 4 stays).
+  it("R632 holds Armor Up's Armor until its player's next turn and keeps Tank Up's for the game", () => {
+    expect(config.ARMOR_UP).toEqual({ base: 2, radiant: 4 });
+    provenIn(632, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R633 …" and 098-heroic-power.test.ts "R633 …" (a different power, its
+  // Radiant face, and the use spent until the next turn).
+  it("R633 refreshes Tank Up into a different power, usable from the next turn", () => {
+    provenIn(633, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R634 …" and 098-heroic-power.test.ts "R634 …" (a pick among the enemy
+  // hero and Units, and Lucky's lethal hero first).
+  it("R634 picks Die Insect's random enemy among the enemy hero and Units, Lucky keeping the better", () => {
+    expect(config.DIE_INSECT_DAMAGE).toBe(8);
+    provenIn(634, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R635 …" and 098-heroic-power.test.ts "R635 …" (a declared target,
+  // Pierce, and the Ghoul a Radiant kill summons).
+  it("R635 declares Ping's target with the activation and summons a Ghoul for a Radiant kill", () => {
+    provenIn(635, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R636 …" and 098-heroic-power.test.ts "R636 …" (damage through Armor,
+  // and the Radiant face's two decks).
+  it("R636 makes Life Tap a draw and a hit, and its Radiant face a draw from each deck", () => {
+    provenIn(636, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R637 …" and 098-heroic-power.test.ts "R637 …" (4, then 6, then 8).
+  it("R637 upgrades Steady Shot's declared number by 2 after each Radiant shot", () => {
+    provenIn(637, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R638 …" and 098-heroic-power.test.ts "R638 …" (Traps and Field Traps,
+  // summoned face-down into the backrow).
+  it("R638 Discovers Terminus Tricks' Trap from every set and summons it face-down", () => {
+    provenIn(638, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R639 …" and 098-heroic-power.test.ts "R639 …" (the KY card and the
+  // Spells it discounts, X-cost ones aside; the Fruit at (0)).
+  it("R639 draws KY Brainstorm's KY card and Pluck's Fruit from every set", () => {
+    expect(config.KY_BRAINSTORM_DISCOUNT).toBe(1);
+    expect(config.PLUCK_COST).toBe(0);
+    provenIn(639, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by rulings-a.test.ts "R640 routes every later departure by a field card's current owner".
+  it("R640 makes the player who receives a card on the field its current owner", () => {
+    provenIn(640, "rulings-a.test.ts");
+=======
   // R632 is a client ruling (SPEC §9.2): proved by apps/web net/session.test.ts "R632 …" (the tab's
   // storage, an older build's session moved, the fixture's key, blocked storage, sign-out) and
   // routes/shell-gate.test.tsx "R632 …" (another tab's sign-out leaves this tab signed in).
@@ -3709,6 +3770,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // "R634 …" (load, push-up, debounce, one request at a time, failures dropped, a clock running ahead).
   it("R634 replaces a group of the account's settings only with a strictly later one, and merges the device's the same way", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
+>>>>>>> origin/main
   });
 });
 

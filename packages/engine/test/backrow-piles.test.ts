@@ -15,7 +15,7 @@ import { legalActions } from "../src/reduce";
 import { hashState } from "../src/replay";
 import { makeContext } from "../src/resolve";
 import { findInstance, newInstance, type CardInstance, type GameState } from "../src/state";
-import { whyCannotActivate } from "../src/subsystems/heroPower";
+import { whyCannotActivateAbility } from "../src/subsystems/activate";
 import { settle } from "../src/triggers";
 import { viewFor } from "../src/viewFor";
 import {
@@ -202,10 +202,10 @@ describe("B5 E21 backrow piles (R447)", () => {
     const power = put(state, heroicPower.id, slot("p1", "backrow", 3));
     power.memory.power = "ping";
     flush(state, "p1");
-    expect(whyCannotActivate(state, "p1", power.id)).toBeNull();
+    expect(whyCannotActivateAbility(state, "p1", power.id)).toBeNull();
     stackOnto(state, cover.id, power);
-    expect(whyCannotActivate(state, "p1", power.id)).toBe("that card is under a pile and does not act");
-    expect(legalActions(state, "p1").some((action) => action.type === "activatePower")).toBe(false);
+    expect(whyCannotActivateAbility(state, "p1", power.id)).toBe("that card is under a pile and does not act");
+    expect(legalActions(state, "p1").some((action) => "instanceId" in action && action.instanceId === power.id)).toBe(false);
   });
 
   it("R447 a JSON round trip keeps the pile, and a game with no pile carries no pile field", () => {

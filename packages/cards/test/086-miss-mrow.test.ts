@@ -53,8 +53,9 @@ describe('#86 "Miss" Mrow — base', () => {
     // R15: p1's lane 1 was free, so the killer kept its lane.
     expect(s.unit("p1", 1)?.defId).toBe(FELINORS);
     expect(s.unit("p2", 1)).toBeNull();
-    // R12: control, never ownership; R78: it never left the field, so its damage came along.
-    expect(s.unit("p1", 1)?.owner).toBe("p2");
+    // R12, R640: control, and the current owner with it; R78: it never left the field, so its
+    // damage came along.
+    expect(s.unit("p1", 1)?.owner).toBe("p1");
     expect(s.unit("p1", 1)?.controller).toBe("p1");
     expect(s.unit("p1", 1)?.damage).toBe(1);
     // The other enemy unit had no part in it and stays with p2.
@@ -82,7 +83,7 @@ describe('#86 "Miss" Mrow — base', () => {
     s.attack(FELINORS, MROW);
 
     expect(s.unit("p1", 1)?.defId).toBe(FELINORS);
-    expect(s.unit("p1", 1)?.owner).toBe("p2");
+    expect(s.unit("p1", 1)?.owner).toBe("p1");
     expect(s.unit("p2", 2)).toBeNull();
     expect(s.unit("p2", 1)?.controller).toBe("p2");
     expect(s.unit("p2", 3)?.controller).toBe("p2");
@@ -100,7 +101,7 @@ describe('#86 "Miss" Mrow — base', () => {
 
     s.expectInZone(MROW, "graveyard");
     expect(s.unit("p1", 2)?.defId).toBe(SORCERER);
-    expect(s.unit("p1", 2)?.owner).toBe("p2");
+    expect(s.unit("p1", 2)?.owner).toBe("p1");
   });
 
   it("R361 takes nothing when the killer died in the same combat (R78)", () => {
@@ -207,7 +208,7 @@ describe('#86 "Miss" Mrow — radiant', () => {
     s.expectInZone(MROW, "graveyard");
     expect(s.unit("p1", 1)?.defId).toBe(SORCERER);
     expect(s.unit("p1", 1)?.damage).toBe(2);
-    expect(s.unit("p1", 1)?.owner).toBe("p2");
+    expect(s.unit("p1", 1)?.owner).toBe("p1");
     expect(s.unit("p2", 2)?.defId).toBe(GARY);
   });
 });

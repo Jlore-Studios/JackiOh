@@ -55,8 +55,10 @@ describe("E24 the cards beneath a Stack become copies of its top (Classic+ #4)",
     const start = playing("transform-beneath");
     const state = start.state;
     const [bottom, middle] = pile(state, [fuseA.id, body.id], "p2");
-    // The bottom card is the opponent's, stolen onto p1's lane long ago: the copy keeps that owner.
+    // The bottom card came from the opponent onto p1's lane long ago, which made p1 its current
+    // owner (R640): the copy keeps that owner.
     const bottomCard = must(bottom, "the bottom card");
+    expect(bottomCard.owner).toBe("p1");
     const middleCard = must(middle, "the middle card");
     middleCard.position = "DEF";
     const top = handCard(state, juhan.id);
@@ -72,7 +74,7 @@ describe("E24 the cards beneath a Stack become copies of its top (Classic+ #4)",
       expect(copy.defId).toBe(juhan.id);
       expect(copy.radiant).toBe(true);
       expect(copy.buffs).toEqual({ attack: 1, health: 1 });
-      expect(copy.owner).toBe("p2");
+      expect(copy.owner).toBe(bottomCard.owner);
       expect(copy.controller).toBe("p1");
     }
     expect(lane[1]?.position).toBe("DEF");

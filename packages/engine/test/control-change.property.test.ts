@@ -9,7 +9,8 @@
 // Four properties, each read from outside the code under test:
 //   P1 bookkeeping: a card that got a `controlChanged` and is still on the field took this turn and
 //      a fresh exertion; every other card on the field kept exactly what it started with; a card's
-//      controller only changes with a `controlChanged`; nobody's owner changes.
+//      controller only changes with a `controlChanged`; a card's current owner is always the player
+//      whose side or pile holds it, so it changes only with a `controlChanged` (R12, R640).
 //   P2 the §6.1 oracle: a unit that crossed, or started the turn freshly entered, is sick, so with
 //      neither Rush nor Charge it has no target and without Charge it cannot aim at the hero; one
 //      that crossed with Charge and nothing else stopping it has a target (the fresh exertion).
@@ -200,7 +201,7 @@ function run({ board, verbs }: Case): { state: GameState; start: Map<string, Sna
 // ---------------------------------------------------------------------------
 
 describe("R171 over random boards and random control changes (fast-check)", () => {
-  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and no owner changes", () => {
+  it("R171 P1: only a card that changed sides takes this turn and a fresh exertion, and its current owner follows its side (R640)", () => {
     fc.assert(
       fc.property(caseArb, (sample) => {
         const { state, start, crossed } = run(sample);
@@ -209,6 +210,7 @@ describe("R171 over random boards and random control changes (fast-check)", () =
           const before = start.get(card.id);
           if (before === undefined) throw new Error(`${card.id} appeared on the field`);
           expect(card.controller, `${card.id} controller vs its zone`).toBe(card.zone.player);
+          expect(card.owner, `${card.id} owner vs its controller`).toBe(card.controller);
           if (card.controller !== before.controller) expect(crossed.has(card.id), `${card.id} changed side silently`).toBe(true);
           if (crossed.has(card.id)) {
             expect(card.summonedTurn, `${card.id} crossed`).toBe(turn);
@@ -219,7 +221,11 @@ describe("R171 over random boards and random control changes (fast-check)", () =
           }
         }
         for (const [id, before] of start) {
-          expect(findInstance(state, id)?.owner, `${id} owner`).toBe(before.owner);
+          const card = findInstance(state, id);
+          if (card === undefined) throw new Error(`${id} disappeared`);
+          // A card a radiant rotation bounced is off the field, in its current owner's pile (R12).
+          expect(card.owner, `${id} owner vs its zone`).toBe(card.zone.player);
+          if (card.owner !== before.owner) expect(crossed.has(id), `${id} changed owner silently`).toBe(true);
         }
       }),
       { seed: PROPERTY_SEED, numRuns: BOOKKEEPING_RUNS },

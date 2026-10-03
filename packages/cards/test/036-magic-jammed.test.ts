@@ -80,8 +80,8 @@ describe("#36 Magic Jammed", () => {
     expect(s.backrow("p1", 2)?.id).toBe(target.id);
     expect(s.backrow("p2", 2)).toBeNull();
     expect(s.card(target.id).controller).toBe("p1");
-    // R12: control moved, ownership did not.
-    expect(s.card(target.id).owner).toBe("p2");
+    // R12, R640: control moved, and the current owner with it.
+    expect(s.card(target.id).owner).toBe("p1");
     // "Lock its original zone": the zone it came from, not the one it landed in.
     expect(s.state.players.p2.locks.backrow[1]).toBe(true);
     expect(s.state.players.p1.locks.backrow[1]).toBe(false);
@@ -123,11 +123,12 @@ describe("#36 Magic Jammed", () => {
 
     s.play(MAGIC_JAMMED, { targets: pick(target.id) });
 
-    // After: R33 keys readability on the CONTROLLER, so the thief reads it even though p2 owns it.
+    // After: R33 keys readability on the CONTROLLER, so the thief reads it, and is its current owner
+    // too (R640).
     expect(s.view("p1").you.backrow[1]).toMatchObject({
       faceDown: false,
       defId: SHEEPISH,
-      owner: "p2",
+      owner: "p1",
       controller: "p1",
     });
     expect(s.view("p2").opponent.backrow[1]).toEqual({ faceDown: true, cost: 1 });

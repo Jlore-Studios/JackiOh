@@ -15,3 +15,5 @@ export type { ArtManifest } from "./manifest.ts";
 export { ART_MANIFEST, artUrl } from "./manifest.ts";
 export type { ArtShape, CardArtProps } from "./CardArt.tsx";
 export { CardArt } from "./CardArt.tsx";
+export type { PowerArt } from "./powerArt.ts";
+export { DEFAULT_POWER_ART, POWER_ART, POWER_ART_BOX, powerArtOf } from "./powerArt.ts";

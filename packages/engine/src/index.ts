@@ -63,5 +63,7 @@ export * from "./targetingPoint";
 export * from "./gameSummary";
 export * as effects from "./effects";
 export * as subsystems from "./subsystems";
+// R388: semantic card-script changes keep a namespaced historical implementation for pinned replays.
+export * as legacyHeroPower from "./subsystems/heroPower-v0.2.0";
 // B5 E30, R417: last boards, a setup input; the server reads `lastBoardFor` as a game ends.
 export { lastBoardFor } from "./subsystems/lastBoards";

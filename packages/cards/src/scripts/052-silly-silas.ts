@@ -33,9 +33,9 @@
 //   * a card that crosses the centre line has entered its new controller's side (R171): it takes
 //     this turn as its `summonedTurn`, so it is summoning sick there, and a fresh exertion;
 //   * `controller` changes only when the destination is on the other side of the centre line, and
-//     `owner` never changes (R12), so a crossed card still leaves to its OWNER's piles later; a
-//     face-down trap that crosses is read by its new controller alone, which follows from
-//     `controller` and is why `faceUp` is untouched (R33);
+//     the current `owner` changes with it (R12, R640), so a crossed card leaves to its new side's
+//     piles later; a face-down trap that crosses is read by its new controller alone, which follows
+//     from `controller` and is why `faceUp` is untouched (R33);
 //   * a Locked or Reborn-reserved destination bounces the card to its owner's hand instead (R14,
 //     R88), where the hand cap applies (R4) and a unit token ceases to exist on the way (R11);
 //   * `radiant: true` replaces an OUTBOUND crossing — a card leaving this player's side for the

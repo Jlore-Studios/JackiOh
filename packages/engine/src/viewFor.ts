@@ -10,7 +10,7 @@
 //     viewer was shown going in (`ownLibrary.ts`) — definitions, faces and counts, never an instance
 //     id — so R97's rule below still reads no library card, the owner's included.
 //   - R33: a face-down trap is readable by its *current controller* only, so a steal, a board swap
-//     or a rotation moves who may read it even though ownership never changed; a Field Trap that
+//     or a rotation moves who may read it as current ownership follows control; a Field Trap that
 //     has fired (`faceUp`) is public to both.
 //   - R13, §3.2: the lower cards of a Stack pile are dormant and not on the field. The view shows
 //     the top card and a count of what is buried under it, never a buried card's identity.
@@ -90,7 +90,7 @@ import { copiedTextOf, textFaceOf } from "./subsystems/copiedText";
 import { paramsView } from "./params";
 import { activationViewsFor } from "./subsystems/activate";
 import { syncFusedScripts } from "./subsystems/fuse";
-import { powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
+import { powerAbilityOf, powerCostOf, powerOf, usedThisTurn } from "./subsystems/heroPower";
 import { questViewOf } from "./subsystems/quests";
 import { marksOn } from "./marks";
 import { ownLibraryView } from "./ownLibrary";
@@ -256,7 +256,7 @@ function withMarks(state: GameState, instanceId: string): { marks?: CardMark[] }
  * face as well. A Unit's stats are its face plus the permanent buffs it gained in hand (§10.4
  * layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
  * floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
- * R151), which its cost alone does not.
+ * R151), which its (0) cost does not.
  */
 function handCardView(state: GameState, card: CardInstance): CardView {
   const view = withCopies(cardView(state, card), state, card);
@@ -431,12 +431,14 @@ function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { ca
 /**
  * R43: a Heroic Power lives on its instance and it is a Field Spell (§8 #98), so it is public to
  * both players once it is on the field — the row §2's hero panel marks visible to both. The power,
- * its X and its use are `heroPower`'s to report, never re-derived here.
+ * its X, the ability its `activate` names, its face and its use are `heroPower`'s to report, never
+ * re-derived here; its declared numbers (`params`, R386) are the card's as they stand.
  *
- * It follows control, not ownership: a stolen Heroic Power powers its new controller's hero. So a
- * player can hold more than one — their own plus one taken with #36 radiant or #49 — and each is
- * separately once-per-turn, which is why this is a list and every entry carries its `instanceId`
- * for `activatePower` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
+ * It follows control: a stolen Heroic Power powers its new controller's hero, who is its current
+ * owner too since patch v0.2.1 (R640). So a player can hold more than one — their own plus one
+ * taken with #36 radiant or #49 — and each is separately once-per-turn, which is why this is a list
+ * and every entry carries its `instanceId` for its `activate` (§10.2). Board order: p1's backrow
+ * lane 1 to 5, then p2's.
  */
 function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
   const powers: HeroPowerView[] = [];
@@ -445,12 +447,16 @@ function heroPowersOf(state: GameState, player: PlayerId): HeroPowerView[] {
       if (card === null || card.controller !== player) continue;
       const power = powerOf(card);
       if (power === null) continue;
+      const params = paramsView(state, card);
       powers.push({
         instanceId: card.id,
         defId: card.defId,
         name: power.name,
+        ability: powerAbilityOf(state, card) ?? power.name,
+        radiant: card.radiant,
         x: powerCostOf(card),
         usedThisTurn: usedThisTurn(state, card),
+        ...(params === null ? {} : { params }),
       });
     }
   }
@@ -516,6 +522,9 @@ function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): str
     // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
     case "replacePlays":
       return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
+    // R632: #98's Armor Up and Tank Up, in the power's own words.
+    case "heroArmor":
+      return `Your hero has +${mod.amount} Armor until your next turn`;
   }
 }
 

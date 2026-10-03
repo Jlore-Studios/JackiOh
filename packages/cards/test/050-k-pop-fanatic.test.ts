@@ -84,9 +84,9 @@ describe("#50 K-Pop Fanatic", () => {
     expect(g.state.active).toBe("p1");
     expect(g.unit("p1", 2)?.id).toBe(prey.id);
     expect(g.unit("p2", 2)).toBeNull();
-    // R12: control moved, ownership did not.
+    // R12, R640: control moved, and the current owner with it.
     expect(g.card(prey).controller).toBe("p1");
-    expect(g.card(prey).owner).toBe("p2");
+    expect(g.card(prey).owner).toBe("p1");
     // The base face has no rider: the stolen card keeps its face (R282 is the radiant face's).
     expect(g.card(prey).radiant).toBe(false);
     expect(g.events.some((event) => event.type === "radiantSet")).toBe(false);

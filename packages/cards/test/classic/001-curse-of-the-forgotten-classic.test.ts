@@ -2,7 +2,8 @@
 // the enemy hero, N = the size of their exile as it resolves, so Armor applies once; an empty exile
 // deals no hit (R63); then draw 1; its preview is N (R280); radiant: the same hit and draw (the
 // Radiant keeps "Draw 1"), then Recruit from their exile its most recently exiled permanent card, under
-// your control with its owner unchanged, back to their piles when it leaves the field (§3.2); a Unit
+// your control, becoming yours as it reaches your side, so it goes to your piles when it leaves the
+// field (R12); a Unit
 // recruited that way makes one forced attack on the enemy hero at once, summoning sickness ignored
 // (R53); no permanent in their exile, or no open zone, → nothing recruited; a recruited trap is set
 // face-down and read by you alone (R33); its tuned numbers (damage per card, draw) read through
@@ -136,7 +137,7 @@ describe("C #1 Curse of the Forgotten Classic", () => {
       expect(s.hand("p1").map((card) => card.defId)).toEqual([STOCKPILE, VANILLA]);
     });
 
-    it("E25 recruits the most recently exiled permanent of theirs, under your control, its owner unchanged", () => {
+    it("E25 recruits the most recently exiled permanent of theirs, under your control and current ownership", () => {
       const s = curse(true, { theirExile: [MENACE, VANILLA, STOCKPILE] });
       const menace = theirExiled(s, MENACE);
       const vanilla = theirExiled(s, VANILLA);
@@ -144,7 +145,7 @@ describe("C #1 Curse of the Forgotten Classic", () => {
       expect(s.unit("p1", 1)?.id).toBe(vanilla.id);
       const recruited = s.card(vanilla);
       expect(recruited.controller).toBe("p1");
-      expect(recruited.owner).toBe("p2");
+      expect(recruited.owner).toBe("p1");
       s.expectInZone(menace, "exile");
     });
 
@@ -171,15 +172,15 @@ describe("C #1 Curse of the Forgotten Classic", () => {
       expect(s.events.some((event) => event.type === "summoned" && event.defId === RUSH_TOKEN)).toBe(false);
     });
 
-    it("§3.2 when it leaves the field it goes to its owner's piles", () => {
+    it("R12 when it leaves the field it goes to its current owner's piles", () => {
       const s = curse(true, { theirExile: [VANILLA] });
       const vanilla = theirExiled(s, VANILLA);
       s.play(CURSE);
       s.endTurn();
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
       s.expectInZone(vanilla, "graveyard");
-      expect(s.pile("p2", "graveyard").map((card) => card.id)).toContain(vanilla.id);
-      expect(s.pile("p1", "graveyard").map((card) => card.id)).not.toContain(vanilla.id);
+      expect(s.pile("p1", "graveyard").map((card) => card.id)).toContain(vanilla.id);
+      expect(s.pile("p2", "graveyard").map((card) => card.id)).not.toContain(vanilla.id);
     });
 
     it("no permanent in their exile: nothing is recruited", () => {
@@ -204,7 +205,7 @@ describe("C #1 Curse of the Forgotten Classic", () => {
       const trap = s.backrow("p1", 1);
       expect(trap?.defId).toBe(SHEEPISH);
       expect(trap?.faceUp).not.toBe(true);
-      expect(trap?.owner).toBe("p2");
+      expect(trap?.owner).toBe("p1");
       expect(s.unit("p1", 1)).toBeNull();
       expect(s.view("p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
       expect(s.view("p1").you.backrow[0]).toMatchObject({ defId: SHEEPISH });

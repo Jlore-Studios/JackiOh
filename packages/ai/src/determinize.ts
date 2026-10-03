@@ -68,9 +68,12 @@ function shownUnits(state: GameState): string {
   ).join("|");
 }
 
-/** Whether either face of a def projects an aura, which a face-down Trap does from the moment it is set (R403). */
-function hasAura(defId: string): boolean {
-  const { base, radiant } = scriptsFor(defId);
+/**
+ * Whether either face of a def projects an aura, which a face-down Trap does from the moment it is set (R403).
+ * `version` is the match's pinned catalog (R388), so an older match reads its own scripts.
+ */
+function hasAura(defId: string, version: string | undefined): boolean {
+  const { base, radiant } = scriptsFor(defId, version);
   return base.aura !== undefined || radiant.aura !== undefined;
 }
 
@@ -94,7 +97,7 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   // face-down Trap's aura is live (R403) and the units it changes are on the board for the seat to read,
   // so a candidate whose aura would change any unit's shown stats is not in the pool for that card.
   const trapPool = query({ type: ["Trap", "Field Trap"] }).map((def) => def.id);
-  const auraTraps = trapPool.filter(hasAura);
+  const auraTraps = trapPool.filter((id) => hasAura(id, next.catalogVersion));
   const shown = auraTraps.length > 0 ? shownUnits(next) : "";
   const trapFor = (card: CardInstance): string => {
     const agrees = (defId: string): boolean => {

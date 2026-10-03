@@ -192,6 +192,7 @@ export function placePlagueTokens(args: { count: number; amount?: number }): Eff
         hook: PLAGUE_PLACEMENT_HOOK,
         step: "place",
         radiant: ctx.radiant,
+        catalogVersion: ctx.self?.catalogVersion ?? ctx.state.catalogVersion,
         ...(ctx.self === null ? {} : { instanceId: ctx.self.id }),
         data: { amount: Math.max(1, Math.trunc(args.amount ?? 1)), left: count - 1 },
       });

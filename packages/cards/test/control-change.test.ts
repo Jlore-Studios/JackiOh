@@ -480,7 +480,7 @@ describe("R171 with the cards that change control", () => {
 });
 
 describe("R172 a stolen unit dies as its controller's", () => {
-  it("R172 #81: a stolen Saintess dies for the thief, radiating the thief's units, and goes to her owner's graveyard", () => {
+  it("R172 #81: a stolen Saintess dies for the thief, radiating the thief's units, and goes to the thief's graveyard", () => {
     const g = scenario({
       p1: { hand: [MIND_CONTROL, SORCERER], mana: 10, field: [{ def: POINTMASTER, lane: 5 }] },
       p2: { hand: [VANILLA], field: [{ def: SAINTESS, lane: 2 }, { def: POINTMASTER, lane: 4 }] },
@@ -494,13 +494,13 @@ describe("R172 a stolen unit dies as its controller's", () => {
 
     const died = g.events.filter((event) => event.type === "destroyed" && event.instanceId === saintess.id);
     expect(died).toHaveLength(1);
-    expect(died[0]).toMatchObject({ owner: "p2" });
+    expect(died[0]).toMatchObject({ owner: "p1" });
     // Death: "Make your other Units Radiant" — "your" is the thief.
     expect(g.card(mine).radiant).toBe(true);
     expect(g.card(theirs).radiant).toBe(false);
-    // No Reborn since patch v0.1.1: off the field she is her owner's again (R12).
+    // No Reborn since patch v0.1.1: off the field she remains the thief's (R12).
     expect(g.unit("p1", 2)).toBeNull();
-    expect(g.pile("p2", "graveyard").map((card) => card.id)).toContain(saintess.id);
+    expect(g.pile("p1", "graveyard").map((card) => card.id)).toContain(saintess.id);
   });
 
   it("R172 radiant #3: a stolen Right-house defender's Death summons its base copy on the thief's side", () => {
@@ -532,7 +532,7 @@ describe("R172 a stolen unit dies as its controller's", () => {
     expect(copy?.controller).toBe("p1");
     expect(g.unit("p1", 2)?.id).toBe(defender.id);
     expect(g.card(defender).controller).toBe("p1");
-    expect(g.card(defender).owner).toBe("p2");
+    expect(g.card(defender).owner).toBe("p1");
     for (let lane = 1; lane <= 3; lane += 1) expect(g.unit("p2", lane)).toBeNull();
   });
 });
@@ -586,7 +586,7 @@ describe("R14: radiant Silly Silas bounces only the cards that would move to the
 
     expect(g.unit("p1", 1)?.id).toBe(inbound.id);
     expect(g.card(inbound).controller).toBe("p1");
-    expect(g.card(inbound).owner).toBe("p2");
+    expect(g.card(inbound).owner).toBe("p1");
     expect(g.card(inbound).summonedTurn).toBe(g.state.turn);
     expect(g.lastEvents).toContainEqual({
       type: "controlChanged",

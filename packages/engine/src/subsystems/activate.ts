@@ -21,13 +21,12 @@
 //      are ordinary prompts, which the card's `resume` table answers.
 //   6. Not a play: nothing that counts plays sees it (no turn log, no `counters.played`, no
 //      `cardPlayed`). What the effect plays or casts counts as usual (R70).
-//   8. `legalActions` lists `activate` exactly as it lists a Heroic Power's `activatePower`: the
-//      refusal below is also the list (§10.2's pattern, R43), so a greyed-out control and a refused
-//      action give one reason.
-//  10. Heroic Power (Core #98) keeps its own power (R43) in v0.2.0; `reduce.ts` routes `activate` and
-//      `activatePower` on it to `heroPower.ts`, so `activatePower` is an alias and every old log
-//      replays. Patch v0.2.1 moves the powers onto this module as a card patch: an ability with a
-//      mana price and a declared target, and `ActivationDecl.has` for the one power a copy rolled.
+//   8. `legalActions` lists `activate` from the refusal below, which is also the list (§10.2's
+//      pattern, R43), so a greyed-out control and a refused action give one reason.
+//  10. Heroic Power (Core #98): since patch v0.2.1 each power is one of the card's abilities here — a
+//      mana price, the ping's declared target, and `ActivationDecl.has` for the one power a copy
+//      rolled (`heroPower.heroPowerActivations`, R43). `reduce.ts` routes `activatePower`, the alias
+//      every old log carries, to the same `activateAbility`.
 //
 // The sequence is resumable like every other that can ask (§9.3, R113): paying a Tribute runs the
 // tributed units' Death hooks, which can ask, and then the effect is owed on `state.work`

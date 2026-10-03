@@ -52,7 +52,7 @@ function exiled(state: GameState, defId: string, owner: "p1" | "p2"): CardInstan
 }
 
 describe("E25 Recruit from the opponent's exile (Classic #1 Radiant)", () => {
-  it("R12 the newest permanent of their exile is summoned on your side, under your control, its owner unchanged", () => {
+  it("R640 the newest permanent of their exile is summoned on your side, under your control and now your card", () => {
     const start = playing("recruit-exile");
     const state = start.state;
     const older = exiled(state, pricyUnit.id, "p2");
@@ -64,15 +64,16 @@ describe("E25 Recruit from the opponent's exile (Classic #1 Radiant)", () => {
 
     const card = must(state.players.p1.units[0]?.[0], "the recruited card");
     expect(card.id).toBe(newest.id);
-    expect(card.owner).toBe("p2");
+    expect(card.owner).toBe("p1");
     expect(card.controller).toBe("p1");
     expect(state.players.p2.exile.map((entry) => entry.id)).not.toContain(newest.id);
     expect(state.players.p2.exile.map((entry) => entry.id)).toContain(older.id);
     expect(eventsOfType(sink.events, "summoned")).toMatchObject([{ player: "p1", instanceId: newest.id }]);
 
-    // It goes back to its owner's piles when it leaves the field (§3.2).
+    // It goes to its current owner's piles, yours, when it leaves the field (R12).
     moveToZone(state, card, "graveyard");
-    expect(state.players.p2.graveyard.map((entry) => entry.id)).toContain(newest.id);
+    expect(state.players.p1.graveyard.map((entry) => entry.id)).toContain(newest.id);
+    expect(state.players.p2.graveyard.map((entry) => entry.id)).not.toContain(newest.id);
   });
 
   it("R53 'if it's a Unit, it attacks them at once': the recruit is one of the units this list summoned", () => {

@@ -1,5 +1,5 @@
 // Swap (SPEC §6.3's Swap row, R73; BUILD M3-T1): #87 Pocket Chaos's three swaps — hero health,
-// the board lane by lane, and the libraries — with R12's ownership rule and its one exception,
+// the board lane by lane, and the libraries — with R12's current-ownership rule,
 // R33's face-down trap and §3.2's Stack pile. The fixture Trap this file needs is registered here,
 // so no shared fixture has to grow for it (BUILD §0).
 
@@ -95,10 +95,10 @@ describe("swap (§6.3, R73, M3-T1)", () => {
     expect(cardAt(state, slot("p1", "units", 2))).toBeNull();
     expect(cardAt(state, slot("p2", "units", 5))).toBeNull();
 
-    // Control changes, ownership does not (R12).
+    // Control and current ownership change together (R12).
     expect([mine.controller, myBack.controller]).toEqual(["p2", "p2"]);
     expect([theirs.controller, theirBack.controller]).toEqual(["p1", "p1"]);
-    expect([mine.owner, myBack.owner, theirs.owner, theirBack.owner]).toEqual(["p1", "p1", "p2", "p2"]);
+    expect([mine.owner, myBack.owner, theirs.owner, theirBack.owner]).toEqual(["p2", "p2", "p1", "p1"]);
 
     // Nothing left the field, so R78's reset never ran: damage, buffs, counters and position came along.
     expect(mine.damage).toBe(1);
@@ -121,19 +121,19 @@ describe("swap (§6.3, R73, M3-T1)", () => {
     ]);
   });
 
-  it("R12 a swapped card changes controller but never owner, so it still leaves to its owner's zones", () => {
+  it("R12 a swapped card's current owner changes, so it leaves to its new owner's zones", () => {
     const state = game();
     const card = put(state, plain.id, slot("p1", "units", 1));
 
     run(state, swapBoard());
     expect(card.controller).toBe("p2");
-    expect(card.owner).toBe("p1");
+    expect(card.owner).toBe("p2");
 
-    // Off the field a card always belongs to its owner (R12, §3.2), and R78 hands control back.
+    // Off the field a card follows its current owner (R12, §3.2), and R78 preserves that owner.
     moveToZone(state, card, "graveyard");
-    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
-    expect(state.players.p2.graveyard).toHaveLength(0);
-    expect(card.controller).toBe("p1");
+    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([card.id]);
+    expect(state.players.p1.graveyard).toHaveLength(0);
+    expect(card.controller).toBe("p2");
   });
 
   it("R73 swaps uneven boards, so an empty side simply receives the other side's cards", () => {
@@ -209,7 +209,7 @@ describe("swap (§6.3, R73, M3-T1)", () => {
 
     expect(whereIs(state, hidden)).toBe("p2 backrow 2");
     expect(hidden.controller).toBe("p2");
-    expect(hidden.owner).toBe("p1");
+    expect(hidden.owner).toBe("p2");
     // The swap never flips the card: `controller` is what decides who may read it (R33).
     expect(hidden.faceUp).toBeUndefined();
     expect(viewFor(state, "p2").you.backrow[1]).toMatchObject({ defId: trap.id, faceDown: false });

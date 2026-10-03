@@ -314,8 +314,8 @@ export function defaultZoneFor(
 
 /**
  * §2.3: whether the player chooses X when playing this card — an X-cost card whose X is not fixed
- * by a `cost` hook. #98 Heroic Power prints X but "its X is fixed by its power" (§2.3, R43, R65):
- * its cost hook answers the X, so there is nothing to choose and no X travels in its play.
+ * by a `cost` hook: a cost hook that answers the X leaves nothing to choose, and no X travels in the
+ * play (§2.3, R65). (#98 Heroic Power was such a card until patch v0.2.1 made it cost (0), R43.)
  */
 export function choosesX(state: GameState, instance: CardInstance): boolean {
   // B5 E14, R545: a copier pays its own price and chooses the X of an X-cost text it copies.
@@ -1183,7 +1183,7 @@ function refuseX(state: GameState, player: PlayerId, card: CardInstance, x?: num
     return whyXRefused(state, player, x ?? 0, mostX(state, player, card));
   }
   if (!isXCost(state, card)) return x === undefined ? null : `${name} does not cost X`;
-  // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
+  // R65: an X the card's own cost hook fixes is not the player's to choose, so whatever the
   // action names is ignored — never recorded on the card, never read by the cost (`playSteps`).
   if (!choosesX(state, card)) return null;
   // R348: an X the play leaves out is the old default 0, which is no longer one to choose.

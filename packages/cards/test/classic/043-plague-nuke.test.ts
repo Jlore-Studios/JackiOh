@@ -2,7 +2,7 @@
 // Unit first, then destroys all Units in one state check (§4.5), then gives 1 mana this turn per token
 // counted, an Indestructible survivor's tokens included; its preview is that mana (R280); radiant:
 // after that check, each non-token Unit card that had a token and now lies in a graveyard is summoned
-// to your side under your control, its owner unchanged, into your leftmost open zones in lane order,
+// to your side under your control, becoming yours there (R12), into your leftmost open zones in lane order,
 // without a Cry; a Reborn Unit already back is not summoned again; tokens are gone (R11); a full board
 // leaves the rest; a Unit exiled instead of dying into a graveyard (C #50) is not summoned; its tuned
 // number (mana per token) reads through `param()` (R386)".
@@ -128,7 +128,7 @@ describe("C #43 Plague Nuke", () => {
   });
 
   describe("radiant", () => {
-    it("summons each Unit that had a token from its owner's graveyard under your control, owner unchanged, in lane order", () => {
+    it("summons each Unit that had a token from its owner's graveyard under your control and ownership, in lane order", () => {
       const s = scenario({
         p1: { hand: [{ def: NUKE, radiant: true }, ANCHOR], field: [plagued(VANILLA, 1)] },
         p2: { hand: [ANCHOR], field: [MENACE, plagued(MENACE, 2)] },
@@ -143,7 +143,7 @@ describe("C #43 Plague Nuke", () => {
       expect(unitDefs(s, "p1")).toEqual([VANILLA, MENACE, null, null, null]);
       expect(s.unit("p1", 1)?.id).toBe(mine.id);
       expect(s.unit("p1", 2)?.id).toBe(theirs.id);
-      expect(s.card(theirs.id).owner).toBe("p2");
+      expect(s.card(theirs.id).owner).toBe("p1");
       expect(s.card(theirs.id).controller).toBe("p1");
       // The Menace with no token stays in its owner's graveyard.
       expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([MENACE]);
@@ -199,7 +199,7 @@ describe("C #43 Plague Nuke", () => {
       s.play(NUKE);
 
       expect(unitDefs(s, "p1")).toEqual([FIENDER, null, null, null, null]);
-      expect(s.card(FIENDER).owner).toBe("p2");
+      expect(s.card(FIENDER).owner).toBe("p1");
       expect(unitDefs(s, "p2")).toEqual([BIG_FELINOR, null, null, null, null]);
     });
 
@@ -244,7 +244,7 @@ describe("C #43 Plague Nuke", () => {
       expect(s.pile("p2", "exile")).toEqual([]);
       expect(s.pile("p2", "graveyard").map((card) => card.defId)).toEqual([VOIDWALKER]);
       expect(unitDefs(s, "p1")).toEqual([VANILLA, null, null, null, null]);
-      expect(s.card(VANILLA).owner).toBe("p2");
+      expect(s.card(VANILLA).owner).toBe("p1");
     });
   });
 });

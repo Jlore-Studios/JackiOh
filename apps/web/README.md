@@ -36,7 +36,9 @@ src/
                         differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
-                        "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks
+                        "Mentions" panel, one named card at a time, is inspect/References.tsx, and the
+                        detail view pages its faces and named cards one at a time, issue #37), and
+                        "{n}" values (R280). A card's marks
                         (R437, #50's pending steal) are read through marks.ts (`marksOf`, `markEventOf`, the
                         colour key → palette and mark → words tables) and drawn by CardMarks.tsx (marks.css):
                         a corruption aura in the mark's colours and a badge with its words, still under
@@ -223,9 +225,9 @@ otherwise it is greyed and its tooltip gives the view's `reason`. A press report
 `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
 listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
-in the inline picker. Heroic Power is built the same way: `power` (the first power) and
-`power-<instanceId>` (any further one) report the power's activation, whichever of `activatePower`
-or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
+in the inline picker. Heroic Power is built the same way from the hero panel, its only control (its
+card wears none): `power` (the first power) and `power-<instanceId>` (any further one, drawn as its
+crest alone) report the power's activation, whichever of `activatePower` or `activate` `legal` lists. The control flashes (`data-flash="activated"`, a static ring under
 reduced motion) while the `activated` row plays on its card.
 
 **A play's payments** (B5 E5, E11, E19). Plays that differ by `discards` (Classic #89's targeting

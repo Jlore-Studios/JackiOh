@@ -191,7 +191,8 @@ export { forEachCard } from "./each";
 export { cardsInCardScope, matchesCardScope, readersOf, unreadableBy } from "./cardScope";
 export type { CardScope, CardZone, Readers, ScopedCard } from "./cardScope";
 
-// Degrade and Upgrade (B3.4, R386, R440, R442), and KY's Constant's number set outright (Classic+ #41).
+// Degrade and Upgrade (B3.4, R386, R440, R442), an Upgrade of a named number of the card's own (Core #98's
+// Steady Shot, R637), and KY's Constant's number set outright (Classic+ #41).
 export {
   NUMBER_CARD_KEY,
   applicableChanges,
@@ -202,6 +203,7 @@ export {
   setNumber,
   tuneOnce,
   upgrade,
+  upgradeOwnNumber,
 } from "./tune";
 export type { TuneArgs, TuneDirection, TuneRow } from "./tune";
 
@@ -334,8 +336,9 @@ export { destroyFieldSpellsAndHit, drawWhileCheap, fieldSpellsDoomed } from "./d
 export type { FieldSpellSide } from "./datacenter";
 
 // Classic+ #46–#61:
-// Armor a hero keeps for the game (C+ #46) and a random hand card made cheaper (C+ #49).
-export { discountRandomInHand, gainHeroArmor } from "./perks";
+// Armor a hero keeps for the game (C+ #46) or until its next turn (Core #98's Armor Up, R632), and a
+// random hand card made cheaper (C+ #49).
+export { discountRandomInHand, gainHeroArmor, gainHeroArmorUntilNextTurn } from "./perks";
 
 // Classic+ #63–#67, #75, #76 and their tokens:
 // the Grapes a Grape card rolls (GRAPE_ODDS, R382), a hit on an enemy or a heal on a friend, a draw whose

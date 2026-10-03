@@ -41,6 +41,7 @@ import {
   FACE_DOWN_TAG,
   FaceDownPreview,
   FaceDownSheet,
+  HEROIC_POWER_ID,
   Icon,
   MinionFace,
   UNREVEALED_NOTE,
@@ -420,8 +421,11 @@ export default function Card(props: CardProps): ReactElement {
       )}
 
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
-          view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
-      <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+          view of a card acting on the field (ActivateControl.tsx). Heroic Power is the one
+          exception: it is represented only by the hero-panel control (R510). */}
+      {(unit ?? card).defId !== HEROIC_POWER_ID && (
+        <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+      )}
 
       <PopLayer pops={props.pops} />
     </div>

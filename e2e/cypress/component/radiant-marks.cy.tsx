@@ -87,6 +87,8 @@ describe("R279 a reference opens the card it names", () => {
         <CardDetail def={def("core-090")} onClose={() => undefined} />
       </CardDefsProvider>,
     );
+    // The detail shows one face at a time (issue #37): page to the Radiant one.
+    cy.get('[data-testid="inspect-carousel-next"]').click();
     cy.get('[data-testid="inspect-face-radiant"] .cf-ref[data-ref="core-090-1"]').first().focus();
     cy.get('[data-testid="card-ref-tooltip"]')
       .should("be.visible")
@@ -111,6 +113,8 @@ describe("R279 a reference opens the card it names", () => {
         <CardDetail def={def("core-041")} onClose={() => undefined} />
       </CardDefsProvider>,
     );
+    // The detail shows one face at a time (issue #37): page to the Radiant one.
+    cy.get('[data-testid="inspect-carousel-next"]').click();
     cy.get('[data-testid="inspect-face-radiant"] .cf-ref[data-ref="core-055"]').first().trigger("pointerover", { pointerType: "mouse" });
     cy.get('[data-testid="card-ref-tooltip"]').should("be.visible").find(".card-name").should("have.text", "Lava Golem");
   });

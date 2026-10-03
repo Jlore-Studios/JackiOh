@@ -1,7 +1,9 @@
-// Two small gifts a Classic+ card gives its own side (SPEC §8.7): Armor its hero keeps for the rest of
-// the game (C+ #46 Felinor Flagbearer) and a discount on a random card of a hand (C+ #49 Jay Fungus).
+// Small gifts a card gives its own side: Armor its hero keeps for the rest of the game (C+ #46 Felinor
+// Flagbearer, SPEC §8.7) or until its next turn (Core #98's Armor Up, patch v0.2.1, R632), and a discount
+// on a random card of a hand (C+ #49 Jay Fungus).
 
 import { effectiveCost, isXCost } from "../mana";
+import { addModifier } from "../modifiers";
 import type { Effect } from "../script";
 import { setCostMod } from "./cost";
 import { playerOf, type PlayerSpec } from "./targets";
@@ -18,6 +20,28 @@ export function gainHeroArmor(args: { amount: number; player?: PlayerSpec }): Ef
       const amount = Math.max(0, Math.trunc(args.amount));
       if (amount === 0) return;
       ctx.state.players[playerOf(ctx, args.player ?? "self")].hero.armor += amount;
+    },
+  };
+}
+
+/**
+ * R632, Core #98's Armor Up: "Your hero gains N Armor until your next turn" — the same per-hit
+ * reduction, held as a `heroArmor` modifier on the player that ends as that player's next turn starts
+ * (`modifiers.expireAtTurnStart`), so it covers the opponent's turn between and never touches the
+ * Armor written on the hero. Its badge is the modifier's (R169).
+ */
+export function gainHeroArmorUntilNextTurn(args: { amount: number; player?: PlayerSpec }): Effect {
+  return {
+    kind: "gainHeroArmorUntilNextTurn",
+    apply(ctx): void {
+      const amount = Math.max(0, Math.trunc(args.amount));
+      if (amount === 0) return;
+      const player = playerOf(ctx, args.player ?? "self");
+      addModifier(ctx, player, {
+        kind: "heroArmor",
+        amount,
+        expiry: { until: "startOfTurnOf", player, fromTurn: ctx.state.turn },
+      });
     },
   };
 }

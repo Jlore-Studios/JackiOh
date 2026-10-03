@@ -34,6 +34,8 @@ export const IMPACT_AMOUNT_CAP = 10;
 export const GAIN_SMOOTHING_S = 0.015;   // setTargetAtTime time constant for bus changes
 export const VOICE_DELAY_MS = 150;       // play/cast line after the card whoosh
 export const DEATH_VOICE_DELAY_MS = 120;
+/** The deck builder plays an inspected card's selected voice line immediately after its click. */
+export const INSPECT_VOICE_DELAY_MS = 0;
 export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed cardPlayed+summoned entry
 export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;

@@ -219,7 +219,7 @@ describe("C #50 Voidwalker", () => {
       expect(defIds(s, "p1", "graveyard")).toEqual([HIT_JOB]);
     });
 
-    it("Aura: judged by owner — a stolen Unit of theirs dying on your side is exiled", () => {
+    it("Aura: judged by current owner — a Unit you stole is yours (R640), so its death reaches your graveyard", () => {
       const s = scenario({
         p1: { hand: [MIND_CONTROL, HIT_JOB, FILLER], field: [{ def: VOID, radiant: true }], mana: 7 },
         p2: { hand: [FILLER], field: [VANILLA] },
@@ -227,10 +227,11 @@ describe("C #50 Voidwalker", () => {
       const vanilla = s.card(VANILLA);
       s.play(MIND_CONTROL, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
       expect(s.card(vanilla).controller).toBe("p1");
+      expect(s.card(vanilla).owner).toBe("p1");
       s.play(HIT_JOB, { targets: [{ pick: "instance", instanceId: vanilla.id }] });
-      s.expectInZone(vanilla, "exile");
-      expect(defIds(s, "p2", "exile")).toEqual([VANILLA]);
-      expect(defIds(s, "p1", "graveyard")).toEqual([MIND_CONTROL, HIT_JOB]);
+      s.expectInZone(vanilla, "graveyard");
+      expect(defIds(s, "p2", "exile")).toEqual([]);
+      expect(defIds(s, "p1", "graveyard")).toEqual([MIND_CONTROL, VANILLA, HIT_JOB]);
     });
 
     it("Aura: your own cards reach your graveyard — your Unit that dies, your discards", () => {

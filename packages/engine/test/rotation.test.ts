@@ -157,19 +157,19 @@ describe("rotation (R14, M3-T7)", () => {
     expect(eventsOfType(events, "controlChanged").map((e) => e.row)).toEqual(["backrow", "backrow"]);
   });
 
-  it("R12 a rotated card changes controller but never owner, and still leaves to its owner's zones", () => {
+  it("R12 a rotated card changes its current owner and leaves to that owner's zones", () => {
     const state = game("rotate-ownership");
     const card = put(state, plain.id, slot("p1", "units", 5));
 
     rotate(state, "right");
     expect(card.controller).toBe("p2");
-    expect(card.owner).toBe("p1");
+    expect(card.owner).toBe("p2");
 
-    // Off the field a card always belongs to its owner (R12, §3.2).
+    // Off the field a card follows its current owner (R12, §3.2).
     moveToZone(state, card, "graveyard");
-    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
-    expect(state.players.p2.graveyard).toHaveLength(0);
-    expect(card.controller).toBe("p1");
+    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([card.id]);
+    expect(state.players.p1.graveyard).toHaveLength(0);
+    expect(card.controller).toBe("p2");
   });
 
   it("R14 damage and buffs travel with a rotated card", () => {
@@ -243,10 +243,10 @@ describe("rotation (R14, M3-T7)", () => {
     expect(eventsOfType(events, "bounced").map((e) => e.instanceId)).toEqual([mine.id]);
 
     // p2's lane-1 card moves to p1, not to the opponent: the base clause holds, so it crosses and
-    // changes control, entering p1's side this turn (R171) and keeping its owner (R12).
+    // changes control and current ownership, entering p1's side this turn (R171, R12).
     expect(whereIs(state, theirs)).toBe("p1 units 1");
     expect(theirs.controller).toBe("p1");
-    expect(theirs.owner).toBe("p2");
+    expect(theirs.owner).toBe("p1");
     expect(theirs.summonedTurn).toBe(state.turn);
     expect(theirs.costOverride).toBeUndefined();
     expect(result.crossed).toEqual([theirs.id]);
@@ -321,7 +321,7 @@ describe("rotation (R14, M3-T7)", () => {
 
     expect(whereIs(state, card)).toBe("p2 backrow 5");
     expect(card.controller).toBe("p2");
-    expect(card.owner).toBe("p1");
+    expect(card.owner).toBe("p2");
     // Who may read it follows from the controller alone, so the card is still face down (R33).
     expect(card.faceUp).toBeUndefined();
     expect(eventsOfType(events, "controlChanged")).toEqual([
@@ -363,4 +363,3 @@ describe("rotation (R14, M3-T7)", () => {
     expect(state.players.p1.graveyard).toHaveLength(0);
   });
 });
-

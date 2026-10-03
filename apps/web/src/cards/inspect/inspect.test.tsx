@@ -26,6 +26,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
 import { CardDetail, closeInspect, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
 import {
+  INSPECT_CAROUSEL_PREVIOUS,
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE,
@@ -978,8 +979,10 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
-    // R388: the History section's control is the detail's first, before the caller's actions.
-    const first = screen.getByTestId(patchTestid.historyToggle);
+    // Issue #37: the face pager's ‹ is the detail's first control, before the History section's
+    // (R388) and the caller's actions.
+    const first = screen.getByTestId(INSPECT_CAROUSEL_PREVIOUS);
+    expect(screen.getByTestId(patchTestid.historyToggle)).toBeInTheDocument();
     expect(close).toHaveFocus();
 
     expect(tabFrom(close)).toBe(false);

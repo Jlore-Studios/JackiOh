@@ -10,11 +10,18 @@ export const INSPECT_CLOSE = "inspect-close";
 export const INSPECT_FACE = "inspect-face";
 export const INSPECT_FACE_BASE = "inspect-face-base";
 export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
+/** The detail dialog's pager: its faces and the cards they name, one at a time. */
+export const INSPECT_CAROUSEL = "inspect-carousel";
+export const INSPECT_CAROUSEL_PREVIOUS = "inspect-carousel-previous";
+export const INSPECT_CAROUSEL_NEXT = "inspect-carousel-next";
+export const INSPECT_CAROUSEL_POSITION = "inspect-carousel-position";
 export const INSPECT_GLOSSARY = "inspect-glossary";
 /** A face in play's printed text, where the two differ (SPEC §10.10). */
 export const INSPECT_PRINTED = "inspect-printed";
-/** R279: the hover preview's column of the cards a face's text names. */
+/** R279: the hover preview's panel of the cards a face's text names, one at a time. */
 export const INSPECT_REFS = "inspect-refs";
+/** Its place among them ("2 of 3"), when there are several. */
+export const INSPECT_REFS_POSITION = "inspect-refs-position";
 
 // A list of cards (a graveyard or an exile pile): the hover preview, the sheet, and inside them.
 export const INSPECT_LIST_HOVER = "inspect-list-hover";

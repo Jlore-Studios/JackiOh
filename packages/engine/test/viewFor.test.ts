@@ -382,7 +382,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
     });
   });
 
-  it("R33 a stolen trap becomes visible to its thief and hidden from its owner, though ownership is unchanged", () => {
+  it("R33 a stolen trap becomes visible to its thief and hidden from its previous controller, whose card it no longer is (R640)", () => {
     const state = game("r33-steal");
     const hidden = put(state, secretTrap.id, slot("p2", "backrow", 1));
 
@@ -393,9 +393,9 @@ describe("viewFor (§10.8, M3-T6)", () => {
 
     run(state, steal({ instanceId: hidden.id }), { controller: "p1" });
 
-    // R33's point: control moved, ownership did not, and the view follows control.
+    // R33's point: the view follows control, and current ownership moved with it (R640).
     expect(hidden.controller).toBe("p1");
-    expect(hidden.owner).toBe("p2");
+    expect(hidden.owner).toBe("p1");
     expect(hidden.faceUp).toBeUndefined();
     expect(viewFor(state, "p1").you.backrow[0]).toMatchObject({
       faceDown: false,
@@ -403,7 +403,7 @@ describe("viewFor (§10.8, M3-T6)", () => {
       defId: secretTrap.id,
     });
     expect(viewFor(state, "p2").opponent.backrow[0]).toEqual({ faceDown: true, cost: 1 });
-    // The previous controller stops seeing it entirely, even though it still owns the card.
+    // The previous controller stops seeing it entirely.
     expect(JSON.stringify(viewFor(state, "p2"))).not.toContain(`"${secretTrap.id}"`);
     expect(JSON.stringify(viewFor(state, "p2"))).not.toContain(`"${hidden.id}"`);
   });

@@ -186,17 +186,18 @@ describe("destroy (§6.3, M3-T1)", () => {
     expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([card.id]);
   });
 
-  it("R12 a stolen unit destroyed goes to its owner's graveyard", () => {
+  it("R640 a unit placed on the other side, destroyed, goes to its current owner's graveyard", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
+    expect(theirs.owner).toBe("p1");
     const run = runner(state);
 
     run.apply(destroy({ target: chosen }), theirs);
     run.check();
 
-    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
   });
 
   it("R11 a destroyed unit token vanishes and reaches no graveyard", () => {
@@ -311,16 +312,17 @@ describe("sacrifice (§6.3, M3-T1)", () => {
     expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
   });
 
-  it("R12 a sacrificed stolen unit goes to its owner's graveyard", () => {
+  it("R640 a sacrificed unit placed on the other side goes to its current owner's graveyard", () => {
     const state = game();
     const theirs = newInstance(state, "fx-4", "p2", { z: "hand", player: "p2" });
     expect(placeOnField(state, theirs, slot("p1", "units", 1))).toBe(true);
+    expect(theirs.owner).toBe("p1");
     const run = runner(state);
 
     run.apply(sacrifice({ target: chosen }), theirs, { controller: "p1" });
 
-    expect(state.players.p2.graveyard.map((c) => c.id)).toEqual([theirs.id]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
+    expect(state.players.p1.graveyard.map((c) => c.id)).toEqual([theirs.id]);
+    expect(state.players.p2.graveyard).toHaveLength(0);
   });
 
   it("§6.3 does nothing for a card that is not on the field", () => {

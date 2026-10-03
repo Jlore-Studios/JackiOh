@@ -315,31 +315,33 @@ describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () =
     const fillers = Array.from({ length: 9 }, () => VANILLA);
     const g = scenario({
       p1: {
-        hand: [MIND_CONTROL, { def: SILAS, radiant: true }, HIT_JOB],
+        // Mind Control and Silas leave the hand as they are played, so it holds ten, full (HAND_CAP),
+        // when Silas's Cry resolves.
+        hand: [MIND_CONTROL, { def: SILAS, radiant: true }, REMINISCE, ...fillers],
         mana: 10,
         library: [...LIBRARY],
       },
       p2: {
-        hand: [REMINISCE, ...fillers],
+        hand: [VANILLA],
         field: [{ def: SEVEN_SEVEN, lane: 1 }],
         library: [...LIBRARY],
       },
     });
     const seven = g.card(SEVEN_SEVEN);
-    expect(g.state.players.p2.hand).toHaveLength(10);
 
-    // p1 steals the 7/7 into its own lane 1 (R15). Rotating left, p1's lane 1 would move to p2's
-    // lane 1 — to the opponent — so radiant Silas bounces it to its OWNER's hand "costing 0"
-    // (R12), but that hand is full, so it is burned instead (§2.4, R4).
+    // p1 steals the 7/7 into its own lane 1 (R15), and is its current owner from then on (R640).
+    // Rotating left, p1's lane 1 would move to p2's lane 1 — to the opponent — so radiant Silas
+    // bounces it to its owner's hand "costing 0" (R12), p1's, but that hand is full, so it is burned
+    // into p1's graveyard instead (§2.4, R4).
     g.play(MIND_CONTROL, { targets: at(seven) });
     expect(g.unit("p1", 1)?.id).toBe(seven.id);
     g.play(SILAS, { zone: 3, modes: ["left"] });
+    expect(g.state.players.p1.hand).toHaveLength(10);
     g.expectInZone(seven, "graveyard");
+    expect(g.state.players.p1.graveyard.map((card) => card.id)).toContain(seven.id);
     expect(g.card(seven).costOverride).toBeUndefined();
 
-    // p2 Reminisces it back: "it costs 1 less", so the printed 4 becomes 3.
-    g.endTurn();
-    expect(g.state.active).toBe("p2");
+    // p1 Reminisces it back: "it costs (1) less", so the printed 4 becomes 3.
     g.play(REMINISCE);
     g.answer(seven.id);
     g.expectInZone(seven, "hand");

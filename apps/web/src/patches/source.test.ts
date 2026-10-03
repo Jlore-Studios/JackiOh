@@ -68,9 +68,9 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: six patches in the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads packages/cards/patches/: seven patches in the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0", "v0.2.1"]);
     const index = await realPatchSource.index();
     expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {

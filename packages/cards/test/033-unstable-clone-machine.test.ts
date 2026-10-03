@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
-import { LIBRARY_CAP, subsystems, type CardInstance } from "@jackioh/engine";
+import { LIBRARY_CAP, type CardInstance } from "@jackioh/engine";
 
 /** The copies of one def sitting in a library. */
 function copiesIn(cards: CardInstance[], defId: string): CardInstance[] {
@@ -269,29 +269,29 @@ describe("R316: what a full library turns away", () => {
 });
 
 describe("R119: a permanent does not answer the play that put it onto the field", () => {
-  it("R119 a Clone Machine a played Heroic Power's Recruit put on the field does not answer that play", () => {
+  it("R119 a Clone Machine a played Pile On's Recruit put on the field does not answer that play", () => {
+    // C #60 Pile On, "Recruit every permanent in your deck" (#98's Recruit is an Activate since patch
+    // v0.2.1, R43, and an activation is no play).
     const s = scenario({
-      seed: "edge-r8-hp-clone",
-      p1: { hand: ["core-098", "core-008"], library: ["core-033", "core-008", "core-008", "core-008"], mana: 8 },
+      seed: "edge-r8-pile-on-clone",
+      p1: { hand: ["classic-060", "core-008"], library: ["core-033", "core-008"], mana: 8 },
       p2: { hand: ["core-008"], library: ["core-008", "core-008", "core-008", "core-008", "core-008", "core-008"] },
     });
-    // R43: the power lives on the instance; "(3) Recruit a permanent".
-    const hp = s.hand("p1")[0];
-    if (hp === undefined) throw new Error("expected the Heroic Power in hand");
-    hp.memory[subsystems.POWER_KEY] = "recruit";
+    const pileOn = s.hand("p1")[0];
+    if (pileOn === undefined) throw new Error("expected Pile On in hand");
 
-    s.play(hp);
+    s.play(pileOn);
 
-    // Playing it activated the power once (R43): the Recruit put the Clone Machine on p1's backrow
-    // while the Heroic Power's play was resolving.
+    // The Recruit put the Clone Machine on p1's backrow while Pile On's play was resolving.
     const backrow = [1, 2, 3, 4, 5].flatMap((lane) => {
       const card = s.backrow("p1", lane);
       return card === null ? [] : [card.defId];
     });
     expect(backrow).toContain("core-033");
     // R119: "does not fire on the play that put it onto the field: it starts counting from the next
-    // play". No copies of the Heroic Power are shuffled in.
-    expect(copiesIn(s.pile("p1", "library"), "core-098")).toHaveLength(0);
+    // play". No copies of Pile On are shuffled in: the one in the library is Pile On itself, which
+    // goes to the bottom of the deck instead of the graveyard.
+    expect(copiesIn(s.pile("p1", "library"), "classic-060").map((card) => card.id)).toEqual([pileOn.id]);
   });
 });
 

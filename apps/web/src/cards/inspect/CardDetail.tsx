@@ -1,32 +1,41 @@
-// The deck builder's detail view (B29): both printed faces side by side at every width, a meta
-// line (its lines of code last, E36), the glossary of both faces, and the caller's meta and actions above Close. It is a centred
-// modal dialog over a scrim, closed by Close, the scrim or Escape (B25), and it takes the one
-// inspect slot: opening it closes any hover preview or sheet, and closeInspect() closes it.
+// The deck builder's detail view (B29): the printed faces one at a time — base, Radiant, then each
+// card the text names, paged like Marvel Snap's related cards (issue #37) — a meta line (its lines of
+// code last, E36), the glossary of both faces, the card's voice lines, and the caller's meta and
+// actions above Close. It is a centred modal dialog over a scrim, closed by Close, the scrim or
+// Escape (B25), and it takes the one inspect slot: opening it closes any hover preview or sheet, and
+// closeInspect() closes it.
 //
 // Both faces and the reading-size rules are where a reference in a card's text is a control (R279):
 // hovering, focusing or tapping a name shows the card it names. The Radiant face and the Radiant
 // line mark what the base face does not have in gold (R277).
 //
-// Under the faces, the rules text is printed again at reading size. Two faces side by side on a
-// 390 px phone are about 170 px wide each, where a 400-character card prints at 5 px; inspect.css
-// shows this block on narrow screens and short ones, and on any screen for a card long enough to
-// shrink hard. On a wide screen up to 900 px tall (a 1280x720 desktop, a phone on its side) the
-// faces stand at the height the screen allows, with the rest of the dialog in a column beside
-// them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
-// is visible the moment the dialog opens, which is also where focus lands.
+// Under the faces, the rules text is printed again at reading size, both faces' together, so the
+// Radiant changes read without paging; inspect.css shows this block on narrow screens and short ones,
+// and on any screen for a card long enough to shrink hard. On a wide screen up to 900 px tall (a
+// 1280x720 desktop, a phone on its side) the face stands at the height the screen allows, with the
+// rest of the dialog in a column beside it. The actions row (the caller's actions and Close) is
+// pinned under the scrolling body, so it is visible the moment the dialog opens, which is also where
+// focus lands.
 //
 // Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
 // "History" control, it loads the card's patch history when opened and lists each patch that changed
 // the card, newest first, with its faces as that patch left them and what changed marked. The
 // Patch notes page opens the detail with it already open (`historyOpen`).
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
+import { INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY } from "../../audio/constants.ts";
+import { getAudioEngine } from "../../audio/engine.ts";
+import type { VoiceLineKind } from "../../audio/types.ts";
+import { VOICE_LINES, lineFor } from "../../audio/voiceData.ts";
 import { CardFace } from "../CardFace.tsx";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
+import { useDefResolver } from "../refContext.tsx";
+import { namedCards } from "./References.tsx";
+import { CAROUSEL_SWIPE_PX } from "./constants.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
@@ -35,12 +44,22 @@ import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
+  INSPECT_CAROUSEL,
+  INSPECT_CAROUSEL_NEXT,
+  INSPECT_CAROUSEL_POSITION,
+  INSPECT_CAROUSEL_PREVIOUS,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
   INSPECT_SCRIM,
 } from "./testids.ts";
 import "./inspect.css";
+
+const VOICE_LINE_BUTTONS: readonly { kind: VoiceLineKind; label: string }[] = [
+  { kind: "play", label: "Play voice line" },
+  { kind: "death", label: "Death voice line" },
+  { kind: "cast", label: "Cast voice line" },
+];
 
 export type CardDetailProps = {
   def: CardDef;
@@ -67,6 +86,143 @@ export function detailMetaLine(def: CardDef): string {
 
 /** Text tiers whose printed face shrinks far enough to want the reading-size copy on any screen. */
 const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
+
+type DetailFace = {
+  key: string;
+  caption: string;
+  testId?: string;
+  relatedId?: string;
+  face: FaceModel;
+};
+
+/**
+ * What the detail pages through (issue #37): the card's two printed faces, then each card either
+ * face's text names (R279's `refs`), in the order the text names them, on the face it names: "a
+ * Radiant Rush Token" is the token's Radiant face (`namedCards`, as the hover preview reads them).
+ * Only what the card names, never the cards that name it, so a token's detail stays its own.
+ */
+function detailFaces(base: FaceModel, radiant: FaceModel, resolve: ((id: string) => CardDef | undefined) | null): DetailFace[] {
+  const faces: DetailFace[] = [
+    { key: "base", caption: "Base", testId: INSPECT_FACE_BASE, face: base },
+    { key: "radiant", caption: "Radiant", testId: INSPECT_FACE_RADIANT, face: radiant },
+  ];
+  if (resolve === null) return faces;
+  const seen = new Set<string>();
+  for (const named of [...namedCards(base, resolve), ...namedCards(radiant, resolve)]) {
+    const key = `related:${named.def.id}:${named.radiant ? "radiant" : "base"}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    faces.push({
+      key,
+      caption: named.radiant ? `Radiant ${named.def.name}` : named.def.name,
+      relatedId: named.def.id,
+      face: faceModel({ defId: named.def.id, def: named.def, radiant: named.radiant }),
+    });
+  }
+  return faces;
+}
+
+/**
+ * The faces one at a time, as Marvel Snap pages a card's related cards: ‹ and ›, the arrow keys, or a
+ * horizontal swipe across the face (a touch or pen drag of at least CAROUSEL_SWIPE_PX) move by one,
+ * wrapping, and "n of N" says where. Every card has at least its base face and its Radiant face.
+ */
+function RelatedCardCarousel({ def, base, radiant }: { def: CardDef; base: FaceModel; radiant: FaceModel }): ReactElement {
+  const resolve = useDefResolver();
+  const faces = detailFaces(base, radiant, resolve);
+  const [active, setActive] = useState(0);
+  const swipeFrom = useRef<number | null>(null);
+  useEffect(() => setActive(0), [def.id]);
+  const index = Math.min(active, faces.length - 1);
+  const step = (by: number): void => setActive((current) => (current + by + faces.length) % faces.length);
+  const paged = faces.length > 1;
+
+  return (
+    <div
+      className="inspect-detail-carousel"
+      data-testid={INSPECT_CAROUSEL}
+      role="group"
+      aria-roledescription="carousel"
+      aria-label={`${def.name}: faces and related cards`}
+      onKeyDown={(event) => {
+        if (!paged || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+        event.preventDefault();
+        step(event.key === "ArrowLeft" ? -1 : 1);
+      }}
+    >
+      <div
+        className="inspect-detail-faces"
+        onPointerDown={(event) => {
+          // A swipe is a finger's or a pen's; a mouse has the buttons and the arrow keys, and its drag
+          // stays a text selection.
+          swipeFrom.current = event.pointerType === "mouse" ? null : event.clientX;
+        }}
+        onPointerUp={(event) => {
+          const from = swipeFrom.current;
+          swipeFrom.current = null;
+          if (!paged || from === null) return;
+          const moved = event.clientX - from;
+          if (Math.abs(moved) >= CAROUSEL_SWIPE_PX) step(moved < 0 ? 1 : -1);
+        }}
+        onPointerCancel={() => {
+          swipeFrom.current = null;
+        }}
+      >
+        {faces.map((entry, entryIndex) => (
+          <figure
+            key={entry.key}
+            className={`inspect-detail-face${entry.face.radiant ? " inspect-detail-face--radiant" : ""}`}
+            hidden={entryIndex !== index}
+            data-related-id={entry.relatedId}
+          >
+            <div className="inspect-face inspect-face--detail" {...(entry.testId === undefined ? {} : { "data-testid": entry.testId })}>
+              <CardFace face={entry.face} layout="full" />
+            </div>
+            <figcaption className="inspect-detail-caption">{entry.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+      {paged && (
+        <div className="inspect-carousel-controls">
+          <button type="button" data-testid={INSPECT_CAROUSEL_PREVIOUS} aria-label="Previous face" onClick={() => step(-1)}>
+            ‹
+          </button>
+          <span data-testid={INSPECT_CAROUSEL_POSITION} aria-live="polite">
+            {index + 1} of {faces.length}
+          </span>
+          <button type="button" data-testid={INSPECT_CAROUSEL_NEXT} aria-label="Next face" onClick={() => step(1)}>
+            ›
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Every authored line this card has, each played only after the click has unlocked Web Audio. */
+function VoiceLineButtons({ defId }: { defId: string }): ReactElement | null {
+  const lines = VOICE_LINE_BUTTONS.filter(({ kind }) => lineFor(VOICE_LINES, defId, kind) !== null);
+  if (lines.length === 0) return null;
+  return (
+    <span className="inspect-voice-lines" aria-label="Voice lines">
+      {lines.map(({ kind, label }) => (
+        <button
+          key={kind}
+          type="button"
+          className="inspect-voice-line"
+          data-testid={`inspect-voice-${kind}`}
+          onClick={() => {
+            const audio = getAudioEngine();
+            audio.unlock();
+            audio.playVoice(defId, kind, INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY.summon);
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </span>
+  );
+}
 
 /**
  * The rules at reading size: the base text, then the Radiant face's whole text with what the base
@@ -133,20 +289,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
             Add and Close are on screen as the dialog opens, whatever the card's length. */}
         <div className="inspect-detail-body">
           <RefsInteractive>
-            <div className="inspect-detail-faces">
-              <figure className="inspect-detail-face">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
-                  <CardFace face={base} layout="full" />
-                </div>
-                <figcaption className="inspect-detail-caption">Base</figcaption>
-              </figure>
-              <figure className="inspect-detail-face inspect-detail-face--radiant">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
-                  <CardFace face={radiant} layout="full" />
-                </div>
-                <figcaption className="inspect-detail-caption">Radiant</figcaption>
-              </figure>
-            </div>
+            <RelatedCardCarousel def={def} base={base} radiant={radiant} />
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
                 them on a wide, short one such as a 1280x720 desktop (inspect.css). */}
             <div className="inspect-detail-info">
@@ -161,6 +304,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
           </RefsInteractive>
         </div>
         <div className="inspect-actions">
+          <VoiceLineButtons defId={def.id} />
           {actions}
           <button
             ref={closeButton}

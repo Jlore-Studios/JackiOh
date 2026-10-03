@@ -126,19 +126,19 @@
 //   `expect(() => s.play(x)).toThrow(/tribute/)`.
 //
 // ---------------------------------------------------------------------------------------------
-// THREE ACTIONS `reduce` HAS NOT WIRED YET
+// TWO ACTIONS `reduce` HAS NOT WIRED YET
 // ---------------------------------------------------------------------------------------------
-// `packages/engine/src/reduce.ts` still answers three action types with a placeholder string,
-// although the modules behind all three are written. For those EXACT messages — and for no other
+// `packages/engine/src/reduce.ts` still answers two action types with a placeholder string,
+// although the modules behind both are written. For those EXACT messages — and for no other
 // refusal — the harness calls the engine function `reduce` will call, so a card test can be written
 // against the documented API today and needs no change when the wiring lands:
 //   attack         "combat arrives with M2"    → `declareAttack(sink, attacker, target)` (combat.ts)
 //   answer         "prompts arrive with M3"    → `answerPrompt(sink, {…})`               (prompts.ts)
-//   activate       "hero powers arrive with M3"→ `subsystems.activatePower(sink, player, {…})`
 // These are the engine's own complete implementations — validation, payment, damage pipeline and
 // state check included — not a harness re-implementation of any rule, and each fallback stops
 // being reachable the moment its `reduce` case returns something else. A genuine rules refusal is
-// never swallowed: it is not one of the three strings, so it throws untouched.
+// never swallowed: it is not one of the two strings, so it throws untouched. (`activate`, a Heroic
+// Power's power included since patch v0.2.1, has always gone through `reduce`.)
 // `view()` calls `viewFor(state, playerId)` (§10.8) directly and needs no fallback.
 
 import { expect } from "vitest";
@@ -166,7 +166,6 @@ import {
   showToOwner,
   startTurn as engineStartTurn,
   stateCheck,
-  subsystems,
   unitView,
   viewFor,
   answerPrompt,
@@ -197,7 +196,6 @@ export const DEFAULT_TURN = 9;
  */
 const PLACEHOLDERS = {
   attack: "combat arrives with M2",
-  power: "hero powers arrive with M3",
   prompt: "prompts arrive with M3",
 } as const;
 
@@ -287,9 +285,9 @@ export type PlayOptions = {
 /**
  * B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
  * names one when a card has several, `modes` and `targets` are its declared choices, and `tributes`
- * pays a Tribute its cost names (card references on the field, as `play`'s). With none of `ability`,
- * `modes` or `tributes` the harness sends `activatePower`, the alias every old log carries, which
- * the engine routes exactly as `activate` (R43, R384).
+ * pays a Tribute its cost names (card references on the field, as `play`'s). The harness always
+ * sends `activate`, a Heroic Power's power included (R43); `activatePower`, the alias old logs carry,
+ * is routed exactly the same by the engine.
  */
 export type ActivateOptions = {
   targets?: readonly Selection[];
@@ -961,37 +959,21 @@ class Harness implements Scenario {
   activate(card: CardRef, opts: ActivateOptions = {}): Scenario {
     const source = this.resolve(card, "field", "activate");
     const who = source.controller;
-    if (opts.ability !== undefined || opts.modes !== undefined || opts.tributes !== undefined) {
-      const what = `activate ${describeInstance(this.current, source)}`;
-      const tributes = opts.tributes?.map((ref) => this.resolve(ref, "field", `${what} (tribute)`).id);
-      this.action(
-        {
-          type: "activate",
-          playerId: who,
-          instanceId: source.id,
-          ...(opts.ability === undefined ? {} : { ability: opts.ability }),
-          ...(opts.targets === undefined ? {} : { targets: [...opts.targets] }),
-          ...(opts.modes === undefined ? {} : { modes: [...opts.modes] }),
-          ...(tributes === undefined ? {} : { tributes }),
-        },
-        what,
-      );
-      return this;
-    }
-    this.actionOrEngine(
+    const what = `activate ${describeInstance(this.current, source)}`;
+    const tributes = opts.tributes?.map((ref) => this.resolve(ref, "field", `${what} (tribute)`).id);
+    // B3.2, R384: one action for every Activate ability, a Heroic Power's power included since patch
+    // v0.2.1 (R43); `activatePower` is only the alias old logs carry.
+    this.action(
       {
-        type: "activatePower",
+        type: "activate",
         playerId: who,
         instanceId: source.id,
+        ...(opts.ability === undefined ? {} : { ability: opts.ability }),
         ...(opts.targets === undefined ? {} : { targets: [...opts.targets] }),
+        ...(opts.modes === undefined ? {} : { modes: [...opts.modes] }),
+        ...(tributes === undefined ? {} : { tributes }),
       },
-      PLACEHOLDERS.power,
-      `activate ${describeInstance(this.current, source)}`,
-      (sink) =>
-        subsystems.activatePower(sink, who, {
-          instanceId: source.id,
-          ...(opts.targets === undefined ? {} : { targets: opts.targets }),
-        }),
+      what,
     );
     return this;
   }

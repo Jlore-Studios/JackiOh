@@ -1,22 +1,30 @@
 // Polish 6, slice C: the detail view (docs/polish/6-cards.md, B29).
 //
-// `<CardDetail def onClose actions? meta?>` is a centred dialog: both faces side by side, a meta
+// `<CardDetail def onClose actions? meta?>` is a centred dialog: its faces one at a time (issue #37), a meta
 // line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` and ` · N lines of code` (E36), the
 // glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY } from "../../audio/constants.ts";
+import { getAudioEngine } from "../../audio/engine.ts";
+import { CardDefsProvider } from "../refContext.tsx";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
+import { CAROUSEL_SWIPE_PX } from "./constants.ts";
 import { CardDetail, closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
+  INSPECT_CAROUSEL,
+  INSPECT_CAROUSEL_NEXT,
+  INSPECT_CAROUSEL_POSITION,
+  INSPECT_CAROUSEL_PREVIOUS,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
@@ -25,6 +33,11 @@ import {
 
 /** The meta line's separator, as the Surface spells it. */
 const SEP = " · ";
+/**
+ * #98's pages: its base and Radiant faces, then what each face names on the face it names it — the
+ * base text's Rush Token and Felinor Token, the Radiant text's Radiant Rush Token and Ghoul Token.
+ */
+const HEROIC_POWER_PAGES = ["Base", "Radiant", "Rush Token", "Felinor Token", "Radiant Rush Token", "Ghoul Token"];
 
 function defOf(id: string): CardDef {
   const def = CATALOG[id];
@@ -59,6 +72,7 @@ afterEach(() => {
     closeInspect();
   });
   cleanup();
+  vi.restoreAllMocks();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
@@ -252,4 +266,87 @@ describe("CardDetail (B29)", () => {
     }
     // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
   }, 30_000);
+
+  it("pages a card's base, Radiant, then each named card on the face its text names, one at a time", () => {
+    const def = defOf("core-098");
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <CardDetail def={def} onClose={() => undefined} />
+      </CardDefsProvider>,
+    );
+    const shown = (): HTMLElement[] =>
+      [...screen.getByTestId(INSPECT_CAROUSEL).querySelectorAll<HTMLElement>("figure")].filter((figure) => !figure.hidden);
+    const caption = (): string => shown()[0]?.querySelector("figcaption")?.textContent ?? "";
+    const count = HEROIC_POWER_PAGES.length;
+
+    expect(screen.getByTestId(INSPECT_CAROUSEL).querySelectorAll("figure")).toHaveLength(count);
+    expect(shown()).toHaveLength(1);
+    expect(screen.getByTestId(INSPECT_CAROUSEL_POSITION)).toHaveTextContent(`1 of ${String(count)}`);
+    expect(screen.getByTestId(INSPECT_FACE_BASE).closest("figure")).not.toHaveAttribute("hidden");
+    expect(screen.getByTestId(INSPECT_FACE_RADIANT).closest("figure")).toHaveAttribute("hidden");
+
+    const seen: string[] = [];
+    for (let n = 0; n < count; n += 1) {
+      seen.push(caption());
+      fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_NEXT));
+    }
+    expect(seen).toEqual(HEROIC_POWER_PAGES);
+    // It wraps: past the last page is the first again.
+    expect(caption()).toBe("Base");
+    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_PREVIOUS));
+    expect(caption()).toBe("Ghoul Token");
+    // The Radiant Rush Token page is the token's Radiant face.
+    fireEvent.click(screen.getByTestId(INSPECT_CAROUSEL_PREVIOUS));
+    expect(shown()[0]).toHaveAttribute("data-related-id", "core-t-rush");
+    expect(shown()[0]?.querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
+  });
+
+  it("the arrow keys and a horizontal swipe page it too; a mouse drag does not", () => {
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <CardDetail def={defOf("core-098")} onClose={() => undefined} />
+      </CardDefsProvider>,
+    );
+    const carousel = screen.getByTestId(INSPECT_CAROUSEL);
+    const position = (): string => screen.getByTestId(INSPECT_CAROUSEL_POSITION).textContent ?? "";
+    const faces = carousel.querySelector<HTMLElement>(".inspect-detail-faces");
+    if (faces === null) throw new Error("no faces");
+    const swipe = (pointerType: string, from: number, to: number): void => {
+      fireEvent.pointerDown(faces, { pointerType, clientX: from, pointerId: 3 });
+      fireEvent.pointerUp(faces, { pointerType, clientX: to, pointerId: 3 });
+    };
+
+    fireEvent.keyDown(carousel, { key: "ArrowRight" });
+    expect(position()).toMatch(/^2 of /);
+    fireEvent.keyDown(carousel, { key: "ArrowLeft" });
+    expect(position()).toMatch(/^1 of /);
+
+    swipe("touch", 300, 300 - CAROUSEL_SWIPE_PX);
+    expect(position()).toMatch(/^2 of /);
+    swipe("touch", 100, 100 + CAROUSEL_SWIPE_PX);
+    expect(position()).toMatch(/^1 of /);
+    // Shorter than a swipe, or a mouse, pages nothing.
+    swipe("touch", 300, 300 - CAROUSEL_SWIPE_PX + 1);
+    swipe("mouse", 300, 100);
+    expect(position()).toMatch(/^1 of /);
+  });
+
+  it("offers every voice-line kind that the inspected card has and plays the selected line", () => {
+    const playVoice = vi.spyOn(getAudioEngine(), "playVoice");
+    const unlock = vi.spyOn(getAudioEngine(), "unlock");
+    const unit = defOf("core-004");
+    const { rerender } = render(<CardDetail def={unit} onClose={() => undefined} />);
+
+    expect(screen.getByRole("button", { name: "Play voice line" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Death voice line" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cast voice line" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Death voice line" }));
+    expect(unlock).toHaveBeenCalledOnce();
+    expect(playVoice).toHaveBeenCalledWith(unit.id, "death", INSPECT_VOICE_DELAY_MS, VOICE_PRIORITY.summon);
+
+    rerender(<CardDetail def={defOf("core-005")} onClose={() => undefined} />);
+    expect(screen.queryByRole("button", { name: "Play voice line" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Death voice line" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cast voice line" })).toBeInTheDocument();
+  });
 });

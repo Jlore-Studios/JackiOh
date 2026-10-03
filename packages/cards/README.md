@@ -17,7 +17,7 @@ packages/cards
 ├── catalog.json                 card data, proved against SPEC §8 by test/catalog.test.ts (M4-T1, M9)
 ├── patches                      the catalog's history (R388, §8 below)
 │   ├── patches.json             every patch in order: { version, date, title, source, notes }
-│   └── <version>.json           the whole catalog as that patch left it, v0.1.0 … v0.2.0
+│   └── <version>.json           the whole catalog as that patch left it, v0.1.0 … v0.2.1
 ├── src
 │   ├── catalog-data.ts          the ONE reader of catalog.json: CATALOG, CATALOG_VERSION, cardDef(id)
 │   ├── query.ts                 SPEC §5.1's catalog.query — the only random-pool source
@@ -531,9 +531,10 @@ still be read.
   Coin added); v0.1.0-r3 (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
   `refs`); v0.1.1 (2026-09-27, issue #27: the Ghoul Token added and 105 entries changed); v0.2.0
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
-  below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a
-  full clone (a shallow one stops early).
-- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.0`, and a test
+  below); v0.2.1 (2026-10-02, issue #37: Heroic Power's Activate rework). Everything before v0.1.1
+  was rebuilt from `git log --follow packages/cards/catalog.json` on a full clone (a shallow one stops
+  early).
+- **The version is the patch.** `CATALOG_VERSION` is the latest patch's version, `v0.2.1`, and a test
   holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version. A
   patch bumps it everywhere the string lives: `src/catalog-data.ts`; the server's env
   (`apps/server/.env.example`, `render.yaml`); the client's `VITE_CATALOG_VERSION`; and the database,
@@ -543,9 +544,9 @@ still be read.
 - **Making one.** `pnpm --filter @jackioh/cards run patch <version> "<title>"` (in `scripts/`, where fs
   is allowed) snapshots `catalog.json`, diffs it against the previous snapshot and writes the
   patch-notes entry, card by card.
-- **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its
-  script. A patch that changes what a script does is recorded by the card's new text and its ruling,
-  and an old log of that card's games replays exactly only under the code it was played with.
+- **Data and code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`). A patch
+  that changes a script also keeps its prior script under `<id>@<version>`; the match-pinned catalog
+  version selects it for each instance and continuation, so an old log replays under the code it used.
 
 Patch v0.2.0's changes to Core, beside the two new sets:
 

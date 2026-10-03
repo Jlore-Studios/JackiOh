@@ -57,8 +57,9 @@ function optionsOf(how: CastHow): CastOptions {
 
 /**
  * E12, R453: cast a card that exists (default: the first chosen one). It is cast by the running card's
- * controller, who makes its choices (R70), from whatever pile it lies in; its owner does not change,
- * so it lands in its owner's piles afterwards. A card on the field, or one that has ceased to exist,
+ * controller, who makes its choices (R70), from whatever pile it lies in; the cast does not change its
+ * owner (a Field Spell or Trap it places becomes the caster's on the field, R12), so it lands in its
+ * current owner's piles afterwards. A card on the field, or one that has ceased to exist,
  * is not cast.
  */
 export function cast(args: { target?: TargetSpec } & CastHow = {}): Effect {

@@ -19,7 +19,7 @@ export type CardView = {
   health?: number;
   /**
    * R243, R43, R151: the power a #98 Heroic Power in its owner's hand rolled as it arrived, by name.
-   * Its X is the card's cost, which does not name it: four of the eight powers cost the same.
+   * The card costs (0) whatever it rolled (patch v0.2.1), so its cost does not name it.
    */
   power?: string;
   /**
@@ -229,15 +229,22 @@ export type BackrowView =
     }
   | null;
 
-/** A Heroic Power on the field (§8 #98, R43), as the client needs it to act. */
+/** A Heroic Power on the field (§8 #98, R43), as the client needs it to act and to draw it. */
 export type HeroPowerView = {
-  /** #98's instance, so `activatePower {instanceId}` is built from the view alone (§10.2). */
+  /** #98's instance, so its `activate {instanceId, ability}` is built from the view alone (§10.2). */
   instanceId: string;
   defId: string;
+  /** R103: the power's stored name ("recruit", "ping", …), which the client's words are keyed by. */
   name: string;
-  /** "Once per turn, spend X" (§8 #98): the X, which is also the card's cost (R43, R65). */
+  /** R384: the id of the Activate ability the power is on this card — its name, or a fused card's own id (R102). */
+  ability: string;
+  /** §5.2: the face the power runs on — its Radiant clause, and Armor Up's name Tank Up, when true. */
+  radiant: boolean;
+  /** "Activate: Spend (X)" (§8 #98): the mana the power's activation spends (R43); the card costs (0). */
   x: number;
   usedThisTurn: boolean;
+  /** B3.4, R386: the card's declared numbers as they stand (Steady Shot's `shot`, R637), when it has any. */
+  params?: Record<string, number>;
 };
 
 export type HeroView = {

@@ -1,6 +1,6 @@
-// Steal (SPEC §6.3): take control of a card on the field. Control is a field-only notion, so the
-// card keeps its owner and still goes to that owner's hand, library, graveyard or exile when it
-// later leaves the field (R12, §3.2). Where it lands is R15, and it keeps its damage, buffs,
+// Steal (SPEC §6.3): take control of a card on the field. A field control change also changes the
+// card's current owner, so it later goes to the new owner's hand, library, graveyard or exile (R12,
+// §3.2). Where it lands is R15, and it keeps its damage, buffs,
 // counters and position because it never leaves the field, which is what R78's reset is about.
 // What a steal does change besides `controller` is R171's: the card has entered its new
 // controller's side on this turn, so it takes the turn as its `summonedTurn` (summoning sick, §4.1)
@@ -69,6 +69,10 @@ function takeControl(ctx: EffectContext, card: CardInstance): boolean {
     placeOnField(ctx.state, card, from, { stack: true });
     return false;
   }
+
+  // R12: a field control change transfers current ownership too, so every later off-field move uses
+  // this side's piles. `placeOnField` has just set the controller to the destination player.
+  card.owner = card.controller;
 
   // R171: the card has entered its new controller's side on this turn.
   enterNewSide(ctx, card, previous);

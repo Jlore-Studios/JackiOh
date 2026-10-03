@@ -43,6 +43,7 @@ const REMINISCE = "core-072";
 const FIENDER = "core-092";
 const HEROIC = "core-098";
 const CRAFT = "core-099"; // two chained Discovers
+const MC_TECH = "classic-040"; // Radiant: "steal one of your choice", a target prompt at resolution
 const FELINORS = "core-012";
 const JELLY_BEAN = "core-026"; // Choose a card in your hand; it becomes Radiant (radiant: choose 2)
 const TWINSPELL = "core-079"; // the next Spell you play gains Echo +1
@@ -189,7 +190,7 @@ describe("R43 and R103: what an activatePower or a Heroic Power play may carry",
     expect(result.state.players.p1.hand.map((card) => card.defId)).toEqual(handBefore);
   });
 
-  it("R43 Heroic Power's X is its power's X: legalActions offers no X choice and a play records none (§2.3, R65)", () => {
+  it("R43 Heroic Power costs (0) and is no X card: legalActions offers no X choice, and a play naming one is refused (§2.3, R65)", () => {
     const g = scenario({ p1: { hand: [HEROIC, RENO], mana: 4 } });
     const card = withPower(must(g.state.players.p1.hand[0], "the Heroic Power in hand"), "ping");
 
@@ -200,16 +201,23 @@ describe("R43 and R103: what an activatePower or a Heroic Power play may carry",
     expect(plays.length).toBe(perZone.size);
     expect(plays.filter((play) => play.x !== undefined)).toEqual([]);
 
-    const result = act(g.state, {
+    const withX = act(g.state, {
       type: "play",
       playerId: "p1",
       instanceId: card.id,
       zone: { row: "backrow", lane: 2 },
       x: 4,
     });
+    expect(withX.error).toBeDefined();
+
+    // Since patch v0.2.1 the card costs (0) and its play activates nothing: the power's X is spent
+    // only when it is activated (R43, R384).
+    const result = act(g.state, { type: "play", playerId: "p1", instanceId: card.id, zone: { row: "backrow", lane: 2 } });
     expect(result.error).toBeUndefined();
+    expect(result.state.players.p1.mana.current).toBe(4);
     const played = result.events.find((e) => e.type === "cardPlayed");
     expect(played !== undefined && "x" in played ? played.x : undefined).toBeUndefined();
+    expect(result.events.some((e) => e.type === "activated")).toBe(false);
   });
 });
 
@@ -239,18 +247,17 @@ describe("§6.2: 'this turn' on the opponent's turn", () => {
 
 describe("§10.6: a prompt's options can each be picked through the view", () => {
   it("§10.6 a target prompt's options have distinct keys, so each of two same-named units can be picked (§10.8, R81, R103)", () => {
-    // Two Duplicating Felinors — #12's own copy makes this an ordinary board — and #98's ping power
-    // with no target named, which opens the power's target prompt (R81, R103).
+    // Two Duplicating Felinors — #12's own copy makes this an ordinary board — and a Radiant C #40 MC
+    // Tech, whose "steal one of your choice" opens a target prompt as its Cry resolves (§10.6). (#98's
+    // Ping declares its target with the activation since patch v0.2.1, R635, so it no longer asks.)
     const s = scenario({
       seed: "inv-r4-prompt-keys",
-      p1: { hand: [RENO], mana: 8, backrow: [HEROIC] },
-      p2: { field: [FELINORS, FELINORS] },
+      p1: { hand: [{ def: MC_TECH, radiant: true }, RENO], mana: 8 },
+      p2: { field: [FELINORS, FELINORS, VANILLA, VANILLA] },
     });
-    const power = must(s.backrow("p1", 1), "p1's Heroic Power");
-    withPower(power, "ping");
-    s.activate(power);
+    s.play(MC_TECH, { zone: 1 });
 
-    const pending = must(s.view("p1").pending, "the ping's target prompt");
+    const pending = must(s.view("p1").pending, "MC Tech's target prompt");
     if (!pending.forYou) throw new Error("the prompt should be p1's");
     expect(pending.options.filter((option) => option.defId === FELINORS)).toHaveLength(2);
     // The view's contract (`PendingOption.key` in packages/shared/src/view.ts) is that the key is

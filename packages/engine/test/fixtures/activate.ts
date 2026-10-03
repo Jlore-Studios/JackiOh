@@ -21,7 +21,7 @@ import {
 import { openPrompt, resumeSelf } from "../../src/prompts";
 import type { ActivationDecl, CardScripts, Effect, EffectContext, Script } from "../../src/script";
 import { activationPaid } from "../../src/subsystems/activate";
-import { heroPower, powerCostOf, rollPower, usePower, POWER_RESUME } from "../../src/subsystems/heroPower";
+import { heroPower, heroPowerActivations, rollPower, POWER_RESUME, STEADY_SHOT_PARAM } from "../../src/subsystems/heroPower";
 import type { GameState } from "../../src/state";
 
 let nextIndex = 4100;
@@ -202,8 +202,16 @@ export const trapper = def("trapper", "Trap");
 /** "Activate ♾️" with no cost, to reach the cap. */
 export const endless = def("endless", "Field Spell");
 
-/** Heroic Power wired as Core #98 is (R43), so `activate` and its alias reach the real power. */
-export const heroic = def("heroic", "Field Spell", { cost: "X", tags: ["Quickdraw"] });
+/**
+ * Heroic Power wired as Core #98 is since patch v0.2.1 (R43): it costs (0), and its powers are its
+ * Activate abilities, so `activate` and its alias reach the real power. It declares Steady Shot's
+ * number as the catalog does (R637).
+ */
+export const heroic = def("heroic", "Field Spell", {
+  cost: 0,
+  tags: ["Quickdraw"],
+  params: [{ key: STEADY_SHOT_PARAM, base: 2, radiant: 4, better: "up", step: 2 }],
+});
 
 export const ACTIVATE_DEFS: CardDef[] = [
   logCard,
@@ -299,16 +307,14 @@ export const ACTIVATE_SCRIPTS: Record<string, CardScripts> = {
   [heroic.id]: faces(
     {
       staticFlags: { quickdraw: true },
-      cost: ({ instance }) => powerCostOf(instance),
       startOfGame: () => [rollPower()],
-      cry: () => [usePower({ radiant: false })],
+      activations: heroPowerActivations(false),
       resume: { [POWER_RESUME]: heroPower },
     },
     {
       staticFlags: { quickdraw: true },
-      cost: ({ instance }) => powerCostOf(instance),
       startOfGame: () => [rollPower()],
-      cry: () => [usePower({ radiant: true })],
+      activations: heroPowerActivations(true),
       resume: { [POWER_RESUME]: heroPower },
     },
   ),
