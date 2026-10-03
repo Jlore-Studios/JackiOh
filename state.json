@@ -953,21 +953,21 @@
     },
     "68": {
       "action": "plan",
-      "asks": [
-        "c:5964126592"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "muse",
       "queued_at": "2026-10-03T01:30:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37138371404",
-      "started_at": "2026-10-03T16:51:43Z",
+      "run_id": "37138554295",
+      "started_at": "2026-10-03T16:55:26Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5964126592"
+      ]
     },
     "75": {
       "asks": [],
@@ -1073,9 +1073,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T16:52:25Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138413401",
-    "what": "build #49 on devin"
+    "at": "2026-10-03T16:55:26Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37138554295",
+    "what": "plan #68 on muse"
   },
   "last_sweep": {
     "at": "2026-10-03T16:44:39Z",
