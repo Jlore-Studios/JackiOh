@@ -4454,6 +4454,33 @@
         ]
       },
       {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
         "id": "core-067",
         "name": "Zoomerbin Oomen",
         "kind": "changed",
@@ -4463,12 +4490,28 @@
         ]
       },
       {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
         "id": "classic-010",
         "name": "Exile",
         "kind": "changed",
         "fields": [
           "base.text",
           "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text"
         ]
       },
       {
@@ -4490,12 +4533,70 @@
         ]
       },
       {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
         "id": "classic-029",
         "name": "Book of Vital Kill",
         "kind": "changed",
         "fields": [
           "base.text",
           "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "tags"
         ]
       },
       {
@@ -4508,10 +4609,35 @@
         ]
       },
       {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
         "id": "classic-063",
         "name": "Crop Dusting",
         "kind": "changed",
         "fields": [
+          "tags",
           "base.text",
           "radiant.text"
         ]
@@ -4526,11 +4652,93 @@
         ]
       },
       {
+        "id": "classic-066",
+        "name": "EU Striker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-069",
+        "name": "Plague Charger",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
         "id": "classicplus-019-5",
         "name": "Bot Loser",
         "kind": "changed",
         "fields": [
           "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
         ]
       },
       {

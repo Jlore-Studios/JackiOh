@@ -118,7 +118,8 @@ export const SHORT_TERMS: readonly (keyof typeof SHORT_REMINDERS)[] = ["Cry", "T
 
 /**
  * R373: SPEC's rules vocabulary in the words a player reads — the rules' library is the Deck, and
- * to sacrifice is to tribute. Whole words only, keeping a leading capital.
+ * to sacrifice is to tribute. Patch v0.2.4 (issue #45) adds the retired turn-trigger prose ("At the
+ * start of your turn" reads "At the start of turn"). Whole words only, keeping a leading capital.
  */
 const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
   [/\blibraries\b/g, "decks"],
@@ -129,6 +130,11 @@ const PLAYER_WORDS: readonly (readonly [RegExp, string])[] = [
   [/\bSacrific(e|es|ed|ing)\b/g, "Tribut$1"],
   [/\bbackrow zone\b/g, "backrow"],
   [/\bBackrow zone\b/g, "Backrow"],
+  // Patch v0.2.4 (issue #45): the retired turn-trigger prose reads label-style.
+  [/\bAt the start of your turn\b/g, "At the start of turn"],
+  [/\bAt the end of your turn\b/g, "At the end of turn"],
+  [/\bat the start of your turn\b/g, "at the start of turn"],
+  [/\bat the end of your turn\b/g, "at the end of turn"],
 ];
 
 /** A SPEC row's citation of its ruling, " (R384)" or " (R41, R428)": no player's word. */

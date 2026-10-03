@@ -600,7 +600,7 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to your hand."
+      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [
@@ -609,7 +609,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to your hand."
+      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
     }
   },
   "core-024": {
@@ -625,11 +625,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to your hand."
+      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to your hand."
+      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
     }
   },
   "core-025": {
@@ -790,11 +790,11 @@
     "loc": 56,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to your hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to your hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     }
   },
   "core-032": {
@@ -2324,7 +2324,8 @@
     "set": "Core",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Rare",
     "token": false,
@@ -3367,7 +3368,7 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
+      "text": "Activates when any of your Units die: Return them to hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
@@ -3801,7 +3802,9 @@
     "name": "Pestilent Slime",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 0,
@@ -4042,11 +4045,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Return {cards|card|cards} from your graveyard to your hand."
+      "text": "Return {cards|card|cards} from your graveyard to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return {cards|card|cards} from your graveyard or exile to your hand."
+      "text": "Return {cards|card|cards} from your graveyard or exile to hand."
     }
   },
   "classic-035": {
@@ -4211,7 +4214,9 @@
     "name": "Outbreak",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 1,
@@ -4310,7 +4315,9 @@
     "name": "Transmutable Toxins",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -4348,7 +4355,9 @@
     "name": "Plague Nuke",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 3,
@@ -4504,13 +4513,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to your hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to your hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -4679,7 +4688,9 @@
     "name": "Plague Crawler",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -4868,7 +4879,8 @@
     "set": "Classic",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Common",
     "token": false,
@@ -4923,7 +4935,9 @@
     "name": "Plague Bringer Goliath",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Legendary",
     "token": false,
     "cost": 3,
@@ -4979,7 +4993,9 @@
     "name": "Living Bomb",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -4999,7 +5015,9 @@
     "name": "Crop Dusting",
     "set": "Classic",
     "type": "Trap",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5098,7 +5116,7 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to your hand."
+      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
     },
     "radiant": {
       "attack": 10,
@@ -5108,7 +5126,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to your hand."
+      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
     }
   },
   "classic-067": {
@@ -5196,7 +5214,9 @@
     "name": "Plague Charger",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -5239,7 +5259,8 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [
-      "Book"
+      "Book",
+      "Plague"
     ],
     "rarity": "Epic",
     "token": false,
@@ -5358,7 +5379,9 @@
     "name": "Corpse Plantation",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
@@ -5418,7 +5441,9 @@
     "name": "Plague Bringer",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5510,7 +5535,9 @@
     "name": "Mutate Spell",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5842,7 +5869,9 @@
     "name": "Plague Chalice",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": "X",
@@ -6009,7 +6038,9 @@
     "name": "Second Amendment Snake",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -6663,11 +6694,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
     },
     "radiant": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to your hand. This can't cost less than ({floor}).\" Draw {draw}."
+      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\" Draw {draw}."
     }
   },
   "classicplus-015": {
@@ -7121,7 +7152,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Return this to your hand."
+      "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Return this to hand."
     }
   },
   "classicplus-022": {

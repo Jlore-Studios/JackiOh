@@ -132,6 +132,16 @@ const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "bounce", pattern: /\bbounce(s|d)?\b/i },
   { name: "backrow zone", pattern: /\bbackrow zone\b/i },
   { name: "cost 1 less", pattern: /\bcosts? 1 less\b/i },
+  { name: "turn trigger", pattern: /\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i },
+  { name: "End your turn", pattern: /\bEnd your turn\b/ },
+  { name: "Start of Game", pattern: /\bStart of Game\b/ },
+  { name: "Once per Turn", pattern: /\bOnce per Turn\b/ },
+  { name: "that costs (N)", pattern: /\bthat costs \(/i },
+  { name: "Cost (N)", pattern: /\bCost \(/ },
+  { name: "costing (N)", pattern: /\bcosting \(/i },
+  { name: "Trigger the Cry", pattern: /\bTrigger the Cry\b/i },
+  { name: "Set a hero's health", pattern: /\bSet a hero's health\b/i },
+  { name: "Cannot be in Defense Position", pattern: /\bCannot be in Defense Position\b/i },
 ];
 
 describe("patch v0.2.4 vocabulary table (SPEC §11 R366)", () => {
@@ -149,9 +159,24 @@ describe("patch v0.2.4 vocabulary table (SPEC §11 R366)", () => {
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Bounce that unit"))).toBe(true);
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("in the backrow zone"))).toBe(true);
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("cost 1 less"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Start of your turn: Draw 1."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("At the end of your turn, draw 1."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("End your turn."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Start of Game: Draw 1."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Once per Turn: Draw 1."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("a Spell that costs (1)"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Face-down trap, Cost (2)"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("a card costing (1) or less"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Trigger the Cry of a Unit"))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Set a hero's health to 13."))).toBe(true);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Cannot be in Defense Position."))).toBe(true);
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("costs (1) less"))).toBe(false);
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("in the backrow"))).toBe(false);
     expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("return that unit to hand"))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Start of turn: Draw 1."))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("End the turn."))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("Mr. Vanilla costs (1)"))).toBe(false);
+    expect(RETIRED_VOCABULARY.some(({ pattern }) => pattern.test("at the end of each of your turns"))).toBe(false);
   });
 });
 

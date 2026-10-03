@@ -443,8 +443,23 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
     // Patch v0.2.4: backrow zone becomes backrow in players' words.
     expect(inPlayerWords("steps from its backrow zone into a unit zone")).toBe("steps from its backrow into a unit zone");
+    // Patch v0.2.4: retired turn-trigger prose reads label-style in players' words.
+    expect(inPlayerWords("At the start of your turn, the count drops")).toBe("At the start of turn, the count drops");
+    expect(inPlayerWords("it heals at the end of your turn")).toBe("it heals at the end of turn");
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific|\bbounce\b|\bbackrow zone\b/i);
+      // Patch v0.2.4 (issue #45): no glossary rule uses any other word the vocabulary table retired.
+      expect(entry.rule, entry.id).not.toMatch(/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i);
+      expect(entry.rule, entry.id).not.toMatch(/\bEnd your turn\b/);
+      expect(entry.rule, entry.id).not.toMatch(/\bStart of Game\b/);
+      expect(entry.rule, entry.id).not.toMatch(/\bOnce per Turn\b/);
+      expect(entry.rule, entry.id).not.toMatch(/\bthat costs \(/i);
+      expect(entry.rule, entry.id).not.toMatch(/\bCost \(/);
+      expect(entry.rule, entry.id).not.toMatch(/\bcosting \(/i);
+      expect(entry.rule, entry.id).not.toMatch(/\bTrigger the Cry\b/i);
+      expect(entry.rule, entry.id).not.toMatch(/\bSet a hero's health\b/i);
+      expect(entry.rule, entry.id).not.toMatch(/\bCannot be in Defense Position\b/i);
+      expect(entry.rule, entry.id).not.toMatch(/\breturn\b[^.\n]*\bto your hand\b/i);
     }
   });
 
