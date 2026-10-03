@@ -71,6 +71,12 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
  */
 const SEED = seedFor("13-practice-n");
 
+/**
+ * The Hard game's own seed: it needs an AI first turn the page has time to show, which the old seed
+ * still gives and `13-practice-n:hard` does not (the Hard AI plays nothing and ends it at once).
+ */
+const HARD_SEED = `${seedFor("13-practice")}:hard`;
+
 /** Human turns played through the UI before the concede. */
 const HUMAN_TURNS = 3;
 
@@ -484,7 +490,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   });
 
   it("B40 a Hard game seated p2: the AI's first turn shows mana-opponent data-max=2", () => {
-    visitPractice(practiceUrl(`${SEED}:hard`, "hard", "p2"), { reducedMotion: true });
+    visitPractice(practiceUrl(HARD_SEED, "hard", "p2"), { reducedMotion: true });
 
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
       .should("have.attr", "data-difficulty", "hard")
