@@ -1366,8 +1366,17 @@ card layer alone; no rule changed.
   unfitted; the result is what the one-at-a-time search gave, step for step (`fit.test.tsx` fits
   twelve cards and one and compares them). A test that renders a face and reads the fit calls
   `flushFits()` first.
-- **What is left** is the first layout of the grid itself: about 0.9 s for 318 faces on the
-  reference machine, of which the procedural art's image decode is roughly half. Skipping the
-  off-screen faces (`content-visibility: auto`) would remove most of it, but a skipped face has no
-  layout for the fitter to read, so the fit would have to wait for the face to come into view; that
-  is not done here.
+- **A long grid drew every picture at load.** A procedural picture is a data-URI SVG on the art
+  window's background, which the browser parses when the window is first styled and laid out (about
+  1.3 ms a card). `CardArt` takes a `lazy` prop, which `CardFace` passes on as `lazyArt` and the pool
+  grid (the deck builder's and the Almanac's) sets: the window stays its dark ground
+  (`data-art-pending="true"`) until it is within `ART_NEAR_MARGIN_PX` of the box that scrolls it,
+  then draws and keeps its picture (`art/near.ts`: one `IntersectionObserver` per scrolling box,
+  rooted at the nearest `overflow-y: auto | scroll` ancestor, because a margin widens the root and
+  nothing else). Real art is an `<img loading="lazy">` already. Where nothing can be watched
+  (jsdom) a window draws at once, and a face outside a grid is never lazy.
+- **What is left** is the first layout of the faces themselves: about 0.6 s for 318 on the
+  reference machine. Skipping the off-screen ones with `content-visibility: auto` would remove most
+  of it, but a skipped face has no layout for the fitter to read, and reading one anyway lays it out
+  alone (5 s of layout across the Almanac in a trial), so the fit would have to wait for the face to
+  come into view. That is not done here.

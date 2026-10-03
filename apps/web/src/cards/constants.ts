@@ -46,3 +46,10 @@ export const REF_PANEL_FACE_HEIGHT_PX = 190;
  * card) this many badges show and the rest fold into a "+n" chip. Mirrored in cardstate.css.
  */
 export const STATE_BADGES_SMALL_MAX = 2;
+
+/**
+ * A grid's lazy art (CardArt `lazy`) is drawn once its window is within this many px of the
+ * scrolling box it sits in, so a card is drawn before it scrolls into view and a long grid draws
+ * only the first screens at load.
+ */
+export const ART_NEAR_MARGIN_PX = 600;

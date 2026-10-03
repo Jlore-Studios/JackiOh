@@ -11,12 +11,13 @@
 // (`useDefResolver`: the deck builder's, else the board's), so a card draws the same picture in the
 // hand, on the board and in the deck list. With no name anywhere, the picture has no motif.
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
 import { useDefResolver } from "../refContext.tsx";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
+import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -36,6 +37,12 @@ export type CardArtProps = {
   /** For tests. Defaults to ART_MANIFEST. */
   manifest?: ArtManifest;
   className?: string;
+  /**
+   * A grid of many faces: draw the procedural picture only once the window is near the screen
+   * (near.ts). Until then the window is its dark ground, `data-art-pending="true"`. A real-art
+   * `<img>` is already `loading="lazy"`, and a window that cannot be watched draws at once.
+   */
+  lazy?: boolean;
 };
 
 function classes(shape: ArtShape, className: string | undefined): string {
@@ -43,9 +50,29 @@ function classes(shape: ArtShape, className: string | undefined): string {
   return className === undefined || className === "" ? base : `${base} ${className}`;
 }
 
-export function CardArt({ defId, radiant, tags, type, shape, name, manifest = ART_MANIFEST, className }: CardArtProps): ReactElement {
+export function CardArt({
+  defId,
+  radiant,
+  tags,
+  type,
+  shape,
+  name,
+  manifest = ART_MANIFEST,
+  className,
+  lazy = false,
+}: CardArtProps): ReactElement {
   // The src that failed to load, so a later src (another card, the other face) gets its own try.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  // A lazy window is drawn once it has been near the screen, and stays drawn.
+  const windowRef = useRef<HTMLSpanElement>(null);
+  const [near, setNear] = useState(() => !lazy || !canWatchArt());
+  useEffect(() => {
+    const element = windowRef.current;
+    if (near || element === null) return undefined;
+    return whenNear(element, () => {
+      setNear(true);
+    });
+  }, [near]);
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
   const motif = motifFor(name ?? resolve?.(defId)?.name, theme);
@@ -76,16 +103,18 @@ export function CardArt({ defId, radiant, tags, type, shape, name, manifest = AR
     );
   }
 
-  const uri = proceduralArtUri(defId, theme, compositionFor(type), radiant, motif);
+  const uri = near ? proceduralArtUri(defId, theme, compositionFor(type), radiant, motif) : null;
   return (
     <span
+      ref={windowRef}
       className={classes(shape, className)}
       data-art="procedural"
       data-art-theme={theme}
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
+      data-art-pending={uri === null ? "true" : undefined}
       aria-hidden="true"
-      style={{ backgroundImage: `url("${uri}")`, backgroundSize: "cover" }}
+      style={uri === null ? undefined : { backgroundImage: `url("${uri}")`, backgroundSize: "cover" }}
     />
   );
 }
