@@ -714,8 +714,8 @@
       "provider": "agy",
       "queued_at": "2026-10-03T19:08:38Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37146982870",
-      "started_at": "2026-10-03T19:11:52Z",
+      "run_id": "37147242562",
+      "started_at": "2026-10-03T19:16:26Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -1228,8 +1228,8 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T19:11:52Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37146982870",
+    "at": "2026-10-03T19:16:26Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37147242562",
     "what": "build #160 on agy"
   },
   "last_sweep": {
