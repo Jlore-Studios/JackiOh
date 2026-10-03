@@ -128,6 +128,8 @@ class AvailabilityTests(unittest.TestCase):
         state = {"providers": {"claude-2": {"usage": {"seven_day": {"utilization": 0.95,
                                                                      "resets_at": later}}}}}
         self.assertIn("7-day usage is 95%", self.why("claude-2", state))
+        # --force lifts a subscription's hours, never its caps.
+        self.assertIn("7-day usage is 95%", self.why("claude-2", state, at=DAY, forced=True))
         # claude-2 stops at 90% of its 5-hour session too; claude-1 goes on to 98%.
         session = {"five_hour": {"utilization": 0.92, "resets_at": later}}
         self.assertIn("5-hour usage is 92%",

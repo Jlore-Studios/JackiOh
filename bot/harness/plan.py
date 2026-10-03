@@ -118,11 +118,17 @@ class Lanes:
                          for n, p in sorted(self.held.items())) or "none"
 
 
+def working_threads(ctx: Context) -> list[dict[str, Any]]:
+    """Every thread labelled `bot:working`, closed ones too: a run goes on after someone closes
+    its issue, and holds its lane until it ends (deliver then drops its work)."""
+    return ctx.gh.list_issues(labels=LABEL_WORKING, state="all")
+
+
 def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     """The lanes held by runs that are still going. A run that ended without delivering holds
     nothing: housekeeping requeues its item."""
     lanes = Lanes(ctx.cfg.pool.max_parallel)
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         if run_alive(ctx, record.get("run_id")):
@@ -330,7 +336,7 @@ def run_request(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
 
 def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
     """What `housekeeping` would requeue, read without changing anything, or None."""
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         run_id = state["items"].get(str(thread["number"]), {}).get("run_id")
         if run_status(ctx, run_id) == "dead":
             return f"#{thread['number']} was left working by a run that ended"
@@ -425,13 +431,17 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Requeue items a dead run left working; queue a revision for conflicted bot PRs."""
     notes: list[str] = []
-    for thread in ctx.gh.list_issues(labels=LABEL_WORKING):
+    for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         run_id = str(record.get("run_id") or "")
         if run_id and run_id == ctx.cfg.run_id:
             continue
         if run_status(ctx, run_id) != "dead":
+            continue
+        if thread.get("state") != "open":  # closed meanwhile: nothing to requeue
+            set_state_label(ctx, number, label_names(thread), None)
+            notes.append(f"#{number} was closed; its dead run's label is gone")
             continue
         if record.get("kind") == "review":
             wanted = LABEL_CROSS
