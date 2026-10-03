@@ -1,7 +1,10 @@
 // C+ #73.1 Classic Golem (SPEC §8.7 row 73.1, B7). (4) Unit, Token (printed Legendary). 10/10 → 20/20.
 //   Base:    "Rush, First Strike, Trample / After this attacks a Unit, it transforms into a random
-//            Classic or Classic+ Unit. If it destroyed that Unit, the new Unit may attack again this turn."
-//   Radiant: "Rush, First Strike, Trample, Divine Shield / (the same)"
+//            Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again
+//            this turn."
+//   Radiant: "Rush, Trample, Divine Shield / After this attacks a Unit, it transforms into a random
+//            Radiant Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack
+//            again this turn." (balance patch 1: no First Strike, a Radiant transform)
 //   Engine:  "R424: the transform comes after the combat of an attack the Golem declared on a Unit, so
 //            the Golem's own stats fight (First Strike, Trample's excess to the hero, §4.4); a Golem that
 //            left the field in that combat transforms into nothing. It is transformed (Transform, §6.3)
@@ -31,14 +34,24 @@ const CLASSIC_UNITS = { type: "Unit" as const, set: ["Classic" as const, "Classi
 /** A hero target is `hero-<player>` in the combat's facts (`combat.targetIdOf`). */
 const HERO_TARGET = "hero-";
 
-function afterItAttacks(ctx: EffectContext): Effect[] {
-  const combat = afterAttackOf(ctx);
-  if (combat === null || combat.forced || !combat.survived || combat.targetId.startsWith(HERO_TARGET)) return [];
-  const destroyed = combat.destroyedIds.includes(combat.targetId);
-  return [transformRandom({ target: { of: "self" }, query: CLASSIC_UNITS, readyToAttack: destroyed })];
+function afterItAttacks(radiant: boolean): (ctx: EffectContext) => Effect[] {
+  return (ctx) => {
+    const combat = afterAttackOf(ctx);
+    if (combat === null || combat.forced || !combat.survived || combat.targetId.startsWith(HERO_TARGET)) return [];
+    const destroyed = combat.destroyedIds.includes(combat.targetId);
+    return [
+      transformRandom({
+        target: { of: "self" },
+        query: CLASSIC_UNITS,
+        ...(radiant ? { radiant: true } : {}),
+        readyToAttack: destroyed,
+      }),
+    ];
+  };
 }
 
-export const base: Script = { afterAttack: afterItAttacks };
+export const base: Script = { afterAttack: afterItAttacks(false) };
 
-// "Plus Divine Shield; same": the Radiant face's 20/20 and keywords are its catalog face.
-export const radiant: Script = base;
+// "Rush, Trample, Divine Shield; a random Radiant Unit": the Radiant face transforms into a Radiant
+// Unit (balance patch 1); its 20/20 and keywords are its catalog face.
+export const radiant: Script = { afterAttack: afterItAttacks(true) };

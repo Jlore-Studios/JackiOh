@@ -8,7 +8,7 @@
 // can read it without pulling the destroy and state-check machinery the tick needs.
 
 import { numberedSum, tunedCount } from "./tuning";
-import { runningFace } from "./faces";
+import { cardTypeOf, runningFace } from "./faces";
 import type { CardInstance, GameState } from "./state";
 
 /**
@@ -41,9 +41,17 @@ export function activeBrittleCount(card: Pick<CardInstance, "brittle" | "vanilla
  * arrival passes (`zones.placeOnField`, `zones.replaceInZone`). A card that already has a count keeps
  * it (a count is kept in every zone, so a card that left the field and came back ticks on), and one
  * that prints no Brittle starts nothing.
+ *
+ * R639: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
+ * while it is unrevealed (Classic+ #74). The count starts when the card reveals: its own subsystem
+ * starts it with its first activation, and the `reveal` effect starts one for any card it shows.
  */
 export function startPrintedBrittle(state: GameState, card: CardInstance): void {
   if (card.brittle !== undefined) return;
+  if (card.zone.z === "field" && card.zone.row === "backrow") {
+    const type = cardTypeOf(state, card);
+    if ((type === "Trap" || type === "Field Trap") && card.faceUp !== true && card.revealed !== true) return;
+  }
   const printed = printedBrittleOf(state, card);
   if (printed === null || printed <= 0) return;
   card.brittle = { count: printed, since: state.turn, printed: true };

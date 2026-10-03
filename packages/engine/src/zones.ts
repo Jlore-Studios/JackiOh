@@ -18,6 +18,16 @@ export function rowSize(row: Row): number {
   return row === "units" ? UNIT_ZONES : BACKROW_ZONES;
 }
 
+/**
+ * §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
+ * both center lanes of an even one (R637). Locks never matter to it. The caller reads the count off
+ * the board (a side's unit row length), never off `MID_LANE`, which no longer exists.
+ */
+export function midlaneLanes(lanes: number): number[] {
+  if (!Number.isInteger(lanes) || lanes <= 0) return [];
+  return lanes % 2 === 1 ? [(lanes + 1) / 2] : [lanes / 2, lanes / 2 + 1];
+}
+
 export function slotsOf(player: PlayerId, row: Row): ZoneSlot[] {
   return Array.from({ length: rowSize(row) }, (_, i) => ({ player, row, lane: i + 1 }));
 }
@@ -488,6 +498,7 @@ export function resetInstance(instance: CardInstance): void {
   delete instance.armorOverride;
   delete instance.tauntSuppressedTurn;
   delete instance.faceUp;
+  delete instance.revealed;
   delete instance.lastDamagedBy;
   delete instance.x;
   delete instance.embiggened;

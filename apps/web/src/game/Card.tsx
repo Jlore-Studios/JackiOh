@@ -184,6 +184,11 @@ export type CardProps = {
    * "Face down" tag, because the other player sees only its back.
    */
   unrevealed?: boolean;
+  /**
+   * R243, §6.3 Vanilla: a face-up backrow card's text is gone (`BackrowView.vanilla`), stamped as a
+   * unit's is. Absent otherwise.
+   */
+  backrowVanilla?: boolean;
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
   /** Units carry the switch-position button (BUILD M5-T2). */
@@ -251,7 +256,8 @@ export default function Card(props: CardProps): ReactElement {
               ),
           }
         : null;
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside" });
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", showLoc: false });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
@@ -353,7 +359,7 @@ export default function Card(props: CardProps): ReactElement {
       data-condition-active={conditionAttr(card)}
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
-      data-vanilla={unit?.vanilla === true ? "true" : undefined}
+      data-vanilla={unit?.vanilla === true || props.backrowVanilla === true ? "true" : undefined}
       // R437: the marks the view lists on the card, by name.
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       // R371: your own face-down trap, which the other player sees only as a back.

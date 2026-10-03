@@ -88,6 +88,7 @@ const PING_E1: ActionBody = { type: "activate", instanceId: "act1", ability: "pi
 const PING_E2: ActionBody = { type: "activate", instanceId: "act1", ability: "ping", targets: [at("e2")] };
 const DAMAGE: ActionBody = { type: "activate", instanceId: "fs2", ability: "punish", modes: ["damage"], targets: [at("e1")] };
 const DISCARD: ActionBody = { type: "activate", instanceId: "fs2", ability: "punish", modes: ["discard"] };
+const DOOM_E1: ActionBody = { type: "activate", instanceId: "fs2", ability: "punish", modes: ["doom"], targets: [at("e1")] };
 const TURTLE_U1: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u1"], targets: [at("e1")] };
 const TURTLE_U2: ActionBody = { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u2"], targets: [at("e1")] };
 
@@ -263,9 +264,23 @@ describe("R384 an activation is built through the board as a play is", () => {
 
     fireEvent.click(el(testid.activate("fs2")));
     const modal = el("prompt-modal");
-    expect(modal).toHaveAttribute("data-prompt-kind", "mode");
+    // Two options is a Discover pop-up, not the plain mode list.
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
     expect(modal).toHaveAttribute("data-prompt-source", "play");
     expect(modal).toHaveTextContent("The Power to Punish");
+
+    fireEvent.click(el("prompt-option-discard"));
+    expect(onAction).toHaveBeenCalledWith(DISCARD);
+  });
+
+  it("Classic #20 the targetless Discard mode is asked before any target, so it stays selectable", () => {
+    const { onAction } = renderGame([DAMAGE, DISCARD, DOOM_E1]);
+
+    fireEvent.click(el(testid.activate("fs2")));
+    const modal = el("prompt-modal");
+    // The modes decide which targets even exist, so they come first; Discard wants no target.
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
+    expect(modal).toHaveTextContent(/discard/i);
 
     fireEvent.click(el("prompt-option-discard"));
     expect(onAction).toHaveBeenCalledWith(DISCARD);

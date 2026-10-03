@@ -528,4 +528,10 @@ describe("B44 the picker says which route opened it", () => {
     expect(portrait).toContain('.game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(');
     expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-zones, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
   });
+
+  it("Confirm sticks to the modal's visible bottom, so no menu pushes it off-screen", () => {
+    const text = css("prompt.css");
+
+    expect(text).toMatch(/\.prompt-actions \{\s*[^}]*position: sticky;\s*[^}]*bottom: 0;/);
+  });
 });

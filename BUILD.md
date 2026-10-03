@@ -150,7 +150,7 @@ Every number below is a named export. Nothing in the engine hard-codes them.
 | `CALL_TO_CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos of either edition resolves | §8 #95, §8.7 C+ #73, R423 |
 | `CHAOS_PLUS_FRUITS` / `CHAOS_PLUS_BOOKS` / `CHAOS_PLUS_CLASSIC_CARDS` | 5 / 3 / 3: the cards C+ #73's first, second and fourth entries add | §8.7 C+ #73 |
 | `CHAOS_PLUS_UPGRADES` / `CHAOS_PLUS_DEGRADES` | 2 per card of your hand and deck / 3 per card of the opponent's field and hand | §8.7 C+ #73, R386 |
-| `MID_LANE` | 3, the middle lane of `UNIT_ZONES` ("midlane") | §3.1, §8.6 C #22 |
+| _(removed)_ `MID_LANE` | Balance patch 1 computes midlane from the lane count (`midlaneLanes` in `zones.ts`: odd count → center lane, even count → both center lanes; R637) instead of hard-coding lane 3 | §3.1, §8.6 C #22 |
 | `GLITCH_NUMBERS` | 0 to 10: C #18's number prompt | §8.6 C #18, §10.6 |
 | `BLADE_STORM_ROUNDS` | 30: the printed round cap, C+ #32.3's `rounds` param, which a Degrade or Upgrade moves on that card | §4.5, §8.7 C+ #32.3, R59 |
 | `ROLLBACK_MAX_TURNS` / `BOARD_HISTORY_DEPTH` | 3 / 4 (this turn's snapshot and the three before it) | §10.1, §8.7 C+ #35, R419 |

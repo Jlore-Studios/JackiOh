@@ -166,7 +166,11 @@ function markUse(state: GameState, card: CardInstance): void {
 function tributeUnitsFor(state: GameState, player: PlayerId, card: CardInstance, decl: ActivationDecl): CardInstance[] {
   const units = activeUnitsOf(state, player);
   // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
-  return decl.cost?.tributeSelf === true ? units.filter((unit) => unit.id !== card.id) : units;
+  // R635: a cost that excludes itself (Classic #21) never lists the card either.
+  if (decl.cost?.tributeSelf === true || decl.cost?.tributeExcludesSelf === true) {
+    return units.filter((unit) => unit.id !== card.id);
+  }
+  return units;
 }
 
 function plural(count: number, one: string): string {

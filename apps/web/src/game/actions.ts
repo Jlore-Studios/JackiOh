@@ -430,7 +430,10 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
  * purely from the candidate array: two candidates that differ only in `x` mean the player must
  * pick an X, and nothing else. Asked in cost order (X, embiggen and the Plague Tokens change what
  * is paid), then the Tribute, the targets and the discards a target costs (Classic #89), the
- * modes, and the board-driven zone last so a zone click finishes the play.
+ * modes, and the board-driven zone last so a zone click finishes the play — except that the modes
+ * come before the targets when some candidate wants no target at all: a target-first order would
+ * force a target pick and strand the targetless mode where no click can reach it (Classic #20's
+ * Discard, which is shown but could never be selected).
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
@@ -471,6 +474,25 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
       max: Math.max(...lengths),
       instanceIds: [...new Set(tributeSets.flat())],
     };
+  }
+
+  // Classic #20: when a targetless candidate shares the build with targeted ones, the modes
+  // decide which targets even exist, so they are asked first. Otherwise the target order below
+  // stands, and a mode shared by every remaining candidate is never asked twice.
+  if (fields.some((c) => c.targets === undefined)) {
+    const mixedModes = distinctBy(
+      fields.flatMap((c) => (c.modes === undefined ? [] : [c.modes])),
+      listKey,
+    );
+    if (mixedModes.length > 1) {
+      const lengths = mixedModes.map((list) => list.length);
+      return {
+        kind: "mode",
+        min: Math.min(...lengths),
+        max: Math.max(...lengths),
+        options: [...new Set(mixedModes.flat())],
+      };
+    }
   }
 
   const targetLists = distinctBy(
@@ -879,7 +901,17 @@ export function onClickTarget(
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
         if (asTribute !== null) return settle(asTribute);
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
-        return asTarget === null ? { interaction } : settle(asTarget);
+        if (asTarget !== null) return settle(asTarget);
+        // R446: a backrow card covers its zone, so a click on a carrier's card is a click on its
+        // zone — otherwise a Unit could never be placed on an Ivory Tower by tapping the Tower.
+        if (target.on === "backrow" && target.side === "you") {
+          const zone: ZoneChoice = { row: "backrow", lane: target.lane };
+          if (someCandidateFixesZone(interaction, zone)) {
+            const next = narrowedBy(interaction, { zone });
+            return next === null ? { interaction } : settle(next);
+          }
+        }
+        return { interaction };
       }
       const candidates = attacksBy(legal, target.instanceId);
       if (candidates.length === 0) return { interaction };

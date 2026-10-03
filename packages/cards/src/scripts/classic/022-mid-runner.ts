@@ -1,12 +1,13 @@
 // C #22 Mid Runner (SPEC §8.6 row 22). (1) Unit, Human, Common, 2/1 → 4/2.
-//   Base:    "Cry: If this is in lane 3, Tribute it. If you had {threshold} or more mana when you
+//   Base:    "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you
 //            played this, bounce {bounces|random enemy permanent|random enemy permanents}." — 4, 2
-//   Radiant: the same text; its Radiant face is its doubled stats, the designer's word, recorded
-//            against R275 in `docs/radiant-audit.md`.
-//   Engine:  "Two independent checks. Midlane is lane 3 (`MID_LANE`). "When you played this" is the
+//   Radiant: the same text but bounce 3; its Radiant face is its doubled stats, the designer's word,
+//            recorded against R275 in `docs/radiant-audit.md`.
+//   Engine:  "Two independent checks. Midlane is computed from the lane count (R637: an odd count's
+//            center lane, an even count's both center lanes). "When you played this" is the
 //            mana before paying for it, recorded as the play begins (§10.5 step 1). Two different
-//            random enemy permanents (R60) go to their owners' hands (Bounce, §6.3: the hand cap
-//            applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
+//            random enemy permanents (R60; Radiant: three) go to their owners' hands (Bounce, §6.3:
+//            the hand cap applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
 //
 // The two checks are read as the Cry begins and act in the text's order. In `MID_LANE` the card
 // Tributes itself: §6.3's Sacrifice, a death (Death, Reborn and the destroyed count), which bypasses
@@ -29,7 +30,7 @@
 // Both numbers are the declared `threshold` and `bounces` (R386), read through `param`.
 
 import {
-  MID_LANE,
+  midlaneLanes,
   param,
   slotOf,
   unspentManaOf,
@@ -56,7 +57,12 @@ function manaWhenPlayed(ctx: EffectContext): number {
 const cry = (ctx: EffectContext): Effect[] => {
   const self = ctx.self;
   if (self === null) return [];
-  const inMidlane = slotOf(ctx.state, self)?.lane === MID_LANE && self.zone.z === "field" && self.zone.row === "units";
+  // R637: midlane is computed from the lane count, never hardcoded — the lanes come from the board.
+  const lanes = ctx.state.players[ctx.controller].units.length;
+  const inMidlane =
+    midlaneLanes(lanes).includes(slotOf(ctx.state, self)?.lane ?? -1) &&
+    self.zone.z === "field" &&
+    self.zone.row === "units";
   const bounces = param(ctx, "bounces");
   return [
     ...(inMidlane ? [sacrifice({ target: { of: "self" } })] : []),

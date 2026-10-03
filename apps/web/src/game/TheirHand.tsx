@@ -36,7 +36,8 @@ function cardsWord(count: number): string {
 }
 
 function TheirCard({ card, face, index }: { card: CardView; face: FaceModel | null; index: number }): ReactElement {
-  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above" });
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above", showLoc: false });
   const style = { "--i": index } as CSSProperties;
   if (face === null) {
     return (

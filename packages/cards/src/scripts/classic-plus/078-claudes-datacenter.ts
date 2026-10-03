@@ -9,7 +9,7 @@
 // An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
 // §6.3's Add to hand, so a full hand burns it, and the opponent sees the sentinel (R97).
 
-import { param, type Script } from "@jackioh/engine";
+import type { Script } from "@jackioh/engine";
 import { addRandomFromCatalog } from "@jackioh/engine/effects";
 import { cardDef } from "../../catalog-data";
 
@@ -21,10 +21,13 @@ const AI_POOL = { tags: ["AI" as const], token: true };
 /** §8.7: "It costs (0)". */
 const FREE = 0;
 
+/** The printed "a random AI generated card": one card per end of turn. */
+const CARDS = 1;
+
 function datacenter(radiant: boolean): Script {
   return {
-    endOfTurn: (ctx) => [
-      addRandomFromCatalog({ query: AI_POOL, count: param(ctx, "cards"), costOverride: FREE, ...(radiant ? { radiant } : {}) }),
+    endOfTurn: () => [
+      addRandomFromCatalog({ query: AI_POOL, count: CARDS, costOverride: FREE, ...(radiant ? { radiant } : {}) }),
     ],
   };
 }
