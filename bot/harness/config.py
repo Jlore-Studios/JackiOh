@@ -103,6 +103,9 @@ class Gate:
     name: str
     run: str
     timeout_minutes: int
+    #: Runs in a model job on the bot's machine too. `false` leaves it to CI on the pull request
+    #: there: the machine's two vCPUs are shared by every job on it, GitHub's runners are not.
+    machine: bool = True
 
 
 @dataclass(frozen=True)
@@ -231,7 +234,8 @@ def _gate(raw: Any, where: str) -> Gate:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{where}: expected an object")
     try:
-        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]))
+        return Gate(str(raw["name"]), str(raw["run"]), int(raw["timeout_minutes"]),
+                    machine=bool(raw.get("machine", True)))
     except (KeyError, TypeError, ValueError) as exc:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
 

@@ -24,8 +24,8 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. At most `machine_parallel` (3) jobs run here at once, each as its own user; Devin has
-`"lanes": 2`, so two of them can be Devin's, on its two runners.
+the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
+`"lanes": 3`, so three of them can be Devin's, on its three runners.
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -89,13 +89,17 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
   (`/usr/local/bin/night-vm-job-done.sh`, the runners' job-completed hook); the checkout and the
   logins stay. `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary
   at all, since the bot's checks never run e2e.
-- **How many at once:** three machine jobs (`machine_parallel`) is as many as this machine
-  holds, whoever the builder is: the load is each job's checks (typecheck and the unit tests),
-  not the model. Measured on 2026-10-02 with three jobs running: load average 14 on 2 vCPUs, 6.1
-  of 7.8 GB in use and 1.5 GB swapped, about 4 GB for one job in typecheck and the web tests.
-  So the Claude accounts run on GitHub's runners instead, which takes `max_parallel` to 7: three
-  here and up to four Claude jobs there. More machine jobs need a bigger machine, and the Free
-  plan's largest are the 2-vCPU `m7i-flex.large` and `c7i-flex.large`.
+- **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
+  light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
+  the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
+  2026-10-03 for one job: `pnpm install` 26 s and 0.55 GB, lint 2 min and 0.8 GB, typecheck
+  4.5 min and 1.1 GB, the catalog and rulings checks seconds and 0.13 GB, and `pnpm test` 22.6
+  min on one of GitHub's four-vCPU runners. So a job here runs install, typecheck and the light
+  checks; lint and the unit tests (`"machine": false` in `.harness/config.json`) run in CI on
+  the pull request, and the agents are told to run only the tests for what they changed. The
+  Claude accounts run on GitHub's runners, so `max_parallel` is 10: six here and up to four
+  Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
+  `c7i-flex.large`.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
   month if it never stopped) plus its disk (about $2.40 a month). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.

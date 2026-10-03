@@ -5,7 +5,7 @@ forbidden paths, so a change it makes here is reverted before review and refused
 
 | File | What it does |
 |---|---|
-| `config.json` | Every knob but the subscriptions: turn caps, time budget, review rounds, self-check rounds (`max_self_check_rounds`), auto-merge, the checks it runs, the required CI checks, the suggestion cap, the quiet check |
+| `config.json` | Every knob but the subscriptions: turn caps, time budget, review rounds, self-check rounds (`max_self_check_rounds`), auto-merge, the checks it runs (`"machine": false` leaves one to CI when the run is on the bot's machine), the required CI checks, the suggestion cap, the quiet check |
 | `providers.json` | The subscriptions it may spend (Claude accounts, Codex, agy, Muse, Devin): each one's CLI, model, effort and tier (`weak`, `medium` or `strong`), any `extra_models` it runs (Sonnet on claude-3 and claude-1), `self_check`, its login (a secret's name, or `machine`), the runner its model job runs on (`runs_on`), hours and limits, how many run at once, the usage order (`priority`) and each tier's model order (`tiers`). A Claude account without its secret set sits out; `enabled: false` turns any one off ([Subscriptions](../bot/README.md#subscriptions), [the machine](../bot/machine/README.md)) |
 | `trust.txt` | Who may command the bot, and at which level |
 | `HALT` | Absent normally. Commit a file here (any content) to stop every model call at once; delete it to allow them again. `/harness halt` and `/harness start` are the everyday switch; this file is the one nobody but a committer can lift |

@@ -40,7 +40,10 @@ AUTH_WORDS = re.compile(
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
     r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
     r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
-    r"|run `?muse login|authentication required|devin auth login)"
+    r"|run `?muse login|authentication required|devin auth login"
+    # Claude Code's answer when its token is revoked or mistyped: "Failed to authenticate. API
+    # Error: 401 OAuth access token is invalid." A model never says that on its own.
+    r"|failed to authenticate|access token is invalid|api error: 401)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.

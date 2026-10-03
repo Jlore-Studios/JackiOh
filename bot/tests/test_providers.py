@@ -40,7 +40,7 @@ class ParseTests(unittest.TestCase):
         # kept for planning and review, and Devin last.
         self.assertEqual(pool.priority, ("claude-3", "claude-1", "claude-4", "agy", "muse", "gpt",
                                          "claude-2", "devin"))
-        self.assertEqual((pool.max_parallel, pool.machine_parallel), (7, 3))
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (10, 6))
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 4)
         first = pool.get("claude-1")
@@ -129,7 +129,7 @@ class ParseTests(unittest.TestCase):
                "share the runner")
         broken(lambda r: r["providers"]["devin"].update(lanes=0), "at least 1")
         broken(lambda r: r["providers"]["devin"].update(lanes="two"), "not a number")
-        broken(lambda r: r.update(machine_parallel=8), "machine_parallel")
+        broken(lambda r: r.update(machine_parallel=11), "machine_parallel")
         # A secret login may still run on GitHub's runners, and those are shared by design.
         raw = raw_providers()
         for name in ("claude-1", "claude-2"):
@@ -149,9 +149,10 @@ class AvailabilityTests(unittest.TestCase):
                                       forced=forced)
 
     def test_hours_secrets_and_the_switch(self):
-        self.assertIsNone(self.why("claude-1"))
-        self.assertIn("outside its hours (21:00–07:00", self.why("claude-1", at=DAY))
-        self.assertIsNone(self.why("claude-1", at=DAY, forced=True))
+        self.assertIsNone(self.why("claude-4"))
+        self.assertIn("outside its hours (21:00–07:00", self.why("claude-4", at=DAY))
+        self.assertIsNone(self.why("claude-4", at=DAY, forced=True))
+        self.assertIsNone(self.why("claude-1", at=DAY))  # any hour, under its caps
         self.assertIsNone(self.why("gpt", at=DAY))
         self.assertIn("`CLAUDE_CODE_OAUTH_TOKEN_2` is not set",
                       self.why("claude-2", env=secrets("CLAUDE_CODE_OAUTH_TOKEN")))
@@ -292,12 +293,13 @@ class MatchingTests(unittest.TestCase):
             providers.parse(raw)
 
     def test_claude_2_and_3_work_any_hour(self):
-        """The committed hours: claude-2 and claude-3 run all day, claude-2 under its 90% caps
-        and claude-3 with none; claude-1 and claude-4 wait for the night. By day claude-3 takes
-        Opus's work first, and claude-2, kept back, plans for the medium models."""
+        """The committed hours: claude-1, claude-2 and claude-3 run all day, claude-1 under its
+        98%/90% caps, claude-2 under 90% and claude-3 with none; claude-4 waits for the night.
+        By day claude-3 and then claude-1 take Opus's work first, and claude-2, kept back, plans
+        for the medium models."""
         pool = providers.load(ROOT)
         hours = {p.id: (p.schedule.mode, p.limits.mode) for p in pool.ordered() if p.cli == "claude"}
-        self.assertEqual(hours, {"claude-1": ("window", "caps"), "claude-2": ("always", "caps"),
+        self.assertEqual(hours, {"claude-1": ("always", "caps"), "claude-2": ("always", "caps"),
                                  "claude-3": ("always", "none"), "claude-4": ("window", "caps")})
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
@@ -309,9 +311,16 @@ class MatchingTests(unittest.TestCase):
         gh.runs["1"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 4).update(run_id="1"))
         planned = plan_mod.make(ctx)
-        # #3 builds on agy, which has no strong model to plan it: claude-2 plans it first.
+        # claude-1 works by day too, and plans its own build.
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (3, "claude-2", "plan"))
+                         (3, "claude-1", "build"))
+        gh.runs["2"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
+        gh.add_issue(5, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx)
+        # #5 builds on agy, which has no strong model to plan it: claude-2 plans it first.
+        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
+                         (5, "claude-2", "plan"))
         self.assertEqual(planned["seats"]["plan"]["tier"], "strong")
         # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
         later = clock.iso(DAY + timedelta(days=2))
@@ -378,18 +387,18 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(again["action"], "none")
         self.assertIn("`claude-2` is busy", again["reason"])
 
-    def test_devin_works_on_two_items_at_once(self):
-        """`lanes: 2`: Devin takes a second item while it holds one (two runners carry its
-        label), and a third waits; the machine's limit still counts both."""
+    def test_devin_works_on_three_items_at_once(self):
+        """`lanes: 3`: Devin takes more items while it holds some (three runners carry its
+        label), and a fourth waits; the machine's limit counts all of them."""
         gh = FakeGitHub()
-        for n in (3, 4, 5):
+        for n in (3, 4, 5, 6):
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))  # Devin is weak
         ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
-                                    for n in (3, 4, 5)])
-        self.assertEqual(ctx.cfg.pool.get("devin").lanes, 2)
+                                    for n in (3, 4, 5, 6)])
+        self.assertEqual(ctx.cfg.pool.get("devin").lanes, 3)
         taken = []
-        for _ in range(3):
+        for _ in range(4):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -397,10 +406,10 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(3, "devin"), (4, "devin")])
+        self.assertEqual(taken, [(3, "devin"), (4, "devin"), (5, "devin")])
         self.assertIn("`devin` is busy", planned["reason"])
         lanes = plan_mod.read_lanes(ctx, ctx.store.load())
-        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (2, 2))
+        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (3, 3))
 
     def test_a_second_review_goes_to_another_model_family(self):
         gh = FakeGitHub()

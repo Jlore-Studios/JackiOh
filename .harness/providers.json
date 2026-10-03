@@ -1,6 +1,6 @@
 {
-  "max_parallel": 7,
-  "machine_parallel": 3,
+  "max_parallel": 10,
+  "machine_parallel": 6,
   "priority": ["claude-3", "claude-1", "claude-4", "agy", "muse", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
@@ -29,7 +29,7 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
-      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
       "quiet_check": true
     },
@@ -118,7 +118,7 @@
       "self_check": true,
       "login": "machine",
       "runs_on": "night-vm-devin",
-      "lanes": 2,
+      "lanes": 3,
       "off_from": "2026-10-15",
       "off_reason": "SWE-2 is free on Devin's CLI only through 2026-10-16 (devin.ai/pricing). After that it draws on the Devin plan's daily and weekly allowance, at 6x (medium) to 12x (max) credits, so Devin needs a new model, caps, or to stay off.",
       "schedule": { "mode": "always" },
