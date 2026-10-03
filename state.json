@@ -199,6 +199,12 @@
       "lines": [
         "/harness Put an Opus agent on this. Decide if the CI checks are out of date."
       ]
+    },
+    "c:5970217178": {
+      "at": "2026-10-03T14:43:53Z",
+      "lines": [
+        "/harness skip the vercel check"
+      ]
     }
   },
   "items": {
