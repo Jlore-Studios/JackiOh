@@ -26,12 +26,14 @@ from harness import providers as providers_mod
 from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness import sweep as sweep_mod
+from harness import triage as triage_mod
 from harness.clock import iso, now as clock_now
-from harness.config import LABELS, Config
+from harness.config import LABELS, TRUST_PATH, Config
 from harness.errors import ConfigError, GitHubError, HarnessError, LoginError
 from harness.redact import redact
 from harness.runner import get_runner, ping_usage
 from harness.state import item as state_item
+from harness.trust import Trust
 from harness.work import Worker, check_templates
 
 
@@ -415,6 +417,59 @@ def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
+    """Triage a new issue or pull request (`triage.py`). Every step skips quietly on failure:
+    triage is a convenience, never a reason for a red run."""
+    if args.step == "gate":
+        payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
+        go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
+                                  cfg.root, clock_now(), cfg.timezone)
+        thread, _ = triage_mod.thread_of(payload)
+        _output({"go": str(go).lower(), "number": thread.get("number") or ""})
+        print(f"triage: {'go' if go else 'skip'}: {why}")
+        return 0
+    number = int(args.number)
+    out = Path(args.verdict)
+    if args.step == "classify":
+        try:
+            ctx = _ctx(cfg, write=False)
+            thread = ctx.gh.get_issue(number)
+            text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
+                                     triage_mod.conventions_text(cfg.root))
+            answer = triage_mod.run_devin(cfg.bin("devin"), triage_mod.devin_model(cfg.root), text)
+            verdict = triage_mod.parse(answer)
+        except Exception as exc:  # noqa: BLE001 - any failure skips
+            print(redact(f"triage: Devin did not classify #{number}: {exc}"))
+            return 0
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"number": number, "verdict": verdict}), encoding="utf-8")
+        print(f"triage: #{number}: {json.dumps(verdict)[:500]}")
+        return 0
+    try:
+        written = json.loads(out.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        print(f"triage: nothing to apply to #{number}")
+        return 0
+    if int(written.get("number") or 0) != number:
+        print(f"triage: the answer is for #{written.get('number')}, not #{number}")
+        return 0
+    try:
+        ctx = _ctx(cfg)
+        thread = ctx.gh.get_issue(number)
+        repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
+        plan = triage_mod.decide(written.get("verdict"), thread, "pull_request" in thread,
+                                 repo_labels, cfg.bot_login)
+        done = triage_mod.apply(ctx.gh, number, plan)
+    except GitHubError as exc:
+        print(redact(f"triage: could not triage #{number}: {exc}"))
+        return 0
+    lines = done or ["nothing to change"]
+    report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
+    print(report)
+    _summary(report)
+    return 0
+
+
 def cmd_forget(cfg: Config, args: argparse.Namespace) -> int:
     """Clear an item's failure count and findings, so it can be queued fresh."""
     ctx = _ctx(cfg)
@@ -471,6 +526,11 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", help="create labels and the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
+    p = sub.add_parser("triage", help="label, assign and title a new issue or pull request")
+    p.add_argument("step", choices=("gate", "classify", "apply"))
+    p.add_argument("--payload", default="", help="gate: the event's payload file")
+    p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
+    p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top
@@ -493,6 +553,7 @@ COMMANDS = {
     "doctor": cmd_doctor,
     "setup": cmd_setup,
     "forget": cmd_forget,
+    "triage": cmd_triage,
 }
 
 

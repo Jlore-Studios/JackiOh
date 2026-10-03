@@ -209,6 +209,12 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect(termsOf("Start of turn: gain 1 mana")).toEqual([{ text: "Start of turn:", term: "Start of turn" }]);
   });
 
+  it("B10 'End of your turn:' is the End of turn term, through its alias (Classic #65, #85)", () => {
+    expect(termsOf("End of your turn: Flip a coin.")).toEqual([{ text: "End of your turn:", term: "End of turn" }]);
+    expect(termsOf("End of turn: heal to full")).toEqual([{ text: "End of turn:", term: "End of turn" }]);
+    expect(termsIn(played("classic-065"))[0]).toBe("End of turn");
+  });
+
   it("B10 'Start of Game' and 'Once per Turn' are aliases of Start of game and Once per turn", () => {
     expect(termsOf("Start of Game: gain a power")).toEqual([{ text: "Start of Game:", term: "Start of game" }]);
     expect(termsOf("Start of game: gain a power")).toEqual([{ text: "Start of game:", term: "Start of game" }]);
@@ -479,8 +485,9 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("B11 the three spelled variants are aliases: Start of your turn, Start of Game, Once per Turn", () => {
+  it("B11 the four spelled variants are aliases: Start of your turn, End of your turn, Start of Game, Once per Turn", () => {
     expect(GLOSSARY["Start of turn"].aliases).toContain("Start of your turn");
+    expect(GLOSSARY["End of turn"].aliases).toContain("End of your turn");
     expect(GLOSSARY["Start of game"].aliases).toContain("Start of Game");
     expect(GLOSSARY["Once per turn"].aliases).toContain("Once per Turn");
   });

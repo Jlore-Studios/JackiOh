@@ -526,9 +526,9 @@ still be read.
   title, source, notes }`, and `patches/<version>.json` is the whole catalog as that patch left it
   (snapshots, not diffs). A generated index maps each card id to the versions in which it changed;
   the client's History section and Patch notes page read these files (`apps/web/README.md`).
-- **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0-r1
-  (2026-09-22: the Core Set balance changes of issue #1); v0.1.0-r2 (2026-09-24: #95's text, and The
-  Coin added); v0.1.0-r3 (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
+- **The history.** v0.1.0 (2026-09-18: Core as first built, 100 cards and 9 tokens); v0.1.0b
+  (2026-09-22: the Core Set balance changes of issue #1); v0.1.0c (2026-09-24: #95's text, and The
+  Coin added); v0.1.0d (2026-09-25: the Radiant pass, R275–R279: Radiant faces, the Jlockeed tag and
   `refs`); v0.1.1 (2026-09-27, issue #27: the Ghoul Token added and 105 entries changed); v0.2.0
   (issue #40: Classic, Classic+, the new keywords, Core's pools across sets and the Core card patches
   below). Everything before v0.1.1 was rebuilt from `git log --follow packages/cards/catalog.json` on a

@@ -277,6 +277,35 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
+  // #85: the builder is a tavern screen, and tavern.css paints the screen's own `strong` pale gold,
+  // which reached every keyword on the parchment, where it all but vanished. Every term in the pool
+  // is bold in its rules box's own ink; the control is that each card's keywords print as terms.
+  // (Which terms a face draws is CardFace.test.tsx's B10 sweep; this is what Chrome paints them.)
+  it("every pool card prints its keywords in bold in the rules box's ink (#85)", () => {
+    cy.viewport(1280, 720);
+    cy.get(ts(WORKSHOP)).should("have.class", "tavern");
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE_COUNT);
+    cy.document().should((doc) => {
+      const missing: string[] = [];
+      const faint: string[] = [];
+      for (const def of DECKABLE) {
+        const item = doc.querySelector(`${POOL_ITEMS}[data-card="${def.id}"]`);
+        const terms = [...(item?.querySelectorAll<HTMLElement>(".card-text strong.cf-term") ?? [])];
+        const drawn = new Set(terms.map((term) => term.dataset.term));
+        for (const keyword of def.base.keywords) if (!drawn.has(keyword.kind)) missing.push(`${def.id} ${keyword.kind}`);
+        for (const term of terms) {
+          const box = term.closest(".card-text");
+          const style = getComputedStyle(term);
+          if (box === null || style.color !== getComputedStyle(box).color || style.fontWeight !== "800") {
+            faint.push(`${def.id} "${term.textContent ?? ""}" ${style.color} ${style.fontWeight}`);
+          }
+        }
+      }
+      expect(missing, "keywords that print as no term").to.deep.equal([]);
+      expect(faint, "terms not bold in the box's ink").to.deep.equal([]);
+    });
+  });
+
   // Integration QA: a refused save's reasons rendered under all 268 pool cards on a phone. There is
   // no Save button any more (R256); the deck's verdict sits in its sidebar, on the first screen, at
   // every size — and on a phone, where the sidebar and the pool stack, above the pool, never under

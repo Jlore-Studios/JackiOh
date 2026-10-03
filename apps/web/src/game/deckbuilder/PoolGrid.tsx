@@ -155,7 +155,7 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         {...inspect.handlers}
       >
         <span className="db-card-face" aria-hidden="true">
-          <CardFace face={face} layout="full" />
+          <CardFace face={face} layout="full" lazyArt />
         </span>
         {badge === null ? null : (
           <span className="db-held" data-place={place === "deck" ? "deck" : "other"} aria-hidden="true">

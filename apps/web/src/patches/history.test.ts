@@ -150,14 +150,14 @@ describe("R388 one card's history", () => {
     expect(await currentDef("core-999", FIXTURE_PATCHES, FIXTURE_INDEX, source.snapshot)).toBeNull();
   });
 
-  it("R388 the real history of Right-house defender (core-003) runs v0.2.0, v0.1.1, v0.1.0-r3, v0.1.0-r1, v0.1.0", async () => {
+  it("R388 the real history of Right-house defender (core-003) runs v0.2.0, v0.1.1, v0.1.0d, v0.1.0b, v0.1.0", async () => {
     const patches = await realPatchSource.patches();
     const index = await realPatchSource.index();
     const versions = versionsForCard("core-003", patches, index);
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
     const entries = cardHistory("core-003", patches, index, snapshots);
-    expect(entries.map((entry) => entry.patch.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0-r3", "v0.1.0-r1", "v0.1.0"]);
+    expect(entries.map((entry) => entry.patch.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0b", "v0.1.0"]);
     expect(entries.at(-1)?.delta.kind).toBe("added");
   });
 

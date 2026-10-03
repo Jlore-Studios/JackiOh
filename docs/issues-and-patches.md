@@ -45,8 +45,8 @@ titles, so retitle one when you accept it.
   of name order (#63). The order is `packages/cards/patches/patches.json`'s, and nothing parses or
   compares a version string (R105, R388).
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
-  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix, so v0.1.0-r1 becomes v0.1.0b
-  and v0.1.0-r3 becomes v0.1.0d. The patch history still uses the old names until #85 renames them.
+  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
+  v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
 
 ## A patch that takes several pull requests
 

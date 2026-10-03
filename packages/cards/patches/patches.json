@@ -554,7 +554,7 @@
     ]
   },
   {
-    "version": "v0.1.0-r1",
+    "version": "v0.1.0b",
     "date": "2026-09-22",
     "title": "Core Set balance changes",
     "source": "Issue #1: commits 1539fa7 and cd780db; the designer's balance notes landed first as ba45d13 (PR #2), in the source notes",
@@ -630,7 +630,7 @@
     ]
   },
   {
-    "version": "v0.1.0-r2",
+    "version": "v0.1.0c",
     "date": "2026-09-24",
     "title": "Call to Chaos's text and The Coin",
     "source": "Commits f5b94bc (PR #11, the edge-case hunt) and a17a9e8 (PR #14)",
@@ -652,7 +652,7 @@
     ]
   },
   {
-    "version": "v0.1.0-r3",
+    "version": "v0.1.0d",
     "date": "2026-09-25",
     "title": "The Radiant pass",
     "source": "PR #18 (commit c219bb4), R275-R279",
