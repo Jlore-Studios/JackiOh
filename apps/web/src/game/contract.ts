@@ -5,7 +5,18 @@
 // was clicked, `actions.ts` turns that into an `ActionBody` chosen from `legalActions`, and the
 // engine decides. `Highlight` is a set of `data-testid`s the engine has already blessed.
 
-import type { GameEvent, GameEventType, PlayerId, PlayerView, Row } from "@jackioh/shared";
+import type {
+  EmoteGate,
+  EmoteId,
+  GameEvent,
+  GameEventType,
+  PlayerId,
+  PlayerView,
+  PortraitId,
+  Row,
+} from "@jackioh/shared";
+
+import type { EmoteShow } from "../emotes/session.ts";
 
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
 export type Side = "you" | "opponent";
@@ -153,6 +164,25 @@ export type AnimatingMap = ReadonlyMap<string, GameEventType>;
 /** One animation entry as the board reads it: what it marks, and the events it is playing. */
 export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent[] };
 
+/**
+ * The emote surface one hero carries (R637–R638, issue §1–§5): its portrait, what it is showing,
+ * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
+ * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
+ * (the legal branch still goes to `onClick`), which is what opens a menu (issue §2: targeting
+ * wins).
+ */
+export type HeroEmotes = {
+  portrait: PortraitId;
+  show: EmoteShow | null;
+  menu: "emotes" | "mute" | null;
+  muted: boolean;
+  gate: () => EmoteGate;
+  onPortrait: () => void;
+  onPick: (emote: EmoteId) => void;
+  onMute: () => void;
+  onCloseMenu: () => void;
+};
+
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
@@ -168,4 +198,6 @@ export type BoardProps = {
   animated?: readonly AnimationFrames[];
   onClick?: (target: ClickTarget) => void;
   onControl?: (control: BoardControl) => void;
+  /** One hero's emote surface per side, or undefined where a route does not run emotes. */
+  emotes?: (side: Side) => HeroEmotes | undefined;
 };

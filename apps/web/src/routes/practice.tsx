@@ -64,6 +64,7 @@ import {
 } from "../practice/controller.ts";
 import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue } from "../practice/decks.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
+import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
@@ -255,7 +256,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
         const decks = response.decks;
         const saved: SavedDecks =
           Array.isArray(decks) && decks.length > 0
-            ? { kind: "ready", decks: decks.map((deck) => ({ name: deck.name, cards: [...deck.cards] })) }
+            ? { kind: "ready", decks: decks.map((deck) => ({ name: deck.name, cards: [...deck.cards], portrait: deck.portrait ?? null })) }
             : { kind: "none" };
         setLoaded({ token, saved });
       },
@@ -677,6 +678,10 @@ function PracticeScreen({
     [controller],
   );
 
+  // R636–R639: the game's emote half — the dealt portraits, the AI's persona and its replies —
+  // driven off the controller's snapshots (practice/emotes.ts). With no game it deals nothing.
+  const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat);
+
   const defs = state.defs;
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
 
@@ -772,6 +777,7 @@ function PracticeScreen({
       onAction={onAction}
       error={snapshot.error}
       resultForm="chip"
+      emotes={emotes}
       {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
     />
   );

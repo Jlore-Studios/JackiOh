@@ -1,0 +1,451 @@
+/* Emotes (issue §2–§5, R637–R638): the picker on your portrait, the mute menu on the opponent's,
+   and the bubble/sticker that pops out of a hero. Everything mounts inside `.hero` (position:
+   relative), so the pieces hang off the portrait without knowing board geometry. The animations
+   honour Reduce Motion exactly like board.css does: media query plus the app's
+   `data-reduce-motion` root flag — a fade instead of the bounce/slide. */
+
+/* ---- the portrait (issue §1) ------------------------------------------------- */
+
+/* The oval the hero's art draws in, with the two badges hung on its edges. It is a flex item of
+   `.hero` like the health gem used to be, so the seat label, power and badges flow around it the
+   way they always did. */
+.hero-portrait {
+  position: relative;
+  order: -1;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 50px;
+}
+
+.hero-portrait-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* Badges ride the oval's lower corners (issue §1): health right, armor left. They keep the
+   `hero-health`/`hero-armor` look board.css gives them; only the anchoring is new. The badges are
+   smaller than the loose row's were, so they sit on the art instead of beside it. */
+.hero-portrait .hero-health,
+.hero-portrait .hero-armor {
+  position: absolute;
+  bottom: -4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 0.82em;
+  z-index: 2;
+}
+
+.hero-portrait .hero-health {
+  right: -6px;
+}
+
+.hero-portrait .hero-armor {
+  left: -6px;
+}
+
+/* ---- the picker ------------------------------------------------------------ */
+
+.emote-menu {
+  position: absolute;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-bright);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
+  box-shadow: 0 6px 22px rgb(0 0 0 / 55%);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Your seat sits at the board's bottom edge, so its menu hangs above the portrait; the
+   opponent's — the mute menu — drops below theirs, mirroring it. */
+.emote-menu-you {
+  bottom: calc(100% + 8px);
+}
+
+.emote-menu-opponent,
+.emote-menu-mute {
+  top: calc(100% + 8px);
+}
+
+.emote-voice-arc {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.emote-emoji-row {
+  display: flex;
+  gap: 4px;
+}
+
+.emote-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-bright);
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.emote-voice {
+  padding: 4px 8px;
+  font-size: 0.72em;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.emote-emoji-pick {
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+}
+
+.emote-emoji-pick .emote-emoji-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* A limited item greys and shows its wait; the button's `disabled` does the not-pressing. */
+.emote-item[data-limited="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.emote-wait {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--bg-sunken) 78%, transparent);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.emote-mute {
+  padding: 5px 12px;
+  font-size: 0.8em;
+}
+
+.emote-mute:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---- the show -------------------------------------------------------------- */
+
+.emote-show {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* The speech bubble rides beside the portrait — above it for your seat, below for the
+   opponent's (the mirror of where their menus hang). `--emote-hold` is the line's span:
+   it pops in, holds, and is unmounted; the fade is the animation's tail. */
+.emote-bubble {
+  left: 50%;
+  bottom: calc(100% + 6px);
+  max-width: 30ch;
+  padding: 6px 10px;
+  border: 1px solid var(--line-bright);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 0.82em;
+  line-height: 1.25;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
+  animation: emote-bubble var(--emote-hold, 2s) ease-out both;
+}
+
+.seat-opponent .emote-bubble,
+.hero-opponent .emote-bubble {
+  top: calc(100% + 6px);
+  bottom: auto;
+  border-radius: 12px 12px 3px 12px;
+}
+
+/* The little tail pointing at the speaker. */
+.emote-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -6px;
+  border: 6px solid transparent;
+  border-top-color: var(--bg-raised);
+  border-bottom: 0;
+}
+
+.seat-opponent .emote-bubble::after,
+.hero-opponent .emote-bubble::after {
+  top: -6px;
+  bottom: auto;
+  border: 6px solid transparent;
+  border-bottom-color: var(--bg-raised);
+  border-top: 0;
+}
+
+/* The emoji sticker (issue §4): pops out of the portrait, bounces, holds, fades — 2s. */
+.emote-sticker {
+  left: 50%;
+  bottom: calc(100% + 10px);
+  width: 56px;
+  height: 56px;
+  transform: translateX(-50%);
+  animation: emote-sticker var(--emote-hold, 2s) ease-out both;
+}
+
+.seat-opponent .emote-sticker,
+.hero-opponent .emote-sticker {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+
+.emote-sticker .emote-emoji-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 3px 6px rgb(0 0 0 / 50%));
+}
+
+/* Sob's tears run while the sticker holds. */
+.emote-tear {
+  animation: emote-tear 0.9s ease-in infinite;
+}
+.emote-tear-r {
+  animation-delay: 0.45s;
+}
+
+/* Wah Wah's trombone slides in for the sting. */
+.emote-trombone {
+  animation: emote-trombone var(--emote-hold, 2s) ease-out both;
+  transform-origin: 24px 41px;
+}
+
+@keyframes emote-bubble {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  6% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+  10% { transform: translateX(-50%) scale(1); }
+  88% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1); }
+}
+
+@keyframes emote-sticker {
+  0% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.3); }
+  14% { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1.12); }
+  24% { transform: translateX(-50%) translateY(0) scale(0.96); }
+  32% { transform: translateX(-50%) translateY(-3px) scale(1.02); }
+  40% { transform: translateX(-50%) translateY(0) scale(1); }
+  82% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.92); }
+}
+
+@keyframes emote-tear {
+  0% { transform: translateY(0); opacity: 1; }
+  80% { opacity: 0.7; }
+  100% { transform: translateY(6px); opacity: 0; }
+}
+
+@keyframes emote-trombone {
+  0% { transform: translateX(26px) scale(0.4); opacity: 0; }
+  12% { transform: translateX(0) scale(1); opacity: 1; }
+  78% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(8px) scale(0.9); opacity: 0; }
+}
+
+/* Reduce Motion (issue §4): fade in and out, no bounce, no slide, no tears running. */
+@media (prefers-reduced-motion: reduce) {
+  .emote-bubble { animation: emote-bubble-fade var(--emote-hold, 2s) ease-out both; }
+  .emote-sticker { animation: emote-sticker-fade var(--emote-hold, 2s) ease-out both; }
+  .emote-tear, .emote-trombone { animation: none; }
+}
+
+:root[data-reduce-motion="true"] .emote-bubble {
+  animation: emote-bubble-fade var(--emote-hold, 2s) ease-out both;
+}
+:root[data-reduce-motion="true"] .emote-sticker {
+  animation: emote-sticker-fade var(--emote-hold, 2s) ease-out both;
+}
+:root[data-reduce-motion="true"] .emote-tear,
+:root[data-reduce-motion="true"] .emote-trombone {
+  animation: none;
+}
+
+@keyframes emote-bubble-fade {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes emote-sticker-fade {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Phone (issue §2's 380px): the voice buttons' labels are the wide part — let the menu use the
+   seat's width and shrink the text rather than clip. */
+@media (max-width: 480px) {
+  .emote-menu { max-width: 96vw; }
+  .emote-voice { padding: 4px 6px; font-size: 0.66em; }
+  .emote-emoji-pick { width: 34px; height: 34px; }
+  .emote-sticker { width: 48px; height: 48px; }
+}
+
+/* ---- the deck builder's picker (issue §8) ------------------------------------ */
+
+.portrait-picker {
+  position: relative;
+  display: inline-block;
+}
+
+/* The deck's current portrait: the same oval the hero wears, at name-field height. */
+.portrait-current {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.66em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.portrait-current:hover,
+.portrait-current[aria-expanded="true"] {
+  border-color: var(--line-bright);
+  color: var(--text);
+}
+
+.portrait-current .cf-art {
+  width: 40px;
+  height: 44px;
+  display: block;
+}
+
+.portrait-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  max-width: min(92vw, 460px);
+  padding: 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 14px;
+  background: var(--bg-raised);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 60%);
+}
+
+.portrait-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portrait-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.portrait-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 6px;
+  border: 1px solid var(--line-bright);
+  border-radius: 12px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.portrait-tile[data-selected="true"] .portrait-pick {
+  border-color: var(--selected, #e8b64a);
+  box-shadow: 0 0 0 1px var(--selected, #e8b64a);
+}
+
+.portrait-pick .cf-art {
+  width: 52px;
+  height: 58px;
+  display: block;
+}
+
+.portrait-name {
+  font-size: 0.72em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.portrait-preview-toggle {
+  padding: 2px 10px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.72em;
+  cursor: pointer;
+}
+
+.portrait-preview-toggle[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--selected, #e8b64a);
+}
+
+.portrait-preview {
+  position: relative;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-bright);
+}
+
+/* The preview's show mounts inside this anchor: a fixed stage so the absolutely-positioned
+   bubble/sticker has somewhere to hang (they center on it like a portrait's). */
+.portrait-preview-show {
+  position: relative;
+  display: block;
+  height: 0;
+  overflow: visible;
+}
+
+.portrait-preview-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.portrait-preview-emojis {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}

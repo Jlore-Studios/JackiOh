@@ -33,6 +33,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
+  "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1117,6 +1118,106 @@ const clockTick: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * R638's emoji emotes (issue §4): five animated-sticker sounds, all synthesized, on the effects
+ * channel like every other SFX. Wah Wah is the sad-trombone sting.
+ * ------------------------------------------------------------------------------------------- */
+
+/** Sob: a wobbly falling whimper — two little cries, each sliding down and shaking. */
+const emoteSob: SfxRecipe = (ctx, out, at) => {
+  const len = 1.2;
+  const k = kit(ctx, out, at, len);
+  const muffle = biquad(k, "lowpass", 1400, 0.7);
+  chain(muffle, out);
+  for (const [start, from, to, stop] of [
+    [0, 620, 380, 0.5],
+    [0.55, 520, 300, len],
+  ] as const) {
+    const cry = oscillator(k, "triangle", from, start);
+    glide(k, cry.frequency, to, stop);
+    vibrato(k, cry.frequency, 11, 26, start, stop);
+    chain(cry, envelope(k, start, 0.02, 0.34, stop), muffle);
+    run(k, cry, start, stop);
+  }
+  return len;
+};
+
+/** Yawn: a long falling breath — band-passed noise swelling in and sighing out over a soft tone. */
+const emoteYawn: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 700, 0.8);
+  chain(noise, band, heldEnvelope(k, 0, 0.35, 0.3, 0.8, 0.12, len), out);
+  glide(k, band.frequency, 420, len);
+  run(k, noise, 0, len);
+  const sigh = oscillator(k, "sine", 330, 0);
+  glide(k, sigh.frequency, 190, len);
+  chain(sigh, heldEnvelope(k, 0, 0.3, 0.16, 0.75, 0.06, len), out);
+  run(k, sigh, 0, len);
+  return len;
+};
+
+/** Laugh: a quick bouncing "ha-ha" — four short square blips stepping down. */
+const emoteLaugh: SfxRecipe = (ctx, out, at) => {
+  const len = 0.75;
+  const k = kit(ctx, out, at, len);
+  const muffle = biquad(k, "lowpass", 2200, 0.7);
+  chain(muffle, out);
+  const has: readonly (readonly [number, number])[] = [
+    [0, 520],
+    [0.16, 480],
+    [0.32, 440],
+    [0.48, 390],
+  ];
+  for (const [start, hz] of has) {
+    tone(k, muffle, "square", hz, start, 0.004, 0.2, start + 0.11);
+  }
+  return len;
+};
+
+/** Angry: a short growl — a low sawtooth and its rattle, buzzing out through a closed filter. */
+const emoteAngry: SfxRecipe = (ctx, out, at) => {
+  const len = 0.7;
+  const k = kit(ctx, out, at, len);
+  const muffle = biquad(k, "lowpass", 800, 1.5);
+  chain(muffle, out);
+  const growl = oscillator(k, "sawtooth", 95, 0);
+  vibrato(k, growl.frequency, 25, 14, 0, len);
+  chain(growl, envelope(k, 0, 0.03, 0.5, len), muffle);
+  run(k, growl, 0, len);
+  const rattle = modulatedGain(k, "square", 30, 0.5, 0.5);
+  chain(rattle, muffle);
+  const grind = oscillator(k, "sawtooth", 190, 0);
+  chain(grind, rattle);
+  run(k, grind, 0, len);
+  return len;
+};
+
+/**
+ * Wah Wah: the sad trombone. Four notes stepping down a minor third each — wah, wah, wah — and the
+ * last dropping a semitone more, held long with vibrato until it trails off.
+ */
+const emoteWahWah: SfxRecipe = (ctx, out, at) => {
+  const len = 1.8;
+  const k = kit(ctx, out, at, len);
+  const brass = biquad(k, "lowpass", 1600, 1);
+  chain(brass, out);
+  const notes: readonly (readonly [number, number, number])[] = [
+    [0, 233, 0.28],
+    [0.28, 196, 0.56],
+    [0.56, 165, 0.9],
+    [0.9, 156, len],
+  ];
+  for (const [start, hz, stop] of notes) {
+    const note = oscillator(k, "sawtooth", hz, start);
+    if (stop === len) vibrato(k, note.frequency, 6, 9, start + 0.2, stop);
+    chain(note, heldEnvelope(k, start, 0.04, 0.4, stop - 0.06, 0.3, stop), brass);
+    run(k, note, start, stop);
+  }
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1156,4 +1257,9 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   brand: { recipe: brand, durationMs: 800, gain: 0.39 },
   heartbeat: { recipe: heartbeat, durationMs: 450, gain: 0.34 },
   clockTick: { recipe: clockTick, durationMs: 350, gain: 1 },
+  emoteSob: { recipe: emoteSob, durationMs: 1200, gain: 0.8 },
+  emoteYawn: { recipe: emoteYawn, durationMs: 1400, gain: 0.8 },
+  emoteLaugh: { recipe: emoteLaugh, durationMs: 750, gain: 0.8 },
+  emoteAngry: { recipe: emoteAngry, durationMs: 700, gain: 0.8 },
+  emoteWahWah: { recipe: emoteWahWah, durationMs: 1800, gain: 0.8 },
 };

@@ -15,7 +15,7 @@
  * actor.
  */
 
-import type { PlayerId } from "@jackioh/shared";
+import { portraitOrDefault, type PlayerId } from "@jackioh/shared";
 import { ApiError } from "../api/http";
 import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, StartMatchInput } from "../api/ports";
 import { createMatchActor, lastBoardsOf, type MatchActor } from "./actor";
@@ -68,6 +68,9 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+      // R636: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
+      // reconnected client) reads the same pair.
+      portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
     };
     await deps.store.matches.create(match);
 

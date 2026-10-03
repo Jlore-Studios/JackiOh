@@ -78,7 +78,7 @@ import type {
   SfxId,
   SfxParams,
   VoiceKey,
-  VoiceLineKind,
+  PlayableLineKind,
   VoiceLineTable,
   VoiceManifest,
   VoiceOutcome,
@@ -733,7 +733,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
   }
 
-  function playVoice(defId: string, lineKind: VoiceLineKind, delayMs?: number, priority?: VoicePriority): boolean {
+  function playVoice(defId: string, lineKind: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean {
     try {
       if (!accepting() || ctx === null) return false;
       if (!readAudioSettings().voiceOn) return false;

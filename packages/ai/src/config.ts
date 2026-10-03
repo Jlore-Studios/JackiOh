@@ -1,6 +1,7 @@
 // Every number the AI states (CLAUDE.md rule 9, in the package's own config). The weights are tuning
 // defaults: tests pin rankings and puzzle outcomes, never these values.
 
+import type { EmoteId } from "@jackioh/shared";
 import type { SearchBudget } from "./types";
 
 /** The practice AI's budget (SPEC §9.9): the same at every difficulty (R180). */
@@ -235,3 +236,146 @@ export const AI_DETERMINIZE = {
    */
   excludeDefIds: ["core-098"],
 } as const;
+
+// ---------------------------------------------------------------------------
+// R639: the AI's emote personas. Every weight, chance, pool, cap, threshold and delay in the
+// issue's §6 table, in one config object keyed by persona so a persona can be tuned — or a new
+// one added — without touching personas.ts. Cosmetic only: none of this reaches the engine, the
+// action log or a game record, and `decide`/`search.ts` never import it.
+// ---------------------------------------------------------------------------
+
+/** §6: the situations a persona may answer, named as personas.ts detects them. */
+export const EMOTE_TRIGGERS = [
+  /** The mulligan phase just ended. */
+  "mulliganEnd",
+  /** The AI's turn started while it is ahead (its health − yours ≥ leadHealth, or leadUnits+ more units). */
+  "turnStartAhead",
+  /** The AI dealt bigHit+ damage to your hero in one hit. */
+  "dealtBigHit",
+  /** The AI killed your highest-attack unit. */
+  "killedTopUnit",
+  /** The AI took bigHit+ damage to its hero in one hit. */
+  "tookBigHit",
+  /** The AI lost its highest-attack unit. */
+  "lostTopUnit",
+  /** Your turn ran past longTurnMs (once per turn). */
+  "playerTurnLong",
+  /** You made a big play: bigHit+ damage to its hero, or killsForBigPlay+ of its units in one turn. */
+  "playerBigPlay",
+  /** You conceded, or the AI dealt lethal. */
+  "matchWon",
+  /** The AI is about to lose. */
+  "matchLost",
+] as const;
+
+export type EmoteTrigger = (typeof EMOTE_TRIGGERS)[number];
+
+/** §6's reply table: what a player's emote is answered as, when a row exists for it at all. */
+export const EMOTE_REPLY_KEYS = ["greetings", "compliment", "taunt", "apology"] as const;
+export type EmoteReplyKey = (typeof EMOTE_REPLY_KEYS)[number];
+
+/** §6's thresholds and timings — every number the trigger table shares. */
+export const AI_EMOTE = {
+  /** "its health − yours ≥ 10". */
+  leadHealth: 10,
+  /** "or 3+ more units". */
+  leadUnits: 3,
+  /** "10+ damage to a hero in one hit". */
+  bigHit: 10,
+  /** "you kill 2+ of its units in one turn". */
+  killsForBigPlay: 2,
+  /** "Your turn runs past 45s (once per turn)". */
+  longTurnMs: 45_000,
+  /** "a random 0.8–2.5s delay" — every rolled emote waits inside this window. */
+  delayMinMs: 800,
+  delayMaxMs: 2500,
+} as const;
+
+export type PersonaName = "balanced" | "polite" | "bm" | "silent";
+
+export type PersonaSpec = {
+  /** The share of AI opponents dealt this persona at match creation; weights sum to 1. */
+  readonly weight: number;
+  /**
+   * §6's caps: most emotes within one of the AI's own turns (`ownTurn`) or one of the player's
+   * (`otherTurn`), and per match (`match`) — the mulligan greeting and the end-of-match emotes
+   * exempted from the last.
+   */
+  readonly caps: { readonly ownTurn: number; readonly otherTurn: number; readonly match: number };
+  readonly triggers: Partial<Record<EmoteTrigger, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
+  readonly replies: Partial<Record<EmoteReplyKey, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
+};
+
+/**
+ * §6, verbatim: Balanced 40 / Polite 25 / BM 20 / Silent 15, and each row of the trigger and reply
+ * tables. A dash in the table is an absent key here. Silent holds no rows at all: it sends nothing
+ * in any situation, including Greetings and Well Played.
+ */
+export const AI_PERSONAS: Record<PersonaName, PersonaSpec> = {
+  balanced: {
+    weight: 0.4,
+    caps: { ownTurn: 1, otherTurn: 1, match: 8 },
+    triggers: {
+      mulliganEnd: { chance: 1, pool: ["greetings"] },
+      turnStartAhead: { chance: 0.1, pool: ["threaten", "laugh", "yawn"] },
+      dealtBigHit: { chance: 0.35, pool: ["laugh", "threaten", "wahWah"] },
+      killedTopUnit: { chance: 0.2, pool: ["laugh", "wahWah"] },
+      tookBigHit: { chance: 0.25, pool: ["oops", "sob", "angry"] },
+      lostTopUnit: { chance: 0.15, pool: ["sob", "angry", "oops"] },
+      playerTurnLong: { chance: 0.2, pool: ["yawn"] },
+      matchWon: { chance: 0.4, pool: ["wahWah", "laugh", "wellPlayed"] },
+      matchLost: { chance: 1, pool: ["wellPlayed"] },
+    },
+    replies: {
+      greetings: { chance: 0.7, pool: ["greetings"] },
+      compliment: { chance: 0.3, pool: ["thanks"] },
+      taunt: { chance: 0.25, pool: ["laugh", "wahWah", "yawn", "threaten"] },
+    },
+  },
+  polite: {
+    weight: 0.25,
+    caps: { ownTurn: 1, otherTurn: 1, match: 6 },
+    triggers: {
+      mulliganEnd: { chance: 1, pool: ["greetings"] },
+      dealtBigHit: { chance: 0.15, pool: ["oops"] },
+      tookBigHit: { chance: 0.3, pool: ["wellPlayed", "oops"] },
+      lostTopUnit: { chance: 0.2, pool: ["wellPlayed"] },
+      playerBigPlay: { chance: 0.4, pool: ["wellPlayed"] },
+      matchWon: { chance: 1, pool: ["wellPlayed"] },
+      matchLost: { chance: 1, pool: ["wellPlayed"] },
+    },
+    replies: {
+      greetings: { chance: 1, pool: ["greetings"] },
+      compliment: { chance: 0.8, pool: ["thanks"] },
+      taunt: { chance: 0.3, pool: ["oops", "greetings"] },
+      apology: { chance: 0.5, pool: ["thanks"] },
+    },
+  },
+  bm: {
+    weight: 0.2,
+    caps: { ownTurn: 2, otherTurn: 2, match: 20 },
+    triggers: {
+      mulliganEnd: { chance: 1, pool: ["threaten", "laugh"] },
+      turnStartAhead: { chance: 0.5, pool: ["threaten", "laugh", "yawn", "wahWah"] },
+      dealtBigHit: { chance: 0.8, pool: ["laugh", "wahWah", "threaten"] },
+      killedTopUnit: { chance: 0.6, pool: ["laugh", "wahWah", "yawn"] },
+      tookBigHit: { chance: 0.4, pool: ["angry", "threaten"] },
+      lostTopUnit: { chance: 0.3, pool: ["angry"] },
+      playerTurnLong: { chance: 0.7, pool: ["yawn"] },
+      matchWon: { chance: 1, pool: ["wahWah", "laugh"] },
+      matchLost: { chance: 0.5, pool: ["sob", "angry"] },
+    },
+    replies: {
+      greetings: { chance: 0.6, pool: ["threaten", "laugh"] },
+      compliment: { chance: 0.4, pool: ["yawn"] },
+      taunt: { chance: 0.9, pool: ["laugh", "wahWah", "yawn", "threaten"] },
+      apology: { chance: 0.7, pool: ["laugh", "wahWah"] },
+    },
+  },
+  silent: {
+    weight: 0.15,
+    caps: { ownTurn: 0, otherTurn: 0, match: 0 },
+    triggers: {},
+    replies: {},
+  },
+};

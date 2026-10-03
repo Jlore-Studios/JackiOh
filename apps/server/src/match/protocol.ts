@@ -34,6 +34,7 @@ import type {
   Selection,
   ZoneChoice,
 } from "@jackioh/shared";
+import { isEmoteId, type EmoteId, type PortraitId } from "@jackioh/shared";
 import type { MatchClocks } from "../api/ports";
 
 // ---------------------------------------------------------------------------
@@ -63,11 +64,19 @@ export type JoinRoomMessage = { type: "joinRoom"; token?: string; roomCode: stri
 /** An action the client wants applied. `playerId` never survives parsing (see the file header). */
 export type ActionMessage = { type: "action"; nonce: string; body: ActionBody };
 
-export type ClientMessage = HelloMessage | JoinRoomMessage | ActionMessage;
+/**
+ * R637: a cosmetic emote. Top-level on purpose — it is NOT an `ActionBody`, so it never reaches
+ * `reduce`, the action log or the replay hash, and it carries no nonce because there is nothing to
+ * ack: a rate-limited emote is silently dropped, and silence is exactly what a drop needs (R637).
+ * An `emote` value outside the ten `EMOTE_IDS` is `malformed`, the only way this frame can fail.
+ */
+export type EmoteMessage = { type: "emote"; emote: EmoteId };
+
+export type ClientMessage = HelloMessage | JoinRoomMessage | ActionMessage | EmoteMessage;
 
 export type MalformedMessage = { type: "malformed"; reason: string };
 
-export const CLIENT_MESSAGE_TYPES = ["hello", "joinRoom", "action"] as const;
+export const CLIENT_MESSAGE_TYPES = ["hello", "joinRoom", "action", "emote"] as const;
 
 /**
  * R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
@@ -169,9 +178,36 @@ export type PromptMessage =
  */
 export type ClockMessage = { type: "clock"; now: number; clocks: MatchClocks };
 
-export type ServerMessage = ViewMessage | AckMessage | ErrorMessage | PromptMessage | ClockMessage;
+/**
+ * R636: both seats' hero portraits, sent on join and again on reconnect — a row on the match,
+ * never a field of `PlayerView` (portraits are cosmetic; `PlayerView` is a rules surface).
+ */
+export type PortraitsMessage = { type: "portraits"; p1: PortraitId; p2: PortraitId };
 
-export const SERVER_MESSAGE_TYPES = ["view", "ack", "error", "prompt", "clock"] as const;
+/**
+ * R637: an opponent's emote, relayed. The sender already sees their own locally and gets nothing
+ * back — the one asymmetry this frame has.
+ */
+export type EmoteRelayMessage = { type: "emote"; from: PlayerId; emote: EmoteId };
+
+export type ServerMessage =
+  | ViewMessage
+  | AckMessage
+  | ErrorMessage
+  | PromptMessage
+  | ClockMessage
+  | PortraitsMessage
+  | EmoteRelayMessage;
+
+export const SERVER_MESSAGE_TYPES = [
+  "view",
+  "ack",
+  "error",
+  "prompt",
+  "clock",
+  "portraits",
+  "emote",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Builders
@@ -196,6 +232,14 @@ export function errorMessage(
 
 export function clockMessage(now: number, clocks: MatchClocks): ClockMessage {
   return { type: "clock", now, clocks };
+}
+
+export function portraitsMessage(p1: PortraitId, p2: PortraitId): PortraitsMessage {
+  return { type: "portraits", p1, p2 };
+}
+
+export function emoteRelayMessage(from: PlayerId, emote: EmoteId): EmoteRelayMessage {
+  return { type: "emote", from, emote };
 }
 
 /** For the holder of the prompt: the choiceId it must answer and the kind to render. */
@@ -441,6 +485,12 @@ export function parseClientMessage(text: string): ClientMessage | MalformedMessa
       const body = parseActionBody(raw);
       if (body.type === "malformed") return body;
       return { type: "action", nonce, body };
+    }
+    case "emote": {
+      // R637: the ten emote ids are the whole vocabulary; anything else is malformed, and there
+      // is nothing else on the frame to validate (no nonce, no seat — the actor stamps the seat).
+      if (!isEmoteId(parsed.emote)) return malformed(`"emote" must be a known emote id`);
+      return { type: "emote", emote: parsed.emote };
     }
     default:
       return malformed(`"${type}" is not a client message`);

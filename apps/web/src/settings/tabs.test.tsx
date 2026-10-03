@@ -115,10 +115,12 @@ describe("#128 the tablist", () => {
   });
 
   it("a section with no switch and no slot has no tab", () => {
+    // Audio always draws now (R637's "Mute opponent emotes" is a built-in switch of it); the
+    // section with nothing in it is account, which only exists when an account slot is mounted.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
-    expect(screen.getAllByRole("tab").map((node) => node.textContent)).toEqual(["Gameplay", "Visuals"]);
-    expect(screen.queryByTestId("settings-tab-audio")).toBeNull();
+    expect(screen.getAllByRole("tab").map((node) => node.textContent)).toEqual(["Gameplay", "Visuals", "Audio"]);
+    expect(screen.queryByTestId("settings-tab-account")).toBeNull();
   });
 });
 
@@ -140,7 +142,8 @@ describe("#128 the tab the player used last opens next", () => {
     expect(shown()).toEqual(["audio"]);
     first.unmount();
 
-    render(<SettingsPanel onClose={noop} slots={[]} initialTab="audio" />);
+    // `account` is a tab this dialog lacks (no switch, no slot), so the remembered tab wins.
+    render(<SettingsPanel onClose={noop} slots={[]} initialTab="account" />);
     expect(shown()).toEqual(["visuals"]);
   });
 
@@ -208,9 +211,17 @@ describe("#128 the dialog around the tabs", () => {
     expect(document.activeElement).toBe(screen.getByTestId("setting-dragToPlay"));
     first.unmount();
 
-    rememberTab("audio");
-    render(<SettingsPanel onClose={noop} slots={slotsWith()} />);
-    expect(document.activeElement).toBe(tab("audio"));
+    // The account section is the one a slot alone fills: its probe is no `role="switch"` input,
+    // so with nothing to land on, focus falls to the tab itself. (Audio used to play this part;
+    // since R637's "Mute opponent emotes" switch it has one, and focuses it.)
+    const slots: SettingsSlot[] = [
+      ...slotsWith(),
+      { section: "account", id: "probe-account", render: () => <input aria-label="account probe" data-testid="probe-account" /> },
+    ];
+    rememberTab("account");
+    render(<SettingsPanel onClose={noop} slots={slots} />);
+    expect(tab("account")).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(tab("account"));
   });
 
   it("Tab and Shift+Tab cycle inside the dialog, past the open tab's controls only", () => {

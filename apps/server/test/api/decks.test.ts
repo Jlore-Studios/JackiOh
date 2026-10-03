@@ -20,6 +20,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
+import { isPortraitId, PORTRAIT_IDS } from "@jackioh/shared";
 
 import {
   assertNotInSeries,
@@ -151,6 +152,8 @@ describe("saved decks (§9.4, R250, R256)", () => {
       id: uuid(1),
       name: "Aggro",
       cards: cards(deps, 4),
+      // R635: a body that names no portrait saves `null` — `vanilla` wherever it is shown.
+      portrait: null,
       catalogVersion: deps.catalog.version,
       createdAt: deps.timers.now(),
       updatedAt: deps.timers.now(),
@@ -347,6 +350,79 @@ describe("saved decks (§9.4, R250, R256)", () => {
     const upper = uuid(5).toUpperCase();
     expect((await putDeck(deckBody(deps), upper)).status).toBe(200);
     expect(deps.store.tables.decks[0]?.id).toBe(uuid(5));
+  });
+});
+
+/**
+ * R635's `portrait` field and D5's check on it (§9.4): a saved deck may name one of the portrait
+ * ids — or `null`, `vanilla` wherever the deck is shown — and nothing else.
+ */
+describe("the deck's portrait (R635, D5)", () => {
+  it("D5 saves every portrait id and echoes it on the deck", async () => {
+    for (const [index, portrait] of PORTRAIT_IDS.entries()) {
+      const saved = await putDeck(
+        { ...deckBody(deps), name: `Portrait ${portrait}`, portrait },
+        uuid(10 + index),
+      );
+      expect(saved.status).toBe(200);
+      const deck = (await readJson<{ deck: DeckView }>(saved)).deck;
+      expect(deck.portrait).toBe(portrait);
+      // The row keeps what was saved, so a later read back — or a freeze — meets it.
+      expect(deps.store.tables.decks.at(-1)?.portrait).toBe(portrait);
+    }
+    expect(deps.store.tables.decks).toHaveLength(PORTRAIT_IDS.length);
+  });
+
+  it("R635 accepts `portrait: null` and absent alike — both read back `null`", async () => {
+    for (const [index, body] of [
+      { ...deckBody(deps), portrait: null },
+      deckBody(deps),
+    ].entries()) {
+      const saved = await putDeck(body, uuid(20 + index));
+      expect(saved.status).toBe(200);
+      expect((await readJson<{ deck: DeckView }>(saved)).deck.portrait).toBeNull();
+    }
+    // Both wrote `null` to the row; `null` is what a pre-portrait row reads as too.
+    expect(deps.store.tables.decks.map((deck) => deck.portrait)).toEqual([null, null]);
+  });
+
+  it("D5 refuses an id outside the roster, with the shared module's own issue, and writes nothing", async () => {
+    // PREMISE: the expected issue is the validator's own verdict for the same input — computed
+    // here against the same `isPortraitId` the route passes, never a sentence typed out.
+    const expected = checkDeckDraft({
+      name: normalizeName("Aggro"),
+      cards: cards(deps, 4),
+      isDeckable: (cardId) => deps.catalog.cardIds.includes(cardId) && !deps.catalog.isToken(cardId),
+      nameMaxLength: DECK_NAME_MAX_LENGTH,
+      portrait: "ulfric",
+      isPortrait: isPortraitId,
+    });
+    expect(expected).toEqual([{ rule: "D5", message: '"portrait" is not a known portrait id.' }]);
+
+    const response = await putDeck(deckBody(deps, { portrait: "ulfric" }));
+    const body = await readJson<ErrorBody>(response);
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("bad_request");
+    expect(body.error.details).toEqual(expected);
+    expect(body.error.message).toBe(expected[0]?.message);
+    expect(deps.store.tables.decks).toEqual([]);
+  });
+
+  it("R635 refuses a portrait that is not a string, and keeps a saved one on re-save", async () => {
+    const odd = await putDeck(deckBody(deps, { portrait: 42 }));
+    expect(odd.status).toBe(400);
+    const body = await readJson<ErrorBody>(odd);
+    expect(body.error.code).toBe("bad_request");
+    expect(body.error.message).toBe('"portrait" must be a string');
+    expect(deps.store.tables.decks).toEqual([]);
+
+    // A re-save names the new portrait; it lands on the same row.
+    const first = await putDeck(deckBody(deps, { portrait: "gary" }));
+    const id = (await readJson<{ deck: DeckView }>(first)).deck.id;
+    const again = await putDeck({ ...deckBody(deps), name: "Re-saved", portrait: "felinors" }, id);
+    expect(again.status).toBe(200);
+    expect((await readJson<{ deck: DeckView }>(again)).deck.portrait).toBe("felinors");
+    expect(deps.store.tables.decks).toHaveLength(1);
   });
 });
 
@@ -754,7 +830,7 @@ describe("readModeChoice (R257)", () => {
 
 describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
   function savedDeck(id: string, name: string, deck: string[], profileId = PROFILE, at = 0): SavedDeck {
-    return { id, profileId, name, cards: deck, catalogVersion: "old-0", createdAt: at, updatedAt: at };
+    return { id, profileId, name, cards: deck, portrait: null, catalogVersion: "old-0", createdAt: at, updatedAt: at };
   }
 
   /** A validator that approves and remembers what it was asked. */
@@ -773,7 +849,8 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
 
     const frozen = await freezeChoice(deps, PROFILE, { mode: "bo1", deckId: uuid(1) });
 
-    expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3) } });
+    // R636: the deck's portrait freezes with it (R635's `null` here — `vanilla` when dealt).
+    expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3), portrait: null } });
     expect(seen).toEqual([
       {
         decks: [cards(deps, 3)],
@@ -790,7 +867,20 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
     await deps.store.decks.upsert(savedDeck(uuid(1), "Aggro", cards(deps, 3)), MAX_SAVED_DECKS);
     const frozen = await freezeChoice(deps, PROFILE, { mode: "bo1", deckId: uuid(1) });
     await deps.store.decks.upsert(savedDeck(uuid(1), "Changed", cards(deps, 3, 10)), MAX_SAVED_DECKS);
-    expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3) } });
+    expect(frozen).toEqual({ mode: "bo1", deck: { name: "Aggro", cards: cards(deps, 3), portrait: null } });
+  });
+
+  it("R636 freezes the deck's portrait with it: a later re-save cannot reach the copy", async () => {
+    const garyDeck = { ...savedDeck(uuid(1), "Gary's", cards(deps, 3)), portrait: "gary" };
+    await deps.store.decks.upsert(garyDeck, MAX_SAVED_DECKS);
+
+    const frozen = await freezeChoice(deps, PROFILE, { mode: "bo1", deckId: uuid(1) });
+    // The saved deck's portrait changes afterwards; the frozen one does not.
+    await deps.store.decks.upsert({ ...garyDeck, portrait: "timmy" }, MAX_SAVED_DECKS);
+    expect(frozen).toEqual({
+      mode: "bo1",
+      deck: { name: "Gary's", cards: cards(deps, 3), portrait: "gary" },
+    });
   });
 
   it("R257 reads a legacy deckIndex as a position in the saved list, oldest first", async () => {
@@ -799,11 +889,11 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
 
     expect(await freezeChoice(deps, PROFILE, { mode: "bo1", deckIndex: 0 })).toEqual({
       mode: "bo1",
-      deck: { name: "Older", cards: cards(deps, 2) },
+      deck: { name: "Older", cards: cards(deps, 2), portrait: null },
     });
     expect(await freezeChoice(deps, PROFILE, { mode: "bo1", deckIndex: 1 })).toEqual({
       mode: "bo1",
-      deck: { name: "Newer", cards: cards(deps, 2, 5) },
+      deck: { name: "Newer", cards: cards(deps, 2, 5), portrait: null },
     });
     const past = await apiError(() => freezeChoice(deps, PROFILE, { mode: "bo1", deckIndex: 2 }));
     expect(past.code).toBe("loadout_invalid");
@@ -863,9 +953,9 @@ describe("freezeChoice (R253: what a ticket or a room keeps)", () => {
       trio: {
         name: "Main",
         decks: [
-          { name: "Three", cards: cards(deps, 2, 4) },
-          { name: "One", cards: cards(deps, 2, 0) },
-          { name: "Two", cards: cards(deps, 2, 2) },
+          { name: "Three", cards: cards(deps, 2, 4), portrait: null },
+          { name: "One", cards: cards(deps, 2, 0), portrait: null },
+          { name: "Two", cards: cards(deps, 2, 2), portrait: null },
         ],
       },
     });

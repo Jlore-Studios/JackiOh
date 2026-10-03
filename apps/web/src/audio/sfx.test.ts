@@ -18,6 +18,8 @@ const UNION_ORDER: SfxId[] = [
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
+  // Patch v0.2.X (R638): the five emoji emotes.
+  "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -61,6 +63,11 @@ const DURATION_MS: Record<SfxId, number> = {
   brand: 800,
   heartbeat: 450,
   clockTick: 350,
+  emoteSob: 1200,
+  emoteYawn: 1400,
+  emoteLaugh: 750,
+  emoteAngry: 700,
+  emoteWahWah: 1800,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }];
@@ -207,7 +214,7 @@ function rampProblems(run: Run): string[] {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
-  it("B14 SFX_IDS lists all 38 ids, in the order of the SfxId union", () => {
+  it("B14 SFX_IDS lists all 43 ids, in the order of the SfxId union", () => {
     expect([...SFX_IDS]).toEqual(UNION_ORDER);
   });
 

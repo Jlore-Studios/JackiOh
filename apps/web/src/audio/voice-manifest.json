@@ -1717,6 +1717,126 @@
     "core-t-sheep-play": {
       "hash": "226cf61252f53e79",
       "bytes": 6062
+    },
+    "emote-vanilla-greetings": {
+      "hash": "2002a04fe1033cce",
+      "bytes": 15720
+    },
+    "emote-vanilla-wellPlayed": {
+      "hash": "5524c2c25470f2a1",
+      "bytes": 10771
+    },
+    "emote-vanilla-oops": {
+      "hash": "1ba00196e5b82606",
+      "bytes": 14160
+    },
+    "emote-vanilla-thanks": {
+      "hash": "7ed660402b20316c",
+      "bytes": 12692
+    },
+    "emote-vanilla-threaten": {
+      "hash": "5d38684e62f63bcc",
+      "bytes": 17521
+    },
+    "emote-gary-greetings": {
+      "hash": "13879665a33a43a2",
+      "bytes": 12058
+    },
+    "emote-gary-wellPlayed": {
+      "hash": "0a554b6aa414f7a2",
+      "bytes": 13820
+    },
+    "emote-gary-oops": {
+      "hash": "4c73bbe74a5f962f",
+      "bytes": 15083
+    },
+    "emote-gary-thanks": {
+      "hash": "d865dcdcddf3ea55",
+      "bytes": 12981
+    },
+    "emote-gary-threaten": {
+      "hash": "5c9afb92bde9c5cd",
+      "bytes": 12351
+    },
+    "emote-timmy-greetings": {
+      "hash": "0d1a22a304648439",
+      "bytes": 9498
+    },
+    "emote-timmy-wellPlayed": {
+      "hash": "db5fd285b53379c9",
+      "bytes": 10445
+    },
+    "emote-timmy-oops": {
+      "hash": "ecbc7e52b50ddbea",
+      "bytes": 5940
+    },
+    "emote-timmy-thanks": {
+      "hash": "a904de8450d63d8f",
+      "bytes": 8631
+    },
+    "emote-timmy-threaten": {
+      "hash": "eaae06e89aa22440",
+      "bytes": 6223
+    },
+    "emote-dfender-greetings": {
+      "hash": "af0c8f6e0334c6b6",
+      "bytes": 15527
+    },
+    "emote-dfender-wellPlayed": {
+      "hash": "d9ad179b89d5619f",
+      "bytes": 21115
+    },
+    "emote-dfender-oops": {
+      "hash": "77b93b18061fcb44",
+      "bytes": 13564
+    },
+    "emote-dfender-thanks": {
+      "hash": "9cfde9bdea5ec358",
+      "bytes": 10460
+    },
+    "emote-dfender-threaten": {
+      "hash": "a755d42a715719fc",
+      "bytes": 17009
+    },
+    "emote-felinors-greetings": {
+      "hash": "7fa4ada1a578ee4a",
+      "bytes": 9378
+    },
+    "emote-felinors-wellPlayed": {
+      "hash": "703248e9531a2fc5",
+      "bytes": 8510
+    },
+    "emote-felinors-oops": {
+      "hash": "6be3a9302958a3ec",
+      "bytes": 6434
+    },
+    "emote-felinors-thanks": {
+      "hash": "1244305bb47c1c71",
+      "bytes": 8297
+    },
+    "emote-felinors-threaten": {
+      "hash": "052bc4462df5685f",
+      "bytes": 7868
+    },
+    "emote-shredder-greetings": {
+      "hash": "1b9e2bc8408acad7",
+      "bytes": 9953
+    },
+    "emote-shredder-wellPlayed": {
+      "hash": "a9f977448cacadb9",
+      "bytes": 13174
+    },
+    "emote-shredder-oops": {
+      "hash": "af977329682cf111",
+      "bytes": 8732
+    },
+    "emote-shredder-thanks": {
+      "hash": "439983d1534f0943",
+      "bytes": 9788
+    },
+    "emote-shredder-threaten": {
+      "hash": "75477c3f98393d07",
+      "bytes": 16030
     }
   }
 }

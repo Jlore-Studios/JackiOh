@@ -2,6 +2,7 @@
 // (or broken) storage and a manual clock, so "after the debounce", "offline" and "a new visit"
 // are exact moments rather than real waits.
 
+import { portraitOrDefault } from "@jackioh/shared";
 import { checkImportRoom } from "@jackioh/validator";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -33,6 +34,7 @@ import {
   createDeckStore,
   deckNameForSave,
   mirrorKey,
+  parseMirror,
   trioNameForSave,
   type DeckStore,
   type DeckStoreOptions,
@@ -208,7 +210,7 @@ function fakeServer() {
 }
 
 function savedDeck(id: string, name: string, cards: string[], createdAt: number): SavedDeck {
-  return { id, name, cards, catalogVersion: CATALOG_VERSION, createdAt, updatedAt: createdAt };
+  return { id, name, cards, catalogVersion: CATALOG_VERSION, portrait: null, createdAt, updatedAt: createdAt };
 }
 
 function savedTrio(id: string, name: string, deckIds: TrioSlots, createdAt: number): SavedTrio {
@@ -298,6 +300,8 @@ describe("the debounced save", () => {
       name: "Big Tempo",
       cards: [fixtureCardId(3), fixtureCardId(1)],
       catalogVersion: CATALOG_VERSION,
+      // D5: the portrait rides the same save; a deck the player never picked one for sends null.
+      portrait: null,
     });
     // The field keeps what the player typed; only the save is cleaned.
     expect(store.getSnapshot().decks[0]?.name).toBe("  Big   Tempo  ");
@@ -831,5 +835,129 @@ describe("a trio import", () => {
     expect(await refusing.importTrio(code)).toEqual({ ok: false, message: "The server refused deck 1." });
     expect(refusing.getSnapshot().decks).toEqual([]);
     expect(refusing.getSnapshot().trios).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// The deck's portrait (R635)
+// ---------------------------------------------------------------------------------------------
+
+describe("the deck's portrait (R635)", () => {
+  it("R635 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
+    const server = fakeServer();
+    const storage = memoryStorage();
+    const clock = manualClock();
+    const store = open({ api: server.api, clock, storage });
+
+    const id = store.createDeck({ name: "Aggro", portrait: "gary" }) ?? "";
+    // The snapshot carries it at once (the picker's `onPortrait` writes through the same edit).
+    expect(store.getSnapshot().decks[0]?.portrait).toBe("gary");
+    // And it is in the mirror before anything else can happen — NEVER LOSE WORK.
+    const mirrored = parseMirror(storage.data.get(mirrorKey(PROFILE)) ?? null);
+    expect(mirrored?.decks[0]?.item.portrait).toBe("gary");
+
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    // D5: the PUT body carries the field, so the column round-trips.
+    const put = server.calls.find((call) => call.op === "putDeck")?.body as DeckInput | undefined;
+    expect(put?.portrait).toBe("gary");
+    expect(server.decks.get(id)?.portrait).toBe("gary");
+    expect(store.getSnapshot().unsynced.has(id)).toBe(false);
+  });
+
+  it("R635 updateDeck carries a new portrait, keeps it over an unrelated edit, and clears on null", async () => {
+    const server = fakeServer();
+    const clock = manualClock();
+    const store = open({
+      api: server.api,
+      clock,
+      server: response([savedDeck("d1", "Aggro", [], 1)]),
+    });
+
+    store.updateDeck("d1", { portrait: "timmy" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")?.portrait).toBe("timmy");
+
+    // An unrelated edit must not drop it — the portrait rides the same row.
+    store.updateDeck("d1", { name: "Aggro v2" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")).toMatchObject({ name: "Aggro v2", portrait: "timmy" });
+
+    // `null` is the column's cleared value — the deck reads vanilla again.
+    store.updateDeck("d1", { portrait: null });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")?.portrait).toBeNull();
+    expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
+  });
+
+  it("R635 a portrait-only edit still saves; the same portrait again is a no-op", async () => {
+    const server = fakeServer();
+    const clock = manualClock();
+    const store = open({
+      api: server.api,
+      clock,
+      server: response([{ ...savedDeck("d1", "Aggro", [], 1), portrait: "gary" }]),
+    });
+
+    // No change, no request: a portrait equal to the held one is not an edit.
+    store.updateDeck("d1", { portrait: "gary" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls).toEqual([]);
+
+    store.updateDeck("d1", { portrait: "shredder" });
+    expect(store.getSnapshot().unsynced.has("d1")).toBe(true);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")?.portrait).toBe("shredder");
+  });
+
+  it("R635 a mirror row written before the portrait column reads back `null`", () => {
+    const storage = memoryStorage();
+    // A mirror a pre-portrait client left behind: the item simply has no `portrait` key.
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          {
+            item: { id: "d1", name: "Old deck", cards: [fixtureCardId(1)], createdAt: 1, updatedAt: 1 },
+            dirty: true,
+          },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    // deckFrom normalizes the missing column to `null`, never dropping the row.
+    expect(mirrored?.decks[0]?.item.portrait).toBeNull();
+
+    const store = open({ api: fakeServer().api, storage, server: response([]) });
+    const item = store.getSnapshot().decks[0];
+    // `null` reads as `vanilla` everywhere the deck is shown — the picker's collapsed control too.
+    expect(item?.portrait).toBeNull();
+    expect(portraitOrDefault(item?.portrait)).toBe("vanilla");
+    expect(portraitOrDefault("not-a-portrait")).toBe("vanilla");
+    expect(portraitOrDefault("gary")).toBe("gary");
+  });
+
+  it("R635 a server row's `null` portrait reads vanilla through portraitOrDefault", () => {
+    const store = open({
+      api: fakeServer().api,
+      server: response([savedDeck("d1", "Aggro", [fixtureCardId(1)], 1)]),
+    });
+    const item = store.getSnapshot().decks[0];
+    expect(item?.portrait).toBeNull();
+    expect(portraitOrDefault(item?.portrait ?? null)).toBe("vanilla");
+  });
+
+  it("R635 an imported trio's decks arrive portrait: null — the codes carry none", async () => {
+    const server = fakeServer();
+    const store = open({ api: server.api });
+    const result = await store.importTrio({
+      name: "Shared trio",
+      slots: [{ name: "One", cards: [fixtureCardId(1)] }, null, null],
+    });
+    expect(result.ok).toBe(true);
+    expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
   });
 });

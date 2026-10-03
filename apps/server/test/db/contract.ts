@@ -576,6 +576,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         profileId,
         name: "Aggro",
         cards: deckOf(harness, 0).slice(0, 7),
+        portrait: null,
         catalogVersion: harness.catalogVersion,
         createdAt: at,
         updatedAt: at,
@@ -601,6 +602,31 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.decks.upsert(deck, 10)).toBe("created");
         expect(await store.decks.get(deck.id)).toEqual(deck);
         expect(await store.decks.list(profile.id)).toEqual([deck]);
+      });
+
+      it("R635 round-trips the portrait — `null` and a known id — and re-saves it in place", async () => {
+        const profile = await activeProfile();
+        const portraitless = savedDeck(profile.id);
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        const pictured = savedDeck(profile.id, {
+          portrait: "gary",
+          createdAt: harness.now() + 1_000,
+          updatedAt: harness.now() + 1_000,
+        });
+        // PREMISE: `savedDeck` really does hold `null` — the pre-portrait default — not undefined.
+        expect(portraitless.portrait).toBeNull();
+        expect(portraitless).not.toBe(pictured);
+
+        expect(await store.decks.upsert(portraitless, 10)).toBe("created");
+        expect(await store.decks.upsert(pictured, 10)).toBe("created");
+        expect(await store.decks.get(portraitless.id)).toEqual(portraitless);
+        expect(await store.decks.get(pictured.id)).toEqual(pictured);
+        expect((await store.decks.list(profile.id)).map((deck) => deck.portrait)).toEqual([null, "gary"]);
+
+        // An update swaps the field like any other: `null` back to a choice and back again.
+        const changed = { ...pictured, portrait: null, updatedAt: harness.now() + 1_000 };
+        expect(await store.decks.upsert(changed, 10)).toBe("updated");
+        expect(await store.decks.get(pictured.id)).toEqual({ ...changed, createdAt: pictured.createdAt });
       });
 
       it("R256 updates the name, cards and version in place and keeps createdAt", async () => {
