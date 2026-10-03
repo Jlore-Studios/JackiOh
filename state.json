@@ -405,6 +405,7 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "pr": 141,
       "provider": "claude-3",
       "question": "Issue #37 (patch v0.2.1) says it should only be built once Classic+ ships, and Classic+ hasn't shipped: the catalog is still the 111 Core cards and patch v0.2.0 (Classic, Classic+, the Activate and Upgrade keywords, the Fruit pool with its Grapes) is only a design brief in docs/classic-sets.md. Should the bot (a) wait until v0.2.0 is merged and pick this up then, (b) build only the cosmetic items now (keywords in the deckbuilder, the locked-zone icon and its blocked X, the defense-position and mulligan animations bleeding into the next turn, scrolling through related cards), or (c) build the whole patch now on the existing Heroic Power code, with Pluck and KY Brainstorm drawing only from Core's pools?",
       "queued_at": "2026-10-02T17:40:27Z",
