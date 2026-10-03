@@ -405,7 +405,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "gemini"
+          "gemini",
+          "muse"
         ],
         "builder": "gemini",
         "rejections": [],
