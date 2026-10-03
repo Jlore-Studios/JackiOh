@@ -193,6 +193,12 @@
       "lines": [
         "@jgoetzmann-bot status"
       ]
+    },
+    "c:5969836811": {
+      "at": "2026-10-03T13:55:08Z",
+      "lines": [
+        "/harness Put an Opus agent on this. Decide if the CI checks are out of date."
+      ]
     }
   },
   "items": {
