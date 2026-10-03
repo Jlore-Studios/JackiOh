@@ -221,6 +221,10 @@ const WEB_PRACTICE_CORE_TEST = "../../../apps/web/src/practice/core.test.ts";
 /** R203's and R204's proofs (SPEC §10.11): the client's sound cue table, and the director that plays it. */
 const WEB_AUDIO_CUES_TEST = "../../../apps/web/src/audio/cues.test.ts";
 const WEB_AUDIO_DIRECTOR_TEST = "../../../apps/web/src/audio/director.test.ts";
+/** R631's proofs (SPEC §10.11): the music's priority stack, the game's music director and the player. */
+const WEB_MUSIC_PLAN_TEST = "../../../apps/web/src/audio/musicPlan.test.ts";
+const WEB_MUSIC_DIRECTOR_TEST = "../../../apps/web/src/audio/musicDirector.test.ts";
+const WEB_MUSIC_PLAYER_TEST = "../../../apps/web/src/audio/music.test.ts";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3672,11 +3676,20 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(630, "../../../apps/web/src/routes/almanac.test.tsx", WEB_FILTERS_TEST);
   });
 
-  // Proved by cards patches-ship.test.ts "R631 …" (the fragment rules on fixtures, the promotion on
+  // R631 is a client ruling (SPEC §10.11): proved by apps/web musicPlan.test.ts "R631 …" (the
+  // priority stack and dynamic music off), musicDirector.test.ts "R631 …" (the viewer's own state,
+  // casts at R204's moments and only when readable, a theme's end, station switches, the match's
+  // sting and rotation, the hotseat hand-over) and music.test.ts "R631 …" (bar-line crossfades, a
+  // sting's hand-off, the turn mix, resuming, focus and nothing scheduled on a stopped context).
+  it("R631 plays each viewer's own music from their own view, by the priority stack", () => {
+    provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
+  });
+
+  // Proved by cards patches-ship.test.ts "R632 …" (the fragment rules on fixtures, the promotion on
   // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
-  // patches.test.ts "R631 …" (shipped.json lists every shipped patch with its commit and blob).
-  it("R631 builds card patches as pending fragments and ships them in ship order", () => {
-    provenIn(631, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
+  // patches.test.ts "R632 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R632 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(632, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
   });
 });
 

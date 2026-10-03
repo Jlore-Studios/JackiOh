@@ -67,7 +67,7 @@ import type { EngineSink } from "../resolve";
 import { activeTargetDecls, selectionsPerDeclaration, storedDeclarationSlices } from "../playChoices";
 import { runStartOfGame } from "../prompts";
 import { lazyPart } from "../resolve";
-import type { AuraHook, CardScripts, Effect, EffectContext, Hook, Script, TriggerDef } from "../script";
+import type { AuraHook, CardScripts, Effect, EffectContext, Hook, Script, TargetCheck, TriggerDef } from "../script";
 import {
   INGREDIENTS_KEY,
   asIngredient,
@@ -101,6 +101,8 @@ export const CRAFTED_CARD_COST = 0;
 const COST_KEY = "cost";
 /** The `Script` key of the step table a continuation re-enters (`prompts.RESUME_HOOK`). */
 const RESUME_KEY = "resume";
+/** `Script.targetChecks`: named predicates (§10.6), which are not hooks and combine as `combinedChecks` says. */
+const TARGET_CHECKS_KEY = "targetChecks";
 const SET_STAT_KEY = "setStat";
 const CONDITION_MET_KEY = "conditionMet";
 /** Classic #88 (R403): "When …, Tribute this" holds for a fusion when it holds for any ingredient. */
@@ -577,6 +579,20 @@ function combinedHook(fns: readonly (ListFn | undefined)[], step = false): (ctx:
 }
 
 /**
+ * One named target predicate across the ingredients that define it (§10.6, R102). It is not a hook:
+ * a declaration's filter asks it with the candidate and gets a boolean back, in a context that
+ * carries no instance data to route a part by, so wrapping it as a fused Cry threw on the first ask
+ * and would have answered with a list of effects had it not. One ingredient's predicate stays as it
+ * is; ingredients that name the same predicate must each admit the candidate, the one stricter
+ * requirement that flags and numbers also take when they combine.
+ */
+function combinedChecks(checks: readonly TargetCheck[]): TargetCheck {
+  const [only] = checks;
+  if (checks.length === 1 && only !== undefined) return only;
+  return (args) => checks.every((check) => check(args));
+}
+
+/**
  * Combine one key of several scripts, `values` aligned with the ingredients (undefined where one has
  * none). The rule is the same for every kind of value a script holds, which is what keeps this
  * working as `Script` grows new hooks:
@@ -596,6 +612,9 @@ function combinedHook(fns: readonly (ListFn | undefined)[], step = false): (ctx:
 function combineValues(values: readonly unknown[], key = "", parent = ""): unknown {
   const defined = values.filter((value) => value !== undefined);
   if (defined.length === 0) return undefined;
+  if (parent === TARGET_CHECKS_KEY && defined.every((value) => typeof value === "function")) {
+    return combinedChecks(defined as TargetCheck[]);
+  }
   if (defined.every((value) => typeof value === "function")) {
     const fns = values.map((value) => (typeof value === "function" ? (value as ListFn) : undefined));
     if (EAGER_KEYS.includes(key)) {

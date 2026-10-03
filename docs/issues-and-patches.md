@@ -65,7 +65,7 @@ titles, so retitle one when you accept it.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to card data goes live through a pending fragment:
-  `pnpm --filter @jackioh/cards patches <version> "<title>"` writes
+  `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` writes
   `packages/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
   the branch merges `patches ship` promotes it — appending the version to `patches.json` and
   bumping `CATALOG_VERSION` everywhere it lives (`packages/cards/README.md` §8) — and the next

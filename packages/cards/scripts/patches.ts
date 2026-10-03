@@ -1,11 +1,11 @@
 /**
- * Card patches with several in flight at once (R631): pending fragments, the check that proves
+ * Card patches with several in flight at once (R632): pending fragments, the check that proves
  * them, and the promotion that ships them, in ship order.
  *
- *   pnpm --filter @jackioh/cards patches <version> "<title>" [date] \
+ *   pnpm --filter @jackioh/cards run patches <version> <date> "<title>" \
  *     [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--cards <id,...>]
- *   pnpm --filter @jackioh/cards patches check
- *   pnpm --filter @jackioh/cards patches ship
+ *   pnpm --filter @jackioh/cards run patches check
+ *   pnpm --filter @jackioh/cards run patches ship
  *
  * - A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`: `{ version,
  *   title, sources, notes, cards }`, where `cards` lists the catalog ids the patch creates,
@@ -30,7 +30,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { bumpSites } from "./patch";
 import {
@@ -165,7 +165,7 @@ export type ShipResult = { shipped: string[] };
 
 /**
  * Promotes every pending fragment to a shipped patch, in the order of the first-parent commit
- * that added it (ship order, R631). One commit per fragment is assumed — the squash-merge shape
+ * that added it (ship order, R632). One commit per fragment is assumed — the squash-merge shape
  * the bot's pull requests land in — so the snapshot is `catalog.json` as that commit left it.
  * Idempotent: with no fragments it changes nothing.
  */
@@ -173,6 +173,9 @@ export function shipPatches(repoRoot: string): ShipResult {
   const paths = patchPaths(repoRoot);
   const files = readFragments(paths.pendingDir);
   if (files.length === 0) return { shipped: [] };
+
+  const problems = checkPatches(repoRoot);
+  if (problems.length > 0) throw new Error(`cannot ship pending fragments:\n${problems.join("\n")}`);
 
   const order = new Map(
     git(repoRoot, ["log", "--first-parent", "--format=%H"])
@@ -202,8 +205,7 @@ export function shipPatches(repoRoot: string): ShipResult {
   for (const { name, fragment, commit } of queued) {
     const version = nextShipName(taken, fragment.version);
     const raw = git(repoRoot, ["show", `${commit}:${CATALOG_REL}`]);
-    const snapshot = JSON.parse(raw) as Catalog;
-    writeJson(snapshotPath(version, paths.dir), snapshot);
+    writeFileSync(snapshotPath(version, paths.dir), raw, "utf8");
     taken.add(version);
     const entry: PatchEntry = {
       version,
@@ -211,6 +213,8 @@ export function shipPatches(repoRoot: string): ShipResult {
       title: fragment.title,
       source: fragment.sources,
       notes: fragment.notes,
+      commits: [commit],
+      reconstructed: false,
       changes: [],
     };
     patches.push(entry);

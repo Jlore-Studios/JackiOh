@@ -932,18 +932,29 @@ export const HIDDEN_ID = "hidden";
 /**
  * The fields R97 rewrites together with a card's identity when the card turns unreadable, besides
  * the ids that become the sentinel (engine `viewFor.ts` `redactEvent`): `cardResolved` drops its
- * `radiant`, `cardPlayed` and `summoned` drop their `formerId` (R227), `buffed` zeroes its
- * `attack` and `health` and `costChanged` blanks its `cost` (R177), and `radiantSet` moves its
- * `zone` to the owner's hand. Every one of them is rewritten only when the event's own
- * `instanceId` is the one hidden. `libraryOverflow` drops the `radiant` of the card it refused
- * (R316); `burned` (R317) changes nothing but its ids, and `fatigue` (R315) is public.
+ * `radiant`, `cardPlayed`, `summoned` and `controlChanged` drop their `formerId` (R227), `buffed`
+ * zeroes its `attack` and `health`, `costChanged` blanks its `cost` (R177), `counterChanged` blanks a
+ * Brittle `value` (R385), `degraded` and `upgraded` blank their `change` (R386), `numberChanged`
+ * zeroes its `value`, `cardAnnounced` reads a face-down card as a Trap whatever its `cardType` (R448),
+ * and `radiantSet` moves its `zone` to the owner's hand. Every one of them is rewritten only when the
+ * event's own `instanceId` is the one hidden. `libraryOverflow` drops the `radiant` of the card it
+ * refused (R316); `burned` (R317) changes nothing but its ids, and `fatigue` (R315) is public.
+ *
+ * An event type missing here makes its two copies stop matching, `newEventsSince` finds no overlap,
+ * and the runner animates the whole window again.
  */
 const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>> = {
   cardResolved: ["radiant"],
   cardPlayed: ["formerId"],
   summoned: ["formerId"],
+  controlChanged: ["formerId"],
   buffed: ["attack", "health"],
   costChanged: ["cost"],
+  counterChanged: ["value"],
+  degraded: ["change"],
+  upgraded: ["change"],
+  numberChanged: ["value"],
+  cardAnnounced: ["cardType"],
   radiantSet: ["zone"],
   libraryOverflow: ["radiant"],
 };

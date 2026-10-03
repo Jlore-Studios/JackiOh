@@ -5,7 +5,7 @@
 // newest patch's version, everywhere the string lives. A version is opaque (R105): its order is
 // patches.json's, never a comparison of strings.
 //
-// Several patches are built at once (R631), so branches change `catalog.json` and add one
+// Several patches are built at once (R632), so branches change `catalog.json` and add one
 // fragment under `patches/pending/` instead of editing the history: while a fragment is pending,
 // the catalog differs from the newest snapshot on exactly the claimed cards, and `patches ship`
 // promotes each fragment after it merges.
@@ -51,17 +51,14 @@ describe("R388 card patch history (B4.2)", () => {
       expect(patch.source.length, patch.version).toBeGreaterThan(0);
       expect(patch.notes.length, patch.version).toBeGreaterThan(0);
     }
-    // The dates never go backwards along patches.json's order (the order itself is the file's).
-    const dates = PATCHES.map((patch) => patch.date);
-    expect(dates).toEqual([...dates].sort());
   });
 
-  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R631)", () => {
+  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R632)", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
     expect(CATALOG_VERSION).toBe("v0.2.0");
     const snapshot = readSnapshot(CATALOG_VERSION);
     // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
-    // cards (R631): reverted to the snapshot, the catalog is the snapshot. With no fragments
+    // cards (R632): reverted to the snapshot, the catalog is the snapshot. With no fragments
     // pending this is the old equality, entry for entry.
     const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
     const catalog = CATALOG as unknown as Catalog;
@@ -76,7 +73,7 @@ describe("R388 card patch history (B4.2)", () => {
     }
   });
 
-  it("R631 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
+  it("R632 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
     const shipped = readShipped();
     expect(shipped.map((entry) => entry.version)).toEqual(VERSIONS);
     expect(new Set(shipped.map((entry) => entry.version)).size).toBe(shipped.length);

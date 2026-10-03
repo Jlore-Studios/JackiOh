@@ -516,12 +516,12 @@ pnpm exec tsc -p packages/cards/tsconfig.json         # src + test + scripts
 pnpm lint                                             # includes the Math.random / Date ban
 pnpm --filter @jackioh/cards run gen                  # rebuild the script barrel
 pnpm --filter @jackioh/cards run missing-tests        # M4-T3 gate: silence means covered
-pnpm --filter @jackioh/cards patches <version> "<title>"   # claim a patch (§8)
-pnpm --filter @jackioh/cards patches check                # prove every catalog change is claimed once
-pnpm --filter @jackioh/cards patches ship                 # promote pending fragments in ship order
+pnpm --filter @jackioh/cards run patches <version> <date> "<title>" # claim a patch (§8)
+pnpm --filter @jackioh/cards run patches check            # prove every catalog change is claimed once
+pnpm --filter @jackioh/cards run patches ship             # promote pending fragments in ship order
 ```
 
-## 8. Patches and the catalog version (R388, R631)
+## 8. Patches and the catalog version (R388, R632)
 
 Every change to card data is a patch, and every patch is kept, so an older version of any card can
 still be read. Several patches are built at once, so a patch is claimed on its branch and shipped
@@ -531,6 +531,8 @@ after it merges — never by editing the history on the branch.
   `{ version, date, title, source, notes }`, `patches/<version>.json` is the whole catalog as that
   patch left it (snapshots, not diffs), and `patches/shipped.json` carries each patch's
   `{ version, commit, blob }`: the commit that shipped it and its snapshot file's git blob hash.
+  A promoted entry also records that first-parent commit in `commits` and
+  `reconstructed: false`; historical entries stay byte-identical.
   A generated index maps each card id to the versions in which it changed; the client's History
   section and Patch notes page read these files (`apps/web/README.md`). Shipped snapshots are
   never amended.
@@ -548,7 +550,7 @@ after it merges — never by editing the history on the branch.
   where `db:seed-catalog` restamps every `cards` row and `app.settings` (`apps/server/README.md`). A
   version stays opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s.
-- **Claiming one.** `pnpm --filter @jackioh/cards patches <version> "<title>"` (in `scripts/`,
+- **Claiming one.** `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` (in `scripts/`,
   where fs is allowed) writes `patches/pending/<version>.json` — `{ version, title, sources,
   notes, cards }`, where `cards` lists the catalog ids the patch creates, changes or removes
   (`--cards` lists them; otherwise they are diffed from the working catalog against the newest

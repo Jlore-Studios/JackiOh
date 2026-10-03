@@ -63,7 +63,7 @@ export type PatchSource = {
 /** A file's loader, as `import.meta.glob` hands them out: resolves to the file's parsed JSON. */
 export type Loader = () => Promise<unknown>;
 
-/** The files that are not snapshots: the list, the index, and the shipping ledger (R631). */
+/** The files that are not snapshots: the list, the index, and the shipping ledger (R632). */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";

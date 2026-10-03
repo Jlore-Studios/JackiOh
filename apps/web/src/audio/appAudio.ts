@@ -1,5 +1,6 @@
 // The page-wide half of sound (SPEC §10.11; B52): the gesture unlock and the UI click and hover
-// ticks, installed once on the document for as long as anything holds them.
+// ticks, installed once on the document for as long as anything holds them, and the main menu
+// theme on every screen without a board (R631, musicScene.ts).
 //
 // Two holders exist. `main.tsx` takes one for the page's lifetime, so the landing page, the deck
 // builder and the lobby tick like the board does, and the first tap anywhere unlocks the context
@@ -11,6 +12,7 @@
 // one, so a test that swaps the singleton (`setAudioEngineForTests`) is heard.
 
 import { getAudioEngine } from "./engine.ts";
+import { holdMenuMusic } from "./musicScene.ts";
 import type { SfxId, SfxParams } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
 import { installAudioUnlock } from "./unlock.ts";
@@ -27,9 +29,11 @@ function install(): () => void {
     { playSfx: (id: SfxId, params?: SfxParams, delayMs?: number) => getAudioEngine().playSfx(id, params, delayMs) },
     document,
   );
+  const releaseMenu = holdMenuMusic();
   return () => {
     removeUnlock();
     removeTicks();
+    releaseMenu();
   };
 }
 
