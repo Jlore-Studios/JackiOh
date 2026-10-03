@@ -8,6 +8,7 @@
 // use one shape each, so this file reads them back into the regular expressions Vercel builds and
 // checks real paths against those.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,8 @@ const WEB_CONFIG = join(HERE, "../../vercel.json");
 const ROOT_CONFIG = join(HERE, "../../../../vercel.json");
 
 type VercelConfig = {
+  git: { deploymentEnabled: Record<string, boolean> };
+  ignoreCommand: string;
   rewrites: { source: string; destination: string }[];
   headers: { source: string; headers: { key: string; value: string }[] }[];
 };
@@ -119,5 +122,67 @@ describe("vercel.json", () => {
         "wss://jackioh-server.onrender.com",
       ]),
     );
+  });
+});
+
+// Vercel's free plan allows 100 deployments a day and counts every push to every branch, [skip ci]
+// or not (the night bot's `bot-state` commits alone used it up). `git.deploymentEnabled` stops the
+// deployment from being created at all, and `ignoreCommand` is the flag for every other branch: it
+// cancels the build unless the branch is main or the commit message says `[vercel]`. The config is
+// read from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
+
+/** `bot/**` -> every branch under `bot/`; anything else is a branch name taken literally. Nothing else. */
+function branchRegex(pattern: string): RegExp {
+  const family = /^([a-z-]+)\/\*\*$/u.exec(pattern);
+  if (family !== null) return new RegExp(`^${family[1] ?? ""}/.+$`, "u");
+  if (/^[a-z-]+$/u.test(pattern)) return new RegExp(`^${pattern}$`, "u");
+  throw new Error(`deploy-routes.test.ts cannot read this branch pattern: ${pattern}`);
+}
+
+function deploys(branch: string): boolean {
+  const off = Object.entries(config.git.deploymentEnabled).some(
+    ([pattern, enabled]) => !enabled && branchRegex(pattern).test(branch),
+  );
+  return !off;
+}
+
+/** Whether the ignoreCommand lets Vercel build: it exits 1 to build and 0 to skip. */
+function builds(env: Record<string, string>): boolean {
+  const run = spawnSync("sh", ["-c", config.ignoreCommand], { env: { PATH: process.env.PATH ?? "", ...env } });
+  expect(run.error, "sh ran").toBeUndefined();
+  expect([0, 1], `exit status ${String(run.status)}`).toContain(run.status);
+  return run.status === 1;
+}
+
+describe("vercel.json deployment flag", () => {
+  it("creates no deployment for the branches machines push to, and never for main", () => {
+    for (const branch of [
+      "bot-state",
+      "bot/issue-63",
+      "claude/stoic-tesla-837kse",
+      "copilot/fix-1",
+      "dependabot/npm_and_yarn/vite-7",
+      "patch/v0.1.1",
+      "patches/ship-74c8823",
+      "polish/3-ai",
+      "wt/engine",
+    ]) {
+      expect(deploys(branch), branch).toBe(false);
+    }
+    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany"]) {
+      expect(deploys(branch), branch).toBe(true);
+    }
+  });
+
+  it("builds main and production, and skips any other branch unless the commit message says [vercel]", () => {
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "main", VERCEL_GIT_COMMIT_MESSAGE: "A change" })).toBe(true);
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "release", VERCEL_ENV: "production" })).toBe(true);
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "A change" })).toBe(false);
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_ENV: "preview" })).toBe(false);
+    expect(builds({})).toBe(false);
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Final polish [vercel]" })).toBe(true);
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Final polish [Vercel]\n\nbody" })).toBe(true);
+    // The flag is the bracketed word: a message that only names Vercel does not turn builds on.
+    expect(builds({ VERCEL_GIT_COMMIT_REF: "feat/x", VERCEL_GIT_COMMIT_MESSAGE: "Why vercel skips builds" })).toBe(false);
   });
 });

@@ -207,6 +207,22 @@ file can hold a comment, and three things in them are not obvious:
 - **`vercel.json` rejects unknown keys.** The `"// name"` comment idiom this repo uses in
   `package.json` is fine for npm and pnpm and is a hard error here, which is why this note is in
   Markdown instead of beside the setting it explains.
+- **Vercel deploys on the last push, not every push.** The Hobby plan allows 100 deployments a day
+  and counts one for every push to every branch; `[skip ci]` stops GitHub Actions and does nothing
+  here, and the night bot's `bot-state` commits plus its PR branches used the day up (every PR then
+  showed a failed Vercel check: `api-deployments-free-per-day`). Two settings in `vercel.json` hold it
+  down. `git.deploymentEnabled` creates no deployment at all for the branches machines push to
+  (`bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`, `patch/**`, `patches/**`,
+  `polish/**`, `wt/**`); main is never listed. `ignoreCommand` is the flag for every other branch: it
+  cancels the build unless the branch is `main`, the environment is production, or the commit message
+  contains `[vercel]`, so a branch gets a preview only on the push that says so. A cancelled build
+  still counts against the 100, which is why the machine branches are switched off outright rather
+  than left to `ignoreCommand`. Vercel reads the config from the commit that is pushed, so a branch
+  cut before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
+  `vercel.json` of its own: it needs a root `vercel.json` of `{ "git": { "deploymentEnabled": false } }`,
+  which the bot's `ensure()` does not restore if it ever recreates the branch. The quota resets about
+  24 hours after the cap was hit; redeploy from the Vercel dashboard (or push a new commit) after it
+  does. `apps/web/src/net/deploy-routes.test.ts` holds both settings in place.
 - **`render.yaml` installs with `--prod=false`.** `tsx` is a devDependency of the workspace root
   and `apps/server`'s start script runs through it, so a production-only install builds a service
   that cannot boot. Both files set `CYPRESS_INSTALL_BINARY=0`, since neither deploy runs a test.
