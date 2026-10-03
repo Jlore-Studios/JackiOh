@@ -391,6 +391,9 @@
     },
     "143": {
       "asks": [],
+      "ci_reruns": {
+        "b3273c49cc8be2e716fc91a03e529faa1d446e62": 1
+      },
       "cross_rounds": 0,
       "died": 0,
       "failures": 0,
