@@ -375,6 +375,27 @@ describe("B10: RulesText marks terms in bold", () => {
     },
     CATALOG_SWEEP_TIMEOUT_MS,
   );
+
+  it(
+    "B10 every keyword a catalog face declares is bold in the text that face prints",
+    () => {
+      for (const card of DEFS) {
+        for (const radiant of [false, true]) {
+          const where = `${card.id} radiant=${String(radiant)}`;
+          const bold = new Set(
+            [...one(catalogFace(card.id, radiant), ".cf-text-base").querySelectorAll("strong.cf-term")].map((strong) =>
+              strong.getAttribute("data-term"),
+            ),
+          );
+          for (const keyword of (radiant ? card.radiant : card.base).keywords) {
+            expect(bold.has(keyword.kind), `${where}: ${keyword.kind}`).toBe(true);
+          }
+          cleanup();
+        }
+      }
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
 });
 
 /* ----------------------------------------------------------------------------------------- B13 */
