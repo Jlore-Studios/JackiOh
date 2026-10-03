@@ -411,6 +411,14 @@
       "failures": 0,
       "feedback_since": "2026-10-03T12:45:01Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-10-03T13:33:20Z",
+        "family": "claude-opus",
+        "notes": "",
+        "provider": "claude-3",
+        "reason": "the reviewer's answer could not be read twice in a row",
+        "trail": "- said: Failed to authenticate. API Error: 401 OAuth access token is invalid."
+      },
       "interruptions": 0,
       "issue": 57,
       "kind": "revise",
