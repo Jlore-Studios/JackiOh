@@ -396,8 +396,9 @@ Transformed into", which is §6.2's ruling, not its "enters the field for the fi
 **Glossary terms.** The glossary has the 16 `KEYWORD_KINDS`, plus the §6.2 terms (Cry, Death,
 Start of turn, End of turn, Start of game, Once per turn, Aura, Combo, Echo, Cast on draw,
 Quickdraw), the §6.3 terms (Discover, Tribute, Embiggen, Recruit, Fuse, Transform, Vanilla, Lock,
-Choose one) and Radiant (§5.2). Aliases: "Start of turn" also matches "Start of your turn", "Start
-of game" matches "Start of Game", and "Once per turn" matches "Once per Turn".
+Choose one) and Radiant (§5.2). Aliases: "Start of turn" also matches "Start of your turn", "End
+of turn" matches "End of your turn" (#85), "Start of game" matches "Start of Game", and "Once per
+turn" matches "Once per Turn".
 
 **Tokenizer.**
 
