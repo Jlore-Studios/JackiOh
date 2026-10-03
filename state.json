@@ -519,38 +519,7 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [
-        {
-          "claim": "Typecheck fails with exit code 2 due to four noUncheckedIndexedAccess compiler errors in stats.test.ts.",
-          "evidence": "Running `pnpm exec tsc -p apps/server/tsconfig.json` produces TS2532 on lines 421 and 422 (data.players[0].displayName, data.players[1].displayName) and TS18048 on lines 430 and 434 (alice.favouriteCards, alice.funStats), causing the required `pnpm typecheck` CI gate to fail.",
-          "severity": "blocking",
-          "where": "apps/server/test/api/stats.test.ts:421"
-        },
-        {
-          "claim": "CardDetail unconditionally renders CardStatsBlock, triggering an API call on /almanac and breaking Cypress Spec 33 and SPEC R630.",
-          "evidence": "SPEC R630 rules that /almanac 'calls no endpoint (not the catalog\\'s, the collection\\'s, the decks\\' or the account\\'s)'. Cypress Spec 33 (33-almanac.cy.ts:114) asserts expect(apiCalls.slice(callsBefore)).to.deep.eq([]). Mounting <CardStatsBlock cardId={def.id} /> in CardDetail.tsx:159 causes getCardStats() to fetch /api/stats/cards?card=... whenever a card is inspected in /almanac, violating R630 and failing Spec 33.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/inspect/CardDetail.tsx:159"
-        },
-        {
-          "claim": "The standalone stats page cost filter option '6+' is queried as exact equality cost == 6, excluding all cards costing 7 or more.",
-          "evidence": "In apps/web/src/routes/stats.tsx:433, the dropdown defines <option value=\"6\">6+</option>, sending ?cost=6. In apps/server/src/api/stats.ts:146, the route filters with numericCost !== Number(costParam), which excludes all cards costing 7 or higher (such as 10-cost Mulch Muncher or 100-cost Ceaseless Void) rather than grouping them into the 6+ bucket as the deckbuilder does (CURVE_TOP = 6).",
-          "severity": "blocking",
-          "where": "apps/server/src/api/stats.ts:146"
-        },
-        {
-          "claim": "GET /api/stats/cards omits the required source query parameter filter.",
-          "evidence": "Issue #131 explicitly requires: 'Add a public, read-only, cacheable endpoint for card aggregates, with filters for source, patch, set, rarity and cost.' In apps/server/src/api/stats.ts, the handler parses patch, set, rarity, cost, and card, but never inspects or applies req.url.searchParams.get(\"source\").",
-          "severity": "blocking",
-          "where": "apps/server/src/api/stats.ts:95"
-        },
-        {
-          "claim": "Card drill-down turn curve fabricates turn numbers by equating card play index to turn played.",
-          "evidence": "Issue #131 requires 'Card drill-down: win rate by patch over time ... by turn played'. In packages/shared/src/stats.ts, SeatSummary stores played: string[] (play order across the entire game), which does not record the turn each card was cast on. apps/server/src/api/stats.ts:281 assigns const turn = Math.max(1, Math.min(record.game.turns, playIndex + 1));, attributing the Nth card played to turn N even if multiple cards were played on the same turn.",
-          "severity": "blocking",
-          "where": "apps/server/src/api/stats.ts:281"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-03T22:03:10Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
