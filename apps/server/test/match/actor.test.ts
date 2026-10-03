@@ -1503,24 +1503,33 @@ describe("the automatic turn end is each player's to turn off (R82, R345)", () =
   }
 
   /**
-   * The decks `decksTheEngineAccepts` gives "seed-actor". p2's opening deal draws #21 Hinder, cast on
-   * draw (§2.4), whose base face asks p2 for a discard before the mulligans open (R431, R224) and
-   * leaves p1's first refresh 1 lower, at 0 (§2.3) — which is what leaves p1 nothing to do on turn 1
-   * once both keep their hands. The deal's question is answered here, so the tests start, as their
-   * names say, in the mulligan window (R265).
+   * Two decks the real engine accepts, p1's of cards that each cost two or more and none of which
+   * casts on draw. Turn 1 has one mana (§2.3), so once both keep their hands p1 has nothing to play
+   * on it and R82 would end the turn by itself, which is what these tests need to see the preference
+   * change. (#21 Hinder's cast used to do it, by lowering p1's first refresh to 0, but setup no longer
+   * deals a cast-on-draw card, R635.) Setup asks nothing, so the tests start, as their names say, in
+   * the mulligan window (R265).
    */
   async function realMatch(): Promise<Harness> {
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
-    const { decks } = decksTheEngineAccepts(engine, pool, "seed-actor");
-    const h = await harness({ engine, p1Deck: decks[0], p2Deck: decks[1] });
-    // PREMISE: the deal asks p2 first (R224), and answering it opens both mulligans.
-    expect(h.actor.snapshot()).toMatchObject({ phase: "setup", pendingFor: "p2" });
-    const frame = h.p2.ofType<{ type: "view"; legal: ActionBody[] }>("view").at(-1);
-    const answer = frame?.legal.find((action) => action.type === "answer");
-    if (answer === undefined) throw new Error("the deal asked p2 nothing it can answer");
-    await send(h.actor, h.p2, "deal-answer", answer);
+    const [first] = decksTheEngineAccepts(engine, pool, "seed-actor").decks;
+    const dear = pool.filter((cardId) => {
+      const def = catalog.defs[cardId];
+      return (
+        def !== undefined &&
+        typeof def.cost === "number" &&
+        def.cost >= 2 &&
+        !def.tags.includes("Quickdraw") &&
+        !/cast on draw/i.test(`${def.base.text} ${def.radiant.text}`)
+      );
+    });
+    const p1Deck = dear.slice(0, first.length);
+    const p2Deck = pool.filter((cardId) => !p1Deck.includes(cardId)).slice(0, first.length);
+    expect(p1Deck, "enough cards that cost two or more").toHaveLength(first.length);
+    const h = await harness({ engine, p1Deck, p2Deck });
+    // PREMISE: the deal asks nothing (R635), so both mulligans are open.
     expect(h.actor.snapshot()).toMatchObject({ phase: "mulligan", pendingFor: null, mulliganOwed: ["p1", "p2"] });
     return h;
   }
