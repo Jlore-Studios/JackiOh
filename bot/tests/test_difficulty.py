@@ -113,8 +113,9 @@ class BuilderTests(unittest.TestCase):
         self.assertIn("no subscription can take the queue now", planned["reason"])
 
     def test_the_usage_order(self):
-        """claude-3, then claude-1, then the medium models, then Devin, and claude-2 builds only
-        after all of them (`build_last`)."""
+        """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
+        claude-1, then the medium models, and claude-2 builds only after all of them
+        (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 12):
@@ -135,17 +136,17 @@ class BuilderTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
-        self.assertEqual(order, [("claude-3", "sonnet"), ("claude-1", "sonnet"),
-                                 ("claude-4", "opus"), ("agy", "gemini-3.8-flash-high"),
+        self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
+                                 ("claude-1", "sonnet"), ("claude-4", "opus"),
+                                 ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
-                                 ("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
-                                 ("claude-2", "opus")])
+                                 ("gpt", "gpt-5.6-terra"), ("claude-2", "opus")])
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
-        # claude-3 busy, claude-1 open: claude-1 builds the easy item with Sonnet, not Devin.
+        # claude-3 busy, claude-1 open and Devin full: claude-1 builds the easy item with Sonnet.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=("devin",))
-        busy(gh, ctx, ("claude-3", 50))
+        busy(gh, ctx, ("claude-3", 50), *[("devin", n) for n in range(60, 66)])
         queue(gh, ctx, 3, EASY)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "weak"))
         # Neither open and the medium models busy: Devin builds it, the default, while claude-2
@@ -164,6 +165,32 @@ class BuilderTests(unittest.TestCase):
         gh.threads[3]["labels"] = [{"name": LABEL_BUILD}, {"name": EASY}]
         busy(gh, ctx, *[("devin", n) for n in range(56, 62)])
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
+
+    def test_devin_fills_its_lanes_with_easy_items_planned_ahead_of_long_runs(self):
+        """With Devin's lanes free, a free planner plans an easy item for Devin on a short run of
+        its own before it takes a long build, even one of higher priority; Devin then builds it
+        while the planner goes back to the work only it may do."""
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, machine=ALL_MACHINE)
+        busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
+        queue(gh, ctx, 3, "priority:high")             # medium, urgent: claude-1's
+        queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"], planned["provider"]),
+                         ("plan", 4, "claude-1"))
+        self.assertEqual(seats(planned)["plan"], ("claude-1", "opus", "strong"))
+        # The plan delivered, the next runs: Devin builds #4, claude-1 builds #3.
+        gh.runs.clear()
+        ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT), run_id=None))
+        busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
+        taken = []
+        for _ in range(2):
+            planned = plan_mod.make(ctx)
+            gh.runs[str(planned["number"])] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
+                run_id=str(n)))
+            taken.append((planned["action"], planned["number"], planned["provider"]))
+        self.assertEqual(sorted(taken), [("build", 3, "claude-1"), ("build", 4, "devin")])
 
     def test_claude_2_builds_a_medium_item_devin_may_not(self):
         """Devin is weak, so a medium item passes it by: with only claude-2 and Devin free,

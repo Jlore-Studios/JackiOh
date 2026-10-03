@@ -160,6 +160,9 @@ class Provider:
     #: It builds, fixes and revises only after every other subscription that may (claude-2, kept
     #: for planning and review); it plans and reviews in its `priority` place.
     build_last: bool = False
+    #: It builds and revises easy items ahead of every other subscription while it has a free lane
+    #: (Devin: it may build nothing harder, so the stronger models are kept for what only they can).
+    easy_first: bool = False
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()
     #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
@@ -342,7 +345,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last", "off_hours"}
+                  "lanes", "build_last", "easy_first", "off_hours"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -460,6 +463,7 @@ def _provider(name: str, raw: Any) -> Provider:
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
+        easy_first=bool(raw.get("easy_first", False)),
         off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),

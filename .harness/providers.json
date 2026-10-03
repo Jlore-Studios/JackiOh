@@ -109,7 +109,7 @@
       "quiet_check": false
     },
     "devin": {
-      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models.",
+      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models. Weak, so it builds easy items only, and it takes them ahead of the stronger models while it has a free lane (easy_first).",
       "enabled": true,
       "cli": "devin",
       "family": "cognition",
@@ -117,6 +117,7 @@
       "effort": "",
       "tier": "weak",
       "self_check": true,
+      "easy_first": true,
       "login": "machine",
       "runs_on": "night-vm-devin",
       "lanes": 6,

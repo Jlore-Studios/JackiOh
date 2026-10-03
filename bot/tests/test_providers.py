@@ -229,23 +229,27 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual((planned["provider"], planned["runs_on"]), ("gpt", "night-vm-gpt"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "gpt")
 
-    def test_devin_is_the_last_resort(self):
-        """Devin (SWE-2) logs in on the machine, works any hour with no caps, is weak, checks its
-        own builds, and is last in the usage order: any other free model builds first."""
+    def test_devin_takes_easy_items_first_and_nothing_harder(self):
+        """Devin (SWE-2) logs in on the machine, works any hour with no caps, is weak and checks
+        its own builds. It is last in the usage order, but an easy item goes to it first while it
+        has a free lane (`easy_first`), planned by a free medium or strong model on its own run."""
         pool = providers.load(ROOT)
         devin = pool.get("devin")
         self.assertEqual((devin.cli, devin.family, devin.login, devin.runs_on),
                          ("devin", "cognition", "machine", "night-vm-devin"))
         self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
-        self.assertEqual((devin.tier, devin.self_check), ("weak", True))
+        self.assertEqual((devin.tier, devin.self_check, devin.easy_first), ("weak", True, True))
         self.assertEqual(pool.priority[-1], "devin")
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
-        self.assertEqual(planned["provider"], "agy")
-        self.assertEqual(planned["routing"], [
-            "#3: built on medium though difficulty:easy allows weak: the usage order puts `agy` "
-            "before `devin` (devin, `swe-2-max`, weak)"])
+        self.assertEqual((planned["action"], planned["provider"]), ("plan", "agy"))
+        self.assertIn("planned on its own run, since its builder `devin`", planned["routing"][0])
+        # A medium item passes Devin by.
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "agy"))
         # With nothing else free, Devin builds an easy item another model already planned.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
