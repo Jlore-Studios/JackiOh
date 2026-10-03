@@ -630,7 +630,9 @@
     },
     "160": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5972198034"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -650,7 +652,7 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_tier": "medium",
       "provider": "muse",
-      "queued_at": "2026-10-03T16:49:58Z",
+      "queued_at": "2026-10-03T18:31:28Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37139256084",
       "started_at": "2026-10-03T17:09:20Z",
