@@ -230,6 +230,13 @@ const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
 const SERVER_SETTINGS_API_TEST = "../../../apps/server/test/api/settings.test.ts";
 const SERVER_SETTINGS_SQL = "../../../apps/server/test/sql/11_player_settings.sql";
 const WEB_SETTINGS_SYNC_TEST = "../../../apps/web/src/settings/accountSync.test.tsx";
+/** R639's proofs (SPEC §9.11, §10.10): the player statistics and the homescreen's rotation. */
+const WEB_STATS_MODEL_TEST = "../../../apps/web/src/stats/model.test.ts";
+const WEB_STATS_TRACK_TEST = "../../../apps/web/src/stats/track.test.ts";
+const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
+const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
+const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
+const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3731,6 +3738,22 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // through leaving the field), and the card side in packages/cards (Dropshipping's and Hallucination's tests).
   it("R638 ticks a Brittle count on the field only", () => {
     provenIn(638, "brittle.test.ts");
+  });
+
+  // Proved by apps/web stats/model.test.ts, stats/track.test.ts (what the viewer was shown and what the
+  // events count), stats/store.test.ts (localStorage, tolerant), stats/useGameStats.test.tsx (once, at the
+  // end), routes/landingFan.test.ts (the pool, the weighting, one rotation step) and routes/landing.test.tsx
+  // (the threshold, the interval, holding still, a face that opens, "Your table").
+  it("R639 keeps the player's statistics on the device and rotates the homescreen through every set once there are enough games", () => {
+    provenIn(
+      639,
+      WEB_STATS_MODEL_TEST,
+      WEB_STATS_TRACK_TEST,
+      WEB_STATS_STORE_TEST,
+      WEB_STATS_HOOK_TEST,
+      WEB_LANDING_FAN_TEST,
+      WEB_LANDING_TEST,
+    );
   });
 });
 
