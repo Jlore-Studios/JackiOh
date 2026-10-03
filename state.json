@@ -516,6 +516,14 @@
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
+    "agy": {
+      "spent": [
+        {
+          "at": "2026-10-03T02:02:07Z",
+          "minutes": 135.8
+        }
+      ]
+    },
     "claude-1": {
       "refused_until": "2026-10-03T02:50:00Z",
       "spent": [
