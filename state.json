@@ -328,8 +328,11 @@
     },
     "136": {
       "asks": [],
+      "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T08:05:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 85,
       "kind": "revise",
       "last_findings": [],
