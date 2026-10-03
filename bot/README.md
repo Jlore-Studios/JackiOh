@@ -316,7 +316,7 @@ At the top level, `max_parallel` is how many run at once, `machine_parallel` how
 may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
 and no such limit), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once; Devin's is 3, on three runners. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+(default 1) is how many items it may work on at once; Devin's is 6, on six runners, so it can fill the machine's six alone. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as

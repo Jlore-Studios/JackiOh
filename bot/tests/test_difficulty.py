@@ -162,7 +162,7 @@ class BuilderTests(unittest.TestCase):
         # Only with all of Devin's lanes taken does claude-2 build it, with Opus (no Sonnet).
         gh.threads[3]["state"] = "open"
         gh.threads[3]["labels"] = [{"name": LABEL_BUILD}, {"name": EASY}]
-        busy(gh, ctx, ("devin", 56), ("devin", 57), ("devin", 58))
+        busy(gh, ctx, *[("devin", n) for n in range(56, 62)])
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 
     def test_claude_2_builds_a_medium_item_devin_may_not(self):

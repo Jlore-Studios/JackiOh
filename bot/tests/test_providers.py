@@ -387,18 +387,20 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(again["action"], "none")
         self.assertIn("`claude-2` is busy", again["reason"])
 
-    def test_devin_works_on_three_items_at_once(self):
-        """`lanes: 3`: Devin takes more items while it holds some (three runners carry its
-        label), and a fourth waits; the machine's limit counts all of them."""
+    def test_devin_can_fill_the_machine(self):
+        """`lanes: 6`: Devin takes more items while it holds some (six runners carry its
+        label) and can fill the machine alone; a seventh waits. The machine's limit of six
+        counts every subscription's runs, so with another one there Devin gets fewer."""
         gh = FakeGitHub()
-        for n in (3, 4, 5, 6):
+        items = (3, 4, 5, 6, 7, 8, 9)
+        for n in items:
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))  # Devin is weak
         ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
-                                    for n in (3, 4, 5, 6)])
-        self.assertEqual(ctx.cfg.pool.get("devin").lanes, 3)
+                                    for n in items])
+        self.assertEqual((ctx.cfg.pool.get("devin").lanes, ctx.cfg.pool.machine_parallel), (6, 6))
         taken = []
-        for _ in range(4):
+        for _ in range(7):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -406,10 +408,31 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(3, "devin"), (4, "devin"), (5, "devin")])
+        self.assertEqual(taken, [(n, "devin") for n in items[:6]])
         self.assertIn("`devin` is busy", planned["reason"])
         lanes = plan_mod.read_lanes(ctx, ctx.store.load())
-        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (3, 3))
+        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (6, 6))
+        # With GPT holding a machine run, Devin's sixth waits for room on the machine.
+        gh = FakeGitHub()
+        for n in items:
+            gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))
+        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin", "gpt"))
+        ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
+                                    for n in items])
+        gh.add_issue(40, labels=(LABEL_WORKING,))
+        gh.runs["40"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, 40).update(run_id="40", provider="gpt"))
+        devins = 0
+        for _ in range(7):
+            planned = plan_mod.make(ctx)
+            if planned["action"] == "none":
+                break
+            gh.runs[str(planned["number"])] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
+                run_id=str(n)))
+            devins += planned["provider"] == "devin"
+        self.assertEqual(devins, 5)
+        self.assertIn("`devin` waits for room on the machine (6 at once)", planned["reason"])
 
     def test_a_second_review_goes_to_another_model_family(self):
         gh = FakeGitHub()
