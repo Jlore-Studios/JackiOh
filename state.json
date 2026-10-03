@@ -855,6 +855,9 @@
       "stop_requested": false
     },
     "171": {
+      "ci_reruns": {
+        "f4216c2945c3879a40cce6307e596f0a8f6b6962": 1
+      },
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-03T16:52:25Z",
