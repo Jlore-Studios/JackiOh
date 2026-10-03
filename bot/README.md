@@ -235,8 +235,9 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
 | `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00 | 98% of 5 hours, 90% of the week |
-| `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | 21:00–07:00 | 90% of 5 hours, 90% of the week |
-| `claude-3`, `-4` | the same | the secrets `CLAUDE_CODE_OAUTH_TOKEN_3`, `_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
+| `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
+| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |

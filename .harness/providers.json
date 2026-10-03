@@ -20,7 +20,7 @@
       "quiet_check": true
     },
     "claude-2": {
-      "note": "A second Claude account. Paste its `claude setup-token` into the secret to turn it on. Capped at 90% of both its 5-hour session and its week.",
+      "note": "A second Claude account. Paste its `claude setup-token` into the secret to turn it on. Any hour, capped at 90% of both its 5-hour session and its week.",
       "enabled": true,
       "cli": "claude",
       "family": "claude-opus",
@@ -29,13 +29,14 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
       "runs_on": "night-vm-claude-2",
-      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
+      "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
       "self_review": true,
       "difficult": true,
       "quiet_check": false
     },
     "claude-3": {
+      "note": "A third Claude account, the bot's own: any hour, no caps. It works until Claude refuses, then waits for that limit to reset.",
       "enabled": true,
       "cli": "claude",
       "family": "claude-opus",
@@ -44,8 +45,8 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
       "runs_on": "night-vm-claude-3",
-      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
-      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
       "self_review": true,
       "difficult": true,
       "quiet_check": false

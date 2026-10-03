@@ -161,9 +161,9 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIsNone(self.why("claude-1", state))
 
 
-def ctx_for(gh, at=NIGHT, env=None, machine=MACHINE):
+def ctx_for(gh, at=NIGHT, env=None, machine=MACHINE, committed_hours=False):
     return make_ctx(gh, at=at, cfg=make_config(env=env or secrets(*providers.SECRETS),
-                                               machine=machine))
+                                               machine=machine, committed_hours=committed_hours))
 
 
 class MatchingTests(unittest.TestCase):
@@ -181,6 +181,35 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx_for(gh2, at=DAY, machine=("agy",)))
         self.assertEqual((planned["provider"], planned["runs_on"]), ("agy", "night-vm-agy"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "agy")
+
+    def test_claude_2_and_3_work_any_hour(self):
+        """The committed hours: claude-2 and claude-3 run all day, claude-2 under its 90% caps
+        and claude-3 with none, so by day they take Opus's work ahead of the other models,
+        `difficult` first; claude-1 and claude-4 wait for the night."""
+        pool = providers.load(ROOT)
+        hours = {p.id: (p.schedule.mode, p.limits.mode) for p in pool.ordered() if p.cli == "claude"}
+        self.assertEqual(hours, {"claude-1": ("window", "caps"), "claude-2": ("always", "caps"),
+                                 "claude-3": ("always", "none"), "claude-4": ("window", "caps")})
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        gh.add_issue(4, labels=(LABEL_BUILD, "difficult"))
+        ctx = ctx_for(gh, at=DAY, committed_hours=True)
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["number"], planned["provider"]), (4, "claude-2"))
+        gh.runs["1"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, 4).update(run_id="1"))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["number"], planned["provider"]), (3, "claude-3"))
+        # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
+        later = clock.iso(DAY + timedelta(days=2))
+        full = {"five_hour": {"utilization": 0.99, "resets_at": later},
+                "seven_day": {"utilization": 0.99, "resets_at": later}}
+        state = {"providers": {"claude-2": {"usage": full}, "claude-3": {"usage": full}}}
+        everyone = Secrets.of(secrets(*providers.SECRETS))
+        self.assertIn("usage is 99%", providers.availability(
+            pool.get("claude-2"), state, DAY, "America/Chicago", everyone))
+        self.assertIsNone(providers.availability(
+            pool.get("claude-3"), state, DAY, "America/Chicago", everyone))
 
     def test_difficult_work_waits_for_opus_and_opus_takes_it_first(self):
         gh = FakeGitHub()
