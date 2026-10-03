@@ -352,6 +352,13 @@ class GitHub:
             {"id": node_id},
         )
 
+    def pin_issue(self, node_id: str) -> None:
+        """Pin an issue to the top of the issue list (at most three are pinned)."""
+        self.graphql(
+            "mutation($id: ID!) { pinIssue(input: {issueId: $id}) { issue { number } } }",
+            {"id": node_id},
+        )
+
     def mark_ready(self, node_id: str) -> None:
         self.graphql(
             "mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id})"

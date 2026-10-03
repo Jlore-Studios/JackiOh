@@ -57,6 +57,22 @@ def _record(state: dict[str, Any], number: int) -> dict[str, Any]:
     return state["items"].get(str(number), {})
 
 
+record_of = _record
+
+
+def lanes_now(ctx: Context, state: dict[str, Any]) -> tuple[dict[int, str], dict[int, str]]:
+    """The lanes the state file says are held (item number, 0 for a survey -> provider), and those
+    of them whose run GitHub has not seen end."""
+    held: dict[int, str] = {}
+    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
+        record = state["items"].get(str(issue["number"]), {})
+        held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
+    survey = state.get("suggest") or {}
+    if survey.get("provider"):
+        held[0] = str(survey["provider"])
+    return held, live_lanes(ctx, state, held)
+
+
 def live_lanes(ctx: Context, state: dict[str, Any], held: dict[int, str]) -> dict[int, str]:
     """`held` without the runs GitHub says have ended (the next plan requeues their items). A run
     GitHub cannot read counts as still going, as it does for the plan (`plan.read_lanes`)."""
@@ -144,14 +160,7 @@ def report(ctx: Context) -> str:
                 found.append(issue)
         return found
 
-    held: dict[int, str] = {}
-    for issue in working_threads(ctx):  # closed ones too: a run goes on until it ends
-        record = state["items"].get(str(issue["number"]), {})
-        held[int(issue["number"])] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
-    survey = state.get("suggest") or {}
-    if survey.get("provider"):
-        held[0] = str(survey["provider"])
-    live = live_lanes(ctx, state, held)
+    held, live = lanes_now(ctx, state)
     lines += running_lines(ctx, state, live)
     lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, "
                  f"{cfg.pool.machine_parallel} of them on the machine):")
