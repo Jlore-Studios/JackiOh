@@ -256,6 +256,11 @@ opens, from a Devin call (`triage.py`):
   - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
     the org, or those three when the token can't read them) if it has none. A pull request has no
     type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
+- **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every
+  open issue still without one: a bot's (the CI-duration alerts, the status issue), which never
+  reaches triage, at once; anyone else's after three hours, so triage, which can wait that long
+  for a free Devin runner, goes first. It reads the title and labels (`triage.fallback_type`):
+  a failure is a Bug; tooling, CI, the bot and trackers a Task; something new a Feature.
 - **It only adds.** A person's labels, assignees, conventional title and type stay. A priority or a model
   tier a person chose gets no second one.
 - **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
