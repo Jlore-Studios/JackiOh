@@ -2841,17 +2841,21 @@
         {
           "at": "2026-10-04T16:20:32Z",
           "minutes": 14.4
+        },
+        {
+          "at": "2026-10-04T16:26:02Z",
+          "minutes": 2.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T20:50:00Z",
-          "utilization": 0.78
+          "utilization": 0.95
         },
-        "observed_at": "2026-10-04T16:20:32Z",
+        "observed_at": "2026-10-04T16:26:02Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.58
+          "utilization": 0.59
         },
         "status": "allowed_warning"
       }
