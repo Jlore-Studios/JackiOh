@@ -104,6 +104,16 @@ if [ -d "$muse_sessions" ]; then
     -exec rm -rf {} + 2>/dev/null
   find "$muse_sessions" -mindepth 1 -type d -empty -delete 2>/dev/null
 fi
+# Devin keeps every session in one SQLite file, about 700 MB a day; the bot never resumes one
+# (`devin -p` with `--export`). An open database is not deleted under a running session, so it
+# goes only when this job is the user's last one running; its login is credentials.toml, beside it.
+devin_cli="$HOME/.local/share/devin/cli"
+if [ -d "$devin_cli" ]; then
+  if [ "$(pgrep -c -u "$(id -u)" -f Runner.Worker)" -le 1 ]; then
+    rm -f "$devin_cli/sessions.db" "$devin_cli/sessions.db-wal" "$devin_cli/sessions.db-shm"
+  fi
+  find "$devin_cli/logs" "$devin_cli/summaries" -type f -mmin +480 -delete 2>/dev/null
+fi
 exit 0
 EOF
 chmod 755 /usr/local/bin/night-vm-job-done.sh

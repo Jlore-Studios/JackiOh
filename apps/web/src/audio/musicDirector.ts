@@ -30,8 +30,8 @@ import type { MusicRequest } from "./music.ts";
 import { MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
 import { chooseMusic, type MusicMoment } from "./musicPlan.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import type { AudioSettings, MusicCardEntry, MusicManifest, MusicStation, VoiceLineTable } from "./types.ts";
-import { VOICE_LINES, entryFor } from "./voiceData.ts";
+import type { AudioSettings, CardAudioTable, MusicCardEntry, MusicManifest, MusicStation } from "./types.ts";
+import { CARD_AUDIO, entryFor } from "./voiceData.ts";
 
 /** Where the director's choices go: the scene, which plays them while this board holds the music. */
 export type MusicSink = {
@@ -54,7 +54,7 @@ export type MusicDirectorOptions = {
   sink: MusicSink;
   manifest?: MusicManifest;
   cards?: Readonly<Record<string, MusicCardEntry>>;
-  lines?: VoiceLineTable;
+  lines?: CardAudioTable;
   settings?: () => AudioSettings;
   subscribeSettings?: (listener: (s: AudioSettings) => void) => () => void;
   /** The rotation the match whose first view this is uses (default: `rotationFor`). */
@@ -90,7 +90,7 @@ function defaultLater(ms: number, fn: () => void): () => void {
  * The card a cast names and who cast it, at R204's moments: a unit or spell's play, a trap's first
  * firing. `fired` remembers the trap instances that have fired this match.
  */
-function castOf(event: GameEvent, lines: VoiceLineTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
+function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
   if (event.type === "cardPlayed") {
     if (event.defId === HIDDEN_DEF_ID) return null;
     // A trap's play is its set, face down: it is cast when it fires.
@@ -114,7 +114,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   const { sink } = options;
   const manifest = options.manifest ?? MUSIC_MANIFEST;
   const cards = options.cards ?? MUSIC_CARDS;
-  const lines = options.lines ?? VOICE_LINES;
+  const lines = options.lines ?? CARD_AUDIO;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
   const rotationOf = options.rotation ?? rotationFor;

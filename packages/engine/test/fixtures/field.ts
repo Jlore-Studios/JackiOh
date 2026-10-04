@@ -68,7 +68,7 @@ export const spatula = def("spatula", "Field Spell", {
 /** A plain Animated Field Spell, which animates as it enters the field (B3.1 rule 4). */
 export const golem = def("golem", "Field Spell", { base: face(3, 3, [ANIMATED]), radiant: face(6, 6, [ANIMATED]) });
 
-/** A stat-less Animated Field Spell (R655): incidentally animated, it fights as a 0/1. */
+/** A stat-less Animated Field Spell (R656): incidentally animated, it fights as a 0/1. */
 export const wisp = def("wisp", "Field Spell", {
   base: { keywords: [ANIMATED], text: "wisp" },
   radiant: { keywords: [ANIMATED], text: "wisp" },

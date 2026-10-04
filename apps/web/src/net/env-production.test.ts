@@ -41,6 +41,8 @@ describe("apps/web/.env.production", () => {
   it("names the production hosts, which the CSP lets the page reach", () => {
     const values = Object.fromEntries(entries());
     expect(values["VITE_SUPABASE_URL"]).toBe("https://exmjdaswedxhnzmpzqrq.supabase.co");
+    // The publishable key, which Supabase makes to ship to browsers; a secret key fails the test above.
+    expect(values["VITE_SUPABASE_PUBLISHABLE_KEY"]).toMatch(/^sb_publishable_[A-Za-z0-9_-]+$/u);
     expect(values["VITE_SERVER_HTTP_URL"]).toBe("https://jackioh-server.onrender.com");
     expect(values["VITE_SERVER_WS_URL"]).toBe("wss://jackioh-server.onrender.com/ws/match");
     const csp = readFileSync(join(WEB, "public/_headers"), "utf8");

@@ -740,4 +740,63 @@ begin
 end $$;
 rollback;
 
+\echo '### R263: a series' game in play is ended only by the server's own write — app.end_match refuses it and the SQL reaper skips it ###'
+begin;
+-- The series' game in play: a stale live match its series names through next_match_id. Ending
+-- it SQL-side writes the results row and nothing else, so the series would sit 'playing' on a
+-- finished match for ever — the game's result and the series' record of it must commit in one
+-- transaction, which only the server writes.
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, started_at, ceiling_at)
+  values ('f1000000-0000-4000-8000-0000000000b1', 'live', 'seed',
+          '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+          '[]'::jsonb, '[]'::jsonb, 'core-1', now(), now() - interval '1 minute'),
+         -- The control: an unranked stale match no series claims, which the sweep still reaps.
+         ('f1000000-0000-4000-8000-0000000000b3', 'live', 'seed',
+          '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
+          '[]'::jsonb, '[]'::jsonb, 'core-1', now(), now() - interval '1 minute');
+insert into public.series (id, p1_profile_id, p2_profile_id, status, next_match_id, version,
+                           catalog_version, state)
+  values ('f1000000-0000-4000-8000-0000000000b2',
+          '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+          'playing', 'f1000000-0000-4000-8000-0000000000b1', 1, 'core-1',
+          '{"sides": [], "games": [], "seedBase": "s"}');
+do $$
+declare
+  v_reaped int;
+begin
+  -- Directly: end_match refuses the match a series calls its game in play.
+  begin
+    perform app.end_match('f1000000-0000-4000-8000-0000000000b1', null, 'match-ceiling', 0, 1000, 1000);
+    raise exception 'FAIL (R263): app.end_match ended a series'' game in play — the series is stuck on a finished match';
+  exception
+    when raise_exception then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      if sqlerrm not like '%server%to end%' then
+        raise exception 'FAIL (R263): end_match raised "%", not the series-game guard', sqlerrm;
+      end if;
+  end;
+  if (select status from public.matches where id = 'f1000000-0000-4000-8000-0000000000b1')
+       is distinct from 'live' then
+    raise exception 'FAIL (R263): the refused end_match still touched the series game';
+  end if;
+
+  -- The sweep skips the series game rather than aborting on it: the unclaimed one reaps beside it.
+  v_reaped := app.reap_stale_matches();
+  if v_reaped <> 1 then
+    raise exception 'FAIL (R263): the reaper returned % — expected 1 (the unclaimed match, the series game skipped)', v_reaped;
+  end if;
+  if (select status from public.matches where id = 'f1000000-0000-4000-8000-0000000000b1')
+       is distinct from 'live' then
+    raise exception 'FAIL (R263): the SQL reaper ended a series'' game in play — the server-side reaper is its path';
+  end if;
+  if (select status from public.matches where id = 'f1000000-0000-4000-8000-0000000000b3')
+       is distinct from 'over' then
+    raise exception 'FAIL (R263): the SQL reaper stopped ending unclaimed matches';
+  end if;
+
+  raise notice 'OK (R263): app.end_match refuses a series'' game in play; the SQL reaper skips it and still ends unclaimed ones';
+end $$;
+rollback;
+
 \echo '### ALL DECK, MODE AND SERIES CHECKS RAN ###'

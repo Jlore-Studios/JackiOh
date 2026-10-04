@@ -8,7 +8,7 @@ import { isVoiceEmote } from "@jackioh/shared";
 
 import type { SfxId, SoundSink } from "../audio/types.ts";
 import { VOICE_PRIORITY } from "../audio/constants.ts";
-import { VOICE_LINES, emoteLineFor, emoteVoiceDef } from "../audio/voiceData.ts";
+import { CARD_AUDIO, emoteLineFor, emoteVoiceDef } from "../audio/voiceData.ts";
 import {
   EMOTE_BUBBLE_MAX_MS,
   EMOTE_BUBBLE_MIN_MS,
@@ -33,7 +33,7 @@ export const EMOJI_SFX: Record<EmojiEmoteId, SfxId> = {
  * Felinors' echoed tail. When the voice table can't resolve a line the bubble holds the minimum.
  */
 export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId): number {
-  const line = emoteLineFor(VOICE_LINES, portrait, emote);
+  const line = emoteLineFor(CARD_AUDIO, portrait, emote);
   if (line === null) return EMOTE_BUBBLE_MIN_MS;
   const words = line.text.split(/\s+/).filter((word) => word.length > 0).length;
   const wpm =
@@ -47,7 +47,7 @@ export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId): number
 
 /** The bubble text for a voice emote, or null when the voice table can't resolve it. */
 export function voiceBubbleText(portrait: PortraitId, emote: VoiceEmoteId): string | null {
-  return emoteLineFor(VOICE_LINES, portrait, emote)?.text ?? null;
+  return emoteLineFor(CARD_AUDIO, portrait, emote)?.text ?? null;
 }
 
 /** What an emote shows: voice lines' bubble, emoji's sticker and their spans. */

@@ -62,6 +62,7 @@ async function start(registry: MatchRegistry, engine: EnginePort, matchId: strin
     matchId,
     seed,
     catalogVersion: TEST_CATALOG_VERSION,
+    ranked: false,
     seats: [
       { profileId: P1, player: "p1", deck: engine.dealRandomDeck(`${seed}:p1-deck`) },
       { profileId: P2, player: "p2", deck: engine.dealRandomDeck(`${seed}:p2-deck`) },

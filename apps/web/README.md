@@ -104,7 +104,9 @@ src/
     cues.ts director.ts useGameAudio.ts      SOUND_CUES (a total map over GameEventType) and the runner-synced director
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
-    voice-lines.json voice-manifest.json     every card's lines and personas; the generated hash and size of each file
+    usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R655)
+    card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R655), hand-edited, and its parser
+    voice-manifest.json                      the generated hash and size of each rendered line
     music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
     musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
     musicData.ts music-manifest.json         the rendered tracks (loop points, tempo) and music-cards.json, the
@@ -154,7 +156,7 @@ src/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
 scripts/
-  gen-voice.mjs         renders voice-lines.json to public/audio/voice/<card-id>-<play|death|cast>.m4a
+  gen-voice.mjs         renders card-audio.json5's lines to public/audio/voice/<card-id>-<hook>.m4a
   gen-music.mjs         renders the scores in music/tracks.mjs to public/audio/music/<track>.m4a (R631)
   music/                the composition toolkit (theory.mjs, compose.mjs, midi.mjs) and every score
 ```
@@ -284,6 +286,9 @@ routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as t
                         R338): choose a deck that has not won, lock it in, wait sealed; one clock
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
                         "Continue" once the game is over
+routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
+                        Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
+                        a visible rank in a player's words for this screen, the account and the board
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 ```
 
@@ -422,15 +427,20 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 
 ## Regenerating the voice lines
 
-The voice files are generated from `src/audio/voice-lines.json` and committed, so CI never runs a
-synthesizer. Each persona names its backend (R501): Core's personas are macOS `say` (the default),
-and the Classic and Classic+ personas are `"backend": "sapi"`, Windows SAPI (`System.Speech`, the
-"Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by `ffmpeg`: trimmed, pitched
-by the persona's `semitones`, coloured by its `filter` chain, peak-normalised and encoded to the same
-mono AAC at 22050 Hz and about 32 kbps. After editing a line or a persona, run
-`pnpm --filter @jackioh/web gen:voice` on a Mac for `say` personas, or on Windows or WSL (it finds
+Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edited by hand, whose
+header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
+`pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
+comment beside its id, where each hook (`play`, `attack`, `death`, `cast`; `CARD_HOOKS` in
+`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both. `voiceData.ts` checks it
+at load and names the path of any mistake. The voice files are generated from its lines and
+committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
+macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
+(`System.Speech`, the "Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by
+`ffmpeg`: trimmed, pitched by the voice's `semitones`, coloured by its `filter` chain, peak-normalised
+and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a line or a voice, run
+`pnpm --filter @jackioh/web gen:voice` on a Mac for `say` voices, or on Windows or WSL (it finds
 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`) with `ffmpeg` and `ffprobe` on the
-`PATH` for SAPI personas; with neither it exits 2. It renders only the keys whose input hash changed
+`PATH` for SAPI voices; with neither it exits 2. It renders only the keys whose input hash changed
 and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
 orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
 `VOICE_BUDGET_BYTES` (6 MiB, R501) or a line runs past 4 s. `--only <defId>` limits it to one card
@@ -439,7 +449,7 @@ byte-deterministic, so expect a large diff). Commit the manifest together with `
 `node apps/web/scripts/gen-voice.mjs --check` needs no synthesizer, runs on any OS and is what the
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
-missing from the manifest falls back to the browser's `speechSynthesis`, with the persona's `web`
+missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
 pitch and rate.
 
 ## Blocked on the engine
