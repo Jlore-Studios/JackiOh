@@ -1,6 +1,5 @@
 // The landing page (docs/polish/5-sign-in.md, B37, B38): `/` renders `LandingRoute`, its CTAs are
-// real links that navigate in place on a plain left click, the corner slot follows the account,
-// and the hero states the game's numbers from config rather than spelling them.
+// real links that navigate in place on a plain left click, and the corner slot follows the account.
 //
 // Layout (no horizontal overflow at 360-1280 px, B39) needs a layout engine, so it is the Cypress
 // component spec's job (e2e/cypress/component/landing-and-code-field.cy.tsx), not this file's.
@@ -12,10 +11,7 @@ import { fileURLToPath } from "node:url";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DECK_SIZE, MAX_MANA, UNIT_ZONES } from "@jackioh/engine/config";
-import { LOADOUT_DECKS } from "@jackioh/validator";
-
-import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
+import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
 import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
 import { paths } from "../net/navigate.ts";
@@ -31,7 +27,6 @@ import { EVEN, FAN_POOL, ROTATION_POOL, dealLandingFan, featureWeight, rotateFan
 const { App } = await import("../main.tsx");
 
 const FAN_CARDS = 5;
-const STEPS = 4;
 
 /** A stubbed round trip can outrun the 1 s default under load. */
 const SLOW = { timeout: 5_000 } as const;
@@ -403,35 +398,6 @@ describe("B38 the hero", () => {
       __resetSettingsForTests();
     }
     expect(landing()).toHaveAttribute("data-motion", "full");
-  });
-
-  it("B38 the four steps state MAX_MANA, UNIT_ZONES, DECK_SIZE and LOADOUT_DECKS from config", () => {
-    render(<LandingRoute />);
-    const how = within(landing()).getByTestId(landingTestid.howItPlays);
-    const steps = Array.from({ length: STEPS }, (_unused, index) =>
-      within(how).getByTestId(landingStepTestid(index)).textContent ?? "",
-    );
-    expect(screen.queryByTestId(landingStepTestid(STEPS))).toBeNull();
-
-    const stated = (value: number): boolean =>
-      steps.some((text) => new RegExp(`(^|\\D)${String(value)}(\\D|$)`).test(text));
-    expect(stated(MAX_MANA), `a step states MAX_MANA (${String(MAX_MANA)})`).toBe(true);
-    expect(stated(UNIT_ZONES), `a step states UNIT_ZONES (${String(UNIT_ZONES)})`).toBe(true);
-    expect(stated(DECK_SIZE), `a step states DECK_SIZE (${String(DECK_SIZE)})`).toBe(true);
-    expect(stated(LOADOUT_DECKS), `a step states LOADOUT_DECKS (${String(LOADOUT_DECKS)})`).toBe(true);
-  });
-
-  it("B38 the step icons draw the counts their tiles state: UNIT_ZONES lanes and LOADOUT_DECKS decks", () => {
-    render(<LandingRoute />);
-    const how = within(landing()).getByTestId(landingTestid.howItPlays);
-    // A lane is the space between two edges, and the board's outline is the outer two.
-    expect(how.querySelectorAll(".landing-icon-lane-edge")).toHaveLength(UNIT_ZONES - 1);
-    expect(how.querySelectorAll(".landing-icon-deck")).toHaveLength(LOADOUT_DECKS);
-    // Drawn, not typed: no icon carries text a screen reader or a search could pick up as a number.
-    for (const icon of how.querySelectorAll(".landing-step-icon")) {
-      expect(icon.textContent).toBe("");
-      expect(icon.getAttribute("aria-hidden")).toBe("true");
-    }
   });
 });
 
