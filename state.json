@@ -1261,10 +1261,11 @@
     "194": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T03:37:31Z",
-      "forced": true,
+      "forced": false,
       "interruptions": 0,
       "issue": 153,
       "kind": "revise",
