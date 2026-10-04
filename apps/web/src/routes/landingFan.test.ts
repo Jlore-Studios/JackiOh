@@ -14,6 +14,7 @@ import { faceModel } from "../cards/model.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN } from "../stats/config.ts";
 import { seeded } from "../test/random.ts";
 import {
+  EVEN,
   FAN_FACES,
   FAN_POOL,
   FAN_RADIANT_AT,
@@ -190,5 +191,38 @@ describe("R639 one rotation step", () => {
       for (const { def } of hand) sets.add(def.set);
     }
     expect(sets).toEqual(new Set(["Core", "Classic", "Classic+"]));
+  });
+});
+
+describe("R651 a swap below the threshold", () => {
+  it("R651 draws from the deal's own pool, evenly: a Core card of the slot's rarity, every one as likely as the next", () => {
+    // Below ROTATION_MIN_GAMES the fan swaps among FAN_POOL with EVEN, as R374's deal did: the
+    // swap keeps the slot's rarity, repeats nothing on show and never leaves Core.
+    const hand = dealLandingFan(seeded(7));
+    for (const slot of [0, 1, 2, 3]) {
+      const next = rotateFan(hand, slot, seeded(40 + slot), FAN_POOL, EVEN);
+      expect(next[slot]?.def.id).not.toBe(hand[slot]?.def.id);
+      expect(next[slot]?.def.rarity).toBe(hand[slot]?.def.rarity);
+      expect(next[slot]?.radiant).toBe(hand[slot]?.radiant);
+      expect(FAN_POOL).toContainEqual(next[slot]?.def);
+      expect(next.filter((_, at) => at !== slot)).toEqual(hand.filter((_, at) => at !== slot));
+    }
+
+    // And evenly in practice: over a long run of draws every Core card of a rarity comes up about
+    // as often as the next, not weighted by how it prints.
+    const commons = FAN_POOL.filter((def) => def.rarity === "Common");
+    expect(commons.length).toBeGreaterThan(4);
+    const random = seeded(29);
+    const draws = 20_000;
+    const drawn = new Map<string, number>();
+    for (let i = 0; i < draws; i += 1) {
+      const def = pickWeighted(commons, random, EVEN);
+      if (def !== undefined) drawn.set(def.id, (drawn.get(def.id) ?? 0) + 1);
+    }
+    const each = draws / commons.length;
+    for (const def of commons) {
+      expect(drawn.get(def.id) ?? 0, def.id).toBeGreaterThan(each * 0.8);
+      expect(drawn.get(def.id) ?? 0, def.id).toBeLessThan(each * 1.25);
+    }
   });
 });

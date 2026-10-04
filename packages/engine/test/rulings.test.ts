@@ -3846,6 +3846,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R650 names a micro patch after the newest version, with the next letter", () => {
     provenIn(650, "../../cards/test/versions.test.ts");
   });
+
+  // Proved by apps/web routes/landing.test.tsx "R651 …" (swaps below the threshold among Core's
+  // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
+  // sheet's rules) and routes/landingFan.test.ts "R651 …" (the swap's pool below the threshold,
+  // drawn evenly).
+  it("R651 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
+    provenIn(651, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

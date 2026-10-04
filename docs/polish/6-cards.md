@@ -1383,3 +1383,17 @@ card layer alone; no rule changed.
   of it, but a skipped face has no layout for the fitter to read, and reading one anyway lays it out
   alone (5 s of layout across the Almanac in a trial), so the fit would have to wait for the face to
   come into view. That is not done here.
+
+## Addendum: the foil sweep's edges (#200, 2026-10-04)
+
+The animated foil kept two seams after the rendering pass above. The loop jumped every 5.5 s,
+because the slide left part of the band on the card at both ends — a pale stripe bottom-right as it
+finished, a gold one top-left as it restarted. And on a face taller than 5:7 (a hand card squeezed
+narrow, a minion filling its zone) the 115° gradient reached the layer's left edge, which crossed
+the face as a hard vertical line. The band is now a horizontal gradient, transparent at both ends,
+on a layer 170% of the card wide — a third narrower than the still foil's, so the fix is a little
+cheaper too — skewed -25° to the old lean. It rests entirely off the face at both ends of an 8 s
+loop on a card of any proportions, so nothing jumps and no edge ever lies across the card. It still
+moves by `transform` alone on its own layer; under reduced motion (the media query or the settings
+panel's Reduce motion) the animated rule falls away and the face wears the still foil.
+`cards/foil.test.ts` proves the geometry off the sheet.

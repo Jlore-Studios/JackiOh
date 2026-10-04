@@ -5,6 +5,10 @@
 // Layout (no horizontal overflow at 360-1280 px, B39) needs a layout engine, so it is the Cypress
 // component spec's job (e2e/cypress/component/landing-and-code-field.cy.tsx), not this file's.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,10 +23,10 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { seeded } from "../test/random.ts";
-import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES } from "../stats/config.ts";
+import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import LandingRoute from "./landing.tsx";
-import { ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
+import { EVEN, FAN_POOL, ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -345,7 +349,7 @@ describe("B38 the hero", () => {
     expect(back.textContent).toBe("");
   });
 
-  it("R374 each visit deals its own hand, and a hand holds still while the page is up", () => {
+  it("R374 each visit deals its own hand, and a re-render in the same visit does not deal again", () => {
     const shown = (): string[] =>
       [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
     const first = render(<LandingRoute random={seeded(1)} />);
@@ -449,22 +453,38 @@ function shownIds(): string[] {
   return [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
 }
 
-describe("R639 the homescreen rotation", () => {
+describe("R639, R651 the homescreen rotation", () => {
   afterEach(() => {
     vi.useRealTimers();
     dropPlayerStatsCache();
   });
 
-  it("R639 below the threshold the fan keeps its fixed deal of Core cards and never swaps", () => {
+  it("R651 below the threshold the fan swaps one slot a step, left to right, among Core's cards", () => {
     vi.useFakeTimers();
     withGames(ROTATION_MIN_GAMES - 1);
     render(<LandingRoute random={seeded(5)} />);
-    const hand = shownIds();
-    expect(hand).toEqual(dealLandingFan(seeded(5)).map(({ def }) => def.id));
-    act(() => {
-      vi.advanceTimersByTime(ROTATION_INTERVAL_MS * 6);
-    });
-    expect(shownIds()).toEqual(hand);
+
+    // The same source, the same draws: the deal, then the swaps the page makes among Core's cards.
+    const mirror = seeded(5);
+    let expected = dealLandingFan(mirror);
+    expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
+
+    for (const slot of [0, 1, 2, 3, 0]) {
+      const before = shownIds();
+      act(() => {
+        vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+      });
+      expected = rotateFan(expected, slot, mirror, FAN_POOL, EVEN);
+      const after = shownIds();
+      expect(after).toEqual(expected.map(({ def }) => def.id));
+      // One card moved, in the slot due, and it is a Core card of the same rarity the fan was not showing.
+      expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
+      expect(after[slot]).not.toBe(before[slot]);
+      expect(new Set(after).size).toBe(after.length);
+      for (const id of after) {
+        expect(FAN_POOL.some((def) => def.id === id), `${id} is a non-token Core card`).toBe(true);
+      }
+    }
   });
 
   it("R639 at the threshold the fan deals from every set and swaps one slot a step, left to right", () => {
@@ -535,6 +555,92 @@ describe("R639 the homescreen rotation", () => {
       vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
     });
     expect(shownIds()).not.toEqual(dealt);
+  });
+
+  it("R651 a swap keeps the card going out over the new one for ROTATION_SWAP_MS, a ghost that is no control, then it is gone", () => {
+    vi.useFakeTimers();
+    render(<LandingRoute random={seeded(5)} />);
+    const dealt = shownIds();
+
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+    });
+    const swapped = shownIds();
+    expect(swapped[0]).not.toBe(dealt[0]);
+    // The old card stays as a ghost over the slot: the id it was dealt, hidden from assistive
+    // tech, and no control — no role, no key handling, no fan card's test id.
+    const ghost = screen.getByTestId(landingTestid.fanLeaving);
+    expect(ghost).toHaveAttribute("data-def-id", dealt[0]);
+    expect(ghost).toHaveAttribute("aria-hidden", "true");
+    expect(ghost.getAttribute("role")).toBeNull();
+    expect(ghost.getAttribute("tabindex")).toBeNull();
+    expect(ghost.closest(`[data-testid="${landingFanCardTestid(0)}"]`)).toBeNull();
+    // The new card is the slot's only face, come in by the swap's apparition rather than dealt again.
+    const fresh = screen.getByTestId(landingFanCardTestid(0));
+    expect(fresh).toHaveAttribute("data-entry", "swap");
+    expect(fresh).toHaveAttribute("role", "button");
+    expect(within(ghost.parentElement as HTMLElement).queryAllByTestId(landingFanCardTestid(0))).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_SWAP_MS);
+    });
+    expect(screen.queryByTestId(landingTestid.fanLeaving)).toBeNull();
+    expect(shownIds()).toEqual(swapped);
+  });
+
+  it("R651 the opening deal enters as a deal, and a swap's ghost keeps the slot's count at five cards", () => {
+    vi.useFakeTimers();
+    render(<LandingRoute random={seeded(5)} />);
+    for (let index = 0; index < FAN_CARDS - 1; index += 1) {
+      expect(screen.getByTestId(landingFanCardTestid(index))).toHaveAttribute("data-entry", "deal");
+    }
+    act(() => {
+      vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+    });
+    const fan = screen.getByTestId(landingTestid.fan);
+    // Four faces and a back still answer their test ids; the ghost adds its own, not a sixth card's.
+    for (let index = 0; index < FAN_CARDS; index += 1) {
+      expect(within(fan).getAllByTestId(landingFanCardTestid(index))).toHaveLength(1);
+    }
+    expect(screen.queryByTestId(landingFanCardTestid(FAN_CARDS))).toBeNull();
+    expect(within(fan).getAllByTestId(landingTestid.fanLeaving)).toHaveLength(1);
+  });
+
+  it("R651 the sheet plays the swap for --fan-swap, which landing.tsx hands ROTATION_SWAP_MS", () => {
+    // The dom half: the fan carries the length the ghost's timeout reads as well.
+    render(<LandingRoute random={seeded(5)} />);
+    expect(screen.getByTestId(landingTestid.fan).getAttribute("style")).toContain(
+      `--fan-swap: ${String(ROTATION_SWAP_MS)}ms`,
+    );
+
+    const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
+    // The ghost: over the slot, no pointer, fizzles out over --fan-swap.
+    expect(css).toContain(".landing .landing-fan-card--leaving {");
+    const leaving = /\.landing \.landing-fan-card--leaving \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(leaving).toMatch(/position:\s*absolute/);
+    expect(leaving).toMatch(/pointer-events:\s*none/);
+    expect(leaving).toMatch(/animation:[^;]*landing-fizzle[^;]*var\(--fan-swap\)/);
+    // The new card: an apparition out of the same smoke for --fan-swap, then the float resumes.
+    expect(css).toContain('.landing .landing-fan-card[data-entry="swap"] {');
+    const swap = /\.landing \.landing-fan-card\[data-entry="swap"\] \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(swap).toMatch(/landing-apparition[^;,]*var\(--fan-swap\)/);
+    expect(swap).toMatch(/landing-float[^;,]*var\(--fan-swap\)/);
+    // Both keyframes exist, each drawn from opacity, transform and filter alone (the compositor's set).
+    const keyframes = new Map(
+      [...css.matchAll(/@keyframes ([\w-]+)\s*\{([\s\S]*?)\n\}/g)].map((match) => [match[1], match[2] ?? ""]),
+    );
+    for (const name of ["landing-fizzle", "landing-apparition"]) {
+      const body = keyframes.get(name) ?? "";
+      expect(body, `@keyframes ${name}`).not.toBe("");
+      for (const stop of body.matchAll(/\{([^{}]*)\}/g)) {
+        for (const decl of (stop[1] ?? "").split(";")) {
+          const prop = (decl.split(":")[0] ?? "").trim();
+          if (prop !== "") {
+            expect(["opacity", "transform", "filter"], `${name} animates ${prop}`).toContain(prop);
+          }
+        }
+      }
+    }
   });
 });
 

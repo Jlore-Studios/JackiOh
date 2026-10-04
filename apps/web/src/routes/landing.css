@@ -367,6 +367,23 @@
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6);
 }
 
+/* R651: a swap. The card going out stays over the new one for `--fan-swap` (ROTATION_SWAP_MS, set
+   on the fan by landing.tsx), takes no pointer and fizzles away; the card coming in fades in out
+   of the same smoke instead of being dealt again, then floats with the others. */
+.landing .landing-fan-card--leaving {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: landing-fizzle var(--fan-swap) ease-in-out both;
+}
+
+.landing .landing-fan-card[data-entry="swap"] {
+  animation:
+    landing-apparition var(--fan-swap) ease-in-out backwards,
+    landing-float 6s ease-in-out var(--fan-swap) infinite;
+}
+
 /* The spread: only where a pointer can hover, so a tap on a phone never leaves it stuck open. */
 @media (hover: hover) {
   .landing .landing-fan:hover {
@@ -801,6 +818,47 @@
   }
   50% {
     transform: translateY(-5px);
+  }
+}
+
+/* R651: the card a swap takes out fizzles away as the board's refused card does (animations.css,
+   jk-overflow-fizzle from 45% on: it greys, brightens and swells as it fades), drifting up a little
+   rather than flying off, since nothing here is refused. */
+@keyframes landing-fizzle {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1) grayscale(0);
+  }
+  45% {
+    opacity: 0.55;
+    transform: translateY(-3%) scale(1.04);
+    filter: brightness(1.7) grayscale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6%) scale(1.1);
+    filter: brightness(2.2) grayscale(1);
+  }
+}
+
+/* R651: the card a swap brings in is that fizzle run backwards, an apparition that gathers out of
+   the same pale smoke and settles into its place. */
+@keyframes landing-apparition {
+  0% {
+    opacity: 0;
+    transform: translateY(-6%) scale(1.1);
+    filter: brightness(2.2) grayscale(1);
+  }
+  55% {
+    opacity: 0.55;
+    transform: translateY(-3%) scale(1.04);
+    filter: brightness(1.7) grayscale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1) grayscale(0);
   }
 }
 
