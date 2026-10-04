@@ -727,15 +727,6 @@
       "failures": 0,
       "feedback_since": "2026-10-04T02:21:26Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-04T02:08:20Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "",
-        "provider": "claude-3",
-        "reason": "the claude CLI could not run: Failed to authenticate. API Error: 401 OAuth access token is invalid.",
-        "trail": "- said: Failed to authenticate. API Error: 401 OAuth access token is invalid."
-      },
       "interruptions": 0,
       "issue": 63,
       "kind": "revise",
