@@ -1994,12 +1994,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "cognition"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "cognition",
+            "run": "37241051768",
+            "tier": "weak"
+          }
+        ],
         "sha": "a96786af137a4498e7600d8fbb71f709092fb8e6",
-        "tiers": {}
+        "tiers": {
+          "cognition": "weak"
+        }
       }
     },
     "218": {
