@@ -1725,7 +1725,7 @@
       }
     },
     "203": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 3,
       "ci_reruns": {
@@ -1757,11 +1757,11 @@
         }
       ],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "devin",
       "question": "",
       "queued_at": "2026-10-04T17:30:10Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37220154902",
+      "run_id": "37220845783",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in BUILD.md, SPEC.md, apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx, docs/radiant-audit.md, packages/cards/test/card-text.test.ts, packages/cards/test/catalog.test.ts, packages/cards/test/classic/033-joro.test.ts, packages/cards/test/patches.test.ts, packages/engine/test/rulings.test.ts.",
@@ -1783,7 +1783,7 @@
         }
       ],
       "source": "cross-review",
-      "started_at": "2026-10-04T17:25:05Z",
+      "started_at": "2026-10-04T17:32:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2603,9 +2603,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T17:31:31Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37220760989",
-    "what": "review #214 on muse"
+    "at": "2026-10-04T17:32:45Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37220845783",
+    "what": "revise #203 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T17:30:54Z",
