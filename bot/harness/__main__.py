@@ -155,6 +155,12 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                provider: providers_mod.Provider | None = None):
     provider = provider or ctx.cfg.pool.ordered()[0]
 
+    def closed(thread: int) -> bool:
+        try:
+            return ctx.gh.get_issue(thread).get("state") == "closed"
+        except GitHubError:
+            return False  # GitHub could not say: carry on, as before this check
+
     def probe(last_usage: dict | None):
         if ctx.repo_halted():
             return ("halted by .harness/HALT on main", "halt")
@@ -165,6 +171,9 @@ def make_probe(ctx: context_mod.Context, number: int | None,
             record = state["items"].get(str(number), {})
             if record.get("stop_requested"):
                 return (f"stopped by @{record.get('stopped_by', 'someone')}", "stop")
+            if closed(number):
+                # Deliver drops a closed thread's work anyway, so stop spending on it now.
+                return (f"#{number} was closed", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
                                         ctx.now(), ctx.cfg.timezone)

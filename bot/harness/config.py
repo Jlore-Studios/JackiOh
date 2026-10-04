@@ -67,7 +67,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
     "bot:planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
     "bot:stuck": ("d93f0b", "It failed every review round it had: a comment says why, for a person to review"),
-    "human": ("ededed", "A human will do this. Night bot skips it."),
+    "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
@@ -93,7 +93,10 @@ LABEL_PLANNED = "bot:planned"
 #: A build or revision used every review round (`max_review_cycles`) without an approval; its
 #: comment says why, round by round (`failures.py`), for a person to review.
 LABEL_STUCK = "bot:stuck"
-#: No model takes a thread labelled `human` (#96).
+#: People do a thread labelled `human` (#96): a decision, an account or a secret, or repository
+#: work the bot may not do (a change to bot/, .harness/ or .github/) or that a person is already
+#: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
+#: gets a reply saying so.
 LABEL_HUMAN = "human"
 #: An item's difficulty decides which models may plan, build and review it; no label counts as
 #: medium, and with several the hardest counts. Like `human`, these match whatever their case.
