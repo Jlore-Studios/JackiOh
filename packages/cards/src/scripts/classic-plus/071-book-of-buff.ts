@@ -12,7 +12,8 @@ import { cardDef } from "../../catalog-data";
 export const def = cardDef("classicplus-071");
 
 export const base: Script = {
-  targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "backrow", "hand"] } }],
+  // R651: an Upgrade helps, so a random cast that targets enemies aims this at friends.
+  targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "backrow", "hand"] }, aim: "help" }],
   cry: (ctx) => [upgrade({ target: { of: "chosen" }, times: param(ctx, "times") })],
 };
 

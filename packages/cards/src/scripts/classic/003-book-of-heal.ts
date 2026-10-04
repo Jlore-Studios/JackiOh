@@ -23,7 +23,10 @@ import { cardDef } from "../../catalog-data";
 export const def = cardDef("classic-003");
 
 /** R19: any unit or hero, either side. */
-const targets: TargetDecl[] = [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }];
+const targets: TargetDecl[] = [
+  // R651: a heal helps, so a random cast that targets enemies aims this at friends.
+  { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] }, aim: "help" },
+];
 
 export const base: Script = {
   targets,

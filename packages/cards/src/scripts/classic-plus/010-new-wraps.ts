@@ -9,7 +9,10 @@ import { cardDef } from "../../catalog-data";
 
 export const def = cardDef("classicplus-010");
 
-const A_UNIT: TargetDecl[] = [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] } }];
+// R651: Reborn helps, so a random cast that targets enemies aims this at friends.
+const A_UNIT: TargetDecl[] = [
+  { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] }, aim: "help" },
+];
 
 const giveReborn = grantKeyword({ target: { of: "chosen" }, keyword: { kind: "Reborn" } });
 

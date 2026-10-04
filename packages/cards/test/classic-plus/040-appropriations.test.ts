@@ -2,10 +2,18 @@
 // R440, R581, BUILD M9 row C+ 40. Education's verb is proved in packages/engine/test/shuffle-random.test.ts
 // (a Book it made is cast as it is drawn, R58), the grants and buffs in the engine's E38 tests.
 
-import { LIBRARY_CAP, hasEnchantment, type CardInstance } from "@jackioh/engine";
+import { LIBRARY_CAP, hasEnchantment, type CardInstance, type Script } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { cardDef } from "../../src/index";
+import { base as healBase } from "../../src/scripts/classic/003-book-of-heal";
+import { base as bloodBase } from "../../src/scripts/classic/012-book-of-blood";
+import { base as flameBase } from "../../src/scripts/classic/016-book-of-flame";
+import { base as vitalKillBase } from "../../src/scripts/classic/029-book-of-vital-kill";
+import { base as wildfireBase } from "../../src/scripts/classic/055-book-of-wildfire";
+import { base as wrapsBase } from "../../src/scripts/classic-plus/010-new-wraps";
+import { base as statsBase } from "../../src/scripts/classic-plus/057-book-of-stats";
+import { base as buffBase } from "../../src/scripts/classic-plus/071-book-of-buff";
 import { base, def, radiant } from "../../src/scripts/classic-plus/040-appropriations";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
 
@@ -115,6 +123,45 @@ describe("C+ #40 Appropriations", () => {
         expect(hasEnchantment(card, "castOnDraw")).toBe(true);
         expect(hasEnchantment(card, "targetEnemies")).toBe(true);
       }
+    });
+
+    it("R651 every Book's target declaration says which it aims: help for heal and buff, harm by default", () => {
+      const aimed = (targets: Script["targets"]): (string | undefined)[] =>
+        (targets ?? []).map((decl) => (decl.kind === "target" ? decl.aim : undefined));
+      expect(aimed(healBase.targets)).toEqual(["help"]);
+      expect(aimed(statsBase.targets)).toEqual(["help"]);
+      expect(aimed(buffBase.targets)).toEqual(["help"]);
+      expect(aimed(wrapsBase.targets)).toEqual(["help"]);
+      expect(aimed(flameBase.targets)).toEqual([undefined]);
+      expect(aimed(bloodBase.targets)).toEqual([undefined]);
+      expect(aimed(wildfireBase.targets)).toEqual([undefined]);
+      expect(aimed(vitalKillBase.targets)).toEqual([undefined]);
+    });
+
+    it("R651 an Education Book that helps aims friends: a drawn Book of Heal offers only your side", () => {
+      const s = scenario({
+        seed: "appropriations-aim",
+        p1: { hand: [VANILLA], field: [TIMMY], library: ["classic-003"] },
+        p2: { hand: [VANILLA], field: [TIMMY], library: [FILLER] },
+      });
+      const book = s.pile("p1", "library").find((card) => card.defId === "classic-003");
+      if (book === undefined) throw new Error("Book of Heal in p1's library");
+      book.enchantments = [{ kind: "castOnDraw" }, { kind: "targetEnemies" }];
+      const timmy = s.unit("p1", 1) as CardInstance;
+      timmy.damage = 1;
+      s.endTurn().endTurn();
+      // The draw casts the Book, which asks its caster for a target aimed at friends.
+      const pending = s.state.pending;
+      expect(pending?.kind).toBe("target");
+      const selections = pending?.options.map((option) => option.selection) ?? [];
+      expect(selections.length).toBeGreaterThan(0);
+      for (const selection of selections) {
+        if (selection.pick === "hero") expect(selection.player).toBe("p1");
+        else if (selection.pick === "instance") expect(selection.instanceId).toBe(timmy.id);
+        else throw new Error(`unexpected pick ${selection.pick}`);
+      }
+      s.answer(pending?.options[0]?.key ?? "");
+      expect(s.events.some((event) => event.type === "healed" && event.targetId === timmy.id)).toBe(true);
     });
 
     it("R311 the shuffle-in is open to its owner: the deck list shows the Radiant Books; the opponent sees a count", () => {

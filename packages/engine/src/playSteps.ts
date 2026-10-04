@@ -84,6 +84,7 @@ import {
   type AnswerInput,
 } from "./prompts";
 import { countChainCast, preferEnemies, preferFriends, randomCastOf, randomPicks, withCastMode } from "./randomCast";
+import { targetAim } from "./targeting";
 import {
   MANA_BEFORE_PLAY_KEY,
   flagReturnToHandAtEndOfTurn,
@@ -1462,7 +1463,7 @@ type RepeatRecord = NonNullable<PlayRun["repeat"]>;
 function castTargetOptions(state: GameState, run: PlayRun, card: CardInstance, decl: TargetDecl): Selection[] {
   const options = legalSelectionsFor(state, run.player, card, decl);
   if (run.targetEnemies !== true) return options;
-  const prefer = decl.aim === "help" ? preferFriends : preferEnemies;
+  const prefer = targetAim(decl) === "help" ? preferFriends : preferEnemies;
   return prefer(state, run.player, options, (selection) => selection, Math.min(decl.min, options.length));
 }
 

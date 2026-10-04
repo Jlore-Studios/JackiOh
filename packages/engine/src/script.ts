@@ -163,7 +163,10 @@ export type StaticFlags = {
   infiniteReserves?: boolean;
   /** Cannot switch to Defense Position (#65.1). */
   neverDefense?: boolean;
-  /** R49: two exertions, so one attack plus one switch in a turn (#45 Deft Duelist). */
+  /**
+   * R49: two exertions, so one attack plus one switch in a turn. Legacy: patch v0.2.5 made this a
+   * printed keyword (Deft), which `combat.ts` reads through §10.4's layers instead of this flag.
+   */
   deftDuelist?: boolean;
   /** R30: this card's own Echo, so its play resolves this many extra times. */
   echo?: number;

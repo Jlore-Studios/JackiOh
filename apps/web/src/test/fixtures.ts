@@ -124,6 +124,8 @@ const ALL_KEYWORDS: Keyword[] = [
   // Patch v0.2.X's keyword rules (R636, R637).
   { kind: "Windfury" },
   { kind: "Temporary" },
+  // Patch v0.2.5's keyword (R49).
+  { kind: "Deft" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

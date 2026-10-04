@@ -145,7 +145,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.5's DE.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -172,6 +172,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Immune to Spells": "IS",
   Windfury: "WF",
   Temporary: "TE",
+  Deft: "DE",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -209,6 +210,16 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
       ["§6.1", "Can attack twice each turn"],
       ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+    ]);
+  });
+
+  it("R49 Deft is a term in a card's text, with the glossary entry the SPEC row gives", () => {
+    expect(termsOf("Charge, Deft")).toEqual([
+      { text: "Charge", term: "Charge" },
+      { text: "Deft", term: "Deft" },
+    ]);
+    expect([GLOSSARY.Deft].map((entry) => [entry.section, entry.rule])).toEqual([
+      ["§6.1", "Can attack and switch position in the same turn"],
     ]);
   });
 
@@ -358,7 +369,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 17 kinds", () => {
+  it("B11 KEYWORD_MARK keeps the two-letter marks Card.tsx used, for exactly the 18 kinds", () => {
     expect(KEYWORD_MARK).toEqual(MARKS);
   });
 

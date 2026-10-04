@@ -1,6 +1,7 @@
 // C+ #38.1 Solarius-Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
 // casts 5 random non-token Spells of any set one after another (R380), every choice random with no
-// prompt, each target an enemy whenever one is legal, X the current mana and at least 1 (R348), each
+// prompt, each target aimed by its declaration (R651: harm at enemies, help at friends), X the current
+// mana and at least 1 (R348), each
 // cast a play (R70) whose hits its own Spell Damage raises (it is on the field during its Cry); a cast
 // with no legal target fizzles and the next goes; a game that ends midway stops the rest; the casts are
 // public, what they add to your hand hidden (R97); Spell Damage and casts read through `param()`;
@@ -126,19 +127,30 @@ describe("C+ #38.1 Solarius-Prime", () => {
       expect([...sets].sort()).toEqual(["Classic", "Classic+", "Core"]);
     });
 
-    it("R452 each target pick is an enemy whenever one is legal: no cast ever aims at your hero", () => {
-      let enemyTargets = 0;
+    it("R651 each pick aims by its declaration: harm never at your hero, help never at an enemy", () => {
+      // The helpful Spells a random cast can pick: their target declarations aim "help".
+      const HELP = new Set(["classic-003", "classicplus-010", "classicplus-057", "classicplus-071", "core-047", "core-063"]);
+      let aimed = 0;
       for (const seed of SEEDS) {
         const { s, prime } = playPrime(seed);
         const mine = new Set(["hero-p1", prime, ...s.pile("p1", "graveyard").map((card) => card.id)]);
+        const foe = new Set([
+          "hero-p2",
+          ...s.state.players.p2.units.flatMap((pile) => pile ?? []).map((card) => card.id),
+          ...s.pile("p2", "graveyard").map((card) => card.id),
+        ]);
         for (const { event } of castsDuring(s, prime)) {
           for (const target of event.targets) {
-            expect(target === "hero-p1", `${seed} ${event.defId}`).toBe(false);
-            if (!mine.has(target)) enemyTargets += 1;
+            if (HELP.has(event.defId)) {
+              expect(foe.has(target), `${seed} ${event.defId}`).toBe(false);
+            } else {
+              expect(target === "hero-p1", `${seed} ${event.defId}`).toBe(false);
+            }
+            if (!mine.has(target)) aimed += 1;
           }
         }
       }
-      expect(enemyTargets).toBeGreaterThan(0);
+      expect(aimed).toBeGreaterThan(0);
     });
 
     it("R70 each cast is a play: the turn's log counts all of them", () => {

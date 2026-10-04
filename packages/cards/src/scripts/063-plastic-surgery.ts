@@ -28,7 +28,8 @@ export const def = cardDef("core-063");
 
 /** "Target unit": either side, §8's Conventions, and no narrowing in either cell. */
 const targets: TargetDecl[] = [
-  { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] } },
+  // R651: a buff and a keyword help, so a random cast that targets enemies aims this at friends.
+  { kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit"] }, aim: "help" },
 ];
 
 /** The radiant face is the same card at doubled numbers, so one factory carries both. */

@@ -9,10 +9,11 @@
 //    the match rng, so its caster is never asked. Its X is the caster's current mana, at least 1, as
 //    every cast's is. A cast made while it resolves is random too, and the whole chain is capped
 //    (RANDOM_CAST_CHAIN_CAP). The other player's prompts are theirs and are asked as usual.
-//  - a cast that targets enemies when it can (Solarius-Prime's "They target enemies when they can",
-//    the `targetEnemies` enchantment Classic+ #40 Appropriations gives its Books, E39) narrows each
-//    target pick to the enemies among its options when there is one: its declared targets, its Echo
-//    repeats' and the prompts its own text opens for its caster.
+//  - a cast that targets enemies when it can (Solarius-Prime's "Each aims at enemies when it harms
+//    and at your side when it helps", the `targetEnemies` enchantment Classic+ #40 Appropriations
+//    gives its Books, E39) aims each target pick by its declaration (R651): a harmful pick narrows
+//    to the enemies among its options, a helpful one to the friends, when there is one — its declared
+//    targets, its Echo repeats' and the prompts its own text opens for its caster.
 //
 // While such a cast's steps run, its mode sits on `state.castsResolving` (`withCastMode`), which is
 // what `prompts.openPrompt` reads to answer or narrow a prompt. The stack is transient: a step that

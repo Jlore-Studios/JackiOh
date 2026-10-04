@@ -273,7 +273,7 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
   }
 
   it("R388 serves every patch in patches.json, whole, to a caller with no account", async () => {
-    const catalog = await loadCatalog({ version: "v0.2.4" });
+    const catalog = await loadCatalog({ version: "v0.2.5" });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
     expect(patches.length, "patches.json is the shipped history").toBeGreaterThan(0);

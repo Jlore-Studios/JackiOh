@@ -541,10 +541,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the fourteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the fourteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -559,8 +559,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Cleave",
       "Pierce",
       "Windfury",
+      "Deft",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(14);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3775,6 +3776,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {
     provenIn(650, "../../cards/test/versions.test.ts");
+  });
+
+  // Proved by effects-cast.test.ts "R651 …": a harmful pick narrows to enemies, a helpful one to
+  // friends, and Jogg's Box stays fully random.
+  it("R651 a cast that targets enemies aims each target pick by its declaration", () => {
+    provenIn(651, "effects-cast.test.ts");
   });
 });
 

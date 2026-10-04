@@ -1854,11 +1854,19 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   TE
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Deft"
+                  title="Deft"
+                >
+                  DE
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary, Deft"
                 >
                   +
-                  19
+                  20
                 </span>
               </span>
               <span

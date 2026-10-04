@@ -223,6 +223,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // R636, R637: the keyword rules patch (SPEC §6.1).
   Windfury: keyword("Windfury", "Can attack twice each turn"),
   Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
+  // Patch v0.2.5 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
+  Deft: keyword("Deft", "Can attack and switch position in the same turn"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense"),
   "Can't be attacked": status("Can't be attacked", "No attack may target it"),
@@ -315,4 +317,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   "Immune to Spells": "IS",
   Windfury: "WF",
   Temporary: "TE",
+  Deft: "DE",
 };
