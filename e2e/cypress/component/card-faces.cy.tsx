@@ -7,8 +7,9 @@
 //
 //   B15  every catalog card, base and radiant face, as a full CardFace in a 5:7 box 270 px wide
 //        and 170 px wide: `.card-name` and `.card-text` stay inside their own boxes on both axes
-//        (scroll <= client + 1). At 270 px nothing may clamp; at 170 px only a face whose printed
-//        text (base plus radiant clause) runs past 260 characters may carry `data-clamped`, and a
+//        (scroll <= client + 1). At either width only a face whose printed text (base plus
+//        radiant clause) runs past 260 characters may carry `data-clamped` — thirteen powers do
+//        not fit a 270 px box whole at the reading floor any more than a 170 px one — and a
 //        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
 //        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
@@ -45,13 +46,10 @@ const SETTLE_TIMEOUT_MS = 15_000;
 
 /* ----------------------------------------------------------------------------------------- B15 */
 
-type FitBox = { width: number; clampAllowed: boolean };
+type FitBox = { width: number };
 
-/** B15's two widths. At 270 px nothing may clamp; at 170 px only the longest texts may. */
-const FIT_BOXES: readonly FitBox[] = [
-  { width: 270, clampAllowed: false },
-  { width: 170, clampAllowed: true },
-];
+/** B15's two widths. The longest texts may clamp at either; every other face fits whole. */
+const FIT_BOXES: readonly FitBox[] = [{ width: 270 }, { width: 170 }];
 
 const FACES = [
   { label: "base", radiant: false },
@@ -95,6 +93,11 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     problems.push(`${where}: .cf is ${rect.width}x${rect.height}, not ${box.width}x${height}`);
   }
 
+  // The allowance follows the face, not the box: the premise test below pins exactly which
+  // faces are the longest texts, and those may clamp at either width. Every other face must fit
+  // whole at both.
+  const mayClamp = printedLength(def, radiant) > TEXT_TIER_MAX.xl;
+
   for (const selector of [".card-name", ".card-text"]) {
     const el = cf.querySelector<HTMLElement>(selector);
     if (el === null) {
@@ -104,7 +107,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     // A rules box that may clamp and did is cut at a line with an ellipsis, by design: the rest of
     // its text is scrollable overflow it never paints (fit.ts). It must still stay inside the face
     // and print at the reading floor, which is what is checked for it instead.
-    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && box.clampAllowed) {
+    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && mayClamp) {
       const face = cf.getBoundingClientRect();
       const own = el.getBoundingClientRect();
       if (own.bottom > face.bottom + 1 || own.top < face.top - 1) problems.push(`${where}: a clamped .card-text runs off the face`);
@@ -133,7 +136,6 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
   }
 
   const clamped = [...cf.querySelectorAll<HTMLElement>("[data-clamped]")];
-  const mayClamp = box.clampAllowed && printedLength(def, radiant) > TEXT_TIER_MAX.xl;
   if (clamped.length > 0 && !mayClamp) {
     const which = clamped.map((el) => `.${(el.getAttribute("class") ?? "").split(/\s+/).join(".")}`).join(", ");
     problems.push(`${where}: data-clamped on ${which} (printed text is ${printedLength(def, radiant)} characters)`);
@@ -169,7 +171,7 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
 
   for (const box of FIT_BOXES) {
     for (const face of FACES) {
-      const rule = box.clampAllowed ? "only the longest texts may clamp" : "nothing clamps";
+      const rule = "only the longest texts may clamp";
       it(`B15 every ${face.label} face at ${box.width}px wide: name and text within their boxes, ${rule}`, () => {
         cy.mount(<FaceGrid width={box.width} radiant={face.radiant} />);
         cy.get("[data-fit-box] > .cf").should("have.length", DEFS.length);

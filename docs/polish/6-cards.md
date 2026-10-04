@@ -932,9 +932,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   `useFitText` changes nothing without layout (jsdom). In Chrome, for every catalog card and both
   faces, `.card-name` and `.card-text` stay within their boxes, with scroll ≤ client + 1 on both
   axes (Cypress component):
-  - at 270 px wide, no element carries `data-clamped`;
-  - at 170 px wide, only faces whose printed text exceeds 260 characters may carry
-    `data-clamped="true"`, and a clamped rules box stays inside the face at `FIT_FLOOR_PX`.
+  - at either width, only faces whose printed text exceeds 260 characters may carry
+    `data-clamped="true"` (thirteen powers do not fit a 270 px box whole at the reading floor
+    any more than a 170 px one), and a clamped rules box stays inside the face at `FIT_FLOOR_PX`.
   - Since the integration QA, the rules text has a reading floor (`FIT_FLOOR_PX`, 9 px): a text
     that would need less first drops its tier's head start, then takes the long layout
     (`data-long` on the face: a shorter art window and a taller rules box), and only then clamps at
@@ -1261,9 +1261,10 @@ since §10.10 is task 1's and this task adds no event animation.
 - **Container units and `aspect-ratio`.** These need Chrome 105+, Safari 16+ or Firefox 110+. The
   Cypress Chrome and Electron runners qualify; older browsers get unscaled but unclipped text. The
   component specs are the only proof of fit and overflow, because jsdom has no layout.
-- **The longest rules texts** (core-093, core-095, core-098 at 341–400 characters, and core-051's
-  radiant face at 269) shrank to about 6 px at grid size; the reading floor (B15) now holds them at
-  9 px, in the long layout, clamped where even that will not fit. B15 allows them to clamp at 170 px wide.
+- **The longest rules texts** (past 260 characters — the premise test in `card-faces.cy.tsx`
+  pins the exact faces, Heroic Power's thirteen powers the longest by far) shrank to about 6 px
+  at grid size; the reading floor (B15) now holds them at 9 px, in the long layout, clamped where
+  even that will not fit. B15 allows them to clamp at either width.
   The detail view (both faces at about 260 px) and the hover preview (380 px tall) must show them
   in full. If they don't, raise `PREVIEW_HEIGHT_PX` rather than lowering `FIT_MIN`.
 - **An intrinsic width of zero.** An element with size containment, or only absolutely positioned
