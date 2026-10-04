@@ -376,18 +376,18 @@
       "stop_requested": false
     },
     "108": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "devin",
       "queued_at": "2026-10-03T04:14:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37167157273",
-      "started_at": "2026-10-04T01:11:21Z",
+      "run_id": "37168052374",
+      "started_at": "2026-10-04T01:30:52Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -1598,9 +1598,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T01:27:59Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37167870976",
-    "what": "revise #144 on agy"
+    "at": "2026-10-04T01:30:52Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37168052374",
+    "what": "build #108 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T01:30:20Z",
