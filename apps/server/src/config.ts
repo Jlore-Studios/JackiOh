@@ -364,11 +364,6 @@ export const RANK_CONVERGENCE_GAP_PIPS = 3;
 export const RANK_CONVERGENCE_PIPS = 1;
 /** R608: Jlorious is the top this-many Mythic Grape players by hidden rating. */
 export const JLORIOUS_SIZE = 100;
-/**
- * R612: the most players the leaderboard lists in each Grape tier below Jlorious. The tier's full
- * count is always given, and the viewer's own row is always listed.
- */
-export const LEADERBOARD_TIER_ROWS_MAX = 50;
 /** R612: characters in a player's public tag, from the invite-code alphabet (30 bits). */
 export const PLAYER_TAG_LENGTH = 6;
 
@@ -614,7 +609,6 @@ export const SERVER_CONFIG = Object.freeze({
   RANK_CONVERGENCE_GAP_PIPS,
   RANK_CONVERGENCE_PIPS,
   JLORIOUS_SIZE,
-  LEADERBOARD_TIER_ROWS_MAX,
   PLAYER_TAG_LENGTH,
   SEASON_RESET_STRENGTH,
   SEASON_RESET_DEVIATION_BOOST,

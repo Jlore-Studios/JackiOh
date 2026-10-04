@@ -19,7 +19,6 @@
 
 import type { GameOverReason, PlayerId } from "@jackioh/shared";
 
-import { LEADERBOARD_TIER_ROWS_MAX } from "../config";
 import { loadCurrentPatch } from "./catalog";
 import { rateGame, START_GLICKO, type Glicko, type Score } from "../ranked/glicko2";
 import {
@@ -369,8 +368,7 @@ export type LeaderboardBody = {
   jlorious: { position: number; tag: string; you: boolean }[];
   /**
    * Every other placed player, grouped by Grape tier, highest tier first and, inside a tier, highest
-   * rank first. `count` is the whole tier; `players` the first `LEADERBOARD_TIER_ROWS_MAX`, plus the
-   * caller's own row wherever it falls.
+   * rank first. `count` is the tier's size; `players` is all of it (R612).
    */
   tiers: { tier: GrapeTier; count: number; players: LeaderboardRow[] }[];
   /** Players still playing their placements. */
@@ -404,11 +402,10 @@ export async function leaderboard(deps: ServerDeps, viewerId: string): Promise<L
     jlorious: jlorious.map((profileId, index) => ({ position: index + 1, tag: playerTag(profileId), you: profileId === viewerId })),
     tiers: [...GRAPE_TIERS].reverse().map((tier) => {
       const rows = (groups.get(tier) ?? []).sort((a, b) => b.ladder - a.ladder || (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0));
-      const shown = rows.filter((row, index) => index < LEADERBOARD_TIER_ROWS_MAX || row.you);
       return {
         tier,
         count: rows.length,
-        players: shown.map((row) => {
+        players: rows.map((row) => {
           const place = placeOf(row.ladder);
           return { tag: row.tag, division: place.division, pips: place.pips, you: row.you };
         }),
