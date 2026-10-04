@@ -1980,15 +1980,19 @@
         {
           "at": "2026-10-04T02:28:20Z",
           "minutes": 29.3
+        },
+        {
+          "at": "2026-10-04T03:22:52Z",
+          "minutes": 41.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T06:40:00Z",
-          "utilization": 0.36
+          "utilization": 0.93
         },
-        "observed_at": "2026-10-04T02:28:20Z",
-        "status": "allowed"
+        "observed_at": "2026-10-04T03:22:52Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
