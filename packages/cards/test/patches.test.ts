@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CATALOG, CATALOG_VERSION } from "../src/catalog-data";
-import { INDEX_JSON, buildIndex, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
+import { INDEX_JSON, buildIndex, changedFields, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
 import { versionsAtSites } from "../scripts/patch";
 
 const PATCHES = readPatches();
@@ -127,11 +127,13 @@ describe("R388 card patch history (B4.2)", () => {
     expect(plague).toHaveLength(17);
     expect(plague.every((id) => JSON.stringify(fieldsOf(id)) === JSON.stringify(["tags"]))).toBe(true);
     // The mechanics: Exile's threshold, Joro's Spell-only text, Blade Storm's Whirlwind cast and
-    // refs, Adaptive Growth's numbers, Chaos Machine's other-card text.
-    expect(fieldsOf("classic-010")).toEqual(["params"]);
+    // refs, Adaptive Growth's numbers, Chaos Machine's other-card text. A face counts as changed
+    // when its printed words move, even when only a param's value moved (Exile's base face,
+    // Adaptive Growth's Radiant face).
+    expect(fieldsOf("classic-010")).toEqual(["base.text", "params"]);
     expect(fieldsOf("classic-033")).toEqual(["base.text", "radiant.text"]);
     expect(fieldsOf("classicplus-032-3")).toEqual(["base.text", "refs"]);
-    expect(fieldsOf("classicplus-050")).toEqual(["base.text", "loc", "params"]);
+    expect(fieldsOf("classicplus-050")).toEqual(["base.text", "loc", "params", "radiant.text"]);
     expect(fieldsOf("classicplus-070")).toEqual(["base.text", "loc", "radiant.text"]);
     const before = readSnapshot("v0.2.4");
     const after = readSnapshot("v0.2.5");
@@ -143,6 +145,20 @@ describe("R388 card patch history (B4.2)", () => {
     expect(param(after, "classic-010", "threshold")).toMatchObject({ base: 2, radiant: 3 });
     expect(param(before, "classicplus-050", "debuff")).toMatchObject({ base: 4, radiant: 4 });
     expect(param(after, "classicplus-050", "debuff")).toMatchObject({ base: 2, radiant: 3 });
+  });
+
+  it("R388 changedFields compares a face's text as it prints, its params filled in", () => {
+    const face = (threshold: number, tail: string): Record<string, unknown> => ({
+      params: [{ key: "threshold", base: threshold, radiant: 3 }],
+      base: { keywords: [], text: `Counter a ({threshold}) Cost or less card. ${tail}` },
+      radiant: { keywords: [], text: "No placeholder here." },
+    });
+    // Only the value moved: the template is untouched, but the printed base face is reworded.
+    expect(changedFields(face(1, ""), face(2, ""))).toEqual(["params", "base.text"]);
+    // The template moved: the raw and the printed faces differ together.
+    expect(changedFields(face(1, "Draw 1."), face(1, "Draw 2."))).toEqual(["base.text"]);
+    // Nothing moved: no fields.
+    expect(changedFields(face(1, ""), face(1, ""))).toEqual([]);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

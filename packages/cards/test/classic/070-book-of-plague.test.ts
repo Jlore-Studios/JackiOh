@@ -61,10 +61,10 @@ function board(radiantFace = false): Scenario {
 }
 
 describe("C #70 Book of Plague", () => {
-  it("is a Spell tagged Book with one number, and one script on both faces", () => {
+  it("is a Spell tagged Book and Plague with one number, and one script on both faces", () => {
     expect(def.id).toBe(BOOK);
     expect(def.type).toBe("Spell");
-    expect(def.tags).toEqual(["Book"]);
+    expect(def.tags).toEqual(["Book", "Plague"]);
     expect(def.params).toEqual([{ key: "tokens", base: 5, radiant: 10, better: "up", step: 1, min: 1 }]);
     expect(radiant).toBe(base);
   });
