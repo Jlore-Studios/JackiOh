@@ -1008,7 +1008,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(78, "rulings-b.test.ts", "statecheck.test.ts", "effects-move.test.ts");
   });
 
-  // M7 owns apps/server/src/config.ts: the server test proves the clocks, the Elo and the room codes.
+  // M7 owns apps/server/src/config.ts: the server test proves the clocks, the rating and the room codes.
   // Proved by rulings-b.test.ts "R79 answers only the timed-out player's prompt, loses on a disconnect, draws
   // at the ceiling, and leaves the clocks to the server".
   it("R79 leaves the match-lifecycle defaults to the server config", () => {
@@ -1280,7 +1280,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Proved by 03_match_lifecycle.sql "### R112: a reaper-resolved ceiling draw records turns 0 and
   // moves no rating ###"; results.test.ts "resolves a match past its ceiling as a draw and leaves
   // both ratings unchanged (R112)", "match-ceiling: an actor-resolved ceiling is a draw with the
-  // ordinary Elo move (R112)".
+  // ordinary rating move (R112)".
   it("R112 has the reaper resolve a stuck match itself, recording turns 0 and no rating move", () => {
     provenIn(112, SERVER_SQL, "../../../apps/server/test/api/results.test.ts");
   });

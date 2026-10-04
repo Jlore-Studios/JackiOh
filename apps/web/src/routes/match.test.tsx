@@ -236,6 +236,7 @@ describe("the series banner on a series game (R259)", () => {
         pickDeadline: null,
         now: 0,
         currentMatchId: over ? null : "m-1",
+        ranked: true,
         you: { seat: "p1", wins: over ? 1 : 0, trioName: "Main trio", decks, pick: null, autoPick: false },
         opponent: { wins: 0, decks: decks.map(({ slot }) => ({ slot, won: false })), picked: false },
         games: [],

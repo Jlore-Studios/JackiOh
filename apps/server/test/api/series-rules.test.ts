@@ -631,6 +631,7 @@ describe("R336 — what each side sees", () => {
         "now",
         "opponent",
         "pickDeadline",
+        "ranked",
         "result",
         "status",
         "winsNeeded",
@@ -653,6 +654,7 @@ describe("R336 — what each side sees", () => {
       now: NOW,
       currentMatchId: null,
       pickDeadline: null,
+      ranked: true,
     });
   });
 });
@@ -746,6 +748,11 @@ describe("R262 — how a series is rated", () => {
     expect(JSON.stringify(viewOf(rated, ALICE))).not.toMatch(/1180\.5|1200|1019\.5/);
     // R604: a room's series is unranked, and its row records no move.
     expect(viewOf(rateSeries({ ...decided, ranked: false }, null), BOB).result).toMatchObject({ ranked: false });
+    // The flag rides on the view from the start, not only in `result`, so a mid-series screen
+    // can say whether a forfeit moves the rating.
+    expect(viewOf(fresh(), BOB).ranked).toBe(true);
+    expect(viewOf({ ...fresh(), ranked: false }, BOB).ranked).toBe(false);
+    expect(viewOf({ ...fresh(), ranked: undefined }, BOB).ranked).toBe(false);
   });
 });
 

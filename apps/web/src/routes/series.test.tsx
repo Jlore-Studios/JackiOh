@@ -42,6 +42,7 @@ function view(overrides: Partial<SeriesView> = {}): SeriesView {
     pickDeadline: SERVER_NOW + SERIES_PICK_SECONDS * MS_PER_SECOND,
     now: SERVER_NOW,
     currentMatchId: null,
+    ranked: true,
     you: {
       seat: "p1",
       wins: 0,
@@ -291,6 +292,8 @@ describe("the series screen", () => {
 
     fireEvent.click(screen.getByTestId(seriesTestid.forfeit));
     expect(screen.getByTestId(seriesTestid.forfeitConfirm)).toBeInTheDocument();
+    // R604: a ranked series' forfeit is a rated loss, and the confirm says so.
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("your rating moves as for a loss");
     fireEvent.click(screen.getByTestId(seriesTestid.forfeitCancel));
     expect(screen.queryByTestId(seriesTestid.forfeitConfirm)).toBeNull();
     expect(vi.mocked(forfeitSeries)).not.toHaveBeenCalled();
@@ -302,6 +305,14 @@ describe("the series screen", () => {
     expect(result).toHaveAttribute("data-outcome", "loss");
     expect(result).toHaveTextContent("You forfeited the series.");
     expect(screen.queryByTestId(seriesTestid.forfeit)).toBeNull();
+    cleanup();
+
+    // R604: a room's series is unranked, so the confirm makes no rating claim.
+    vi.mocked(getSeries).mockResolvedValue(view({ ranked: false }));
+    await renderSeries();
+    fireEvent.click(screen.getByTestId(seriesTestid.forfeit));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Your opponent wins it.");
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent("rating");
     cleanup();
 
     // During a game there is no forfeit: the game is conceded on the board.

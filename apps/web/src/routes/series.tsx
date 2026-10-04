@@ -421,7 +421,11 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
             <section className="lobby-card play-panel series-panel" aria-label="Leave the series">
               {confirming ? (
                 <div className="row" role="alertdialog" aria-label="Forfeit the series?">
-                  <p>Forfeit the series? Your opponent wins it, and your rating moves as for a loss.</p>
+                  <p>
+                    {view.ranked
+                      ? "Forfeit the series? Your opponent wins it, and your rating moves as for a loss."
+                      : "Forfeit the series? Your opponent wins it."}
+                  </p>
                   <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
                     Forfeit
                   </button>

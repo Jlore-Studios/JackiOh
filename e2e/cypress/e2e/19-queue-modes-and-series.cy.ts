@@ -166,6 +166,7 @@ type SeriesView = {
   winsNeeded: number;
   maxGames: number;
   currentMatchId: string | null;
+  ranked: boolean;
   you: {
     seat: "p1" | "p2";
     wins: number;

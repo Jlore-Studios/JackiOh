@@ -1536,7 +1536,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(viewFor(clean, "p1", 75_000).clockMs).toBe(75_000);
     expect(viewFor(clean, "p1").clockMs).toBeNull();
     expect(Object.keys(engineConfig).filter((key) => SERVER_CONSTANTS.includes(key))).toEqual([]);
-    // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and Elo values.
+    // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and rating values.
   });
 
   it("R80 caps a library at LIBRARY_CAP: a new card is never created and an existing one lands in the graveyard", () => {

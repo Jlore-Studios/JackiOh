@@ -27,6 +27,7 @@ function series(overrides: Partial<SeriesView> = {}): SeriesView {
     pickDeadline: null,
     now: 0,
     currentMatchId: MATCH_ID,
+    ranked: true,
     you: {
       seat: "p1",
       wins: 0,

@@ -462,9 +462,10 @@ naming where to get each, and never logs a secret value — not even truncated. 
 
 Two things that are **not** env vars, deliberately:
 
-- **R79's lifecycle values** — turn clock, prompt clock, grace, ceiling, room-code length, Elo K and
-  start. They are gameplay, so they are named exports in `apps/server/src/config.ts` and change only
-  with a code change and a review. BUILD §2 requires exactly that.
+- **R79's lifecycle values and §9.12's ranked numbers** — turn clock, prompt clock, grace,
+  ceiling, room-code length, the Glicko-2 start and the ladder's tier and season constants
+  (R603–R609). They are gameplay, so they are named exports in `apps/server/src/config.ts` and
+  change only with a code change and a review. BUILD §2 requires exactly that.
 - **The code pepper in Postgres.** Hashing happens in the server, so the pepper never reaches the
   database and `invite_codes` only ever holds `code_hash`. A database dump therefore does not yield a
   single redeemable code.
@@ -637,8 +638,9 @@ step that is not yet implemented says which BUILD task delivers it.
     views. **This is the milestone: a working room-code match.**
 15. **Prove the log is the truth.** Kill the server mid-match and restart it: both players reconnect
     to the same `viewFor`, rebuilt by folding `(seed, log)` (BUILD M6-T4 acceptance).
-16. **Finish the match** and confirm one `results` row, both ratings moved by the Elo update
-    (K = 32 from 1000, R79), both `profiles.current_match_id` cleared and both players queue-eligible
+16. **Finish the match** and confirm one `results` row, both ratings recorded unchanged (a
+    room-code match is unranked, R604; a queue-paired one would show them moved by the Glicko-2
+    update, R603), both `profiles.current_match_id` cleared and both players queue-eligible
     again (BUILD M7-T2).
 
 ---

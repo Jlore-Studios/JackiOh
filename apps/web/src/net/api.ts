@@ -568,6 +568,11 @@ export type SeriesView = {
   now: number;
   /** The match to open while `status` is `playing`. */
   currentMatchId: string | null;
+  /**
+   * R604: the queue paired this series, so it is rated; a room's is not. Known from the start —
+   * the player chose the mode — so it rides on the view, not only on `result`.
+   */
+  ranked: boolean;
   you: {
     seat: "p1" | "p2";
     wins: number;

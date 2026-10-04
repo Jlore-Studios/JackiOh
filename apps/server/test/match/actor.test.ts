@@ -1275,7 +1275,7 @@ describe("the concurrent mulligan through the actor (R265, R266, R268)", () => {
  * practice play them with no server at all. The actor only relays: an offer is an action like any
  * other, its refusal is the reducer's sentence, and an accepted draw is one more ending for the
  * results writer. So these run the real engine — the fake's `offerDraw` is unconditional — and the
- * real results writer over the in-memory store, so "rated 0.5 each" is the real Elo move.
+ * real results writer over the in-memory store, so "rated 0.5 each" is the real rating move.
  */
 describe("draw offers and concede through the actor (R36, R269, §9.5)", () => {
   type DrawHarness = Harness & {
