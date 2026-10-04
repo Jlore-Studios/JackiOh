@@ -2062,6 +2062,7 @@
     "219": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 1,
       "forced": false,
       "handoff": {
