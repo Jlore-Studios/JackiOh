@@ -774,9 +774,7 @@
       "source": "",
       "started_at": "2026-10-04T22:25:40Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5984801478"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
