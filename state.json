@@ -526,6 +526,7 @@
       "planned_tier": "medium",
       "pr": 173,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-03T23:13:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37165316691",
