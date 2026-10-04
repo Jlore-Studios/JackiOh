@@ -1996,8 +1996,10 @@
     "what": "plan #188 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-04T06:37:49Z",
-    "notes": [],
+    "at": "2026-10-04T06:48:19Z",
+    "notes": [
+      "started a night run, as a lane was free: #168 (medium) is queued to review, for `agy` (another run waits for `claude-1`)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
