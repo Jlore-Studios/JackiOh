@@ -629,6 +629,7 @@
     "141": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-04T07:21:04Z",
       "forced": false,
