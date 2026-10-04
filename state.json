@@ -1607,7 +1607,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T08:57:23Z",
+      "feedback_since": "2026-10-04T09:20:57Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T09:08:03Z",
@@ -1648,7 +1648,7 @@
           "where": "checks"
         }
       ],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-04T09:20:57Z",
       "stop_requested": false,
       "taken_asks": [],
