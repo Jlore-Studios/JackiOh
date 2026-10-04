@@ -1731,7 +1731,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-04T16:16:41Z",
+      "queued_at": "2026-10-04T16:27:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37214822425",
       "self_check_findings": [
@@ -1754,7 +1754,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-04T15:56:27Z",
       "stop_requested": false,
       "taken_asks": [],
