@@ -2214,10 +2214,14 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [],
+        "rejections": [
+          "cognition"
+        ],
         "reviews": [],
         "sha": "6f0f24d50bb3cb5767693eded086c3626014aeee",
-        "tiers": {}
+        "tiers": {
+          "cognition": "weak"
+        }
       }
     },
     "225": {
