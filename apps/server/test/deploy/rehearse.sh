@@ -15,8 +15,10 @@
 #      TRUSTED_PROXY_HOPS), read from the file so the rehearsal cannot drift from the deploy. The
 #      secrets are placeholders: the server checks their shape at boot, and nothing here calls out.
 #   3. The readiness probe Render uses, GET /api/catalog: it must answer within READY_SECONDS with
-#      render.yaml's catalog version, the server's memory must fit MEMORY_LIMIT_MB (the free
-#      instance's 512 MB, less headroom), and a second boot must migrate nothing.
+#      render.yaml's catalog version and, in its x-deployed-commit header, the commit Render hands
+#      the service in RENDER_GIT_COMMIT (deploy-watch.yml compares that header with each push), the
+#      server's memory must fit MEMORY_LIMIT_MB (the free instance's 512 MB, less headroom), and a
+#      second boot must migrate nothing.
 #
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
@@ -28,6 +30,8 @@ PORT_UNDER_TEST=18787
 READY_SECONDS=120
 MEMORY_LIMIT_MB=450
 CONTAINER=jackioh-pg-deploy
+# What Render sets RENDER_GIT_COMMIT to is a full git SHA; this one is made up.
+REHEARSAL_COMMIT=0123456789abcdef0123456789abcdef01234567
 
 PGHOST_=${REHEARSAL_PGHOST:-}
 PGPORT_=${REHEARSAL_PGPORT:-5432}
@@ -105,6 +109,7 @@ start_server() {
     export NODE_ENV="$(yaml_value NODE_ENV)"
     export TRUSTED_PROXY_HOPS="$(yaml_value TRUSTED_PROXY_HOPS)"
     export PORT="$PORT_UNDER_TEST"
+    export RENDER_GIT_COMMIT="$REHEARSAL_COMMIT"
     export SUPABASE_URL=https://rehearsal.supabase.co
     export SUPABASE_SECRET_KEY=rehearsal-placeholder
     export CODE_PEPPER=rehearsal-placeholder-pepper-of-a-length-the-server-accepts-0123456789
@@ -137,7 +142,7 @@ stop_server() {
 # Waits for /api/catalog, checks its version and the server's memory. $1 is the boot's log.
 check_boot() {
   i=0
-  until curl -fs -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; do
+  until curl -fs -D "$1.headers" -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; do
     i=$((i + 1))
     if ! kill -0 "$SERVER_PID" 2>/dev/null || [ "$i" -ge "$READY_SECONDS" ]; then
       echo "FAIL: /api/catalog never answered (the start command exited, or ${READY_SECONDS}s passed)"
@@ -150,6 +155,12 @@ check_boot() {
   echo "ready after ${i}s; serving catalog $served"
   if [ "${served%% *}" != "$CATALOG_VERSION" ]; then
     echo "FAIL: serving catalog ${served%% *}, render.yaml says $CATALOG_VERSION"
+    exit 1
+  fi
+  reported=$(tr -d '\r' < "$1.headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print $2; exit }')
+  echo "reporting commit ${reported:-(none)}"
+  if [ "$reported" != "$REHEARSAL_COMMIT" ]; then
+    echo "FAIL: x-deployed-commit is ${reported:-missing}, RENDER_GIT_COMMIT was $REHEARSAL_COMMIT"
     exit 1
   fi
   rss_kb=0
