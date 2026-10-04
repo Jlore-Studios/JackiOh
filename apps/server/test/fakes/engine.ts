@@ -498,6 +498,7 @@ export function createFakeEngine(options: FakeEngineOptions = {}): EnginePort {
         opening: opening?.[player] ?? [],
         drawn: [],
         played: [...fake.played[player]],
+        ...(fake.played[player].length > 0 ? { playedTurns: fake.played[player].map(() => Math.max(1, fake.turn)) } : {}),
       });
       return {
         first: "p1",

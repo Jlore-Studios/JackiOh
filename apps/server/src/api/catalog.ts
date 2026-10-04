@@ -197,6 +197,21 @@ export async function loadCurrentPatch(url: URL = new URL("patches.json", patche
   return version;
 }
 
+/** All patch versions from patches.json in release order. */
+export async function loadPatchVersions(url: URL = new URL("patches.json", patchesUrl())): Promise<string[]> {
+  try {
+    const parsed = JSON.parse(await readFile(url, "utf8"));
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((entry) => (typeof entry === "object" && entry !== null && typeof (entry as { version?: unknown }).version === "string" ? (entry as { version: string }).version : ""))
+        .filter((v) => v.length > 0);
+    }
+  } catch {
+    // fallback
+  }
+  return [];
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------

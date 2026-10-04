@@ -57,6 +57,8 @@ const bot = (n, body) => st.issues.find((i) => i.number === n).comments.push({ i
 const issue = (n) => st.issues.find((i) => i.number === Number(n));
 st.log.push(argv.join(" "));
 const [a, b] = pos;
+// Which token each call went out with, and what it was: "pr merge", "issue close", "api DELETE".
+st.tokens.push(process.env.GH_TOKEN + " " + a + " " + (a === "api" ? (f("-X") || "GET") : b));
 if (a === "run" && b === "list") {
   const sha = f("--commit") !== undefined ? (st.green.includes(f("--commit")) ? f("--commit") : "") : st.newestGreen;
   out(sha ? [{ headSha: sha }] : []);
@@ -125,6 +127,7 @@ interface Gh {
   newestGreen: string;
   failMerges: number;
   log: string[];
+  tokens: string[];
 }
 
 // --- a world: origin, a working copy, the stand-in -------------------------------------------
@@ -183,7 +186,7 @@ function world(): World {
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, log: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
@@ -648,6 +651,32 @@ describe("what stops it", () => {
     expect(issue(stuck, 1).state).toBe("open");
   });
 
+  it("moves production with PROMOTE_TOKEN, which may update workflows, and keeps everything else on GH_TOKEN", () => {
+    // GitHub refuses the Actions token a ref update that carries a change to .github/workflows, so
+    // the push, the pull request, its merge and the branch's deletion go out as the bot; the
+    // countdown issue stays on the Actions token, whose writes start no workflow.
+    const w = counting();
+    edit(w, (s) => {
+      s.tokens = [];
+    });
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
+    expect(gh(w).prs[0]?.merged).toBe(true);
+    const calls = (token: string): string[] =>
+      gh(w).tokens.filter((c) => c.startsWith(`${token} `)).map((c) => c.slice(token.length + 1));
+    expect(calls("bot")).toEqual(["pr list", "pr create", "pr merge", "api DELETE"]);
+    expect(calls("actions")).toEqual(expect.arrayContaining(["run list", "label create", "issue close", "issue create"]));
+    expect(calls("actions").filter((c) => c.startsWith("pr ") || c === "api DELETE")).toEqual([]);
+
+    // Without one, everything goes out as GH_TOKEN.
+    const plain = counting();
+    edit(plain, (s) => {
+      s.tokens = [];
+    });
+    ok(run(plain, "schedule", "2026-10-05T15:07:00Z"));
+    expect(gh(plain).tokens.filter((c) => !c.startsWith("x "))).toEqual([]);
+    expect(gh(plain).tokens).toContain("x pr merge");
+  });
+
   it("never moves production backwards: promoting a commit it already has is a no-op", () => {
     const w = counting();
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
@@ -681,6 +710,12 @@ describe("the workflow", () => {
   it("holds the concurrency group on the job, so a comment that wakes nothing never queues", () => {
     expect(WORKFLOW).not.toMatch(/^concurrency:/mu);
     expect(WORKFLOW).toMatch(/^ {4}concurrency:\n {6}group: promote-production\n {6}cancel-in-progress: false$/mu);
+  });
+
+  it("checks out, and moves production, with the bot's token, which has the workflow scope", () => {
+    const token = "${{ secrets.BOT_GITHUB_TOKEN || github.token }}";
+    expect(WORKFLOW).toContain(`          fetch-depth: 0\n          token: ${token}\n`);
+    expect(WORKFLOW).toContain(`          GH_TOKEN: \${{ github.token }}\n          PROMOTE_TOKEN: ${token}\n`);
   });
 
   it("asks for the permissions the script uses, and no more", () => {

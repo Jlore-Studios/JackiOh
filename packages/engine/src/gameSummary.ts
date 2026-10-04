@@ -29,6 +29,8 @@ type Reading = {
   opening: Record<PlayerId, string[]> | null;
   drawn: Record<PlayerId, string[]>;
   played: Record<PlayerId, string[]>;
+  playedTurns: Record<PlayerId, number[]>;
+  currentTurn: number;
 };
 
 /**
@@ -48,7 +50,7 @@ function handsOf(state: GameState, following?: Hands): Hands {
   return { p1: hand("p1"), p2: hand("p2") };
 }
 
-function perSeat(): Record<PlayerId, string[]> {
+function perSeat<T = string>(): Record<PlayerId, T[]> {
   return { p1: [], p2: [] };
 }
 
@@ -63,6 +65,7 @@ function read(reading: Reading, events: readonly GameEvent[]): void {
   events.forEach((event, at) => {
     switch (event.type) {
       case "turnStarted":
+        reading.currentTurn = event.turn;
         // §2.1: the mulligans have resolved and The Coin is dealt; the first turn's draw comes next.
         if (reading.opening === null) {
           reading.first = event.player;
@@ -88,6 +91,7 @@ function read(reading: Reading, events: readonly GameEvent[]): void {
         const hand = hands[event.player];
         if (!hand.has(id)) return;
         reading.played[event.player].push(event.defId);
+        reading.playedTurns[event.player].push(reading.currentTurn);
         hand.delete(id);
         return;
       }
@@ -116,12 +120,16 @@ function read(reading: Reading, events: readonly GameEvent[]): void {
 }
 
 function seatSummary(reading: Reading, decks: ReplayInput["decks"], player: PlayerId, seat: number): SeatSummary {
-  return {
+  const summary: SeatSummary = {
     deck: [...(decks[seat] ?? [])],
     opening: reading.opening?.[player] ?? [],
     drawn: reading.drawn[player],
     played: reading.played[player],
   };
+  if (reading.playedTurns[player].length > 0) {
+    summary.playedTurns = reading.playedTurns[player];
+  }
+  return summary;
 }
 
 /**
@@ -136,7 +144,15 @@ export function summarizeGame(input: ReplayInput): GameSummary | null {
     ...(input.catalog === undefined ? {} : { catalog: input.catalog }),
     ...(input.handicaps === undefined ? {} : { handicaps: input.handicaps }),
   });
-  const reading: Reading = { hands: handsOf(start), first: null, opening: null, drawn: perSeat(), played: perSeat() };
+  const reading: Reading = {
+    hands: handsOf(start),
+    first: null,
+    opening: null,
+    drawn: perSeat(),
+    played: perSeat(),
+    playedTurns: perSeat<number>(),
+    currentTurn: 1,
+  };
 
   const begun = beginGame(start);
   read(reading, begun.events);

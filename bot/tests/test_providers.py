@@ -273,7 +273,7 @@ class MatchingTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
         self.assertEqual(planned["seats"]["self_check"], True)
-        self.assertIsNone(planned["seats"]["review"])  # weak never reviews
+        self.assertIsNone(planned["seats"]["review"])  # weak reviews only in a review run
 
     def test_devin_is_switched_off_from_october_15(self):
         """`off_from`: from that day (Central time) Devin takes no new work, forced or not, and

@@ -379,7 +379,7 @@ describe("B3.1 Animated Field Spells and 'Animated on your turn' (R383)", () => 
     expect(isReserved(state, slot("p2", "backrow", 1))).toBe(false);
   });
 
-  it("R654 an Animated card with no printed stats fights as a 0/1", () => {
+  it("R655 an Animated card with no printed stats fights as a 0/1", () => {
     const state = playing("animated-wisp");
     const sink = sinkFor(state);
     // Printed Animated, no stats on either face: a 0/1, not a 0/0 dead at the state check.

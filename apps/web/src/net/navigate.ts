@@ -94,6 +94,8 @@ export const paths = {
   patchNotes: "/patch-notes",
   /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */
   almanac: "/almanac",
+  /** R654: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
+  stats: "/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

@@ -138,10 +138,10 @@ export const RANDOM_KEYWORD_POOL = [
  */
 export const RADIANT_FALLBACK_FACTOR = 2;
 
-/** R654: an Animated card with no printed stats fights with this attack. */
+/** R655: an Animated card with no printed stats fights with this attack. */
 export const ANIMATED_FALLBACK_ATTACK = 0;
 
-/** R654: an Animated card with no printed stats fights with this health. */
+/** R655: an Animated card with no printed stats fights with this health. */
 export const ANIMATED_FALLBACK_HEALTH = 1;
 
 /**
