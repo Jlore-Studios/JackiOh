@@ -597,12 +597,12 @@
      Close a row of its own. Here the card takes the sheet's full height, and the glossary and
      Close stand beside it. */
   /* The right column holds, top down, whichever the face has of its states (StateNotes.tsx), its
-     printed text, its glossary, its lines of code and Close: each is placed in column 2 and flows
+     printed text, its glossary, its flavour line (R658), its lines of code and Close: each is placed in column 2 and flows
      into the next free row, the face spans every row, and the last row takes the slack. */
   .inspect-sheet {
     display: grid;
     grid-template-columns: auto minmax(0, 420px);
-    grid-template-rows: auto repeat(6, auto) 1fr;
+    grid-template-rows: auto repeat(7, auto) 1fr;
     justify-content: center;
     align-items: start;
     gap: 12px 16px;
@@ -628,6 +628,7 @@
   .inspect-sheet .inspect-states,
   .inspect-sheet .inspect-printed,
   .inspect-sheet .inspect-glossary,
+  .inspect-sheet .inspect-flavour,
   .inspect-sheet .inspect-loc {
     grid-column: 2;
     max-width: none;
@@ -827,6 +828,43 @@
   flex: none;
 }
 
+/* ---- Flavour (R658): the card's flavour line and artist credit, quiet under the rules ---------- */
+
+.inspect-flavour {
+  flex: none;
+  box-sizing: border-box;
+  margin: 0;
+  text-align: left;
+}
+
+.inspect-flavour-text {
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.inspect-artist {
+  margin: 4px 0 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Over the board, a panel of its own as the glossary has, so the line reads on any background. */
+.inspect-hover .inspect-flavour,
+.inspect-sheet .inspect-flavour {
+  padding: 6px 12px;
+  background: rgba(11, 13, 19, 0.94);
+  border: 1px solid var(--line-bright, #454d66);
+  border-radius: 10px;
+}
+
+.inspect-hover .inspect-flavour {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
 /* Over the board, a panel of its own as the glossary has, so the line reads on any background. */
 .inspect-hover .inspect-loc,
 .inspect-sheet .inspect-loc {
@@ -847,6 +885,7 @@
 
 .inspect-sheet .inspect-tuned,
 .inspect-sheet .inspect-states,
+.inspect-sheet .inspect-flavour,
 .inspect-sheet .inspect-loc {
   flex: 1 1 220px;
   max-width: 420px;

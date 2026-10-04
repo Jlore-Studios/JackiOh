@@ -15,7 +15,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
-import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { CARD_FLAVOUR } from "../cards/flavour.ts";
+import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import {
@@ -191,6 +192,16 @@ describe("R630 the almanac's browse pane", () => {
 
     fireEvent.contextMenu(screen.getByTestId(poolCardId(unit.id)));
     expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("data-card", unit.id);
+  });
+
+  it("R658 a card's detail shows its flavour line from the sidecar, a token's too", () => {
+    render(<AlmanacRoute />);
+    for (const id of ["core-001", "core-t-sheep"]) {
+      fireEvent.click(screen.getByTestId(poolCardId(id)));
+      const flavour = within(screen.getByTestId(INSPECT_DETAIL)).getByTestId(INSPECT_FLAVOUR);
+      expect(flavour).toHaveTextContent(CARD_FLAVOUR[id]?.flavour ?? "missing");
+      closeInspect();
+    }
   });
 
   it("R630 a token's detail says it is a token and never goes in a deck", () => {

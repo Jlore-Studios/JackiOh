@@ -33,7 +33,10 @@ src/
                         rolled power, R243, what a formula comes to now, R280) and inPlay.ts's words (#98's
                         power, ??? for Call to Chaos); with no `inPlay` it is the collection's printed card.
                         The inspect overlays in play show the printed text beside a face wherever the two
-                        differ (inspect/Printed.tsx). RulesText draws every face's text with its marks: a
+                        differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
+                        `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
+                        R658). Real art follows art/ART.md, which art/convention.test.ts holds
+                        public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
                         "Mentions" column is inspect/References.tsx), and "{n}" values (R280). A card's marks

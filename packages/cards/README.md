@@ -591,3 +591,16 @@ Patch v0.2.0's changes to Core, beside the two new sets:
 The same patch rewrote every text in the house style (R432) and opened every Core pool that names no
 set to all three sets (R380): #7, #54, #57, #59, #67, #83, #95, #98 and #99 draw from every set, while
 #82 KY's Trial and #97 Zephyrs name Core and keep to it.
+
+## 9. Flavour text and artist credits (R658)
+
+`flavour.json` is a sidecar beside the catalog, keyed by catalog id: `{ "flavour"?: string,
+"artist"?: string }` per card and token. It is words about a card, not the card, so it is not card
+data: an edit to it is not a patch, claims no pending fragment, and `patches check` and
+`validate:catalog` never read it. The designer edits it freely. `src/flavour.ts` exports it as
+`FLAVOUR` with its caps (`FLAVOUR_MAX_CHARS`, `ARTIST_MAX_CHARS`), and `test/flavour.test.ts` holds
+it to them: every key is a catalog card or token, every card and token has a flavour line, and each
+value is one trimmed line under its cap. The client's `apps/web/src/cards/flavour.test.tsx` also
+refuses any rules word in a flavour line (the voice lines' list, issue #115). An artist is credited
+when their art lands (`apps/web/src/cards/art/ART.md`). The client shows both in the inspect views
+and the Card Almanac, never on a face.
