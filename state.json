@@ -722,9 +722,7 @@
       "source": "",
       "started_at": "2026-10-04T15:59:58Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5981781059"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
