@@ -107,7 +107,7 @@ describe("R388 card patch history (B4.2)", () => {
     expect(idsOf("v0.2.10", "added")).toEqual([]);
     expect(idsOf("v0.2.10", "changed")).toEqual([
       "core-014", "core-033", "core-038", "core-065", "core-073",
-      "classic-004", "classic-007", "classic-062", "classic-064", "classic-087",
+      "classic-004", "classic-007", "classic-052", "classic-062", "classic-064", "classic-087",
       "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031", "classicplus-033",
       "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
     ]);
@@ -115,6 +115,8 @@ describe("R388 card patch history (B4.2)", () => {
     const keywords = (id: string): unknown => (after[id]?.["base"] as { keywords?: { kind: string }[] } | undefined)?.keywords?.[0]?.kind;
     expect(keywords("core-073")).toBe("Animated");
     expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
+    // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing printed does.
+    expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
   });
 
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {

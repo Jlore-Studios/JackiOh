@@ -4756,7 +4756,7 @@
         "min": 1
       }
     ],
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."

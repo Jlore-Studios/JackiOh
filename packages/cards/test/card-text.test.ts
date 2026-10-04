@@ -261,7 +261,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     ]);
   });
 
-  it("R366 patch v0.2.10 only Animates eighteen Field Spells and rewords Ivory Tower between v0.2.5 and the current catalog", () => {
+  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and the current catalog", () => {
     const before = readSnapshot("v0.2.5");
     const animated = new Set([
       "core-014",
@@ -340,11 +340,14 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
           },
           `only text and loc differ on ${id}`,
         ).toEqual(priorCard);
+      } else if (id === "classic-052") {
+        // Final Gambit's follow-up gained its R216 guard: only the script's loc moves.
+        expect({ ...currentCard, loc: priorCard.loc }, `only loc differs on ${id}`).toEqual(priorCard);
       } else {
         expect(currentCard, `card ${id} unchanged by v0.2.10`).toEqual(priorCard);
       }
     }
-    expect(changed.sort()).toEqual([...animated, "classicplus-033"].sort());
+    expect(changed.sort()).toEqual([...animated, "classicplus-033", "classic-052"].sort());
   });
 
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {

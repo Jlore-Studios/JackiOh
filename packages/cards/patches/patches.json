@@ -4837,7 +4837,7 @@
     "date": "2026-10-04",
     "title": "Patch v0.2.10: Animated pass on Field Spells, Ivory Tower fuses",
     "source": "Issue #113",
-    "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant).",
+    "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant). Classic #52 Final Gambit's follow-up neither heals nor draws once its re-aimed hit has felled the enemy hero (R216), so one fused into a Field Trap that stays cannot re-aim its own fatigue for ever.",
     "changes": [
       {
         "id": "core-014",
@@ -4942,6 +4942,14 @@
           "radiant.text",
           "radiant.attack",
           "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "loc"
         ]
       },
       {
