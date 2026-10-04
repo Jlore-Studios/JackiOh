@@ -1,6 +1,6 @@
 /**
  * The production `Store` (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
- * migrations in `./migrations` (0001-0020) with the `pg` driver already in `apps/server/package.json`.
+ * migrations in `./migrations` (0001-0021) with the `pg` driver already in `apps/server/package.json`.
  *
  * `src/index.ts` finds this module by dynamic import and calls `createPostgresStore({
  * connectionString })`; until it existed the server threw `StoreUnavailableError` and could only
@@ -380,7 +380,7 @@ function toProfile(row: ProfileRow): Profile {
     email: row.email ?? "",
     status: status satisfies ProfileStatus,
     rating: row.rating,
-    // R603's Glicko triple, carried on the row since migration 0020.
+    // R603's Glicko triple, carried on the row since migration 0021.
     ratingDeviation: row.rating_deviation,
     ratingVolatility: row.rating_volatility,
     inMatchId: row.current_match_id,
@@ -450,7 +450,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-    // R604: the flag migration 0020 adds. Absent when false, exactly as `MatchRow` types it —
+    // R604: the flag migration 0021 adds. Absent when false, exactly as `MatchRow` types it —
     // `results.ts` reads a missing flag the same way (unranked).
     ...(row.ranked ? { ranked: true } : {}),
     // R642: absent when neither seat carried a portrait (a match from before 0019); both then
@@ -774,14 +774,14 @@ function toSeries(row: SeriesDbRow): SeriesRow {
     updatedAt: msOf(row.updated_at),
     endedAt: msOrNull(row.ended_at),
     version: row.version,
-    // R604: the flag migration 0020 adds. Absent when false, exactly as `SeriesRow` types it —
+    // R604: the flag migration 0021 adds. Absent when false, exactly as `SeriesRow` types it —
     // `series.ts` reads a missing flag the same way (unranked, so it never rates).
     ...(row.ranked ? { ranked: true } : {}),
   };
 }
 
 // ---------------------------------------------------------------------------
-// The ranked ladder's rows (SPEC §9.12, migration 0020)
+// The ranked ladder's rows (SPEC §9.12, migration 0021)
 // ---------------------------------------------------------------------------
 
 type SeasonDbRow = { id: string; patch_version: string; started_at: Date };
@@ -942,7 +942,7 @@ function toRatedGame(row: RatedGameDbRow): RatedGameRow {
       toRatedSide(row.p2_profile_id, row.p2_bot_id, row.p2_pilot, row.p2_before, row.p2_after, row.p2_rank_before, row.p2_rank_after),
     ],
     winnerSide,
-    // `rated_games_reason_check` (0020) pins the column to the two reason sets, so the cast
+    // `rated_games_reason_check` (0021) pins the column to the two reason sets, so the cast
     // restates a database constraint, as `toResult`'s does.
     reason: row.reason as RatedGameRow["reason"],
     endedAt: msOf(row.ended_at),
@@ -2444,7 +2444,7 @@ function buildStore(session: Session): Store {
   };
 
   // -------------------------------------------------------------------------
-  // Ranked ladder (SPEC §9.12): migration 0020's four tables — `seasons`, `season_ranks`,
+  // Ranked ladder (SPEC §9.12): migration 0021's four tables — `seasons`, `season_ranks`,
   // `bot_ratings` and `rated_games` — plus the Glicko triple on `profiles`. None of these reaches
   // an `app.*` function, because none has a rule to hold that one statement does not already hold:
   // `putRank`/`putBot` are upserts, `createSeason`/`recordGame` are one-statement idempotent
@@ -2820,7 +2820,7 @@ function fromTicketStatus(status: TicketStatus): string {
 //    again. `e2e-store.ts` keeps no such row, and its `discardOpen` changes nothing; there a
 //    matched ticket keeps the discarded id.
 //  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches,
-//    results and series to NULL, and migration 0020 does the same on `rated_games`' sides while
+//    results and series to NULL, and migration 0021 does the same on `rated_games`' sides while
 //    cascading its `season_ranks` away, so `matches.get`, `results.getByMatch`, `series.get` and
 //    `ranked.game` can read back a null where the port types a profile id. The in-memory stores
 //    keep the id (they have no foreign keys). Nothing reads a finished match's seats back, and a

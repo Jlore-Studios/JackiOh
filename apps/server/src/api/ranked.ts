@@ -433,7 +433,7 @@ export async function matchRanks(deps: ServerDeps, matchId: string, viewerId: st
   const standings = await deps.store.ranked.standings(buildSeasonId(deps));
   const jlorious = jloriousOrder(standings);
   const seat = (profileId: string) => ({ tag: playerTag(profileId), rank: rankIn(standings, jlorious, profileId), you: profileId === viewerId });
-  // A missing flag is unranked (a pre-0020 row, or a room's), so this game moved nothing.
+  // A missing flag is unranked (a pre-0021 row, or a room's), so this game moved nothing.
   return { ranked: match.ranked ?? false, seats: { p1: seat(match.players[0]), p2: seat(match.players[1]) } };
 }
 

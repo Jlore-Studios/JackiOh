@@ -137,7 +137,7 @@ async function startSeriesGame(deps: ServerDeps, series: SeriesRow): Promise<boo
   }
 
   try {
-    // A missing flag is unranked (a pre-0020 row, or a room's series): it never rates.
+    // A missing flag is unranked (a pre-0021 row, or a room's series): it never rates.
     await deps.matches.start({ matchId, seed, catalogVersion: series.catalogVersion, ranked: series.ranked ?? false, seats });
   } catch (error) {
     // Another start got there first — a request and the sweeper, or a second process — and wrote

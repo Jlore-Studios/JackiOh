@@ -319,12 +319,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- The one exception is `debug`, which carries the raw state, the log, the decks and the handicaps
-  for spec 13's replay check. The core answers it only when `MODE !== "production"`, and the route
-  sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, log)`: nonces are `h<n>` for the
+- The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
+  the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
+  and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
+  the human's deck pile lists only what they have been shown of it and a card back for the rest. A
+  preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
 - URL params (all optional): `?seed=`, `?difficulty=easy|medium|hard`, `?deck=random|preset:<id>`
   (both together start a game at once), `?seat=p1|p2`, and `?pace=fast` for e2e, which a
   production build ignores.

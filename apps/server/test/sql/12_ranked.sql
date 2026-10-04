@@ -1,4 +1,4 @@
--- The ranked ladder's tables (migration 0020, SPEC §9.12, R603-R612), as the server's role drives
+-- The ranked ladder's tables (migration 0021, SPEC §9.12, R603-R612), as the server's role drives
 -- them: the season rows, the per-season rank rows, the bot ratings and the rated-game records.
 -- Runs after 11_player_settings.sql; profiles 1, 2 and 3 are active by then (03 activated them).
 \set ON_ERROR_STOP on

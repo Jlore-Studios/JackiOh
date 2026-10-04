@@ -596,9 +596,9 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
-                           help="also rewrite the pinned statistics issue, every two hours")
+                           help="also rewrite the pinned statistics issue, every hour")
     p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
-    p.add_argument("--force", action="store_true", help="even if it was rewritten under two hours ago")
+    p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")

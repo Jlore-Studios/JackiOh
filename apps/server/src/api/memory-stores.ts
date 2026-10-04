@@ -20,7 +20,7 @@
  *  - `playerSettings.merge` replaces a group only with a strictly later one and caps the result's
  *    groups and bytes (0018, R633, R634);
  *  - `ranked.createSeason` refuses an id that exists, `ranked.recordGame` a second row for one game,
- *    and `ranked.notePeakJlorious` only ever lowers a peak (R608, R609, R611; migration 0020
+ *    and `ranked.notePeakJlorious` only ever lowers a peak (R608, R609, R611; migration 0021
  *    carries the same tables on Postgres),
  *  - `gameRecords.insert` writes one record per id and refuses a second, and refuses a development
  *    record without a `dev:` id or a live one with one (0014, R376, R378).
@@ -541,7 +541,7 @@ export function purgeExpiredRows(tables: AccountTables, input: RetentionPurgeInp
 }
 
 // ---------------------------------------------------------------------------------------------
-// The ranked ladder (SPEC §9.12; migration 0020 carries it on Postgres), for both in-memory
+// The ranked ladder (SPEC §9.12; migration 0021 carries it on Postgres), for both in-memory
 // stores.
 // ---------------------------------------------------------------------------------------------
 

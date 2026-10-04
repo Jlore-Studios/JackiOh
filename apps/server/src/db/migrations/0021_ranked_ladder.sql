@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0020: the ranked ladder -- seasons, ranks, bot ratings, rated games
+-- Migration 0021: the ranked ladder -- seasons, ranks, bot ratings, rated games
 -- ============================================================================
 -- Serves SPEC.md §9.12 and R603-R612: the hidden Glicko-2 rating every player
 -- climbs with, the Grape tiers they are shown, the numbered Jlorious
@@ -61,7 +61,7 @@
 -- SET NULLs its profile_id, so the other side's history stays whole. A bot
 -- row survives: it is keyed on the bot id, not a profile.
 --
--- Apply order: 0001 -> ... -> 0018 -> 0019 -> 0020 (this file). Only adds objects and
+-- Apply order: 0001 -> ... -> 0018 -> 0019 -> 0020 -> 0021 (this file). Only adds objects and
 -- widens columns; the one DROP is app.end_match, whose signature change (the
 -- int rating arguments to double precision) `create or replace` cannot make.
 -- Safe to re-apply: create-if-not-exists, add-column-if-not-exists,
@@ -90,7 +90,7 @@ alter table public.tickets
   alter column rating type double precision;
 
 comment on column public.tickets.rating is
-  'SPEC §9.5: the enqueueing player''s Glicko-2 rating (0020; Elo before that). The pairing scan reads it through tickets_pairing_scan_idx; the windows widen by time in queue.';
+  'SPEC §9.5: the enqueueing player''s Glicko-2 rating (0021; Elo before that). The pairing scan reads it through tickets_pairing_scan_idx; the windows widen by time in queue.';
 
 alter table public.results
   alter column p1_rating_before type double precision,
@@ -238,7 +238,7 @@ comment on function app.end_match(uuid, uuid, text, int, double precision, doubl
   current_match_id and any stray queued ticket. Idempotent on a repeat
   call for an already-'over' match. Takes *_rating_after as arguments --
   the Glicko-2 update (SPEC §9.12, R603) is computed in apps/server, so
-  its constants are not duplicated in SQL. 0020 widened the rating
+  its constants are not duplicated in SQL. 0021 widened the rating
   arguments to doubles and refused the matches only the server's result
   write may end: a ranked one, or one a series calls its game in play
   (R263) -- see the comment above the function.$$;

@@ -519,7 +519,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   };
 
   // SPEC §9.12's ranked ladder, shared with `src/api/e2e-store.ts`; `db/store.ts` carries the
-  // same tables since migration 0020.
+  // same tables since migration 0021.
   store.ranked = createMemoryRankedStore(() => tables, call);
 
   return store;

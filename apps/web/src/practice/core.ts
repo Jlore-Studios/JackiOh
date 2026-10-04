@@ -10,7 +10,7 @@
 //
 // Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
 // actions the engine accepted, so a refused action spends nothing and the log folds exactly
-// (`fold({ seed, decks, handicaps, lastBoards, log })`, R187, R508). The AI draws from its own stream,
+// (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
 // `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
 
 import { registerAll } from "@jackioh/cards";
@@ -67,6 +67,8 @@ type PracticeGame = {
   handicaps: Partial<Record<PlayerId, Handicap>>;
   /** R508: the human's last board as `createGame` had it, seat ordered; absent when none. */
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
+  /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none. */
+  dealt?: PlayerId[];
   state: GameState;
   log: Action[];
   /** The AI's own stream, `${seed}:ai`, for the whole game. */
@@ -124,6 +126,16 @@ function decksAndHandicap(config: PracticeStartConfig): { humanDeck: string[]; a
   };
 }
 
+/**
+ * R433: the seats whose deck was dealt rather than built. A free game on the random deck deals the
+ * human theirs (`humanDeckFor`'s "random"), so the human is shown none of it going in. The AI's
+ * deck is never counted dealt: no view shows its seat, and R185's redaction would hide the AI's own
+ * library from itself. A lesson plays its fixed decks, whatever `deck` says.
+ */
+function dealtSeats(config: PracticeStartConfig): PlayerId[] {
+  return config.lesson === undefined && config.deck.kind === "random" ? [config.humanSeat] : [];
+}
+
 function startGame(config: PracticeStartConfig): PracticeGame {
   const aiSeat = opponentOf(config.humanSeat);
   const { humanDeck, aiDeck, handicap } = decksAndHandicap(config);
@@ -133,10 +145,17 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   const board = config.lesson === undefined ? (config.lastBoard ?? []) : [];
   const lastBoards: [LastBoardCard[], LastBoardCard[]] | undefined =
     board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
+  const dealt = dealtSeats(config);
 
   // `createGame` throws on an illegal deck and `beginGame` reports a refusal in `error`; either way
   // there is no game, and `handle` turns the throw into "failed".
-  const created = createGame({ seed: config.seed, decks, handicaps, ...(lastBoards === undefined ? {} : { lastBoards }) });
+  const created = createGame({
+    seed: config.seed,
+    decks,
+    handicaps,
+    ...(lastBoards === undefined ? {} : { lastBoards }),
+    ...(dealt.length === 0 ? {} : { dealt }),
+  });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
 
@@ -146,6 +165,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     decks: [[...decks[0]], [...decks[1]]],
     handicaps,
     ...(lastBoards === undefined ? {} : { lastBoards }),
+    ...(dealt.length === 0 ? {} : { dealt }),
     state: begun.state,
     log: [],
     rng: createRng(`${config.seed}:ai`),
@@ -257,6 +277,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       humanSeat: active.config.humanSeat,
       ...(active.config.lesson === undefined ? {} : { lesson: active.config.lesson }),
       ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
+      ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
     };
   }
 

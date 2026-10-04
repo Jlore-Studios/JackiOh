@@ -297,7 +297,7 @@ export function ratingWindow(waitedSeconds: number): number {
 /**
  * SPEC §11 R603: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
  * depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
- * ratings and only the deviation and volatility are new (migration 0020).
+ * ratings and only the deviation and volatility are new (migration 0021).
  */
 export const RATING_START = 1000;
 /** R603: a new profile's rating deviation: Glickman's starting value, the most uncertain rating. */
