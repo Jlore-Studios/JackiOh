@@ -19,6 +19,7 @@ from typing import Any
 from harness import config as config_mod
 from harness import context as context_mod
 from harness import dashboard as dashboard_mod
+from harness import stats as stats_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
 from harness import logins as logins_mod
@@ -297,9 +298,21 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        if getattr(args, "stats", False):
+            try:
+                print(redact(stats_mod.update(_ctx(cfg))), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the statistics issue was not updated: {exc}"),
+                      flush=True)
         if not every or time.monotonic() + every > deadline:
             return 0
         time.sleep(every)
+
+
+def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
+    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force."""
+    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)))))
+    return 0
 
 
 def cmd_halt(cfg: Config, args: argparse.Namespace) -> int:
@@ -582,6 +595,10 @@ def parser() -> argparse.ArgumentParser:
                            help="how long to keep rewriting it, in seconds")
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
+    dashboard.add_argument("--stats", action="store_true",
+                           help="also rewrite the pinned statistics issue, every two hours")
+    p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
+    p.add_argument("--force", action="store_true", help="even if it was rewritten under two hours ago")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -619,6 +636,7 @@ COMMANDS = {
     "sweep": cmd_sweep,
     "status": cmd_status,
     "dashboard": cmd_dashboard,
+    "stats": cmd_stats,
     "halt": cmd_halt,
     "start": cmd_start,
     "dispatch": cmd_dispatch,
