@@ -1017,7 +1017,18 @@
       "feedback_since": "2026-10-03T22:13:10Z",
       "issue": 45,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "sha": "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "31": {
       "failures": 0,
