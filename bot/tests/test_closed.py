@@ -17,8 +17,9 @@ from tests.test_cross import ALL
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, builder, reviewer
 
-#: Three runs on the machine's subscriptions; someone closed #5 while its run went on.
-RUNS = ((5, "gpt", "51"), (6, "agy", "61"), (7, "muse", "71"))
+#: Runs holding every lane of the machine's subscriptions (Muse has two); someone closed #5
+#: while its run went on.
+RUNS = ((5, "gpt", "51"), (6, "agy", "61"), (7, "muse", "71"), (9, "muse", "91"))
 
 
 class ClosedWhileWorkingTests(unittest.TestCase):
@@ -35,7 +36,7 @@ class ClosedWhileWorkingTests(unittest.TestCase):
         self.assertEqual(planned["action"], "none")
         self.assertIn("`gpt` is busy", planned["reason"])  # its lane is still the closed #5's
         text = report(ctx)
-        self.assertIn("3 of 10 lanes, 7 free; 3 of 6 on the machine", text)
+        self.assertIn("4 of 10 lanes, 6 free; 4 of 6 on the machine", text)
         self.assertIn("`gpt` (codex", text)
 
     def test_its_work_is_not_delivered(self):

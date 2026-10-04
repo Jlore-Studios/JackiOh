@@ -219,15 +219,20 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
             out.mkdir(parents=True, exist_ok=True)
             (out / "vault.enc").write_text(sealed + "\n", encoding="utf-8")
 
+    runner = get_runner(cfg, provider, login)
     worker = Worker(
-        cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
+        cfg, planned, runner, cfg.root, Path(args.work_dir), out,
         probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
     )
-    if cfg.backend != "fake" and provider.cli == "claude" and provider.limits.stops:
+    if cfg.backend != "fake" and provider.limits.stops:
         # A fresh reading before any model work: the stored one is the last run's, and none at
-        # all once its window reset. One Haiku turn, signed in as this subscription.
-        worker.start_usage = ping_usage(cfg.claude_bin, cfg.quiet.ping_model,
-                                        token=secret if provider.login == "secret" else "")
+        # all once its window reset. Claude: one Haiku turn, signed in as this subscription; agy
+        # and Muse: their own `/usage`, no model call.
+        if provider.cli == "claude":
+            worker.start_usage = ping_usage(cfg.claude_bin, cfg.quiet.ping_model,
+                                            token=secret if provider.login == "secret" else "")
+        elif getattr(runner, "polls_usage", False):
+            worker.start_usage = runner.read_usage(provider.model)
     result = worker.run()
     keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")
@@ -596,9 +601,9 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
-                           help="also rewrite the pinned statistics issue, every two hours")
+                           help="also rewrite the pinned statistics issue, every hour")
     p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
-    p.add_argument("--force", action="store_true", help="even if it was rewritten under two hours ago")
+    p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
