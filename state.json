@@ -916,7 +916,9 @@
     },
     "168": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5975340398"
+      ],
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -928,8 +930,8 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-03T23:10:54Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-04T01:28:37Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37162321326",
       "self_check_findings": [],
       "source": "request",
