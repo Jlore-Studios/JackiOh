@@ -8,10 +8,11 @@ apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
-from harness import asks
+from harness import asks, issueplan
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
@@ -228,6 +229,8 @@ class Candidate:
     priority: int = NO_PRIORITY
     #: For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
     planned: bool = False
+    #: The tier of the model that wrote that plan ("" if none, or if not recorded).
+    plan_tier: str = ""
     #: For a review: the families whose approval the head already has, which may not give it again.
     approved: tuple[str, ...] = ()
     #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
@@ -235,9 +238,101 @@ class Candidate:
     bot_pr: bool = False
 
 
+def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str) -> dict[str, Any]:
+    """Whether a build is planned, and by what tier: the bot's own record of its planning run,
+    or else a Plan section someone put in the issue's description (`issueplan.START` … `END`),
+    which counts as a strong plan: a person, or a session they ran, wrote it on purpose, and the
+    bot must not plan over it."""
+    if record.get("planned_at"):
+        return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
+    if kind == "build" and issueplan.plan_of(thread.get("body")):
+        return {"planned": True, "plan_tier": "strong"}
+    return {"planned": False, "plan_tier": ""}
+
+
+def strong_plan(candidate: Candidate) -> bool:
+    """A strong model wrote its plan. A plan from before planners' tiers were recorded counts:
+    the planner was strong whenever one was free."""
+    return candidate.planned and candidate.plan_tier in ("strong", "")
+
+
+def needs_plan(candidate: Candidate) -> bool:
+    """The Needs plan stage: a build with no plan yet, or an easy one whose plan no strong model
+    wrote (a builder that cannot plan, Devin, builds only from a strong model's plan)."""
+    return candidate.kind == "build" and (
+        not candidate.planned or (candidate.difficulty == "easy" and not strong_plan(candidate)))
+
+
 #: The order of urgency after forced items, the priority tier and the difficulty (`pairs` in
 #: plan.py puts harder items first, since only the stronger models can take them).
 KIND_ORDER = {"review": 0, "revise": 1, "build": 2}
+
+
+#: A line of a description that names an issue that must close first: "Blocked by #125",
+#: "Depends on #12 and #14", "Do not start until #125 has merged".
+_BLOCKED_BY = re.compile(
+    r"(?i)\b(?:blocked by|depends on|do not start until|waits (?:on|for))[^\S\n]*:?[^\S\n]*"
+    r"(#\d+(?:[^\S\n]*(?:,|\band\b|&)?[^\S\n]*#\d+)*)")
+#: A multi-part patch's part (docs/issues-and-patches.md): "Patch v0.2.X (part 2 of 4): …".
+#: n is the order the parts merge in, and every part of a patch carries the same m.
+_PART = re.compile(r"(?i)^(.*?)\s*\(part (\d+) of (\d+)\)")
+
+
+def named_blockers(body: str | None) -> set[int]:
+    """The issues a description says must close first, its Plan section left out (a planner's
+    notes are not the task's)."""
+    found: set[int] = set()
+    for match in _BLOCKED_BY.finditer(issueplan.without_plan(body)):
+        found.update(int(n) for n in re.findall(r"#(\d+)", match.group(1)))
+    return found
+
+
+def part_of(title: str) -> tuple[tuple[str, int], int] | None:
+    """`((the patch's name, m), n)` for a part's title, or None. Several patches can share a
+    name such as "Patch v0.2.X", so the parts of one patch are those with its name and its m."""
+    match = _PART.match(str(title or "").strip())
+    if not match:
+        return None
+    return (" ".join(match.group(1).lower().split()), int(match.group(3))), int(match.group(2))
+
+
+def waits_for(ctx: Context, threads: list[dict[str, Any]]) -> dict[int, list[int]]:
+    """The issues among `threads` that wait for another to close first, with what they wait for:
+    the issues a "Blocked by #n" line names, GitHub's own blocked-by links, and the earlier parts
+    of the same patch (a part builds only once every part before it has closed). Only open ones
+    count. GitHub is asked about open issues only when some thread names one or is a part."""
+    named = {int(t["number"]): named_blockers(t.get("body")) for t in threads}
+    parts = {int(t["number"]): part_of(str(t.get("title") or "")) for t in threads}
+    open_numbers: set[int] = set()
+    earlier: dict[int, list[int]] = {}
+    if any(named.values()) or any(parts.values()):
+        try:
+            everything = ctx.gh.list_issues(state="open", limit=500)
+        except GitHubError:
+            everything = []
+        open_numbers = {int(t["number"]) for t in everything}
+        for number, part in parts.items():
+            if part is None:
+                continue
+            earlier[number] = sorted(
+                int(t["number"]) for t in everything if "pull_request" not in t
+                and (other := part_of(str(t.get("title") or ""))) is not None
+                and other[0] == part[0] and other[1] < part[1])
+    waiting: dict[int, list[int]] = {}
+    for thread in threads:
+        number = int(thread["number"])
+        blockers = {n for n in named[number] if n in open_numbers and n != number}
+        blockers.update(earlier.get(number, ()))
+        summary = thread.get("issue_dependencies_summary")
+        if isinstance(summary, dict) and int(summary.get("blocked_by") or 0) > 0:
+            try:
+                blockers.update(int(b["number"]) for b in ctx.gh.blocked_by(number)
+                                if b.get("state") == "open")
+            except GitHubError:
+                pass
+        if blockers:
+            waiting[number] = sorted(blockers)
+    return waiting
 
 
 def candidates(ctx: Context, state: dict[str, Any],
@@ -249,9 +344,11 @@ def candidates(ctx: Context, state: dict[str, Any],
     plan counts at this one. Either queue label queues either kind of thread: an issue builds
     and a pull request revises. A queue label is the request, so a thread that failed before and
     was labelled again is taken again. A thread labelled `human` is left out, whatever model
-    would take it, with a line in `skipped` when the caller keeps one."""
+    would take it, and so is a build that waits for another issue (`waits_for`) unless it was
+    forced, each with a line in `skipped` when the caller keeps one."""
     found: dict[int, Candidate] = {}
     human: set[int] = set()
+    builds: list[dict[str, Any]] = []
     for label in (LABEL_BUILD, LABEL_REVISE, LABEL_CROSS):
         for thread in ctx.gh.list_issues(labels=label):
             number = int(thread["number"])
@@ -273,11 +370,19 @@ def candidates(ctx: Context, state: dict[str, Any],
                 str(record.get("queued_at") or thread.get("created_at") or ""),
                 difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
                 builder=str(votes.get("builder") or ""),
-                priority=priority_tier(names), planned=bool(record.get("planned_at")),
+                priority=priority_tier(names), **plan_of(record, thread, kind),
                 approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
+            if kind == "build" and not found[number].forced:
+                builds.append(thread)
+    waiting = waits_for(ctx, builds) if builds else {}
+    for number in waiting:
+        found.pop(number, None)
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
                        "tier" for number in sorted(human))
+        skipped.extend(f"#{number} skipped: it waits for "
+                       f"{', '.join(f'#{n}' for n in blockers)} to close first"
+                       for number, blockers in sorted(waiting.items()))
     return sorted(found.values(), key=lambda c: (not c.forced, c.priority, KIND_ORDER[c.kind],
                                                  c.queued_at, c.number))
 

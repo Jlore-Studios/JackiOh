@@ -11,6 +11,14 @@
 # `required_checks` and branch protection wait on six names; each long one is now a summary job that
 # needs its pieces and fails unless every piece passed. A summary job runs `if: !cancelled()`, never
 # on plain `needs`: a required check SKIPPED because a piece failed would count as passing.
+#
+# A pull request that changes only the night bot's own files (`scripts/ci-scope.sh` lists them: bot/,
+# .harness/ and the workflows that run the bot) skips every job below except `bot selftest`, which
+# has its own workflow and always runs. Nothing else here reads those paths. The `changes` job
+# decides; each job below it runs `if: needs.changes.outputs.full == 'true'`, so a skip is a job-level
+# skip, which counts as passing for a required check (a workflow-level `paths:` filter would leave the
+# check pending forever), and the summary jobs accept "skipped" only on `full == 'false'`. A push to
+# main, and any doubt, runs everything.
 name: CI
 
 on:
@@ -28,12 +36,39 @@ env:
   CATALOG_VERSION: v0.2.0
 
 jobs:
+  # `full` is `false` only for a pull request whose every changed file is on scripts/ci-scope.sh's
+  # skip list. A failed `changes` job leaves `full` empty and skips every job below it, which fails
+  # each summary job (it accepts a skip only on `full == 'false'`).
+  changes:
+    name: what the change touches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "full=true" | tee -a "$GITHUB_OUTPUT"
+          fi
+
   # ------------------------------------------------------------------------------------------------
   # lint, typecheck, unit, fuzz, coverage
   # ------------------------------------------------------------------------------------------------
 
   static:
     name: lint, typecheck, catalog, rulings
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -58,6 +93,8 @@ jobs:
   # web is split by file as well: alone it took 4 minutes, too near the budget.
   unit:
     name: unit (${{ matrix.projects }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -87,6 +124,8 @@ jobs:
   # whatever run it sits in, so the shards together play exactly `pnpm fuzz`.
   fuzz:
     name: fuzz (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -109,6 +148,8 @@ jobs:
   # threshold in vitest.config.ts is held against the merged total, never a shard's.
   coverage:
     name: coverage (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -134,26 +175,34 @@ jobs:
 
   checks:
     name: lint, typecheck, unit, fuzz, coverage
-    needs: [static, unit, fuzz, coverage]
+    needs: [changes, static, unit, fuzz, coverage]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: every piece passed
         run: |
-          echo "static=${{ needs.static.result }} unit=${{ needs.unit.result }} fuzz=${{ needs.fuzz.result }} coverage=${{ needs.coverage.result }}"
+          echo "full=${{ needs.changes.outputs.full }} static=${{ needs.static.result }} unit=${{ needs.unit.result }} fuzz=${{ needs.fuzz.result }} coverage=${{ needs.coverage.result }}"
+          if [ "${{ needs.changes.outputs.full }}" = false ]; then
+            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+            exit 0
+          fi
           test "${{ needs.static.result }}" = success
           test "${{ needs.unit.result }}" = success
           test "${{ needs.fuzz.result }}" = success
           test "${{ needs.coverage.result }}" = success
       - uses: actions/checkout@v4
+        if: ${{ needs.changes.outputs.full == 'true' }}
       - uses: ./.github/actions/setup
+        if: ${{ needs.changes.outputs.full == 'true' }}
       - uses: actions/download-artifact@v4
+        if: ${{ needs.changes.outputs.full == 'true' }}
         with:
           pattern: coverage-blob-*
           path: .vitest/blob
           merge-multiple: true
       - name: coverage floor, over every shard
+        if: ${{ needs.changes.outputs.full == 'true' }}
         run: pnpm exec vitest run --merge-reports --coverage --project engine --project cards
 
   # ------------------------------------------------------------------------------------------------
@@ -172,6 +221,8 @@ jobs:
   # shards.
   ai-gate-shard:
     name: ai gates (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -195,23 +246,31 @@ jobs:
 
   ai-gate:
     name: ai quality gates (full)
-    needs: [ai-gate-shard]
+    needs: [changes, ai-gate-shard]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: every shard passed
         run: |
-          echo "shards=${{ needs.ai-gate-shard.result }}"
+          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.ai-gate-shard.result }}"
+          if [ "${{ needs.changes.outputs.full }}" = false ]; then
+            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+            exit 0
+          fi
           test "${{ needs.ai-gate-shard.result }}" = success
       - uses: actions/checkout@v4
+        if: ${{ needs.changes.outputs.full == 'true' }}
       - uses: ./.github/actions/setup
+        if: ${{ needs.changes.outputs.full == 'true' }}
       - uses: actions/download-artifact@v4
+        if: ${{ needs.changes.outputs.full == 'true' }}
         with:
           pattern: ai-gate-*
           path: ai-gate-shards
           merge-multiple: true
       - name: each matchup's wins against gateNeeded, over every shard
+        if: ${{ needs.changes.outputs.full == 'true' }}
         run: pnpm ai:gate:merge ai-gate-shards
 
   # ------------------------------------------------------------------------------------------------
@@ -225,6 +284,8 @@ jobs:
   # against a real Postgres, so it gets a gate of its own.
   sql:
     name: sql invariants (real Postgres)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -247,6 +308,8 @@ jobs:
   # stores, the in-memory one in `pnpm test` and this one here.
   db:
     name: store contract (real Postgres)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -285,6 +348,8 @@ jobs:
   # shards that boot their own client and server (.github/actions/e2e-shard says why that matters).
   e2e-chrome-shard:
     name: e2e chrome (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -302,6 +367,8 @@ jobs:
 
   e2e-electron-shard:
     name: e2e electron (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -323,6 +390,8 @@ jobs:
   # no E2E=1: the component dev server compiles apps/web/src itself, on port 5273.
   component:
     name: e2e component (chrome)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -340,25 +409,33 @@ jobs:
 
   e2e-chrome:
     name: e2e (chrome)
-    needs: [e2e-chrome-shard, component]
+    needs: [changes, e2e-chrome-shard, component]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: every shard passed
         run: |
-          echo "shards=${{ needs.e2e-chrome-shard.result }} component=${{ needs.component.result }}"
+          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.e2e-chrome-shard.result }} component=${{ needs.component.result }}"
+          if [ "${{ needs.changes.outputs.full }}" = false ]; then
+            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+            exit 0
+          fi
           test "${{ needs.e2e-chrome-shard.result }}" = success
           test "${{ needs.component.result }}" = success
 
   e2e-electron:
     name: e2e (electron)
-    needs: [e2e-electron-shard]
+    needs: [changes, e2e-electron-shard]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: every shard passed
         run: |
-          echo "shards=${{ needs.e2e-electron-shard.result }}"
+          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.e2e-electron-shard.result }}"
+          if [ "${{ needs.changes.outputs.full }}" = false ]; then
+            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+            exit 0
+          fi
           test "${{ needs.e2e-electron-shard.result }}" = success

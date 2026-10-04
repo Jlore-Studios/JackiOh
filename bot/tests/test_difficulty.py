@@ -113,8 +113,9 @@ class BuilderTests(unittest.TestCase):
         self.assertIn("no subscription can take the queue now", planned["reason"])
 
     def test_the_usage_order(self):
-        """claude-3, then claude-1, then the medium models, then Devin, and claude-2 builds only
-        after all of them (`build_last`)."""
+        """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
+        claude-1, then the medium models, and claude-2 builds only after all of them
+        (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 12):
@@ -135,17 +136,17 @@ class BuilderTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
-        self.assertEqual(order, [("claude-3", "sonnet"), ("claude-1", "sonnet"),
-                                 ("claude-4", "opus"), ("agy", "gemini-3.8-flash-high"),
+        self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
+                                 ("claude-1", "sonnet"), ("claude-4", "opus"),
+                                 ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
-                                 ("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
-                                 ("claude-2", "opus")])
+                                 ("gpt", "gpt-5.6-terra"), ("claude-2", "opus")])
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
-        # claude-3 busy, claude-1 open: claude-1 builds the easy item with Sonnet, not Devin.
+        # claude-3 busy, claude-1 open and Devin full: claude-1 builds the easy item with Sonnet.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=("devin",))
-        busy(gh, ctx, ("claude-3", 50))
+        busy(gh, ctx, ("claude-3", 50), *[("devin", n) for n in range(60, 66)])
         queue(gh, ctx, 3, EASY)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "weak"))
         # Neither open and the medium models busy: Devin builds it, the default, while claude-2
@@ -159,10 +160,10 @@ class BuilderTests(unittest.TestCase):
         queue(gh, ctx, 3, EASY)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["provider"], seats(planned)["build"][1]), ("devin", "swe-2-max"))
-        # Only with both of Devin's lanes taken does claude-2 build it, with Opus (no Sonnet).
+        # Only with all of Devin's lanes taken does claude-2 build it, with Opus (no Sonnet).
         gh.threads[3]["state"] = "open"
         gh.threads[3]["labels"] = [{"name": LABEL_BUILD}, {"name": EASY}]
-        busy(gh, ctx, ("devin", 56), ("devin", 57))
+        busy(gh, ctx, *[("devin", n) for n in range(56, 62)])
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 
     def test_claude_2_builds_a_medium_item_devin_may_not(self):
@@ -219,17 +220,20 @@ class BuilderTests(unittest.TestCase):
 
 
 class PlannerTests(unittest.TestCase):
-    def test_a_strong_planner_is_preferred_and_plans_on_its_own_run_when_it_must(self):
-        """By day agy builds; claude-2, strong and kept for planning, plans it on its own run."""
+    def test_a_strong_planner_plans_on_the_planning_lane(self):
+        """By day claude-2, strong and kept for planning, plans it on the planning lane before
+        agy builds it."""
         gh = FakeGitHub()
-        ctx = ctx_for(gh, at=DAY, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), committed_hours=True)
+        ctx = make_ctx(gh, at=DAY, cfg=make_config(env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
+                                                   machine=MACHINE, committed_hours=True,
+                                                   plan_lanes=None))
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
         self.assertEqual(seats(planned), {"plan": ("claude-2", "opus", "strong"),
                                           "build": None, "review": None})
-        self.assertIn("planned on its own run, since its builder `agy`", planned["routing"][0])
-        self.assertIn("Planning this now", gh.bot_comments(3)[-1])
+        self.assertIn("needs a plan; `claude-2`", planned["routing"][0])
+        self.assertIn("goes into this issue's description", gh.bot_comments(3)[-1])
 
     def test_with_no_strong_model_free_a_medium_one_plans_in_the_same_run(self):
         gh = FakeGitHub()
@@ -247,9 +251,10 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(planned["action"], "none")
 
     def test_a_planning_run_hands_its_plan_to_the_builder(self):
-        h = Harness(self, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE, at=DAY)
+        h = Harness(self, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE, at=DAY,
+                    plan_lanes=None)
         h.committed_hours()
-        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        h.gh.add_issue(12, labels=(LABEL_BUILD,), body="Make the rules v2.")
         plan_text = "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; run the checks."
         planner = FakeRunner({"plan": lambda request: RunResult(True, plan_text)})
         planned, result = h.night(planner)
@@ -261,9 +266,17 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(record["handoff"]["kind"], "plan")
         self.assertIn("Rules v2", record["handoff"]["notes"])
         self.assertTrue(record["planned_at"])
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertEqual(record["planned_tier"], "strong")
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})  # out of the Needs plan stage
         self.assertIn("Planned on `claude-2` (claude, `opus`, strong)", h.gh.bot_comments(12)[-1])
+        self.assertIn("in this issue's description", h.gh.bot_comments(12)[-1])
+        body = h.gh.threads[12]["body"]
+        self.assertTrue(body.startswith("Make the rules v2.\n\n<!-- jackioh-bot:plan -->"))
+        self.assertIn("## Plan", body)
+        self.assertIn("Edit src/game.txt", body)
         self.assertIsNone(h.origin_sha("bot/issue-12"))  # nothing built yet
+        # A person corrects the plan in the description: the builder follows their version.
+        h.gh.threads[12]["body"] = body.replace("Edit src/game.txt", "Edit src/game.txt only")
         # The next run builds from it, on the cheapest model its difficulty allows.
         seen = {}
         def building(request):
@@ -275,8 +288,9 @@ class PlannerTests(unittest.TestCase):
                          ("build", "agy", "approved"))
         self.assertEqual([c.role for c in runner.calls], ["build", "review"])
         self.assertIn("## The plan", runner.calls[0].prompt)
-        self.assertIn("Edit src/game.txt", runner.calls[0].prompt)
-        self.assertIn("Rules v2", seen["notes"])
+        self.assertIn("**Plan** section of the issue's description", runner.calls[0].prompt)
+        self.assertIn("Edit src/game.txt only", runner.calls[0].prompt)
+        self.assertIn("Edit src/game.txt only", seen["notes"])
 
 
 class ReviewRunTests(unittest.TestCase):

@@ -207,6 +207,34 @@ file can hold a comment, and three things in them are not obvious:
 - **`vercel.json` rejects unknown keys.** The `"// name"` comment idiom this repo uses in
   `package.json` is fine for npm and pnpm and is a hard error here, which is why this note is in
   Markdown instead of beside the setting it explains.
+- **Vercel deploys on the last push, and only when the push can change the site.** The Hobby plan
+  allows 100 deployments a day and counts one for every push to every branch; `[skip ci]` stops
+  GitHub Actions and does nothing here, and the night bot's `bot-state` commits plus its PR branches
+  used the day up (every PR then showed a failed Vercel check: `api-deployments-free-per-day`). Two
+  settings in `vercel.json` hold it down. `git.deploymentEnabled` creates no deployment at all for
+  the branches machines push to (`bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
+  `patch/**`, `patches/**`, `polish/**`, `wt/**`); main is never listed. `ignoreCommand` runs
+  `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on
+  any branch (the flag for a preview); any other branch is cancelled; and main builds unless every
+  file changed since the last commit Vercel built (`VERCEL_GIT_PREVIOUS_SHA`, and only when that
+  commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.github/`,
+  `docs/`, `reviews/`, `e2e/`, `apps/server/`, `scripts/`, `render.yaml`, the root docs, and inside
+  the client and the packages their test files (`*.test.ts(x)`, a package's `test/`,
+  `apps/web/src/test/`), each package's own `scripts/` tooling and READMEs (the bundle imports
+  `packages/*` and nothing else, and none of those; `packages/cards/src/scripts/` is the card
+  scripts and is bundled, so the list names each package's `scripts/` and never a wildcard). Diffing against the last build, not the previous
+  commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
+  no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
+  still counts against the 100, which is why the machine branches are switched off outright rather
+  than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
+  before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
+  `vercel.json` of its own: it needs a root `vercel.json` of `{ "git": { "deploymentEnabled": false } }`,
+  which the bot's `ensure()` does not restore if it ever recreates the branch. The quota resets
+  about 24 hours after the cap was hit; redeploy from the Vercel dashboard (or push a new commit)
+  after it does. Vercel still builds main in parallel with CI, not after it: making it wait for every
+  CI job would take a deploy hook called from `ci.yml` and `deploymentEnabled: { "main": false }`.
+  `apps/web/src/net/deploy-routes.test.ts` holds the branch list in place and `vercel-ignore.test.ts`
+  the script's decisions, over diffs in a throwaway repo.
 - **`render.yaml` installs with `--prod=false`.** `tsx` is a devDependency of the workspace root
   and `apps/server`'s start script runs through it, so a production-only install builds a service
   that cannot boot. Both files set `CYPRESS_INSTALL_BINARY=0`, since neither deploy runs a test.

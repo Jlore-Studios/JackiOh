@@ -163,7 +163,7 @@ describe("R388 the History section over the real history", () => {
     renderDetail(def);
     openHistory();
     const entries = await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW);
-    // Promotions prepend in this newest-first list (R635): the four known versions are the tail.
+    // Promotions prepend in this newest-first list (R641): the four known versions are the tail.
     expect(entries.map((element) => element.dataset.version).slice(-4)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");
@@ -176,7 +176,7 @@ describe("R388 the History section over the real history", () => {
     renderDetail(def);
     openHistory();
     // "Unchanged since" shows only while the card's whole history is the patch that added it;
-    // a promoted patch touching classic-001 (R635) ends that and the line goes away.
+    // a promoted patch touching classic-001 (R641) ends that and the line goes away.
     const listed = (await realPatchSource.index())["classic-001"] ?? [];
     if (listed.length === 1) {
       expect(await screen.findByTestId(patchTestid.historyUnchanged, undefined, SLOW)).toHaveTextContent(`Unchanged since ${listed[0]}.`);

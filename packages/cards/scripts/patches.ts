@@ -1,5 +1,5 @@
 /**
- * Card patches with several in flight at once (R635): pending fragments, the check that proves
+ * Card patches with several in flight at once (R641): pending fragments, the check that proves
  * them, and the promotion that ships them, in ship order.
  *
  *   pnpm --filter @jackioh/cards run patches <version> <date> "<title>" \
@@ -165,7 +165,7 @@ export type ShipResult = { shipped: string[] };
 
 /**
  * Promotes every pending fragment to a shipped patch, in the order of the first-parent commit
- * that added it (ship order, R635). One commit per fragment is assumed — the squash-merge shape
+ * that added it (ship order, R641). One commit per fragment is assumed — the squash-merge shape
  * the bot's pull requests land in — so the snapshot is `catalog.json` as that commit left it.
  * Idempotent: with no fragments it changes nothing.
  */

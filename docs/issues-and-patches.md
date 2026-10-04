@@ -22,6 +22,18 @@ medium, and `hard` is Claude Opus's alone), `human` (no model does it), the `pri
 (the bot's pickup order) and the `bot:*` labels are separate. Never add
 `bot:build` while retitling or relabelling, because it queues a build.
 
+## Issue type
+
+Every issue also has one of the organisation's issue types, which are not labels:
+
+| Type | For |
+|---|---|
+| Task | A specific piece of work: most patches, tooling, docs |
+| Bug | Something that behaves wrongly: a rule, a card, a crash, a failing job |
+| Feature | Something new for players or for the team: a mode, a screen, a system |
+
+A pull request has no type.
+
 ## Titles
 
 | Kind | Title |

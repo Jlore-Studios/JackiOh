@@ -170,7 +170,7 @@ describe("R388 one card's history", () => {
     expect(versions.slice(0, 2)).toEqual(["v0.1.1", "v0.2.0"]);
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
-    // Added in v0.2.0 and unchanged since — until a promoted patch touches it again (R635),
+    // Added in v0.2.0 and unchanged since — until a promoted patch touches it again (R641),
     // which turns "unchanged since" off by adding a second history entry.
     expect(unchangedSince(cardHistory("classic-001", patches, index, snapshots))).toBe(
       (index["classic-001"] ?? []).length === 1 ? "v0.2.0" : null,

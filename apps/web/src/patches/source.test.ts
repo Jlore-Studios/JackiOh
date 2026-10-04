@@ -71,7 +71,7 @@ describe("R388 the patch source", () => {
 
   it("R388 the real source reads packages/cards/patches/: every patch in the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    // Promotions only ever append (R635): the six versions the brief checked stay the prefix,
+    // Promotions only ever append (R641): the six versions the brief checked stay the prefix,
     // and a promoted patch that touches a card appends to that card's index entry.
     expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     const index = await realPatchSource.index();

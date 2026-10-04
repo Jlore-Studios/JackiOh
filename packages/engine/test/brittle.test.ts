@@ -1,7 +1,7 @@
-// Brittle X (docs/classic-sets.md B3.3; R385, R440, R441): where the count lives, when it starts,
-// when it ticks, what a crumble does on the field and in a hand or a deck, what a Vanilla does to it,
-// what the views show, and a crumble whose Death asks something pausing the settle after the tick
-// (R113), with the paused game surviving a JSON round trip and resuming identically.
+// Brittle X (docs/classic-sets.md B3.3; R385, R438, R440, R441, R638): where the count lives, when it
+// starts, when it ticks (on the field only), what a crumble does, what a Vanilla does to it, what the
+// views show, and a crumble whose Death asks something pausing the settle after the tick (R113), with
+// the paused game surviving a JSON round trip and resuming identically.
 //
 // `turn.ts` runs `brittleTick` as a stage of the start of a turn (the activate-and-turn workstream
 // wires it); these tests drive the stage directly, setting `state.turn` and `state.active` as a start
@@ -19,7 +19,7 @@ import { stateCheck } from "../src/stateCheck";
 import { cloneState, newInstance, type CardInstance, type GameState } from "../src/state";
 import { settle } from "../src/triggers";
 import { viewFor } from "../src/viewFor";
-import { placeOnField } from "../src/zones";
+import { placeOnField, removeFromField } from "../src/zones";
 import { indestructible, plain, stacker } from "./fixtures/combat";
 import { eventsOfType, inHand, put, setLibrary, sinkFor, slot } from "./fixtures/harness";
 import { asker, brittleTrap, brittleUnit, instanceGame } from "./fixtures/instanceData";
@@ -73,14 +73,23 @@ describe("B3.3 where a Brittle count lives and when it starts (R385)", () => {
     const card = newInstance(state, brittleUnit.id, "p1", { z: "hand", player: "p1" });
     given(state, card, 5, 3);
     expect(placeOnField(state, card, slot("p1", "units", 1))).toBe(true);
-    expect(card.brittle).toEqual({ count: 5, since: 3 });
+    // R638: the count is kept, and its turn cycle starts on the field, at this arrival.
+    expect(card.brittle).toEqual({ count: 5, since: 6 });
+  });
+
+  it("R638 a move from one field zone to another is no arrival: the count's cycle is not restarted", () => {
+    const state = at(8);
+    const unit = put(state, plain.id, slot("p1", "units", 1));
+    given(state, unit, 3, 5);
+    expect(removeFromField(state, unit)).toBe(true);
+    expect(placeOnField(state, unit, slot("p1", "units", 2))).toBe(true);
+    expect(unit.brittle).toEqual({ count: 3, since: 5 });
   });
 
   it("R385 a count ticks first at its controller's start of turn t + 2 or later, then every one of theirs", () => {
     expect(BRITTLE_FIRST_TICK_TURNS).toBe(2);
     const state = at(5);
-    const [mine] = inHand(state, plain.id, "p1");
-    if (mine === undefined) throw new Error("no card");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
     // Given on p1's turn 5: it lives through the rest of 5 and p2's turn 6, ticks at 7, crumbles at 9.
     given(state, mine, 2, 5);
     tickAt(state, 5, "p1");
@@ -93,8 +102,7 @@ describe("B3.3 where a Brittle count lives and when it starts (R385)", () => {
 
   it("R385 a count given on the other player's turn waits a whole turn cycle of its own", () => {
     const state = at(6, "p2");
-    const [mine] = inHand(state, plain.id, "p1");
-    if (mine === undefined) throw new Error("no card");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
     given(state, mine, 2, 6);
     // p1's turn 7 is only one player-turn later: no tick yet. Turn 9 is the first.
     tickAt(state, 7, "p1");
@@ -105,12 +113,59 @@ describe("B3.3 where a Brittle count lives and when it starts (R385)", () => {
 
   it("R385 the other player's start of turn never ticks a count", () => {
     const state = at(3);
-    const [mine] = inHand(state, plain.id, "p1");
-    if (mine === undefined) throw new Error("no card");
+    const mine = put(state, plain.id, slot("p1", "units", 1));
     given(state, mine, 1, 1);
     tickAt(state, 4, "p2");
     expect(mine.brittle?.count).toBe(1);
-    expect(mine.zone.z).toBe("hand");
+    expect(mine.zone.z).toBe("field");
+  });
+
+  it("R638 a count in a hand or a deck holds: no tick, no crumble and no event, however long it waits", () => {
+    const state = at(9);
+    const [handCard] = inHand(state, plain.id, "p1");
+    const [deckCard] = setLibrary(state, "p1", [body(), plain.id]);
+    if (handCard === undefined || deckCard === undefined) throw new Error("no card");
+    given(state, handCard, 1, 3);
+    given(state, deckCard, 2, 3);
+
+    for (const turn of [9, 11, 13]) expect(tickAt(state, turn, "p1")).toEqual([]);
+    expect(handCard.zone).toEqual({ z: "hand", player: "p1" });
+    expect(handCard.brittle).toEqual({ count: 1, since: 3 });
+    expect(deckCard.zone.z).toBe("library");
+    expect(deckCard.brittle).toEqual({ count: 2, since: 3 });
+  });
+
+  it("R638 a count held in a hand starts its cycle as the card enters the field: first tick at t + 2 of the arrival", () => {
+    const state = at(5);
+    const card = newInstance(state, plain.id, "p1", { z: "hand", player: "p1" });
+    given(state, card, 2, 1);
+    state.turn = 9;
+    expect(placeOnField(state, card, slot("p1", "units", 1))).toBe(true);
+    expect(card.brittle).toEqual({ count: 2, since: 9 });
+
+    // Held since turn 1, yet not due at 9: the cycle is the field's.
+    tickAt(state, 9, "p1");
+    expect(card.brittle?.count).toBe(2);
+    tickAt(state, 11, "p1");
+    expect(card.brittle?.count).toBe(1);
+    tickAt(state, 13, "p1");
+    expect(card.zone.z).toBe("graveyard");
+  });
+
+  it("R638 a card that leaves the field keeps the count it has, and it holds there until the card is back", () => {
+    const state = at(6);
+    const unit = put(state, plain.id, slot("p1", "units", 1));
+    given(state, unit, 3, 2);
+    tickAt(state, 6, "p1");
+    expect(unit.brittle?.count).toBe(2);
+
+    expect(removeFromField(state, unit)).toBe(true);
+    unit.zone = { z: "hand", player: "p1" };
+    state.players.p1.hand.push(unit);
+    tickAt(state, 8, "p1");
+    tickAt(state, 10, "p1");
+    expect(unit.brittle?.count).toBe(2);
+    expect(unit.zone.z).toBe("hand");
   });
 });
 
@@ -148,39 +203,6 @@ describe("B3.3 a crumble (R385)", () => {
     expect(eventsOfType(second, "crumbled")).toHaveLength(1);
     // Nothing more to take off: no second counterChanged.
     expect(eventsOfType(second, "counterChanged")).toHaveLength(0);
-  });
-
-  it("R385 in a hand or a deck the card goes to its owner's graveyard — not a discard — and the ticks there are silent (R440)", () => {
-    const state = at(9);
-    const [handCard] = inHand(state, plain.id, "p1");
-    const [deckCard] = setLibrary(state, "p1", [body(), plain.id]);
-    if (handCard === undefined || deckCard === undefined) throw new Error("no card");
-    given(state, handCard, 1, 5);
-    given(state, deckCard, 2, 5);
-
-    const events = tickAt(state, 9, "p1");
-    expect(handCard.zone).toEqual({ z: "graveyard", player: "p1" });
-    expect(deckCard.brittle?.count).toBe(1);
-    expect(deckCard.zone.z).toBe("library");
-    expect(events.map((e) => e.type)).toEqual(["crumbled", "enteredGraveyard"]);
-    expect(eventsOfType(events, "crumbled")[0]?.zone).toBe("hand");
-    expect(eventsOfType(events, "discarded")).toHaveLength(0);
-
-    const deck = tickAt(state, 11, "p1");
-    expect(deckCard.zone.z).toBe("graveyard");
-    expect(eventsOfType(deck, "crumbled")[0]?.zone).toBe("library");
-    expect(eventsOfType(deck, "counterChanged")).toHaveLength(0);
-  });
-
-  it("R385 a unit-token card in a hand ceases to exist as it crumbles (R11): no graveyard", () => {
-    const state = at(9);
-    const [token] = inHand(state, "fx-token-rush", "p1");
-    if (token === undefined) throw new Error("no card");
-    given(state, token, 1, 5);
-    const events = tickAt(state, 9, "p1");
-    expect(token.zone.z).toBe("gone");
-    expect(events.map((e) => e.type)).toEqual(["crumbled"]);
-    expect(state.players.p1.graveyard).toHaveLength(0);
   });
 
   it("R385 a count ticks at its controller's start of turn on the field: a stolen card ticks on the thief's", () => {

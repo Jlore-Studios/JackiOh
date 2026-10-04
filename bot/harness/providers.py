@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import re
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -70,8 +71,13 @@ SECRETS: tuple[str, ...] = (
 )
 
 #: After a run on a provider could not work (its login refused, its CLI would not install or
-#: start), unforced runs leave that provider alone this long. The others carry on.
-INFRA_BACKOFF = timedelta(minutes=50)
+#: start), unforced runs leave that provider alone this long. The others carry on. Each failure in
+#: a row waits longer (the last wait repeats), so a dead login stops costing a run every hour; the
+#: streak ends when a run on the provider gets a model call through (`clear_infra`).
+INFRA_BACKOFFS = (timedelta(minutes=50), timedelta(hours=2), timedelta(hours=8))
+INFRA_BACKOFF = INFRA_BACKOFFS[0]
+#: After this many failures in a row, `deliver` opens an issue asking a person to fix it.
+INFRA_ASK_AFTER = 3
 
 #: Usage windows, and how long each lasts when a reading carries no reset time of its own.
 WINDOWS = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
@@ -109,6 +115,9 @@ class Limits:
     seven_day: float | None = None
     five_hour_minutes: int | None = None
     seven_day_minutes: int | None = None
+    #: How far under a cap a build or revision must be to start (`start_headroom` in
+    #: providers.json): one that starts at 39% under a 40% cap is cut off almost at once.
+    headroom: Mapping[str, float] = field(default_factory=dict)
 
     @property
     def stops(self) -> dict[str, float]:
@@ -160,11 +169,36 @@ class Provider:
     #: It builds, fixes and revises only after every other subscription that may (claude-2, kept
     #: for planning and review); it plans and reviews in its `priority` place.
     build_last: bool = False
+    #: It builds and revises easy items ahead of every other subscription while it has a free lane
+    #: (Devin: it may build nothing harder, so the stronger models are kept for what only they can).
+    easy_first: bool = False
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()
+    #: Caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then too, but only
+    #: under these, and a run that goes past them there stops. No entry: it works in its hours only.
+    off_hours: Mapping[str, float] = field(default_factory=dict)
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
+
+    def hours(self, zone_name: str) -> str:
+        """Its hours, and how far it may go outside them."""
+        text = self.schedule.describe(zone_name)
+        if self.off_hours and self.schedule.mode == "window":
+            caps = " and ".join(f"{share:.0%} of {WINDOW_NAMES[window]}"
+                                for window, share in self.off_hours.items())
+            text += f", outside them up to {caps}"
+        return text
+
+    def caps_at(self, at: datetime, zone_name: str | None) -> dict[str, float]:
+        """The usage caps that hold at `at`: its own, and outside its window the tighter of
+        those and its `off_hours` ones."""
+        caps = dict(self.limits.stops)
+        if (self.off_hours and zone_name is not None
+                and not self.schedule.is_open(zone_name, at)):
+            for window, share in self.off_hours.items():
+                caps[window] = min(caps.get(window, 1.0), share)
+        return caps
 
 
 @dataclass(frozen=True)
@@ -217,6 +251,9 @@ class Pool:
     #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
     #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
+    #: How many planning runs may go at once on top of `max_parallel` (the planning lane): a
+    #: strong model plans the Needs plan stage there while the build lanes are full.
+    plan_lanes: int = 0
     #: Each tier's models, in the order the router tries them.
     tiers: Mapping[str, tuple[TierEntry, ...]] = field(default_factory=dict)
 
@@ -293,6 +330,17 @@ def _schedule(raw: Any, where: str) -> Schedule:
     raise ConfigError(f"{where}.mode: {mode!r} is not always or window")
 
 
+def _headroom(raw: Any, where: str) -> dict[str, float]:
+    if raw in (None, {}):
+        return {}
+    if not isinstance(raw, Mapping):
+        raise ConfigError(f"{where}: expected an object such as {{\"five_hour\": 0.15}}")
+    unknown = sorted(set(raw) - set(WINDOWS))
+    if unknown:
+        raise ConfigError(f"{where}: unknown windows {', '.join(unknown)}")
+    return {str(window): _fraction(share, f"{where}.{window}") for window, share in raw.items()}
+
+
 def _limits(raw: Any, where: str) -> Limits:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{where}: expected an object")
@@ -320,7 +368,7 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason",
-                  "lanes", "build_last"}
+                  "lanes", "build_last", "easy_first", "off_hours"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -438,6 +486,8 @@ def _provider(name: str, raw: Any) -> Provider:
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
+        easy_first=bool(raw.get("easy_first", False)),
+        off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )
@@ -448,6 +498,9 @@ def parse(raw: Any) -> Pool:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{PROVIDERS_PATH} must hold a JSON object")
     providers = {str(k): _provider(str(k), v) for k, v in dict(raw.get("providers") or {}).items()}
+    headroom = _headroom(raw.get("start_headroom"), f"{PROVIDERS_PATH}.start_headroom")
+    providers = {k: dataclasses.replace(p, limits=dataclasses.replace(p.limits, headroom=headroom))
+                 if p.limits.stops else p for k, p in providers.items()}
     if not providers:
         raise ConfigError(f"{PROVIDERS_PATH}: at least one provider is required")
     secrets = [p.secret for p in providers.values() if p.login == "secret"]
@@ -474,7 +527,11 @@ def parse(raw: Any) -> Pool:
     machine = int(raw.get("machine_parallel", lanes))
     if not 0 <= machine <= lanes:
         raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
-    pool = Pool(lanes, priority, providers, machine_parallel=machine, tiers=tiers)
+    plan_lanes = int(raw.get("plan_lanes", 0))
+    if plan_lanes < 0:
+        raise ConfigError(f"{PROVIDERS_PATH}: plan_lanes must be 0 or more")
+    pool = Pool(lanes, priority, providers, machine_parallel=machine, plan_lanes=plan_lanes,
+                tiers=tiers)
     # Every model a provider runs has its place in its own tier's order, so the router always
     # knows which to try first, and a model never has two tiers.
     for provider in providers.values():
@@ -541,6 +598,13 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         resets = parse_iso(reset_at)
         if resets is None and str(reset_at).startswith("+PT"):
             resets = at + _duration(str(reset_at))
+            from harness.runner import DEFAULT_PARK  # runner imports config, which imports this
+            if str(reset_at) == DEFAULT_PARK:
+                # The refusal named no reset: a window the last reading had nearly full is the
+                # likely cause, so wait for it (gpt's week at 89% was retried every hour).
+                held = near_full_reset(entry.get("usage"), at)
+                if held is not None and held > resets:
+                    resets = held
         if resets is not None:
             entry["refused_until"] = iso(resets)
     if minutes > 0:
@@ -549,25 +613,88 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         entry["spent"] = spent[-SPENT_KEEP:]
 
 
-def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime) -> None:
-    """A run on this provider could not work: leave it alone for `INFRA_BACKOFF`."""
+#: A window at least this full in the last reading is taken to be why a refusal came.
+NEAR_FULL = 0.85
+
+
+def near_full_reset(usage: Any, at: datetime) -> datetime | None:
+    """When the latest-resetting window that the reading had nearly full resets, if any."""
+    if not isinstance(usage, Mapping):
+        return None
+    found = []
+    for window in WINDOWS:
+        reading = usage.get(window)
+        if not isinstance(reading, Mapping):
+            continue
+        resets = parse_iso(reading.get("resets_at"))
+        utilization = reading.get("utilization")
+        if (resets is not None and resets > at and isinstance(utilization, (int, float))
+                and utilization >= NEAR_FULL):
+            found.append(resets)
+    return max(found, default=None)
+
+
+def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime, *,
+               escalate: bool = True) -> int:
+    """A run on this provider could not work: leave it alone for its backoff (`infra_backoff`).
+    Returns the failures in a row. `escalate` False (a failure that was not the provider's, such
+    as an install that fails on untouched main) keeps the streak where it was."""
     entry = record(state, provider_id)
-    entry["infra"] = {"at": iso(at), "reason": str(reason)[:500]}
+    previous = entry.get("infra") if isinstance(entry.get("infra"), Mapping) else {}
+    streak = _streak(previous)
+    if escalate or not previous:
+        streak = streak + 1 if previous else 1
+    entry["infra"] = {**{k: previous[k] for k in ("issue",) if previous.get(k)},
+                      "at": iso(at), "reason": str(reason)[:500], "streak": streak}
+    return streak
+
+
+def clear_infra(state: dict[str, Any], provider_id: str) -> int | None:
+    """A run on this provider got a model call through: its failure streak is over. Returns the
+    issue `deliver` opened about it, if any, to close."""
+    entry = (state.get("providers") or {}).get(provider_id)
+    if not isinstance(entry, dict) or not isinstance(entry.get("infra"), Mapping):
+        return None
+    issue = entry.pop("infra").get("issue")
+    return int(issue) if issue else None
+
+
+def _streak(infra: Mapping[str, Any]) -> int:
+    try:
+        return max(1, int(infra.get("streak") or 1)) if infra else 0
+    except (TypeError, ValueError):
+        return 1
+
+
+def infra_backoff(infra: Mapping[str, Any]) -> timedelta:
+    """How long a provider is left alone after its last failure, by the failures in a row."""
+    return INFRA_BACKOFFS[min(max(_streak(infra), 1), len(INFRA_BACKOFFS)) - 1]
 
 
 def _duration(text: str) -> timedelta:
-    amount = int("".join(ch for ch in text if ch.isdigit()) or "30")
-    return timedelta(hours=amount) if text.upper().endswith("H") else timedelta(minutes=amount)
+    """`+PT90M`, `+PT2H`, `+PT1H30M`: how long a relative refusal lasts (30 minutes if unread)."""
+    match = re.fullmatch(r"\+?PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", text.strip().upper())
+    if not match or not any(match.groups()):
+        return timedelta(minutes=30)
+    hours, minutes, seconds = (int(g or 0) for g in match.groups())
+    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime) -> str | None:
-    """Why this provider's usage says to start nothing now, or None."""
+def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
+            zone_name: str | None = None, *, starting: bool = False) -> str | None:
+    """Why this provider's usage says to start nothing now, or None. With the bot's time zone,
+    outside its window its `off_hours` caps hold too. `starting` (a build or a revision about to
+    start) leaves `start_headroom` under each cap; a run going on stops at the cap itself."""
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         return f"it refused a call; its limit resets at {iso(until)}"
     usage = entry.get("usage") or {}
     observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
-    for window, stop in provider.limits.stops.items():
+    caps = provider.caps_at(at, zone_name)
+    outside = caps != dict(provider.limits.stops)
+    room = provider.limits.headroom if starting else {}
+    for window, cap in caps.items():
+        stop = max(0.0, cap - room.get(window, 0.0))
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
@@ -578,8 +705,13 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime) -> str |
             continue  # that window has reset since the reading, or cannot be dated
         utilization = reading.get("utilization")
         if isinstance(utilization, (int, float)) and utilization >= stop:
+            where = " outside its hours" if outside else ""
+            if stop < cap:
+                return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, too close to its "
+                        f"{cap:.0%} cap{where} to start a build (it starts under {stop:.0%}); "
+                        f"it resets at {iso(resets)}")
             return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, at or over its "
-                    f"{stop:.0%} cap; it resets at {iso(resets)}")
+                    f"{stop:.0%} cap{where}; it resets at {iso(resets)}")
     for window, budget in provider.limits.budgets.items():
         used = minutes_spent(entry, at - WINDOWS[window])
         if used >= budget:
@@ -616,6 +748,17 @@ class Secrets:
         return False if self.known else None
 
 
+def _off_hours(raw: Any, where: str) -> dict[str, float]:
+    if raw in (None, {}):
+        return {}
+    if not isinstance(raw, Mapping):
+        raise ConfigError(f"{where}: expected an object such as {{\"five_hour\": 0.4}}")
+    unknown = sorted(set(raw) - set(WINDOWS))
+    if unknown:
+        raise ConfigError(f"{where}: unknown windows {', '.join(unknown)}")
+    return {str(window): _fraction(share, f"{where}.{window}") for window, share in raw.items()}
+
+
 def _lanes(raw: Any, where: str) -> int:
     try:
         lanes = int(raw)
@@ -641,7 +784,7 @@ def switched_off_by_date(provider: Provider, at: datetime, zone_name: str) -> bo
 
 
 def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
-                 secrets: Secrets, *, forced: bool = False) -> str | None:
+                 secrets: Secrets, *, forced: bool = False, starting: bool = False) -> str | None:
     """Why `provider` may not start a run now, or None when it may. Busy-ness is the caller's."""
     if not provider.enabled:
         return "switched off in providers.json"
@@ -649,17 +792,20 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
         return f"switched off from {provider.off_from} (`off_from` in providers.json)"
     if provider.login == "secret" and secrets.has(provider.secret) is False:
         return f"its secret `{provider.secret}` is not set"
-    if not forced and not provider.schedule.is_open(zone_name, at):
+    if not forced and not provider.off_hours and not provider.schedule.is_open(zone_name, at):
         window = provider.schedule.window(zone_name)
         opens = window.next_open(at) if window else at
         return f"outside its hours ({provider.schedule.describe(zone_name)}; opens in {human_delta(opens - at)})"
     entry = peek_record(state, provider.id)
     infra = entry.get("infra") if isinstance(entry.get("infra"), Mapping) else {}
     failed = parse_iso(infra.get("at"))
-    if not forced and failed is not None and at - failed < INFRA_BACKOFF:
-        return (f"its last run could not work ({str(infra.get('reason') or '')[:120]}); it is "
-                f"left alone until {iso(failed + INFRA_BACKOFF)}")
-    return refusal(provider, entry, at)
+    backoff = infra_backoff(infra)
+    if not forced and failed is not None and at - failed < backoff:
+        streak = _streak(infra)
+        times = f", {streak} times in a row" if streak > 1 else ""
+        return (f"its last run could not work{times} ({str(infra.get('reason') or '')[:120]}); "
+                f"it is left alone until {iso(failed + backoff)}")
+    return refusal(provider, entry, at, zone_name, starting=starting)
 
 
 def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,

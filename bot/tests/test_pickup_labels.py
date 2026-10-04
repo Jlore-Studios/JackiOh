@@ -130,7 +130,7 @@ class PriorityTests(unittest.TestCase):
         gh.add_labels(5, [HIGH])
         self.assertEqual(plan_mod.make(ctx)["number"], 5)
 
-    def test_with_no_priority_labels_the_order_is_forced_harder_reviews_revisions_builds(self):
+    def test_with_no_priority_labels_the_order_is_forced_reviews_revisions_harder_builds(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         for number in (3, 4, 5, 6):
@@ -148,9 +148,9 @@ class PriorityTests(unittest.TestCase):
         queue = queue_mod.candidates(ctx, state)
         order = [c.number for c, _ in plan_mod.pairs(ctx, state, queue, plan_mod.Lanes(3),
                                                      force=False, quiet_ok=plan_mod.ANY_QUIET)]
-        # Forced first, then the hard one (only the strongest can take it), then the review,
-        # the revision, and the builds oldest first.
-        self.assertEqual(order, [6, 7, 10, 9, 8, 4, 5, 3])
+        # Forced first, then the review and the revision (work already begun), then the builds:
+        # the hard one first (only the strongest can take it), the rest oldest first.
+        self.assertEqual(order, [6, 10, 9, 7, 8, 4, 5, 3])
 
 
 class HumanTests(unittest.TestCase):
@@ -230,7 +230,7 @@ class LabelsTests(unittest.TestCase):
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertTrue(pull["draft"])
         self.assertEqual(h.gh.label_names(int(pull["number"])),
-                         {LABEL_PR, "bot:blocked", "difficulty:hard", LOW})
+                         {LABEL_PR, "bot:blocked", "bot:stuck", "difficulty:hard", LOW})
 
 
 if __name__ == "__main__":

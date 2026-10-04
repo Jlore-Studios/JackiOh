@@ -326,6 +326,24 @@ export const spikeyPillow = def({
   },
 });
 
+/** R636: a plain 3/3 that may attack twice each turn. */
+export const windfurier = def({
+  id: "cb-windfurier",
+  index: "913",
+  name: "Windfurier (combat fixture)",
+  base: { attack: 3, health: 10, keywords: [{ kind: "Windfury" }], text: "Windfury" },
+  radiant: { attack: 6, health: 20, keywords: [{ kind: "Windfury" }], text: "Windfury" },
+});
+
+/** R637: a 2/2 Unit that prints Temporary, so it is discarded from a hand at the end of its owner's turn. */
+export const temporaryBody = def({
+  id: "cb-temporary",
+  index: "914",
+  name: "Temporary Body (combat fixture)",
+  base: { attack: 2, health: 2, keywords: [{ kind: "Temporary" }], text: "Temporary" },
+  radiant: { attack: 4, health: 4, keywords: [{ kind: "Temporary" }], text: "Temporary" },
+});
+
 /** −2 attack to the controller's units on the field; `sparesOwnKind` is 65.1's radiant text. */
 function attackDrainAura(sparesOwnKind: boolean): AuraHook {
   return ({ self }) => [
@@ -372,6 +390,8 @@ export const COMBAT_DEFS: CardDef[] = [
   bigDfender,
   deftDuelist,
   spikeyPillow,
+  windfurier,
+  temporaryBody,
 ];
 
 export const COMBAT_SCRIPTS: Record<string, CardScripts> = {

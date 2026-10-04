@@ -11,6 +11,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import dataclasses
+
+from harness import runner as runner_mod
 from harness.runner import ClaudeCli, RunRequest, parse_stream, usage_from_event
 
 FAKE_CLAUDE = textwrap.dedent('''\
@@ -24,6 +27,13 @@ FAKE_CLAUDE = textwrap.dedent('''\
         print(json.dumps(obj), flush=True)
     emit({{"type": "system", "subtype": "init"}})
     if mode == "sleep":
+        time.sleep(30)
+    if mode == "climb":
+        for share in (0.3, 0.6):
+            emit({{"type": "rate_limit_event", "rate_limit_info": {{"status": "allowed",
+                  "unifiedWindows": {{"five_hour": {{"utilization": share,
+                                                     "resetsAt": 1790710800}}}}}}}})
+            time.sleep(0.4)
         time.sleep(30)
     if mode == "daemon":
         import subprocess
@@ -64,6 +74,29 @@ class RunnerTests(unittest.TestCase):
                "CLAUDE_CODE_OAUTH_TOKEN": "oauth-token-value", "ANTHROPIC_API_KEY": "sk-ant-nope"}
         with mock.patch.dict(os.environ, env):
             return ClaudeCli(str(self.bin)).run(self.request(timeout))
+
+    def test_a_call_past_its_cap_is_stopped_while_it_runs(self):
+        """The usage the CLI streams is watched during the call: the call stops once the
+        reading crosses the cap, not up to `call_timeout_minutes` later."""
+        seen = []
+
+        def stop(usage):
+            share = usage["five_hour"]["utilization"]
+            seen.append(share)
+            return f"5-hour usage is {share:.0%}, at or over its 50% cap" if share >= 0.5 else None
+
+        env = {"FAKE_MODE": "climb", "FAKE_ENV_DUMP": str(self.dump),
+               "CLAUDE_CODE_OAUTH_TOKEN": "oauth-token-value"}
+        request = dataclasses.replace(self.request(), usage_stop=stop)
+        with mock.patch.dict(os.environ, env), mock.patch.object(runner_mod, "WATCH_SECONDS", 0.1):
+            result = ClaudeCli(str(self.bin)).run(request)
+        self.assertFalse(result.ok)
+        self.assertEqual(result.extra["usage_stop"], "5-hour usage is 60%, at or over its 50% cap")
+        self.assertIn("stopped mid-call", result.error)
+        self.assertLess(result.duration_s, 20)  # the fake would sleep 30 seconds more
+        self.assertEqual(seen[-1], 0.6)
+        self.assertEqual(result.usage["five_hour"]["utilization"], 0.6)
+        self.assertFalse(result.rate_limited)
 
     def test_argv(self):
         argv = ClaudeCli("claude").argv(self.request(), Path("/tmp/s.md"))
@@ -128,6 +161,11 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(result.infra)
         self.assertFalse(result.rate_limited)
         self.assertFalse(RunResult(False, "", 1, error="max turns reached").infra)
+        # Claude Code with a revoked or mistyped token (CLAUDE_CODE_OAUTH_TOKEN_3, 2026-10-03):
+        # it ran a whole revision's checks and a review on it before this counted as a login.
+        revoked = "Failed to authenticate. API Error: 401 OAuth access token is invalid."
+        self.assertTrue(RunResult(False, "", 1, error=revoked).infra)
+        self.assertFalse(RunResult(False, "", 1, error=revoked).rate_limited)
 
     def test_missing_binary(self):
         result = ClaudeCli(str(self.tmp / "nope")).run(self.request())

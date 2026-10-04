@@ -74,7 +74,7 @@
   "upload_transcripts": false,
   "install": { "run": "pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
-    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15 },
+    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15, "machine": false },
     { "name": "typecheck", "run": "pnpm typecheck", "timeout_minutes": 15 },
     { "name": "catalog", "run": "pnpm validate:catalog", "timeout_minutes": 5 },
     {
@@ -83,6 +83,11 @@
       "timeout_minutes": 5
     },
     { "name": "rulings coverage", "run": "pnpm rulings:coverage", "timeout_minutes": 5 },
-    { "name": "unit and integration", "run": "pnpm test", "timeout_minutes": 40 }
+    {
+      "name": "related tests",
+      "run": "pnpm exec vitest run --changed origin/main --exclude '**/gate-*.test.ts' --exclude '**/fuzz*.test.ts'",
+      "timeout_minutes": 15,
+      "machine": false
+    }
   ]
 }

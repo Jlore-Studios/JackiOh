@@ -28,11 +28,12 @@ REPO_LABELS = {"patch", "major version", "architecture", "night bot", "human", "
 
 
 def event(*, login="MaxGoetzmann", user_id=87041877, association="OWNER", title="Fix the thing",
-          labels=(), assignees=(), pr=False, number=40) -> dict:
+          labels=(), assignees=(), pr=False, number=40, issue_type=None) -> dict:
     thread = {"number": number, "title": title, "body": "Please fix it.",
               "user": {"login": login, "id": user_id}, "author_association": association,
               "labels": [{"name": n} for n in labels],
-              "assignees": [{"login": a} for a in assignees], "state": "open"}
+              "assignees": [{"login": a} for a in assignees], "state": "open",
+              "type": {"name": issue_type} if issue_type else None}
     return {"pull_request": thread} if pr else {"issue": thread}
 
 
@@ -62,8 +63,14 @@ class GateTests(unittest.TestCase):
         self.assertFalse(self.go(event(login="github-actions[bot]", association="NONE"))[0])
 
     def test_nothing_left_to_do_skips(self):
-        done = event(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",))
-        self.assertEqual(self.go(done), (False, "already labelled, assigned and titled"))
+        done = event(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",),
+                     issue_type="Task")
+        self.assertEqual(self.go(done), (False, "already labelled, assigned, titled and typed"))
+        # An issue with everything but a type still goes, for its type; a PR has none to give.
+        untyped = event(title="Night bot: a thing", labels=("night bot",), assignees=("jgoetzmann",))
+        self.assertTrue(self.go(untyped)[0])
+        pr = event(title="Anything", labels=("night bot",), assignees=("jgoetzmann",), pr=True)
+        self.assertFalse(self.go(pr)[0])
 
     def test_devin_switched_off_skips_quietly(self):
         go, why = self.go(event(), at=datetime(2026, 10, 15, 6, 0, tzinfo=timezone.utc))
@@ -87,6 +94,12 @@ class PromptTests(unittest.TestCase):
         self.assertNotIn("- `bot:build`", text)  # never offered as a label
         self.assertIn("## Titles", text)  # the conventions themselves
         self.assertIn("`.harness/` or `.github/`, which the bot may not touch", text)
+        # An issue is asked for its type, from the organisation's list; a pull request is not.
+        self.assertIn('"type": the issue\'s type, exactly one of Task (A specific piece of work); '
+                      'Bug (An unexpected problem or behavior); Feature', text)
+        self.assertIn('"reason": "...", "type": "..."}', text)
+        pr = triage.prompt(thread(pr=True), True, labels, "", {"Chore": "upkeep"})
+        self.assertNotIn('"type"', pr)
 
     def test_the_answer_is_the_last_json_object(self):
         answer = 'Sure.\n```json\n{"kind": "bot", "labels": ["patch"], "title": ""}\n```'
@@ -148,6 +161,29 @@ class DecideTests(unittest.TestCase):
         plan = self.decide({"kind": "human", "labels": ["patch"]}, pr=True)
         self.assertEqual((plan.labels, plan.assignees), (["patch"], ["MaxGoetzmann", "jgoetzmann"]))
 
+    def test_an_issue_gets_a_type_a_person_set_stays_and_a_pr_gets_none(self):
+        plan = self.decide({"kind": "bot", "labels": ["patch"], "type": "bug"})
+        self.assertEqual(plan.issue_type, "Bug")  # matched whatever its case
+        kept = self.decide({"kind": "bot", "type": "Feature"}, issue_type="Task")
+        self.assertEqual(kept.issue_type, "")
+        pr = self.decide({"kind": "bot", "labels": ["patch"], "type": "Bug"}, pr=True)
+        self.assertEqual(pr.issue_type, "")
+        odd = self.decide({"kind": "bot", "type": "Epic"})
+        self.assertEqual(odd.issue_type, "")
+        self.assertTrue(any("not one of Task, Bug, Feature" in note for note in odd.notes))
+        # Only the organisation's own types count.
+        custom = triage.decide({"kind": "bot", "type": "Chore"}, thread(), False, REPO_LABELS,
+                               BOT, {"Chore": "upkeep"})
+        self.assertEqual(custom.issue_type, "Chore")
+
+    def test_the_issue_types_come_from_the_organisation_or_the_defaults(self):
+        self.assertEqual(list(triage.issue_types(FakeGitHub())), ["Task", "Bug", "Feature"])
+
+        class Refused:
+            def list_issue_types(self):
+                return []
+        self.assertEqual(triage.issue_types(Refused()), triage.DEFAULT_ISSUE_TYPES)
+
     def test_nothing_usable_changes_nothing(self):
         for verdict in (None, "a string", {"kind": "maybe", "labels": "patch", "title": 7}):
             plan = self.decide(verdict)
@@ -162,8 +198,17 @@ class DecideTests(unittest.TestCase):
         plan = triage.decide({"kind": "human", "labels": ["patch"],
                               "title": "Patch v0.2.9: a public Card Almanac"},
                              gh.get_issue(40), False, REPO_LABELS, BOT)
+        self.assertEqual(plan.issue_type, "")  # the verdict named none
+        plan.issue_type = "Bug"
         done = triage.apply(gh, 40, plan)
-        self.assertEqual(len(done), 3)
+        self.assertEqual(len(done), 4)
+        self.assertIn("typed it Bug", done)
+        self.assertEqual(gh.threads[40]["type"], "Bug")
+        # A type GitHub drops without an error is reported, not claimed.
+        gh.update_issue = lambda number, **fields: {"type": None}
+        plan = triage.Plan(issue_type="Feature")
+        self.assertEqual(triage.apply(gh, 40, plan),
+                         ["could not do this: typed it Feature (GitHub did not keep it)"])
         self.assertEqual(gh.label_names(40), {"patch", "human"})
         self.assertEqual([a["login"] for a in gh.threads[40]["assignees"]],
                          ["MaxGoetzmann", "jgoetzmann"])

@@ -22,6 +22,7 @@ import os
 import re
 import signal
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -33,14 +34,27 @@ from harness.redact import redact
 
 RATE_LIMIT_WORDS = re.compile(
     r"(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:\w+ )?limit"
-    r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror)"
+    r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror"
+    # agy, once its plan's allowance is spent: "Individual quota reached. Please upgrade your
+    # subscription to increase your limits. Resets in 1h44m44s."
+    r"|quota reached|upgrade your subscription to increase your limits)"
 )
+#: "Resets in 1h44m44s" (agy), "resets in 3h", "try again in 5 days 2 hours 22 minutes" (Codex):
+#: how long a refusal lasts.
+RESETS_IN = re.compile(
+    r"(?i)(?:resets?|try again) in\s*(?:(\d+)\s*d(?:ays?)?\b)?[\s,]*(?:(\d+)\s*h(?:ours?)?\b|(\d+)h)?"
+    r"[\s,]*(?:(\d+)\s*m(?:in(?:ute)?s?)?(?![a-z])|(\d+)m(?=\d))?[\s,]*(?:(\d+)\s*s)?")
+#: How often a running call's usage is looked at (`_Cli._launch`'s watcher).
+WATCH_SECONDS = 15
 AUTH_WORDS = re.compile(
     r"(?i)(invalid api key|authentication[_ ]error|oauth token|not logged in|please run /login"
     r"|invalid bearer|401 unauthorized|credit balance is too low|sign in again"
     r"|refresh token (?:has expired|was already used|was revoked)|could not be refreshed"
     r"|manual authorization is required|no meta credentials|api key from meta_api_key was rejected"
-    r"|run `?muse login|authentication required|devin auth login)"
+    r"|run `?muse login|authentication required|devin auth login"
+    # Claude Code's answer when its token is revoked or mistyped: "Failed to authenticate. API
+    # Error: 401 OAuth access token is invalid." A model never says that on its own.
+    r"|failed to authenticate|access token is invalid|api error: 401)"
 )
 USAGE_WINDOWS = ("five_hour", "seven_day")
 #: Set in every model call's environment, so the processes it leaves behind can be found.
@@ -54,6 +68,17 @@ EXIT_TIMEOUT = 124
 EXIT_NOT_FOUND = 127
 #: When a refusal names no reset time: try again after this long.
 DEFAULT_PARK = "+PT60M"
+
+
+def park_for(error: str | None) -> str:
+    """How long a refused CLI is left alone: until the reset its message names, plus a minute,
+    or an hour when it names none."""
+    match = RESETS_IN.search(error or "")
+    if not match or not any(match.groups()):
+        return DEFAULT_PARK
+    days, hours, hours2, minutes, minutes2, seconds = (int(g or 0) for g in match.groups())
+    total = (days * 24 + hours + hours2) * 60 + minutes + minutes2 + (1 if seconds else 0)
+    return f"+PT{max(1, total) + 1}M"
 #: How much of a transcript the next agent is shown (`trail`).
 TRAIL_ENTRIES = 40
 TRAIL_CHARS = 6000
@@ -84,6 +109,9 @@ class RunRequest:
     read_only: bool = False
     #: Directories outside `cwd` the session may need to write (a worktree's git directory).
     extra_dirs: tuple[str, ...] = ()
+    #: Asked with each usage reading the CLI streams while the call runs (Claude's
+    #: `rate_limit_event`): a reason stops the call there, None lets it go on.
+    usage_stop: Callable[[dict[str, Any]], str | None] | None = None
 
 
 @dataclass
@@ -205,6 +233,8 @@ class _Launch:
     raw: Path
     stderr: str
     elapsed: float
+    #: Why the usage watcher stopped the call, if it did.
+    stopped: str | None = None
 
 
 class _Cli:
@@ -241,6 +271,7 @@ class _Cli:
         marker = f"{request.role}-{os.getpid()}-{time.time_ns()}"
         env = {**env, CALL_MARKER: marker}
         timed_out = False
+        stopped: list[str] = []
         before = _own_pids()
         session: list[int] = []
         stderr_path = raw.with_suffix(".stderr")
@@ -253,17 +284,52 @@ class _Cli:
                     stdout=out, stderr=err, text=True, start_new_session=True,
                 )
                 session.append(proc.pid)
+                done = threading.Event()
+                if request.usage_stop is not None:
+                    threading.Thread(target=self._watch, args=(proc, raw, request, done, stopped),
+                                     daemon=True).start()
                 try:
                     proc.communicate(stdin_text, timeout=request.timeout_s)
                 except subprocess.TimeoutExpired:
                     timed_out = True
                     _kill(proc)
+                finally:
+                    done.set()
                 code = proc.returncode if proc.returncode is not None else EXIT_TIMEOUT
         except FileNotFoundError:
             return RunResult(False, "", EXIT_NOT_FOUND, error=f"{self.binary} not found")
         finally:
             _reap(before, marker, session[0] if session else None)
-        return _Launch(code, timed_out, raw, _read(stderr_path), time.monotonic() - started)
+        return _Launch(code, timed_out, raw, _read(stderr_path), time.monotonic() - started,
+                       stopped[0] if stopped else None)
+
+    def live_usage(self, line: str) -> dict[str, Any] | None:
+        """A usage reading in one line of the running call's output, if the CLI streams any."""
+        return None
+
+    def _watch(self, proc: subprocess.Popen, raw: Path, request: RunRequest,
+               done: threading.Event, stopped: list[str]) -> None:
+        """While the call runs: read the usage it streams, and stop it once `usage_stop` says
+        so. Without this a call (up to `call_timeout_minutes`) ran past its cap unchecked."""
+        offset, pending = 0, ""
+        while not done.wait(WATCH_SECONDS):
+            try:
+                with open(raw, encoding="utf-8", errors="replace") as handle:
+                    handle.seek(offset)
+                    chunk = handle.read()
+                    offset = handle.tell()
+            except OSError:
+                continue
+            lines = (pending + chunk).split("\n")
+            pending = lines.pop()
+            readings = [u for u in (self.live_usage(line) for line in lines) if u]
+            if not readings or request.usage_stop is None:
+                continue
+            reason = request.usage_stop(readings[-1])
+            if reason and proc.poll() is None:
+                stopped.append(reason)
+                _kill(proc)
+                return
 
     def _keep(self, launch: _Launch, transcript: Path) -> None:
         """The raw output, redacted, becomes the transcript; the raw file goes."""
@@ -333,6 +399,10 @@ class ClaudeCli(_Cli):
         with open(raw, encoding="utf-8", errors="replace") as handle:
             result, usage = parse_stream(handle)
         self._keep(launch, transcript)
+        if launch.stopped:
+            return RunResult(False, _text(result), launch.code, _turns(result), launch.elapsed,
+                             f"stopped mid-call: {launch.stopped}", usage,
+                             extra={"usage_stop": launch.stopped})
         if launch.timed_out:
             return RunResult(False, _text(result), EXIT_TIMEOUT, _turns(result), launch.elapsed,
                              f"timed out after {request.timeout_s}s", usage, timed_out=True)
@@ -349,6 +419,13 @@ class ClaudeCli(_Cli):
         return RunResult(ok=not is_error and code == 0, text=text, exit_code=code,
                          turns=_turns(result), duration_s=launch.elapsed, error=error,
                          usage=usage, reset_at=reset_at)
+
+    def live_usage(self, line: str) -> dict[str, Any] | None:
+        if "rate_limit_event" not in line:
+            return None
+        for event in _json_lines([line]):
+            return usage_from_event(event)
+        return None
 
     def trail(self, transcript: Path) -> str:
         entries: list[str] = []
@@ -505,7 +582,7 @@ class AgyCli(_Cli):
         if not ok:
             error = redact((str(result.get("error") or "") or launch.stderr
                             or f"agy exited {launch.code} ({result.get('status')})")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at)
 
     def trail(self, transcript: Path) -> str:
@@ -562,7 +639,7 @@ class MuseCli(_Cli):
         if not ok:
             last = [line for line in stderr.splitlines() if line.strip()]
             error = redact((last[-1] if last else f"muse exited {launch.code}")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at,
                          infra_hint=launch.code == 2)
 
@@ -645,7 +722,7 @@ class DevinCli(_Cli):
         if not ok:
             last = [line for line in stderr.splitlines() if line.strip()]
             error = redact((last[-1] if last else f"devin exited {launch.code}")[-2000:])
-        reset_at = DEFAULT_PARK if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return RunResult(ok, text, launch.code, None, launch.elapsed, error, None, reset_at)
 
 
@@ -657,9 +734,11 @@ PING_PROMPT = "Reply with the word ok."
 PING_TIMEOUT_S = 180
 
 
-def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run) -> dict | None:
+def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run,
+               token: str = "") -> dict | None:
     """The Claude subscription's usage now, read off the smallest call there is: one turn of
-    `model` in an empty directory. None when the CLI gave no reading."""
+    `model` in an empty directory, signed in with `token` (else this process's own). None when
+    the CLI gave no reading."""
     import tempfile
 
     argv = [claude_bin, "--print", "--output-format", "stream-json", "--verbose",
@@ -669,6 +748,8 @@ def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess
     for key in ACTIONS_FILES:
         env.pop(key, None)
     env.update(QUIET_ENV)
+    if token:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = token
     with tempfile.TemporaryDirectory(prefix="bot-ping-") as empty:
         env["CLAUDE_CONFIG_DIR"] = str(Path(empty) / ".claude")
         try:

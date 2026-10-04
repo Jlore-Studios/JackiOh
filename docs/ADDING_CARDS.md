@@ -33,7 +33,7 @@ non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SI
 `apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
 size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). The patch-list tests
 (`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
-yours — a pending-claimed card needs no edits there (R635).
+yours — a pending-claimed card needs no edits there (R641).
 
 Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
 `CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.
@@ -102,7 +102,7 @@ describe("C+ #6 Wrong-House Attacker", () => {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388, R635). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a
+A change to card data is a patch (R388, R641). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a
 shipped one. A branch claims its card changes with a pending fragment:
 
 ```

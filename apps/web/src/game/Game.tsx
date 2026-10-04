@@ -57,6 +57,7 @@ import CardShowcase from "./showcase/CardShowcase.tsx";
 import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, useVoiceSpeaking } from "../audio/index.ts";
+import { useGameStats } from "../stats/useGameStats.ts";
 
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
@@ -91,6 +92,12 @@ export type GameProps = {
    * setting says. The tutorial pins it on, since its lessons are written around R82.
    */
   autoEndTurn?: boolean;
+  /**
+   * R639: log this game in the device's statistics when it ends. The routes that play the player's
+   * own game (an online match, a practice game) set it; a tutorial lesson, a hotseat game on one
+   * screen and a test fixture leave it off.
+   */
+  trackStats?: boolean;
 };
 
 /** What the board is offered while it is still showing an older view than `legal` describes. */
@@ -104,6 +111,7 @@ export default function Game({
   resultActions,
   resultForm = "panel",
   autoEndTurn: pinnedAutoEndTurn,
+  trackStats = false,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
@@ -182,6 +190,7 @@ export default function Game({
     });
   }
   const runner = queue.current;
+  useGameStats(view, trackStats);
   useGameAudio(runner, view); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9); hotseat and online play simply carry it.

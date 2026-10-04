@@ -2,7 +2,7 @@
 // with the import declarations left out, written into the catalog by `scripts/gen-loc.ts` (part of
 // `pnpm --filter @jackioh/cards gen`) and held current here, as `_generated.ts` is by the barrel.
 // It is card data (Classic #48 Hired Shrimp and Classic+ #44/#45 read it) and so part of a card's
-// patch history (B4.2, R635): a moved `loc` is a catalog change for a pending fragment to claim,
+// patch history (B4.2, R641): a moved `loc` is a catalog change for a pending fragment to claim,
 // and only the promotion snapshots it — shipped snapshots are never amended.
 
 import { describe, expect, it } from "vitest";
@@ -51,7 +51,7 @@ describe("E36 lines of code (docs/classic-sets.md B5, B4.2)", () => {
     expect(CATALOG_IDS.filter((id) => id.startsWith("core-") && expected.get(id) === undefined)).toEqual([]);
   });
 
-  it("keeps the newest snapshot's loc equal to the catalog's, pending fragments aside (B4.2, R635)", () => {
+  it("keeps the newest snapshot's loc equal to the catalog's, pending fragments aside (B4.2, R641)", () => {
     // A pending fragment may hold the catalog ahead of the newest snapshot on its claimed cards,
     // `loc` included: reverted to the snapshot, the two agree entry for entry.
     const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
