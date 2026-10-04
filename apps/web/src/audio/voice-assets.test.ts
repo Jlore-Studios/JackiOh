@@ -11,7 +11,7 @@
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
-//   R651 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
+//   R654 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
 //        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
 //        no file.
 //
@@ -121,8 +121,17 @@ function voicedKeys(table: Json): string[] {
   );
 }
 
-/** Every hook the committed file voices; a hook that is only an effect renders no file. */
-const EXPECTED_KEYS: readonly string[] = voicedKeys(AUDIO);
+/** R644: the emotes section's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
+const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
+const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
+  isRecord(AUDIO.emotes) ? AUDIO.emotes : {},
+).flatMap((portrait) => EMOTE_LINES.map((line) => `emote-${portrait}-${line}`));
+
+/**
+ * Every hook the committed file voices, plus every emote line; a hook that is only an effect
+ * renders no file.
+ */
+const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO), ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
 /** Core's own count (44 units, 67 spells and traps) plus whatever the other sets bring. */
 const EXPECTED_FILE_COUNT = EXPECTED_KEYS.length;
@@ -158,7 +167,29 @@ function sapiHash(input: { voice: unknown; rate: unknown; semitones: unknown; fi
 function expectedHash(key: string, table: Json = AUDIO): string | null {
   const { defId, line } = splitKey(key);
   const cards = isRecord(table.cards) ? table.cards : {};
+  const emotes = isRecord(table.emotes) ? table.emotes : {};
   const voices = isRecord(table.voices) ? table.voices : {};
+  if (defId.startsWith("emote-")) {
+    // R644: `emote-<portrait>` keys resolve through the emotes section (voiceData.ts `emoteLineFor`).
+    const entry = emotes[defId.slice("emote-".length)];
+    if (!isRecord(entry)) return null;
+    const personaName = entry.persona;
+    if (typeof personaName !== "string") return null;
+    const voice = voices[personaName];
+    if (!isRecord(voice)) return null;
+    const text = entry[line];
+    if (typeof text !== "string") return null;
+    if (voice.backend === "sapi") {
+      return sapiHash({ voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text });
+    }
+    return voiceHash({
+      say: voice.say,
+      rate: entry.rate ?? voice.rate,
+      pbas: entry.pbas ?? voice.pbas,
+      pmod: entry.pmod ?? voice.pmod,
+      text,
+    });
+  }
   const entry = cards[defId];
   if (!isRecord(entry)) return null;
   const assignment = entry[line];
@@ -302,6 +333,14 @@ describe("the committed voice files (B35)", () => {
     expect(EXPECTED_KEYS.filter((key) => key.startsWith("core-")), "Core's own lines").toHaveLength(CORE_FILE_COUNT);
   });
 
+  it("R644 renders all five voice emotes of every portrait, on disk and in the manifest", () => {
+    expect(EXPECTED_EMOTE_KEYS).toHaveLength(30);
+    const missing = EXPECTED_EMOTE_KEYS.filter(
+      (key) => !existsSync(voicePath(key)) || MANIFEST_FILES[key] === undefined,
+    );
+    expect(missing, "emote keys with no file or no manifest entry").toEqual([]);
+  });
+
   it("B35 leaves no expected voice file missing from public/audio/voice", () => {
     const missing = EXPECTED_KEYS.filter((key) => !existsSync(voicePath(key)));
     expect(missing, `keys with no file under ${VOICE_DIR}`).toEqual([]);
@@ -403,10 +442,10 @@ describe("the voice budget (B36)", () => {
   });
 });
 
-// ----------------------------------------------------------------------------------- R651 ---
+// ----------------------------------------------------------------------------------- R654 ---
 
-describe("the move to card-audio.json5 (R651)", () => {
-  it("R651 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
+describe("the move to card-audio.json5 (R654)", () => {
+  it("R654 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
     const manifestKeys = Object.keys(MANIFEST_FILES).sort();
     expect(manifestKeys.length, "the manifest lists voice lines").toBeGreaterThan(0);
     expect([...EXPECTED_KEYS].sort(), "the file's voice lines are the manifest's keys").toEqual(manifestKeys);
@@ -420,7 +459,7 @@ describe("the move to card-audio.json5 (R651)", () => {
     expect(wrong, "lines whose voice or text changed in the move").toEqual([]);
   });
 
-  it("R651 expects no file for a hook that is only an effect, core-066's attack among them", () => {
+  it("R654 expects no file for a hook that is only an effect, core-066's attack among them", () => {
     expect(cardsOf(AUDIO)["core-066"]?.attack, "core-066's attack hook").toEqual({ effect: "rumble" });
     const effectOnly = Object.entries(cardsOf(AUDIO)).flatMap(([defId, entry]) =>
       Object.entries(entry)
@@ -680,7 +719,7 @@ describe("gen-voice.mjs --check (B37)", () => {
   );
 
   it(
-    "R651 exits 0 when a card gains an attack hook that is only an effect, which renders no file",
+    "R654 exits 0 when a card gains an attack hook that is only an effect, which renders no file",
     () => {
       const root = copyWebTree();
       editAudio(root, (table) => {

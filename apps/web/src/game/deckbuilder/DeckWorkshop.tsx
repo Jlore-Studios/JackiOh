@@ -463,6 +463,9 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         onRename={(name) => {
           store.updateDeck(openDeck.id, { name });
         }}
+        onPortrait={(portrait) => {
+          store.updateDeck(openDeck.id, { portrait });
+        }}
         onCards={(cards) => {
           store.updateDeck(openDeck.id, { cards });
         }}

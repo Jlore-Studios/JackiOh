@@ -3,7 +3,7 @@
 // preview does. Presentation only (CLAUDE.md rule 7): it reads the public card sound table through
 // `lineFor`, which is null for the hidden sentinel and for a fused transient definition, so R203
 // holds, and it changes none of R204's in-game speech moments. It lists the hooks that have a line,
-// in CARD_HOOKS's order (R651); a hook with only an effect has nothing to preview here. Muted or
+// in CARD_HOOKS's order (R654); a hook with only an effect has nothing to preview here. Muted or
 // voice-off refusal lives inside the engine (`playVoice` returns false), so there are no settings
 // checks here.
 

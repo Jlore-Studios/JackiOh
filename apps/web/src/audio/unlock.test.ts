@@ -22,6 +22,7 @@ const LINES: CardAudioTable = {
       death: { voice: "hustler", text: "House always wins." },
     },
   },
+  emotes: {},
 };
 const MANIFEST: VoiceManifest = { version: 1, format: "m4af aac@22050 mono 32000", files: {} };
 

@@ -39,7 +39,7 @@ export type DragLayerProps = {
   onInteraction: (next: Interaction) => void;
   onAction: (body: ActionBody) => void;
   /**
-   * R651: a press has just become a drag, once per lift. `Game` plays a lifted attacker's `attack`
+   * R654: a press has just become a drag, once per lift. `Game` plays a lifted attacker's `attack`
    * hook from it; the drop, a cancel and the attack itself report nothing.
    */
   onLift?: (plan: DragPlan) => void;

@@ -14,7 +14,7 @@ export type PracticeDeckChoice =
   | { kind: "random" }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[] };
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };
 
 export type PracticeStartConfig = {
   seed: string;
@@ -69,6 +69,8 @@ export type PracticeDebug = {
   lesson?: string;
   /** R417: the last boards `createGame` had, seat ordered, when the human brought one. */
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
+  /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none was. */
+  dealt?: PlayerId[];
 };
 
 export type PracticeRequest =

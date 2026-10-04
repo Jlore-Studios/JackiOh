@@ -1,4 +1,4 @@
-// R651: a Unit's `attack` hook, played as the viewer picks it up to attack, as in Hearthstone. `Game`
+// R654: a Unit's `attack` hook, played as the viewer picks it up to attack, as in Hearthstone. `Game`
 // calls the function this returns when a drag lifts one of the viewer's Units to attack
 // (`DragLayer`'s `onLift`) and when a click chooses one as the attacker. Both only ever lift a Unit
 // that `legalActions` lets attack (`planDrag`, `onClickTarget`), the source the green glow reads.

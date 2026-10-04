@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders every voice line in src/audio/card-audio.json5 to public/audio/voice/<key>.m4a and records
 // each file in src/audio/voice-manifest.json (docs/polish/2-sound.md, "gen-voice.mjs"; SPEC §10.11,
-// R501, R651).
+// R501, R654).
 //
 // The file is JSON5 and only ever read. A voice line is a card hook's assignment that names a voice
 // from the voices bank (with its text); its key is `<defId>-<hook>`. An assignment that is only an
@@ -73,6 +73,11 @@ const SAPI_BATCH = 60;
 /** SPEC §10.11: the lines every card of a kind has. */
 const LINES_BY_KIND = { unit: ["play", "death"], spell: ["cast"], trap: ["cast"] };
 const KIND_OF_TYPE = { Unit: "unit", Spell: "spell", "Field Spell": "spell", Trap: "trap", "Field Trap": "trap" };
+// R644's hero-portrait emotes (issue §3): the `emotes` section of card-audio.json5, one entry per
+// portrait id, each with the five voice lines below. Files are keyed `emote-<portrait>-<line>`.
+const EMOTE_PORTRAITS = ["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"];
+const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"];
+const EMOTE_PREFIX = "emote-";
 const BACKENDS = ["say", "sapi"];
 /** SAPI voice ranges: SSML prosody rate in percent, the ffmpeg pitch shift in semitones. */
 const SAPI_RATE_RANGE = [-50, 100];
@@ -224,6 +229,61 @@ function expectedKeys(table, problems) {
         const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
         expected.set(key, { defId, line: hook, backend, ...values, hash: sapiHash(values) });
       }
+    }
+  }
+  // R644: one expected `emote-<portrait>-<line>` key per line, resolved through the same voice
+  // machinery as a card's lines; the caller names the defId the file is written under.
+  const expectEmote = (defId, entry, line) => {
+    const voice = voices[entry.persona];
+    const backend = backendOf(voice);
+    if (backend === "say") {
+      const values = {
+        say: voice.say,
+        rate: entry.rate ?? voice.rate,
+        pbas: entry.pbas ?? voice.pbas,
+        pmod: entry.pmod ?? voice.pmod,
+        text: entry[line],
+      };
+      expected.set(`${defId}-${line}`, { defId, line, backend, ...values, hash: voiceHash(values) });
+    } else {
+      const values = {
+        voice: voice.voice,
+        rate: voice.rate,
+        semitones: voice.semitones,
+        filter: voice.filter,
+        text: entry[line],
+      };
+      expected.set(`${defId}-${line}`, { defId, line, backend, ...values, hash: sapiHash(values) });
+    }
+  };
+  // The emotes section: its own shape — a voice and the five issue-§3 lines, no hooks.
+  for (const [portrait, entry] of Object.entries(isObject(table.emotes) ? table.emotes : {})) {
+    const defId = `${EMOTE_PREFIX}${portrait}`;
+    if (!EMOTE_PORTRAITS.includes(portrait)) {
+      problems.push(`${defId}: not a portrait id`);
+      continue;
+    }
+    const voice = voices[entry?.persona];
+    if (!voice) {
+      problems.push(`${defId}: unknown voice ${JSON.stringify(entry?.persona)}`);
+      continue;
+    }
+    if (badVoices.has(entry.persona)) {
+      problems.push(`${defId}: voice ${entry.persona} cannot render`);
+      continue;
+    }
+    for (const line of EMOTE_LINES) {
+      const text = entry[line];
+      if (typeof text !== "string" || text.trim() === "") {
+        problems.push(`${defId}-${line}: no ${line} line`);
+        continue;
+      }
+      expectEmote(defId, entry, line);
+    }
+  }
+  for (const portrait of EMOTE_PORTRAITS) {
+    if (!Object.hasOwn(isObject(table.emotes) ? table.emotes : {}, portrait)) {
+      problems.push(`${EMOTE_PREFIX}${portrait}: missing from card-audio.json5 emotes`);
     }
   }
   return expected;

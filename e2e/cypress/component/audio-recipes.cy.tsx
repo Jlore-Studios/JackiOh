@@ -57,13 +57,14 @@ const SILENT = 0.001;
 /** B16's tolerance. */
 const RMS_TOLERANCE = 0.01;
 
-/** The SfxId union from types.ts, in its order: SFX_IDS is "all 38, in the order of the union". */
+/** The SfxId union from types.ts, in its order: SFX_IDS is "all 43, in the order of the union". */
 const EXPECTED_IDS = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
+  "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
 ] as const;
 
 /** The Surface's recipe table, `durationMs` column: the window each recipe must fall silent in. */
@@ -107,6 +108,11 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   brand: 800,
   heartbeat: 450,
   clockTick: 350,
+  emoteSob: 1200,
+  emoteYawn: 1400,
+  emoteLaugh: 750,
+  emoteAngry: 700,
+  emoteWahWah: 1800,
 };
 
 /** B14's params sets, reused so the browser checks the same inputs the fake context does. */

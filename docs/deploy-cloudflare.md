@@ -113,7 +113,10 @@ Workers & Pages -> your project. A **Worker** shows "Deployments" and "Settings 
 
 - **Git repository:** `Jlore-Studios/JackiOh`
 - **Production branch:** `production` (not `main`). This is what makes it once a day.
-- **Builds for non-production branches:** off. Previews are Vercel's job.
+- **Builds for non-production branches:** off (Branch control). Previews are Vercel's job. Left on,
+  Cloudflare builds every pull request and every bot branch, and its "Workers Builds: jackioh"
+  check goes red on all of them, which is what issue #207 was about. It is not a required check, so
+  it never blocked a merge, but it buries the real ones.
 - **Root directory:** `/`
 - **Build command:** `pnpm --filter @jackioh/web build`
 - **Deploy command:** `npx wrangler deploy`
@@ -138,7 +141,8 @@ variables, because Vite compiles them into the bundle. All of them are public; n
 | `VITE_SERVER_HTTP_URL` | `https://jackioh-server.onrender.com` |
 | `VITE_SERVER_WS_URL` | `wss://jackioh-server.onrender.com/ws/match` |
 | `NODE_VERSION` | `24.19.0` (from `.nvmrc`) |
-| `PNPM_VERSION` | `11.3.0` (only if the build log shows a different pnpm) |
+| `PNPM_VERSION` | `11.3.0` (the `packageManager` in `package.json`; set it always, do not rely on the image's pnpm) |
+| `CYPRESS_INSTALL_BINARY` | `0` (the install covers the whole workspace, `e2e/` included, and `pnpm-workspace.yaml` lets Cypress's install script run; without this the build downloads a browser it never uses. Render sets the same variable for the same reason) |
 
 Copy the first two from Vercel -> Project -> Settings -> Environment Variables. If either
 `VITE_SERVER_*` value is missing, the bundle falls back to `localhost:8787` and every API call and
@@ -232,6 +236,27 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
   ruleset), and the next run continues normally.
+- **deploy-watch opens "Render: the live server is not serving main's catalog":** it compares the
+  version and the commit the live server reports (`x-deployed-commit`, from Render's
+  `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
+  runs an older commit: Render is not receiving pushes, or a deploy failed. jackioh-server, Events
+  shows a "Deploy started" for every push it receives, and a failed deploy names its step in the
+  log. The server runs the pushed commit but another catalog version: render.yaml's start command
+  takes the version from `patches.json`, so `render.yaml`'s `CATALOG_VERSION` and that list
+  disagree, or the service is not running render.yaml's start command (Settings, Build & Deploy;
+  Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not
+  set. The run that finds the server live closes the issue.
+- **Render stopped deploying (the repository moved):** when the repository was transferred from
+  `jgoetzmann` to `Jlore-Studios`, Render kept the last deploy it had made (Oct 2) and received no
+  push after it, so a catalog change (v0.2.4) never arrived and nothing flagged it, because the
+  watch then compared only the catalog version and the version had not changed. To repair it:
+  jackioh-server, Settings, Build & Deploy: the repository must be `Jlore-Studios/JackiOh`, the
+  branch `main`, Auto-Deploy on commit ("After CI checks pass" would wait on the red Cloudflare
+  check). If the repository is not offered, an owner of the organization has to authorize Render's
+  GitHub app for it. The service is Blueprint-managed, so also check Blueprints, the repository of
+  the Blueprint. Then Manual Deploy, "Deploy latest commit". The `CATALOG_VERSION` in Environment is
+  ignored: the start command overwrites it at every boot from `patches.json`, so a stale copy there
+  cannot be served (delete it, so nobody edits it expecting an effect).
 - **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
   workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
 - **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for
@@ -259,7 +284,8 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   branch (`render.yaml` `branch: production`, and `deploy-watch.yml` triggered by pushes to
   `production`). Then the production server and client ship together once a day, staging is fully
   separate, and the catalog fast path is no longer needed.
-- **No automatic check that Cloudflare actually deployed.** `deploy-watch.yml` watches Render only.
+- **No automatic check that Cloudflare actually deployed.** `deploy-watch.yml` watches Render only
+  (the catalog version and the deployed commit).
   A similar job that fetches the live site after each promotion and compares a build marker with
   the promoted commit would catch a silently failed Cloudflare build. Until then, Cloudflare's
   build-failure email notifications (account -> Notifications) are the alarm.

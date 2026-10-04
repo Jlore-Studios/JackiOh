@@ -7,7 +7,7 @@
 // Whatever the runner never starts — every entry under reduced motion, `gameOver`'s zero-length
 // entry, a queue drained at a game's end or a skip — is flushed once, condensed, when the runner
 // goes idle. A condensed burst plays at most FLUSH_MAX_SFX plain effects, one card effect and one
-// line: the most important of each (R651).
+// line: the most important of each (R654).
 //
 // R203: the first view, and a view for a different seat (a hotseat hand-over), voices nothing and
 // drops everything owed, so the arriving seat hears nothing its own view did not produce.
@@ -198,7 +198,7 @@ export function createSoundDirector(
           // The most important line of the burst, the first of those on a tie.
           if (line === null || cue.priority > line.priority) line = cue;
         } else if (cue.kind === "effect") {
-          // R651: a card's effect is chosen as its line is: the burst's most important, the first on a tie.
+          // R654: a card's effect is chosen as its line is: the burst's most important, the first on a tie.
           if (cardEffect === null || cue.priority > cardEffect.priority) cardEffect = cue;
         } else if (item.event.type === "gameOver") {
           if (endCue === null) endCue = cue;

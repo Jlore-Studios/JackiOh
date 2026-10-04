@@ -1,4 +1,4 @@
-// R651 through the board: picking up one of your own Units to attack plays its `attack` hook, as in
+// R654 through the board: picking up one of your own Units to attack plays its `attack` hook, as in
 // Hearthstone. Driven through `<Game/>` as a player's pointer drives it (drag-layer.test.tsx says
 // how: `document.elementsFromPoint` is stubbed, the press goes to the element, the moves and the
 // release to `window`), with the audio singleton swapped for a fake whose `playPickup` is the spy.
@@ -173,8 +173,8 @@ afterEach(() => {
 // A drag.
 // ---------------------------------------------------------------------------------------------
 
-describe("R651 a drag that lifts your attacker plays its pick-up, once per lift", () => {
-  it("R651 a press on your attacker plays nothing until it travels the threshold, then plays once with the Unit's defId and sends nothing", () => {
+describe("R654 a drag that lifts your attacker plays its pick-up, once per lift", () => {
+  it("R654 a press on your attacker plays nothing until it travels the threshold, then plays once with the Unit's defId and sends nothing", () => {
     const { onAction } = renderGame();
     const source = el("card-u1");
 
@@ -190,7 +190,7 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R651 the rest of the drag plays nothing more: moving over its targets and off them again", () => {
+  it("R654 the rest of the drag plays nothing more: moving over its targets and off them again", () => {
     renderGame();
     lift(el("card-u1"));
 
@@ -205,7 +205,7 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
     expect(pickups()).toEqual([ROCK]);
   });
 
-  it("R651 dropping it on a target sends the attack and plays nothing more, nor does the click after the release", () => {
+  it("R654 dropping it on a target sends the attack and plays nothing more, nor does the click after the release", () => {
     const { onAction } = renderGame();
     const source = el("card-u1");
     lift(source);
@@ -219,7 +219,7 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
     expect(pickups()).toEqual([ROCK]);
   });
 
-  it("R651 dropping it on the empty board sends nothing and plays nothing more", () => {
+  it("R654 dropping it on the empty board sends nothing and plays nothing more", () => {
     const { onAction } = renderGame();
     const source = el("card-u1");
     lift(source);
@@ -241,7 +241,7 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
     ["pointercancel", () => fireEvent.pointerCancel(window, { pointerId: POINTER })],
   ];
 
-  it.each(CANCELS)("R651 %s cancels the drag and plays nothing more", (_name, cancel) => {
+  it.each(CANCELS)("R654 %s cancels the drag and plays nothing more", (_name, cancel) => {
     const { onAction } = renderGame();
     const source = el("card-u1");
     lift(source);
@@ -256,7 +256,7 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
     expect(pickups()).toEqual([ROCK]);
   });
 
-  it("R651 each pick-up plays: lifting the same attacker again plays it again, and another attacker plays its own", () => {
+  it("R654 each pick-up plays: lifting the same attacker again plays it again, and another attacker plays its own", () => {
     const { onAction } = renderGame();
 
     lift(el("card-u1"));
@@ -283,8 +283,8 @@ describe("R651 a drag that lifts your attacker plays its pick-up, once per lift"
 // What never plays.
 // ---------------------------------------------------------------------------------------------
 
-describe("R651 only a Unit `legal` lets attack is picked up", () => {
-  it("R651 your Unit with no legal attack plays nothing, dragged or clicked, though its card has an attack hook", () => {
+describe("R654 only a Unit `legal` lets attack is picked up", () => {
+  it("R654 your Unit with no legal attack plays nothing, dragged or clicked, though its card has an attack hook", () => {
     const { onAction } = renderGame();
     const source = el("card-u2");
 
@@ -299,7 +299,7 @@ describe("R651 only a Unit `legal` lets attack is picked up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R651 your Unit whose drag lifts its Activate ability, not an attack, plays nothing, dragged or clicked", () => {
+  it("R654 your Unit whose drag lifts its Activate ability, not an attack, plays nothing, dragged or clicked", () => {
     renderGame();
     const source = el("card-act1");
 
@@ -316,7 +316,7 @@ describe("R651 only a Unit `legal` lets attack is picked up", () => {
     expect(engine.playPickup).not.toHaveBeenCalled();
   });
 
-  it("R651 the opponent's Unit plays nothing, dragged or clicked", () => {
+  it("R654 the opponent's Unit plays nothing, dragged or clicked", () => {
     const { onAction } = renderGame();
     const source = el("card-e1");
 
@@ -329,7 +329,7 @@ describe("R651 only a Unit `legal` lets attack is picked up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R651 a press that never travels the threshold and is no click on an attacker plays nothing", () => {
+  it("R654 a press that never travels the threshold and is no click on an attacker plays nothing", () => {
     const { onAction } = renderGame();
     const source = el("card-u1");
 
@@ -349,7 +349,7 @@ describe("R651 only a Unit `legal` lets attack is picked up", () => {
     expect(source).not.toHaveAttribute("data-selected");
   });
 
-  it("R651 the same short press followed by its click on the attacker is a pick-up by click, and plays once", () => {
+  it("R654 the same short press followed by its click on the attacker is a pick-up by click, and plays once", () => {
     renderGame();
     const source = el("card-u1");
 
@@ -368,8 +368,8 @@ describe("R651 only a Unit `legal` lets attack is picked up", () => {
 // Click-click.
 // ---------------------------------------------------------------------------------------------
 
-describe("R651 click-click: choosing your attacker is a pick-up", () => {
-  it("R651 clicking your attacker plays once, and clicking its target attacks, plays nothing more and sends exactly the attack", () => {
+describe("R654 click-click: choosing your attacker is a pick-up", () => {
+  it("R654 clicking your attacker plays once, and clicking its target attacks, plays nothing more and sends exactly the attack", () => {
     const { onAction } = renderGame();
 
     fireEvent.click(el("card-u1"));
@@ -383,7 +383,7 @@ describe("R651 click-click: choosing your attacker is a pick-up", () => {
     expect(pickups()).toEqual([ROCK]);
   });
 
-  it("R651 clicking the chosen attacker again deselects it and plays nothing; choosing it once more plays again", () => {
+  it("R654 clicking the chosen attacker again deselects it and plays nothing; choosing it once more plays again", () => {
     const { onAction } = renderGame();
     const source = el("card-u1");
 
@@ -398,7 +398,7 @@ describe("R651 click-click: choosing your attacker is a pick-up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R651 a click that leaves the chosen attacker chosen (your own Unit, not its target) plays nothing more", () => {
+  it("R654 a click that leaves the chosen attacker chosen (your own Unit, not its target) plays nothing more", () => {
     const { onAction } = renderGame();
 
     fireEvent.click(el("card-u1"));
@@ -410,7 +410,7 @@ describe("R651 click-click: choosing your attacker is a pick-up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R651 with drag to play off, a long move on your attacker plays nothing, and its click still plays once", () => {
+  it("R654 with drag to play off, a long move on your attacker plays nothing, and its click still plays once", () => {
     writeSettings({ dragToPlay: false });
     const { onAction } = renderGame();
     const source = el("card-u1");
@@ -427,7 +427,7 @@ describe("R651 click-click: choosing your attacker is a pick-up", () => {
     expect(onAction.mock.calls).toEqual([[U1_E1]]);
   });
 
-  it("R651 a pick-up the engine refuses or fails on changes nothing the board does: the attacker is chosen and the attack sent as before", () => {
+  it("R654 a pick-up the engine refuses or fails on changes nothing the board does: the attacker is chosen and the attack sent as before", () => {
     engine.playPickup.mockImplementationOnce(() => false).mockImplementationOnce(() => {
       throw new Error("no audio");
     });

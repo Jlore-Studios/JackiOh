@@ -387,13 +387,13 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("outside its hours", planned["reason"])
         self.assertEqual(plan_mod.make(ctx_for(gh, at=DAY), force=True)["provider"], "claude-3")
 
-    def test_one_item_per_subscription_and_at_most_three_lanes(self):
+    def test_each_subscription_takes_as_many_items_as_its_lanes(self):
         gh = FakeGitHub()
-        for n in (3, 4, 5, 6):
+        for n in (3, 4, 5, 6, 7):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         ctx = ctx_for(gh, at=DAY)
         taken = []
-        for _ in range(4):
+        for _ in range(5):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -401,20 +401,21 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"], r=str(len(taken)): state_item(
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(3, "agy"), (4, "muse"), (5, "gpt")])
-        # By day the Claude accounts are closed, and each machine subscription holds its lane.
+        # Muse has two lanes, so it takes a second item before gpt, next in the usage order.
+        self.assertEqual(taken, [(3, "agy"), (4, "muse"), (5, "muse"), (6, "gpt")])
+        # By day the Claude accounts are closed, and each machine subscription holds its lanes.
         self.assertIn("`muse` is busy", planned["reason"])
         # Each claim with work and a lane left started the next run.
-        self.assertEqual(len(gh.dispatches), 2)
+        self.assertEqual(len(gh.dispatches), 3)
 
-    def test_the_machine_holds_three_and_github_takes_the_claude_accounts(self):
-        """Machine runs stop at `machine_parallel`; a Claude account on GitHub's runners still
-        takes work, up to `max_parallel` in all."""
+    def test_with_the_machine_subscriptions_full_github_takes_the_claude_accounts(self):
+        """Each machine subscription holds as many runs as its lanes (Muse two); a Claude account
+        on GitHub's runners still takes work, up to `max_parallel` in all."""
         gh = FakeGitHub()
         for n in (3, 4, 5, 6):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         ctx = ctx_for(gh, at=NIGHT, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE)
-        for n, provider in ((40, "gpt"), (41, "agy"), (42, "muse")):
+        for n, provider in ((40, "gpt"), (41, "agy"), (42, "muse"), (43, "muse")):
             gh.add_issue(n, labels=(LABEL_WORKING,))
             gh.runs[str(n)] = {"status": "in_progress"}
             ctx.store.update(lambda s, n=n, p=provider: state_item(s, n).update(run_id=str(n),

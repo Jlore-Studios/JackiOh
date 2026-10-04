@@ -1,17 +1,18 @@
-// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R651).
+// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R654).
 //
-// `card-audio.json5` (the voices bank, the effects bank and every card's hooks) and
-// `voice-manifest.json` (which rendered files exist, written by `apps/web/scripts/gen-voice.mjs`)
-// are imported here and nowhere else. The file is JSON5, read as text and parsed once at import
-// against the catalog, so a malformed table fails loudly at load, naming the path of the problem,
-// instead of speaking garbage. Each card's kind comes from its catalog type: the file never states
-// it. Everything here reads a `PlayerView` or a defId and nothing else (CLAUDE.md rule 7, R203): a
-// redacted card carries `HIDDEN_DEF_ID`, which is never in the table, so it never yields a sound.
+// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits'
+// emote lines) and `voice-manifest.json` (which rendered files exist, written by
+// `apps/web/scripts/gen-voice.mjs`) are imported here and nowhere else. The file is JSON5, read
+// as text and parsed once at import against the catalog, so a malformed table fails loudly at
+// load, naming the path of the problem, instead of speaking garbage. Each card's kind comes from
+// its catalog type: the file never states it. Everything here reads a `PlayerView` or a defId
+// and nothing else (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is
+// never in the table, so it never yields a sound.
 
 import JSON5 from "json5";
 
 import catalogJson from "@jackioh/cards/catalog.json";
-import type { PlayerView } from "@jackioh/shared";
+import type { PlayerView, PortraitId, VoiceEmoteId } from "@jackioh/shared";
 
 import { CARD_HOOKS, CARD_HOOK_NAMES, HIDDEN_DEF_ID } from "./constants.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
@@ -21,8 +22,10 @@ import type {
   CardEffect,
   CardHook,
   CardKind,
+  EmoteLineEntry,
   HookAssignment,
   Persona,
+  PlayableLineKind,
   SfxId,
   SfxParams,
   SfxTimbre,
@@ -86,7 +89,7 @@ const GAIN_RANGE = [0, 2] as const;
 /** R501's SAPI voices: SSML prosody rate in percent, and the ffmpeg pitch shift in semitones. */
 const SAPI_RATE_RANGE = [-50, 100] as const;
 const SAPI_SEMITONE_RANGE = [-12, 12] as const;
-/** R651: an effect's pitch, a frequency ratio: two octaves either way. */
+/** R654: an effect's pitch, a frequency ratio: two octaves either way. */
 const EFFECT_PITCH_RANGE = [0.25, 4] as const;
 /** `amount` as the recipes read it (types.ts SfxParams): a count, clamped by each recipe. */
 const EFFECT_AMOUNT_RANGE = [0, 100] as const;
@@ -222,16 +225,39 @@ function parseCard(
   return entry;
 }
 
+/** The `emotes` section's one entry shape (R644): a voice and the five issue-§3 lines. */
+function parseEmoteEntry(raw: unknown, path: string, voices: Record<string, Persona>): EmoteLineEntry {
+  const o = record(raw, path);
+  const persona = text(o.persona, `${path}.persona`);
+  if (!Object.hasOwn(voices, persona)) fail(`${path}.persona`, `unknown voice "${persona}"`);
+  const overrides: { rate?: number; pbas?: number; pmod?: number } = {};
+  if (o.rate !== undefined) overrides.rate = numberIn(o.rate, `${path}.rate`, ...RATE_RANGE);
+  if (o.pbas !== undefined) overrides.pbas = numberIn(o.pbas, `${path}.pbas`, ...PITCH_BASE_RANGE);
+  if (o.pmod !== undefined) overrides.pmod = numberIn(o.pmod, `${path}.pmod`, ...PITCH_MOD_RANGE);
+  return {
+    persona,
+    greetings: text(o.greetings, `${path}.greetings`),
+    wellPlayed: text(o.wellPlayed, `${path}.wellPlayed`),
+    oops: text(o.oops, `${path}.oops`),
+    thanks: text(o.thanks, `${path}.thanks`),
+    threaten: text(o.threaten, `${path}.threaten`),
+    ...overrides,
+  };
+}
+
 /**
  * The parsed file, checked against `catalog`. Throws Error("card-audio.json5: <path>: <problem>") on
  * a shape error: an unknown section, voice, effect, recipe, hook or field, a missing text, a value
  * out of range, or a card id the catalog does not hold. Does NOT check that every catalog card has
- * its lines, or the word limits: the tests do (B33, B34).
+ * its lines, or the word limits: the tests do (B33, B34). The `emotes` section is optional, so a
+ * small test table without it still parses; the shipped file carries it (R644).
  */
 export function parseCardAudio(raw: unknown, catalog: CatalogTypes): CardAudioTable {
   const root = record(raw, "(root)");
   const sections = Object.keys(root);
-  if (sections.join() !== SECTIONS.join()) {
+  const headed = sections.slice(0, 3).join() === SECTIONS.join();
+  const tailed = sections.length === 3 || (sections.length === 4 && sections[3] === "emotes");
+  if (!headed || !tailed) {
     fail("(root)", `must hold ${SECTIONS.join(", ")}, in that order (found ${sections.join(", ") || "nothing"})`);
   }
   const voices: Record<string, Persona> = {};
@@ -251,7 +277,11 @@ export function parseCardAudio(raw: unknown, catalog: CatalogTypes): CardAudioTa
     if (kind === undefined) fail(`cards.${defId}`, `the catalog type ${JSON.stringify(type)} has no hooks`);
     cards[defId] = parseCard(value, `cards.${defId}`, kind, voices, effects);
   }
-  return { voices, effects, cards };
+  const emotes: Record<string, EmoteLineEntry> = {};
+  for (const [portrait, value] of Object.entries(record(root.emotes ?? {}, "emotes"))) {
+    emotes[portrait] = parseEmoteEntry(value, `emotes.${portrait}`, voices);
+  }
+  return { voices, effects, cards, emotes };
 }
 
 /** A JSON5 word: an identifier, a number or a literal (`true`, `Infinity`, `-0.5`, `1e3`). */
@@ -346,7 +376,7 @@ export const VOICE_MANIFEST = rawManifest as VoiceManifest;
  * Lookups
  * ------------------------------------------------------------------------------------------- */
 
-export function voiceKey(defId: string, line: VoiceLineKind): VoiceKey {
+export function voiceKey(defId: string, line: PlayableLineKind): VoiceKey {
   return `${defId}-${line}`;
 }
 
@@ -369,19 +399,27 @@ export function hookFor(table: CardAudioTable, defId: string, hook: CardHook): H
   return entryFor(table, defId)?.[hook] ?? null;
 }
 
-/** The hook's line: its text and the voice that speaks it, or null when the hook has no line. */
+/**
+ * The hook's line: its text and the voice that speaks it, or null when the hook has no line.
+ * R644: an emote line (`greetings` and the rest) resolves through the emotes table instead, the
+ * way a card's resolves through `cards` — which is what lets `playVoice` carry emote defIds
+ * (`emote-vanilla` etc.) unchanged (engine.ts).
+ */
 export function lineFor(
   table: CardAudioTable,
   defId: string,
-  line: VoiceLineKind,
+  line: PlayableLineKind,
 ): { text: string; persona: Persona } | null {
+  if (line !== "play" && line !== "death" && line !== "cast" && line !== "attack") {
+    return emoteLineFor(table, emotePortraitOf(defId), line);
+  }
   const assignment = hookFor(table, defId, line);
   if (assignment?.voice === undefined) return null;
   const persona = table.voices[assignment.voice];
   return persona === undefined ? null : { text: assignment.text, persona };
 }
 
-/** R651: the hook's effect, with its bank name, or null when the hook has none. */
+/** R654: the hook's effect, with its bank name, or null when the hook has none. */
 export function effectFor(
   table: CardAudioTable,
   defId: string,
@@ -393,9 +431,40 @@ export function effectFor(
   return effect === undefined ? null : { name, effect };
 }
 
+/** `emote-vanilla` -> `vanilla`; anything else -> itself (only emote keys carry the prefix). */
+function emotePortraitOf(defId: string): string {
+  return defId.startsWith("emote-") ? defId.slice("emote-".length) : defId;
+}
+
+/**
+ * A portrait's bubble text and emote voice for one issue-§3 line, or null. `portrait` is the
+ * portrait id (`vanilla`, …); passing the `emote-<portrait>` wire defId also works.
+ */
+export function emoteLineFor(
+  table: CardAudioTable,
+  portrait: string,
+  line: VoiceEmoteId,
+): { text: string; persona: Persona } | null {
+  const entry = table.emotes[emotePortraitOf(portrait)];
+  if (entry === undefined) return null;
+  const base = table.voices[entry.persona];
+  if (base === undefined) return null;
+  // A SAPI voice takes no per-entry overrides (R501); a `say` one applies them.
+  const persona: Persona =
+    base.backend === "sapi"
+      ? base
+      : { ...base, rate: entry.rate ?? base.rate, pbas: entry.pbas ?? base.pbas, pmod: entry.pmod ?? base.pmod };
+  return { text: entry[line], persona };
+}
+
+/** The `playVoice` defId that resolves a portrait's lines: `emote-vanilla` etc. */
+export function emoteVoiceDef(portrait: PortraitId): string {
+  return `emote-${portrait}`;
+}
+
 /**
  * Keys worth preloading for a view, deduped, in this order: the viewer's hand (unit → play, spell →
- * cast; traps none), every unit on both boards (death), the viewer's own units (attack, R651), the
+ * cast; traps none), every unit on both boards (death), the viewer's own units (attack, R654), the
  * viewer's own face-up backrow traps (cast). Only hooks that have a line: an effect renders no file.
  */
 export function voiceKeysForView(view: PlayerView, table: CardAudioTable): VoiceKey[] {

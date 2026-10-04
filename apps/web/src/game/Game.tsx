@@ -33,8 +33,10 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
+import type { EmoteShow } from "../emotes/session.ts";
+import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
@@ -51,7 +53,7 @@ import {
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
-import { testid, type BoardControl, type ClickTarget } from "./contract.ts";
+import { sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
@@ -94,11 +96,31 @@ export type GameProps = {
    */
   autoEndTurn?: boolean;
   /**
+   * The route's emote session (R643–R644): portraits for both seats, what each is showing, the
+   * send that admits through the shared gate, and the mutes. Absent, the heroes still draw their
+   * default portraits and simply open no menus — tests that render a bare board get that.
+   */
+  emotes?: GameEmotes;
+  /**
    * R639: log this game in the device's statistics when it ends. The routes that play the player's
    * own game (an online match, a practice game) set it; a tutorial lesson, a hotseat game on one
    * screen and a test fixture leave it off.
    */
   trackStats?: boolean;
+};
+
+/**
+ * What Game needs of a route's `useEmotes` (emotes/useEmotes.ts): the pure reads plus the two
+ * verbs the portraits report. Every method takes a PlayerId, not a Side — the session keys on
+ * seats so a hotseat hand-over moves no bubble.
+ */
+export type GameEmotes = {
+  portraitOf: (player: PlayerId) => PortraitId;
+  visible: (player: PlayerId) => EmoteShow | null;
+  send: (player: PlayerId, emote: EmoteId) => boolean;
+  gate: (player: PlayerId) => EmoteGate;
+  muted: (player: PlayerId) => boolean;
+  mute: (player: PlayerId) => void;
 };
 
 /** What the board is offered while it is still showing an older view than `legal` describes. */
@@ -112,6 +134,7 @@ export default function Game({
   resultActions,
   resultForm = "panel",
   autoEndTurn: pinnedAutoEndTurn,
+  emotes,
   trackStats = false,
 }: GameProps): ReactElement {
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -121,6 +144,13 @@ export default function Game({
    * hotseat hand-over, or a game that ends while it is open, closes it without a word.
    */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
+  /**
+   * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
+   * hotseat hand-over closes it the way a hand-over closes the concede question. Issue §2's other
+   * closes — outside press, Escape, picking — live in the menus themselves; the ones that are a
+   * board state (a drag or targeting starting) are the render-adjust below.
+   */
+  const [emoteMenu, setEmoteMenu] = useState<{ side: "you" | "opponent"; viewer: PlayerId } | null>(null);
 
   // The view the DOM is showing: the newest one once the queue has settled, an older one while
   // an event is still animating over it (BUILD M5-T4).
@@ -281,7 +311,7 @@ export default function Game({
     [onAction],
   );
 
-  // R651: picking up one of your Units to attack plays its `attack` hook: a drag lifting it, or a
+  // R654: picking up one of your Units to attack plays its `attack` hook: a drag lifting it, or a
   // click choosing it as the attacker (click-click counts as a pick-up). Both lift only a Unit
   // `legal` lets attack, and nothing about it is sent.
   const pickUp = usePickupSound(shown);
@@ -322,6 +352,17 @@ export default function Game({
   // A hand-over or the game's end drops the question for good (React's "adjust state while
   // rendering" pattern: no effect, so the dialog never shows for one frame on the wrong seat).
   if (concedeFor !== null && (concedeFor !== view.viewer || view.result !== null)) setConcedeFor(null);
+
+  // Issue §2's board-state closes for an open emote menu: a pick or drag starting (interaction
+  // leaving IDLE — targeting always wins over the portrait), and the hotseat hand-over that made
+  // the open menu another seat's. Match end also closes it, as an effect so the result screen can
+  // still send (emotes are live "through the results screen", issue §2).
+  if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
+    setEmoteMenu(null);
+  }
+  useEffect(() => {
+    if (shown.result !== null) setEmoteMenu(null);
+  }, [shown.result]);
   const concedeOpen = concedeFor !== null && concedeFor === view.viewer && view.result === null;
   /** Back to the control that opened the dialog, as a dialog should leave the focus (WAI-ARIA APG). */
   const refocusConcede = useCallback(() => {
@@ -341,6 +382,36 @@ export default function Game({
 
   const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
+
+  /**
+   * One hero's emote surface, built per side (R643–R644). The picker opens only on your own
+   * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
+   * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
+   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.
+   */
+  const heroEmotes = useCallback(
+    (side: "you" | "opponent"): HeroEmotes | undefined => {
+      if (emotes === undefined) return undefined;
+      const player = sideView(shown, side).player;
+      return {
+        portrait: emotes.portraitOf(player),
+        show: emotes.visible(player),
+        menu: emoteMenu?.side === side ? (side === "you" ? "emotes" : "mute") : null,
+        muted: emotes.muted(player),
+        gate: () => emotes.gate(shown.viewer),
+        onPortrait: () => {
+          if (interaction !== IDLE) return;
+          setEmoteMenu((open) => (open?.side === side ? null : { side, viewer: shown.viewer }));
+        },
+        onPick: (emote) => {
+          emotes.send(shown.viewer, emote);
+        },
+        onMute: () => emotes.mute(player),
+        onCloseMenu: () => setEmoteMenu(null),
+      };
+    },
+    [emotes, emoteMenu, shown, interaction],
+  );
 
   // The newest turn event the burst has reached, the one in flight included: the board is still the
   // view from before it, and the banner must not fall back to that view's turn between its entry and
@@ -394,6 +465,7 @@ export default function Game({
         animated={animated}
         onClick={handleClick}
         onControl={handleControl}
+        emotes={heroEmotes}
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}

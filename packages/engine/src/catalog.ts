@@ -4,7 +4,8 @@
 
 import type { CardDef, CardDefs, CardType, CatalogQuery, FusedIngredient, Rarity, SetName, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS } from "@jackioh/shared";
-import { POOL_TOKEN_TAGS } from "./config";
+import { GRAPE_ODDS, POOL_TOKEN_TAGS } from "./config";
+import type { Rng } from "./rng";
 
 let registered: CardDefs = {};
 let version = "0";
@@ -272,4 +273,47 @@ export function query(args: CatalogQueryArgs = {}): CardDef[] {
       if (a.index !== b.index) return a.index < b.index ? -1 : 1;
       return a.id < b.id ? -1 : 1;
     });
+}
+
+// ---------------------------------------------------------------------------
+// Grapes (C+ #65, #66; R382)
+// ---------------------------------------------------------------------------
+
+/**
+ * R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
+ * sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
+ * the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
+ * Returns the Grape's def id.
+ */
+export function rollGrape(rng: Rng, lucky = 0): string {
+  const roll = (): number => {
+    const total = GRAPE_ODDS.reduce((sum, grape) => sum + grape.percent, 0);
+    let at = rng.int(total);
+    for (let i = 0; i < GRAPE_ODDS.length; i += 1) {
+      const grape = GRAPE_ODDS[i];
+      if (grape === undefined) break;
+      if (at < grape.percent) return i;
+      at -= grape.percent;
+    }
+    return GRAPE_ODDS.length - 1;
+  };
+  const extra = Math.max(0, Math.trunc(lucky));
+  const index = extra === 0 ? roll() : rng.lucky(extra, roll, (a, b) => Math.max(a, b));
+  const grape = GRAPE_ODDS[index] ?? GRAPE_ODDS[GRAPE_ODDS.length - 1];
+  return grape?.defId ?? "";
+}
+
+/** The def ids `GRAPE_ODDS` rolls: a pool pick naming one of these is re-rolled (R382). */
+const GRAPE_DEF_IDS: ReadonlySet<string> = new Set(GRAPE_ODDS.map((grape) => grape.defId));
+
+/**
+ * R382: draw the generated card from a pool — as `rng.pick` today, except that a Grape pick is
+ * rolled again on `GRAPE_ODDS` and the Grape that roll names is generated instead, so the Grape
+ * rarity pool persists across every kind of Grape generation. One extra rng draw, only when a
+ * Grape was picked; every other pick draws exactly as before.
+ */
+export function pickGenerated(rng: Rng, pool: readonly CardDef[]): CardDef | undefined {
+  const def = rng.pick(pool);
+  if (def === undefined || !GRAPE_DEF_IDS.has(def.id)) return def;
+  return findDef(null, rollGrape(rng)) ?? def;
 }

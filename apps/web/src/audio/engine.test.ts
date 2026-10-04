@@ -64,6 +64,7 @@ const LINES: CardAudioTable = {
     "core-005": { kind: "spell", cast: { voice: "narrator", text: "Hoarding is self care." } },
     "core-008": { kind: "unit", play: { voice: "narrator", text: "Hello. I am very normal." }, death: { voice: "narrator", text: "Plain. Simple. Gone." } },
   },
+  emotes: {},
 };
 
 const FILE = { hash: "0123456789abcdef", bytes: 9_000 };
@@ -1390,10 +1391,10 @@ describe("speaking: a line holds the voice channel from its request until it end
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * R651: card effects and the pick-up
+ * R654: card effects and the pick-up
  * --------------------------------------------------------------------------------------------- */
 
-describe("R651 a card's effect and a Unit picked up to attack", () => {
+describe("R654 a card's effect and a Unit picked up to attack", () => {
   /**
    * #66 The Rock: effects alone on its play and attack hooks, an effect and a line on its death.
    * #4: an attack hook with an effect and a line (with a file). #8 has no attack hook.
@@ -1419,6 +1420,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
         death: { voice: "hustler", text: "House always wins." },
       },
     },
+    emotes: {},
   };
   const FX_MANIFEST: VoiceManifest = { ...MANIFEST, files: { ...MANIFEST.files, "core-004-attack": FILE } };
 
@@ -1433,7 +1435,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     audio.nodes.slice(from).filter((n) => n.kind === "gain" && n.connections.includes(sfxBus));
   const cents = (pitch: number): number => 1200 * Math.log2(pitch);
 
-  it("R651 an effect plays its recipe on the sfx bus from currentTime + delayMs/1000, logged with its card, hook and name", () => {
+  it("R654 an effect plays its recipe on the sfx bus from currentTime + delayMs/1000, logged with its card, hook and name", () => {
     const r = fxRig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1453,7 +1455,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(audio.violations).toEqual([]);
   });
 
-  it("R651 an effect's gain is its recipe's times its own, and each oscillator and filter is detuned by its pitch", () => {
+  it("R654 an effect's gain is its recipe's times its own, and each oscillator and filter is detuned by its pitch", () => {
     const r = fxRig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1476,7 +1478,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(audio.violations).toEqual([]);
   });
 
-  it("R651 each play varies the pitch by at most EFFECT_PITCH_JITTER either way", () => {
+  it("R654 each play varies the pitch by at most EFFECT_PITCH_JITTER either way", () => {
     const draws = [0, 0.999_999];
     const r = fxRig({ random: () => draws.shift() ?? 0.5 });
     const audio = unlocked(r);
@@ -1492,7 +1494,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(detunes[1]).toBeCloseTo(cents(0.5 * (1 + EFFECT_PITCH_JITTER)), 3);
   });
 
-  it("R651 an effect plays with voice lines off, and is refused while muted, hidden, for the sentinel or for a hook with none", () => {
+  it("R654 an effect plays with voice lines off, and is refused while muted, hidden, for the sentinel or for a hook with none", () => {
     const r = fxRig();
     unlocked(r);
     writeAudioSettings({ voiceOn: false });
@@ -1512,7 +1514,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(effectEntries(r)).toHaveLength(1);
   });
 
-  it("R651 an effect's retrigger guard is its own name's, so the plain sound of the same moment does not refuse it", () => {
+  it("R654 an effect's retrigger guard is its own name's, so the plain sound of the same moment does not refuse it", () => {
     const r = fxRig();
     unlocked(r);
 
@@ -1524,7 +1526,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.log().map((c) => c.kind)).toEqual(["sfx", "effect", "effect"]);
   });
 
-  it("R651 an effect ducks the music like a line, whatever its recipe", () => {
+  it("R654 an effect ducks the music like a line, whatever its recipe", () => {
     const r = fxRig();
     const audio = unlocked(r);
     writeAudioSettings({ duckMusic: true });
@@ -1538,7 +1540,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
   });
 
-  it("R651 a context that is not running logs the effect as suspended and builds nothing", () => {
+  it("R654 a context that is not running logs the effect as suspended and builds nothing", () => {
     const r = rig({
       factory: fakeContextFactory({ state: "suspended", resumeMode: "stay" }),
       engine: { lines: FX_LINES, manifest: FX_MANIFEST },
@@ -1551,7 +1553,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(audio.nodes.length).toBe(before);
   });
 
-  it("R651 a pick-up plays the attack hook's effect at once and its line CARD_EFFECT_DELAY_MS later, at VOICE_PRIORITY.pickup", async () => {
+  it("R654 a pick-up plays the attack hook's effect at once and its line CARD_EFFECT_DELAY_MS later, at VOICE_PRIORITY.pickup", async () => {
     const r = fxRig();
     unlocked(r);
 
@@ -1565,7 +1567,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(r.fetch.urls()).toContain(url("core-004-attack"));
   });
 
-  it("R651 a pick-up within PICKUP_MIN_GAP_MS of the last plays nothing; a later one fades the last one's effect and cuts its line", async () => {
+  it("R654 a pick-up within PICKUP_MIN_GAP_MS of the last plays nothing; a later one fades the last one's effect and cuts its line", async () => {
     const r = fxRig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1597,7 +1599,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(audio.violations).toEqual([]);
   });
 
-  it("R651 a pick-up's line cuts in on any line, a death line included", async () => {
+  it("R654 a pick-up's line cuts in on any line, a death line included", async () => {
     const r = fxRig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1613,7 +1615,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(lastVoice(r)).toMatchObject({ defId: "core-004", line: "attack" });
   });
 
-  it("R651 a pick-up whose attack hook is only an effect still cuts off the last pick-up's line, and frees the channel", async () => {
+  it("R654 a pick-up whose attack hook is only an effect still cuts off the last pick-up's line, and frees the channel", async () => {
     const r = fxRig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1630,7 +1632,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(effectEntries(r).map((e) => e.defId)).toEqual(["core-004", "core-066"]);
   });
 
-  it("R651 a pick-up of a Unit with no attack hook, of the sentinel, or while muted plays nothing and does not start the gap", () => {
+  it("R654 a pick-up of a Unit with no attack hook, of the sentinel, or while muted plays nothing and does not start the gap", () => {
     const r = fxRig();
     unlocked(r);
 
@@ -1644,7 +1646,7 @@ describe("R651 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playPickup("core-066"), "no refused pick-up held the gap").toBe(true);
   });
 
-  it("R651 with voice lines off a pick-up plays its effect alone", async () => {
+  it("R654 with voice lines off a pick-up plays its effect alone", async () => {
     const r = fxRig();
     unlocked(r);
     writeAudioSettings({ voiceOn: false });

@@ -39,7 +39,7 @@
 // new request and a preload is held (the newest one, run when it clears). A line asked to play is
 // never held. With sound muted or voice lines off, neither the prefetch nor a preload runs at all.
 //
-// CARD EFFECTS (R651). A card's hook may play a named effect from `card-audio.json5`'s bank: one of
+// CARD EFFECTS (R654). A card's hook may play a named effect from `card-audio.json5`'s bank: one of
 // the procedural recipes at its own pitch (varied a little on each play) and gain, on the effects
 // bus beside the plain sfx. It is refused for the sentinel, while muted or hidden, and past
 // SFX_MAX_VOICES like any sfx; its retrigger guard is its own name's, since it shares a recipe with
@@ -93,7 +93,7 @@ import type {
   SfxId,
   SfxParams,
   VoiceKey,
-  VoiceLineKind,
+  PlayableLineKind,
   VoiceManifest,
   VoiceOutcome,
   VoicePriority,
@@ -154,7 +154,7 @@ export type AudioEngineOptions = {
   visibility?: () => DocumentVisibilityState;          // default document.visibilityState ("visible" without a document)
   lines?: CardAudioTable;                              // default CARD_AUDIO
   manifest?: VoiceManifest;                            // default VOICE_MANIFEST
-  random?: () => number;                               // [0, 1); an effect's pitch variation (R651); default Math.random
+  random?: () => number;                               // [0, 1); an effect's pitch variation (R654); default Math.random
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -283,10 +283,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   let entries: PlayedCue[] = [];
   const lastSfxAt = new Map<SfxId, number>();
-  /** R651: a card effect's retrigger guard, by its bank name. */
+  /** R654: a card effect's retrigger guard, by its bank name. */
   const lastEffectAt = new Map<string, number>();
   let sfxEnds: number[] = [];
-  /** R651: when the last pick-up was accepted, and the gain of its effect, which the next one fades. */
+  /** R654: when the last pick-up was accepted, and the gain of its effect, which the next one fades. */
   let lastPickupAt: number | null = null;
   let pickupEffect: GainNode | null = null;
   /** Compressed bytes per key, for the page's lifetime (a failed fetch is kept as null). */
@@ -484,7 +484,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
   }
 
-  /* ----- card effects (R651) ----- */
+  /* ----- card effects (R654) ----- */
 
   /**
    * Schedules a card's effect for a hook. false: refused (nothing logged). null: accepted while the
@@ -727,7 +727,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   /** Whether a line of priority `rank` takes the channel from the one holding it. */
   function cutsIn(rank: VoicePriority, held: VoicePriority): boolean {
-    // R651: a pick-up answers the viewer's own hand, so it also cuts off the last pick-up's line.
+    // R654: a pick-up answers the viewer's own hand, so it also cuts off the last pick-up's line.
     return rank > held || rank === VOICE_PRIORITY.pickup;
   }
 
@@ -853,7 +853,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
   }
 
-  function playVoice(defId: string, lineKind: VoiceLineKind, delayMs?: number, priority?: VoicePriority): boolean {
+  function playVoice(defId: string, lineKind: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean {
     try {
       if (!accepting() || ctx === null) return false;
       if (!readAudioSettings().voiceOn) return false;

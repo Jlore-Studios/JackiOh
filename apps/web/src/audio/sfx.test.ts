@@ -19,6 +19,8 @@ const UNION_ORDER: SfxId[] = [
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
+  // Patch v0.2.X (R644): the five emoji emotes.
+  "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -62,6 +64,11 @@ const DURATION_MS: Record<SfxId, number> = {
   brand: 800,
   heartbeat: 450,
   clockTick: 350,
+  emoteSob: 1200,
+  emoteYawn: 1400,
+  emoteLaugh: 750,
+  emoteAngry: 700,
+  emoteWahWah: 1800,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }];
@@ -208,7 +215,7 @@ function rampProblems(run: Run): string[] {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
-  it("B14 SFX_IDS lists all 38 ids, in the order of the SfxId union", () => {
+  it("B14 SFX_IDS lists all 43 ids, in the order of the SfxId union", () => {
     expect([...SFX_IDS]).toEqual(UNION_ORDER);
   });
 
@@ -465,7 +472,7 @@ describe("R506 the new families and moments keep the recipe contract", () => {
   });
 });
 
-describe("R651 a recipe pitched for a card's effect", () => {
+describe("R654 a recipe pitched for a card's effect", () => {
   /** `id`'s recipe through `renderSfx` at `pitch`, as the engine plays a card's effect. */
   const pitchedRun = (id: SfxId, pitch: number, params: SfxParams = {}): Run =>
     runRecipe(`${id} ${JSON.stringify(params)} at pitch ${String(pitch)}`, (c, out, at, p) => renderSfx(id, c, out, at, p, pitch), SFX[id].durationMs, params);
@@ -480,11 +487,11 @@ describe("R651 a recipe pitched for a card's effect", () => {
   const detunes = (run: Run): number[] =>
     run.made.filter((n) => n.kind === "oscillator" || n.kind === "biquad").map((n) => n.param("detune").settled());
 
-  it("R651 every recipe keeps the recipe contract at the bank's lowest and highest pitch", () => {
+  it("R654 every recipe keeps the recipe contract at the bank's lowest and highest pitch", () => {
     expect(allProblems(SFX_IDS.flatMap((id) => [pitchedRun(id, 0.25), pitchedRun(id, 4)]))).toEqual([]);
   });
 
-  it("R651 every effect in the shipped bank keeps the contract at its own pitch and params, varied either way", () => {
+  it("R654 every effect in the shipped bank keeps the contract at its own pitch and params, varied either way", () => {
     const effects = Object.entries(CARD_AUDIO.effects);
     expect(effects.length, "the bank has effects").toBeGreaterThan(0);
     const runs = effects.flatMap(([, effect]) =>
@@ -493,7 +500,7 @@ describe("R651 a recipe pitched for a card's effect", () => {
     expect(allProblems(runs)).toEqual([]);
   });
 
-  it("R651 renderSfx detunes every oscillator and filter by the pitch in cents and keeps the recipe's length", () => {
+  it("R654 renderSfx detunes every oscillator and filter by the pitch in cents and keeps the recipe's length", () => {
     const plain = pitchedRun("impact", 1, { amount: 8 });
     const up = pitchedRun("impact", 2, { amount: 8 });
     expect(detunes(plain).length).toBeGreaterThan(0);
@@ -504,7 +511,7 @@ describe("R651 a recipe pitched for a card's effect", () => {
     expect(up.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
   });
 
-  it("R651 the crushed wavetable, which has no detune, plays as much faster as the pitch is higher", () => {
+  it("R654 the crushed wavetable, which has no detune, plays as much faster as the pitch is higher", () => {
     const rate = (run: Run): number[] =>
       run.made.filter((n) => n.kind === "bufferSource" && n.buffer !== null && n.buffer.length < 1000).map((n) => n.param("playbackRate").settled());
     const plain = rate(pitchedRun("summon", 1, { timbre: "ai" }));
@@ -513,7 +520,7 @@ describe("R651 a recipe pitched for a card's effect", () => {
     down.forEach((value, i) => expect(value).toBeCloseTo((plain[i] ?? 0) * 0.5, 9));
   });
 
-  it("R651 the pitch is the one run's: a recipe run after a pitched one, or straight from SFX, is not detuned", () => {
+  it("R654 the pitch is the one run's: a recipe run after a pitched one, or straight from SFX, is not detuned", () => {
     pitchedRun("death", 0.5);
     const after = runRecipe("death after a pitched run", SFX.death.recipe, SFX.death.durationMs, {});
     expect(new Set(detunes(after))).toEqual(new Set([0]));

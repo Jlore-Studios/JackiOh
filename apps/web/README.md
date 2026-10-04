@@ -104,8 +104,8 @@ src/
     cues.ts director.ts useGameAudio.ts      SOUND_CUES (a total map over GameEventType) and the runner-synced director
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
-    usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R651)
-    card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R651), hand-edited, and its parser
+    usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R654)
+    card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R654), hand-edited, and its parser
     voice-manifest.json                      the generated hash and size of each rendered line
     music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
     musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
@@ -318,12 +318,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- The one exception is `debug`, which carries the raw state, the log, the decks and the handicaps
-  for spec 13's replay check. The core answers it only when `MODE !== "production"`, and the route
-  sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, log)`: nonces are `h<n>` for the
+- The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
+  the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
+  and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
+  the human's deck pile lists only what they have been shown of it and a card back for the rest. A
+  preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
 - URL params (all optional): `?seed=`, `?difficulty=easy|medium|hard`, `?deck=random|preset:<id>`
   (both together start a game at once), `?seat=p1|p2`, and `?pace=fast` for e2e, which a
   production build ignores.
@@ -418,7 +421,7 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 
 ## Regenerating the voice lines
 
-Every card's sounds are in `src/audio/card-audio.json5` (R651), a JSON5 file edited by hand, whose
+Every card's sounds are in `src/audio/card-audio.json5` (R654), a JSON5 file edited by hand, whose
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`; `CARD_HOOKS` in

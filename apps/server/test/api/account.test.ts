@@ -68,7 +68,7 @@ describe("DELETE /api/account", () => {
   it("answers 204 with no body, removes the profile's own rows, and signs the token out", async () => {
     const at = deps.timers.now();
     await deps.store.decks.upsert(
-      { id: "deck-1", profileId: PROFILE, name: "Mine", cards: [], catalogVersion: "test-1", createdAt: at, updatedAt: at },
+      { id: "deck-1", profileId: PROFILE, name: "Mine", cards: [], portrait: null, catalogVersion: "test-1", createdAt: at, updatedAt: at },
       10,
     );
     await deps.store.tutorial.merge({ profileId: PROFILE, completed: ["basics"], hiddenChoice: null, at }, 32);
