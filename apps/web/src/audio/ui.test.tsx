@@ -27,7 +27,7 @@ import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } fro
 import { FakeClock, FakeFetch, fakeContextFactory } from "./test/fakeAudio.ts";
 import type { AudioEngine, AudioState, PlayedCue, SoundSink } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
-import { VOICE_LINES, voiceKeysForView } from "./voiceData.ts";
+import { CARD_AUDIO, voiceKeysForView } from "./voiceData.ts";
 import { durationFor } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
 import { baseView, card, emptySide, unit, withEvents } from "../test/fixtures.ts";
@@ -59,6 +59,8 @@ function fakeEngine(options: { state?: AudioState; contexts?: number; log?: Play
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
     playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
+    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
+    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
   };
   return engine;
 }
@@ -622,7 +624,7 @@ describe("B44 Game preloads the voice lines each view makes likely, once the con
     const first = baseView({ you: emptySide("p1", { hand: [card({ defId: "core-004" }), card({ defId: "core-005" })] }) });
     const { rerender } = renderGame(first);
 
-    expect(engine.preloadVoices).toHaveBeenLastCalledWith(voiceKeysForView(first, VOICE_LINES));
+    expect(engine.preloadVoices).toHaveBeenLastCalledWith(voiceKeysForView(first, CARD_AUDIO));
     expect(engine.preloadVoices.mock.lastCall?.[0]).toEqual(["core-004-play", "core-005-cast"]);
 
     const second = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "core-012" }), null, null, null, null] }) });

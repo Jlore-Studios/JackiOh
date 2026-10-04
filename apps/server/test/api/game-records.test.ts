@@ -78,6 +78,7 @@ async function liveMatch(mode: QueueMode | null, options: { recorder?: boolean }
     matchId: MATCH_ID,
     seed: "seed-records",
     catalogVersion: TEST_CATALOG_VERSION,
+    ranked: false,
     seats: [
       { profileId: "profile-1", player: "p1", deck: P1_DECK },
       { profileId: "profile-2", player: "p2", deck: P2_DECK },
@@ -124,7 +125,13 @@ describe("live game records (§9.11)", () => {
           reason: "hero-death",
           turns: 3,
           seats: {
-            p1: { deck: P1_DECK, opening: P1_DECK.slice(0, 3), drawn: [], played: ["test-lethal"] },
+            p1: {
+              deck: P1_DECK,
+              opening: P1_DECK.slice(0, 3),
+              drawn: [],
+              played: ["test-lethal"],
+              playedTurns: [3],
+            },
             p2: { deck: P2_DECK, opening: P2_DECK.slice(0, 3), drawn: [], played: [] },
           },
         },

@@ -35,8 +35,8 @@ function patchEntry(version: string): HTMLElement {
   return found;
 }
 
-function byCard(testId: string, id: string): HTMLElement {
-  const found = screen.getAllByTestId(testId).find((element) => element.dataset.card === id);
+function byCard(testId: string, id: string, inside: HTMLElement = document.body): HTMLElement {
+  const found = within(inside).getAllByTestId(testId).find((element) => element.dataset.card === id);
   if (found === undefined) throw new Error(`no ${testId} for ${id}`);
   return found;
 }
@@ -191,29 +191,12 @@ describe("R388 the Patch notes page", () => {
 });
 
 describe("R388 the Patch notes page over the real history", () => {
-<<<<<<< HEAD
-  it("R388 lists the eight patches newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
-=======
   it("R388 lists every patch newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
->>>>>>> origin/main
     renderPage();
     const shipped = await realPatchSource.patches();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.2", "v0.2.4", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0c", "v0.1.0b", "v0.1.0"]);
-    // v0.2.2 is open on arrival: collapse it and open v0.2.0
-    fireEvent.click(within(patchEntry("v0.2.2")).getByTestId(patchTestid.toggle));
-    fireEvent.click(within(patchEntry("v0.2.0")).getByTestId(patchTestid.toggle));
-    await within(patchEntry("v0.2.0")).findByTestId(patchTestid.cards, undefined, SLOW);
-=======
-=======
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
     // (R646), so the page's list is the file's, whatever the newest patch is called today.
->>>>>>> origin/main
-=======
->>>>>>> origin/main
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
     // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
@@ -235,11 +218,11 @@ describe("R388 the Patch notes page over the real history", () => {
       fireEvent.click(within(v020).getByTestId(patchTestid.toggle));
     }
     await within(v020).findByTestId(patchTestid.cards, undefined, SLOW);
->>>>>>> origin/main
-    const mask = byCard(patchTestid.changedCard, "core-065");
+    // Inside v0.2.0's entry: the newest patch is open too, and a promoted one may change the Mask again (R646).
+    const mask = byCard(patchTestid.changedCard, "core-065", v020);
     expect(mask).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(mask.querySelector(".cost-gem")).toHaveAttribute("data-cost", "1");
-    const hinder = byCard(patchTestid.changedCard, "core-021");
+    const hinder = byCard(patchTestid.changedCard, "core-021", v020);
     expect(Array.from(hinder.querySelectorAll("ins.patch-mark")).map((element) => element.textContent)).toEqual(["Discard 1"]);
     // Every card v0.2.0 records as changed is on the page once: a face, or a name in the data-only list.
     const record = shipped.find((patch) => patch.version === "v0.2.0");

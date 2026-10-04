@@ -11,6 +11,7 @@ import type { PlayerView } from "@jackioh/shared";
 import { newEventsSince } from "../game/animations.ts";
 import { EMPTY_LOG, type GameLog } from "./model.ts";
 import { recordGame } from "./store.ts";
+import { syncPlayerStats } from "./sync.ts";
 import { observe, outcomeOfView } from "./track.ts";
 
 export function useGameStats(view: PlayerView, enabled: boolean): void {
@@ -39,6 +40,7 @@ export function useGameStats(view: PlayerView, enabled: boolean): void {
     if (outcome !== null && !recorded.current) {
       recorded.current = true;
       recordGame(log.current, outcome);
+      void syncPlayerStats();
     }
   }, [view, enabled]);
 }

@@ -35,10 +35,10 @@ const MOTHS = "core-009"; // (2) Unit 1/14: "Start of turn: Every enemy Unit att
 const TWINSPELL = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
 const TOXINS = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Counter on each of 2 random Units."
 const STOCKPILE = "core-005"; // (1) Spell, a spare card (§2.5)
-const CRAWLER = "classic-053"; // (1) Unit: "Cry: Place a Plague Token on another permanent."
-const BRINGER = "classic-076"; // (2) Unit: "Cry: Place 2 Plague Tokens; draw 1."
+const CRAWLER = "classic-053"; // (1) Unit: "Cry: Place a Plague Counter on another permanent."
+const BRINGER = "classic-076"; // (2) Unit: "Cry: Place 2 Plague Counters; draw 1."
 const PUNISH = "classic-020"; // (2) Field Spell: "Activate: Choose one: Deal 2 damage; ..."
-const TESLA = "classic-005"; // (2) Field Trap: "Activates when your opponent summons a Unit: Deal 4 damage to it."
+const TESLA = "classic-005"; // (2) Field Trap: "Reveals when your opponent summons a Unit: Deal 4 damage to it."
 
 function redirects(s: Scenario): Extract<GameEvent, { type: "redirected" }>[] {
   return s.events.filter((event): event is Extract<GameEvent, { type: "redirected" }> => event.type === "redirected");
@@ -211,9 +211,6 @@ describe("C #33 Joro", () => {
       expect(redirects(s).map((event) => [event.fromId, event.toId])).toEqual([[menace.id, joro.id]]);
     });
 
-<<<<<<< HEAD
-    it("a random pick targets nothing: C #42's random Plague Counters draw no Joro", () => {
-=======
     it("R651 a Unit's declared Cry pick draws no Joro: Plague Crawler's token", () => {
       const s = scenario({
         active: "p2",
@@ -273,8 +270,7 @@ describe("C #33 Joro", () => {
       s.expectInZone(vanilla, "graveyard");
     });
 
-    it("a random pick targets nothing: C #42's random Plague Tokens draw no Joro", () => {
->>>>>>> origin/main
+    it("a random pick targets nothing: C #42's random Plague Counters draw no Joro", () => {
       const s = scenario({
         active: "p2",
         p1: { hand: [JORO, STOCKPILE], field: [MENACE] },

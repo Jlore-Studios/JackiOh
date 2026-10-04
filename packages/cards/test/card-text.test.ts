@@ -6,7 +6,7 @@
 // comma-separated list on a line of their own; each labelled ability starts a line of its own; and
 // every other line is sentences that end with a full stop. Patch v0.2.0 turned the cost words round
 // (R432, issue #40): "(N) Cost" is the noun ("a (1) Cost or less card", "(4)+ Cost cards") and
-// "costs (N)" the verb ("costs (1) less", "costs (0)"). Patch v0.2.2 (R652) renamed the Plague Token
+// "costs (N)" the verb ("costs (1) less", "costs (0)"). Patch v0.2.2 (R657) renamed the Plague Token
 // the Plague Counter and made a Trap "reveal" where it "activated". Every face is read with its
 // `params` filled in (B3.4 rule 5), as a player reads it. Text is presentation (CLAUDE.md rule 7):
 // no rule reads it, which is why the proof is a scan of the catalog rather than a game.
@@ -127,20 +127,12 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-<<<<<<< HEAD
-  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and the v0.2.4 catalog", () => {
-=======
   it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and v0.2.4", () => {
->>>>>>> origin/main
     const before = readSnapshot("v0.2.0");
     const after = readSnapshot("v0.2.4");
     const differingCards: string[] = [];
-<<<<<<< HEAD
-    for (const [id, currentCard] of Object.entries(readSnapshot("v0.2.4")) as [string, CardDef][]) {
-=======
     for (const [id, currentRaw] of Object.entries(after)) {
       const currentCard = currentRaw as unknown as CardDef;
->>>>>>> origin/main
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.0`).toBeDefined();
       if (!priorCard) continue;
@@ -270,8 +262,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     ]);
   });
 
-  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and the current catalog", () => {
+  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and v0.2.10", () => {
     const before = readSnapshot("v0.2.5");
+    const after = readSnapshot("v0.2.10") as unknown as Record<string, CardDef>;
     const animated = new Set([
       "core-014",
       "core-033",
@@ -293,7 +286,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classicplus-078",
     ]);
     const changed: string[] = [];
-    for (const [id, currentCard] of Object.entries(CATALOG)) {
+    for (const [id, currentCard] of Object.entries(after)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.5`).toBeDefined();
       if (!priorCard) continue;
@@ -402,7 +395,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(check("Cry: Add 2 random Units to your hand. They cost (1).")).toEqual([]);
   });
 
-  it("R652 says \"Plague Counter\", and keeps \"activate\" for §6.2's keyword alone", () => {
+  it("R657 says \"Plague Counter\", and keeps \"activate\" for §6.2's keyword alone", () => {
     const wrong = swept.filter((face) => {
       if (/\bPlague Tokens?\b/.test(face.text)) return true;
       // Every remaining "activat" is the Activate keyword's own label, bar #98's verb for it.

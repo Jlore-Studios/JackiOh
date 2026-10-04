@@ -1,4 +1,4 @@
-// #87 Pocket Chaos (SPEC §8.4, §10.6, R4, R11, R12, R33, R73, R81, R88, R653).
+// #87 Pocket Chaos (SPEC §8.4, §10.6, R4, R11, R12, R33, R73, R81, R88, R658).
 //
 // Base: "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos
 // with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be
@@ -40,7 +40,7 @@
 // copy — R57's "carries the radiant flag" is about copies of an existing card, and nothing in this
 // card's text or the radiant cell says the gift is Radiant.
 //
-// The copy's base cost is R653's: one under the cast copy's own R65 base — its `costOverride` where
+// The copy's base cost is R658's: one under the cast copy's own R65 base — its `costOverride` where
 // it carries one, else its printed cost — so a copy handed over at a lower base hands one lower
 // still. The cast copy's `costMod` and the price the play paid are modifiers over the base and
 // never enter it, and where the result would be (0) no copy is added at all: a copy whose own base
@@ -68,12 +68,12 @@ const GIFT = "gift";
 const SKIP = "skip";
 const GIFT_MODE: ModeDecl = { kind: "mode", options: [GIFT, SKIP] };
 
-/** R653: the copy's base cost is one under the cast copy's own. */
+/** R658: the copy's base cost is one under the cast copy's own. */
 const GIFT_DISCOUNT = 1;
 
 /**
  * The cast copy's R65 base — its `costOverride` where it carries one, else its printed cost — less
- * GIFT_DISCOUNT, floored at 0 (R653). `ctx.self` is the resolving card, never null for a cry its own
+ * GIFT_DISCOUNT, floored at 0 (R658). `ctx.self` is the resolving card, never null for a cry its own
  * text runs.
  */
 function giftCost(ctx: EffectContext): number {
@@ -89,7 +89,7 @@ function chaos(radiantFace: boolean): Script {
     cry: (ctx): Effect[] => {
       // Only an explicit SKIP skips: the base clause is to add it, and the radiant cell makes that
       // optional rather than reversing it, so an unanswered gift mode still hands the copy over.
-      // A gift whose base would be (0) is never added on either face (R653).
+      // A gift whose base would be (0) is never added on either face (R658).
       const skipped = radiantFace && chosenOptions(ctx).includes(SKIP);
       const gift = giftCost(ctx);
       return [

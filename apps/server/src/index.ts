@@ -34,10 +34,12 @@ import { sharedLoadoutValidator } from "./api/loadout-validator";
 import type { Logger, ServerDeps, Store } from "./api/ports";
 import { systemTimers } from "./api/ports";
 import { createQueueRoutes, startMatchmaker } from "./api/queue";
+import { createRankedRoutes, loadPatchVersion, openSeason } from "./api/ranked";
 import { createRecordResult, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createSettingsRoutes } from "./api/settings";
+import { createStatsRoutes } from "./api/stats";
 import { createTutorialRoutes } from "./api/tutorial";
 import { MATCH_REAPER_INTERVAL_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS } from "./config";
 import { loadEnv, type ServerEnv } from "./env";
@@ -126,7 +128,7 @@ const E2E_ENV_DEFAULTS: Readonly<Record<string, string>> = {
   DATABASE_URL: "memory://e2e-fixture-store",
   CODE_PEPPER: "e2e-fixture-code-pepper-not-a-secret-abcdefgh",
   PUBLIC_ORIGINS: VITE_DEV_ORIGINS.join(","),
-  CATALOG_VERSION: "v0.2.2",
+  CATALOG_VERSION: "v0.2.10",
 };
 
 function e2eRequested(source: Record<string, string | undefined>): boolean {
@@ -224,6 +226,8 @@ export async function createRuntime(
       has: () => false,
       stop: async () => {},
     },
+    // R375, R609: the game's version names the season and is recorded with every rated game.
+    patchVersion: overrides.patchVersion ?? (await loadPatchVersion()),
     log,
     // R190: how many `X-Forwarded-For` entries, from the right, this deployment's proxies wrote.
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
@@ -260,7 +264,9 @@ export function allRoutes(options: { commit?: string | undefined } = {}): Route[
     ...createRoomRoutes(),
     ...createSeriesRoutes(),
     ...createTutorialRoutes(),
+    ...createRankedRoutes(),
     ...createSettingsRoutes(),
+    ...createStatsRoutes(),
   ];
 }
 
@@ -281,6 +287,16 @@ export async function start(env: ServerEnv = loadServerEnv()): Promise<RunningSe
     // R144: reseeded on every start, before the port opens, so no request can land on half a
     // fixture set and so spec 10 is repeatable run after run.
     if (e2eStore !== null) await seedE2EFixtures(deps, e2eStore);
+  }
+
+  // R609: the build's season is open before the first request, with its soft reset if this build
+  // begins one. A failure is loud but not fatal: the first rated game opens it in its own
+  // transaction all the same.
+  try {
+    const opened = await openSeason(deps);
+    deps.log.info("season.current", { seasonId: opened.season.id, opened: opened.opened, reset: opened.reset });
+  } catch (error) {
+    deps.log.alert("season.open_failed", { message: error instanceof Error ? error.message : String(error) });
   }
 
   const origins = browserOrigins(env);

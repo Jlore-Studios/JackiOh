@@ -57,7 +57,7 @@ export function portraitOrDefault(portrait: string | null | undefined): Portrait
 /**
  * The launch roster. `cardName` is the Core card the portrait's art and voice come from, looked
  * up BY NAME in the catalog, never by number (the issue's roster table). `flavour` is the voice
- * direction the emote persona in `voice-lines.json` (`emote-<id>`) follows.
+ * direction the emote persona in `card-audio.json5` (`emote-<id>`) follows.
  */
 export const PORTRAITS: Record<PortraitId, { cardName: string; flavour: string }> = {
   vanilla: { cardName: "Mr. Vanilla", flavour: "Flat, polite, unbothered" },

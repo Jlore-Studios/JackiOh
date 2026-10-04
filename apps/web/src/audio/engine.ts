@@ -39,10 +39,22 @@
 // new request and a preload is held (the newest one, run when it clears). A line asked to play is
 // never held. With sound muted or voice lines off, neither the prefetch nor a preload runs at all.
 //
+// CARD EFFECTS (R655). A card's hook may play a named effect from `card-audio.json5`'s bank: one of
+// the procedural recipes at its own pitch (varied a little on each play) and gain, on the effects
+// bus beside the plain sfx. It is refused for the sentinel, while muted or hidden, and past
+// SFX_MAX_VOICES like any sfx; its retrigger guard is its own name's, since it shares a recipe with
+// the plain sounds of the same moment. It ducks the music like a line, and it plays with voice lines
+// off. A Unit the viewer picks up to attack (`playPickup`) plays its `attack` hook at once, the
+// effect first and the line CARD_EFFECT_DELAY_MS later at VOICE_PRIORITY.pickup, which cuts in on any
+// line, an earlier pick-up's included. A pick-up within PICKUP_MIN_GAP_MS of the last one accepted
+// plays nothing; any later one fades out what the last is still playing.
+//
 // Every accepted cue is logged (at most LOG_LIMIT), which is how tests and the e2e debug handle
 // observe the engine in a headless browser with no audio device.
 
 import {
+  CARD_EFFECT_DELAY_MS,
+  EFFECT_PITCH_JITTER,
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
   LOG_LIMIT,
@@ -50,6 +62,7 @@ import {
   MUSIC_DUCK_GAIN,
   MUSIC_DUCK_RELEASE_TC_S,
   MUSIC_DUCK_SFX,
+  PICKUP_MIN_GAP_MS,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
   VOICE_DECODED_MAX,
@@ -68,23 +81,24 @@ import {
 } from "./constants.ts";
 import { buildMix, mixLevels, type Mix } from "./mix.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import { SFX } from "./sfx.ts";
+import { SFX, renderSfx } from "./sfx.ts";
 import type {
   AudioEngine,
   AudioSettings,
   AudioState,
+  CardAudioTable,
+  CardHook,
   Persona,
   PlayedCue,
   SfxId,
   SfxParams,
   VoiceKey,
   PlayableLineKind,
-  VoiceLineTable,
   VoiceManifest,
   VoiceOutcome,
   VoicePriority,
 } from "./types.ts";
-import { VOICE_LINES, VOICE_MANIFEST, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
+import { CARD_AUDIO, VOICE_MANIFEST, effectFor, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
 
 export type SpeechPort = {
   speak(text: string, voice: { pitch: number; rate: number; volume: number }, onEnd: () => void): void;
@@ -138,8 +152,9 @@ export type AudioEngineOptions = {
   fetchBytes?: (url: string) => Promise<ArrayBuffer>;  // default fetch; rejects on !ok
   now?: () => number;                                  // ms; default performance.now()
   visibility?: () => DocumentVisibilityState;          // default document.visibilityState ("visible" without a document)
-  lines?: VoiceLineTable;                              // default VOICE_LINES
+  lines?: CardAudioTable;                              // default CARD_AUDIO
   manifest?: VoiceManifest;                            // default VOICE_MANIFEST
+  random?: () => number;                               // [0, 1); an effect's pitch variation (R655); default Math.random
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -220,6 +235,7 @@ export function audibleSpan(buffer: AudioBuffer): Span {
  * ------------------------------------------------------------------------------------------- */
 
 type VoiceEntry = Extract<PlayedCue, { kind: "voice" }>;
+type EffectEntry = Extract<PlayedCue, { kind: "effect" }>;
 type Spoken = { text: string; persona: Persona } | null;
 
 /** One accepted line, from its request until it has finished or been given up on. */
@@ -254,8 +270,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
   const now = options.now ?? defaultNow;
   const visibility = options.visibility ?? defaultVisibility;
-  const lines = options.lines ?? VOICE_LINES;
+  const lines = options.lines ?? CARD_AUDIO;
   const manifest = options.manifest ?? VOICE_MANIFEST;
+  const random = options.random ?? Math.random;
 
   let ctx: AudioContext | null = null;
   let buses: Mix | null = null;
@@ -266,7 +283,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   let entries: PlayedCue[] = [];
   const lastSfxAt = new Map<SfxId, number>();
+  /** R655: a card effect's retrigger guard, by its bank name. */
+  const lastEffectAt = new Map<string, number>();
   let sfxEnds: number[] = [];
+  /** R655: when the last pick-up was accepted, and the gain of its effect, which the next one fades. */
+  let lastPickupAt: number | null = null;
+  let pickupEffect: GainNode | null = null;
   /** Compressed bytes per key, for the page's lifetime (a failed fetch is kept as null). */
   const bytes = new Map<VoiceKey, Promise<ArrayBuffer | null>>();
   /** Decoded buffers per key, least recently used first, at most VOICE_DECODED_MAX. */
@@ -462,6 +484,98 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
   }
 
+  /* ----- card effects (R655) ----- */
+
+  /**
+   * Schedules a card's effect for a hook. false: refused (nothing logged). null: accepted while the
+   * context is not running, so nothing was built. Otherwise the cue's own gain node.
+   */
+  function startEffect(defId: string, hook: CardHook, delay: number): GainNode | null | false {
+    try {
+      if (!accepting() || ctx === null || buses === null) return false;
+      if (defId === HIDDEN_DEF_ID) return false;
+      const found = effectFor(lines, defId, hook);
+      if (found === null) return false;
+      const t = now();
+      const logged: EffectEntry = { kind: "effect", defId, hook, effect: found.name, delayMs: delay, atMs: t };
+
+      if (!running()) {
+        pushLog({ ...logged, suspended: true });
+        return null;
+      }
+
+      const last = lastEffectAt.get(found.name);
+      if (last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
+      sfxEnds = sfxEnds.filter((end) => end > t);
+      if (sfxEnds.length >= SFX_MAX_VOICES) return false;
+
+      const { effect } = found;
+      const cue = ctx.createGain();
+      cue.gain.value = SFX[effect.sfx].gain * effect.gain;
+      cue.connect(buses.sfx);
+      const startAt = ctx.currentTime + delay / 1000;
+      const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
+      const lengthMs = renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
+
+      lastEffectAt.set(found.name, t);
+      sfxEnds.push(t + delay + lengthMs);
+      duck(startAt, lengthMs / 1000);
+      later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
+      pushLog(logged);
+      return cue;
+    } catch {
+      return false;
+    }
+  }
+
+  function playEffect(defId: string, hook: CardHook, delayMs?: number): boolean {
+    return startEffect(defId, hook, delayMs ?? 0) !== false;
+  }
+
+  /** Fades out a pick-up's effect (its sources run on, silent, to their own ends). */
+  function fadeEffect(cue: GainNode): void {
+    if (ctx === null) return;
+    try {
+      const t = ctx.currentTime;
+      cue.gain.cancelScheduledValues(t);
+      cue.gain.setTargetAtTime(0, t, VOICE_FADE_S / 3);
+    } catch {
+      // Already gone.
+    }
+  }
+
+  function playPickup(defId: string): boolean {
+    try {
+      if (!accepting() || ctx === null) return false;
+      if (defId === HIDDEN_DEF_ID) return false;
+      const hasEffect = effectFor(lines, defId, "attack") !== null;
+      const key = voiceKey(defId, "attack");
+      const hasLine =
+        readAudioSettings().voiceOn && (Object.hasOwn(manifest.files, key) || lineFor(lines, defId, "attack") !== null);
+      if (!hasEffect && !hasLine) return false;
+      const t = now();
+      if (lastPickupAt !== null && t - lastPickupAt < PICKUP_MIN_GAP_MS) return false;
+      lastPickupAt = t;
+
+      // The last pick-up stops: its effect fades, and its line goes unless this one's line takes the
+      // channel from it (`cutsIn`), which never flickers `speaking`.
+      if (pickupEffect !== null) fadeEffect(pickupEffect);
+      pickupEffect = null;
+      if (!hasLine && channel !== null && channel.line.priority === VOICE_PRIORITY.pickup) {
+        cut(channel);
+        startNext();
+        notifySpeaking();
+      }
+
+      const effect = hasEffect ? startEffect(defId, "attack", 0) : false;
+      if (effect !== false && effect !== null) pickupEffect = effect;
+      const voiced = hasLine && playVoice(defId, "attack", hasEffect ? CARD_EFFECT_DELAY_MS : 0, VOICE_PRIORITY.pickup);
+      return effect !== false || voiced;
+    } catch {
+      return false;
+    }
+  }
+
   /* ----- voice files ----- */
 
   function fetchCached(key: VoiceKey): Promise<ArrayBuffer | null> {
@@ -609,6 +723,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     for (const line of waiting) setOutcome(line, "dropped");
     waiting = [];
     notifySpeaking();
+  }
+
+  /** Whether a line of priority `rank` takes the channel from the one holding it. */
+  function cutsIn(rank: VoicePriority, held: VoicePriority): boolean {
+    // R655: a pick-up answers the viewer's own hand, so it also cuts off the last pick-up's line.
+    return rank > held || rank === VOICE_PRIORITY.pickup;
   }
 
   /** The waiting line to start next: the most important, then the oldest; stale ones are dropped. */
@@ -764,7 +884,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       // Where the line goes: the free channel, over a less important line, or into the queue.
       const busy = voiceBusy();
       let displaced: VoiceLine | undefined;
-      if (busy && channel !== null && rank <= channel.line.priority && waiting.length >= VOICE_QUEUE_MAX) {
+      if (busy && channel !== null && !cutsIn(rank, channel.line.priority) && waiting.length >= VOICE_QUEUE_MAX) {
         for (const w of waiting) if (displaced === undefined || w.priority < displaced.priority) displaced = w;
         if (displaced === undefined || displaced.priority >= rank) return false;
       }
@@ -785,7 +905,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
       if (!busy) {
         begin(line);
-      } else if (channel !== null && rank > channel.line.priority) {
+      } else if (channel !== null && cutsIn(rank, channel.line.priority)) {
         cut(channel);
         begin(line);
       } else {
@@ -876,6 +996,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     unlock,
     playSfx,
     playVoice,
+    playEffect,
+    playPickup,
     preloadVoices,
     setBusy,
     log: () => entries.slice(),

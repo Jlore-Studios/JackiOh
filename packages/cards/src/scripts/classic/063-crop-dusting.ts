@@ -5,7 +5,7 @@
 //   Engine:  "A Trap whose condition is its controller's start of turn, fired with the start-of-turn
 //            triggers (§2.2, R62); it fires once and goes to the graveyard. Each permanent on the field,
 //            both sides, face-down ones included, gets one placement (Plague Counters, §6.3) of 1
-//            (Radiant 3). The designer's Radiant face (patch v0.2.2, R652) triples both numbers.
+//            (Radiant 3). The designer's Radiant face (patch v0.2.2, R657) triples both numbers.
 //            Tunes: tokens 1 ↑; draw 1 ↑."
 //
 // A Trap is set face-down (R33) and fires by answering an event (§5.1, R99): this one answers its own

@@ -2,7 +2,7 @@
 // of your next turn with the start-of-turn triggers (R62) and goes to the graveyard; places 1 Plague
 // Counter on each permanent on the field, both sides, face-down ones included (C #27 doubles its own),
 // then draws 1; the placement on a face-down card never names it to the player who can't read it (R97);
-// radiant: 3 counters each and draw 3 (the designer's face since patch v0.2.2, R652); its tuned numbers
+// radiant: 3 counters each and draw 3 (the designer's face since patch v0.2.2, R657); its tuned numbers
 // (tokens, draw) read through `param()` (R386)".
 //
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.

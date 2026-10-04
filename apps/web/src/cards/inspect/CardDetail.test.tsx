@@ -277,6 +277,8 @@ describe("VoicePreview (R630)", () => {
       dispose: vi.fn<AudioEngine["dispose"]>(),
       playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
       playVoice,
+      playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
+      playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
     };
   }
 

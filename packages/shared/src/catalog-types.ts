@@ -15,7 +15,7 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * §5: tribes and tags. "Jlockeed" is Core #13 and #14's and the Classic+ Jlockheed cards' (R278);
  * patch v0.2.0 adds Book (every "Book of …" card), Pancake (Classic+ #12, #13 and the eight Pancake
  * tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
- * that uses Plague Tokens).
+ * that uses Plague Counters).
  */
 export type Tag =
   | "Human"

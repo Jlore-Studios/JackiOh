@@ -37,6 +37,7 @@ begin
   insert into public.trios (id, profile_id, name, deck1_id) values (trio, gone, 'Trio', deck);
   insert into public.tutorial_progress (profile_id, completed) values (gone, '{basics}');
   insert into public.player_settings (profile_id, groups) values (gone, '{"audio": {"at": 1, "values": {}}}');
+  insert into public.player_stats (profile_id, stats) values (gone, '{"games": 1}');
   insert into public.tickets (profile_id, slot, rating, frozen_deck, catalog_version, mode)
   values (gone, null, 1000, '[]', 'core-1', 'bo1');
 
@@ -67,6 +68,7 @@ begin
        + (select count(*) from public.trios where profile_id = gone)
        + (select count(*) from public.tutorial_progress where profile_id = gone)
        + (select count(*) from public.player_settings where profile_id = gone)
+       + (select count(*) from public.player_stats where profile_id = gone)
        + (select count(*) from public.tickets where profile_id = gone)
        + (select count(*) from public.code_attempts where profile_id = gone)
        + (select count(*) from public.invite_codes where created_by = gone)

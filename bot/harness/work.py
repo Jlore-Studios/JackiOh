@@ -7,7 +7,8 @@ fixes, and the run's own adversarial reviewer. A builder whose seat has `self_ch
 its own change before any review: build, checks, a self check by a fresh session of the same
 model, and on findings a fix and the checks and the self check again, up to
 `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
-seat that may review (only weak ones) ends with the change built, for a review run to judge.
+seat of at least medium to review in the run (only weak ones) ends with the change built, for a
+review run to judge; a weak model reviews only in a review run, and only an easy item.
 
 This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
 to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
@@ -23,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from harness import gates as gates_mod
-from harness import prompts, verdicts
+from harness import prompts, review_rule, verdicts
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
@@ -805,7 +806,8 @@ class Worker:
                     return
                 report = checked
             if self.review_seat is None:
-                # No seat here may review (a weak one never does): a review run judges it.
+                # No seat here reviews in the run (a weak one only in a review run): a review
+                # run judges it.
                 self.result.update(status="built", reason=(
                     "built; no model on this subscription may review it, so it waits for a "
                     "review run" + (f", with {len(open_self_check)} self-check finding(s) still "
@@ -879,9 +881,10 @@ class Worker:
             raise Interrupt(found[0], found[1])
 
     def _second_review(self) -> None:
-        """A review run: a medium or strong model reads a bot pull request. Nothing is built or
-        pushed: the verdict goes to `deliver`, which merges once one strong approval, or two
-        medium ones of different families, hold for the same commit, or asks for a revision.
+        """A review run: a model reads a bot pull request (a weak one only for an easy item, where
+        its approval counts toward the review rule). Nothing is built or pushed: the verdict goes
+        to `deliver`, which merges once the approvals for the same commit meet the review rule
+        (`review_rule.py`), or asks for a revision.
         Nothing is installed or run either: the reviewer holds another subscription's login, and
         the builder's code (a postinstall script, a test) must not run beside it. CI runs every
         check on the pull request before it can merge."""
@@ -896,8 +899,8 @@ class Worker:
                   else "Nobody has approved it yet.")
         context = (f"This is a review run. `{builder}` built this change; you are "
                    f"`{self.provider.family}` on `{seat.model}` ({seat.tier} tier). It merges once "
-                   "one strong model, or two medium models of different families, approve the "
-                   f"same commit. {so_far} Dependencies are not installed in this run and you "
+                   f"{review_rule.SUMMARY} approved the same commit. {so_far} Dependencies are "
+                   "not installed in this run and you "
                    "should not run the branch's code: read it. CI runs every check on the pull "
                    "request before it can merge.")
         open_findings = [_finding(f) for f in self.plan.get("self_check_findings") or []]

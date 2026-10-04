@@ -652,6 +652,7 @@ function seriesWith(target: TestDeps, p1: string, p2: string, status: SeriesRow[
       { profileId: p2, trio: trioNamed(p2), wins: 0, pick: null },
     ],
     catalogVersion: target.catalog.version,
+    ranked: true,
     seedBase: "seed-base",
     status,
     games: [],
@@ -687,6 +688,8 @@ describe("R257 — queue modes (§9.5)", () => {
     expect(second.mode).toBe("bo1");
     expect(second.seriesId).toBeNull();
     expect(second.matchId).toBe(deps.matches.started[0]?.matchId);
+    // R604: a match the queue paired is ranked.
+    expect(deps.matches.started[0]?.ranked).toBe(true);
     // R376: the mode its game record is filed under is read off the tickets it was paired from.
     expect(await deps.store.matches.modeOf(second.matchId ?? "")).toBe("bo1");
 
@@ -753,6 +756,8 @@ describe("R257 — queue modes (§9.5)", () => {
     const [series] = deps.store.tables.series;
     expect(series).toBeDefined();
     expect(second).toMatchObject({ status: "matched", mode: "bo3", matchId: null, seriesId: series?.id });
+    // R604: a series the queue paired is ranked.
+    expect(series?.ranked).toBe(true);
     expect(series?.sides.map((side) => side.profileId)).toEqual(["older", "younger"]);
     expect(series?.sides[0]?.trio).toEqual(ticket?.trio);
     expect(series?.sides[1]?.trio.name).toBe("younger's trio");
@@ -787,6 +792,8 @@ describe("R258 — All Random (§9.5)", () => {
 
     const started = deps.matches.started[0];
     expect(started?.matchId).toBe(second.matchId);
+    // R604: a match the queue paired is ranked — All Random included.
+    expect(started?.ranked).toBe(true);
     expect(await deps.store.matches.modeOf(second.matchId ?? "")).toBe("random");
     const seed = started?.seed ?? "";
     expect(seatDeck(deps, "rng-one")).toEqual(deps.dealRandomDeck(`${seed}:p1-deck`));
@@ -811,6 +818,74 @@ describe("R258 — All Random (§9.5)", () => {
     expect(deps.matches.started[0]?.seed).toBe("spec-seed");
     expect(seatDeck(deps, "pin-one")).toEqual(deps.dealRandomDeck("spec-seed:p1-deck"));
     expect(seatDeck(deps, "pin-two")).toEqual(deps.dealRandomDeck("spec-seed:p2-deck"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A start that fails
+// ---------------------------------------------------------------------------
+
+describe("a paired match whose start fails (§9.5)", () => {
+  it("frees both players instead of locking them on the claim's skeleton", async () => {
+    const one = activeProfile(deps, "starter-a");
+    const two = activeProfile(deps, "starter-b");
+    const deckA = await saveDeckFor(deps, "starter-a");
+    const deckB = await saveDeckFor(deps, "starter-b");
+
+    await enqueueWith(one, { mode: "bo1", deckId: deckA });
+    const calls: string[] = [];
+    deps.store.onCall = (method) => calls.push(method);
+    deps.matches.start = async () => {
+      throw new Error("actor refused to start");
+    };
+
+    // The claim won, the in-match transaction committed, and then the start threw — the pair
+    // is lost either way; what must NOT be lost is the players.
+    expect((await enqueueWith(two, { mode: "bo1", deckId: deckB })).status).toBe(500);
+    expect(calls).toContain("matches.discardOpen");
+    for (const id of ["starter-a", "starter-b"]) {
+      expect(deps.store.tables.profiles.find((row) => row.id === id)?.inMatchId).toBeNull();
+    }
+
+    // Free means free: the same player can queue straight back up (their ticket is claimed,
+    // never open, so nothing blocks a fresh enqueue).
+    deps.matches = createFakeMatchDirectory(deps.store);
+    expect((await readJson<QueueBody>(await enqueueWith(one, { mode: "bo1", deckId: deckA }))).status).toBe("open");
+  });
+
+  it("frees a Conquest pair the same way, rolling the half-made series row back with it", async () => {
+    const one = activeProfile(deps, "series-a");
+    const two = activeProfile(deps, "series-b");
+    const trioA = await saveTrioFor(deps, "series-a");
+    const trioB = await saveTrioFor(deps, "series-b");
+
+    await enqueueWith(one, { mode: "bo3", trioId: trioA });
+    const calls: string[] = [];
+    deps.store.onCall = (method) => calls.push(method);
+    // The claim won, `series.create` had already landed inside the transaction, and then the
+    // start threw — what a transaction exists to take back. Without it the 'picking' row would
+    // hold both players out of the queue (R264) until the pick deadline ran the series out
+    // (R333), and the `open` skeleton forever.
+    const info = deps.log.info;
+    deps.log.info = (event, fields) => {
+      if (event === "series.started") throw new Error("log write refused");
+      return info(event, fields);
+    };
+
+    expect((await enqueueWith(two, { mode: "bo3", trioId: trioB })).status).toBe(500);
+    expect(calls).toContain("matches.discardOpen");
+    // The transaction's half: nothing of the series remains, and no in-match flag was ever set.
+    expect(deps.store.tables.series).toEqual([]);
+    for (const id of ["series-a", "series-b"]) {
+      expect(deps.store.tables.profiles.find((row) => row.id === id)?.inMatchId).toBeNull();
+    }
+
+    deps.log.info = info;
+    deps.matches = createFakeMatchDirectory(deps.store);
+    // Free means free: the same player can queue straight back up.
+    expect(
+      (await readJson<QueueBody>(await enqueueWith(one, { mode: "bo3", trioId: trioA }))).status,
+    ).toBe("open");
   });
 });
 
