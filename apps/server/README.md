@@ -246,6 +246,8 @@ Properties the actor holds, each with a test named after it:
 - Every resolved action is appended to `match_actions`. A crashed or evicted actor rebuilds itself
   by folding `(seed, decks, log)` — a reconnect gets a fresh full view, never a log replay (§9.5).
   A match whose setup took last boards (below) folds with the boards frozen into it at its start.
+  An All Random match (R258) folds, as it started, with both seats dealt (R433), read off the
+  match's mode (`matches.modeOf`), so neither player's deck pile lists a card they were not shown.
 
 ### Last boards (C+ #29 Portal to the Past, R417)
 

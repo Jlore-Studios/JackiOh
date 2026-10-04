@@ -3142,9 +3142,18 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // R433's client half: apps/web game/dealtDeck.test.tsx "R433 …" (a mostly unknown deck is backs under
-  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck).
+  // "Your deck", with its counts) and routes/play.test.tsx "R433 …" (nothing lists a dealt deck); its
+  // wiring: apps/web practice/core.test.ts "R433 …" (practice's random deck is dealt to the human's seat
+  // alone) and apps/server match/dealt-deck.test.ts "R433 …" (All Random deals both seats, and a rebuild
+  // folds them so).
   it("R433 lists a dealt deck with only the cards its owner has been shown", () => {
-    provenIn(433, "../../../apps/web/src/game/dealtDeck.test.tsx", WEB_PLAY_TEST);
+    provenIn(
+      433,
+      "../../../apps/web/src/game/dealtDeck.test.tsx",
+      WEB_PLAY_TEST,
+      WEB_PRACTICE_CORE_TEST,
+      "../../../apps/server/test/match/dealt-deck.test.ts",
+    );
   });
 
   // R434's client half: apps/web game/reveal.test.tsx and game/Hand.test.tsx "R434 …" (the opponent's

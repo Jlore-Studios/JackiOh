@@ -1307,6 +1307,7 @@ changed it, and how long "the first" lasts. It takes the next number after R652 
 been taken by patch v0.2.5's Joro and Blade Storm rulings while this branch was in flight), and the
 patch edits §3.2, §5.1, §6.1, §7, §8 (C+ #5, C+ #24, C+ #33, T-AI-6 and the eighteen cards) and R5,
 R13, R78, R383, R408, R418, R446, R447 and R588.
+
 **R654 is the public card and player statistics page of the v0.2.X patch (issue #131, 2026-10-03)**:
 the publication gate (`PUBLIC_STATS_MIN_LIVE_GAMES`, 1000 live ranked and unranked games, tutorial excluded)
 under which AI development games pad the card win-rate figures, and at and above which public statistics

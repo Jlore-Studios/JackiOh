@@ -102,6 +102,8 @@ type PracticeDebugLike = {
   hash: string;
   difficulty: Difficulty;
   humanSeat: PlayerId;
+  /** R433: the dealt seats (the human's, on the random deck). */
+  dealt?: PlayerId[];
 };
 
 type PracticeHandleLike = {
@@ -477,6 +479,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
             log: debug.log,
             state: debug.state,
             handicaps: debug.handicaps,
+            ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }),
           },
           { timeout: timeouts.task },
         ).then((result) => {
@@ -532,6 +535,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
             log: debug.log,
             state: debug.state,
             handicaps: debug.handicaps,
+            ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }),
           },
           { timeout: timeouts.task },
         ).then((result) => {
