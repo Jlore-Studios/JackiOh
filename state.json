@@ -1993,6 +1993,7 @@
     "214": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -2009,12 +2010,19 @@
       },
       "interruptions": 0,
       "issue": 200,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Unresolved merge-conflict markers remain in SPEC.md, so the spec is unparsable and unmergeable.",
+          "evidence": "git grep shows HEAD:SPEC.md:1627:<<<<<<< HEAD, :1630:=======, :1632:<<<<<<< HEAD, :1634:>>>>>>> origin/main, :1635:=======, :1637:>>>>>>> origin/main; read of SPEC.md:1627-1637 shows nested markers duplicating R374/R375 rows.",
+          "severity": "blocking",
+          "where": "SPEC.md:1627"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-04T16:58:36Z",
+      "queued_at": "2026-10-04T17:34:24Z",
       "run_id": "37220760989",
       "self_check_findings": [
         {
@@ -2030,7 +2038,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-04T17:31:31Z",
       "stop_requested": false,
       "taken_asks": [],
