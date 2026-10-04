@@ -83,7 +83,7 @@ import {
   whyAnswerRefused,
   type AnswerInput,
 } from "./prompts";
-import { countChainCast, preferEnemies, randomCastOf, randomPicks, withCastMode } from "./randomCast";
+import { countChainCast, preferEnemies, preferFriends, randomCastOf, randomPicks, withCastMode } from "./randomCast";
 import {
   MANA_BEFORE_PLAY_KEY,
   flagReturnToHandAtEndOfTurn,
@@ -1456,12 +1456,14 @@ type RepeatRecord = NonNullable<PlayRun["repeat"]>;
 
 /**
  * The options one declaration offers a pick the pipeline makes itself — an Echo repeat's or a cast's
- * (R81, R70) — narrowed to enemies when the run targets enemies and one is legal (R452).
+ * (R81, R70) — narrowed to enemies when the run targets enemies and one is legal (R452), or to friendly
+ * targets when the declaration is beneficial (aim "help", R651).
  */
 function castTargetOptions(state: GameState, run: PlayRun, card: CardInstance, decl: TargetDecl): Selection[] {
   const options = legalSelectionsFor(state, run.player, card, decl);
   if (run.targetEnemies !== true) return options;
-  return preferEnemies(state, run.player, options, (selection) => selection, Math.min(decl.min, options.length));
+  const prefer = decl.aim === "help" ? preferFriends : preferEnemies;
+  return prefer(state, run.player, options, (selection) => selection, Math.min(decl.min, options.length));
 }
 
 /** The repeat's target declarations, each offered in turn; false while one is waiting (R81). */
@@ -1489,6 +1491,7 @@ function askRepeatTargets(
     const opened = openPrompt(sink, {
       player: run.player,
       kind: decl.kind,
+      aim: decl.aim,
       prompt: askLabel(step, name, run),
       options: options.map((selection) => ({
         key: `${selection.pick}:${labelOf(selection)}`,

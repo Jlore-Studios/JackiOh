@@ -9,7 +9,7 @@
 // text that makes a card harder to target (Classic #89) or answers its targeting (Classic #33, from a
 // hand) is read from there.
 
-import type { PlayerId, Selection } from "@jackioh/shared";
+import type { PlayerId, Selection, TargetDecl } from "@jackioh/shared";
 import { opponentOf } from "@jackioh/shared";
 import { fusedIdParts } from "./catalog";
 import { spellCannotReach } from "./restrictions";
@@ -172,4 +172,12 @@ export function targetingDiscardSets(
   };
   walk(0);
   return out;
+}
+
+/**
+ * R651: whether a target declaration aims to help ("help") or harm ("harm").
+ * Defaults to "harm".
+ */
+export function targetAim(decl: TargetDecl): "harm" | "help" {
+  return decl.aim ?? "harm";
 }

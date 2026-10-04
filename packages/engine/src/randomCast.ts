@@ -142,6 +142,38 @@ export function preferEnemies<T>(
 }
 
 /**
+ * R651: whether a pick names one of `chooser`'s friendly targets — the chooser's own hero,
+ * a card they control on the field, or a card in one of their piles.
+ */
+export function isFriendlyPick(state: GameState, chooser: PlayerId, selection: Selection): boolean {
+  if (selection.pick === "hero") return selection.player === chooser;
+  if (selection.pick !== "instance") return false;
+  const card = findInstance(state, selection.instanceId);
+  if (card === undefined) return false;
+  return card.zone.z === "field" ? card.controller === chooser : card.zone.player === chooser;
+}
+
+/**
+ * R651: "target allies when beneficial" — the mirror of `preferEnemies`. Under a random cast that
+ * targets enemies, a declaration with `aim: "help"` narrows to friendly targets among the target picks
+ * when there is a friendly target to pick and enough of them for `required`; otherwise every option.
+ */
+export function preferFriends<T>(
+  state: GameState,
+  chooser: PlayerId,
+  options: readonly T[],
+  selectionOf: (option: T) => Selection,
+  required: number,
+): T[] {
+  if (!options.some((option) => isFriendlyPick(state, chooser, selectionOf(option)))) return [...options];
+  const narrowed = options.filter((option) => {
+    const selection = selectionOf(option);
+    return !isTargetPick(selection) || isFriendlyPick(state, chooser, selection);
+  });
+  return narrowed.length >= required ? narrowed : [...options];
+}
+
+/**
  * R452: a uniformly random set of between `low` and `high` of `items` (the size first, then the set),
  * kept in the order they were offered — a declaration's picks are a set, taken in offered order (R221).
  */
