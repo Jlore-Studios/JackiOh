@@ -53,7 +53,7 @@ export type CardFaceProps = {
   face: FaceModel;
   layout?: "full" | "compact";
   className?: string;
-  /** One face of a long grid: its art is drawn once it is near the screen (CardArt `lazy`). */
+  /** One face of a long grid: its art is drawn once it has dwelt near the screen (CardArt `lazy`). */
   lazyArt?: boolean;
 };
 

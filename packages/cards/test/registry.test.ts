@@ -44,10 +44,10 @@ import {
 } from "../scripts/naming";
 
 /**
- * SPEC §8 + §7 and B2.1's census: Core's 100 cards + 11 tokens, Classic's 90 cards, Classic+'s 78
- * cards + 38 tokens. `catalog.test.ts` proves the values.
+ * The whole catalog, however many entries it holds. `catalog.test.ts` proves the census (SPEC §8 +
+ * §7 and B2.1's per-set sizes).
  */
-const CATALOG_SIZE = 317;
+const CATALOG_SIZE = CATALOG_IDS.length;
 
 /**
  * BUILD M4-T2's gate is "every catalog id has a script and every script has a catalog entry".
@@ -112,11 +112,10 @@ describe("registry (BUILD M4-T2)", () => {
     expect(() => buildRegistry([{ def, base: {}, radiant: {} }])).toThrow(/not in/);
   });
 
-  it("registerAll registers all 317 defs and the catalog version", () => {
+  it("registerAll registers every def and the catalog version", () => {
     registerAll();
     const registered = registeredCatalog();
     expect(Object.keys(registered)).toHaveLength(CATALOG_SIZE);
-    expect(CATALOG_IDS).toHaveLength(CATALOG_SIZE);
     for (const id of CATALOG_IDS) {
       expect(registered[id], `"${id}" reached the engine`).toBe(cardDef(id));
     }

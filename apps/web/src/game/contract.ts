@@ -122,6 +122,16 @@ export function sideView(view: PlayerView, side: Side) {
 }
 
 /**
+ * #165: what a touch hold on a card opens while this view is on the board. On the viewer's own
+ * turn a hold stays the inspect sheet it has always been, so reading a card can never eat the
+ * press that plays it; on the opponent's turn nothing is playable anyway, so the hold is the
+ * mouse-over a touch screen lacks — the hover preview, open while the finger stays down.
+ */
+export function touchHoldMode(view: PlayerView): "sheet" | "preview" {
+  return view.active === view.viewer ? "sheet" : "preview";
+}
+
+/**
  * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
  *
  * `activate` is an Activate control (R384): a card's own, or a Heroic Power's on the hero panel.

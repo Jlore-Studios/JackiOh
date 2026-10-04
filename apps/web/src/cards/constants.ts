@@ -53,3 +53,10 @@ export const STATE_BADGES_SMALL_MAX = 2;
  * only the first screens at load.
  */
 export const ART_NEAR_MARGIN_PX = 600;
+
+/**
+ * How long a lazy art window must stay near the screen before it draws (art/near.ts). A card
+ * flicked straight past never dwells this long, so it never parses its picture; the first
+ * screen's windows wait it too, so it stays short.
+ */
+export const ART_DWELL_MS = 150;
