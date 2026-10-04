@@ -181,6 +181,10 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     asc: ["x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04", "x-03", "x-05", "x-06", "x-07"],
     desc: ["x-07", "x-06", "x-05", "x-03", "x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04"],
   },
+  winRate: {
+    asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+    desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+  },
 };
 
 function owned(ids: readonly string[]): string[] {

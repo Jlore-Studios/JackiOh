@@ -168,6 +168,10 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     asc: ["x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04", "x-03", "x-05", "x-06", "x-07"],
     desc: ["x-07", "x-06", "x-05", "x-03", "x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04"],
   },
+  winRate: {
+    asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+    desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+  },
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -211,9 +215,9 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(DEFAULT_FILTER.ownedOnly).toBe(true);
   });
 
-  it("B34 there are six sort keys, and the default sort is cost ascending", () => {
-    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "rarity", "type"]);
-    expect(SORT_KEYS).toHaveLength(6);
+  it("B34 there are seven sort keys, and the default sort is cost ascending", () => {
+    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "rarity", "type", "winRate"]);
+    expect(SORT_KEYS).toHaveLength(7);
     expect(DEFAULT_SORT).toEqual({ key: "cost", dir: "asc" });
   });
 
@@ -469,6 +473,25 @@ describe("sortPool (B34)", () => {
     const copy = [...ids];
     sortPool(ids, CATALOG, { key: "name", dir: "asc" });
     expect(ids).toEqual(copy);
+  });
+
+  it("R641 sorts by winRate: cards above sample threshold first, unsampled cards last", () => {
+    const winRates = new Map([
+      ["x-01", { winRate: 0.55, hasEnoughGames: true }],
+      ["x-02", { winRate: 0.65, hasEnoughGames: true }],
+      ["x-03", { winRate: 0.4, hasEnoughGames: true }],
+      ["x-04", { winRate: 0.99, hasEnoughGames: false }],
+      ["x-05", { winRate: null, hasEnoughGames: false }],
+    ]);
+    const ids = ["x-01", "x-02", "x-03", "x-04", "x-05"];
+
+    const desc = sortPool(ids, CATALOG, { key: "winRate", dir: "desc" }, winRates);
+    expect(desc.slice(0, 3)).toEqual(["x-02", "x-01", "x-03"]);
+    expect(desc.slice(3)).toEqual(["x-04", "x-05"]);
+
+    const asc = sortPool(ids, CATALOG, { key: "winRate", dir: "asc" }, winRates);
+    expect(asc.slice(0, 3)).toEqual(["x-03", "x-01", "x-02"]);
+    expect(asc.slice(3)).toEqual(["x-04", "x-05"]);
   });
 });
 

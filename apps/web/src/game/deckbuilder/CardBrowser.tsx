@@ -49,10 +49,12 @@ export type CardBrowserProps = {
   /** The open detail view, or null when none is. */
   detail: BrowserDetail | null;
   onCloseDetail: () => void;
+  /** SPEC §9.11, R641: render the compact card statistics block in detail view; omitted in almanac. */
+  showStats?: boolean;
 };
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
-  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags } = props;
+  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, showStats } = props;
   const { deck, status, onInspect, detail, onCloseDetail } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
@@ -85,7 +87,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
       </div>
       {/* A dialog in a portal on document.body, so where it sits in this tree changes nothing. */}
       {detail === null || detailDef === undefined ? null : (
-        <CardDetail def={detailDef} onClose={onCloseDetail} meta={detail.meta} actions={detail.actions} />
+        <CardDetail def={detailDef} onClose={onCloseDetail} meta={detail.meta} actions={detail.actions} showStats={showStats} />
       )}
     </section>
   );

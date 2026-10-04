@@ -31,6 +31,8 @@ import type {
   PlayerSettingsMergeOutcome,
   PlayerSettingsRow,
   PlayerSettingsStore,
+  PlayerStatsStore,
+  PublicPlayerSummary,
   LastBoardEntry,
   LastBoardKind,
   LastBoardStore,
@@ -450,6 +452,149 @@ export function createMemoryGameRecordStore(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Player statistics on the account (SPEC §9.11, R639, R641)
+// ---------------------------------------------------------------------------
+
+export type PlayerStatsTables = {
+  playerStats: {
+    profileId: string;
+    stats: Record<string, unknown>;
+    isPrivate: boolean;
+    createdAt: number;
+    updatedAt: number;
+  }[];
+};
+
+export function emptyPlayerStatsTables(): PlayerStatsTables {
+  return { playerStats: [] };
+}
+
+function countNumber(value: unknown): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
+}
+
+export function toPublicPlayerSummary(
+  profileId: string,
+  displayName: string | null,
+  stats: Record<string, unknown>,
+  updatedAt: number,
+): PublicPlayerSummary {
+  const games = countNumber(stats.games);
+  const wins = countNumber(stats.wins);
+  const losses = countNumber(stats.losses);
+  const draws = countNumber(stats.draws);
+  const winRate = games === 0 ? null : wins / games;
+
+  const cardStats = (typeof stats.cards === "object" && stats.cards !== null ? stats.cards : {}) as Record<string, Record<string, unknown>>;
+  const playedCounts: { id: string; count: number }[] = [];
+  const nemesisCounts: { id: string; count: number }[] = [];
+  let totalDestroyed = 0;
+  let totalDefeated = 0;
+
+  for (const [id, counters] of Object.entries(cardStats)) {
+    if (typeof counters !== "object" || counters === null) continue;
+    const played = countNumber(counters.played);
+    const playedAgainst = countNumber(counters.playedAgainst);
+    const destroyed = countNumber(counters.destroyed);
+    const defeated = countNumber(counters.defeated);
+
+    if (played > 0) playedCounts.push({ id, count: played });
+    if (playedAgainst > 0) nemesisCounts.push({ id, count: playedAgainst });
+    totalDestroyed += destroyed;
+    totalDefeated += defeated;
+  }
+
+  playedCounts.sort((a, b) => b.count - a.count || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  nemesisCounts.sort((a, b) => b.count - a.count || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+  return {
+    profileId,
+    displayName,
+    games,
+    wins,
+    losses,
+    draws,
+    winRate,
+    favouriteCards: playedCounts.slice(0, 3),
+    funStats: {
+      nemesisCardId: nemesisCounts[0]?.id ?? null,
+      totalDestroyed,
+      totalDefeated,
+    },
+    updatedAt,
+  };
+}
+
+export function createMemoryPlayerStatsStore(
+  tables: () => PlayerStatsTables & { profiles: { id: string; displayName?: string | null }[] },
+  call: (method: string) => void = () => undefined,
+): PlayerStatsStore {
+  return {
+    get: async (profileId) => {
+      call("playerStats.get");
+      const row = tables().playerStats.find((r) => r.profileId === profileId);
+      if (row === undefined) return null;
+      return {
+        profileId: row.profileId,
+        stats: clone(row.stats),
+        isPrivate: row.isPrivate,
+        updatedAt: row.updatedAt,
+      };
+    },
+    put: async (profileId, stats, isPrivate, at) => {
+      call("playerStats.put");
+      const rows = tables().playerStats;
+      const index = rows.findIndex((r) => r.profileId === profileId);
+      if (index >= 0) {
+        rows[index] = {
+          profileId,
+          stats: clone(stats),
+          isPrivate,
+          createdAt: rows[index]!.createdAt,
+          updatedAt: at,
+        };
+      } else {
+        rows.push({
+          profileId,
+          stats: clone(stats),
+          isPrivate,
+          createdAt: at,
+          updatedAt: at,
+        });
+      }
+    },
+    listPublic: async ({ search, limit, offset }) => {
+      call("playerStats.listPublic");
+      const term = (search ?? "").trim().toLowerCase();
+      const all = tables();
+      const profileMap = new Map(all.profiles.map((p) => [p.id, p.displayName ?? null]));
+
+      const publicRows = all.playerStats
+        .filter((r) => !r.isPrivate)
+        .map((r) => {
+          const displayName = profileMap.get(r.profileId) ?? null;
+          return { row: r, displayName };
+        })
+        .filter(({ displayName }) => {
+          if (term.length === 0) return true;
+          return displayName !== null && displayName.toLowerCase().includes(term);
+        });
+
+      publicRows.sort((a, b) => {
+        const gamesA = countNumber(a.row.stats.games);
+        const gamesB = countNumber(b.row.stats.games);
+        return gamesB - gamesA || b.row.updatedAt - a.row.updatedAt || (a.row.profileId < b.row.profileId ? -1 : 1);
+      });
+
+      const sliced = publicRows.slice(offset, offset + limit);
+      return sliced.map(({ row, displayName }) =>
+        toPublicPlayerSummary(row.profileId, displayName, row.stats, row.updatedAt),
+      );
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------------------------
 // Account deletion and the retention purge (migrations 0012 and 0013), for both in-memory stores.
 // ---------------------------------------------------------------------------------------------
@@ -458,8 +603,9 @@ export function createMemoryGameRecordStore(
 export type AccountTables = DeckTables &
   TutorialTables &
   PlayerSettingsTables &
-  LastBoardTables & {
-    profiles: { id: string }[];
+  LastBoardTables &
+  PlayerStatsTables & {
+    profiles: { id: string; displayName?: string | null }[];
     attempts: { profileId: string | null; at: number }[];
     collection: { profileId: string }[];
     grants: { profileId: string }[];
@@ -501,6 +647,7 @@ export function removeProfileRows(tables: AccountTables, profileId: string): boo
   keepOnly(tables.tutorial, (row) => row.profileId !== profileId);
   keepOnly(tables.playerSettings, (row) => row.profileId !== profileId);
   keepOnly(tables.lastBoards, (row) => row.profileId !== profileId);
+  keepOnly(tables.playerStats, (row) => row.profileId !== profileId);
   keepOnly(tables.tickets, (row) => row.profileId !== profileId);
   keepOnly(tables.rooms, (row) => !(row.hostProfileId === profileId && row.guestProfileId === null));
   return true;

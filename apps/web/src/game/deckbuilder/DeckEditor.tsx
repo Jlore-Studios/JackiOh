@@ -27,7 +27,8 @@ import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
+import { visiblePool, type CardWinRateInfo, type PoolFilter, type PoolSort } from "./filters.ts";
+import { getCardStats } from "../../net/api.ts";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import {
   DB_DETAIL_ADD,
@@ -178,7 +179,31 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     return clashing;
   }, [deck.cards, holders]);
 
-  const pool = useMemo(() => visiblePool(catalog, collection, filter, sort), [catalog, collection, filter, sort]);
+  const [winRates, setWinRates] = useState<Map<string, CardWinRateInfo> | null>(null);
+
+  useEffect(() => {
+    if (sort.key === "winRate" && winRates === null) {
+      let cancelled = false;
+      getCardStats()
+        .then((res) => {
+          if (cancelled) return;
+          const map = new Map<string, CardWinRateInfo>();
+          for (const card of res.cards) {
+            map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
+          }
+          setWinRates(map);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [sort.key, winRates]);
+
+  const pool = useMemo(
+    () => visiblePool(catalog, collection, filter, sort, winRates ?? undefined),
+    [catalog, collection, filter, sort, winRates],
+  );
   const verdict = useMemo(
     () => deckVerdict(deck, catalog, collection, limits.nameLength),
     [deck, catalog, collection, limits.nameLength],
@@ -545,6 +570,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           }
           onInspect={openDetail}
           detail={detail}
+          showStats
           onCloseDetail={() => {
             setDetailCardId(null);
           }}
