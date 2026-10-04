@@ -2135,14 +2135,10 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [
-          "cognition"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "6f0f24d50bb3cb5767693eded086c3626014aeee",
-        "tiers": {
-          "cognition": "weak"
-        }
+        "sha": "d6f7e3b462497cb1e3e43aa89622149643b68491",
+        "tiers": {}
       }
     },
     "225": {
