@@ -3158,6 +3158,22 @@
         "status": "rejected"
       }
     },
+    "claude-4": {
+      "spent": [
+        {
+          "at": "2026-10-04T21:16:50Z",
+          "minutes": 49.3
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-04T22:00:00Z",
+          "utilization": 0.5
+        },
+        "observed_at": "2026-10-04T21:16:50Z",
+        "status": "allowed"
+      }
+    },
     "devin": {
       "spent": [
         {
