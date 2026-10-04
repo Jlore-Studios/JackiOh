@@ -23,6 +23,7 @@ import type {
   Store,
   Timers,
 } from "../../src/api/ports";
+import { portraitOrDefault } from "@jackioh/shared";
 import { createHashes } from "../../src/api/crypto";
 import { seedHash } from "./engine";
 import { createMemoryStore, type MemoryStore } from "./store";
@@ -349,6 +350,8 @@ export function createFakeMatchDirectory(store?: Store): FakeMatchDirectory {
           status: "live",
           createdAt: 0,
           finishedAt: null,
+          // R642: as registry.start does, so tests reading the row see the same field.
+          portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
           clocks: {
             turnDeadline: null,
             promptDeadline: null,

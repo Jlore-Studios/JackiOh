@@ -1,4 +1,4 @@
--- The ranked ladder's tables (migration 0019, SPEC §9.12, R603-R612), as the server's role drives
+-- The ranked ladder's tables (migration 0020, SPEC §9.12, R603-R612), as the server's role drives
 -- them: the season rows, the per-season rank rows, the bot ratings and the rated-game records.
 -- Runs after 11_player_settings.sql; profiles 1, 2 and 3 are active by then (03 activated them).
 \set ON_ERROR_STOP on
@@ -297,9 +297,9 @@ begin;
 -- Fixtures as the migration role, before the authenticated switch: profile 1 has a
 -- queued ticket and a finished result against profile 2 — the two rows whose own-side
 -- columns used to carry the hidden rating to the client (and the opponent's on results).
-insert into public.tickets (id, profile_id, slot, rating, frozen_deck, catalog_version, status)
+insert into public.tickets (id, profile_id, slot, rating, frozen_deck, portrait, catalog_version, status)
   values ('bbbbbbbb-0000-4000-8000-000000000001',
-          '11111111-1111-1111-1111-111111111111', 1, 1000.5, '[]'::jsonb, 'core-1', 'queued');
+          '11111111-1111-1111-1111-111111111111', 1, 1000.5, '[]'::jsonb, 'gary', 'core-1', 'queued');
 insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                             catalog_version, started_at, ceiling_at)
   values ('cccccccc-0000-4000-8000-000000000001', 'over', 'seed',
@@ -385,6 +385,15 @@ begin
       if sqlerrm like 'FAIL%' then raise; end if;
       raise exception 'FAIL (R612): tickets.rating raised "%" (%), not insufficient_privilege', sqlerrm, sqlstate;
   end;
+
+  -- The whitelist carves out the hidden rating and nothing else: tickets.portrait (0019) is a
+  -- cosmetic column the table grant used to cover, so it must still come back.
+  select count(*) into seen
+    from public.tickets
+   where id = 'bbbbbbbb-0000-4000-8000-000000000001' and portrait = 'gary';
+  if seen <> 1 then
+    raise exception 'FAIL (R612): tickets.portrait is not in the whitelist — the revoke took back a column 0019 granted';
+  end if;
 
   select count(*) into seen
     from public.results

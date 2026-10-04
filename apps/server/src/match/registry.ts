@@ -15,7 +15,7 @@
  * actor.
  */
 
-import type { PlayerId } from "@jackioh/shared";
+import { portraitOrDefault, type PlayerId } from "@jackioh/shared";
 import { ApiError } from "../api/http";
 import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, StartMatchInput } from "../api/ports";
 import { createMatchActor, lastBoardsOf, type MatchActor } from "./actor";
@@ -69,6 +69,9 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+      // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
+      // reconnected client) reads the same pair.
+      portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
     };
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
     // `beginGame` from `(seed, decks)` before it applies a single action (§9.3). It runs before

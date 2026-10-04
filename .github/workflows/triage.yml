@@ -1,5 +1,7 @@
 # Triage (bot/harness/triage.py): a new issue or pull request from someone trusted gets its labels,
-# its assignees and a title that follows docs/issues-and-patches.md, from a Devin call.
+# its assignees, a title that follows docs/issues-and-patches.md and, for an issue, its dependencies
+# (blocked by, blocks, its patch's tracker as parent), from a Devin call. Call it on any thread with
+# `gh workflow run triage.yml -f number=<n>`: it triages that one again, whatever it already has.
 #
 # gate -> classify -> apply. Only classify runs a model, on Devin's own runner on the bot's machine
 # (night-vm-devin), and it holds no write token: it reads the thread's title and body through the
@@ -15,11 +17,16 @@ on:
   # _target: this repository's workflow runs, never code from the pull request.
   pull_request_target:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      number:
+        description: "The issue or pull request to triage (again)"
+        required: true
 
 permissions: {}
 
 concurrency:
-  group: triage-${{ github.event.issue.number || github.event.pull_request.number }}
+  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}
   cancel-in-progress: false
 
 env:
@@ -33,6 +40,8 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: read           # a dispatched thread's title, body and author
+      pull-requests: read
     outputs:
       go: ${{ steps.gate.outputs.go }}
       number: ${{ steps.gate.outputs.number }}
@@ -48,10 +57,13 @@ jobs:
           python-version: "3.13"
 
       # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself,
-      # something left to do, and Devin switched on (providers.json).
+      # something left to do (always, when a person called it), and Devin switched on
+      # (providers.json). A dispatch names the thread, which the gate reads read-only.
       - name: Should Devin triage this?
         id: gate
         working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 -m harness triage gate --payload "$GITHUB_EVENT_PATH"
 
   classify:
@@ -117,8 +129,10 @@ jobs:
           path: ${{ runner.temp }}/triage
 
       # Labels from the repository's own set (no bot:*), assignees only the two people or the
-      # bot, a title only when the old one breaks the convention; never removes anything.
-      - name: Label, assign and title
+      # bot, a title only when the old one breaks the convention, dependencies only to open
+      # issues; never removes anything. Links the issue's own text gives are made even when
+      # Devin gave no answer.
+      - name: Label, assign, title and link
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}

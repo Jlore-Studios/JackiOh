@@ -403,7 +403,7 @@ do $$
 declare
   -- `series` (0009, R263): both sides' frozen trios and both current picks, which R259 keeps
   -- hidden until both have picked — the same reason `matches` is here. `game_records` (0014,
-  -- R376): both hands and both decklists of every recorded game. The four ranked tables (0019,
+  -- R376): both hands and both decklists of every recorded game. The four ranked tables (0020,
   -- R603–R612): hidden ratings, which R612 says no client read may ever carry — the client gets
   -- its rank through the API, never a row.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records',

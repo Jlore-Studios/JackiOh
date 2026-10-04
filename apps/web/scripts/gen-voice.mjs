@@ -65,6 +65,11 @@ const JOBS = 2;
 const SAPI_BATCH = 60;
 const LINES_BY_KIND = { unit: ["play", "death"], spell: ["cast"], trap: ["cast"] };
 const KIND_OF_TYPE = { Unit: "unit", Spell: "spell", "Field Spell": "spell", Trap: "trap", "Field Trap": "trap" };
+// R644's hero-portrait emotes (issue §3): the `emotes` table of voice-lines.json, one entry per
+// portrait id, each with the five voice lines below. Files are keyed `emote-<portrait>-<line>`.
+const EMOTE_PORTRAITS = ["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"];
+const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"];
+const EMOTE_PREFIX = "emote-";
 const BACKENDS = ["say", "sapi"];
 /** SAPI persona ranges: SSML prosody rate in percent, the ffmpeg pitch shift in semitones. */
 const SAPI_RATE_RANGE = [-50, 100];
@@ -178,52 +183,92 @@ function expectedKeys(table, problems) {
     if (found.length > 0) badPersonas.add(name);
     problems.push(...found);
   }
-  for (const [defId, entry] of Object.entries(table.cards ?? {})) {
-    const lines = LINES_BY_KIND[entry?.kind];
-    if (!lines) {
-      problems.push(`${defId}: unknown kind ${JSON.stringify(entry?.kind)}`);
+  // One expected `emote-<portrait>-<line>` key per line, resolved through the same persona
+  // machinery as a card's lines; the caller names the defId the file is written under.
+  const expectEntry = (defId, entry, line) => {
+    const persona = personas[entry.persona];
+    const backend = backendOf(persona);
+    if (backend === "say") {
+      const values = {
+        say: persona.say,
+        rate: entry.rate ?? persona.rate,
+        pbas: entry.pbas ?? persona.pbas,
+        pmod: entry.pmod ?? persona.pmod,
+        text: entry[line],
+      };
+      expected.set(`${defId}-${line}`, { defId, line, backend, ...values, hash: voiceHash(values) });
+    } else {
+      const values = {
+        voice: persona.voice,
+        rate: persona.rate,
+        semitones: persona.semitones,
+        filter: persona.filter,
+        text: entry[line],
+      };
+      expected.set(`${defId}-${line}`, { defId, line, backend, ...values, hash: sapiHash(values) });
+    }
+  };
+  const entriesOf = (rows, keyFor) => {
+    for (const [defId, entry] of Object.entries(rows ?? {})) {
+      const lines = LINES_BY_KIND[entry?.kind];
+      if (!lines) {
+        problems.push(`${defId}: unknown kind ${JSON.stringify(entry?.kind)}`);
+        continue;
+      }
+      const persona = personas[entry.persona];
+      if (!persona) {
+        problems.push(`${defId}: unknown persona ${JSON.stringify(entry.persona)}`);
+        continue;
+      }
+      if (badPersonas.has(entry.persona)) {
+        problems.push(`${defId}: persona ${entry.persona} cannot render`);
+        continue;
+      }
+      if (backendOf(persona) === "sapi" && ["rate", "pbas", "pmod"].some((field) => field in entry)) {
+        problems.push(`${defId}: a SAPI persona's lines take no rate, pbas or pmod override`);
+        continue;
+      }
+      for (const line of lines) {
+        const text = entry[line];
+        if (typeof text !== "string" || text.trim() === "") {
+          problems.push(`${keyFor(defId)}-${line}: no ${line} line`);
+          continue;
+        }
+        expectEntry(keyFor(defId), entry, line);
+      }
+    }
+  };
+  entriesOf(table.cards, (defId) => defId);
+  // The emotes table: its own shape — a persona and the five issue-§3 lines, no `kind` field.
+  for (const [portrait, entry] of Object.entries(table.emotes ?? {})) {
+    const defId = `${EMOTE_PREFIX}${portrait}`;
+    if (!EMOTE_PORTRAITS.includes(portrait)) {
+      problems.push(`${defId}: not a portrait id`);
       continue;
     }
-    const persona = personas[entry.persona];
+    const persona = personas[entry?.persona];
     if (!persona) {
-      problems.push(`${defId}: unknown persona ${JSON.stringify(entry.persona)}`);
+      problems.push(`${defId}: unknown persona ${JSON.stringify(entry?.persona)}`);
       continue;
     }
     if (badPersonas.has(entry.persona)) {
       problems.push(`${defId}: persona ${entry.persona} cannot render`);
       continue;
     }
-    const backend = backendOf(persona);
-    if (backend === "sapi" && ["rate", "pbas", "pmod"].some((field) => field in entry)) {
-      problems.push(`${defId}: a SAPI persona's lines take no rate, pbas or pmod override`);
-      continue;
-    }
-    for (const line of lines) {
-      const key = `${defId}-${line}`;
+    for (const line of EMOTE_LINES) {
       const text = entry[line];
       if (typeof text !== "string" || text.trim() === "") {
-        problems.push(`${key}: no ${line} line`);
+        problems.push(`${defId}-${line}: no ${line} line`);
         continue;
       }
-      if (backend === "say") {
-        const values = {
-          say: persona.say,
-          rate: entry.rate ?? persona.rate,
-          pbas: entry.pbas ?? persona.pbas,
-          pmod: entry.pmod ?? persona.pmod,
-          text,
-        };
-        expected.set(key, { defId, line, backend, ...values, hash: voiceHash(values) });
-      } else {
-        const values = {
-          voice: persona.voice,
-          rate: persona.rate,
-          semitones: persona.semitones,
-          filter: persona.filter,
-          text,
-        };
-        expected.set(key, { defId, line, backend, ...values, hash: sapiHash(values) });
-      }
+      // An emote entry resolves its lines through the persona's fields, the way an un-overridden
+      // card entry does; `expectEntry` reads no `kind`.
+      expectEntry(defId, entry, line);
+    }
+  }
+  for (const portrait of EMOTE_PORTRAITS) {
+    if (!Object.hasOwn(table.emotes ?? {}, portrait)) {
+      problems.push(`${EMOTE_PREFIX}${portrait}: missing from voice-lines.json emotes`);
     }
   }
   return expected;

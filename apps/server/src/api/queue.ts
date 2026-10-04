@@ -31,6 +31,7 @@
  * "±100 widening ±50 every 10 s, uncapped after 60 s" is written down exactly once.
  */
 
+import { pickPortraitFromSeed } from "@jackioh/shared";
 import { ratingWindow } from "../config";
 import { callerProfile } from "./collection";
 import { assertNotInSeries, freezeChoice, readModeChoice, type ModeChoiceInput } from "./decks";
@@ -160,6 +161,8 @@ async function enqueue(
     // that lands in the ticket and, later, in the match or the series — the saved deck is never
     // read again.
     deck: frozen.mode === "bo1" ? frozen.deck.cards : [],
+    // R642: the deck's portrait freezes with it.
+    portrait: frozen.mode === "bo1" ? (frozen.deck.portrait ?? null) : null,
     trio: frozen.mode === "bo3" ? frozen.trio : null,
     catalogVersion: deps.catalog.version,
     enqueuedAt: deps.timers.now(),
@@ -282,7 +285,8 @@ async function startPairedSeries(
  *
  * Best of 1 plays the two decks the tickets froze. All Random (R258) deals both from the match
  * seed and the seat, `${seed}:p1-deck` and `${seed}:p2-deck`, and the dealt decks go into the match
- * row like any frozen deck, so `(seed, decks, log)` replays it as ever.
+ * row like any frozen deck, so `(seed, decks, log)` replays it as ever. Portraits ride the same
+ * way (R642): the ticket's own for Best of 1, a uniform pick dealt from the seed for All Random.
  */
 async function startPairedMatch(
   deps: ServerDeps,
@@ -298,8 +302,18 @@ async function startPairedMatch(
   const seed = takeSeedForPair(a, b) ?? deps.ids.seed();
   const random = a.mode === "random";
   const seats: [MatchSeat, MatchSeat] = [
-    { profileId: a.profileId, player: "p1", deck: random ? deps.dealRandomDeck(`${seed}:p1-deck`) : a.deck },
-    { profileId: b.profileId, player: "p2", deck: random ? deps.dealRandomDeck(`${seed}:p2-deck`) : b.deck },
+    {
+      profileId: a.profileId,
+      player: "p1",
+      deck: random ? deps.dealRandomDeck(`${seed}:p1-deck`) : a.deck,
+      portrait: random ? pickPortraitFromSeed(`${seed}:portrait:p1`) : (a.portrait ?? undefined),
+    },
+    {
+      profileId: b.profileId,
+      player: "p2",
+      deck: random ? deps.dealRandomDeck(`${seed}:p2-deck`) : b.deck,
+      portrait: random ? pickPortraitFromSeed(`${seed}:portrait:p2`) : (b.portrait ?? undefined),
+    },
   ];
 
   // NO `matches.create` HERE. `MatchRegistry.start` builds the row -- seed, both frozen decks,

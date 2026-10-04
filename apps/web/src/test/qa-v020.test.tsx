@@ -357,7 +357,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
 
   it("item 9: the Find a match box repeats no queue count; the mode tiles carry them (R505)", async () => {
     const ids = Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`);
-    const deck: SavedDeck = { id: "d1", name: "Aggro", cards: ids, catalogVersion: "v1", createdAt: 0, updatedAt: 0 };
+    const deck: SavedDeck = { id: "d1", name: "Aggro", cards: ids, catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 };
     const decks: DecksResponse = {
       catalogVersion: "v1",
       decks: [deck],

@@ -375,3 +375,44 @@ describe("every voice line is short, plain flavour (B34)", () => {
     ).toBe(true);
   });
 });
+
+/** R644: the emotes table — the six portraits' five issue-§3 voice-line emotes each. */
+describe("voice-lines.json emotes (R644)", () => {
+  const EMOTE_PORTRAITS = ["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"] as const;
+  const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
+  /** B34's charset plus digits, which "SHREDDER-10" needs and cards may not have. */
+  const EMOTE_CHARSET = /^[A-Za-z0-9 ,.'!?-]+$/;
+  const EMOTES: Record<string, Json> = isRecord(TABLE.emotes)
+    ? (Object.fromEntries(
+        Object.entries(TABLE.emotes).filter(([, entry]) => isRecord(entry)),
+      ) as Record<string, Json>)
+    : {};
+
+  it("R644 names exactly the six portraits", () => {
+    expect(Object.keys(EMOTES).sort()).toEqual([...EMOTE_PORTRAITS].sort());
+  });
+
+  it("R644 gives every portrait all five lines, non-empty and inside the emote charset", () => {
+    const wrong: string[] = [];
+    for (const portrait of EMOTE_PORTRAITS) {
+      const entry = EMOTES[portrait] ?? {};
+      for (const line of EMOTE_LINES) {
+        const text = entry[line];
+        if (typeof text !== "string" || text.trim() === "") wrong.push(`${portrait}-${line}: missing`);
+        else if (!EMOTE_CHARSET.test(text)) wrong.push(`${portrait}-${line}: ${JSON.stringify(text)}`);
+      }
+      for (const field of Object.keys(entry)) {
+        if (field !== "persona" && !(EMOTE_LINES as readonly string[]).includes(field)) {
+          wrong.push(`${portrait}: unexpected field "${field}"`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("R644 names only personas that exist, one per portrait", () => {
+    const personas = EMOTE_PORTRAITS.map((portrait) => EMOTES[portrait]?.persona);
+    expect(personas.every((name) => typeof name === "string" && isRecord(PERSONAS[name]))).toBe(true);
+    expect(new Set(personas).size, "each portrait's own voice").toBe(EMOTE_PORTRAITS.length);
+  });
+});
