@@ -1609,6 +1609,7 @@
     "202": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-04T14:44:12Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -1628,6 +1629,7 @@
       "issue": 196,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "devin",
       "question": "",
