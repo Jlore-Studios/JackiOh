@@ -1607,7 +1607,7 @@
       "taken_asks": []
     },
     "202": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cross_rounds": 0,
       "died": 0,
@@ -1619,12 +1619,12 @@
       "issue": 196,
       "kind": "revise",
       "pending_request": false,
-      "provider": "agy",
+      "provider": "devin",
       "queued_at": "2026-10-04T14:08:18Z",
-      "run_id": "37199287641",
+      "run_id": "37208114170",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-04T11:36:47Z",
+      "started_at": "2026-10-04T14:08:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2309,9 +2309,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T13:24:12Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37205440347",
-    "what": "revise #141 on muse"
+    "at": "2026-10-04T14:08:44Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37208114170",
+    "what": "revise #202 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T14:07:18Z",
