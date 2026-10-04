@@ -3101,7 +3101,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by after-attack.test.ts, 032-prem-panther.test.ts "R426 …".
-  it("R426 draws for Prem Panther only after it attacks and survives", () => {
+  it("R426 draws for Prem Panther after it attacks, even when it dies", () => {
     provenIn(426, "after-attack.test.ts", "../../cards/test/032-prem-panther.test.ts");
   });
 
