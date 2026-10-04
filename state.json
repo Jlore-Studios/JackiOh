@@ -2794,10 +2794,8 @@
     "what": "revise #203 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-04T21:55:49Z",
-    "notes": [
-      "started a night run, as a lane was free: #203 (easy) is queued to revise, for `devin` (another run waits for `claude-1`)"
-    ],
+    "at": "2026-10-04T21:58:14Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
