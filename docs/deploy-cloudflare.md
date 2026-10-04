@@ -108,9 +108,15 @@ pull request too. To rename it, change `RELEASE_LABEL` in `scripts/promote-produ
 label named in the job's `if` in `promote-production.yml`; `promote-production.test.ts` fails until
 they agree. The hour (`RELEASE_HOUR_UTC`) and the other numbers are at the top of the script.
 
-It moves `production` with the built-in `GITHUB_TOKEN` (permission `contents: write`); a push made
-with that token starts no other workflow, so it cannot loop. Its `deploy` job uses one secret,
-`CLOUDFLARE_API_TOKEN`.
+It moves `production` (the promote branch, the pull request, its merge) with the night bot's token,
+the `BOT_GITHUB_TOKEN` secret, which has the `workflow` scope: GitHub refuses the built-in
+`GITHUB_TOKEN` any update to `production` that carries a change to `.github/workflows`, whatever the
+job's `permissions:` say, and a day of `main` often carries one ("refusing to allow a GitHub App to
+create or update workflow ... without `workflows` permission"). The countdown issue, its comments and
+the label stay on `GITHUB_TOKEN`, whose writes start no workflow, so the night bot never picks the
+issue up. Nothing loops: a pull request's CI never starts the promotion (only a green push to `main`
+does), and nothing runs on a push to a promote branch or to `production`. Its `deploy` job uses one
+secret, `CLOUDFLARE_API_TOKEN`.
 
 ## 3. What is in this change
 
@@ -142,15 +148,15 @@ every response.
 
 Do these in order. Steps 2 to 4 are where most mistakes would happen.
 
-### Step 1: Merge this pull request, and allow the workflow to open pull requests
+### Step 1: Merge this pull request, and check the bot's token
 
 `promote-production.yml` has to be on `main` before it can run or be started by hand. It opens and
-merges pull requests with the built-in token, which GitHub allows only when two repository settings
-say so: Settings -> Actions -> General -> Workflow permissions -> **Allow GitHub Actions to create
-and approve pull requests** (for an organization's repository, the organization's setting must allow
-it first), and Settings -> General -> Pull Requests -> **Allow merge commits**. Without the first,
-a run fails with "GitHub Actions is not permitted to create or approve pull requests"; without the
-second, the merge is refused.
+merges its pull requests as the night bot, with the `BOT_GITHUB_TOKEN` secret (`bot/README.md`,
+"Setting it up": a classic token with the `public_repo` and `workflow` scopes), which the bot
+already uses. The merge is a merge commit, so Settings -> General -> Pull Requests -> **Allow merge
+commits** must stay on. Without the secret the workflow falls back to the built-in token, and the
+first promotion that carries a workflow change fails with "Could not push ... only a token with the
+workflow scope may move it".
 
 ### Step 2: Create the `production` branch
 
@@ -268,6 +274,11 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   workflow) until the fix has merged, then re-enable it.
 - **Pause production:** `/hold` on the countdown issue (a catalog bump still goes out), or disable the
   workflow to stop everything. Staging keeps updating.
+- **A promote run fails with "refusing to allow a GitHub App to create or update workflow" or "only
+  a token with the workflow scope may move it":** the run had no `BOT_GITHUB_TOKEN`, or that token
+  lost its `workflow` scope or expired, and main changed `.github/workflows` since production. Renew
+  the token (`bot/README.md`, "Setting it up"), then run *promote production* by hand. The first
+  failure, on 2026-10-04, is why the promotion moves production as the bot.
 - **A promote run fails with "production has diverged":** someone committed to `production` by hand
   or main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
   nothing on `production` needs keeping, an admin can reset it with
@@ -317,9 +328,8 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 - Cloudflare: none. The `VITE_` settings are all public and committed, and there is no Worker
   script.
 - GitHub: `CLOUDFLARE_API_TOKEN`, which the deploy job uses to upload the build. Moving `production`
-  uses the built-in `GITHUB_TOKEN`, with the two repository settings in step 1. Pull requests and
-  issues made with that token start no other workflow, so `ci.yml` does not run on a promotion pull
-  request, which is right: its commits already passed.
+  uses the bot's existing `BOT_GITHUB_TOKEN` (step 1). CI runs on a promotion pull request like any
+  other, but the merge does not wait for it: its head is a commit of `main` whose CI already passed.
 - Render and Supabase: unchanged, except for the `PUBLIC_ORIGINS` value and the Redirect URL above.
 
 ## 7. Known gaps and recommended next steps
