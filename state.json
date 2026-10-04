@@ -394,6 +394,12 @@
       "lines": [
         "/harness run"
       ]
+    },
+    "c:5982168885": {
+      "at": "2026-10-04T16:45:28Z",
+      "lines": [
+        "@jgoetzmann-bot help"
+      ]
     }
   },
   "items": {
