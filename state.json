@@ -1187,9 +1187,12 @@
     "193": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T02:08:56Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 108,
       "kind": "revise",
       "last_findings": [],
