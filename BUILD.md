@@ -633,10 +633,10 @@ Acceptance:
 - A version 1 deck or trio code reads as Core numbers; a version 2 code round-trips a Classic and a Classic+ card; any other version is refused with its own sentence (R255, R339).
 - `loc` equals the generator's count for every script file (a test re-runs the generator and diffs), and a fused card's is its ingredients' sum (§5).
 
-**M9-T2 Patch history.** Files: `cards/patches/`, `cards/scripts/patch.ts`, `cards/src/catalog-data.ts`, `apps/server/src/{env,config}.ts`, `apps/server/src/api/catalog.ts`, `render.yaml`, the `.env.example`s, a migration.
-`patches.json` and one snapshot per patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0, v0.2.10); `pnpm --filter @jackioh/cards run patch <version> "<title>"`; `CATALOG_VERSION` the latest patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388); `GET /api/catalog/:version`.
+**M9-T2 Patch history.** Files: `cards/patches/`, `cards/scripts/{patch,patches,patches-io}.ts`, `cards/src/catalog-data.ts`, `apps/server/src/{env,config}.ts`, `apps/server/src/api/catalog.ts`, `render.yaml`, the `.env.example`s, a migration.
+`patches.json` and one snapshot per shipped patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0, v0.2.4, v0.2.5, v0.2.10); a branch uses `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` to add a pending fragment, then `patches ship` promotes it in first-parent ship order; `CATALOG_VERSION` is the latest shipped patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388, R646); `GET /api/catalog/:version`.
 Acceptance:
-- A test holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version; `patches.json` lists every snapshot in order and nothing orders versions by comparing strings (R105).
+- A test holds `catalog.json`, after reverting every pending claim, equal to the latest snapshot and `CATALOG_VERSION` equal to the latest shipped version; `patches.json` lists every snapshot in ship order and nothing orders versions by comparing strings (R105, R646).
 - The server serves each version's snapshot and refuses an unknown one; a stale version is refused at save and queue as before.
 
 **M9-T3 Global mechanics.** Files: `engine/src/{config,turn,playChoices}.ts`, `engine/src/subsystems/*`, `e2e/cypress/e2e/08-turn-cap-draw.cy.ts`.
