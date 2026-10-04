@@ -475,6 +475,11 @@ class GitHub:
             f"{self._r}/actions/workflows/{workflow}/runs", params, key="workflow_runs", limit=limit
         )
 
+    def list_commits(self, *, author: str = "", limit: int = 1000) -> list[dict]:
+        """Commits on the default branch, newest first, by `author` when given."""
+        params: dict[str, Any] = {"author": author} if author else {}
+        return self.paginate(f"{self._r}/commits", params, limit=limit)
+
     def runs_for_sha(self, sha: str, limit: int = 30) -> list[dict]:
         return self.paginate(f"{self._r}/actions/runs", {"head_sha": sha}, key="workflow_runs",
                              limit=limit)
