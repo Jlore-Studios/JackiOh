@@ -352,6 +352,12 @@
       "lines": [
         "/harness revise This was blocked by `agy`'s quota refusals, which the bot read as unreadable reviews (#174 fixed that), not by real findings. Run it again."
       ]
+    },
+    "c:5976206149": {
+      "at": "2026-10-04T03:35:41Z",
+      "lines": [
+        "@jgoetzmann-bot work on this --force"
+      ]
     }
   },
   "items": {
