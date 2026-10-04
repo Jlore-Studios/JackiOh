@@ -1087,9 +1087,7 @@
     },
     "44": {
       "action": "plan",
-      "asks": [
-        "c:5961370035"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1113,10 +1111,12 @@
       "question": "Issue #44 depends on #40 (Patch v0.2.0), and #40 isn't on main yet. main's catalog.json has only the 111 Core entries, its patch history stops at v0.1.1, and the Classic and Classic+ cards exist only on the unmerged origin/v0.2.0 branch. Which should happen? (a) Merge #40 / v0.2.0 into main, then queue #44 again. (b) Fold these rarity and text changes into #40's branch before it merges. (c) Have the bot only update docs/classic-sets.md now. Whichever you choose, please also settle the family conflict the issue raises. Either the ___ Glowy Jelly Bean and ___ of the Forgotten families become Common, or Core #27 Blood Ridden, #28 Knockoff Temu and #40 Echoes of the Forgotten become Rare, which breaks the issue's 'Core: no changes'.",
       "queued_at": "2026-10-03T01:36:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37161675672",
-      "started_at": "2026-10-03T23:25:06Z",
+      "run_id": "37164470438",
+      "started_at": "2026-10-04T00:17:41Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:5961370035"
+      ]
     },
     "45": {
       "action": "build",
@@ -1500,9 +1500,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-03T23:53:53Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37163130140",
-    "what": "build #131 on agy"
+    "at": "2026-10-04T00:17:41Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37164470438",
+    "what": "plan #44 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-04T00:16:40Z",
