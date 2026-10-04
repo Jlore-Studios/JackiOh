@@ -1311,7 +1311,9 @@
     },
     "44": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:5961370035"
+      ],
       "died": 0,
       "failures": 1,
       "forced": false,
@@ -1338,9 +1340,7 @@
       "run_id": "37168768639",
       "started_at": "2026-10-04T01:54:36Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5961370035"
-      ]
+      "taken_asks": []
     },
     "45": {
       "action": "build",
