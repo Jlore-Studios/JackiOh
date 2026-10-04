@@ -2345,9 +2345,9 @@
     "what": "build #207 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-04T14:49:34Z",
+    "at": "2026-10-04T15:00:38Z",
     "notes": [
-      "started a night run, as a lane was free: #200 (easy) is queued to build, for `devin`: build on `devin` (devin, `swe-2-max`, weak); review in a review run after its self check"
+      "started a night run, as a lane was free: #144 conflicts with main"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
