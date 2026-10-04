@@ -2018,15 +2018,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "sha": "8b4c218d5b4b0fdffdd10231388b60bf2153fe04",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "98e6e01d2114369510751a5aecf98a8a5ebef716",
+        "tiers": {}
       }
     },
     "218": {
