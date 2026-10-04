@@ -10,8 +10,8 @@
 // Core #80 Zao Gao ("Discard 2 random cards"), Core #21 Hinder's cast-on-draw discard and C #89 Paul
 // Allen's Ghost's targeting cost.
 
-import { reduce, type GameState } from "@jackioh/engine";
-import type { Action, GameEvent, PlayerId, Selection } from "@jackioh/shared";
+import { reduce } from "@jackioh/engine";
+import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { base, def, radiant } from "../../src/scripts/classic/064-malzahars-recycler";
 import { scenario, type Scenario } from "../_harness";
@@ -326,12 +326,16 @@ describe("C #64 Malzahar's Recycler: Animated (patch v0.2.10)", () => {
     s.play(RECYCLER, { zone: 3 });
     expect(s.unit("p1", 3)?.defId).toBe(RECYCLER);
     s.endTurn();
-    expect(s.state.pending).toMatchObject({ playerId: "p1", kind: "hand", min: 2, max: 2 });
-    s.answer(pick(s, MENACE, VANILLA));
+    // R654: the two discards land at once, at random — no prompt opens.
+    expect(s.state.pending).toBeNull();
+    expect(s.state.active).toBe("p2");
 
     const events = s.lastEvents;
     const p2Starts = events.findIndex((event) => event.type === "turnStarted");
-    expect(discardedBy(events, "p1")).toHaveLength(2);
+    const discarded = discardedBy(events, "p1").map((event) => (event as { defId: string }).defId);
+    expect(discarded).toHaveLength(2);
+    expect([MENACE, VANILLA, FILLER]).toEqual(expect.arrayContaining(discarded));
     expect(drawnBy(events.slice(0, p2Starts), "p1")).toHaveLength(2);
+    expect(s.hand("p1")).toHaveLength(3);
   });
 });

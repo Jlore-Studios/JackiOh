@@ -578,7 +578,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
     expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
     expect(termsIn(played("classicplus-019-2"))).toContain("Berserk");
-    expect(termsOf(played("classicplus-074"))).toContainEqual({ text: "Brittle 4", term: "Brittle" });
+    expect(termsOf(played("classicplus-074"))).toContainEqual({ text: "Brittle 2", term: "Brittle" });
     expect(termsIn(played("classicplus-038"))).toContain("Spell Damage");
     expect(termsIn(played("classic-005"))).toContain("Animated");
     expect(termsIn(played("classicplus-012-8"))).toContain("Animated on your turn");

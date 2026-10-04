@@ -375,6 +375,7 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classic-038": ["base", "radiant"],
       "classic-043": ["cost"],
       "classic-046": ["base"],
+      "classic-054": ["base"],
       "classic-064": ["loc"],
       "classic-065": ["loc", "radiant"],
       "classic-074": ["base", "loc", "radiant"],

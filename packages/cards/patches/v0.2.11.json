@@ -4835,7 +4835,7 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Trigger a Cry of one of your Units on the field or in your graveyard, {repeats|time|times}."
+      "text": "Trigger a Cry of one of your Units on the field or in your graveyard."
     },
     "radiant": {
       "keywords": [],

@@ -5310,6 +5310,14 @@
         ]
       },
       {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
         "id": "classic-064",
         "name": "Malzahar's Recycler",
         "kind": "changed",

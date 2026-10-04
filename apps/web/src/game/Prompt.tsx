@@ -356,10 +356,6 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
   );
 }
 
-function cardsWord(count: number): string {
-  return count === 1 ? "1 card" : `${String(count)} cards`;
-}
-
 /** "Pay in mana only", "Spend 2 Plague Tokens", and where they come from when several cards pay. */
 function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
   if (option === "none") return "Pay in mana only";

@@ -23,7 +23,7 @@ const FRUITS = 1;
 /** The two faces differ only in whether the Fruit is Radiant (R276: the Radiant face's proposal). */
 function fruitTree(radiant: boolean): Script {
   return {
-    startOfTurn: (ctx) => [
+    startOfTurn: () => [
       addRandomFromCatalog({
         query: { tags: ["Fruit"] },
         count: FRUITS,

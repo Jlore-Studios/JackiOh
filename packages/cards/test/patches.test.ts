@@ -150,7 +150,7 @@ describe("R388 card patch history (B4.2)", () => {
     expect(idsOf("v0.2.11", "added")).toEqual([]);
     expect(idsOf("v0.2.11", "removed")).toEqual([]);
     expect(changesOf("v0.2.11").every((change) => change.kind === "changed")).toBe(true);
-    expect(idsOf("v0.2.11", "changed")).toHaveLength(51);
+    expect(idsOf("v0.2.11", "changed")).toHaveLength(52);
   });
 
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
