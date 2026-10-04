@@ -1,6 +1,6 @@
 // C #20 The Power to Punish — SPEC §8.6 row 20, BUILD M9 Classic row C 20: "Activate, once per turn
 // (R384), the mode and its target carried in the `activate` action: deal 2 damage to a target; the
-// opponent discards a card at random (R640; an empty hand: nothing), with no prompt; or a Unit, either
+// opponent discards a card at random (R641; an empty hand: nothing), with no prompt; or a Unit, either
 // side, is destroyed at the start of your next turn, a delayed effect keyed to that stay on the field
 // that fizzles if the Unit has left it, even if it came back (R174), resolving with the start-of-turn
 // delayed effects (R62, R68) and still firing if The Power to Punish has left the field (as R76); an
@@ -98,7 +98,7 @@ describe("C #20 The Power to Punish", () => {
       s.expectHealth("p2", 30);
     });
 
-    it("R640 the opponent discards a card at random: no prompt opens", () => {
+    it("R641 the opponent discards a card at random: no prompt opens", () => {
       const s = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
 
       punish(s, DISCARD);
@@ -122,7 +122,7 @@ describe("C #20 The Power to Punish", () => {
       for (const card of s.pile("p2", "graveyard")) expect(seen).toContain(card.id);
     });
 
-    it("R640 the random discard comes from the match rng: the same game discards the same card", () => {
+    it("R641 the random discard comes from the match rng: the same game discards the same card", () => {
       const first = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
       punish(first, DISCARD);
       const second = setup({}, { hand: [VANILLA, TIMMY, MENACE] });
@@ -132,7 +132,7 @@ describe("C #20 The Power to Punish", () => {
       expect(ids(first)).toEqual(ids(second));
     });
 
-    it("R640 an opponent with an empty hand discards nothing and is asked nothing", () => {
+    it("R641 an opponent with an empty hand discards nothing and is asked nothing", () => {
       const s = setup({}, { hand: [], field: [VANILLA] });
 
       punish(s, DISCARD);
@@ -280,7 +280,7 @@ describe("C #20 The Power to Punish", () => {
       s.expectHealth("p2", 26);
     });
 
-    it("R640 the opponent discards 2 cards at random", () => {
+    it("R641 the opponent discards 2 cards at random", () => {
       const s = setup({}, { hand: [VANILLA, TIMMY, MENACE] }, true);
 
       punish(s, DISCARD);
@@ -289,7 +289,7 @@ describe("C #20 The Power to Punish", () => {
       expect(s.pile("p2", "graveyard")).toHaveLength(2);
     });
 
-    it("R640 with one card in hand the opponent discards that one", () => {
+    it("R641 with one card in hand the opponent discards that one", () => {
       const s = setup({}, { hand: [TIMMY], field: [VANILLA] }, true);
 
       punish(s, DISCARD);

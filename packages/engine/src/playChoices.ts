@@ -1096,7 +1096,7 @@ export function pricedPlayActions(
             if (bound && !tributePicksAgree(state, player, face, choices.targets ?? [], choices.modes ?? [], tributes)) {
               continue;
             }
-            // B5 E5, R450, R640: the targets' discard cost is random at pay time, so it lists no
+            // B5 E5, R450, R641: the targets' discard cost is random at pay time, so it lists no
             // paying sets — one action, offered only when the cost can be paid at all.
             const owed = targetingDiscardsRequired(state, player, face, choices.targets ?? [], choices.modes ?? []);
             if (whyTargetingDiscardsUnpayable(state, player, owed, playUses(card, choices.targets ?? [])) !== null) {
@@ -1322,7 +1322,7 @@ export function whyChoicesRefused(
   if (!tributePicksAgree(state, player, face, action.targets ?? [], action.modes ?? [], action.tributes ?? [])) {
     return `${defOf(state, face.defId).name}'s Tribute pick must be a unit it tributes`;
   }
-  // B5 E5, R450, R640: a declared target that costs discards needs that many other cards held —
+  // B5 E5, R450, R641: a declared target that costs discards needs that many other cards held —
   // the discards are random at pay time, so the action carries none. Never the card being played.
   const required = targetingDiscardsRequired(state, player, face, action.targets ?? [], action.modes ?? []);
   return whyTargetingDiscardsUnpayable(state, player, required, playUses(card, action.targets ?? []));

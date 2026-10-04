@@ -3,7 +3,7 @@
 //
 // Two things answer a targeting, in this order:
 //   1. A targeting cost (Classic #89 Paul Allen's Ghost: "to target this with anything but an attack,
-//      a player must also discard N cards"). The discards are random at pay time (R640); §10.5 step
+//      a player must also discard N cards"). The discards are random at pay time (R641); §10.5 step
 //      2 pays them (`payTargetingDiscards`), and a prompt answer naming such a card pays them before
 //      it goes on. It binds both players. With fewer cards than the cost in hand the card is not a
 //      legal target at all (`targeting.canPayToTarget`), so it is never offered.
@@ -83,7 +83,7 @@ export function interceptTargeting(sink: EngineSink, args: InterceptArgs): Selec
 }
 
 /**
- * R450, R640, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
+ * R450, R641, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
  * player's hand outside `keep`, drawn through the match rng. Fewer cards than the cost ends it; a
  * cost nobody can pay is never listed or offered (`canPayToTarget`, `whyTargetingDiscardsUnpayable`),
  * so the keep is what the refusal kept: the card a play is taking out of that hand, and any hand
@@ -120,7 +120,7 @@ export function whyTargetAnswerRefused(state: GameState, pending: PendingChoice,
 }
 
 /**
- * R450, R640: the targeting point of a `target` prompt's answer, which the caller has validated and
+ * R450, R641: the targeting point of a `target` prompt's answer, which the caller has validated and
  * closed. A costly answer pays its random discards first, then the interception answers.
  */
 export function targetAnswer(sink: EngineSink, pending: PendingChoice, picks: readonly Selection[]): Selection[] {

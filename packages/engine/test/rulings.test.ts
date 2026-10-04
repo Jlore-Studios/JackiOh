@@ -754,12 +754,11 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(46, "rulings-b.test.ts", "statecheck.test.ts", "effects-destroy.test.ts");
   });
 
-  // Proved by rulings-b.test.ts "R47 fizzles a lane-targeted summon into an occupied or Locked zone, and
-  // holds a Reborn unit's zone"; statecheck.test.ts "R47: Reborn into a zone that was Locked meanwhile
-  // fails silently", "R47 says so in the event stream when a Reborn return fizzles into a Locked zone";
-  // effects-summon.test.ts "R47 a lane-named summon fizzles on an occupied or a Locked zone".
-  it("R47 fizzles a lane-targeted summon into an occupied or Locked zone", () => {
-    provenIn(47, "rulings-b.test.ts", "statecheck.test.ts", "effects-summon.test.ts");
+  // Proved by rulings-b.test.ts "R47 …" (occupied fizzles, Locked lands, the Reborn zone holds) and
+  // effects-summon.test.ts "R47 …" (a lane-named summon fizzles on an occupied zone). Reborn into a
+  // zone Locked meanwhile is R647's proof now (statecheck.test.ts "R647 …").
+  it("R47 fails an aimed summon on an occupied zone; a Locked zone takes it unless the card says otherwise", () => {
+    provenIn(47, "rulings-b.test.ts", "effects-summon.test.ts");
   });
 
   // M4 owns #77 Professor Curvature: its card test proves the discount on the real script.
@@ -3719,6 +3718,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
   });
 
+  // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
+  // the mulligans at random places and without a word to the other seat, an all-cast-on-draw deck
+  // deals an empty hand with no fatigue and turn 1's chain meets R58's cap, and a mulligan can be
+  // dealt fewer cards back than it returned; and by 021-hinder.test.ts's "R431, R635 …" (a real game).
+  it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
+    provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
+  });
+
   // Proved by windfury.test.ts "R636 …" (the second attack in `legalActions` and the reducer, the switch
   // the first one spends, the count read at the second declaration, Deft Duelist beside it) and
   // config.test.ts / rulings-a.test.ts "R21 …" (Windfury in the random keyword pool).
@@ -3756,19 +3763,19 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by targeting.test.ts "R640 …" (no play carries discards, the exact cost pays both with no
-  // prompt, the kept cards never pay) and the card side in packages/cards
-  // test/classic/089-paul-allens-ghost.test.ts "R640 …" (one play, two random others, the interception
-  // stays paid).
-  it("R640 discards are random by default, paid at pay time with no choice", () => {
-    provenIn(640, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
+  // Proved by setup-aside.test.ts "R640 …": five Quickdraw cards deal three to the first seat and four
+  // to the second, five to a Medium seat going second, the hand is the table's size whatever the deck
+  // holds, and the surplus are ordinary cards a later draw can take.
+  it("R640 deals a seat at most as many Quickdraw cards as it has opening draws", () => {
+    provenIn(640, "setup-aside.test.ts");
   });
 
-  // Proved by setup.test.ts "R641 …" (the deal and the mulligan wait past cast-on-draw cards, and the
-  // fallback still casts) and the card side in packages/cards/test/021-hinder.test.ts "R641 …" (no
-  // opening deal holds the Hinder).
-  it("R641 keeps a cast-on-draw card out of the opening draw and the mulligan while other cards remain", () => {
-    provenIn(641, "setup.test.ts", "../../cards/test/021-hinder.test.ts");
+  // Proved by targeting.test.ts "R641 …" (no play carries discards, the exact cost pays both with no
+  // prompt, the kept cards never pay) and the card side in packages/cards
+  // test/classic/089-paul-allens-ghost.test.ts "R641 …" (one play, two random others, the interception
+  // stays paid).
+  it("R641 discards are random by default, paid at pay time with no choice", () => {
+    provenIn(641, "targeting.test.ts", "../../cards/test/classic/089-paul-allens-ghost.test.ts");
   });
 
   // Proved by the card side in packages/cards/test/classic/021-turtinator.test.ts "R642 …" (alone, no
@@ -3806,6 +3813,48 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // test/classic-plus/074-twice-forward-one-step-backwards.test.ts "R646 …".
   it("R646 starts no Brittle count while a backrow Trap is unrevealed", () => {
     provenIn(646, "twiceForward.test.ts", "../../cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts");
+  });
+
+  // Proved by zones.test.ts "R647 …" (a Locked zone takes a summon but no play),
+  // statecheck.test.ts "R647 …" (Reborn still returns into one) and animated.test.ts "R647 …"
+  // (the home return is a move, not a play), and the card side in packages/cards
+  // test/067-zoomerbin-oomen.test.ts and test/classic-plus/019-league-of-losers.test.ts "R647 …"
+  // (the cards' own overrides: a fizzle and a skip).
+  it("R647 refuses only plays into a Locked zone: summons, moves and returns still land", () => {
+    provenIn(
+      647,
+      "zones.test.ts",
+      "statecheck.test.ts",
+      "animated.test.ts",
+      "effects-summon.test.ts",
+      "../../cards/test/067-zoomerbin-oomen.test.ts",
+      "../../cards/test/classic-plus/019-league-of-losers.test.ts",
+    );
+  });
+
+  // Proved by effects-plague.test.ts "R648 …" (every token on the one pick, the Radiant count, the
+  // −X/−X death after the whole effect) and the card side in packages/cards
+  // test/classic/070-book-of-plague.test.ts and test/classic/061-plague-bringer-goliath.test.ts
+  // "R648 …" (no spreading: the whole effect lands on the one pick).
+  it("R648 places every Plague Token of one effect on the single permanent one prompt names", () => {
+    provenIn(
+      648,
+      "effects-plague.test.ts",
+      "../../cards/test/classic/070-book-of-plague.test.ts",
+      "../../cards/test/classic/061-plague-bringer-goliath.test.ts",
+    );
+  });
+
+  // Proved by recruit-variants.test.ts "R649 …" (the scan prefers a non-X match; only-X still recruits;
+  // recruitAll leaves X-cost cards the same way). No card script needed it: the skip lives in the
+  // Recruit scan itself.
+  it("R649 skips (X)-cost cards in a Recruit scan unless they are the only valid targets", () => {
+    provenIn(649, "recruit-variants.test.ts");
+  });
+
+  // Proved by effects-transform.test.ts "R650 …" (DEF stays DEF on the new instance).
+  it("R650 keeps a transformed Unit's battle position", () => {
+    provenIn(650, "effects-transform.test.ts");
   });
 });
 

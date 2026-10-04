@@ -1,9 +1,9 @@
 // C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: "Five placements of one Plague
-// Token, one prompt each, on any permanent either side, face-down ones and repeats included; with no
-// permanent on the field it places nothing; each placement is its own for "whenever tokens are placed"
-// (C #53 draws five times) and C #27 doubles its share; a face-down option carries only its id (R177);
-// tagged Book, so C #4 answers it; radiant: ten; its tuned number (tokens) reads through `param()`
-// (R386)".
+// Token, all on the one permanent a single prompt names (R648), on any permanent either side,
+// face-down ones included; with no permanent on the field it places nothing; each placement is still
+// its own for "whenever tokens are placed" (C #53 draws five times) and C #27 doubles its share;
+// a face-down option carries only its id (R177); tagged Book, so C #4 answers it; radiant: ten; its
+// tuned number (tokens) reads through `param()` (R386)".
 //
 // The C #27 Pestilent Slime and C #4 Palantir cases need those cards' scripts (cards-classic-a).
 
@@ -48,9 +48,9 @@ function drawsBy(events: readonly GameEvent[], player: PlayerId): number {
   return events.filter((event) => event.type === "drawn" && event.player === player).length;
 }
 
-/** Answer `times` placement prompts, all on `card`. */
-function placeAll(s: Scenario, card: CardInstance, times: number): void {
-  for (let n = 0; n < times; n += 1) s.answer(card.id);
+/** Answer the one placement prompt on `card`: every placement lands there (R648). */
+function placeAll(s: Scenario, card: CardInstance): void {
+  s.answer(card.id);
 }
 
 function board(radiantFace = false): Scenario {
@@ -70,7 +70,7 @@ describe("C #70 Book of Plague", () => {
   });
 
   describe("base", () => {
-    it("five placements of one token, one prompt each, over every permanent on either side, face-down included", () => {
+    it("five placements of one token on the one permanent a single prompt names, over every permanent on either side, face-down included", () => {
       const s = board();
       const vanilla = s.card(VANILLA);
       const menace = s.card(MENACE);
@@ -81,21 +81,21 @@ describe("C #70 Book of Plague", () => {
 
       expect(s.state.pending?.playerId).toBe("p1");
       expect(new Set(optionIds(s))).toEqual(new Set([vanilla.id, menace.id, well.id, pawn.id]));
-      s.answer(vanilla.id).answer(menace.id).answer(well.id).answer(pawn.id);
-      expect(s.state.pending).not.toBeNull();
+      // One answer puts all five on the pick: no second prompt opens.
       s.answer(menace.id);
 
       expect(s.state.pending).toBeNull();
       expect(placements(s)).toEqual([1, 1, 1, 1, 1]);
-      expect([vanilla, menace, well, pawn].map((card) => s.card(card).counters.plague)).toEqual([1, 2, 1, 1]);
+      expect([vanilla, menace, well, pawn].map((card) => s.card(card).counters.plague ?? 0)).toEqual([0, 5, 0, 0]);
       s.expectInZone(BOOK, "graveyard");
     });
 
-    it("repeats are allowed: all five on one card", () => {
+    it("R648 the counters cannot be spread: the whole effect lands on the one pick", () => {
       const s = board();
       s.play(BOOK);
-      placeAll(s, s.card(MENACE), 5);
+      placeAll(s, s.card(MENACE));
 
+      expect(s.state.pending).toBeNull();
       expect(s.card(MENACE).counters.plague).toBe(5);
     });
 
@@ -126,7 +126,7 @@ describe("C #70 Book of Plague", () => {
       const option = must(mine.options.find((entry) => entry.instanceId === pawn.id || entry.key.includes(pawn.id)), "the trap's option");
       expect(option.defId).toBeUndefined();
       expect(JSON.stringify(s.view("p1"))).not.toContain(PAWN);
-      placeAll(s, pawn, 5);
+      placeAll(s, pawn);
 
       expect(s.card(pawn).counters.plague).toBe(5);
       expect(JSON.stringify(s.view("p1"))).not.toContain(PAWN);
@@ -144,71 +144,66 @@ describe("C #70 Book of Plague", () => {
       const s = scenario({ p1: { hand: [BOOK, ANCHOR], field: [CRAWLER], library: lib(6) }, p2: { hand: [ANCHOR] } });
       s.play(BOOK);
 
-      placeAll(s, s.card(CRAWLER), 5);
+      placeAll(s, s.card(CRAWLER));
 
       expect(drawsBy(s.events, "p1")).toBe(5);
     });
 
-    it("C #27 a Pestilent Slime doubles its share: three placements on it put 6", () => {
+    it("C #27 a Pestilent Slime doubles its share: all five on it put 10", () => {
       const s = scenario({ p1: { hand: [BOOK, ANCHOR], field: [SLIME, { def: VANILLA, lane: 2 }] }, p2: { hand: [ANCHOR] } });
       s.play(BOOK);
       const slime = s.card(SLIME);
 
-      placeAll(s, slime, 3);
-      placeAll(s, s.card(VANILLA), 2);
+      placeAll(s, slime);
 
-      expect(s.card(slime).counters.plague).toBe(6);
-      expect(s.card(VANILLA).counters.plague).toBe(2);
-      expect(placements(s)).toEqual([2, 2, 2, 1, 1]);
+      expect(s.card(slime).counters.plague).toBe(10);
+      expect(s.card(VANILLA).counters.plague ?? 0).toBe(0);
+      expect(placements(s)).toEqual([2, 2, 2, 2, 2]);
     });
 
-    it("C #4 tagged Book: the opponent's Palantir is asked whether to steal it, and stealing it places nothing", () => {
+    it("C #4 tagged Book: the opponent's Palantir steals it outright, and the stolen Book places nothing", () => {
       const s = scenario({ p1: { hand: [BOOK, ANCHOR], field: [VANILLA] }, p2: { hand: [ANCHOR], backrow: [PALANTIR] } });
       const book = s.card(BOOK);
 
       s.play(book);
 
-      expect(s.state.pending?.playerId).toBe("p2");
-      s.answer("steal");
-
+      // No "you may": the steal is answered without asking, so no prompt ever opens.
+      expect(s.state.pending).toBeNull();
       expect(placements(s)).toEqual([]);
       expect(s.hand("p2").map((card) => card.id)).toContain(book.id);
+      // Palantir paid its price.
+      s.expectInZone(PALANTIR, "graveyard");
     });
 
-    it("§9.3 a chain paused mid-way survives a JSON round trip and finishes as the live one does", () => {
+    it("§9.3 the open prompt survives a JSON round trip and finishes as the live one does", () => {
       const s = board();
       s.play(BOOK);
       const menace = s.card(MENACE);
-      s.answer(menace.id).answer(menace.id);
 
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(revived).toEqual(s.state);
-      let state = revived;
-      for (let n = 0; n < 3; n += 1) {
-        const choice = must(state.pending, "the next placement");
-        const result = reduce(state, {
-          type: "answer",
-          playerId: "p1",
-          choiceId: choice.id,
-          selection: [{ pick: "instance", instanceId: menace.id }],
-          nonce: `book-json-${n}`,
-        });
-        expect(result.error).toBeUndefined();
-        state = result.state;
-      }
-      placeAll(s, menace, 3);
+      const choice = must(revived.pending, "the placement prompt");
+      const result = reduce(revived, {
+        type: "answer",
+        playerId: "p1",
+        choiceId: choice.id,
+        selection: [{ pick: "instance", instanceId: menace.id }],
+        nonce: "book-json-0",
+      });
+      expect(result.error).toBeUndefined();
+      placeAll(s, menace);
 
-      expect(state.pending).toBeNull();
-      expect(hashState(state)).toBe(hashState(s.state));
+      expect(result.state.pending).toBeNull();
+      expect(hashState(result.state)).toBe(hashState(s.state));
       expect(s.card(menace).counters.plague).toBe(5);
     });
 
-    it("R386 an Upgrade asks six times", () => {
+    it("R386 an Upgrade places six", () => {
       const s = board();
       stepParam(s.card(BOOK), "tokens", 1);
       s.play(BOOK);
 
-      placeAll(s, s.card(MENACE), 6);
+      placeAll(s, s.card(MENACE));
 
       expect(s.state.pending).toBeNull();
       expect(s.card(MENACE).counters.plague).toBe(6);
@@ -216,26 +211,24 @@ describe("C #70 Book of Plague", () => {
   });
 
   describe("radiant", () => {
-    it("ten placements, one prompt each", () => {
+    it("ten placements on the one pick", () => {
       const s = board(true);
       s.play(BOOK);
       const menace = s.card(MENACE);
 
-      placeAll(s, menace, 9);
-      expect(s.state.pending).not.toBeNull();
-      s.answer(s.card(VANILLA).id);
+      placeAll(s, menace);
 
       expect(s.state.pending).toBeNull();
-      expect(s.card(menace).counters.plague).toBe(9);
+      expect(s.card(menace).counters.plague).toBe(10);
       expect(placements(s)).toHaveLength(10);
     });
 
-    it("R386 a Degrade asks nine times", () => {
+    it("R386 a Degrade places nine", () => {
       const s = board(true);
       stepParam(s.card(BOOK), "tokens", -1);
       s.play(BOOK);
 
-      placeAll(s, s.card(MENACE), 9);
+      placeAll(s, s.card(MENACE));
 
       expect(s.state.pending).toBeNull();
       expect(s.card(MENACE).counters.plague).toBe(9);

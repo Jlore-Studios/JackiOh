@@ -3,7 +3,7 @@
 //            the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}." (3; 1, 1, 1)
 //   Radiant: the same words with 3; 2, 2, 2.
 //   Engine:  "Three mode prompts held by the opponent (§10.6), one after another, repeats allowed;
-//            "discard" discards at random from their hand (R640). Only choices that would do something
+//            "discard" discards at random from their hand (R641). Only choices that would do something
 //            are offered, and "you draw" always is. The opponent answers during your turn, a non-active
 //            player's prompt on its own clock (R79); a timeout answers with the AI policy. Tunes:
 //            choices 3 ↑; discard 1 ↑; exile 1 ↑; draw 1 ↑."
@@ -19,7 +19,7 @@
 // their hand holds a card, "exile" while their deck does, and "you draw" always — a draw from an
 // empty deck is fatigue (§2.4), which still does something. The options name no card.
 //
-// "DISCARD" is random from their hand (R640: no "of your choice"), so no prompt opens and the next
+// "DISCARD" is random from their hand (R641: no "of your choice"), so no prompt opens and the next
 // question follows at once. You read only the discard events, never the cards (R177).
 //
 // THE CLOCK is not the card's: the engine runs a non-active player's prompt on its own clock, and a

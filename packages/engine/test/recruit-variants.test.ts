@@ -26,6 +26,7 @@ import {
   playing,
   pricyUnit,
   replayed,
+  xUnit,
 } from "./fixtures/generation";
 import { eventsOfType, put, setLibrary, sinkFor, slot } from "./fixtures/harness";
 
@@ -191,5 +192,41 @@ describe("E25 Recruit your entire deck (Classic #60)", () => {
     expect(state.players.p1.units[0]?.[0]?.id).toBe(second.id);
     expect(state.players.p1.units[1]).toBeNull();
     expect(state.players.p2.exile.map((card) => card.id)).toContain(first.id);
+  });
+});
+
+describe("R649 Recruit skips (X)-cost cards unless they are the only valid targets", () => {
+  it("R649 a scan takes the first non-X match past an (X)-cost card on top, which stays", () => {
+    const start = playing("recruit-x-skip");
+    const state = start.state;
+    const library = ids(setLibrary(state, "p1", [xUnit.id, cheapUnit.id]));
+    run(sinkFor(state), [recruit({})]);
+    expect(state.players.p1.units[0]?.[0]?.id).toBe(library[1]);
+    expect(ids(state.players.p1.library)).toEqual([library[0]]);
+  });
+
+  it("R649 with only (X)-cost matches the scan takes the first one", () => {
+    const start = playing("recruit-x-only");
+    const state = start.state;
+    const library = ids(setLibrary(state, "p1", [xUnit.id, deckSpell.id]));
+    run(sinkFor(state), [recruit({})]);
+    expect(state.players.p1.units[0]?.[0]?.id).toBe(library[0]);
+    expect(ids(state.players.p1.library)).toEqual([library[1]]);
+  });
+
+  it("R649 recruitAll leaves (X)-cost cards when other permanents match, and takes them when nothing else does", () => {
+    const mixed = playing("recruit-all-x-mixed");
+    const mixedState = mixed.state;
+    const mixedLibrary = ids(setLibrary(mixedState, "p1", [cheapUnit.id, xUnit.id, deckSpell.id]));
+    run(sinkFor(mixedState), [recruitAll({})]);
+    expect(mixedState.players.p1.units[0]?.[0]?.id).toBe(mixedLibrary[0]);
+    expect(ids(mixedState.players.p1.library)).toEqual([mixedLibrary[1], mixedLibrary[2]]);
+
+    const only = playing("recruit-all-x-only");
+    const onlyState = only.state;
+    const onlyLibrary = ids(setLibrary(onlyState, "p1", [xUnit.id, deckSpell.id]));
+    run(sinkFor(onlyState), [recruitAll({})]);
+    expect(onlyState.players.p1.units[0]?.[0]?.id).toBe(onlyLibrary[0]);
+    expect(ids(onlyState.players.p1.library)).toEqual([onlyLibrary[1]]);
   });
 });

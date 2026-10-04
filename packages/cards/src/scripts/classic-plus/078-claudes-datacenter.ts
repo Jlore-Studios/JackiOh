@@ -1,10 +1,9 @@
 // C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (2) Field Spell, Legendary.
-//   Base:    "End of turn: Add {cards|random AI generated card|random AI generated cards} to your hand.
-//            Each costs (0)."
+//   Base:    "End of Turn: Add a random AI Generated card to your hand. It costs (0)."
 //   Radiant: "… random Radiant AI generated card …"
 //   Engine:  "Its controller's end of turn (R62). The pool is the ten AI generated cards (T-AI-1 to
 //            T-AI-10, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
-//            it (§2.4). Tunes: cards 1 ↑."
+//            it (§2.4). Tunes: none (balance patch 1: the count is fixed at one)."
 //
 // An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
 // §6.3's Add to hand, so a full hand burns it, and the opponent sees the sentinel (R97).

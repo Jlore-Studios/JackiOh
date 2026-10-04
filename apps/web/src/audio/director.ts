@@ -63,7 +63,7 @@ function findUnit(view: PlayerView | null, instanceId: string): UnitView | null 
 
 /**
  * Events that may come between a card's `drawn` and its cast's `cardPlayed` (R506): the card's own
- * announce, Radiance or cost, and the prompts its cast asks the drawer (#21 Hinder's discard).
+ * announce, Radiance or cost, and the prompts its cast asks the drawer (an Echoed hand pick).
  */
 function keepsDrawnCard(event: GameEvent, drawn: { instanceId: string; player: PlayerId }): boolean {
   switch (event.type) {

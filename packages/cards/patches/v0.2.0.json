@@ -1746,7 +1746,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "loc": 17,
+    "loc": 18,
     "base": {
       "attack": 1,
       "health": 2,
@@ -6812,7 +6812,7 @@
       "classicplus-019-4",
       "classicplus-019-5"
     ],
-    "loc": 30,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."

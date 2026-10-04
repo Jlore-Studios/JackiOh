@@ -1,10 +1,8 @@
-// C+ #46 Felinor Flagbearer — SPEC §8.7 row 46, BUILD M9 Classic+ row C+ 46: "Rush, Cleave; Cry gives
-// your hero +1 Armor for the rest of the game (`hero.armor`, stacking with every source, cutting each
-// hit at §4.4 step 2, skipped by Pierce, kept after it leaves); Aura: your other Felinor Units have
-// +1/+1 while it is on the field (not itself, not the opponent's); Death shuffles a Felinor
-// Flagbearer Prime (C+ #46.1) into your deck (R80's cap), shown in your library list; Armor and aura
-// read through `param()`; radiant +2 Armor and +2/+2 to every Felinor Unit you control, itself
-// included". The verb is proved again in packages/engine/test/effects-perks.test.ts.
+// C+ #46 Felinor Flagbearer — SPEC §8.7 row 46, BUILD M9 Classic+ row C+ 46: "Rush (no Cleave, no Cry,
+// balance patch 1); Aura: your other Felinor Units have +1/+1 while it is on the field (not itself, not
+// the opponent's); Death shuffles a Felinor Flagbearer Prime (C+ #46.1) into your deck (R80's cap),
+// shown in your library list; the aura reads through `param()`; radiant +2/+2 to every Felinor Unit
+// you control, itself included".
 
 import { LIBRARY_CAP, stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -42,40 +40,40 @@ function destroyFlag(s: Scenario): void {
 }
 
 describe("C+ #46 Felinor Flagbearer", () => {
-  it("is a (2) Felinor Unit, 4/4 Rush, Cleave (8/8 Radiant), naming its Prime", () => {
+  it("is a (2) Felinor Unit, 4/4 Rush (8/8 Radiant), no Cleave, naming its Prime", () => {
     expect(def.tags).toEqual(["Felinor"]);
     expect(def.refs).toContain(PRIME);
     const s = rally();
     s.play(FLAG);
     s.expectStats(FLAG, { attack: 4, health: 4 });
-    expect(kinds(s, FLAG)).toEqual(["Rush", "Cleave"]);
+    expect(kinds(s, FLAG)).toEqual(["Rush"]);
   });
 
   describe("base", () => {
-    it("§4.4 its Cry gives your hero +1 Armor, which the view carries", () => {
+    it("no Cry: playing grants no Armor to either hero, in any view", () => {
       const s = rally();
       s.play(FLAG);
-      expect(s.state.players.p1.hero.armor).toBe(1);
-      expect(s.view("p1").you.hero.armor).toBe(1);
-      expect(s.view("p2").opponent.hero.armor).toBe(1);
+      expect(s.state.players.p1.hero.armor).toBe(0);
+      expect(s.view("p1").you.hero.armor).toBe(0);
+      expect(s.view("p2").opponent.hero.armor).toBe(0);
       expect(s.state.players.p2.hero.armor).toBe(0);
     });
 
-    it("R124 the Armor stacks with every source: hero Armor 3 becomes 4", () => {
+    it("R124 hero Armor 3 stays 3: there is no Cry to stack with it", () => {
       const s = rally({ armor: 3 });
       s.play(FLAG);
-      expect(s.view("p1").you.hero.armor).toBe(4);
+      expect(s.view("p1").you.hero.armor).toBe(3);
     });
 
-    it("§4.4 step 2 it cuts each hit on your hero, and stays after the Flagbearer has left", () => {
+    it("§4.4 step 2 with no Armor from it, a 4-attack hit deals its full 4", () => {
       const s = rally();
       s.play(FLAG);
       destroyFlag(s);
       s.expectInZone(FLAG, "graveyard");
       s.endTurn();
       s.attack(s.unit("p2", 2) ?? "", "hero");
-      s.expectHealth("p1", 27);
-      expect(s.view("p1").you.hero.armor).toBe(1);
+      s.expectHealth("p1", 26);
+      expect(s.view("p1").you.hero.armor).toBe(0);
     });
 
     it("§4.4 R346 a Pierce hit skips it (True Strike deals its full 4)", () => {
@@ -134,21 +132,21 @@ describe("C+ #46 Felinor Flagbearer", () => {
       expect(s.pile("p1", "library")).toHaveLength(LIBRARY_CAP);
     });
 
-    it("R386 an Upgrade makes the Armor 2 and the aura +2/+2", () => {
+    it("R386 an Upgrade makes the aura +2/+2 (no Armor left to tune)", () => {
       const s = rally();
-      stepParam(s.card(FLAG), "armor", 1);
       stepParam(s.card(FLAG), "aura", 1);
       s.play(FLAG);
-      expect(s.view("p1").you.hero.armor).toBe(2);
+      expect(s.view("p1").you.hero.armor).toBe(0);
       s.expectStats(s.unit("p1", 1) ?? "", { attack: 5, health: 6 });
     });
   });
 
   describe("radiant", () => {
-    it("§5.2 8/8 Rush, Cleave; its Cry gives your hero +2 Armor", () => {
+    it("§5.2 8/8 Rush, no Cleave; no Cry Armor on the Radiant face either", () => {
       const s = rally({ radiant: true });
       s.play(FLAG);
-      expect(s.view("p1").you.hero.armor).toBe(2);
+      expect(kinds(s, FLAG)).toEqual(["Rush"]);
+      expect(s.view("p1").you.hero.armor).toBe(0);
     });
 
     it("§10.4 its aura gives every Felinor Unit you control +2/+2, itself included", () => {
@@ -168,12 +166,11 @@ describe("C+ #46 Felinor Flagbearer", () => {
       expect(prime?.radiant).toBe(false);
     });
 
-    it("R386 the Radiant numbers step from 2", () => {
+    it("R386 the Radiant aura steps from 2", () => {
       const s = rally({ radiant: true });
-      stepParam(s.card(FLAG), "armor", -1);
       stepParam(s.card(FLAG), "aura", 1);
       s.play(FLAG);
-      expect(s.view("p1").you.hero.armor).toBe(1);
+      expect(s.view("p1").you.hero.armor).toBe(0);
       s.expectStats(FLAG, { attack: 11, health: 11 });
     });
   });

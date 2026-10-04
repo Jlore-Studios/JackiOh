@@ -10,8 +10,8 @@
 // fills current mana to §2.3's max plus that one-shot rider, floored at 0, then clears it. So a −2
 // against a 1-mana refresh is 0, not −1, and max mana itself is untouched (§2.3).
 //
-// THE DISCARD (R431, R640, R70). "Discard 1" names no "of your choice", so the discard is random
-// from the caster's hand (R640) — no declaration travels in the play action (R81), and a cast, on a
+// THE DISCARD (R431, R641, R70). "Discard 1" names no "of your choice", so the discard is random
+// from the caster's hand (R641) — no declaration travels in the play action (R81), and a cast, on a
 // draw, which is how Hinder almost always resolves, asks nothing as it begins (R70): no hand prompt
 // pauses the draw. With an empty hand there is nothing to discard, and the mana clause still lands.
 // The discard comes second, after the mana clause, as the text reads.
@@ -32,7 +32,7 @@ function hinder(lower: number, discards: boolean): Script {
   }
   return {
     staticFlags: { castOnDraw: true },
-    // R640: "Discard 1" — one random card of the caster's own hand.
+    // R641: "Discard 1" — one random card of the caster's own hand.
     cry: () => [nextTurnMana({ amount: -lower, player: "enemy" }), discardRandom({ count: 1 })],
   };
 }

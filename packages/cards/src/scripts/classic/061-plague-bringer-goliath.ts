@@ -12,13 +12,13 @@
 // paid at §10.5 step 2, so with no Unit to tribute the card can't be played at all; on a full unit row
 // it may take the zone its own Tribute empties (R391).
 //
-// "Place N Plague Tokens" names no card, so it is N placements (`placePlagueTokens`): each one a
-// `target` prompt of its own for the Goliath's controller over every permanent on the field — either
-// side, the Goliath itself and face-down cards included (a face-down card the chooser may not read is
-// offered by its id alone, R177), the same card as often as they like. Each placement is one placement
-// of 1, multiplied by the card that receives it (C #27), and each is its own for "whenever Plague
-// Tokens are placed on this" (C #53). The first prompt parks the rest of the Cry on `state.work` (R113),
-// so the draw comes after the last placement. The other player sees only that a prompt is open.
+// "Place N Plague Tokens" names no card, so it is N placements (`placePlagueTokens`), all on the one
+// permanent a single `target` prompt names for the Goliath's controller over every permanent on the
+// field — either side, the Goliath itself and face-down cards included (a face-down card the chooser
+// may not read is offered by its id alone, R177) (R648). Each placement is one placement of 1,
+// multiplied by the card that receives it (C #27), and each is its own for "whenever Plague Tokens
+// are placed on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the
+// draw comes after the placements. The other player sees only that a prompt is open.
 //
 // Both numbers are the declared `tokens` and `draw` (R386), read through `param`.
 

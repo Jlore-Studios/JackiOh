@@ -419,7 +419,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
 // The play's payments in the pickers
 // ---------------------------------------------------------------------------------------------
 
-describe("B5 E5 R640 a target that costs discards (Classic #89): no picker — the cost is random at pay time", () => {
+describe("B5 E5 R641 a target that costs discards (Classic #89): no picker — the cost is random at pay time", () => {
   const legal: ActionBody[] = [
     { type: "play", instanceId: "h1", targets: [at("e1")] },
     { type: "play", instanceId: "h1", targets: [at("e2")] },

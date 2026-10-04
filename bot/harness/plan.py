@@ -45,7 +45,7 @@ from harness import asks, issueplan, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
-                            LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING,
                             MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
@@ -145,10 +145,12 @@ class Lanes:
         return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
     def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`. A subscription the quiet check guards counts its
-        planning run too: the check cannot tell a second run of the bot's from its owner."""
+        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
+        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
+        the bot's from its owner, and two runs deciding from one reading go past a cap together
+        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
         held = self.count(provider.id)
-        if provider.quiet_check:
+        if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
         return held >= provider.lanes
 
@@ -208,8 +210,9 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
         return False
+    # A build or a revision runs long: it starts only with `start_headroom` under each cap.
     return providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
-                                      forced=forced) is None
+                                      forced=forced, starting=role in ("build", "revise")) is None
 
 
 @dataclass
@@ -306,8 +309,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
         seat = cfg.pool.best_seat(provider, "strong")
         if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
             continue
-        if provider.quiet_check and lanes.count(provider.id):
-            continue
+        if (provider.quiet_check or provider.limits.stops) and lanes.count(provider.id):
+            continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
         if (provider.quiet_check and cfg.quiet.enabled and not forced
@@ -707,13 +710,21 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
 
 def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Keep `bot:needs-plan` on exactly the queued items in the Needs plan stage, and on the ones
-    being planned now."""
+    being planned now; and `bot:planned` on the queued ones a strong model has planned (it stays
+    after they leave the queue, and comes off only if the item needs a plan again)."""
     notes: list[str] = []
     try:
-        wanted = {c.number for c in candidates(ctx, state) if needs_plan(c)}
+        queued = [c for c in candidates(ctx, state) if c.kind == "build"]
+        wanted = {c.number for c in queued if needs_plan(c)}
         labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
+        planned = {c.number for c in queued if c.planned and not needs_plan(c)}
+        has_planned = {int(t["number"]) for t in ctx.gh.list_issues(labels=LABEL_PLANNED)}
     except GitHubError as exc:
         return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
+    for number in sorted(planned - has_planned):
+        ctx.gh.add_labels(number, [LABEL_PLANNED])
+    for number in sorted(has_planned & wanted):
+        ctx.gh.remove_label(number, LABEL_PLANNED)
     have = set()
     for thread in labelled:
         number = int(thread["number"])
@@ -924,7 +935,7 @@ def claim(ctx: Context, candidate: Candidate,
         if not handoff or handoff.get("kind") == "plan":
             planned["handoff"] = {**handoff, "kind": "plan",
                                   "provider": handoff.get("provider") or record.get("planned_by")
-                                  or "?", "notes": planned["plan_in_issue"]}
+                                  or "the issue's description", "notes": planned["plan_in_issue"]}
     set_state_label(ctx, number, names, LABEL_WORKING)
     if LABEL_NEEDS_PLAN in names and assignment.action != "plan":
         ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)  # this run plans it first, in the run

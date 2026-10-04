@@ -1,5 +1,5 @@
 // C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
-// draw limit), then discard 4 cards at random (R640; 4 or fewer in hand → all of them), with no prompt;
+// draw limit), then discard 4 cards at random (R641; 4 or fewer in hand → all of them), with no prompt;
 // radiant: draw 5, discard 4; its tuned numbers (draw, discard) read through `param()` (R386)".
 //
 // The draw-limit case puts C #4 Palantir in the opponent's backrow ("Aura: Your opponent can't draw
@@ -35,14 +35,14 @@ function discardedDefs(s: Scenario): string[] {
 }
 
 describe("C #26 Rapid Draw", () => {
-  it("runs one script on both faces, with no resume step (R640: random, no prompt)", () => {
+  it("runs one script on both faces, with no resume step (R641: random, no prompt)", () => {
     expect(def.id).toBe(RAPID);
     expect(radiant).toBe(base);
     expect(base.resume).toBeUndefined();
   });
 
   describe("base", () => {
-    it("draws 4, then R640 discards 4 at random with no prompt", () => {
+    it("draws 4, then R641 discards 4 at random with no prompt", () => {
       const s = scenario({ p1: { hand: [RAPID, FILLER, FILLER], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
@@ -55,7 +55,7 @@ describe("C #26 Rapid Draw", () => {
       expect(graveDefs(s)).toEqual(expect.arrayContaining([...discarded, RAPID]));
     });
 
-    it("R640 the random discards come from the match rng: the same game discards the same cards", () => {
+    it("R641 the random discards come from the match rng: the same game discards the same cards", () => {
       const opts = { p1: { hand: [RAPID, FILLER, FILLER], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } };
       const first = scenario(opts);
       first.play(RAPID);
@@ -64,7 +64,7 @@ describe("C #26 Rapid Draw", () => {
       expect(discardedDefs(first)).toEqual(discardedDefs(second));
     });
 
-    it("R640 with 4 or fewer cards in hand it discards all of them and asks nothing", () => {
+    it("R641 with 4 or fewer cards in hand it discards all of them and asks nothing", () => {
       const s = scenario({ p1: { hand: [RAPID], library: [A, B, C, D, E] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);
@@ -172,7 +172,7 @@ describe("C #26 Rapid Draw", () => {
       expect(discardedDefs(s)).toHaveLength(4);
     });
 
-    it("R640 a deck of 3 leaves 3 in hand, all discarded without a prompt", () => {
+    it("R641 a deck of 3 leaves 3 in hand, all discarded without a prompt", () => {
       const s = scenario({ p1: { hand: [{ def: RAPID, radiant: true }], library: [A, B, C] }, p2: { hand: [FILLER] } });
 
       s.play(RAPID);

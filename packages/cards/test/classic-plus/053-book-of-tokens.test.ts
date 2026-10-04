@@ -1,6 +1,7 @@
-// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 2 Rush Tokens (3/3
-// Rush) into your leftmost open zones, one on a nearly full board, none on a full one; the count reads
-// through `param()`; radiant 2 Radiant Rush Tokens (6/6 Rush, Cleave)".
+// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 1-2 Rush Tokens (3/3
+// Rush), the count random, into your leftmost open zones, one on a nearly full board, none on a full
+// one; the count is no declared number, so tuning moves nothing; radiant 1-2 Radiant Rush Tokens
+// (6/6 Rush, Cleave)".
 
 import { stepParam } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
@@ -12,8 +13,11 @@ const RUSH = "core-t-rush";
 const VANILLA = "core-008";
 const FILLER = "core-005";
 
-function book(opts: { radiant?: boolean; field?: readonly (string | { def: string; lane: number })[] } = {}): Scenario {
+function book(
+  opts: { radiant?: boolean; field?: readonly (string | { def: string; lane: number })[]; seed?: string } = {},
+): Scenario {
   return scenario({
+    ...(opts.seed === undefined ? {} : { seed: opts.seed }),
     p1: { hand: [{ def: BOOK, ...(opts.radiant === true ? { radiant: true } : {}) }, FILLER], field: opts.field ?? [] },
     p2: { hand: [FILLER] },
   });
@@ -37,17 +41,23 @@ describe("C+ #53 Book of Tokens", () => {
   });
 
   describe("base", () => {
-    it("R64 summons 2 Rush Tokens (3/3 Rush) into your leftmost open zones", () => {
-      const s = book({ field: [{ def: VANILLA, lane: 1 }, { def: VANILLA, lane: 3 }] });
-      s.play(BOOK);
-      expect(tokens(s)).toEqual([
-        { lane: 2, radiant: false },
-        { lane: 4, radiant: false },
-      ]);
-      const token = s.unit("p1", 2) ?? "";
-      s.expectStats(token, { attack: 3, health: 3 });
-      expect(s.stats(token).keywords.map((keyword) => keyword.kind)).toEqual(["Rush"]);
-      expect(s.lastEvents.filter((event) => event.type === "summoned")).toHaveLength(2);
+    it("R64 summons 1-2 Rush Tokens (3/3 Rush) into your leftmost open zones, the count random but never above the curve", () => {
+      const counts = new Set<number>();
+      for (let n = 0; n < 20; n += 1) {
+        const s = book({ field: [{ def: VANILLA, lane: 1 }, { def: VANILLA, lane: 3 }], seed: `book-of-tokens-${n}` });
+        s.play(BOOK);
+        const found = tokens(s);
+        expect(found.length).toBeGreaterThanOrEqual(1);
+        expect(found.length).toBeLessThanOrEqual(2);
+        expect(found.map((token) => token.lane)).toEqual(found.length === 1 ? [2] : [2, 4]);
+        expect(found.every((token) => token.radiant === false)).toBe(true);
+        const first = s.unit("p1", found[0]?.lane ?? 0) ?? "";
+        s.expectStats(first, { attack: 3, health: 3 });
+        expect(s.stats(first).keywords.map((keyword) => keyword.kind)).toEqual(["Rush"]);
+        counts.add(found.length);
+      }
+      // Both faces of the roll come up across seeds: genuinely 1-2, never 3.
+      expect(counts).toEqual(new Set([1, 2]));
     });
 
     it("§3.2 one on a nearly full board", () => {
@@ -63,37 +73,40 @@ describe("C+ #53 Book of Tokens", () => {
       s.expectInZone(BOOK, "graveyard");
     });
 
-    it("R386 an Upgrade summons 3; a Degrade 1, never fewer", () => {
-      const up = book();
-      stepParam(up.card(BOOK), "tokens", 1);
-      up.play(BOOK);
-      expect(tokens(up)).toHaveLength(3);
-
-      const down = book();
-      stepParam(down.card(BOOK), "tokens", -4);
-      down.play(BOOK);
-      expect(tokens(down)).toHaveLength(1);
+    it("R386 the count is no declared number: a tokens tuning moves nothing, the roll stays 1-2", () => {
+      const s = book({ seed: "book-of-tokens-tune" });
+      stepParam(s.card(BOOK), "tokens", 2);
+      s.play(BOOK);
+      expect(tokens(s).length).toBeGreaterThanOrEqual(1);
+      expect(tokens(s).length).toBeLessThanOrEqual(2);
     });
   });
 
   describe("radiant", () => {
-    it("§7 summons 2 Radiant Rush Tokens (6/6 Rush, Cleave)", () => {
-      const s = book({ radiant: true });
-      s.play(BOOK);
-      expect(tokens(s)).toEqual([
-        { lane: 1, radiant: true },
-        { lane: 2, radiant: true },
-      ]);
-      const token = s.unit("p1", 1) ?? "";
-      s.expectStats(token, { attack: 6, health: 6 });
-      expect(s.stats(token).keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "Cleave"]);
+    it("§7 summons 1-2 Radiant Rush Tokens (6/6 Rush, Cleave)", () => {
+      const counts = new Set<number>();
+      for (let n = 0; n < 20; n += 1) {
+        const s = book({ radiant: true, seed: `book-of-tokens-radiant-${n}` });
+        s.play(BOOK);
+        const found = tokens(s);
+        expect(found.length).toBeGreaterThanOrEqual(1);
+        expect(found.length).toBeLessThanOrEqual(2);
+        expect(found.map((token) => token.lane)).toEqual(found.length === 1 ? [1] : [1, 2]);
+        expect(found.every((token) => token.radiant === true)).toBe(true);
+        const first = s.unit("p1", 1) ?? "";
+        s.expectStats(first, { attack: 6, health: 6 });
+        expect(s.stats(first).keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "Cleave"]);
+        counts.add(found.length);
+      }
+      expect(counts).toEqual(new Set([1, 2]));
     });
 
-    it("R386 the Radiant count steps the same way", () => {
-      const s = book({ radiant: true });
+    it("R386 the Radiant roll is untunable the same way", () => {
+      const s = book({ radiant: true, seed: "book-of-tokens-radiant-tune" });
       stepParam(s.card(BOOK), "tokens", 2);
       s.play(BOOK);
-      expect(tokens(s)).toEqual([1, 2, 3, 4].map((lane) => ({ lane, radiant: true })));
+      expect(tokens(s).length).toBeGreaterThanOrEqual(1);
+      expect(tokens(s).length).toBeLessThanOrEqual(2);
     });
   });
 });

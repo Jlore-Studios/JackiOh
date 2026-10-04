@@ -219,10 +219,12 @@ needs level 3.
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
 | `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a strong model's plan, which goes into its description |
+| `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
+| `bot:stuck` | beside `bot:blocked`: a build or revision used every review round (`max_review_cycles`, 10) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
@@ -256,6 +258,11 @@ opens, from a Devin call (`triage.py`):
   - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
     the org, or those three when the token can't read them) if it has none. A pull request has no
     type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
+- **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every
+  open issue still without one: a bot's (the CI-duration alerts, the status issue), which never
+  reaches triage, at once; anyone else's after three hours, so triage, which can wait that long
+  for a free Devin runner, goes first. It reads the title and labels (`triage.fallback_type`):
+  a failure is a Bug; tooling, CI, the bot and trackers a Task; something new a Feature.
 - **It only adds.** A person's labels, assignees, conventional title and type stay. A priority or a model
   tier a person chose gets no second one.
 - **When it can't:** a failure, or Devin past its `off_from` (2026-10-15), skips quietly.
@@ -272,10 +279,10 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
-| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | none: until it refuses |
-| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | none: until it refuses |
+| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 100% of the week (agy reports none: until it refuses) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | none: until it refuses |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | 100% of the week (Muse reports none: until it refuses) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -307,6 +314,22 @@ each one and whether it could start now, and `/harness status` does the same on 
     (Claude, and Codex through its session log);
   - `five_hour_minutes` and `seven_day_minutes`: minutes of model time the bot counts itself, for
     agy and Muse, which report none.
+
+  How the caps hold:
+  - **A fresh reading before the run.** A capped Claude account is pinged (one Haiku turn)
+    before any model work, since the stored reading is the last run's, or nothing once its
+    window has reset.
+  - **Watched during each call.** Claude streams its usage as it works; a call stops once the
+    reading crosses a cap. A call may run 150 minutes, so checking only between steps let runs
+    go to 100%.
+  - **Headroom to start.** A build or a revision starts only `start_headroom` under each cap
+    (top level: 15 points of the 5-hour window, 5 of the week); a plan or a review, which is
+    short, goes up to the cap.
+  - **One run at a time** on a capped subscription, its planning run included: two runs
+    deciding from one reading pass a cap together.
+  - **A refusal** parks the subscription until the reset its message names ("resets in
+    1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
+    last reading had nearly full (85% or more), else an hour.
 - `quiet_check: true`: it waits until nobody else is spending it
   ([below](#it-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
@@ -378,6 +401,10 @@ they may build. With its six lanes it fills whatever room on the machine the med
   and a checklist for done. Its plan goes into the issue's description, in a **Plan** section
   (`harness/issueplan.py`), and into the handoff. The builder starts from that section as it
   stands then, so a person can correct the plan in the description before anyone builds it.
+  A person (or a session they run) can also write the plan: put it in the description between
+  `<!-- jackioh-bot:plan -->` and `<!-- /jackioh-bot:plan -->`. With no planning run of the bot's
+  on record, that section counts as a strong plan, so the item leaves the Needs plan stage and
+  the bot does not plan over it (`queue.plan_of`).
   Devin, which cannot plan, builds only from a strong model's plan. When no strong model is free
   on the lane and a medium or strong builder takes an unplanned item, it plans it first in its own
   run, on its strongest model; that plan goes into the description too. A revision is not planned

@@ -5,8 +5,8 @@
 // reads through `param()` (R386)".
 //
 // The placements come from C #39 Outbreak ("Place {tokens} Plague Tokens on a permanent", one
-// placement) and, for the split, C #70 Book of Plague ("Place {tokens} Plague Tokens": one placement
-// per token, each a prompt), whose script (cards-classic-b) that case waits for.
+// placement) and C #70 Book of Plague ("Place {tokens} Plague Tokens": one placement per token, all
+// on the one permanent a single prompt names, R648).
 
 import { stepParam } from "@jackioh/engine";
 import type { GameEvent } from "@jackioh/shared";
@@ -86,21 +86,18 @@ describe("C #27 Pestilent Slime", () => {
       expect(placements(s, slime.id)[0]?.placed).toBe(2);
     });
 
-    it("R471 each one-token placement of a split puts 2, each its own placement", () => {
+    it("R471 R648 each one-token placement on it puts 2, each its own placement: one answer lands all five", () => {
       const s = scenario({ p1: { hand: [BOOK_OF_PLAGUE, ANCHOR], field: [SLIME, VANILLA] }, p2: { hand: [ANCHOR] } });
       const slime = s.card(SLIME);
       const vanilla = s.card(VANILLA);
 
       s.play(BOOK_OF_PLAGUE);
       s.answer([{ pick: "instance", instanceId: slime.id }]);
-      s.answer([{ pick: "instance", instanceId: slime.id }]);
-      s.answer([{ pick: "instance", instanceId: vanilla.id }]);
-      s.answer([{ pick: "instance", instanceId: slime.id }]);
-      s.answer([{ pick: "instance", instanceId: vanilla.id }]);
 
-      expect(s.card(slime.id).counters.plague).toBe(6);
-      expect(placements(s, slime.id).map((event) => event.placed)).toEqual([2, 2, 2]);
-      expect(s.card(vanilla.id).counters.plague).toBe(2);
+      expect(s.state.pending).toBeNull();
+      expect(s.card(slime.id).counters.plague).toBe(10);
+      expect(placements(s, slime.id).map((event) => event.placed)).toEqual([2, 2, 2, 2, 2]);
+      expect(s.card(vanilla.id).counters.plague ?? 0).toBe(0);
     });
 
     it("§6.3 Vanilla: a Vanilla copy has no text, so a placement of 1 on it puts 1", () => {

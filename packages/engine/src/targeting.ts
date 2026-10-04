@@ -121,10 +121,10 @@ export function targetingDiscardsFor(
 }
 
 /**
- * R450, R640: whether the player can pay a targeting cost of `required` discards — that many cards
+ * R450, R641: whether the player can pay a targeting cost of `required` discards — that many cards
  * held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
  * the same play picks), or null when they can. The discards themselves are random at pay time
- * (R640: a discard is its player's choice only when the card says "of your choice"); nothing lists
+ * (R641: a discard is its player's choice only when the card says "of your choice"); nothing lists
  * or chooses them, so there are no paying sets to enumerate.
  */
 export function whyTargetingDiscardsUnpayable(

@@ -1,9 +1,9 @@
 // C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61: "Tribute 1, Rush, Trample:
 // can't be played without a Unit to Tribute, and may take the tributed Unit's zone on a full board
-// (R391); Cry: place 3 Plague Tokens as three placements, one prompt each, on any permanent either
-// side, face-down ones and repeats included (a face-down option carries only its id, R177), then draw 1;
-// Trample's excess hits the hero (R63); radiant 14/14: draw 3; its tuned numbers (tokens, draw) read
-// through `param()` (R386)".
+// (R391); Cry: place 3 Plague Tokens as three placements, all on the one permanent a single prompt
+// names (R648), on any permanent either side, face-down ones included (a face-down option carries only
+// its id, R177), then draw 1; Trample's excess hits the hero (R63); radiant 14/14: draw 3; its tuned
+// numbers (tokens, draw) read through `param()` (R386)".
 
 import { hashState, legalActions, reduce, stepParam, type CardInstance, type GameState } from "@jackioh/engine";
 import type { ActionBody, GameEvent, PlayerId, Selection } from "@jackioh/shared";
@@ -107,7 +107,7 @@ describe("C #61 Plague Bringer Goliath", () => {
       expect(s.unit("p1", 3)?.defId).toBe(GOLIATH);
     });
 
-    it("Cry: three placements, one prompt each, over every permanent on either side, itself included", () => {
+    it("Cry: three placements on the one permanent a single prompt names, over every permanent on either side, itself included", () => {
       const s = ready(false, { p2Backrow: [MANA_WELL] });
       const goliath = playGoliath(s);
       const menace = s.card(MENACE);
@@ -116,45 +116,42 @@ describe("C #61 Plague Bringer Goliath", () => {
       expect(s.state.pending?.playerId).toBe("p1");
       expect(s.state.pending?.kind).toBe("target");
       expect(new Set(optionIds(s))).toEqual(new Set([goliath.id, menace.id, well.id]));
+      // One answer puts all three on the pick: no second prompt opens.
       s.answer(menace.id);
-      const second = must(s.state.pending, "the second placement");
-      s.answer(well.id);
-      expect(s.state.pending?.id).not.toBe(second.id);
-      s.answer(goliath.id);
 
       expect(s.state.pending).toBeNull();
-      expect(s.card(menace).counters.plague).toBe(1);
-      expect(s.card(well).counters.plague).toBe(1);
-      expect(s.card(goliath).counters.plague).toBe(1);
+      expect(s.card(menace).counters.plague).toBe(3);
+      expect(s.card(well).counters.plague ?? 0).toBe(0);
+      expect(s.card(goliath).counters.plague ?? 0).toBe(0);
       const placed = s.events.filter((event) => event.type === "counterChanged" && event.placed !== undefined);
       expect(placed).toHaveLength(3);
     });
 
-    it("repeats are allowed: all three on one card, three placements of 1", () => {
+    it("R648 no spreading: one answer puts all three on the pick, three placements of 1", () => {
       const s = ready();
       playGoliath(s);
       const menace = s.card(MENACE);
 
-      s.answer(menace.id).answer(menace.id).answer(menace.id);
+      s.answer(menace.id);
 
+      expect(s.state.pending).toBeNull();
       expect(s.card(menace).counters.plague).toBe(3);
       expect(
         s.events.flatMap((event) => (event.type === "counterChanged" && event.placed !== undefined ? [event.placed] : [])),
       ).toEqual([1, 1, 1]);
     });
 
-    it("R113 then draw 1: the draw waits for the last placement", () => {
+    it("R113 then draw 1: the draw waits for the one answer", () => {
       const s = ready();
       playGoliath(s);
       const menace = s.card(MENACE);
 
-      s.answer(menace.id).answer(menace.id);
-      expect(drawsBy(s.events, "p1")).toBe(0);
       s.answer(menace.id);
 
+      expect(s.state.pending).toBeNull();
       expect(drawsBy(s.lastEvents, "p1")).toBe(1);
       const kinds = s.lastEvents.flatMap((event) => (event.type === "counterChanged" || event.type === "drawn" ? [event.type] : []));
-      expect(kinds).toEqual(["counterChanged", "drawn"]);
+      expect(kinds).toEqual(["counterChanged", "counterChanged", "counterChanged", "drawn"]);
     });
 
     it("R177 a face-down enemy trap is an option by its id alone, and placing on it never names it to you", () => {
@@ -170,8 +167,9 @@ describe("C #61 Plague Bringer Goliath", () => {
       expect(JSON.stringify(s.view("p1"))).not.toContain(PAWN);
       expect(JSON.stringify(s.view("p1"))).not.toContain("My Pawn");
 
-      s.answer(trap.id).answer(trap.id).answer(trap.id);
+      s.answer(trap.id);
 
+      expect(s.state.pending).toBeNull();
       expect(s.card(trap).counters.plague).toBe(3);
       expect(JSON.stringify(s.view("p1"))).not.toContain(PAWN);
     });
@@ -191,31 +189,26 @@ describe("C #61 Plague Bringer Goliath", () => {
       playGoliath(s);
       const crawler = s.card(CRAWLER);
 
-      s.answer(crawler.id).answer(crawler.id).answer(crawler.id);
+      s.answer(crawler.id);
 
       // Three Crawler draws and the Goliath's own.
       expect(drawsBy(s.events, "p1")).toBe(4);
     });
 
-    it("§9.3 a placement chain paused mid-way survives a JSON round trip and finishes as the live one does", () => {
+    it("§9.3 the open prompt survives a JSON round trip and finishes as the live one does", () => {
       const s = ready();
       playGoliath(s);
       const menace = s.card(MENACE);
-      s.answer(menace.id);
 
       const revived = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(revived).toEqual(s.state);
-      let state = revived;
-      for (const [n, target] of [menace, s.card(GOLIATH)].entries()) {
-        const choice = must(state.pending, "the next placement");
-        const result = reduce(state, { type: "answer", playerId: "p1", choiceId: choice.id, selection: pick(target), nonce: `goliath-json-${n}` });
-        expect(result.error).toBeUndefined();
-        state = result.state;
-      }
-      s.answer(menace.id).answer(s.card(GOLIATH).id);
+      const choice = must(revived.pending, "the placement prompt");
+      const result = reduce(revived, { type: "answer", playerId: "p1", choiceId: choice.id, selection: pick(menace), nonce: "goliath-json-0" });
+      expect(result.error).toBeUndefined();
+      s.answer(menace.id);
 
-      expect(state.pending).toBeNull();
-      expect(hashState(state)).toBe(hashState(s.state));
+      expect(result.state.pending).toBeNull();
+      expect(hashState(result.state)).toBe(hashState(s.state));
     });
 
     it("R63 Trample: with Rush it attacks a Unit the turn it enters, and the excess hits the hero", () => {
@@ -225,7 +218,7 @@ describe("C #61 Plague Bringer Goliath", () => {
       });
       const theirs = must(s.unit("p2", 2), "p2's Vanilla");
       const goliath = playGoliath(s);
-      s.answer(goliath.id).answer(goliath.id).answer(goliath.id);
+      s.answer(goliath.id);
 
       s.attack(goliath, theirs);
 
@@ -240,58 +233,55 @@ describe("C #61 Plague Bringer Goliath", () => {
       });
       playGoliath(full);
       const crawler = full.card(CRAWLER);
-      full.answer(crawler.id).answer(crawler.id).answer(crawler.id);
+      full.answer(crawler.id);
       // 9 in hand after the play, and four draws (three of the Crawler's, one of its own): one fills it, three burn.
       expect(full.hand("p1")).toHaveLength(10);
       expect(full.events.filter((event) => event.type === "burned")).toHaveLength(3);
 
       const empty = ready(false, { library: 0 });
       const goliath = playGoliath(empty);
-      empty.answer(goliath.id).answer(goliath.id).answer(goliath.id);
+      empty.answer(goliath.id);
       expect(empty.lastEvents.filter((event) => event.type === "fatigue" && event.player === "p1")).toHaveLength(1);
     });
 
-    it("R386 an Upgrade of its tokens asks four times; of its draw draws 2", () => {
+    it("R386 an Upgrade of its tokens places four; of its draw draws 2", () => {
       const s = ready();
       stepParam(s.card(GOLIATH), "tokens", 1);
       stepParam(s.card(GOLIATH), "draw", 1);
       playGoliath(s);
       const menace = s.card(MENACE);
 
-      s.answer(menace.id).answer(menace.id).answer(menace.id);
-      expect(s.state.pending).not.toBeNull();
       s.answer(menace.id);
 
+      expect(s.state.pending).toBeNull();
       expect(s.card(menace).counters.plague).toBe(4);
       expect(drawsBy(s.lastEvents, "p1")).toBe(2);
     });
   });
 
   describe("radiant", () => {
-    it("is a 14/14 with Rush and Trample, the same Tribute, three placements, then draw 3", () => {
+    it("is a 14/14 with Rush and Trample, the same Tribute, three placements on the one pick, then draw 3", () => {
       const s = ready(true);
       expect(() => scenario({ p1: { hand: [{ def: GOLIATH, radiant: true }, ANCHOR] } }).play(GOLIATH)).toThrow(/Tribute/);
       const goliath = playGoliath(s);
       const menace = s.card(MENACE);
 
       s.expectStats(goliath, { attack: 14, health: 14 });
-      s.answer(menace.id).answer(menace.id);
-      expect(s.state.pending).not.toBeNull();
-      s.answer(goliath.id);
+      s.answer(menace.id);
 
-      expect(s.card(menace).counters.plague).toBe(2);
-      expect(s.card(goliath).counters.plague).toBe(1);
+      expect(s.state.pending).toBeNull();
+      expect(s.card(menace).counters.plague).toBe(3);
       expect(drawsBy(s.lastEvents, "p1")).toBe(3);
     });
 
-    it("R386 a Degrade of its draw draws 2; of its tokens asks twice", () => {
+    it("R386 a Degrade of its draw draws 2; of its tokens places two", () => {
       const s = ready(true);
       stepParam(s.card(GOLIATH), "draw", -1);
       stepParam(s.card(GOLIATH), "tokens", -1);
       playGoliath(s);
       const menace = s.card(MENACE);
 
-      s.answer(menace.id).answer(menace.id);
+      s.answer(menace.id);
 
       expect(s.state.pending).toBeNull();
       expect(s.card(menace).counters.plague).toBe(2);

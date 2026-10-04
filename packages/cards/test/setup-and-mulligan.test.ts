@@ -1,28 +1,35 @@
-// Setup and the mulligan when a cast asks (SPEC §2.1, §2.4, §9.3, §10.1, §10.6, R9, R70, R81, R158,
-// R224). Found by the polish-4 edge-case hunt, round 7 (docs/polish/4-edge-cases.md, lenses L7,
-// "legality-agreement" and "engine invariants"); every case here failed before its fix.
+// Setup and the mulligan when a question is asked during it (SPEC §2.1, §2.4, §9.3, §10.1, §10.6, R9,
+// R151, R158, R224, R635). Found by the polish-4 edge-case hunt, round 7 (docs/polish/4-edge-cases.md,
+// lenses L7, "legality-agreement" and "engine invariants"); every case here failed before its fix.
 //
-//  - R224: a cast-on-draw card drawn by the opening draw or by R9's replacement draws is cast, and a
-//    cast can ask its caster something. Setup used to open the next mulligan over that question,
-//    which replaced it and left the cast half-played in its caster's resolving zone for good.
-//  - §10.6: the mulligan's `promptAnswered` named the word "mulligan" rather than the prompt.
+//  - R224: setup used to open the next mulligan over a question a draw's cast had asked, which
+//    replaced it and left the cast half-played in its caster's resolving zone for good. A cast-on-draw
+//    card is no longer dealt by setup (R635), so what asks during it now is a start-of-game clause run
+//    as its card arrives in a hand (R151), the one thing a card setup draws can still do. The rule is
+//    the same: setup owes the rest of itself behind the question and the answer finishes it (R113,
+//    R122).
+//  - §10.6: the mulligan's `promptAnswered` named the word "mulligan", not the prompt.
 //  - Round 8 (lens L10). R225: a Quickdraw card is the last of the opening draws it replaces,
 //    reported and counted as a draw, so #100's price, the deal's events and the counts while setup
 //    waits (R224) do not tell the other seat whether the opening hand holds one.
 //  - Round 10 (lens L8, and L7 for the clause that asks). Setup is turn 0, no player's turn (§2.1):
-//    a Spell a mulligan's replacement draw casts kept its return flag into its caster's first turn
+//    a Spell a mulligan's replacement draw cast kept its return flag into its caster's first turn
 //    end (R155), and p1's cast armed an end-of-turn clause for turn 1 that p2's did not (R241). A
 //    start-of-game clause that asks at §2.1 step 4 now holds the rest of setup, and turn 1, until
-//    it is answered (R151, R113).
+//    it is answered (R151, R113). Those two cases keep their casts: R635 sets a cast-on-draw card
+//    aside, so the Spell is cast by a start-of-game clause as it arrives in the hand a replacement
+//    draw fills, which is the same cast on turn 0.
 //
-// No Core cast-on-draw card asks anything, so the asking card is a fixture (a transient def and a
-// registered script, the way paused-sequences.test.ts builds its asking cards).
+// No Core card has a start-of-game clause that asks, so the asking card is a fixture (a transient def
+// and a registered script, the way paused-sequences.test.ts builds its asking cards).
 
 import { describe, expect, it } from "vitest";
 import type { Action, ActionBody, ActionInput, CardDef, CardType, PlayerId, PlayerView } from "@jackioh/shared";
 import {
   DECK_SIZE,
+  OPENING_DRAW,
   RESUME_HOOK,
+  SETUP_TURN,
   beginGame,
   createGame,
   mulliganOwed,
@@ -37,7 +44,7 @@ import {
   type GameState,
   type Script,
 } from "@jackioh/engine";
-import { bounce, chooseMode, damage, delay, exileHand } from "@jackioh/engine/effects";
+import { bounce, cast, chooseMode, damage, delay, exileHand, remember } from "@jackioh/engine/effects";
 import { CATALOG } from "../src/index";
 // Importing the harness registers the real catalog and every card script (`registerAll()`); these
 // cases build their games through `createGame`, since a `scenario()` starts past the mulligan.
@@ -71,6 +78,26 @@ function fixture(state: GameState, id: string, type: CardType, script: Script): 
   registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } });
 }
 
+/**
+ * R151: a start-of-game clause runs as its card arrives in a hand, so a card setup draws can ask a
+ * question. It asks once: §2.1 step 4 runs the clause of every card still in a hand or library again
+ * (R153).
+ */
+function askingOnArrival(prompt: string): Script {
+  return {
+    startOfGame: (ctx) =>
+      ctx.self?.memory.asked === true
+        ? []
+        : [remember({ key: "asked", value: true }), chooseMode({ options: ["ok"], step: "ok", prompt })],
+    resume: { ok: () => [] },
+  };
+}
+
+/** A start-of-game clause that casts its card as it arrives in a hand, which only setup does (turn 0). */
+const CAST_ON_SETUP_ARRIVAL: Pick<Script, "startOfGame"> = {
+  startOfGame: (ctx) => (ctx.state.turn === SETUP_TURN ? [cast({ target: { of: "self" } })] : []),
+};
+
 /** Two legal decks straight from the catalog: the first 40 non-token cards in id order. */
 function catalogDecks(): [string[], string[]] {
   const pool = Object.entries(CATALOG)
@@ -91,22 +118,18 @@ function act(state: GameState, body: ActionInput): ReturnType<typeof reduce> {
 const P1_DECK = Array.from({ length: 20 }, (_, at) => `core-${String(at + 1).padStart(3, "0")}`);
 const P2_DECK = Array.from({ length: 20 }, (_, at) => `core-${String(at + 30).padStart(3, "0")}`);
 
-describe("R224: setup waits for a cast's question", () => {
-  it("R224 the question a cast-on-draw replacement asks p1 is not overwritten by p2's mulligan (§10.1, R9, R158, R265)", () => {
+describe("R224: setup waits for a question", () => {
+  it("R224 the question a replacement draw's arrival clause asks p1 is not overwritten by p2's mulligan (§10.1, R9, R151, R158, R265)", () => {
     let state = beginGame(createGame({ seed: "edge-r7-l7-mulligan", decks: [P1_DECK, P2_DECK] })).state;
     expect(mulliganPromptFor(state, "p1")?.kind).toBe("mulligan");
     expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
 
-    // A cast-on-draw Spell whose cast asks its caster something, on top of p1's library.
-    fixture(state, "edge-r7-l7-cod-asks", "Spell", {
-      staticFlags: { castOnDraw: true },
-      cry: () => [chooseMode({ options: ["ok"], step: "ok", prompt: "the cast's question" })],
-      resume: { ok: () => [] },
-    });
-    const cod = newInstance(state, "edge-r7-l7-cod-asks", "p1", { z: "library", player: "p1" });
-    state.players.p1.library.unshift(cod);
+    // A card whose start-of-game clause asks, on top of p1's library: the replacement draw reaches it.
+    fixture(state, "edge-r7-l7-asks", "Spell", askingOnArrival("the clause's question"));
+    const asks = newInstance(state, "edge-r7-l7-asks", "p1", { z: "library", player: "p1" });
+    state.players.p1.library.unshift(asks);
 
-    // p1 returns one card: R9 draws the replacement first, and it is the cast-on-draw card (§2.4).
+    // p1 returns one card: R9 draws the replacement first, and it is the asking card (§2.4).
     // The answer is sealed until p2 answers too (R266); p2 returns one card as well.
     const hand = state.players.p1.hand.map((card) => card.id);
     const returned = must(hand[0], "a card to return");
@@ -116,11 +139,11 @@ describe("R224: setup waits for a cast's question", () => {
     const p2Returned = must(p2Hand[0], "a card p2 returns");
     const result = act(state, { type: "mulligan", keep: p2Hand.slice(1), playerId: "p2" });
     state = result.state;
-    // Both are in, so both resolve in seat order (R265): p1's replacement was cast, and its cast
-    // asked p1 (§2.4, R70, R81).
+    // Both are in, so both resolve in seat order (R265): p1's replacement arrived, and its clause
+    // asked p1 (R151).
     expect(result.events.some((event) => event.type === "promptOpened" && event.kind === "mode")).toBe(true);
 
-    // §9.3, §10.1: one prompt at a time, and the cast's question is state until p1 answers it. p2's
+    // §9.3, §10.1: one prompt at a time, and the question is state until p1 answers it. p2's
     // resolution waits behind it: p2's hand is as it answered, and p1's returned card waits to go back.
     const pending = must(state.pending, "an open prompt");
     expect(pending.playerId, `open prompt: ${pending.kind} "${pending.prompt}"`).toBe("p1");
@@ -129,8 +152,8 @@ describe("R224: setup waits for a cast's question", () => {
     expect(state.players.p2.hand.map((card) => card.id)).toEqual(p2Hand);
     expect(state.mulliganed).toEqual([]);
 
-    // The answer finishes the cast and the rest of p1's mulligan (R122): the returned card is
-    // shuffled back, then p2's sealed answer resolves, and then the game begins.
+    // The answer finishes the rest of p1's mulligan (R122): the returned card is shuffled back, then
+    // p2's sealed answer resolves, and then the game begins.
     state = act(state, { type: "answer", choiceId: pending.id, selection: [{ pick: "mode", option: "ok" }], playerId: "p1" }).state;
     expect(state.players.p1.library.some((card) => card.id === returned)).toBe(true);
     expect(state.players.p2.hand.map((card) => card.id)).not.toContain(p2Returned);
@@ -139,47 +162,46 @@ describe("R224: setup waits for a cast's question", () => {
     expect(state.turn).toBe(1);
   });
 
-  it("R224 a cast-on-draw card's question from the opening draw is not written over by the mulligan (§2.1, §2.4, R158, R70)", () => {
+  it("R224 a question from the opening draw's arrival clauses is not written over by the mulligan (§2.1, R151, R158)", () => {
     const deck = query({})
       .map((def) => def.id)
       .slice(0, 20);
     const game = createGame({ seed: "edge-r7-setup", decks: [deck, deck] });
-    // A cast-on-draw Spell that declares a target, so its cast asks its caster for it (R70, R81).
-    const id = "edge-r7-asking-cod";
-    fixture(game, id, "Spell", {
-      staticFlags: { castOnDraw: true },
-      targets: [{ kind: "target", min: 1, max: 1, filter: { side: "enemy", of: ["hero"] } }],
-      cry: () => [damage({ to: { of: "chosen" }, amount: 1 })],
-    });
+    // A card whose start-of-game clause asks, as it arrives in a hand (R151).
+    const id = "edge-r7-asking";
+    fixture(game, id, "Spell", askingOnArrival("the clause's question"));
     game.players.p1.library = game.players.p1.library.map(() =>
       newInstance(game, id, "p1", { z: "library", player: "p1" }),
     );
 
     const started = beginGame(game);
-    const cast = started.events.find((event) => event.type === "promptOpened" && event.kind === "target");
-    expect(cast, "p1's opening draw casts the card, which asks for its target").toBeDefined();
+    const asked = started.events.find((event) => event.type === "promptOpened" && event.kind === "mode");
+    expect(asked, "p1's opening draw reaches the card, whose clause asks").toBeDefined();
 
     // R158: a draw a prompt interrupts stops there and owes the rest, and §2.1's mulligan follows
-    // the opening draw. A second prompt never overwrites an unanswered one (R156), so the cast's
-    // question stays open until it is answered, and the cast is not left half-played.
+    // the opening draw. A second prompt never overwrites an unanswered one (R156), so the question
+    // stays open until it is answered.
     const answered = started.events.some(
-      (event) => event.type === "promptAnswered" && cast !== undefined && event.choiceId === (cast as { choiceId: string }).choiceId,
+      (event) => event.type === "promptAnswered" && asked !== undefined && event.choiceId === (asked as { choiceId: string }).choiceId,
     );
-    const stillOpen = cast !== undefined && started.state.pending?.id === (cast as { choiceId: string }).choiceId;
-    expect(answered || stillOpen, `the cast's question was replaced by a ${started.state.pending?.kind ?? "no"} prompt`).toBe(true);
+    const stillOpen = asked !== undefined && started.state.pending?.id === (asked as { choiceId: string }).choiceId;
+    expect(answered || stillOpen, `the question was replaced by a ${started.state.pending?.kind ?? "no"} prompt`).toBe(true);
 
-    // Every card in p1's library is one of these, so the draw chain goes on casting (R58) and each
-    // cast asks in turn. Answering each finishes that cast and goes on with the opening deal, and the
-    // first mulligan opens only once nothing is asking — with no cast left half-played.
+    // Every card in p1's library is one of these, so each of the three opening draws asks in turn.
+    // Answering each goes on with the opening deal, and the first mulligan opens only once nothing is
+    // asking.
     let state = started.state;
-    for (let guard = 0; guard < 40 && state.pending?.kind === "target"; guard += 1) {
-      const open = must(state.pending, "a cast's question");
-      state = act(state, { type: "answer", choiceId: open.id, selection: [{ pick: "hero", player: "p2" }], playerId: "p1" }).state;
+    let questions = 0;
+    for (let guard = 0; guard < 40 && state.pending?.kind === "mode"; guard += 1) {
+      const open = must(state.pending, "a clause's question");
+      state = act(state, { type: "answer", choiceId: open.id, selection: [{ pick: "mode", option: "ok" }], playerId: "p1" }).state;
+      questions += 1;
     }
+    expect(questions).toBe(OPENING_DRAW[0]);
     expect(state.pending).toBeNull();
     expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
-    expect(state.players.p1.resolving).toEqual([]);
-    expect(state.players.p2.hand).toHaveLength(4);
+    expect(state.players.p1.hand).toHaveLength(OPENING_DRAW[0] as number);
+    expect(state.players.p2.hand).toHaveLength(OPENING_DRAW[1] as number);
   });
 
   it("R224 the mulligan's promptAnswered names the prompt that promptOpened named (§10.3, §10.6)", () => {
@@ -266,26 +288,23 @@ describe("R225: a Quickdraw card is counted as the draw it replaces", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Quickdraw and setup resumed after a cast's question (R224)
+// Quickdraw and setup resumed after a clause's question (R224)
 // ---------------------------------------------------------------------------
 
-const ASKING = "r8-l10-cod-asks";
+const ASKING = "r8-l10-asks";
 
 function asking(state: GameState): void {
   state.transientDefs[ASKING] = fixtureDef(ASKING, "Spell");
-  const script: Script = {
-    staticFlags: { castOnDraw: true },
-    cry: () => [chooseMode({ options: ["ok"], step: "ok", prompt: "the cast's question" })],
-    resume: { ok: () => [] },
-  };
+  const script = askingOnArrival("the clause's question");
   registerScripts({ ...registeredScripts(), [ASKING]: { base: script, radiant: script } });
 }
 
 describe("R225, R224: a Quickdraw card is dealt as the last opening draw", () => {
   /**
-   * p1's library holds one cast-on-draw card that asks (a fixture: no Core cast-on-draw card asks),
-   * and with this seed p1's opening draw reaches it, so setup waits for p1's answer before it deals
-   * to p2 (R224). The answer's action then carries p2's opening deal, which p1's view shows.
+   * p1's library holds one card whose start-of-game clause asks as it arrives in a hand (a fixture: no
+   * Core card asks), and with this seed p1's opening draw reaches it, so setup waits for p1's answer
+   * before it deals to p2 (R224, R151). The answer's action then carries p2's opening deal, which
+   * p1's view shows.
    */
   function pausedDeal(seed: string, p2Twentieth: string): GameState {
     const game = createGame({ seed, decks: [[...QD_P1_DECK], [...QD_P2_SHARED, p2Twentieth]] });
@@ -339,26 +358,29 @@ describe("R225, R224: a Quickdraw card is dealt as the last opening draw", () =>
   }
 
   it("R225 p1's hand and library counts while setup waits do not tell p2 whether p1's opening hand holds a Quickdraw card (§2.1, §9.1, R224)", () => {
-    // A seed whose shuffle puts the asking card on top of p1's library, so it is p1's first draw.
+    // A seed whose shuffle puts the asking card on top of p1's library, so it is p1's first draw: the
+    // only card in p1's hand, where its clause arrived and asked.
     let seed: string | undefined;
     for (let at = 0; at < 400 && seed === undefined; at += 1) {
       const candidate = `r8-l10-own-deal-${at}`;
       const state = pausedOwnDeal(candidate, CRAFT);
-      if (state.pending?.kind === "mode" && state.players.p1.hand.length === 0) seed = candidate;
+      if (state.pending?.kind === "mode" && state.players.p1.hand.map((card) => card.defId).join() === ASKING) {
+        seed = candidate;
+      }
     }
     const found = must(seed, "a seed that draws the asking card first");
     const withPower = pausedOwnDeal(found, HEROIC_POWER);
     const without = pausedOwnDeal(found, CRAFT);
 
-    // Both games wait on p1's cast question, the cast card in p1's resolving zone, p2 not yet dealt.
+    // Both games wait on p1's question, the asking card in p1's hand, p2 not yet dealt.
     for (const state of [withPower, without]) {
       expect(state.pending?.kind).toBe("mode");
       expect(state.pending?.playerId).toBe("p1");
       expect(state.players.p2.hand).toHaveLength(0);
     }
     // R225: the Heroic Power replaces the last of p1's opening draws, so it is still in the library
-    // while the first draw's cast asks.
-    expect(withPower.players.p1.hand).toEqual([]);
+    // while the first draw's clause asks.
+    expect(withPower.players.p1.hand.map((card) => card.defId)).toEqual([ASKING]);
     expect(withPower.players.p1.library.some((card) => card.defId === HEROIC_POWER)).toBe(true);
 
     // p2 may count p1's hand and library (§10.8), but whether p1's deck holds a Quickdraw card is
@@ -393,9 +415,9 @@ function endTurnsThrough(state: GameState, turn: number): GameState {
   return next;
 }
 
-/** #23's return, verbatim in shape, on a cast-on-draw Spell: the flag step 7 writes, or a play this turn. */
+/** #23's return, verbatim in shape, on a Spell setup casts: the flag step 7 writes, or a play this turn. */
 const SETUP_BOOMERANG: Script = {
-  staticFlags: { castOnDraw: true },
+  ...CAST_ON_SETUP_ARRIVAL,
   cry: () => [],
   endOfTurn: (ctx) => {
     const self = ctx.self;
@@ -406,8 +428,10 @@ const SETUP_BOOMERANG: Script = {
 };
 
 describe("R155, R241: a card setup casts belongs to no turn of its caster's (§2.1, §6.2)", () => {
-  // No Core cast-on-draw card carries an end-of-turn clause, so the card that makes each case
-  // observable is a fixture; the rest of each game is real Core cards.
+  // No Core card casts in setup or carries an end-of-turn clause of a Spell it casts, so the card that
+  // makes each case observable is a fixture; the rest of each game is real Core cards. Setup does not
+  // draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts it in the
+  // hand (`CAST_ON_SETUP_ARRIVAL`).
   it("R155 a return Spell cast by a mulligan's replacement draw stays in the graveyard at its caster's first turn end, a turn it was not played on", () => {
     // Once for each seat: p1's first turn end is turn 1's, p2's is turn 2's.
     for (const seat of ["p1", "p2"] as const) {
@@ -444,10 +468,10 @@ describe("R155, R241: a card setup casts belongs to no turn of its caster's (§2
     let state = beginGame(createGame({ seed: "edge-r10-setup-exile", decks: [P1_DECK, P2_DECK] })).state;
     expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
 
-    // /fullsend's end-of-turn clause, verbatim in shape, on a cast-on-draw Spell.
+    // /fullsend's end-of-turn clause, verbatim in shape, on a Spell setup casts.
     const id = "edge-r10-setup-late-exile";
     fixture(state, id, "Spell", {
-      staticFlags: { castOnDraw: true },
+      ...CAST_ON_SETUP_ARRIVAL,
       cry: () => [delay({ at: { phase: "end", player: "self" }, step: "exile", hook: RESUME_HOOK })],
       resume: { exile: () => [exileHand({ player: "self" })] },
     });

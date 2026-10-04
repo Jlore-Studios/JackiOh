@@ -1,11 +1,11 @@
-// C+ #31 Fusion Lab — SPEC §8.7 row 31, BUILD M9 Classic+ row C+ 31: "Field Spell: its Cry fuses a
-// random non-token card of any set but Fusion Lab (R387) into a hand card chosen with the play (R81),
-// and each end of your turn does the same through a hand prompt; the hand card is the kept instance,
-// its type wins (R77) and it costs what it cost before (`costOverride`); an Immutable hand card is never
-// offered (R23); an empty hand, no pick and nothing happens; the opponent's view names neither the hand
-// card, the ingredient nor the fused id (R97, R179); radiant the random card is fused in on its Radiant
-// face and lends it to both of the fusion's forms, so its rider shows whether or not the hand card is
-// Radiant" (R561).
+// C+ #31 Fusion Lab — SPEC §8.7 row 31, BUILD M9 Classic+ row C+ 31: "Field Spell (balance patch 1: the
+// Cry and the end-of-turn trigger became one Activate, once): Activate fuses a random non-token card of
+// any set but Fusion Lab (R387) into a hand card chosen with the activation (R81); the hand card is the
+// kept instance, its type wins (R77) and it costs what it cost before (`costOverride`); an Immutable
+// hand card is never offered (R23); an empty hand offers no activation; the opponent's view names
+// neither the hand card, the ingredient nor the fused id (R97, R179); radiant the random card is fused
+// in on its Radiant face and lends it to both of the fusion's forms, so its rider shows whether or not
+// the hand card is Radiant" (R561).
 
 import type { Action, Selection } from "@jackioh/shared";
 import { defOf, effectiveCost, fusedIdParts, fusedIdSpecs, hashState, reduce, type GameState } from "@jackioh/engine";
@@ -36,19 +36,22 @@ function fusedEvents(s: Scenario, viewer: "p1" | "p2") {
 }
 
 describe("C+ #31 Fusion Lab", () => {
-  it("declares one hand card with the play (R81), and its faces differ only in the ingredient's face", () => {
+  it("declares one hand card with the activation (R81), once, and its faces differ only in the ingredient's face", () => {
     expect(def.id).toBe(LAB);
-    expect(base.targets).toEqual([{ kind: "hand", min: 1, max: 1, filter: { check: "fusable" } }]);
+    expect(base.activations).toHaveLength(1);
+    expect(base.activations[0]?.targets).toEqual([{ kind: "hand", min: 1, max: 1, filter: { check: "fusable" } }]);
+    expect(base.activations[0]?.uses).toBe(1);
     expect(base).not.toBe(radiant);
   });
 
   describe("base", () => {
-    it("R77 its Cry fuses a random card into the chosen hand card, which stays in hand, keeps its type and its cost", () => {
+    it("R77 its Activate fuses a random card into the chosen hand card, which stays in hand, keeps its type and its cost", () => {
       const s = scenario({ p1: { hand: [LAB, MENACE, STOCKPILE] } });
       const kept = idOf(s, MENACE);
       const other = idOf(s, STOCKPILE);
       const costBefore = effectiveCost(s.state, s.card(kept));
-      s.play(LAB, { targets: pick(kept) });
+      s.play(LAB);
+      s.activate(LAB, { targets: pick(kept) });
       const now = s.card(kept);
       expect(now.zone).toEqual({ z: "hand", player: "p1" });
       const [ingredient, held] = partsOf(s, kept);
@@ -66,70 +69,74 @@ describe("C+ #31 Fusion Lab", () => {
       for (const seed of ["lab-a", "lab-b", "lab-c", "lab-d", "lab-e", "lab-f"]) {
         const s = scenario({ seed, p1: { hand: [LAB, MENACE] } });
         const kept = idOf(s, MENACE);
-        s.play(LAB, { targets: pick(kept) });
+        s.play(LAB);
+        s.activate(LAB, { targets: pick(kept) });
         expect(partsOf(s, kept)[0]).not.toBe(LAB);
       }
     });
 
-    it("R81 at each end of your turn it asks for a hand card and fuses a random card into it", () => {
+    it("the end of turn fuses nothing: the Cry and the trigger are gone", () => {
       const s = scenario({ p1: { hand: [LAB, MENACE, STOCKPILE] }, p2: { hand: [STOCKPILE] } });
+      s.play(LAB);
       const menace = idOf(s, MENACE);
-      const stockpile = s.hand("p1").find((card) => card.defId === STOCKPILE)?.id ?? "";
-      s.play(LAB, { targets: pick(menace) });
-      const once = s.card(menace).defId;
       s.endTurn();
-      const pending = s.state.pending;
-      expect(pending?.kind).toBe("hand");
-      expect(pending?.playerId).toBe("p1");
-      expect(s.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
-      s.answer(stockpile);
-      expect(partsOf(s, stockpile)[1]).toBe(STOCKPILE);
-      expect(defOf(s.state, s.card(stockpile).defId).type).toBe("Spell");
-      expect(s.card(menace).defId).toBe(once);
+      expect(s.state.pending).toBeNull();
+      expect(s.events.some((event) => event.type === "fused")).toBe(false);
+      expect(s.card(menace).defId).toBe(MENACE);
       expect(s.state.active).toBe("p2");
     });
 
-    it("R113 paused at the end of turn, the state survives JSON and the answer replays to the same hash", () => {
+    it("the Activate is once: a second activation is refused", () => {
+      const s = scenario({ p1: { hand: [LAB, MENACE, STOCKPILE] } });
+      const menace = idOf(s, MENACE);
+      const stockpile = s.hand("p1").find((card) => card.defId === STOCKPILE)?.id ?? "";
+      s.play(LAB);
+      s.activate(LAB, { targets: pick(menace) });
+      expect(() => s.activate(LAB, { targets: pick(stockpile) })).toThrow();
+      expect(s.card(stockpile).defId).toBe(STOCKPILE);
+    });
+
+    it("R113 the played state survives JSON and the activation replays to the same hash", () => {
       const s = scenario({ p1: { hand: [LAB, MENACE, STOCKPILE] }, p2: { hand: [STOCKPILE] } });
       const menace = idOf(s, MENACE);
-      s.play(LAB, { targets: pick(menace) });
-      s.endTurn();
-      const pending = s.state.pending;
-      if (pending === null) throw new Error("the end of turn asked nothing");
+      s.play(LAB);
       const thawed = JSON.parse(JSON.stringify(s.state)) as GameState;
       expect(thawed).toEqual(s.state);
-      const action = { type: "answer", choiceId: pending.id, selection: pick(menace), playerId: "p1", nonce: "lab-roundtrip" } as Action;
-      const live = reduce(s.state, action);
-      const again = reduce(thawed, action);
+      const declared = { type: "activate", playerId: "p1", instanceId: s.card(LAB).id, ability: "fuse", targets: pick(menace), nonce: "lab-roundtrip" } as Action;
+      const live = reduce(s.state, declared);
+      const again = reduce(thawed, declared);
       expect(live.error).toBeUndefined();
       expect(hashState(again.state)).toBe(hashState(live.state));
       expect(again.events).toEqual(live.events);
     });
 
-    it("R23 an Immutable hand card is never offered, by the play or by the end of turn", () => {
+    it("R23 an Immutable hand card is never offered: its declared pick is refused, the legal card still fuses", () => {
       // A Radiant Midrange Menace prints Immutable.
       const s = scenario({ p1: { hand: [LAB, { def: MENACE, radiant: true }, STOCKPILE] }, p2: { hand: [STOCKPILE] } });
       const menace = idOf(s, MENACE);
       const stockpile = s.hand("p1").find((card) => card.defId === STOCKPILE)?.id ?? "";
-      expect(() => s.play(LAB, { targets: pick(menace) })).toThrow(/not a legal target/);
-      s.play(LAB, { targets: pick(stockpile) });
-      s.endTurn();
-      const offered = (s.state.pending?.options ?? []).map((option) => (option.selection.pick === "instance" ? option.selection.instanceId : ""));
-      expect(offered).toEqual([stockpile]);
+      s.play(LAB);
+      expect(() => s.activate(LAB, { targets: pick(menace) })).toThrow(/not a legal target/);
+      s.activate(LAB, { targets: pick(stockpile) });
+      expect(partsOf(s, stockpile)[1]).toBe(STOCKPILE);
+      expect(s.card(menace).defId).toBe(MENACE);
     });
 
-    it("R23 with only an Immutable card in hand the Cry has no pick and the end of turn asks nothing", () => {
+    it("R23 with only an Immutable card in hand the activation has no pick", () => {
       const s = scenario({ p1: { hand: [LAB, { def: MENACE, radiant: true }] }, p2: { hand: [STOCKPILE] } });
+      const menace = idOf(s, MENACE);
       s.play(LAB);
+      expect(() => s.activate(LAB, { targets: pick(menace) })).toThrow(/not a legal target/);
       s.endTurn();
       expect(s.events.some((event) => event.type === "fused")).toBe(false);
       expect(s.state.pending).toBeNull();
       expect(s.events.some((event) => event.type === "turnEnded" && event.player === "p1")).toBe(true);
     });
 
-    it("§8.7 an empty hand: no pick and nothing happens, at the Cry and at the end of turn", () => {
+    it("§8.7 an empty hand: activating picks nothing and fuses nothing, and the end of turn asks nothing", () => {
       const s = scenario({ p1: { hand: [LAB] }, p2: { hand: [STOCKPILE] } });
       s.play(LAB);
+      s.activate(LAB);
       expect(s.events.some((event) => event.type === "fused")).toBe(false);
       s.endTurn();
       expect(s.state.pending).toBeNull();
@@ -139,7 +146,8 @@ describe("C+ #31 Fusion Lab", () => {
     it("R97 R179 the opponent's view names neither the hand card, the ingredient nor the fused id", () => {
       const s = scenario({ p1: { hand: [LAB, MENACE] }, p2: { hand: [STOCKPILE] } });
       const menace = idOf(s, MENACE);
-      s.play(LAB, { targets: pick(menace) });
+      s.play(LAB);
+      s.activate(LAB, { targets: pick(menace) });
       const theirs = fusedEvents(s, "p2");
       expect(theirs).toHaveLength(1);
       expect(theirs[0]?.defId).toBe(HIDDEN);
@@ -158,7 +166,8 @@ describe("C+ #31 Fusion Lab", () => {
     it("R561 the random card goes in on its Radiant face, lent to both forms: a base hand card shows its Radiant text", () => {
       const s = scenario({ p1: { hand: [{ def: LAB, radiant: true }, MENACE] } });
       const menace = idOf(s, MENACE);
-      s.play(LAB, { targets: pick(menace) });
+      s.play(LAB);
+      s.activate(LAB, { targets: pick(menace) });
       const kept = s.card(menace);
       expect(kept.radiant).toBe(false);
       const [ingredient, held] = fusedIdSpecs(kept.defId) ?? [];
@@ -173,7 +182,8 @@ describe("C+ #31 Fusion Lab", () => {
     it("R561 a Radiant hand card shows the same Radiant ingredient", () => {
       const s = scenario({ p1: { hand: [{ def: LAB, radiant: true }, { def: STOCKPILE, radiant: true }] } });
       const stockpile = idOf(s, STOCKPILE);
-      s.play(LAB, { targets: pick(stockpile) });
+      s.play(LAB);
+      s.activate(LAB, { targets: pick(stockpile) });
       const kept = s.card(stockpile);
       expect(kept.radiant).toBe(true);
       const [ingredient] = fusedIdSpecs(kept.defId) ?? [];
@@ -182,14 +192,12 @@ describe("C+ #31 Fusion Lab", () => {
       expect(defOf(s.state, kept.defId).radiant.text).toContain(lent);
     });
 
-    it("R77 its end of turn fuses a Radiant card too, keeping the cost", () => {
+    it("R77 its Activate fuses a Radiant card too, keeping the cost", () => {
       const s = scenario({ p1: { hand: [{ def: LAB, radiant: true }, MENACE, STOCKPILE] }, p2: { hand: [STOCKPILE] } });
-      const menace = idOf(s, MENACE);
       const stockpile = s.hand("p1").find((card) => card.defId === STOCKPILE)?.id ?? "";
-      s.play(LAB, { targets: pick(menace) });
+      s.play(LAB);
       const cost = effectiveCost(s.state, s.card(stockpile));
-      s.endTurn();
-      s.answer(stockpile);
+      s.activate(LAB, { targets: pick(stockpile) });
       expect(fusedIdSpecs(s.card(stockpile).defId)?.[0]?.radiant).toBe(true);
       expect(effectiveCost(s.state, s.card(stockpile))).toBe(cost);
     });

@@ -12,7 +12,7 @@
 //
 // Each station has two in-game tracks (rotated across matches), a low-health variant (minor, faster,
 // with a low pulse and busier percussion) and a match-start sting. The menu theme, the three result
-// stings with their loops and the eight Mythic themes are shared.
+// stings with their loops, the eight Mythic themes and the two shared Legendary themes are shared.
 
 import {
   DR, DRUMS, GM, KIT, RHYTHMS,
@@ -155,9 +155,11 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
 
   const lute = { ch: 2, step: danger ? 0.25 : 0.5, pattern: danger ? [0, 2, 3, 2] : [0, 2, 3, 4, 3, 2, 1, 2], center: 55, vel: danger ? 46 : 54 };
   const folkBass = { ch: 4, pattern: [[0, "R", 1.4, 1], [1.5, "5", 0.5, 0.7], [2, "5", 1.4, 0.85], [3.5, "A", 0.5, 0.7]], vel: 80 };
+  // The in-game builds keep their folk modes and progressions but borrow the low-health build's
+  // offbeat shakers and tom hits at a lower level, so the match tracks drive harder throughout.
   const perc = danger
     ? [...TAVERN_PERC, [0.25, DR.shaker, 30], [1.25, DR.shaker, 30], [2.25, DR.shaker, 30], [3.25, DR.shaker, 30], [0, DR.tomLo, 54], [2, DR.tomLo, 48], [3.5, DR.tomMid, 40]]
-    : TAVERN_PERC;
+    : [...TAVERN_PERC, [0.25, DR.shaker, 28], [1.25, DR.shaker, 28], [2.25, DR.shaker, 28], [3.25, DR.shaker, 28], [0, DR.tomLo, 44], [2, DR.tomLo, 40]];
   const fill = [...perc, [3, DR.tomMid, 50], [3.5, DR.tomLo, 56]];
 
   const s1 = section(song, "body", 8, A);
@@ -198,8 +200,8 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   arp(s5, { ch: 3, step: 0.5, pattern: [0, 1, 2, 3, 4, 3, 2, 1], center: 62, vel: 50 });
   pad(s5, { ch: 5, center: 60, vel: 36 });
   melody(s5, { ch: 1, rhythms: RHYTHMS.epic, range: [0, 8], vel: 66, motifBars: [0], start: 2, seed: 5 });
+  pulse(s5, { ch: 6, step: 0.5, octave: -2, vel: 56 });
   if (danger) {
-    pulse(s5, { ch: 6, step: 0.5, octave: -2, vel: 56 });
     drums(s5, { pattern: [[0, DR.tomLo, 60], [2, DR.tomLo, 50], [3, DR.tomMid, 44], [3.5, DR.tomMid, 44]] });
   }
 
@@ -211,6 +213,7 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   melody(s6, { ch: 0, rhythms: RHYTHMS.epic, range: [4, 12], vel: 78, motifBars: [0, 4], start: 7, seed: 3 });
   melody(s6, { ch: 1, rhythms: RHYTHMS.folk, range: [0, 7], vel: 56, motifBars: [], start: 2, seed: 6 });
   if (danger) pulse(s6, { ch: 6, step: 0.5, octave: -2, vel: 60 });
+  else pulse(s6, { ch: 6, step: 0.5, octave: -2, vel: 56 });
 
   // A reprise of the opening, varied, so the loop runs past two minutes (#51).
   const s7 = section(song, "body", 8, A);
@@ -221,6 +224,18 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   melody(s7, { ch: 1, rhythms: RHYTHMS.folk, range: [3, 11], vel: 76, motifBars: [0, 4], start: 4, seed: 7 });
   if (danger) pulse(s7, { ch: 6, step: 0.5, octave: -2, vel: 58 });
   else pad(s7, { ch: 6, center: 60, vel: 30, every: 2 });
+
+  if (!danger) {
+    // The faster in-game tempo shortens the loop, so the match builds reprise the opening once
+    // more instead of ending on s7.
+    const s8 = section(song, "body", 8, A);
+    arp(s8, lute);
+    arp(s8, { ch: 3, step: 0.5, pattern: [0, 1, 2, 3, 4, 3, 2, 1], center: 67, vel: 42 });
+    bass(s8, folkBass);
+    drums(s8, { pattern: [...perc, ...TAVERN_TAMB], fill });
+    melody(s8, { ch: 0, rhythms: RHYTHMS.folk, range: [4, 12], vel: 80, motifBars: [0, 4], start: 7, seed: 8 });
+    pulse(s8, { ch: 6, step: 0.5, octave: -2, vel: 56 });
+  }
   return { song };
 }
 
@@ -288,16 +303,22 @@ function edm({ id, tonic, mode, bpm, A, B, danger = false }) {
   pad(s5, { ch: 2, center: 60, vel: 60 });
   bass(s5, offbeatBass);
   arp(s5, { ...pluck, pattern: [0, 2, 4, 2, 1, 3, 5, 3] });
-  drums(s5, { pattern: [...kicks, ...hats, ...EDM_CLAP, [0, DR.open, 40], [2, DR.open, 40]] });
+  drums(s5, { pattern: [...kicks, ...EDM_BUSY_HATS, ...EDM_CLAP, [0, DR.open, 40], [2, DR.open, 40]] });
   melody(s5, { ch: 0, rhythms: RHYTHMS.edm, range: [3, 11], vel: 76, motifBars: [0, 4], start: 4, seed: 1 });
   melody(s5, { ch: 5, rhythms: RHYTHMS.epic, range: [0, 7], vel: 54, motifBars: [], start: 2, seed: 4 });
   pump(s5, { chs: [2, 3] });
 
+  // s6 doubles the kick: four on the floor plus an offbeat layer under the busy hats.
   const s6 = section(song, "body", 8, A);
   pad(s6, { ch: 4, center: 62, vel: 52 });
   bass(s6, { ...offbeatBass, vel: 70 });
   arp(s6, { ...pluck, vel: 48 });
-  drums(s6, { pattern: [...EDM_HATS, [0, DR.kick, 84], [2, DR.kick, 80]], fill: roll });
+  drums(s6, {
+    pattern: danger
+      ? [...EDM_HATS, [0, DR.kick, 84], [2, DR.kick, 80]]
+      : [...FOUR_FLOOR, [0.5, DR.kick, 66], [1.5, DR.kick, 62], [2.5, DR.kick, 66], [3.5, DR.kick, 62], ...EDM_BUSY_HATS],
+    fill: roll,
+  });
   melody(s6, { ch: 5, rhythms: RHYTHMS.edm, range: [2, 9], vel: 62, motifBars: [0], start: 4, seed: 5 });
   pump(s6, { chs: [3, 4] });
 
@@ -309,16 +330,15 @@ function edm({ id, tonic, mode, bpm, A, B, danger = false }) {
   melody(s7, { ch: 0, rhythms: RHYTHMS.edm, range: [4, 12], vel: 72, motifBars: [0, 4], start: 7, seed: 3 });
   pump(s7, { chs: [2, 3] });
 
-  if (danger) {
-    // The low-health track runs faster, so one more section keeps its loop past two minutes (#51).
-    const s8 = section(song, "body", 8, A);
-    pad(s8, { ch: 2, center: 60, vel: 56 });
-    bass(s8, offbeatBass);
-    arp(s8, { ...pluck, pattern: [0, 2, 4, 2, 1, 3, 5, 3], vel: 50 });
-    drums(s8, { pattern: [...kicks, ...hats, ...EDM_CLAP], fill: roll });
-    melody(s8, { ch: 5, rhythms: RHYTHMS.edm, range: [2, 9], vel: 60, motifBars: [0, 4], start: 4, seed: 6 });
-    pump(s8, { chs: [2, 3] });
-  }
+  // The faster tracks run their loop short of two minutes at seven sections, so every build takes
+  // an eighth (#51): the low-health build always did, and the match builds now match it.
+  const s8 = section(song, "body", 8, A);
+  pad(s8, { ch: 2, center: 60, vel: 56 });
+  bass(s8, offbeatBass);
+  arp(s8, { ...pluck, pattern: [0, 2, 4, 2, 1, 3, 5, 3], vel: 50 });
+  drums(s8, { pattern: [...kicks, ...hats, ...EDM_CLAP], fill: roll });
+  melody(s8, { ch: 5, rhythms: RHYTHMS.edm, range: [2, 9], vel: 60, motifBars: [0, 4], start: 4, seed: 6 });
+  pump(s8, { chs: [2, 3] });
   return { song };
 }
 
@@ -346,6 +366,13 @@ function lofi({ id, tonic, mode, bpm, A, B, danger = false }) {
   const keys = { ch: 0, hits: [[0, 1.4, 1], [1.5, 2.3, 0.8]], center: 62, vel: 58 };
   const walk = { ch: 2, pattern: [[0, "R", 1.4, 1], [1.5, "5", 0.4, 0.6], [2.5, "8", 0.9, 0.75], [3.5, "A", 0.4, 0.6]], vel: 78 };
   const beat = danger ? [...LOFI_DRUMS, [0.5, DR.kick, 46], [2, DR.tomLo, 34]] : LOFI_DRUMS;
+  // The match builds double the brushed-drums density — offbeat hats, an extra kick and stick —
+  // under a low pulse, so the swung groove drives instead of lounges.
+  const drive = danger ? beat : [...LOFI_DRUMS,
+    [0.25, DR.hat, 24], [0.75, DR.hat, 22], [1.25, DR.hat, 24], [1.75, DR.hat, 22],
+    [2.25, DR.hat, 24], [2.75, DR.hat, 22], [3.25, DR.hat, 24], [3.75, DR.hat, 22],
+    [1.5, DR.kick, 44], [3.5, DR.stick, 40]];
+  const sparse = [[0, DR.kick, 50], [2.5, DR.kick, 40], [0, DR.hat, 24], [2, DR.hat, 24]];
 
   const s1 = section(song, "body", 8, A);
   comp(s1, keys);
@@ -378,15 +405,28 @@ function lofi({ id, tonic, mode, bpm, A, B, danger = false }) {
   const s5 = section(song, "body", 4, A);
   comp(s5, { ...keys, hits: [[0, 3.8, 0.9]] });
   pad(s5, { ch: 3, center: 60, vel: 34 });
-  drums(s5, { pattern: [[0, DR.kick, 50], [2.5, DR.kick, 40], [0, DR.hat, 24], [2, DR.hat, 24]] });
+  drums(s5, { pattern: danger ? sparse : drive });
+  if (!danger) pulse(s5, { ch: 3, step: 1, octave: -1, vel: 54, gate: 0.9 });
 
   const s6 = section(song, "body", 8, B);
   comp(s6, keys);
   bass(s6, walk);
-  drums(s6, { pattern: beat });
+  drums(s6, { pattern: danger ? beat : drive });
   melody(s6, { ch: 1, rhythms: RHYTHMS.lofi, range: [3, 11], vel: 66, motifBars: [0], start: 6, seed: 4 });
   arp(s6, { ch: 4, step: 0.5, pattern: [0, 2, 1, 3, null, 2, null, 1], center: 64, vel: 40, gate: 0.7 });
   if (danger) pulse(s6, { ch: 3, step: 1, octave: -1, vel: 46, gate: 0.9 });
+  else pulse(s6, { ch: 3, step: 1, octave: -1, vel: 54, gate: 0.9 });
+
+  if (!danger) {
+    // The faster match tempo shortens the loop, so the match builds reprise the opening (#51).
+    const s7 = section(song, "body", 8, A);
+    comp(s7, keys);
+    bass(s7, walk);
+    drums(s7, { pattern: drive });
+    pad(s7, { ch: 3, center: 60, vel: 38 });
+    melody(s7, { ch: 1, rhythms: RHYTHMS.lofi, range: [3, 11], vel: 70, motifBars: [0, 4], start: 6, seed: 5 });
+    pulse(s7, { ch: 3, step: 1, octave: -1, vel: 54, gate: 0.9 });
+  }
   return { song };
 }
 
@@ -451,11 +491,14 @@ function epic({ id, tonic, mode, bpm, A, B, danger = false }) {
   const s5 = section(song, "body", 8, danger ? B : A);
   arp(s5, { ch: 7, step: 0.5, pattern: [0, 1, 2, 3, 4, 3, 2, 1], center: 62, vel: 48 });
   pad(s5, { ch: 4, center: 60, vel: 42 });
-  pad(s5, { ch: 1, center: 55, vel: 34 });
+  pad(s5, { ch: 1, center: 55, vel: danger ? 34 : 42 });
   melody(s5, { ch: 8, rhythms: RHYTHMS.epic, range: [4, 11], vel: 66, motifBars: [0], start: 7, seed: 5 });
   if (danger) {
     arp(s5, ostinato);
     roots(s5, timp);
+  } else {
+    // Timpani under the match build too, and louder strings beside them.
+    roots(s5, { ch: 6, octave: -2, vel: 66, hits: [[0, 1, 1]] });
   }
 
   const s6 = section(song, "body", 8, B);
@@ -463,9 +506,21 @@ function epic({ id, tonic, mode, bpm, A, B, danger = false }) {
   bass(s6, low);
   comp(s6, { ch: 3, hits: [[0, 1.8, 1], [2, 1.8, 0.8]], center: 57, vel: danger ? 62 : 54 });
   pad(s6, { ch: 4, center: 62, vel: 54 });
-  pad(s6, { ch: 1, center: 57, vel: 48 });
+  pad(s6, { ch: 1, center: 57, vel: danger ? 48 : 56 });
   melody(s6, { ch: 2, rhythms: RHYTHMS.epic, range: [2, 9], vel: 80, motifBars: [0, 4], start: 4, seed: 3 });
   roots(s6, danger ? timp : { ...timp, hits: [[0, 1, 1], [3, 0.5, 0.6], [3.5, 0.5, 0.7]] });
+
+  if (!danger) {
+    // The faster match tempo shortens the loop, so the match builds reprise the opening (#51).
+    const s7 = section(song, "body", 8, A);
+    arp(s7, ostinato);
+    bass(s7, low);
+    pad(s7, { ch: 4, center: 64, vel: 52 });
+    pad(s7, { ch: 1, center: 57, vel: 56 });
+    melody(s7, { ch: 2, rhythms: RHYTHMS.epic, range: [0, 8], vel: 78, motifBars: [0, 4], start: 4, seed: 6 });
+    roots(s7, { ch: 6, octave: -2, vel: 66, hits: [[0, 1, 1], [3, 0.5, 0.6], [3.5, 0.5, 0.7]] });
+    drums(s7, { pattern: [[0, DR.crash, 44]], skip: (bar) => bar !== 0 });
+  }
   return { song };
 }
 
@@ -731,6 +786,64 @@ function twiceForward() {
 }
 
 /* ------------------------------------------------------------------------------------------- *
+ * Shared Legendary entrance themes (src/audio/music-cards.json names which cards play which).
+ * One shape for both, brass-forward next to the Mythics' prismatic themes: a two-bar fanfare
+ * opening on the motif, then a twelve-bar body (twelve, not eight, so the loop still runs past
+ * fifteen seconds at this tempo) quoting the motif over brass, timpani and a high glint run.
+ * ------------------------------------------------------------------------------------------- */
+
+/** Shared Legendary theme 1: D minor, trumpet over horn, trombone and timpani, celesta glint. */
+function legendaryTheme1() {
+  const song = createSong({ id: "legendary-1", bpm: 132, key: key("D", "minor") });
+  song.reverb = { room: 0.8, damp: 0.3, width: 1, level: 0.62 };
+  instrument(song, 0, GM.trumpet, { volume: 90, pan: 60, reverb: 60 });
+  instrument(song, 1, GM.horn, { volume: 86, pan: 48, reverb: 65 });
+  instrument(song, 2, GM.celesta, { volume: 72, pan: 80, reverb: 70 });
+  instrument(song, 3, GM.timpani, { volume: 86, reverb: 60 });
+  instrument(song, 4, GM.trombone, { volume: 80, pan: 70, reverb: 60 });
+  instrument(song, 5, GM.contrabass, { volume: 84, reverb: 50 });
+  instrument(song, DRUMS, KIT.orchestra, { volume: 76, reverb: 60 });
+  const intro = section(song, "intro", 2, ["i", "V+"]);
+  line(intro, { ch: 0, notes: FANFARE, vel: 86 });
+  comp(intro, { ch: 1, hits: [[0, 0.9, 1], [1.5, 0.4, 0.7]], center: 57, vel: 58 });
+  roots(intro, { ch: 3, octave: -2, vel: 72, hits: [[0, 1, 1], [1.5, 0.5, 0.7]] });
+  const prog = ["i", "VI", "III", "VII", "i", "iv", "V+", "i", "VI", "VII", "iv", "V+"];
+  const body = section(song, "body", 12, prog);
+  melody(body, { ch: 0, rhythms: RHYTHMS.epic, range: [2, 9], vel: 82, motifBars: [0, 4, 8], start: 4, seed: 1 });
+  comp(body, { ch: 1, hits: [[0, 0.9, 1], [1.5, 0.4, 0.7], [2, 1.9, 0.85]], center: 57, vel: 56 });
+  arp(body, { ch: 2, step: 0.25, pattern: [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 2, 3], center: 72, vel: 48 });
+  roots(body, { ch: 3, octave: -2, vel: 66, hits: [[0, 1, 1], [3.5, 0.5, 0.6]] });
+  bass(body, { ch: 4, pattern: [[0, "R", 0.9, 1], [2, "5", 0.9, 0.8]], octave: -1, vel: 62 });
+  bass(body, { ch: 5, pattern: [[0, "R", 1.9, 1], [2, "R", 1.9, 0.8]], vel: 70 });
+  return { song };
+}
+
+/** Shared Legendary theme 2: G minor, horn-led answer to theme 1 over the same forces. */
+function legendaryTheme2() {
+  const song = createSong({ id: "legendary-2", bpm: 132, key: key("G", "minor") });
+  song.reverb = { room: 0.8, damp: 0.3, width: 1, level: 0.62 };
+  instrument(song, 0, GM.trumpet, { volume: 88, pan: 68, reverb: 60 });
+  instrument(song, 1, GM.horn, { volume: 90, pan: 52, reverb: 65 });
+  instrument(song, 2, GM.piccolo, { volume: 70, pan: 80, reverb: 65 });
+  instrument(song, 3, GM.timpani, { volume: 86, reverb: 60 });
+  instrument(song, 4, GM.trombone, { volume: 82, pan: 44, reverb: 60 });
+  instrument(song, 5, GM.contrabass, { volume: 84, reverb: 50 });
+  instrument(song, DRUMS, KIT.orchestra, { volume: 76, reverb: 60 });
+  const intro = section(song, "intro", 2, ["i", "V+"]);
+  line(intro, { ch: 1, notes: FANFARE, vel: 84 });
+  roots(intro, { ch: 3, octave: -2, vel: 70, hits: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((t) => [t, 0.5, 0.6]) });
+  const prog = ["i", "iv", "VII", "III", "VI", "iv", "V+", "i", "iv", "VI", "VII", "V+"];
+  const body = section(song, "body", 12, prog);
+  melody(body, { ch: 1, rhythms: RHYTHMS.epic, range: [0, 7], vel: 82, motifBars: [0, 4, 8], start: 7, seed: 2 });
+  comp(body, { ch: 0, hits: [[0, 0.9, 1], [2, 1.9, 0.85]], center: 60, vel: 52 });
+  arp(body, { ch: 2, step: 0.25, pattern: [7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 5, 4], center: 74, vel: 46 });
+  roots(body, { ch: 3, octave: -2, vel: 66, hits: [[0, 0.5, 1], [2, 0.5, 0.8], [3.5, 0.5, 0.6]] });
+  bass(body, { ch: 4, pattern: [[0, "R", 0.9, 1], [1, "5", 0.9, 0.8], [2, "8", 0.9, 0.85], [3, "5", 0.9, 0.8]], octave: -1, vel: 64 });
+  bass(body, { ch: 5, pattern: [[0, "R", 1.9, 1], [2, "R", 1.9, 0.8]], vel: 70 });
+  return { song };
+}
+
+/* ------------------------------------------------------------------------------------------- *
  * The track list
  * ------------------------------------------------------------------------------------------- */
 
@@ -765,20 +878,20 @@ const EPIC_DANGER_B = ["iv", "VI", "VII", "i", "iv", "VI", ["VII", "V+"], "i"];
 /** Every track, in the manifest's order. `loop` false: a sting that plays once. */
 export const TRACKS = [
   { id: "menu", loop: true, build: menu },
-  { id: "tavern-1", loop: true, build: () => tavern({ id: "tavern-1", tonic: "D", mode: "major", bpm: 96, A: TAVERN_A, B: TAVERN_B, lead: GM.flute, second: GM.fiddle }) },
-  { id: "tavern-2", loop: true, build: () => tavern({ id: "tavern-2", tonic: "G", mode: "mixolydian", bpm: 104, A: MIXO_A, B: MIXO_B, lead: GM.fiddle, second: GM.recorder }) },
+  { id: "tavern-1", loop: true, build: () => tavern({ id: "tavern-1", tonic: "D", mode: "major", bpm: 110, A: TAVERN_A, B: TAVERN_B, lead: GM.flute, second: GM.fiddle }) },
+  { id: "tavern-2", loop: true, build: () => tavern({ id: "tavern-2", tonic: "G", mode: "mixolydian", bpm: 116, A: MIXO_A, B: MIXO_B, lead: GM.fiddle, second: GM.recorder }) },
   { id: "tavern-danger", loop: true, build: () => tavern({ id: "tavern-danger", tonic: "D", mode: "minor", bpm: 112, A: TAVERN_DANGER_A, B: TAVERN_DANGER_B, lead: GM.fiddle, second: GM.oboe, danger: true }) },
   { id: "tavern-start", loop: false, build: () => matchStart("tavern") },
-  { id: "edm-1", loop: true, build: () => edm({ id: "edm-1", tonic: "A", mode: "minor", bpm: 112, A: EDM_A, B: EDM_B }) },
-  { id: "edm-2", loop: true, build: () => edm({ id: "edm-2", tonic: "D", mode: "minor", bpm: 108, A: EDM2_A, B: EDM2_B }) },
+  { id: "edm-1", loop: true, build: () => edm({ id: "edm-1", tonic: "A", mode: "minor", bpm: 122, A: EDM_A, B: EDM_B }) },
+  { id: "edm-2", loop: true, build: () => edm({ id: "edm-2", tonic: "D", mode: "minor", bpm: 120, A: EDM2_A, B: EDM2_B }) },
   { id: "edm-danger", loop: true, build: () => edm({ id: "edm-danger", tonic: "A", mode: "minor", bpm: 124, A: EDM_DANGER_A, B: EDM_DANGER_B, danger: true }) },
   { id: "edm-start", loop: false, build: () => matchStart("edm") },
-  { id: "lofi-1", loop: true, build: () => lofi({ id: "lofi-1", tonic: "F", mode: "major", bpm: 82, A: LOFI_A, B: LOFI_B }) },
-  { id: "lofi-2", loop: true, build: () => lofi({ id: "lofi-2", tonic: "Bb", mode: "major", bpm: 86, A: LOFI2_A, B: LOFI2_B }) },
+  { id: "lofi-1", loop: true, build: () => lofi({ id: "lofi-1", tonic: "F", mode: "major", bpm: 94, A: LOFI_A, B: LOFI_B }) },
+  { id: "lofi-2", loop: true, build: () => lofi({ id: "lofi-2", tonic: "Bb", mode: "major", bpm: 98, A: LOFI2_A, B: LOFI2_B }) },
   { id: "lofi-danger", loop: true, build: () => lofi({ id: "lofi-danger", tonic: "F", mode: "minor", bpm: 88, A: LOFI_DANGER_A, B: LOFI_DANGER_B, danger: true }) },
   { id: "lofi-start", loop: false, build: () => matchStart("lofi") },
-  { id: "epic-1", loop: true, build: () => epic({ id: "epic-1", tonic: "D", mode: "minor", bpm: 88, A: EPIC_A, B: EPIC_B }) },
-  { id: "epic-2", loop: true, build: () => epic({ id: "epic-2", tonic: "G", mode: "minor", bpm: 92, A: EPIC2_A, B: EPIC2_B }) },
+  { id: "epic-1", loop: true, build: () => epic({ id: "epic-1", tonic: "D", mode: "minor", bpm: 100, A: EPIC_A, B: EPIC_B }) },
+  { id: "epic-2", loop: true, build: () => epic({ id: "epic-2", tonic: "G", mode: "minor", bpm: 104, A: EPIC2_A, B: EPIC2_B }) },
   { id: "epic-danger", loop: true, build: () => epic({ id: "epic-danger", tonic: "D", mode: "minor", bpm: 96, A: EPIC_DANGER_A, B: EPIC_DANGER_B, danger: true }) },
   { id: "epic-start", loop: false, build: () => matchStart("epic") },
   { id: "victory", loop: true, build: victory },
@@ -792,4 +905,6 @@ export const TRACKS = [
   { id: "mythic-in-too-deep", loop: true, build: inTooDeep },
   { id: "mythic-zephrys-zealotism", loop: true, build: zephrysZealotism },
   { id: "mythic-twice-forward", loop: true, build: twiceForward },
+  { id: "legendary-1", loop: true, build: legendaryTheme1 },
+  { id: "legendary-2", loop: true, build: legendaryTheme2 },
 ];

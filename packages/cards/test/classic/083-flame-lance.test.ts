@@ -1,5 +1,5 @@
 // C #83 Flame Lance (SPEC §8.6 row 83; BUILD M9 row C 83). (3) Spell, Common: Trample; deal {damage}
-// damage to a Unit — damage 11, Radiant 22, step 2.
+// damage to a Unit — damage 10, Radiant 20, step 2.
 
 import { describe, expect, it } from "vitest";
 import { legalActions, stepParam } from "@jackioh/engine";
@@ -35,24 +35,24 @@ describe("C #83 Flame Lance", () => {
       expect(() => s.play(LANCE, { targets: [{ pick: "hero", player: "p2" }] })).toThrow();
     });
 
-    it("§4.4 step 9 Trample: 11 into a 4/4, the 7 beyond its health a new instance on its controller's hero", () => {
+    it("§4.4 step 9 Trample: 10 into a 4/4, the 6 beyond its health a new instance on its controller's hero", () => {
       const s = scenario({ p1: { hand: [LANCE, STOCKPILE], library: SPARE.library }, p2: { field: [VANILLA], ...SPARE } });
       const foe = s.unit("p2", 1)!;
       lanceAt(s, foe.id);
       expect(hitsOf(s)).toEqual([
         { targetId: foe.id, amount: 4 },
-        { targetId: "hero-p2", amount: 7 },
+        { targetId: "hero-p2", amount: 6 },
       ]);
-      s.expectInZone(foe, "graveyard").expectHealth("p2", 23);
+      s.expectInZone(foe, "graveyard").expectHealth("p2", 24);
     });
 
-    it("R63 the target's health before the hit is its current health: 11 into a 4/4 with 3 damage tramples 10", () => {
+    it("R63 the target's health before the hit is its current health: 10 into a 4/4 with 3 damage tramples 9", () => {
       const s = scenario({ p1: { hand: [LANCE, STOCKPILE], library: SPARE.library }, p2: { field: [{ def: VANILLA, damage: 3 }], ...SPARE } });
       const foe = s.unit("p2", 1)!;
       lanceAt(s, foe.id);
       expect(hitsOf(s)).toEqual([
         { targetId: foe.id, amount: 1 },
-        { targetId: "hero-p2", amount: 10 },
+        { targetId: "hero-p2", amount: 9 },
       ]);
     });
 
@@ -68,17 +68,17 @@ describe("C #83 Flame Lance", () => {
     it("§8.6 either side: on your own Unit the excess hits your own hero", () => {
       const s = scenario({ p1: { hand: [LANCE, STOCKPILE], field: [VANILLA], library: SPARE.library }, p2: SPARE });
       lanceAt(s, s.unit("p1", 1)!.id);
-      s.expectHealth("p1", 23);
+      s.expectHealth("p1", 24);
     });
 
     it("§4.4 step 2 Armor lowers the hit before the excess is taken", () => {
-      // A Unit in Defense Position has Armor 1: 11 − 1 = 10, 4 to it and 6 beyond.
+      // A Unit in Defense Position has Armor 1: 10 − 1 = 9, 4 to it and 5 beyond.
       const s = scenario({ p1: { hand: [LANCE, STOCKPILE], library: SPARE.library }, p2: { field: [{ def: VANILLA, position: "DEF" }], ...SPARE } });
       const foe = s.unit("p2", 1)!;
       lanceAt(s, foe.id);
       expect(hitsOf(s)).toEqual([
         { targetId: foe.id, amount: 4 },
-        { targetId: "hero-p2", amount: 6 },
+        { targetId: "hero-p2", amount: 5 },
       ]);
     });
 
@@ -95,27 +95,27 @@ describe("C #83 Flame Lance", () => {
       rock.expectHealth("p2", 30);
     });
 
-    it("R386 its tuned number: an Upgrade's step of 2 makes it 13, 9 beyond a 4/4", () => {
+    it("R386 its tuned number: an Upgrade's step of 2 makes it 12, 8 beyond a 4/4", () => {
       const s = scenario({ p1: { hand: [LANCE, STOCKPILE], library: SPARE.library }, p2: { field: [VANILLA], ...SPARE } });
       stepParam(s.card(LANCE), "damage", 1);
       lanceAt(s, s.unit("p2", 1)!.id);
-      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 9]);
+      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 8]);
     });
   });
 
   describe("radiant", () => {
-    it("§8.6 22 damage: 18 beyond a 4/4", () => {
+    it("§8.6 20 damage: 16 beyond a 4/4", () => {
       const s = scenario({ p1: { hand: [{ def: LANCE, radiant: true }, STOCKPILE], library: SPARE.library }, p2: { field: [VANILLA], ...SPARE } });
       lanceAt(s, s.unit("p2", 1)!.id);
-      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 18]);
-      s.expectHealth("p2", 12);
+      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 16]);
+      s.expectHealth("p2", 14);
     });
 
-    it("R386 a Degrade's step of 2 makes the Radiant 20", () => {
+    it("R386 a Degrade's step of 2 makes the Radiant 18", () => {
       const s = scenario({ p1: { hand: [{ def: LANCE, radiant: true }, STOCKPILE], library: SPARE.library }, p2: { field: [VANILLA], ...SPARE } });
       stepParam(s.card(LANCE), "damage", -1);
       lanceAt(s, s.unit("p2", 1)!.id);
-      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 16]);
+      expect(hitsOf(s).map((hit) => hit.amount)).toEqual([4, 14]);
     });
   });
 });

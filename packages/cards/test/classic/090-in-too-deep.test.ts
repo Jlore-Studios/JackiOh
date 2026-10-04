@@ -305,17 +305,16 @@ describe("C #90 In Too Deep", () => {
       expect(s.pile("p1", "graveyard")).toEqual([]);
     });
 
-    it("R471 reward D: three Plague Token placements, each a prompt of yours over every permanent, then quest 5", () => {
+    it("R471 R648 reward D: three Plague Token placements on the one permanent a single prompt of yours names, then quest 5", () => {
       const s = scenario({ p1: { backrow: [ITD], field: [VANILLA], ...SPARE }, p2: { field: [MENACE], ...SPARE } });
       onQuest(s, "2", 2);
       anyAction(s);
       s.answer("D");
       const foe = must(s.unit("p2", 1), "Menace");
-      for (let at = 0; at < 3; at += 1) {
-        expect(pendingKind(s)).toBe("target");
-        expect(line(s)?.active).toEqual([]);
-        s.answer(foe.id);
-      }
+      expect(pendingKind(s)).toBe("target");
+      expect(line(s)?.active).toEqual([]);
+      // One answer puts all three on the pick: no second prompt opens.
+      s.answer(foe.id);
       expect(s.card(foe).counters.plague).toBe(3);
       expect(line(s)).toMatchObject({ active: ["5"], done: ["2"] });
     });
@@ -741,7 +740,7 @@ describe("C #90 In Too Deep", () => {
       // met by the board (In Too Deep and two Units).
       setLine(s, { active: ["2", "3"], progress: { "2": 2 }, done: ["1"] });
       anyAction(s);
-      // Quest 2: C (two graveyard cards), D (three placements); quest 3: D again (three more), E.
+      // Quest 2: C (two graveyard cards), D (three placements on one pick); quest 3: D again, E.
       const foe = must(s.unit("p2", 1), "Menace");
       let placements = 0;
       while (s.state.pending !== null) {
@@ -749,7 +748,8 @@ describe("C #90 In Too Deep", () => {
         s.answer(foe.id);
         placements += 1;
       }
-      expect(placements).toBe(6);
+      // One prompt per D grant (R648): two answers, six counters.
+      expect(placements).toBe(2);
       expect(s.card(foe).counters.plague).toBe(6);
       expect(s.events.filter((e) => e.type === "buffed")).toHaveLength(1);
       const memory = must(line(s), "the line");
