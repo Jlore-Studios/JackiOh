@@ -2200,12 +2200,25 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "cognition"
         ],
         "builder": "cognition",
         "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "tier": "medium"
+          },
+          {
+            "family": "cognition",
+            "run": "37234186251",
+            "tier": "weak"
+          }
+        ],
         "sha": "f5f6cfd0c29c1fd0624e474cbd8eb605625dd89c",
         "tiers": {
+          "cognition": "weak",
           "muse": "medium"
         }
       }
