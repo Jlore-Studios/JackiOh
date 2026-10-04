@@ -16,7 +16,7 @@
 #   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest),
 #                      if GitHub starts it: read the new comments, merge if due and not on hold, then
 #                      close the issue with the pull request and open the next.
-#   issue_comment      a /hold, /resume or /delay on the countdown issue, from someone GitHub calls an
+#   issue_comment      a /hold, /resume, /delay or /fast-forward on the countdown issue, from someone GitHub calls an
 #                      owner, member or collaborator: the same check, so the answer is quick and a
 #                      /resume on an overdue merge goes out at once.
 #   workflow_run (CI)  right after a green CI run on main: the same check, and the one that does the
@@ -94,7 +94,7 @@ jobs:
         && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
         && (contains(github.event.comment.body, '/hold') || contains(github.event.comment.body, '/resume')
           || contains(github.event.comment.body, '/release') || contains(github.event.comment.body, '/unhold')
-          || contains(github.event.comment.body, '/delay')))
+          || contains(github.event.comment.body, '/delay') || contains(github.event.comment.body, '/fast-forward')))
     concurrency:
       group: promote-production
       cancel-in-progress: false
