@@ -3187,8 +3187,24 @@
         {
           "at": "2026-10-04T15:35:00Z",
           "minutes": 15.9
+        },
+        {
+          "at": "2026-10-04T15:58:59Z",
+          "minutes": 16.9
         }
-      ]
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-04T18:42:00Z",
+          "utilization": 0.1
+        },
+        "observed_at": "2026-10-04T15:58:59Z",
+        "seven_day": {
+          "resets_at": "2026-10-05T00:00:00Z",
+          "utilization": 0.36
+        },
+        "status": "allowed"
+      }
     }
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
