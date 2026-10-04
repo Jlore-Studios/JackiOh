@@ -65,7 +65,7 @@ function shuffled<T>(items: readonly T[], random: RandomSource): T[] {
 /** How readily a card is drawn: a positive number, in proportion to the others'. */
 export type CardWeight = (def: CardDef) => number;
 
-/** Every card equally likely: R374's deal, which draws uniformly from a rarity, and R651's swaps below R639's threshold. */
+/** Every card equally likely: R374's deal, which draws uniformly from a rarity, and R653's swaps below R639's threshold. */
 export const EVEN: CardWeight = () => 1;
 
 const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 3, xxl: 4 };

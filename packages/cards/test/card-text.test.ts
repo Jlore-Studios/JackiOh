@@ -126,10 +126,12 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and the current catalog", () => {
+  it("R366 patch v0.2.4 only changes base.text and radiant.text between v0.2.0 and v0.2.4", () => {
     const before = readSnapshot("v0.2.0");
+    const after = readSnapshot("v0.2.4");
     const differingCards: string[] = [];
-    for (const [id, currentCard] of Object.entries(CATALOG)) {
+    for (const [id, currentRaw] of Object.entries(after)) {
+      const currentCard = currentRaw as unknown as CardDef;
       const priorCard = before[id] as unknown as CardDef | undefined;
       expect(priorCard, `card ${id} existed in v0.2.0`).toBeDefined();
       if (!priorCard) continue;
@@ -173,6 +175,87 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
       "classicplus-026",
       "classicplus-034",
       "classicplus-052",
+    ]);
+  });
+
+  it("R366 patch v0.2.5 changes only its mechanics cards between v0.2.4 and the current catalog", () => {
+    const before = readSnapshot("v0.2.4");
+    const nonTextChanged: Record<string, string[]> = {};
+    const differingCards: string[] = [];
+    for (const [id, currentCard] of Object.entries(CATALOG)) {
+      const priorCard = before[id] as unknown as CardDef | undefined;
+      expect(priorCard, `card ${id} existed in v0.2.4`).toBeDefined();
+      if (!priorCard) continue;
+
+      const priorNonText = {
+        ...priorCard,
+        base: { ...priorCard.base, text: "" },
+        radiant: { ...priorCard.radiant, text: "" },
+      };
+      const currentNonText = {
+        ...currentCard,
+        base: { ...currentCard.base, text: "" },
+        radiant: { ...currentCard.radiant, text: "" },
+      };
+      const changed = [...new Set([...Object.keys(priorNonText), ...Object.keys(currentNonText)])].filter(
+        (field) =>
+          JSON.stringify(priorNonText[field as keyof CardDef]) !==
+          JSON.stringify(currentNonText[field as keyof CardDef]),
+      );
+      if (changed.length > 0) nonTextChanged[id] = changed;
+
+      if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) {
+        differingCards.push(id);
+      }
+    }
+    // Seventeen cards gain the Plague tag and nothing else; Exile moves its threshold, Blade Storm
+    // gains its Whirlwind ref, Adaptive Growth its numbers, Chaos Machine its lines of code.
+    expect(nonTextChanged).toEqual({
+      "core-091": ["tags"],
+      "classic-010": ["params"],
+      "classic-027": ["tags"],
+      "classic-039": ["tags"],
+      "classic-042": ["tags"],
+      "classic-043": ["tags"],
+      "classic-053": ["tags"],
+      "classic-059": ["tags"],
+      "classic-061": ["tags"],
+      "classic-062": ["tags"],
+      "classic-063": ["tags"],
+      "classic-069": ["tags"],
+      "classic-070": ["tags"],
+      "classic-074": ["tags"],
+      "classic-076": ["tags"],
+      "classic-078": ["tags"],
+      "classic-087": ["tags"],
+      "classicplus-003": ["tags"],
+      "classicplus-032-3": ["refs"],
+      "classicplus-050": ["params", "loc"],
+      "classicplus-070": ["loc"],
+    });
+    expect(differingCards).toEqual([
+      "core-091",
+      "classic-010",
+      "classic-027",
+      "classic-033",
+      "classic-039",
+      "classic-042",
+      "classic-043",
+      "classic-053",
+      "classic-059",
+      "classic-061",
+      "classic-062",
+      "classic-063",
+      "classic-069",
+      "classic-070",
+      "classic-074",
+      "classic-076",
+      "classic-078",
+      "classic-087",
+      "classicplus-003",
+      "classicplus-032-3",
+      "classicplus-050",
+      "classicplus-070",
     ]);
   });
 

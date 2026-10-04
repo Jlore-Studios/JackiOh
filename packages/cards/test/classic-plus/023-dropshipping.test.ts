@@ -7,7 +7,7 @@
 // field; the owner sees the counts, the opponent sees three cards added under the sentinel (R97); a full hand burns
 // the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
 
-import { HAND_CAP, hashState, query, reduce, stepParam, type GameState } from "@jackioh/engine";
+import { createRng, GRAPE_ODDS, HAND_CAP, hashState, pickGenerated, query, reduce, stepParam, type GameState } from "@jackioh/engine";
 import type { Action, CardView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "../_harness";
@@ -87,6 +87,34 @@ describe("C+ #23 Dropshipping", () => {
         }
       }
       expect(sawToken).toBe(true);
+    });
+
+    it("R382 a Grape the pool picks is re-rolled on GRAPE_ODDS, not generated as picked", () => {
+      // Each seed below picks a Grape mid-pool (read off the probe rng): the card Dropshipping
+      // generates for it is the re-roll, so the generated triple equals `pickGenerated` three times
+      // over — and differs from the picked triple, which a plain `rng.pick` would generate as is.
+      const pool = query({ withTokens: true, excludeDefId: DROP });
+      const grapes = new Set(GRAPE_ODDS.map((grape) => grape.defId));
+      const table = GRAPE_ODDS.reduce((sum, grape) => sum + grape.percent, 0);
+      let differed = 0;
+      for (const seed of ["drop-reroll-3", "drop-reroll-36", "drop-reroll-72", "drop-reroll-76"]) {
+        const s = shop(seed);
+        const rng = createRng(s.state.seed, s.state.rngCursor);
+        const probe = createRng(s.state.seed, s.state.rngCursor);
+        const expected: (string | undefined)[] = [];
+        const firsts: (string | undefined)[] = [];
+        for (let at = 0; at < 3; at += 1) {
+          const first = probe.pick(pool);
+          firsts.push(first?.id);
+          if (first !== undefined && grapes.has(first.id)) probe.int(table);
+          expected.push(pickGenerated(rng, pool)?.id);
+        }
+        expect(firsts.some((id) => id !== undefined && grapes.has(id))).toBe(true);
+        if (JSON.stringify(firsts) !== JSON.stringify(expected)) differed += 1;
+        s.play(DROP);
+        expect(added(s).map((id) => s.card(id).defId)).toEqual(expected);
+      }
+      expect(differed).toBeGreaterThan(0);
     });
 
     it("§9.3 the three random cards replay from a JSON copy to the same hash", () => {

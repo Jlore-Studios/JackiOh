@@ -1,9 +1,9 @@
 // C+ #50 Adaptive Growth — SPEC §8.7 row 50, BUILD M9 Classic+ row C+ 50: "Cast on draw (R70, R58): if
-// you control fewer Units than your opponent, every Unit on both sides gets −3/−3 (max health falls,
+// you control fewer Units than your opponent, every Unit on both sides gets −2/−2 (max health falls,
 // units at 0 die at the state check, an Indestructible one too, R69), otherwise every Unit gets +2/+2,
 // all permanent; equal counts take the second branch; played from a hand it does the same;
-// `conditionMet` in hand answers whether you control fewer Units now (R195); the buff and the radiant
-// debuff read through `param()`; radiant fewer: enemy Units −4/−4; otherwise your Units +3/+3".
+// `conditionMet` in hand answers whether you control fewer Units now (R195); both numbers read through
+// `param()`; radiant fewer: enemy Units −3/−3; otherwise your Units +3/+3".
 // The `conditionMet` proofs live in packages/cards/test/condition-active.test.ts (README §5).
 
 import { stepParam } from "@jackioh/engine";
@@ -13,7 +13,6 @@ import { base, def, radiant } from "../../src/scripts/classic-plus/050-adaptive-
 
 const GROWTH = "classicplus-050";
 const VANILLA = "core-008"; // Mr. Vanilla 4/4
-const RUSH = "core-t-rush"; // 3/3
 const ROCK = "core-066"; // The Rock, Indestructible
 const FIENDER = "core-092"; // Felinor Fiender, Stack
 const FILLER = "core-005";
@@ -52,24 +51,24 @@ describe("C+ #50 Adaptive Growth", () => {
       expect(s.hand("p1").filter((card) => card.defId === FILLER)).toHaveLength(2);
     });
 
-    it("§10.4 fewer Units than the opponent: every Unit on both sides gets −3/−3, max health too", () => {
+    it("§10.4 fewer Units than the opponent: every Unit on both sides gets −2/−2, max health too", () => {
       const s = drawn({ mine: [VANILLA], theirs: [VANILLA, VANILLA] });
       s.endTurn();
-      s.expectStats(s.unit("p1", 1) ?? "", { attack: 1, health: 1, maxHealth: 1 });
-      s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1, maxHealth: 1 });
-      s.expectStats(s.unit("p2", 2) ?? "", { attack: 1, health: 1, maxHealth: 1 });
+      s.expectStats(s.unit("p1", 1) ?? "", { attack: 2, health: 2, maxHealth: 2 });
+      s.expectStats(s.unit("p2", 1) ?? "", { attack: 2, health: 2, maxHealth: 2 });
+      s.expectStats(s.unit("p2", 2) ?? "", { attack: 2, health: 2, maxHealth: 2 });
     });
 
     it("§4.5 a Unit brought to 0 max health dies at the state check", () => {
-      const s = drawn({ mine: [], theirs: [RUSH] });
+      const s = drawn({ mine: [], theirs: [{ def: VANILLA, statsOverride: { attack: 2, health: 2 } }] });
       const token = s.unit("p2", 1);
       s.endTurn();
-      s.expectInZone(token ?? "", "gone");
+      s.expectInZone(token ?? "", "graveyard");
       expect(s.events.some((event) => event.type === "destroyed" && event.instanceId === token?.id)).toBe(true);
     });
 
     it("R69 an Indestructible Unit at 0 max health dies too", () => {
-      const s = drawn({ mine: [], theirs: [{ def: ROCK, statsOverride: { attack: 10, health: 3 } }] });
+      const s = drawn({ mine: [], theirs: [{ def: ROCK, statsOverride: { attack: 10, health: 2 } }] });
       const rock = s.unit("p2", 1);
       s.endTurn();
       s.expectInZone(rock ?? "", "graveyard");
@@ -100,7 +99,7 @@ describe("C+ #50 Adaptive Growth", () => {
       const buried = s.state.players.p1.units[0]?.find((card) => card.defId === VANILLA);
       if (buried === undefined) throw new Error("no pile");
       s.endTurn();
-      s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
+      s.expectStats(s.unit("p2", 1) ?? "", { attack: 2, health: 2 });
       // The dormant card is not on the field for effects (R13): it keeps its 4/4.
       expect(s.card(buried.id).buffs).toEqual({ attack: 0, health: 0 });
     });
@@ -108,32 +107,32 @@ describe("C+ #50 Adaptive Growth", () => {
     it("§6.2 played from a hand it does the same", () => {
       const fewer = held({ mine: [VANILLA], theirs: [VANILLA, VANILLA] });
       fewer.play(GROWTH);
-      fewer.expectStats(fewer.unit("p1", 1) ?? "", { attack: 1, health: 1 });
+      fewer.expectStats(fewer.unit("p1", 1) ?? "", { attack: 2, health: 2 });
 
       const more = held({ mine: [VANILLA], theirs: [] });
       more.play(GROWTH);
       more.expectStats(more.unit("p1", 1) ?? "", { attack: 6, health: 6 });
     });
 
-    it("R386 an Upgrade makes the buff +3/+3; the printed −3/−3 does not move", () => {
+    it("R386 an Upgrade moves both numbers: +3/+3 and −3/−3", () => {
       const up = held({ mine: [VANILLA], theirs: [] });
       stepParam(up.card(GROWTH), "buff", 1);
       up.play(GROWTH);
       up.expectStats(up.unit("p1", 1) ?? "", { attack: 7, health: 7 });
 
       const down = held({ mine: [VANILLA], theirs: [VANILLA, VANILLA] });
-      stepParam(down.card(GROWTH), "buff", 1);
+      stepParam(down.card(GROWTH), "debuff", 1);
       down.play(GROWTH);
       down.expectStats(down.unit("p1", 1) ?? "", { attack: 1, health: 1 });
     });
   });
 
   describe("radiant", () => {
-    it("fewer Units: only enemy Units get −4/−4", () => {
+    it("fewer Units: only enemy Units get −3/−3", () => {
       const s = drawn({ radiant: true, mine: [VANILLA], theirs: [VANILLA, { def: VANILLA, damage: 1 }] });
       s.endTurn();
       s.expectStats(s.unit("p1", 1) ?? "", { attack: 4, health: 4 });
-      expect(s.unit("p2", 1)).toBeNull();
+      s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
       expect(s.unit("p2", 2)).toBeNull();
     });
 
@@ -148,7 +147,7 @@ describe("C+ #50 Adaptive Growth", () => {
       const fewer = held({ radiant: true, mine: [VANILLA], theirs: [{ def: VANILLA, statsOverride: { attack: 9, health: 9 } }, VANILLA] });
       stepParam(fewer.card(GROWTH), "debuff", 1);
       fewer.play(GROWTH);
-      fewer.expectStats(fewer.unit("p2", 1) ?? "", { attack: 4, health: 4 });
+      fewer.expectStats(fewer.unit("p2", 1) ?? "", { attack: 5, health: 5 });
 
       const more = held({ radiant: true, mine: [VANILLA], theirs: [] });
       stepParam(more.card(GROWTH), "buff", -1);
