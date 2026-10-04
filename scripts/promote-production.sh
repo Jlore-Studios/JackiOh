@@ -436,6 +436,12 @@ check() {
   cand=$(vet "")
   promote "$cand" "the scheduled merge" "$issue"
   [ "$RESULT" != waiting ] || return 0
+  # Production has every green commit, but main is ahead of it: those commits' CI has not passed yet.
+  # That is not "nothing to merge". The countdown stays due, and the next green run on main merges.
+  if [ "$RESULT" = uptodate ] && [ "$(git rev-list --count origin/production..origin/main)" -gt 0 ]; then
+    echo "::notice::production has every green commit of main, but main has $(git rev-list --count origin/production..origin/main) newer commit(s) whose CI has not passed yet. #$issue stays due: the next green CI run on main merges them."
+    return 0
+  fi
   roll "$issue"
 }
 

@@ -288,6 +288,11 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
   ruleset), and the next run continues normally. The hourly check fails the same way until then.
+- **A run says "main has N newer commit(s) whose CI has not passed yet":** production has every
+  green commit and `main` is ahead. The countdown stays due (a `/fast-forward` too), and the next
+  green CI run on `main` merges. CI on `main` is never cancelled by a newer push (`ci.yml`'s
+  `concurrency`), so that is at most a run or two away; before that change a busy afternoon left no
+  commit of `main` green for hours.
 - **A run says "Not merging … yet: main has changed .github/workflows":** only without the
   `BOT_GITHUB_TOKEN` secret. The Actions token is refused a push of workflow files that differ from
   `main`'s, so while `main`'s newest commit changes a workflow and its CI is still running, the
