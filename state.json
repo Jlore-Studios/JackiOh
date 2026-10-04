@@ -706,7 +706,7 @@
       "ci_sha": "64ef8326932faae394ca3b66304b2d469d449cd8",
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-04T03:38:11Z",
+      "feedback_since": "2026-10-04T15:59:58Z",
       "forced": false,
       "interruptions": 0,
       "issue": 124,
@@ -719,7 +719,7 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37215064315",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-04T15:59:58Z",
       "stop_requested": false,
       "taken_asks": [
