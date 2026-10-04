@@ -1974,7 +1974,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T16:27:58Z",
+      "feedback_since": "2026-10-04T16:51:43Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T16:37:31Z",
@@ -2008,7 +2008,7 @@
           "where": "self check"
         }
       ],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-04T16:51:43Z",
       "stop_requested": false,
       "taken_asks": [],
