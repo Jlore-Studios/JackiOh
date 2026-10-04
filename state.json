@@ -1455,9 +1455,7 @@
       "source": "request",
       "started_at": "2026-10-04T03:36:28Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5976206149"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
