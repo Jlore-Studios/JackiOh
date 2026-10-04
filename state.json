@@ -1588,7 +1588,7 @@
       "planned_at": "2026-10-03T16:39:41Z",
       "pr": 166,
       "provider": "muse",
-      "question": "Continue the build from .bot-notes.md session 3: R647 Locked engine work is implemented and tested but its SPEC \u00a711 row is not yet written; plague single-target and recruit X-skip are not started; typecheck/eslint/validate:catalog/rulings:coverage were not re-run. Continue on this branch?",
+      "question": "Step budget exhausted mid-build: batch-2 card tests are green and the merge is marked resolved, but SPEC \u00a78 rows (#31/#39/#46/#60/#63/#78) plus BUILD/docs rows and the final gates still need a continuation run \u2014 shall /harness continue pick up exactly that list?",
       "queued_at": "2026-10-03T23:17:22Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37166153403",
