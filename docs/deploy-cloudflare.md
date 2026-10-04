@@ -28,7 +28,10 @@ only ever moves forward along main.
    staging (unless `scripts/vercel-ignore.sh` skips it); and CI runs again on main.
 3. Every day at 15:00 UTC, `promote-production.yml` looks up the newest commit of `main` whose
    push-to-main CI run succeeded and fast-forwards `production` to it. If `production` is already
-   there, nothing happens and nothing deploys.
+   there, nothing happens and nothing deploys. GitHub did not start the first scheduled run (it
+   starts this repository's schedules late, if at all), so the same promotion also runs on the first
+   green CI run on `main` once its commit is `MAX_LAG_HOURS` (24) newer than `production`'s: the
+   daily promotion happens without the cron.
 4. Cloudflare's GitHub app sees the push to `production`, runs the build, and deploys it.
 
 ### 2.1 The catalog fast path, and why it exists
@@ -259,8 +262,10 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   cannot be served (delete it, so nobody edits it expecting an effect).
 - **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
   workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
-- **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for
-  60 days. Re-enable it in the Actions tab.
+- **Scheduled runs stop, or never start:** GitHub disables scheduled workflows in a repository with
+  no activity for 60 days, and may start a schedule late or not at all. Re-enable it in the Actions
+  tab. Nothing depends on it: a green push to `main` a day past `production`'s commit promotes it
+  too (section 2, step 3).
 
 ## 6. What needs no secret
 
