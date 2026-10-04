@@ -851,6 +851,41 @@ describe("a paired match whose start fails (§9.5)", () => {
     deps.matches = createFakeMatchDirectory(deps.store);
     expect((await readJson<QueueBody>(await enqueueWith(one, { mode: "bo1", deckId: deckA }))).status).toBe("open");
   });
+
+  it("frees a Conquest pair the same way, rolling the half-made series row back with it", async () => {
+    const one = activeProfile(deps, "series-a");
+    const two = activeProfile(deps, "series-b");
+    const trioA = await saveTrioFor(deps, "series-a");
+    const trioB = await saveTrioFor(deps, "series-b");
+
+    await enqueueWith(one, { mode: "bo3", trioId: trioA });
+    const calls: string[] = [];
+    deps.store.onCall = (method) => calls.push(method);
+    // The claim won, `series.create` had already landed inside the transaction, and then the
+    // start threw — what a transaction exists to take back. Without it the 'picking' row would
+    // hold both players out of the queue (R264) until the pick deadline ran the series out
+    // (R333), and the `open` skeleton forever.
+    const info = deps.log.info;
+    deps.log.info = (event, fields) => {
+      if (event === "series.started") throw new Error("log write refused");
+      return info(event, fields);
+    };
+
+    expect((await enqueueWith(two, { mode: "bo3", trioId: trioB })).status).toBe(500);
+    expect(calls).toContain("matches.discardOpen");
+    // The transaction's half: nothing of the series remains, and no in-match flag was ever set.
+    expect(deps.store.tables.series).toEqual([]);
+    for (const id of ["series-a", "series-b"]) {
+      expect(deps.store.tables.profiles.find((row) => row.id === id)?.inMatchId).toBeNull();
+    }
+
+    deps.log.info = info;
+    deps.matches = createFakeMatchDirectory(deps.store);
+    // Free means free: the same player can queue straight back up.
+    expect(
+      (await readJson<QueueBody>(await enqueueWith(one, { mode: "bo3", trioId: trioA }))).status,
+    ).toBe("open");
+  });
 });
 
 // ---------------------------------------------------------------------------

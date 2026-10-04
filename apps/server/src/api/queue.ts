@@ -35,7 +35,7 @@ import { ratingWindow } from "../config";
 import { callerProfile } from "./collection";
 import { assertNotInSeries, freezeChoice, readModeChoice, type ModeChoiceInput } from "./decks";
 import { ApiError, badRequest, ok, route, type Route } from "./http";
-import type { FrozenTrio, MatchSeat, Profile, ServerDeps, Ticket, Timer } from "./ports";
+import type { FrozenTrio, MatchSeat, Profile, ServerDeps, SeriesRow, Ticket, Timer } from "./ports";
 import { startSeries } from "./series";
 
 /** Unit conversion, not configuration: `ratingWindow` speaks seconds, tickets are stamped in ms. */
@@ -233,18 +233,39 @@ async function startPairedSeries(
   // R143 and R259: the server mints the series seed (each game's is `${seedBase}:${n}`), unless an
   // end-to-end enqueue supplied one.
   const seedBase = takeSeedForPair(a, b) ?? deps.ids.seed();
-  const series = await startSeries(deps, {
-    seriesId: deps.ids.uuid(),
-    firstMatchId: matchId,
-    sides: [
-      { profileId: older.profileId, trio: trioOf(older) },
-      { profileId: younger.profileId, trio: trioOf(younger) },
-    ],
-    seedBase,
-    catalogVersion: deps.catalog.version,
-    // R604: a series the queue pairs is ranked.
-    ranked: true,
-  });
+  let series: SeriesRow;
+  try {
+    // One transaction, so the series row and `startSeries`'s stale-ticket cancels land together
+    // or not at all: a 'picking' row that half-landed would hold both players out of the queue
+    // (assertNotInSeries) until the pick deadline ran it out (R333).
+    series = await deps.store.tx((t) =>
+      startSeries(deps, {
+        seriesId: deps.ids.uuid(),
+        firstMatchId: matchId,
+        sides: [
+          { profileId: older.profileId, trio: trioOf(older) },
+          { profileId: younger.profileId, trio: trioOf(younger) },
+        ],
+        seedBase,
+        catalogVersion: deps.catalog.version,
+        // R604: a series the queue pairs is ranked.
+        ranked: true,
+      }, t));
+  } catch (error) {
+    // `startPairedMatch`'s catch, for a pair that becomes a series rather than a match: the
+    // claimed tickets stay claimed either way (the pair is lost), but the `open` skeleton
+    // `claimPair` wrote points at nothing now — a series sets no in-match flag, so nothing else
+    // references it — and nothing reaps `open` rows. Delete it or it stays forever.
+    try {
+      await deps.store.matches.discardOpen(matchId);
+    } catch (cleanupError) {
+      deps.log.alert("queue.pair_cleanup_failed", {
+        matchId,
+        message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      });
+    }
+    throw error;
+  }
   deps.log.info("queue.paired", {
     mode: "bo3",
     seriesId: series.id,

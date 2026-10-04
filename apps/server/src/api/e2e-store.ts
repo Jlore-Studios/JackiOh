@@ -70,6 +70,7 @@ import {
   type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
+import { DuplicateResultError } from "./ports";
 import type {
   CatalogInfo,
   CodeAttempt,
@@ -578,7 +579,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables);
 
-  // SPEC §9.11: the ranked ladder, shared with the unit-test fake like the decks.
+  // SPEC §9.12: the ranked ladder, shared with the unit-test fake like the decks.
   store.ranked = createMemoryRankedStore(() => tables);
 
   // -------------------------------------------------------------------------
@@ -716,7 +717,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.results = {
     insert: async (row: ResultRow) => {
       if (tables.results.some((existing) => existing.matchId === row.matchId)) {
-        throw new Error(`results holds one row per match: ${row.matchId}`);
+        throw new DuplicateResultError(row.matchId);
       }
       tables.results.push(clone(row));
     },

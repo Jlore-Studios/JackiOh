@@ -32,7 +32,7 @@ import { ApiError, ok, route, type ApiRequest, type Route } from "../api/http";
 import { seedOverrideOf } from "../api/queue";
 import { startSeries } from "../api/series";
 import { ROOM_CODE_LENGTH } from "../config";
-import type { MatchSeat, QueueMode, Room, ServerDeps } from "../api/ports";
+import type { MatchSeat, QueueMode, Room, ServerDeps, SeriesRow } from "../api/ports";
 
 /**
  * SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
@@ -261,18 +261,40 @@ export function createRoomRoutes(): Route[] {
       // R259, R263: the series, with the host as series p1 and the id the claim reserved as game
       // 1's. Nobody is in a match yet: the series opens on its pick phase.
       if (claimed.hostTrio === null) throw new Error(`Conquest room ${claimed.code} holds no trio`);
-      const series = await startSeries(deps, {
-        seriesId: deps.ids.uuid(),
-        firstMatchId: matchId,
-        sides: [
-          { profileId: claimed.hostProfileId, trio: claimed.hostTrio },
-          { profileId, trio: frozen.trio },
-        ],
-        seedBase: seed,
-        catalogVersion: deps.catalog.version,
-        // R604: a room's series is unranked.
-        ranked: false,
-      });
+      // A named binding, since property narrowing does not survive into the transaction's callback.
+      const hostTrio = claimed.hostTrio;
+      let series: SeriesRow;
+      try {
+        // One transaction, so the series row and `startSeries`'s stale-ticket cancels land
+        // together or not at all: a 'picking' row that half-landed would hold both players out
+        // of the queue and the room until the pick deadline ran it out (R333).
+        series = await deps.store.tx((t) =>
+          startSeries(deps, {
+            seriesId: deps.ids.uuid(),
+            firstMatchId: matchId,
+            sides: [
+              { profileId: claimed.hostProfileId, trio: hostTrio },
+              { profileId, trio: frozen.trio },
+            ],
+            seedBase: seed,
+            catalogVersion: deps.catalog.version,
+            // R604: a room's series is unranked.
+            ranked: false,
+          }, t));
+      } catch (error) {
+        // The claim has already committed, so the room's `open` row is still there, claimed and
+        // pointing at no series — and nothing reaps `open` rows. `discardOpen` releases it, which
+        // frees the room code at once (`matches_room_code_open_key` covers only rows that exist).
+        try {
+          await deps.store.matches.discardOpen(matchId);
+        } catch (cleanupError) {
+          deps.log.alert("room.series_cleanup_failed", {
+            matchId,
+            message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+          });
+        }
+        throw error;
+      }
       deps.log.info("room.joined", {
         code: claimed.code,
         mode: claimed.mode,

@@ -70,14 +70,17 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
     };
-    await deps.store.matches.create(match);
-
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
-    // `beginGame` from `(seed, decks)` before it applies a single action (§9.3).
+    // `beginGame` from `(seed, decks)` before it applies a single action (§9.3). It runs before
+    // the row is written so a game the engine cannot begin leaves nothing behind: written first,
+    // the row went `live` with no actor and no log, and nothing but the ceiling reaper could ever
+    // end it — while an `open` skeleton a caller reserved stays `open`, which
+    // `matches.discardOpen` (R263) is still able to release.
     const state = deps.engine.beginGame(
       deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match) }),
     ).state;
 
+    await deps.store.matches.create(match);
     actors.set(match.id, createMatchActor(deps, { match, state }));
     deps.log.info("match.started", { matchId: match.id, players: match.players });
   }

@@ -413,6 +413,15 @@ export const WS_MAX_CONNECTIONS_PER_ADDRESS = 10;
 // SPEC §11 R108: 30 s. The ceiling itself is a 60-minute wall clock, so a half-minute reaper
 // sweep resolves a stuck match promptly without meaningfully scanning `matches` too often.
 export const MATCH_REAPER_INTERVAL_SECONDS = 30;
+/**
+ * §9.5's "every ending records a result", under two first writers at once — a live actor and the
+ * reaper resolving the same match. The transaction's own `getByMatch` cannot see the other's
+ * uncommitted write, so the loser only learns of the race when its insert hits `results_pkey`,
+ * and then runs the whole write again: the rerun either returns the row the winner committed or,
+ * if the winner rolled back, lands this one. Three losses in a row is a storm, not a race worth
+ * waiting out (the same bound R263 gives a series transition's compare-and-set).
+ */
+export const RESULT_WRITE_ATTEMPTS = 3;
 
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). PUBLIC: the deck builder imports these too.
@@ -652,6 +661,7 @@ export const SERVER_CONFIG = Object.freeze({
   API_REQUESTS_PER_MINUTE,
   WS_MAX_CONNECTIONS_PER_ADDRESS,
   MATCH_REAPER_INTERVAL_SECONDS,
+  RESULT_WRITE_ATTEMPTS,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
   DECK_NAME_MAX_LENGTH,

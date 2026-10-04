@@ -39,6 +39,8 @@ import type {
   ServerDeps,
   Store,
 } from "./ports";
+import { DuplicateResultError } from "./ports";
+import { RESULT_WRITE_ATTEMPTS } from "../config";
 import type { RecordResult, RecordResultInput, TerminalOutcome } from "../match/contracts";
 import { recordLiveGame } from "./game-records";
 import { rateRankedGame } from "./ranked";
@@ -71,15 +73,31 @@ type WriteInput = RecordResultInput & { ratingPolicy: RatingPolicy };
 type Written = { row: ResultRow; series: SeriesRow | null };
 
 /**
- * The one write. Everything it touches is inside `deps.store.tx`, so a mid-write failure leaves
- * no half-ended match: either the row, both ratings, both in-match flags and the match's own
- * `finished` state all land, or none of them do.
+ * The one write, retried on the collision below. Everything it touches is inside `deps.store.tx`,
+ * so a mid-write failure leaves no half-ended match: either the row, both ratings, both in-match
+ * flags and the match's own `finished` state all land, or none of them do.
  */
 async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written> {
-  return deps.store.tx(async (t: Store): Promise<Written> => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await deps.store.tx((t) => writeOnce(deps, t, input));
+    } catch (error) {
+      // `getByMatch` cannot see a concurrent first writer's uncommitted row, so two writers
+      // resolving one match at once both pass the read and one loses on `results_pkey`. That loss
+      // is the same repeat, arriving the hard way: the winner's row has committed by the time the
+      // loser's next transaction reads for it — and if the winner rolled back instead, the rerun
+      // simply lands this write. Anything but the duplicate is a real failure and stands.
+      if (!(error instanceof DuplicateResultError) || attempt >= RESULT_WRITE_ATTEMPTS) throw error;
+    }
+  }
+}
+
+/** One attempt of the write, run as the body of `writeResult`'s transaction. */
+async function writeOnce(deps: ServerDeps, t: Store, input: WriteInput): Promise<Written> {
     // §9.5 idempotency: one row per match. The in-memory store and the `results` primary key both
-    // refuse a second row, so this read is what turns that refusal into a clean no-op — and it is
-    // inside the transaction, so a concurrent actor and reaper cannot both pass it.
+    // refuse a second row, so this read is what turns that refusal into a clean no-op. It only sees
+    // committed rows, though — two first writers can both pass it, which is what the retry above
+    // is for: the loser's insert meets `results_pkey` instead.
     const already = await t.results.getByMatch(input.matchId);
     if (already !== null) return { row: already, series: null };
 
@@ -197,7 +215,6 @@ async function writeResult(deps: ServerDeps, input: WriteInput): Promise<Written
       ...(advanced === null ? {} : { seriesId: advanced.id, seriesStatus: advanced.status }),
     });
     return { row, series: advanced };
-  });
 }
 
 /**

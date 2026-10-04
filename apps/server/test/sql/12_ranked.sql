@@ -412,4 +412,55 @@ begin
 end $$;
 rollback;
 
+\echo '### R604: a ranked match is ended only by the server's own write — app.end_match refuses it and the SQL reaper skips it ###'
+begin;
+-- A stale live match, ranked: the ending the flag names is the server's transaction (the hidden
+-- rating move, the ladder write and the rated_games record), never this path's unrated row.
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, started_at, ceiling_at, ranked)
+  values ('dddddddd-0000-4000-8000-000000000001', 'live', 'seed',
+          '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+          '[]'::jsonb, '[]'::jsonb, 'core-1', now(), now() - interval '1 minute', true),
+         -- The control: an unranked stale match beside it, which the same sweep must still reap.
+         ('dddddddd-0000-4000-8000-000000000002', 'live', 'seed',
+          '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
+          '[]'::jsonb, '[]'::jsonb, 'core-1', now(), now() - interval '1 minute', false);
+do $$
+declare
+  v_reaped int;
+begin
+  -- Directly, before the idempotent return even reaches the row: a ranked match raises.
+  begin
+    perform app.end_match('dddddddd-0000-4000-8000-000000000001', null, 'match-ceiling', 0, 1000, 1000);
+    raise exception 'FAIL (R604): app.end_match ended a ranked match — the unrated row it writes moves no rating and leaves the ladder silent';
+  exception
+    when raise_exception then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      if sqlerrm not like '%server%to end%' then
+        raise exception 'FAIL (R604): end_match raised "%", not the ranked guard', sqlerrm;
+      end if;
+  end;
+  if (select status from public.matches where id = 'dddddddd-0000-4000-8000-000000000001')
+       is distinct from 'live' then
+    raise exception 'FAIL (R604): the refused end_match still touched the ranked match';
+  end if;
+
+  -- The sweep skips the ranked row rather than aborting on it: the unranked one reaps beside it.
+  v_reaped := app.reap_stale_matches();
+  if v_reaped <> 1 then
+    raise exception 'FAIL (R604): the reaper returned % — expected 1 (the unranked match, the ranked one skipped)', v_reaped;
+  end if;
+  if (select status from public.matches where id = 'dddddddd-0000-4000-8000-000000000001')
+       is distinct from 'live' then
+    raise exception 'FAIL (R604): the SQL reaper ended a ranked match — the server-side reaper is its path';
+  end if;
+  if (select status from public.matches where id = 'dddddddd-0000-4000-8000-000000000002')
+       is distinct from 'over' then
+    raise exception 'FAIL (R604): the SQL reaper stopped ending unranked matches';
+  end if;
+
+  raise notice 'OK (R604): app.end_match refuses a ranked match; the SQL reaper skips it and still ends unranked ones';
+end $$;
+rollback;
+
 \echo '### ALL RANKED CHECKS RAN ###'

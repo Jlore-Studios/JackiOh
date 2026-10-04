@@ -2306,12 +2306,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   });
 
   // Proved by series-recovery.test.ts "R263 …" (the sweeper starts a game a restart left unstarted;
-  // a second process continues the series) and the store contract's "R263 …" (compare-and-set).
+  // a second process continues the series), the store contract's "R263 …" (compare-and-set) and
+  // 04_decks_and_series.sql "### R263: a series' game in play is ended only by the server's own
+  // write ###" (the legacy end_match and SQL reaper refuse it).
   it("R263 keeps a series in the database, so it survives a restart", () => {
     expect(serverConstant(SERVER_CONFIG, "SERIES_SWEEP_INTERVAL_SECONDS")).toBe("5");
     expect(serverConstant(SERVER_CONFIG, "SERIES_START_GRACE_SECONDS")).toBe("15");
     expect(serverConstant(SERVER_CONFIG, "SERIES_START_GIVE_UP_SECONDS")).toBe("120");
-    provenIn(263, SERVER_SERIES_RECOVERY_TEST, SERVER_STORE_CONTRACT);
+    provenIn(263, SERVER_SERIES_RECOVERY_TEST, SERVER_STORE_CONTRACT, SERVER_DECKS_SQL);
   });
 
   // Proved by rooms.test.ts "R264 …", the store contract's "R264 …" (a room's mode and trio) and

@@ -21,9 +21,14 @@
 --   3. Recreates app.end_match on the widened rating: its p_*_rating_after
 --      arguments and before-rating locals follow the columns to double
 --      precision, so the SQL-only path cannot truncate a Glicko rating to an
---      integer. app.reap_stale_matches (0004) needs no change -- its
---      `(select rating ...)` arguments now arrive in the type the new
---      signature asks for.
+--      integer -- and it gains a guard, because the SQL-only path is now the
+--      wrong one for two kinds of match it used to end: a ranked match (whose
+--      rating move, ladder write and rated-game record live in apps/server's
+--      results transaction, R603-R611) and a series' game in play (whose
+--      ending must advance the series in the same write, R263). app.end_match
+--      refuses both, and app.reap_stale_matches is re-created to skip them:
+--      their ceiling draw is the server-side reaper's, and a wedged one must
+--      not abort the sweep for everyone else.
 --   4. Creates the four tables the ladder keeps:
 --      * public.seasons      -- one row per season, named by the minor
 --                               version (R609): 'v0.2' for every patch of v0.2.
@@ -115,17 +120,35 @@ comment on column public.series.ranked is
   'R604: true for a Conquest the queue paired. R262/R604: it moves the rating once, when the series ends, from the ratings at the time it ends.';
 
 -- ----------------------------------------------------------------------------
--- 3. app.end_match on the widened rating.
+-- 3. app.end_match on the widened rating, and the reaper narrowed to the
+--    matches that are still its own.
 -- ----------------------------------------------------------------------------
--- The same function as 0004's, verbatim except for the two types that follow
--- the widened columns: the p_*_rating_after arguments and the
--- v_*_rating_before locals move to double precision. A signature change
--- cannot be `create or replace`d, so the old one is dropped first. Its
--- remaining callers are 0004's app.reap_stale_matches and the e2e onlineReset
--- task, whose `(select rating ...)` arguments now arrive in the type this
--- signature asks for; the server's own ending is results.ts's
--- one-transaction write set and never calls this function (db/store.ts's
--- matches.finish comment).
+-- The same function as 0004's except for the two types that follow
+-- the widened columns (the p_*_rating_after arguments and the
+-- v_*_rating_before locals move to double precision) and one guard. A
+-- signature change cannot be `create or replace`d, so the old one is dropped
+-- first. Its remaining callers are 0004's app.reap_stale_matches (re-created
+-- just below) and the e2e onlineReset task, whose `(select rating ...)`
+-- arguments now arrive in the type this signature asks for; the server's own
+-- ending is results.ts's one-transaction write set and never calls this
+-- function (db/store.ts's matches.finish comment).
+--
+-- THE GUARD. Until the flag existed this function was "the one path that
+-- terminates a match"; for two kinds of match that is no longer true:
+--
+--   * A RANKED match. Its ending moves both hidden Glicko ratings, both
+--     season ranks and the public.rated_games record (R603-R611) — all
+--     computed and written inside apps/server's results transaction. This
+--     path writes the results row and nothing else, which is exactly the
+--     unrated write a ranked match must never get.
+--   * A series' game in play. R263: a game's result and the series' record of
+--     it commit in one transaction — `series.next_match_id` advancing to the
+--     next game is a transition only the server can compute. A match ended
+--     here stays `next_match_id` for ever: the series sits 'playing' on a
+--     finished match and its players are locked out of the queue.
+--
+-- Both are the server-side reaper's (results.ts reapStuckMatches), which ends
+-- them through the same write as everything else.
 drop function if exists app.end_match(uuid, uuid, text, int, int, int);
 
 create or replace function app.end_match(
@@ -149,6 +172,15 @@ begin
 
   if not found then
     raise exception 'app.end_match: match % not found', p_match_id;
+  end if;
+
+  -- A match the server's result write must end (see the comment above the
+  -- function): a ranked one, or one a series calls its game in play. Raised
+  -- before the idempotent return below so a second call on an already-'over'
+  -- such match still reports the wrong path rather than pretending it worked.
+  if v_match.ranked
+     or exists (select 1 from public.series s where s.next_match_id = p_match_id) then
+    raise exception 'app.end_match: match % is the server''s to end (ranked or a series game)', p_match_id;
   end if;
 
   -- Idempotent on a second call for the same match: SPEC §9.5's reaper
@@ -207,10 +239,73 @@ comment on function app.end_match(uuid, uuid, text, int, double precision, doubl
   call for an already-'over' match. Takes *_rating_after as arguments --
   the Glicko-2 update (SPEC §9.12, R603) is computed in apps/server, so
   its constants are not duplicated in SQL. 0019 widened the rating
-  arguments to doubles.$$;
+  arguments to doubles and refused the matches only the server's result
+  write may end: a ranked one, or one a series calls its game in play
+  (R263) -- see the comment above the function.$$;
 
 revoke all on function app.end_match(uuid, uuid, text, int, double precision, double precision) from public;
 grant execute on function app.end_match(uuid, uuid, text, int, double precision, double precision) to service_role;
+
+-- ----------------------------------------------------------------------------
+-- app.reap_stale_matches, narrowed to the matches that are still its own.
+-- ----------------------------------------------------------------------------
+-- 0004's function verbatim but for its scan, which now skips the two kinds
+-- app.end_match above refuses: a ranked match and a series' game in play.
+-- Skipping is the right shape rather than letting app.end_match's refusal
+-- abort the pass: a stuck ranked match is the server-side reaper's work, and
+-- one wedged row must not keep every unranked stale match behind it from
+-- being swept in the meantime. R112's ceiling-draw semantics are unchanged:
+-- the matches this still ends are exactly the unrated, non-series ones the
+-- SQL-only path has always correctly resolved.
+create or replace function app.reap_stale_matches() returns int
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_match record;
+  v_count int := 0;
+begin
+  for v_match in
+    select m.id, m.p1_profile_id, m.p2_profile_id
+    from public.matches m
+    where m.status = 'live' and m.ceiling_at < now()
+      -- See app.end_match's guard: these two are the server-side reaper's.
+      and not m.ranked
+      and not exists (select 1 from public.series s where s.next_match_id = m.id)
+    for update skip locked
+  loop
+    -- SPEC §11 R112: turns is not tracked on public.matches (the live turn
+    -- counter lives only in the match actor's in-memory GameState), so a
+    -- ceiling draw the reaper resolves records turns = 0 rather than the
+    -- true count. A server-driven ceilingReached action (the normal
+    -- path) always has the real turn count from GameState and should be
+    -- preferred whenever the actor is still alive; this reaper is the
+    -- last-resort path for when it is not.
+    perform app.end_match(
+      v_match.id,
+      null,
+      'match-ceiling',
+      0,
+      (select rating from public.profiles where id = v_match.p1_profile_id),
+      (select rating from public.profiles where id = v_match.p2_profile_id)
+    );
+
+    v_count := v_count + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+comment on function app.reap_stale_matches() is
+  $$SPEC §9.5's reaper: ends every `live` match past ceiling_at as a draw
+  with reason 'match-ceiling', ratings unchanged -- except the matches the
+  server's result write must end (a ranked one, or a series' game in play;
+  see app.end_match's guard), which it leaves to the server-side reaper.
+  See 0004 for the R112 rating-delta and turns-count choices. SKIP LOCKED
+  lets concurrent reaper runs split the work instead of double-processing
+  the same match. Returns the number of matches reaped.$$;
 
 -- ----------------------------------------------------------------------------
 -- 4a. public.seasons (R609): one row per minor version. `id` is the name a

@@ -20,6 +20,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { Action, GameRecord } from "@jackioh/shared";
+import { DuplicateResultError } from "../../src/api/ports";
 import type {
   FrozenTrio,
   LastBoardEntry,
@@ -1587,7 +1588,8 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         };
         await store.results.insert(row);
         expect(await store.results.getByMatch(matchId)).toEqual(row);
-        await expect(store.results.insert(row)).rejects.toThrow();
+        // The port's own refusal — `results.ts` retries on it, so it must not arrive untyped.
+        await expect(store.results.insert(row)).rejects.toThrow(DuplicateResultError);
       });
 
       it("records a draw as a null winner", async () => {

@@ -43,6 +43,7 @@ import {
   type TutorialTables,
 } from "../../src/api/memory-stores";
 import { RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START } from "../../src/config";
+import { DuplicateResultError } from "../../src/api/ports";
 import type {
   CodeAttempt,
   CollectionEntry,
@@ -506,7 +507,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     insert: async (row: ResultRow) => {
       call("results.insert");
       if (tables.results.some((existing) => existing.matchId === row.matchId)) {
-        throw new Error(`results already holds a row for ${row.matchId}`);
+        throw new DuplicateResultError(row.matchId);
       }
       tables.results.push(clone(row));
     },

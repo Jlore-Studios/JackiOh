@@ -45,6 +45,7 @@
 import { Pool } from "pg";
 import type { PoolClient, QueryResult, QueryResultRow } from "pg";
 
+import { DuplicateResultError } from "../api/ports";
 import type {
   BotRating,
   CodeAttempt,
@@ -109,6 +110,16 @@ const DECISIVE_REASONS: readonly string[] = ["hero-death", "concede", "disconnec
  * instead of succeeding because the connection happened to own the table.
  */
 const ACTING_ROLE = "service_role";
+
+/**
+ * `pg`'s `unique_violation` (23505) on `results_pkey` — the shape `results.insert` translates into
+ * the port's `DuplicateResultError`. Checked structurally rather than by `instanceof` so it holds
+ * however the driver wrapped the error.
+ */
+function isResultsKeyConflict(error: unknown): boolean {
+  const held = error as { code?: unknown; constraint?: unknown };
+  return held.code === "23505" && held.constraint === "results_pkey";
+}
 
 /**
  * One statement, two `SET LOCAL`s. `set_config(name, value, true)` is `SET LOCAL name = value`,
@@ -2074,28 +2085,36 @@ function buildStore(session: Session): Store {
 
     /** One row per match: `results.match_id` is the primary key, so a second insert raises. */
     insert: async (row: ResultRow) => {
-      await session.query(
-        null,
-        `insert into public.results (
-           match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,
-           p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
-         values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::text, $6::int,
-                 $7::double precision, $8::double precision, $9::double precision,
-                 $10::double precision, ${ts("$11")})`,
-        [
-          row.matchId,
-          row.players[0],
-          row.players[1],
-          row.winnerProfileId,
-          row.reason,
-          row.turns,
-          row.ratingBefore[0],
-          row.ratingAfter[0],
-          row.ratingBefore[1],
-          row.ratingAfter[1],
-          row.endedAt,
-        ],
-      );
+      try {
+        await session.query(
+          null,
+          `insert into public.results (
+             match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,
+             p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
+           values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::text, $6::int,
+                   $7::double precision, $8::double precision, $9::double precision,
+                   $10::double precision, ${ts("$11")})`,
+          [
+            row.matchId,
+            row.players[0],
+            row.players[1],
+            row.winnerProfileId,
+            row.reason,
+            row.turns,
+            row.ratingBefore[0],
+            row.ratingAfter[0],
+            row.ratingBefore[1],
+            row.ratingAfter[1],
+            row.endedAt,
+          ],
+        );
+      } catch (error) {
+        // `results_pkey` answering a write whose `getByMatch` ran before a concurrent first
+        // writer committed: surfaced as the port's own error so `results.ts`'s retry sees the
+        // collision for what it is rather than as a failure of the statement.
+        if (isResultsKeyConflict(error)) throw new DuplicateResultError(row.matchId);
+        throw error;
+      }
     },
 
     getByMatch: async (matchId) => {

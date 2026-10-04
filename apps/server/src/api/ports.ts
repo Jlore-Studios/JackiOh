@@ -641,8 +641,21 @@ export type ResultRow = {
  */
 export type ProfileRecord = { wins: number; losses: number; draws: number };
 
+/**
+ * `results.insert`'s refusal of a second row for one match (§9.5), as its own type so the writer
+ * can tell it from a real failure: a transaction whose `getByMatch` ran before a concurrent first
+ * writer committed only meets the duplicate here, and that collision is a clean no-op arriving
+ * the hard way — `results.ts` retries on it and finds the row the winner wrote.
+ */
+export class DuplicateResultError extends Error {
+  constructor(readonly matchId: string) {
+    super(`result for match ${matchId} is already recorded`);
+    this.name = "DuplicateResultError";
+  }
+}
+
 export type ResultStore = {
-  /** One row per match (§9.5). Rejects a second row for the same match. */
+  /** One row per match (§9.5). Rejects a second row for the same match with `DuplicateResultError`. */
   insert: (row: ResultRow) => Promise<void>;
   getByMatch: (matchId: string) => Promise<ResultRow | null>;
   /** Every finished match this profile played, as wins/losses/draws. */

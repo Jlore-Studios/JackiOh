@@ -124,6 +124,46 @@ async function startMatch(options: { engine?: EnginePort; decks?: [string[], str
 }
 
 describe("M6-T4 crash recovery", () => {
+  it("a start the engine refuses writes no match row and registers no actor", async () => {
+    // The opening draw runs before the row is written, so a `beginGame` that cannot build a game
+    // (a deck the catalog change stranded, say) fails the start cleanly. Written the other way
+    // round the row went `live` first: a live match no socket could ever build an actor for —
+    // `(seed, decks, log)` reconstructs nothing the engine refuses — and nothing but the ceiling
+    // reaper could ever end it.
+    const deps = createTestDeps();
+    const engine = createFakeEngine();
+    engine.beginGame = () => {
+      throw new Error("the opening draw refused");
+    };
+    const registry = createMatchRegistry({
+      store: deps.store,
+      timers: deps.timers,
+      config: deps.config,
+      log: deps.log,
+      engine,
+      createClock: createMatchClock,
+      recordResult: async () => {
+        throw new Error("unreachable: no game exists to end");
+      },
+    });
+
+    await expect(
+      registry.start({
+        matchId: MATCH_ID,
+        seed: "seed-recovery",
+        catalogVersion: TEST_CATALOG_VERSION,
+        ranked: false,
+        seats: [
+          { profileId: "profile-1", player: "p1", deck: fakeDeck() },
+          { profileId: "profile-2", player: "p2", deck: fakeDeck() },
+        ],
+      }),
+    ).rejects.toThrow("the opening draw refused");
+    expect(deps.store.tables.matches).toEqual([]);
+    expect(registry.live()).toEqual([]);
+    expect(deps.log.entries.some((entry) => entry.event === "match.started")).toBe(false);
+  });
+
   it("killing the actor mid-game and reconnecting yields the same viewFor for both players", async () => {
     const { deps, registry, engine, recordResult } = await startMatch();
     const actor = await registry.actorFor(MATCH_ID);

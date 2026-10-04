@@ -16,6 +16,7 @@ import { pickDeck } from "../../src/api/series-rules";
 import { initialClocks, matchCeilingAt } from "../../src/match/clock";
 import { RATING_DEVIATION_START, RATING_VOLATILITY_START } from "../../src/config";
 import { rateGame, type Score } from "../../src/ranked/glicko2";
+import { DuplicateResultError } from "../../src/api/ports";
 import type { FrozenTrio, MatchSeat, ResultRow, SeriesRow } from "../../src/api/ports";
 import type { TerminalOutcome } from "../../src/match/contracts";
 import { TEST_PATCH_VERSION, createFakeMatchDirectory, createTestDeps, testConfig, type TestDeps } from "../fakes/deps";
@@ -247,6 +248,60 @@ describe("results (M7-T2)", () => {
     });
     expect(again).toEqual(first);
     await expectOneEnding(deps, { winner: A, reason: "concede", ratingAfter: [WIN, LOSS] });
+  });
+
+  it("returns the racing first writer's row when two writes collide on the result key (§9.5)", async () => {
+    const deps = await scenario();
+    // Two writers — an actor and the reaper — pass `getByMatch` together, each inside its own
+    // transaction. The first commits; the second's insert meets `results_pkey`, which the port
+    // reports as DuplicateResultError. Simulate exactly that: this store's first `insert` refuses
+    // as if the collision had happened, and the next `getByMatch` — run inside the retry's fresh
+    // transaction — sees the row the winner committed.
+    const winnerRow: ResultRow = {
+      matchId: MATCH_ID,
+      players: [A, B],
+      winnerProfileId: null,
+      reason: "match-ceiling",
+      turns: 0,
+      endedAt: deps.timers.now(),
+      ratingBefore: [1000, 1000],
+      ratingAfter: [1000, 1000],
+    };
+    let collided = false;
+    const insert = deps.store.results.insert;
+    const getByMatch = deps.store.results.getByMatch;
+    deps.store.results.insert = async (row) => {
+      if (!collided) {
+        collided = true;
+        throw new DuplicateResultError(row.matchId);
+      }
+      return insert(row);
+    };
+    deps.store.results.getByMatch = async (matchId) => {
+      const found = await getByMatch(matchId);
+      if (collided && found === null) {
+        // The racing writer's commit: visible now because the loser's transaction rolled back.
+        deps.store.tables.results.push({ ...winnerRow });
+        return { ...winnerRow };
+      }
+      return found;
+    };
+
+    const row = await createRecordResult(deps)({
+      matchId: MATCH_ID,
+      seats,
+      outcome: { winner: "p1", reason: "hero-death" },
+      turns: 12,
+      at: deps.timers.now(),
+    });
+    expect(row).toEqual(winnerRow);
+    // One effective write: the winner's row, and the loser added nothing — no second row, no
+    // rating move of its own, and the match still finished exactly once.
+    expect(deps.store.tables.results).toHaveLength(1);
+    expect((await deps.store.profiles.getById(A))?.rating).toBe(1000);
+    expect((await deps.store.profiles.getById(B))?.rating).toBe(1000);
+    expect(deps.store.tables.seasonRanks).toEqual([]);
+    expect(deps.store.tables.ratedGames).toEqual([]);
   });
 
   it("clears a stray open queue ticket so both players can queue again (§9.5)", async () => {
@@ -494,7 +549,7 @@ describe("results (M7-T2)", () => {
       ]);
     });
 
-    it("R262 the game that ends the series moves both ratings once, from where the series began", async () => {
+    it("R262 the game that ends the series moves both ratings once, from the ratings at the time it ends", async () => {
       const deps = await seriesScenario();
       await record(deps, [{ type: "concede", playerId: "p2" }]);
       await playNext(deps, [1, 1]);
