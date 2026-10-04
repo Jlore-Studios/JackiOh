@@ -1,4 +1,4 @@
-// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R654).
+// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R655).
 //
 // `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits'
 // emote lines) and `voice-manifest.json` (which rendered files exist, written by
@@ -89,7 +89,7 @@ const GAIN_RANGE = [0, 2] as const;
 /** R501's SAPI voices: SSML prosody rate in percent, and the ffmpeg pitch shift in semitones. */
 const SAPI_RATE_RANGE = [-50, 100] as const;
 const SAPI_SEMITONE_RANGE = [-12, 12] as const;
-/** R654: an effect's pitch, a frequency ratio: two octaves either way. */
+/** R655: an effect's pitch, a frequency ratio: two octaves either way. */
 const EFFECT_PITCH_RANGE = [0.25, 4] as const;
 /** `amount` as the recipes read it (types.ts SfxParams): a count, clamped by each recipe. */
 const EFFECT_AMOUNT_RANGE = [0, 100] as const;
@@ -419,7 +419,7 @@ export function lineFor(
   return persona === undefined ? null : { text: assignment.text, persona };
 }
 
-/** R654: the hook's effect, with its bank name, or null when the hook has none. */
+/** R655: the hook's effect, with its bank name, or null when the hook has none. */
 export function effectFor(
   table: CardAudioTable,
   defId: string,
@@ -464,7 +464,7 @@ export function emoteVoiceDef(portrait: PortraitId): string {
 
 /**
  * Keys worth preloading for a view, deduped, in this order: the viewer's hand (unit → play, spell →
- * cast; traps none), every unit on both boards (death), the viewer's own units (attack, R654), the
+ * cast; traps none), every unit on both boards (death), the viewer's own units (attack, R655), the
  * viewer's own face-up backrow traps (cast). Only hooks that have a line: an effect renders no file.
  */
 export function voiceKeysForView(view: PlayerView, table: CardAudioTable): VoiceKey[] {

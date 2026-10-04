@@ -311,7 +311,7 @@ export default function Game({
     [onAction],
   );
 
-  // R654: picking up one of your Units to attack plays its `attack` hook: a drag lifting it, or a
+  // R655: picking up one of your Units to attack plays its `attack` hook: a drag lifting it, or a
   // click choosing it as the attacker (click-click counts as a pick-up). Both lift only a Unit
   // `legal` lets attack, and nothing about it is sent.
   const pickUp = usePickupSound(shown);

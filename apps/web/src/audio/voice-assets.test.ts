@@ -11,7 +11,7 @@
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
-//   R654 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
+//   R655 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
 //        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
 //        no file.
 //
@@ -442,10 +442,10 @@ describe("the voice budget (B36)", () => {
   });
 });
 
-// ----------------------------------------------------------------------------------- R654 ---
+// ----------------------------------------------------------------------------------- R655 ---
 
-describe("the move to card-audio.json5 (R654)", () => {
-  it("R654 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
+describe("the move to card-audio.json5 (R655)", () => {
+  it("R655 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
     const manifestKeys = Object.keys(MANIFEST_FILES).sort();
     expect(manifestKeys.length, "the manifest lists voice lines").toBeGreaterThan(0);
     expect([...EXPECTED_KEYS].sort(), "the file's voice lines are the manifest's keys").toEqual(manifestKeys);
@@ -459,7 +459,7 @@ describe("the move to card-audio.json5 (R654)", () => {
     expect(wrong, "lines whose voice or text changed in the move").toEqual([]);
   });
 
-  it("R654 expects no file for a hook that is only an effect, core-066's attack among them", () => {
+  it("R655 expects no file for a hook that is only an effect, core-066's attack among them", () => {
     expect(cardsOf(AUDIO)["core-066"]?.attack, "core-066's attack hook").toEqual({ effect: "rumble" });
     const effectOnly = Object.entries(cardsOf(AUDIO)).flatMap(([defId, entry]) =>
       Object.entries(entry)
@@ -719,7 +719,7 @@ describe("gen-voice.mjs --check (B37)", () => {
   );
 
   it(
-    "R654 exits 0 when a card gains an attack hook that is only an effect, which renders no file",
+    "R655 exits 0 when a card gains an attack hook that is only an effect, which renders no file",
     () => {
       const root = copyWebTree();
       editAudio(root, (table) => {

@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B41 to B43 and R654: the lookups in
+// Polish task 2 (docs/polish/2-sound.md), behaviours B41 to B43 and R655: the lookups in
 // `voiceData.ts` that the engine, the cue table and the hook read, its parser of `card-audio.json5`,
 // and the file's layout.
 //
@@ -11,9 +11,9 @@
 //        <problem>`; it does not check word limits or the lines every card must have (B33, B34 do).
 //   B43  `voiceKeysForView` lists, deduped and in this order, the viewer's hand (unit -> play,
 //        spell -> cast, traps none), every unit on both boards (death), the viewer's own units
-//        (attack, R654) and the viewer's own face-up backrow traps (cast); a card it cannot name, or
+//        (attack, R655) and the viewer's own face-up backrow traps (cast); a card it cannot name, or
 //        a hook with no line, adds nothing.
-//   R654 every shape error names its path, JSON5's comments and trailing commas parse, a card's kind
+//   R655 every shape error names its path, JSON5's comments and trailing commas parse, a card's kind
 //        comes from its catalog type, and `hookFor`, `lineFor` and `effectFor` read a hook that is a
 //        line, an effect or both.
 //
@@ -147,7 +147,7 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
 
   it("B41 lineFor speaks core-016 in a voice of its own, the hustler at rate 170 and pbas 32", () => {
     // docs/polish/2-sound.md, Personas: core-016 is the hustler with `rate 170, pbas 32`, once a
-    // per-card override and now the voice `hustler-hitman` (R654).
+    // per-card override and now the voice `hustler-hitman` (R655).
     const entry = CARD_AUDIO.cards["core-016"];
     if (entry?.kind !== "spell" || entry.cast?.voice === undefined) throw new Error("core-016 should be a spell with a cast line");
     const hustler = CARD_AUDIO.voices.hustler;
@@ -305,7 +305,7 @@ describe("R501 SAPI voices", () => {
   });
 });
 
-describe("R654 parseCardAudio's shape errors", () => {
+describe("R655 parseCardAudio's shape errors", () => {
   /** Expect `edit` of a fresh fixture to throw exactly `card-audio.json5: <message>`. */
   function expectError(edit: (table: RawTable) => void, message: string): void {
     const table = fixture();
@@ -313,29 +313,29 @@ describe("R654 parseCardAudio's shape errors", () => {
     expect(parseError(table)).toBe(`card-audio.json5: ${message}`);
   }
 
-  it("R654 accepts the fixture as written", () => {
+  it("R655 accepts the fixture as written", () => {
     expect(parseError(fixture())).toBe("(no error)");
   });
 
-  it("R654 names a voice the bank does not hold", () => {
+  it("R655 names a voice the bank does not hold", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "x", text: "Hi." } };
     }, 'cards.core-004.play.voice: unknown voice "x"');
   });
 
-  it("R654 names an effect the bank does not hold", () => {
+  it("R655 names an effect the bank does not hold", () => {
     expectError((t) => {
       t.cards["core-004"] = { attack: { effect: "bang" } };
     }, 'cards.core-004.attack.effect: unknown effect "bang"');
   });
 
-  it("R654 names an unknown hook", () => {
+  it("R655 names an unknown hook", () => {
     expectError((t) => {
       t.cards["core-004"] = { jump: { effect: "zip" } };
     }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast)");
   });
 
-  it("R654 names a hook the card's kind may not carry", () => {
+  it("R655 names a hook the card's kind may not carry", () => {
     expectError((t) => {
       t.cards["core-004"] = { cast: { effect: "zip" } };
     }, "cards.core-004.cast: a unit has no cast hook");
@@ -347,7 +347,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     }, "cards.core-018.death: a trap has no death hook");
   });
 
-  it("R654 names a voice with no text, a text with no voice, and a hook with neither a line nor an effect", () => {
+  it("R655 names a voice with no text, a text with no voice, and a hook with neither a line nor an effect", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "hustler" } };
     }, "cards.core-004.play.text: must be a non-empty string");
@@ -365,7 +365,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     }, "cards.core-004.play: needs a voice and a text, an effect, or both");
   });
 
-  it("R654 names a card id the catalog does not hold, and a catalog type with no hooks", () => {
+  it("R655 names a card id the catalog does not hold, and a catalog type with no hooks", () => {
     expectError((t) => {
       t.cards["core-999"] = { cast: { effect: "zip" } };
     }, "cards.core-999: not a card in the catalog");
@@ -377,7 +377,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     expect(parseError(odd, { "x-1": { type: "Hero" } })).toBe('card-audio.json5: cards.x-1: the catalog type "Hero" has no hooks');
   });
 
-  it("R654 names an effect whose sfx is not a recipe, and a pitch or gain out of range", () => {
+  it("R655 names an effect whose sfx is not a recipe, and a pitch or gain out of range", () => {
     expectError((t) => {
       t.effects.thud = { sfx: "boom" };
     }, 'effects.thud.sfx: unknown recipe "boom" (expected one of sfx.ts SFX_IDS)');
@@ -395,7 +395,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     }, 'effects.thud.params.timbre: unknown timbre "robot" (expected one of human, felinor, ky, cn, fruit, chaos, quickdraw, token, field, book, pancake, ai)');
   });
 
-  it("R654 names a field no part of the file allows", () => {
+  it("R655 names a field no part of the file allows", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "hustler", text: "Hi.", rate: 200 } };
     }, "cards.core-004.play.rate: unknown field (expected voice, text, effect)");
@@ -410,7 +410,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     }, "voices.hustler.semitones: unknown field (expected backend, say, rate, pbas, pmod, web, gain)");
   });
 
-  it("R654 names the sections when they are out of order, missing or joined by another", () => {
+  it("R655 names the sections when they are out of order, missing or joined by another", () => {
     const { voices, effects, cards } = fixture();
     expect(parseError({ cards, voices, effects })).toBe(
       "card-audio.json5: (root): must hold voices, effects, cards, in that order (found cards, voices, effects)",
@@ -424,14 +424,14 @@ describe("R654 parseCardAudio's shape errors", () => {
     expect(parseError({})).toBe("card-audio.json5: (root): must hold voices, effects, cards, in that order (found nothing)");
   });
 
-  it("R654 reports a JSON5 syntax error with its line and column", () => {
+  it("R655 reports a JSON5 syntax error with its line and column", () => {
     expect(textError("{ voices: {")).toBe("card-audio.json5: (syntax): JSON5: invalid end of input at 1:12");
     expect(textError("{\n  voices: {},\n  effects: {}\n  cards: {},\n}\n")).toBe(
       "card-audio.json5: (syntax): JSON5: invalid character 'c' at 4:3",
     );
   });
 
-  it("R654 refuses a key written twice in one object, which JSON5 alone would let the last of win, naming its path", () => {
+  it("R655 refuses a key written twice in one object, which JSON5 alone would let the last of win, naming its path", () => {
     const source = (cards: string, voices = 'crone: { say: "Grandma (English (US))", rate: 170, pbas: 50, pmod: 40, web: { pitch: 1.1, rate: 0.9 } },'): string =>
       `{\n  voices: { ${voices} },\n  effects: { zip: { sfx: "whoosh" } },\n  cards: {\n${cards}\n  },\n}\n`;
     const stockpile = '    "core-005": { // Stockpile\n      cast: { voice: "crone", text: "Hoarding is self care." },\n    },';
@@ -451,7 +451,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     expect(textError(source(twoObjects))).toBe("(no error)");
   });
 
-  it("R654 parses JSON5's comments, unquoted keys and trailing commas", () => {
+  it("R655 parses JSON5's comments, unquoted keys and trailing commas", () => {
     const source = [
       "// A header comment.",
       "{",
@@ -520,7 +520,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     );
   });
 
-  it("R654 derives each card's kind from its catalog type: Unit a unit, Spell and Field Spell a spell, Trap and Field Trap a trap", () => {
+  it("R655 derives each card's kind from its catalog type: Unit a unit, Spell and Field Spell a spell, Trap and Field Trap a trap", () => {
     const table = parseCardAudio(
       {
         voices: { crone: CRONE },
@@ -544,7 +544,7 @@ describe("R654 parseCardAudio's shape errors", () => {
     });
   });
 
-  it("R654 gives an effect pitch 1 and gain 1 unless it says otherwise, and keeps its params", () => {
+  it("R655 gives an effect pitch 1 and gain 1 unless it says otherwise, and keeps its params", () => {
     const table = parseCardAudio(fixture(), CATALOG);
     expect(table.effects).toEqual({
       thud: { sfx: "impact", pitch: 0.6, gain: 1, params: { amount: 8 } },
@@ -553,16 +553,16 @@ describe("R654 parseCardAudio's shape errors", () => {
   });
 });
 
-describe("R654 hookFor, lineFor and effectFor", () => {
+describe("R655 hookFor, lineFor and effectFor", () => {
   const table = parseCardAudio(fixture(), CATALOG);
 
-  it("R654 reads a hook that is a line alone", () => {
+  it("R655 reads a hook that is a line alone", () => {
     expect(hookFor(table, "core-004", "play")).toEqual({ voice: "hustler", text: "Double or nothing, baby!" });
     expect(lineFor(table, "core-004", "play")).toEqual({ text: "Double or nothing, baby!", persona: SAY });
     expect(effectFor(table, "core-004", "play")).toBeNull();
   });
 
-  it("R654 reads a hook that is an effect alone", () => {
+  it("R655 reads a hook that is an effect alone", () => {
     expect(hookFor(table, "core-004", "attack")).toEqual({ effect: "zip" });
     expect(lineFor(table, "core-004", "attack")).toBeNull();
     expect(effectFor(table, "core-004", "attack")).toEqual({ name: "zip", effect: { sfx: "whoosh", pitch: 1, gain: 1 } });
@@ -572,13 +572,13 @@ describe("R654 hookFor, lineFor and effectFor", () => {
     });
   });
 
-  it("R654 reads a hook that is both a line and an effect", () => {
+  it("R655 reads a hook that is both a line and an effect", () => {
     expect(hookFor(table, "core-004", "death")).toEqual({ voice: "hustler", text: "House always wins.", effect: "thud" });
     expect(lineFor(table, "core-004", "death")).toEqual({ text: "House always wins.", persona: SAY });
     expect(effectFor(table, "core-004", "death")?.name).toBe("thud");
   });
 
-  it("R654 reads nothing for the sentinel, an unknown id or a hook the card does not carry", () => {
+  it("R655 reads nothing for the sentinel, an unknown id or a hook the card does not carry", () => {
     for (const hook of ["play", "attack", "death", "cast"] as const) {
       for (const defId of [HIDDEN_DEF_ID, "core-999", "toString", "constructor"]) {
         expect(hookFor(table, defId, hook), `${defId} ${hook}`).toBeNull();
@@ -593,7 +593,7 @@ describe("R654 hookFor, lineFor and effectFor", () => {
     expect(entryFor(table, "core-041")).toBeNull();
   });
 
-  it("R654 CARD_AUDIO is the shipped card-audio.json5, parsed against the shipped catalog", () => {
+  it("R655 CARD_AUDIO is the shipped card-audio.json5, parsed against the shipped catalog", () => {
     expect(CARD_AUDIO).toEqual(parseCardAudioText(shippedText(), SHIPPED_CATALOG));
     expect(Object.keys(CARD_AUDIO.cards)).toEqual(Object.keys(SHIPPED_CATALOG));
     expect(effectFor(CARD_AUDIO, "core-066", "attack")?.name).toBe("rumble");
@@ -652,7 +652,7 @@ describe("B43 voiceKeysForView", () => {
     expect(voiceKeysForView(viewWith(), table)).toEqual([]);
   });
 
-  it("R654 adds the viewer's own units' attack lines after the death lines and before the traps, and skips a hook with no line", () => {
+  it("R655 adds the viewer's own units' attack lines after the death lines and before the traps, and skips a hook with no line", () => {
     const catalog: CatalogTypes = {
       "x-unit": { type: "Unit" },
       "x-mute": { type: "Unit" },
@@ -694,7 +694,7 @@ describe("B43 voiceKeysForView", () => {
     expect(voiceKeysForView(view, table)).toEqual(["x-unit-play", "x-unit-death", "x-unit-attack", "x-trap-cast"]);
   });
 
-  it("R654 adds no attack line for a unit on the other seat's board alone", () => {
+  it("R655 adds no attack line for a unit on the other seat's board alone", () => {
     const table = parseCardAudio(
       {
         voices: { hustler: SAY },
@@ -717,7 +717,7 @@ describe("B43 voiceKeysForView", () => {
   });
 });
 
-describe("card-audio.json5 layout (docs/polish/2-sound.md; R654)", () => {
+describe("card-audio.json5 layout (docs/polish/2-sound.md; R655)", () => {
   it("keeps the voices sorted by name, the cards in catalog order, and a trailing newline", () => {
     const text = shippedText();
     const table = JSON5.parse<RawTable>(text);

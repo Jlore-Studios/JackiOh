@@ -67,7 +67,7 @@ The user's words, then the decisions made for them.
   `GameEventType` gets a sound or an explicit silence, as a total map (like `ANIMATIONS`).
 - **Voice lines:** every Unit gets a *play* line (spoken when it is played, which is when its Cry
   fires) and a *death* line. Spells and traps get a short *cast* line. The lines are written in
-  character from each card's name and text in `apps/web/src/audio/card-audio.json5` (R654).
+  character from each card's name and text in `apps/web/src/audio/card-audio.json5` (R655).
 - The audio is **generated with macOS `say`** by `apps/web/scripts/gen-voice.mjs`: voice and rate
   chosen per card personality, mono AAC `.m4a` at about 32 kbps in
   `apps/web/public/audio/voice/<card-id>-<play|death|cast>.m4a`. Total budget is ≤ 3 MB. The script is

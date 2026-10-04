@@ -226,6 +226,7 @@ export type Profile = {
   /** The managed-auth user id. */
   userId: string;
   email: string;
+  displayName?: string | null;
   status: ProfileStatus;
   rating: number;
   /** Non-null while the profile is in a match (§9.5: every ending clears it). */
@@ -237,9 +238,10 @@ export type ProfileStore = {
   getById: (profileId: string) => Promise<Profile | null>;
   getByUserId: (userId: string) => Promise<Profile | null>;
   getMany: (profileIds: readonly string[]) => Promise<Profile[]>;
-  create: (input: { userId: string; email: string; rating: number; at: number }) => Promise<Profile>;
+  create: (input: { userId: string; email: string; rating: number; at: number; displayName?: string | null }) => Promise<Profile>;
   setStatus: (profileId: string, status: ProfileStatus) => Promise<void>;
   setRating: (profileId: string, rating: number) => Promise<void>;
+  setDisplayName: (profileId: string, displayName: string | null) => Promise<void>;
   /** Pass null to clear. §9.5: every terminal reason clears both players'. */
   setInMatch: (profileId: string, matchId: string | null) => Promise<void>;
   /**
@@ -879,6 +881,40 @@ export type LastBoardStore = {
   put: (profileId: string, kind: LastBoardKind, board: readonly LastBoardEntry[], at: number) => Promise<void>;
 };
 
+// ---------------------------------------------------------------------------
+// Player statistics on the account (SPEC §9.11, R639, R654).
+// ---------------------------------------------------------------------------
+
+export type PlayerStatsRow = {
+  profileId: string;
+  stats: Record<string, unknown>;
+  isPrivate: boolean;
+  updatedAt: number;
+};
+
+export type PublicPlayerSummary = {
+  profileId: string;
+  displayName: string | null;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+  favouriteCards: readonly { id: string; count: number }[];
+  funStats: {
+    nemesisCardId: string | null;
+    totalDestroyed: number;
+    totalDefeated: number;
+  };
+  updatedAt: number;
+};
+
+export type PlayerStatsStore = {
+  get: (profileId: string) => Promise<PlayerStatsRow | null>;
+  put: (profileId: string, stats: Record<string, unknown>, isPrivate: boolean, at: number) => Promise<void>;
+  listPublic: (options: { search?: string; limit: number; offset: number }) => Promise<PublicPlayerSummary[]>;
+};
+
 export type RetentionPurgeInput = { codeAttemptsBefore: number; matchActionsEndedBefore: number };
 export type RetentionPurgeResult = { codeAttempts: number; matchActions: number };
 
@@ -936,6 +972,8 @@ export type Store = {
   lastBoards: LastBoardStore;
   /** R376: the card statistics' game records. */
   gameRecords: GameRecordStore;
+  /** R654: each profile's player statistics and privacy setting. */
+  playerStats: PlayerStatsStore;
 };
 
 // ---------------------------------------------------------------------------

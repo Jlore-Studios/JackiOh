@@ -863,10 +863,10 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * R654: card effects ride the same path as the lines
+ * R655: card effects ride the same path as the lines
  * --------------------------------------------------------------------------------------------- */
 
-describe("R654 a card's effect is sent on its hook's moment, through the director", () => {
+describe("R655 a card's effect is sent on its hook's moment, through the director", () => {
   /** #66 The Rock: an effect and a line on its play, only an effect on its death; #5 a cast that is only an effect. */
   const FX_LINES: CardAudioTable = {
     voices: LINES.voices,
@@ -888,7 +888,7 @@ describe("R654 a card's effect is sent on its hook's moment, through the directo
     return { sink, director: createSoundDirector(sink, FX_LINES) };
   }
 
-  it("R654 the runner starting a play sends the effect at the line's moment, and the line CARD_EFFECT_DELAY_MS after it", () => {
+  it("R655 the runner starting a play sends the effect at the line's moment, and the line CARD_EFFECT_DELAY_MS after it", () => {
     const { sink, director } = fxRig();
     const view = begin(director, [played("core-066", "c1"), summoned("core-066", "c1")]);
     director.onEntryStart(must(entriesOf(view, view.events)[0], "the pair"));
@@ -903,7 +903,7 @@ describe("R654 a card's effect is sent on its hook's moment, through the directo
     );
   });
 
-  it("R654 a hook that is only an effect sends the effect and no line", () => {
+  it("R655 a hook that is only an effect sends the effect and no line", () => {
     const { sink, director } = fxRig();
     const view = begin(director, [destroyed("core-066", "c1"), played("core-005", "c2")]);
     for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
@@ -912,7 +912,7 @@ describe("R654 a card's effect is sent on its hook's moment, through the directo
     expect(cards).toEqual([`effect:core-066/death@${String(DEATH_VOICE_DELAY_MS)}`, `effect:core-005/cast@${String(VOICE_DELAY_MS)}`]);
   });
 
-  it("R654 a flushed burst sends one card effect, its most important, beside its one line", () => {
+  it("R655 a flushed burst sends one card effect, its most important, beside its one line", () => {
     const { sink, director } = fxRig();
     begin(director, [played("core-066", "c1"), summoned("core-066", "c1"), destroyed("core-066", "c3", "p2"), played("core-005", "c2")]);
     director.onIdle();
@@ -923,7 +923,7 @@ describe("R654 a card's effect is sent on its hook's moment, through the directo
     expect(linesSent(sink)).toEqual([`core-066/play!${String(VOICE_PRIORITY.play)}`]);
   });
 
-  it("R654 the sentinel sends no effect, even from a table that has one under that name", () => {
+  it("R655 the sentinel sends no effect, even from a table that has one under that name", () => {
     const sink = recorder();
     const poisoned: CardAudioTable = {
       ...FX_LINES,

@@ -1,4 +1,4 @@
-// Every card's sounds (SPEC §10.11, R654). apps/web/src/audio/voiceData.ts reads this file when the
+// Every card's sounds (SPEC §10.11, R655). apps/web/src/audio/voiceData.ts reads this file when the
 // client loads and apps/web/scripts/gen-voice.mjs renders its voice lines. Nothing writes it back, so
 // comments and trailing commas are safe. A mistake fails the load and the tests, naming its path.
 //

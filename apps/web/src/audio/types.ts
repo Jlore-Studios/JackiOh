@@ -49,7 +49,7 @@ export type SfxParams = {
 
 /** A card's sound family in `card-audio.json5`, from its catalog type: which hooks it may carry. */
 export type CardKind = "unit" | "spell" | "trap";
-/** R654: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
+/** R655: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
 export type CardHook = keyof typeof CARD_HOOKS;
 /** A voice line is a hook's line, so its kinds are the hooks. */
 export type VoiceLineKind = CardHook;
@@ -98,12 +98,12 @@ export type SapiPersona = PersonaCommon & {
 export type Persona = SayPersona | SapiPersona;
 
 /**
- * R654: a sound effect in the effects bank: one of the procedural recipes, shifted by `pitch` (a
+ * R655: a sound effect in the effects bank: one of the procedural recipes, shifted by `pitch` (a
  * frequency ratio, 1 as the recipe is written), trimmed by `gain` and given the recipe's own params.
  */
 export type CardEffect = { sfx: SfxId; pitch: number; gain: number; params?: SfxParams };
 
-/** R654: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither). */
+/** R655: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither). */
 export type HookAssignment =
   | { voice: string; text: string; effect?: string }
   | { effect: string; voice?: undefined; text?: undefined };
@@ -123,7 +123,7 @@ export type EmoteLineEntry = {
   threaten: string;
 } & Overrides;
 
-/** `card-audio.json5` as `voiceData.ts` parses it (R654). */
+/** `card-audio.json5` as `voiceData.ts` parses it (R655). */
 export type CardAudioTable = {
   /** The voices bank: what each voice's lines are rendered and spoken with. */
   voices: Record<string, Persona>;
@@ -152,7 +152,7 @@ export type VoicePriority = number;
 export type SoundCue =
   | { kind: "sfx"; id: SfxId; params?: SfxParams; delayMs: number }
   | { kind: "voice"; defId: string; line: PlayableLineKind; delayMs: number; priority: VoicePriority }
-  /** R654: a card's effect for a hook, at the moment the hook's line would speak. */
+  /** R655: a card's effect for a hook, at the moment the hook's line would speak. */
   | { kind: "effect"; defId: string; hook: CardHook; delayMs: number; priority: VoicePriority };
 
 export type AudioState = "unsupported" | "locked" | "running" | "suspended" | "closed";
@@ -256,13 +256,13 @@ export type SoundSink = {
   playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean;
   /** `priority` defaults to VOICE_PRIORITY.play. `defId` may be an `emote-<portrait>` id (R644). */
   playVoice(defId: string, line: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean;
-  /** R654: the card's effect for `hook`, on the effects bus. false when it has none or it is refused. */
+  /** R655: the card's effect for `hook`, on the effects bus. false when it has none or it is refused. */
   playEffect(defId: string, hook: CardHook, delayMs?: number): boolean;
 };
 
 export type AudioEngine = SoundSink & {
   /**
-   * R654: the viewer picked up their own Unit to attack (a drag lifted, or a click chose it): its
+   * R655: the viewer picked up their own Unit to attack (a drag lifted, or a click chose it): its
    * `attack` hook, effect then line, at once. Refused within PICKUP_MIN_GAP_MS of the last one
    * accepted; otherwise it cuts off whatever the last pick-up is still playing.
    */

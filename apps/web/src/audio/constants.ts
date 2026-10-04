@@ -5,7 +5,7 @@
 import type { CardHook, CardKind, SfxId } from "./types.ts";
 
 /**
- * R654: the hooks a card's sounds play on, in the order a card entry of `card-audio.json5` lists
+ * R655: the hooks a card's sounds play on, in the order a card entry of `card-audio.json5` lists
  * them, each with the kinds of card that may carry it. This is the one list: the parser accepts a
  * hook name only from here, so a new hook (an Activate, a Trap's reveal, a turn's start) is a new
  * row here and a place that plays it.
@@ -32,7 +32,7 @@ export const VOICE_LATE_MS = 600;        // a line not ready this long after it 
  * lower one waits in the queue. A death line and a firing trap's line ("react") answer something
  * that just happened and would be meaningless a second later, so they take the channel from a play
  * or cast line; a unit an effect summons ("summon") speaks only if nothing else is talking. A Unit
- * the viewer picks up to attack ("pickup", R654) answers their own hand at once: it cuts in on any
+ * the viewer picks up to attack ("pickup", R655) answers their own hand at once: it cuts in on any
  * line, an earlier pick-up's included.
  */
 export const VOICE_PRIORITY = { summon: 0, play: 1, react: 2, pickup: 3 } as const;
@@ -61,13 +61,13 @@ export const UI_HOVER_THROTTLE_MS = 80;
 /** R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+. */
 export const VOICE_BUDGET_BYTES = 6 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
-/** An attack line can repeat while the player fiddles with the Unit (R654), so it is the shortest. */
+/** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
 export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8 } as const satisfies Record<CardHook, number>;
-/** R654: a hook with an effect and a line starts the effect first, and the line this much later. */
+/** R655: a hook with an effect and a line starts the effect first, and the line this much later. */
 export const CARD_EFFECT_DELAY_MS = 200;
-/** R654: each play of a card's effect shifts its pitch by up to this share either way, so repeats differ. */
+/** R655: each play of a card's effect shifts its pitch by up to this share either way, so repeats differ. */
 export const EFFECT_PITCH_JITTER = 0.03;
-/** R654: a pick-up this soon after the last one accepted plays nothing, so quick fiddling never stacks. */
+/** R655: a pick-up this soon after the last one accepted plays nothing, so quick fiddling never stacks. */
 export const PICKUP_MIN_GAP_MS = 300;
 /** R97's sentinel as a redacted event carries it (packages/engine/src/viewFor.ts HIDDEN_ID). */
 export const HIDDEN_DEF_ID = "hidden";

@@ -104,8 +104,8 @@ src/
     cues.ts director.ts useGameAudio.ts      SOUND_CUES (a total map over GameEventType) and the runner-synced director
     AudioToggle.tsx AudioControls.tsx        the mute button (in the board's control bar) and the full panel
     useVoiceSpeaking.ts                      the engine's `speaking()`, which Game marks as data-speaking
-    usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R654)
-    card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R654), hand-edited, and its parser
+    usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R655)
+    card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R655), hand-edited, and its parser
     voice-manifest.json                      the generated hash and size of each rendered line
     music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
     musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
@@ -149,6 +149,9 @@ src/
   routes/almanac.tsx    /almanac: the public Card Almanac (R630), every card with tokens, read-only through
                         the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) and the bundled
                         catalog, no API call; the site footer links it beside Patch notes
+  routes/stats.tsx      /stats: the public card and player statistics page (R654), sortable cards table with
+                        confidence floor, card drill-down, public player aggregates, and provisional AI padding
+                        banner; the site footer links it
   test/
     setup.ts            jsdom matchers and a matchMedia stub
     fixtures.ts         fixture PlayerViews; every test renders one of these
@@ -421,7 +424,7 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 
 ## Regenerating the voice lines
 
-Every card's sounds are in `src/audio/card-audio.json5` (R654), a JSON5 file edited by hand, whose
+Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edited by hand, whose
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`; `CARD_HOOKS` in

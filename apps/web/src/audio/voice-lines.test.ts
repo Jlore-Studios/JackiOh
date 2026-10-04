@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34, and R654's file: `card-audio.json5`
+// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34, and R655's file: `card-audio.json5`
 // against the catalog it voices.
 //
 //   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
@@ -14,7 +14,7 @@
 //        BANNED_RULES_WORDS entry as a whole word, in any case, in fewer than BANNED_WORDS_MAX_SHARE
 //        (2%) of the lines (issue #115). The lines that do are named in the failure and in the
 //        passing test's title count, so none is lost by being under the allowance.
-//   R654 the sections are voices, effects and cards, in that order; each card's entry names the card
+//   R655 the sections are voices, effects and cards, in that order; each card's entry names the card
 //        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
 //        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
 //        every one is used.
@@ -75,7 +75,7 @@ const SAPI_ONLY_FIELDS = ["voice", "semitones", "filter"] as const;
 /** B34's charset, verbatim. */
 const LINE_CHARSET = /^[A-Za-z ,.'!?-]+$/;
 
-/** R654: a card entry's first line, `    "<id>": { // <the card's name>`. */
+/** R655: a card entry's first line, `    "<id>": { // <the card's name>`. */
 const ENTRY_LINE = /^ {4}"([^"]+)": \{ \/\/ (.+)$/;
 
 type Json = Record<string, unknown>;
@@ -170,7 +170,7 @@ function collapse(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-/** R654: each card entry's id and the name its comment gives, in file order, read off the raw text. */
+/** R655: each card entry's id and the name its comment gives, in file order, read off the raw text. */
 function entryComments(): { id: string; name: string }[] {
   const lines = SOURCE.split(/\r?\n/);
   const start = lines.findIndex((line) => /^ {2}cards: \{\s*$/.test(line));
@@ -353,14 +353,14 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
       .map(catalogKind);
     expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(44);
     expect(kinds.filter((kind) => kind === "spell" || kind === "trap"), "spell and trap entries").toHaveLength(67);
-    // The lines SPEC §10.11 requires: an attack line (R654) is optional and not counted.
+    // The lines SPEC §10.11 requires: an attack line (R655) is optional and not counted.
     const coreLines = allAssignments().filter(({ defId, hook, value }) => defId.startsWith("core-") && hook !== "attack" && isLine(value));
     expect(coreLines, "Core's lines in the table").toHaveLength(155);
   });
 
   it("B33 gives every card a line per its kind: twice the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
-    // An attack line (R654) is a Unit's option beside these, and is held to B34 like any other.
+    // An attack line (R655) is a Unit's option beside these, and is held to B34 like any other.
     const lines = allAssignments().filter(({ hook, value }) => hook !== "attack" && isLine(value));
     expect(lines, "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
@@ -446,12 +446,12 @@ describe("every voice line is short, plain flavour (B34)", () => {
   });
 });
 
-describe("card-audio.json5's layout and effects (R654)", () => {
-  it("R654 holds four sections, voices, effects, cards and emotes, in that order", () => {
+describe("card-audio.json5's layout and effects (R655)", () => {
+  it("R655 holds four sections, voices, effects, cards and emotes, in that order", () => {
     expect(Object.keys(TABLE)).toEqual(["voices", "effects", "cards", "emotes"]);
   });
 
-  it("R654 names each card in a comment on the line of its id, as the catalog does, in catalog order", () => {
+  it("R655 names each card in a comment on the line of its id, as the catalog does, in catalog order", () => {
     const comments = entryComments();
     const wrong = comments
       .filter(({ id, name }) => {
@@ -474,7 +474,7 @@ describe("card-audio.json5's layout and effects (R654)", () => {
     ).toEqual(CATALOG_IDS.filter((id) => known.has(id)));
   });
 
-  it("R654 is JSON5: its comments and trailing commas parse, where JSON would refuse them", () => {
+  it("R655 is JSON5: its comments and trailing commas parse, where JSON would refuse them", () => {
     expect(SOURCE, "the file carries // comments").toMatch(/^\s*\/\/ /m);
     expect(SOURCE, "the file carries a trailing comma before a closing brace").toMatch(/,\s*\n\s*\}/);
     expect(() => JSON.parse(SOURCE) as unknown, "JSON.parse refuses the file").toThrow();
@@ -482,7 +482,7 @@ describe("card-audio.json5's layout and effects (R654)", () => {
     expect(JSON5.parse<unknown>('{ a: 1, // a comment\n b: { c: "d", },\n}\n')).toEqual({ a: 1, b: { c: "d" } });
   });
 
-  it("R654 names only effects the effects bank holds", () => {
+  it("R655 names only effects the effects bank holds", () => {
     const dangling = allAssignments()
       .filter(({ value }) => isRecord(value) && "effect" in value)
       .filter(({ value }) => {
@@ -493,7 +493,7 @@ describe("card-audio.json5's layout and effects (R654)", () => {
     expect(dangling, "hooks whose effect is missing from effects").toEqual([]);
   });
 
-  it("R654 builds every bank effect on a recipe sfx.ts has (SFX_IDS)", () => {
+  it("R655 builds every bank effect on a recipe sfx.ts has (SFX_IDS)", () => {
     expect(Object.keys(EFFECTS).length, "the bank holds at least one effect").toBeGreaterThan(0);
     const wrong = Object.entries(EFFECTS)
       .filter(([, effect]) => !isRecord(effect) || typeof effect.sfx !== "string" || !(SFX_IDS as readonly string[]).includes(effect.sfx))
@@ -501,7 +501,7 @@ describe("card-audio.json5's layout and effects (R654)", () => {
     expect(wrong, "effects whose sfx is not a recipe").toEqual([]);
   });
 
-  it("R654 uses every bank effect on at least one card", () => {
+  it("R655 uses every bank effect on at least one card", () => {
     const used = new Set(
       allAssignments().flatMap(({ value }) => (isRecord(value) && typeof value.effect === "string" ? [value.effect] : [])),
     );

@@ -17,7 +17,7 @@
 // The frequencies and times below are each recipe's data, like keyframes in `animations.css`, and
 // stay local to it (CLAUDE.md rule 9 names only the numbers another module reads).
 //
-// PITCH (R654). A card's effect plays a recipe shifted in pitch (`renderSfx`): every oscillator and
+// PITCH (R655). A card's effect plays a recipe shifted in pitch (`renderSfx`): every oscillator and
 // filter the run builds is detuned by the same cents, and the crushed wavetable plays that much
 // faster or slower. The times stay as written, so a pitched recipe keeps its contract.
 //
@@ -119,7 +119,7 @@ const FLOOR = 0.0001;
 /** An offset past any recipe's end; `time()` clamps it to the end. */
 const UNTIL_END = Number.POSITIVE_INFINITY;
 
-/** One recipe run: its context, its output, its span [at, end] and its pitch shift in cents (R654). */
+/** One recipe run: its context, its output, its span [at, end] and its pitch shift in cents (R655). */
 type Kit = { ctx: BaseAudioContext; out: AudioNode; at: number; end: number; cents: number };
 
 /** A detune of this many cents is an octave. */
@@ -1284,7 +1284,7 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
 };
 
 /**
- * R654: runs `id`'s recipe shifted by `pitch` (a frequency ratio: 1 as written, 0.5 an octave down)
+ * R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio: 1 as written, 0.5 an octave down)
  * and returns its length in seconds, which is the unshifted recipe's.
  */
 export function renderSfx(

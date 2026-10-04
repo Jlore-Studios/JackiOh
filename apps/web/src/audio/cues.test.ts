@@ -1085,10 +1085,10 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * R654: a hook's effect plays at the moment its line would speak
+ * R655: a hook's effect plays at the moment its line would speak
  * --------------------------------------------------------------------------------------------- */
 
-describe("R654 a card's hook may carry an effect beside or instead of its line", () => {
+describe("R655 a card's hook may carry an effect beside or instead of its line", () => {
   /** The Rock (#66) with an effect and a line on its play and only an effect on its death; #5, #18 and #96 likewise. */
   const FX: CardAudioTable = {
     voices: LINES.voices,
@@ -1117,7 +1117,7 @@ describe("R654 a card's hook may carry an effect beside or instead of its line",
   const fx = (over: Partial<CueContext> = {}): CueContext => ctx({ lines: FX, ...over });
   const summonedUnit = (defId: string): GameEvent => ({ type: "summoned", player: "p2", instanceId: "t1", defId, row: "units", lane: 1 });
 
-  it("R654 a unit's play starts its effect at the line's moment and its line CARD_EFFECT_DELAY_MS later", () => {
+  it("R655 a unit's play starts its effect at the line's moment and its line CARD_EFFECT_DELAY_MS later", () => {
     expect(shape(played(ROCK), fx())).toEqual(
       [sfx("play"), effect(ROCK, "play", VOICE_DELAY_MS), voice(ROCK, "play", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
     );
@@ -1126,17 +1126,17 @@ describe("R654 a card's hook may carry an effect beside or instead of its line",
     expect(cues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.play, VOICE_PRIORITY.play]);
   });
 
-  it("R654 a unit an effect summons plays its play effect at the lowest priority, as its line would", () => {
+  it("R655 a unit an effect summons plays its play effect at the lowest priority, as its line would", () => {
     const cues = cuesFor(summonedUnit(ROCK), fx()).filter((c) => c.kind === "effect");
     expect(cues).toEqual([{ kind: "effect", defId: ROCK, hook: "play", delayMs: VOICE_DELAY_MS, priority: VOICE_PRIORITY.summon }]);
   });
 
-  it("R654 a death hook that is only an effect plays the effect and speaks nothing", () => {
+  it("R655 a death hook that is only an effect plays the effect and speaks nothing", () => {
     expect(shape(destroyed(ROCK), fx())).toEqual([sfx("death"), effect(ROCK, "death", DEATH_VOICE_DELAY_MS)].sort());
     expect(voices(destroyed(ROCK), fx())).toEqual([]);
   });
 
-  it("R654 a spell's cast and a firing trap's cast carry their effects; a Field Spell's may be an effect alone", () => {
+  it("R655 a spell's cast and a firing trap's cast carry their effects; a Field Spell's may be an effect alone", () => {
     expect(shape(played(SPELL), fx())).toContain(effect(SPELL, "cast", VOICE_DELAY_MS));
     expect(shape(played(SPELL), fx())).toContain(voice(SPELL, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS));
     expect(shape(played(FIELD_SPELL), fx()).filter((c) => !c.startsWith("sfx:"))).toEqual([effect(FIELD_SPELL, "cast", VOICE_DELAY_MS)]);
@@ -1147,12 +1147,12 @@ describe("R654 a card's hook may carry an effect beside or instead of its line",
     expect(trapCues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.react]);
   });
 
-  it("R654 (R203) a trap's set plays no effect: its own seat hears the set, the other the plain whoosh", () => {
+  it("R655 (R203) a trap's set plays no effect: its own seat hears the set, the other the plain whoosh", () => {
     expect(shape(played(TRAP), fx())).toEqual([sfx("trapSet")]);
     expect(shape(played(HIDDEN_DEF_ID, "p2", HIDDEN_DEF_ID), fx())).toEqual([sfx("play")]);
   });
 
-  it("R654 (R203) the sentinel plays no effect, even from a table that has one under that name", () => {
+  it("R655 (R203) the sentinel plays no effect, even from a table that has one under that name", () => {
     const poisoned: CardAudioTable = {
       ...FX,
       cards: { ...FX.cards, [HIDDEN_DEF_ID]: { kind: "unit", play: { effect: "thud" }, death: { effect: "crumble" } } },
@@ -1163,7 +1163,7 @@ describe("R654 a card's hook may carry an effect beside or instead of its line",
     }
   });
 
-  it("R654 the attack hook is no event's: an attack declared plays the plain attack sound alone", () => {
+  it("R655 the attack hook is no event's: an attack declared plays the plain attack sound alone", () => {
     const declared: GameEvent = { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false };
     expect(shape(declared, fx())).toEqual([sfx("attack")]);
   });

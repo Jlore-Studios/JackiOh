@@ -999,6 +999,121 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
       });
     });
 
+    describe("playerStats", () => {
+      it("R654 holds no row before the first write, and put creates or updates a row", async () => {
+        const profile = await activeProfile();
+        expect(await store.playerStats.get(profile.id)).toBeNull();
+
+        const now = harness.now();
+        const initialStats = {
+          games: 10,
+          wins: 6,
+          losses: 4,
+          draws: 0,
+          cards: {
+            "core:c01": { played: 8, defeated: 2, destroyed: 1 },
+          },
+        };
+
+        await store.playerStats.put(profile.id, initialStats, false, now);
+        const stored = await store.playerStats.get(profile.id);
+        expect(stored).toEqual({
+          profileId: profile.id,
+          stats: initialStats,
+          isPrivate: false,
+          updatedAt: Math.floor(now),
+        });
+
+        const updatedStats = {
+          ...initialStats,
+          games: 11,
+          wins: 7,
+        };
+        await store.playerStats.put(profile.id, updatedStats, true, now + 1000);
+        const updated = await store.playerStats.get(profile.id);
+        expect(updated).toEqual({
+          profileId: profile.id,
+          stats: updatedStats,
+          isPrivate: true,
+          updatedAt: Math.floor(now + 1000),
+        });
+      });
+
+      it("R654 listPublic excludes private players, respects search, and sorts by games descending", async () => {
+        const p1 = await activeProfile();
+        const p2 = await activeProfile();
+        const p3 = await activeProfile();
+
+        await store.profiles.setDisplayName(p1.id, "Alice Wonderland");
+        await store.profiles.setDisplayName(p2.id, "Bob Builder");
+        await store.profiles.setDisplayName(p3.id, "Alice Secret");
+
+        const now = harness.now();
+        await store.playerStats.put(
+          p1.id,
+          {
+            games: 50,
+            wins: 30,
+            losses: 20,
+            draws: 0,
+            cards: {
+              "c-strike": { played: 25, defeated: 5, destroyed: 2 },
+              "c-shield": { played: 15, defeated: 1, destroyed: 0 },
+              "c-nemesis": { playedAgainst: 10 },
+            },
+          },
+          false,
+          now,
+        );
+
+        await store.playerStats.put(
+          p2.id,
+          {
+            games: 100,
+            wins: 60,
+            losses: 40,
+            draws: 0,
+          },
+          false,
+          now + 500,
+        );
+
+        await store.playerStats.put(
+          p3.id,
+          {
+            games: 200,
+            wins: 150,
+            losses: 50,
+            draws: 0,
+          },
+          true,
+          now + 1000,
+        );
+
+        const publicAll = await store.playerStats.listPublic({ limit: 10, offset: 0 });
+        expect(publicAll.map((s) => s.profileId)).toEqual([p2.id, p1.id]);
+        expect(publicAll[0]?.displayName).toBe("Bob Builder");
+        expect(publicAll[1]?.displayName).toBe("Alice Wonderland");
+        expect(publicAll[1]?.favouriteCards).toEqual([
+          { id: "c-strike", count: 25 },
+          { id: "c-shield", count: 15 },
+        ]);
+        expect(publicAll[1]?.funStats).toEqual({
+          nemesisCardId: "c-nemesis",
+          totalDestroyed: 2,
+          totalDefeated: 6,
+        });
+
+        const searchAlice = await store.playerStats.listPublic({ search: "Alice", limit: 10, offset: 0 });
+        expect(searchAlice.map((s) => s.profileId)).toEqual([p1.id]);
+
+        const page1 = await store.playerStats.listPublic({ limit: 1, offset: 0 });
+        expect(page1.map((s) => s.profileId)).toEqual([p2.id]);
+        const page2 = await store.playerStats.listPublic({ limit: 1, offset: 1 });
+        expect(page2.map((s) => s.profileId)).toEqual([p1.id]);
+      });
+    });
+
     describe("series", () => {
       function seriesRow(p1: string, p2: string, over: Partial<SeriesRow> = {}): SeriesRow {
         const now = harness.now();
@@ -1636,6 +1751,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
           status: "open",
           matchId: null,
         });
+        await store.playerStats.put(gone.id, { games: 1 }, false, now);
         await store.rooms.create({
           code: "QWERTZ",
           hostProfileId: gone.id,
@@ -1672,6 +1788,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.decks.list(gone.id)).toEqual([]);
         expect(await store.tutorial.get(gone.id)).toBeNull();
         expect(await store.playerSettings.get(gone.id)).toBeNull();
+        expect(await store.playerStats.get(gone.id)).toBeNull();
         expect(await store.collection.get(gone.id)).toEqual([]);
         expect(await store.tickets.openForProfile(gone.id)).toBeNull();
         expect(await store.rooms.get("QWERTZ")).toBeNull();

@@ -617,8 +617,9 @@ Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test server
 | `31-counter-opponent-turn.cy.ts` | Networked or hotseat: P2 has C #17 Counterspell set; P1 plays a Spell (§10.5, R427) | the Spell is announced, then countered on P1's turn: it lands in P1's graveyard with no `cardPlayed`, its mana stays spent, Combo counts do not move, and a Sheepish set beside it never sees a countered Unit |
 | `32-tribute-full-board.cy.ts` | Hotseat: P1's five unit zones full, #66 The Rock or C #45 Nature Titan in hand (R391) | the zone a Tribute empties glows as legal; the card is played into it paying that Tribute; a zone whose tributed unit has Reborn or sits on a pile is never offered |
 | `33-almanac.cy.ts` | Signed out, against a built client with every API call stubbed: the landing page's site footer, then `/almanac` (R630) | the footer's "Card almanac" link opens `/almanac`; filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action and closes; no API call is made on the page; Back returns to the landing page |
+| `34-stats.cy.ts` | Signed out, against a built client with stubbed API calls: the landing page's site footer, then `/stats` (R654) | the footer's "Stats" link opens `/stats`; provisional banner shows live game count; summary tiles render; cards table searches and filters; card drill-down opens CardFace modal; players tab renders public stats without Elo; Back returns to the landing page |
 
-**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–33) green in CI on Chrome and Electron.
+**M8 gate.** Every spec in `e2e/cypress/e2e/` (01–34) green in CI on Chrome and Electron.
 
 ### M9 — Patch v0.2.0: Classic, Classic+, the new keywords and mechanics (issue #40)
 
@@ -632,10 +633,10 @@ Acceptance:
 - A version 1 deck or trio code reads as Core numbers; a version 2 code round-trips a Classic and a Classic+ card; any other version is refused with its own sentence (R255, R339).
 - `loc` equals the generator's count for every script file (a test re-runs the generator and diffs), and a fused card's is its ingredients' sum (§5).
 
-**M9-T2 Patch history.** Files: `cards/patches/`, `cards/scripts/patch.ts`, `cards/src/catalog-data.ts`, `apps/server/src/{env,config}.ts`, `apps/server/src/api/catalog.ts`, `render.yaml`, the `.env.example`s, a migration.
-`patches.json` and one snapshot per patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0, v0.2.10); `pnpm --filter @jackioh/cards run patch <version> "<title>"`; `CATALOG_VERSION` the latest patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388); `GET /api/catalog/:version`.
+**M9-T2 Patch history.** Files: `cards/patches/`, `cards/scripts/{patch,patches,patches-io}.ts`, `cards/src/catalog-data.ts`, `apps/server/src/{env,config}.ts`, `apps/server/src/api/catalog.ts`, `render.yaml`, the `.env.example`s, a migration.
+`patches.json` and one snapshot per shipped patch (v0.1.0, v0.1.0b to v0.1.0d rebuilt from `git log --follow packages/cards/catalog.json`, v0.1.1, v0.2.0, v0.2.4, v0.2.5, v0.2.10); a branch uses `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` to add a pending fragment, then `patches ship` promotes it in first-parent ship order; `CATALOG_VERSION` is the latest shipped patch everywhere it lives, the `cards` rows and `app.settings` reseeded (R105, R388, R646); `GET /api/catalog/:version`.
 Acceptance:
-- A test holds `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version; `patches.json` lists every snapshot in order and nothing orders versions by comparing strings (R105).
+- A test holds `catalog.json`, after reverting every pending claim, equal to the latest snapshot and `CATALOG_VERSION` equal to the latest shipped version; `patches.json` lists every snapshot in ship order and nothing orders versions by comparing strings (R105, R646).
 - The server serves each version's snapshot and refuses an unknown one; a stale version is refused at save and queue as before.
 
 **M9-T3 Global mechanics.** Files: `engine/src/{config,turn,playChoices}.ts`, `engine/src/subsystems/*`, `e2e/cypress/e2e/08-turn-cap-draw.cy.ts`.

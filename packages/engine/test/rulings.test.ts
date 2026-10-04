@@ -193,6 +193,7 @@ const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 /** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
 const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
 const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PATCHES_SHIP_TEST = "../../cards/test/patches-ship.test.ts";
 const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
 /** R481's SQL evidence: migration 0016's grant for a catalog that grows. */
 const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/09_catalog_growth.sql";
@@ -237,6 +238,10 @@ const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
 const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
 const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
 const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
+/** R654's proofs (SPEC §9.11): public card and player statistics page. */
+const SERVER_STATS_API_TEST = "../../../apps/server/test/api/stats.test.ts";
+const SERVER_STATS_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_STATS_ROUTE_TEST = "../../../apps/web/src/routes/stats.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3845,6 +3850,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(645, AI_PERSONAS_TEST);
   });
 
+  // Proved by cards patches-ship.test.ts "R646 …" (the fragment rules on fixtures, the promotion on
+  // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
+  // patches.test.ts "R646 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R646 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(646, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
+  });
+
   // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {
@@ -3870,14 +3882,29 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
   });
 
-  // Proved by apps/web audio/cues.test.ts, director.test.ts, engine.test.ts and sfx.test.ts "R654 …"
-  // (an effect at its hook's moment, ahead of its line, never for the sentinel; the pick-up's gap and
-  // cut-off), test/ux/attack-pickup.test.tsx "R654 …" (the pick-up on the drag's lift and the click,
-  // nothing on the drop), and voiceData.test.ts and voice-lines.test.ts "R654 …" (the file's shape,
-  // its name comments, and the load failing with the path of a mistake).
-  it("R654 lets a card's hooks play effects, and a Unit picked up to attack play its attack hook", () => {
+  // Proved by apps/server test/api/stats.test.ts (publication gate at exactly 1000 live games, AI padding
+  // below gate, ignored at/above gate, tutorial exclusion, sample floor, filtering, drill-down, player sync),
+  // apps/server test/db/contract.ts (store.playerStats contract, privacy filtering, cascade on account delete),
+  // apps/web src/game/deckbuilder/filters.test.ts (sort by win rate, sample floor), and apps/web
+  // src/routes/stats.test.tsx (cards and players tabs, provisional banner, drill-down modal, personal stats).
+  it("R654 publishes card win rates with AI padding until the patch reaches 1000 live games and shows public player statistics", () => {
     provenIn(
       654,
+      SERVER_STATS_API_TEST,
+      SERVER_STATS_CONTRACT_TEST,
+      WEB_FILTERS_TEST,
+      WEB_STATS_ROUTE_TEST,
+    );
+  });
+
+  // Proved by apps/web audio/cues.test.ts, director.test.ts, engine.test.ts and sfx.test.ts "R655 …"
+  // (an effect at its hook's moment, ahead of its line, never for the sentinel; the pick-up's gap and
+  // cut-off), test/ux/attack-pickup.test.tsx "R655 …" (the pick-up on the drag's lift and the click,
+  // nothing on the drop), and voiceData.test.ts and voice-lines.test.ts "R655 …" (the file's shape,
+  // its name comments, and the load failing with the path of a mistake).
+  it("R655 lets a card's hooks play effects, and a Unit picked up to attack play its attack hook", () => {
+    provenIn(
+      655,
       "../../../apps/web/src/audio/cues.test.ts",
       "../../../apps/web/src/audio/director.test.ts",
       "../../../apps/web/src/audio/engine.test.ts",

@@ -28,7 +28,7 @@
 // the public cast, never the card it hit. A card cast as it is drawn stings (`castOnDraw`), Call to
 // Chaos's roll dings once for each effect it names (R436), and a mark brands its card (R437).
 //
-// R654: those moments are a card's hooks (`play`, `death`, `cast`), and a hook in `card-audio.json5`
+// R655: those moments are a card's hooks (`play`, `death`, `cast`), and a hook in `card-audio.json5`
 // gives a line, a named effect, or both. The effect plays at the moment the line would speak, and a
 // line an effect leads waits CARD_EFFECT_DELAY_MS more, so the sound reads as what the card does and
 // the line as its reaction. The effect is read off the same readable entry as the line, so R203 holds
@@ -88,7 +88,7 @@ export type PlayFrame = { defId: string; instanceId: string; player: PlayerId; c
 export type CueContext = {
   /** The view the batch was planned against (pre-batch): `viewer` and seat orientation come from here. */
   view: PlayerView;
-  /** The card sound table (R654): every card's hooks, with the voices and effects they name. */
+  /** The card sound table (R655): every card's hooks, with the voices and effects they name. */
   lines: CardAudioTable;
   /** Current mana this player had before this event, as the director tracks it. */
   manaBefore: (player: PlayerId) => number;
@@ -184,7 +184,7 @@ function voice(defId: string, line: VoiceLineKind, delayMs: number, priority: Vo
 }
 
 /**
- * R654: a readable card's sounds for one hook at its moment: the hook's effect at `delayMs`, and its
+ * R655: a readable card's sounds for one hook at its moment: the hook's effect at `delayMs`, and its
  * line then, or CARD_EFFECT_DELAY_MS later when the effect leads it. None for a card behind the
  * sentinel or a hook the table does not give.
  */

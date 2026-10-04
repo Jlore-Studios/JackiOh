@@ -67,7 +67,7 @@ type VoiceLineKind = "play" | "attack" | "death" | "cast";
 type PlayedCueLike =
   | { kind: "sfx"; id: string; params?: { amount?: number; mine?: boolean }; delayMs: number; atMs: number }
   | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; atMs: number; outcome: string }
-  // R654: a card's own effect on one of its hooks.
+  // R655: a card's own effect on one of its hooks.
   | { kind: "effect"; defId: string; hook: VoiceLineKind; effect: string; delayMs: number; atMs: number };
 
 type AudioDebugHandleLike = {

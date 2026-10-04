@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders every voice line in src/audio/card-audio.json5 to public/audio/voice/<key>.m4a and records
 // each file in src/audio/voice-manifest.json (docs/polish/2-sound.md, "gen-voice.mjs"; SPEC §10.11,
-// R501, R654).
+// R501, R655).
 //
 // The file is JSON5 and only ever read. A voice line is a card hook's assignment that names a voice
 // from the voices bank (with its text); its key is `<defId>-<hook>`. An assignment that is only an
