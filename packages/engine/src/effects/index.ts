@@ -376,3 +376,5 @@ export { replaceHandWithPerfect } from "../subsystems/perfectHand";
 export { castRoundsUntilDeath, damageRoundsUntilDeath } from "./rounds";
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
 export { rollBack } from "../subsystems/boardHistory";
+// The Glitch Easter egg (issue #170, R661): Glitch's one effect, its four outcomes behind one rng draw.
+export { glitch } from "../subsystems/glitch";

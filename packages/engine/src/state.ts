@@ -551,7 +551,26 @@ export type GameState = {
    * (`subsystems/boardHistory.ts`). Never in a view (§10.8). Absent until the first turn starts.
    */
   boardHistory?: BoardSnapshot[];
+  // ---- the Glitch Easter egg (issue #170; R658–R664) ----
+  /** R658: how many "… in the System" cards either player has played. Absent at 0, so a match without one hashes as before. */
+  systemPlays?: number;
+  /** R661: the decks and dealt seats `createGame` began with, which a reset deals again. Never in a view. */
+  opening?: OpeningRecord;
+  /** R661: how many times Glitch has reset the match; keys the reset's id numbering. Absent until the first. */
+  resets?: number;
+  /** R661: a reset Glitch owes, done once the action that drew it has settled (`subsystems/glitch`). */
+  resetOwed?: true;
+  /** R662: how many times Glitch has swapped the seats; odd means each account now holds the other seat. */
+  seatSwaps?: number;
+  /**
+   * R663: the two boards of other players' games a Glitch may put on the field, a `createGame` input
+   * frozen like `lastBoards` (R417, R564). Never in a view.
+   */
+  glitchBoards?: Partial<Record<PlayerId, LastBoardEntry[]>>;
 };
+
+/** R661: what a Glitch reset deals again — `createGame`'s decks and dealt seats. */
+export type OpeningRecord = { decks: [string[], string[]]; dealt?: PlayerId[] };
 
 /** R417: one card of a last board — the card and its face, never stats, buffs or damage. */
 export type LastBoardEntry = { defId: string; radiant: boolean };
@@ -674,6 +693,12 @@ export type CreateGameOptions = {
    * (`replay.ReplayInput.lastBoards`). Omitted, both are empty (hotseat, practice, a first game).
    */
   lastBoards?: LastBoardInput;
+  /**
+   * R663: the boards of two other players' games a Glitch may put on the field, one per seat. Setup,
+   * not an action, frozen as `lastBoards` is (R564): a replay passes the same boards
+   * (`replay.ReplayInput.glitchBoards`). Omitted, a Glitch's boards outcome leaves both fields empty.
+   */
+  glitchBoards?: LastBoardInput;
 };
 
 /** The five fields of a handicap, in §9.9's order, so every reader walks the same list. */
@@ -795,6 +820,19 @@ export function newInstance(
  * human's — carries no `handicap` key and hashes and replays exactly as before the field existed.
  */
 export function createGame(options: CreateGameOptions): GameState {
+  return buildGame(options, 1, "");
+}
+
+/**
+ * R661: the new game a Glitch reset deals — `createGame`'s, with ids numbered on from `nextId` in an
+ * order drawn from a stream of this reset's own (R223), so no id the old game showed names a card of
+ * the new one.
+ */
+export function createGameForReset(options: CreateGameOptions, at: { nextId: number; resets: number }): GameState {
+  return buildGame(options, at.nextId, `:reset-${at.resets}`);
+}
+
+function buildGame(options: CreateGameOptions, firstId: number, stream: string): GameState {
   if (options.catalog !== undefined) registerCatalog(options.catalog);
   const catalog = registeredCatalog();
 
@@ -828,7 +866,7 @@ export function createGame(options: CreateGameOptions): GameState {
     reserved: [],
     mulliganed: [],
     result: null,
-    nextId: 1,
+    nextId: firstId,
     nextSeq: 1,
     applied: [],
   };
@@ -838,7 +876,7 @@ export function createGame(options: CreateGameOptions): GameState {
   // store sorts by card id, so an id numbered in list order told the opponent how many of a deck's
   // cards sort before it, hidden ones included (§9.1, R97). The library itself is still the list in
   // order, for §2.1's shuffle, and the stream is not the match's rng, whose draws are untouched.
-  const numbering = createRng(`${options.seed}${INSTANCE_ID_STREAM}`);
+  const numbering = createRng(`${options.seed}${INSTANCE_ID_STREAM}${stream}`);
   PLAYER_IDS.forEach((player, seat) => {
     const deck = options.decks[seat] ?? [];
     const side = state.players[player];
@@ -873,6 +911,14 @@ export function createGame(options: CreateGameOptions): GameState {
   // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
   const lastBoards = freezeLastBoards(options.lastBoards, catalog);
   if (lastBoards !== undefined) state.lastBoards = lastBoards;
+  // R663: the same freeze for the boards a Glitch may lay down.
+  const glitchBoards = freezeLastBoards(options.glitchBoards, catalog);
+  if (glitchBoards !== undefined) state.glitchBoards = glitchBoards;
+  // R661: what a Glitch reset deals again.
+  state.opening = {
+    decks: [[...(options.decks[0] ?? [])], [...(options.decks[1] ?? [])]],
+    ...(options.dealt === undefined || options.dealt.length === 0 ? {} : { dealt: [...options.dealt] }),
+  };
 
   return state;
 }

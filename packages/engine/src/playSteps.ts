@@ -105,6 +105,7 @@ import {
 import { playedEarlier } from "./query";
 import { flagsOf } from "./scripts";
 import { countPlay } from "./timesPlayed";
+import { countSystemPlay } from "./subsystems/glitch";
 import { sacrificeTogether, stateCheck } from "./stateCheck";
 import { OWED_TO_TRAPS, SETTLE_PASS_CAP, dispatchPending, eventOfQueued, runQueuedTrigger, settle } from "./triggers";
 import { triggerHolderFor, triggerHoldersWithHook, type TriggerHolder } from "./triggers";
@@ -1076,6 +1077,8 @@ function placeCard(sink: EngineSink, run: PlayRun): boolean {
   state.counters.played += 1;
   // R429: a card that counts its own plays counts this one here, with every other count of it.
   countPlay(card);
+  // R658: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
+  if (run.cast !== true) countSystemPlay(state, card);
   run.radiant = card.radiant;
   // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.
   recordPlay(state, run.player, card);

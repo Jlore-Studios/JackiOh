@@ -363,6 +363,13 @@ export type GameEvent =
   /** B5 E10: an effect ended `player`'s turn (the turn's own `turnEnded` follows). */
   | { type: "turnCutShort"; player: PlayerId; byInstanceId: string | null }
   /**
+   * R661–R664: a Glitch `player` played did one of its four things. Public, and it names no card:
+   * `reset` (the match starts again, its setup's events follow), `swap` (each account now plays the
+   * other seat; a host reads `GameState.seatSwaps`), `boards` (both fields became other games'
+   * boards) or `void` (the match never happened; `gameOver` with reason `voided` follows).
+   */
+  | { type: "glitched"; player: PlayerId; outcome: "reset" | "swap" | "boards" | "void" }
+  /**
    * R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
    * (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
    */
@@ -396,7 +403,9 @@ export type GameOverReason =
   | "draw-accepted"
   | "turn-cap"
   | "disconnect"
-  | "match-ceiling";
+  | "match-ceiling"
+  /** R664: a Glitch voided the match — no winner, no result, no record (§2.5). */
+  | "voided";
 
 /**
  * Every type in the union, for the animation-table test (BUILD M5-T4).
@@ -471,6 +480,7 @@ export const GAME_EVENT_TYPES = [
   "drawLimited",
   "turnCutShort",
   "marked",
+  "glitched",
 ] as const satisfies readonly GameEventType[];
 
 /**

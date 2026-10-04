@@ -53,6 +53,7 @@ import { activateAbility, activateActionsFor } from "./subsystems/activate";
 import { playOutTurn } from "./subsystems/aiPolicy";
 import { syncFusedScripts } from "./subsystems/fuse";
 import { activatePower, powerOf, whyCannotActivate } from "./subsystems/heroPower";
+import { resetMatch } from "./subsystems/glitch";
 import { settle } from "./triggers";
 import { answerDraw, canOfferDraw, concede, endTurn, hasStandingDrawOffer, offerDraw } from "./turn";
 import { activeUnitsOf, cardAt, carriedUnitsOf, slotsOf } from "./zones";
@@ -459,6 +460,8 @@ export function reduce(state: GameState, action: Action, rng?: Rng): ReduceResul
   settle(sink);
   answerForLockedOut(sink);
   endDueTurns(sink);
+  // R661: a Glitch's reset goes once the action that drew it has settled.
+  if (next.resetOwed === true) resetMatch(sink);
 
   next.rngCursor = sink.rng.cursor;
   rememberNonce(next, action.nonce, events);
