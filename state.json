@@ -2066,12 +2066,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "cognition"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "cognition",
+            "run": "37236749714",
+            "tier": "weak"
+          }
+        ],
         "sha": "98e6e01d2114369510751a5aecf98a8a5ebef716",
-        "tiers": {}
+        "tiers": {
+          "cognition": "weak"
+        }
       }
     },
     "218": {
