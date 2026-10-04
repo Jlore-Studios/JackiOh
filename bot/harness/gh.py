@@ -242,6 +242,20 @@ class GitHub:
         """The issues GitHub's own issue dependencies say block this one, open or closed."""
         return self.paginate(f"{self._r}/issues/{int(number)}/dependencies/blocked_by", limit=100)
 
+    def blocking(self, number: int) -> list[dict]:
+        """The issues GitHub's own issue dependencies say this one blocks, open or closed."""
+        return self.paginate(f"{self._r}/issues/{int(number)}/dependencies/blocking", limit=100)
+
+    def add_blocked_by(self, number: int, blocker_id: int) -> None:
+        """Mark issue `number` blocked by the issue whose id (not number) is `blocker_id`."""
+        self.request("POST", f"{self._r}/issues/{int(number)}/dependencies/blocked_by",
+                     {"issue_id": int(blocker_id)})
+
+    def add_sub_issue(self, parent: int, child_id: int) -> None:
+        """Make the issue whose id (not number) is `child_id` a sub-issue of issue `parent`."""
+        self.request("POST", f"{self._r}/issues/{int(parent)}/sub_issues",
+                     {"sub_issue_id": int(child_id)})
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         if "body" in fields:
             fields["body"] = with_marker(fields["body"])

@@ -263,6 +263,9 @@ class TriageWorkflowTests(unittest.TestCase):
     def test_only_new_threads_and_never_pull_request_code(self):
         self.assertRegex(self.text, r"issues:\n\s+types: \[opened\]")
         self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
+        # A person can call it on any thread by number; the gate reads that thread read-only.
+        self.assertRegex(self.text, r"workflow_dispatch:\n\s+inputs:\n\s+number:")
+        self.assertIn("|| inputs.number }}", self.text)
         self.assertNotRegex(self.text, r"^  pull_request:", "would run the pull request's code")
         refs = re.findall(r"ref: (.*)", self.text)
         self.assertEqual(len(refs), 3)
@@ -278,7 +281,8 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "read", "pull-requests": "read"})
         for name in ("gate", "apply"):
             self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
-        self.assertEqual(self.grants("gate"), {"contents": "read"})
+        self.assertEqual(self.grants("gate"),
+                         {"contents": "read", "issues": "read", "pull-requests": "read"})
         self.assertEqual(self.grants("apply"),
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn("always() && needs.gate.outputs.go == 'true'", job(self.text, "apply"))
