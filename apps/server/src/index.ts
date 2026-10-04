@@ -126,7 +126,7 @@ const E2E_ENV_DEFAULTS: Readonly<Record<string, string>> = {
   DATABASE_URL: "memory://e2e-fixture-store",
   CODE_PEPPER: "e2e-fixture-code-pepper-not-a-secret-abcdefgh",
   PUBLIC_ORIGINS: VITE_DEV_ORIGINS.join(","),
-  CATALOG_VERSION: "v0.2.11",
+  CATALOG_VERSION: "v0.2.10",
 };
 
 function e2eRequested(source: Record<string, string | undefined>): boolean {
