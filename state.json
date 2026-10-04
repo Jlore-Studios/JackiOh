@@ -868,7 +868,9 @@
     },
     "167": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5975340286"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "2fe1dea4a657d860e9ce809da8fa1f02851b5f2b": 1
@@ -886,8 +888,8 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-03T23:10:11Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-04T01:26:15Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37161750591",
       "self_check_findings": [],
       "source": "request",
