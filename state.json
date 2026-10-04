@@ -981,7 +981,18 @@
       "stop_requested": false,
       "taken_asks": [
         "c:5975340398"
-      ]
+      ],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "sha": "2ed45ad546dffb06f4d093715ff7bcae1dfa5744",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "169": {
       "action": "review",
