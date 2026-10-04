@@ -1,9 +1,15 @@
 // R388: the one seam onto packages/cards/patches/. Each file is its own lazy chunk, loaded once and
 // only when asked for; the order of patches is patches.json's; no data at all is an empty history.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { EMPTY_PATCH_SOURCE, fileStem, loadersByStem, realPatchSource, sourceFromLoaders, type Loader } from "./source.ts";
+
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, Loader>; calls: string[] } {
   const calls: string[] = [];
@@ -68,9 +74,12 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: six patches in the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads packages/cards/patches/: the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    const shipped = JSON.parse(
+      readFileSync(resolve(REPO, "packages/cards/patches/patches.json"), "utf8"),
+    ) as { version: string }[];
+    expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
     const index = await realPatchSource.index();
     expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {
