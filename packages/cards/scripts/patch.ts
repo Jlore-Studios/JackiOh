@@ -3,7 +3,7 @@
  * regenerates each patch's card-by-card `changes` and the per-card `index.json`, and — for the
  * newest patch — bumps `CATALOG_VERSION` everywhere the string lives.
  *
- *   pnpm --filter @jackioh/cards patch <version> "<title>" --date <YYYY-MM-DD> \
+ *   pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD> \
  *     [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--from-git <rev>]
  *
  * - The snapshot is `packages/cards/catalog.json` as it stands, or with `--from-git <rev>` the file
@@ -17,6 +17,9 @@
  *   end-to-end default (`apps/server/src/index.ts`). `test/patches.test.ts` holds all of them, and
  *   the catalog, to the newest snapshot. A deployment then reseeds: `db:seed-catalog` stamps every
  *   `cards` row and `app.settings.catalog_version` with the new version.
+ *
+ * `<version>` may be a micro patch's `vA.B.Y`, which ships as the newest version plus the next
+ * letter (`versions.ts`, R650).
  *
  * There is no clock in this package (CLAUDE.md rule 4), so the date is always given.
  */
@@ -33,6 +36,7 @@ import {
   type Catalog,
   type PatchEntry,
 } from "./patches-io";
+import { resolveVersion } from "./versions";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const CATALOG_PATH = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -142,7 +146,10 @@ export function makePatch(args: Args): PatchEntry[] {
 }
 
 function main(): void {
-  const args = parseArgs(process.argv.slice(2));
+  const asked = parseArgs(process.argv.slice(2));
+  // R650: a micro patch (`vA.B.Y`) is named after the newest version in patches.json.
+  const shipped = readPatches().map((p) => p.version);
+  const args = { ...asked, version: resolveVersion(asked.version, shipped) };
   const written = makePatch(args);
   const patch = written.find((p) => p.version === args.version);
   const counts = { added: 0, changed: 0, removed: 0 };
