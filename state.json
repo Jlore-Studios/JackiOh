@@ -2794,8 +2794,11 @@
     "what": "revise #203 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-04T21:58:14Z",
-    "notes": [],
+    "at": "2026-10-04T22:06:11Z",
+    "notes": [
+      "started a night run, as a lane was free: #166 (medium) is queued to revise, for `claude-4`: build on `claude-4` (claude, `opus`, strong); review on `claude-4` (claude, `opus`, strong)",
+      "#244: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
