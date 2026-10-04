@@ -69,7 +69,9 @@ To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`
 **`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
 It also revises its own pull requests without being asked: when CI fails twice on the same
 commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
-moves on and leaves the branch with conflicts. After three tries at fixing CI on one pull request
+moves on and leaves the branch with conflicts (once the reviews approved a change, resolving its
+conflicts takes no review run again: [the review rule](#difficulty-and-tiers)). After three
+tries at fixing CI on one pull request
 it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
 revision lands. It can revise a pull request a person opened too, as long as the branch is in this
 repository. It never turns on auto-merge for someone else's pull request.
@@ -480,6 +482,19 @@ model's. That holds at every difficulty: a hard item ships on two medium approva
   subscription's login, which the builder's code must never run beside. CI runs every check.
 - When the rule holds, auto-merge turns on, pinned to that commit: GitHub will not merge a head
   that moved after the approval.
+- **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
+  (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
+  runs or before, the revision that resolves them needs no review run: its builder resolves the
+  conflicts, its own run's reviewer (medium or strong) reviews the resolution adversarially,
+  told that its approval is the only one the resolution gets, and if it approves, auto-merge
+  turns on for the new commit, which is cleared in turn. That holds only when the revision
+  started from the cleared commit and changed nothing but the files the merge left conflicted.
+  The deliver job checks that itself: it redoes the merge of the cleared commit and `main` with
+  git and compares the new commit with it, trusting nothing the model job says. A builder with
+  its own reviewer in the run takes such a revision first (Devin has none). A revision that
+  changes anything more, a branch someone pushed to after the reviews, or a change still short of
+  the rule when the conflict came goes back under the rule, and the comment on the pull request
+  says why.
 - Blocking findings queue a revision, built by the building rule above (through the self-check
   loop again if that builder checks itself), which goes round the same way. A rejection stands
   against that commit until the same model approves it or the commit changes. After three such

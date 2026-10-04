@@ -161,6 +161,10 @@ class Worker:
         self._base_gate_cache: dict[str, bool] = {}
         #: The forbidden paths the last path guard put back (`_guard`).
         self.put_back: list[str] = []
+        #: For a conflict revision of a cleared change: what its builder and its reviewer are told
+        #: (`_cleared_notes`).
+        self.carry_build = ""
+        self.carry_review = ""
         self.result: dict[str, Any] = {
             "version": 1,
             "action": plan.get("action"),
@@ -488,7 +492,7 @@ class Worker:
             conflict_text = (
                 data("\n".join(conflicts), "Files merged with conflict markers")
                 if conflicts else "The merge of `main` into the branch was clean."
-            )
+            ) + self.carry_build
             prompt = self.render(
                 "revise",
                 number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
@@ -524,6 +528,37 @@ class Worker:
             gate_list=self._gate_list(),
         )
         return "build", prompt + self._handoff_text()
+
+    def _cleared_notes(self, conflicts: list[str]) -> tuple[str, str]:
+        """What a conflict revision of a cleared change tells its builder and its reviewer, when
+        it starts from the commit the review rule cleared: only its own review stands between
+        the resolution and `main`. ("", "") for any other run. Deliver decides the carry from
+        git alone (`deliver._carry`)."""
+        clear = self.plan.get("cleared")
+        if (self.plan.get("action") != "revise" or self.plan.get("source") != "conflict"
+                or not isinstance(clear, dict) or not self.start_sha
+                or clear.get("sha") != self.start_sha):
+            return "", ""
+        by = f" ({clear['by']})" if clear.get("by") else ""
+        cleared_at = f"at `{self.start_sha[:12]}`{by}"
+        build = (f"\n\nThe reviews had cleared this change {cleared_at} before `main` moved. "
+                 "Resolve the conflicts and change nothing else: if this revision changes only "
+                 "the conflicted files and its reviewer approves, it merges without another "
+                 "review run. If making it correct takes more (say `main` renamed something the "
+                 "change uses), make that change anyway and say so in your report: it then goes "
+                 "back to a review run.")
+        what = ("the builder resolved the conflicts in " + ", ".join(f"`{c}`" for c in conflicts)
+                if conflicts else "the merge was clean")
+        review = (f"This revision resolves a conflict on a change the review rule had already "
+                  f"cleared {cleared_at}: `main` moved and the branch no longer merged, so the "
+                  f"harness merged `main` into it and {what}. If you approve and the revision "
+                  "changed nothing beyond those files, it merges with no further review: yours "
+                  "is the only review of the resolution, so judge it hardest. In each conflicted "
+                  "file both `main`'s change and the branch's change must survive with their "
+                  "meaning, nothing `main` brought may be dropped or reverted, and the merged "
+                  "whole must still be correct. `git log --merges -1` finds the merge commit, and "
+                  "`git show --remerge-diff <it>` shows how each conflict was resolved.")
+        return build, review
 
     def _fix_prompt(self, cycle: int, findings: list[Finding], failures: str,
                     label: str = "Blocking findings") -> str:
@@ -774,6 +809,7 @@ class Worker:
     def _item(self) -> None:
         conflicts = self._prepare()
         assert self.wt is not None
+        self.carry_build, self.carry_review = self._cleared_notes(conflicts)
         if self.plan_seat is not None:
             self._planning()
         findings: list[Finding] = [_finding(f) for f in self.plan.get("previous_findings") or []]
@@ -820,6 +856,9 @@ class Worker:
                            + "The builder's own self checks ran out with these findings still "
                            "open; judge them too:\n\n"
                            + self._findings_text(open_self_check, "Open self-check findings"))
+            if self.carry_review:
+                earlier = context or (self._findings_text(findings) if findings else "")
+                context = (earlier + "\n\n" if earlier else "") + self.carry_review
             review = self._review(cycle, report, results, findings, context=context)
             entry["review"] = review.to_dict()
             if not review.readable:
