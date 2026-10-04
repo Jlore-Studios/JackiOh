@@ -547,7 +547,7 @@ git. Proposal:
 3. **Making a patch** starts with `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` (in
    `scripts/`, where fs is allowed): it adds a pending fragment claiming the catalog ids the branch
    changes. After merge, `patches ship` snapshots that first-parent commit, writes the patch-notes
-   entry and advances the catalog version in ship order (R641).
+   entry and advances the catalog version in ship order (R646).
 4. **Retroactively**, from `git log --follow packages/cards/catalog.json` on a full clone (a shallow
    one stops at later commits that change no entry), checked on 2026-09-30:
 

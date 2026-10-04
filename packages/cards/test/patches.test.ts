@@ -5,7 +5,7 @@
 // newest patch's version, everywhere the string lives. A version is opaque (R105): its order is
 // patches.json's, never a comparison of strings.
 //
-// Several patches are built at once (R641), so branches change `catalog.json` and add one
+// Several patches are built at once (R646), so branches change `catalog.json` and add one
 // fragment under `patches/pending/` instead of editing the history: while a fragment is pending,
 // the catalog differs from the newest snapshot on exactly the claimed cards, and `patches ship`
 // promotes each fragment after it merges.
@@ -42,7 +42,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    // The table the brief checked is the prefix: promotions only ever append (R641), so the
+    // The table the brief checked is the prefix: promotions only ever append (R646), so the
     // history the file holds today can grow past it but never move it.
     expect(VERSIONS.slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
@@ -55,11 +55,11 @@ describe("R388 card patch history (B4.2)", () => {
     }
   });
 
-  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R641)", () => {
+  it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R646)", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
     const snapshot = readSnapshot(CATALOG_VERSION);
     // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
-    // cards (R641): reverted to the snapshot, the catalog is the snapshot. With no fragments
+    // cards (R646): reverted to the snapshot, the catalog is the snapshot. With no fragments
     // pending this is the old equality, entry for entry.
     const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
     const catalog = CATALOG as unknown as Catalog;
@@ -74,7 +74,7 @@ describe("R388 card patch history (B4.2)", () => {
     }
   });
 
-  it("R641 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
+  it("R646 lists every shipped patch once in shipped.json, with the commit that shipped it and its snapshot's blob", () => {
     const shipped = readShipped();
     expect(shipped.map((entry) => entry.version)).toEqual(VERSIONS);
     expect(new Set(shipped.map((entry) => entry.version)).size).toBe(shipped.length);
@@ -158,7 +158,7 @@ describe("R388 card patch history (B4.2)", () => {
     expect(index["classic-001"]?.[0]).toBe("v0.2.0");
     expect(index["core-016"]).toContain("v0.2.0");
     // Every catalog entry was added by some patch, or is claimed by a pending fragment — which is
-    // not a shipped patch yet, so the index does not name it (R641).
+    // not a shipped patch yet, so the index does not name it (R646).
     const claimed = new Set(readFragments().flatMap(({ fragment }) => fragment.cards));
     expect(Object.keys(CATALOG).filter((id) => index[id] === undefined && !claimed.has(id))).toEqual([]);
   });

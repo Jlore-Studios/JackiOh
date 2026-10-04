@@ -521,7 +521,7 @@ pnpm --filter @jackioh/cards run patches check            # prove every catalog 
 pnpm --filter @jackioh/cards run patches ship             # promote pending fragments in ship order
 ```
 
-## 8. Patches and the catalog version (R388, R641)
+## 8. Patches and the catalog version (R388, R646)
 
 Every change to card data is a patch, and every patch is kept, so an older version of any card can
 still be read. Several patches are built at once, so a patch is claimed on its branch and shipped

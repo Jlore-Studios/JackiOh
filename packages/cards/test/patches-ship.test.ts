@@ -1,4 +1,4 @@
-// R641: several card patches are built at once, so branches add a pending fragment under
+// R646: several card patches are built at once, so branches add a pending fragment under
 // `patches/pending/` instead of editing the history; `patches check` proves every catalog change
 // against the newest shipped snapshot, and `patches ship` promotes each fragment in ship order.
 // The pure rules are proved here on fixtures; the promotion is proved below on a throwaway git
@@ -25,8 +25,8 @@ import { checkPatches, shipPatches, utcDateOf, writeFragment } from "../scripts/
 
 const card = (id: string, cost: number): Record<string, unknown> => ({ id, name: `Card ${id}`, cost });
 
-describe("R641 pending fragments and the check that proves them", () => {
-  it("R641 claims every catalog change exactly once, and only changes", () => {
+describe("R646 pending fragments and the check that proves them", () => {
+  it("R646 claims every catalog change exactly once, and only changes", () => {
     const newest: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
     const files = [
       { name: "v0.2.5.json", fragment: { version: "v0.2.5", title: "t", sources: "s", notes: "n", cards: ["aaa"] } },
@@ -55,7 +55,7 @@ describe("R641 pending fragments and the check that proves them", () => {
     ]);
   });
 
-  it("R641 holds every fragment to a bare patch number matching its file", () => {
+  it("R646 holds every fragment to a bare patch number matching its file", () => {
     const newest: Catalog = { aaa: card("aaa", 1) };
     const catalog: Catalog = { aaa: card("aaa", 1) };
     const bad = [{ name: "v9.json", fragment: { version: "9.9", title: "t", sources: "s", notes: "n", cards: [] } }];
@@ -66,7 +66,7 @@ describe("R641 pending fragments and the check that proves them", () => {
     expect(checkFragments({ files: renamed, catalog, newest }).join("\n")).toContain("its file names");
   });
 
-  it("R641 lets a fragment hold a micro vA.B.Y, named at promotion, but never a vA.B.X", () => {
+  it("R646 lets a fragment hold a micro vA.B.Y, named at promotion, but never a vA.B.X", () => {
     const newest: Catalog = { aaa: card("aaa", 1) };
     const catalog: Catalog = { aaa: card("aaa", 2) };
     const micro = [
@@ -85,7 +85,7 @@ describe("R641 pending fragments and the check that proves them", () => {
     expect(checkFragments({ files: placeholder, catalog, newest }).join("\n")).toContain("v0.2.X");
   });
 
-  it("R641 holds a fragment to what a shipped patch carries: a title, a source and notes", () => {
+  it("R646 holds a fragment to what a shipped patch carries: a title, a source and notes", () => {
     const newest: Catalog = { aaa: card("aaa", 1) };
     const empty = [
       { name: "v0.2.5.json", fragment: { version: "v0.2.5", title: "", sources: " ", notes: "", cards: ["aaa"] } },
@@ -97,7 +97,7 @@ describe("R641 pending fragments and the check that proves them", () => {
     ]);
   });
 
-  it("R641 reverts the catalog to the newest snapshot on exactly the claimed cards", () => {
+  it("R646 reverts the catalog to the newest snapshot on exactly the claimed cards", () => {
     const newest: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
     // Changed, added and removed entries all come back; unclaimed entries are untouched.
     const catalog: Catalog = { aaa: card("aaa", 2), ccc: card("ccc", 1) };
@@ -108,14 +108,14 @@ describe("R641 pending fragments and the check that proves them", () => {
     expect(sameCatalog(newest, newest)).toBe(true);
   });
 
-  it("R641 ships a taken version as the next revision letter, never by reopening it", () => {
+  it("R646 ships a taken version as the next revision letter, never by reopening it", () => {
     expect(nextShipName(new Set(), "v0.2.0")).toBe("v0.2.0");
     expect(nextShipName(new Set(["v0.2.0"]), "v0.2.0")).toBe("v0.2.0b");
     expect(nextShipName(new Set(["v0.2.0", "v0.2.0b"]), "v0.2.0")).toBe("v0.2.0c");
     expect(nextShipName(new Set(["v0.2.5"]), "v0.2.0")).toBe("v0.2.0");
   });
 
-  it("R641 dates a patch by its commit's UTC day, never the local one", () => {
+  it("R646 dates a patch by its commit's UTC day, never the local one", () => {
     expect(utcDateOf(0)).toBe("1970-01-01");
     // 2026-10-01T12:00:00Z.
     expect(utcDateOf(1790856000)).toBe("2026-10-01");
@@ -123,13 +123,13 @@ describe("R641 pending fragments and the check that proves them", () => {
     expect(utcDateOf(1790807400)).toBe("2026-09-30");
   });
 
-  it("R641 hashes a snapshot's bytes the way git does", () => {
+  it("R646 hashes a snapshot's bytes the way git does", () => {
     expect(gitBlobHash("test\n")).toBe("9daeafb9864cf43055ae93beb0afd6c7d144bfa4");
     expect(gitBlobHash("")).toBe("e69de29bb2d1d6434b8b29ae775ad8c2e48c5391");
   });
 });
 
-describe("R641 promotion in ship order", () => {
+describe("R646 promotion in ship order", () => {
   const IDENT = {
     GIT_AUTHOR_NAME: "night bot",
     GIT_AUTHOR_EMAIL: "bot@example.invalid",
@@ -161,7 +161,7 @@ describe("R641 promotion in ship order", () => {
   // changing card aaa, branch B adds fragment v0.2.0 changing card bbb. A merges, then B merges
   // with no conflict under pending/, and promotion ships v0.2.5 before v0.2.0 whatever the names
   // say. A later fragment named v0.2.0 ships as v0.2.0b, then v0.2.0c.
-  it("R641 ships pending fragments oldest merge first, snapshots each merge's catalog, and letters revisions", () => {
+  it("R646 ships pending fragments oldest merge first, snapshots each merge's catalog, and letters revisions", () => {
     const root = mkdtempSync(join(tmpdir(), "jackioh-ship-"));
     try {
       const dir = `${root}/packages/cards/patches/`;
@@ -319,7 +319,7 @@ describe("R641 promotion in ship order", () => {
 
   // A micro `vA.B.Y` fragment keeps its Y until promotion names it after the then-newest patch
   // (R650): the first ships as v0.1.1b, the next as v0.1.1c, each snapshot carrying only its card.
-  it("R641 names a micro vA.B.Y fragment after the then-newest patch when it ships", () => {
+  it("R646 names a micro vA.B.Y fragment after the then-newest patch when it ships", () => {
     const root = mkdtempSync(join(tmpdir(), "jackioh-ship-micro-"));
     try {
       const dir = `${root}/packages/cards/patches/`;
@@ -386,7 +386,7 @@ describe("R641 promotion in ship order", () => {
     }
   });
 
-  it("R641 fails check when a micro cannot be named after the newest patch", () => {
+  it("R646 fails check when a micro cannot be named after the newest patch", () => {
     const root = mkdtempSync(join(tmpdir(), "jackioh-check-micro-"));
     try {
       const base: Catalog = { aaa: card("aaa", 1) };
@@ -406,7 +406,7 @@ describe("R641 promotion in ship order", () => {
     }
   });
 
-  it("R641 fails check on the wiring, not only on fixtures: an unclaimed change in a real tree", () => {
+  it("R646 fails check on the wiring, not only on fixtures: an unclaimed change in a real tree", () => {
     const root = mkdtempSync(join(tmpdir(), "jackioh-check-"));
     try {
       const base: Catalog = { aaa: card("aaa", 1) };

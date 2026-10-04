@@ -2,12 +2,15 @@
 
 import type { Action, ActionInput, ActionType } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
+import { registerCatalog, registeredCatalog } from "../src/catalog";
 import { DECK_SIZE } from "../src/config";
 import { beginGame, legalActions, reduce } from "../src/reduce";
 import { fold, hashState } from "../src/replay";
-import type { GameState } from "../src/state";
+import type { Script } from "../src/script";
+import { registerScripts, registeredScripts } from "../src/scripts";
+import { newInstance, type GameState } from "../src/state";
 import { viewFor } from "../src/viewFor";
-import { vanillaDeck } from "./fixtures/catalog";
+import { spellDef, vanillaDeck } from "./fixtures/catalog";
 import { eventsOfType, newGame } from "./fixtures/harness";
 
 const SEED = "r345";
@@ -119,5 +122,40 @@ describe("R345 the automatic turn end is each player's to turn off", () => {
     const leftOff = fold({ seed: SEED, decks: DECKS, log: [toggled[0] as Action, ...mulligans(setup)] });
     expect(leftOff.state.players.p1.autoEndTurn).toBe(false);
     expect(hashState(leftOff.state)).not.toBe(hashState(a.state));
+  });
+});
+
+// #188: `autoEndDue` (reduce.ts) needs to know only whether some action holds the turn open, so it
+// walks `eachLegalAction` and stops at the first one. A card past that point is never priced: in a
+// long game that walk ran after every simulated action and was nearly a third of the AI's time.
+const PRICED = spellDef(0, { id: "fx-priced", name: "Fixture Priced Spell" });
+let priced = 0;
+const PRICED_SCRIPT: Script = {
+  cost: () => {
+    priced += 1;
+    return 1;
+  },
+};
+
+describe("R82 the automatic turn end looks no further than the first action that holds the turn open", () => {
+  it("R82 a hand card after a playable one is never priced to decide that the turn goes on", () => {
+    const state = started();
+    registerCatalog({ ...registeredCatalog(), [PRICED.id]: PRICED });
+    registerScripts({ ...registeredScripts(), [PRICED.id]: { base: PRICED_SCRIPT, radiant: PRICED_SCRIPT } });
+    const [playable] = state.players.p1.hand;
+    if (playable === undefined) throw new Error("p1 kept no hand");
+    const later = newInstance(state, PRICED.id, "p1", { z: "hand", player: "p1" });
+    state.players.p1.hand = [playable, later];
+
+    priced = 0;
+    const result = act(state, { type: "setAutoEndTurn", enabled: true, playerId: "p1" });
+    expect(eventsOfType(result.events, "turnAutoEnded")).toHaveLength(0);
+    expect(result.state.active).toBe("p1");
+    expect(priced).toBe(0);
+
+    // The card is still on offer: the full list prices it and lists its play.
+    const plays = legalActions(result.state, "p1").filter((body) => body.type === "play" && body.instanceId === later.id);
+    expect(plays.length).toBeGreaterThan(0);
+    expect(priced).toBeGreaterThan(0);
   });
 });

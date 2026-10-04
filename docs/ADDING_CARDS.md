@@ -35,7 +35,7 @@ size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`).
 and the web's patch tests (`patches/source.test.ts`, `routes/patch-notes.test.tsx`, `patches/PatchNotes.test.tsx`) count
 `catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests
 (`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
-yours — a pending-claimed card needs no edits there (R641). What stays hand-kept is the proof:
+yours — a pending-claimed card needs no edits there (R646). What stays hand-kept is the proof:
 `catalog.test.ts`'s `RARITY_COUNTS` and `SET_SIZES` (its totals and row counts are the sums) and
 `validate-catalog.ts`'s `SETS` and `EXPECTED_TAG_COUNTS` (`patches.test.ts`'s `VERSIONS` is derived from
 `patches.json`, with the shipped prefix pinned).
@@ -107,7 +107,7 @@ describe("C+ #6 Wrong-House Attacker", () => {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388, R641). The designer picks the version name on the issue (`Patch v0.2.X: …`, or `Patch v0.2.Y: …`
+A change to card data is a patch (R388, R646). The designer picks the version name on the issue (`Patch v0.2.X: …`, or `Patch v0.2.Y: …`
 for a micro patch, which keeps its `Y` until promotion names it, R650); never reopen a
 shipped one. A branch claims its card changes with a pending fragment:
 

@@ -1,4 +1,5 @@
-# The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten every ten minutes.
+# The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten every ten minutes, and
+# the pinned "Night bot statistics" issue (bot/harness/stats.py), rewritten every two hours.
 #
 # GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
 # between runs), so a schedule alone cannot keep the issue current. Instead one job loops: it
@@ -62,7 +63,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
-        run: python -m harness dashboard --sweep --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
+        run: python -m harness dashboard --sweep --stats --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
 
       # Not after a cancellation, so a person can stop the loop.
       - name: Start the next loop

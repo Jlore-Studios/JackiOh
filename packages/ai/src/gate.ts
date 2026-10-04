@@ -64,7 +64,10 @@ export const AI_GATE = {
   /** ai-vs-greedy games whose AI decisions the timing gate replays: `pnpm test`, then `pnpm ai:gate`. */
   perfSmokeGames: 1,
   perfFullGames: 6,
-  /** Runs per decision; the fastest counts, so a context switch on a shared machine is not a failure. */
+  /**
+   * The most runs per decision; the fastest counts, so a context switch on a shared machine is not a
+   * failure. The runs stop at the first under `maxDecisionMs`, since later ones cannot fail it.
+   */
   perfRepeats: 3,
   /**
    * The timing gate's yardstick: random-policy games 1..calibrationGames of ai-vs-random, played

@@ -1,5 +1,5 @@
 /**
- * The card patch history on disk (B4.2, R388, R641): `packages/cards/patches/`.
+ * The card patch history on disk (B4.2, R388, R646): `packages/cards/patches/`.
  *
  *   patches.json       every shipped patch in ship order: { version, date, title, source, notes, changes }
  *   <version>.json     the whole catalog as that patch left it (a snapshot, not a diff)
@@ -12,7 +12,7 @@
  * compared for equality only and never parsed or sorted (R105, R388). `changes` and `index.json` are
  * derived from the snapshots by `rebuildDerived()`, so they can never disagree with them. Shipped
  * snapshots are never amended: branches add a fragment under `pending/` and `patches ship`
- * promotes it after it merges (R641).
+ * promotes it after it merges (R646).
  *
  * Tooling (fs lives in `scripts/`, CLAUDE.md rule 4), shared by `patches.ts` and `gen-loc.ts`;
  * `test/patches.test.ts` reads the same files through these functions.
@@ -25,9 +25,9 @@ import { fileURLToPath } from "node:url";
 export const PATCHES_DIR = fileURLToPath(new URL("../patches/", import.meta.url));
 export const PATCHES_JSON = `${PATCHES_DIR}patches.json`;
 export const INDEX_JSON = `${PATCHES_DIR}index.json`;
-/** Pending fragments: one file per patch being built, never edited after it ships (R641). */
+/** Pending fragments: one file per patch being built, never edited after it ships (R646). */
 export const PENDING_DIR = `${PATCHES_DIR}pending/`;
-/** Every shipped patch's provenance: the commit that shipped it and its snapshot's blob (R641). */
+/** Every shipped patch's provenance: the commit that shipped it and its snapshot's blob (R646). */
 export const SHIPPED_JSON = `${PATCHES_DIR}shipped.json`;
 
 export type Catalog = Record<string, Record<string, unknown>>;
@@ -181,7 +181,7 @@ export function rewriteIndex(): void {
 }
 
 /**
- * Pending fragments and the shipped list (R641): several card patches are built on separate
+ * Pending fragments and the shipped list (R646): several card patches are built on separate
  * branches at once, so branches never edit `patches.json`, the snapshots or the shipped list.
  * A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`, claiming the
  * catalog ids its patch touches; `patches check` proves the claims against the newest shipped
@@ -213,7 +213,7 @@ export type ShippedEntry = {
 };
 
 /**
- * A fragment's version is a bare patch number or a micro `vA.B.Y` (R641, R650): "v0.2.5" or
+ * A fragment's version is a bare patch number or a micro `vA.B.Y` (R646, R650): "v0.2.5" or
  * "v0.2.Y", never a revision ("v0.2.0b") or a placeholder ("v0.2.X": the designer picks the X
  * before the patch is made).
  */
@@ -298,7 +298,7 @@ export function gitBlobHash(text: string): string {
 }
 
 /**
- * The name a fragment ships under (R641): its own version, unless that version already shipped,
+ * The name a fragment ships under (R646): its own version, unless that version already shipped,
  * in which case the next revision letter — the first revision of v0.2.0 is "v0.2.0b", then
  * "v0.2.0c" (`docs/issues-and-patches.md`). A shipped version never reopens.
  */

@@ -9,7 +9,7 @@
  * - Any other name is the designer's and is used as given (`vA.B.X` must be replaced first).
  *
  * This is the one place a version string is read, and only here, when a patch ships (a fragment
- * keeps its `Y` until `patches ship` promotes it, R641): R105 still holds everywhere else, where
+ * keeps its `Y` until `patches ship` promotes it, R646): R105 still holds everywhere else, where
  * a version is compared for equality and never parsed or ordered.
  */
 

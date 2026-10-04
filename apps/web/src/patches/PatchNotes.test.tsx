@@ -196,7 +196,7 @@ describe("R388 the Patch notes page over the real history", () => {
     const shipped = await realPatchSource.patches();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
-    // (R641), so the page's list is the file's, whatever the newest patch is called today.
+    // (R646), so the page's list is the file's, whatever the newest patch is called today.
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
     // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
