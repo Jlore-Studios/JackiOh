@@ -13,7 +13,7 @@
 // `GATE_SLOW_NOTICE_SECONDS` the corner offers what this device's own storage says (Account when it
 // holds a session, else Sign in) without waiting for the server's answer.
 
-import { Suspense, lazy, useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
 
@@ -24,6 +24,7 @@ import type { CardDef } from "@jackioh/shared";
 import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
+import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -123,11 +124,6 @@ function CardFan({
   onOpen: (def: CardDef) => void;
   onHold: (held: boolean) => void;
 }): ReactElement {
-  const openOnKey = (def: CardDef) => (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onOpen(def);
-  };
   return (
     <div
       className="landing-fan"
@@ -146,24 +142,7 @@ function CardFan({
       }}
     >
       {hand.map(({ def, radiant }, index) => (
-        <div key={def.id} className="landing-fan-slot">
-          <div
-            className="landing-fan-card landing-fan-card--face"
-            data-testid={landingFanCardTestid(index)}
-            data-face="up"
-            data-def-id={def.id}
-            data-radiant={radiant ? "true" : undefined}
-            role="button"
-            tabIndex={0}
-            aria-label={`Read ${def.name}`}
-            onClick={() => {
-              onOpen(def);
-            }}
-            onKeyDown={openOnKey(def)}
-          >
-            <CardFace face={faceModel({ defId: def.id, def, radiant })} />
-          </div>
-        </div>
+        <LandingFanCard key={def.id} def={def} radiant={radiant} index={index} onOpen={onOpen} onHold={onHold} />
       ))}
       <div className="landing-fan-slot" aria-hidden="true">
         <div
@@ -174,6 +153,67 @@ function CardFan({
           <CardBack />
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One face of the fan. #165: on a touch screen a held finger is the mouse-over the screen lacks —
+ * the hold shows the card's hover preview while the finger stays down, and the fan stands still
+ * for it as it does for a pointer resting on it. A real mouse is untouched (`hover: false`): its
+ * click opens the detail dialog, as ever, and a hold's release click is swallowed so it does not
+ * also open one.
+ */
+function LandingFanCard({
+  def,
+  radiant,
+  index,
+  onOpen,
+  onHold,
+}: {
+  def: CardDef;
+  radiant: boolean;
+  index: number;
+  onOpen: (def: CardDef) => void;
+  onHold: (held: boolean) => void;
+}): ReactElement {
+  const face = faceModel({ defId: def.id, def, radiant });
+  const inspect = useInspectTrigger(
+    { key: `landing-fan-${def.id}`, face },
+    { hover: false, touchHold: "preview", prefer: "above" },
+  );
+  const held = inspect.open !== null;
+  useEffect(() => {
+    if (!held) return undefined;
+    onHold(true);
+    return () => {
+      onHold(false);
+    };
+  }, [held, onHold]);
+  return (
+    <div className="landing-fan-slot">
+      <div
+        className="landing-fan-card landing-fan-card--face"
+        data-testid={landingFanCardTestid(index)}
+        data-face="up"
+        data-def-id={def.id}
+        data-radiant={radiant ? "true" : undefined}
+        role="button"
+        tabIndex={0}
+        aria-label={`Read ${def.name}`}
+        {...inspect.handlers}
+        onClick={() => {
+          onOpen(def);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          onOpen(def);
+        }}
+      >
+        <CardFace face={face} />
+      </div>
+      {inspect.overlay}
     </div>
   );
 }

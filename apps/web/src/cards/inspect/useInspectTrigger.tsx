@@ -8,7 +8,13 @@
 // closes it.
 //
 // Long-press: a touch held for LONG_PRESS_MS without moving more than LONG_PRESS_SLOP_PX opens the
-// sheet, or calls `onLongPress`. Moving past the slop, lifting or a pointercancel first cancels it.
+// sheet, or calls `onLongPress`. Lifting, a pointercancel or a move past the slop before then
+// cancels the press.
+//
+// With `options.touchHold === "preview"` (and no `onLongPress`) the hold is a touch's mouse-over
+// (#165) instead: the press opens the hover preview, which lifting, a pointercancel or a move past
+// the slop then closes. It answers to the same hover-previews switches, so with them off a hold
+// opens nothing.
 // After it fires, the next click on the trigger is swallowed so the press does not also play or
 // pick the card; that disarms on the next pointerdown or after CLICK_SUPPRESS_MS. The native
 // context menu is prevented while a touch press is pending or has fired, and a mouse right-click
@@ -51,6 +57,14 @@ export type InspectOptions = {
   /** Default true: a touch long-press opens the sheet, or calls onLongPress when given. */
   longPress?: boolean;
   onLongPress?: () => void;
+  /**
+   * What a touch long-press opens when no `onLongPress` is given: "sheet" (the default) is the
+   * inspect sheet; "preview" is the hover preview instead, held open only while the finger stays
+   * down — the touch stand-in for a mouse-over (#165), used where a card cannot be played anyway
+   * (the opponent's turn, the landing fan). It obeys the same hover-previews settings, so with
+   * them off the hold opens nothing and its release click is a plain tap, not swallowed.
+   */
+  touchHold?: "sheet" | "preview";
   /** When given, a mouse right-click calls it and prevents the native menu. The deck builder only;
       the board leaves right-click to task 7's drag cancel. */
   onContextMenu?: () => void;
@@ -137,6 +151,8 @@ export function useInspectTrigger(
   const press = useRef<Press | null>(null);
   const pressState = useRef<PressState>("idle");
   const suppressClick = useRef(false);
+  /** The key of the preview this hold opened, so its end never closes one a mouse's hover opened. */
+  const holdPreview = useRef<string | null>(null);
 
   const handlers = useMemo<InspectHandlers>(() => {
     const t = timers.current;
@@ -161,6 +177,13 @@ export function useInspectTrigger(
       if (t.suppress !== null) clearTimeout(t.suppress);
       suppressClick.current = true;
       t.suppress = setTimeout(disarmSuppressor, CLICK_SUPPRESS_MS);
+    };
+    /** Ends the preview this hold opened (a no-op for any other preview or when none did). */
+    const closeHoldPreview = (): void => {
+      const opened = holdPreview.current;
+      if (opened === null) return;
+      holdPreview.current = null;
+      closeHoverFor(opened);
     };
 
     return {
@@ -191,6 +214,7 @@ export function useInspectTrigger(
         const { subject: current, options: opts } = live.current;
         if (current === null) return;
         closeHoverFor(current.key);
+        holdPreview.current = null;
         disarmSuppressor();
         clearPress();
         if (event.pointerType !== "touch" || opts.longPress === false) return;
@@ -200,15 +224,31 @@ export function useInspectTrigger(
         pressState.current = "pending";
         t.press = setTimeout(() => {
           t.press = null;
-          press.current = null;
           const now = live.current;
           if (now.subject === null || now.subject.key !== pressKey || !element.isConnected) {
+            press.current = null;
+            pressState.current = "idle";
+            return;
+          }
+          const onLongPress = now.options.onLongPress;
+          const previewHold = onLongPress === undefined && now.options.touchHold === "preview";
+          if (previewHold && !hoverAllowed()) {
+            // A hold under the hover-previews-off settings is a plain tap: nothing opens and its
+            // click is not swallowed.
+            press.current = null;
             pressState.current = "idle";
             return;
           }
           pressState.current = "fired";
           armSuppressor();
-          const onLongPress = now.options.onLongPress;
+          if (previewHold) {
+            // `press` keeps the start point, so a drift past the slop still reads as the look
+            // ending; the other paths forget it, as before.
+            holdPreview.current = pressKey;
+            openInspect({ key: pressKey, mode: "hover", anchor: rectOf(element) });
+            return;
+          }
+          press.current = null;
           if (onLongPress !== undefined) onLongPress();
           else openInspect({ key: pressKey, mode: "sheet", anchor: rectOf(element) });
         }, LONG_PRESS_MS);
@@ -220,10 +260,16 @@ export function useInspectTrigger(
         if (event.pointerId !== start.pointerId) return;
         const dx = event.clientX - start.x;
         const dy = event.clientY - start.y;
-        if (Math.hypot(dx, dy) > LONG_PRESS_SLOP_PX) clearPress();
+        if (Math.hypot(dx, dy) <= LONG_PRESS_SLOP_PX) return;
+        // Past the slop the press is a drag, not a hold: a pending press cancels, and the preview
+        // an open hold was showing goes with the finger leaving.
+        closeHoldPreview();
+        clearPress();
       },
 
       onPointerUp: () => {
+        closeHoldPreview();
+        press.current = null;
         if (pressState.current === "pending") clearPress();
         // The finger has just lifted from a long-press: its click is on the way, so the swallow
         // window runs from here.
@@ -231,6 +277,7 @@ export function useInspectTrigger(
       },
 
       onPointerCancel: () => {
+        closeHoldPreview();
         clearPress();
         clearHoverTimer();
       },
@@ -283,6 +330,7 @@ export function useInspectTrigger(
       press.current = null;
       pressState.current = "idle";
       suppressClick.current = false;
+      holdPreview.current = null;
     };
   }, []);
 
