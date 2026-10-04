@@ -326,6 +326,31 @@ describe("the countdown issue", () => {
     expect(openIssues(w).map((i) => i.number)).toEqual([5]);
   });
 
+  it("stays due, rather than close as nothing to merge, while main is ahead but not green yet", () => {
+    // 2026-10-04: every push to main cancelled the CI run before it, the newest green commit was the
+    // one production had, and /fast-forward closed the countdown with nothing merged.
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    const ahead = commit(w, "c4", { "app.txt": "four\n" }, false);
+    const id = comment(w, 3, "/fast-forward", "2026-10-05T16:00:00Z");
+    const r = ok(run(w, "issue_comment", "2026-10-05T16:00:30Z"));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(r.text).toContain("1 newer commit(s) whose CI has not passed yet");
+    expect(issue(w, 3).state).toBe("open");
+    expect(issue(w, 3).title).toBe("Merging to production at the next check (2026-10-05 16:00 UTC)");
+    expect(gh(w).prs).toHaveLength(1);
+
+    // CI passes on main: its run merges what /fast-forward asked for, and the countdown rolls.
+    edit(w, (s) => {
+      s.green.push(ahead);
+      s.newestGreen = ahead;
+    });
+    ok(run(w, "workflow_run", "2026-10-05T16:30:00Z", { RUN_SHA: ahead }));
+    expect(gh(w).prs).toHaveLength(2);
+    expect(tree(w, "production")).toBe(tree(w, ahead));
+    expect(issue(w, 3).state).toBe("closed");
+  });
+
   it("closes it as nothing to merge when production already has everything", () => {
     const w = counting();
     git(w.work, "push", "-q", "origin", `${w.sha.c3}:refs/heads/production`);
