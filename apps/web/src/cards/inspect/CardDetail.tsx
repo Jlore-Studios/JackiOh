@@ -51,7 +51,7 @@ export type CardDetailProps = {
   meta?: ReactNode;
   /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
   historyOpen?: boolean;
-  /** SPEC §9.11, R641: render the compact card statistics block (deckbuilder); omitted in almanac (R630). */
+  /** SPEC §9.11, R641: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
 };
 
