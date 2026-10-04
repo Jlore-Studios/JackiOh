@@ -396,6 +396,13 @@ export const MATCH_ACTIONS_PER_SECOND = 5;
 // polling and UI use while still bounding a runaway or malicious client.
 export const API_REQUESTS_PER_MINUTE = 300;
 /**
+ * SPEC §11 R658: the least time between two `aim` frames the actor relays for one seat. Aims that
+ * arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
+ * the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
+ * Ten a second follows a hover from target to target and bounds what a scripted client can push.
+ */
+export const AIM_RELAY_INTERVAL_MS = 100;
+/**
  * Match sockets one client address may hold at once, counting handshakes still in progress. Not in
  * SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
  * reconnects; ten leaves room for several players behind one home or campus address. Past it the
@@ -697,6 +704,7 @@ export const SERVER_CONFIG = Object.freeze({
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
   MATCH_ACTIONS_PER_SECOND,
   API_REQUESTS_PER_MINUTE,
+  AIM_RELAY_INTERVAL_MS,
   WS_MAX_CONNECTIONS_PER_ADDRESS,
   MATCH_REAPER_INTERVAL_SECONDS,
   RESULT_WRITE_ATTEMPTS,

@@ -1,0 +1,72 @@
+/* R658: the opponent's targeting arrow (OpponentAim.tsx). Red, where your own arrow is lit green
+   and gold, so whose aim it is reads at a glance. Never takes a hit. */
+
+.opponent-aim {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.opponent-aim * {
+  pointer-events: none;
+}
+
+.opponent-aim-shaft {
+  fill: none;
+  stroke: rgb(255 82 82 / 85%);
+  stroke-width: 7;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgb(255 60 60 / 60%));
+}
+
+.opponent-aim-pulse {
+  fill: none;
+  stroke: rgb(255 214 214 / 90%);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 10 18;
+  animation: opponent-aim-run 700ms linear infinite;
+}
+
+.opponent-aim-head {
+  fill: rgb(255 82 82 / 95%);
+  stroke: rgb(255 214 214 / 90%);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.opponent-aim-origin {
+  fill: rgb(255 82 82 / 25%);
+  stroke: rgb(255 82 82 / 90%);
+  stroke-width: 2.5;
+  animation: opponent-aim-breathe 900ms ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes opponent-aim-run {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes opponent-aim-breathe {
+  to {
+    transform: scale(1.25);
+  }
+}
+
+/* Reduce Motion: a static arrow. */
+@media (prefers-reduced-motion: reduce) {
+  .opponent-aim-pulse,
+  .opponent-aim-origin {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .opponent-aim-pulse,
+:root[data-reduce-motion="true"] .opponent-aim-origin {
+  animation: none;
+}

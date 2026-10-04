@@ -20,14 +20,16 @@
  * and a clock alarm can never interleave two `reduce` calls or two log appends.
  */
 
-import type { Action, ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
-import { emoteGate, portraitOrDefault } from "@jackioh/shared";
-import { MATCH_ACTIONS_PER_SECOND } from "../config";
+import type { Action, ActionBody, Aim, AimEnd, PlayerId, PlayerView } from "@jackioh/shared";
+import { aimKey, emoteGate, portraitOrDefault } from "@jackioh/shared";
+import { AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND } from "../config";
 import type { LastBoardEntry, MatchActionRow, MatchClocks, MatchRow, MatchSeat } from "../api/ports";
+import type { Timer } from "../api/ports";
 import type { ActorDeps, ClockExpiry, ClockView, MatchClock, Socket } from "./contracts";
 import type { EngineState, MatchSnapshot } from "./engine";
 import {
   ackMessage,
+  aimRelayMessage,
   clockMessage,
   encode,
   emoteRelayMessage,
@@ -127,6 +129,13 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
    * limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
    */
   const emoteHistory: Record<PlayerId, number[]> = { p1: [], p2: [] };
+  /**
+   * R658: each seat's aim relay. `pending` is the newest aim received and not yet relayed
+   * (`undefined` when there is none: `null` is an aim that has ended), `timer` the one wait armed
+   * to relay it, `lastAt` when the seat's last relay went, and `relayed` what the opponent was last
+   * told, so a repeat is never sent and a seat that leaves mid-aim has its arrow cleared.
+   */
+  const aims: Record<PlayerId, AimSlot> = { p1: emptyAimSlot(), p2: emptyAimSlot() };
   /** R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
   const portraits = match.portraits ?? [portraitOrDefault(null), portraitOrDefault(null)];
   /**
@@ -356,6 +365,8 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     if (finished || snapshot.result === null) return;
     finished = true;
     clock.stop();
+    // R658: no aim outlives the game.
+    for (const player of PLAYERS) endAim(player);
     const at = deps.timers.now();
 
     try {
@@ -484,6 +495,10 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
         return;
       }
 
+      case "aim":
+        receiveAim(player, message.aim);
+        return;
+
       case "joinRoom":
         send(
           player,
@@ -511,6 +526,61 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     }
   }
 
+  // ---------------------------------------------------------------------
+  // The opponent's aim (R658)
+  // ---------------------------------------------------------------------
+
+  /**
+   * R658: an aim is relayed to the opponent at most once per `AIM_RELAY_INTERVAL_MS` per seat.
+   * Faster ones are coalesced, not dropped outright: the newest waits out the interval and goes
+   * alone, so the opponent's arrow always ends where the sender's did. Nothing is answered.
+   */
+  function receiveAim(player: PlayerId, aim: Aim | null): void {
+    if (finished || stopped) return;
+    const slot = aims[player];
+    slot.pending = aim;
+    if (slot.timer !== null) return;
+    const wait = slot.lastAt + AIM_RELAY_INTERVAL_MS - deps.timers.now();
+    if (wait <= 0) {
+      flushAim(player);
+      return;
+    }
+    slot.timer = deps.timers.after(wait, () => {
+      slot.timer = null;
+      flushAim(player);
+    });
+  }
+
+  /**
+   * Relays the seat's pending aim, checked against the state as it stands NOW rather than when the
+   * frame arrived: an aim whose ends name anything the opponent may not see is dropped silently,
+   * and the opponent's arrow is cleared instead if it showed one (R658, R97). A repeat of what
+   * the opponent was last told is not sent again.
+   */
+  function flushAim(player: PlayerId): void {
+    const slot = aims[player];
+    const aim = slot.pending;
+    slot.pending = undefined;
+    if (aim === undefined || finished || stopped) return;
+    const receiver = other(player);
+    const shown = aim === null || aimIsPublic(aim, player, deps.engine.viewFor(state, receiver)) ? aim : null;
+    if (aimKey(shown) === aimKey(slot.relayed)) return;
+    slot.lastAt = deps.timers.now();
+    slot.relayed = shown;
+    send(receiver, aimRelayMessage(player, shown));
+  }
+
+  /** A seat that leaves, or a match that ends, takes its arrow with it. */
+  function endAim(player: PlayerId): void {
+    const slot = aims[player];
+    slot.timer?.cancel();
+    slot.timer = null;
+    slot.pending = undefined;
+    if (slot.relayed === null) return;
+    slot.relayed = null;
+    send(other(player), aimRelayMessage(player, null));
+  }
+
   /**
    * §9.8's action flood limit, `MATCH_ACTIONS_PER_SECOND` from `src/config.ts` (R109), held as one
    * window *per seat*.
@@ -536,6 +606,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     if (sockets[player] !== socket) return;
     sockets[player] = null;
     if (stopped || finished) return;
+    endAim(player);
     deps.log.info("match.socket.closed", { matchId: match.id, player });
     fireAndForget(async () => {
       // §9.5: grace starts, and "the clock keeps running while a player is disconnected".
@@ -606,6 +677,7 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     stop: async () => {
       stopped = true;
       clock.stop();
+      for (const player of PLAYERS) aims[player].timer?.cancel();
       for (const player of PLAYERS) {
         const socket = sockets[player];
         sockets[player] = null;
@@ -621,6 +693,43 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
 
 function other(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";
+}
+
+/** R658: one seat's aim relay (see `aims` in `createMatchActor`). */
+type AimSlot = {
+  pending: Aim | null | undefined;
+  timer: Timer | null;
+  lastAt: number;
+  relayed: Aim | null;
+};
+
+function emptyAimSlot(): AimSlot {
+  return { pending: undefined, timer: null, lastAt: Number.NEGATIVE_INFINITY, relayed: null };
+}
+
+/**
+ * R658, R97, R177: whether every end of `sender`'s aim names something `view` (the receiver's own)
+ * shows. A hero and a zone of the field are public wherever they are — a face-down card is named
+ * by its zone, never itself — so a zone need only exist. A hand card is named by its position, and
+ * only in the sender's own hand, which the receiver sees as that many backs.
+ */
+export function aimIsPublic(aim: Aim, sender: PlayerId, view: PlayerView): boolean {
+  if (aim.source.at === "hand") {
+    if (aim.source.player !== sender) return false;
+    const hand = sender === view.viewer ? view.you.hand : view.opponent.hand;
+    const count = Array.isArray(hand) ? hand.length : hand.count;
+    if (aim.source.index >= count) return false;
+  } else if (!endIsPublic(aim.source, view)) {
+    return false;
+  }
+  return aim.target === null || (aim.target.at !== "hand" && endIsPublic(aim.target, view));
+}
+
+function endIsPublic(end: AimEnd, view: PlayerView): boolean {
+  if (end.at === "hand") return false;
+  if (end.at === "hero") return true;
+  const side = end.player === view.viewer ? view.you : view.opponent;
+  return end.lane <= side.locks[end.row].length;
 }
 
 /**

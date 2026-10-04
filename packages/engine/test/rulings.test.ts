@@ -4002,6 +4002,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by apps/server test/match/aim.test.ts "R658 …" (the relay to the opponent alone, the shape
+  // check, the coalescing throttle, the hidden-information drop, the clear on a closed socket) and
+  // apps/web game/aim/aim.test.tsx "R658 …" (what a seat sends while it aims, its public handles,
+  // and the opponent's arrow drawn and cleared).
+  it("R658 shows the opponent's aim as an arrow built from public handles only", () => {
+    provenIn(658, "../../../apps/server/test/match/aim.test.ts", "../../../apps/web/src/game/aim/aim.test.tsx");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
