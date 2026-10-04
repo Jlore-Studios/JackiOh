@@ -1054,15 +1054,11 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
+        "approvals": [],
+        "builder": "cognition",
         "rejections": [],
-        "sha": "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7",
-        "tiers": {
-          "muse": "medium"
-        }
+        "sha": "94ef5d118f3e81d8d81e70da5150c951dd8f42a3",
+        "tiers": {}
       }
     },
     "181": {
