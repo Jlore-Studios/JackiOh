@@ -722,7 +722,7 @@
       "asks": [],
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-03T23:14:14Z",
+      "feedback_since": "2026-10-04T01:27:59Z",
       "forced": false,
       "interruptions": 0,
       "issue": 63,
@@ -737,7 +737,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37167870976",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-04T01:27:59Z",
       "stop_requested": false,
       "taken_asks": [
