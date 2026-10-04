@@ -13,6 +13,7 @@ import type { CardView, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace, CardListSheet, useInspectTrigger, type CardListEntry, type FaceModel } from "../cards/index.ts";
 import { CatalogContext, type CardLookup } from "./catalog.ts";
+import { touchHoldMode } from "./contract.ts";
 import { listedFace } from "./faces.ts";
 import { revealTestid } from "./reveal.ts";
 import "./reveal.css";
@@ -35,8 +36,8 @@ function cardsWord(count: number): string {
   return count === 1 ? "1 card" : `${String(count)} cards`;
 }
 
-function TheirCard({ card, face, index }: { card: CardView; face: FaceModel | null; index: number }): ReactElement {
-  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above" });
+function TheirCard({ card, face, index, touchHold }: { card: CardView; face: FaceModel | null; index: number; touchHold?: "sheet" | "preview" }): ReactElement {
+  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above", touchHold });
   const style = { "--i": index } as CSSProperties;
   if (face === null) {
     return (
@@ -81,7 +82,7 @@ export function TheirHand({ view, cards }: TheirHandProps): ReactElement {
       ) : (
         <ul className="their-hand__cards">
           {cards.map((card, index) => (
-            <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} />
+            <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} touchHold={touchHoldMode(view)} />
           ))}
         </ul>
       )}

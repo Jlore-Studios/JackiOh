@@ -6,13 +6,14 @@
 // component spec's job (e2e/cypress/component/landing-and-code-field.cy.tsx), not this file's.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE, MAX_MANA, UNIT_ZONES } from "@jackioh/engine/config";
 import { LOADOUT_DECKS } from "@jackioh/validator";
 
 import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
-import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
+import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
+import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -83,6 +84,37 @@ function serve(answer: MeAnswer): void {
 function signedIn(): void {
   window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
 }
+
+/**
+ * jsdom 30 ships `PointerEvent`, but if the window a node lives in ever lacks it, testing-library
+ * falls back to a plain `Event` and drops `pointerType`, which would make every touch look like a
+ * mouse. This installs a `MouseEvent` subclass that keeps it, only when the probe shows it is lost.
+ */
+function ensurePointerEvent(): void {
+  const win = document.defaultView;
+  if (win === null) return;
+  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
+  if (probe !== null && probe.pointerType === "touch") return;
+
+  class TestPointerEvent extends win.MouseEvent {
+    readonly pointerType: string;
+    readonly pointerId: number;
+    readonly isPrimary: boolean;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? "";
+      this.pointerId = init.pointerId ?? 1;
+      this.isPrimary = init.isPrimary ?? true;
+    }
+  }
+  for (const target of [win, globalThis]) {
+    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
+  }
+}
+
+beforeAll(() => {
+  ensurePointerEvent();
+});
 
 function at(path: string): void {
   window.history.replaceState(null, "", path);
@@ -527,6 +559,41 @@ describe("R639 a fan card opens at full size", () => {
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
     fireEvent.keyDown(face, { key: "Enter" });
     expect(await screen.findByTestId(INSPECT_DETAIL, undefined, SLOW)).toBeInTheDocument();
+  });
+});
+
+describe("#165 a touch hold on a fan card", () => {
+  it("#165 shows the card's preview while the finger is down, and the release click opens no detail", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<LandingRoute random={seeded(3)} />);
+      const face = screen.getByTestId(landingFanCardTestid(1));
+      fireEvent.pointerDown(face, { pointerType: "touch", pointerId: 1, isPrimary: true, button: 0 });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS - 1);
+      });
+      expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByTestId(INSPECT_HOVER).textContent).toContain(face.querySelector(".card-name")?.textContent ?? "(no name)");
+      fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
+      expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+
+      // The click the lift ends in is swallowed, so no detail dialog opens; a real tap still does.
+      fireEvent.click(face);
+      await act(async () => {
+        await vi.dynamicImportSettled();
+      });
+      expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+      fireEvent.click(face);
+      await act(async () => {
+        await vi.dynamicImportSettled();
+      });
+      expect(screen.getByTestId(INSPECT_DETAIL)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
