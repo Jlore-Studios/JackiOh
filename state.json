@@ -2819,17 +2819,21 @@
         {
           "at": "2026-10-04T16:03:38Z",
           "minutes": 6.6
+        },
+        {
+          "at": "2026-10-04T16:20:32Z",
+          "minutes": 14.4
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T20:50:00Z",
-          "utilization": 0.09
+          "utilization": 0.78
         },
-        "observed_at": "2026-10-04T16:03:38Z",
+        "observed_at": "2026-10-04T16:20:32Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.52
+          "utilization": 0.58
         },
         "status": "allowed_warning"
       }
