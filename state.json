@@ -725,7 +725,7 @@
       "asks": [],
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-04T01:27:59Z",
+      "feedback_since": "2026-10-04T02:21:26Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T02:08:20Z",
@@ -749,7 +749,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37170607434",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-04T02:21:26Z",
       "stop_requested": false,
       "taken_asks": [],
