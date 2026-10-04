@@ -2177,10 +2177,8 @@
     "what": "revise #203 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-04T09:38:41Z",
-    "notes": [
-      "CI on #203: #203: blocked after 3 CI fixes"
-    ],
+    "at": "2026-10-04T09:49:20Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
