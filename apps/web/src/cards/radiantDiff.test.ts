@@ -96,8 +96,10 @@ describe("R277 the word diff", () => {
     // Designer patch v0.1.1: Core #55 Lava Golem's Radiant face is its base text less the drawback, so
     // it is a pure deletion by design; its doubled stats carry its marks (R277). So are Classic #60
     // Pile On's (no longer returns to the deck) and Classic+ #5 Guy Att's (destroys every backrow
-    // card, not only yours), the brief's own Radiant texts (docs/classic-sets.md, B6, B7).
-    expect(silent).toEqual(["core-055", "classic-060", "classicplus-005"]);
+    // card, not only yours), the brief's own Radiant texts (docs/classic-sets.md, B6, B7). Patch
+    // v0.2.4 adds Classic+ #34 Memory Leak: its Radiant face is its base text less "Choose one."
+    // (both modes, no choice).
+    expect(silent).toEqual(["core-055", "classic-060", "classicplus-005", "classicplus-034"]);
   });
 });
 

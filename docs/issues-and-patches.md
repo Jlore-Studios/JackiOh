@@ -14,11 +14,12 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
+| `night bot vN` | Which night bot release the work belongs to (`night bot v1` for what shipped before 2026-10-04, `night bot v2` for the next). It goes beside `night bot` |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
 `difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; none is
-medium, and `hard` is Claude Opus's alone), `human` (no model does it), the `priority:*` labels
+medium, and `hard` is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`, `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*` labels
 (the bot's pickup order) and the `bot:*` labels are separate. Never add
 `bot:build` while retitling or relabelling, because it queues a build.
 
@@ -40,10 +41,11 @@ A pull request has no type.
 |---|---|
 | Patch | `Patch vX.Y.Z: <what it does>` |
 | Patch whose number isn't picked yet | `Patch v0.2.X: <what it does>`, with the X replaced once it is |
+| Micro patch | `Patch v0.2.Y: <what it does>`, named when it ships (see Version numbers) |
 | Revision of a shipped patch | `Patch vX.Y.Zb: <what it does>` |
 | Major version | `vX.Y.0: <what it does>` |
 | Part of a multi-part patch | `Patch vX.Y.Z (part n of m): <what it does>`, or `vX.Y.0 (part n of m): …` |
-| Night bot | `Night bot: <…>` |
+| Night bot | `Night bot: <…>`, or `Night bot vN: <…>` for a release's tracker and `Night bot vN.M: <…>` for one of its parts |
 | Tooling | `CI: <…>` or `Architecture: <…>` |
 
 "What it does" is a short phrase, such as `Patch v0.2.9: a public Card Almanac`. Keep version
@@ -59,6 +61,16 @@ titles, so retitle one when you accept it.
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
   `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
   v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
+- **Micro or normal.** A patch is a micro patch, `Patch v0.2.Y: …`, when it is small: one fix, one
+  card's numbers or text, one cosmetic or client tweak, with no new mechanic, keyword, ruling set or
+  feature. Anything larger is a normal patch, `Patch v0.2.X: …`, whose number the designer picks.
+  When a micro patch grows past that, retitle it `X`; when a normal one shrinks to one tweak,
+  retitle it `Y`.
+- **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`
+  plus the next letter: a micro patch that ships after v0.2.5 is v0.2.5b, and one after v0.2.7c is
+  v0.2.7d. The patch command does it: `pnpm --filter @jackioh/cards run patch v0.2.Y "<title>" …`
+  (`packages/cards/scripts/versions.ts`). It refuses a `v0.2.Y` when the newest version is not a
+  v0.2 one. A micro patch with no card data change bumps nothing and keeps its `Y` title.
 
 ## A patch that takes several pull requests
 

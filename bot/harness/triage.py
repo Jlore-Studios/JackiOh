@@ -54,10 +54,10 @@ MAX_TITLE = 120
 DEVIN_TIMEOUT_S = 300
 #: A title that already follows the convention.
 CONVENTION = re.compile(
-    r"^(?:Patch v\d+\.\d+\.(?:\d+|X)[a-z]?(?: \(part \d+ of \d+\))?"
+    r"^(?:Patch v\d+\.\d+\.(?:\d+|X|Y)[a-z]?(?: \(part \d+ of \d+\))?"
     r"|v\d+\.\d+\.0(?: \(part \d+ of \d+\))?"
-    r"|Night bot|CI|Architecture): \S")
-VERSION = re.compile(r"\bv\d+\.\d+(?:\.(?:\d+|X))?[a-z]?\b")
+    r"|Night bot(?: v\d+(?:\.\d+)?)?|CI|Architecture): \S")
+VERSION = re.compile(r"\bv\d+\.\d+(?:\.(?:\d+|X|Y))?[a-z]?\b")
 CONVENTIONS_DOC = Path("docs") / "issues-and-patches.md"
 #: The organisation's issue types (Settings → Planning → Issue types), used when the token cannot
 #: read them: an issue gets one; a pull request has none.

@@ -89,7 +89,7 @@ describe("R388 the patch source", () => {
         expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
       }
     }
-    expect(Object.keys((await realPatchSource.snapshot("v0.2.0")) ?? {})).toHaveLength(317);
+    expect(Object.keys((await realPatchSource.snapshot("v0.2.4")) ?? {})).toHaveLength(317);
   });
 
   it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {
