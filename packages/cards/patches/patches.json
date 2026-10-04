@@ -5128,5 +5128,64 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.11",
+    "date": "2026-10-04",
+    "title": "Patch v0.2.11: aimed random casts and the Deft keyword",
+    "source": "#181, #206",
+    "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
+    "commits": [
+      "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-003",
+        "name": "Book of Heal",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-010",
+        "name": "New Wraps",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius-Prime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-040",
+        "name": "Appropriations",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
