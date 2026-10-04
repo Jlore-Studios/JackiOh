@@ -246,8 +246,10 @@
   outline-offset: 2px;
 }
 
-/* The crest is 29 px so the button stands 35 px tall, as the hero panel did before the
-   v0.2.1 crest (B46's vertical budget, B29's 44 px touch tile is met by the row it sits in). */
+/* The crest is 29 px (35 px with its rim), so the button stands 41 px tall and the hero
+   panel 49 px, 9 px taller than the 40 px the 32 px gems set. The desktop card-height budgets
+   above carry those 18 px (both panels), which is what keeps B46's vertical fit. Under the
+   touch sizing below the button itself stands 44 px (B29's tile), as its panel always did. */
 .power-crest {
   position: relative;
   display: inline-grid;
@@ -1484,9 +1486,13 @@
    below the screen. */
 @media (min-width: 1025px), (min-width: 900px) and (orientation: landscape) and (min-height: 501px) {
   .board {
-    /* Four field rows and your hand (1.48) stacked. */
+    /* Four field rows and your hand (1.48) stacked. The fixed-parts budget is 233px: the 215px it
+       was, plus 18px for the v0.2.1 hero-power crest, which stands both hero panels 9px taller
+       (49px, up from the 40px the 32px gems set). A landscape tablet in this block keeps its 44px
+       touch buttons, so its panels are unchanged and its cards come out a little smaller than
+       they must be; that still fits, which is what this budget promises. */
     --card-h: clamp(56px, 11.5vh, 92px);
-    --card-h: clamp(56px, calc((100cqh - 215px) / 5.48), 112px);
+    --card-h: clamp(56px, calc((100cqh - 233px) / 5.48), 112px);
     /* A lane here is three or four cards wide, so a field card takes a square of it: the name
        fits on a line and a backrow card's text has room. The hand keeps its tall cards. */
     --card-w: var(--card-h);
@@ -1598,7 +1604,8 @@
    board shrinking to fit ten of them across 1024px. */
 @media (min-width: 1025px) {
   .board {
-    --card-h: clamp(56px, min(calc((100cqh - 215px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
+    /* The 233px is the fixed-parts budget above, repeated for the height term. */
+    --card-h: clamp(56px, min(calc((100cqh - 233px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
   }
 }
 
