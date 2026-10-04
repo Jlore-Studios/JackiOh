@@ -642,7 +642,7 @@
       "ci_sha": "ba068d099b2fdd3800cfcf95a297ec16ecb61ab6",
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-03T23:10:01Z",
+      "feedback_since": "2026-10-04T02:08:03Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-03T23:13:03Z",
@@ -664,7 +664,7 @@
       "requested_by": "jgoetzmann",
       "run_id": "37170033265",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-04T02:08:03Z",
       "stop_requested": false,
       "taken_asks": [
