@@ -1877,7 +1877,7 @@
       "ci_sha": "284a1c7fc24529c06242f836607204dfacebbb49",
       "died": 0,
       "difficulty": "medium",
-      "failures": 0,
+      "failures": 1,
       "feedback_since": "2026-10-04T19:12:17Z",
       "forced": false,
       "interruptions": 0,
