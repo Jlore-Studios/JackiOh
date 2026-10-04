@@ -3,7 +3,7 @@
 //            and at your side when it helps."
 //   Radiant: "Spell Damage +7. Cry: Cast {casts} random Radiant Spells. Each aims at enemies when it
 //            harms and at your side when it helps."
-// E12's random casts (R452, R651): non-token Spells of every set (R380), repeats allowed (R60), every
+// E12's random casts (R452, R654): non-token Spells of every set (R380), repeats allowed (R60), every
 // choice random, each target pick aimed by its declaration — enemies when it harms, friends when it
 // helps. Its own Spell Damage (the catalog keyword) raises their hits, since it is on the field
 // during its Cry.

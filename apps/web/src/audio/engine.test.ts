@@ -59,6 +59,7 @@ const LINES: VoiceLineTable = {
     "core-005": { kind: "spell", persona: "narrator", cast: "Hoarding is self care." },
     "core-008": { kind: "unit", persona: "narrator", play: "Hello. I am very normal.", death: "Plain. Simple. Gone." },
   },
+  emotes: {},
 };
 
 const FILE = { hash: "0123456789abcdef", bytes: 9_000 };

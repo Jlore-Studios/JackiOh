@@ -36,7 +36,7 @@ const collection = fixtureCollection();
 const NAME = DECK_NAME_MAX_LENGTH;
 
 function deck(id: string, name: string, cards: readonly string[]): DeckItem {
-  return { id, name, cards, createdAt: 0, updatedAt: 0 };
+  return { id, name, cards, portrait: null, createdAt: 0, updatedAt: 0 };
 }
 
 function trio(id: string, deckIds: TrioItem["deckIds"], name = "Ladder"): TrioItem {

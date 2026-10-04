@@ -619,8 +619,9 @@ export function declareAttack(sink: EngineSink, attacker: CardInstance, chosen: 
   if (refusal !== null) return { error: refusal };
 
   // B5 E5, E9: step 2's target chosen, and before the trap window, "a friendly unit is targeted" —
-  // a card of the defender's that interposes (Classic #33 Joro, from the hand) is summoned and the
-  // attack moves to it (`replacements.answerTargeting`: `summoned`, then `redirected`).
+  // a card of the defender's that interposes (from the hand) is summoned and the attack moves to it
+  // (`replacements.answerTargeting`: `summoned`, then `redirected`). An attack carries no source
+  // card, so a `by: "spell"` card (Classic #33 Joro, R651) never answers one.
   const interposer =
     chosen.kind === "unit" ? answerTargeting(sink, { target: chosen.instance, by: attacker.controller, what: "attack" }) : null;
   const target: AttackTarget = interposer === null ? chosen : { kind: "unit", instance: interposer };

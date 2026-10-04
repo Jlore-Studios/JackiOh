@@ -19,7 +19,7 @@
 // into nothing (R452), as R28's Call to Chaos cap does.
 
 import type { Enchantment } from "@jackioh/shared";
-import { excludingDefId, query, type CatalogQueryArgs } from "../catalog";
+import { excludingDefId, pickGenerated, query, type CatalogQueryArgs } from "../catalog";
 import type { CostRule } from "../costRules";
 import { addModifier } from "../modifiers";
 import { mayCastNow } from "../randomCast";
@@ -34,7 +34,7 @@ import { instanceOf, playerOf, type PlayerSpec, type TargetSpec } from "./target
 export type CastHow = {
   /** R452: every choice at random. */
   random?: boolean;
-  /** R452, R651: target picks aim by declaration ("Each aims at enemies when it harms and at your side when it helps"). */
+  /** R452, R654: target picks aim by declaration ("Each aims at enemies when it harms and at your side when it helps"). */
   targetEnemies?: boolean;
   /** R453: a resolved Spell goes to exile instead of its graveyard ("Cast them, then exile them"). */
   afterward?: "exile";
@@ -125,7 +125,7 @@ function castOneRandom(
       if (!mayCastNow(ctx.state, ctx.controller)) return;
       // B4.1, R387: never the casting card's own definition, named by its id.
       const pool = query(excludingDefId(asked, ctx.self?.defId ?? ctx.defId));
-      const def = ctx.rng.pick(pool);
+      const def = pickGenerated(ctx.rng, pool);
       if (def === undefined) return;
       const card = newInstance(ctx.state, def.id, ctx.controller, { z: "resolving", player: ctx.controller });
       card.radiant = radiant;

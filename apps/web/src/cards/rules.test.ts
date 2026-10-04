@@ -145,7 +145,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.5's DE.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.11's DE.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",

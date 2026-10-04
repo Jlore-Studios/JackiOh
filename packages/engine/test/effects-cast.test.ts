@@ -66,7 +66,7 @@ const pingB = spell("ping-b", 4602);
 const echoTarget = spell("echo-target", 4603);
 const castsNamed = spell("casts-named", 4604);
 const castsDiscover = spell("casts-discover", 4605);
-// R651: a helpful Spell — its target declaration aims "help", so a cast that targets enemies
+// R654: a helpful Spell — its target declaration aims "help", so a cast that targets enemies
 // prefers friends for it.
 const healFriend = spell("heal-friend", 4606);
 
@@ -419,8 +419,8 @@ describe("E39 target enemies on a cast its caster makes (R452)", () => {
   });
 });
 
-describe("R651 aimed random targets", () => {
-  it("R651 a helpful pick under targetEnemies narrows to friends when one is legal", () => {
+describe("R654 aimed random targets", () => {
+  it("R654 a helpful pick under targetEnemies narrows to friends when one is legal", () => {
     const state = playing("r651-enchanted");
     const own = put(state, "fx-2", slot("p1", "units", 1));
     put(state, "fx-3", slot("p2", "units", 1));
@@ -434,7 +434,7 @@ describe("R651 aimed random targets", () => {
     ]);
   });
 
-  it("R651 with no friend to pick, or too few, every option stays — and a mode pick is kept either way", () => {
+  it("R654 with no friend to pick, or too few, every option stays — and a mode pick is kept either way", () => {
     const state = playing("r651-no-friend");
     const foe = put(state, "fx-3", slot("p2", "units", 1));
     const options = [
@@ -453,7 +453,7 @@ describe("R651 aimed random targets", () => {
     expect(preferFriends(state, "p1", mixed, (selection) => selection, 4)).toEqual(mixed);
   });
 
-  it("R651 a random cast that targets enemies aims each pick: harm at enemies, help at friends", () => {
+  it("R654 a random cast that targets enemies aims each pick: harm at enemies, help at friends", () => {
     let sawDamage = false;
     let sawHeal = false;
     for (const seed of ["r651-aim-1", "r651-aim-2", "r651-aim-3", "r651-aim-4", "r651-aim-5"]) {
@@ -477,7 +477,7 @@ describe("R651 aimed random targets", () => {
     expect(sawHeal).toBe(true);
   });
 
-  it("R651 Jogg's Box stays fully random: with no targetEnemies even a helpful cast may land on enemies", () => {
+  it("R654 Jogg's Box stays fully random: with no targetEnemies even a helpful cast may land on enemies", () => {
     const seen = new Set<string>();
     for (const seed of ["r651-box-1", "r651-box-2", "r651-box-3", "r651-box-4", "r651-box-5", "r651-box-6"]) {
       const state = playing(seed);

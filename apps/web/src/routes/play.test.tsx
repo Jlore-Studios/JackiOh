@@ -88,7 +88,7 @@ const DEFS: CardDefs = Object.fromEntries(
 );
 
 function deck(id: string, name: string, cards: string[]): SavedDeck {
-  return { id, name, cards, catalogVersion: "v1", createdAt: 0, updatedAt: 0 };
+  return { id, name, cards, catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 };
 }
 
 const AGGRO = deck("d-aggro", "Aggro", run(1));

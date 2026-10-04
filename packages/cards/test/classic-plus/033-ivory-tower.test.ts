@@ -1,206 +1,177 @@
-// C+ #33 Ivory Tower — SPEC §8.7 row 33, R418, BUILD M9 Classic+ row C+ 33: "Field Spell with the
-// aura "Your cards have Stack", in hand and on the field, so your Units may be played onto your
-// occupied unit zones and your backrow cards onto your occupied backrow zones (a backrow pile: only the
-// top acts, a face-down trap beneath can't fire); a Unit you play may name the Tower's zone and top it,
-// one Unit at most: a Unit for every rule (its text works, it is targeted and hit by "all Units") that
-// can neither attack nor be attacked, declared or forced; the Tower stays active beneath it (R418), its
-// aura holding and "all Field Spells" effects finding it; backrow effects (Guy Att, Crushing Walls)
-// pass the Unit by; when the Tower leaves, the Unit moves to your unit zone in that lane, else the
-// leftmost open one (R64), with no Cry and no reset (R78 does not apply), and is destroyed with no open
-// zone; the opponent's cards gain no Stack; radiant the Unit that tops it becomes Radiant".
+// C+ #33 Ivory Tower — SPEC §8.7 row 33, R418, R653, BUILD M9 Classic+ row C+ 33: "Field Spell: the first
+// Unit you play onto its zone stands on it while its play resolves, its Cry included, and is then fused
+// into it per R77, the Tower the kept card: a Field Spell still, with the Unit's text, keywords and stats,
+// so the Unit's aura covers your side, its end-of-turn line runs and its Death fires when the Tower dies;
+// the Unit ceases to exist, with no Death; after that first Unit, no other may be played onto it this
+// stay; a Tower that leaves before the play resolves fuses nothing, its Unit stepping down (R446); an
+// answer that replaced the Unit in place leaves its replacement to be fused; the old aura (your cards have
+// Stack) and the Unit that could neither attack nor be attacked are gone; radiant the Unit becomes Radiant
+// as it lands, so its Cry runs on that face, and is fused in on its Radiant face (R469)".
 
-import { carriedAt, legalActions } from "@jackioh/engine";
+import { HERO_HEALTH, carriedAt, defOf, effectiveCost, legalActions } from "@jackioh/engine";
 import type { Action } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 import { scenario, type FieldSetup, type Scenario } from "../_harness";
 
 const TOWER = "classicplus-033";
-const MENACE = "core-019"; // (3) 9/9 Taunt.
-const TOKENS = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
+const TOKENS = "core-015"; // (1) 1/1, Cry: summon a Rush Token (Radiant: 3).
 const RUSH = "core-t-rush";
-const LUNAR = "core-035"; // (1) Spell: 3 damage to a target.
-const BONE_STORM = "classicplus-036-1"; // (1) Spell: 1 damage to each enemy.
+const MENACE = "core-019"; // (3) 9/9 Taunt.
+const TOE_CRACKER = "classic-006"; // (2) 3/4, Aura: your Traps cost (0).
+const JAY = "classicplus-049"; // (2) 3/6 Taunt, End of turn: a random card in your hand costs (2) less.
+const SHEEPLE = "classic-082"; // (1) 1/1, Death: draw 2.
+const GUY_ATT = "classicplus-005"; // (2) 6/8, Cry: destroy every backrow card you control.
+const SHEEPISH = "core-041"; // (1) Trap: transforms an opponent's played Unit once its Cry resolves.
+const SHEEP = "core-t-sheep";
 const MAGIC_JAMMED = "core-036"; // (1) Spell: destroy target backrow card, Lock its zone.
-const NETHER = "core-088"; // (4) Spell: destroy all permanents.
-const MANA_WELL = "core-006"; // (3) Field Spell.
-const SHEEPISH = "core-041"; // (1) Trap: transforms an opponent's played Unit after its Cry.
-const HONEYPOT = "core-060"; // (1) Trap; Radiant: any play fills its board with Rush Tokens that attack a played Unit.
+const BIG_SPELL = "core-035"; // (1) Spell, a hand card to discount.
 const FILLER = "core-005";
+const DECK = [FILLER, FILLER, FILLER, FILLER];
 
-/** p1 with a Tower in backrow lane 2; plays `rider` on top of it. */
-function towerWith(rider: string, opts: { radiant?: boolean; field?: readonly FieldSetup[]; hand?: string[] } = {}): Scenario {
+/** p1 with a Tower in backrow lane 2; plays `rider` onto it. */
+function towerWith(
+  rider: string,
+  opts: { radiant?: boolean; field?: readonly FieldSetup[]; hand?: string[]; p2Backrow?: readonly FieldSetup[] } = {},
+): { s: Scenario; tower: string; rider: string } {
   const s = scenario({
     p1: {
       hand: [rider, ...(opts.hand ?? [FILLER])],
       field: opts.field ?? [],
       backrow: [{ def: TOWER, lane: 2, radiant: opts.radiant === true }],
-      library: [FILLER, FILLER, FILLER],
+      library: DECK,
       mana: 8,
     },
-    p2: { hand: [FILLER], field: [MENACE], library: [FILLER, FILLER, FILLER] },
+    p2: { hand: [FILLER], field: [MENACE], backrow: opts.p2Backrow ?? [], library: DECK },
   });
+  const tower = s.card(TOWER).id;
+  const riderId = s.card(rider).id;
   s.play(rider, { zone: 2, row: "backrow" });
-  return s;
+  return { s, tower, rider: riderId };
 }
 
-function riderOf(s: Scenario, player: "p1" | "p2" = "p1"): string | undefined {
-  return carriedAt(s.state, { player, row: "backrow", lane: 2 })?.id;
-}
+const textOf = (s: Scenario, id: string): string => {
+  const card = s.card(id);
+  const def = defOf(s.state, card.defId);
+  return (card.radiant ? def.radiant : def.base).text;
+};
 
 describe("C+ #33 Ivory Tower", () => {
   describe("base", () => {
-    it("the aura gives your Units in hand Stack: one may be played onto your occupied unit zone", () => {
+    it("R418 R653 a Unit you play may name the Tower's zone; its Cry resolves, then it is fused into the Tower", () => {
+      const { s, tower, rider } = towerWith(TOKENS);
+      // Its Cry ran while it stood on the Tower: a Rush Token in the unit row.
+      expect(s.unit("p1", 1)?.defId).toBe(RUSH);
+      // Then it was fused in: the Tower is the kept card, still a Field Spell in its zone.
+      expect(s.backrow("p1", 2)?.id).toBe(tower);
+      const fused = defOf(s.state, s.card(tower).defId);
+      expect(fused.type).toBe("Field Spell");
+      expect(fused.name).toBe("Me and Mr Token + Ivory Tower");
+      expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
+      s.expectInZone(rider, "gone");
+      const types = s.events.map((event) => event.type);
+      expect(types.indexOf("cardResolved")).toBeLessThan(types.indexOf("fused"));
+    });
+
+    it("R653 the Unit ceases to exist: no Death, not destroyed, never in a graveyard", () => {
+      const { s, rider } = towerWith(SHEEPLE);
+      s.expectInZone(rider, "gone");
+      expect(s.pile("p1", "graveyard")).toHaveLength(0);
+      expect(s.events.some((event) => event.type === "destroyed")).toBe(false);
+      expect(s.hand("p1")).toHaveLength(1); // the filler: Sheeople's Death drew nothing
+    });
+
+    it("R653 the Tower takes the Unit's text and keywords: its aura covers your side from the backrow", () => {
+      const { s, tower } = towerWith(TOE_CRACKER, { hand: [SHEEPISH, FILLER] });
+      expect(textOf(s, tower)).toContain("Aura: Your Traps cost (0).");
+      expect(effectiveCost(s.state, s.card(SHEEPISH))).toBe(0);
+    });
+
+    it("R653 the Unit's keywords do nothing in the backrow: a fused Taunt binds no attacker, and its end-of-turn line runs", () => {
+      const { s, tower } = towerWith(JAY, { hand: [BIG_SPELL, FILLER] });
+      expect(defOf(s.state, s.card(tower).defId).base.keywords).toContainEqual({ kind: "Taunt" });
+      const before = s.hand("p1").map((card) => effectiveCost(s.state, card));
+      s.endTurn();
+      const after = s.hand("p1").map((card) => effectiveCost(s.state, card));
+      expect(after.reduce((a, b) => a + b, 0)).toBeLessThan(before.reduce((a, b) => a + b, 0));
+      // p2's Menace may attack the hero: the Tower's Taunt is a backrow card's, and binds no attacker.
+      s.attack(MENACE, "hero");
+      s.expectHealth("p1", HERO_HEALTH - 9);
+    });
+
+    it("R418 the Tower stays a backrow card, and the Unit's Death lives on: it fires when the Tower is destroyed", () => {
+      const { s, tower } = towerWith(SHEEPLE, { hand: [MAGIC_JAMMED, FILLER] });
+      const held = s.hand("p1").length;
+      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: tower }] });
+      s.expectInZone(tower, "graveyard");
+      // Magic Jammed left the hand; Sheeople's Death drew 2.
+      expect(s.hand("p1")).toHaveLength(held - 1 + 2);
+    });
+
+    it("R653 after the first Unit, no more Units can be stacked onto it", () => {
+      const { s } = towerWith(TOKENS, { hand: [MENACE, FILLER] });
+      expect(() => s.play(MENACE, { zone: 2, row: "backrow" })).toThrow();
+      const plays = legalActions(s.state, "p1").filter(
+        (action): action is Extract<Action, { type: "play" }> => action.type === "play" && action.instanceId === s.card(MENACE).id,
+      );
+      expect(plays.length).toBeGreaterThan(0);
+      expect(plays.some((action) => action.zone?.row === "backrow")).toBe(false);
+    });
+
+    it("R653 a Tower its Unit's Cry destroys fuses nothing: Guy Att steps down into a unit zone (R446)", () => {
+      const { s, tower, rider } = towerWith(GUY_ATT);
+      s.expectInZone(tower, "graveyard");
+      expect(s.unit("p1", 2)?.id).toBe(rider);
+      expect(s.events.some((event) => event.type === "fused")).toBe(false);
+      expect(s.card(rider).defId).toBe(GUY_ATT);
+    });
+
+    it("R653 an answer that replaces the Unit where it stands leaves its replacement to be fused: Sheepish's Sheep", () => {
+      const { s, tower } = towerWith(TOKENS, { p2Backrow: [{ def: SHEEPISH, faceUp: false }] });
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+      expect(defOf(s.state, s.card(tower).defId).name).toBe("Sheep Token + Ivory Tower");
+      expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
+      expect(s.unit("p1", 2)).toBeNull();
+      expect(s.events.some((event) => event.type === "summoned" && event.defId === SHEEP)).toBe(false);
+    });
+
+    it("the old aura is gone: your cards gain no Stack, and an occupied unit zone takes no Unit", () => {
       const s = scenario({
         p1: { hand: [MENACE, FILLER], field: [{ def: MENACE, lane: 1 }], backrow: [TOWER], mana: 8 },
         p2: { hand: [FILLER] },
       });
       const held = s.hand("p1").find((card) => card.defId === MENACE);
       if (held === undefined) throw new Error("Menace in hand");
-      expect(s.stats(held).keywords).toContainEqual({ kind: "Stack" });
-      s.play(held, { zone: 1 });
-      expect(s.unit("p1", 1)?.id).toBe(held.id);
-      expect(s.pile("p1", "graveyard")).toHaveLength(0);
-    });
-
-    it("the opponent's cards gain no Stack", () => {
-      const s = scenario({
-        active: "p2",
-        p1: { hand: [FILLER], backrow: [TOWER] },
-        p2: { hand: [MENACE, FILLER], field: [{ def: MENACE, lane: 1 }], mana: 8 },
-      });
-      const held = s.hand("p2").find((card) => card.defId === MENACE);
-      if (held === undefined) throw new Error("Menace in hand");
       expect(s.stats(held).keywords).not.toContainEqual({ kind: "Stack" });
       expect(() => s.play(held, { zone: 1 })).toThrow();
     });
 
-    it("backrow cards pile on backrow cards; a face-down trap beneath can't fire", () => {
+    it("a Unit played into a unit zone is untouched, and the Tower may still take a Unit after it", () => {
       const s = scenario({
-        p1: { hand: [MANA_WELL, FILLER], backrow: [TOWER, { def: SHEEPISH, lane: 3, faceUp: false }], mana: 8 },
-        p2: { hand: [TOKENS, FILLER], library: [FILLER, FILLER] },
+        p1: { hand: [MENACE, TOKENS, FILLER], backrow: [{ def: TOWER, lane: 2 }], library: DECK, mana: 8 },
+        p2: { hand: [FILLER] },
       });
-      s.play(MANA_WELL, { zone: 3 });
-      expect(s.backrow("p1", 3)?.defId).toBe(MANA_WELL);
-      s.endTurn();
-      s.play(TOKENS); // a Unit: Sheepish would transform it, but it lies dormant.
-      expect(s.unit("p2", 1)?.defId).toBe(TOKENS);
-      expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
-    });
-
-    it("R418 a Unit you play may name the Tower's zone and top it; its own text works", () => {
-      const s = towerWith(TOKENS);
-      const rider = s.card(TOKENS);
-      expect(riderOf(s)).toBe(rider.id);
-      expect(s.backrow("p1", 2)?.defId).toBe(TOWER);
-      // Its Cry summoned a Rush Token into the unit row.
-      expect(s.unit("p1", 1)?.defId).toBe(RUSH);
-    });
-
-    it("one Unit at most: a second Unit can't name the Tower's zone", () => {
-      const s = towerWith(MENACE, { hand: [TOKENS, FILLER] });
-      expect(() => s.play(TOKENS, { zone: 2, row: "backrow" })).toThrow();
-    });
-
-    it("it can neither attack nor be attacked", () => {
-      const s = towerWith(MENACE);
-      s.endTurn().endTurn(); // no longer summoning sick
-      expect(() => s.attack(MENACE, "hero")).toThrow();
-      s.endTurn();
-      const enemy = s.unit("p2", 1);
-      if (enemy === null) throw new Error("p2's Menace");
-      const rider = riderOf(s) ?? "";
-      expect(() => s.attack(enemy, rider)).toThrow();
-      const attacks = legalActions(s.state, "p2").filter(
-        (action): action is Extract<Action, { type: "attack" }> => action.type === "attack",
-      );
-      expect(attacks.some((action) => action.targetId === rider)).toBe(false);
-      expect(attacks.length).toBeGreaterThan(0);
-    });
-
-    it("nor attacked by a forced attack: a Radiant Bear Honeypot's tokens leave it alone", () => {
-      const s = scenario({
-        p1: { hand: [MENACE, FILLER], backrow: [{ def: TOWER, lane: 2 }], mana: 8 },
-        p2: { hand: [FILLER], backrow: [{ def: HONEYPOT, radiant: true, faceUp: false }] },
-      });
-      s.play(MENACE, { zone: 2, row: "backrow" });
-      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
-      expect(s.events.some((event) => event.type === "summoned" && event.defId === RUSH)).toBe(true);
-      expect(s.events.some((event) => event.type === "damage" && event.targetId === s.card(MENACE).id)).toBe(false);
-      s.expectStats(MENACE, { health: 9 });
-    });
-
-    it("it is a Unit for every rule: targeted, and hit by 'all Units' effects", () => {
-      const s = scenario({
-        active: "p2",
-        p1: { hand: [MENACE, FILLER], backrow: [{ def: TOWER, lane: 2 }], mana: 8 },
-        p2: { hand: [LUNAR, BONE_STORM, FILLER], mana: 8 },
-      });
-      s.endTurn();
-      s.play(MENACE, { zone: 2, row: "backrow" });
-      s.endTurn();
-      s.play(LUNAR, { targets: [{ pick: "instance", instanceId: s.card(MENACE).id }] });
-      s.expectStats(MENACE, { health: 6 });
-      s.play(BONE_STORM);
-      s.expectStats(MENACE, { health: 5 });
-    });
-
-    it("R418 the Tower stays active beneath it: its aura holds and 'all permanents' still finds it", () => {
-      const s = towerWith(MENACE, { hand: [TOKENS, NETHER, FILLER] });
-      expect(s.stats(s.card(TOKENS)).keywords).toContainEqual({ kind: "Stack" });
-      s.play(NETHER);
-      s.expectInZone(TOWER, "graveyard").expectInZone(MENACE, "graveyard");
-    });
-
-    it("backrow effects pass the Unit by: Magic Jammed may target the Tower, never the Unit", () => {
-      const s = towerWith(MENACE, { hand: [MAGIC_JAMMED, FILLER] });
-      expect(() => s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(MENACE).id }] })).toThrow();
-      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(TOWER).id }] });
-      s.expectInZone(TOWER, "graveyard");
-      s.expectInZone(MENACE, "field");
-    });
-
-    it("R418 when the Tower leaves, the Unit moves to its lane's unit zone with no Cry and no reset", () => {
-      const s = towerWith(TOKENS, { hand: [MAGIC_JAMMED, LUNAR, FILLER] });
-      const rider = s.card(TOKENS).id;
-      const tokens = s.events.filter((event) => event.type === "summoned" && event.defId === RUSH).length;
-      // Lane 2's unit zone is open (the Cry's Rush Token took lane 1).
-      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(TOWER).id }] });
-      expect(s.unit("p1", 2)?.id).toBe(rider);
-      expect(s.events.filter((event) => event.type === "summoned" && event.defId === RUSH)).toHaveLength(tokens);
-      expect(s.card(rider).id).toBe(rider);
-    });
-
-    it("R64 with its lane's unit zone taken, it moves to the leftmost open one, keeping its damage", () => {
-      const s = towerWith(MENACE, { field: [{ def: TOKENS, lane: 2 }], hand: [LUNAR, MAGIC_JAMMED, FILLER] });
-      s.play(LUNAR, { targets: [{ pick: "instance", instanceId: s.card(MENACE).id }] });
-      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(TOWER).id }] });
+      s.play(MENACE, { zone: 1 });
       expect(s.unit("p1", 1)?.defId).toBe(MENACE);
-      s.expectStats(MENACE, { health: 6 });
-    });
-
-    it("with no open unit zone, the Unit is destroyed when the Tower leaves", () => {
-      const full = [MENACE, MENACE, MENACE, MENACE, MENACE];
-      const s = towerWith(TOKENS, { field: full, hand: [MAGIC_JAMMED, FILLER] });
-      const rider = s.card(TOKENS).id;
-      s.play(MAGIC_JAMMED, { targets: [{ pick: "instance", instanceId: s.card(TOWER).id }] });
-      s.expectInZone(rider, "graveyard");
+      expect(s.events.some((event) => event.type === "fused")).toBe(false);
+      s.play(TOKENS, { zone: 2, row: "backrow" });
+      expect(s.events.some((event) => event.type === "fused")).toBe(true);
     });
   });
 
   describe("radiant", () => {
-    it("the Unit that tops it becomes Radiant", () => {
-      const s = towerWith(MENACE, { radiant: true });
-      expect(s.card(MENACE).radiant).toBe(true);
-      s.expectStats(MENACE, { attack: 18, health: 18 });
-    });
-
-    it("it becomes Radiant as it arrives, so its Cry runs on the Radiant face", () => {
-      const s = towerWith(TOKENS, { radiant: true });
-      expect(s.card(TOKENS).radiant).toBe(true);
+    it("the Unit becomes Radiant as it lands, so its Cry runs on the Radiant face", () => {
+      const { s } = towerWith(TOKENS, { radiant: true });
       const types = s.events.map((event) => event.type);
       expect(types.indexOf("radiantSet")).toBeLessThan(types.indexOf("cardResolved"));
       // Me and Mr Token's Radiant Cry summons 3 Rush Tokens, its base Cry 1.
       expect(s.events.filter((event) => event.type === "summoned" && event.defId === RUSH)).toHaveLength(3);
+    });
+
+    it("R469 it is fused in on its Radiant face", () => {
+      const { s, tower } = towerWith(TOE_CRACKER, { radiant: true });
+      // Cloaked Toe Cracker's Radiant face adds "After you play a Trap, gain 1 mana", on both fused faces.
+      expect(textOf(s, tower)).toContain("After you play a Trap");
+      expect(defOf(s.state, s.card(tower).defId).base.text).toContain("After you play a Trap");
     });
 
     it("a Unit played into a unit zone is not made Radiant", () => {

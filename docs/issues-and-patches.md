@@ -14,7 +14,6 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
-| `night bot vN` | Which night bot release the work belongs to (`night bot v1` for what shipped before 2026-10-04, `night bot v2` for the next). It goes beside `night bot` |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
@@ -45,7 +44,7 @@ A pull request has no type.
 | Revision of a shipped patch | `Patch vX.Y.Zb: <what it does>` |
 | Major version | `vX.Y.0: <what it does>` |
 | Part of a multi-part patch | `Patch vX.Y.Z (part n of m): <what it does>`, or `vX.Y.0 (part n of m): …` |
-| Night bot | `Night bot: <…>`, or `Night bot vN: <…>` for a release's tracker and `Night bot vN.M: <…>` for one of its parts |
+| Night bot | `Night bot: <…>` |
 | Tooling | `CI: <…>` or `Architecture: <…>` |
 
 "What it does" is a short phrase, such as `Patch v0.2.9: a public Card Almanac`. Keep version
