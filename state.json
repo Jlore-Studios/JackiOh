@@ -1986,6 +1986,9 @@
     "214": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "38efdb8549192f045ddb8012ae2f66998d4263ea": 1
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
