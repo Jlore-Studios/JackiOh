@@ -1178,7 +1178,14 @@
       "feedback_since": "2026-10-04T01:32:34Z",
       "issue": 153,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "e64eec57736ac2e4569e4c6257da6edc0cc1879e",
+        "tiers": {}
+      }
     },
     "31": {
       "failures": 0,
