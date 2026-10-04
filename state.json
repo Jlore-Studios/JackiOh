@@ -1012,16 +1012,25 @@
       "taken_asks": []
     },
     "180": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7": 1
       },
+      "ci_run_id": 37165297553,
+      "ci_sha": "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-03T22:13:10Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 45,
       "kind": "revise",
-      "queued_at": "2026-10-04T00:33:18Z",
+      "pending_request": false,
+      "queued_at": "2026-10-04T00:47:01Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
