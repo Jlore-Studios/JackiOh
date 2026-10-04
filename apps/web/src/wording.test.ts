@@ -4,8 +4,8 @@
 //
 // R432 (v0.2.0): a specific cost is written the way card text writes it, "(N) Cost" as the noun ("a
 // (1) Cost or less card", "Face-down trap, (2) Cost") and "costs (N)" as the verb ("costs (1) less").
-// So no client string says the old noun "Cost (N)", nor a bare number after "cost" ("costs 3"), nor
-// "a 2-cost card".
+// So no client string says the old noun "Cost (N)", the old participle "costing (N)", nor a bare
+// number after "cost" ("costs 3"), nor "a 2-cost card".
 //
 // The guard reads every source file under src/ (tests aside) and parses it, so comments — which
 // name the rules' library freely, as SPEC does — are not text. Of what is left, a machine word is
@@ -89,8 +89,8 @@ describe("R373 players read Deck and Tribute", () => {
   });
 });
 
-/** R432: the old noun ("Cost (2)"), a bare number after the word cost ("costs 3"), and "2-cost". */
-const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
+/** R432: the old noun ("Cost (2)"), the old participle ("costing (2)"), a bare number after the word cost ("costs 3"), and "2-cost". */
+const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcosting \(/i, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
 
 function oldCostWords(text: string): boolean {
   return OLD_COST_WORDS.some((pattern) => pattern.test(text));
@@ -113,6 +113,7 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
     expect(oldCostWords("Jlockeed Shredder-10 costs 3.")).toBe(true);
     expect(oldCostWords("a 2-cost unit")).toBe(true);
     expect(oldCostWords("a card costing 1 or less")).toBe(true);
+    expect(oldCostWords("Add 3 random cards costing (0)")).toBe(true);
     // A template that writes the number bare after "costs" ("costs ${n}") ends its text there.
     expect(oldCostWords(", costs ")).toBe(true);
     expect(oldCostWords("Face-down trap, (2) Cost")).toBe(false);
