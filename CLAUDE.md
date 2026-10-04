@@ -111,7 +111,7 @@ Workspace packages, from pure to impure:
   - `src/game/drag/` plus `glow.ts` — drag to play (click-click always works too) and the green (`legalActions`) and yellow (`conditionActive`, R195) glows.
   - `src/settings/` — the store and panel. Tasks' own stores (`fx/settings.ts`, `audio/settings.ts`, `cards/settings.ts`) mount through `SETTINGS_SLOTS`; "Hover previews" and "Reduce motion" are the panel's own switches and gate the card preview and the effects too. Every store sits in `localStorage` inside try/catch and applies live.
 
-Deployment: `apps/web` is a static bundle on Vercel (`vercel.json`), and `apps/server` runs on Render (`render.yaml`). Render's free tier sleeps when idle, and a match survives the restart by folding `(seed, log)`. Postgres and Auth are on Supabase. `docs/architecture.md` has the bring-up checklist and the env-var contract.
+Deployment: `apps/web` is a static bundle on Cloudflare in production (`wrangler.jsonc`, `apps/web/public/_redirects` and `_headers`, held equal to `vercel.json` by `cloudflare-config.test.ts`), built from the `production` branch that `promote-production.yml` fast-forwards to main's newest green commit once a day (and at once for a catalog bump), and on Vercel as staging from main (`vercel.json`); `docs/deploy-cloudflare.md` is the plan and runbook. `apps/server` runs on Render (`render.yaml`). Render's free tier sleeps when idle, and a match survives the restart by folding `(seed, log)`. Postgres and Auth are on Supabase. `docs/architecture.md` has the bring-up checklist and the env-var contract.
 
 ## The night bot
 
