@@ -1,7 +1,7 @@
 # The JackiOh night bot
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
-free: up to four Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
+free: up to five Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
@@ -308,6 +308,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its caps, and outside it while under 50% of 5 hours and 50% of the week (`off_hours`) | 70% of 5 hours, 70% of the week |
+| `claude-5` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -422,8 +423,9 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last. claude-4 comes right after claude-1, held to half its
-usage outside 03:00–15:00 and to 70% inside it. For building alone, claude-2 is `build_last`: it
+planning and reviewing; and Devin last. claude-4 and then claude-5 come right after claude-1:
+claude-4 held to half its usage outside 03:00–15:00 and to 70% inside it, claude-5 to 40% of its
+5-hour session and 60% of its week. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
 it may build only easy items, so it takes them ahead of everyone while it has a free lane, and the
 stronger models keep the medium and hard items only they may build. With its six lanes it fills
@@ -431,7 +433,7 @@ whatever room on the machine the medium models leave.
 
 - **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
   carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong
-  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-2) plans those first, on
+  model (Opus, in the usage order: claude-3, claude-1, claude-4, claude-5, claude-2) plans those first, on
   the **planning lane**: `plan_lanes` runs on top of `max_parallel`, which take no build lane, so a
   Claude account plans one item while it builds another. claude-1 is the exception: the quiet
   check cannot tell a second run of the bot's from its owner, so it plans only while it holds
@@ -509,7 +511,7 @@ agy started when its quota ran out can be finished by Codex the same hour.
 
 None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-4`), a GitHub secret each.
+- **Claude** (`claude-1` to `claude-5`), a GitHub secret each.
   1. Log in to the account with `claude`.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 

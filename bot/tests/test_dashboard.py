@@ -102,7 +102,7 @@ class DashboardTests(unittest.TestCase):
         gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # The lanes as boxes: each Claude account, then each slot on the machine.
-        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 4 working"]',
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 5 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
         self.assertIn('subgraph machine["The machine: 1 of 6 slots in use"]', body)
