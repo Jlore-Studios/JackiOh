@@ -1623,7 +1623,7 @@
       "question": "",
       "queued_at": "2026-10-04T08:56:18Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37189377964",
+      "run_id": "37190545014",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx.",
@@ -1645,7 +1645,7 @@
         }
       ],
       "source": "ci",
-      "started_at": "2026-10-04T08:35:40Z",
+      "started_at": "2026-10-04T08:57:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2136,8 +2136,8 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T08:35:40Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37189377964",
+    "at": "2026-10-04T08:57:23Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37190545014",
     "what": "revise #203 on devin"
   },
   "last_sweep": {
