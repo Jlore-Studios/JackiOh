@@ -19,7 +19,7 @@ from harness.clock import iso
 from harness.config import (DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
                             LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_REVISE, LABEL_WORKING)
+                            LABEL_READY, LABEL_REVISE, LABEL_WORKING)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -32,10 +32,13 @@ def label_names(thread: dict[str, Any]) -> set[str]:
 
 
 def set_state_label(ctx: Context, number: int, current: set[str], wanted: str | None) -> None:
-    """Leave exactly `wanted` (or none) of the queue's state labels on the thread."""
+    """Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
+    back in the queue is no longer ready for a person to merge, so `ready for merge` comes off."""
     for name in STATE_LABELS:
         if name in current and name != wanted:
             ctx.gh.remove_label(number, name)
+    if wanted and LABEL_READY in current:
+        ctx.gh.remove_label(number, LABEL_READY)
     if wanted and wanted not in current:
         ctx.gh.add_labels(number, [wanted])
 

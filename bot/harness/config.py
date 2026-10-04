@@ -63,6 +63,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:pr": ("c5def5", "A pull request the night bot opened"),
     "bot:suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to build it"),
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
+    "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
     "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
     "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
     "bot:planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
@@ -84,6 +85,10 @@ LABEL_BLOCKED = "bot:blocked"
 LABEL_PR = "bot:pr"
 LABEL_SUGGESTION = "bot:suggestion"
 LABEL_NEEDS_REVIEW = "bot:needs-review"
+#: A bot pull request whose head the review rule approved but which auto-merge could not take
+#: (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so it
+#: waits for a person to merge it. It comes off when the pull request goes back into the queue (`queue.set_state_label`).
+LABEL_READY = "ready for merge"
 LABEL_CROSS = "bot:cross-review"
 #: The Needs plan stage: a queued item (still `bot:build`) waiting for a strong model's plan, which
 #: goes into its description (`issueplan.py`). Not a state label: it sits beside `bot:build`.
