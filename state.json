@@ -1753,6 +1753,7 @@
     "205": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-04T13:58:35Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -1762,6 +1763,7 @@
       "interruptions": 0,
       "issue": 188,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-10-04T11:14:14Z",
