@@ -981,7 +981,7 @@
       }
     },
     "173": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "died": 0,
       "difficulty": "medium",
@@ -990,16 +990,16 @@
       "forced": false,
       "interruptions": 0,
       "issue": 131,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "agy",
+      "provider": "gpt",
       "queued_at": "2026-10-04T00:48:44Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37162468015",
+      "run_id": "37166075661",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-03T23:40:07Z",
+      "started_at": "2026-10-04T00:50:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -1527,9 +1527,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T00:36:07Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37165316691",
-    "what": "build #131 on muse"
+    "at": "2026-10-04T00:50:02Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37166075661",
+    "what": "review #173 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-04T00:48:08Z",
