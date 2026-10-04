@@ -58,7 +58,8 @@ export function canWatchArt(): boolean {
 /**
  * Calls `onNear` once, when `element` has stayed within ART_NEAR_MARGIN_PX of its scrolling box for
  * ART_DWELL_MS (a window gone before then starts its count over when it comes back). Returns the
- * function that stops watching it and cancels a pending dwell.
+ * function that stops watching it and cancels a pending dwell. Watching an element a second time
+ * replaces the first watch.
  */
 export function whenNear(element: Element, onNear: () => void): () => void {
   const root = scrollParent(element);
@@ -87,6 +88,9 @@ export function whenNear(element: Element, onNear: () => void): () => void {
     watch = { observer, windows };
     watches.set(root, watch);
   }
+  // Watching an element already watched replaces it; its pending dwell must not outlive it.
+  const previous = watch.windows.get(element);
+  if (previous !== undefined && previous.dwell !== null) clearTimeout(previous.dwell);
   watch.windows.set(element, { onNear, dwell: null });
   watch.observer.observe(element);
   return () => {

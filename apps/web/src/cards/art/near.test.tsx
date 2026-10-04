@@ -216,6 +216,33 @@ describe("whenNear", () => {
     box.remove();
   });
 
+  it("a window watched again mid-dwell forgets the first watch, timer and all", () => {
+    const box = document.createElement("div");
+    box.style.overflowY = "auto";
+    const window = document.createElement("span");
+    box.append(window);
+    document.body.append(box);
+
+    const near = vi.fn();
+    whenNear(window, () => {
+      near("first");
+    });
+
+    const [observer] = observers;
+    if (observer === undefined) throw new Error("no observer");
+    intersect(observer, window);
+    advance(ART_DWELL_MS - 1);
+    whenNear(window, () => {
+      near("second");
+    });
+    intersect(observer, window);
+    advance(ART_DWELL_MS);
+    // The first watch's dwell is gone: the latest onNear runs once and nothing is left ticking.
+    expect(near).toHaveBeenCalledExactlyOnceWith("second");
+    expect(vi.getTimerCount()).toBe(0);
+    box.remove();
+  });
+
   it("watches against the viewport when nothing above the window scrolls", () => {
     const loose = document.createElement("span");
     document.body.append(loose);
