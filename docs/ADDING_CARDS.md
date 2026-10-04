@@ -19,21 +19,22 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 3 | `packages/cards/src/scripts/classic-plus/NNN-slug.ts` | the script ([§2](#2-templates)) | `registry.test.ts`, `missing-tests` |
 | 4 | `packages/cards/test/classic-plus/NNN-slug.test.ts` | the test ([§2](#2-templates), [cards README §5](../packages/cards/README.md)) | `missing-tests` |
 | 5 | `packages/cards/src/scripts/_generated.ts` | **generated**: run `pnpm typecheck`, commit its diff, never edit it | typecheck |
-| 6 | `packages/cards/test/catalog.test.ts` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS`, `SET_SIZES`, the totals and the row counts (`.toBe(116)` …) | itself |
+| 6 | `packages/cards/test/catalog.test.ts` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
 | 7 | `packages/cards/scripts/validate-catalog.ts` | the set's `cards` and `rarities`, and `EXPECTED_TAG_COUNTS` for each tag the card has | `validate:catalog` |
 | 8 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `radiant-standard.test.ts` |
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
 | 10 | `apps/web/src/audio/voice-lines.json` | the card's lines, in catalog order | `voiceData.test.ts` |
-| 11 | the count assertions below | the totals change by one | the tests named |
+| 11 | `packages/cards/test/patches.test.ts` | its `VERSIONS` list gains the patch — the one patch list still transcribed (#63's fragments may change this) | itself |
 | 12 | `packages/cards/patches/*` and four version sites | by `patch`, [§3](#3-the-patch-and-its-order) | `patches.test.ts`, `loc.test.ts` |
 
-**Count assertions** (`grep -rn "\b317\b\|\b268\b" --include=*.ts --include=*.tsx` finds most): `test/query.test.ts` (the
-non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SIZE`),
-`test/059-unbiased-immigration.test.ts` (the pool without #59), `apps/server/test/api/catalog.test.ts`,
-`apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
-size), `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`), and the patch list in
-`packages/cards/test/patches.test.ts`, `apps/web/src/patches/PatchNotes.test.tsx`, `apps/web/src/patches/source.test.ts` and
-`apps/web/src/routes/patch-notes.test.tsx`.
+**Counts are derived** since #108: `test/query.test.ts`, `test/registry.test.ts`,
+`test/059-unbiased-immigration.test.ts`, `apps/server/test/api/catalog.test.ts`,
+`apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts`,
+`e2e/cypress/component/deckbuilder-layout.cy.tsx` and the web's patch tests (`patches/source.test.ts`,
+`routes/patch-notes.test.tsx`, `patches/PatchNotes.test.tsx`) count `catalog.json` and `patches.json`
+themselves and need no edit. What stays hand-kept is the proof: `catalog.test.ts`'s `RARITY_COUNTS` and
+`SET_SIZES` (its totals and row counts are the sums), `validate-catalog.ts`'s `SETS` and `EXPECTED_TAG_COUNTS`,
+and `patches.test.ts`'s `VERSIONS`.
 
 Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
 `CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.

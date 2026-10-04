@@ -53,16 +53,16 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake 
     await admin.end();
   });
 
-  it("R278 seeds all 317 entries of Core, Classic and Classic+, with the five Jlockeed cards tagged and no other row", async () => {
+  it("R278 seeds every entry of Core, Classic and Classic+, with the five Jlockeed cards tagged and no other row", async () => {
     const entries = await readCatalog(REAL_CATALOG);
     const written = await seedCatalog(databaseUrl(), CATALOG_VERSION, entries);
-    expect(written).toBe(317);
+    expect(written).toBe(entries.length);
 
     const { rows } = await admin.query<{ id: string; tags: string[]; catalog_version: string }>(
       `select id, tags, catalog_version from public.cards where id = any($1::text[]) order by id`,
       [entries.map((entry) => entry.id)],
     );
-    expect(rows).toHaveLength(317);
+    expect(rows).toHaveLength(entries.length);
     expect(rows.every((row) => row.catalog_version === CATALOG_VERSION)).toBe(true);
     expect(rows.filter((row) => row.tags.includes("Jlockeed")).map((row) => row.id)).toEqual([
       "classicplus-048",
@@ -71,9 +71,10 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake 
       "core-013",
       "core-014",
     ]);
-    expect(rows.filter((row) => row.tags.includes("Book"))).toHaveLength(14);
-    expect(rows.filter((row) => row.tags.includes("Pancake"))).toHaveLength(10);
-    expect(rows.filter((row) => row.tags.includes("AI"))).toHaveLength(10);
+    const tagged = (tag: string): number => entries.filter((entry) => entry.tags.includes(tag)).length;
+    expect(rows.filter((row) => row.tags.includes("Book"))).toHaveLength(tagged("Book"));
+    expect(rows.filter((row) => row.tags.includes("Pancake"))).toHaveLength(tagged("Pancake"));
+    expect(rows.filter((row) => row.tags.includes("AI"))).toHaveLength(tagged("AI"));
     // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
     const byId = new Map(entries.map((entry) => [entry.id, entry.tags]));
     for (const row of rows) expect(row.tags, row.id).toEqual(byId.get(row.id));
@@ -81,7 +82,7 @@ describe("R278 db:seed-catalog writes the real catalog, Jlockeed, Book, Pancake 
 
   it("R278 a second seed of the same catalog updates in place, and the tag check still refuses an unknown tag", async () => {
     const entries = await readCatalog(REAL_CATALOG);
-    await expect(seedCatalog(databaseUrl(), CATALOG_VERSION, entries)).resolves.toBe(317);
+    await expect(seedCatalog(databaseUrl(), CATALOG_VERSION, entries)).resolves.toBe(entries.length);
 
     const [first] = entries;
     if (first === undefined) throw new Error("the catalog is empty");

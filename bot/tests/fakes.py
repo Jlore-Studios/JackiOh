@@ -62,6 +62,7 @@ class FakeGitHub:
             "number": number, "title": title, "body": body, "state": state,
             "labels": [{"name": n} for n in labels], "user": dict(user or OPERATOR),
             "created_at": f"2026-09-{10 + number % 15:02d}T00:00:00Z", "assignees": [],
+            "id": 5_000_000 + number,
         }
         self.threads[number] = thread
         self.comments.setdefault(number, [])
@@ -140,6 +141,24 @@ class FakeGitHub:
 
     def blocked_by(self, number: int) -> list[dict]:
         return [copy.deepcopy(self.threads[b]) for b in self.blockers.get(number, [])]
+
+    def blocking(self, number: int) -> list[dict]:
+        return [copy.deepcopy(self.threads[n]) for n, found in sorted(self.blockers.items())
+                if number in found]
+
+    def _by_id(self, issue_id: int) -> int:
+        found = [n for n, t in self.threads.items() if t.get("id") == issue_id]
+        if not found:
+            raise GitHubError(f"no issue with id {issue_id}", 404)
+        return found[0]
+
+    def add_blocked_by(self, number: int, blocker_id: int) -> None:
+        self.block(number, self._by_id(blocker_id))
+
+    def add_sub_issue(self, parent: int, child_id: int) -> None:
+        child = self._by_id(child_id)
+        self.threads[child]["parent_issue_url"] = (
+            f"https://api.github.com/repos/{self.repo}/issues/{parent}")
 
     def list_comments(self, number: int, limit: int = 300) -> list[dict]:
         return copy.deepcopy(self.comments.get(number, []))

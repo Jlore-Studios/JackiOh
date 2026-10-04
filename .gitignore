@@ -33,3 +33,4 @@ __pycache__/
 # be mistaken for the real one.
 package-lock.json
 .polish-website/
+.wrangler/

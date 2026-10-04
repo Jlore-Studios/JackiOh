@@ -8,6 +8,7 @@
 // R74 (the added card is Radiant by flag).
 
 import { describe, expect, it } from "vitest";
+import { CATALOG } from "../src/catalog-data";
 import { pool } from "../src/query";
 import { scenario, type Scenario } from "./_harness";
 
@@ -43,9 +44,9 @@ const BUSY = { field: [{ def: "core-008", lane: 1 }], library: ["core-011", "cor
 const CARD_POOL = pool("core-059").map((def) => def.id);
 
 describe("#59 Unbiased Immigration — the pool", () => {
-  it("R380 §5.1 the pool is the 267 non-token cards of every set, without #59", () => {
-    // Core 100, Classic 90 and Classic+ 78 non-token cards, less #59 itself.
-    expect(CARD_POOL).toHaveLength(267);
+  it("R380 §5.1 the pool is every set's non-token cards, without #59", () => {
+    // Every non-token card of every set, less #59 itself.
+    expect(CARD_POOL).toHaveLength(Object.values(CATALOG).filter((def) => !def.token).length - 1);
     expect(CARD_POOL).not.toContain("core-059");
     expect(CARD_POOL).not.toContain("core-t-rush");
     expect(CARD_POOL).not.toContain("core-051-1");
