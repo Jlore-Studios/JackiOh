@@ -2022,11 +2022,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "8b4c218d5b4b0fdffdd10231388b60bf2153fe04",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "218": {
