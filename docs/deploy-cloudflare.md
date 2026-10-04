@@ -191,6 +191,8 @@ every pull request (#207). They are switched off here.
 3. **Switch off Cloudflare's builds.** Workers & Pages -> `jackioh` -> Settings -> Build -> Git
    repository -> Disconnect. The Worker keeps serving what was deployed last; nothing builds there
    any more, so no check appears on pull requests and no failed build can leave production behind.
+   Done on 2026-10-04, after the first deploy from GitHub Actions went live; a "Workers Builds:
+   jackioh" check on a pull request after that date means the repository was connected again.
 4. **Deploy now.** GitHub -> Actions -> promote production -> Run workflow, tick **redeploy**. The run's
    summary ends with "production is live at https://jackioh.<your-account>.workers.dev"; a red step
    names what to fix.
