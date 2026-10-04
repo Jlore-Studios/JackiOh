@@ -3208,6 +3208,20 @@
         "status": "allowed"
       }
     },
+    "claude-5": {
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-05T00:50:00Z",
+          "utilization": 0.72
+        },
+        "observed_at": "2026-10-04T21:50:19Z",
+        "seven_day": {
+          "resets_at": "2026-10-05T09:00:00Z",
+          "utilization": 0.68
+        },
+        "status": "allowed"
+      }
+    },
     "devin": {
       "spent": [
         {
