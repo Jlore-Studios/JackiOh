@@ -1999,15 +1999,6 @@
       "failures": 0,
       "feedback_since": "2026-10-04T16:51:43Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-04T16:57:59Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "# PR #214 revision: conflict (round 2)\n\n## Task\nNew merge vs main at 9809419b. Main landed patch v0.2.10 which claimed **R653** (C+ #33 Ivory\nTower fusion, issue #113) \u2014 colliding with our ruling that the previous pass had already renumbered\nto R653. Our homescreen-rotation ruling (issue #200) must now become **R654** (next free; main's\nhighest is R653).\n\nPrevious pass notes were stale \u2014 this is a *new* merge, not the one it resolved.\n\n## Conflict files & resolution\n- SPEC.md ~1301 (\u00a711 intro): keep main's R653 para, append ours renumbered R654 after it\n  (\"next number after R653\", with collision-history parenthetical mirroring main's style).\n- SPEC.md ~1800 (\u00a711 table): keep main's R653 row, append ours as | R654 | after it.\n- packages/engine/test/rulings.test.ts ~3866: keep main's R653 entry, ours renumbered\n  R654 (provenIn(654, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST)) after; the trailing `});`\n  outside the markers closes our it-block.\n\n## Our R653 refs to renumber to R654 (all homescreen context)\n- SPEC.md: line 1167 \u00a710.10 \"(R653)\"; line 1628 R374 row (\"since R653\" + last cell\n  \"\u00a79.2, R653\"); line 1790 R639 row (\"since R653 it swaps too\" + last cell \"\u2026, R653\").\n- apps/web/src/stats/config.ts: lines 14, 21\n- apps/web/src/routes/landingFan.ts: line 68\n- apps/web/src/routes/landingFan.test.ts: 197, 198\n- apps/web/src/routes/landing.tsx: 112, 148, 166, 241, 570, 581\n- apps/web/src/routes/landing.css: 370, 824, 845\n- apps/web/src/routes/landing.test.tsx: 456, 462, 560, 591, 609\n\n## Main's R653 refs \u2014 DO NOT touch (Ivory Tower context)\nSPEC.md lines 117, 306, 706, 738, 750, 1323, 1331, 1396, 1671, 1699, 1773, 1803;\ndocs/radiant-audit.md 464, 498; engine/cards sources & tests.\n\n## Verify after edits\n- pnpm vitest run landing.test.tsx landingFan.test.ts foil.test.ts rulings.test.ts\n- pnpm rulings:coverage (expect R1\u2013R654 all named)\n- pnpm typecheck; validate:catalog; missing-tests\n- No markers remain; git diff MERGE_HEAD shows only our (R654) additions.\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may review it, so it waits for a review run, with 2 self-check finding(s) still open",
-        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 3 minutes (at 17:01 UTC). (trace ID: b02e5fcebdb82c4526c701a1bad45fdf): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
-      },
       "interruptions": 0,
       "issue": 200,
       "kind": "revise",
