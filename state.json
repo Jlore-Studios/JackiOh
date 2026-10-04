@@ -1257,13 +1257,22 @@
       }
     },
     "194": {
+      "asks": [
+        "c:5976207329"
+      ],
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T01:32:34Z",
+      "forced": true,
+      "interruptions": 0,
       "issue": 153,
       "kind": "revise",
-      "queued_at": "2026-10-04T02:03:11Z",
+      "pending_request": false,
+      "queued_at": "2026-10-04T03:36:02Z",
+      "requested_by": "jgoetzmann",
       "self_check_findings": [],
+      "source": "request",
+      "stop_requested": false,
       "votes": {
         "approvals": [],
         "builder": "cognition",
