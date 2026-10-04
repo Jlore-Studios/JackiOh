@@ -1980,7 +1980,7 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-04T16:20:29Z",
+      "queued_at": "2026-10-04T16:27:39Z",
       "run_id": "37215117716",
       "self_check_findings": [
         {
@@ -1990,7 +1990,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-04T16:01:48Z",
       "stop_requested": false,
       "taken_asks": [],
