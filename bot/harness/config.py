@@ -65,6 +65,8 @@ LABELS: dict[str, tuple[str, str]] = {
     "bot:needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
     "bot:cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
     "bot:needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
+    "bot:planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
+    "bot:stuck": ("d93f0b", "It failed every review round it had: a comment says why, for a person to review"),
     "human": ("ededed", "A human will do this. Night bot skips it."),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
@@ -86,6 +88,11 @@ LABEL_CROSS = "bot:cross-review"
 #: The Needs plan stage: a queued item (still `bot:build`) waiting for a strong model's plan, which
 #: goes into its description (`issueplan.py`). Not a state label: it sits beside `bot:build`.
 LABEL_NEEDS_PLAN = "bot:needs-plan"
+#: A plan is in the description (`issueplan.py`): beside `bot:build` while queued, and kept after.
+LABEL_PLANNED = "bot:planned"
+#: A build or revision used every review round (`max_review_cycles`) without an approval; its
+#: comment says why, round by round (`failures.py`), for a person to review.
+LABEL_STUCK = "bot:stuck"
 #: No model takes a thread labelled `human` (#96).
 LABEL_HUMAN = "human"
 #: An item's difficulty decides which models may plan, build and review it; no label counts as

@@ -219,10 +219,12 @@ needs level 3.
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
 | `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a strong model's plan, which goes into its description |
+| `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
+| `bot:stuck` | beside `bot:blocked`: a build or revision used every review round (`max_review_cycles`, 10) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |

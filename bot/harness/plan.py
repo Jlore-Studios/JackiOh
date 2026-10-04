@@ -45,7 +45,7 @@ from harness import asks, issueplan, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
-                            LABEL_NEEDS_PLAN, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING,
                             MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
@@ -707,13 +707,21 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
 
 def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
     """Keep `bot:needs-plan` on exactly the queued items in the Needs plan stage, and on the ones
-    being planned now."""
+    being planned now; and `bot:planned` on the queued ones a strong model has planned (it stays
+    after they leave the queue, and comes off only if the item needs a plan again)."""
     notes: list[str] = []
     try:
-        wanted = {c.number for c in candidates(ctx, state) if needs_plan(c)}
+        queued = [c for c in candidates(ctx, state) if c.kind == "build"]
+        wanted = {c.number for c in queued if needs_plan(c)}
         labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
+        planned = {c.number for c in queued if c.planned and not needs_plan(c)}
+        has_planned = {int(t["number"]) for t in ctx.gh.list_issues(labels=LABEL_PLANNED)}
     except GitHubError as exc:
         return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
+    for number in sorted(planned - has_planned):
+        ctx.gh.add_labels(number, [LABEL_PLANNED])
+    for number in sorted(has_planned & wanted):
+        ctx.gh.remove_label(number, LABEL_PLANNED)
     have = set()
     for thread in labelled:
         number = int(thread["number"])
