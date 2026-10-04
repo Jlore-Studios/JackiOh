@@ -739,7 +739,9 @@
     },
     "142": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:5984801478"
+      ],
       "ci_fixes": 3,
       "ci_reruns": {
         "4207c0a988b0876c8b2ea793b6a94b440a38238e": 1,
@@ -756,16 +758,16 @@
       "forced": false,
       "interruptions": 0,
       "issue": 124,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
       "question": "",
-      "queued_at": "2026-10-04T16:14:38Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-04T21:54:33Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37216311900",
       "self_check_findings": [],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-04T16:21:28Z",
       "stop_requested": false,
       "taken_asks": [],
