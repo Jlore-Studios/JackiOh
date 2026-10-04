@@ -7,22 +7,24 @@
 # run passed. It never force-pushes: a `production` that carries anything main does not fails the
 # run, loudly, for a human to look at.
 #
-# The open issue labelled `production merge` says "Merging to production in N hours". The check runs
-# every hour (GitHub starts schedules late and sometimes skips them, so one a day is not enough to
-# honour `/delay 3h`) and merges when the issue's time has passed and nobody has put it on hold.
+# The open issue labelled `production merge` says "Merging to production in N hours". The check
+# merges when the issue's time has passed and nobody has put it on hold. GitHub has not started this
+# repository's scheduled runs at all (CLAUDE.md, the night bot), so the check never rests on the
+# cron: every green CI run on main runs it too, and main moves many times a day.
 #
 # Four ways in:
-#   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest):
-#                      read the new comments, merge if due and not on hold, then close the issue with the
-#                      pull request and open the next. A catalog bump is merged here too.
+#   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest),
+#                      if GitHub starts it: read the new comments, merge if due and not on hold, then
+#                      close the issue with the pull request and open the next.
 #   issue_comment      a /hold, /resume or /delay on the countdown issue, from someone GitHub calls an
 #                      owner, member or collaborator: the same check, so the answer is quick and a
 #                      /resume on an overdue merge goes out at once.
-#   workflow_run (CI)  right after a green CI run on main, but ONLY when that commit changes
-#                      render.yaml's CATALOG_VERSION. Render deploys apps/server from main on every
-#                      push, and the bundle compiles the catalog version in (packages/cards), so a
-#                      catalog bump left a day behind would refuse every deck save and queue in
-#                      production (SPEC §9.4, R105). A hold does not stop it.
+#   workflow_run (CI)  right after a green CI run on main: the same check, and the one that does the
+#                      work in practice. It also merges a commit that changes render.yaml's
+#                      CATALOG_VERSION at once, hold or no hold. Render deploys apps/server from main
+#                      on every push, and the bundle compiles the catalog version in
+#                      (packages/cards), so a catalog bump left a day behind would refuse every deck
+#                      save and queue in production (SPEC §9.4, R105).
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
 #                      commit, or the `sha` given, which must also be green and on main. A hold does
 #                      not stop it.

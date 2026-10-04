@@ -14,14 +14,19 @@
 # not understood). The next merge time is the first RELEASE_HOUR_UTC at least MIN_GAP_HOURS ahead.
 #
 # What runs it, and what each does (EVENT is github.event_name):
-#   schedule, issue_comment  a check: read the new commands, merge when due and not on hold, then
-#                            close the issue as completed with the pull request and open the next one.
-#                            A catalog bump is merged here too, whatever the hold (see below).
-#   workflow_run (CI)        the catalog fast path: the commit CI just passed, only when it changes
-#                            render.yaml's CATALOG_VERSION. Render deploys apps/server from main on
-#                            every push and the bundle compiles the catalog version in, so a catalog
-#                            left a day behind would refuse every deck save and queue in production
-#                            (SPEC §9.4, R105). It ignores the hold and leaves the countdown alone.
+#   schedule, issue_comment, workflow_run
+#                            a check: first the catalog fast path (below), then read the new commands,
+#                            merge when due and not on hold, close the issue as completed with the pull
+#                            request and open the next one. workflow_run is a green CI run on main; it
+#                            is here because GitHub has not started this repository's scheduled runs
+#                            (CLAUDE.md, the night bot), so the first green push after the issue's time
+#                            is what merges, and the cron is a second chance, not the mechanism.
+#   catalog fast path        part of every check. The commit CI just passed (workflow_run), or the
+#                            newest green one, merges at once when it changes render.yaml's
+#                            CATALOG_VERSION. Render deploys apps/server from main on every push and
+#                            the bundle compiles the catalog version in, so a catalog left a day
+#                            behind would refuse every deck save and queue in production (SPEC §9.4,
+#                            R105). It ignores the hold and leaves the countdown's time alone.
 #   workflow_dispatch        by hand: the newest green commit of main, or INPUT_SHA, at once, hold or no
 #                            hold. When it merged something the countdown starts over.
 #
@@ -328,7 +333,7 @@ apply_commands() {
 
 check() {
   local issues issue n cand
-  catalog_gate ""
+  catalog_gate "${RUN_SHA:-}"
   issues=$(open_issues)
   if [ -z "$issues" ]; then
     create_issue "$(next_due "$(now)")"
@@ -361,8 +366,7 @@ manual() {
 }
 
 case $EVENT in
-  schedule | issue_comment) check ;;
-  workflow_run) catalog_gate "${RUN_SHA:?}" ;;
+  schedule | issue_comment | workflow_run) check ;;
   workflow_dispatch) manual ;;
   *) fail "promote-production.sh does not handle the $EVENT event." ;;
 esac

@@ -32,7 +32,9 @@ merging a pull request whose head is a green commit of main, so its files always
    opens a pull request from `promote/<date>-<sha>` into `production` listing the commits, and
    merges it with a merge commit. It then closes the issue as completed, with the pull request, and
    opens the next one. If `production` already has that commit, no pull request is opened and
-   nothing deploys.
+   nothing deploys. GitHub did not start the first scheduled run (it starts this repository's
+   schedules late, if at all), so the same check also runs on every green CI run on `main`: the
+   first one after the issue's time merges, and the cron is only a second chance.
 4. Cloudflare's GitHub app sees the merge into `production`, runs the build, and deploys it.
 
 ### 2.1 The catalog fast path, and why it exists
@@ -44,8 +46,8 @@ deploys only once a day. Without a fast path, a merge that bumps the catalog wou
 with a new server and a day-old client, and **every deck save and queue in production would be
 refused until the next daily run**.
 
-So the workflow also runs whenever CI completes on main, and its hourly check looks for the same
-thing in case that event was lost. It promotes only if the commit changes `render.yaml`'s
+So the workflow also runs whenever CI completes on main, and every check starts with this one (so
+a lost event is made up by the next). It promotes only if the commit changes `render.yaml`'s
 `CATALOG_VERSION` compared to what `production` has, through the same kind of pull request, and **a
 hold does not stop it** (the server already runs the new catalog, so holding the client back is what
 breaks production). It comments on the open countdown issue and leaves its time alone. Every other
@@ -90,9 +92,10 @@ it was refused: the commenter has no write access, or it is not understood), and
 workflow at once, so the answer takes a minute rather than an hour. Commands apply once, in the order
 they were written; editing a comment later changes nothing.
 
-The check runs every hour at minute 7 and merges when the issue's time has passed and it is not held.
-GitHub starts scheduled runs late and sometimes skips them, so a merge can come a little after its
-time and never before. When it merges, the issue is closed as completed with a link to the pull
+The check merges when the issue's time has passed and it is not held. It runs on every green CI run
+on `main`, on every command comment, on a manual run and, if GitHub starts it, from the hourly cron
+(minute 7). GitHub has not started this repository's scheduled runs, so in practice the first green
+push after the time is what merges: a merge comes a little after its time, never before. When it merges, the issue is closed as completed with a link to the pull
 request, and the next one is opened for the first 15:00 UTC at least 12 hours away. A manual run
 (section 5) merges at once, hold or no hold, and starts the countdown over.
 
@@ -325,9 +328,10 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   cannot be served (delete it, so nobody edits it expecting an effect).
 - **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
   workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
-- **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for
-  60 days. Re-enable it in the Actions tab. A comment on the countdown issue and a manual run work
-  while it is off.
+- **Scheduled runs stop, or never start:** GitHub disables scheduled workflows in a repository with
+  no activity for 60 days, and may start a schedule late or not at all. Re-enable it in the Actions
+  tab. Nothing depends on it: every green push to `main`, a comment on the countdown issue and a
+  manual run all run the same check (section 2, step 3).
 
 ## 6. What needs no secret
 

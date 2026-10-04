@@ -11,16 +11,16 @@
  * stale. A card with no script file yet carries no `loc`. A catalog entry is rewritten only when its
  * `loc` changes, so running this twice is a no-op.
  *
- * Shipped snapshots are never amended (R646): a change that moves a card's `loc` is a catalog
- * change like any other, so claim it with a pending fragment (`pnpm --filter @jackioh/cards
- * patches <version> "<title>"`) and let `patches ship` snapshot it. `patches check` fails until
- * the moved card is claimed.
+ * Amending the current snapshot is what keeps "catalog.json equals the latest snapshot" true while a
+ * patch is being built. A change that moves a card's `loc` after its patch has shipped is a balance
+ * change (B4.2): cut a new patch first (`pnpm --filter @jackioh/cards patch <version> "<title>"
+ * --date <YYYY-MM-DD>`), so the one this amends is the new one.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { SET_SUBFOLDERS, resolveRelPath } from "./naming";
-import { orderEntry, writeJson, type Catalog } from "./patches-io";
+import { orderEntry, readPatches, rewriteIndex, snapshotPath, writeJson, type Catalog } from "./patches-io";
 
 const SCRIPTS_DIR = fileURLToPath(new URL("../src/scripts/", import.meta.url));
 export const CATALOG_PATH = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -130,19 +130,29 @@ function withLoc(catalog: Catalog, locs: ReadonlyMap<string, number>): { next: C
   return { next, changed };
 }
 
-export type LocResult = { changed: readonly string[] };
+export type LocResult = { changed: readonly string[]; snapshot: string | null };
 
-/**
- * Rewrites `loc` in catalog.json; returns the ids it moved. The snapshots are shipped history
- * and are never amended (R646): a moved `loc` is a catalog change for a pending fragment to
- * claim, and `patches ship` snapshots it.
- */
+/** Rewrites `loc` in catalog.json and the current patch's snapshot; returns the ids it moved. */
 export function generateLoc(): LocResult {
   const catalog = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as Catalog;
   const locs = expectedLocs(Object.keys(catalog));
   const { next, changed } = withLoc(catalog, locs);
   if (changed.length > 0) writeJson(CATALOG_PATH, next);
-  return { changed };
+
+  // The current patch is the last in patches.json; its snapshot is the catalog (B4.2).
+  const patches = readPatches();
+  const latest = patches[patches.length - 1];
+  let snapshot: string | null = null;
+  if (latest !== undefined) {
+    snapshot = snapshotPath(latest.version);
+    const snap = JSON.parse(readFileSync(snapshot, "utf8")) as Catalog;
+    const amended = withLoc(snap, locs);
+    if (amended.changed.length > 0) {
+      writeJson(snapshot, amended.next);
+      rewriteIndex();
+    }
+  }
+  return { changed, snapshot };
 }
 
 function main(): void {

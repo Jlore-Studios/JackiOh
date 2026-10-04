@@ -495,6 +495,38 @@ describe("the catalog fast path", () => {
   });
 });
 
+describe("a green push to main, for a cron GitHub never starts", () => {
+  it("does the whole check: opens the countdown issue when there is none, and merges nothing yet", () => {
+    const w = world();
+    const plain = commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-04T16:00:00Z", { RUN_SHA: plain }));
+    expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 23 hours (2026-10-05 15:00 UTC)"]);
+    expect(gh(w).prs).toEqual([]);
+  });
+
+  it("waits for the issue's time, then the first one after it merges, with no scheduled run at all", () => {
+    const w = counting();
+    const early = commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-05T14:59:00Z", { RUN_SHA: early }));
+    expect(gh(w).prs).toEqual([]);
+    const late = commit(w, "c5", { "app.txt": "five\n" });
+    ok(run(w, "workflow_run", "2026-10-05T15:40:00Z", { RUN_SHA: late }));
+    expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true]]);
+    expect(tree(w, "production")).toBe(tree(w, late));
+    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(openIssues(w).map((i) => i.number)).toEqual([3]);
+  });
+
+  it("is held by a hold, like any other check", () => {
+    const w = counting();
+    comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
+    const late = commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-05T16:00:00Z", { RUN_SHA: late }));
+    expect(gh(w).prs).toEqual([]);
+    expect(marker(issue(w, 1))).toContain("held=1");
+  });
+});
+
 describe("running it by hand", () => {
   it("merges the newest green commit now, hold or no hold, and starts the countdown over", () => {
     const w = counting();
@@ -578,6 +610,17 @@ describe("what stops it", () => {
     expect(r.text).toContain("could not be merged into production");
     expect(gh(stuck).prs[0]).toMatchObject({ state: "open", merged: false });
     expect(issue(stuck, 1).state).toBe("open");
+  });
+
+  it("never moves production backwards: promoting a commit it already has is a no-op", () => {
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    const before = production(w);
+    const out = ok(run(w, "workflow_dispatch", "2026-10-05T16:00:00Z", { INPUT_SHA: w.sha.c2 as string }));
+    expect(out.text).toContain("nothing to merge");
+    expect(production(w)).toBe(before);
+    expect(gh(w).prs).toHaveLength(1);
+    expect(openIssues(w).map((i) => i.number)).toEqual([3]);
   });
 
   it("refuses an event it does not know", () => {

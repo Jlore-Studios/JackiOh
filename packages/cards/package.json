@@ -11,7 +11,7 @@
   "scripts": {
     "gen": "pnpm exec tsx scripts/gen-registry.ts && pnpm exec tsx scripts/gen-loc.ts",
     "missing-tests": "pnpm exec tsx scripts/missing-tests.ts",
-    "patches": "pnpm exec tsx scripts/patches.ts"
+    "patch": "pnpm exec tsx scripts/patch.ts"
   },
   "dependencies": {
     "@jackioh/engine": "workspace:*",
