@@ -2119,9 +2119,12 @@
     "223": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T20:22:50Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 218,
       "kind": "revise",
       "last_findings": [],
