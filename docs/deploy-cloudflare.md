@@ -32,7 +32,11 @@ only ever moves forward along main.
    starts this repository's schedules late, if at all), so the same promotion also runs on the first
    green CI run on `main` once its commit is `MAX_LAG_HOURS` (24) newer than `production`'s: the
    daily promotion happens without the cron.
-4. Cloudflare's GitHub app sees the push to `production`, runs the build, and deploys it.
+4. The same run's `deploy` job checks out `production`, installs the way CI does, builds
+   `apps/web` with the public settings in `apps/web/.env.production`, refuses the bundle if any of
+   them is missing (`apps/web/scripts/check-production-bundle.mjs`), deploys it to the `jackioh`
+   Worker with `wrangler deploy`, and then fetches the live site: sign-in configured, `/decks` a 200
+   with the CSP, an unknown path a 404. Cloudflare only serves the files; it builds nothing.
 
 ### 2.1 The catalog fast path, and why it exists
 
@@ -61,8 +65,9 @@ These are all tested against a simulated repo before this change shipped:
 - The first run creates `production`.
 - The run summary lists the catalog version and every commit that went live.
 
-It uses only the built-in `GITHUB_TOKEN` (permission `contents: write`). A push made with that token
-starts no other workflow, so it cannot loop, but Cloudflare's GitHub app still receives it.
+It moves `production` with the built-in `GITHUB_TOKEN` (permission `contents: write`); a push made
+with that token starts no other workflow, so it cannot loop. Its `deploy` job uses one secret,
+`CLOUDFLARE_API_TOKEN`.
 
 ## 3. What is in this change
 
@@ -108,69 +113,34 @@ works under these two rules, and they make an accidental `git push -f` to produc
 
 ### Step 3: Set up Cloudflare
 
-You said the repo is already connected to Cloudflare. First check which kind of project it is:
-Workers & Pages -> your project. A **Worker** shows "Deployments" and "Settings -> Build"; a
-**Pages** project shows "Deployments" with "Production" and "Preview" environments.
+GitHub Actions builds and deploys production (section 2, step 4), so Cloudflare needs one API token
+and no build settings. Cloudflare's own Git builds failed on every commit after the first, with logs
+only the dashboard shows, and built every branch, which put a red "Workers Builds: jackioh" check on
+every pull request (#207). They are switched off here.
 
-**If it is a Worker (recommended):** Settings -> Build:
+1. **Make an API token.** Cloudflare dashboard -> your profile icon -> My Profile -> API Tokens ->
+   Create Token -> the **Edit Cloudflare Workers** template -> Use template. Account Resources:
+   Include, your account. Zone Resources: All zones from that account (or only the zone of your
+   custom domain). Continue to summary -> Create Token, and copy it (it is shown once).
+2. **Give it to GitHub.** GitHub -> `Jlore-Studios/JackiOh` -> Settings -> Secrets and variables ->
+   Actions -> New repository secret. Name `CLOUDFLARE_API_TOKEN`, value the token. Only
+   `promote-production.yml` reads it, and only on `main` and `production`.
+3. **Switch off Cloudflare's builds.** Workers & Pages -> `jackioh` -> Settings -> Build -> Git
+   repository -> Disconnect. The Worker keeps serving what was deployed last; nothing builds there
+   any more, so no check appears on pull requests and no failed build can leave production behind.
+4. **Deploy now.** GitHub -> Actions -> promote production -> Run workflow, tick **redeploy**. The run's
+   summary ends with "production is live at https://jackioh.<your-account>.workers.dev"; a red step
+   names what to fix.
 
-- **Git repository:** `Jlore-Studios/JackiOh`
-- **Production branch:** `production` (not `main`). This is what makes it once a day.
-- **Builds for non-production branches:** off (Branch control). Previews are Vercel's job. Left on,
-  Cloudflare builds every pull request and every bot branch, and its "Workers Builds: jackioh"
-  check goes red on all of them, which is what issue #207 was about. It is not a required check, so
-  it never blocked a merge, but it buries the real ones.
-- **Root directory:** `/`
-- **Build command:** `pnpm --filter @jackioh/web build`
-- **Deploy command:** `npx wrangler deploy`
-- **Worker name** must be exactly `jackioh`, the `name` in `wrangler.jsonc`. If your Worker already
-  has another name, either rename it or change `name` in `wrangler.jsonc`; a mismatch fails every
-  deploy.
+**Settings this does not need.** No build variables: the four public `VITE_` values are in
+`apps/web/.env.production` (the publishable key too, or as a repository variable
+`VITE_SUPABASE_PUBLISHABLE_KEY`), and Node, pnpm and the install come from the same setup CI uses.
+The Worker's name is `jackioh` (`wrangler.jsonc`), and its account is `CLOUDFLARE_ACCOUNT_ID` in
+the workflow. **Never** put `SUPABASE_SECRET_KEY`, `DATABASE_URL` or `CODE_PEPPER` in the web build
+or in Cloudflare: anything the web build reads is readable by every visitor.
 
-**If it is a Pages project:** Pages ignores `wrangler.jsonc` (it logs that it skipped it) but uses
-`_redirects` and `_headers` the same way. Settings -> Builds & deployments:
-production branch `production`; preview branch deployments **None**; build command
-`pnpm --filter @jackioh/web build`; build output directory `apps/web/dist`; root directory empty.
-Everything else in this section applies the same way.
-
-**Build variables** (Worker: Settings -> Build -> Variables and secrets; Pages: Settings ->
-Environment variables, Production). These are build-time values, not the Worker's runtime
-variables, because Vite compiles them into the bundle. All of them are public; none is a secret.
-
-| Name | Value |
-| --- | --- |
-| `VITE_SUPABASE_URL` | same as on Vercel (`https://exmjdaswedxhnzmpzqrq.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | same as on Vercel (`sb_publishable_...`) |
-| `VITE_SERVER_HTTP_URL` | `https://jackioh-server.onrender.com` |
-| `VITE_SERVER_WS_URL` | `wss://jackioh-server.onrender.com/ws/match` |
-| `NODE_VERSION` | `24.19.0` (from `.nvmrc`) |
-| `PNPM_VERSION` | `11.3.0` (the `packageManager` in `package.json`; set it always, do not rely on the image's pnpm) |
-| `CYPRESS_INSTALL_BINARY` | `0` (the install covers the whole workspace, `e2e/` included, and `pnpm-workspace.yaml` lets Cypress's install script run; without this the build downloads a browser it never uses. Render sets the same variable for the same reason) |
-
-Copy the first two from Vercel -> Project -> Settings -> Environment Variables. If either
-`VITE_SERVER_*` value is missing, the bundle falls back to `localhost:8787` and every API call and
-match fails. If a `VITE_SUPABASE_*` value is missing, sign-in fails with "unconfigured".
-
-**Never** add `SUPABASE_SECRET_KEY`, `DATABASE_URL` or `CODE_PEPPER` to Cloudflare. They belong only
-on Render. Anything given to the web build ends up readable by every visitor.
-
-**Build watch paths** (optional): include `*`; exclude the files the bundle never reads, the same
-list as `scripts/vercel-ignore.sh`:
-`bot/*`, `.harness/*`, `.github/*`, `docs/*`, `reviews/*`, `e2e/*`, `apps/server/*`, `scripts/*`,
-`render.yaml`, `*.test.ts`, `*.test.tsx`, `packages/*/test/*`, `packages/*/scripts/*`,
-`packages/*/README.md`, `apps/web/scripts/*`, `apps/web/src/test/*`, `apps/web/README.md`,
-`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md`, `SPEC.md`, `BUILD.md`, `REVIEW.md`,
-`ARCHITECTURE-CCG.md`, `JackiOh_*.md`.
-Keep `packages/*/scripts/*` exact: `packages/cards/src/scripts/` holds card scripts that **are**
-bundled. With a once-a-day deploy this saves little, since a day's promotion almost always touches
-the bundle, so it is fine to skip this setting.
-
-**Custom domain:** Worker -> Settings -> Domains & Routes -> Add -> Custom domain (or Pages ->
-Custom domains). Until you add one, the site is on `jackioh.<your-account>.workers.dev` (or
-`<project>.pages.dev`).
-
-Finally, trigger the first build: Deployments -> retry the latest build, or run the promote
-workflow again with a newer green commit.
+**Custom domain:** Worker -> Settings -> Domains & Routes -> Add -> Custom domain. Until you add one,
+the site is on `jackioh.<your-account>.workers.dev`.
 
 ### Step 4: Tell the backend about the new origin
 
@@ -260,8 +230,9 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   the Blueprint. Then Manual Deploy, "Deploy latest commit". The `CATALOG_VERSION` in Environment is
   ignored: the start command overwrites it at every boot from `patches.json`, so a stale copy there
   cannot be served (delete it, so nobody edits it expecting an effect).
-- **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
-  workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
+- **The deploy job fails:** the commit is on `production` but not live. The run's log names the
+  step: the build, the bundle check (a missing `VITE_` setting), the deploy (the token), or the live
+  check. Fix it on `main`, then Actions -> promote production -> Run workflow with **redeploy**.
 - **Scheduled runs stop, or never start:** GitHub disables scheduled workflows in a repository with
   no activity for 60 days, and may start a schedule late or not at all. Re-enable it in the Actions
   tab. Nothing depends on it: a green push to `main` a day past `production`'s commit promotes it
@@ -269,9 +240,10 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 
 ## 6. What needs no secret
 
-- Cloudflare: none. The build variables are all public, and there is no Worker script.
-- GitHub: none added. The workflow uses the built-in `GITHUB_TOKEN`, and Cloudflare deploys through
-  its own GitHub app, so no Cloudflare API token is stored in GitHub.
+- Cloudflare: none. The `VITE_` settings are all public and committed, and there is no Worker
+  script.
+- GitHub: one, `CLOUDFLARE_API_TOKEN`, which the deploy job uses to upload the build. Moving
+  `production` uses the built-in `GITHUB_TOKEN`.
 - Render and Supabase: unchanged, except for the `PUBLIC_ORIGINS` value and the Redirect URL above.
 
 ## 7. Known gaps and recommended next steps
@@ -289,8 +261,7 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   branch (`render.yaml` `branch: production`, and `deploy-watch.yml` triggered by pushes to
   `production`). Then the production server and client ship together once a day, staging is fully
   separate, and the catalog fast path is no longer needed.
-- **No automatic check that Cloudflare actually deployed.** `deploy-watch.yml` watches Render only
-  (the catalog version and the deployed commit).
-  A similar job that fetches the live site after each promotion and compares a build marker with
-  the promoted commit would catch a silently failed Cloudflare build. Until then, Cloudflare's
-  build-failure email notifications (account -> Notifications) are the alarm.
+- **Checking what went live.** `deploy-watch.yml` checks Render after every push (catalog version and
+  deployed commit), and the promote run's `deploy` job checks Cloudflare after every deploy (sign-in
+  configured, routing, headers). Neither compares the live client's commit with `production`'s; a
+  red deploy job is the alarm for the client.
