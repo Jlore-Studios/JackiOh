@@ -316,6 +316,7 @@
 .portrait-picker {
   position: relative;
   display: inline-block;
+  flex: none;
 }
 
 /* The deck's current portrait: the same oval the hero wears, at name-field height. */
