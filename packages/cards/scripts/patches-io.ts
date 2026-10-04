@@ -21,6 +21,7 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { fillParams, type CardDef } from "@jackioh/shared";
 
 export const PATCHES_DIR = fileURLToPath(new URL("../patches/", import.meta.url));
 export const PATCHES_JSON = `${PATCHES_DIR}patches.json`;
@@ -106,20 +107,29 @@ export function orderEntry(def: Record<string, unknown>): Record<string, unknown
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
-/** The fields of one entry that differ, one level into its faces ("base.text", "cost"). */
+/**
+ * The fields of one entry that differ, one level into its faces ("base.text", "cost"). A face's
+ * text is compared as it prints, its `{key}` numbers filled in (`fillParams`, as the patch-notes
+ * diff does): a patch that moves only a param's value still rewords the faces that print it
+ * (v0.2.5's Exile threshold), so the face counts as changed.
+ */
 export function changedFields(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
   const fields: string[] = [];
   const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
   for (const key of keys) {
-    const a = before[key];
-    const b = after[key];
-    if (same(a, b)) continue;
-    const faceA = a as Record<string, unknown> | undefined;
-    const faceB = b as Record<string, unknown> | undefined;
-    if ((key === "base" || key === "radiant") && typeof faceA === "object" && typeof faceB === "object") {
+    const face = key === "base" || key === "radiant" ? key : undefined;
+    const faceA = before[key] as Record<string, unknown> | undefined;
+    const faceB = after[key] as Record<string, unknown> | undefined;
+    if (face !== undefined && typeof faceA === "object" && typeof faceB === "object") {
       const inner = [...new Set([...Object.keys(faceA), ...Object.keys(faceB)])];
-      for (const field of inner) if (!same(faceA[field], faceB[field])) fields.push(`${key}.${field}`);
-    } else {
+      for (const field of inner) {
+        if (field === "text" && typeof faceA[field] === "string" && typeof faceB[field] === "string") {
+          const was = fillParams(before as unknown as CardDef, face);
+          const now = fillParams(after as unknown as CardDef, face);
+          if (was !== now) fields.push(`${key}.${field}`);
+        } else if (!same(faceA[field], faceB[field])) fields.push(`${key}.${field}`);
+      }
+    } else if (!same(before[key], after[key])) {
       fields.push(key);
     }
   }
