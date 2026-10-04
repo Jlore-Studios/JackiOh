@@ -1757,9 +1757,7 @@
     },
     "203": {
       "action": "revise",
-      "asks": [
-        "c:5984803459"
-      ],
+      "asks": [],
       "ci_fixes": 3,
       "ci_reruns": {
         "9e2449301500cade2775362d8a45e2bb8aca0617": 1,
@@ -1791,7 +1789,7 @@
       "question": "",
       "queued_at": "2026-10-04T21:54:49Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37220845783",
+      "run_id": "37238056742",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in BUILD.md, SPEC.md, apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx, docs/radiant-audit.md, packages/cards/test/card-text.test.ts, packages/cards/test/catalog.test.ts, packages/cards/test/classic/033-joro.test.ts, packages/cards/test/patches.test.ts, packages/engine/test/rulings.test.ts.",
@@ -1813,9 +1811,11 @@
         }
       ],
       "source": "request",
-      "started_at": "2026-10-04T17:32:45Z",
+      "started_at": "2026-10-04T21:57:04Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:5984803459"
+      ],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -2789,9 +2789,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T21:48:21Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37237448492",
-    "what": "build #170 on claude-5"
+    "at": "2026-10-04T21:57:04Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37238056742",
+    "what": "revise #203 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T21:55:49Z",
