@@ -1250,7 +1250,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T15:34:36Z",
+      "feedback_since": "2026-10-04T16:23:09Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T16:18:17Z",
@@ -1273,13 +1273,19 @@
       "run_id": "37216428427",
       "self_check_findings": [
         {
+          "claim": "Conflict markers are still in SPEC.md.",
+          "evidence": "git grep",
+          "severity": "blocking",
+          "where": "SPEC.md"
+        },
+        {
           "claim": "The self check's answer could not be read twice in a row.",
           "evidence": "the harness",
           "severity": "blocking",
           "where": "self check"
         }
       ],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-04T16:23:09Z",
       "stop_requested": false,
       "taken_asks": [],
