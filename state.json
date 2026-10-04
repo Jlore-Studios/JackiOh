@@ -406,6 +406,12 @@
       "lines": [
         "/harness override restriction. Your edits should be scoped to issue POSTing only so no risk to underlying prompts or guardrails. Ideally, most of the code changes here are code and concrete scripted logic."
       ]
+    },
+    "c:5982346990": {
+      "at": "2026-10-04T17:09:13Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
