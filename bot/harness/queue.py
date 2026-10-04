@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from harness import asks, issueplan
+from harness import asks, issueplan, review_rule
 from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
@@ -242,8 +242,10 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
-    #: For a review: the families whose approval the head already has, which may not give it again.
+    #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
+    #: For a review: the tier of each approval the head has, one per review (`review_rule`).
+    approval_tiers: tuple[str, ...] = ()
     #: A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
     #: its revision needs a reviewer in the same run.
     bot_pr: bool = False
@@ -382,7 +384,10 @@ def candidates(ctx: Context, state: dict[str, Any],
                 difficulty=difficulty_of(names, str(record.get("difficulty") or "")),
                 builder=str(votes.get("builder") or ""),
                 priority=priority_tier(names), **plan_of(record, thread, kind),
-                approved=tuple(votes.get("approvals") or ()), bot_pr=LABEL_PR in names)
+                approved=tuple(votes.get("approvals") or ()),
+                approval_tiers=tuple(tier for _, tier in review_rule.approvals(
+                    votes, ctx.cfg.pool.family_tier)),
+                bot_pr=LABEL_PR in names)
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

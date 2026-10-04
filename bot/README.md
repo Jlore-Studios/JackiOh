@@ -11,7 +11,8 @@ build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or
 each item first; the cheapest builder the owner's usage order allows builds it, runs the
 repository's checks, and an adversarial reviewer reads the change, going round until the reviewer
 approves. A change merges itself into `main` once CI passes and one strong model, or two medium
-models of different families, approved the same commit. When it has nothing to do, it proposes
+ones (the same model may give both), or for an easy item one weak and one medium one, approved the
+same commit. When it has nothing to do, it proposes
 improvements to the game as issues, at most four open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
@@ -44,8 +45,8 @@ flowchart TD
     G --> R["adversarial reviewer<br/>the run's own medium or strong model"]
     R -- "blocking findings or red checks<br/>(up to 10 rounds)" --> F["a fresh builder<br/>fixes the findings"]
     F --> G
-    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval,<br/>or two medium ones of different families"]
-    D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, or another medium family"]
+    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval,<br/>two medium ones, or (easy) a weak and a medium one"]
+    D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, else a medium one,<br/>else (easy) a weak one"]
     X -- "approved" --> CI
     PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues"]
   end
@@ -413,11 +414,11 @@ Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:med
 `difficulty:hard`. No label counts as medium; with several, the hardest counts. A bot pull request
 keeps its issue's. The difficulty sets the weakest tier that may build it:
 
-| Difficulty | Builds it | Reviews it |
+| Difficulty | Builds it | Approvals it needs |
 |---|---|---|
-| easy | weak or stronger | one strong, or two medium of different families |
-| medium | medium or stronger | the same |
-| hard | strong only | strong only |
+| easy | weak or stronger | one strong, or two medium (the same model may give both), or one weak and one medium |
+| medium | medium or stronger | one strong, or two medium (the same model may give both) |
+| hard | strong only | the same as medium |
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
@@ -457,17 +458,20 @@ whatever room on the machine the medium models leave.
   claude-3 or claude-1 builds it with Sonnet (Sonnet builds only while one of them is free), then
   the medium models, and claude-2 (with Opus, never Sonnet) only when Devin's six lanes are taken
   too. A medium item passes Devin by, so claude-2 builds it once the medium models are busy.
-- **Reviewing in the run.** The run's own strongest model of at least medium (strong for a hard
-  item) reviews the change adversarially, in a fresh session. Weak models never review: a run
-  with none (Devin's) hands the change to a review run.
-- **Review runs.** A strong model whenever one is free, else a medium one of a family whose
-  approval the commit does not have yet. A hard item waits for a strong one.
+- **Reviewing in the run.** The run's own strongest model of at least medium reviews the change
+  adversarially, in a fresh session (a hard item's builder is strong, so its reviewer is too). A
+  run with none (Devin's, which checks itself instead) hands the change to a review run.
+- **Review runs.** A strong model whenever one is free; else a medium one, a family that has not
+  approved the commit yet before one that has (the same model may review it twice); else, for an
+  easy item that has no weak approval yet, a weak one (Devin). A weak model reviews nothing else.
 
-**The review rule.** A commit ships when one strong model approved it, or two medium models of
-different families did (a hard item takes the strong approval), and no model's rejection of it
-stands.
-- Votes are kept per commit and per family, with the tier of the model that cast them, from the
-  plan job's own record of who ran, never from the model job.
+**The review rule** (`harness/review_rule.py`). A commit ships when no model's rejection of it
+stands and it has one strong model's approval, or two medium models' (the same model twice
+counts: two Muse reviews are enough), or, for an easy item, one weak model's and one medium
+model's. That holds at every difficulty: a hard item ships on two medium approvals too.
+- Votes are kept per commit, one per review (each review run, and each run's own reviewer, is
+  one; a deliver job run again does not count its review twice), with the tier of the model that
+  cast them, from the plan job's own record of who ran, never from the model job.
 - A change still short of the rule is labelled `bot:cross-review`, and a review run reads it from
   scratch. The reviewer reads the change but installs and runs nothing: it holds another
   subscription's login, which the builder's code must never run beside. CI runs every check.
@@ -629,8 +633,9 @@ GitHub Actions, such as the harness's local `bb` container.
 
 ## Safety
 
-- **Two gates before `main`.** Independent reviewers approve the change: one strong model, or
-  two medium models of different families, the second in a run of its own. Then
+- **Two gates before `main`.** Adversarial reviewers approve the change: one strong model, or two
+  medium ones (the same model may give both, the second in a run of its own), or for an easy item
+  a weak and a medium one. Then
   every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
