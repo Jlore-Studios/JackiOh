@@ -2136,15 +2136,12 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
+        "approvals": [],
+        "builder": "cognition",
         "rejections": [],
-        "sha": "173fc80a6f230322b2dba0d6c568f3db2f852070",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "1ae8b680882bdb22abbc51f6b83a5d89ac6b0d92",
+        "tiers": {}
       }
     },
     "225": {
