@@ -63,8 +63,12 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       # Render deploys a push when its GitHub integration tells it to, and that has failed twice now:
       # after the repository moved, and again after it was reconnected (#224). Render's deploy hook
-      # does not depend on it: a POST to the hook deploys the service's branch as it stands, which
-      # is this push. Without the secret, the watch relies on Render's own auto-deploy, as before.
+      # does not depend on it, as long as it names the commit: a bare POST deploys the commit Render
+      # last heard of, and a Render without access to the repository hears of none. Its build log
+      # then says "It looks like we don't have access to your repo, but we'll try to clone it
+      # anyway" and checks out the same old commit every time (9809419, all of 2026-10-04). `ref`
+      # names this push instead; the repository is public, so Render clones it and checks it out.
+      # Without the secret, the watch relies on Render's own auto-deploy, as before.
       - name: ask Render to deploy this push
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -73,7 +77,8 @@ jobs:
             echo "RENDER_DEPLOY_HOOK_URL is not set: relying on Render's own auto-deploy (docs/deploy-cloudflare.md, section 5)."
             exit 0
           fi
-          if curl -fsS -X POST -o /dev/null "$HOOK"; then
+          case $HOOK in *\?*) sep='&' ;; *) sep='?' ;; esac
+          if curl -fsS -X POST -o /dev/null "${HOOK}${sep}ref=${GITHUB_SHA}"; then
             echo "Render was asked to deploy ${GITHUB_SHA:0:7}."
           else
             echo "::warning::Render's deploy hook refused the request; the watch still checks whether the push went live."
