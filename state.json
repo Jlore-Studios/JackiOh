@@ -1929,9 +1929,7 @@
     },
     "208": {
       "action": "build",
-      "asks": [
-        "c:5982335792"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -1957,7 +1955,9 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37215434011",
       "started_at": "2026-10-04T16:05:50Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-04T17:09:16Z",
+      "stopped_by": "MaxGoetzmann",
       "taken_asks": []
     },
     "212": {
