@@ -2755,6 +2755,16 @@
     ],
     "since": "2026-09-30T11:21:05Z"
   },
+  "machine_disk": {
+    "reading": {
+      "at": "2026-10-04T23:42:55Z",
+      "free": 31574794240,
+      "percent": 48,
+      "total": 61285326848
+    },
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37242922784",
+    "runner": "night-vm-devin-4"
+  },
   "providers": {
     "agy": {
       "refused_until": "2026-10-09T17:49:15Z",
