@@ -201,6 +201,7 @@ describe("R388 the Patch notes page over the real history", () => {
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.2", "v0.2.4", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0c", "v0.1.0b", "v0.1.0"]);
     // v0.2.2 is open on arrival: collapse it and open v0.2.0
     fireEvent.click(within(patchEntry("v0.2.2")).getByTestId(patchTestid.toggle));
@@ -210,6 +211,8 @@ describe("R388 the Patch notes page over the real history", () => {
 =======
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
     // (R646), so the page's list is the file's, whatever the newest patch is called today.
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
