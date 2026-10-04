@@ -200,8 +200,19 @@ describe("R388 the Patch notes page over the real history", () => {
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
     // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
+    // Today the newest is v0.2.10 (issue #113): it opens on arrival with every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
+    if (newest === "v0.2.10") {
+      const record = shipped.find((patch) => patch.version === "v0.2.10");
+      const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
+      const shownNewest = [
+        ...within(patchEntry(newest)).getAllByTestId(patchTestid.changedCard),
+        ...within(patchEntry(newest)).queryAllByTestId(patchTestid.dataOnly),
+      ].map((element) => element.dataset.card);
+      expect(shownNewest.sort()).toEqual([...changedIds].sort());
+      fireEvent.click(within(patchEntry(newest)).getByTestId(patchTestid.toggle));
+    }
     const v020 = patchEntry("v0.2.0");
     if (within(v020).getByTestId(patchTestid.toggle).getAttribute("aria-expanded") === "false") {
       fireEvent.click(within(v020).getByTestId(patchTestid.toggle));

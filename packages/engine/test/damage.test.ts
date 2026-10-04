@@ -148,6 +148,17 @@ describe("the damage pipeline (§4.4, M2-T3)", () => {
     expect(radiant.players.p1.hero.health).toBe(HERO_HEALTH - 3);
   });
 
+  it("R383 step 3: an Anti-oneshot Armor standing in a unit zone, animated, still caps its hero", () => {
+    const state = newGame();
+    put(state, antiOneshot.id, slot("p1", "units", 1));
+    expect(hit(sinkFor(state), null, onHero("p1"), 12)).toBe(ANTI_ONESHOT_CAP.base);
+    expect(state.players.p1.hero.health).toBe(HERO_HEALTH - ANTI_ONESHOT_CAP.base);
+
+    const radiant = newGame();
+    put(radiant, antiOneshot.id, slot("p1", "units", 1), { radiant: true });
+    expect(hit(sinkFor(radiant), null, onHero("p1"), 12)).toBe(ANTI_ONESHOT_CAP.radiant);
+  });
+
   it("step 4: an Indestructible unit takes 0, stays on the field and emits no damage event", () => {
     const state = newGame();
     const target = put(state, indestructible.id, slot("p2", "units", 3));

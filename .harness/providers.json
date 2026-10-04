@@ -97,7 +97,7 @@
       "quiet_check": false
     },
     "agy": {
-      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High); `agy models` lists the names, each carrying its effort.",
+      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High); `agy models` lists the names, each carrying its effort. Its usage is its own `agy -p /usage` (no model call), the Gemini pool's row: read before the run, after every call and every ten minutes during one.",
       "enabled": true,
       "cli": "agy",
       "family": "gemini",
@@ -107,7 +107,7 @@
       "login": "machine",
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "seven_day": 1.0 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
       "quiet_check": false
     },
     "devin": {
@@ -130,7 +130,7 @@
       "quiet_check": false
     },
     "muse": {
-      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`).",
+      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Two lanes, `night-vm-muse` and `night-vm-muse-2`, under the one login.",
       "enabled": true,
       "cli": "muse",
       "family": "muse",
@@ -139,8 +139,9 @@
       "tier": "medium",
       "login": "machine",
       "runs_on": "night-vm-muse",
+      "lanes": 2,
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "seven_day": 1.0 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
       "quiet_check": false
     }
   }

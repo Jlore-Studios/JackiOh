@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CatalogUnavailableError,
+  DEPLOYED_COMMIT_HEADER,
   catalogFrom,
   catalogUrl,
   createCatalogRoutes,
@@ -282,6 +283,9 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
     expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(patches.length, "patches.json is the shipped history").toBeGreaterThan(0);
+    expect(patches.map((patch) => patch.version)).toEqual(
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]),
+    );
 
     for (const { version } of patches) {
       const response = await router(jsonRequest("GET", `/api/catalog/${version}`));
@@ -393,5 +397,22 @@ describe("R164 — where L6's ban list lives (§9.4, R105)", () => {
     expect(catalog.cardIds.filter((cardId) => catalog.isBanned(cardId))).toEqual([]);
     // The single hook, which reads the db agent's `cards` table once there is something to ban.
     expect(catalogFrom({}, "v0").isBanned("core-001")).toBe(false);
+  });
+
+  it("R163 reports the deployed commit in a header when one is known, and leaves the body alone", async () => {
+    const catalog = await loadCatalog();
+    const deps = createTestDeps({ catalog });
+    const commit = "0123456789abcdef0123456789abcdef01234567";
+
+    const known = await createRouter(createCatalogRoutes({ commit }), deps)(jsonRequest("GET", "/api/catalog"));
+    const unknown = await createRouter(createCatalogRoutes(), deps)(jsonRequest("GET", "/api/catalog"));
+
+    // deploy-watch.yml compares this header with the commit that was pushed.
+    expect(DEPLOYED_COMMIT_HEADER).toBe("x-deployed-commit");
+    expect(known.headers.get(DEPLOYED_COMMIT_HEADER)).toBe(commit);
+    // No commit (a local server, anything but Render): no header, rather than an empty one.
+    expect(unknown.headers.has(DEPLOYED_COMMIT_HEADER)).toBe(false);
+    // The header is not the body: the bytes stay the same for everybody.
+    expect(await known.text()).toBe(await unknown.text());
   });
 });

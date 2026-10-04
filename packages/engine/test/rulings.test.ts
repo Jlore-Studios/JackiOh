@@ -3054,9 +3054,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(417, PLUS_029_TEST, "lastBoards.test.ts");
   });
 
-  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" and engine carried-damage.test.ts "R418 …".
-  it("R418 lets a Unit top C+ #33 Ivory Tower's backrow pile, the Tower acting beneath it", () => {
-    provenIn(418, PLUS_033_TEST, "carried-damage.test.ts");
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R418 …" (patch v0.2.10: the first Unit stacked
+  // onto the Tower is fused into it, and the Tower stays a backrow Field Spell).
+  it("R418 fuses the first Unit stacked onto C+ #33 Ivory Tower into it, the Tower staying a Field Spell", () => {
+    provenIn(418, PLUS_033_TEST);
   });
 
   // Proved by cards classic-plus/035-rollback.test.ts "R419 …" (the three steps, hidden information, JSON
@@ -3868,6 +3869,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // Pierce through Armor) and engine rounds.test.ts "R652 …" (each round casts; the stops).
   it("R652 casts C+ #32.3 Blade Storm's base face as Whirlwinds until a Unit dies", () => {
     provenIn(652, PLUS("032-3-blade-storm"), "rounds.test.ts");
+  });
+
+  // Proved by cards classic-plus/033-ivory-tower.test.ts "R653 …" (the stacked Unit's play resolves
+  // first, what stands on the Tower then is fused, one Unit a stay) and engine backrow-piles.test.ts
+  // "R653 …" (the carrier that fuses its Unit takes one a stay, none while Immutable).
+  it("R653 fuses C+ #33's stacked Unit once its play resolves, and lets the Tower take one Unit a stay", () => {
+    provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
   });
 });
 

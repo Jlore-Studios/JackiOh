@@ -38,6 +38,15 @@ export type ServerEnv = {
    * the header and keys every request on the socket's peer address.
    */
   readonly TRUSTED_PROXY_HOPS: number;
+  /**
+   * The git commit this build is running: Render's `RENDER_GIT_COMMIT`, which it sets on every
+   * deploy and which is unset anywhere else (`undefined` here). `GET /api/catalog` reports it in
+   * the `x-deployed-commit` response header so `deploy-watch.yml` can tell a server that is on the
+   * pushed commit from one Render never redeployed, which the catalog version alone cannot show
+   * when a push leaves the catalog as it was. Only a hex string is kept, since it is echoed into a
+   * header.
+   */
+  readonly DEPLOYED_COMMIT?: string | undefined;
 };
 
 // The client-visible half of the environment contract (`apps/web`, via Vite's `VITE_` prefix
@@ -67,6 +76,7 @@ export const SERVER_ONLY_ENV_VARS: readonly string[] = [
   "E2E",
   "CATALOG_VERSION",
   "TRUSTED_PROXY_HOPS",
+  "RENDER_GIT_COMMIT",
 ];
 
 const MIN_CODE_PEPPER_LENGTH = 32;
@@ -158,6 +168,12 @@ function parseTrustedProxyHops(value: string | undefined, problems: string[]): n
     return DEFAULT_TRUSTED_PROXY_HOPS;
   }
   return parsed;
+}
+
+/** Optional, and never a problem: anything that is not a git SHA is simply not reported. */
+function parseDeployedCommit(value: string | undefined): string | undefined {
+  const trimmed = value?.trim().toLowerCase();
+  return trimmed !== undefined && /^[0-9a-f]{7,64}$/u.test(trimmed) ? trimmed : undefined;
 }
 
 function parsePublicOrigins(value: string | undefined, problems: string[]): readonly string[] {
@@ -316,6 +332,7 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
     E2E: e2e,
     CATALOG_VERSION: catalogVersion,
     TRUSTED_PROXY_HOPS: trustedProxyHops,
+    DEPLOYED_COMMIT: parseDeployedCommit(source.RENDER_GIT_COMMIT),
   };
 }
 

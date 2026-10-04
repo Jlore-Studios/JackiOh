@@ -157,14 +157,14 @@ describe("R388 the History section", () => {
 });
 
 describe("R388 the History section over the real history", () => {
-  it("R388 Masochism Mask's history opens on v0.2.0's new cost, (2) Cost to (1) Cost, and ends where it was added", async () => {
+  it("R388 Masochism Mask's history opens on v0.2.10's Animated face, then v0.2.0's new cost, (2) Cost to (1) Cost, and ends where it was added", async () => {
     const def = CATALOG["core-065"];
     if (def === undefined) throw new Error("expected core-065");
     renderDetail(def);
     openHistory();
     const entries = await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW);
-    // Promotions prepend in this newest-first list (R646): the four known versions are the tail.
-    expect(entries.map((element) => element.dataset.version).slice(-4)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
+    // Newest first; promotions prepend (R646), so v0.2.10 (issue #113) opens this card's history.
+    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.10", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(entry("v0.1.0").dataset.kind).toBe("added");
