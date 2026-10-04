@@ -27,7 +27,7 @@ merging a pull request whose head is a green commit of main, so its files always
 2. Pushes to `main` trigger three things at once: Render deploys `apps/server`; Vercel deploys
    staging (unless `scripts/vercel-ignore.sh` skips it); and CI runs again on main.
 3. An open issue labelled `production merge` says "Merging to production in N hours" (section 2.3).
-   When its time comes, 15:00 UTC each day unless someone held or delayed it,
+   When its time comes, 10:00 AM Central each day unless someone held or delayed it,
    `promote-production.yml` looks up the newest commit of `main` whose push-to-main CI run succeeded,
    opens a pull request from `promote/<date>-<sha>` into `production` listing the commits, and
    merges it with a merge commit. It then closes the issue as completed, with the pull request, and
@@ -79,7 +79,7 @@ These are all tested against a simulated repo before this change shipped:
 ### 2.3 The countdown issue: hold and delay
 
 Exactly one issue labelled `production merge` is open at a time. Its title reads "Merging to
-production in 23 hours (2026-10-05 15:00 UTC)", and every check (the hourly cron, every green CI run
+production in 23 hours (2026-10-05 10:00 AM CT)", and every check (the hourly cron, every green CI run
 on `main`, every command) brings the hours up to date, so it counts down; a check in the same hour
 edits nothing. The first line of its body is a
 hidden state line (the time, whether it is held, the last comment read); leave it alone.
@@ -102,7 +102,8 @@ The check merges when the issue's time has passed and it is not held. It runs on
 on `main`, on every command comment, on a manual run and, if GitHub starts it, from the hourly cron
 (minute 7). GitHub has not started this repository's scheduled runs, so in practice the first green
 push after the time is what merges: a merge comes a little after its time, never before. When it merges, the issue is closed as completed with a link to the pull
-request, and the next one is opened for the first 15:00 UTC at least 12 hours away. A manual run
+request, and the next one is opened for the first 10:00 AM Central at least 12 hours away. Every
+time the issue shows is Central (CT), and the hour stays 10:00 AM through daylight saving. A manual run
 (section 5) merges at once, hold or no hold, and starts the countdown over.
 
 The label is the custom tag: the workflow finds the open issue by it, and it is on every promotion
@@ -262,7 +263,8 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 ## 5. Day-to-day operation
 
 - **Normal day:** merge to main as usual. Staging updates within minutes; production catches up when
-  the countdown issue's time comes (15:00 UTC). To change the hour, edit `RELEASE_HOUR_UTC` in
+  the countdown issue's time comes (10:00 AM CT). To change the hour or the zone, edit
+  `RELEASE_HOUR` or `RELEASE_TZ` in
   `scripts/promote-production.sh`; the hourly `cron` stays as it is.
 - **Now, please:** comment `/fast-forward` on the countdown issue.
 - **Not yet, I'm mid-change:** comment `/hold` on the countdown issue, and `/resume` when the work is
@@ -305,7 +307,7 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   one; close the old one.
 - **The countdown issue is missing or doubled:** the hourly check opens one when none is open and
   closes all but the newest as not planned, so closing it by hand only starts a fresh countdown for
-  the next 15:00 UTC that is at least 12 hours away.
+  the next 10:00 AM CT that is at least 12 hours away.
 - **deploy-watch opens "Render: the live server is not serving main's catalog":** it compares the
   version and the commit the live server reports (`x-deployed-commit`, from Render's
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
