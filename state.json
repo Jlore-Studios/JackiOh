@@ -1661,16 +1661,25 @@
       }
     },
     "204": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "c284389c40e4a47a7ee280be4b493907b6cb61a5": 1
       },
+      "ci_run_id": 37191618150,
+      "ci_sha": "c284389c40e4a47a7ee280be4b493907b6cb61a5",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-04T08:15:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 149,
       "kind": "revise",
-      "queued_at": "2026-10-04T09:16:31Z",
+      "pending_request": false,
+      "queued_at": "2026-10-04T09:29:01Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
