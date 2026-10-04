@@ -160,7 +160,7 @@ class DeliverTests(unittest.TestCase):
             stop_requested=True, stopped_by="jgoetzmann", stopped_at="2026-09-30T03:30:00Z"))
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.list_pulls(head="bot/issue-12"), [])
-        self.assertEqual(h.gh.label_names(12), set())
+        self.assertEqual(h.gh.label_names(12), {"bot:planned"})
         self.assertIn("Stopped, as asked", h.gh.bot_comments(12)[-1])
 
     def test_a_halt_after_the_last_checkpoint_keeps_the_work_queued(self):
@@ -170,7 +170,7 @@ class DeliverTests(unittest.TestCase):
         h.ctx.store.update(lambda s: s.update(halted=True))
         Deliverer(h.ctx, planned, out, h.deliver_repo).run()
         self.assertEqual(h.gh.list_pulls(head="bot/issue-12"), [])
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})
         self.assertIsNotNone(h.origin_sha("bot/issue-12"))
 
     def test_the_model_job_itself_stops_after_the_last_review(self):

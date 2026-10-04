@@ -70,6 +70,26 @@ describe("R265 the mulligan picker, while the viewer still owes its answer", () 
     }
   });
 
+  it("R635 a seat dealt an empty hand still has a mulligan to answer: Ready keeps nothing and returns nothing", () => {
+    // A deck of nothing but cast-on-draw cards deals no opening hand (they are set aside until the
+    // mulligans are done), so the picker has no cards, and the viewer still answers it.
+    const onAction = vi.fn();
+    const view = baseView({
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p1", { hand: [] }),
+      opponent: emptySide("p2", { hand: { count: 4 } }),
+      pending: pendingFor("mulligan", [], { min: 0, max: 0, prompt: "Choose the cards to keep; the rest are returned and redrawn" }),
+      mulligan: { youReady: false, opponentReady: false },
+    });
+    render(<Prompt view={view} onAction={onAction} />);
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "mulligan");
+    expect(document.querySelector("[data-testid^='prompt-option-']")).toBeNull();
+    expect(screen.getByTestId("prompt-submit")).toHaveTextContent("Ready");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({ type: "mulligan", keep: [] });
+  });
+
   it("any other picker still confirms with Confirm", () => {
     const view = baseView({
       you: emptySide("p1", { hand: HAND }),

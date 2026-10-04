@@ -203,9 +203,9 @@ function withoutAnswerKey<T>(entry: T): T {
 /**
  * R266, R185: setup's owed mulligan item (R224, R265) carries two things the seat may not read: the
  * sealed answers of the seats still to resolve (`rest`), and, while a seat's own resolution waits on
- * a cast's question, the cards it returned (`returned`, full instances until they go back). The
- * opponent's sealed answer becomes "keeps everything it was offered", which says nothing, and its
- * returned cards become placeholders.
+ * a question (an arrival clause's, R151), the cards it returned (`returned`, full instances until
+ * they go back). The opponent's sealed answer becomes "keeps everything it was offered", which says
+ * nothing, and its returned cards become placeholders.
  */
 function scrubOwedMulligan<T extends { resume: { hook: string; data: Loose } }>(item: T, opp: PlayerId): T {
   if (item.resume.hook !== SETUP_WORK) return item;

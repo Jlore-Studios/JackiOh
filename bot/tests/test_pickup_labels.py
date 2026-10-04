@@ -230,7 +230,7 @@ class LabelsTests(unittest.TestCase):
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertTrue(pull["draft"])
         self.assertEqual(h.gh.label_names(int(pull["number"])),
-                         {LABEL_PR, "bot:blocked", "difficulty:hard", LOW})
+                         {LABEL_PR, "bot:blocked", "bot:stuck", "difficulty:hard", LOW})
 
 
 if __name__ == "__main__":

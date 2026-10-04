@@ -193,18 +193,18 @@ class BrokenLoginTests(unittest.TestCase):
 
 
 class HonestReportTests(unittest.TestCase):
-    """"After 10 rounds the reviewer still had blocking findings" was posted after one
-    unreadable review; one-commit PRs landed on main as "bot: build pass 1 for #85"."""
+    """The pull request said "the reviewer still had blocking findings" after one unreadable
+    review (#176 fixed the comment); one-commit PRs landed on main as "bot: build pass 1 for #85"."""
 
-    def test_an_unapproved_run_says_how_many_rounds_it_took_and_why(self):
+    def test_an_unapproved_pull_request_says_how_many_rounds_it_took_and_why(self):
         h = Harness(self)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer("LGTM")}))
-        said = h.gh.bot_comments(12)[-1]
-        self.assertIn("was not approved after 1 round of at most 2 (the reviewer's answer could "
-                      "not be read twice in a row)", said)
-        self.assertNotIn("After 2 rounds", said)
+        body = h.gh.list_pulls(head="bot/issue-12")[0]["body"]
+        self.assertIn("It stopped without an approval after 1 of 2 round(s): the reviewer's "
+                      "answer could not be read twice in a row, so this is a draft", body)
+        self.assertNotIn("still had blocking findings", body)
 
     def test_the_squash_commit_takes_the_pull_requests_title(self):
         h = Harness(self, env=ALL, machine=MACHINE)
