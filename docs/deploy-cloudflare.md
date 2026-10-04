@@ -79,8 +79,9 @@ These are all tested against a simulated repo before this change shipped:
 ### 2.3 The countdown issue: hold and delay
 
 Exactly one issue labelled `production merge` is open at a time. Its title reads "Merging to
-production in 23 hours (2026-10-05 15:00 UTC)" when it is opened and again whenever a command changes
-it, so the hours are right at that moment and the date always is. The first line of its body is a
+production in 23 hours (2026-10-05 15:00 UTC)", and every check (the hourly cron, every green CI run
+on `main`, every command) brings the hours up to date, so it counts down; a check in the same hour
+edits nothing. The first line of its body is a
 hidden state line (the time, whether it is held, the last comment read); leave it alone.
 
 Anyone with write access comments on the issue:
@@ -90,6 +91,7 @@ Anyone with write access comments on the issue:
 | `/hold` (a reason after it, if you like) | Nothing merges until `/resume`. The title says "on hold". |
 | `/resume` (or `/release`, `/unhold`) | Lifts the hold. If the time has passed, it merges at once. |
 | `/delay 3h`, `/delay 2d` | Moves the merge later by that long. At most 168 hours at a time; use `/hold` for longer. If the time has already passed, it counts from the comment. |
+| `/fast-forward` | Merges now, past a hold: the comment starts the check, which merges within a minute. |
 
 A command is a line that starts with the slash, in any case. Each is acknowledged with a 👍 (😕 when
 it was refused: the commenter has no write access, or it is not understood), and a comment wakes the
@@ -104,7 +106,8 @@ request, and the next one is opened for the first 15:00 UTC at least 12 hours aw
 (section 5) merges at once, hold or no hold, and starts the countdown over.
 
 The label is the custom tag: the workflow finds the open issue by it, and it is on every promotion
-pull request too. To rename it, change `RELEASE_LABEL` in `scripts/promote-production.sh` and the
+pull request too. Both also carry `human` and are assigned to jgoetzmann and MaxGoetzmann
+(`ASSIGNEES`, `HUMAN_LABEL`), so they reach both people and the night bot never picks them up. To rename it, change `RELEASE_LABEL` in `scripts/promote-production.sh` and the
 label named in the job's `if` in `promote-production.yml`; `promote-production.test.ts` fails until
 they agree. The hour (`RELEASE_HOUR_UTC`) and the other numbers are at the top of the script.
 
@@ -255,6 +258,7 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 - **Normal day:** merge to main as usual. Staging updates within minutes; production catches up when
   the countdown issue's time comes (15:00 UTC). To change the hour, edit `RELEASE_HOUR_UTC` in
   `scripts/promote-production.sh`; the hourly `cron` stays as it is.
+- **Now, please:** comment `/fast-forward` on the countdown issue.
 - **Not yet, I'm mid-change:** comment `/hold` on the countdown issue, and `/resume` when the work is
   done; or `/delay 6h` for a known wait (section 2.3). Neither stops a catalog bump.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main to pass, then Actions ->
@@ -273,6 +277,12 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
   ruleset), and the next run continues normally. The hourly check fails the same way until then.
+- **A run says "Not merging … yet: main has changed .github/workflows":** GitHub refuses this
+  workflow's token a push of workflow files that differ from `main`'s, so while `main`'s newest
+  commit changes a workflow and its CI is still running, the newest green commit cannot be pushed.
+  Nothing to do: the green CI run on that commit merges it. A manual run says the same and fails;
+  run it again once CI on `main` is green. Every failure names the command that failed and quotes
+  what GitHub said, on the run's page.
 - **A promote run fails with "could not be merged into production":** the pull request is left open
   and says why on its page (a setting, a conflict). Fix that and the next hourly check opens a new
   one; close the old one.
