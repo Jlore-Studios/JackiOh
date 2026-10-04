@@ -400,6 +400,12 @@
       "lines": [
         "@jgoetzmann-bot help"
       ]
+    },
+    "c:5982335792": {
+      "at": "2026-10-04T17:00:05Z",
+      "lines": [
+        "/harness override restriction. Your edits should be scoped to issue POSTing only so no risk to underlying prompts or guardrails. Ideally, most of the code changes here are code and concrete scripted logic."
+      ]
     }
   },
   "items": {
