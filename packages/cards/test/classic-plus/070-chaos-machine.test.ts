@@ -18,6 +18,7 @@ import {
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { base, def, radiant } from "../../src/scripts/classic-plus/070-chaos-machine";
 import { scenario, type Scenario, type SideSetup } from "../_harness";
+import { expectAnimated } from "../_animated";
 
 const MACHINE = "classicplus-070";
 const UNIT = "core-008"; // Mr. Vanilla 4/4.
@@ -209,5 +210,33 @@ describe("C+ #70 Chaos Machine", () => {
       expect(tunes(s.lastEvents, "degraded")).toHaveLength(1);
       expect(tunes(s.lastEvents, "upgraded")).toHaveLength(2);
     });
+  });
+});
+
+describe("C+ #70 Chaos Machine: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 2/2 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "classicplus-070", stats: { attack: 2, health: 2 } });
+  });
+
+  it("R383 radiant: a 4/4 Unit", () => {
+    expectAnimated({ def: "classicplus-070", radiant: true, stats: { attack: 4, health: 4 } });
+  });
+
+  it("R383 played, it keeps its text as a Unit: at the end of your turn one Upgrade among your cards, one Degrade among theirs", () => {
+    const s = scenario({
+      p1: { hand: [MACHINE, FILLER], field: [UNIT] },
+      p2: { hand: [FILLER], field: [UNIT] },
+    });
+
+    s.play(MACHINE, { zone: 3 });
+    expect(s.unit("p1", 3)?.defId).toBe(MACHINE);
+    s.endTurn();
+
+    const up = tunes(s.lastEvents, "upgraded");
+    const down = tunes(s.lastEvents, "degraded");
+    expect(up).toHaveLength(1);
+    expect(down).toHaveLength(1);
+    expect(ownerOf(s, up[0]!.instanceId)).toBe("p1");
+    expect(ownerOf(s, down[0]!.instanceId)).toBe("p2");
   });
 });

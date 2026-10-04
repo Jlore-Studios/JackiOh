@@ -7,8 +7,10 @@
 // lose 5 health", read against the RADIANT cap of 3: 5 is below the base cap of 5, so only the
 // radiant face can tell a clamp apart from a bypass.
 
+import { ANTI_ONESHOT_CAP } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
+import { expectAnimated } from "./_animated";
 
 function damageTo(s: Scenario, targetId: string): number[] {
   return s.events
@@ -105,10 +107,10 @@ describe("#73 Anti-oneshot Armor (base)", () => {
     expect(s.hand("p1").map((card) => card.defId)).toContain("core-035");
     expect(s.pile("p1", "library")).toHaveLength(1);
     s.expectEvents("cardPlayed", "summoned", "drawn", "addedToHand");
-    // §5.1: a Field Spell with a Cry — it went to the backrow and stayed there.
-    // (§3.2 also makes a played Field Spell public, but `reduce.playCard` does not set `faceUp`
-    // the way `effects/summon.ts` does; that engine gap is reported, not asserted here.)
-    expect(s.backrow("p1", 1)?.defId).toBe("core-073");
+    // §5.1: a Field Spell with a Cry — since patch v0.2.10 an Animated one (R383): it went to backrow
+    // lane 1 and animated into unit lane 1 as it entered, before its Cry.
+    expect(s.unit("p1", 1)?.defId).toBe("core-073");
+    expect(s.backrow("p1", 1)).toBeNull();
   });
 
   it("R18: \"lose health\" is not damage, so the base cap of 5 never sees it", () => {
@@ -191,7 +193,7 @@ describe("#73 Anti-oneshot Armor (radiant)", () => {
     expect(s.pile("p1", "library").map((card) => card.defId)).toEqual(["core-037"]);
     expect(s.events.filter((event) => event.type === "drawn")).toHaveLength(2);
     s.expectEvents("cardPlayed", "summoned", "drawn", "drawn");
-    expect(s.backrow("p1", 1)?.radiant).toBe(true);
+    expect(s.unit("p1", 1)?.radiant).toBe(true);
   });
 
   it("the base Cry still draws exactly 1 beside the radiant's 2", () => {
@@ -224,5 +226,35 @@ describe("#73 Anti-oneshot Armor (radiant)", () => {
     s.expectHealth("p1", 25);
     s.expectEvents("healthLost");
     expect(damageTo(s, "hero-p1")).toEqual([]);
+  });
+});
+
+describe("#73 Anti-oneshot Armor: Animated (patch v0.2.10)", () => {
+  it("R383 played, it animates into its lane's unit zone, else the leftmost open one, a 1/5 Unit; with none open it stays a Field Spell", () => {
+    expectAnimated({ def: "core-073", stats: { attack: 1, health: 5 } });
+  });
+
+  it("R383 radiant: a 2/10 Unit", () => {
+    expectAnimated({ def: "core-073", radiant: true, stats: { attack: 2, health: 10 } });
+  });
+
+  // R383: an animated card keeps all of its text, so the cap holds from the unit zone it stands in.
+  function animatedThenHit(radiant: boolean): Scenario {
+    const s = scenario({
+      seed: "core-073-animated-cap",
+      p1: { hand: [{ def: "core-073", radiant }, "core-005"], library: ["core-035", "core-036"] },
+      p2: { field: [{ def: "core-002", radiant: true }], hand: ["core-005"], library: ["core-005", "core-005"] },
+    });
+    s.play("core-073", { zone: 2 });
+    expect(s.unit("p1", 2)?.defId).toBe("core-073");
+    return s.endTurn().attack(s.unit("p2", 1)!, "hero");
+  }
+
+  it("R383 played and animated into a unit zone, it still caps its hero: a 12 hit costs 5", () => {
+    expect(damageTo(animatedThenHit(false), "hero-p1")).toEqual([ANTI_ONESHOT_CAP.base]);
+  });
+
+  it("R383 radiant, animated into a unit zone, it still caps at 3", () => {
+    expect(damageTo(animatedThenHit(true), "hero-p1")).toEqual([ANTI_ONESHOT_CAP.radiant]);
   });
 });

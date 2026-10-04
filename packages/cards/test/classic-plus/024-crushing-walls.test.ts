@@ -1,8 +1,9 @@
 // C+ #24 Crushing Walls — SPEC §8.7 row 24, BUILD M9 Classic+ row C+ 24: "Destroys the top card of each of
 // the eight zones in lanes 1 and 5 (each side numbers its lanes from its owner's seat), Units and
 // backrow cards, face-down ones included, an Indestructible one staying; a card dormant beneath
-// resumes; a destroyed backrow card that prints Death fires it (§4.5); lanes 2 to 4 are untouched; a
-// Unit topping an Ivory Tower is passed by (R418); radiant only the enemy's four zones".
+// resumes; a destroyed backrow card that prints Death fires it (§4.5); lanes 2 to 4 are untouched; an
+// Ivory Tower is destroyed like any backrow card, whatever it has fused (R418); radiant only the enemy's
+// four zones".
 
 import { newInstance, placeOnField, registerScripts, registeredScripts } from "@jackioh/engine";
 import { draw } from "@jackioh/engine/effects";
@@ -18,7 +19,7 @@ const TRAP = "core-060";
 const FIENDER = "core-092"; // Stack
 const TOP = "classicplus-019-1"; // Radiant: Immune to Spells
 const FROST = "classicplus-012-8"; // Field Spell, Animated on your turn
-const TOWER = "classicplus-033"; // Ivory Tower: a Unit may be played on top of it
+const TOWER = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it
 const FILLER = "core-005";
 
 function walls(radiantFace = false): Scenario {
@@ -86,22 +87,20 @@ describe("C+ #24 Crushing Walls", () => {
       expect(s.lastEvents.some((event) => event.type === "drawn")).toBe(true);
     });
 
-    it("R418 a Unit topping an Ivory Tower is passed by, while the Tower beneath is destroyed and the Unit steps down", () => {
+    it("R418 an Ivory Tower is destroyed like any backrow card, whatever it has fused in", () => {
       const s = scenario({
         active: "p2",
         p1: { hand: [WALLS, FILLER], library: [FILLER, FILLER] },
         p2: { hand: [BODY, FILLER], backrow: [{ def: TOWER, lane: 1 }], library: [FILLER, FILLER] },
       });
-      const tower = s.backrow("p2", 1);
-      const rider = s.card(BODY);
-      if (tower === null) throw new Error("setup");
-      s.play(BODY, { zone: 1, row: "backrow" });
-      expect(s.card(rider).zone).toMatchObject({ z: "field", row: "backrow", lane: 1 });
+      const tower = s.card(TOWER).id;
+      const rider = s.card(BODY).id;
+      s.play(rider, { zone: 1, row: "backrow" });
+      // R651: once its play resolved, the body was fused into the Tower.
+      s.expectInZone(rider, "gone");
       s.endTurn();
       s.play(WALLS);
       s.expectInZone(tower, "graveyard");
-      expect(s.lastEvents.some((event) => event.type === "destroyed" && event.instanceId === rider.id)).toBe(false);
-      expect(s.card(rider).zone).toMatchObject({ z: "field", player: "p2", row: "units", lane: 1 });
     });
 
     it("R46 an Indestructible one stays, knocked to Attack Position", () => {
