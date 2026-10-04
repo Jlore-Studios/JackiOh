@@ -2303,8 +2303,10 @@
     "what": "revise #141 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-04T13:56:34Z",
-    "notes": [],
+    "at": "2026-10-04T14:07:18Z",
+    "notes": [
+      "started a night run, as a lane was free: #204 conflicts with main"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
