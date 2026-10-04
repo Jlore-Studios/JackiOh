@@ -1097,11 +1097,15 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "cognition",
         "rejections": [],
         "sha": "94ef5d118f3e81d8d81e70da5150c951dd8f42a3",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "181": {
