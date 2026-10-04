@@ -760,12 +760,14 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "gemini"
         ],
         "builder": "muse",
         "rejections": [],
         "sha": "31f02e09356376ff37fab8103228dcf45f5ac0a8",
         "tiers": {
+          "gemini": "medium",
           "muse": "medium"
         }
       }
