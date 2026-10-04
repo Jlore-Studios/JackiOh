@@ -1024,7 +1024,9 @@
     },
     "166": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5984798817"
+      ],
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -1131,8 +1133,8 @@
       "pending_request": false,
       "provider": "muse",
       "question": "Revision incomplete at step budget: conflicts resolved and main gates green, but cards tests still red (Palantir 8, Frozen Wastes 2, Fusion Lab animation 2 \u2014 all need test rewrites for the new behavior, no design decision needed). Continue the run to finish them? Details in .bot-notes.md and below.",
-      "queued_at": "2026-10-04T15:51:26Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-04T21:54:24Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37215073504",
       "self_check_findings": [],
       "source": "request",
