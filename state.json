@@ -2737,7 +2737,9 @@
     },
     "88": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:5981248174"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -2763,9 +2765,7 @@
       "run_id": "37218568782",
       "started_at": "2026-10-04T16:57:09Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5981248174"
-      ]
+      "taken_asks": []
     },
     "90": {
       "failures": 0,
