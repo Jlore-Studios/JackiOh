@@ -1956,7 +1956,7 @@
       }
     },
     "214": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -1979,10 +1979,10 @@
       "question": "",
       "queued_at": "2026-10-04T23:12:20Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "37241051768",
+      "run_id": "37242922784",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-04T22:50:30Z",
+      "started_at": "2026-10-04T23:22:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2738,9 +2738,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T23:17:51Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37242022296",
-    "what": "plan #255 on claude-3"
+    "at": "2026-10-04T23:22:03Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37242922784",
+    "what": "revise #214 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T23:19:19Z",
