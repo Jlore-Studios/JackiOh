@@ -191,12 +191,18 @@ describe("R388 the Patch notes page", () => {
 });
 
 describe("R388 the Patch notes page over the real history", () => {
-  it("R388 lists the seven patches newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
+  it("R388 lists every patch newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
     renderPage();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.4", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0c", "v0.1.0b", "v0.1.0"]);
-    // v0.2.4 is open on arrival: collapse it and open v0.2.0
-    fireEvent.click(within(patchEntry("v0.2.4")).getByTestId(patchTestid.toggle));
+    // Newest first is patches.json read backwards (R105, R388) — and promotions only append, so
+    // the page's list is the file's, whatever the newest patch is called today.
+    const patches = await realPatchSource.patches();
+    expect(entries.map((element) => element.dataset.version)).toEqual(patches.map((patch) => patch.version).reverse());
+    // The newest patch is open on arrival: collapse it and open v0.2.0.
+    const newest = patches.at(-1)?.version;
+    if (newest !== undefined && newest !== "v0.2.0") {
+      fireEvent.click(within(patchEntry(newest)).getByTestId(patchTestid.toggle));
+    }
     fireEvent.click(within(patchEntry("v0.2.0")).getByTestId(patchTestid.toggle));
     await within(patchEntry("v0.2.0")).findByTestId(patchTestid.cards, undefined, SLOW);
     const mask = byCard(patchTestid.changedCard, "core-065");

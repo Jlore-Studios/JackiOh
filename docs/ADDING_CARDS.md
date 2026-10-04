@@ -25,15 +25,15 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
 | 10 | `apps/web/src/audio/voice-lines.json` | the card's lines, in catalog order | `voiceData.test.ts` |
 | 11 | the count assertions below | the totals change by one | the tests named |
-| 12 | `packages/cards/patches/*` and four version sites | by `patch`, [§3](#3-the-patch-and-its-order) | `patches.test.ts`, `loc.test.ts` |
+| 12 | `packages/cards/patches/pending/<version>.json` | the fragment, `run patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the four version sites move at promotion, not here | `patches check`, `patches.test.ts`, `loc.test.ts` |
 
 **Count assertions** (`grep -rn "\b317\b\|\b268\b" --include=*.ts --include=*.tsx` finds most): `test/query.test.ts` (the
 non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SIZE`),
 `test/059-unbiased-immigration.test.ts` (the pool without #59), `apps/server/test/api/catalog.test.ts`,
 `apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
-size), `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`), and the patch list in
-`packages/cards/test/patches.test.ts`, `apps/web/src/patches/PatchNotes.test.tsx`, `apps/web/src/patches/source.test.ts` and
-`apps/web/src/routes/patch-notes.test.tsx`.
+size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). The patch-list tests
+(`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
+yours — a pending-claimed card needs no edits there (R641).
 
 Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
 `CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.
@@ -102,20 +102,24 @@ describe("C+ #6 Wrong-House Attacker", () => {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a shipped
-one. The command is run through `run`, because `pnpm --filter … patch` is pnpm's own `patch` command and fails:
+A change to card data is a patch (R388, R641). The designer picks the version name on the issue (`Patch v0.2.X: …`, or `Patch v0.2.Y: …`
+for a micro patch, which keeps its `Y` until promotion names it, R650); never reopen a
+shipped one. A branch claims its card changes with a pending fragment:
 
 ```
-pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD> --source "<issue or PR>" --notes "<what changed>"
+pnpm --filter @jackioh/cards run patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"
 ```
 
-`--source` and `--notes` are required in practice: `patches.test.ts` fails on a patch without them. It writes
-`packages/cards/patches/<version>.json` (a snapshot of the catalog), `patches.json` and `index.json`, and bumps `CATALOG_VERSION` in
-`src/catalog-data.ts`, `apps/server/.env.example`, `render.yaml` and `apps/server/src/index.ts`.
+It writes or updates `packages/cards/patches/pending/<version>.json`, containing the version, title,
+sources, notes and every catalog id the patch changes. It never changes the shipped history, its
+snapshots or `CATALOG_VERSION`. `pnpm --filter @jackioh/cards run patches check` must pass before the
+branch merges. The post-merge promotion runs `patches ship`: it snapshots the catalog at the
+fragment's first-parent commit, appends the shipped patch and bumps `CATALOG_VERSION` everywhere.
 
-**Run it before the first `pnpm typecheck`.** `typecheck` runs `gen`, whose `gen-loc` writes the new card's `loc` into `catalog.json` *and into
-the newest snapshot*; if your patch is not yet the newest, it rewrites a shipped one. In a patch split over several PRs only the last part
-runs `patch` ([issues-and-patches.md](issues-and-patches.md)).
+`typecheck` runs `gen`, whose `gen-loc` may update the card's `loc` in `catalog.json`; include that
+card in the fragment before merging. It never amends a shipped snapshot. In a patch split over
+several PRs, only the part that changes card data adds the fragment
+([issues-and-patches.md](issues-and-patches.md)).
 
 ## 4. Gates, and what a new card breaks that is not your card's fault
 
@@ -139,7 +143,7 @@ One more card shifts every random draw from the pool (R380), so tests and games 
 ## 5. Do not read
 
 These look relevant and do not change for a standard card: `packages/cards/src/index.ts` (a contract shared by every card, README §2),
-`_generated.ts` (generated; commit it), `catalog-data.ts` (only `patch` edits the version), the snapshots in `packages/cards/patches/`,
+`_generated.ts` (generated; commit it), `catalog-data.ts` (only the post-merge promotion edits the version), the snapshots in `packages/cards/patches/`,
 `packages/engine/**` (unless the text needs a new verb, [§6](#6-a-card-the-engine-cannot-express-yet)), `apps/web/src/cards/**` (faces
 and art are drawn from the catalog; procedural art needs nothing), `apps/server/src/**` and `packages/ai/src/**` (they read the catalog),
 `e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`, and the designer's source notes (`JackiOh_*.md`).

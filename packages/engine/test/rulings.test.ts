@@ -193,6 +193,7 @@ const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 /** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
 const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
 const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PATCHES_SHIP_TEST = "../../cards/test/patches-ship.test.ts";
 const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
 /** R481's SQL evidence: migration 0016's grant for a catalog that grows. */
 const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/09_catalog_growth.sql";
@@ -3769,6 +3770,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // holds, and the surplus are ordinary cards a later draw can take.
   it("R640 deals a seat at most as many Quickdraw cards as it has opening draws", () => {
     provenIn(640, "setup-aside.test.ts");
+  });
+
+  // Proved by cards patches-ship.test.ts "R641 …" (the fragment rules on fixtures, the promotion on
+  // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
+  // patches.test.ts "R641 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R641 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(641, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
   });
 
   // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after

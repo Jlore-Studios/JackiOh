@@ -19,7 +19,7 @@ import { CardDefsProvider } from "../cards/refContext.tsx";
 import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { V1, V2, V3, fixtureDef, fixtureSource } from "./fixtures.ts";
-import { EMPTY_PATCH_SOURCE, type PatchSource } from "./source.ts";
+import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -163,18 +163,27 @@ describe("R388 the History section over the real history", () => {
     renderDetail(def);
     openHistory();
     const entries = await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW);
-    expect(entries.map((element) => element.dataset.version)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
+    // Promotions prepend in this newest-first list (R641): the four known versions are the tail.
+    expect(entries.map((element) => element.dataset.version).slice(-4)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(entry("v0.1.0").dataset.kind).toBe("added");
   });
 
-  it("R388 a Classic card says it is unchanged since v0.2.0", async () => {
+  it("R388 a Classic card says it is unchanged since the patch that added it", async () => {
     const def = CATALOG["classic-001"];
     if (def === undefined) throw new Error("expected classic-001");
     renderDetail(def);
     openHistory();
-    expect(await screen.findByTestId(patchTestid.historyUnchanged, undefined, SLOW)).toHaveTextContent("Unchanged since v0.2.0.");
+    // "Unchanged since" shows only while the card's whole history is the patch that added it;
+    // a promoted patch touching classic-001 (R641) ends that and the line goes away.
+    const listed = (await realPatchSource.index())["classic-001"] ?? [];
+    if (listed.length === 1) {
+      expect(await screen.findByTestId(patchTestid.historyUnchanged, undefined, SLOW)).toHaveTextContent(`Unchanged since ${listed[0]}.`);
+    } else {
+      expect((await screen.findAllByTestId(patchTestid.historyEntry, undefined, SLOW)).length).toBeGreaterThan(0);
+      expect(screen.queryByTestId(patchTestid.historyUnchanged)).toBeNull();
+    }
   });
 });
 

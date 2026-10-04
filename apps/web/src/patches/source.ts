@@ -63,9 +63,10 @@ export type PatchSource = {
 /** A file's loader, as `import.meta.glob` hands them out: resolves to the file's parsed JSON. */
 export type Loader = () => Promise<unknown>;
 
-/** The two files that are not snapshots. */
+/** The files that are not snapshots: the list, the index, and the shipping ledger (R641). */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
+const SHIPPED_FILE = "shipped";
 
 /** "../../../../packages/cards/patches/v0.1.1.json" -> "v0.1.1". */
 export function fileStem(path: string): string {
@@ -126,7 +127,7 @@ export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): Pa
       return pending === null ? {} : readIndex(await pending);
     },
     snapshot: async (version) => {
-      if (version === PATCHES_FILE || version === INDEX_FILE) return null;
+      if (version === PATCHES_FILE || version === INDEX_FILE || version === SHIPPED_FILE) return null;
       const pending = load(version);
       return pending === null ? null : readSnapshot(await pending, version);
     },
