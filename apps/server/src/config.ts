@@ -503,23 +503,23 @@ export const PLAYER_SETTINGS_TEXT_MAX_LENGTH = 40;
 export const PLAYER_SETTINGS_BYTES_MAX = 4096;
 
 // ---------------------------------------------------------------------------------------------
-// Public card and player statistics (SPEC §9.11, R640).
+// Public card and player statistics (SPEC §9.11, R641).
 // ---------------------------------------------------------------------------------------------
 
 /**
- * SPEC §11 R640: live ranked and unranked games (tutorial excluded) logged per patch before public
+ * SPEC §11 R641: live ranked and unranked games (tutorial excluded) logged per patch before public
  * stats flip from provisional (padded with AI development runs) to live-only figures.
  */
 export const PUBLIC_STATS_MIN_LIVE_GAMES = 1000;
 
 /**
- * SPEC §11 R640: minimum sample of games for a card row to display a win-rate percentage. Below it,
+ * SPEC §11 R641: minimum sample of games for a card row to display a win-rate percentage. Below it,
  * the row displays "not enough games".
  */
 export const CARD_STATS_MIN_SAMPLE = 20;
 
 /**
- * SPEC §11 R640: cost bucket boundary for card statistics filters.
+ * SPEC §11 R641: cost bucket boundary for card statistics filters.
  * Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
  */
 export const CARD_STATS_CURVE_TOP = 6;

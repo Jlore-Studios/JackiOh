@@ -720,7 +720,7 @@ export const INSPECT_GLOSSARY = "inspect-glossary";
 export const INSPECT_PRINTED = "inspect-printed";
 /** A14: R279, the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
-/** A14: card stats block in the inspect detail dialog (R640). */
+/** A14: card stats block in the inspect detail dialog (R641). */
 export const INSPECT_STATS = "inspect-stats";
 /** A14: R279, the tooltip a reference in a card's text opens (`[data-ref]` names the card). */
 export const CARD_REF_TOOLTIP = "card-ref-tooltip";
@@ -1003,7 +1003,7 @@ export const SITE_FOOTER_PATCH_NOTES = "site-footer-patch-notes";
 export const NAV_BACK = "nav-back";
 
 // ---------------------------------------------------------------------------------------------
-// A22: the public Statistics screen (`/stats`, R640) and links to it. Mirrors, name for name,
+// A22: the public Statistics screen (`/stats`, R641) and links to it. Mirrors, name for name,
 // `statsTestid` in `apps/web/src/stats/testids.ts` and `SITE_FOOTER_STATS`.
 // ---------------------------------------------------------------------------------------------
 

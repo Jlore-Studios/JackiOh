@@ -609,12 +609,12 @@ export function decksTheEngineAccepts(
  * onto both mulligans (§2.1, R265) — what a test about the window both seats share needs from its
  * very first frame.
  *
- * A card the deal casts on draw (§2.4) may ask its caster something, and setup waits for that answer
- * before it opens the mulligans (R224): #21 Hinder's base face asks for a discard since patch v0.2.0
- * (R431). Which cards the deal draws is the seed's to say, so whether a deal asks is read off the
- * real engine, not off card text. The first deck stays the pool's first slice; the second slides
- * along the pool a card at a time until the deal asks nothing, so a seed whose deal already opened
- * on the mulligans keeps exactly the decks `decksTheEngineAccepts` gives it.
+ * A deal that asks its seat something makes setup wait for the answer before it opens the mulligans
+ * (R224). No cast-on-draw card is dealt (R635), so no cast asks; a start-of-game clause as its card
+ * arrives in a hand still can (R151). Which cards the deal draws is the seed's to say, so whether a
+ * deal asks is read off the real engine, not off card text. The first deck stays the pool's first
+ * slice; the second slides along the pool a card at a time until the deal asks nothing, so a seed
+ * whose deal already opened on the mulligans keeps exactly the decks `decksTheEngineAccepts` gives it.
  */
 export function decksThatOpenOnTheMulligans(
   port: EnginePort,

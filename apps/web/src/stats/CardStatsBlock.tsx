@@ -1,4 +1,4 @@
-// Compact card statistics block for CardDetail view (SPEC §9.11, R640).
+// Compact card statistics block for CardDetail view (SPEC §9.11, R641).
 
 import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";

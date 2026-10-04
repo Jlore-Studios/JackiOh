@@ -82,6 +82,11 @@ FAKE_AGY = PRELUDE + textwrap.dedent('''\
         emit({{"event": "result", "result": {{"status": "ERROR", "num_turns": 2,
               "error": "RESOURCE_EXHAUSTED: You have exhausted your quota on this model."}}}})
         sys.exit(1)
+    if mode == "individual":
+        emit({{"event": "result", "result": {{"status": "ERROR", "num_turns": 1,
+              "error": "Individual quota reached. Please upgrade your subscription to increase "
+                       "your limits. Resets in 1h44m44s."}}}})
+        sys.exit(1)
     answer = '<!-- review: {{"verdict": "approve", "findings": []}} -->'
     step(2, "agent_response", "DONE", text_delta=answer)
     emit({{"event": "result", "result": {{"status": "SUCCESS", "response": answer, "num_turns": 3,
@@ -251,6 +256,52 @@ class AgyTests(Base):
         self.assertTrue(result.rate_limited)
         self.assertEqual(result.reset_at, "+PT60M")
         self.assertIn("exhausted your quota", result.error)
+
+    def test_its_plans_individual_quota_parks_it_until_the_reset_it_names(self):
+        """agy's answer once the plan's allowance is spent. Unread, every run went on to the
+        checks and a review that failed the same way, and the next run started minutes later."""
+        result = self.run_fake(self.backend(), "individual")
+        self.assertTrue(result.rate_limited)
+        self.assertFalse(result.infra)
+        self.assertEqual(result.reset_at, "+PT106M")  # 1h44m44s, rounded up, plus a minute
+
+    def test_a_named_reset_is_how_long_it_stays_parked(self):
+        from datetime import datetime, timedelta, timezone
+        from harness import providers as providers_mod
+        from harness.runner import park_for
+        self.assertEqual(park_for("Resets in 1h44m44s."), "+PT106M")
+        self.assertEqual(park_for("Your limit resets in 3h"), "+PT181M")
+        self.assertEqual(park_for("resets in 12m"), "+PT13M")
+        self.assertEqual(park_for("Usage limit reached."), "+PT60M")
+        at = datetime(2026, 10, 3, 23, 33, tzinfo=timezone.utc)
+        state = {"providers": {}}
+        providers_mod.note_usage(state, "agy", None, "+PT106M", at)
+        self.assertEqual(state["providers"]["agy"]["refused_until"], "2026-10-04T01:19:00Z")
+        providers_mod.note_usage(state, "agy", None, "+PT1H30M", at)
+        self.assertEqual(state["providers"]["agy"]["refused_until"], "2026-10-04T01:03:00Z")
+        self.assertEqual(providers_mod._duration("+PT2H"), timedelta(hours=2))
+        # Codex names days: gpt's weekly limit holds it until the week resets, not an hour.
+        self.assertEqual(park_for("You've hit your usage limit. Upgrade to Pro or try again in "
+                                  "5 days 2 hours 22 minutes."), "+PT7343M")
+
+    def test_a_refusal_that_names_no_reset_waits_for_the_nearly_full_window(self):
+        """gpt's refusal named no time, so it was retried every hour although its last reading
+        had its week at 89%, resetting days later."""
+        from datetime import datetime, timezone
+        from harness import providers as providers_mod
+        from harness.runner import DEFAULT_PARK
+        at = datetime(2026, 10, 3, 23, 47, tzinfo=timezone.utc)
+        week = {"utilization": 0.89, "resets_at": "2026-10-09T23:47:06Z"}
+        state = {"providers": {"gpt": {"usage": {"seven_day": week}}}}
+        providers_mod.note_usage(state, "gpt", None, DEFAULT_PARK, at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-09T23:47:06Z")
+        # A window with room left, or a reset the refusal named, keeps the shorter park.
+        state = {"providers": {"gpt": {"usage": {"seven_day": {**week, "utilization": 0.4}}}}}
+        providers_mod.note_usage(state, "gpt", None, DEFAULT_PARK, at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-04T00:47:00Z")
+        state = {"providers": {"gpt": {"usage": {"seven_day": week}}}}
+        providers_mod.note_usage(state, "gpt", None, "+PT90M", at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-04T01:17:00Z")
 
 
 class MuseTests(Base):

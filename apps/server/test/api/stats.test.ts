@@ -1,5 +1,5 @@
 /**
- * Public card and player statistics page tests (SPEC §9.11, R640).
+ * Public card and player statistics page tests (SPEC §9.11, R641).
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
@@ -159,8 +159,8 @@ beforeEach(() => {
   pendingToken = deps.auth.addUser({ userId: "u-pending", email: "bob@example.test" });
 });
 
-describe("R640: public card and player stats", () => {
-  it("R640 GET /api/stats/cards pads with AI development runs below 1000 live games (provisional)", async () => {
+describe("R641: public card and player stats", () => {
+  it("R641 GET /api/stats/cards pads with AI development runs below 1000 live games (provisional)", async () => {
     // 999 live games and 50 dev games
     for (let i = 1; i <= 999; i++) {
       await deps.store.gameRecords.insert(
@@ -211,7 +211,7 @@ describe("R640: public card and player stats", () => {
     expect(card001?.hasEnoughGames).toBe(true);
   });
 
-  it("R640 GET /api/stats/cards switches strictly to live games only at exactly 1000 live games", async () => {
+  it("R641 GET /api/stats/cards switches strictly to live games only at exactly 1000 live games", async () => {
     // Exactly 1000 live games and 100 dev games
     for (let i = 1; i <= 1000; i++) {
       await deps.store.gameRecords.insert(
@@ -248,7 +248,7 @@ describe("R640: public card and player stats", () => {
     expect(card001?.winRate).toBe(1); // all 1000 live games won by p1
   });
 
-  it("R640 respects sample floor CARD_STATS_MIN_SAMPLE (20) for win-rate and best/worst summary", async () => {
+  it("R641 respects sample floor CARD_STATS_MIN_SAMPLE (20) for win-rate and best/worst summary", async () => {
     // 19 games with core-001, 25 games with core-002
     for (let i = 1; i <= 19; i++) {
       await deps.store.gameRecords.insert(
@@ -289,7 +289,7 @@ describe("R640: public card and player stats", () => {
     expect(data.summary.worstCard?.winRate).toBe(10 / 44);
   });
 
-  it("R640 filters cards by set, rarity, cost, source, and card id", async () => {
+  it("R641 filters cards by set, rarity, cost, source, and card id", async () => {
     const resAll = await router(jsonRequest("GET", "/api/stats/cards"));
     const all = await readJson<PublicStatsCardsResponse>(resAll);
     expect(all.cards.length).toBe(6);
@@ -336,7 +336,7 @@ describe("R640: public card and player stats", () => {
     expect(provisionalStats.sourceLabel).toBe("AI games + live games (provisional)");
   });
 
-  it("R640 GET /api/stats/cards/:id returns drill-down with turn played and co-played cards", async () => {
+  it("R641 GET /api/stats/cards/:id returns drill-down with turn played and co-played cards", async () => {
     for (let i = 1; i <= 30; i++) {
       await deps.store.gameRecords.insert(
         makeGameRecord(`rec-drill-${i}`, {
@@ -376,7 +376,7 @@ describe("R640: public card and player stats", () => {
     expect(notFoundRes.status).toBe(404);
   });
 
-  it("R640 GET and PUT /api/stats/player requires active auth, stores stats and privacy opt-out", async () => {
+  it("R641 GET and PUT /api/stats/player requires active auth, stores stats and privacy opt-out", async () => {
     // Unauthenticated requests
     const unauthGet = await router(jsonRequest("GET", "/api/stats/player"));
     expect(unauthGet.status).toBe(401);
@@ -425,7 +425,7 @@ describe("R640: public card and player stats", () => {
     expect(hugeRes.status).toBe(400);
   });
 
-  it("R640 GET /api/stats/players lists public player summaries, respects privacy and search, omits Elo", async () => {
+  it("R641 GET /api/stats/players lists public player summaries, respects privacy and search, omits Elo", async () => {
     // Setup profiles
     deps.store.seedProfile({ id: "p-alice", userId: "u-alice", status: "active", displayName: "Alice Wonder" });
     deps.store.seedProfile({ id: "p-bob", userId: "u-bob", status: "active", displayName: "Bob Builder" });

@@ -33,6 +33,7 @@ import { RefsInteractive } from "../refContext.tsx";
 import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
+import { VoicePreview } from "./VoicePreview.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -50,7 +51,7 @@ export type CardDetailProps = {
   meta?: ReactNode;
   /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
   historyOpen?: boolean;
-  /** SPEC §9.11, R640: render the compact card statistics block (deckbuilder); omitted in almanac (R630). */
+  /** SPEC §9.11, R641: render the compact card statistics block (deckbuilder); omitted in almanac (R630). */
   showStats?: boolean;
 };
 
@@ -166,6 +167,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
         </div>
         <div className="inspect-actions">
           {actions}
+          <VoicePreview defId={def.id} />
           <button
             ref={closeButton}
             type="button"

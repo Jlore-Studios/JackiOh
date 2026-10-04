@@ -78,7 +78,7 @@ describe(`gate ${MATCHUP} (${FULL ? "full" : "smoke"}: ${GAMES} games${SHARD_LAB
   });
 
   it("B29: the gate plays its own frozen seed series, never the one tuning plays, and deals both seats by one deck rule", () => {
-    expect(AI_GATE.seedSeries).toBe("gate:v2");
+    expect(AI_GATE.seedSeries).toBe("gate:v3");
     expect(AI_TUNING_SERIES).not.toBe(AI_GATE.seedSeries);
     expect(gameConfig(MATCHUP, 1).seed).toBe(`${AI_GATE.seedSeries}:${MATCHUP}:1`);
     expect(gameConfig(MATCHUP, 1, AI_GATE_BUDGET, AI_TUNING_SERIES).seed).toBe(`${AI_TUNING_SERIES}:${MATCHUP}:1`);

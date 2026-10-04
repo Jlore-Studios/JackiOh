@@ -17,7 +17,8 @@ from typing import Any
 from harness import providers as providers_mod
 from harness import status as status_mod
 from harness.clock import human_delta, parse_iso, zone
-from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_REVISE, NIGHT_WORKFLOW
+from harness.config import (LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_REVISE,
+                            NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.queue import difficulty_of, label_names
@@ -178,7 +179,8 @@ def queue_table(issues: list[dict[str, Any]]) -> list[str]:
         names = label_names(issue)
         is_pr = "pull_request" in issue
         if LABEL_BUILD in names and not is_pr:
-            kind = "**needs plan**" if LABEL_NEEDS_PLAN in names else "build"
+            kind = ("**needs plan**" if LABEL_NEEDS_PLAN in names
+                    else "build (planned)" if LABEL_PLANNED in names else "build")
         elif LABEL_REVISE in names and is_pr:
             kind = "revise"
         elif LABEL_CROSS in names and is_pr:

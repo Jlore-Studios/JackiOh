@@ -20,8 +20,19 @@ export const AI_GATE = {
    * of ai-vs-greedy held the gate's own 50), so its result said as much about the tuning as about
    * the AI. Tuning plays `AI_TUNING_SERIES` instead (`scripts/bench.ts`), and this one is read only
    * by the gate.
+   *
+   * `gate:v3` replaces `gate:v2` because setup changed, not the AI (R635: a card that casts on draw
+   * is set aside and shuffled in after the mulligan, which re-deals every game whose deck holds one,
+   * 36 of 100 seats here). `gate:v2` sat on its floor: Hard against Easy won 41 of 50 (40 needed)
+   * before and 38 after, with 5 of its first 20 games flipping both ways, and on 60 tuning games
+   * the same AI won 58. `gate:v3` was played once, on the new setup, never tuned on: 97 of 100
+   * against random, 41 of 50 against greedy and 48 of 50 for Hard against Easy. No count or floor
+   * moved. This is a re-roll of the deals, not tuning and not a lower floor: reviews/2026-09-23-
+   * polish-part-b.md B-3 warned that a gate on its floor goes red on any neutral reshuffle, and its
+   * two ways out were cutting the floor or keeping whichever variant passes the frozen series.
+   * Whoever next sees this gate fail with the AI untouched should look at the deals first.
    */
-  seedSeries: "gate:v2",
+  seedSeries: "gate:v3",
   /**
    * What `pnpm test` runs per matchup (seeds 1..20), under the same rule as the full run
    * (`gateNeeded`: 17, 10 and 16 wins). At four games no count could tell a working AI from a broken

@@ -18,6 +18,8 @@ const ZEPHYRS = "core-097";
 const MY_PAWN = "core-096";
 const CEASELESS_VOID = "core-100";
 const K_POP = "core-050";
+/** #52 Silly Silas (a Legendary Unit, sharing the first Legendary entrance theme). */
+const SILLY_SILAS = "core-052";
 
 type Rig = {
   director: MusicDirector;
@@ -288,6 +290,20 @@ describe("R631 Mythic themes", () => {
     const timer = r.timers.at(-1);
     // Its first pass to the loop's end, and one more loop.
     expect(timer?.ms).toBeGreaterThan(20_000);
+    r.fireTimer();
+    expect(r.last().track).toBe("tavern-1");
+  });
+
+  it("R631 a Legendary's shared theme starts at its cast line and holds like a Mythic's", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(SILLY_SILAS), view);
+    expect(r.last().track).toBe("legendary-1");
+    r.director.onEvent(hitOn("p1"), view);
+    expect(r.last().track).toBe("tavern-1");
+    r.director.onEvent(played(SILLY_SILAS), view);
+    expect(r.last().track).toBe("legendary-1");
     r.fireTimer();
     expect(r.last().track).toBe("tavern-1");
   });

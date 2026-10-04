@@ -631,7 +631,7 @@ function toPlayerSettings(row: PlayerSettingsDbRow): PlayerSettingsRow {
   return { profileId: row.profile_id, groups: row.groups };
 }
 
-/** `public.player_stats` (migration 0019, R640): player stats and privacy flag. */
+/** `public.player_stats` (migration 0019, R641): player stats and privacy flag. */
 type PlayerStatsDbRow = {
   profile_id: string;
   stats: unknown;
@@ -2202,7 +2202,7 @@ function buildStore(session: Session): Store {
   };
 
   // -------------------------------------------------------------------------
-  // Player statistics on the account (SPEC §9.11, R639, R640)
+  // Player statistics on the account (SPEC §9.11, R639, R641)
   // -------------------------------------------------------------------------
 
   store.playerStats = {

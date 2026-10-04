@@ -1,4 +1,4 @@
-// Spec 34 — the public Statistics page (issue #131; SPEC §9.11, R640), on the landing page and `/stats`,
+// Spec 34 — the public Statistics page (issue #131; SPEC §9.11, R641), on the landing page and `/stats`,
 // against `build:e2e` with stubbed `/api/stats/*` endpoints.
 //
 // BUILD M8's key assertions for this row: "the footer's "Stats" link opens `/stats`; provisional banner
@@ -125,7 +125,7 @@ const PLAYERS_FIXTURE = {
   limit: 50,
 };
 
-describe("Spec 34 — the public Statistics page (R640)", () => {
+describe("Spec 34 — the public Statistics page (R641)", () => {
   const seed = seedFor("34-stats");
 
   beforeEach(() => {
@@ -152,7 +152,7 @@ describe("Spec 34 — the public Statistics page (R640)", () => {
     });
   });
 
-  it("R640 signed out: the footer's Stats link, provisional banner, search, drill-down, players tab without Elo, and Back", () => {
+  it("R641 signed out: the footer's Stats link, provisional banner, search, drill-down, players tab without Elo, and Back", () => {
     expect(seed, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
 
     cy.visit("/");

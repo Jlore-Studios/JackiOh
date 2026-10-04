@@ -974,7 +974,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
     });
 
     describe("playerStats", () => {
-      it("R640 holds no row before the first write, and put creates or updates a row", async () => {
+      it("R641 holds no row before the first write, and put creates or updates a row", async () => {
         const profile = await activeProfile();
         expect(await store.playerStats.get(profile.id)).toBeNull();
 
@@ -1013,7 +1013,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         });
       });
 
-      it("R640 listPublic excludes private players, respects search, and sorts by games descending", async () => {
+      it("R641 listPublic excludes private players, respects search, and sorts by games descending", async () => {
         const p1 = await activeProfile();
         const p2 = await activeProfile();
         const p3 = await activeProfile();

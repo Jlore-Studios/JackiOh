@@ -1,4 +1,4 @@
-// `/stats`: Public card and player statistics page (SPEC §9.11, R640).
+// `/stats`: Public card and player statistics page (SPEC §9.11, R641).
 //
 // Accessible signed out and signed in.
 // Provides two tabs:

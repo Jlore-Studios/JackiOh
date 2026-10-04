@@ -453,7 +453,7 @@ export function createMemoryGameRecordStore(
 }
 
 // ---------------------------------------------------------------------------
-// Player statistics on the account (SPEC §9.11, R639, R640)
+// Player statistics on the account (SPEC §9.11, R639, R641)
 // ---------------------------------------------------------------------------
 
 export type PlayerStatsTables = {

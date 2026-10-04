@@ -865,7 +865,7 @@ export type LastBoardStore = {
 };
 
 // ---------------------------------------------------------------------------
-// Player statistics on the account (SPEC §9.11, R639, R640).
+// Player statistics on the account (SPEC §9.11, R639, R641).
 // ---------------------------------------------------------------------------
 
 export type PlayerStatsRow = {
@@ -955,7 +955,7 @@ export type Store = {
   lastBoards: LastBoardStore;
   /** R376: the card statistics' game records. */
   gameRecords: GameRecordStore;
-  /** R640: each profile's player statistics and privacy setting. */
+  /** R641: each profile's player statistics and privacy setting. */
   playerStats: PlayerStatsStore;
 };
 

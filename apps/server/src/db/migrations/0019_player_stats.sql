@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Migration 0019: Player statistics on the account
 -- ============================================================================
--- Serves SPEC.md §9.11 and SPEC §11 R640: each player's statistics tracked by
+-- Serves SPEC.md §9.11 and SPEC §11 R641: each player's statistics tracked by
 -- the client (R639, #125), synced to the account so players can view their own
 -- stats across devices and participate in the public players tab.
 --
@@ -20,7 +20,7 @@ create table if not exists public.player_stats (
 );
 
 comment on table public.player_stats is
-  $$SPEC §9.11 / R640: each profile's player statistics and privacy setting.
+  $$SPEC §9.11 / R641: each profile's player statistics and privacy setting.
   Read and written solely by the server (service_role); no client access.$$;
 
 comment on column public.player_stats.stats is

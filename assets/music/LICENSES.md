@@ -64,6 +64,8 @@ attribution is required when they play in the game.
 | `mythic-in-too-deep` | `apps/web/public/audio/music/mythic-in-too-deep.m4a` | Theme of Classic #90 In Too Deep: halo pad, harp, vibraphone | 31.9 s |
 | `mythic-zephrys-zealotism` | `apps/web/public/audio/music/mythic-zephrys-zealotism.m4a` | Theme of Classic+ #27 Zephrys Zealotism: choir, organ, timpani | 29.2 s |
 | `mythic-twice-forward` | `apps/web/public/audio/music/mythic-twice-forward.m4a` | Theme of Classic+ #74 Twice Forward One Step Backwards: a waltz for clarinet and bassoon | 28.0 s |
+| `legendary-1` | `apps/web/public/audio/music/legendary-1.m4a` | Shared entrance theme of the Core and Classic Legendaries: a brass fanfare over timpani, celesta glint | 29.0 s |
+| `legendary-2` | `apps/web/public/audio/music/legendary-2.m4a` | Shared entrance theme of the Classic+ Legendaries: a brass fanfare over timpani, piccolo glint | 29.0 s |
 
 ## Third-party material
 

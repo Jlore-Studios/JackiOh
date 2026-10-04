@@ -94,7 +94,7 @@ export const paths = {
   patchNotes: "/patch-notes",
   /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */
   almanac: "/almanac",
-  /** R640: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
+  /** R641: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
   stats: "/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,

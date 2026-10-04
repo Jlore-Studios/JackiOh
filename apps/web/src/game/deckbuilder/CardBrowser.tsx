@@ -49,7 +49,7 @@ export type CardBrowserProps = {
   /** The open detail view, or null when none is. */
   detail: BrowserDetail | null;
   onCloseDetail: () => void;
-  /** SPEC §9.11, R640: render the compact card statistics block in detail view; omitted in almanac. */
+  /** SPEC §9.11, R641: render the compact card statistics block in detail view; omitted in almanac. */
   showStats?: boolean;
 };
 

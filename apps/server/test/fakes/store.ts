@@ -340,7 +340,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   store.lastBoards = createMemoryLastBoardStore(() => tables, call);
   // R376: the card statistics' game records, shared with the end-to-end store like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables, call);
-  // R640: each profile's player statistics and privacy setting.
+  // R641: each profile's player statistics and privacy setting.
   store.playerStats = createMemoryPlayerStatsStore(() => tables, call);
 
   store.matches = {

@@ -475,7 +475,7 @@ describe("sortPool (B34)", () => {
     expect(ids).toEqual(copy);
   });
 
-  it("R640 sorts by winRate: cards above sample threshold first, unsampled cards last", () => {
+  it("R641 sorts by winRate: cards above sample threshold first, unsampled cards last", () => {
     const winRates = new Map([
       ["x-01", { winRate: 0.55, hasEnoughGames: true }],
       ["x-02", { winRate: 0.65, hasEnoughGames: true }],

@@ -633,7 +633,7 @@ export function forfeitSeries(token: string, seriesId: string): Promise<SeriesVi
 }
 
 // ---------------------------------------------------------------------------------------------
-// Public card and player statistics (SPEC §9.11, R640)
+// Public card and player statistics (SPEC §9.11, R641)
 // ---------------------------------------------------------------------------------------------
 
 export type PublicCardStat = {

@@ -1,4 +1,4 @@
-// Test IDs for public statistics screen (R640).
+// Test IDs for public statistics screen (R641).
 
 export const statsTestid = {
   screen: "stats-screen",

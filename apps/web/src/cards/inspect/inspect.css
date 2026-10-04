@@ -428,7 +428,7 @@
   font-size: 13px;
 }
 
-/* Card stats block in CardDetail (R640) */
+/* Card stats block in CardDetail (R641) */
 .inspect-stats {
   display: flex;
   flex-direction: column;

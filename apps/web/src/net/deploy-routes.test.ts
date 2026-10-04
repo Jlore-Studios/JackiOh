@@ -64,7 +64,7 @@ describe("vercel.json", () => {
     expect(fixed).toContain(paths.privacy);
     // R630: the Card Almanac is a public screen like the privacy policy.
     expect(fixed).toContain(paths.almanac);
-    // R640: the public statistics page is a public screen like the almanac.
+    // R641: the public statistics page is a public screen like the almanac.
     expect(fixed).toContain(paths.stats);
     for (const path of fixed) {
       expect(servedByApp(path), path).toBe(true);
