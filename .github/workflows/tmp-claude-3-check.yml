@@ -1,0 +1,44 @@
+# TEMPORARY: checks that CLAUDE_CODE_OAUTH_TOKEN_3 (claude-3) authenticates. Deleted right after it runs.
+name: tmp-claude-3-check
+
+on:
+  push:
+    branches: [claude/eager-gauss-ceq7ep]
+    paths: [.github/workflows/tmp-claude-3-check.yml]
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install the claude CLI
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude --version
+
+      - name: Call the model with the claude-3 token
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 }}
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "RESULT: the secret CLAUDE_CODE_OAUTH_TOKEN_3 is empty or not set"
+            exit 2
+          fi
+          status=0
+          for model in haiku opus; do
+            echo "::group::claude -p --model $model"
+            if claude -p "Reply with exactly the word: pong" --model "$model" --max-turns 1; then
+              echo "RESULT: $model OK"
+            else
+              echo "RESULT: $model FAILED (exit $?)"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
