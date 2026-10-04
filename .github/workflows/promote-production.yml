@@ -11,7 +11,11 @@
 #                      render.yaml's CATALOG_VERSION. Render deploys apps/server from main on every
 #                      push, and the bundle compiles the catalog version in (packages/cards), so a
 #                      catalog bump left a day behind would refuse every deck save and queue in
-#                      production (SPEC §9.4, R105). Anything else waits for the daily run.
+#                      production (SPEC §9.4, R105). Anything else waits for the daily run, unless
+#                      production's commit is already MAX_LAG_HOURS older than this one: GitHub did
+#                      not start this repository's first scheduled run at all (it starts schedules
+#                      late, if ever, here: CLAUDE.md, the night bot), so the first green CI run on
+#                      main a day after the last promotion stands in for the cron.
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
 #                      commit, or the `sha` given, which must also be green and on main.
 #
@@ -33,6 +37,11 @@ on:
         description: "Commit of main to promote (default: the newest one whose CI passed)"
         required: false
         default: ""
+
+env:
+  # How far behind main (by commit time) production may fall before a green push to main promotes it
+  # without a catalog change. The cron is the intended daily run; this is its fallback.
+  MAX_LAG_HOURS: "24"
 
 concurrency:
   group: promote-production
@@ -110,8 +119,12 @@ jobs:
               exit 1
             }
             if [ "$EVENT" = workflow_run ] && [ "$(catalog "$current")" = "$(catalog "$candidate")" ]; then
-              echo "No catalog change ($(catalog "$candidate")); this waits for the daily promotion."
-              exit 0
+              lag=$(( $(git log -1 --format=%ct "$candidate") - $(git log -1 --format=%ct "$current") ))
+              if [ "$lag" -lt $(( MAX_LAG_HOURS * 3600 )) ]; then
+                echo "No catalog change ($(catalog "$candidate")) and production is $(( lag / 3600 )) h behind; this waits for the daily promotion."
+                exit 0
+              fi
+              echo "No catalog change, but production is $(( lag / 3600 )) h behind main and the daily promotion has not run: this one stands in for it."
             fi
           else
             current=
