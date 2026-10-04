@@ -1583,6 +1583,7 @@
     "203": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -1599,12 +1600,37 @@
       },
       "interruptions": 0,
       "issue": 44,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
+          "evidence": "git show HEAD:apps/server/test/api/catalog.test.ts lines 279-283 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around the hardcoded 8-patch list vs generic shipped-history assertion.",
+          "severity": "blocking",
+          "where": "apps/server/test/api/catalog.test.ts:279"
+        },
+        {
+          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
+          "evidence": "git show HEAD:apps/web/src/patches/source.test.ts lines 77-88 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around the hardcoded eight-patch vs shipped-order assertion.",
+          "severity": "blocking",
+          "where": "apps/web/src/patches/source.test.ts:77"
+        },
+        {
+          "claim": "Two unresolved merge conflict hunks committed at HEAD break typecheck, lint, and tests.",
+          "evidence": "git show HEAD:apps/web/src/patches/PatchNotes.test.tsx lines 194-219 contain two <<<<<<< HEAD / ======= / >>>>>>> origin/main hunks (eight-patch list and v0.2.2-vs-newest open-on-arrival logic).",
+          "severity": "blocking",
+          "where": "apps/web/src/patches/PatchNotes.test.tsx:194"
+        },
+        {
+          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
+          "evidence": "git show HEAD:apps/web/src/routes/patch-notes.test.tsx lines 53-59 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around expect(entries[0]).toBe(v0.2.2) vs shipped.at(-1).",
+          "severity": "blocking",
+          "where": "apps/web/src/routes/patch-notes.test.tsx:53"
+        }
+      ],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-04T08:03:48Z",
+      "queued_at": "2026-10-04T08:12:07Z",
       "run_id": "37187854392",
       "self_check_findings": [
         {
@@ -1626,7 +1652,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-04T08:07:40Z",
       "stop_requested": false,
       "taken_asks": [],
