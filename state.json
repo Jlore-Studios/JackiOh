@@ -1516,7 +1516,14 @@
       "feedback_since": "2026-10-04T06:10:37Z",
       "issue": 196,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "2e39735c34cd81d1df2065d8c65dff3e54f28fe0",
+        "tiers": {}
+      }
     },
     "31": {
       "failures": 0,
