@@ -136,7 +136,7 @@ function mutateHidden(state: GameState, seat: PlayerId, seed: number): GameState
   for (const player of PLAYER_IDS) {
     for (const card of out.players[player].backrow) {
       if (card === null || !isHiddenBackrow(state, card, seat)) continue;
-      // R403, R602: a face-down trap with no activation condition is live, so a trap of the same cost
+      // R403, R602: a face-down trap with no reveal condition is live, so a trap of the same cost
       // can still change what the seat reads off the board (C #88 Siphon Squad shrinks its units'
       // Attack). That is not hidden from it, so the swap must leave the seat's view as it was. The
       // card's own def always does, so there is always a trap to pick.

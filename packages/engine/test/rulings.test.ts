@@ -2972,7 +2972,7 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
 
   // Proved by the engine's self-tribute.test.ts "R403 …" and cards classic/088-siphon-squad.test.ts "R403 …"
   // (live while face-down, the self-Tribute at every state check, the Radiant 0 set last).
-  it("R403 keeps a Trap with no activation condition live while face-down (C #88 Siphon Squad)", () => {
+  it("R403 keeps a Trap with no reveal condition live while face-down (C #88 Siphon Squad)", () => {
     provenIn(403, "self-tribute.test.ts", CLASSIC_088_TEST);
   });
 

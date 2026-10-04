@@ -6,7 +6,7 @@
 //                Once this has revealed: Whenever a player plays a card, draw {draw} and deal {damage}
 //                damage to the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //
-// R395: while it is face-down only the activation condition is live. It answers the `cardPlayed` that
+// R395: while it is face-down only the reveal condition is live. It answers the `cardPlayed` that
 // takes any player's plays this turn to {plays} (the per-player per-turn count, which already counts
 // the play under way; a cast counts, R70; a countered card was never played, R448, so it never
 // reaches here), and then animates (Animated, B3.1, R383) in Attack Position into the unit zone in its

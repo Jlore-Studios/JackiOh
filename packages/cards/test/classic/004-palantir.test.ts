@@ -109,7 +109,7 @@ describe("C #4 Palantir", () => {
     });
 
     it("§2.4 it holds on its controller's turn too: the opponent's off-turn draw counts, and a second is stopped", () => {
-      // p2's C #38 Jackiestan Auctioneer activates on p1's 3rd play; from then on each play makes p2
+      // p2's C #38 Jackiestan Auctioneer reveals on p1's 3rd play; from then on each play makes p2
       // draw 1, on p1's own turn. The first such draw happens, the second is past the limit.
       const s = scenario({
         p1: { hand: [RECYCLE, RECYCLE, RECYCLE, RECYCLE, RECYCLE, TIMMY], backrow: [{ def: PALANTIR, faceUp: true, lane: 1 }], library: [VANILLA] },

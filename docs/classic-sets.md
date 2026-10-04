@@ -336,7 +336,7 @@ your turn and hides in the backrow on the opponent's, where nothing that attacks
    trigger still fires (Tesla keeps zapping arrivals), an aura still applies.
 4. **When it animates.**
    - An Animated Trap or Field Trap animates as the last step of its firing. "Then summon this in
-     Defense Position" (Tesla) and "Activates/summons" (Auctioneer) are that step. A card that is
+     Defense Position" (Tesla) and "Summon this as a Unit" (Auctioneer) are that step. A card that is
      already a Unit when it fires again does not move or change position.
    - An Animated Field Spell animates as it enters the field.
    - **Animated on your turn**: it animates at the start of its controller's turn (a step after the
@@ -1309,7 +1309,7 @@ base → Radiant.
   player per turn; casts count, R70), then it animates (B3.1). From then on — animated, or stuck face-up
   in the backrow for want of a unit zone — a trigger on every `cardPlayed` by either player: draw 1 and
   one hit of 2 on the enemy hero ("each enemy hero" is the multiplayer phrasing).
-- **Rulings (CL16):** while face-down only the activation condition is live; the "whenever" text starts
+- **Rulings (CL16):** while face-down only the reveal condition is live; the "whenever" text starts
   with the play after the one that set it off (R119's rule about a permanent's own arrival).
 - **Numbers:** trigger play 3 ↓ (never below 2); draw 1 ↑; damage 2 ↑.
 - **Check:** a draw-and-burn engine on every card anyone plays, for (2); its 4/4 body is the answer.
@@ -1446,7 +1446,7 @@ base → Radiant.
 > Trap, return this to your hand. It costs (0).
 
 - **Text:** Cry: Cast Ancient Acquisition.
-  While this is in your graveyard: When one of your Traps activates, return this to your hand.
+  While this is in your graveyard: When one of your Traps reveals, return this to hand.
 - **Radiant:** the same, and it costs (0) when it returns.
 - **Engine:** E12: cast a generated #34 on its base face (goes to your graveyard afterwards, R87), your
   picks. A graveyard trigger (R68's graveyard triggers) on your `trapFired`; Radiant: `costOverride 0`.
@@ -1613,7 +1613,7 @@ base → Radiant.
 
 - **Text:** Cry: Deal damage equal to the number of Plague Counters on the field.
 - **Radiant:** Cry: Place 2 Plague Counters on this. Then deal damage equal to the number of Plague
-  Tokens on the field.
+  Counters on the field.
 - **Engine:** a declared target; one hit of N, every token on both sides counted as it resolves (after
   the Radiant's own placement). A `preview` (R280) shows N.
 - **Numbers:** Radiant tokens 2 ↑.
@@ -1655,7 +1655,7 @@ base → Radiant.
 - **Text:** At the start of each player's turn: Destroy every permanent that player controls with a
   Plague Counter on it.
 - **Radiant:** At the start of your opponent's turn: Destroy every permanent they control with a Plague
-  Token on it.
+  Counter on it.
 - **Engine:** a start-of-turn trigger on both players' turns (the text names each player's), in R68's
   order. "Plague Counter" is the Plague Counter.
 - **Rulings (CL21):** "they destroy all cards" means *their own* cards — the only reading under which
@@ -1827,8 +1827,8 @@ base → Radiant.
 > Plague Token.
 
 - **Text:** Cry: Place 2 Plague Counters on this.
-  You may play Units from your graveyard, paying with Plague Counters from this: each token pays (1), and
-  each such play spends at least 1 token.
+  You may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and
+  each such play spends at least 1 counter.
 - **Radiant:** the same with 4 Plague Counters.
 - **Engine:** E11 for Units, with a second way to pay: the `play` action carries how many tokens pay
   (at least 1, at most the tokens here and the price), the rest in mana. The designer's "cast" here is a
@@ -2030,7 +2030,7 @@ base → Radiant.
   When your opponent controls no Units, Tribute this.
 - **Engine:** a layer-5 aura (the Radiant's "0 Attack" sets attack last, after every other layer); the
   self-Tribute is a condition checked at every state check, the one right after it is set included.
-- **Rulings (CL24):** a Trap or Field Trap whose text has no activation condition is live while
+- **Rulings (CL24):** a Trap or Field Trap whose text has no reveal condition is live while
   face-down: its aura works from the moment it is set, and it stays face-down until something reveals
   it. The opponent sees their attack drop and can deduce the card; R33 hides identity, not
   consequences.

@@ -47,6 +47,6 @@ const dusting: TrapTrigger = {
 
 export const base: Script = { triggers: [dusting] };
 
-// The same script: the Radiant face's 2 tokens and draw 2 are its declared numbers, which `param` reads
-// off the running face.
+// The same script: the Radiant face's 3 counters and draw 3 are its declared numbers, which `param`
+// reads off the running face.
 export const radiant: Script = base;
