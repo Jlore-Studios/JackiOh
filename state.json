@@ -1610,13 +1610,13 @@
       "feedback_since": "2026-10-04T09:20:57Z",
       "forced": false,
       "handoff": {
-        "at": "2026-10-04T09:08:03Z",
+        "at": "2026-10-04T09:29:12Z",
         "family": "cognition",
         "kind": "work",
         "notes": "",
         "provider": "devin",
         "reason": "built; no model on this subscription may review it, so it waits for a review run, with 3 self-check finding(s) still open",
-        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 54 minutes (at 10:01 UTC). (trace ID: b547ca68fbe59babe2595c7f7a368ca6): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
+        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 32 minutes (at 10:01 UTC). (trace ID: b45459f95701c6ac5eda45cd43d08cf4): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
       },
       "interruptions": 0,
       "issue": 44,
