@@ -627,9 +627,8 @@
       }
     },
     "141": {
-      "asks": [
-        "c:5970226112"
-      ],
+      "action": "revise",
+      "asks": [],
       "failures": 0,
       "feedback_since": "2026-10-03T09:23:52Z",
       "forced": false,
@@ -637,10 +636,16 @@
       "issue": 37,
       "kind": "revise",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-03T14:46:21Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "37185479584",
       "source": "request",
-      "stop_requested": false
+      "started_at": "2026-10-04T07:21:04Z",
+      "stop_requested": false,
+      "taken_asks": [
+        "c:5970226112"
+      ]
     },
     "142": {
       "action": "revise",
@@ -2037,9 +2042,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T07:17:28Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37185295355",
-    "what": "revise #167 on agy"
+    "at": "2026-10-04T07:21:04Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37185479584",
+    "what": "revise #141 on muse"
   },
   "last_sweep": {
     "at": "2026-10-04T07:20:10Z",
