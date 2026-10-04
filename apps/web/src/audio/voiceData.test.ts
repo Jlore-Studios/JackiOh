@@ -99,6 +99,7 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
       version: 1,
       personas: { p: { say: "Eddy (English (US))", rate: 180, pbas: 40, pmod: 30, web: { pitch: 1, rate: 1 }, gain: 1.5 } },
       cards: { "x-1": { kind: "unit", persona: "p", play: "Hello.", death: "Bye.", pmod: 5 } },
+      emotes: {},
     };
 
     expect(lineFor(lines, "x-1", "death")).toEqual({
@@ -263,7 +264,7 @@ describe("B43 voiceKeysForView", () => {
   });
 
   it("B43 reads only the table it is given", () => {
-    const lines: VoiceLineTable = { version: 1, personas: VOICE_LINES.personas, cards: {} };
+    const lines: VoiceLineTable = { version: 1, personas: VOICE_LINES.personas, cards: {}, emotes: {} };
     expect(voiceKeysForView(viewWith(), lines)).toEqual([]);
   });
 });

@@ -349,6 +349,77 @@ describe("actions", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// portraits and emotes (R642, R643)
+// ---------------------------------------------------------------------------------------------
+
+describe("portraits and emotes", () => {
+  it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
+    const h = connected();
+    h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
+    expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
+
+    // A second frame — the reconnect's — simply replaces the first.
+    h.socket().deliver({ type: "portraits", p1: "timmy", p2: "dfender" });
+    expect(h.client.snapshot().portraits).toEqual({ p1: "timmy", p2: "dfender" });
+  });
+
+  it("R642 a `portraits` frame with an id the roster does not know is refused", () => {
+    const h = connected();
+    h.socket().deliver({ type: "portraits", p1: "nobody", p2: "shredder" });
+    h.socket().deliver({ type: "portraits", p1: "gary" });
+    h.socket().deliver({ type: "portraits", p1: "gary", p2: 4 });
+    expect(h.client.snapshot().portraits).toBeNull();
+
+    expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "gary", p2: "nobody" }))).toBeNull();
+    // A portrait id is a string of the roster, never a number.
+    expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "core-008", p2: "shredder" }))).toBeNull();
+  });
+
+  it("R643 an `emote` relay lands with a seq that bumps, so the same emote twice still notifies twice", () => {
+    const h = connected();
+    let notified = 0;
+    const stop = h.client.subscribe(() => {
+      notified += 1;
+    });
+
+    h.socket().deliver({ type: "emote", from: "p1", emote: "wahWah" });
+    expect(h.client.snapshot().emote).toEqual({ from: "p1", emote: "wahWah", seq: 1 });
+
+    h.socket().deliver({ type: "emote", from: "p1", emote: "wahWah" });
+    expect(h.client.snapshot().emote).toEqual({ from: "p1", emote: "wahWah", seq: 2 });
+    expect(notified).toBe(2);
+    stop();
+  });
+
+  it("R643 an `emote` frame with an unknown id or a non-player `from` is refused", () => {
+    const h = connected();
+    h.socket().deliver({ type: "emote", from: "p1", emote: "poke" });
+    h.socket().deliver({ type: "emote", from: "p3", emote: "sob" });
+    h.socket().deliver({ type: "emote", emote: "sob" });
+    expect(h.client.snapshot().emote).toBeNull();
+
+    expect(parseServerFrame(JSON.stringify({ type: "emote", from: "p2", emote: "gg" }))).toBeNull();
+  });
+
+  it("R643 `sendEmote` writes {type:'emote', emote} verbatim — no nonce, no ack to wait for", () => {
+    const h = connected();
+    h.client.sendEmote("laugh");
+    expect(h.socket().frames().at(-1)).toEqual({ type: "emote", emote: "laugh" });
+    // Nothing else rode along: the frame is exactly the two fields.
+    expect(Object.keys(h.socket().frames().at(-1) ?? {})).toEqual(["type", "emote"]);
+  });
+
+  it("R643 an emote on a socket that is not open drops silently, the way the server drops a limited one", () => {
+    const h = harness();
+    h.client.connect(); // connecting, never `open()`ed
+    h.client.sendEmote("sob");
+    expect(h.socket().sent).toEqual([]);
+    // Cosmetic chatter is never worth an error banner.
+    expect(h.client.snapshot().error).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
 // the socket's life
 // ---------------------------------------------------------------------------------------------
 

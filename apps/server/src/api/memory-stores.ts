@@ -101,6 +101,7 @@ export function createMemoryDeckStores(
         if (existing.profileId !== deck.profileId) return "not_owner";
         existing.name = deck.name;
         existing.cards = [...deck.cards];
+        existing.portrait = deck.portrait;
         existing.catalogVersion = deck.catalogVersion;
         existing.updatedAt = deck.updatedAt;
         return "updated";

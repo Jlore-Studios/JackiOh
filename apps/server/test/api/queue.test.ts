@@ -29,6 +29,7 @@
  */
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_PORTRAIT, pickPortraitFromSeed } from "@jackioh/shared";
 import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ratingWindow } from "../../src/config";
 import { loadCatalog } from "../../src/api/catalog";
 import { grantEntireCatalog, ownedMap } from "../../src/api/collection";
@@ -91,7 +92,7 @@ async function saveDeckFor(
   const id = uuid();
   const now = target.timers.now();
   const outcome = await target.store.decks.upsert(
-    { id, profileId, name, cards: [...cards], catalogVersion: target.catalog.version, createdAt: now, updatedAt: now },
+    { id, profileId, name, cards: [...cards], portrait: null, catalogVersion: target.catalog.version, createdAt: now, updatedAt: now },
     MAX_SAVED_DECKS,
   );
   expect(outcome).toBe("created");
@@ -814,6 +815,120 @@ describe("R258 — All Random (§9.5)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// R642 — the portrait on the ticket and the seat
+// ---------------------------------------------------------------------------
+
+/**
+ * R642, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8),
+ * an All Random match deals each seat's portrait from the match seed the way it deals the deck
+ * (R258), and either way the pair lands on the match row seat-ordered — which is what the actor's
+ * `portraits` frame reads back.
+ */
+describe("R642 — the portrait the ticket freezes and the seed deals (§9.5)", () => {
+  /** Queue and deck routes on one router, the same trick the §9.8 block uses. */
+  function fullRouter(target: TestDeps): Router {
+    return createRouter([...createQueueRoutes(), ...createDeckRoutes()], target);
+  }
+
+  /** Saves a deck through `PUT /api/decks/:id`, portrait included. */
+  async function savePortrait(
+    route: Router,
+    token: string,
+    deckId: string,
+    cards: string[],
+    portrait: string | null,
+  ): Promise<Response> {
+    return route(
+      jsonRequest(
+        "PUT",
+        `/api/decks/${deckId}`,
+        { name: "The deck", cards, catalogVersion: deps.catalog.version, portrait },
+        { token },
+      ),
+    );
+  }
+
+  it("R642 freezes the deck's portrait into the ticket, and the edit after cannot reach it", async () => {
+    const route = fullRouter(deps);
+    const swapper = activeProfile(deps, "swapper");
+    const rival = activeProfile(deps, "rival");
+    const deckId = uuid();
+    const rivalDeckId = uuid();
+    const [mine = [], theirs = []] = decksFrom(deps);
+    expect((await savePortrait(route, swapper, deckId, mine, "gary")).status).toBe(200);
+    expect((await savePortrait(route, rival, rivalDeckId, theirs, "shredder")).status).toBe(200);
+
+    // 1. Queue with the deck: its portrait freezes into the ticket here and nowhere else.
+    const queued = await readJson<QueueBody>(await enqueueWith(swapper, { mode: "bo1", deckId }, route));
+    const ticketId = queued.ticketId ?? "";
+    expect(queued.status).toBe("open");
+    expect((await deps.store.tickets.get(ticketId))?.portrait).toBe("gary");
+
+    // 2. The re-save, while the ticket is still open. It lands — and the ticket does not move.
+    expect((await savePortrait(route, swapper, deckId, mine, "timmy")).status).toBe(200);
+    // PREMISE: the new portrait really is what the deck holds now, so there is something to leak.
+    expect((await deps.store.decks.get(deckId))?.portrait).toBe("timmy");
+    expect((await deps.store.tickets.get(ticketId))?.portrait).toBe("gary");
+
+    // 3. The pairing: the older ticket is p1, and each seat carries what its ticket froze.
+    const paired = await readJson<QueueBody>(
+      await enqueueWith(rival, { mode: "bo1", deckId: rivalDeckId }, route),
+    );
+    expect(paired.status).toBe("matched");
+
+    const started = deps.matches.started.at(-1);
+    expect(started?.seats.map((seat) => seat.profileId)).toEqual(["swapper", "rival"]);
+    expect(started?.seats.map((seat) => seat.portrait)).toEqual(["gary", "shredder"]);
+    // …and the match row keeps them in seat order, which is what `portraits` frames read back.
+    const row = deps.store.tables.matches.at(-1);
+    expect(row?.players).toEqual(["swapper", "rival"]);
+    expect(row?.portraits).toEqual(["gary", "shredder"]);
+  });
+
+  it("R642 reads a Best-of-1 ticket with no portrait as vanilla on the seat and the row", async () => {
+    const one = activeProfile(deps, "plain-one");
+    const two = activeProfile(deps, "plain-two");
+    // `saveDeckFor` writes `portrait: null` — R641's default, and what a deck saved before
+    // portraits existed holds.
+    const a = await saveDeckFor(deps, "plain-one");
+    const b = await saveDeckFor(deps, "plain-two");
+
+    await enqueueWith(one, { mode: "bo1", deckId: a });
+    const paired = await readJson<QueueBody>(await enqueueWith(two, { mode: "bo1", deckId: b }));
+    expect(paired.status).toBe("matched");
+
+    expect(deps.store.tables.tickets.map((ticket) => ticket.portrait)).toEqual([null, null]);
+    expect(deps.store.tables.matches.at(-1)?.portraits).toEqual([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT]);
+  });
+
+  it("R642 deals an All Random match's portraits from the seed, seat by seat like the decks", async () => {
+    deps.e2e = true;
+    const one = activeProfile(deps, "rng-p1");
+    const two = activeProfile(deps, "rng-p2");
+
+    await enqueueWith(one, { mode: "random", seed: "portrait-seed" });
+    const paired = await readJson<QueueBody>(await enqueueWith(two, { mode: "random" }));
+    expect(paired.status).toBe("matched");
+
+    // An All Random ticket freezes no deck and no portrait: both are the match's to deal.
+    expect(deps.store.tables.tickets.map((ticket) => ticket.portrait)).toEqual([null, null]);
+
+    const started = deps.matches.started[0];
+    // PREMISE: the seed really is the one the enqueue supplied (R143), seat order as paired.
+    expect(started?.seed).toBe("portrait-seed");
+    expect(started?.seats.map((seat) => seat.profileId)).toEqual(["rng-p1", "rng-p2"]);
+    // Each seat's pick is `pickPortraitFromSeed` on its own seat-keyed suffix — the same scheme
+    // the decks are dealt on — so both `:portrait:p1` and `:portrait:p2` are covered here.
+    const expected = [
+      pickPortraitFromSeed("portrait-seed:portrait:p1"),
+      pickPortraitFromSeed("portrait-seed:portrait:p2"),
+    ];
+    expect(started?.seats.map((seat) => seat.portrait)).toEqual(expected);
+    expect(deps.store.tables.matches.at(-1)?.portraits).toEqual(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // R264 — a profile in a series
 // ---------------------------------------------------------------------------
 
@@ -1042,9 +1157,9 @@ describe("R253 — what may be queued, through the real validator", () => {
     expect(w.real.store.tables.tickets[0]?.trio).toEqual({
       name: "Main",
       decks: [
-        { name: "Aggro", cards: decks[0] },
-        { name: "Control", cards: decks[1] },
-        { name: "Tempo", cards: decks[2] },
+        { name: "Aggro", cards: decks[0], portrait: null },
+        { name: "Control", cards: decks[1], portrait: null },
+        { name: "Tempo", cards: decks[2], portrait: null },
       ],
     });
   });

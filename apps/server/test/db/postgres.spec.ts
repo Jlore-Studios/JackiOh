@@ -309,6 +309,7 @@ describe("postgres store, against a real database", () => {
         profileId,
         name: "Aggro",
         cards: deckOf(0).slice(0, 5),
+        portrait: null,
         catalogVersion: CATALOG_VERSION,
         createdAt: at,
         updatedAt: at,

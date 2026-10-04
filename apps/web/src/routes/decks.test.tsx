@@ -70,7 +70,7 @@ beforeEach(() => {
     ),
   );
   vi.mocked(putDeck).mockImplementation(async (_token, id, input) => ({
-    deck: { id, ...input, cards: [...input.cards], createdAt: 0, updatedAt: 0 },
+    deck: { id, ...input, cards: [...input.cards], portrait: input.portrait ?? null, createdAt: 0, updatedAt: 0 },
   }));
 });
 
@@ -194,7 +194,8 @@ describe("saving", () => {
     const [token, id, input] = vi.mocked(putDeck).mock.calls[0] ?? [];
     expect(token).toBe(TOKEN);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-    expect(input).toEqual({ name: "Deck 1", cards: [], catalogVersion: catalog.version });
+    // D5: a fresh deck carries no portrait yet; the column reads it back as `vanilla` (R641).
+    expect(input).toEqual({ name: "Deck 1", cards: [], catalogVersion: catalog.version, portrait: null });
     await waitFor(() => {
       expect(screen.getByTestId("sync-status")).toHaveAttribute("data-state", "saved");
     });
