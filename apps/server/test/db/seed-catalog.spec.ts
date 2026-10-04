@@ -4,7 +4,7 @@
  *
  * Before migration 0010, `cards_tags_check` (0002) did not admit 'Jlockeed', the tag R278 puts on
  * #13 and #14, before 0015 it did not admit patch v0.2.0's Book, Pancake and AI (B2.4), and before
- * 0019 it did not admit the mechanics patch's Plague. The seed runs in one transaction, so one
+ * 0020 it did not admit the mechanics patch's Plague. The seed runs in one transaction, so one
  * such row failed the whole catalog.
  * `seed-catalog.test.ts` compares the tags with the migrations' text in `pnpm test`; this spec
  * checks that the database really accepts them.

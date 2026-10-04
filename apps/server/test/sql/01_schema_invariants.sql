@@ -868,7 +868,7 @@ end $$;
 
 \echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI and Plague included, and refuses any other ==='
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
--- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), and 0019 with the
+-- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), and 0020 with the
 -- mechanics patch's Plague. Each probe row is removed before the next, and each probe runs in a
 -- block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$

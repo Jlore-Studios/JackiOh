@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0019: the Plague tag
+-- Migration 0020: the Plague tag
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and the v0.2.x mechanics patch: one new tag,
 -- Plague (every card that uses Plague Tokens).
@@ -16,7 +16,7 @@
 -- point at (0002's comment on the table). No existing row is rewritten. Every
 -- row 0015 admitted, this check admits too.
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0015 -> ... -> 0019 (this file).
+-- Apply order: 0002 (`public.cards`) -> ... -> 0015 -> ... -> 0020 (this file).
 -- Safe to re-apply: drop-constraint-if-exists-then-add, as 0015 does.
 -- ============================================================================
 
@@ -34,5 +34,5 @@ comment on constraint cards_tags_check on public.cards is
   $$SPEC §5, R278, patch v0.2.0 (B2.4) and the v0.2.x mechanics patch: every
   tag is one of Human, Felinor, KY, CN, Fruit, 'Call to Chaos', Quickdraw,
   Jlockeed, Book, Pancake, AI, Plague, Token. First defined in 0002; 0010
-  re-added it with Jlockeed, 0015 with Book, Pancake and AI, 0019 with
+  re-added it with Jlockeed, 0015 with Book, Pancake and AI, 0020 with
   Plague.$$;
