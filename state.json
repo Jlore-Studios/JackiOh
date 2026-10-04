@@ -2187,6 +2187,7 @@
     "225": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-04T21:49:31Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -2196,6 +2197,7 @@
       "interruptions": 0,
       "issue": 219,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "devin",
       "queued_at": "2026-10-04T19:44:23Z",
