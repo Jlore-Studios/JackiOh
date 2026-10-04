@@ -71,15 +71,22 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
  * puts the portrait anywhere from the screen's left edge (a phone) to its middle, so once laid out
  * the menu measures itself and slides sideways by `menuShift` through `--emote-menu-shift`, which
  * the CSS adds to its centring transform. A layout effect, so the menu never paints off the screen.
+ * The measure first puts the variable back to 0: StrictMode replays this effect in dev (main.tsx
+ * mounts the app under it), and a re-run that read the shift the first run applied would take the
+ * slid menu for centred and write 0 back — the rect carries the transform.
  */
 function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
   useLayoutEffect(() => {
     const menu = ref.current;
     if (menu === null) return;
+    menu.style.setProperty("--emote-menu-shift", "0px");
     const rect = menu.getBoundingClientRect();
     const viewportWidth = document.documentElement.clientWidth;
     // No layout (jsdom, or a hidden board): nothing to measure, so the menu stays centred.
-    if (rect.width === 0 || viewportWidth === 0) return;
+    if (rect.width === 0 || viewportWidth === 0) {
+      menu.style.removeProperty("--emote-menu-shift");
+      return;
+    }
     menu.style.setProperty("--emote-menu-shift", `${menuShift(rect, viewportWidth, EMOTE_MENU_EDGE_PX)}px`);
   }, [ref]);
 }

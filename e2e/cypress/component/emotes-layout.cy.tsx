@@ -19,7 +19,7 @@
 // Every measurement is taken inside a `should` callback so it is retried until the layout has
 // settled after `cy.viewport()`, and until the bubble's pop-in has finished.
 
-import type { ReactElement } from "react";
+import { StrictMode, type ReactElement } from "react";
 
 import { useEmotes } from "../../../apps/web/src/emotes/useEmotes.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
@@ -63,10 +63,14 @@ function EmoteGame({ view, legal }: { view: View; legal: Legal }): ReactElement 
 }
 
 function mountGame(): void {
+  // StrictMode, as main.tsx mounts the app: dev replays every layout effect, and the menu's
+  // keep-on-screen measure has to hold its answer across the replay, not only the first run.
   cy.mount(
-    <div className="app-shell app-shell--wide">
-      <EmoteGame view={fullBoardView()} legal={END_TURN_ONLY} />
-    </div>,
+    <StrictMode>
+      <div className="app-shell app-shell--wide">
+        <EmoteGame view={fullBoardView()} legal={END_TURN_ONLY} />
+      </div>
+    </StrictMode>,
   );
 }
 

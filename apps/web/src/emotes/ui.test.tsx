@@ -3,6 +3,7 @@
 // session decides whether anything shows — so the tests render them bare, against a hand-read
 // `gate`, with no session and no clock but the bubble's `--emote-hold` span.
 
+import { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -152,9 +153,9 @@ describe("R643 the Mute emotes menu", () => {
 });
 
 // #219: jsdom has no layout engine, so what the slide does to a real rect is pinned on `menuShift`
-// and the stylesheet's own text; the rendered menu only proves the hook writes the variable. The
-// measurements themselves (emoji and label sizes, 44px targets, menus and bubble on screen) are
-// e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
+// and the stylesheet's own text; the rendered menu proves the hook writes the variable and keeps
+// it across an effect replay. The measurements themselves (emoji and label sizes, 44px targets,
+// menus and bubble on screen) are e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
 describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
   it("#219 shifts right by what pokes out on the left, left by what pokes out on the right, nothing when it fits", () => {
     // The fixture board at 360px puts your portrait at the screen's left edge: a 320px menu
@@ -199,6 +200,25 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
     render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     expect(screen.getByTestId("emote-menu").style.getPropertyValue("--emote-menu-shift")).toBe("");
+  });
+
+  it("#219 a StrictMode replay — dev's second layout-effect run — keeps the shift, it does not cancel it", () => {
+    // jsdom has no layout, so the stub plays the layout engine: the centred rect plus whatever
+    // --emote-menu-shift the element already carries, what a real getBoundingClientRect reports
+    // once the transform applies. main.tsx mounts the app under StrictMode, so in dev the hook's
+    // effect runs twice — a second run that took the slid rect for centred would write 0 back.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const applied = Number.parseFloat(this.style.getPropertyValue("--emote-menu-shift")) || 0;
+      return rect(-131 + applied, 189 + applied, 320);
+    });
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(360);
+    render(
+      <StrictMode>
+        <EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />
+      </StrictMode>,
+    );
+
+    expect(screen.getByTestId("emote-menu").style.getPropertyValue("--emote-menu-shift")).toBe("139px");
   });
 });
 
