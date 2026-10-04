@@ -612,16 +612,18 @@ describe("the set chips (R380: one format, every set)", () => {
   it("a set chip keeps that set's cards and nothing else, and two chips keep both sets", () => {
     const pool = (sets: readonly SetName[]): readonly string[] =>
       visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, sets: new Set<SetName>(sets) }, DEFAULT_SORT);
+    const deckableIn = (sets: readonly SetName[]): number =>
+      Object.values(CORE_CATALOG).filter((def) => !def.token && sets.includes(def.set)).length;
     const classic = pool(["Classic"]);
-    expect(classic).toHaveLength(90);
+    expect(classic).toHaveLength(deckableIn(["Classic"]));
     expect(new Set(classic.map(setOf))).toEqual(new Set(["Classic"]));
     const plus = pool(["Classic+"]);
-    // Classic+'s 78 cards: its 38 tokens never enter the pool.
-    expect(plus).toHaveLength(78);
+    // Classic+'s tokens never enter the pool.
+    expect(plus).toHaveLength(deckableIn(["Classic+"]));
     expect(new Set(plus.map(setOf))).toEqual(new Set(["Classic+"]));
-    expect(pool(["Core"])).toHaveLength(100);
-    expect(pool(["Core", "Classic"])).toHaveLength(190);
-    expect(pool([])).toHaveLength(268);
+    expect(pool(["Core"])).toHaveLength(deckableIn(["Core"]));
+    expect(pool(["Core", "Classic"])).toHaveLength(deckableIn(["Core", "Classic"]));
+    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+"]));
   });
 });
 

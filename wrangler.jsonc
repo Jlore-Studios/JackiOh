@@ -1,0 +1,15 @@
+// Production: apps/web as static assets on Cloudflare Workers, built from the `production` branch
+// (.github/workflows/promote-production.yml, docs/deploy-cloudflare.md).
+// Vercel stays on as staging (vercel.json). No Worker script: assets only, so nothing runs per
+// request and nothing here needs a secret. The VITE_* values are BUILD variables, set in the
+// Cloudflare dashboard, because Vite compiles them into the bundle.
+// apps/web/src/net/cloudflare-config.test.ts holds this file in place.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jackioh",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./apps/web/dist",
+    "not_found_handling": "404-page"
+  }
+}

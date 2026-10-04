@@ -71,7 +71,9 @@ describe("R388 no raw placeholder reaches the screen", () => {
         }
       }
     }
-    expect(faces).toBeGreaterThan(2 * 317);
+    // The floor: at least the newest snapshot's two faces per entry were drawn.
+    const newest = await snapshotOf(patches.at(-1)?.version ?? "");
+    expect(faces).toBeGreaterThan(2 * Object.keys(newest).length);
     expect(raw).toEqual([]);
   }, 180_000);
 
