@@ -1209,12 +1209,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 49,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "agy",
       "question": "",
-      "queued_at": "2026-10-04T08:06:22Z",
+      "queued_at": "2026-10-04T14:08:23Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37200091192",
       "self_check_findings": [
@@ -1225,7 +1225,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-04T11:51:34Z",
       "stop_requested": false,
       "taken_asks": [],
