@@ -69,6 +69,9 @@ const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   attack: "Attack",
   health: "Health",
   type: "Type",
+  // Not "Win rate": the select is as wide as its widest label, and at 390 px a wider one pushes the
+  // pool's first row below the first screen (B39).
+  winRate: "Win %",
 };
 
 type ChipProps = {

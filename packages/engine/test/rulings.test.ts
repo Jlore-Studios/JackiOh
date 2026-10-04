@@ -193,6 +193,7 @@ const CARDS_REFERENCES_TEST = "../../cards/test/references.test.ts";
 /** Patch v0.2.0's catalog proofs (R380–R382, R388, R432, R482). */
 const CARDS_QUERY_TEST = "../../cards/test/query.test.ts";
 const CARDS_PATCHES_TEST = "../../cards/test/patches.test.ts";
+const CARDS_PATCHES_SHIP_TEST = "../../cards/test/patches-ship.test.ts";
 const CARDS_PARAMS_TEST = "../../cards/test/params.test.ts";
 /** R481's SQL evidence: migration 0016's grant for a catalog that grows. */
 const SERVER_CATALOG_GROWTH_SQL = "../../../apps/server/test/sql/09_catalog_growth.sql";
@@ -237,6 +238,10 @@ const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
 const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
 const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
 const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
+/** R654's proofs (SPEC §9.11): public card and player statistics page. */
+const SERVER_STATS_API_TEST = "../../../apps/server/test/api/stats.test.ts";
+const SERVER_STATS_CONTRACT_TEST = "../../../apps/server/test/db/contract.ts";
+const WEB_STATS_ROUTE_TEST = "../../../apps/web/src/routes/stats.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -3845,6 +3850,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(645, AI_PERSONAS_TEST);
   });
 
+  // Proved by cards patches-ship.test.ts "R646 …" (the fragment rules on fixtures, the promotion on
+  // a throwaway repo: ship order, per-merge snapshots, revision letters, idempotence) and
+  // patches.test.ts "R646 …" (shipped.json lists every shipped patch with its commit and blob).
+  it("R646 builds card patches as pending fragments and ships them in ship order", () => {
+    provenIn(646, CARDS_PATCHES_SHIP_TEST, CARDS_PATCHES_TEST);
+  });
+
   // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
   // the newest version in patches.json with the next letter.
   it("R650 names a micro patch after the newest version, with the next letter", () => {
@@ -3870,12 +3882,27 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
   });
 
-  // Proved by apps/web routes/landing.test.tsx "R654 …" (swaps below the threshold among Core's
+  // Proved by apps/server test/api/stats.test.ts (publication gate at exactly 1000 live games, AI padding
+  // below gate, ignored at/above gate, tutorial exclusion, sample floor, filtering, drill-down, player sync),
+  // apps/server test/db/contract.ts (store.playerStats contract, privacy filtering, cascade on account delete),
+  // apps/web src/game/deckbuilder/filters.test.ts (sort by win rate, sample floor), and apps/web
+  // src/routes/stats.test.tsx (cards and players tabs, provisional banner, drill-down modal, personal stats).
+  it("R654 publishes card win rates with AI padding until the patch reaches 1000 live games and shows public player statistics", () => {
+    provenIn(
+      654,
+      SERVER_STATS_API_TEST,
+      SERVER_STATS_CONTRACT_TEST,
+      WEB_FILTERS_TEST,
+      WEB_STATS_ROUTE_TEST,
+    );
+  });
+
+  // Proved by apps/web routes/landing.test.tsx "R655 …" (swaps below the threshold among Core's
   // cards, the ghost over the new card for ROTATION_SWAP_MS and no control, the deal entry and the
-  // sheet's rules) and routes/landingFan.test.ts "R654 …" (the swap's pool below the threshold,
+  // sheet's rules) and routes/landingFan.test.ts "R655 …" (the swap's pool below the threshold,
   // drawn evenly).
-  it("R654 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
-    provenIn(654, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
+  it("R655 rotates the homescreen's hand from the first visit, a swap a fizzle and an apparition", () => {
+    provenIn(655, WEB_LANDING_TEST, WEB_LANDING_FAN_TEST);
   });
 });
 

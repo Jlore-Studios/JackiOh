@@ -14,6 +14,9 @@ e2e/cypress/videos/
 .env
 .env.*
 !.env.example
+# The production web build's public settings: VITE_ values only, all of them shipped to every browser
+# (apps/web/src/net/env-production.test.ts holds it to that).
+!apps/web/.env.production
 
 # Test-runner caches and local scratch.
 .vitest/

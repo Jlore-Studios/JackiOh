@@ -2,14 +2,15 @@
 // without signing in: the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) with nothing
 // that edits a deck, no collection and no ownership. Public like the Patch notes page: the catalog
 // is public (§5.1) and ships in the bundle, so the page reads `@jackioh/cards/catalog.json`, as the
-// landing's fan does, and asks no server and no account anything.
+// landing's fan does, and asks no server and no account anything for the catalog. The card detail's
+// statistics block (R654) reads the public card aggregates, like the deck builder's.
 //
 // The page decides nothing (CLAUDE.md rule 7): what the filter and the sort keep is filters.ts's,
 // the faces and the detail view are the cards module's. It wears the deck builder's look
 // (deckbuilder.css) in the tavern, with the corner's Back and the settings gear; almanac.css holds
 // only what the browse pane needs without the deck editor's grid around it.
 
-import { useCallback, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDef, CardDefs } from "@jackioh/shared";
@@ -22,9 +23,11 @@ import {
   DEFAULT_FILTER,
   DEFAULT_SORT,
   almanacPool,
+  type CardWinRateInfo,
   type PoolFilter,
   type PoolSort,
 } from "../game/deckbuilder/filters.ts";
+import { getCardStats } from "../net/api.ts";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -60,8 +63,31 @@ export default function AlmanacRoute(): ReactElement {
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
+  const [winRates, setWinRates] = useState<Map<string, CardWinRateInfo> | null>(null);
 
-  const pool = useMemo(() => almanacPool(ALMANAC_CATALOG, filter, sort), [filter, sort]);
+  useEffect(() => {
+    if (sort.key === "winRate" && winRates === null) {
+      let cancelled = false;
+      getCardStats()
+        .then((res) => {
+          if (cancelled) return;
+          const map = new Map<string, CardWinRateInfo>();
+          for (const card of res.cards) {
+            map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
+          }
+          setWinRates(map);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [sort.key, winRates]);
+
+  const pool = useMemo(
+    () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates ?? undefined),
+    [filter, sort, winRates],
+  );
   const detailDef = detailCardId === null ? undefined : ALMANAC_CATALOG.cards[detailCardId];
 
   const openDetail = useCallback((cardId: string) => {
@@ -96,6 +122,9 @@ export default function AlmanacRoute(): ReactElement {
                 ? null
                 : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
             }
+            // R654: the almanac's detail view carries the same compact statistics block as the
+            // deck builder's, reading the public card aggregates.
+            showStats
             onCloseDetail={() => {
               setDetailCardId(null);
             }}
