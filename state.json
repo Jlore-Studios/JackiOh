@@ -1731,9 +1731,7 @@
       "source": "",
       "started_at": "2026-10-04T15:56:27Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5981765909"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
