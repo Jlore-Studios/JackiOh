@@ -271,8 +271,8 @@ const bigDfenderScripts: CardScripts = {
 };
 
 /**
- * §8 #45 Deft Duelist, 4/3 → 8/6 with Charge (radiant adds Armor 1). R49: two exertions, one attack
- * and one switch per turn, which the engine reads off the `deftDuelist` static flag (BUILD M2-T1).
+ * §8 #45 Deft Duelist, 4/3 → 8/6 with Charge and Deft (radiant adds Armor 1). R49: two exertions,
+ * one attack and one switch per turn, which the engine reads off the Deft keyword (BUILD M2-T1).
  */
 export const deftDuelist = def({
   id: "cb-deft-duelist",
@@ -284,20 +284,20 @@ export const deftDuelist = def({
   base: {
     attack: 4,
     health: 3,
-    keywords: [{ kind: "Charge" }],
-    text: "Charge; may attack and switch position in the same turn",
+    keywords: [{ kind: "Charge" }, { kind: "Deft" }],
+    text: "Charge, Deft",
   },
   radiant: {
     attack: 8,
     health: 6,
-    keywords: [{ kind: "Charge" }, { kind: "Armor", n: 1 }],
-    text: "Charge, Armor 1; same",
+    keywords: [{ kind: "Charge" }, { kind: "Armor", n: 1 }, { kind: "Deft" }],
+    text: "Charge, Armor 1, Deft",
   },
 });
 
 const deftDuelistScripts: CardScripts = {
-  base: { staticFlags: { deftDuelist: true } },
-  radiant: { staticFlags: { deftDuelist: true } },
+  base: {},
+  radiant: {},
 };
 
 /**

@@ -20,6 +20,7 @@ from typing import Any
 from harness import config as config_mod
 from harness import context as context_mod
 from harness import dashboard as dashboard_mod
+from harness import disk as disk_mod
 from harness import stats as stats_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
@@ -321,8 +322,8 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
     for GitHub's late schedules to start its next run when its chain of runs breaks. Each tick
     reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
-    the loop runs shows within a tick. A failure is only a warning: it never fails the sweep or
-    the loop."""
+    the loop runs shows within a tick, and settles the issue about the machine's disk
+    (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop."""
     every = max(0, int(getattr(args, "every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     since = _run_created(cfg)
@@ -339,6 +340,12 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
+        try:
+            note = disk_mod.alert(_ctx(cfg))
+            if note:
+                print(redact(f"disk: {note}"), flush=True)
+        except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+            print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
         if getattr(args, "stats", False):
             try:
                 print(redact(stats_mod.update(_ctx(cfg))), flush=True)

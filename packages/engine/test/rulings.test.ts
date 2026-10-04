@@ -554,10 +554,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the fourteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the fourteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -572,8 +572,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Cleave",
       "Pierce",
       "Windfury",
+      "Deft",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(14);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3996,10 +3997,16 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     );
   });
 
-  // Proved by engine animated.test.ts "R656 …" (a stat-less Animated card animates to 0/1, printed or
+  // Proved by effects-cast.test.ts "R656 …": a harmful pick narrows to enemies, a helpful one to
+  // friends, and Jogg's Box stays fully random.
+  it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
+    provenIn(656, "effects-cast.test.ts");
+  });
+
+  // Proved by engine animated.test.ts "R657 …" (a stat-less Animated card animates to 0/1, printed or
   // granted, on either face).
-  it("R656 an Animated card with no printed stats fights as a 0/1", () => {
-    provenIn(656, "animated.test.ts");
+  it("R657 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(657, "animated.test.ts");
   });
 });
 

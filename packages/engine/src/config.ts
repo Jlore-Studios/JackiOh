@@ -113,8 +113,8 @@ export const WINDFURY_ATTACKS = 2;
 
 /**
  * R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
- * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Temporary (R637) stays out,
- * since a card on the field is never in a hand to be discarded.
+ * patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Deft (R49) was added by
+ * patch v0.2.11; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
  */
 export const RANDOM_KEYWORD_POOL = [
   "Taunt",
@@ -130,6 +130,7 @@ export const RANDOM_KEYWORD_POOL = [
   "Cleave",
   "Pierce",
   "Windfury",
+  "Deft",
 ] as const;
 
 /**
@@ -138,10 +139,10 @@ export const RANDOM_KEYWORD_POOL = [
  */
 export const RADIANT_FALLBACK_FACTOR = 2;
 
-/** R656: an Animated card with no printed stats fights with this attack. */
+/** R657: an Animated card with no printed stats fights with this attack. */
 export const ANIMATED_FALLBACK_ATTACK = 0;
 
-/** R656: an Animated card with no printed stats fights with this health. */
+/** R657: an Animated card with no printed stats fights with this health. */
 export const ANIMATED_FALLBACK_HEALTH = 1;
 
 /**

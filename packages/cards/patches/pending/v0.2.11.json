@@ -1,26 +1,13 @@
 {
   "version": "v0.2.11",
-  "title": "Patch v0.2.11: undo the v0.2.10 animated additions",
-  "sources": "Issue #218",
-  "notes": "Removes Animated and the unit faces from the eighteen Field Spells v0.2.10 animated; Ivory Tower's fusion (R653) and Final Gambit's R216 guard stay. Adds R656: an Animated card with no printed stats fights as a 0/1.",
+  "title": "Patch v0.2.11: aimed random casts and the Deft keyword",
+  "sources": "#181, #206",
+  "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
   "cards": [
-    "core-014",
-    "core-033",
-    "core-038",
-    "core-065",
-    "core-073",
-    "classic-004",
-    "classic-007",
-    "classic-062",
-    "classic-064",
-    "classic-087",
-    "classicplus-007",
-    "classicplus-012-5",
-    "classicplus-012-7",
-    "classicplus-031",
-    "classicplus-061",
-    "classicplus-063",
-    "classicplus-070",
-    "classicplus-078"
+    "core-045",
+    "classic-003",
+    "classicplus-010",
+    "classicplus-038-1",
+    "classicplus-040"
   ]
 }

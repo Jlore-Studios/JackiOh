@@ -23,7 +23,22 @@ fi
 
 apt-get update -qq
 apt-get install -y -qq git curl unzip zip jq build-essential ca-certificates gnupg python3 \
-  python3-venv python3-pip bubblewrap util-linux >/dev/null
+  python3-venv python3-pip bubblewrap util-linux cloud-guest-utils >/dev/null
+# A disk made larger in EC2 (Modify volume) is grown into by cloud-init at the next boot; this
+# grows the partition and the filesystem now, so the room counts without a restart.
+root_src="$(findmnt -no SOURCE / || true)"
+root_disk="$(lsblk -no PKNAME "$root_src" 2>/dev/null | head -1 || true)"
+root_part="$(cat "/sys/class/block/${root_src##*/}/partition" 2>/dev/null || true)"
+if [ -n "$root_disk" ] && [ -n "$root_part" ] \
+   && growpart "/dev/$root_disk" "$root_part" >/dev/null 2>&1; then
+  resize2fs "$root_src" >/dev/null 2>&1 || true
+fi
+# The system journal may otherwise take a tenth of the disk (up to 4 GB).
+mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nSystemMaxUse=200M\n' > /etc/systemd/journald.conf.d/night-vm.conf
+systemctl restart systemd-journald
+journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+
 # Codex sandboxes commands with bubblewrap, which Ubuntu's AppArmor blocks by default.
 echo 'kernel.apparmor_restrict_unprivileged_userns=0' > /etc/sysctl.d/60-codex-bwrap.conf
 sysctl -q -p /etc/sysctl.d/60-codex-bwrap.conf
@@ -67,56 +82,37 @@ ln -sfn "$devin_version" /usr/local/lib/devin/current
 ln -sf /usr/local/lib/devin/current/bin/devin /usr/local/bin/devin
 chmod -R a+rX /usr/local/lib/devin
 
-# After every job, as the runner's user: give back the disk the job used. The repo's packages
-# come back from the network next time; the checkout and the logins stay. The runner takes a hook
-# only by its extension (.sh, .ps1 or .js), and fails the job's last step otherwise.
+# The disk's clean-up (clean.sh, beside this script: on-machine.sh ships the folder), run as each
+# user: after every job by the runners' job-completed hook, and every ten minutes by the disk
+# timer below. The repo's packages come back from the network next time; the checkout and the
+# logins stay. The runner takes a hook only by its extension (.sh, .ps1 or .js), and fails the
+# job's last step otherwise.
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+install -m 755 "$here/clean.sh" /usr/local/bin/night-vm-clean.sh
 rm -f /usr/local/bin/night-vm-job-done
 cat > /usr/local/bin/night-vm-job-done.sh <<'EOF'
 #!/bin/bash
-# The runner runs this with `bash -e`; nothing here may fail the job, so errors are ignored.
-set +e
-if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
-  find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
-fi
-# The model job's worktrees lived in RUNNER_TEMP. Forget them, or the next checkout cannot reset
-# a branch one still claims ("used by worktree at ...") and clones the repository afresh.
-for repo in "$HOME"/actions-runner*/_work/*/*/; do
-  [ -d "$repo/.git" ] && git -C "$repo" worktree prune 2>/dev/null
-done
-# A subscription with more than one lane (Devin, Muse) may have another job going, whose install
-# reads the shared caches: those go only when this job is the user's last one running.
-if [ "$(pgrep -c -u "$(id -u)" -f Runner.Worker)" -le 1 ]; then
-  rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
-    "$HOME/.cache/Cypress" 2>/dev/null
-fi
-# What this user's jobs left in /tmp, once older than any job runs (job_budget_minutes, 330):
-# a younger one may be another lane's, still in use.
-find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +360 -exec rm -rf {} + 2>/dev/null
-if [ -d "$HOME/.codex/sessions" ]; then
-  find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
-fi
-# Muse keeps every session's log, a few hundred MB a day; the bot keeps its own transcripts. A
-# session untouched for 8 hours has ended (a call runs at most 150 minutes).
-muse_sessions="$HOME/.local/share/muse/sessions"
-if [ -d "$muse_sessions" ]; then
-  find "$muse_sessions" -mindepth 4 -maxdepth 4 -type d -mmin +480 -exec rm -rf {} + 2>/dev/null
-  find "$muse_sessions/.msp-view-v1" -mindepth 1 -maxdepth 1 -type d -mmin +480 \
-    -exec rm -rf {} + 2>/dev/null
-  find "$muse_sessions" -mindepth 1 -type d -empty -delete 2>/dev/null
-fi
-# Devin keeps every session in one SQLite file, about 700 MB a day; the bot never resumes one
-# (`devin -p` with `--export`). An open database is not deleted under a running session, so it
-# goes only when this job is the user's last one running; its login is credentials.toml, beside it.
-devin_cli="$HOME/.local/share/devin/cli"
-if [ -d "$devin_cli" ]; then
-  if [ "$(pgrep -c -u "$(id -u)" -f Runner.Worker)" -le 1 ]; then
-    rm -f "$devin_cli/sessions.db" "$devin_cli/sessions.db-wal" "$devin_cli/sessions.db-shm"
-  fi
-  find "$devin_cli/logs" "$devin_cli/summaries" -type f -mmin +480 -delete 2>/dev/null
-fi
+# The runner runs this with `bash -e` after every job, as the job's user; it must not fail the job.
+/usr/local/bin/night-vm-clean.sh --job || true
 exit 0
 EOF
 chmod 755 /usr/local/bin/night-vm-job-done.sh
+cat > /usr/local/bin/night-vm-disk <<'EOF'
+#!/bin/bash
+# Every ten minutes: each agent user cleans its own home as itself (night-vm-clean.sh), so a
+# lane that sits idle still gives back what its last job left, and the system trims its journal
+# and its package cache.
+for home in /home/agent-*; do
+  user="${home##*/}"
+  id "$user" >/dev/null 2>&1 || continue
+  runuser -u "$user" -- env -i HOME="$home" PATH=/usr/local/bin:/usr/bin:/bin \
+    /usr/local/bin/night-vm-clean.sh | logger -t night-vm-disk
+done
+journalctl --vacuum-size=200M >/dev/null 2>&1
+apt-get clean
+exit 0
+EOF
+chmod 755 /usr/local/bin/night-vm-disk
 
 # The newest GitHub Actions runner, unpacked once per user (register-runners.sh registers it).
 version="$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)"
@@ -200,8 +196,26 @@ OnUnitActiveSec=5min
 [Install]
 WantedBy=timers.target
 EOF
+cat > /etc/systemd/system/night-vm-disk.service <<'EOF'
+[Unit]
+Description=Give back the disk the night bot's jobs can do without
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/usr/local/bin/night-vm-disk
+EOF
+cat > /etc/systemd/system/night-vm-disk.timer <<'EOF'
+[Unit]
+Description=Clean the night machine's disk every ten minutes
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+[Install]
+WantedBy=timers.target
+EOF
 systemctl daemon-reload
-systemctl enable --now night-vm-idle-stop.timer >/dev/null 2>&1
+systemctl enable --now night-vm-idle-stop.timer night-vm-disk.timer >/dev/null 2>&1
 apt-get clean
 
 for cli in claude codex agy muse devin; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done

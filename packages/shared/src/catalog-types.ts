@@ -82,7 +82,9 @@ export type Keyword =
   /** R636: a Unit may attack twice each turn. */
   | { kind: "Windfury" }
   /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
-  | { kind: "Temporary" };
+  | { kind: "Temporary" }
+  /** A Unit may attack and switch position in the same turn (R49). */
+  | { kind: "Deft" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -112,6 +114,7 @@ export const KEYWORD_KINDS = [
   "Immune to Spells",
   "Windfury",
   "Temporary",
+  "Deft",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {
@@ -369,6 +372,12 @@ export type TargetDecl = {
    * target 2X" — and its mana mode names none (§8 Conventions).
    */
   forModes?: string[];
+  /**
+   * Whether the target pick is beneficial ("help") or harmful ("harm").
+   * Defaults to "harm". Used by random casts with `targetEnemies` to aim at
+   * friendly targets when beneficial and enemies when harmful (R656).
+   */
+  aim?: "harm" | "help";
 };
 
 /**

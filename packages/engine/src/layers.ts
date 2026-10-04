@@ -64,7 +64,7 @@ export function faceOf(state: GameState, instance: CardInstance): { attack: numb
   const face = instance.radiant ? def.radiant : def.base;
   const stats = wornStatsOverride(def, instance) ?? xStatsOf(face, instance);
   const keywords = tunedKeywords(printedKeywordsOf(state, instance), instance);
-  // R656: an Animated card with no stats from any source (no printed stats, no statsOverride, no X
+  // R657: an Animated card with no stats from any source (no printed stats, no statsOverride, no X
   // stats) fights as a 0/1 instead of dying as a 0/0 at the state check.
   const statless = stats === undefined && face.attack === undefined && face.health === undefined;
   const animated =

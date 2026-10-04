@@ -14,12 +14,13 @@ from harness import providers, vault
 from harness.config import LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner, RunResult
+from harness.state import item as state_item
 from harness.work import NOTES_FILE
 
-from tests.fakes import git, push_branch
-from tests.support import DAY, MACHINE, test_pool
+from tests.fakes import FakeGitHub, git, push_branch
+from tests.support import DAY, MACHINE, make_config, make_ctx, test_pool
 from tests.test_flow import Harness
-from tests.test_work import APPROVE, builder, changes, reviewer
+from tests.test_work import APPROVE, DONE, builder, changes, reviewer
 
 ALL = {"HARNESS_SECRETS_SET": " ".join(providers.SECRETS)}
 
@@ -268,6 +269,137 @@ class VaultDeliveryTests(unittest.TestCase):
         (out / "vault.enc").write_text("not a vault")
         log = Deliverer(h.ctx, planned, out, h.deliver_repo).run()["log"]
         self.assertIn("ignored a vault that is not sealed", log)
+
+
+def resolve(extra: dict[str, str] | None = None):
+    """A builder that resolves the conflict `main` left in src/game.txt, and writes `extra`."""
+    def handler(request):
+        target = request.cwd / "src" / "game.txt"
+        assert "<<<<<<<" in target.read_text(), target.read_text()
+        target.write_text("rules v2, with main's\n")
+        for name, text in (extra or {}).items():
+            (request.cwd / name).parent.mkdir(parents=True, exist_ok=True)
+            (request.cwd / name).write_text(text)
+        return RunResult(True, DONE)
+    return handler
+
+
+class ConflictCarryTests(unittest.TestCase):
+    """A change the review rule cleared, then left with conflicts by `main`: the revision that
+    resolves them ships on its own run's adversarial review, with no review run, when it started
+    from the cleared commit and changed nothing but the conflicted files."""
+
+    def conflicted(self, h, pr):
+        """`main` moves on and the branch no longer merges."""
+        push_branch(h.origin, h.root, "main", {"src/game.txt": "rules from main\n"})
+        h.gh.threads[pr]["mergeable_state"] = "dirty"
+
+    def cleared_pr(self, h):
+        """agy builds and approves it, muse approves it in a review run: the rule is met, and
+        then `main` conflicts with it."""
+        pr, built = ReviewRuleTests.build_on_agy(self, h)
+        next_run(h, "778")
+        h.night(FakeRunner({"review": reviewer(APPROVE)}))
+        self.assertIn(f"PR_{pr}", h.gh.auto_merge)
+        record = h.ctx.store.load()["items"][str(pr)]
+        self.assertEqual(record["cleared"]["sha"], built["head"])
+        self.assertEqual(record["cleared"]["by"], "`gemini` (medium), `muse` (medium)")
+        self.conflicted(h, pr)
+        next_run(h, "779")
+        return pr, built["head"]
+
+    def test_a_conflict_on_a_cleared_change_ships_on_its_own_review(self):
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        pr, cleared_sha = self.cleared_pr(h)
+        runner = FakeRunner({"revise": resolve(), "review": reviewer(APPROVE)})
+        planned, result = h.night(runner)
+        self.assertEqual((planned["action"], planned["source"], planned["provider"]),
+                         ("revise", "conflict", "agy"))
+        self.assertEqual((result["status"], planned["cleared"]["sha"]), ("approved", cleared_sha))
+        self.assertIn("it merges without another review run", h.gh.bot_comments(pr)[-2])
+        self.assertEqual([c.role for c in runner.calls], ["revise", "review"])
+        self.assertIn("Resolve the conflicts and change nothing else", runner.calls[0].prompt)
+        self.assertIn("yours is the only review of the resolution", runner.calls[1].prompt)
+        self.assertIn("resolved the conflicts in `src/game.txt`", runner.calls[1].prompt)
+        # No review run: auto-merge is back on, pinned to the resolved head.
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR})
+        self.assertEqual(h.gh.auto_merge_heads[f"PR_{pr}"], result["head"])
+        record = h.ctx.store.load()["items"][str(pr)]
+        self.assertEqual([r["family"] for r in record["votes"]["reviews"]], ["gemini"])
+        carried = record["votes"]["carried"]
+        self.assertEqual((carried["from"], carried["conflicts"]), (cleared_sha, ["src/game.txt"]))
+        # The resolved head is cleared in turn, so the next conflict carries again.
+        self.assertEqual((record["cleared"]["sha"], record["cleared"]["carried_from"]),
+                         (result["head"], cleared_sha))
+        self.assertEqual((record["cleared"]["by"], record["cleared"]["resolved_by"]),
+                         ("`gemini` (medium), `muse` (medium)", "`gemini` (medium)"))
+        comment = h.gh.bot_comments(pr)[-1]
+        self.assertIn(f"The reviews had cleared this change at `{cleared_sha[:12]}` (`gemini` "
+                      "(medium), `muse` (medium)). This revision only merged `main` and resolved "
+                      "the conflicts in `src/game.txt`, and its own reviewer approved that, so the "
+                      "clearance carries over and no review run is needed. Auto-merge is on",
+                      comment)
+
+    def test_a_resolution_that_changes_more_goes_back_to_review(self):
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        pr, cleared_sha = self.cleared_pr(h)
+        planned, result = h.night(FakeRunner({"revise": resolve({"src/extra.txt": "more\n"}),
+                                              "review": reviewer(APPROVE)}))
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.auto_merge, {})
+        record = h.ctx.store.load()["items"][str(pr)]
+        self.assertNotIn("carried", record["votes"])
+        self.assertEqual(record["cleared"]["sha"], cleared_sha)
+        self.assertIn("but that does not carry over: it changed more than the conflicts "
+                      "(`src/extra.txt`). `gemini` (medium) approved it, so it waits for a strong "
+                      "or medium model's review", h.gh.bot_comments(pr)[-1])
+
+    def test_a_branch_that_moved_after_the_reviews_does_not_carry(self):
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        pr, _ = self.cleared_pr(h)
+        # Someone pushed to the branch after the reviews cleared it; nobody reviewed that.
+        push_branch(h.origin, h.root, "bot/issue-12", {"src/other.txt": "unreviewed\n"},
+                    base="bot/issue-12")
+        runner = FakeRunner({"revise": resolve(), "review": reviewer(APPROVE)})
+        h.night(runner)
+        self.assertNotIn("change nothing else", runner.calls[0].prompt)
+        self.assertNotIn("yours is the only review", runner.calls[1].prompt)
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertIn("but that does not carry over: the branch had moved on from the commit they "
+                      "cleared", h.gh.bot_comments(pr)[-1])
+
+    def test_a_change_short_of_the_rule_has_nothing_to_carry(self):
+        """One medium approval of two: the change was never cleared, so its resolution waits for
+        the review run like any revision."""
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        pr, _ = ReviewRuleTests.build_on_agy(self, h)
+        self.assertNotIn("cleared", h.ctx.store.load()["items"][str(pr)])
+        self.conflicted(h, pr)
+        next_run(h, "778")
+        runner = FakeRunner({"revise": resolve(), "review": reviewer(APPROVE)})
+        planned, result = h.night(runner)
+        self.assertEqual((planned["source"], result["status"]), ("conflict", "approved"))
+        self.assertNotIn("cleared", planned)
+        self.assertNotIn("yours is the only review", runner.calls[1].prompt)
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.auto_merge, {})
+        self.assertNotIn("cleared this change", h.gh.bot_comments(pr)[-1])
+
+    def test_a_builder_that_reviews_in_its_own_run_goes_first(self):
+        """Devin takes an easy revision first, but nothing reviews in its run, so a conflict on a
+        cleared change goes to agy, whose own reviewer can carry the clearance."""
+        gh = FakeGitHub()
+        ctx = make_ctx(gh, at=DAY, cfg=make_config(env={"HARNESS_SECRETS_SET": ""},
+                                                   machine=("devin", "agy")))
+        gh.add_pull(9, "bot/issue-2", labels=(LABEL_PR, LABEL_REVISE, "difficulty:easy"))
+        ctx.store.update(lambda s: state_item(s, 9).update(kind="revise", source="conflict"))
+        self.assertEqual(plan_mod.peek(ctx).provider, "devin")
+        ctx.store.update(lambda s: state_item(s, 9).update(
+            cleared={"sha": "abc", "by": "`claude` (strong)"}))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["provider"], planned["cleared"]["sha"]), ("agy", "abc"))
+        self.assertIn("it merges without another review run", gh.bot_comments(9)[-1])
 
 
 if __name__ == "__main__":
