@@ -56,7 +56,8 @@ from harness.errors import GitHubError
 from harness.prompts import data
 from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           label_names, needs_plan, open_pull_for_branch, set_state_label,
+                           is_human, label_names, needs_plan,
+                           open_pull_for_branch, set_state_label,
                            strong_plan)
 from harness.state import item as state_item
 
@@ -626,7 +627,8 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
             return f"#{thread['number']} was left working by a run that ended"
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
-        if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if ("pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
+                or is_human(names)):
             continue
         record = state["items"].get(str(thread["number"]), {})
         if record.get("stop_requested"):
@@ -776,7 +778,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if "pull_request" not in thread:
             continue
         names = label_names(thread)
-        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED} or is_human(names):
             continue
         pull = ctx.gh.get_pull(int(thread["number"]))
         record = state["items"].get(str(pull["number"]), {})

@@ -91,8 +91,13 @@ more than one, the highest counts, and any other `priority:*` label counts as no
 the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
 every tier. A priority label never makes work eligible or ineligible.
 
-**`human`** takes work away from every model: a person will do it. No model picks it up,
-whatever else it is labelled, forced or not.
+**`human`** takes work away from the bot altogether: people do it. That is a decision, an
+account or a secret, repository work the bot may not do (a change to `bot/`, `.harness/` or
+`.github/`), or work a person is already building. No model picks it up, whatever else it is
+labelled, forced or not, and the bot never touches it: it is never queued, planned or built,
+gets no `bot:*` stage label, and a conflicted `human` pull request is not revised. A
+`/harness build`, an assignment or a mention gets one reply saying so, and nothing else. Take
+the label off to hand it to the bot.
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -239,7 +244,7 @@ needs level 3.
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong; none counts as medium, and with several the hardest counts ([below](#difficulty-and-tiers)) |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
-| `human` | a person will do it; no model picks it up |
+| `human` | people do it; the bot never queues, plans, builds or labels it |
 
 ## Triage
 
@@ -257,8 +262,8 @@ opens, from a Devin call (`triage.py`):
   - **`apply`**, on GitHub's runner, holds the write token and runs no model.
 - **What `apply` changes:**
   - **Labels:** only the repository's own, never a `bot:` one.
-  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, so the night
-    bot skips it. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
+  - **Assignees:** a human task goes to MaxGoetzmann and jgoetzmann, with `human`, which the
+    night bot never touches. A bot task (an issue) is assigned to the bot, which queues it (the sweep answers
     the assignment).
   - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
     doesn't already, and only if every version number survives. A pull request keeps its title,
@@ -699,7 +704,7 @@ days.
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` (Opus only) |
-| keep an item from every model | label it `human` |
+| keep the bot off an item altogether | label it `human` |
 | change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
