@@ -21,13 +21,16 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
+import { portraitOrDefault } from "@jackioh/shared";
 
+import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
+import { visiblePool, type CardWinRateInfo, type PoolFilter, type PoolSort } from "./filters.ts";
+import { getCardStats } from "../../net/api.ts";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import {
   DB_DETAIL_ADD,
@@ -90,6 +93,8 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
+  /** R641, issue §8: the deck's hero portrait changed; saved through the same upsert. */
+  onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
   /** Saves now, without waiting for the debounce. */
@@ -120,7 +125,7 @@ function joinNames(names: readonly string[]): string {
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal } = props;
-  const { filter, onFilter, sort, onSort, onRename, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
 
   const label = deckLabel(deck, limits.nameLength);
   const [compare, setCompare] = useState<Compare>(NO_COMPARE);
@@ -178,7 +183,31 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     return clashing;
   }, [deck.cards, holders]);
 
-  const pool = useMemo(() => visiblePool(catalog, collection, filter, sort), [catalog, collection, filter, sort]);
+  const [winRates, setWinRates] = useState<Map<string, CardWinRateInfo> | null>(null);
+
+  useEffect(() => {
+    if (sort.key === "winRate" && winRates === null) {
+      let cancelled = false;
+      getCardStats()
+        .then((res) => {
+          if (cancelled) return;
+          const map = new Map<string, CardWinRateInfo>();
+          for (const card of res.cards) {
+            map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
+          }
+          setWinRates(map);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [sort.key, winRates]);
+
+  const pool = useMemo(
+    () => visiblePool(catalog, collection, filter, sort, winRates ?? undefined),
+    [catalog, collection, filter, sort, winRates],
+  );
   const verdict = useMemo(
     () => deckVerdict(deck, catalog, collection, limits.nameLength),
     [deck, catalog, collection, limits.nameLength],
@@ -322,6 +351,14 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
         ← All decks
       </button>
+      {/* Issue §8: the deck's portrait. The picker holds the whole roster and the previews;
+          picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
+      <PortraitPicker
+        portrait={portraitOrDefault(deck.portrait)}
+        onPick={(next) => {
+          onPortrait(next);
+        }}
+      />
       <label className="ws-name" htmlFor={nameId}>
         <span className="ws-field-label">Deck name</span>
         <input
@@ -545,6 +582,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           }
           onInspect={openDetail}
           detail={detail}
+          showStats
           onCloseDetail={() => {
             setDetailCardId(null);
           }}

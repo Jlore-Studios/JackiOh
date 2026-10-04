@@ -21,6 +21,7 @@
  */
 
 import type { Action, ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
+import { emoteGate, portraitOrDefault } from "@jackioh/shared";
 import { MATCH_ACTIONS_PER_SECOND } from "../config";
 import type { LastBoardEntry, MatchActionRow, MatchClocks, MatchRow, MatchSeat } from "../api/ports";
 import type { ActorDeps, ClockExpiry, ClockView, MatchClock, Socket } from "./contracts";
@@ -29,8 +30,10 @@ import {
   ackMessage,
   clockMessage,
   encode,
+  emoteRelayMessage,
   errorMessage,
   parseClientMessage,
+  portraitsMessage,
   promptForOpponent,
   promptForYou,
   SERVER_NONCE_PREFIX,
@@ -118,6 +121,14 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
   const sockets: Record<PlayerId, Socket | null> = { p1: null, p2: null };
   /** One window per seat; see `floodExceeded`. */
   const recentActions: Record<PlayerId, number[]> = { p1: [], p2: [] };
+  /**
+   * R643: each seat's recent emote sends, the one input the shared `emoteGate` decides on. The
+   * client runs the same gate against its own copy, so the two can never disagree about the
+   * limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
+   */
+  const emoteHistory: Record<PlayerId, number[]> = { p1: [], p2: [] };
+  /** R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them. */
+  const portraits = match.portraits ?? [portraitOrDefault(null), portraitOrDefault(null)];
   /**
    * A rebuilt actor whose log already ends in a result and whose row is already `finished` has
    * nothing left to record. One that is still `live` crashed between the terminal action and the
@@ -458,8 +469,20 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
         fireAndForget(async () => {
           pushView(player);
           pushClock(player);
+          // R642: portraits ride again on a reconnect, as on join.
+          send(player, portraitsMessage(portraits[0], portraits[1]));
         }, "hello");
         return;
+
+      case "emote": {
+        // R643: same gate the client ran. A fail is a silent drop — no error, no rejected-action
+        // log; a pass relays to the opponent only (the sender already showed it locally).
+        const gate = emoteGate(emoteHistory[player], deps.timers.now());
+        if (!gate.ok) return;
+        emoteHistory[player] = [...gate.sentAt, deps.timers.now()];
+        send(other(player), emoteRelayMessage(player, message.emote));
+        return;
+      }
 
       case "joinRoom":
         send(
@@ -539,9 +562,10 @@ export function createMatchActor(deps: ActorDeps, input: MatchActorInput): Match
     fireAndForget(async () => {
       clock.clearGrace(player);
       await persistClocks();
-      // §9.5: a fresh full view, never a log replay.
+      // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it.
       pushView(player);
       pushClock(player);
+      send(player, portraitsMessage(portraits[0], portraits[1]));
       pushClock(other(player));
     }, "attach");
   }

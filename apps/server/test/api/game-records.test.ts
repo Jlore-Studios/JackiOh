@@ -125,7 +125,13 @@ describe("live game records (§9.11)", () => {
           reason: "hero-death",
           turns: 3,
           seats: {
-            p1: { deck: P1_DECK, opening: P1_DECK.slice(0, 3), drawn: [], played: ["test-lethal"] },
+            p1: {
+              deck: P1_DECK,
+              opening: P1_DECK.slice(0, 3),
+              drawn: [],
+              played: ["test-lethal"],
+              playedTurns: [3],
+            },
             p2: { deck: P2_DECK, opening: P2_DECK.slice(0, 3), drawn: [], played: [] },
           },
         },

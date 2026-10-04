@@ -4,11 +4,11 @@
  *
  * This file replaces the single three-deck loadout. A profile keeps up to `MAX_SAVED_DECKS` named
  * decks and up to `MAX_SAVED_TRIOS` trios built from them, and both are DRAFTS (R250, R252): a
- * save checks structure only — D1–D4 for a deck, T1–T3 for a trio — and legality is judged when a
- * deck or a trio is queued (R253). So the save routes below never call the L1–L6 validator, and
- * the queue-time helpers at the bottom always do.
+ * save checks structure only — D1–D5 for a deck (R641 added the portrait's), T1–T3 for a trio —
+ * and legality is judged when a deck or a trio is queued (R253). So the save routes below never
+ * call the L1–L6 validator, and the queue-time helpers at the bottom always do.
  *
- * No rule is written here. D1–D4, T1–T3 and `normalizeName` are `@jackioh/validator`'s, reached
+ * No rule is written here. D1–D5, T1–T3 and `normalizeName` are `@jackioh/validator`'s, reached
  * through `loadout-validator.ts` (the server's one importer of that package); L1–L6 are the
  * `LoadoutValidator` port. Every refusal passes the shared module's issues through untouched as
  * `details`, with the first one's sentence as the message, so the deck builder and the server say
@@ -26,8 +26,9 @@ import {
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
 } from "../config";
+import { isPortraitId } from "@jackioh/shared";
 import { callerProfile, ownedMap } from "./collection";
-import { ApiError, badRequest, ok, route, str, stringList, type Route } from "./http";
+import { ApiError, badRequest, ok, optionalStr, route, str, stringList, type Route } from "./http";
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName, TRIO_DECKS } from "./loadout-validator";
 import type {
   FrozenDeck,
@@ -75,6 +76,7 @@ function deckView(deck: SavedDeck): DeckView {
     id: deck.id,
     name: deck.name,
     cards: [...deck.cards],
+    portrait: deck.portrait,
     catalogVersion: deck.catalogVersion,
     createdAt: deck.createdAt,
     updatedAt: deck.updatedAt,
@@ -282,13 +284,14 @@ export function createDeckRoutes(): Route[] {
       });
     }),
 
-    /** R250, R256: create or replace one deck. D1–D4 only: a draft may be incomplete or unowned. */
+    /** R250, R256: create or replace one deck. D1–D5 only: a draft may be incomplete or unowned. */
     route("PUT", "/api/decks/:id", "active", async (req, deps) => {
       const profile = callerProfile(req);
       const id = pathIdOf(req.params["id"], "deck");
       const rawName = nameOf(req.body);
       const cards = stringList(req.body, "cards");
       const catalogVersion = str(req.body, "catalogVersion");
+      const portrait = optionalStr(req.body, "portrait");
 
       assertCurrentCatalog(deps, catalogVersion);
       const name = normalizeName(rawName);
@@ -297,6 +300,8 @@ export function createDeckRoutes(): Route[] {
         cards,
         isDeckable: deckableIn(deps),
         nameMaxLength: DECK_NAME_MAX_LENGTH,
+        portrait,
+        isPortrait: isPortraitId,
       });
       const first = issues[0];
       if (first !== undefined) throw draftRefused(first.message, issues);
@@ -309,6 +314,7 @@ export function createDeckRoutes(): Route[] {
           profileId: profile.id,
           name,
           cards: [...cards],
+          portrait,
           catalogVersion,
           createdAt: now,
           updatedAt: now,
@@ -434,7 +440,14 @@ export function createDeckRoutes(): Route[] {
           const at = now + order;
           order += 1;
           const outcome = await t.decks.upsert(
-            { ...deck, profileId: profile.id, catalogVersion: input.catalogVersion, createdAt: at, updatedAt: at },
+            {
+              ...deck,
+              profileId: profile.id,
+              portrait: null,
+              catalogVersion: input.catalogVersion,
+              createdAt: at,
+              updatedAt: at,
+            },
             MAX_SAVED_DECKS,
           );
           if (outcome !== "created" && outcome !== "updated") throw importOutcomeRefused("deck", outcome);
@@ -600,7 +613,7 @@ function assertLegal(
 
 /** A copy, so a frozen deck can never alias the stored one. */
 function freeze(deck: SavedDeck): FrozenDeck {
-  return { name: deck.name, cards: [...deck.cards] };
+  return { name: deck.name, cards: [...deck.cards], portrait: deck.portrait };
 }
 
 /**

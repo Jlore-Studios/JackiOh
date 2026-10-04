@@ -297,7 +297,7 @@ export function ratingWindow(waitedSeconds: number): number {
 /**
  * SPEC §11 R603: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
  * depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
- * ratings and only the deviation and volatility are new (migration 0019).
+ * ratings and only the deviation and volatility are new (migration 0022).
  */
 export const RATING_START = 1000;
 /** R603: a new profile's rating deviation: Glickman's starting value, the most uncertain rating. */
@@ -574,6 +574,44 @@ export const PLAYER_SETTINGS_TEXT_MAX_LENGTH = 40;
 export const PLAYER_SETTINGS_BYTES_MAX = 4096;
 
 // ---------------------------------------------------------------------------------------------
+// Public card and player statistics (SPEC §9.11, R654).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * SPEC §11 R654: live ranked and unranked games (tutorial excluded) logged per patch before public
+ * stats flip from provisional (padded with AI development runs) to live-only figures.
+ */
+export const PUBLIC_STATS_MIN_LIVE_GAMES = 1000;
+
+/**
+ * SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
+ * the row displays "not enough games".
+ */
+export const CARD_STATS_MIN_SAMPLE = 20;
+
+/**
+ * SPEC §11 R654: cost bucket boundary for card statistics filters.
+ * Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
+ */
+export const CARD_STATS_CURVE_TOP = 6;
+
+/** Cache-Control max-age in seconds for public card statistics endpoints. */
+export const CARD_STATS_CACHE_TTL_SECONDS = 300;
+
+/** Cache-Control max-age in seconds for public player statistics endpoints. */
+export const PLAYER_STATS_CACHE_TTL_SECONDS = 60;
+
+/** Maximum players per page returned by GET /api/stats/players. */
+export const PLAYER_STATS_PAGE_LIMIT = 50;
+
+/**
+ * The most text the stored player statistics JSON of one account may come to, in bytes.
+ * Bounds request body and stored payload.
+ */
+export const PLAYER_STATS_BYTES_MAX = 16384;
+
+
+// ---------------------------------------------------------------------------------------------
 // Derived millisecond helpers, since timers (setTimeout/alarms) take milliseconds.
 // ---------------------------------------------------------------------------------------------
 
@@ -690,6 +728,13 @@ export const SERVER_CONFIG = Object.freeze({
   PLAYER_SETTINGS_NAME_MAX_LENGTH,
   PLAYER_SETTINGS_TEXT_MAX_LENGTH,
   PLAYER_SETTINGS_BYTES_MAX,
+  PUBLIC_STATS_MIN_LIVE_GAMES,
+  CARD_STATS_MIN_SAMPLE,
+  CARD_STATS_CURVE_TOP,
+  CARD_STATS_CACHE_TTL_SECONDS,
+  PLAYER_STATS_CACHE_TTL_SECONDS,
+  PLAYER_STATS_PAGE_LIMIT,
+  PLAYER_STATS_BYTES_MAX,
   TURN_CLOCK_MS,
   PROMPT_CLOCK_MS,
   MULLIGAN_CLOCK_MS,

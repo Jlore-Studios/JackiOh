@@ -820,12 +820,12 @@ describe("C+ #50 Adaptive Growth lights up while you control fewer Units (R195)"
     });
   }
 
-  it("R195 with fewer Units it glows in hand, and the Spell then gives every Unit −3/−3", () => {
+  it("R195 with fewer Units it glows in hand, and the Spell then gives every Unit −2/−2", () => {
     const s = growth(1, 2);
     expect(handGlows(s, s.card(GROWTH))).toBe(true);
     s.play(GROWTH);
-    s.expectStats(s.unit("p1", 1) ?? "", { attack: 1, health: 1 });
-    s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
+    s.expectStats(s.unit("p1", 1) ?? "", { attack: 2, health: 2 });
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 2, health: 2 });
   });
 
   it("R195 with equal counts it does not glow, and the Spell then gives every Unit +2/+2", () => {
@@ -841,12 +841,12 @@ describe("C+ #50 Adaptive Growth lights up while you control fewer Units (R195)"
     expect(handGlows(s, s.card(GROWTH))).toBe(false);
   });
 
-  it("R195 the radiant face glows on the same count: fewer, and only the enemy Units get −4/−4", () => {
+  it("R195 the radiant face glows on the same count: fewer, and only the enemy Units get −3/−3", () => {
     const s = growth(1, 2, true);
     expect(handGlows(s, s.card(GROWTH))).toBe(true);
     s.play(GROWTH);
     s.expectStats(s.unit("p1", 1) ?? "", { attack: 4, health: 4 });
-    expect(s.unit("p2", 1)).toBeNull();
+    s.expectStats(s.unit("p2", 1) ?? "", { attack: 1, health: 1 });
   });
 
   it("R195 the radiant face with equal counts does not glow, and gives your Units +3/+3", () => {

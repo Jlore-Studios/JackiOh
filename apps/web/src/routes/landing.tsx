@@ -317,6 +317,14 @@ function Actions(): ReactElement {
         >
           Build decks
         </a>
+        <a
+          className="landing-cta landing-cta--secondary"
+          href={paths.stats}
+          data-testid={landingTestid.statsLink}
+          onClick={followInApp(paths.stats)}
+        >
+          Stats
+        </a>
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>

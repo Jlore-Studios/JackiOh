@@ -5,7 +5,7 @@
 
 import type { GameEvent, PlayerId, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
-import { registerCatalog } from "../src/catalog";
+import { findDef, pickGenerated, query, registerCatalog } from "../src/catalog";
 import { GRAPE_ODDS, HAND_CAP } from "../src/config";
 import {
   addRolledGrapes,
@@ -251,6 +251,62 @@ describe("drawPriced (C+ #65.2, #65.3)", () => {
     expect(cast?.zone.z).toBe("graveyard");
     expect(next?.zone.z).toBe("hand");
     expect(next?.costMod).toBe(0);
+  });
+});
+
+describe("pickGenerated (R382)", () => {
+  it("passes a non-Grape pick through: the same seed draws the same def as rng.pick, in one draw", () => {
+    game("pick-through");
+    const pool = query({ type: "Spell", notTags: ["Token"] });
+    expect(pool.length).toBeGreaterThan(1);
+    expect(pool.some((def) => GRAPE_IDS.includes(def.id))).toBe(false);
+    const a = createRng("pick-through-seed");
+    const b = createRng("pick-through-seed");
+    expect(pickGenerated(a, pool)).toBe(b.pick(pool));
+    expect(a.cursor).toBe(1);
+  });
+
+  it("R382 a Grape pick is re-rolled by GRAPE_ODDS: a pool holding only one Grape deals the odds, not that Grape", () => {
+    game("pick-grape");
+    const only = findDef(null, GRAPE_IDS[4] ?? "");
+    if (only === undefined) throw new Error("fixture Mythic Grape");
+    const pool = [only];
+    const counts = new Map<string, number>();
+    const seeds = 300;
+    for (let i = 0; i < seeds; i += 1) {
+      const got = pickGenerated(createRng(`pick-grape-${i}`), pool);
+      expect(got === undefined || GRAPE_IDS.includes(got.id)).toBe(true);
+      counts.set(got?.id ?? "", (counts.get(got?.id ?? "") ?? 0) + 1);
+    }
+    const count = (id: string): number => counts.get(id) ?? 0;
+    // The odds, not the pool's one entry: Normal (60%) is the plurality, and the pool's own Mythic
+    // entry is not what comes out (it would be all 300 without the re-roll).
+    expect(count(GRAPE_IDS[1] ?? "")).toBeGreaterThan(count(GRAPE_IDS[2] ?? ""));
+    expect(count(GRAPE_IDS[1] ?? "")).toBeGreaterThan(count(GRAPE_IDS[0] ?? ""));
+    expect(count(GRAPE_IDS[0] ?? "")).toBeGreaterThanOrEqual(5);
+    expect(count(GRAPE_IDS[3] ?? "")).toBeGreaterThanOrEqual(1);
+    expect(count(GRAPE_IDS[4] ?? "")).toBeLessThanOrEqual(12);
+    expect(count(GRAPE_IDS[4] ?? "")).toBeLessThan(seeds);
+  });
+
+  it("draws one extra number only when a Grape was picked: one draw else, two for a Grape", () => {
+    game("pick-draws");
+    const plain = query({ type: "Spell", notTags: ["Token"] });
+    const grape = findDef(null, GRAPE_IDS[0] ?? "");
+    if (grape === undefined) throw new Error("fixture Rotten Grape");
+    const through = createRng("pick-draws");
+    pickGenerated(through, plain);
+    expect(through.cursor).toBe(1);
+    const rerolled = createRng("pick-draws");
+    pickGenerated(rerolled, [grape]);
+    expect(rerolled.cursor).toBe(2);
+  });
+
+  it("an empty pool is undefined and draws nothing", () => {
+    game("pick-empty");
+    const rng = createRng("pick-empty");
+    expect(pickGenerated(rng, [])).toBeUndefined();
+    expect(rng.cursor).toBe(0);
   });
 });
 

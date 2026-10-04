@@ -96,6 +96,8 @@ export const paths = {
   almanac: "/almanac",
   /** R608, R612: the global ranked ladder (routes/leaderboard.tsx). Gated: every read needs an account. */
   leaderboard: "/leaderboard",
+  /** R654: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
+  stats: "/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

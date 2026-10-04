@@ -89,7 +89,7 @@ export async function onlineReset(): Promise<OnlineResetResult> {
       const p2Rating = row.p2 === null ? p1Rating : (byId.get(row.p2) ?? p1Rating);
       if (row.server_owned) {
         // A RANKED match, or one a series calls its game in play: `app.end_match` refuses both
-        // since migration 0019, because the rating move, the ladder write and the series
+        // since migration 0022, because the rating move, the ladder write and the series
         // transition live only in the server's result write. The reset cannot reproduce that
         // write — but it can end the match the honest way the reset always has: a winnerless
         // ceiling draw with ratings passed back unchanged (which is also what an abandoned
@@ -121,7 +121,7 @@ export async function onlineReset(): Promise<OnlineResetResult> {
         continue;
       }
       // No winner: a draw, so neither rating is meant to move, and passing the current values
-      // back is how `end_match` is told that. The ratings are doubles since migration 0019
+      // back is how `end_match` is told that. The ratings are doubles since migration 0022
       // widened the column and the function from int — an ::int cast would refuse a real one.
       await client.query(
         "select app.end_match($1::uuid, null, 'match-ceiling', 0, $2::double precision, $3::double precision)",

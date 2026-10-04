@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CATALOG, CATALOG_VERSION } from "../src/catalog-data";
-import { INDEX_JSON, buildIndex, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
+import { INDEX_JSON, buildIndex, changedFields, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
 import { versionsAtSites } from "../scripts/patch";
 
 const PATCHES = readPatches();
@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5", "v0.2.10"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.4");
+    expect(CATALOG_VERSION).toBe("v0.2.10");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -103,6 +103,22 @@ describe("R388 card patch history (B4.2)", () => {
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
   });
 
+  it("R388 records patch v0.2.10: eighteen Field Spells Animated and Ivory Tower's text (issue #113)", () => {
+    expect(idsOf("v0.2.10", "added")).toEqual([]);
+    expect(idsOf("v0.2.10", "changed")).toEqual([
+      "core-014", "core-033", "core-038", "core-065", "core-073",
+      "classic-004", "classic-007", "classic-052", "classic-062", "classic-064", "classic-087",
+      "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031", "classicplus-033",
+      "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+    ]);
+    const after = readSnapshot("v0.2.10");
+    const keywords = (id: string): unknown => (after[id]?.["base"] as { keywords?: { kind: string }[] } | undefined)?.keywords?.[0]?.kind;
+    expect(keywords("core-073")).toBe("Animated");
+    expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
+    // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing printed does.
+    expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
+  });
+
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
     expect(idsOf("v0.2.4", "added")).toHaveLength(0);
     expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
@@ -112,6 +128,53 @@ describe("R388 card patch history (B4.2)", () => {
         (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
       ),
     ).toBe(true);
+  });
+
+  it("R388 records patch v0.2.5: small set of mechanics changes (issue #149)", () => {
+    expect(idsOf("v0.2.5", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.5", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.5", "changed")).toHaveLength(22);
+    const fieldsOf = (id: string): string[] => {
+      const change = changesOf("v0.2.5").find((c) => c.id === id);
+      return change?.kind === "changed" ? [...change.fields].sort() : [];
+    };
+    // Seventeen cards gain the Plague tag and nothing else.
+    const plague = idsOf("v0.2.5", "changed").filter((id) => fieldsOf(id).includes("tags"));
+    expect(plague).toHaveLength(17);
+    expect(plague.every((id) => JSON.stringify(fieldsOf(id)) === JSON.stringify(["tags"]))).toBe(true);
+    // The mechanics: Exile's threshold, Joro's Spell-only text, Blade Storm's Whirlwind cast and
+    // refs, Adaptive Growth's numbers, Chaos Machine's other-card text. A face counts as changed
+    // when its printed words move, even when only a param's value moved (Exile's base face,
+    // Adaptive Growth's Radiant face).
+    expect(fieldsOf("classic-010")).toEqual(["base.text", "params"]);
+    expect(fieldsOf("classic-033")).toEqual(["base.text", "radiant.text"]);
+    expect(fieldsOf("classicplus-032-3")).toEqual(["base.text", "refs"]);
+    expect(fieldsOf("classicplus-050")).toEqual(["base.text", "loc", "params", "radiant.text"]);
+    expect(fieldsOf("classicplus-070")).toEqual(["base.text", "loc", "radiant.text"]);
+    const before = readSnapshot("v0.2.4");
+    const after = readSnapshot("v0.2.5");
+    const param = (snapshot: Catalog, id: string, key: string): unknown =>
+      (snapshot[id]?.["params"] as { key: string; base: number; radiant: number }[] | undefined)?.find(
+        (p) => p.key === key,
+      );
+    expect(param(before, "classic-010", "threshold")).toMatchObject({ base: 1, radiant: 3 });
+    expect(param(after, "classic-010", "threshold")).toMatchObject({ base: 2, radiant: 3 });
+    expect(param(before, "classicplus-050", "debuff")).toMatchObject({ base: 4, radiant: 4 });
+    expect(param(after, "classicplus-050", "debuff")).toMatchObject({ base: 2, radiant: 3 });
+  });
+
+  it("R388 changedFields compares a face's text as it prints, its params filled in", () => {
+    const face = (threshold: number, tail: string): Record<string, unknown> => ({
+      params: [{ key: "threshold", base: threshold, radiant: 3 }],
+      base: { keywords: [], text: `Counter a ({threshold}) Cost or less card. ${tail}` },
+      radiant: { keywords: [], text: "No placeholder here." },
+    });
+    // Only the value moved: the template is untouched, but the printed base face is reworded.
+    expect(changedFields(face(1, ""), face(2, ""))).toEqual(["params", "base.text"]);
+    // The template moved: the raw and the printed faces differ together.
+    expect(changedFields(face(1, "Draw 1."), face(1, "Draw 2."))).toEqual(["base.text"]);
+    // Nothing moved: no fields.
+    expect(changedFields(face(1, ""), face(1, ""))).toEqual([]);
   });
 
   it("R388 indexes each card by the versions that added or changed it", () => {

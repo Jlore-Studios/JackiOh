@@ -22,12 +22,12 @@
 // "Trigger the Cry", "Set a hero's health", "End your turn"), keeping only grammatical plurals
 // ("Plague Tokens") and specific prompts ("Look at your opponent's hand").
 //
-// Patch v0.2.0 added the §6 rows its card texts print (R512):
-// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position",
-//   "Can't be attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
-//   gets no row: the one card that names it (Classic+ #33 Ivory Tower) writes it mid-sentence in
-//   lower case ("That Unit can't attack or be attacked"), and matching stays case-sensitive, as
-//   "may tribute enemy units" stays plain words.
+// Patch v0.2.0 adds the §6 rows its card texts print (R512):
+// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
+//   catalog's spelling of SPEC's "Cannot be in Defense Position", which stays an alias), "Can't be
+//   attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
+//   gets no row: no card prints it since patch v0.2.10 (it is the rule of a Unit a carrier holds,
+//   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one row for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
 //   the count or the ♾️ with the label, as it takes "Armor 2").
 // - §6.3's Counter, Steal, Unlock, Flicker, Plague Token (and "Plague Tokens"), Redirect, Set health,

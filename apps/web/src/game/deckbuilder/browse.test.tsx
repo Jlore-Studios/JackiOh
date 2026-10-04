@@ -181,6 +181,10 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     asc: ["x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04", "x-03", "x-05", "x-06", "x-07"],
     desc: ["x-07", "x-06", "x-05", "x-03", "x-01", "x-02", "x-09", "x-08", "x-11", "x-10", "x-04"],
   },
+  winRate: {
+    asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+    desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+  },
 };
 
 function owned(ids: readonly string[]): string[] {
@@ -470,7 +474,7 @@ describe("filtering (B31)", () => {
       ...FILTER_TAGS.map(filterTagId),
       ...FILTER_RARITIES.map(filterRarityId),
     ];
-    expect(ids).toHaveLength(3 + 8 + 5 + 10 + 5);
+    expect(ids).toHaveLength(3 + 8 + 5 + 11 + 5);
     for (const id of ids) {
       const chip = within(filters).getByTestId(id);
       expect(chip.tagName, id).toBe("BUTTON");

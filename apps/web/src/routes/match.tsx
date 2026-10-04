@@ -30,6 +30,9 @@ import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
+import { getAudioEngine } from "../audio/index.ts";
+import { useEmotes } from "../emotes/useEmotes.ts";
+import { useSetting } from "../settings/index.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import {
   installDevHandle,
@@ -229,6 +232,26 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   );
 
   const view = match.view;
+
+  // R643–R644: the match's emote session. The local seat's sends emit through the socket
+  // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
+  // frame so the same emote twice still notifies. The device setting mutes the opponent live.
+  const globalMuteEmotes = useSetting("muteOpponentEmotes");
+  const emotes = useEmotes({
+    portraits: match.portraits,
+    emit: match.sendEmote,
+    engine: getAudioEngine(),
+    globalMute: globalMuteEmotes,
+    you: view?.viewer ?? "p1",
+  });
+  const relayed = match.emote;
+  const lastRelaySeq = useRef(0);
+  useEffect(() => {
+    if (relayed === null || relayed.seq === lastRelaySeq.current) return;
+    lastRelaySeq.current = relayed.seq;
+    emotes.receive(relayed.from, relayed.emote);
+  }, [relayed, emotes]);
+
   // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
   // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
@@ -311,6 +334,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      emotes={emotes}
       trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}

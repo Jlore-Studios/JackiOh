@@ -30,6 +30,13 @@ export type Settings = {
   hoverPreviews: boolean;
   /** Visuals. Force reduced motion on top of the OS preference (`--anim-scale: 0`). */
   reduceMotion: boolean;
+  /**
+   * Audio/social. R644: mute every opponent's emotes in every match — they are never drawn and
+   * never heard. Default off, stored per device like the rest of this file (issue §5).
+   */
+  muteOpponentEmotes: boolean;
+  /** Privacy. Share player statistics on the public stats page. Default true. */
+  publicStats: boolean;
 };
 
 export type SettingKey = keyof Settings;
@@ -42,6 +49,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   autoEndTurn: true,
   hoverPreviews: true,
   reduceMotion: false,
+  muteOpponentEmotes: false,
+  publicStats: true,
 });
 
 /** The keys `parseSettings` keeps, in the order they are written to storage. */
@@ -51,6 +60,8 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "autoEndTurn",
   "hoverPreviews",
   "reduceMotion",
+  "muteOpponentEmotes",
+  "publicStats",
 ];
 
 /** `<html data-reduce-motion="true">`; settings.css maps it to `--anim-scale: 0` (B22). */

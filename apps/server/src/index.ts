@@ -39,6 +39,7 @@ import { createRecordResult, reapStuckMatches } from "./api/results";
 import { purgeExpired } from "./api/retention";
 import { createSeriesRoutes, startSeriesSweeper } from "./api/series";
 import { createSettingsRoutes } from "./api/settings";
+import { createStatsRoutes } from "./api/stats";
 import { createTutorialRoutes } from "./api/tutorial";
 import { MATCH_REAPER_INTERVAL_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS } from "./config";
 import { loadEnv, type ServerEnv } from "./env";
@@ -127,7 +128,7 @@ const E2E_ENV_DEFAULTS: Readonly<Record<string, string>> = {
   DATABASE_URL: "memory://e2e-fixture-store",
   CODE_PEPPER: "e2e-fixture-code-pepper-not-a-secret-abcdefgh",
   PUBLIC_ORIGINS: VITE_DEV_ORIGINS.join(","),
-  CATALOG_VERSION: "v0.2.4",
+  CATALOG_VERSION: "v0.2.10",
 };
 
 function e2eRequested(source: Record<string, string | undefined>): boolean {
@@ -262,6 +263,7 @@ export function allRoutes(): Route[] {
     ...createTutorialRoutes(),
     ...createRankedRoutes(),
     ...createSettingsRoutes(),
+    ...createStatsRoutes(),
   ];
 }
 

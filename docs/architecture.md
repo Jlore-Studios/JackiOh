@@ -559,8 +559,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0008_queue_modes.sql` → `0009_series.sql` → `0010_jlockeed_tag.sql` →
    `0011_tutorial_progress.sql` → `0012_account_deletion.sql` → `0013_retention_purge.sql` →
    `0014_game_records.sql` → `0015_classic_sets_tags.sql` → `0016_catalog_growth_grants.sql` →
-   `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_ranked_ladder.sql` — and records them
-   in `app.migrations`. Expected result: 24 tables
+   `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
+   `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` — and records them
+   in `app.migrations`. Expected result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `db:seed-catalog` can
@@ -573,7 +574,7 @@ step that is not yet implemented says which BUILD task delivers it.
    server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
    R565). 0018 adds `player_settings` and its one write path, `app.merge_player_settings` (R633,
    R634), which keeps a player's game settings on the account; like 0011 it needs nothing else from
-   the bring-up. 0019 is the ranked ladder (R603–R612): Glicko ratings go fractional and gain the
+   the bring-up. 0022 is the ranked ladder (R603–R612): Glicko ratings go fractional and gain the
    deviation and volatility columns, `matches` and `series` gain their `ranked` flag, and the four
    server-only tables land — `seasons`, `season_ranks`, `bot_ratings`, `rated_games`. On a project
    that already has players it also narrows the client grants on `profiles`, `tickets` and

@@ -15,9 +15,9 @@
  * actor.
  */
 
-import type { PlayerId } from "@jackioh/shared";
+import { PLAYER_IDS, portraitOrDefault, type PlayerId } from "@jackioh/shared";
 import { ApiError } from "../api/http";
-import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, StartMatchInput } from "../api/ports";
+import type { LastBoardEntry, MatchClocks, MatchDirectory, MatchRow, QueueMode, StartMatchInput } from "../api/ports";
 import { createMatchActor, lastBoardsOf, type MatchActor } from "./actor";
 import type { ActorDeps, Socket } from "./contracts";
 
@@ -42,6 +42,17 @@ function initialClocks(now: number, ceilingMinutes: number): MatchClocks {
     graceDeadline: { p1: null, p2: null },
     ceilingAt: now + ceilingMinutes * 60_000,
   };
+}
+
+/**
+ * R258, R433: an All Random match deals both seats' decks, so `createGame` and every rebuild's `fold`
+ * are told both seats were dealt, and neither player's own library lists a card they were not shown
+ * going in. The match row does not record its mode, so it is read off what made the match
+ * (`matches.modeOf`, as `api/game-records.ts` files a record): the same answer at the start and at
+ * every rebuild, so a rebuilt actor folds the same game. Every other mode's decks were built.
+ */
+function dealtFor(mode: QueueMode | null): { dealt?: readonly PlayerId[] } {
+  return mode === "random" ? { dealt: PLAYER_IDS } : {};
 }
 
 export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
@@ -69,7 +80,15 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
+      // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
+      // reconnected client) reads the same pair.
+      portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
     };
+    // R433: the mode is read off what made the match — its tickets, its room or its series, which
+    // the reserved `open` skeleton already links — so it reads the same before the row is written
+    // as `rebuild` reads it after, and both fold the same setup.
+    const dealt = dealtFor(await deps.store.matches.modeOf(match.id));
+
     // The opening draw is part of the engine, not of the log: `fold` replays `createGame` and
     // `beginGame` from `(seed, decks)` before it applies a single action (§9.3). It runs before
     // the row is written so a game the engine cannot begin leaves nothing behind: written first,
@@ -77,7 +96,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
     // end it — while an `open` skeleton a caller reserved stays `open`, which
     // `matches.discardOpen` (R263) is still able to release.
     const state = deps.engine.beginGame(
-      deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match) }),
+      deps.engine.createGame({ seed: match.seed, decks: match.decks, ...lastBoardsOf(match), ...dealt }),
     ).state;
 
     await deps.store.matches.create(match);
@@ -90,11 +109,13 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
     if (match === null) throw new ApiError("not_found", "no such match");
 
     const log = await deps.store.matches.actions(matchId);
+    const dealt = dealtFor(await deps.store.matches.modeOf(matchId));
     const folded = deps.engine.fold({
       seed: match.seed,
       decks: match.decks,
       log: log.map((row) => row.action),
       ...lastBoardsOf(match),
+      ...dealt,
     });
     if (folded.errors.length > 0) {
       // An action the engine once accepted and now refuses is a determinism break: the log no

@@ -13,6 +13,7 @@
 import { lazyPart } from "../resolve";
 import type { Effect } from "../script";
 import { afterStateCheck } from "./afterCheck";
+import { castNew } from "./cast";
 import { damageAll } from "./damage";
 import { cardsInScope, type BoardScope } from "./targets";
 
@@ -36,4 +37,33 @@ function round(storm: Storm, at: number, deathsBefore: number | null): Effect {
 /** `amount` to every Unit in scope, round after round, each round with its own state check (R59). */
 export function damageRoundsUntilDeath(args: Storm): Effect {
   return round(args, 0, null);
+}
+
+// ---------------------------------------------------------------------------
+// Casts in rounds until a Unit dies (SPEC §8.7 C+ #32.3 Blade Storm's base face, R652)
+// ---------------------------------------------------------------------------
+
+type CastStorm = { def: string; rounds: number };
+
+function castRound(storm: CastStorm, at: number, deathsBefore: number | null): Effect {
+  return lazyPart("castRound", (ctx, memo) => {
+    const deaths = ctx.state.counters.destroyed;
+    if (typeof memo !== "number") {
+      const died = deathsBefore !== null && deaths > deathsBefore;
+      if (died || at >= storm.rounds || cardsInScope(ctx, { side: "any" }).length === 0) return { effects: [] };
+    }
+    const start = typeof memo === "number" ? memo : deaths;
+    return {
+      effects: [castNew({ def: storm.def }), afterStateCheck(() => []), castRound(storm, at + 1, start)],
+      memo: start,
+    };
+  });
+}
+
+/**
+ * R652: cast `def` round after round — each round a real Spell cast (R70) with its own state check
+ * (R59) — until a round in which a Unit died, `rounds` rounds, or no Unit is left.
+ */
+export function castRoundsUntilDeath(args: CastStorm): Effect {
+  return castRound(args, 0, null);
 }

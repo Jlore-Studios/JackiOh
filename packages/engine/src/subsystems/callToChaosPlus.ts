@@ -10,7 +10,7 @@
 // and the board each later entry reads (R87), and a pause inside one parks the rest of it (R113).
 
 import type { CatalogQuery } from "@jackioh/shared";
-import { defByIndex, query } from "../catalog";
+import { defByIndex, pickGenerated, query } from "../catalog";
 import {
   CHAOS_PLUS_BOOKS,
   CHAOS_PLUS_CLASSIC_CARDS,
@@ -60,7 +60,7 @@ export function replaceDeckWithCallToChaos(): Effect {
       apply(inner): void {
         const library = inner.state.players[inner.controller].library;
         const at = library.findIndex((card) => card.id === old.id);
-        const def = at < 0 ? undefined : inner.rng.pick(pool);
+        const def = at < 0 ? undefined : pickGenerated(inner.rng, pool);
         if (def === undefined) return;
         transform({ instanceId: old.id, defId: def.id }).apply(inner);
         const replacement = library[at];

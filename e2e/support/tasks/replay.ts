@@ -27,6 +27,8 @@ export type ReplayHashPayload = {
    * 60-card library, a bigger opening hand). Absent for every other spec, whose payload is unchanged.
    */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
+  /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to `fold` untouched. */
+  dealt?: ("p1" | "p2")[];
 };
 
 export type ReplayHashResult = {
@@ -53,6 +55,7 @@ export function replayHash(projectRoot: string, payload: ReplayHashPayload): Rep
         decks: payload.decks,
         log: payload.log,
         ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
+        ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
       },
       null,
       2,

@@ -57,6 +57,7 @@ import {
   createMemoryGameRecordStore,
   createMemoryLastBoardStore,
   createMemoryPlayerSettingsStore,
+  createMemoryPlayerStatsStore,
   createMemoryRankedStore,
   createMemoryTutorialStore,
   emptyRankedTables,
@@ -67,6 +68,7 @@ import {
   type GameRecordTables,
   type LastBoardTables,
   type PlayerSettingsTables,
+  type PlayerStatsTables,
   type RankedTables,
   type TutorialTables,
 } from "./memory-stores";
@@ -108,6 +110,7 @@ type Tables = {
   PlayerSettingsTables &
   RankedTables &
   LastBoardTables &
+  PlayerStatsTables &
   GameRecordTables;
 
 function emptyTables(): Tables {
@@ -128,6 +131,7 @@ function emptyTables(): Tables {
     tutorial: [],
     playerSettings: [],
     lastBoards: [],
+    playerStats: [],
     gameRecords: [],
     ...emptyRankedTables(),
   };
@@ -442,7 +446,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
     },
     getMany: async (profileIds) =>
       tables.profiles.filter((profile) => profileIds.includes(profile.id)).map(clone),
-    create: async ({ userId, email, rating, at }) => {
+    create: async ({ userId, email, rating, at, displayName }) => {
       if (tables.profiles.some((profile) => profile.userId === userId)) {
         throw new Error(`profiles.user_id is unique: ${userId} already has a profile`);
       }
@@ -452,6 +456,7 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
         id: `profile-${String(nextProfile)}`,
         userId,
         email,
+        displayName: displayName ?? null,
         status: "pending",
         rating,
         ratingDeviation: RATING_DEVIATION_START,
@@ -482,6 +487,11 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
       const row = profileOf(profileId);
       if (row === undefined) throw new Error(`no profile ${profileId}`);
       row.rating = rating;
+    },
+    setDisplayName: async (profileId, displayName) => {
+      const row = profileOf(profileId);
+      if (row === undefined) throw new Error(`no profile ${profileId}`);
+      row.displayName = displayName;
     },
     setInMatch: async (profileId, matchId) => {
       const row = profileOf(profileId);
@@ -578,6 +588,8 @@ export function createE2EStore(options: E2EStoreOptions): E2EStore {
   store.lastBoards = createMemoryLastBoardStore(() => tables);
   // R376: the card statistics' game records, shared with the unit-test fake like the tutorial.
   store.gameRecords = createMemoryGameRecordStore(() => tables);
+  // R654: each profile's player statistics and privacy setting.
+  store.playerStats = createMemoryPlayerStatsStore(() => tables);
 
   // SPEC §9.12: the ranked ladder, shared with the unit-test fake like the decks.
   store.ranked = createMemoryRankedStore(() => tables);

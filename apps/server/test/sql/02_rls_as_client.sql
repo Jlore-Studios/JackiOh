@@ -388,7 +388,7 @@ declare
   t text;
   missing text := '';
 begin
-  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records',
+  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                            'seasons', 'season_ranks', 'bot_ratings', 'rated_games'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
@@ -403,10 +403,11 @@ do $$
 declare
   -- `series` (0009, R263): both sides' frozen trios and both current picks, which R259 keeps
   -- hidden until both have picked — the same reason `matches` is here. `game_records` (0014,
-  -- R376): both hands and both decklists of every recorded game. The four ranked tables (0019,
-  -- R603–R612): hidden ratings, which R612 says no client read may ever carry — the client gets
-  -- its rank through the API, never a row.
-  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records',
+  -- R376): both hands and both decklists of every recorded game. `player_stats` (0021, R654):
+  -- each player's tracked stats and privacy settings, accessed solely via service_role. The four
+  -- ranked tables (0022, R603–R612): hidden ratings, which R612 says no client read may ever carry —
+  -- the client gets its rank through the API, never a row.
+  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;

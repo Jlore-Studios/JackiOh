@@ -50,8 +50,11 @@ const DEFAULTS: Settings = {
   autoEndTurn: true,
   hoverPreviews: true,
   reduceMotion: false,
+  muteOpponentEmotes: false,
+  publicStats: true,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "reduceMotion"];
+// Sorted: what `Object.keys(parsed).sort()` produces — muteOpponentEmotes before publicStats before reduceMotion.
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "publicStats", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
@@ -626,16 +629,26 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     ["autoEndTurn", "End turn automatically"],
     ["hoverPreviews", "Hover previews"],
     ["reduceMotion", "Reduce motion"],
+    ["muteOpponentEmotes", "Mute opponent emotes"],
   ];
 
-  it("B24 shows gameplay (drag, confirm, auto end, hover) and visuals (reduce motion), and no empty audio section", () => {
+  /** The tab each switch lives on; the gameplay tab is the default. */
+  const TAB_FOR: Partial<Record<SettingKey, "visuals" | "audio">> = {
+    reduceMotion: "visuals",
+    muteOpponentEmotes: "audio",
+  };
+
+  it("B24 shows gameplay (drag, confirm, auto end, hover), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
     // Integration mounts tasks 1, 2 and 6's controls through SETTINGS_SLOTS (settings-wiring.test.tsx);
-    // with no slots the panel is task 7's alone, and a section with nothing in it is not drawn.
+    // with no slots the panel is task 7's alone. The audio section still draws: R643's device-wide
+    // "Mute opponent emotes" is a built-in switch of it. A section with nothing in it — account,
+    // here — is not drawn.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
     const gameplay = screen.getByTestId("settings-section-gameplay");
     const visuals = screen.getByTestId("settings-section-visuals");
-    for (const section of [gameplay, visuals]) {
+    const audio = screen.getByTestId("settings-section-audio");
+    for (const section of [gameplay, visuals, audio]) {
       expect(section.tagName).toBe("SECTION");
       expect(within(section).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     }
@@ -644,15 +657,17 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     }
     expect(visuals.contains(switchFor("reduceMotion"))).toBe(true);
     expect(gameplay.contains(switchFor("reduceMotion"))).toBe(false);
-    expect(screen.queryByTestId("settings-section-audio")).toBeNull();
+    expect(audio.contains(switchFor("muteOpponentEmotes"))).toBe(true);
+    expect(screen.queryByTestId("settings-section-account")).toBeNull();
   });
 
   it("B24 every control is a checkbox with role switch and its printed label", () => {
     render(<SettingsPanel onClose={noop} />);
 
     for (const [key, label] of SWITCHES) {
-      // A switch is reachable on its own tab: Reduce motion is on Visuals, the rest on Gameplay.
-      fireEvent.click(screen.getByTestId(key === "reduceMotion" ? "settings-tab-visuals" : "settings-tab-gameplay"));
+      // A switch is reachable on its own tab: Reduce motion is on Visuals, Mute opponent emotes on
+      // Audio, the rest on Gameplay.
+      fireEvent.click(screen.getByTestId(`settings-tab-${TAB_FOR[key] ?? "gameplay"}`));
       const input = switchFor(key);
       expect(input.type, key).toBe("checkbox");
       expect(input, key).toHaveAttribute("role", "switch");
@@ -661,7 +676,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
   });
 
   it("B24 each switch reflects the stored settings", () => {
-    store({ dragToPlay: false, reduceMotion: true });
+    store({ dragToPlay: false, reduceMotion: true, muteOpponentEmotes: true });
     render(<SettingsPanel onClose={noop} />);
 
     expect(switchFor("dragToPlay").checked).toBe(false);
@@ -669,6 +684,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(switchFor("autoEndTurn").checked).toBe(true);
     expect(switchFor("hoverPreviews").checked).toBe(true);
     expect(switchFor("reduceMotion").checked).toBe(true);
+    expect(switchFor("muteOpponentEmotes").checked).toBe(true);
   });
 
   it("B24 toggling a switch writes the store and persists it", () => {
@@ -702,7 +718,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
   });
 
   it("B24 settings-reset restores the defaults, in the store and on every switch", () => {
-    store({ dragToPlay: false, confirmEndTurn: true, hoverPreviews: false, reduceMotion: true });
+    store({ dragToPlay: false, confirmEndTurn: true, hoverPreviews: false, reduceMotion: true, muteOpponentEmotes: true });
     render(<SettingsPanel onClose={noop} />);
     expect(switchFor("confirmEndTurn").checked).toBe(true);
 
@@ -713,7 +729,29 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(switchFor("confirmEndTurn").checked).toBe(false);
     expect(switchFor("hoverPreviews").checked).toBe(true);
     expect(switchFor("reduceMotion").checked).toBe(false);
+    expect(switchFor("muteOpponentEmotes").checked).toBe(false);
     expect(reduceMotionAttr()).toBeNull();
+  });
+
+  it("R643 the Mute opponent emotes switch lives on the Audio tab, defaults off, and persists like every setting", () => {
+    render(<SettingsPanel onClose={noop} />);
+    fireEvent.click(screen.getByTestId("settings-tab-audio"));
+
+    const toggleEl = switchFor("muteOpponentEmotes");
+    expect(toggleEl).toHaveAttribute("role", "switch");
+    expect(screen.getByRole("switch", { name: "Mute opponent emotes" })).toBe(toggleEl);
+    expect(screen.getByTestId("settings-section-audio").contains(toggleEl)).toBe(true);
+    expect(toggleEl.checked).toBe(false);
+
+    fireEvent.click(toggleEl);
+
+    expect(readSettings().muteOpponentEmotes).toBe(true);
+    expect(toggleEl.checked).toBe(true);
+    expect(persisted()).toMatchObject({ muteOpponentEmotes: true });
+
+    // Stored per device like the rest of this store: a reload reads it back (R643, issue §5).
+    __resetSettingsForTests();
+    expect(readSettings().muteOpponentEmotes).toBe(true);
   });
 
   it("B24 an audio slot makes the audio section appear with the slot inside it", () => {
@@ -753,8 +791,10 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     for (const key of ["dragToPlay", "confirmEndTurn", "hoverPreviews"] as const) {
       expect(switchFor(key).compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING, key).toBeTruthy();
     }
-    // No audio slot, so still no audio section.
-    expect(screen.queryByTestId("settings-section-audio")).toBeNull();
+    // No account slot and no account controls, so still no account section. (Audio stays drawn
+    // without a slot: "Mute opponent emotes" is a built-in switch of it, since R643.)
+    expect(screen.queryByTestId("settings-section-account")).toBeNull();
+    expect(screen.getByTestId("settings-section-audio").contains(switchFor("muteOpponentEmotes"))).toBe(true);
   });
 
   it("B24 the panel opened from the gear shows the same switches, reflecting the store", () => {

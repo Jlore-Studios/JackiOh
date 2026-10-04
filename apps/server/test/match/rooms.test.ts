@@ -19,6 +19,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_PORTRAIT, pickPortraitFromSeed } from "@jackioh/shared";
 import { createDeckRoutes } from "../../src/api/decks";
 import { createRouter, type Router } from "../../src/api/http";
 import type { FrozenTrio, Ids } from "../../src/api/ports";
@@ -26,7 +27,13 @@ import { CODE_ALPHABET, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH } fro
 import { createQueueRoutes } from "../../src/api/queue";
 import { createSeriesRoutes } from "../../src/api/series";
 import { createRoomRoutes, e2eRoomSeedCount } from "../../src/match/rooms";
-import { createTestDeps, jsonRequest, readJson, type TestDeps } from "../fakes/deps";
+import {
+  createFakeMatchDirectory,
+  createTestDeps,
+  jsonRequest,
+  readJson,
+  type TestDeps,
+} from "../fakes/deps";
 
 const DECK = ["core-001", "core-002", "core-003"];
 const HOST = "host";
@@ -49,7 +56,7 @@ async function saveDeck(
 ): Promise<void> {
   const at = deps.timers.now();
   const outcome = await deps.store.decks.upsert(
-    { id, profileId, name, cards: [...cards], catalogVersion: deps.catalog.version, createdAt: at, updatedAt: at },
+    { id, profileId, name, cards: [...cards], portrait: null, catalogVersion: deps.catalog.version, createdAt: at, updatedAt: at },
     MAX_SAVED_DECKS,
   );
   expect(outcome).toBe("created");
@@ -600,5 +607,98 @@ describe("R264 — rooms carry a mode (§9.5, R257)", () => {
     // The control: once the host is free the same join goes through.
     await h.deps.store.profiles.setInMatch(HOST, null);
     expect((await join(h.router, h.guest, code)).status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R642 — the portraits on a room's match (§9.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * R642, the room half: a Best-of-1 room freezes the host deck's portrait at `POST /api/rooms`,
+ * with the deck, and an All Random room deals each seat's portrait off the match seed — the same
+ * `pickPortraitFromSeed` the queue uses (R258's dealing, one layer down).
+ *
+ * The match row these tests read is the real write: `createFakeMatchDirectory(deps.store)` writes
+ * it exactly as `createMatchRegistry.start` does, seat order and `portraitOrDefault` included.
+ */
+describe("R642 — the portraits on a room's match (§9.5)", () => {
+  /** The default harness, with the match row written where production writes it. */
+  async function portraitHarness(options: { e2e?: boolean } = {}) {
+    const h = await harness(options);
+    h.deps.matches = createFakeMatchDirectory(h.deps.store);
+    return h;
+  }
+
+  it("R642 deals an All Random room's portraits from the seed, seat by seat like the decks", async () => {
+    const h = await portraitHarness({ e2e: true });
+    const code = (await readJson<{ code: string }>(
+      await create(h.router, h.host, { mode: "random", seed: "room-portraits" }),
+    )).code;
+
+    const joined = await join(h.router, h.guest, code, { mode: "random" });
+    expect(joined.status).toBe(200);
+
+    const started = h.deps.matches.started[0];
+    // PREMISE: the host's seed really is the match's (R143), the host p1 as ever (§9.5).
+    expect(started?.seed).toBe("room-portraits");
+    expect(started?.seats.map((seat) => seat.profileId)).toEqual([HOST, GUEST]);
+    // Each seat's pick is `pickPortraitFromSeed` on its own seat-keyed suffix — both `:portrait:p1`
+    // and `:portrait:p2` — and the row the actor will read keeps them in that seat order.
+    const expected = [
+      pickPortraitFromSeed("room-portraits:portrait:p1"),
+      pickPortraitFromSeed("room-portraits:portrait:p2"),
+    ];
+    expect(started?.seats.map((seat) => seat.portrait)).toEqual(expected);
+    expect(h.deps.store.tables.matches[0]?.portraits).toEqual(expected);
+  });
+
+  it("R642 freezes both seats' portraits: the host's with the room, the joiner's with the join", async () => {
+    const h = await portraitHarness();
+    const router = createRouter([...createRoomRoutes(), ...createDeckRoutes()], h.deps);
+    const putPortrait = async (token: string, deckId: string, portrait: string): Promise<Response> =>
+      router(
+        jsonRequest(
+          "PUT",
+          `/api/decks/${deckId}`,
+          { name: "Deck", cards: DECK, catalogVersion: h.deps.catalog.version, portrait },
+          { token },
+        ),
+      );
+
+    // Host and guest save their decks under portraits, through the endpoint a player would use.
+    expect((await putPortrait(h.host, uuid(1), "gary")).status).toBe(200);
+    expect((await putPortrait(h.guest, uuid(2), "shredder")).status).toBe(200);
+
+    // The host's freezes into the room here — the same moment its deck does (§9.4).
+    const created = await create(router, h.host, { mode: "bo1", deckId: uuid(1) });
+    expect(created.status).toBe(200);
+    const { code } = await readJson<{ code: string }>(created);
+    expect(h.deps.store.tables.rooms[0]?.hostPortrait).toBe("gary");
+
+    // The host re-saves under another portrait while the room waits for its guest: the room's copy
+    // does not move (the §9.8 freeze, one field wider).
+    expect((await putPortrait(h.host, uuid(1), "timmy")).status).toBe(200);
+    expect((await h.deps.store.decks.get(uuid(1)))?.portrait).toBe("timmy");
+    expect(h.deps.store.tables.rooms[0]?.hostPortrait).toBe("gary");
+
+    const joined = await join(router, h.guest, code, { mode: "bo1", deckId: uuid(2) });
+    expect(joined.status).toBe(200);
+
+    // The host's seat carries the frozen one, not "timmy"; the guest's carries what the join
+    // froze. Both land on the match row in seat order.
+    const started = h.deps.matches.started[0];
+    expect(started?.seats.map((seat) => seat.portrait)).toEqual(["gary", "shredder"]);
+    expect(h.deps.store.tables.matches[0]?.portraits).toEqual(["gary", "shredder"]);
+  });
+
+  it("R642 reads a room made before portraits — `hostPortrait` null — as vanilla on the row", async () => {
+    const h = await portraitHarness();
+    // The harness's saved decks carry `portrait: null`: R641's default, and what every deck saved
+    // before portraits existed holds.
+    await playThrough(h);
+
+    expect(h.deps.store.tables.rooms[0]?.hostPortrait).toBeNull();
+    expect(h.deps.store.tables.matches[0]?.portraits).toEqual([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT]);
   });
 });
