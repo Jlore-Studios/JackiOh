@@ -1492,12 +1492,12 @@
       "pending_request": false,
       "planned_at": "2026-10-03T16:39:41Z",
       "pr": 166,
-      "provider": "agy",
+      "provider": "muse",
       "question": "Continue the build from .bot-notes.md session 3: R647 Locked engine work is implemented and tested but its SPEC \u00a711 row is not yet written; plague single-target and recruit X-skip are not started; typecheck/eslint/validate:catalog/rulings:coverage were not re-run. Continue on this branch?",
       "queued_at": "2026-10-03T23:17:22Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "37157132505",
-      "started_at": "2026-10-03T22:04:53Z",
+      "run_id": "37166153403",
+      "started_at": "2026-10-04T00:54:42Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -1527,9 +1527,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T00:54:12Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37166094139",
-    "what": "plan #44 on claude-2"
+    "at": "2026-10-04T00:54:42Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37166153403",
+    "what": "build #88 on muse"
   },
   "last_sweep": {
     "at": "2026-10-04T00:48:08Z",
