@@ -29,10 +29,13 @@ function coreIndices(defs: readonly CardDef[]): string[] {
   return defs.filter((def) => def.set === "Core").map((def) => def.index);
 }
 
-/** Every token of every set: B2.1's 49. */
+/** Every token of every set (B2.1's census itself is catalog.test.ts's to prove). */
 const TOKEN_IDS = Object.values(CATALOG)
   .filter((def) => def.token)
   .map((def) => def.id);
+
+/** Every non-token def, in catalog order — the pool a plain query answers (R380). */
+const NON_TOKEN = Object.values(CATALOG).filter((def) => !def.token);
 
 beforeAll(() => {
   registerCatalog(CATALOG, CATALOG_VERSION);
@@ -54,19 +57,17 @@ describe("the cards-layer surface (§5.1: one query function)", () => {
 });
 
 describe("§5.1 tokens are out of every pool unless the card names the token pool", () => {
-  it("R380 a plain query({}) is the 268 non-token cards of every set: no def.token, no Token tag, no Token rarity", () => {
+  it("R380 a plain query({}) is every set's non-token cards: no def.token, no Token tag, no Token rarity", () => {
     const all = query({});
 
-    expect(all).toHaveLength(268);
-    expect(all.filter((def) => def.set === "Core")).toHaveLength(100);
-    expect(all.filter((def) => def.set === "Classic")).toHaveLength(90);
-    expect(all.filter((def) => def.set === "Classic+")).toHaveLength(78);
+    // Every non-token def of every set, in catalog order — the census is catalog.test.ts's to prove.
+    expect(ids(all)).toEqual(ids(NON_TOKEN));
     expect(all.filter((def) => def.token)).toEqual([]);
     expect(all.filter((def) => def.tags.includes("Token"))).toEqual([]);
     expect(all.filter((def) => def.rarity === "Token")).toEqual([]);
     // And named outright, because "never a token" is the rule cards depend on (BUILD M4-T4 row 51.1
     // wants #51.1 "absent from every random pool"):
-    expect(TOKEN_IDS).toHaveLength(49);
+    expect(TOKEN_IDS.length).toBeGreaterThan(0);
     for (const id of TOKEN_IDS) {
       expect(ids(all)).not.toContain(id);
     }
@@ -84,7 +85,7 @@ describe("§5.1 tokens are out of every pool unless the card names the token poo
   });
 
   it("R380 a pool that names a set keeps to it (Core #82 KY's Trial, #97 Zephyrs)", () => {
-    expect(query({ set: "Core" })).toHaveLength(100);
+    expect(ids(query({ set: "Core" }))).toEqual(ids(NON_TOKEN.filter((def) => def.set === "Core")));
     expect(ids(query({ set: "Classic", tags: ["Book"] }))).toEqual([
       "classic-003",
       "classic-012",
@@ -388,7 +389,7 @@ describe("R382 the Fruit pool holds the five Grapes; a pool that takes every tok
 
   it("R382 Classic+ #23 Dropshipping's pool takes every card and every token of every set but itself", () => {
     const every = ids(pool("classicplus-023", { withTokens: true }));
-    expect(every).toHaveLength(317 - 1);
+    expect(every).toHaveLength(Object.keys(CATALOG).length - 1);
     expect(every).not.toContain("classicplus-023");
     for (const id of [...GRAPES, "classicplus-019-3", "classicplus-t-ai-01", "core-t-coin", "core-051-1"]) {
       expect(every).toContain(id);

@@ -422,6 +422,16 @@ const SET_SIZES: Readonly<Record<string, { cards: number; tokens: number }>> = {
   "Classic+": { cards: 78, tokens: 38 },
 };
 
+/** B2.1's totals, as SET_SIZES sums them: the only count of the whole catalog this file keeps. */
+const TOTAL_CARDS = Object.values(SET_SIZES).reduce((n, size) => n + size.cards, 0);
+const TOTAL_TOKENS = Object.values(SET_SIZES).reduce((n, size) => n + size.tokens, 0);
+
+/** A set's SET_SIZES row as one number (cards + tokens), for the fixture-row counts below. */
+const setSize = (set: string): number => {
+  const size = SET_SIZES[set];
+  return (size?.cards ?? 0) + (size?.tokens ?? 0);
+};
+
 const ENTRIES: readonly CardDef[] = Object.values(CATALOG);
 
 /** An index is unique only within its set (B2.2), so entries are found by `set` and `index`. */
@@ -457,12 +467,12 @@ const label = (entry: CardDef, field: string, expected: unknown, actual: unknown
   `${entry.id} (#${entry.index}) ${field}: expected ${show(expected)}, got ${show(actual)}`;
 
 describe("catalog membership (BUILD M4-T1, B2.1)", () => {
-  it("holds 268 cards and 49 tokens, 317 entries, across Core, Classic and Classic+", () => {
+  it("holds B2.1's cards and tokens, every entry, across Core, Classic and Classic+", () => {
     const cards = ENTRIES.filter((entry) => entry.token === false);
     const tokens = ENTRIES.filter((entry) => entry.token === true);
-    expect(cards.length, "entries with token: false").toBe(268);
-    expect(tokens.length, "entries with token: true").toBe(49);
-    expect(ENTRIES.length, "catalog entries").toBe(317);
+    expect(cards.length, "entries with token: false").toBe(TOTAL_CARDS);
+    expect(tokens.length, "entries with token: true").toBe(TOTAL_TOKENS);
+    expect(ENTRIES.length, "catalog entries").toBe(TOTAL_CARDS + TOTAL_TOKENS);
     for (const [set, size] of Object.entries(SET_SIZES)) {
       const inSet = ENTRIES.filter((entry) => entry.set === set);
       expect(inSet.filter((entry) => !entry.token).length, `${set} cards`).toBe(size.cards);
@@ -501,9 +511,9 @@ describe("catalog membership (BUILD M4-T1, B2.1)", () => {
     expect(flagged, "Core entries flagged token: true").toEqual([...expected].sort());
   });
 
-  it("has Classic+'s 28 card-defined tokens and the ten AI generated cards (B2.1, B2.3, B8)", () => {
+  it("has Classic+'s card-defined tokens and the ten AI generated cards (B2.1, B2.3, B8)", () => {
     const tokens = CLASSIC_PLUS.filter((row) => row.rarity === "Token").map((row) => row.index);
-    expect(tokens.length).toBe(38);
+    expect(tokens.length).toBe(SET_SIZES["Classic+"]?.tokens);
     expect(tokens.filter((index) => index.startsWith("T-AI-")).length).toBe(10);
     const flagged = ENTRIES.filter((entry) => entry.set === "Classic+" && entry.token).map((entry) => entry.index);
     expect([...flagged].sort()).toEqual([...tokens].sort());
@@ -515,9 +525,9 @@ describe("catalog membership (BUILD M4-T1, B2.1)", () => {
       (entry) => `${entry.id} (${keyOf(entry.set, entry.index)})`,
     );
     expect(extra, "catalog entries with no fixture row").toEqual([]);
-    expect(CORE.length, "SPEC §8 + §7 fixture rows").toBe(111);
-    expect(CLASSIC.length, "B6 fixture rows").toBe(90);
-    expect(CLASSIC_PLUS.length, "B7 + B8 fixture rows").toBe(116);
+    for (const [set, rows] of FIXTURES) {
+      expect(rows.length, `${set} fixture rows`).toBe(setSize(set));
+    }
   });
 });
 
