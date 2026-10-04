@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 import { scenario } from "./_harness";
-import { base as deftBase, radiant as deftRadiant } from "../src/scripts/045-deft-duelist";
+import { base as deftBase, def, radiant as deftRadiant } from "../src/scripts/045-deft-duelist";
 
 /** Deft Duelist in hand, an enemy hero to hit; #21 Hinder keeps the turn alive (R82). */
 function fromHand(radiantDuelist = false): ReturnType<typeof scenario> {
@@ -40,9 +40,11 @@ function inDefense(def: string, radiantUnit = false): ReturnType<typeof scenario
 }
 
 describe("#45 Deft Duelist — base", () => {
-  it("R49 the two exertions are a static flag on both faces, which `combat.ts` reads", () => {
-    expect(deftBase.staticFlags?.deftDuelist).toBe(true);
-    expect(deftRadiant.staticFlags?.deftDuelist).toBe(true);
+  it("R49 the two exertions are the Deft keyword on both faces, which `combat.ts` reads", () => {
+    expect(deftBase.staticFlags?.deftDuelist).toBeUndefined();
+    expect(deftRadiant.staticFlags?.deftDuelist).toBeUndefined();
+    expect(def.base.keywords).toEqual([{ kind: "Charge" }, { kind: "Deft" }]);
+    expect(def.radiant.keywords).toEqual([{ kind: "Charge" }, { kind: "Armor", n: 1 }, { kind: "Deft" }]);
   });
 
   it("§6.1 Charge lets it attack a unit on its summon turn", () => {

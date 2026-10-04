@@ -13,7 +13,8 @@
 #   /fast-forward          merges now, past a hold
 # Every check also brings the title's "in N hours" up to date, so it counts down hour by hour.
 # Each command gets a +1 reaction, or a confused one when it was refused (not from a collaborator, or
-# not understood). The next merge time is the first RELEASE_HOUR_UTC at least MIN_GAP_HOURS ahead.
+# not understood). The next merge time is the first RELEASE_HOUR in RELEASE_TZ (10:00 AM Central,
+# through daylight saving) at least MIN_GAP_HOURS ahead, and every time it shows is in that zone ("CT").
 #
 # What runs it, and what each does (EVENT is github.event_name):
 #   schedule, issue_comment, workflow_run
@@ -70,7 +71,9 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # the night bot off them (docs/issues-and-patches.md: people's work is `human`, for both of them).
 : "${ASSIGNEES:=jgoetzmann,MaxGoetzmann}"
 : "${HUMAN_LABEL:=human}"
-: "${RELEASE_HOUR_UTC:=15}"
+: "${RELEASE_TZ:=America/Chicago}"
+: "${RELEASE_ZONE_NAME:=CT}"
+: "${RELEASE_HOUR:=10}"
 : "${MIN_GAP_HOURS:=12}"
 : "${MAX_DELAY_HOURS:=168}"
 : "${LISTED_COMMITS:=100}"
@@ -81,7 +84,14 @@ REPO=$GITHUB_REPOSITORY
 SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/null}
 
 now() { echo "${NOW:-$(date -u +%s)}"; }
-stamp() { jq -nr --argjson t "$1" '$t | strftime("%Y-%m-%d %H:%M UTC")'; }
+# RELEASE_TZ's offset from UTC at epoch $1, in seconds (-18000 for CDT). jq's localtime converts
+# correctly but labels the zone wrongly, so the offset is worked out rather than printed.
+offset() { TZ=$RELEASE_TZ jq -nr --argjson t "$1" '($t | localtime | mktime) - ($t | floor)'; }
+# "2026-10-05 10:00 AM CT"
+stamp() {
+  TZ=$RELEASE_TZ jq -nr --argjson t "$1" --arg z "$RELEASE_ZONE_NAME" '$t | strflocaltime("%Y-%m-%d %I:%M %p ") + $z' \
+    | sed -E 's/ 0([1-9]:)/ \1/'
+}
 fail() { echo "::error::$*" >&2; exit 1; }
 # Runs a git or gh command; when it fails, the error names it and quotes what it printed. Its output
 # goes to stdout as usual. (Logs need a download; an annotation shows on the run page and in the API.)
@@ -256,10 +266,19 @@ open_issues() {
   gh issue list --state open --label "$RELEASE_LABEL" --limit 100 --json number --jq 'map(.number) | sort | .[]'
 }
 
-# The first RELEASE_HOUR_UTC at least MIN_GAP_HOURS after $1 (seconds since the epoch).
+# The first RELEASE_HOUR in RELEASE_TZ at least MIN_GAP_HOURS after $1 (seconds since the epoch).
+# Days are counted on the local calendar, and each candidate's own offset applies, so it stays
+# 10:00 AM local across a daylight-saving change (which happens at 2 AM, before any candidate).
 next_due() {
-  local floor=$(( $1 + MIN_GAP_HOURS * 3600 )) t=$(( $1 - $1 % 86400 + RELEASE_HOUR_UTC * 3600 ))
-  while [ "$t" -lt "$floor" ]; do t=$(( t + 86400 )); done
+  local floor=$(( $1 + MIN_GAP_HOURS * 3600 )) here day naive t
+  here=$(( $1 + $(offset "$1") ))
+  day=$(( here - here % 86400 ))
+  while :; do
+    naive=$(( day + RELEASE_HOUR * 3600 ))
+    t=$(( naive - $(offset "$naive") ))
+    [ "$t" -lt "$floor" ] || break
+    day=$(( day + 86400 ))
+  done
   echo "$t"
 }
 
@@ -323,15 +342,16 @@ roll() {
   create_issue "$(next_due "$(now)")"
 }
 
-# The issue's state lives in globals: due, held, last, its title, and changed (the body needs writing).
+# The issue's state lives in globals: due, held, last, and its title and body as GitHub has them.
 load_issue() {
   local m info
   info=$(try gh issue view "$1" --json title,body)
   title=$(jq -r .title <<<"$info")
+  body=$(jq -r .body <<<"$info" | tr -d '\r')
   m=$(jq -r .body <<<"$info" | grep -o 'promote-production due=[0-9]* held=[01] last=[0-9]*' | head -n1 || true)
   if [ -z "$m" ]; then
     echo "#$1 has lost its state line; scheduling it afresh."
-    due=$(next_due "$(now)") held=0 last=0 changed=1
+    due=$(next_due "$(now)") held=0 last=0
     return
   fi
   due=${m#*due=}; due=${due%% *}
@@ -339,11 +359,14 @@ load_issue() {
   last=${m#*last=}
 }
 save_issue() { # issue
-  local f want
+  local f want text
   want=$(title_for "$due" "$held")
-  if [ "$changed" = 1 ]; then
+  text=$(body_for "$due" "$held" "$last")
+  # The body is written when its text changed (new state, or a new wording such as the time zone);
+  # the title when its "in N hours" did, which is every check that crossed an hour, so it counts down.
+  if [ "$text" != "$body" ]; then
     f=$(mktemp)
-    body_for "$due" "$held" "$last" > "$f"
+    printf '%s\n' "$text" > "$f"
     if [ "$want" != "$title" ]; then
       try gh issue edit "$1" --title "$want" --body-file "$f"
     else
@@ -351,11 +374,9 @@ save_issue() { # issue
     fi
     rm -f "$f"
   elif [ "$want" != "$title" ]; then
-    # Nothing but the clock moved: "in N hours" is refreshed at every check, the hourly cron's
-    # among them, so the title counts down.
     try gh issue edit "$1" --title "$want"
   fi
-  title=$want
+  title=$want body=$text
 }
 react() { gh api -X POST "repos/$REPO/issues/comments/$1/reactions" -f content="$2" --silent >/dev/null || true; }
 
@@ -365,7 +386,7 @@ apply_commands() {
   while IFS= read -r line; do
     id=$(jq -r .id <<<"$line")
     [ "$id" -gt "$last" ] || continue
-    last=$id changed=1
+    last=$id
     cmdline=$(jq -r .body <<<"$line" | tr -d '\r' \
       | grep -iE -m1 '^[[:space:]]*/(hold|resume|release|unhold|delay|fast-forward)([[:space:]]|$)' || true)
     [ -n "$cmdline" ] || continue
@@ -426,7 +447,6 @@ check() {
     [ "$n" = "$issue" ] || gh issue close "$n" --reason "not planned" --comment "Superseded by #$issue."
   done
 
-  changed=0
   load_issue "$issue"
   apply_commands "$issue"
   save_issue "$issue"

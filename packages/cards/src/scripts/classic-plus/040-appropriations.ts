@@ -1,8 +1,8 @@
 // C+ #40 Appropriations (SPEC §8.7 row 40, E38, E39, R58, R60, R80, R81, R177, R311, R348, R380, R581).
 // (X) Spell, Epic. Choose one, with the play (R81); X is at least 1 (R348):
 //   Military:   your Units on the field, in your hand and in your deck get +2X Attack and Rush.
-//   Education:  shuffle 2X random Radiant Books into your deck; they have Cast on draw and target
-//               enemies when they can.
+//   Education:  shuffle 2X random Radiant Books into your deck; they have Cast on draw and aim at
+//               enemies when they harm and at your side when they help.
 //   Culture:    each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.
 //   Healthcare: your Units on the field, in your hand and in your deck get +2X Health and Armor X.
 //   Radiant:    +5X Attack; 5X Books; 25X%; +7X Health and Armor 2X.

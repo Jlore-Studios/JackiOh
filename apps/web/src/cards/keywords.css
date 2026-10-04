@@ -39,6 +39,7 @@
   --kw-period-sparkle: 2.6s;
   --kw-period-seal: 3.4s;
   --kw-period-edge: 3.6s;
+  --kw-period-dart: 1.2s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -366,6 +367,10 @@
   animation: kw-sand-fall var(--kw-period-sand) linear infinite;
 }
 
+.cf .kw-fx[data-keyword-fx="Deft"][data-kw-motion="on"] .kw-anim {
+  animation: kw-deft-dart var(--kw-period-dart) ease-in-out infinite alternate;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -569,6 +574,15 @@
   }
   to {
     transform: translateX(6%);
+  }
+}
+
+@keyframes kw-deft-dart {
+  from {
+    transform: translate(7%, -7%);
+  }
+  to {
+    transform: translate(-7%, 7%);
   }
 }
 

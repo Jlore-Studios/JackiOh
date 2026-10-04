@@ -367,7 +367,7 @@
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6);
 }
 
-/* R656: a swap. The card going out stays over the new one for `--fan-swap` (ROTATION_SWAP_MS, set
+/* R657: a swap. The card going out stays over the new one for `--fan-swap` (ROTATION_SWAP_MS, set
    on the fan by landing.tsx), takes no pointer and fizzles away; the card coming in fades in out
    of the same smoke instead of being dealt again, then floats with the others. */
 .landing .landing-fan-card--leaving {
@@ -821,7 +821,7 @@
   }
 }
 
-/* R656: the card a swap takes out fizzles away as the board's refused card does (animations.css,
+/* R657: the card a swap takes out fizzles away as the board's refused card does (animations.css,
    jk-overflow-fizzle from 45% on: it greys, brightens and swells as it fades), drifting up a little
    rather than flying off, since nothing here is refused. */
 @keyframes landing-fizzle {
@@ -842,7 +842,7 @@
   }
 }
 
-/* R656: the card a swap brings in is that fizzle run backwards, an apparition that gathers out of
+/* R657: the card a swap brings in is that fizzle run backwards, an apparition that gathers out of
    the same pale smoke and settles into its place. */
 @keyframes landing-apparition {
   0% {

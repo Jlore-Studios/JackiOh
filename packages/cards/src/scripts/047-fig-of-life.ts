@@ -26,7 +26,8 @@ export const def = cardDef("core-047");
 function figOfLife(amount: number): Script {
   return {
     // R19: any unit or hero, either side.
-    targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] } }],
+    // R656: a heal helps, so a random cast that targets enemies aims this at friends.
+    targets: [{ kind: "target", min: 1, max: 1, filter: { side: "any", of: ["unit", "hero"] }, aim: "help" }],
     cry: () => [heal({ target: { of: "chosen" }, amount })],
   };
 }
