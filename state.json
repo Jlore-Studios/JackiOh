@@ -756,6 +756,7 @@
       },
       "ci_run_id": 37170971365,
       "ci_sha": "64ef8326932faae394ca3b66304b2d469d449cd8",
+      "cross_rounds": 0,
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-04T22:25:40Z",
