@@ -212,6 +212,14 @@ the site is on `jackioh.<your-account>.workers.dev`.
   which stopped delivering pushes twice (after the repository moved, and again after it was
   reconnected, #224). Keep Auto-Deploy on "On Commit" too; never "After CI checks pass" while any
   check on `main` can be red for reasons that are not the server's.
+- **Render API key** (once, recommended): Render -> Account Settings -> API Keys -> Create API Key,
+  saved as the GitHub repository secret `RENDER_API_KEY`. With it `deploy-watch.yml` starts each
+  deploy through Render's API with the pushed commit (`commitId`), and its `Render deploy of this
+  push` job follows that deploy with `Bounceapp/render-action`, so a failed build or boot shows in
+  the run with a link to its Render log. Without it the hook names the commit with `ref`. Either way
+  Render clones the public repository itself, which is what keeps deploys going while its GitHub
+  access is broken: its log then says "It looks like we don't have access to your repo" and, given
+  no commit, rebuilt `9809419` all through 2026-10-04.
 - **Render** -> `jackioh-server` -> Environment -> `PUBLIC_ORIGINS`: add the Cloudflare origin,
   comma-separated, keeping `https://jackioh.vercel.app` for staging. Example:
   `https://jackioh.vercel.app,https://play.example.com`. This list gates both CORS and the WebSocket
@@ -317,9 +325,11 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not
   set. The run that finds the server live closes the issue.
 - **Render stopped deploying again after the reconnect (#224):** the live server stayed on the
-  commit the manual sync deployed, and no push after it arrived. The `RENDER_DEPLOY_HOOK_URL` secret
-  (section 4, step 4) makes `deploy-watch.yml` request each deploy itself; until it is set, Manual
-  Deploy, "Deploy latest commit", is the way to catch up.
+  commit the manual sync deployed, and no push after it arrived. Render had lost its GitHub access:
+  every deploy, the hook's and Manual Deploy's too, logged "It looks like we don't have access to
+  your repo, but we'll try to clone it anyway" and rebuilt that same commit, because Render takes
+  "the latest commit" from the integration. `deploy-watch.yml` therefore names the pushed commit:
+  through the API with `RENDER_API_KEY`, or the hook's `ref` (section 4, step 4).
 - **Render stopped deploying (the repository moved):** when the repository was transferred from
   `jgoetzmann` to `Jlore-Studios`, Render kept the last deploy it had made (Oct 2) and received no
   push after it, so a catalog change (v0.2.4) never arrived and nothing flagged it, because the
