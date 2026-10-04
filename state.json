@@ -1881,6 +1881,8 @@
       }
     },
     "206": {
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "be91ec40fa39ff8a49980d56af4ab7f371194db2": 1
@@ -1895,11 +1897,15 @@
       "issue": 181,
       "kind": "revise",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-04T13:36:09Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "37221036435",
       "self_check_findings": [],
       "source": "ci",
+      "started_at": "2026-10-04T17:36:26Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -2606,9 +2612,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T17:32:45Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37220845783",
-    "what": "revise #203 on devin"
+    "at": "2026-10-04T17:36:26Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37221036435",
+    "what": "revise #206 on muse"
   },
   "last_sweep": {
     "at": "2026-10-04T17:30:54Z",
