@@ -14,6 +14,7 @@
       "patches/**": false,
       "polish/**": false,
       "production": false,
+      "promote/**": false,
       "wt/**": false
     }
   },

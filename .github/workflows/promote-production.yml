@@ -1,28 +1,42 @@
-# Promotes main to production (Cloudflare) once a day. docs/deploy-cloudflare.md is the plan.
+# Merges main into production (Cloudflare) through a pull request, once a day, with a countdown
+# issue anyone can hold or delay. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh
+# is the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
 #
 # Cloudflare builds one branch, `production`, and nothing else. This workflow is the only thing that
-# moves it, and only ever by fast-forward to a commit of main whose push-to-main CI run passed. It
-# never force-pushes: a `production` that is not an ancestor of the candidate fails the run, loudly,
-# for a human to look at.
+# moves it, and only by merging a pull request whose head is a commit of main whose push-to-main CI
+# run passed. It never force-pushes: a `production` that carries anything main does not fails the
+# run, loudly, for a human to look at.
 #
-# Three ways in:
-#   schedule           once a day: the newest green commit of main.
+# The open issue labelled `production merge` says "Merging to production in N hours". The check runs
+# every hour (GitHub starts schedules late and sometimes skips them, so one a day is not enough to
+# honour `/delay 3h`) and merges when the issue's time has passed and nobody has put it on hold.
+#
+# Four ways in:
+#   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest):
+#                      read the new comments, merge if due and not on hold, then close the issue with the
+#                      pull request and open the next. A catalog bump is merged here too.
+#   issue_comment      a /hold, /resume or /delay on the countdown issue, from someone GitHub calls an
+#                      owner, member or collaborator: the same check, so the answer is quick and a
+#                      /resume on an overdue merge goes out at once.
 #   workflow_run (CI)  right after a green CI run on main, but ONLY when that commit changes
 #                      render.yaml's CATALOG_VERSION. Render deploys apps/server from main on every
 #                      push, and the bundle compiles the catalog version in (packages/cards), so a
 #                      catalog bump left a day behind would refuse every deck save and queue in
-#                      production (SPEC §9.4, R105). Anything else waits for the daily run.
+#                      production (SPEC §9.4, R105). A hold does not stop it.
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
-#                      commit, or the `sha` given, which must also be green and on main.
+#                      commit, or the `sha` given, which must also be green and on main. A hold does
+#                      not stop it.
 #
-# A push made with GITHUB_TOKEN starts no workflow (so this cannot loop) but GitHub still sends the
-# push to Cloudflare's GitHub app, which is what builds and deploys.
+# A push or a merge made with GITHUB_TOKEN starts no workflow (so this cannot loop) but GitHub still
+# sends it to Cloudflare's GitHub app, which is what builds and deploys. Opening pull requests needs
+# Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests".
 name: promote production
 
 on:
   schedule:
-    # 15:00 UTC daily. GitHub may start a scheduled run late under load; that only delays it.
-    - cron: "0 15 * * *"
+    - cron: "7 * * * *"
+  issue_comment:
+    types: [created]
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -34,21 +48,34 @@ on:
         required: false
         default: ""
 
-concurrency:
-  group: promote-production
-  cancel-in-progress: false
-
 permissions:
   contents: write
   actions: read
+  issues: write
+  pull-requests: write
 
 jobs:
   promote:
-    name: fast-forward production
-    # A workflow_run fires for every completed CI run; only a green push to main can promote.
+    name: merge main into production
+    # A workflow_run fires for every completed CI run, and an issue_comment for every comment in the
+    # repository; only a green push to main, or a command on the countdown issue, gets past here.
+    # The label is `RELEASE_LABEL` in scripts/promote-production.sh, which the test holds equal. The
+    # concurrency group is the job's, not the workflow's, so a comment that wakes nothing never takes
+    # the place of a run waiting its turn.
     if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
+        && contains(github.event.issue.labels.*.name, 'production merge')
+        && github.event.comment.user.type != 'Bot'
+        && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+        && (contains(github.event.comment.body, '/hold') || contains(github.event.comment.body, '/resume')
+          || contains(github.event.comment.body, '/release') || contains(github.event.comment.body, '/unhold')
+          || contains(github.event.comment.body, '/delay')))
+    concurrency:
+      group: promote-production
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -57,76 +84,10 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: pick the candidate and promote it
+      - name: merge main into production and keep the countdown issue
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
-        run: |
-          set -euo pipefail
-
-          green() {
-            [ -n "$(gh run list --workflow ci.yml --branch main --event push --status success \
-              --commit "$1" --limit 1 --json headSha --jq '.[].headSha')" ]
-          }
-          catalog() {
-            git show "$1:render.yaml" 2>/dev/null | awk '$1 == "-" && $2 == "key:" { k = $3; next }
-              k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }'
-          }
-
-          case "$EVENT" in
-            workflow_run) candidate=$RUN_SHA ;;
-            workflow_dispatch) candidate=${INPUT_SHA:-} ;;
-            *) candidate= ;;
-          esac
-          if [ -z "$candidate" ]; then
-            candidate=$(gh run list --workflow ci.yml --branch main --event push --status success \
-              --limit 1 --json headSha --jq '.[0].headSha // ""')
-          fi
-          if [ -z "$candidate" ]; then
-            echo "::error::No push to main has a passing CI run; nothing can be promoted."
-            exit 1
-          fi
-          candidate=$(git rev-parse --verify "$candidate^{commit}")
-
-          git merge-base --is-ancestor "$candidate" origin/main \
-            || { echo "::error::$candidate is not on main."; exit 1; }
-          green "$candidate" \
-            || { echo "::error::$candidate has no passing push-to-main CI run."; exit 1; }
-
-          if git rev-parse --verify -q origin/production >/dev/null; then
-            current=$(git rev-parse origin/production)
-            if [ "$current" = "$candidate" ]; then
-              echo "production is already $candidate."
-              exit 0
-            fi
-            if git merge-base --is-ancestor "$candidate" "$current"; then
-              echo "production ($current) is already past $candidate; nothing to do."
-              exit 0
-            fi
-            git merge-base --is-ancestor "$current" "$candidate" || {
-              echo "::error::production ($current) is not an ancestor of $candidate. It was moved by hand or main was rewritten. Not force-pushing; see docs/deploy-cloudflare.md, 'production has diverged'."
-              exit 1
-            }
-            if [ "$EVENT" = workflow_run ] && [ "$(catalog "$current")" = "$(catalog "$candidate")" ]; then
-              echo "No catalog change ($(catalog "$candidate")); this waits for the daily promotion."
-              exit 0
-            fi
-          else
-            current=
-            echo "production does not exist yet; this run creates it."
-          fi
-
-          git push origin "$candidate:refs/heads/production"
-          {
-            echo "### production -> \`${candidate:0:12}\` ($EVENT)"
-            echo
-            echo "Catalog: $(catalog "$candidate")"
-            if [ -n "$current" ]; then
-              echo
-              echo "Commits promoted:"
-              echo
-              git log --format='- %h %s' "$current..$candidate"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bash scripts/promote-production.sh

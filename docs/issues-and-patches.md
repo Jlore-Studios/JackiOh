@@ -15,6 +15,7 @@ Every issue carries at least one type label:
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
 | `night bot vN` | Which night bot release the work belongs to (`night bot v1` for what shipped before 2026-10-04, `night bot v2` for the next). It goes beside `night bot` |
+| `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. Comments `/hold`, `/resume` and `/delay 3h` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The

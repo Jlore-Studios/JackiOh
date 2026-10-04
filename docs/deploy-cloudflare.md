@@ -11,25 +11,29 @@ database and auth (Supabase).
 | --- | --- | --- |
 | Purpose | See main as it is now; preview a branch on request | What players use |
 | Builds from | `main`, plus any branch whose commit message says `[vercel]` | `production` only |
-| How often | Every push to main that changes the bundle | Once a day, plus catalog bumps as soon as CI passes |
+| How often | Every push to main that changes the bundle | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
 | Gate | Vercel's own build | `main`'s push-to-main CI run must have passed |
 | Routing and headers | `vercel.json` (source of truth) | `apps/web/public/_redirects`, `_headers`, `wrangler.jsonc` |
 | Domain | `jackioh.vercel.app` | your Cloudflare domain (to be chosen) |
 | Backend | Render + Supabase (shared) | Render + Supabase (shared) |
 
 `main` stays the only branch anyone merges into. `production` is a pointer to "the commit of main
-that is live on Cloudflare". Nothing but `.github/workflows/promote-production.yml` moves it, and it
-only ever moves forward along main.
+that is live on Cloudflare". Nothing but `.github/workflows/promote-production.yml` moves it, by
+merging a pull request whose head is a green commit of main, so its files always equal that commit's.
 
 ## 2. How a commit reaches production
 
 1. A pull request merges into `main` (branch protection already requires the six CI checks).
 2. Pushes to `main` trigger three things at once: Render deploys `apps/server`; Vercel deploys
    staging (unless `scripts/vercel-ignore.sh` skips it); and CI runs again on main.
-3. Every day at 15:00 UTC, `promote-production.yml` looks up the newest commit of `main` whose
-   push-to-main CI run succeeded and fast-forwards `production` to it. If `production` is already
-   there, nothing happens and nothing deploys.
-4. Cloudflare's GitHub app sees the push to `production`, runs the build, and deploys it.
+3. An open issue labelled `production merge` says "Merging to production in N hours" (section 2.3).
+   When its time comes, 15:00 UTC each day unless someone held or delayed it,
+   `promote-production.yml` looks up the newest commit of `main` whose push-to-main CI run succeeded,
+   opens a pull request from `promote/<date>-<sha>` into `production` listing the commits, and
+   merges it with a merge commit. It then closes the issue as completed, with the pull request, and
+   opens the next one. If `production` already has that commit, no pull request is opened and
+   nothing deploys.
+4. Cloudflare's GitHub app sees the merge into `production`, runs the build, and deploys it.
 
 ### 2.1 The catalog fast path, and why it exists
 
@@ -40,10 +44,13 @@ deploys only once a day. Without a fast path, a merge that bumps the catalog wou
 with a new server and a day-old client, and **every deck save and queue in production would be
 refused until the next daily run**.
 
-So the workflow also runs whenever CI completes on main. In that case it promotes only if the commit
-changes `render.yaml`'s `CATALOG_VERSION` compared to what `production` has. Every other change
-waits for the daily run. The gap that remains is the time for CI plus a Cloudflare build after
-Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closing that gap.
+So the workflow also runs whenever CI completes on main, and its hourly check looks for the same
+thing in case that event was lost. It promotes only if the commit changes `render.yaml`'s
+`CATALOG_VERSION` compared to what `production` has, through the same kind of pull request, and **a
+hold does not stop it** (the server already runs the new catalog, so holding the client back is what
+breaks production). It comments on the open countdown issue and leaves its time alone. Every other
+change waits for the countdown. The gap that remains is the time for CI plus a Cloudflare build
+after Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closing that gap.
 
 ### 2.2 The rules the promotion workflow enforces
 
@@ -52,11 +59,47 @@ These are all tested against a simulated repo before this change shipped:
 - The candidate must be on `main` and have a successful push-to-main CI run. A commit whose CI is
   still running, failed, or was cancelled is never promoted; the daily run takes the newest green
   one instead.
-- `production` only fast-forwards. If it is not an ancestor of the candidate, the run fails with an
-  error and changes nothing. It never force-pushes.
+- `production` only receives merges of green main commits. Before opening anything, the run checks
+  that `production`'s files equal those of the main commit it last merged
+  (`git diff <merge-base> production` is empty). If someone committed to `production`, the run fails
+  with an error and changes nothing, and after the merge it checks that `production`'s files equal
+  the candidate's. It never force-pushes.
 - Asking it to promote an older commit than `production` already has is a no-op, not a rollback.
-- The first run creates `production`.
-- The run summary lists the catalog version and every commit that went live.
+- The first promotion creates `production`, by pushing the candidate: there is no pull request to
+  open against a branch that does not exist.
+- The pull request lists the catalog version and every commit that goes live, and the run summary
+  repeats it.
+
+### 2.3 The countdown issue: hold and delay
+
+Exactly one issue labelled `production merge` is open at a time. Its title reads "Merging to
+production in 23 hours (2026-10-05 15:00 UTC)" when it is opened and again whenever a command changes
+it, so the hours are right at that moment and the date always is. The first line of its body is a
+hidden state line (the time, whether it is held, the last comment read); leave it alone.
+
+Anyone with write access comments on the issue:
+
+| Comment | Effect |
+| --- | --- |
+| `/hold` (a reason after it, if you like) | Nothing merges until `/resume`. The title says "on hold". |
+| `/resume` (or `/release`, `/unhold`) | Lifts the hold. If the time has passed, it merges at once. |
+| `/delay 3h`, `/delay 2d` | Moves the merge later by that long. At most 168 hours at a time; use `/hold` for longer. If the time has already passed, it counts from the comment. |
+
+A command is a line that starts with the slash, in any case. Each is acknowledged with a 👍 (😕 when
+it was refused: the commenter has no write access, or it is not understood), and a comment wakes the
+workflow at once, so the answer takes a minute rather than an hour. Commands apply once, in the order
+they were written; editing a comment later changes nothing.
+
+The check runs every hour at minute 7 and merges when the issue's time has passed and it is not held.
+GitHub starts scheduled runs late and sometimes skips them, so a merge can come a little after its
+time and never before. When it merges, the issue is closed as completed with a link to the pull
+request, and the next one is opened for the first 15:00 UTC at least 12 hours away. A manual run
+(section 5) merges at once, hold or no hold, and starts the countdown over.
+
+The label is the custom tag: the workflow finds the open issue by it, and it is on every promotion
+pull request too. To rename it, change `RELEASE_LABEL` in `scripts/promote-production.sh` and the
+label named in the job's `if` in `promote-production.yml`; `promote-production.test.ts` fails until
+they agree. The hour (`RELEASE_HOUR_UTC`) and the other numbers are at the top of the script.
 
 It uses only the built-in `GITHUB_TOKEN` (permission `contents: write`). A push made with that token
 starts no other workflow, so it cannot loop, but Cloudflare's GitHub app still receives it.
@@ -70,9 +113,12 @@ starts no other workflow, so it cannot loop, but Cloudflare's GitHub app still r
 - `apps/web/public/_headers`: the CSP and security headers, copied from `vercel.json`.
 - `apps/web/src/net/cloudflare-config.test.ts`: fails CI if the three files above drift from
   `vercel.json`.
-- `.github/workflows/promote-production.yml`: the daily promotion described in section 2.
-- `vercel.json` and `apps/web/vercel.json`: `production` added to `git.deploymentEnabled` as
-  `false`, so Vercel never builds Cloudflare's branch (it would spend Vercel's daily deployment cap);
+- `.github/workflows/promote-production.yml`: when the promotion runs (section 2), and
+  `scripts/promote-production.sh`: what it does. `apps/web/src/net/promote-production.test.ts` runs
+  the script against a throwaway repository and a stand-in for `gh`.
+- `vercel.json` and `apps/web/vercel.json`: `production` and `promote/**` added to
+  `git.deploymentEnabled` as `false`, so Vercel never builds Cloudflare's branch or the head branches
+  of the promotion pull requests (they would spend Vercel's daily deployment cap);
   `deploy-routes.test.ts` holds it.
 - `CLAUDE.md`: the deployment paragraph names both hosts.
 
@@ -88,9 +134,15 @@ every response.
 
 Do these in order. Steps 2 to 4 are where most mistakes would happen.
 
-### Step 1: Merge this pull request
+### Step 1: Merge this pull request, and allow the workflow to open pull requests
 
-`promote-production.yml` has to be on `main` before it can run or be started by hand.
+`promote-production.yml` has to be on `main` before it can run or be started by hand. It opens and
+merges pull requests with the built-in token, which GitHub allows only when two repository settings
+say so: Settings -> Actions -> General -> Workflow permissions -> **Allow GitHub Actions to create
+and approve pull requests** (for an organization's repository, the organization's setting must allow
+it first), and Settings -> General -> Pull Requests -> **Allow merge commits**. Without the first,
+a run fails with "GitHub Actions is not permitted to create or approve pull requests"; without the
+second, the merge is refused.
 
 ### Step 2: Create the `production` branch
 
@@ -100,8 +152,9 @@ Cloudflare needs a branch to point at.
 
 Then protect it: Settings -> Rules -> Rulesets -> New branch ruleset, target `production`, and enable
 **Restrict deletions** and **Block force pushes**. Do **not** enable "Require a pull request" or
-required status checks on it; those would block the workflow's push. A fast-forward push still
-works under these two rules, and they make an accidental `git push -f` to production impossible.
+required status checks on it; those would block the push that creates the branch and hold back the
+promotion pull requests, which no check runs on. Merging a pull request still works under these two
+rules, and they make an accidental `git push -f` to production impossible.
 
 ### Step 3: Set up Cloudflare
 
@@ -112,7 +165,9 @@ Workers & Pages -> your project. A **Worker** shows "Deployments" and "Settings 
 **If it is a Worker (recommended):** Settings -> Build:
 
 - **Git repository:** `Jlore-Studios/JackiOh`
-- **Production branch:** `production` (not `main`). This is what makes it once a day.
+- **Production branch:** `production` (not `main`). This is what makes it once a day. The
+  `promote/<date>-<sha>` heads of the promotion pull requests are non-production branches too, so
+  they build nothing while this is off.
 - **Builds for non-production branches:** off (Branch control). Previews are Vercel's job. Left on,
   Cloudflare builds every pull request and every bot branch, and its "Workers Builds: jackioh"
   check goes red on all of them, which is what issue #207 was about. It is not a required check, so
@@ -220,22 +275,33 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 
 ## 5. Day-to-day operation
 
-- **Normal day:** merge to main as usual. Staging updates within minutes; production catches up at
-  15:00 UTC. To change the time, edit the `cron` line (it is in UTC).
+- **Normal day:** merge to main as usual. Staging updates within minutes; production catches up when
+  the countdown issue's time comes (15:00 UTC). To change the hour, edit `RELEASE_HOUR_UTC` in
+  `scripts/promote-production.sh`; the hourly `cron` stays as it is.
+- **Not yet, I'm mid-change:** comment `/hold` on the countdown issue, and `/resume` when the work is
+  done; or `/delay 6h` for a known wait (section 2.3). Neither stops a catalog bump.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main to pass, then Actions ->
-  promote production -> Run workflow. It promotes the newest green commit, or the `sha` you give.
+  promote production -> Run workflow. It promotes the newest green commit, or the `sha` you give, at
+  once and whatever the hold, and the countdown starts over.
 - **Catalog bump:** nothing to do; it promotes itself after CI passes. Watch the Actions tab for the
   promote run, then do verification step 6.
 - **Roll back:** Cloudflare -> Deployments -> pick the last good one -> Rollback. This is instant
   and does not touch git. Then fix forward on main. Because the next daily run would deploy main's
   newest green commit again, disable the workflow (Actions -> promote production -> "..." -> Disable
   workflow) until the fix has merged, then re-enable it.
-- **Pause production:** disable the workflow. Staging keeps updating.
-- **A promote run fails with "production has diverged":** someone moved `production` by hand or
-  main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
+- **Pause production:** `/hold` on the countdown issue (a catalog bump still goes out), or disable the
+  workflow to stop everything. Staging keeps updating.
+- **A promote run fails with "production has diverged":** someone committed to `production` by hand
+  or main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
-  ruleset), and the next run continues normally.
+  ruleset), and the next run continues normally. The hourly check fails the same way until then.
+- **A promote run fails with "could not be merged into production":** the pull request is left open
+  and says why on its page (a setting, a conflict). Fix that and the next hourly check opens a new
+  one; close the old one.
+- **The countdown issue is missing or doubled:** the hourly check opens one when none is open and
+  closes all but the newest as not planned, so closing it by hand only starts a fresh countdown for
+  the next 15:00 UTC that is at least 12 hours away.
 - **deploy-watch opens "Render: the live server is not serving main's catalog":** it compares the
   version and the commit the live server reports (`x-deployed-commit`, from Render's
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
@@ -260,13 +326,16 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
 - **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
   workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
 - **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for
-  60 days. Re-enable it in the Actions tab.
+  60 days. Re-enable it in the Actions tab. A comment on the countdown issue and a manual run work
+  while it is off.
 
 ## 6. What needs no secret
 
 - Cloudflare: none. The build variables are all public, and there is no Worker script.
-- GitHub: none added. The workflow uses the built-in `GITHUB_TOKEN`, and Cloudflare deploys through
-  its own GitHub app, so no Cloudflare API token is stored in GitHub.
+- GitHub: none added. The workflow uses the built-in `GITHUB_TOKEN` (with the two repository
+  settings in step 1), and Cloudflare deploys through its own GitHub app, so no Cloudflare API token
+  is stored in GitHub. Pull requests and issues made with that token start no other workflow, so
+  `ci.yml` does not run on a promotion pull request, which is right: its commits already passed.
 - Render and Supabase: unchanged, except for the `PUBLIC_ORIGINS` value and the Redirect URL above.
 
 ## 7. Known gaps and recommended next steps
