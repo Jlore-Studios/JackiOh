@@ -64,6 +64,8 @@ print(report["wins"], "/", report["games"])
   `decks`, `built_by_agent` and the replay `hash`.
 - `audit_candidate(logs, card_pool, config)` returns `shadowbanned`,
   `unobserved` and per-card `stats` (`opportunities`, `plays`, `use_rate`).
+  It counts only the candidate's own decisions: `play_series` stamps each log
+  with `candidate_seat`, and stamped logs ignore the other seat's decisions.
 - `evaluate_gates(wins_vs_champions, wins_vs_random, candidate_shadowbanned,
   champion_shadowbanned, pool_size, config)` returns `promoted` and the
   `failures` that blocked it, if any.

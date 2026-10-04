@@ -38,14 +38,19 @@ def _canonical(action: Action) -> str:
 
 
 def _def_of(obs: Observation, instance_id: str) -> str | None:
+    # Card views (``cardView``) key hand and graveyard cards by ``instanceId``
+    # with the definition in ``defId``. Legal ``play`` actions name cards from
+    # either zone (graveyard casts reuse the same action), so both are searched.
     you = obs.get("you", {})
-    hand = you.get("hand", [])
-    if not isinstance(hand, list):
-        return None
-    for card in hand:
-        if isinstance(card, dict) and card.get("id") == instance_id:
-            def_id = card.get("defId")
-            return def_id if isinstance(def_id, str) else None
+    for zone in ("hand", "graveyard"):
+        cards = you.get(zone, [])
+        if not isinstance(cards, list):
+            continue
+        for card in cards:
+            if isinstance(card, dict) and card.get("instanceId") == instance_id:
+                def_id = card.get("defId")
+                if isinstance(def_id, str):
+                    return def_id
     return None
 
 

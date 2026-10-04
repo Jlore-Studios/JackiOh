@@ -13,6 +13,11 @@ Across all gauntlet games for a candidate, for each card in the pool:
 - When the agent builds decks, a pool card drafted in no gauntlet game is also
   shadowbanned.
 
+Only the candidate's own decisions count: ``play_series`` stamps each game log
+with ``candidate_seat`` and each decision with its ``seat``, and logs carrying
+that stamp ignore the other seat's decisions (and decks). Logs without the
+stamp (single-agent probes) count every decision, as before.
+
 All thresholds come from ``ladder/config.yaml``; nothing is hardcoded.
 ``agent_builds_decks: auto`` reads the arena logs' ``built_by_agent`` flag.
 """
@@ -47,12 +52,22 @@ def compute_shadowban(
     plays: dict[str, int] = {card: 0 for card in card_pool}
     drafted: set[str] = set()
     for log in logs:
+        candidate_seat = log.get("candidate_seat")
         decks = log.get("decks", {})
         if isinstance(decks, dict):
-            for deck in decks.values():
+            own_deck = decks.get(candidate_seat) if isinstance(candidate_seat, str) else None
+            visible = [own_deck] if isinstance(own_deck, list) else list(decks.values())
+            for deck in visible:
                 if isinstance(deck, list):
                     drafted.update(c for c in deck if isinstance(c, str))
         for decision in log.get("decisions", []):
+            seat = decision.get("seat")
+            if (
+                isinstance(candidate_seat, str)
+                and isinstance(seat, str)
+                and seat != candidate_seat
+            ):
+                continue
             seen = set()
             for card in decision.get("legal_plays", []):
                 if card in opportunities and card not in seen:

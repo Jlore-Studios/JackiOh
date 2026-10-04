@@ -87,6 +87,26 @@ class RecordingAgent(RandomAgent):
         return choice
 
 
+def test_decision_logs_resolve_played_def_ids(bridge):
+    # The audit reads defIds off the view's hand/graveyard cards (`instanceId`,
+    # not `id`): every play action must resolve, and some decision must offer
+    # a play, or the shadowban audit measures nothing.
+    report = play_series(bridge, RandomAgent("x"), RandomAgent("y"), ["test-played-0", "test-played-1"])
+    decisions = [d for log in report["logs"] for d in log["decisions"]]
+    plays = [d for d in decisions if d["action_type"] == "play"]
+    assert plays, "expected at least one play action across two games"
+    assert all(d["played"] is not None for d in plays)
+    assert any(d["legal_plays"] for d in decisions)
+    from audit.shadowban import compute_shadowban
+
+    pool = bridge.call({"cmd": "cards"})["cards"]
+    out = compute_shadowban(report["logs"], pool, 20, 0.05, False)
+    total_opp = sum(s["opportunities"] for s in out["stats"].values())
+    total_plays = sum(s["plays"] for s in out["stats"].values())
+    assert total_opp > 0
+    assert total_plays > 0
+
+
 def test_every_logged_choice_was_in_its_legal_set(bridge):
     rec1, rec2 = RecordingAgent("r1"), RecordingAgent("r2")
     log = play_game(bridge, {"p1": rec1, "p2": rec2}, "test-legal")

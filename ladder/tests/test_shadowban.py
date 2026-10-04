@@ -43,6 +43,41 @@ def test_never_drafted_is_shadowbanned_only_when_agent_builds():
     assert "card-b" in builds["shadowbanned"]
 
 
+def _seated_log(candidate_seat="p1"):
+    decisions = [{"seat": "p1", "legal_plays": ["card-a"], "played": "other"} for _ in range(20)]
+    decisions += [{"seat": "p2", "legal_plays": ["card-a"], "played": "card-a"} for _ in range(20)]
+    return {
+        "decisions": decisions,
+        "decks": {},
+        "built_by_agent": False,
+        "candidate_seat": candidate_seat,
+    }
+
+
+def test_opponent_decisions_do_not_count_toward_candidate():
+    # The candidate (p1) never plays card-a; the opponent (p2) always does.
+    # Without seat filtering the 20 opponent plays would mask the shadowban.
+    out = compute_shadowban([_seated_log("p1")], POOL, 20, 0.05, False)
+    assert out["shadowbanned"] == ["card-a"]
+    assert out["stats"]["card-a"] == {"opportunities": 20, "plays": 0, "use_rate": 0.0}
+
+
+def test_candidate_seat_p2_counts_only_p2():
+    out = compute_shadowban([_seated_log("p2")], POOL, 20, 0.05, False)
+    assert out["shadowbanned"] == []
+
+
+def test_never_drafted_uses_candidate_deck_only():
+    log = {
+        "decisions": [{"seat": "p1", "legal_plays": ["card-b"], "played": "card-b"} for _ in range(20)],
+        "decks": {"p1": ["card-a"], "p2": ["card-b"]},
+        "built_by_agent": True,
+        "candidate_seat": "p1",
+    }
+    out = compute_shadowban([log], POOL, 20, 0.05, True)
+    assert "card-b" in out["shadowbanned"]
+
+
 def test_auto_reads_built_by_agent_from_logs():
     assert resolve_agent_builds_decks("auto", [_log(built_by_agent=True)]) is True
     assert resolve_agent_builds_decks("auto", [_log(built_by_agent=False)]) is False

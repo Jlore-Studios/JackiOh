@@ -14,3 +14,5 @@ One line per judgment call the issue did not settle, with the alternative reject
 - A use rate exactly at `max_use_rate` is not shadowbanned (the definition bans strictly below it).
 - Multi-context specialists are logged from the agent's `last_specialist` attribute read after each `act`; agents without one log `null`. Rejected: a wider return type, which would break the single-contract interface.
 - `ladder/` is outside the pnpm workspace and `pnpm test`: Python 3.10+ with `pyyaml` and `jsonschema`, tests via `python -m pytest` from `ladder/`. Rejected: folding Python into the root install, which would slow every JS-only workflow.
+- The audit counts only the candidate seat's decisions (`candidate_seat` stamp from `play_series`), because a game log holds both seats and the opponent's habits are not the candidate's. Rejected: caller-side pre-filtering, which every future caller would have to remember.
+- DefIds resolve off the view's `instanceId` key (hand and graveyard, the zones `play` actions name), never a bare `id`, which card views do not carry.
