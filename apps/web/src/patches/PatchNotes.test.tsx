@@ -35,8 +35,8 @@ function patchEntry(version: string): HTMLElement {
   return found;
 }
 
-function byCard(testId: string, id: string): HTMLElement {
-  const found = screen.getAllByTestId(testId).find((element) => element.dataset.card === id);
+function byCard(testId: string, id: string, inside: HTMLElement = document.body): HTMLElement {
+  const found = within(inside).getAllByTestId(testId).find((element) => element.dataset.card === id);
   if (found === undefined) throw new Error(`no ${testId} for ${id}`);
   return found;
 }
@@ -218,10 +218,11 @@ describe("R388 the Patch notes page over the real history", () => {
       fireEvent.click(within(v020).getByTestId(patchTestid.toggle));
     }
     await within(v020).findByTestId(patchTestid.cards, undefined, SLOW);
-    const mask = byCard(patchTestid.changedCard, "core-065");
+    // Inside v0.2.0's entry: the newest patch is open too, and a promoted one may change the Mask again (R646).
+    const mask = byCard(patchTestid.changedCard, "core-065", v020);
     expect(mask).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(mask.querySelector(".cost-gem")).toHaveAttribute("data-cost", "1");
-    const hinder = byCard(patchTestid.changedCard, "core-021");
+    const hinder = byCard(patchTestid.changedCard, "core-021", v020);
     expect(Array.from(hinder.querySelectorAll("ins.patch-mark")).map((element) => element.textContent)).toEqual(["Discard 1"]);
     // Every card v0.2.0 records as changed is on the page once: a face, or a name in the data-only list.
     const record = shipped.find((patch) => patch.version === "v0.2.0");

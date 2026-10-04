@@ -1,0 +1,91 @@
+# Promotes pending card-patch fragments (SPEC R646, issue #63): `patches ship` after every merge to
+# main that touches packages/cards/patches/pending/, opened as a pull request.
+#
+# A branch that changes card data adds one fragment under pending/ and never edits the history.
+# Once it merges, `pnpm --filter @jackioh/cards run patches ship` snapshots the catalog as each
+# fragment's first-parent commit left it, appends the patches in ship order, records shipped.json,
+# deletes the fragments and bumps CATALOG_VERSION everywhere it lives. It needs main's whole
+# history (fetch-depth: 0), and it writes nothing when a fragment's commit does not match its claims,
+# so a refusal fails this run, loudly, with main untouched.
+#
+# The result goes up from `patches/ship-<short sha>`, never a `bot/` branch (bot-commands.yml treats
+# those as the night bot's), and auto-merges by squash like the night bot's own pull requests. It is
+# pushed and opened with BOT_GITHUB_TOKEN because a pull request opened with GITHUB_TOKEN starts no
+# workflow, so the checks branch protection requires would never report.
+#
+# A run supersedes every promotion still open: it starts from a newer main, whose pending/ still
+# holds their fragments, so it ships all of them, and it closes the older pull requests. Merging
+# the promotion deletes the fragments, which touches pending/ and runs this again; with nothing
+# pending it opens nothing.
+name: patches ship
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/cards/patches/pending/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: patches-ship
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ship:
+    name: promote pending fragments
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup
+
+      # `shell: bash` runs with pipefail, so a refused promotion fails the step through `tee`.
+      - name: ship
+        shell: bash
+        run: pnpm --filter @jackioh/cards run patches ship | tee "$RUNNER_TEMP/ship.log"
+
+      - name: open the promotion pull request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Nothing pending; no promotion to open."
+            exit 0
+          fi
+
+          versions=$(sed -n 's/^patches ship: shipped //p' "$RUNNER_TEMP/ship.log" | paste -sd, - | sed 's/,/, /g')
+          head=$(git rev-parse HEAD)
+          branch="patches/ship-$(git rev-parse --short HEAD)"
+          login=$(gh api user --jq .login)
+          id=$(gh api user --jq .id)
+
+          git checkout -b "$branch"
+          git add -A
+          git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
+            commit -q -m "patches ship: $versions" \
+            -m "Promotes the pending fragments on main at $head (R646): snapshots, patches.json, shipped.json, index.json and CATALOG_VERSION."
+          git push -u origin "$branch"
+
+          body=$(printf '%s\n' \
+            "Promotes the card patches pending on main at $head (SPEC R646): $versions." \
+            "" \
+            "\`patches ship\` snapshotted the catalog as each fragment's merge commit left it, appended the patches in ship order, recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes.")
+          url=$(gh pr create --base main --head "$branch" --title "patches ship: $versions" --body "$body")
+          gh pr merge "$url" --auto --squash
+
+          # Older promotions still open shipped a subset of what this one ships.
+          gh pr list --state open --base main --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("patches/ship-")) | "\(.number) \(.headRefName)"' |
+            while read -r number ref; do
+              [ "$ref" = "$branch" ] && continue
+              gh pr close "$number" --delete-branch --comment "Superseded by $url, which ships everything this one did from a newer main."
+            done
+          echo "### patches ship: $versions" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"

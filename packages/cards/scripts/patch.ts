@@ -49,12 +49,16 @@ export function versionsAtSites(): { file: string; version: string | undefined }
   });
 }
 
-/** Rewrites `CATALOG_VERSION` everywhere the string lives (promotion bumps it, R646). */
+/**
+ * Rewrites `CATALOG_VERSION` everywhere the string lives (promotion bumps it, R646). Every site is
+ * read and matched before the first one is written, so a missing site leaves all of them alone.
+ */
 export function bumpSites(version: string, repoRoot: string = REPO_ROOT): void {
-  for (const site of VERSION_SITES) {
+  const rewritten = VERSION_SITES.map((site) => {
     const path = `${repoRoot}/${site.file}`;
     const text = readFileSync(path, "utf8");
     if (!site.pattern.test(text)) throw new Error(`${site.file}: no CATALOG_VERSION to rewrite`);
-    writeFileSync(path, text.replace(site.pattern, site.render(version)), "utf8");
-  }
+    return { path, text: text.replace(site.pattern, site.render(version)) };
+  });
+  for (const { path, text } of rewritten) writeFileSync(path, text, "utf8");
 }

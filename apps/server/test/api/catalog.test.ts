@@ -292,7 +292,10 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
       expect(response.status, version).toBe(200);
       const body = await readJson<CatalogBody>(response);
       expect(body.version).toBe(version);
-      expect(body.defs, version).toEqual(await snapshotFile(version));
+      // The version this server runs is served from the catalog it loaded; every other one is its
+      // snapshot. Between a card change's merge and its promotion the loaded catalog is ahead of the
+      // newest snapshot on the pending fragment's cards (R646), which packages/cards proves.
+      expect(body.defs, version).toEqual(version === catalog.version ? catalog.defs : await snapshotFile(version));
     }
   });
 

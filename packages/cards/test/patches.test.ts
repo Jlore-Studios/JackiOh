@@ -72,8 +72,8 @@ describe("R388 card patch history (B4.2)", () => {
   });
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot apart from pending fragments (R646)", () => {
+    // Never a literal: `patches ship` moves the newest patch, and its pull request cannot edit tests.
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.10");
     const snapshot = readSnapshot(CATALOG_VERSION);
     // Pending fragments hold the catalog ahead of the newest snapshot on exactly their claimed
     // cards (R646): reverted to the snapshot, the catalog is the snapshot. With no fragments

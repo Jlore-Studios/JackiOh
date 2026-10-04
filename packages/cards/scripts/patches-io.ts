@@ -321,6 +321,19 @@ export function nextShipName(taken: ReadonlySet<string>, version: string): strin
   throw new Error(`no free revision letter for "${version}" (b through z are all shipped)`);
 }
 
+/**
+ * The ids whose entry is not the same bytes in both catalogs (added, removed, or any field moved,
+ * key order and a reworded `{key}` included), in `after`'s order, removals last. This is what a
+ * fragment claims: `diffCatalogs` reports a patch's changes the way players read them, but every
+ * entry that would make the next snapshot differ has to belong to a patch, and `sameCatalog`
+ * agrees with this one.
+ */
+export function differingIds(before: Catalog, after: Catalog): string[] {
+  const out = Object.keys(after).filter((id) => JSON.stringify(before[id]) !== JSON.stringify(after[id]));
+  for (const id of Object.keys(before)) if (after[id] === undefined) out.push(id);
+  return out;
+}
+
 /** Two catalogs hold the same entries, key order aside. */
 export function sameCatalog(a: Catalog, b: Catalog): boolean {
   const keysA = Object.keys(a);
@@ -350,8 +363,9 @@ export function revertPending(catalog: Catalog, newest: Catalog, claimed: Readon
  * card (and the fragment) at fault, or [] when the tree is shippable: every catalog entry that
  * differs from the newest snapshot is claimed by exactly one fragment, every claimed card
  * differs, every fragment names a bare patch number or a micro `vA.B.Y`, every fragment file
- * holds the version its name says, and every fragment carries a title, sources and notes — they
- * become the shipped patch's. Pure: `patches check` reads the files and prints what this returns.
+ * holds the version its name says, every fragment claims at least one card, and every fragment
+ * carries a title, sources and notes — they become the shipped patch's. Pure: `patches check`
+ * reads the files and prints what this returns.
  */
 export function checkFragments(args: {
   files: readonly { name: string; fragment: PendingFragment }[];
@@ -374,8 +388,12 @@ export function checkFragments(args: {
         problems.push(`pending/${name} has an empty ${field}, but a shipped patch needs one`);
       }
     }
+    // A patch is a catalog change; one with none would bump the version over nothing (R650).
+    if (fragment.cards.length === 0) {
+      problems.push(`pending/${name} claims no cards, but a patch ships a catalog change`);
+    }
   }
-  const differed = new Set(diffCatalogs(args.newest, args.catalog).map((change) => change.id));
+  const differed = new Set(differingIds(args.newest, args.catalog));
   const claimants = new Map<string, string[]>();
   for (const { fragment } of args.files) {
     for (const id of fragment.cards) {

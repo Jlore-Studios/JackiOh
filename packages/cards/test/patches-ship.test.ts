@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkFragments,
+  differingIds,
   gitBlobHash,
   nextShipName,
   readFragments,
@@ -95,6 +96,26 @@ describe("R646 pending fragments and the check that proves them", () => {
       "pending/v0.2.5.json has an empty sources, but a shipped patch needs one",
       "pending/v0.2.5.json has an empty notes, but a shipped patch needs one",
     ]);
+  });
+
+  it("R646 refuses a fragment that claims no card: a patch is a catalog change", () => {
+    const newest: Catalog = { aaa: card("aaa", 1) };
+    const none = [{ name: "v0.2.5.json", fragment: { version: "v0.2.5", title: "t", sources: "s", notes: "n", cards: [] } }];
+    expect(checkFragments({ files: none, catalog: newest, newest })).toEqual([
+      "pending/v0.2.5.json claims no cards, but a patch ships a catalog change",
+    ]);
+  });
+
+  it("R646 counts an entry whose bytes moved as changed, key order included, so every catalog has a legal state", () => {
+    const newest: Catalog = { aaa: { id: "aaa", name: "Card aaa", cost: 1 } };
+    const reordered: Catalog = { aaa: { cost: 1, id: "aaa", name: "Card aaa" } };
+    const files = [{ name: "v0.2.5.json", fragment: { version: "v0.2.5", title: "t", sources: "s", notes: "n", cards: ["aaa"] } }];
+    expect(differingIds(newest, reordered)).toEqual(["aaa"]);
+    expect(checkFragments({ files: [], catalog: reordered, newest })).toEqual([
+      '"aaa" differs from the newest shipped snapshot but no pending fragment claims it',
+    ]);
+    expect(checkFragments({ files, catalog: reordered, newest })).toEqual([]);
+    expect(sameCatalog(revertPending(reordered, newest, new Set(["aaa"])), newest)).toBe(true);
   });
 
   it("R646 reverts the catalog to the newest snapshot on exactly the claimed cards", () => {
@@ -401,6 +422,99 @@ describe("R646 promotion in ship order", () => {
       });
       writeFragment(root, { version: "v0.2.Y", title: "t", sources: "s", notes: "n" });
       expect(checkPatches(root).join("\n")).toContain("cannot ship");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  /** A repo whose only patch is v0.1.1 over `base`, committed, with its provenance recorded. */
+  function shippedRepo(prefix: string, base: Catalog): string {
+    const root = mkdtempSync(join(tmpdir(), prefix));
+    git(root, ["init", "-q", "-b", "main"]);
+    writeFiles(root, {
+      "packages/cards/catalog.json": json(base),
+      "packages/cards/patches/patches.json": json([
+        { version: "v0.1.1", date: "2026-09-27", title: "base", source: "test", notes: "n", changes: [] },
+      ]),
+      "packages/cards/patches/v0.1.1.json": json(base),
+      "packages/cards/patches/index.json": json({}),
+      "packages/cards/patches/shipped.json": json([{ version: "v0.1.1", commit: "0".repeat(40), blob: "0".repeat(40) }]),
+      "packages/cards/src/catalog-data.ts": 'export const CATALOG_VERSION = "v0.1.1";\n',
+      "apps/server/.env.example": "CATALOG_VERSION=v0.1.1\n",
+      "render.yaml": "x:\n- key: CATALOG_VERSION\n  value: v0.1.1\n",
+      "apps/server/src/index.ts": 'export const env = {\n  CATALOG_VERSION: "v0.1.1",\n};\n',
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "base"], "2026-09-27T12:00:00+00:00");
+    return root;
+  }
+
+  it("R646 ships a fragment a merge commit brought in, snapshotting the catalog that merge left", () => {
+    const base: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
+    const root = shippedRepo("jackioh-ship-merge-", base);
+    try {
+      const dir = `${root}/packages/cards/patches/`;
+      git(root, ["checkout", "-q", "-b", "patch"]);
+      writeFiles(root, { "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 2) }) });
+      writeFragment(root, { version: "v0.2.5", title: "t", sources: "s", notes: "n" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.2.5"], "2026-10-01T12:00:00+00:00");
+      git(root, ["checkout", "-q", "main"]);
+      writeFiles(root, { "README.md": "unrelated\n" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "meanwhile on main"], "2026-10-01T13:00:00+00:00");
+      git(root, ["merge", "-q", "--no-ff", "patch", "-m", "Merge pull request"], "2026-10-02T12:00:00+00:00");
+      const merge = git(root, ["rev-parse", "HEAD"]).trim();
+      expect(shipPatches(root)).toEqual({ shipped: ["v0.2.5"] });
+      const v25 = readPatches(`${dir}patches.json`).find((patch) => patch.version === "v0.2.5");
+      // The merge commit is on main's first-parent line; the branch's own commit is not.
+      expect({ date: v25?.date, commits: v25?.commits }).toEqual({ date: "2026-10-02", commits: [merge] });
+      expect(costOf(readSnapshot("v0.2.5", dir), "aaa")).toBe(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R646 writes nothing when a claimed card changed again after its fragment merged", () => {
+    const base: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
+    const root = shippedRepo("jackioh-ship-late-", base);
+    try {
+      writeFiles(root, { "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 2) }) });
+      writeFragment(root, { version: "v0.2.5", title: "t", sources: "s", notes: "n" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.2.5"], "2026-10-01T12:00:00+00:00");
+      // A later merge moves the claimed card again without touching the fragment: check passes,
+      // but no snapshot of the fragment's commit is today's catalog.
+      writeFiles(root, { "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 3) }) });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "aaa again"], "2026-10-02T12:00:00+00:00");
+      expect(checkPatches(root)).toEqual([]);
+      expect(() => shipPatches(root)).toThrow(/catalog\.json changed after/);
+      expect(git(root, ["status", "--porcelain"])).toBe("");
+
+      // A fragment edited to claim a card its commit did not change is refused the same way.
+      writeFiles(root, { "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 3), bbb: card("bbb", 2) }) });
+      writeFragment(root, { version: "v0.2.5", title: "t", sources: "s", notes: "n" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.2.5 claims bbb too"], "2026-10-03T12:00:00+00:00");
+      expect(checkPatches(root)).toEqual([]);
+      expect(() => shipPatches(root)).toThrow(/but the fragment claims \["aaa","bbb"\]/);
+      expect(git(root, ["status", "--porcelain"])).toBe("");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R646 writes nothing when a version site is missing", () => {
+    const base: Catalog = { aaa: card("aaa", 1) };
+    const root = shippedRepo("jackioh-ship-site-", base);
+    try {
+      writeFiles(root, { "packages/cards/catalog.json": json({ aaa: card("aaa", 2) }), "render.yaml": "x: {}\n" });
+      writeFragment(root, { version: "v0.2.5", title: "t", sources: "s", notes: "n" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.2.5"], "2026-10-01T12:00:00+00:00");
+      expect(() => shipPatches(root)).toThrow(/render\.yaml: no CATALOG_VERSION/);
+      expect(git(root, ["status", "--porcelain"])).toBe("");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

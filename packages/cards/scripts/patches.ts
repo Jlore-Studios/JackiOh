@@ -17,16 +17,19 @@
  * - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
  *   without exactly one fragment claiming it, when a claimed card does not differ, when a
  *   fragment's version is neither a bare patch number (`^v\d+\.\d+\.\d+$`) nor a micro `vA.B.Y`,
- *   when a micro cannot be named after the newest patch, or when a fragment's title, sources or
- *   notes is empty — they become the shipped patch's (R388). CI runs it in the
- *   `validate:catalog` step.
+ *   when a micro cannot be named after the newest patch, when a fragment claims no card, or when a
+ *   fragment's title, sources or notes is empty — they become the shipped patch's (R388). CI runs
+ *   it in the `validate:catalog` step.
  * - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
  *   appends the patch (its version — a micro `vA.B.Y` first named after the then-newest patch,
  *   R650 — or `<version>b`, then `c`, …, when that name already shipped; a shipped version never
  *   reopens), snapshots `catalog.json` as that commit left it, records `{ version, commit, blob }`
  *   in `shipped.json`, deletes the fragment, regenerates the derived files and bumps
  *   `CATALOG_VERSION` to the newest patch. With no fragments it changes nothing, so running it
- *   twice is running it once. It needs full history (`fetch-depth: 0`).
+ *   twice is running it once. It needs full history (`fetch-depth: 0`). It writes nothing unless
+ *   each adding commit's catalog changed exactly the cards its fragment claims and the last one is
+ *   `catalog.json` as it stands. `.github/workflows/patches-ship.yml` runs it after every merge
+ *   that touches `pending/` and opens the promotion's pull request.
  *
  * There is no clock in this package (CLAUDE.md rule 4): dates come from the git history, and the
  * UTC conversion below is arithmetic, never `Date`.
@@ -39,7 +42,7 @@ import { bumpSites } from "./patch";
 import { resolveVersion } from "./versions";
 import {
   checkFragments,
-  diffCatalogs,
+  differingIds,
   FRAGMENT_VERSION,
   gitBlobHash,
   nextShipName,
@@ -104,7 +107,7 @@ export function writeFragment(repoRoot: string, args: FragmentArgs): PendingFrag
   if (newest === undefined) throw new Error("patches.json holds no shipped patch");
   const catalog = readCatalog(paths.catalog);
   const newestSnapshot = readSnapshot(newest.version, paths.dir);
-  const cards = args.cards ?? diffCatalogs(newestSnapshot, catalog).map((change) => change.id);
+  const cards = args.cards ?? differingIds(newestSnapshot, catalog);
   const fragment: PendingFragment = {
     version: args.version,
     title: args.title,
@@ -181,9 +184,15 @@ export type ShipResult = { shipped: string[] };
 
 /**
  * Promotes every pending fragment to a shipped patch, in the order of the first-parent commit
- * that added it (ship order, R646). One commit per fragment is assumed — the squash-merge shape
- * the bot's pull requests land in — so the snapshot is `catalog.json` as that commit left it.
- * Idempotent: with no fragments it changes nothing.
+ * that added it (ship order, R646). The snapshot is `catalog.json` as that commit left it: the
+ * squash commit, or the merge commit, a pull request lands on main as. Idempotent: with no
+ * fragments it changes nothing.
+ *
+ * Nothing is written until every fragment has been named and proved: each adding commit's
+ * catalog must differ from the patch before it on exactly the cards its fragment claims, and the
+ * last one must be the catalog as it stands. A claimed card changed again after its fragment
+ * merged, or a fragment edited to claim more, fails here with the files untouched, instead of
+ * shipping a history whose newest snapshot is not `catalog.json`.
  */
 export function shipPatches(repoRoot: string): ShipResult {
   const paths = patchPaths(repoRoot);
@@ -213,6 +222,14 @@ export function shipPatches(repoRoot: string): ShipResult {
     return { name, fragment, commit, at };
   });
   queued.sort((a, b) => b.at - a.at);
+  // A commit's catalog is one snapshot, so it can ship one patch: two fragments added together
+  // would have to split one diff between them.
+  for (let i = 1; i < queued.length; i += 1) {
+    const [before, after] = [queued[i - 1], queued[i]];
+    if (before !== undefined && after !== undefined && before.commit === after.commit) {
+      throw new Error(`pending/${before.name} and pending/${after.name} were added by one commit, ${after.commit}, which can ship one patch`);
+    }
+  }
 
   const patches = readPatches(paths.patchesJson);
   const taken = new Set(patches.map((patch) => patch.version));
@@ -227,9 +244,37 @@ export function shipPatches(repoRoot: string): ShipResult {
     sequence.push(version);
     return { name, fragment, commit, version };
   });
+  const newest = patches[patches.length - 1];
+  if (newest === undefined) throw new Error("patches.json holds no shipped patch");
+  let previous = readSnapshot(newest.version, paths.dir);
+  const proved = planned.map((plan) => {
+    const raw = git(repoRoot, ["show", `${plan.commit}:${CATALOG_REL}`]);
+    const snapshot = JSON.parse(raw) as Catalog;
+    const changed = differingIds(previous, snapshot);
+    const claimed = new Set(plan.fragment.cards);
+    if (changed.length !== claimed.size || !changed.every((id) => claimed.has(id))) {
+      throw new Error(
+        `pending/${plan.name}: the catalog ${plan.commit} left changes ${JSON.stringify(changed)} ` +
+          `but the fragment claims ${JSON.stringify(plan.fragment.cards)}; nothing was shipped`,
+      );
+    }
+    previous = snapshot;
+    return { ...plan, raw };
+  });
+  const last = proved[proved.length - 1];
+  if (last === undefined) throw new Error("no pending fragment to ship");
+  if (last.raw !== readFileSync(paths.catalog, "utf8")) {
+    throw new Error(
+      `catalog.json changed after ${last.commit} added pending/${last.name}, so the newest snapshot would not be ` +
+        "catalog.json; nothing was shipped",
+    );
+  }
+
+  // The last patch shipped is the newest one, so the version moves first: a version site that is
+  // missing stops the promotion before any history is written.
+  bumpSites(last.version, repoRoot);
   const names: string[] = [];
-  for (const { name, fragment, commit, version } of planned) {
-    const raw = git(repoRoot, ["show", `${commit}:${CATALOG_REL}`]);
+  for (const { name, fragment, commit, version, raw } of proved) {
     writeFileSync(snapshotPath(version, paths.dir), raw, "utf8");
     const entry: PatchEntry = {
       version,
@@ -248,11 +293,7 @@ export function shipPatches(repoRoot: string): ShipResult {
   }
   writeJson(paths.patchesJson, patches);
   writeJson(paths.shippedJson, shipped);
-  const written = rebuildDerived(paths.dir);
-
-  const newest = written[written.length - 1];
-  if (newest === undefined) throw new Error("patches.json holds no shipped patch after promotion");
-  bumpSites(newest.version, repoRoot);
+  rebuildDerived(paths.dir);
   return { shipped: names };
 }
 
