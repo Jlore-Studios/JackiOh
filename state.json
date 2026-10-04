@@ -2288,14 +2288,14 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T10:50:00Z",
-          "utilization": 0.89
+          "utilization": 0.95
         },
-        "observed_at": "2026-10-04T06:47:24Z",
+        "observed_at": "2026-10-04T06:48:57Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.43
+          "utilization": 0.44
         },
-        "status": "allowed"
+        "status": "allowed_warning"
       }
     },
     "claude-3": {
