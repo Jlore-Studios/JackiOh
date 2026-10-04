@@ -19,7 +19,12 @@ export function rowSize(row: Row): number {
 }
 
 export function slotsOf(player: PlayerId, row: Row): ZoneSlot[] {
-  return Array.from({ length: rowSize(row) }, (_, i) => ({ player, row, lane: i + 1 }));
+  // A loop, not `Array.from({ length })`: every unit read asks for slots through the layers, and
+  // Array.from's generic path was a fifth of a long AI gate game's time (#188).
+  const size = rowSize(row);
+  const slots: ZoneSlot[] = [];
+  for (let lane = 1; lane <= size; lane += 1) slots.push({ player, row, lane });
+  return slots;
 }
 
 /** §3.1: lane N-1 and N+1 on the same side and row, never across sides. */
@@ -707,11 +712,16 @@ export function moveToZone(
  * Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
  */
 export function activeUnitsOf(state: GameState, player: PlayerId): CardInstance[] {
-  const tops = slotsOf(player, "units").flatMap((ref) => {
-    const card = cardAt(state, ref);
-    return card === null ? [] : [card];
-  });
-  return [...tops, ...carriedUnitsOf(state, player)];
+  // Read straight off the rows, not through `slotsOf` and `cardAt`: the auras ask for this on every
+  // unit read (`layers.auraSources`), so it builds nothing it does not return (#188).
+  const side = state.players[player];
+  const units: CardInstance[] = [];
+  for (let lane = 1; lane <= UNIT_ZONES; lane += 1) {
+    const top = side.units[lane - 1]?.[0] ?? null;
+    if (top !== null) units.push(top);
+  }
+  for (const card of side.carried ?? []) if (card !== null) units.push(card);
+  return units;
 }
 
 export function dormantUnitsOf(state: GameState, player: PlayerId): CardInstance[] {

@@ -9,9 +9,11 @@
 // passed alone. So each run of a decision is timed right after a fixed piece of engine work
 // (`AI_GATE.calibrationGames` random-policy games), and the decision's cost is its time over the
 // yardstick's, times the yardstick's time on the development machine (`calibrationRefMs`). Load, or
-// a slower CI runner, slows both, and the ratio stands. Each state is decided AI_GATE.perfRepeats
-// times and its smallest ratio counts, so a burst of load during one run fails nothing, while a
-// decision that is slow on its own still does.
+// a slower CI runner, slows both, and the ratio stands. Each state is decided up to
+// AI_GATE.perfRepeats times and its smallest ratio counts, so a burst of load during one run fails
+// nothing, while a decision that is slow on its own still does. The runs stop at the first one under
+// AI_GATE.maxDecisionMs: a decision fails only when every run is over, so the runs after a passing
+// one cannot change the verdict, and they were two thirds of a shard's perf time (#188).
 //
 // `pnpm test` times the decisions of AI_GATE.perfSmokeGames games; `pnpm ai:gate`
 // (JACKIOH_AI_GATE=full) times AI_GATE.perfFullGames.
@@ -84,8 +86,9 @@ function yardstickMs(): number {
 }
 
 /**
- * AI_GATE.perfRepeats runs of one decision, each timed right after the yardstick: the smallest
- * ratio of the two, in the development machine's milliseconds, with the node count.
+ * Up to AI_GATE.perfRepeats runs of one decision, each timed right after the yardstick, stopping at
+ * the first under AI_GATE.maxDecisionMs: the smallest ratio of the two, in the development machine's
+ * milliseconds, with the node count (the same on every run: budgets count nodes).
  */
 function timeDecision(state: GameState, seat: PlayerId, rngSeed: string): Timing {
   let ratio = Number.POSITIVE_INFINITY;
@@ -101,6 +104,7 @@ function timeDecision(state: GameState, seat: PlayerId, rngSeed: string): Timing
     rawMs = Math.min(rawMs, ms);
     nodes = decision?.stats.nodes ?? 0;
     reason = decision?.reason ?? "none";
+    if (ratio * AI_GATE.calibrationRefMs < AI_GATE.maxDecisionMs) break;
   }
   return { ms: ratio * AI_GATE.calibrationRefMs, rawMs, nodes, reason };
 }
