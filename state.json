@@ -1351,7 +1351,7 @@
     "188": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-10-04T10:26:57Z",
         "family": "claude",
@@ -1362,11 +1362,14 @@
         "trail": ""
       },
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-04T10:27:14Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 205,
       "provider": "muse",
+      "question": "",
       "run_id": "37195856139",
       "started_at": "2026-10-04T10:38:00Z",
       "stop_requested": false,
