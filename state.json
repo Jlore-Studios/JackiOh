@@ -1313,7 +1313,7 @@
       "action": "plan",
       "asks": [],
       "died": 0,
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-10-04T01:24:20Z",
