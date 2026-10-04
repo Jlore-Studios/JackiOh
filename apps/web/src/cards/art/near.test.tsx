@@ -1,14 +1,15 @@
-// A grid's lazy art (near.ts, CardArt `lazy`): drawn once the window is near the box that scrolls it.
-// jsdom has no IntersectionObserver, so this file stands one in and fires it by hand.
+// A grid's lazy art (near.ts, CardArt `lazy`): drawn once the window has dwelt near the box that
+// scrolls it. jsdom has no IntersectionObserver, so this file stands one in and fires it by hand.
 
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { ART_NEAR_MARGIN_PX } from "../constants.ts";
+import { ART_DWELL_MS, ART_NEAR_MARGIN_PX } from "../constants.ts";
 import { CardArt } from "./index.ts";
 import { whenNear } from "./near.ts";
+import { THEME_PALETTES, themeFor } from "./themes.ts";
 
 type Observer = {
   callback: IntersectionObserverCallback;
@@ -44,14 +45,23 @@ function intersect(observer: Observer, target: Element, isIntersecting = true): 
   });
 }
 
+/** Runs the clock forward `ms`, flushing the state a dwell timer sets. */
+function advance(ms: number): void {
+  act(() => {
+    vi.advanceTimersByTime(ms);
+  });
+}
+
 beforeEach(() => {
   observers.length = 0;
   vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+  vi.useFakeTimers();
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function Art({ lazy }: { lazy: boolean }) {
@@ -75,7 +85,7 @@ describe("lazy procedural art", () => {
     expect(window.style.backgroundImage).toBe("");
   });
 
-  it("draws the picture once the window comes near, and keeps it", () => {
+  it("draws the picture once the window has dwelt near, and keeps it", () => {
     const { container } = render(<Art lazy />);
     const window = art(container);
     const [observer] = observers;
@@ -83,10 +93,66 @@ describe("lazy procedural art", () => {
     intersect(observer, window, false);
     expect(window.getAttribute("data-art-pending")).toBe("true");
     intersect(observer, window);
+    expect(window.getAttribute("data-art-pending")).toBe("true");
+    advance(ART_DWELL_MS);
     expect(window.hasAttribute("data-art-pending")).toBe(false);
     expect(window.style.backgroundImage).toContain("data:image/svg+xml");
     // Once drawn it is no longer watched.
     expect(observer.targets.size).toBe(0);
+  });
+
+  it("does not draw before the window has dwelt ART_DWELL_MS", () => {
+    const { container } = render(<Art lazy />);
+    const window = art(container);
+    const [observer] = observers;
+    if (observer === undefined) throw new Error("no observer");
+    intersect(observer, window);
+    advance(ART_DWELL_MS - 1);
+    expect(window.getAttribute("data-art-pending")).toBe("true");
+    expect(window.style.backgroundImage).toBe("");
+    advance(1);
+    expect(window.style.backgroundImage).toContain("data:image/svg+xml");
+  });
+
+  it("a window that leaves before the dwell stays pending, stays watched, and dwells again", () => {
+    const { container } = render(<Art lazy />);
+    const window = art(container);
+    const [observer] = observers;
+    if (observer === undefined) throw new Error("no observer");
+    intersect(observer, window);
+    advance(ART_DWELL_MS - 1);
+    intersect(observer, window, false);
+    advance(ART_DWELL_MS * 2);
+    expect(window.getAttribute("data-art-pending")).toBe("true");
+    expect(observer.targets.has(window)).toBe(true);
+    // Back near, the dwell counts from scratch.
+    intersect(observer, window);
+    advance(ART_DWELL_MS - 1);
+    expect(window.getAttribute("data-art-pending")).toBe("true");
+    advance(1);
+    expect(window.hasAttribute("data-art-pending")).toBe(false);
+  });
+
+  it("unmounting mid-dwell drops the window and its timer", () => {
+    const { container, unmount } = render(<Art lazy />);
+    const window = art(container);
+    const [observer] = observers;
+    if (observer === undefined) throw new Error("no observer");
+    intersect(observer, window);
+    advance(ART_DWELL_MS - 1);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(observer.disconnected).toBe(true);
+  });
+
+  it("paints a pending window with its theme's sky", () => {
+    const card = CATALOG["core-002"];
+    if (card === undefined) throw new Error("the catalog has no core-002");
+    const { container } = render(<Art lazy />);
+    const window = art(container);
+    const [skyTop, skyBottom] = THEME_PALETTES[themeFor(card.tags, card.type)].sky;
+    expect(window.style.getPropertyValue("--art-sky-1")).toBe(skyTop);
+    expect(window.style.getPropertyValue("--art-sky-2")).toBe(skyBottom);
   });
 
   it("draws at once when it is not asked to be lazy, and at once when nothing can watch", () => {
@@ -134,9 +200,11 @@ describe("whenNear", () => {
 
     if (observer === undefined) throw new Error("no observer");
     intersect(observer, second);
+    advance(ART_DWELL_MS);
     expect(near).toHaveBeenCalledExactlyOnceWith("second");
     // A window reported twice is called once.
     intersect(observer, second);
+    advance(ART_DWELL_MS);
     expect(near).toHaveBeenCalledTimes(1);
 
     // The second left when it was near; the first is the last one watched, and its stop ends the watch.
