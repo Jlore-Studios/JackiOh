@@ -109,12 +109,26 @@ export function carriedAt(state: GameState, ref: ZoneSlot): CardInstance | null 
 }
 
 /**
- * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (Classic+ #33 Ivory
- * Tower's `staticFlags.carrier`). The flag is the card's text, so a Vanilla carrier carries nothing
- * more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
+ * B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
+ * or Classic+ #33 Ivory Tower's `fusesCarried`, R653). The flag is the card's text, so a Vanilla
+ * carrier carries nothing more (§6.3, R115: `flagsOf` reads nothing off a Vanilla instance).
  */
 export function isCarrier(card: CardInstance): boolean {
-  return flagsOf(card).carrier === true;
+  const flags = flagsOf(card);
+  return flags.carrier === true || flags.fusesCarried === true;
+}
+
+/**
+ * R653: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
+ * the rest of its stay. Memory, so R78 clears it when the card leaves the field, and a Fuse that keeps
+ * the carrier keeps it (R77: it is the engine's entry, not a text's).
+ */
+const STACKED_KEY = "__stacked";
+
+/** R653: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or null if none yet. */
+export function stackedOnto(card: CardInstance): string | null {
+  const id = card.memory[STACKED_KEY];
+  return typeof id === "string" ? id : null;
 }
 
 /** R446: whether this card is a Unit standing on a carrier in a backrow zone. */
@@ -145,6 +159,7 @@ export function whyCannotCarry(state: GameState, ref: ZoneSlot): string | null {
   const top = cardAt(state, ref);
   if (top === null || !isCarrier(top)) return "that zone holds no card a Unit may be played on top of";
   if (carriedAt(state, ref) !== null) return "that card already carries a Unit";
+  if (flagsOf(top).fusesCarried === true && stackedOnto(top) !== null) return "that card has taken its one Unit";
   if (isLocked(state, ref)) return "that zone is Locked";
   if (isReserved(state, ref)) return "that zone is held for a card's return";
   return null;
@@ -295,6 +310,8 @@ export function placeOnField(
     if (top === null || carriedAt(state, ref) !== null) return false;
     if (!isCarrier(top) && options.stack !== true) return false;
     setCarried(side, ref.lane, instance);
+    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
+    if (flagsOf(top).fusesCarried === true && stackedOnto(top) === null) top.memory[STACKED_KEY] = instance.id;
   } else {
     // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
     // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).

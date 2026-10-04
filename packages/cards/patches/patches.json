@@ -4831,5 +4831,302 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.2.10",
+    "date": "2026-10-04",
+    "title": "Patch v0.2.10: Animated pass on Field Spells, Ivory Tower fuses",
+    "source": "Issue #113",
+    "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant). Classic #52 Final Gambit's follow-up neither heals nor draws once its re-aimed hit has felled the enemy hero (R216), so one fused into a Field Trap that stays cannot re-aim its own fatigue for ever.",
+    "changes": [
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-012-5",
+        "name": "Anti-Waffle Shell",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-012-7",
+        "name": "Legion of the Hungry",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      }
+    ]
   }
 ]

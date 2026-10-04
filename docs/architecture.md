@@ -451,9 +451,10 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `PORT` | no (8787) | listen port | — |
 | `PUBLIC_ORIGINS` | yes | comma-separated allowed origins for CORS and the WebSocket `Origin` check | your web host |
 | `NODE_ENV` | no (`development`) | `development \| test \| production` | — |
-| `CATALOG_VERSION` | yes | the catalog version this server accepts (§9.4) | must match what `db:seed-catalog` stamped |
+| `CATALOG_VERSION` | yes | the catalog version this server accepts (§9.4) | must match what `db:seed-catalog` stamped. On Render the start command sets it at every boot from the newest entry of `packages/cards/patches/patches.json` (`scripts/catalog-version.mjs`), so a value in the dashboard is overwritten and a patch needs no dashboard edit; set it yourself only for a local server |
 | `E2E` | no (`0`) | BUILD M8's test-server mode; refused when `NODE_ENV=production` | — |
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
+| `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
 
 `apps/server/src/env.ts` loads these, reports **every** missing or malformed variable in one error
 naming where to get each, and never logs a secret value — not even truncated. It exports

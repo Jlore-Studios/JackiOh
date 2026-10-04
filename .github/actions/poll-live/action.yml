@@ -1,8 +1,14 @@
 # One window of deploy-watch.yml's wait: polls the live server's GET /api/catalog until it serves
-# `expected` or `seconds` pass. deploy-watch.yml chains a few of these as separate jobs, so the wait
-# for Render's deploy can run long without any one job breaking CI's five-minute budget (#73).
+# `expected` (and, when `commit` is given, is running that commit) or `seconds` pass. deploy-watch.yml
+# chains a few of these as separate jobs, so the wait for Render's deploy can run long without any
+# one job breaking CI's five-minute budget (#73).
+#
+# The catalog version alone cannot show that Render deployed a push: a push that leaves the catalog
+# as it was serves the same version before and after, and a service whose dashboard CATALOG_VERSION
+# is stale serves the old version from new code. The server therefore also reports the commit it was
+# deployed from in the `x-deployed-commit` header (apps/server/src/api/catalog.ts).
 name: poll live catalog
-description: Poll the live server's /api/catalog until it serves the expected catalog version
+description: Poll the live server's /api/catalog until it serves the expected catalog version, on the expected commit
 inputs:
   server:
     description: the server's base URL
@@ -10,16 +16,26 @@ inputs:
   expected:
     description: the catalog version main's render.yaml names
     required: true
+  commit:
+    description: the full git SHA the server must report running; empty checks the version only
+    required: false
+    default: ""
   seconds:
     description: how long this window polls
     required: true
 outputs:
   live:
-    description: "'true' once the server served the expected version"
+    description: "'true' once the server served the expected version on the expected commit"
     value: ${{ steps.poll.outputs.live }}
   served:
-    description: the version the server served last, or why it did not answer
+    description: what the server served last, version and commit, or why it did not answer
     value: ${{ steps.poll.outputs.served }}
+  served_version:
+    description: the catalog version the server served last, or why it did not answer
+    value: ${{ steps.poll.outputs.served_version }}
+  served_commit:
+    description: the commit the server reported last; empty when it reported none
+    value: ${{ steps.poll.outputs.served_commit }}
 runs:
   using: composite
   steps:
@@ -28,22 +44,38 @@ runs:
       env:
         SERVER: ${{ inputs.server }}
         EXPECTED: ${{ inputs.expected }}
+        COMMIT: ${{ inputs.commit }}
         SECONDS_: ${{ inputs.seconds }}
       run: |
         deadline=$(( $(date +%s) + SECONDS_ ))
-        served="(no answer)"
+        version="(no answer)"
+        reported=""
+        headers=$(mktemp)
+        body=$(mktemp)
+        want_commit=$(printf '%s' "$COMMIT" | tr 'A-F' 'a-f')
+        finish() {
+          shown="$version"
+          if [ "$version" != "(no answer)" ]; then shown="$version, commit ${reported:-(none reported)}"; fi
+          {
+            echo "live=$1"
+            echo "served=$shown"
+            echo "served_version=$version"
+            echo "served_commit=$reported"
+          } >> "$GITHUB_OUTPUT"
+        }
         while [ "$(date +%s)" -lt "$deadline" ]; do
           left=$(( deadline - $(date +%s) ))
           # A free instance asleep takes about a minute to answer its first request.
-          if body=$(curl -fsS -m "$(( left < 90 ? (left < 5 ? 5 : left) : 90 ))" "$SERVER/api/catalog" 2>/dev/null); then
-            served=$(printf '%s' "$body" | jq -r '.version // "(no version)"')
-            if [ "$served" = "$EXPECTED" ]; then
-              echo "live: catalog $served"
-              { echo "live=true"; echo "served=$served"; } >> "$GITHUB_OUTPUT"
+          if curl -fsS -m "$(( left < 90 ? (left < 5 ? 5 : left) : 90 ))" -D "$headers" -o "$body" "$SERVER/api/catalog" 2>/dev/null; then
+            version=$(jq -r '.version // "(no version)"' "$body")
+            reported=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print tolower($2); exit }')
+            if [ "$version" = "$EXPECTED" ] && { [ -z "$want_commit" ] || [ "$reported" = "$want_commit" ]; }; then
+              echo "live: catalog $version, commit ${reported:-(none reported)}"
+              finish true
               exit 0
             fi
           fi
-          echo "$(date -u +%H:%M:%S) serving $served, waiting for $EXPECTED"
+          echo "$(date -u +%H:%M:%S) serving $version on commit ${reported:-(none reported)}, waiting for $EXPECTED on commit ${want_commit:-(any)}"
           sleep 20
         done
-        { echo "live=false"; echo "served=$served"; } >> "$GITHUB_OUTPUT"
+        finish false
