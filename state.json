@@ -1630,17 +1630,11 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse",
-          "gemini"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "sha": "2e39735c34cd81d1df2065d8c65dff3e54f28fe0",
-        "tiers": {
-          "gemini": "medium",
-          "muse": "medium"
-        }
+        "sha": "1d5a66ed2a191230a58fa8fcd12543734118a117",
+        "tiers": {}
       }
     },
     "203": {
