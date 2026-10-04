@@ -1279,12 +1279,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 49,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-04T18:25:02Z",
+      "queued_at": "2026-10-04T20:25:52Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37223958932",
       "self_check_findings": [
@@ -1295,7 +1295,7 @@
           "where": "self check"
         }
       ],
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-10-04T18:19:49Z",
       "stop_requested": false,
       "taken_asks": [],
