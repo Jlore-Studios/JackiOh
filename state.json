@@ -813,9 +813,12 @@
           "muse"
         ],
         "builder": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "sha": "b5f6c36c67410260d3e709257914c0452af3a6ee",
         "tiers": {
+          "claude": "strong",
           "muse": "medium"
         }
       }
