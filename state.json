@@ -2062,7 +2062,7 @@
     "219": {
       "action": "build",
       "asks": [],
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-10-04T17:44:28Z",
