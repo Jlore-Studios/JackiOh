@@ -1739,15 +1739,6 @@
       "failures": 0,
       "feedback_since": "2026-10-04T16:52:32Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-04T16:56:20Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "# bot-notes for PR #203 revise (rebase onto main 9809419b)\n\n## Task\nMaintainer asked \"@jgoetzmann-bot needs rebase\". Harness merged main into\nbot/issue-44; 18 files have conflict markers. Resolve so BOTH main's changes\nand the branch's patch v0.2.2 (rarity pass) survive.\n\n## Key facts\n- MERGE_HEAD = 9809419b09d93f1522b9c14eda01ee9dc97b9224 (main)\n- merge base = 372bcb83\n- main shipped patches v0.2.5 and v0.2.10 AFTER this branch's v0.2.2 was built.\n  => patches.json order must be ..., v0.2.4, v0.2.5, v0.2.10, v0.2.2 (v0.2.2\n     lands last = newest => its snapshot must equal merged catalog.json).\n  => CATALOG_VERSION stays/moves to v0.2.2 (newest patch), per patches.json order.\n  => v0.2.2.json snapshot MUST BE REGENERATED from merged catalog.json.\n- Do NOT commit/stage; harness does that. Just resolve markers in files.\n\n## Plan\n1. Resolve small files (.env.example, index.ts, render.yaml, catalog-data.ts)\n2. Resolve patches.json / index.json; regenerate v0.2.2 snapshot\n3. Resolve catalog.json (15 rarities + text changes + main's changes)\n4. Resolve SPEC.md, BUILD.md, radiant-audit.md\n5. Resolve test files (catalog.test, card-text, patches, joro, rulings,\n   patch-notes, source.test, server catalog.test)\n6. Run: typecheck, validate:catalog, missing-tests, rulings:coverage + targeted tests\n\n## Status: in progress\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may review it, so it waits for a review run, with 3 self-check finding(s) still open",
-        "trail": "- --- stderr ---\n- Error: Agent error: Reached free model rate limit. Upgrade to Max for higher limits, or switch to a different model. Your limit will reset in 3 minutes (at 17:01 UTC). (trace ID: f2c7d0d8916d6eddfe79c8140fa5c9ee): {\n- \"cognition.ai/errorKind\": \"unavailable\",\n- \"cognition.ai/retryable\": true\n- }"
-      },
       "interruptions": 0,
       "issue": 44,
       "kind": "revise",
