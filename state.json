@@ -1922,9 +1922,12 @@
     "214": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T15:26:04Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 200,
       "kind": "revise",
       "last_findings": [],
