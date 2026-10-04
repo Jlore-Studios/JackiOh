@@ -1971,8 +1971,10 @@
     "what": "revise #168 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-04T06:16:22Z",
-    "notes": [],
+    "at": "2026-10-04T06:27:14Z",
+    "notes": [
+      "started a night run, as a lane was free: #144 (medium) is queued to review, for `agy`: review on `agy` (agy, `gemini-3.8-flash-high`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "providers": {
