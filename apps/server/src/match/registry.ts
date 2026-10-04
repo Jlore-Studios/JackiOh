@@ -68,7 +68,7 @@ export function createMatchRegistry(deps: ActorDeps): MatchRegistry {
       finishedAt: null,
       clocks: initialClocks(now, deps.config.matchCeilingMinutes),
       ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-      // R641: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
+      // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
       // reconnected client) reads the same pair.
       portraits: [portraitOrDefault(first.portrait), portraitOrDefault(second.portrait)],
     };

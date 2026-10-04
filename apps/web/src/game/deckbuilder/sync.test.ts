@@ -839,11 +839,11 @@ describe("a trio import", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// The deck's portrait (R640)
+// The deck's portrait (R641)
 // ---------------------------------------------------------------------------------------------
 
-describe("the deck's portrait (R640)", () => {
-  it("R640 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
+describe("the deck's portrait (R641)", () => {
+  it("R641 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
     const server = fakeServer();
     const storage = memoryStorage();
     const clock = manualClock();
@@ -864,7 +864,7 @@ describe("the deck's portrait (R640)", () => {
     expect(store.getSnapshot().unsynced.has(id)).toBe(false);
   });
 
-  it("R640 updateDeck carries a new portrait, keeps it over an unrelated edit, and clears on null", async () => {
+  it("R641 updateDeck carries a new portrait, keeps it over an unrelated edit, and clears on null", async () => {
     const server = fakeServer();
     const clock = manualClock();
     const store = open({
@@ -889,7 +889,7 @@ describe("the deck's portrait (R640)", () => {
     expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
   });
 
-  it("R640 a portrait-only edit still saves; the same portrait again is a no-op", async () => {
+  it("R641 a portrait-only edit still saves; the same portrait again is a no-op", async () => {
     const server = fakeServer();
     const clock = manualClock();
     const store = open({
@@ -909,7 +909,7 @@ describe("the deck's portrait (R640)", () => {
     expect(server.decks.get("d1")?.portrait).toBe("shredder");
   });
 
-  it("R640 a mirror row written before the portrait column reads back `null`", () => {
+  it("R641 a mirror row written before the portrait column reads back `null`", () => {
     const storage = memoryStorage();
     // A mirror a pre-portrait client left behind: the item simply has no `portrait` key.
     storage.setItem(
@@ -940,7 +940,7 @@ describe("the deck's portrait (R640)", () => {
     expect(portraitOrDefault("gary")).toBe("gary");
   });
 
-  it("R640 a server row's `null` portrait reads vanilla through portraitOrDefault", () => {
+  it("R641 a server row's `null` portrait reads vanilla through portraitOrDefault", () => {
     const store = open({
       api: fakeServer().api,
       server: response([savedDeck("d1", "Aggro", [fixtureCardId(1)], 1)]),
@@ -950,7 +950,7 @@ describe("the deck's portrait (R640)", () => {
     expect(portraitOrDefault(item?.portrait ?? null)).toBe("vanilla");
   });
 
-  it("R640 an imported trio's decks arrive portrait: null — the codes carry none", async () => {
+  it("R641 an imported trio's decks arrive portrait: null — the codes carry none", async () => {
     const server = fakeServer();
     const store = open({ api: server.api });
     const result = await store.importTrio({

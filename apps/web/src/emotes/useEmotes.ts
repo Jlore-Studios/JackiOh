@@ -1,4 +1,4 @@
-// useEmotes: the React half of the emote session (R642, R643). session.ts holds the pure state —
+// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state —
 // what shows, who is muted, when the shared gate admits a send — and this hook adds the three
 // things a component tree needs that must not live in the pure half:
 //

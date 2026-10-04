@@ -1,4 +1,4 @@
-// The hero portraits and the emote menus (issue #75, SPEC §10.10, R640–R643): a portrait's art on
+// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644): a portrait's art on
 // each seat's hero with the health and armor badges, your portrait's ten-item emote menu, the
 // opponent's one-item mute, and every way the menu must leave — a pick, a press outside, Escape,
 // the start of a play or attack, a hotseat seat change and the end of the match.
@@ -69,9 +69,9 @@ afterEach(() => {
   cleanup();
 });
 
-describe("the hero portraits (R640)", () => {
+describe("the hero portraits (R641)", () => {
   it.each(PORTRAIT_IDS)(
-    "R640 the %s portrait draws its art inside each seat's hero element",
+    "R641 the %s portrait draws its art inside each seat's hero element",
     (portrait) => {
       const api = { current: null as EmotesApi | null };
       render(
@@ -88,7 +88,7 @@ describe("the hero portraits (R640)", () => {
         const frame = hero.querySelector<HTMLElement>(".hero-portrait");
         expect(frame, `portrait frame inside ${side}`).not.toBeNull();
         expect(frame).toHaveAttribute("data-portrait", portrait);
-        // CardArt's oval is the shape R640 fixes.
+        // CardArt's oval is the shape R641 fixes.
         expect(frame?.querySelector(".cf-art--oval")).not.toBeNull();
         // …and the hero element is the same testid and drop target it always was.
         expect(hero).toHaveAttribute("data-legal", "false");
@@ -96,7 +96,7 @@ describe("the hero portraits (R640)", () => {
     },
   );
 
-  it("R640 the portrait carries the seat's health and armor badges, armor only above zero", () => {
+  it("R641 the portrait carries the seat's health and armor badges, armor only above zero", () => {
     const api = { current: null as EmotesApi | null };
     // The full board's heroes: yours carries 21/3, the opponent's 30/0 — both badge cases.
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
@@ -117,7 +117,7 @@ describe("the hero portraits (R640)", () => {
     expect(opponent.querySelector(".hero-armor")).toBeNull();
   });
 
-  it("R640 the badges hang on the oval's lower corners — health right, armor left", () => {
+  it("R641 the badges hang on the oval's lower corners — health right, armor left", () => {
     // The anchoring is in emotes.css; read it the way Board.test.tsx reads board.css.
     const css = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "../emotes/emotes.css"),
@@ -130,8 +130,8 @@ describe("the hero portraits (R640)", () => {
   });
 });
 
-describe("your portrait's emote menu (R642)", () => {
-  it("R642 clicking your portrait opens the ten-emote menu on your hero", () => {
+describe("your portrait's emote menu (R643)", () => {
+  it("R643 clicking your portrait opens the ten-emote menu on your hero", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
@@ -157,7 +157,7 @@ describe("your portrait's emote menu (R642)", () => {
     }
   });
 
-  it("R642 a picked voice line is sent as the viewer and shows its bubble on your hero", () => {
+  it("R643 a picked voice line is sent as the viewer and shows its bubble on your hero", () => {
     const api = { current: null as EmotesApi | null };
     const onSend = vi.fn();
     render(
@@ -167,13 +167,13 @@ describe("your portrait's emote menu (R642)", () => {
     fireEvent.click(screen.getByTestId("emote-greetings"));
 
     expect(onSend).toHaveBeenCalledWith("p1", "greetings");
-    // The sender sees their own locally, without waiting for the wire (R642, issue §5).
+    // The sender sees their own locally, without waiting for the wire (R643, issue §5).
     const bubble = within(screen.getByTestId("hero-you")).getByTestId("emote-bubble");
     expect(bubble).toHaveClass("emote-bubble");
     expect(bubble.textContent).not.toBe("");
   });
 
-  it("R642 a picked emoji pops its sticker out of the portrait and sends", () => {
+  it("R643 a picked emoji pops its sticker out of the portrait and sends", () => {
     const api = { current: null as EmotesApi | null };
     const onSend = vi.fn();
     render(
@@ -193,7 +193,7 @@ describe("your portrait's emote menu (R642)", () => {
    * `[data-emote-menu]` (ui.tsx) so it never reaches the hero's own onClick — which would read the
    * hero as not-legal and reopen the just-closed menu through `emotes.onPortrait()`.
    */
-  it("R642 the emote menu closes on a pick", () => {
+  it("R643 the emote menu closes on a pick", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     fireEvent.click(screen.getByTestId("hero-you"));
@@ -219,7 +219,7 @@ describe("your portrait's emote menu (R642)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R642 selecting an attacker shuts an open menu — targeting wins", () => {
+  it("R643 selecting an attacker shuts an open menu — targeting wins", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={FACE_ATTACK} onAction={vi.fn()} apiRef={api} />);
     fireEvent.click(screen.getByTestId("hero-you"));
@@ -233,7 +233,7 @@ describe("your portrait's emote menu (R642)", () => {
     expect(api.current).not.toBeNull();
   });
 
-  it("R642 starting a card play shuts an open menu and makes the portrait click inert", () => {
+  it("R643 starting a card play shuts an open menu and makes the portrait click inert", () => {
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     const view = baseView({
@@ -263,7 +263,7 @@ describe("your portrait's emote menu (R642)", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R642 the end of the match closes an open menu", () => {
+  it("R643 the end of the match closes an open menu", () => {
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     const { rerender } = render(
@@ -278,7 +278,7 @@ describe("your portrait's emote menu (R642)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R642 a hotseat seat change closes the previous seat's open menu", () => {
+  it("R643 a hotseat seat change closes the previous seat's open menu", () => {
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     const p2View = baseView({
@@ -302,8 +302,8 @@ describe("your portrait's emote menu (R642)", () => {
   });
 });
 
-describe("targeting wins over the menus (R642)", () => {
-  it("R642 a legal hero takes the click as a target — the menu never opens", () => {
+describe("targeting wins over the menus (R643)", () => {
+  it("R643 a legal hero takes the click as a target — the menu never opens", () => {
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     render(<EmoteGame view={BOARD} legal={FACE_ATTACK} onAction={onAction} apiRef={api} />);
@@ -322,7 +322,7 @@ describe("targeting wins over the menus (R642)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R642 the opponent's legal hero fires the attack, not the mute menu", () => {
+  it("R643 the opponent's legal hero fires the attack, not the mute menu", () => {
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     render(<EmoteGame view={BOARD} legal={FACE_ATTACK} onAction={onAction} apiRef={api} />);
@@ -340,7 +340,7 @@ describe("targeting wins over the menus (R642)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R642 a hero click while an attacker's targets are lit still wins over the menu", () => {
+  it("R643 a hero click while an attacker's targets are lit still wins over the menu", () => {
     // The mirror of the close-on-targeting test: the menu was open in idle, the attacker's
     // selection closed it, and now the legal hero click is the target pick.
     const api = { current: null as EmotesApi | null };
@@ -359,8 +359,8 @@ describe("targeting wins over the menus (R642)", () => {
   });
 });
 
-describe("the opponent's mute (R642)", () => {
-  it("R642 the opponent's portrait opens a one-item Mute emotes menu, never the ten", () => {
+describe("the opponent's mute (R643)", () => {
+  it("R643 the opponent's portrait opens a one-item Mute emotes menu, never the ten", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
 
@@ -374,7 +374,7 @@ describe("the opponent's mute (R642)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R642 muting the opponent hides their emotes for the rest of the match", () => {
+  it("R643 muting the opponent hides their emotes for the rest of the match", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     // Their emote is showing on their hero…
@@ -393,7 +393,7 @@ describe("the opponent's mute (R642)", () => {
     expect(
       screen.getByTestId("hero-opponent").querySelector('[data-testid="emote-bubble"]'),
     ).toBeNull();
-    // …and the muted player's never arrive (R642).
+    // …and the muted player's never arrive (R643).
     act(() => {
       expect(api.current?.receive("p2", "laugh")).toBe(false);
     });
@@ -409,7 +409,7 @@ describe("the opponent's mute (R642)", () => {
    * `[data-emote-menu]`, so `onPortrait` never reopens the just-closed mute menu — the mute
    * applies, the menu is gone, and a fresh press on the portrait reopens it already muted.
    */
-  it("R642 the mute menu closes once the mute is set — and shows it as done next time", () => {
+  it("R643 the mute menu closes once the mute is set — and shows it as done next time", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     fireEvent.click(screen.getByTestId("hero-opponent"));
@@ -422,7 +422,7 @@ describe("the opponent's mute (R642)", () => {
     expect(item).toBeDisabled();
   });
 
-  it("R642 a muted opponent's menu item shows it is done", () => {
+  it("R643 a muted opponent's menu item shows it is done", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     act(() => {
@@ -434,7 +434,7 @@ describe("the opponent's mute (R642)", () => {
     expect(item).toBeDisabled();
   });
 
-  it("R642 the device's Mute opponent emotes setting mutes the other seat on its own", () => {
+  it("R643 the device's Mute opponent emotes setting mutes the other seat on its own", () => {
     const api = { current: null as EmotesApi | null };
     render(
       <EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} globalMute />,

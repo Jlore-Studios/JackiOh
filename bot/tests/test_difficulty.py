@@ -267,7 +267,7 @@ class PlannerTests(unittest.TestCase):
         self.assertIn("Rules v2", record["handoff"]["notes"])
         self.assertTrue(record["planned_at"])
         self.assertEqual(record["planned_tier"], "strong")
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})  # out of the Needs plan stage
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})  # out of the Needs plan stage
         self.assertIn("Planned on `claude-2` (claude, `opus`, strong)", h.gh.bot_comments(12)[-1])
         self.assertIn("in this issue's description", h.gh.bot_comments(12)[-1])
         body = h.gh.threads[12]["body"]

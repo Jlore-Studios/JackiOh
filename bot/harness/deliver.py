@@ -19,14 +19,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness import asks, issueplan
+from harness import asks, failures, issueplan
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
-                            LABEL_NEEDS_PLAN,
+                            LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
                             LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
@@ -49,6 +49,11 @@ DIED_LIMIT = 2
 VAULT_ATTEMPTS = 4
 NO_RESULT = ("the model job left no result: it failed before the model started (the doctor "
              "step, the install or the CLI setup), or it was cancelled")
+
+
+def _cut(text: str, limit: int, *, head: bool) -> str:
+    """`text` cut to `limit` characters: its beginning (a plan) or its end (a builder's log)."""
+    return text[:limit] if head else text[-limit:]
 
 
 def load_result(out_dir: Path) -> dict[str, Any]:
@@ -109,6 +114,7 @@ class Deliverer:
         self.ctx.store.update(lambda s: providers_mod.note_usage(
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
+        self._login_works()
         if action == "suggest":
             self._suggestions()
         elif action in ("plan", "build", "revise", "review"):
@@ -143,6 +149,64 @@ class Deliverer:
                 if exc.status not in (409, 422):
                     break  # only a race with another writer is worth trying again
         self.log.append(f"could not keep the refreshed login of {self.provider.id}: {problem}")
+
+    def _login_works(self) -> None:
+        """A model call went through on this run's subscription: any streak of runs that could
+        not work there is over (`providers.clear_infra`), and the issue asking a person about it,
+        if one was opened, is closed."""
+        try:
+            calls = int(self.result.get("model_calls") or 0)
+        except (TypeError, ValueError):
+            calls = 0
+        if self.result.get("status") == "infra" or not calls:
+            return
+        if not isinstance(providers_mod.peek_record(self.ctx.store.load(),
+                                                    self.provider.id).get("infra"), dict):
+            return
+        opened: list[int] = []
+        self.ctx.store.update(lambda s: opened.extend(
+            n for n in [providers_mod.clear_infra(s, self.provider.id)] if n),
+            f"{self.provider.id} works again")
+        for number in opened:
+            self._try(lambda n=number: self.gh.create_comment(
+                n, f"`{self.provider.id}` works again: a run got a model call through "
+                   f"({self._link()}). Closing this."))
+            self._try(lambda n=number: self.gh.update_issue(n, state="closed"))
+            self.log.append(f"{self.provider.id} works again: closed #{number}")
+
+    def _ask_about_infra(self, streak: int, reason: str) -> None:
+        """After `providers.INFRA_ASK_AFTER` runs in a row that could not work on this
+        subscription, open one issue asking a person to fix it (the bot cannot: a login is a
+        secret, and `.harness/` is not the bot's to change)."""
+        if streak < providers_mod.INFRA_ASK_AFTER:
+            return
+        record = providers_mod.peek_record(self.ctx.store.load(), self.provider.id)
+        if (record.get("infra") or {}).get("issue"):
+            return
+        backoff = providers_mod.INFRA_BACKOFFS[-1]
+        hours = int(backoff.total_seconds() // 3600)
+        login = self.provider.secret or "its login on the machine"
+        body = (f"The last {streak} runs on `{self.provider.id}` ({self.provider.cli}, "
+                f"`{self.provider.model}`) could not work. The last one ({self._link()}) said:\n\n"
+                f"> {reason[:500]}\n\nUntil a run on it gets a model call through, unforced runs "
+                f"try it only once every {hours} hours, and the other subscriptions take its "
+                "work.\n\nTo fix it, a person (the bot cannot change secrets or `.harness/`):\n"
+                f"- renews its login (`{login}`), if the reason is a refused or expired login;\n"
+                "- or switches it off (`\"enabled\": false` in `.harness/providers.json`).\n\n"
+                f"The bot closes this issue by itself once a run on `{self.provider.id}` works "
+                "again.")
+        try:
+            issue = self.gh.create_issue(
+                f"Night bot: `{self.provider.id}` could not work {streak} times in a row", body,
+                labels=["night bot", LABEL_HUMAN])
+        except GitHubError as exc:
+            self.log.append(f"could not open an issue about {self.provider.id}: {exc}")
+            return
+        number = int(issue.get("number") or 0)
+        if number:
+            self.ctx.store.update(lambda s: providers_mod.record(s, self.provider.id).setdefault(
+                "infra", {}).update(issue=number), f"{self.provider.id} infra issue")
+            self.log.append(f"{self.provider.id} could not work {streak} times: opened #{number}")
 
     def _rederive(self) -> None:
         """Work the branch out again from GitHub, whatever the plan file says."""
@@ -332,11 +396,14 @@ class Deliverer:
                                                                self._link()))
         except GitHubError:
             return False
-        if LABEL_NEEDS_PLAN in self._labels(number):
-            try:
+        labels = self._labels(number)
+        try:
+            if LABEL_NEEDS_PLAN in labels:
                 self.gh.remove_label(number, LABEL_NEEDS_PLAN)
-            except GitHubError:
-                pass  # the next plan job's sync takes it off
+            if LABEL_PLANNED not in labels:
+                self.gh.add_labels(number, [LABEL_PLANNED])
+        except GitHubError:
+            pass  # the next plan job's sync puts the labels right
         return True
 
     def _closed(self, number: int, thread: dict[str, Any]) -> None:
@@ -384,7 +451,8 @@ class Deliverer:
                     "kind": "plan" if status == "planned" else "work",
                     "at": str(handoff.get("at") or ""),
                     "reason": redact(str(self.result.get("reason") or ""))[:500],
-                    "notes": redact(str(handoff.get("notes") or ""))[-HANDOFF_NOTES:],
+                    "notes": _cut(redact(str(handoff.get("notes") or "")), HANDOFF_NOTES,
+                                  head=status == "planned"),
                     "trail": redact(str(handoff.get("trail") or ""))[-HANDOFF_TRAIL:]}
         def change(state: dict[str, Any]) -> None:
             entry = state_item(state, number)
@@ -420,8 +488,15 @@ class Deliverer:
         reason = str(self.result.get("reason") or NO_RESULT)
         now = iso(self.ctx.now())
         label = requeue or (LABEL_REVISE if kind == "revise" else LABEL_BUILD)
-        self.ctx.store.update(lambda s: providers_mod.note_infra(
-            s, self.provider.id, reason, self.ctx.now()), f"infra {self.provider.id}")
+        # A failure that was not the subscription's (an install red on untouched main, a push
+        # GitHub refused) backs it off but does not lengthen its streak.
+        escalate = not self.result.get("infra_scope")
+        streak: list[int] = []
+        self.ctx.store.update(lambda s: streak.append(providers_mod.note_infra(
+            s, self.provider.id, reason, self.ctx.now(), escalate=escalate)),
+            f"infra {self.provider.id}")
+        if escalate and streak:
+            self._ask_about_infra(streak[-1], reason)
         where = f"on `{self.provider.id}`"
         if not self.result.get("no_result"):
             set_state_label(self.ctx, number, self._labels(number), label)
@@ -545,7 +620,8 @@ class Deliverer:
         built = status == "built"  # no model in the run could review it: a review run will
         pushed, problem = self._publish(approved=approved)
         if problem.startswith("the push was refused"):
-            self.result.update(status="infra", reason=problem, no_result=True)
+            self.result.update(status="infra", reason=problem, no_result=True,
+                               infra_scope="github")
             self._infra(number, "build")
             return
         if problem:
@@ -607,6 +683,8 @@ class Deliverer:
                         f"round {cycles} of {self.cfg.max_review_cycles}.")
             else:
                 said = self._self_check_said()
+            if approved:
+                self._unstick(number, pr)
             self.gh.create_comment(number, f"Opened #{pr}, built on {self.build_seat.describe()}. "
                                    f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
@@ -614,13 +692,44 @@ class Deliverer:
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
             if pr and LABEL_REVISE not in self._labels(pr):
                 set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"After {self.cfg.max_review_cycles} rounds the "
-                                   f"reviewer still had blocking findings, so #{pr} stays a "
-                                   f"draft and will not merge by itself ({self._link()}).\n\n"
-                                   f"{self._findings_md()}\n\nComment `@{self.cfg.bot_login} "
-                                   f"<guidance>` here or on #{pr} to have me try again with your "
-                                   "notes.")
+            stuck = self._mark_stuck(number, pr)
+            self.gh.create_comment(number, f"{self._not_approved_head()}, so #{pr} stays a draft "
+                                   f"and will not merge by itself ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}\n\n{stuck}"
+                                   f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
+                                   "to have me try again with your notes.")
             self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+
+    def _not_approved_head(self) -> str:
+        """The first words of a comment on a build or revision that was not approved: the real
+        round count, and the real reason when it stopped before its last round."""
+        rounds = len(self.result.get("cycles") or [])
+        limit = self.cfg.max_review_cycles
+        if failures.stuck(self.result.get("cycles"), limit):
+            return f"After all {limit} rounds the reviewer still had blocking findings"
+        reason = str(self.result.get("reason") or "no reason recorded")
+        return f"It stopped without an approval after {rounds} of {limit} round(s): {reason}"
+
+    def _why_md(self) -> str:
+        return failures.why(self.result.get("cycles"), self.cfg.max_review_cycles,
+                            str(self.result.get("reason") or ""))
+
+    def _mark_stuck(self, *numbers: int) -> str:
+        """Label a run that used every round `bot:stuck`, for a person to review; the sentence
+        that says so, or "" for one that stopped sooner."""
+        if not failures.stuck(self.result.get("cycles"), self.cfg.max_review_cycles):
+            return ""
+        for number in numbers:
+            if number:
+                self._try(lambda n=number: self.gh.add_labels(n, [LABEL_STUCK]))
+        return (f"Labelled `{LABEL_STUCK}`: it failed every round, so a person should read the "
+                "above before anyone tries again. ")
+
+    def _unstick(self, *numbers: int) -> None:
+        """An approval clears `bot:stuck`."""
+        for number in numbers:
+            if number and LABEL_STUCK in self._labels(number):
+                self._try(lambda n=number: self.gh.remove_label(n, LABEL_STUCK))
 
     def _self_check_said(self) -> str:
         """What a change built without a reviewer in its run went through."""
@@ -668,9 +777,11 @@ class Deliverer:
         if status not in ("approved", "built"):
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
-            self.gh.create_comment(number, f"My revision did not pass review after "
-                                   f"{self.cfg.max_review_cycles} rounds, so I pushed nothing "
-                                   f"({self._link()}).\n\n{self._findings_md()}")
+            stuck = self._mark_stuck(number)
+            self.gh.create_comment(number, f"I pushed nothing from this revision. "
+                                   f"{self._not_approved_head()} ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}"
+                                   + (f"\n\n{stuck}" if stuck else ""))
             self._remember(number, last_findings=self.result.get("findings") or [],
                            feedback_since=started)
             return
@@ -683,6 +794,8 @@ class Deliverer:
                                    f"{problem}.")
             return
         set_state_label(self.ctx, number, self._labels(number), None)
+        if approved:
+            self._unstick(number)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
         rerun = not pushed and bool(self._record(number).get("ci_run_id"))
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
@@ -980,16 +1093,27 @@ class Deliverer:
             what = "is not protected" if required is None else f"does not require {missing}"
             return self._hand_to_a_person(
                 pull, f"`{self.cfg.default_branch}` {what}, so auto-merge would not wait for CI")
+        headline = self._merge_title(pull)
         error = self._try(lambda: self.gh.enable_auto_merge(pull["node_id"], self.cfg.merge_method,
-                                                            expected_head))
+                                                            expected_head, headline))
         if not error:
             return "Auto-merge is on: it merges when every required check passes."
         if "clean status" in error.lower():
             # Every required check has already passed, so GitHub will not wait; merge it now.
-            merged = self._try(lambda: self.gh.merge_pull(int(pull["number"]), self.cfg.merge_method))
+            merged = self._try(lambda: self.gh.merge_pull(int(pull["number"]), self.cfg.merge_method,
+                                                          headline))
             if not merged:
                 return "Every required check had already passed, so I merged it."
         return self._hand_to_a_person(pull, f"GitHub refused it ({error})")
+
+    def _merge_title(self, pull: dict[str, Any]) -> str:
+        """The squash commit's title: the pull request's, as GitHub writes it for a pull request of
+        several commits. Without it a one-commit pull request lands on `main` under the bot's own
+        commit message ("bot: build pass 1 for #85")."""
+        title = str(pull.get("title") or "").strip()
+        if self.cfg.merge_method != "squash" or not title:
+            return ""
+        return f"{title} (#{pull.get('number')})"
 
     def _rerun_ci(self, number: int) -> None:
         run_id = self._record(number).get("ci_run_id")
@@ -1018,15 +1142,16 @@ class Deliverer:
                 parts.append("\nNotes the reviewer left (not blocking):\n")
                 parts += [f"- `{f.get('where')}`: {f.get('claim')}" for f in notes[:20]]
         else:
-            parts.append("### Not approved\n\nThe reviewer still had blocking findings after "
-                         f"{len(cycles)} rounds, so this is a draft and will not merge by itself.")
+            parts.append(f"### Not approved\n\n{self._not_approved_head()}, so this is a draft "
+                         "and will not merge by itself.")
             parts.append("")
             parts.append(self._findings_md())
         rows = ["| Round | Builder | Checks | Review |", "|---|---|---|---|"]
         for c in cycles:
             builder = c.get("builder") or {}
             checks = c.get("gates") or []
-            red = [g["name"] for g in checks if not g.get("ok") and not g.get("pre_existing")]
+            red = [g["name"] for g in checks if not g.get("ok") and not g.get("pre_existing")
+                   and not g.get("inconclusive")]
             verdict = (c.get("review") or {}).get("verdict", "-")
             blocking = len([f for f in (c.get("review") or {}).get("findings") or []
                             if f.get("severity") == "blocking"])
@@ -1034,7 +1159,8 @@ class Deliverer:
                         f"{'red: ' + ', '.join(red) if red else 'green'} | {verdict}"
                         f"{f' ({blocking} blocking)' if blocking else ''} |")
         results = [gates_mod.GateResult(**{k: g.get(k) for k in (
-            "name", "run", "ok", "exit_code", "seconds", "tail", "pre_existing", "skipped")})
+            "name", "run", "ok", "exit_code", "seconds", "tail", "pre_existing", "skipped",
+            "inconclusive")})
             for g in self.result.get("gates") or []]
         parts += ["", "<details><summary>Rounds and checks</summary>", "", *rows, "",
                   gates_mod.table(results), "", "</details>", ""]

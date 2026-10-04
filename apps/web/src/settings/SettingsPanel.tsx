@@ -66,7 +66,7 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   },
   autoEndTurn: {
     label: "End turn automatically",
-    hint: "End your turn by itself when there is nothing left to play or attack with. Off: press End turn yourself.",
+    hint: "Ends the turn by itself when there is nothing left to play or attack with. Off: press End turn yourself.",
   },
   // One switch for both hover behaviours: task 7's hand lift and task 6's enlarged preview, which
   // opens only while this is on (cards/inspect/useInspectTrigger.tsx).

@@ -271,7 +271,7 @@ export const script: LessonScript = {
     info({
       id: "farm-works",
       title: "The farm at work",
-      text: "At the start of your turn, Rush Token Farm made a new Rush Token. A Field Spell keeps working, turn after turn.",
+      text: "At the start of turn, Rush Token Farm made a new Rush Token. A Field Spell keeps working, turn after turn.",
       anchor: (ctx) =>
         unitOf(ctx.view, "you", RUSH_TOKEN) === undefined ? { kind: "backrow", side: "you" } : { kind: "unit", side: "you", defId: RUSH_TOKEN },
       when: (ctx) => myMain(ctx) && farmWorked(ctx),

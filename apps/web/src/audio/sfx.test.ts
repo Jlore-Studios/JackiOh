@@ -18,7 +18,7 @@ const UNION_ORDER: SfxId[] = [
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
-  // Patch v0.2.X (R643): the five emoji emotes.
+  // Patch v0.2.X (R644): the five emoji emotes.
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
 ];
 

@@ -1,6 +1,6 @@
 // The emote client's numbers (CLAUDE.md rule 9): bubble span, the emoji's own 2s show, the menu's
 // grey-out tick, and the voice-line duration estimate. The SEND limits (1.5s cooldown, 5 per 20s)
-// are NOT here — they live in `packages/shared` because the server enforces them too (R642).
+// are NOT here — they live in `packages/shared` because the server enforces them too (R643).
 
 /** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4, "2s total"). */
 export const EMOTE_EMOJI_MS = 2000;

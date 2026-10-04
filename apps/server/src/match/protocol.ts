@@ -65,9 +65,9 @@ export type JoinRoomMessage = { type: "joinRoom"; token?: string; roomCode: stri
 export type ActionMessage = { type: "action"; nonce: string; body: ActionBody };
 
 /**
- * R642: a cosmetic emote. Top-level on purpose — it is NOT an `ActionBody`, so it never reaches
+ * R643: a cosmetic emote. Top-level on purpose — it is NOT an `ActionBody`, so it never reaches
  * `reduce`, the action log or the replay hash, and it carries no nonce because there is nothing to
- * ack: a rate-limited emote is silently dropped, and silence is exactly what a drop needs (R642).
+ * ack: a rate-limited emote is silently dropped, and silence is exactly what a drop needs (R643).
  * An `emote` value outside the ten `EMOTE_IDS` is `malformed`, the only way this frame can fail.
  */
 export type EmoteMessage = { type: "emote"; emote: EmoteId };
@@ -179,13 +179,13 @@ export type PromptMessage =
 export type ClockMessage = { type: "clock"; now: number; clocks: MatchClocks };
 
 /**
- * R641: both seats' hero portraits, sent on join and again on reconnect — a row on the match,
+ * R642: both seats' hero portraits, sent on join and again on reconnect — a row on the match,
  * never a field of `PlayerView` (portraits are cosmetic; `PlayerView` is a rules surface).
  */
 export type PortraitsMessage = { type: "portraits"; p1: PortraitId; p2: PortraitId };
 
 /**
- * R642: an opponent's emote, relayed. The sender already sees their own locally and gets nothing
+ * R643: an opponent's emote, relayed. The sender already sees their own locally and gets nothing
  * back — the one asymmetry this frame has.
  */
 export type EmoteRelayMessage = { type: "emote"; from: PlayerId; emote: EmoteId };
@@ -487,7 +487,7 @@ export function parseClientMessage(text: string): ClientMessage | MalformedMessa
       return { type: "action", nonce, body };
     }
     case "emote": {
-      // R642: the ten emote ids are the whole vocabulary; anything else is malformed, and there
+      // R643: the ten emote ids are the whole vocabulary; anything else is malformed, and there
       // is nothing else on the frame to validate (no nonce, no seat — the actor stamps the seat).
       if (!isEmoteId(parsed.emote)) return malformed(`"emote" must be a known emote id`);
       return { type: "emote", emote: parsed.emote };

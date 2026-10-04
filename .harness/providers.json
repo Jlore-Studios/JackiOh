@@ -2,6 +2,7 @@
   "max_parallel": 10,
   "machine_parallel": 6,
   "plan_lanes": 2,
+  "start_headroom": { "five_hour": 0.15, "seven_day": 0.05 },
   "priority": ["claude-3", "claude-1", "claude-4", "agy", "muse", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
@@ -92,7 +93,7 @@
       "login": "machine",
       "runs_on": "night-vm-gpt",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "none" },
+      "limits": { "mode": "caps", "seven_day": 1.0 },
       "quiet_check": false
     },
     "agy": {
@@ -106,7 +107,7 @@
       "login": "machine",
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "none" },
+      "limits": { "mode": "caps", "seven_day": 1.0 },
       "quiet_check": false
     },
     "devin": {
@@ -139,7 +140,7 @@
       "login": "machine",
       "runs_on": "night-vm-muse",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "none" },
+      "limits": { "mode": "caps", "seven_day": 1.0 },
       "quiet_check": false
     }
   }

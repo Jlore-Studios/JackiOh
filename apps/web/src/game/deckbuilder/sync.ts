@@ -234,7 +234,7 @@ function deckFrom(value: unknown): DeckItem | null {
   const { id, name, cards, createdAt, updatedAt } = value;
   if (typeof id !== "string" || id.length === 0 || typeof name !== "string" || !isStringArray(cards)) return null;
   if (!isFiniteNumber(createdAt) || !isFiniteNumber(updatedAt)) return null;
-  // R640: the portrait rides the same row; an old mirror without it reads as `vanilla` (null).
+  // R641: the portrait rides the same row; an old mirror without it reads as `vanilla` (null).
   const portrait = "portrait" in value && typeof value.portrait === "string" ? value.portrait : null;
   return { id, name, cards: [...cards], portrait, createdAt, updatedAt };
 }

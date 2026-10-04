@@ -212,7 +212,7 @@ export const script: LessonScript = {
     }),
     endTurnOn(1, {
       id: "end-1",
-      title: "End your turn",
+      title: "End the turn",
       text: "Your mana is spent. Press End turn: the enemy plays next, then you draw a card and your mana refills.",
     }),
     attackHero,
@@ -228,14 +228,14 @@ export const script: LessonScript = {
     }),
     endTurnOn(2, {
       id: "end-2",
-      title: "End your turn",
+      title: "End the turn",
       text: "Your mana is spent, and the Felinors need a turn before they can attack. Press End turn.",
       when: (ctx) => !ctx.legal.some((action) => action.type === "play" || action.type === "attack"),
     }),
     playBy(4, {
       id: "play-shredder",
       title: "A big unit",
-      text: "Jlockeed Shredder-10 costs (3). Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of your turn.",
+      text: "Jlockeed Shredder-10 costs (3). Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of turn.",
       defId: SHREDDER,
     }),
     endTurnOn(3, {
@@ -335,7 +335,7 @@ export const script: LessonScript = {
     tip({
       id: "shredder-fired",
       title: "Shredder at work",
-      text: "At the end of your turn Jlockeed Shredder-10 hit every enemy unit and the enemy hero for 2. It does that every turn it stays.",
+      text: "At the end of turn, Jlockeed Shredder-10 hit every enemy unit and the enemy hero for 2. It does that every turn it stays.",
       anchor: { kind: "unit", side: "you", defId: SHREDDER },
       when: (ctx) => {
         const shredder = unitOf(ctx.view, "you", SHREDDER);
@@ -356,7 +356,7 @@ export const script: LessonScript = {
     tip({
       id: "menace",
       title: "A bodyguard",
-      text: "Midrange Menace has Taunt, like a unit in Defense Position: enemy attacks must go at it first, so it guards your hero. It heals to full at the end of your turn.",
+      text: "Midrange Menace has Taunt, like a unit in Defense Position: enemy attacks must go at it first, so it guards your hero. It heals to full at the end of turn.",
       anchor: { kind: "unit", side: "you", defId: MENACE },
       when: (ctx) => freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.defId === MENACE),
     }),

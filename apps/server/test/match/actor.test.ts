@@ -174,7 +174,7 @@ async function harness(
   options: {
     p1Deck?: string[];
     p2Deck?: string[];
-    /** R641: the portraits dealt to the two seats, written onto the match row `registry.start` makes. */
+    /** R642: the portraits dealt to the two seats, written onto the match row `registry.start` makes. */
     portraits?: [string, string];
     attach?: boolean;
     /** The real `EnginePort` for the block at the bottom of this file; the fake otherwise. */
@@ -648,11 +648,11 @@ describe("M6-T4 the match actor", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R642 — the emote protocol and its shared rate limit (§9.5, §10.10)
+// R643 — the emote protocol and its shared rate limit (§9.5, §10.10)
 // ---------------------------------------------------------------------------
 
 /**
- * §10.10's emotes through the actor (R642): a top-level `emote` frame, never an `ActionBody`, so it
+ * §10.10's emotes through the actor (R643): a top-level `emote` frame, never an `ActionBody`, so it
  * reaches neither `reduce`, the append-only log nor a rejected-action log line; the actor relays it
  * to the opponent alone, drops it silently past the shared limit, and answers an unknown id as
  * `malformed`.
@@ -661,12 +661,12 @@ describe("M6-T4 the match actor", () => {
  * menu off the same `emoteGate` the actor drops with, so the constants the test measures against
  * are the ones the wire actually enforces rather than this file's restatement of them.
  */
-describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
+describe("R643 — emotes through the actor (§9.5, §10.10)", () => {
   function relays(socket: FakeSocket): EmoteRelayMessage[] {
     return socket.ofType<EmoteRelayMessage>("emote");
   }
 
-  it("R642 relays a valid emote to the opponent alone, stamped with the sender's seat", async () => {
+  it("R643 relays a valid emote to the opponent alone, stamped with the sender's seat", async () => {
     const { actor, p1, p2 } = await harness();
     p1.clear();
     p2.clear();
@@ -689,7 +689,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(errors(p2)).toEqual([]);
   });
 
-  it("R642 relays every id of the ten and writes none of them to the log", async () => {
+  it("R643 relays every id of the ten and writes none of them to the log", async () => {
     const { actor, p1, p2, deps } = await harness();
     p1.clear();
     p2.clear();
@@ -709,7 +709,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     // PREMISE: every send really did land inside its own gate — none of the ten was a silent drop
     // this test happened not to look at.
     expect(sentAt).toHaveLength(EMOTE_IDS.length);
-    // §9.3, R642: no `ActionBody`, so no seq is spent, no ack is owed, no row is written and no
+    // §9.3, R643: no `ActionBody`, so no seq is spent, no ack is owed, no row is written and no
     // rejected-action entry is logged.
     expect(deps.store.tables.matchActions).toEqual([]);
     expect(acks(p1)).toEqual([]);
@@ -717,7 +717,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(deps.log.entries.some((entry) => entry.event === "match.action.rejected")).toBe(false);
   });
 
-  it("R642 answers an id outside the ten as malformed, relays nothing, and logs no rejected action", async () => {
+  it("R643 answers an id outside the ten as malformed, relays nothing, and logs no rejected action", async () => {
     const { actor, p1, p2, deps } = await harness();
     p1.clear();
     p2.clear();
@@ -746,7 +746,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(relays(p1)).toEqual([]);
 
     // Each bad frame is logged as a malformed frame — and an emote is never a rejected *action*
-    // (R642's drop does not count toward the rejected-action alert, and neither does its refusal).
+    // (R643's drop does not count toward the rejected-action alert, and neither does its refusal).
     const logged = deps.log.entries.slice(entriesBefore);
     expect(logged).toHaveLength(5);
     expect(logged.every((entry) => entry.event === "match.frame.malformed")).toBe(true);
@@ -754,7 +754,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(deps.store.tables.matchActions).toEqual([]);
   });
 
-  it("R642 drops an emote sent inside the cooldown — silently — and resumes after it", async () => {
+  it("R643 drops an emote sent inside the cooldown — silently — and resumes after it", async () => {
     const { actor, p1, p2, deps } = await harness();
     p1.clear();
     p2.clear();
@@ -764,7 +764,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(relays(p2)).toEqual([{ type: "emote", from: "p1", emote: "greetings" }]);
 
     // Inside EMOTE_COOLDOWN_MS the shared gate says no: nothing reaches the opponent, no error
-    // reaches the sender, and nothing is written — silence is what a drop needs (R642).
+    // reaches the sender, and nothing is written — silence is what a drop needs (R643).
     const entriesBefore = deps.log.entries.length;
     p1.receiveJson({ type: "emote", emote: "laugh" });
     await actor.idle();
@@ -782,7 +782,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(relays(p2).map((frame) => frame.emote)).toEqual(["greetings", "laugh"]);
   });
 
-  it("R642 relays EMOTE_WINDOW_MAX spaced emotes and silently drops the next inside the window", async () => {
+  it("R643 relays EMOTE_WINDOW_MAX spaced emotes and silently drops the next inside the window", async () => {
     const { actor, p1, p2, deps } = await harness();
     p1.clear();
     p2.clear();
@@ -818,7 +818,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     expect(relays(p2)).toHaveLength(EMOTE_WINDOW_MAX + 1);
   });
 
-  it("R642 spends none of the seat's §9.8 action budget: a flooded seat's emote still relays", async () => {
+  it("R643 spends none of the seat's §9.8 action budget: a flooded seat's emote still relays", async () => {
     const { actor, p1, p2 } = await harness();
     p1.clear();
     p2.clear();
@@ -830,7 +830,7 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
     await actor.idle();
     expect(errors(p1).some((error) => error.code === "rate_limited")).toBe(true);
 
-    // The emote never counted and is not counted now: it is no ActionBody (R642), so §9.8's limit
+    // The emote never counted and is not counted now: it is no ActionBody (R643), so §9.8's limit
     // does not see it and its own limit — the shared gate — still admits the first send.
     p1.receiveJson({ type: "emote", emote: "oops" });
     await actor.idle();
@@ -839,20 +839,20 @@ describe("R642 — emotes through the actor (§9.5, §10.10)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R641 — the portraits frame (§9.5, §10.11)
+// R642 — the portraits frame (§9.5, §10.11)
 // ---------------------------------------------------------------------------
 
 /**
- * A match's two portraits are the match row's data (R641): fixed when the seats are, sent to each
+ * A match's two portraits are the match row's data (R642): fixed when the seats are, sent to each
  * client on attach and again on a reconnect's `hello`, in a frame of their own — a portrait is
  * never part of `PlayerView`.
  */
-describe("R641 — the portraits frame (§9.5)", () => {
+describe("R642 — the portraits frame (§9.5)", () => {
   function portraitsSent(socket: FakeSocket): PortraitsMessage[] {
     return socket.ofType<PortraitsMessage>("portraits");
   }
 
-  it("R641 sends both seats' portraits on attach, in their own frame — never on the view", async () => {
+  it("R642 sends both seats' portraits on attach, in their own frame — never on the view", async () => {
     const { p1, p2, deps } = await harness({ portraits: ["gary", "shredder"] });
 
     // PREMISE: the row really did freeze the pair the seats were dealt, seat order like `decks`.
@@ -860,14 +860,14 @@ describe("R641 — the portraits frame (§9.5)", () => {
 
     for (const socket of [p1, p2]) {
       expect(portraitsSent(socket)).toEqual([{ type: "portraits", p1: "gary", p2: "shredder" }]);
-      // …and the view frame carries neither key: `PlayerView` is a rules surface (R640, R641).
+      // …and the view frame carries neither key: `PlayerView` is a rules surface (R641, R642).
       const view = socket.ofType<{ type: "view"; view: Record<string, unknown> }>("view").at(-1);
       expect(view?.view).not.toHaveProperty("portrait");
       expect(view?.view).not.toHaveProperty("portraits");
     }
   });
 
-  it("R641 sends them again on a reconnect's fresh view and again on hello", async () => {
+  it("R642 sends them again on a reconnect's fresh view and again on hello", async () => {
     const { actor, p1 } = await harness({ portraits: ["timmy", "dfender"] });
     expect(portraitsSent(p1)).toHaveLength(1);
 
@@ -888,9 +888,9 @@ describe("R641 — the portraits frame (§9.5)", () => {
     ]);
   });
 
-  it("R641 reads a match row that predates portraits as vanilla/vanilla", async () => {
+  it("R642 reads a match row that predates portraits as vanilla/vanilla", async () => {
     // A row written before migration 0019 carries no `portraits`; both seats read as the default
-    // (R640's `null`-is-`vanilla`, one level up at the row).
+    // (R641's `null`-is-`vanilla`, one level up at the row).
     const deps = createTestDeps();
     const clocks = stubClocks();
     const actorDeps: ActorDeps = {
@@ -1806,24 +1806,33 @@ describe("the automatic turn end is each player's to turn off (R82, R345)", () =
   }
 
   /**
-   * The decks `decksTheEngineAccepts` gives "seed-actor". p2's opening deal draws #21 Hinder, cast on
-   * draw (§2.4), whose base face asks p2 for a discard before the mulligans open (R431, R224) and
-   * leaves p1's first refresh 1 lower, at 0 (§2.3) — which is what leaves p1 nothing to do on turn 1
-   * once both keep their hands. The deal's question is answered here, so the tests start, as their
-   * names say, in the mulligan window (R265).
+   * Two decks the real engine accepts, p1's of cards that each cost two or more and none of which
+   * casts on draw. Turn 1 has one mana (§2.3), so once both keep their hands p1 has nothing to play
+   * on it and R82 would end the turn by itself, which is what these tests need to see the preference
+   * change. (#21 Hinder's cast used to do it, by lowering p1's first refresh to 0, but setup no longer
+   * deals a cast-on-draw card, R635.) Setup asks nothing, so the tests start, as their names say, in
+   * the mulligan window (R265).
    */
   async function realMatch(): Promise<Harness> {
     const catalog = await loadCatalog();
     const pool = catalog.cardIds.filter((cardId) => !catalog.isToken(cardId));
     const engine = enginePort();
-    const { decks } = decksTheEngineAccepts(engine, pool, "seed-actor");
-    const h = await harness({ engine, p1Deck: decks[0], p2Deck: decks[1] });
-    // PREMISE: the deal asks p2 first (R224), and answering it opens both mulligans.
-    expect(h.actor.snapshot()).toMatchObject({ phase: "setup", pendingFor: "p2" });
-    const frame = h.p2.ofType<{ type: "view"; legal: ActionBody[] }>("view").at(-1);
-    const answer = frame?.legal.find((action) => action.type === "answer");
-    if (answer === undefined) throw new Error("the deal asked p2 nothing it can answer");
-    await send(h.actor, h.p2, "deal-answer", answer);
+    const [first] = decksTheEngineAccepts(engine, pool, "seed-actor").decks;
+    const dear = pool.filter((cardId) => {
+      const def = catalog.defs[cardId];
+      return (
+        def !== undefined &&
+        typeof def.cost === "number" &&
+        def.cost >= 2 &&
+        !def.tags.includes("Quickdraw") &&
+        !/cast on draw/i.test(`${def.base.text} ${def.radiant.text}`)
+      );
+    });
+    const p1Deck = dear.slice(0, first.length);
+    const p2Deck = pool.filter((cardId) => !p1Deck.includes(cardId)).slice(0, first.length);
+    expect(p1Deck, "enough cards that cost two or more").toHaveLength(first.length);
+    const h = await harness({ engine, p1Deck, p2Deck });
+    // PREMISE: the deal asks nothing (R635), so both mulligans are open.
     expect(h.actor.snapshot()).toMatchObject({ phase: "mulligan", pendingFor: null, mulliganOwed: ["p1", "p2"] });
     return h;
   }

@@ -194,7 +194,7 @@ describe("saving", () => {
     const [token, id, input] = vi.mocked(putDeck).mock.calls[0] ?? [];
     expect(token).toBe(TOKEN);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-    // D5: a fresh deck carries no portrait yet; the column reads it back as `vanilla` (R640).
+    // D5: a fresh deck carries no portrait yet; the column reads it back as `vanilla` (R641).
     expect(input).toEqual({ name: "Deck 1", cards: [], catalogVersion: catalog.version, portrait: null });
     await waitFor(() => {
       expect(screen.getByTestId("sync-status")).toHaveAttribute("data-state", "saved");

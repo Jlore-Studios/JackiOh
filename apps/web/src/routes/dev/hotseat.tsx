@@ -393,7 +393,7 @@ function Hotseat({
   const next = otherSeat(session.seat);
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
 
-  // R641–R643: hotseat emotes run locally with the same shared gate — no wire, so `send` only
+  // R642–R644: hotseat emotes run locally with the same shared gate — no wire, so `send` only
   // shows and plays. The dev decks carry no portrait (they are not saved decks), so both seats
   // read `vanilla`; the device mute applies to whichever seat isn't holding the device.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");

@@ -122,7 +122,7 @@ function parseEntry(raw: unknown, path: string, personas: Record<string, Persona
   return fail(`${path}.kind`, 'must be "unit", "spell" or "trap"');
 }
 
-/** The `emotes` table's one entry shape (R643): a persona and the five issue-§3 lines. */
+/** The `emotes` table's one entry shape (R644): a persona and the five issue-§3 lines. */
 function parseEmoteEntry(raw: unknown, path: string, personas: Record<string, Persona>): EmoteLineEntry {
   const o = record(raw, path);
   const persona = text(o.persona, `${path}.persona`);
@@ -196,7 +196,7 @@ export function lineFor(
   defId: string,
   line: PlayableLineKind,
 ): { text: string; persona: Persona } | null {
-  // R643: `emote-<portrait>` defIds resolve through the emotes table, the way a card's resolve
+  // R644: `emote-<portrait>` defIds resolve through the emotes table, the way a card's resolve
   // through `cards` — which is what lets `playVoice` carry them unchanged (engine.ts).
   if (line !== "play" && line !== "death" && line !== "cast") {
     return emoteLineFor(lines, emotePortraitOf(defId), line);

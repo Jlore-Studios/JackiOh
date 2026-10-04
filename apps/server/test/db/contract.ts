@@ -604,7 +604,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.decks.list(profile.id)).toEqual([deck]);
       });
 
-      it("R640 round-trips the portrait — `null` and a known id — and re-saves it in place", async () => {
+      it("R641 round-trips the portrait — `null` and a known id — and re-saves it in place", async () => {
         const profile = await activeProfile();
         const portraitless = savedDeck(profile.id);
         // One tick later, so "oldest first" below asks a real ordering question, not a tie.
@@ -1307,7 +1307,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
           rating: 1000,
           mode: "bo1" as const,
           deck: deckOf(harness, 0),
-          // R641: the Bo1 deck's frozen portrait; `null` reads as `vanilla`.
+          // R642: the Bo1 deck's frozen portrait; `null` reads as `vanilla`.
           portrait: null,
           trio: null,
           catalogVersion: harness.catalogVersion,
@@ -1344,7 +1344,7 @@ export function runStoreContract(make: () => Promise<StoreHarness>): void {
         expect(await store.tickets.countOpenByMode()).toEqual({ bo1: 1, bo3: 1, random: 0 });
       });
 
-      it("R641 keeps a Best-of-3 ticket's per-deck portraits, and absence stays absent", async () => {
+      it("R642 keeps a Best-of-3 ticket's per-deck portraits, and absence stays absent", async () => {
         const profile = await activeProfile();
         const trio = frozenTrio(harness);
         trio.decks[0].portrait = "gary";

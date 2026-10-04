@@ -169,7 +169,7 @@ function frozenTrioOf(value: unknown): FrozenTrio {
   const [first, second, third, ...rest] = trio.decks.map((deck: unknown) => {
     const entry = (deck ?? {}) as { name?: unknown; cards?: unknown; portrait?: unknown };
     const frozen: FrozenDeck = { name: textOf(entry.name), cards: cardListOf(entry.cards) };
-    // R641: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
+    // R642: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
     // portraits existed, so absence stays absent and reads as `vanilla` downstream.
     if (entry.portrait !== undefined) frozen.portrait = entry.portrait === null ? null : textOf(entry.portrait);
     return frozen;
@@ -423,7 +423,7 @@ function toMatch(row: MatchDbRow): MatchRow {
     },
     // R417: absent when both are empty, as the registry writes it.
     ...(boards[0].length + boards[1].length > 0 ? { lastBoards: boards } : {}),
-    // R641: absent when neither seat carried a portrait (a match from before 0019); both then
+    // R642: absent when neither seat carried a portrait (a match from before 0019); both then
     // read as `vanilla` wherever `MatchRow.portraits` is consumed.
     ...(row.p1_portrait !== null || row.p2_portrait !== null
       ? { portraits: [portraitOrDefault(row.p1_portrait), portraitOrDefault(row.p2_portrait)] as [PortraitId, PortraitId] }
@@ -540,7 +540,7 @@ function toRoom(row: RoomRow): Room {
     // could only ever have been a Best-of-1 room. See KNOWN DIVERGENCES (rooms).
     mode: row.room_mode === null ? "bo1" : queueModeOf(row.room_mode),
     hostDeck: cardListOf(row.p1_deck),
-    // R641: the host's portrait waits in the open row beside the host's deck (migration 0019).
+    // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
     hostPortrait: row.p1_portrait,
     hostTrio: trioOrNull(row.room_trio),
     catalogVersion: row.catalog_version,
@@ -574,7 +574,7 @@ function toDeck(row: DeckRow): SavedDeck {
     name: row.name,
     // A jsonb array keeps the order it was written in, so this is the player's order (R250).
     cards: cardListOf(row.cards),
-    // R640: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
+    // R641: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
     portrait: row.portrait,
     catalogVersion: row.catalog_version,
     createdAt: msOf(row.created_at),

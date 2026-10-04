@@ -78,6 +78,11 @@ set +e
 if [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; then
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
 fi
+# The model job's worktrees lived in RUNNER_TEMP. Forget them, or the next checkout cannot reset
+# a branch one still claims ("used by worktree at ...") and clones the repository afresh.
+for repo in "$HOME"/actions-runner*/_work/*/*/; do
+  [ -d "$repo/.git" ] && git -C "$repo" worktree prune 2>/dev/null
+done
 rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
   "$HOME/.cache/Cypress" 2>/dev/null
 # What this user's jobs left in /tmp; one job at a time per user, so an hour old is this job's.

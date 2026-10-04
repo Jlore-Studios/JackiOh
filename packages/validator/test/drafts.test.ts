@@ -1,4 +1,4 @@
-// Saved decks, saved trios and the Best-of-1 deck check (SPEC §9.4, R250–R253, R640).
+// Saved decks, saved trios and the Best-of-1 deck check (SPEC §9.4, R250–R253, R641).
 //
 // A saved deck or trio is a draft: the save checks only its structure (D1–D5, T1–T3), and the
 // legality rules run when it is queued — L2, L3, L5 and L6 for a Best-of-1 deck, L1–L6 for a trio.
@@ -118,7 +118,7 @@ describe("R250 — a saved deck is a draft: D1–D4 are all a save checks", () =
   });
 });
 
-describe("R640 — D5: a saved deck's portrait is null or a known portrait id", () => {
+describe("R641 — D5: a saved deck's portrait is null or a known portrait id", () => {
   /** A draft carrying `portrait`, D5-checked against the shared roster as the caller passes it. */
   const portraitDraft = (
     portrait: string | null | undefined,
@@ -133,14 +133,14 @@ describe("R640 — D5: a saved deck's portrait is null or a known portrait id", 
       isPortrait,
     });
 
-  it("R640 saves a deck whose portrait is null and one carrying every roster id", () => {
+  it("R641 saves a deck whose portrait is null and one carrying every roster id", () => {
     expect(portraitDraft(null, isPortraitId)).toEqual([]);
     for (const id of PORTRAIT_IDS) {
       expect(portraitDraft(id, isPortraitId), id).toEqual([]);
     }
   });
 
-  it("R640 fails an unknown portrait id, naming the field, beside the other draft issues", () => {
+  it("R641 fails an unknown portrait id, naming the field, beside the other draft issues", () => {
     expect(portraitDraft("not-a-portrait", isPortraitId)).toEqual([
       { rule: "D5", message: '"portrait" is not a known portrait id.' },
     ]);
@@ -157,7 +157,7 @@ describe("R640 — D5: a saved deck's portrait is null or a known portrait id", 
     ).toEqual(["D1", "D5"]);
   });
 
-  it("R640 checks nothing when no portrait is given or the caller knows no roster", () => {
+  it("R641 checks nothing when no portrait is given or the caller knows no roster", () => {
     // `portrait` absent or undefined: nothing for D5 to read.
     expect(draft([])).toEqual([]);
     expect(portraitDraft(undefined, isPortraitId)).toEqual([]);

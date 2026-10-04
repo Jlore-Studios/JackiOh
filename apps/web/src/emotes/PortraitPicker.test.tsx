@@ -1,4 +1,4 @@
-// The deck builder's portrait picker (issue §8, R640, R643): the deck's current portrait as the
+// The deck builder's portrait picker (issue §8, R641, R644): the deck's current portrait as the
 // collapsed control, a grid of the whole six-portrait roster on open, and each tile's Preview
 // panel whose ten emotes play exactly as they would in a match — voice line on the voice channel
 // plus its speech bubble, emoji synth on the effects channel plus the sticker.
@@ -79,8 +79,8 @@ function openPicker(): HTMLElement {
   return screen.getByRole("dialog", { name: "Choose a hero portrait" });
 }
 
-describe("the deck's portrait button (R640)", () => {
-  it("R640 the collapsed control wears the deck's portrait art as the hero does — its oval", () => {
+describe("the deck's portrait button (R641)", () => {
+  it("R641 the collapsed control wears the deck's portrait art as the hero does — its oval", () => {
     render(picker("dfender"));
     const current = screen.getByTestId("portrait-current");
     expect(current).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.dfender.def.name}`);
@@ -92,7 +92,7 @@ describe("the deck's portrait button (R640)", () => {
     expect(root.children).toHaveLength(1);
   });
 
-  it("R640 the open menu is the whole six-portrait roster, each tile its card's art and name", () => {
+  it("R641 the open menu is the whole six-portrait roster, each tile its card's art and name", () => {
     render(picker("gary"));
     const menu = openPicker();
     const grid = within(menu).getByRole("listbox", { name: "Portraits" });
@@ -111,7 +111,7 @@ describe("the deck's portrait button (R640)", () => {
     }
   });
 
-  it("R640 the deck's own tile shows selected, and picking another reports its id and closes", () => {
+  it("R641 the deck's own tile shows selected, and picking another reports its id and closes", () => {
     const onPick = vi.fn();
     render(picker("timmy", onPick));
     openPicker();
@@ -140,8 +140,8 @@ describe("the deck's portrait button (R640)", () => {
   });
 });
 
-describe("the emote previews (R643)", () => {
-  it("R643 a tile's Preview opens its ten emotes — five voice lines, five emoji", () => {
+describe("the emote previews (R644)", () => {
+  it("R644 a tile's Preview opens its ten emotes — five voice lines, five emoji", () => {
     render(picker("gary"));
     openPicker();
     expect(screen.queryByTestId("portrait-preview-panel")).toBeNull();
@@ -160,10 +160,10 @@ describe("the emote previews (R643)", () => {
     expect(within(panel).getAllByRole("button")).toHaveLength(10);
   });
 
-  it("R643 a voice preview speaks the previewed portrait's own line and shows its bubble", () => {
+  it("R644 a voice preview speaks the previewed portrait's own line and shows its bubble", () => {
     render(picker("gary"));
     openPicker();
-    // Preview a portrait that is not the deck's: the previewed one owns the line (R643).
+    // Preview a portrait that is not the deck's: the previewed one owns the line (R644).
     fireEvent.click(screen.getByTestId("portrait-preview-shredder"));
     fireEvent.click(screen.getByTestId("emote-preview-greetings"));
 
@@ -181,7 +181,7 @@ describe("the emote previews (R643)", () => {
     expect(bubble.textContent).not.toBe("");
   });
 
-  it("R643 an emoji preview plays its synth on the effects channel and pops the sticker", () => {
+  it("R644 an emoji preview plays its synth on the effects channel and pops the sticker", () => {
     render(picker("gary"));
     openPicker();
     fireEvent.click(screen.getByTestId("portrait-preview-timmy"));
@@ -194,7 +194,7 @@ describe("the emote previews (R643)", () => {
     expect(sticker).toHaveAttribute("data-emoji", "laugh");
   });
 
-  it("R643 the same preview is live per emote — each press plays again as the newest show", () => {
+  it("R644 the same preview is live per emote — each press plays again as the newest show", () => {
     render(picker("gary"));
     openPicker();
     fireEvent.click(screen.getByTestId("portrait-preview-gary"));
@@ -208,8 +208,8 @@ describe("the emote previews (R643)", () => {
   });
 });
 
-describe("the picker's place in the deck editor (R640)", () => {
-  it("R640 the menu opens inside the picker root and the root is the inline-block it anchors to", () => {
+describe("the picker's place in the deck editor (R641)", () => {
+  it("R641 the menu opens inside the picker root and the root is the inline-block it anchors to", () => {
     render(picker("gary"));
     const menu = openPicker();
     const root = screen.getByTestId("portrait-picker");
@@ -230,7 +230,7 @@ describe("the picker's place in the deck editor (R640)", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// The picker where the player meets it: in the open deck's editor (issue §8, R640, D5)
+// The picker where the player meets it: in the open deck's editor (issue §8, R641, D5)
 // ---------------------------------------------------------------------------------------------
 
 const catalog = fixtureCatalog();
@@ -258,8 +258,8 @@ function mountWorkshop(decks: readonly SavedDeck[], id: string) {
   return { server, storage };
 }
 
-describe("the picker in the deck editor (R640)", () => {
-  it("R640 the editor's picker wears the deck's saved portrait and a pick saves the new one", () => {
+describe("the picker in the deck editor (R641)", () => {
+  it("R641 the editor's picker wears the deck's saved portrait and a pick saves the new one", () => {
     const { storage } = mountWorkshop(
       [{ ...savedDeck("d1", "Aggro", ONE, 1), portrait: "gary" }],
       "d1",

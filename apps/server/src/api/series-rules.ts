@@ -539,7 +539,7 @@ export function gameSeats(series: SeriesRow): { seats: [MatchSeat, MatchSeat]; s
     const side = series.sides[index];
     const deck = side.trio.decks[game.slots[index]];
     if (deck === undefined) throw new Error(`series ${series.id}: slot ${String(game.slots[index])} is not a deck`);
-    // R641: a Conquest game plays the picked deck's portrait, frozen into the trio with it.
+    // R642: a Conquest game plays the picked deck's portrait, frozen into the trio with it.
     return { profileId: side.profileId, player, deck: [...deck.cards], portrait: deck.portrait ?? undefined };
   };
   return {

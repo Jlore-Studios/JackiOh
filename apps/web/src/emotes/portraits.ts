@@ -1,4 +1,4 @@
-// R640's hero portraits on the client: which catalog card's art each portrait draws, in `CardArt`'s
+// R641's hero portraits on the client: which catalog card's art each portrait draws, in `CardArt`'s
 // `oval` shape (issue §1 — the card's own art, manifest image first, procedural SVG otherwise).
 //
 // The roster in `packages/shared` names each portrait by its card's NAME, not its id — the issue's

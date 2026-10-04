@@ -206,8 +206,8 @@ describe("#21 Hinder", () => {
 });
 
 // ---------------------------------------------------------------------------
-// A real game: the opening deal casts Hinder, setup waits for its question (R224), and the log folds
-// back to the same game (§9.3).
+// A real game: setup deals no Hinder (R635), turn 1's draw is what meets it, and the log folds back to
+// the same game (§9.3).
 // ---------------------------------------------------------------------------
 
 /** Twenty legal Core cards with no other cast-on-draw card among them, Hinder first. */
@@ -227,40 +227,48 @@ function act(state: GameState, body: ActionInput, log: Action[]): GameState {
   return result.state;
 }
 
-describe("#21 Hinder in a real game (R158, R224, §9.3)", () => {
-  it("R431, R224 a Hinder in p1's opening deal asks p1 before the mulligan, and the log replays to the same state", () => {
-    // A seed whose shuffle deals p1 the Hinder: its cast asks p1 during setup.
-    let found: { seed: string; state: GameState } | null = null;
-    for (let at = 0; at < 200 && found === null; at += 1) {
+describe("#21 Hinder in a real game (R158, R635, §9.3)", () => {
+  it("R431, R635 a Hinder in p1's deck is neither dealt nor cast in setup; turn 1's draw meets it and asks p1, and the log replays to the same state", () => {
+    // A seed whose shuffle-in puts the Hinder on top of p1's library, so turn 1's draw casts it.
+    let found: { seed: string; state: GameState; log: Action[] } | null = null;
+    for (let at = 0; at < 300 && found === null; at += 1) {
       const seed = `hinder-deal-${at}`;
-      const begun = beginGame(createGame({ seed, decks: [DECK, DECK] })).state;
-      if (begun.pending?.kind === "hand" && begun.pending.playerId === "p1") found = { seed, state: begun };
+      const log: Action[] = [];
+      let state = beginGame(createGame({ seed, decks: [DECK, DECK] })).state;
+
+      // §2.1, R635: setup casts nothing and asks nothing, so the mulligans open at once, over a hand
+      // that holds no Hinder, with the Hinder waiting in the library.
+      expect(state.pending).toBeNull();
+      expect(state.mulligan).toBeDefined();
+      expect(state.players.p1.hand.map((card) => card.defId)).not.toContain(HINDER);
+      expect(state.players.p1.graveyard).toEqual([]);
+      expect(state.players.p1.library.map((card) => card.defId)).toContain(HINDER);
+
+      for (const player of ["p1", "p2"] as PlayerId[]) {
+        state = act(state, { type: "mulligan", keep: state.players[player].hand.map((card) => card.id), playerId: player }, log);
+      }
+      expect(state.turn).toBe(1);
+      if (state.pending?.kind === "hand" && state.pending.playerId === "p1") found = { seed, state, log };
     }
     expect(found).not.toBeNull();
     if (found === null) return;
-    const log: Action[] = [];
     let state = found.state;
 
-    // §2.1, R224: the mulligan waits behind the cast's question, and p2 learns only that p1 chooses.
-    expect(state.mulligan).toBeUndefined();
+    // R158: turn 1's draw cast the Hinder, and the draw waits behind its question; p2 learns only that p1 chooses.
     expect(viewFor(state, "p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
     const hand = state.players.p1.hand.map((card) => card.id);
     const pending = state.pending;
     expect(pending?.options.map((option) => option.key).sort()).toEqual(hand.map((id) => `instance:${id}`).sort());
 
     const chosen = hand[0] ?? "";
-    state = act(state, { type: "answer", choiceId: pending?.id ?? "", selection: [{ pick: "instance", instanceId: chosen }], playerId: "p1" }, log);
-    // The discarded card is in p1's graveyard, the deal went on, and both mulligans are open now.
+    state = act(state, { type: "answer", choiceId: pending?.id ?? "", selection: [{ pick: "instance", instanceId: chosen }], playerId: "p1" }, found.log);
+    // The discarded card is in p1's graveyard, with the Hinder, and the turn goes on.
     expect(state.players.p1.graveyard.map((card) => card.id)).toContain(chosen);
     expect(state.players.p1.graveyard.map((card) => card.defId)).toContain(HINDER);
-    expect(state.mulligan).toBeDefined();
-
-    for (const player of ["p1", "p2"] as PlayerId[]) {
-      state = act(state, { type: "mulligan", keep: state.players[player].hand.map((card) => card.id), playerId: player }, log);
-    }
+    expect(state.pending).toBeNull();
     expect(state.turn).toBe(1);
 
-    const replayed = fold({ seed: found.seed, decks: [DECK, DECK], log });
+    const replayed = fold({ seed: found.seed, decks: [DECK, DECK], log: found.log });
     expect(replayed.errors).toEqual([]);
     expect(hashState(replayed.state)).toBe(hashState(state));
   });

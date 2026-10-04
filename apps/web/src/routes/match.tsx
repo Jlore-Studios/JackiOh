@@ -192,7 +192,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
 
   const view = match.view;
 
-  // R642–R643: the match's emote session. The local seat's sends emit through the socket
+  // R643–R644: the match's emote session. The local seat's sends emit through the socket
   // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
   // frame so the same emote twice still notifies. The device setting mutes the opponent live.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");

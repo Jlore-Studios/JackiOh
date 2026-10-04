@@ -1,4 +1,4 @@
-/* Emotes (issue §2–§5, R642–R643): the picker on your portrait, the mute menu on the opponent's,
+/* Emotes (issue §2–§5, R643–R644): the picker on your portrait, the mute menu on the opponent's,
    and the bubble/sticker that pops out of a hero. Everything mounts inside `.hero` (position:
    relative), so the pieces hang off the portrait without knowing board geometry. The animations
    honour Reduce Motion exactly like board.css does: media query plus the app's

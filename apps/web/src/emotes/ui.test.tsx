@@ -1,5 +1,5 @@
-// The emote UI (ui.tsx): what a shown emote draws (R643) and what the two menus do (issue §2, §5,
-// with R642's grey-out). The components are cosmetic — a pick reports the emote upward and the
+// The emote UI (ui.tsx): what a shown emote draws (R644) and what the two menus do (issue §2, §5,
+// with R643's grey-out). The components are cosmetic — a pick reports the emote upward and the
 // session decides whether anything shows — so the tests render them bare, against a hand-read
 // `gate`, with no session and no clock but the bubble's `--emote-hold` span.
 
@@ -21,8 +21,8 @@ afterEach(() => {
   cleanup();
 });
 
-describe("R643 EmoteShow", () => {
-  it("R643 a voice emote draws its line's text in a speech bubble", () => {
+describe("R644 EmoteShow", () => {
+  it("R644 a voice emote draws its line's text in a speech bubble", () => {
     const show: EmoteShowState = { key: 1, emote: "greetings", text: "Hey there, friend! Feeling lucky?", until: Date.now() + 3_000 };
     render(<EmoteShow show={show} />);
 
@@ -35,7 +35,7 @@ describe("R643 EmoteShow", () => {
     expect(bubble.style.getPropertyValue("--emote-hold")).toMatch(/^\d+ms$/);
   });
 
-  it("R643 an emoji emote draws its sticker — the SVG for that id, and no words", () => {
+  it("R644 an emoji emote draws its sticker — the SVG for that id, and no words", () => {
     const show: EmoteShowState = { key: 2, emote: "wahWah", text: null, until: Date.now() + 2_000 };
     render(<EmoteShow show={show} />);
 
@@ -47,8 +47,8 @@ describe("R643 EmoteShow", () => {
   });
 });
 
-describe("R642 the emote picker", () => {
-  it("R642 offers the five voice lines on their arc and the five emoji below, ten items", () => {
+describe("R643 the emote picker", () => {
+  it("R643 offers the five voice lines on their arc and the five emoji below, ten items", () => {
     render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     const items = screen.getAllByRole("menuitem");
@@ -66,7 +66,7 @@ describe("R642 the emote picker", () => {
     }
   });
 
-  it("R642 a press reports the emote and closes the menu", () => {
+  it("R643 a press reports the emote and closes the menu", () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
     render(<EmoteMenu side="you" gate={() => OPEN} onPick={onPick} onClose={onClose} />);
@@ -82,7 +82,7 @@ describe("R642 the emote picker", () => {
     expect(onPick).toHaveBeenCalledTimes(2);
   });
 
-  it("R642 while the shared gate says limited, every item greys out with the wait and reports nothing", () => {
+  it("R643 while the shared gate says limited, every item greys out with the wait and reports nothing", () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
     render(<EmoteMenu side="you" gate={() => LIMITED} onPick={onPick} onClose={onClose} />);
@@ -104,7 +104,7 @@ describe("R642 the emote picker", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("R642 the menu closes on a press outside it and on Escape, but not on a press inside", () => {
+  it("R643 the menu closes on a press outside it and on Escape, but not on a press inside", () => {
     const onClose = vi.fn();
     render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={onClose} />);
 
@@ -119,8 +119,8 @@ describe("R642 the emote picker", () => {
   });
 });
 
-describe("R642 the Mute emotes menu", () => {
-  it("R642 offers the one item and reports it, then closes", () => {
+describe("R643 the Mute emotes menu", () => {
+  it("R643 offers the one item and reports it, then closes", () => {
     const onMute = vi.fn();
     const onClose = vi.fn();
     render(<MuteMenu muted={false} onMute={onMute} onClose={onClose} />);
@@ -134,7 +134,7 @@ describe("R642 the Mute emotes menu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("R642 an already-muted opponent reads Emotes muted and does nothing", () => {
+  it("R643 an already-muted opponent reads Emotes muted and does nothing", () => {
     const onMute = vi.fn();
     const onClose = vi.fn();
     render(<MuteMenu muted={true} onMute={onMute} onClose={onClose} />);

@@ -95,7 +95,7 @@ export type GameProps = {
    */
   autoEndTurn?: boolean;
   /**
-   * The route's emote session (R642–R643): portraits for both seats, what each is showing, the
+   * The route's emote session (R643–R644): portraits for both seats, what each is showing, the
    * send that admits through the shared gate, and the mutes. Absent, the heroes still draw their
    * default portraits and simply open no menus — tests that render a bare board get that.
    */
@@ -369,7 +369,7 @@ export default function Game({
   const animated = useMemo(() => burst.map((entry) => ({ frames: entry.frames, events: entry.events })), [burst]);
 
   /**
-   * One hero's emote surface, built per side (R642–R643). The picker opens only on your own
+   * One hero's emote surface, built per side (R643–R644). The picker opens only on your own
    * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
    * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
    * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.

@@ -4,7 +4,7 @@
  *
  * This file replaces the single three-deck loadout. A profile keeps up to `MAX_SAVED_DECKS` named
  * decks and up to `MAX_SAVED_TRIOS` trios built from them, and both are DRAFTS (R250, R252): a
- * save checks structure only — D1–D5 for a deck (R640 added the portrait's), T1–T3 for a trio —
+ * save checks structure only — D1–D5 for a deck (R641 added the portrait's), T1–T3 for a trio —
  * and legality is judged when a deck or a trio is queued (R253). So the save routes below never
  * call the L1–L6 validator, and the queue-time helpers at the bottom always do.
  *

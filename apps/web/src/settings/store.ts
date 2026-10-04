@@ -31,7 +31,7 @@ export type Settings = {
   /** Visuals. Force reduced motion on top of the OS preference (`--anim-scale: 0`). */
   reduceMotion: boolean;
   /**
-   * Audio/social. R643: mute every opponent's emotes in every match — they are never drawn and
+   * Audio/social. R644: mute every opponent's emotes in every match — they are never drawn and
    * never heard. Default off, stored per device like the rest of this file (issue §5).
    */
   muteOpponentEmotes: boolean;

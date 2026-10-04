@@ -55,9 +55,10 @@ describe("R436 the words for each rolled effect", () => {
     for (const table of Object.values(CHAOS_EFFECT_NAMES)) {
       for (const name of Object.values(table)) {
         expect(name.length, name).toBeLessThanOrEqual(48);
-        // R373, R432: "Deck" and "Tribute", "(N) Cost" as the noun ("Cost (N)" is the old noun).
+        // R373, R432: "Deck" and "Tribute", "(N) Cost" as the noun ("Cost (N)" and "costing (N)" are the old forms).
         expect(name, name).not.toMatch(/\blibrar|\bsacrific|costs? \d|\d-cost/i);
         expect(name, name).not.toMatch(/\bCost \(\d/);
+        expect(name, name).not.toMatch(/\bcosting \(/i);
       }
     }
     expect(chaosEffectName(CHAOS_CORE, UNITS)).toBe("Summon 3 random (3) Cost Units");
@@ -70,7 +71,7 @@ describe("R436 the words for each rolled effect", () => {
     expect(chaosEffectName("hidden", GOLEM)).toBe("Summon a Chaos Golem");
     // Printed by both, and spelled the same, so it reads the same whoever cast it.
     expect(chaosEffectName("hidden", RECAST)).toBe("Cast a random Call to Chaos");
-    expect(chaosEffectName("hidden", "Add 5 random Fruits to your hand, which cost (0)")).toBe("Add 5 Fruits costing (0)");
+    expect(chaosEffectName("hidden", "Add 5 random Fruits to your hand, which cost (0)")).toBe("Add 5 (0) Cost Fruits");
   });
 
   it("R436 an unknown clause still reads: words stay words, one word is capitalised", () => {

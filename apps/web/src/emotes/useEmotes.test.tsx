@@ -1,4 +1,4 @@
-// useEmotes: the React half of the emote session (R642, R643). The pure half is proved in
+// useEmotes: the React half of the emote session (R643, R644). The pure half is proved in
 // session.test.ts; what this file proves is what only the hook does — a send shows and sounds
 // locally without waiting for the relay, a muted or device-muted emote never reaches the audio
 // engine, a newer emote's expiry timer is the only one that lands, and `globalMute` spares the
@@ -44,8 +44,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("R641 the dealt portraits", () => {
-  it("R641 portraitOf reads the server's frame, and vanilla before one arrives", () => {
+describe("R642 the dealt portraits", () => {
+  it("R642 portraitOf reads the server's frame, and vanilla before one arrives", () => {
     const dealt = hook({ portraits: { p1: "gary", p2: "shredder" } });
     expect(dealt.result.current.portraitOf("p1")).toBe("gary");
     expect(dealt.result.current.portraitOf("p2")).toBe("shredder");
@@ -57,8 +57,8 @@ describe("R641 the dealt portraits", () => {
   });
 });
 
-describe("R642 a local send", () => {
-  it("R642 an admitted send shows and sounds at once, then is emitted — no relay waited on", () => {
+describe("R643 a local send", () => {
+  it("R643 an admitted send shows and sounds at once, then is emitted — no relay waited on", () => {
     const engine = engineSpy();
     const emit = vi.fn();
     const { result } = hook({
@@ -86,7 +86,7 @@ describe("R642 a local send", () => {
     expect(emit).toHaveBeenCalledWith("greetings");
   });
 
-  it("R642 a send the gate drops emits nothing, plays nothing and leaves the menu's reading true", () => {
+  it("R643 a send the gate drops emits nothing, plays nothing and leaves the menu's reading true", () => {
     const engine = engineSpy();
     const emit = vi.fn();
     const { result } = hook({ emit, engine, you: "p1" });
@@ -110,7 +110,7 @@ describe("R642 a local send", () => {
     expect(engine.playSfx).toHaveBeenCalledTimes(1);
   });
 
-  it("R642 the gate the menu reads opens again once the cooldown has passed", () => {
+  it("R643 the gate the menu reads opens again once the cooldown has passed", () => {
     vi.useFakeTimers();
     const emit = vi.fn();
     const { result } = hook({ emit, engine: null });
@@ -133,8 +133,8 @@ describe("R642 a local send", () => {
   });
 });
 
-describe("R642 an opponent's emote", () => {
-  it("R642 a received emote shows its sticker or bubble and plays its sound", () => {
+describe("R643 an opponent's emote", () => {
+  it("R643 a received emote shows its sticker or bubble and plays its sound", () => {
     const engine = engineSpy();
     const { result } = hook({ portraits: { p1: "vanilla", p2: "shredder" }, engine, you: "p1" });
 
@@ -155,7 +155,7 @@ describe("R642 an opponent's emote", () => {
     expect(engine.playSfx).toHaveBeenCalledWith("emoteSob");
   });
 
-  it("R642 a muted player's emote shows nothing and plays no sound", () => {
+  it("R643 a muted player's emote shows nothing and plays no sound", () => {
     const engine = engineSpy();
     const { result } = hook({ engine });
 
@@ -175,7 +175,7 @@ describe("R642 an opponent's emote", () => {
     expect(engine.playSfx).not.toHaveBeenCalled();
   });
 
-  it("R642 mute takes the muted player's standing bubble down with it", () => {
+  it("R643 mute takes the muted player's standing bubble down with it", () => {
     const { result } = hook({});
 
     act(() => {
@@ -191,7 +191,7 @@ describe("R642 an opponent's emote", () => {
     expect(result.current.muted("p2")).toBe(true);
   });
 
-  it("R642 the device's muteOpponentEmotes setting silences every seat but you, live", () => {
+  it("R643 the device's muteOpponentEmotes setting silences every seat but you, live", () => {
     const engine = engineSpy();
     const { result, rerender } = hook({ engine, globalMute: false, you: "p1" });
 
@@ -215,7 +215,7 @@ describe("R642 an opponent's emote", () => {
     expect(engine.playVoice).toHaveBeenCalledTimes(2); // p2's own line, then yours — the muted one never played
   });
 
-  it("R642 in a hotseat the seat on move is the one the setting spares", () => {
+  it("R643 in a hotseat the seat on move is the one the setting spares", () => {
     // Hotseat hands `you` the seat whose turn it is; globalMute mutes only the other.
     const { result, rerender } = hook({ globalMute: true, you: "p1" });
     expect(result.current.muted("p2")).toBe(true);
@@ -227,8 +227,8 @@ describe("R642 an opponent's emote", () => {
   });
 });
 
-describe("R642 one emote per player, expiring on its own span", () => {
-  it("R642 a newer emote replaces the old, and the old show's timer cannot take it down", () => {
+describe("R643 one emote per player, expiring on its own span", () => {
+  it("R643 a newer emote replaces the old, and the old show's timer cannot take it down", () => {
     vi.useFakeTimers();
     const { result } = hook({});
 
@@ -254,7 +254,7 @@ describe("R642 one emote per player, expiring on its own span", () => {
     expect(result.current.visible("p2")).toBeNull();
   });
 
-  it("R642 the bubble leaves when its span is up", () => {
+  it("R643 the bubble leaves when its span is up", () => {
     vi.useFakeTimers();
     const { result } = hook({});
 
@@ -274,7 +274,7 @@ describe("R642 one emote per player, expiring on its own span", () => {
     expect(result.current.visible("p2")).toBeNull();
   });
 
-  it("R642 a nulled engine still shows the emote — sound is cosmetic, the bubble is not", () => {
+  it("R643 a nulled engine still shows the emote — sound is cosmetic, the bubble is not", () => {
     const { result } = hook({ engine: null });
 
     act(() => {

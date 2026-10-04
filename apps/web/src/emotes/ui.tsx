@@ -4,7 +4,7 @@
 // Placement is inside the hero element (`position: relative`), so it needs no coordinates: the
 // voice lines sit on an arc above the portrait, the emoji in a row under them, the bubble or
 // sticker beside the portrait — `.emote-*` in emotes.css owns the geometry. Everything here is
-// cosmetic (R642): a menu pick reports the emote and the caller decides how it travels.
+// cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -53,7 +53,7 @@ function useMenuLifetime(open: boolean, onClose: () => void): void {
 /**
  * Your portrait's menu: the five voice lines on their arc, the five emoji below. `gate` is the
  * shared limiter's live reading — while limited the items grey and carry the wait in seconds,
- * and the press reports nothing (R642). Re-polled every EMOTE_MENU_TICK_MS so the wait counts down.
+ * and the press reports nothing (R643). Re-polled every EMOTE_MENU_TICK_MS so the wait counts down.
  */
 export function EmoteMenu({
   side,

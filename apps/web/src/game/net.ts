@@ -217,9 +217,9 @@ export type ServerFrame =
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
   | { type: "clock"; now: number; clocks: MatchClocks }
-  /** R641: both seats' hero portraits, on join and on reconnect. */
+  /** R642: both seats' hero portraits, on join and on reconnect. */
   | { type: "portraits"; p1: PortraitId; p2: PortraitId }
-  /** R642: an emote the opponent sent, relayed by the actor. */
+  /** R643: an emote the opponent sent, relayed by the actor. */
   | { type: "emote"; from: PlayerId; emote: EmoteId };
 
 /**
@@ -357,10 +357,10 @@ export type MatchSnapshot = {
   prompt: PromptFrame | null;
   /** The last `ack`: the nonce the actor accepted and the log seq it wrote it at. */
   ack: { nonce: string; seq: number } | null;
-  /** R641: both seats' portraits, null until the first `portraits` frame arrives. */
+  /** R642: both seats' portraits, null until the first `portraits` frame arrives. */
   portraits: { p1: PortraitId; p2: PortraitId } | null;
   /**
-   * R642: the last emote the opponent sent, with a `seq` that bumps on every relay so the same
+   * R643: the last emote the opponent sent, with a `seq` that bumps on every relay so the same
    * emote twice in a row still notifies.
    */
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
@@ -374,7 +374,7 @@ export type MatchClient = {
   /** Send one action. The nonce is minted here; `playerId` is never sent (the actor stamps it). */
   send: (body: ActionBody) => void;
   /**
-   * R642: send one emote. No nonce and no ack — a rate-limited emote is the server's silent drop,
+   * R643: send one emote. No nonce and no ack — a rate-limited emote is the server's silent drop,
    * so there is nothing to wait for; the board shows it locally at once.
    */
   sendEmote: (emote: EmoteId) => void;
@@ -452,7 +452,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let pendingRetry: unknown = null;
   /** Set by `close()`; cleared by `connect()`. Keeps a deliberate close from reconnecting. */
   let stopped = false;
-  /** R642: bumps on every relayed emote, so two identical ones in a row still notify. */
+  /** R643: bumps on every relayed emote, so two identical ones in a row still notify. */
   let emoteSeq = 0;
 
   function emit(): void {
@@ -615,7 +615,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     sendEmote: (emote) => {
       const live = socket;
       // Cosmetic chatter is never worth an error banner: a dead socket just drops the emote, the
-      // way the server drops a rate-limited one (R642).
+      // way the server drops a rate-limited one (R643).
       if (live === null || live.readyState !== OPEN) return;
       try {
         live.send(JSON.stringify({ type: "emote", emote }));
@@ -750,7 +750,7 @@ export type UseMatchOptions = {
 export type UseMatchResult = MatchSnapshot & {
   /** Send one action to the actor. */
   send: (body: ActionBody) => void;
-  /** R642: send one emote; the local board shows it at once and the server relays it on. */
+  /** R643: send one emote; the local board shows it at once and the server relays it on. */
   sendEmote: (emote: EmoteId) => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;
