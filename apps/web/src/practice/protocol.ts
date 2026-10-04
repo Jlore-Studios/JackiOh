@@ -69,6 +69,8 @@ export type PracticeDebug = {
   lesson?: string;
   /** R417: the last boards `createGame` had, seat ordered, when the human brought one. */
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
+  /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none was. */
+  dealt?: PlayerId[];
 };
 
 export type PracticeRequest =
