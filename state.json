@@ -1581,7 +1581,7 @@
       }
     },
     "203": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cross_rounds": 1,
       "died": 0,
@@ -1619,10 +1619,10 @@
         }
       ],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "devin",
       "question": "",
       "queued_at": "2026-10-04T08:12:07Z",
-      "run_id": "37187854392",
+      "run_id": "37188158928",
       "self_check_findings": [
         {
           "claim": "Conflict markers are still in apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx.",
@@ -1644,7 +1644,7 @@
         }
       ],
       "source": "cross-review",
-      "started_at": "2026-10-04T08:07:40Z",
+      "started_at": "2026-10-04T08:14:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2139,9 +2139,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T08:07:40Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37187854392",
-    "what": "review #203 on muse"
+    "at": "2026-10-04T08:14:07Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37188158928",
+    "what": "revise #203 on devin"
   },
   "last_sweep": {
     "at": "2026-10-04T08:13:12Z",
