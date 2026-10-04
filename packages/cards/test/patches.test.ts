@@ -8,12 +8,17 @@
 // `pnpm --filter @jackioh/cards patch <version> "<title>" --date … --from-git <rev>`; the table the
 // brief checked on 2026-09-30 is asserted below, card by card where it names cards.
 
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CATALOG, CATALOG_VERSION } from "../src/catalog-data";
 import { INDEX_JSON, buildIndex, diffCatalogs, readPatches, readSnapshot, snapshotPath, type Catalog } from "../scripts/patches-io";
 import { versionsAtSites } from "../scripts/patch";
 
+const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const PATCHES = readPatches();
 const VERSIONS = PATCHES.map((patch) => patch.version);
 const changesOf = (version: string) => PATCHES.find((patch) => patch.version === version)?.changes ?? [];
@@ -54,6 +59,28 @@ describe("R388 card patch history (B4.2)", () => {
     for (const site of versionsAtSites()) {
       expect(site.version, site.file).toBe(CATALOG_VERSION);
     }
+  });
+
+  it("R388 gives Render's start command the catalog version from the patch list, so a stale dashboard value is never served", () => {
+    const script = join(ROOT, "scripts/catalog-version.mjs");
+    // The version a deploy serves and stamps is the newest patch, which is CATALOG_VERSION.
+    expect(execFileSync(process.execPath, [script], { encoding: "utf8" })).toBe(CATALOG_VERSION);
+
+    // render.yaml runs it, as its own command, and exports the result before `release` stamps the
+    // database and before the server starts.
+    const start = /^ *startCommand: *(.*)$/mu.exec(readFileSync(join(ROOT, "render.yaml"), "utf8"))?.[1] ?? "";
+    const commands = start.split("&&").map((command) => command.trim());
+    expect(commands[0]).toBe("CATALOG_VERSION=$(node scripts/catalog-version.mjs)");
+    expect(commands[1]).toBe("export CATALOG_VERSION");
+    expect(commands[2]).toContain("release");
+
+    // A patch list that names no newest version stops the chain with nothing on stdout.
+    const empty = join(mkdtempSync(join(tmpdir(), "catalog-version-")), "patches.json");
+    writeFileSync(empty, "[]");
+    const failed = spawnSync(process.execPath, [script, empty], { encoding: "utf8" });
+    expect(failed.status).toBe(1);
+    expect(failed.stdout).toBe("");
+    expect(failed.stderr).toContain("names no newest version");
   });
 
   it("R388 derives each patch's card-by-card changes and the per-card index from the snapshots alone", () => {

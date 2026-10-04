@@ -11,9 +11,12 @@
 #   1. A database owned by `migrator`, a login role that is NOT a superuser, as Supabase's
 #      `postgres` role is not; the Supabase-managed pieces (test/db/bootstrap.sql: roles, auth.users,
 #      auth.uid()) are installed by the superuser, as Supabase installs them, and granted to it.
-#   2. render.yaml's own startCommand and its non-secret env values (CATALOG_VERSION, NODE_ENV,
-#      TRUSTED_PROXY_HOPS), read from the file so the rehearsal cannot drift from the deploy. The
-#      secrets are placeholders: the server checks their shape at boot, and nothing here calls out.
+#   2. render.yaml's own startCommand and its non-secret env values (NODE_ENV, TRUSTED_PROXY_HOPS),
+#      read from the file so the rehearsal cannot drift from the deploy. CATALOG_VERSION is the
+#      exception: it starts out as a stale value, as one left in Render's dashboard would be, and
+#      the start command must overwrite it from patches.json, so the version served and stamped on
+#      the database is render.yaml's. The secrets are placeholders: the server checks their shape at
+#      boot, and nothing here calls out.
 #   3. The readiness probe Render uses, GET /api/catalog: it must answer within READY_SECONDS with
 #      render.yaml's catalog version and, in its x-deployed-commit header, the commit Render hands
 #      the service in RENDER_GIT_COMMIT (deploy-watch.yml compares that header with each push), the
@@ -30,6 +33,8 @@ PORT_UNDER_TEST=18787
 READY_SECONDS=120
 MEMORY_LIMIT_MB=450
 CONTAINER=jackioh-pg-deploy
+# A catalog version nothing ships: what a dashboard that was never updated would still hold.
+STALE_CATALOG_VERSION=v0.0.0-stale-dashboard-value
 # What Render sets RENDER_GIT_COMMIT to is a full git SHA; this one is made up.
 REHEARSAL_COMMIT=0123456789abcdef0123456789abcdef01234567
 
@@ -105,7 +110,8 @@ echo "catalog version: $CATALOG_VERSION"
 start_server() {
   (
     cd "$REPO"
-    export DATABASE_URL CATALOG_VERSION
+    export DATABASE_URL
+    export CATALOG_VERSION="$STALE_CATALOG_VERSION"
     export NODE_ENV="$(yaml_value NODE_ENV)"
     export TRUSTED_PROXY_HOPS="$(yaml_value TRUSTED_PROXY_HOPS)"
     export PORT="$PORT_UNDER_TEST"
@@ -180,6 +186,10 @@ echo "--- first boot: every migration, the reseed, then the server ---"
 start_server "$LOG_DIR/deploy-boot-1.log"
 check_boot "$LOG_DIR/deploy-boot-1.log"
 grep -E "^(migrate|seed-catalog):" "$LOG_DIR/deploy-boot-1.log" || true
+if ! grep -q "^seed-catalog: wrote .* at catalog version $CATALOG_VERSION\$" "$LOG_DIR/deploy-boot-1.log"; then
+  echo "FAIL: the reseed did not stamp catalog $CATALOG_VERSION: the start command must overwrite CATALOG_VERSION"
+  exit 1
+fi
 stop_server
 
 echo "--- second boot: nothing to migrate, the same catalog ---"

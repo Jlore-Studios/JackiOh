@@ -241,10 +241,11 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
   runs an older commit: Render is not receiving pushes, or a deploy failed. jackioh-server, Events
   shows a "Deploy started" for every push it receives, and a failed deploy names its step in the
-  log. The server runs the pushed commit but an older catalog version: the dashboard's
-  `CATALOG_VERSION` is stale, so set it to render.yaml's value. The server reports no commit: it
-  predates the check, or `RENDER_GIT_COMMIT` is not set. The run that finds the server live closes
-  the issue.
+  log. The server runs the pushed commit but another catalog version: render.yaml's start command
+  takes the version from `patches.json`, so `render.yaml`'s `CATALOG_VERSION` and that list
+  disagree, or the service is not running render.yaml's start command (Settings, Build & Deploy;
+  Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not
+  set. The run that finds the server live closes the issue.
 - **Render stopped deploying (the repository moved):** when the repository was transferred from
   `jgoetzmann` to `Jlore-Studios`, Render kept the last deploy it had made (Oct 2) and received no
   push after it, so a catalog change (v0.2.4) never arrived and nothing flagged it, because the
@@ -253,8 +254,9 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   branch `main`, Auto-Deploy on commit ("After CI checks pass" would wait on the red Cloudflare
   check). If the repository is not offered, an owner of the organization has to authorize Render's
   GitHub app for it. The service is Blueprint-managed, so also check Blueprints, the repository of
-  the Blueprint. Then Environment: `CATALOG_VERSION` must equal render.yaml's value. Then Manual
-  Deploy, "Deploy latest commit".
+  the Blueprint. Then Manual Deploy, "Deploy latest commit". The `CATALOG_VERSION` in Environment is
+  ignored: the start command overwrites it at every boot from `patches.json`, so a stale copy there
+  cannot be served (delete it, so nobody edits it expecting an effect).
 - **A Cloudflare build fails:** the commit is on `production` but not live. Fix on main, then run the
   workflow by hand, or use Cloudflare's "Retry build" for a transient failure.
 - **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for

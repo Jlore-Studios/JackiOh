@@ -9,7 +9,7 @@
 # The commit is what catches a push that leaves the catalog as it was: when Render stops receiving
 # pushes (the repository moved or was renamed, the GitHub app lost access, Auto-Deploy is off) the
 # live server keeps serving the same version, and the version alone cannot tell. It also catches a
-# dashboard CATALOG_VERSION that is stale: the new commit is live but still serves the old version.
+# start command that is not render.yaml's: the new commit is live but serves another catalog version.
 # The issue says which of those it is, and the run that finds the server live closes it again.
 #
 # The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
@@ -153,7 +153,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
-            diagnosis="Render deployed this commit, so the catalog version comes from the service's own \`CATALOG_VERSION\` setting, not from the code. Open jackioh-server, Environment, and set \`CATALOG_VERSION\` to **$EXPECTED**. A Blueprint-managed service takes render.yaml's value only when Render syncs the Blueprint, which it does on a push it receives."
+            diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The start command takes the version from the newest entry of packages/cards/patches/patches.json (scripts/catalog-version.mjs), so either render.yaml's \`CATALOG_VERSION\` and that list disagree (the patch command writes both, and R388's test holds them equal), or the service is not running render.yaml's start command: open jackioh-server, Settings, Build & Deploy, and Blueprints."
           elif [ -n "$SERVED_COMMIT" ]; then
             diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
           else
