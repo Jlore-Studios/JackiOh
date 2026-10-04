@@ -81,7 +81,16 @@ function hashUnit(seed: string): number {
     h ^= seed.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return h / 0x100000000;
+  // Avalanche (MurmurHash3's fmix32): FNV-1a diffuses a differing last character into a small
+  // multiple of the prime, so `${seed}:portrait:p1` and `${seed}:portrait:p2` fell in the same
+  // portrait bucket ~95% of the time instead of R642's independent ~1/6. The finalizer spreads
+  // one-character differences over all 32 bits, so the seats draw independently.
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return (h >>> 0) / 0x100000000;
 }
 
 /**

@@ -118,6 +118,22 @@ describe("R642 — a match's portrait picks land on the roster", () => {
     // Dealt independently per seat (R642): the two draws disagree on at least some matches.
     expect(differ).toBeGreaterThan(0);
   });
+
+  it("R642 deals the two All Random seats independently: p1/p2 agree about one match in six", () => {
+    // Fixed strings, no RNG: a hash with no avalanche dealt the seats the same portrait ~95% of
+    // the time (the `:p1`/`:p2` suffixes differ in one character). Six hundred matches put the
+    // ~1/6 agreement at 100 ± 27 (3σ), so [50, 200] proves independence and stays far from both
+    // the old ~570 and a degenerate never-agreeing hash.
+    const matches = 600;
+    let same = 0;
+    for (let i = 0; i < matches; i += 1) {
+      if (pickPortraitFromSeed(`seed-${i}:portrait:p1`) === pickPortraitFromSeed(`seed-${i}:portrait:p2`)) {
+        same += 1;
+      }
+    }
+    expect(same, `p1/p2 agree on ${String(same)} of ${String(matches)}`).toBeGreaterThanOrEqual(50);
+    expect(same, `p1/p2 agree on ${String(same)} of ${String(matches)}`).toBeLessThanOrEqual(200);
+  });
 });
 
 describe("R643 — the one rate limit both ends enforce", () => {
