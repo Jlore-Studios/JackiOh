@@ -24,6 +24,7 @@ from typing import Any, Callable
 
 from harness import gates as gates_mod
 from harness import prompts, verdicts
+from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
 from harness.config import Config, child_env
 from harness.git import Git, Identity, worktree_add
@@ -144,6 +145,8 @@ class Worker:
         self.build_transcript: Path | None = None
         self.who = Identity.bot(cfg.bot_login, cfg.bot_user_id)
         self.last_usage: dict | None = None
+        #: A fresh usage reading taken just before the run (`cmd_work`'s ping), if any.
+        self.start_usage: dict | None = None
         self.calls = 0
         self.wt: Git | None = None
         self.base_ref = f"origin/{cfg.default_branch}"
@@ -238,6 +241,7 @@ class Worker:
             transcript=transcript,
             read_only=reader,
             extra_dirs=self._git_dirs(cwd),
+            usage_stop=self._usage_stop if self.provider.limits.stops else None,
         )
         result = self.runner.run(request)
         if self.after_call is not None:
@@ -245,12 +249,36 @@ class Worker:
         self.minutes += result.duration_s / 60
         if result.usage:
             self.last_usage = result.usage
+        if result.extra.get("usage_stop"):
+            raise Interrupt(f"`{self.provider.id}` stops mid-call: {result.extra['usage_stop']}",
+                            "usage")
         if result.rate_limited:
             raise Interrupt(f"`{self.provider.id}` reached its usage limit", "usage",
                             result.reset_at)
         if result.infra:
             raise Interrupt(f"the {self.provider.cli} CLI could not run: {result.error}", "infra")
         return result
+
+    def _usage_stop(self, usage: dict[str, Any]) -> str | None:
+        """While a call runs: the reading it just streamed, against the provider's caps (and
+        its `off_hours` ones outside its window). A reason stops the call there."""
+        now = self.now()
+        entry = {"usage": {**usage, "observed_at": iso(now)}}
+        return providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
+
+    def _start_check(self) -> None:
+        """The fresh reading taken just before the run: a run over its cap, or a build or a
+        revision without `start_headroom` under it, ends here before any model work. Without it a
+        run started from whatever reading the last run left, none at all after a reset."""
+        if not self.start_usage:
+            return
+        self.last_usage = self.start_usage
+        now = self.now()
+        entry = {"usage": {**self.start_usage, "observed_at": iso(now)}}
+        reason = providers_mod.refusal(self.provider, entry, now, self.cfg.timezone,
+                                       starting=self.plan.get("action") in ("build", "revise"))
+        if reason:
+            raise Interrupt(f"`{self.provider.id}` stops before it starts: {reason}", "usage")
 
     def _git_dirs(self, cwd: Path) -> tuple[str, ...]:
         """The repository's git directory, which a worktree's git commands write to and a
@@ -278,6 +306,7 @@ class Worker:
     def run(self) -> dict[str, Any]:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         try:
+            self._start_check()
             action = self.plan.get("action")
             if action == "suggest":
                 self._suggest()

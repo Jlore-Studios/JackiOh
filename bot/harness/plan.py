@@ -145,10 +145,12 @@ class Lanes:
         return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
     def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`. A subscription the quiet check guards counts its
-        planning run too: the check cannot tell a second run of the bot's from its owner."""
+        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
+        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
+        the bot's from its owner, and two runs deciding from one reading go past a cap together
+        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
         held = self.count(provider.id)
-        if provider.quiet_check:
+        if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
         return held >= provider.lanes
 
@@ -208,8 +210,9 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
         return False
+    # A build or a revision runs long: it starts only with `start_headroom` under each cap.
     return providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
-                                      forced=forced) is None
+                                      forced=forced, starting=role in ("build", "revise")) is None
 
 
 @dataclass
@@ -306,8 +309,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
         seat = cfg.pool.best_seat(provider, "strong")
         if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
             continue
-        if provider.quiet_check and lanes.count(provider.id):
-            continue
+        if (provider.quiet_check or provider.limits.stops) and lanes.count(provider.id):
+            continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
         if (provider.quiet_check and cfg.quiet.enabled and not forced

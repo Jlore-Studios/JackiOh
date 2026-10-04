@@ -213,6 +213,11 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
         cfg, planned, get_runner(cfg, provider, login), cfg.root, Path(args.work_dir), out,
         probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
     )
+    if cfg.backend != "fake" and provider.cli == "claude" and provider.limits.stops:
+        # A fresh reading before any model work: the stored one is the last run's, and none at
+        # all once its window reset. One Haiku turn, signed in as this subscription.
+        worker.start_usage = ping_usage(cfg.claude_bin, cfg.quiet.ping_model,
+                                        token=secret if provider.login == "secret" else "")
     result = worker.run()
     keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import re
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -109,6 +110,9 @@ class Limits:
     seven_day: float | None = None
     five_hour_minutes: int | None = None
     seven_day_minutes: int | None = None
+    #: How far under a cap a build or revision must be to start (`start_headroom` in
+    #: providers.json): one that starts at 39% under a 40% cap is cut off almost at once.
+    headroom: Mapping[str, float] = field(default_factory=dict)
 
     @property
     def stops(self) -> dict[str, float]:
@@ -321,6 +325,17 @@ def _schedule(raw: Any, where: str) -> Schedule:
     raise ConfigError(f"{where}.mode: {mode!r} is not always or window")
 
 
+def _headroom(raw: Any, where: str) -> dict[str, float]:
+    if raw in (None, {}):
+        return {}
+    if not isinstance(raw, Mapping):
+        raise ConfigError(f"{where}: expected an object such as {{\"five_hour\": 0.15}}")
+    unknown = sorted(set(raw) - set(WINDOWS))
+    if unknown:
+        raise ConfigError(f"{where}: unknown windows {', '.join(unknown)}")
+    return {str(window): _fraction(share, f"{where}.{window}") for window, share in raw.items()}
+
+
 def _limits(raw: Any, where: str) -> Limits:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{where}: expected an object")
@@ -478,6 +493,9 @@ def parse(raw: Any) -> Pool:
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{PROVIDERS_PATH} must hold a JSON object")
     providers = {str(k): _provider(str(k), v) for k, v in dict(raw.get("providers") or {}).items()}
+    headroom = _headroom(raw.get("start_headroom"), f"{PROVIDERS_PATH}.start_headroom")
+    providers = {k: dataclasses.replace(p, limits=dataclasses.replace(p.limits, headroom=headroom))
+                 if p.limits.stops else p for k, p in providers.items()}
     if not providers:
         raise ConfigError(f"{PROVIDERS_PATH}: at least one provider is required")
     secrets = [p.secret for p in providers.values() if p.login == "secret"]
@@ -575,12 +593,40 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         resets = parse_iso(reset_at)
         if resets is None and str(reset_at).startswith("+PT"):
             resets = at + _duration(str(reset_at))
+            from harness.runner import DEFAULT_PARK  # runner imports config, which imports this
+            if str(reset_at) == DEFAULT_PARK:
+                # The refusal named no reset: a window the last reading had nearly full is the
+                # likely cause, so wait for it (gpt's week at 89% was retried every hour).
+                held = near_full_reset(entry.get("usage"), at)
+                if held is not None and held > resets:
+                    resets = held
         if resets is not None:
             entry["refused_until"] = iso(resets)
     if minutes > 0:
         spent = list(entry.get("spent") or [])
         spent.append({"at": iso(at), "minutes": round(float(minutes), 1)})
         entry["spent"] = spent[-SPENT_KEEP:]
+
+
+#: A window at least this full in the last reading is taken to be why a refusal came.
+NEAR_FULL = 0.85
+
+
+def near_full_reset(usage: Any, at: datetime) -> datetime | None:
+    """When the latest-resetting window that the reading had nearly full resets, if any."""
+    if not isinstance(usage, Mapping):
+        return None
+    found = []
+    for window in WINDOWS:
+        reading = usage.get(window)
+        if not isinstance(reading, Mapping):
+            continue
+        resets = parse_iso(reading.get("resets_at"))
+        utilization = reading.get("utilization")
+        if (resets is not None and resets > at and isinstance(utilization, (int, float))
+                and utilization >= NEAR_FULL):
+            found.append(resets)
+    return max(found, default=None)
 
 
 def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime) -> None:
@@ -599,9 +645,10 @@ def _duration(text: str) -> timedelta:
 
 
 def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
-            zone_name: str | None = None) -> str | None:
+            zone_name: str | None = None, *, starting: bool = False) -> str | None:
     """Why this provider's usage says to start nothing now, or None. With the bot's time zone,
-    outside its window its `off_hours` caps hold too."""
+    outside its window its `off_hours` caps hold too. `starting` (a build or a revision about to
+    start) leaves `start_headroom` under each cap; a run going on stops at the cap itself."""
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         return f"it refused a call; its limit resets at {iso(until)}"
@@ -609,7 +656,9 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
     observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
     caps = provider.caps_at(at, zone_name)
     outside = caps != dict(provider.limits.stops)
-    for window, stop in caps.items():
+    room = provider.limits.headroom if starting else {}
+    for window, cap in caps.items():
+        stop = max(0.0, cap - room.get(window, 0.0))
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
@@ -621,6 +670,10 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
         utilization = reading.get("utilization")
         if isinstance(utilization, (int, float)) and utilization >= stop:
             where = " outside its hours" if outside else ""
+            if stop < cap:
+                return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, too close to its "
+                        f"{cap:.0%} cap{where} to start a build (it starts under {stop:.0%}); "
+                        f"it resets at {iso(resets)}")
             return (f"{WINDOW_NAMES[window]} usage is {utilization:.0%}, at or over its "
                     f"{stop:.0%} cap{where}; it resets at {iso(resets)}")
     for window, budget in provider.limits.budgets.items():
@@ -695,7 +748,7 @@ def switched_off_by_date(provider: Provider, at: datetime, zone_name: str) -> bo
 
 
 def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
-                 secrets: Secrets, *, forced: bool = False) -> str | None:
+                 secrets: Secrets, *, forced: bool = False, starting: bool = False) -> str | None:
     """Why `provider` may not start a run now, or None when it may. Busy-ness is the caller's."""
     if not provider.enabled:
         return "switched off in providers.json"
@@ -713,7 +766,7 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     if not forced and failed is not None and at - failed < INFRA_BACKOFF:
         return (f"its last run could not work ({str(infra.get('reason') or '')[:120]}); it is "
                 f"left alone until {iso(failed + INFRA_BACKOFF)}")
-    return refusal(provider, entry, at, zone_name)
+    return refusal(provider, entry, at, zone_name, starting=starting)
 
 
 def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,

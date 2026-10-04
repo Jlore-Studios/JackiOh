@@ -280,6 +280,28 @@ class AgyTests(Base):
         providers_mod.note_usage(state, "agy", None, "+PT1H30M", at)
         self.assertEqual(state["providers"]["agy"]["refused_until"], "2026-10-04T01:03:00Z")
         self.assertEqual(providers_mod._duration("+PT2H"), timedelta(hours=2))
+        # Codex names days: gpt's weekly limit holds it until the week resets, not an hour.
+        self.assertEqual(park_for("You've hit your usage limit. Upgrade to Pro or try again in "
+                                  "5 days 2 hours 22 minutes."), "+PT7343M")
+
+    def test_a_refusal_that_names_no_reset_waits_for_the_nearly_full_window(self):
+        """gpt's refusal named no time, so it was retried every hour although its last reading
+        had its week at 89%, resetting days later."""
+        from datetime import datetime, timezone
+        from harness import providers as providers_mod
+        from harness.runner import DEFAULT_PARK
+        at = datetime(2026, 10, 3, 23, 47, tzinfo=timezone.utc)
+        week = {"utilization": 0.89, "resets_at": "2026-10-09T23:47:06Z"}
+        state = {"providers": {"gpt": {"usage": {"seven_day": week}}}}
+        providers_mod.note_usage(state, "gpt", None, DEFAULT_PARK, at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-09T23:47:06Z")
+        # A window with room left, or a reset the refusal named, keeps the shorter park.
+        state = {"providers": {"gpt": {"usage": {"seven_day": {**week, "utilization": 0.4}}}}}
+        providers_mod.note_usage(state, "gpt", None, DEFAULT_PARK, at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-04T00:47:00Z")
+        state = {"providers": {"gpt": {"usage": {"seven_day": week}}}}
+        providers_mod.note_usage(state, "gpt", None, "+PT90M", at)
+        self.assertEqual(state["providers"]["gpt"]["refused_until"], "2026-10-04T01:17:00Z")
 
 
 class MuseTests(Base):

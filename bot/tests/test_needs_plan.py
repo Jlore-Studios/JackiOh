@@ -5,6 +5,7 @@ builder (Devin above all) starts from it."""
 from __future__ import annotations
 
 import unittest
+from datetime import timedelta
 
 from harness import issueplan
 from harness import plan as plan_mod
@@ -123,6 +124,35 @@ class PlanningLaneTests(unittest.TestCase):
         queue(gh, ctx, 3, planned=False)
         self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
         gh.runs.pop("50")
+        self.assertEqual(plan_mod.make(ctx)["action"], "plan")
+
+    def test_a_capped_subscription_runs_one_thing_at_a_time(self):
+        """claude-2 (capped) neither plans while it builds nor builds while it plans: two runs
+        deciding from one reading went past its cap together."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
+        busy(gh, ctx, ("claude-2", 50))
+        queue(gh, ctx, 3, planned=False)
+        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+        gh.runs.pop("50")
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
+        running(gh, ctx, planned)
+        queue(gh, ctx, 4)
+        self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
+
+    def test_headroom_holds_back_builds_but_not_plans(self):
+        """At 80% of its 5-hour window claude-2 (cap 90%, builds start under 75%) still plans,
+        which is short, but starts no build."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
+        later = iso(NIGHT + timedelta(hours=2))
+        ctx.store.update(lambda s: s.setdefault("providers", {}).update({"claude-2": {"usage": {
+            "five_hour": {"utilization": 0.8, "resets_at": later},
+            "observed_at": iso(NIGHT)}}}))
+        queue(gh, ctx, 3)                    # planned: a build
+        self.assertNotEqual(plan_mod.make(ctx)["action"], "build")
+        queue(gh, ctx, 4, planned=False)     # not planned: a plan
         self.assertEqual(plan_mod.make(ctx)["action"], "plan")
 
     def test_a_planning_run_starts_with_every_build_lane_taken(self):
