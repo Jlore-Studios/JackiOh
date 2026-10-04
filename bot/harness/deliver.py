@@ -19,14 +19,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness import asks, issueplan
+from harness import asks, failures, issueplan
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
-                            LABEL_NEEDS_PLAN,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
                             LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
@@ -332,11 +332,14 @@ class Deliverer:
                                                                self._link()))
         except GitHubError:
             return False
-        if LABEL_NEEDS_PLAN in self._labels(number):
-            try:
+        labels = self._labels(number)
+        try:
+            if LABEL_NEEDS_PLAN in labels:
                 self.gh.remove_label(number, LABEL_NEEDS_PLAN)
-            except GitHubError:
-                pass  # the next plan job's sync takes it off
+            if LABEL_PLANNED not in labels:
+                self.gh.add_labels(number, [LABEL_PLANNED])
+        except GitHubError:
+            pass  # the next plan job's sync puts the labels right
         return True
 
     def _closed(self, number: int, thread: dict[str, Any]) -> None:
@@ -607,6 +610,8 @@ class Deliverer:
                         f"round {cycles} of {self.cfg.max_review_cycles}.")
             else:
                 said = self._self_check_said()
+            if approved:
+                self._unstick(number, pr)
             self.gh.create_comment(number, f"Opened #{pr}, built on {self.build_seat.describe()}. "
                                    f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
@@ -614,13 +619,44 @@ class Deliverer:
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
             if pr and LABEL_REVISE not in self._labels(pr):
                 set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"After {self.cfg.max_review_cycles} rounds the "
-                                   f"reviewer still had blocking findings, so #{pr} stays a "
-                                   f"draft and will not merge by itself ({self._link()}).\n\n"
-                                   f"{self._findings_md()}\n\nComment `@{self.cfg.bot_login} "
-                                   f"<guidance>` here or on #{pr} to have me try again with your "
-                                   "notes.")
+            stuck = self._mark_stuck(number, pr)
+            self.gh.create_comment(number, f"{self._not_approved_head()}, so #{pr} stays a draft "
+                                   f"and will not merge by itself ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}\n\n{stuck}"
+                                   f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
+                                   "to have me try again with your notes.")
             self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+
+    def _not_approved_head(self) -> str:
+        """The first words of a comment on a build or revision that was not approved: the real
+        round count, and the real reason when it stopped before its last round."""
+        rounds = len(self.result.get("cycles") or [])
+        limit = self.cfg.max_review_cycles
+        if failures.stuck(self.result.get("cycles"), limit):
+            return f"After all {limit} rounds the reviewer still had blocking findings"
+        reason = str(self.result.get("reason") or "no reason recorded")
+        return f"It stopped without an approval after {rounds} of {limit} round(s): {reason}"
+
+    def _why_md(self) -> str:
+        return failures.why(self.result.get("cycles"), self.cfg.max_review_cycles,
+                            str(self.result.get("reason") or ""))
+
+    def _mark_stuck(self, *numbers: int) -> str:
+        """Label a run that used every round `bot:stuck`, for a person to review; the sentence
+        that says so, or "" for one that stopped sooner."""
+        if not failures.stuck(self.result.get("cycles"), self.cfg.max_review_cycles):
+            return ""
+        for number in numbers:
+            if number:
+                self._try(lambda n=number: self.gh.add_labels(n, [LABEL_STUCK]))
+        return (f"Labelled `{LABEL_STUCK}`: it failed every round, so a person should read the "
+                "above before anyone tries again. ")
+
+    def _unstick(self, *numbers: int) -> None:
+        """An approval clears `bot:stuck`."""
+        for number in numbers:
+            if number and LABEL_STUCK in self._labels(number):
+                self._try(lambda n=number: self.gh.remove_label(n, LABEL_STUCK))
 
     def _self_check_said(self) -> str:
         """What a change built without a reviewer in its run went through."""
@@ -668,9 +704,11 @@ class Deliverer:
         if status not in ("approved", "built"):
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
-            self.gh.create_comment(number, f"My revision did not pass review after "
-                                   f"{self.cfg.max_review_cycles} rounds, so I pushed nothing "
-                                   f"({self._link()}).\n\n{self._findings_md()}")
+            stuck = self._mark_stuck(number)
+            self.gh.create_comment(number, f"I pushed nothing from this revision. "
+                                   f"{self._not_approved_head()} ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}"
+                                   + (f"\n\n{stuck}" if stuck else ""))
             self._remember(number, last_findings=self.result.get("findings") or [],
                            feedback_since=started)
             return
@@ -683,6 +721,8 @@ class Deliverer:
                                    f"{problem}.")
             return
         set_state_label(self.ctx, number, self._labels(number), None)
+        if approved:
+            self._unstick(number)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
         rerun = not pushed and bool(self._record(number).get("ci_run_id"))
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
