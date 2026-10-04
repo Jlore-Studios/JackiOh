@@ -186,7 +186,7 @@ describe("R175: Reborn's return for a unit token and onto a Stack pile", () => {
   it("R175 a Rush Token given Reborn comes back through Reborn, reset and sick (§6.1's pool, R21, R83)", () => {
     // On this seed Plastic Surgery's random keyword is Reborn: §6.1's pool keeps Reborn for tokens.
     const g = scenario({
-      seed: "re-entry-reborn-token-10", // R346's Pierce moved the roll off "-4"
+      seed: "re-entry-reborn-token-31", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19"
       p1: { hand: [SURGERY, HIT_JOB], field: [{ def: RUSH_TOKEN, lane: 1 }], library: [...LIBRARY] },
       p2: { hand: [HIT_JOB], library: [...LIBRARY] },
     });
@@ -329,7 +329,7 @@ describe("§8 #52, R4, R78: a rider on a card that never reached the hand", () =
     });
     const seven = g.card(SEVEN_SEVEN);
 
-    // p1 steals the 7/7 into its own lane 1 (R15), and is its current owner from then on (R640).
+    // p1 steals the 7/7 into its own lane 1 (R15), and is its current owner from then on (R659).
     // Rotating left, p1's lane 1 would move to p2's lane 1 — to the opponent — so radiant Silas
     // bounces it to its owner's hand "costing 0" (R12), p1's, but that hand is full, so it is burned
     // into p1's graveyard instead (§2.4, R4).

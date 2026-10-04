@@ -52,7 +52,7 @@ function exiled(state: GameState, defId: string, owner: "p1" | "p2"): CardInstan
 }
 
 describe("E25 Recruit from the opponent's exile (Classic #1 Radiant)", () => {
-  it("R640 the newest permanent of their exile is summoned on your side, under your control and now your card", () => {
+  it("R659 the newest permanent of their exile is summoned on your side, under your control and now your card", () => {
     const start = playing("recruit-exile");
     const state = start.state;
     const older = exiled(state, pricyUnit.id, "p2");

@@ -41,6 +41,7 @@ import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { CardHistory } from "../../patches/CardHistory.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
+import { VoicePreview } from "./VoicePreview.tsx";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -306,6 +307,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false }:
         <div className="inspect-actions">
           <VoiceLineButtons defId={def.id} />
           {actions}
+          <VoicePreview defId={def.id} />
           <button
             ref={closeButton}
             type="button"

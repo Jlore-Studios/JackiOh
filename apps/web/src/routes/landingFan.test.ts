@@ -9,8 +9,20 @@ import { fileURLToPath } from "node:url";
 import type { CardDef } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
+import { nameTier, textTier } from "../cards/fit.ts";
+import { faceModel } from "../cards/model.ts";
+import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN } from "../stats/config.ts";
 import { seeded } from "../test/random.ts";
-import { FAN_FACES, FAN_POOL, FAN_RADIANT_AT, dealLandingFan } from "./landingFan.ts";
+import {
+  FAN_FACES,
+  FAN_POOL,
+  FAN_RADIANT_AT,
+  ROTATION_POOL,
+  dealLandingFan,
+  featureWeight,
+  pickWeighted,
+  rotateFan,
+} from "./landingFan.ts";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const CATALOG = JSON.parse(readFileSync(resolve(REPO, "packages/cards/catalog.json"), "utf8")) as Record<string, CardDef>;
@@ -21,7 +33,6 @@ describe("R374 the landing fan is dealt at random", () => {
   it("R374 the pool is every non-token Core card, exactly as the catalog holds it", () => {
     // R374 deals from Core; Classic and Classic+ (R380) share the catalog but not the landing hand.
     const expected = Object.values(CATALOG).filter((def) => !def.token && def.set === "Core");
-    expect(FAN_POOL).toHaveLength(100);
     expect(FAN_POOL).toEqual(expected);
   });
 
@@ -63,5 +74,121 @@ describe("R374 the landing fan is dealt at random", () => {
     expect(hand).toHaveLength(2);
     expect(new Set(hand.map(({ def }) => def.rarity))).toEqual(new Set(["Common", "Rare"]));
     expect(dealLandingFan(seeded(3), [])).toEqual([]);
+  });
+});
+
+describe("R639 the rotation's pool", () => {
+  it("R639 is every non-token card of Core, Classic and Classic+, as the catalog holds it", () => {
+    const expected = Object.values(CATALOG).filter(
+      (def) => !def.token && (def.set === "Core" || def.set === "Classic" || def.set === "Classic+"),
+    );
+    expect(ROTATION_POOL).toEqual(expected);
+    expect(ROTATION_POOL.length).toBeGreaterThan(FAN_POOL.length);
+    expect(new Set(ROTATION_POOL.map((def) => def.set))).toEqual(new Set(["Core", "Classic", "Classic+"]));
+  });
+});
+
+describe("R639 favouring the cards that print at full size", () => {
+  it("R639 a card whose name and text fit the two shortest tiers weighs more than one that needs shrinking, and none weighs 0", () => {
+    expect(FEATURE_WEIGHT_PLAIN).toBeGreaterThan(FEATURE_WEIGHT_DENSE);
+    expect(FEATURE_WEIGHT_DENSE).toBeGreaterThan(0);
+    const weights = ROTATION_POOL.map((def) => featureWeight(def));
+    expect(new Set(weights)).toEqual(new Set([FEATURE_WEIGHT_PLAIN, FEATURE_WEIGHT_DENSE]));
+    for (const def of ROTATION_POOL) {
+      const face = faceModel({ defId: def.id, def, radiant: false });
+      const fits = ["s", "m"].includes(nameTier(face.name)) && ["s", "m"].includes(textTier(face.text.full));
+      expect(featureWeight(def), def.id).toBe(fits ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE);
+    }
+  });
+
+  it("R639 a weighted draw picks plain cards more often, and still reaches every card", () => {
+    const plain = ROTATION_POOL.filter((def) => featureWeight(def) === FEATURE_WEIGHT_PLAIN);
+    const dense = ROTATION_POOL.filter((def) => featureWeight(def) === FEATURE_WEIGHT_DENSE);
+    expect(plain.length).toBeGreaterThan(0);
+    expect(dense.length).toBeGreaterThan(0);
+
+    const random = seeded(99);
+    const drawn = new Map<string, number>();
+    const draws = 40_000;
+    for (let i = 0; i < draws; i += 1) {
+      const def = pickWeighted(ROTATION_POOL, random, featureWeight);
+      if (def !== undefined) drawn.set(def.id, (drawn.get(def.id) ?? 0) + 1);
+    }
+    const average = (cards: readonly CardDef[]): number =>
+      cards.reduce((sum, def) => sum + (drawn.get(def.id) ?? 0), 0) / cards.length;
+    // Per card, a plain one comes up about FEATURE_WEIGHT_PLAIN / FEATURE_WEIGHT_DENSE times as often.
+    const ratio = average(plain) / average(dense);
+    expect(ratio).toBeGreaterThan((FEATURE_WEIGHT_PLAIN / FEATURE_WEIGHT_DENSE) * 0.8);
+    expect(ratio).toBeLessThan((FEATURE_WEIGHT_PLAIN / FEATURE_WEIGHT_DENSE) * 1.25);
+    // Less likely, not excluded: every dense card still came up.
+    expect(dense.every((def) => (drawn.get(def.id) ?? 0) > 0)).toBe(true);
+  });
+
+  it("R639 a weight that is not above 0, or not a number, counts as 1, so no card is out of reach", () => {
+    const [a, b] = ROTATION_POOL;
+    if (a === undefined || b === undefined) throw new Error("pool too small");
+    const weigh = (def: CardDef): number => (def.id === a.id ? 0 : Number.NaN);
+    const seen = new Set<string>();
+    const random = seeded(4);
+    for (let i = 0; i < 200; i += 1) seen.add(pickWeighted([a, b], random, weigh)?.id ?? "");
+    expect(seen).toEqual(new Set([a.id, b.id]));
+    expect(pickWeighted([], random)).toBeUndefined();
+  });
+
+  it("R639 the draw is the seed's: the same source picks the same card, and the edges of the source stay in range", () => {
+    expect(pickWeighted(ROTATION_POOL, seeded(8), featureWeight)?.id).toBe(pickWeighted(ROTATION_POOL, seeded(8), featureWeight)?.id);
+    for (const value of [0, 0.999999999, 1]) {
+      expect(pickWeighted(ROTATION_POOL, () => value, featureWeight)).toBeDefined();
+    }
+  });
+
+  it("R639 a deal from the whole pool is still four cards of four rarities with the middle one Radiant", () => {
+    for (const seed of SEEDS) {
+      const hand = dealLandingFan(seeded(seed), ROTATION_POOL, featureWeight);
+      expect(hand, `seed ${String(seed)}`).toHaveLength(FAN_FACES);
+      expect(new Set(hand.map(({ def }) => def.rarity)).size).toBe(FAN_FACES);
+      expect(hand.map(({ radiant }) => radiant)).toEqual([0, 1, 2, 3].map((at) => at === FAN_RADIANT_AT));
+    }
+  });
+});
+
+describe("R639 one rotation step", () => {
+  it("R639 swaps the slot for a card of the same rarity the fan is not showing, keeps the others and the Radiant slot", () => {
+    for (const seed of SEEDS) {
+      const hand = dealLandingFan(seeded(seed), ROTATION_POOL, featureWeight);
+      for (const slot of [0, 1, 2, 3]) {
+        const next = rotateFan(hand, slot, seeded(seed + 1000));
+        expect(next).toHaveLength(hand.length);
+        expect(next[slot]?.def.id).not.toBe(hand[slot]?.def.id);
+        expect(next[slot]?.def.rarity).toBe(hand[slot]?.def.rarity);
+        expect(next[slot]?.radiant).toBe(hand[slot]?.radiant);
+        expect(next.filter((_, at) => at !== slot)).toEqual(hand.filter((_, at) => at !== slot));
+        expect(new Set(next.map(({ def }) => def.id)).size).toBe(next.length);
+      }
+    }
+  });
+
+  it("R639 takes the slot modulo the hand, so a counter that keeps rising keeps rotating", () => {
+    const hand = dealLandingFan(seeded(5), ROTATION_POOL, featureWeight);
+    expect(rotateFan(hand, 5, seeded(6))).toEqual(rotateFan(hand, 1, seeded(6)));
+    expect(rotateFan(hand, -1, seeded(6))).toEqual(rotateFan(hand, 3, seeded(6)));
+  });
+
+  it("R639 keeps a slot that has nothing to swap in, and an empty hand stays empty", () => {
+    const hand = dealLandingFan(seeded(5), ROTATION_POOL, featureWeight);
+    // A pool of only the cards on show leaves nothing of any rarity to bring in.
+    expect(rotateFan(hand, 0, seeded(1), hand.map(({ def }) => def))).toEqual(hand);
+    expect(rotateFan([], 0, seeded(1))).toEqual([]);
+  });
+
+  it("R639 over many steps it brings in cards of every set", () => {
+    let hand = dealLandingFan(seeded(21), ROTATION_POOL, featureWeight);
+    const random = seeded(22);
+    const sets = new Set<string>();
+    for (let step = 0; step < 200; step += 1) {
+      hand = rotateFan(hand, step, random);
+      for (const { def } of hand) sets.add(def.set);
+    }
+    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+"]));
   });
 });

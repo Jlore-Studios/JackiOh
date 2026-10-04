@@ -219,7 +219,7 @@ describe("C #50 Voidwalker", () => {
       expect(defIds(s, "p1", "graveyard")).toEqual([HIT_JOB]);
     });
 
-    it("Aura: judged by current owner — a Unit you stole is yours (R640), so its death reaches your graveyard", () => {
+    it("Aura: judged by current owner — a Unit you stole is yours (R659), so its death reaches your graveyard", () => {
       const s = scenario({
         p1: { hand: [MIND_CONTROL, HIT_JOB, FILLER], field: [{ def: VOID, radiant: true }], mana: 7 },
         p2: { hand: [FILLER], field: [VANILLA] },

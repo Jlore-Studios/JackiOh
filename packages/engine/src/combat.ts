@@ -16,9 +16,9 @@
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { PLAYER_IDS, hasKeyword, opponentOf } from "@jackioh/shared";
-import { LANE_RESTRICTED_ATTACKS } from "./config";
+import { LANE_RESTRICTED_ATTACKS, WINDFURY_ATTACKS } from "./config";
 import { dealDamage, type DamageTarget } from "./damage";
-import { unitView } from "./layers";
+import { unitHas, unitView } from "./layers";
 import { SELF_KEY, runResumableList, type ResumePlan } from "./prompts";
 import { makeContext, type EngineSink } from "./resolve";
 import { flagsOf, scriptOf } from "./scripts";
@@ -62,12 +62,27 @@ function hasTwoExertions(unit: CardInstance): boolean {
 }
 
 /**
- * §4.1: one exertion per turn, so a unit that attacked cannot switch and a unit that switched
- * cannot attack (R6). Deft Duelist spends the two independently (R49).
+ * R636: how many attacks the unit may declare in a turn — two with Windfury, read through the layers
+ * (§10.4) so a keyword granted or lost mid-turn counts from that moment, one otherwise.
  */
-export function hasExertion(unit: CardInstance, kind: ExertionKind): boolean {
+export function attacksPerTurn(state: GameState, unit: CardInstance): number {
+  return unitHas(state, unit, "Windfury") ? WINDFURY_ATTACKS : 1;
+}
+
+/**
+ * §4.1: one exertion per turn, so a unit that attacked cannot switch and a unit that switched
+ * cannot attack (R6). Deft Duelist spends the two independently (R49). R636: a unit with Windfury
+ * attacks again until it has declared `attacksPerTurn`, and the first of them already spends the
+ * exertion a switch needs.
+ */
+export function hasExertion(state: GameState, unit: CardInstance, kind: ExertionKind): boolean {
   const spent = unit.exertion;
-  if (hasTwoExertions(unit)) return kind === "attack" ? !spent.attacked : !spent.switched;
+  if (kind === "attack") {
+    const attacks = spent.attacks ?? (spent.attacked ? 1 : 0);
+    if (attacks >= attacksPerTurn(state, unit)) return false;
+    return hasTwoExertions(unit) || !spent.switched;
+  }
+  if (hasTwoExertions(unit)) return !spent.switched;
   return !spent.attacked && !spent.switched;
 }
 
@@ -138,7 +153,7 @@ export function switchPosition(
   // every unit" reaches units already in the position it would set.
   if (to === from) return {};
 
-  if (spendExertion && !hasExertion(unit, "switch")) return { error: "that unit has already acted this turn" };
+  if (spendExertion && !hasExertion(sink.state, unit, "switch")) return { error: "that unit has already acted this turn" };
   // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
   if (to === "DEF" && flagsOf(unit).neverDefense === true) {
     return { error: "that unit cannot be in Defense Position" };
@@ -159,7 +174,7 @@ export function switchPosition(
 function whyCannotDeclare(state: GameState, attacker: CardInstance): string | null {
   if (!isActiveOnField(state, attacker)) return "that unit is not on the field";
   if (carriedOutOfCombat(state, attacker)) return "a Unit on a carrier cannot attack";
-  if (!hasExertion(attacker, "attack")) return "that unit has already acted this turn";
+  if (!hasExertion(state, attacker, "attack")) return "that unit has already acted this turn";
 
   const view = unitView(state, attacker);
   if (view.position !== "ATK") return "only Attack-Position units may attack";
@@ -611,7 +626,10 @@ export function declareAttack(sink: EngineSink, attacker: CardInstance, chosen: 
   const target: AttackTarget = interposer === null ? chosen : { kind: "unit", instance: interposer };
 
   // Step 4's first sentence. R44 never gives this back, so a cancelled attack is gone either way.
+  // R636: only a repeat attack writes `attacks`, so an ordinary exertion keeps its two-flag shape.
+  const attacks = (attacker.exertion.attacks ?? (attacker.exertion.attacked ? 1 : 0)) + 1;
   attacker.exertion.attacked = true;
+  if (attacks > 1) attacker.exertion.attacks = attacks;
 
   const targetId = targetIdOf(target);
   const declared: DeclaredAttack = {

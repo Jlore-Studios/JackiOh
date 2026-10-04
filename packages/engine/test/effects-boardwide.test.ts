@@ -136,14 +136,14 @@ function stolenOnto(state: GameState, defId: string, owner: PlayerId, ref: Retur
 // ---------------------------------------------------------------------------
 
 describe("destroyAll (§6.3, §4.5, R46, R59, M3-T1)", () => {
-  it("§6.3 marks every matching enemy unit, leaves allies and other tags standing, and one state check buries them in their current owners' graveyards (R12, R59, R640)", () => {
+  it("§6.3 marks every matching enemy unit, leaves allies and other tags standing, and one state check buries them in their current owners' graveyards (R12, R59, R659)", () => {
     const state = game("destroyAll-scope");
     const ally = put(state, beast.id, slot("p1", "units", 1));
     const allyHuman = put(state, human.id, slot("p1", "units", 2));
     const enemyOne = put(state, beast.id, slot("p2", "units", 1));
     const enemyHuman = put(state, human.id, slot("p2", "units", 2));
     const enemyTwo = put(state, felinor.id, slot("p2", "units", 3));
-    // R12, R640: p1's card placed on p2's side, which made p2 its current owner as it arrived, so
+    // R12, R659: p1's card placed on p2's side, which made p2 its current owner as it arrived, so
     // the sweep's scope (by side) and its graveyard (by current owner) both name p2.
     const stolen = stolenOnto(state, beast.id, "p1", slot("p2", "units", 4));
     expect(stolen.owner).toBe("p2");
@@ -170,7 +170,7 @@ describe("destroyAll (§6.3, §4.5, R46, R59, M3-T1)", () => {
     expect(cardAt(state, slot("p2", "units", 2))?.id).toBe(enemyHuman.id);
     expect(cardAt(state, slot("p1", "units", 1))?.id).toBe(ally.id);
     expect(cardAt(state, slot("p1", "units", 2))?.id).toBe(allyHuman.id);
-    // R640: all three to p2's graveyard, the card that came over from p1 included.
+    // R659: all three to p2's graveyard, the card that came over from p1 included.
     expect(state.players.p2.graveyard.map((c) => c.id).sort()).toEqual([enemyOne.id, enemyTwo.id, stolen.id].sort());
     expect(state.players.p1.graveyard).toHaveLength(0);
     // R59: one state check collected all three, so there are exactly three deaths from one pass.
@@ -452,7 +452,7 @@ describe("bounceAll (§6.3, §3.2, R11, R12, R78, M3-T1)", () => {
     mine.buffs = { attack: 3, health: 3 };
     const token = put(state, rushToken.id, slot("p1", "units", 2));
     const theirs = put(state, beast.id, slot("p2", "units", 1));
-    // R640: p1's card placed on p2's side is p2's now, so a bounce sends it to p2's hand, not p1's.
+    // R659: p1's card placed on p2's side is p2's now, so a bounce sends it to p2's hand, not p1's.
     const stolen = stolenOnto(state, beast.id, "p1", slot("p2", "units", 2));
     const run = runner(state);
 

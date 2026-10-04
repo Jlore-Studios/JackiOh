@@ -42,9 +42,6 @@ const GLYPH_MIN_PX = 12;
  */
 const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 
-/** Tall enough for every row of the grid, so a hit test can reach the last one. */
-const GRID_VIEWPORT = { width: 1000, height: 3400 } as const;
-
 /** How far a box may poke past the card's own edge (the card clips it anyway). */
 const EDGE_SLACK_PX = 1;
 
@@ -75,6 +72,17 @@ const ROWS: readonly Row[] = [
   { id: "Brittle 1", unit: { keywords: [{ kind: "Brittle", n: 3 }], brittle: 1 } },
   { id: "Stack, 2 buried", unit: { keywords: [{ kind: "Stack" }], buried: 2 } },
 ];
+
+/**
+ * Tall enough for every row of the grid, so a hit test can reach the last one: a row is the largest
+ * minion (113px) and its gap, and a new keyword adds a row, so the height follows the rows rather than
+ * being a number to bump (R636 and R637 added two and pushed the last row past 3400).
+ */
+const GRID_ROW_PX = 131;
+const GRID_SLACK_PX = 100;
+/** The viewport stays under this however many rows there are: the hit test scrolls each cell into view. */
+const VIEWPORT_MAX_PX = 4000;
+const GRID_VIEWPORT = { width: 1000, height: Math.min(VIEWPORT_MAX_PX, ROWS.length * GRID_ROW_PX + GRID_SLACK_PX) } as const;
 
 function Minion({ row, width, height }: { row: Row; width: number; height: number }) {
   const u = unit("p1", { defId: DEF_ID, attack: 3, health: 4, maxHealth: 4, ...row.unit });
@@ -185,6 +193,8 @@ describe("R438 keyword visuals on the board minion", () => {
             problems.push(`${where}: no ${selector}`);
             continue;
           }
+          // A point outside the viewport hits nothing, so bring the element into it first.
+          el.scrollIntoView({ block: "center", inline: "center" });
           const r = el.getBoundingClientRect();
           const hit = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           if (hit === null || !(hit === el || el.contains(hit))) {

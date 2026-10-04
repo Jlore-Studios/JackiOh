@@ -611,13 +611,13 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
 
     expect(declareAttack(sink, duel, { kind: "unit", instance: victim }).error).toBeUndefined();
     expect(duel.exertion.attacked).toBe(true);
-    expect(hasExertion(duel, "switch")).toBe(true);
+    expect(hasExertion(state, duel, "switch")).toBe(true);
     expect(switchPosition(sink, duel).error).toBeUndefined();
     expect(duel.position).toBe("DEF");
 
     const ordinary = put(state, plain.id, slot("p1", "units", 2));
     expect(declareAttack(sink, ordinary, { kind: "hero", player: "p2" }).error).toBeUndefined();
-    expect(hasExertion(ordinary, "switch")).toBe(false);
+    expect(hasExertion(state, ordinary, "switch")).toBe(false);
     expect(switchPosition(sink, ordinary).error).toBe("that unit has already acted this turn");
   });
 
@@ -1633,7 +1633,7 @@ describe("SPEC §11 rulings R43–R84 (M3 gate)", () => {
     expect(whyCannotAttack(state, rb, { kind: "unit", instance: wall })).toBe("that unit is summoning sick");
 
     // R78 cleared its exertion, so it may switch position, as any unit summoned this turn may.
-    expect(hasExertion(rb, "switch")).toBe(true);
+    expect(hasExertion(state, rb, "switch")).toBe(true);
     expect(switchPosition(sink, rb).error).toBeUndefined();
     expect(rb.position).toBe("DEF");
   });

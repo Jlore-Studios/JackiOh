@@ -1,4 +1,4 @@
-"""Labels that steer pickup: the priority tiers (#90), and `human` and `shitter` (#96)."""
+"""Labels that steer pickup: the priority tiers (#90), `human` (#96) and the difficulty labels."""
 
 from __future__ import annotations
 
@@ -40,56 +40,15 @@ def picks(ctx, gh: FakeGitHub, **plan_args: Any) -> list[int]:
     taken = []
     while True:
         planned = plan_mod.make(ctx, **plan_args)
-        if planned["action"] not in ("build", "revise", "review"):
+        if planned["action"] not in ("plan", "build", "revise", "review"):
             return taken
         taken.append(planned["number"])
         gh.threads[planned["number"]]["state"] = "closed"
 
 
 def every_model() -> Iterator[providers.Provider]:
-    """Each committed subscription, and Astra and an unknown model in `gpt`'s place."""
-    pool = make_config(env=ALL, machine=ALL_MACHINE).pool
-    yield from pool.ordered()
-    yield dataclasses.replace(pool.get("gpt"), model="gpt-5.6-astra")
-    yield dataclasses.replace(pool.get("gpt"), model="mystery-model-9")
-
-
-# ------------------------------------------------------------------ before these labels
-
-def pairs_before(ctx, state, queue, lanes, *, force, quiet_ok):
-    """`plan.pairs` as it was before the priority tiers and `shitter`, word for word."""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), not c.difficult,
-                                         queue_mod.KIND_ORDER[c.kind], c.queued_at, c.number))
-    for candidate in order:
-        forced = force or candidate.forced
-        for provider in ctx.cfg.pool.ordered():
-            if candidate.difficult and not provider.difficult:
-                continue
-            if candidate.kind == "review" and provider.family == candidate.builder:
-                continue
-            if plan_mod._usable(ctx, state, provider, lanes, plan_mod.ROLE_OF[candidate.kind],
-                                forced=forced, quiet_ok=quiet_ok):
-                yield candidate, provider
-                break
-
-
-def a_mixed_queue(gh: FakeGitHub, ctx) -> None:
-    """Forced, `difficult`, second reviews, revisions and builds of several ages, none of them
-    with a priority, `human` or `shitter` label."""
-    for number in (3, 4, 5, 6):
-        gh.add_issue(number, labels=(LABEL_BUILD,))
-    gh.add_issue(7, labels=(LABEL_BUILD, "difficult"))
-    gh.add_issue(8, labels=(LABEL_BUILD, "an-unrelated-label", "priority:urgent"))
-    gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, LABEL_REVISE))
-    gh.add_pull(10, "bot/issue-2", labels=(LABEL_PR, LABEL_CROSS))
-    gh.add_pull(11, "bot/issue-0", labels=(LABEL_PR, LABEL_CROSS))
-    for number, at in ((3, "2026-09-25"), (4, "2026-09-21"), (5, "2026-09-23"), (6, "2026-09-23"),
-                       (7, "2026-09-28"), (8, "2026-09-20"), (9, "2026-09-27"),
-                       (10, "2026-09-26"), (11, "2026-09-24")):
-        queued(ctx, number, f"{at}T00:00:00Z")
-    queued(ctx, 6, "2026-09-23T00:00:00Z", forced=True)
-    ctx.store.update(lambda s: state_item(s, 10).update(votes={"builder": "gpt"}))
-    ctx.store.update(lambda s: state_item(s, 11).update(votes={"builder": "claude-opus"}))
+    """Each committed subscription."""
+    yield from make_config(env=ALL, machine=ALL_MACHINE).pool.ordered()
 
 
 class PriorityTests(unittest.TestCase):
@@ -171,58 +130,46 @@ class PriorityTests(unittest.TestCase):
         gh.add_labels(5, [HIGH])
         self.assertEqual(plan_mod.make(ctx)["number"], 5)
 
-    def test_with_no_priority_labels_anywhere_the_order_is_the_one_before(self):
-        for at in (NIGHT, DAY):
-            for force in (False, True):
-                gh = FakeGitHub()
-                ctx = ctx_for(gh, at=at)
-                a_mixed_queue(gh, ctx)
-                state = ctx.store.load()
-                queue = queue_mod.candidates(ctx, state)
-                lanes = plan_mod.Lanes(3)
-                now = [(c.number, p.id) for c, p in plan_mod.pairs(
-                    ctx, state, queue, lanes, force=force, quiet_ok=plan_mod.ANY_QUIET)]
-                before = [(c.number, p.id) for c, p in pairs_before(
-                    ctx, state, queue, lanes, force=force, quiet_ok=plan_mod.ANY_QUIET)]
-                self.assertEqual(now, before, (at, force))
-                self.assertEqual(len(now), 9 if at == NIGHT or force else 8)
-        # The queue itself is listed in the same order as before.
-        self.assertEqual(queue, sorted(queue, key=lambda c: (
-            not c.forced, queue_mod.KIND_ORDER[c.kind], c.queued_at, c.number)))
-        self.assertEqual([c.number for c in queue], [6, 11, 10, 9, 8, 4, 5, 3, 7])
+    def test_with_no_priority_labels_the_order_is_forced_reviews_revisions_harder_builds(self):
+        gh = FakeGitHub()
+        ctx = ctx_for(gh)
+        for number in (3, 4, 5, 6):
+            gh.add_issue(number, labels=(LABEL_BUILD,))
+        gh.add_issue(7, labels=(LABEL_BUILD, "difficulty:hard"))
+        gh.add_issue(8, labels=(LABEL_BUILD, "an-unrelated-label", "priority:urgent"))
+        gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, LABEL_REVISE))
+        gh.add_pull(10, "bot/issue-2", labels=(LABEL_PR, LABEL_CROSS))
+        for number, at in ((3, "2026-09-25"), (4, "2026-09-21"), (5, "2026-09-23"),
+                           (6, "2026-09-23"), (7, "2026-09-28"), (8, "2026-09-20"),
+                           (9, "2026-09-27"), (10, "2026-09-26")):
+            queued(ctx, number, f"{at}T00:00:00Z")
+        queued(ctx, 6, "2026-09-23T00:00:00Z", forced=True)
+        state = ctx.store.load()
+        queue = queue_mod.candidates(ctx, state)
+        order = [c.number for c, _ in plan_mod.pairs(ctx, state, queue, plan_mod.Lanes(3),
+                                                     force=False, quiet_ok=plan_mod.ANY_QUIET)]
+        # Forced first, then the review and the revision (work already begun), then the builds:
+        # the hard one first (only the strongest can take it), the rest oldest first.
+        self.assertEqual(order, [6, 10, 9, 7, 8, 4, 5, 3])
 
 
-class HumanAndShitterTests(unittest.TestCase):
-    """#96: no model takes `human`; only a low-tier one takes `shitter`."""
-
-    def test_the_tier_of_a_model(self):
-        tier = providers.model_tier
-        for name in ("opus", "OPUS", "claude-opus-4-1", "Claude Opus 5.5", "claude-opus",
-                     "opusplan", "gpt-5.6-astra", "OpenAI Astra", "astra-2"):
-            self.assertEqual(tier(name), providers.HIGH_TIER, name)
-        for name in ("gpt-5.6-terra", "gemini-3.8-flash-high", "muse-spark-1.3-contributor",
-                     "sonnet", "claude-sonnet-4-5", "claude-haiku-4-5", "", "mystery-model-9"):
-            self.assertEqual(tier(name), providers.LOW_TIER, name)
-
-    def test_the_committed_subscriptions_tiers(self):
-        pool = make_config(env=ALL, machine=MACHINE).pool
-        self.assertEqual({p.id for p in pool.ordered()
-                          if providers.model_tier(p.model) == providers.HIGH_TIER},
-                         {"claude-1", "claude-2", "claude-3", "claude-4"})
+class HumanTests(unittest.TestCase):
+    """#96: no model takes `human`, whatever its tier."""
 
     def test_human_is_never_selected_whatever_the_model(self):
         for provider in every_model():
             gh = FakeGitHub()
             ctx = ctx_for(gh, only=provider)
-            gh.add_issue(5, labels=(LABEL_BUILD, "human", HIGH))
-            gh.add_issue(6, labels=(LABEL_BUILD,))
+            gh.add_issue(5, labels=(LABEL_BUILD, "human", HIGH, "difficulty:easy"))
+            gh.add_issue(6, labels=(LABEL_BUILD, "difficulty:easy"))
+            ctx.store.update(lambda s: state_item(s, 6).update(planned_at="2026-09-20T00:00:00Z"))
             queued(ctx, 5, "2026-09-20T00:00:00Z", forced=True)
             planned = plan_mod.make(ctx, force=True)
-            self.assertEqual(planned["number"], 6, provider.model)
+            self.assertEqual(planned["number"], 6, provider.id)
             self.assertIn("#5 skipped: labelled `human`, so no model takes it", planned["skipped"][0])
             gh.threads[6]["state"] = "closed"
             planned = plan_mod.make(ctx, force=True, item=5)
-            self.assertEqual(planned["action"], "none", provider.model)
+            self.assertEqual(planned["action"], "none", provider.id)
             self.assertIn("#5 is not queued", planned["reason"])
 
     def test_a_human_pull_request_is_not_revised_either(self):
@@ -233,158 +180,79 @@ class HumanAndShitterTests(unittest.TestCase):
         self.assertEqual(picks(ctx, gh), [3])
         self.assertIn("#9 skipped: labelled `human`", plan_mod.peek(ctx).skipped[0])
 
-    def test_shitter_is_skipped_by_opus_and_astra(self):
-        for provider in every_model():
-            if providers.model_tier(provider.model) != providers.HIGH_TIER:
-                continue
-            gh = FakeGitHub()
-            ctx = ctx_for(gh, only=provider)
-            gh.add_issue(7, labels=(LABEL_BUILD, "shitter"))
-            planned = plan_mod.make(ctx, force=True)
-            self.assertNotEqual(planned.get("number"), 7, provider.model)
-            self.assertEqual(planned["skipped"], [
-                f"#7 skipped on `{provider.id}`: labelled `shitter`, and {provider.model} is "
-                "high-tier"])
-            look = plan_mod.peek(ctx, force=True, mode="build")
-            self.assertFalse(look.work)
-            self.assertEqual(look.skipped, planned["skipped"])
-
-    def test_shitter_is_selectable_by_a_low_tier_model(self):
-        for provider in every_model():
-            if providers.model_tier(provider.model) != providers.LOW_TIER:
-                continue
-            gh = FakeGitHub()
-            ctx = ctx_for(gh, only=provider)
-            gh.add_issue(7, labels=(LABEL_BUILD, "Shitter"))
-            planned = plan_mod.make(ctx, force=True)
-            self.assertEqual((planned["number"], planned["provider"]), (7, provider.id),
-                             provider.model)
-            self.assertEqual(planned["skipped"], [])
-
-    def test_an_unrecognised_model_is_low_tier(self):
-        unknown = list(every_model())[-1]
-        self.assertEqual(unknown.model, "mystery-model-9")
-        self.assertEqual(providers.model_tier(unknown.model), providers.LOW_TIER)
+    def test_human_is_never_queued_planned_labelled_or_built(self):
+        """`human`: people do it. A request to build it gets a reply and nothing else, and it is
+        never a candidate, nor given a stage label, nor revised when it conflicts."""
         gh = FakeGitHub()
-        gh.add_issue(7, labels=(LABEL_BUILD, "shitter"))
-        self.assertEqual(plan_mod.make(ctx_for(gh, only=unknown), force=True)["number"], 7)
-
-    def test_by_night_opus_passes_shitter_on_to_the_next_free_model(self):
-        gh = FakeGitHub()
-        gh.add_issue(7, labels=(LABEL_BUILD, "shitter"))
-        planned = plan_mod.make(ctx_for(gh))
-        self.assertEqual((planned["number"], planned["provider"]), (7, "gpt"))
-        self.assertEqual([line.split(":")[0] for line in planned["skipped"]],
-                         [f"#7 skipped on `claude-{n}`" for n in (1, 2, 3, 4)])
-
-    def test_a_second_review_of_a_shitter_pull_request_goes_to_a_low_tier_model(self):
-        gh = FakeGitHub()
-        gh.add_pull(10, "bot/issue-2", labels=(LABEL_PR, LABEL_CROSS, "shitter"))
-        ctx = ctx_for(gh)
-        ctx.store.update(lambda s: state_item(s, 10).update(votes={"builder": "gpt"}))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["action"], planned["provider"]), ("review", "agy"))
-
-    def test_human_and_shitter_together_are_never_selected(self):
-        for provider in every_model():
-            gh = FakeGitHub()
-            ctx = ctx_for(gh, only=provider)
-            gh.add_issue(5, labels=(LABEL_BUILD, "human", "shitter"))
-            planned = plan_mod.make(ctx, force=True, item=5)
-            self.assertEqual(planned["action"], "none", provider.model)
-            self.assertEqual(len(planned["skipped"]), 1)
-            self.assertIn("#5 skipped: labelled `human`", planned["skipped"][0])
-
-    def test_difficult_and_shitter_together_have_no_model(self):
-        gh = FakeGitHub()
-        gh.add_issue(7, labels=(LABEL_BUILD, "difficult", "shitter"))
-        planned = plan_mod.make(ctx_for(gh), force=True)
-        self.assertNotEqual(planned.get("number"), 7)
-
-    def test_with_neither_label_anywhere_selection_is_the_one_before(self):
-        # The same mixed queue as the priority test, every pairing compared, by night and by
-        # day, forced or not: no item is skipped and nothing moves.
-        for at in (NIGHT, DAY):
-            gh = FakeGitHub()
-            ctx = ctx_for(gh, at=at)
-            a_mixed_queue(gh, ctx)
-            state = ctx.store.load()
-            skipped: list[str] = []
-            queue = queue_mod.candidates(ctx, state, skipped)
-            now = list(plan_mod.pairs(ctx, state, queue, plan_mod.Lanes(3), force=False,
-                                      quiet_ok="", skipped=skipped))
-            before = list(pairs_before(ctx, state, queue, plan_mod.Lanes(3), force=False,
-                                       quiet_ok=""))
-            self.assertEqual([(c.number, p.id) for c, p in now],
-                             [(c.number, p.id) for c, p in before])
-            self.assertEqual(skipped, [])
+        ctx = make_ctx(gh, at=NIGHT, cfg=make_config(env=ALL, machine=MACHINE, plan_lanes=None))
+        gh.add_issue(5, labels=(LABEL_BUILD, "Human", HIGH))
+        gh.add_issue(6, labels=("human",))
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        reply = queue_mod.queue_build(ctx, 6, by="MaxGoetzmann")
+        self.assertIn("#6 is labelled `human`: people do it, so I leave it alone", reply)
+        self.assertEqual(gh.label_names(6), {"human"})
+        planned = plan_mod.make(ctx, force=True)
+        self.assertEqual(planned["number"], 3)
+        self.assertIn("#5 skipped: labelled `human`", planned["skipped"][0])
+        self.assertEqual(gh.label_names(5), {LABEL_BUILD, "Human", HIGH})  # no bot:needs-plan
+        pull = gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "human"))
+        pull["mergeable_state"] = "dirty"
+        plan_mod.housekeeping(ctx, ctx.store.load())
+        self.assertNotIn(LABEL_REVISE, gh.label_names(9))
+        self.assertIn("labelled `human`", queue_mod.queue_revise(ctx, 9, by="MaxGoetzmann"))
 
     def test_the_reply_says_what_the_label_changes(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         gh.add_issue(5, labels=("human",))
-        gh.add_issue(7, labels=("shitter",))
+        gh.add_issue(7, labels=("Difficulty:Hard",))
         gh.add_issue(8)
-        self.assertIn("labelled `human`, though, so no model takes it",
+        self.assertIn("#5 is labelled `human`: people do it, so I leave it alone",
                       queue_mod.queue_build(ctx, 5, by="MaxGoetzmann"))
-        self.assertIn("labelled `shitter`, so only a low-tier model takes it",
+        self.assertIn("labelled `difficulty:hard`, so only Opus plans, builds and reviews it",
                       queue_mod.queue_build(ctx, 7, by="MaxGoetzmann"))
         self.assertNotIn("labelled", queue_mod.queue_build(ctx, 8, by="MaxGoetzmann"))
 
 
 class LabelsTests(unittest.TestCase):
     def test_setup_creates_the_new_labels(self):
-        self.assertEqual(LABELS["human"][1], "A human will do this. Night bot skips it.")
-        self.assertEqual(LABELS["shitter"][1],
-                         "Low-tier models only (anything except OpenAI Astra or Claude Opus).")
+        self.assertEqual(LABELS["human"][1],
+                         "People do this: the night bot never queues, plans, builds or labels it")
+        self.assertNotIn("shitter", LABELS)
+        self.assertNotIn("difficult", LABELS)
         self.assertEqual({name: LABELS[name][0] for name in (HIGH, MEDIUM, LOW)},
                          {HIGH: "d73a4a", MEDIUM: "fbca04", LOW: "0e8a16"})
         gh = FakeGitHub()
         created = [name for name, (color, text) in LABELS.items()
                    if gh.ensure_label(name, color, text)]
-        self.assertTrue({"human", "shitter", HIGH, MEDIUM, LOW} <= set(created))
+        self.assertTrue({"human", "difficulty:easy", "difficulty:medium", "difficulty:hard",
+                         HIGH, MEDIUM, LOW} <= set(created))
         self.assertFalse(any(gh.ensure_label(name, color, text)
                              for name, (color, text) in LABELS.items()))
 
-    def test_the_pull_request_keeps_the_issues_tier_and_shitter(self):
-        h = Harness(self, env=ALL, machine=MACHINE)
-        h.gh.add_issue(12, labels=(LABEL_BUILD, "shitter", "Priority:High"))
+    def test_the_pull_request_keeps_the_issues_difficulty_and_tier(self):
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:easy", "Priority:High"))
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                                               "review": reviewer(APPROVE)}))
-        self.assertEqual((planned["provider"], planned["priority"], result["status"]),
-                         ("gpt", "high", "approved"))
+        self.assertEqual((planned["provider"], planned["priority"], planned["difficulty"],
+                          result["status"]), ("agy", "high", "easy", "approved"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "shitter", "Priority:High"})
-        # Opus may not give the second review either.
-        planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
-        self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("review", pr, "agy"))
+        self.assertEqual(h.gh.label_names(pr),
+                         {LABEL_PR, LABEL_CROSS, "difficulty:easy", "Priority:High"})
+        self.assertEqual(h.ctx.store.load()["items"][str(pr)]["difficulty"], "easy")
 
     def test_a_draft_pull_request_keeps_them_too(self):
-        h = Harness(self, env=ALL, machine=MACHINE)
-        h.gh.add_issue(12, labels=(LABEL_BUILD, "shitter", LOW))
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:hard", LOW))
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
-                                              "review": reviewer(changes("Still wrong."))}))
-        self.assertEqual((planned["provider"], result["status"]), ("gpt", "not_approved"))
+                                              "review": reviewer(changes("Still wrong."))}),
+                                  force=True)
+        self.assertEqual((planned["provider"], result["status"]), ("claude-3", "not_approved"))
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertTrue(pull["draft"])
         self.assertEqual(h.gh.label_names(int(pull["number"])),
-                         {LABEL_PR, "bot:blocked", "shitter", LOW})
-        # Its revision, asked for on the draft by night, goes past Opus.
-        queue_mod.queue_revise(h.ctx, int(pull["number"]), by="MaxGoetzmann")
-        planned = plan_mod.make(h.ctx)
-        self.assertEqual((planned["action"], planned["provider"]), ("revise", "gpt"))
-
-    def test_a_shitter_pull_request_with_no_low_tier_reviewer_says_it_waits_for_a_person(self):
-        for labels, waits in (((LABEL_BUILD, "shitter"), True), ((LABEL_BUILD,), False)):
-            # Opus and gpt only: by day gpt builds both, and only Opus could review.
-            h = Harness(self, env=ALL, machine=("gpt",), at=DAY)
-            h.gh.add_issue(12, labels=labels)
-            planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
-                                                  "review": reviewer(APPROVE)}))
-            self.assertEqual((planned["provider"], result["status"]), ("gpt", "approved"))
-            self.assertEqual("No subscription of another model family is set up" in
-                             h.gh.bot_comments(12)[-1], waits, labels)
+                         {LABEL_PR, "bot:blocked", "bot:stuck", "difficulty:hard", LOW})
 
 
 if __name__ == "__main__":

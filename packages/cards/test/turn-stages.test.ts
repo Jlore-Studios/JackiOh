@@ -349,7 +349,7 @@ describe("R68, §4.5: a delayed effect's check is answered before the next delay
     // p2's radiant Suppressive Aura shrinks p2's enemies by -2/-2. p1's two K-Pop Fanatics take p2's
     // Tempo Timmy and then p2's Mr. Vanilla at the start of p1's next turn, in that order (R68).
     // Timmy (3/3 with 1 damage) stolen onto p1's side is at 0 health there and dies in the check
-    // after the first steal. p2's fixture trap answers Timmy's death (Timmy is p1's by then, R640) by
+    // after the first steal. p2's fixture trap answers Timmy's death (Timmy is p1's by then, R659) by
     // returning p2's units to hand.
     const s = scenario({
       p1: { hand: [KPOP_FANATIC, KPOP_FANATIC, RENO], mana: 5, library: [RENO, RENO, RENO] },

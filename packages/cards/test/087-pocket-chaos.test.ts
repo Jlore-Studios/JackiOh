@@ -124,7 +124,7 @@ describe("#87 Pocket Chaos — base", () => {
     expect(s.backrow("p1", 4)?.id).toBe(well.id);
     expect(s.backrow("p2", 4)).toBeNull();
 
-    // R12, R73, R640: current ownership follows every field control change.
+    // R12, R73, R659: current ownership follows every field control change.
     expect(s.card(gary).controller).toBe("p2");
     expect(s.card(gary).owner).toBe("p2");
     expect(s.card(reno).controller).toBe("p1");

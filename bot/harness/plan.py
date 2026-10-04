@@ -6,14 +6,35 @@ item at once, and a subscription holds one at a time), then one item and the sub
 takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
-Which subscription takes an item (`pairs`): items go in order of urgency (forced, then the
-priority tier, `difficult`, second reviews, revisions, the oldest builds), and each goes to the
-first subscription in `priority` that is free, available (`providers.availability`: switched on,
-its secret set, inside its hours unless the item is forced, under its limits) and allowed it: a
-`difficult` item only to one marked `difficult` (Opus), a second review only to a model family
-that has not approved the change yet, a `shitter` item only to a low-tier model. An item
-labelled `human` is never queued (`candidates`). `claude-1` is shared with its owner, so an
-unforced run uses it only after the gate saw it quiet (`quiet_ok`).
+Who does what (`pairs`, `assign`): items go in order of urgency (forced, then the priority tier,
+reviews, revisions, then builds, the harder first and then the oldest), so work already begun is
+finished before new work starts. An item's difficulty (`difficulty:easy`,
+`medium` or `hard`; medium without a label) sets the weakest tier that may build it (`MIN_TIER`).
+Among the seats (`providers.Seat`: one model on one subscription) whose subscription is free and
+available (`providers.availability`: switched on, its secret set, inside its hours unless the item
+is forced, under its limits):
+
+- **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
+  claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
+  all of them) with a seat that meets the tier, on its weakest such seat. An easy item goes to
+  an `easy_first` subscription (Devin) ahead of that order while it has a free lane; otherwise
+  claude-3 and claude-1 build it with Sonnet, not Opus. A
+  builder above the item's tier (no seat of that tier free, or one comes later in the usage
+  order) is said in the run's log.
+- **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
+  seat, strong whenever one is free. When the builder's own subscription has a seat of that tier,
+  the plan and the build share one run; otherwise the planning is a run of its own, and the item
+  goes back to the queue to build from the plan. Such a planning run is short and starts before
+  any long run, so a planner plans Devin's next item before it builds one of its own.
+- **review** in the run: the run's own strongest seat of at least medium (strong for a hard item);
+  a weak seat never reviews, so a run with none hands the change to a review run.
+- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium
+  one of a family that has not approved the head yet; a hard item waits for a strong one.
+
+An item labelled `human` is never queued (`candidates`), nor a build that waits for another
+issue (`queue.waits_for`: a "Blocked by #n" line, GitHub's own blocked-by link, or an earlier
+part of the same patch still open). `claude-1` is shared with its owner, so
+an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 """
 
 from __future__ import annotations
@@ -23,28 +44,33 @@ from datetime import timedelta
 from itertools import islice
 from typing import Any, Iterator
 
-from harness import asks, threads
+from harness import asks, issueplan, threads
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING, NIGHT_WORKFLOW,
-                            STATE_BRANCH)
+from harness.config import (DIFFICULTIES, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_WORKING,
+                            MIN_TIER, NIGHT_WORKFLOW, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
-from harness.providers import Provider
+from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
-                           label_names, open_pull_for_branch, set_state_label)
+                           is_human, label_names, needs_plan,
+                           open_pull_for_branch, set_state_label,
+                           strong_plan)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
+#: What an assignment's run does: its action in the plan file.
+ACTIONS = ("plan", "build", "revise", "review")
 #: A run asked for and never taken up is dropped after this long.
 RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
 #: A run in one of these states is still going.
 LIVE = ("queued", "in_progress", "waiting", "pending", "requested")
 #: The role a provider must allow for each kind of item.
-ROLE_OF = {"build": "build", "revise": "revise", "review": "review"}
+ROLE_OF = {"build": "build", "revise": "revise", "review": "review", "plan": "plan"}
 #: `quiet_ok` that lets every provider through, for questions that start nothing.
 ANY_QUIET = "*"
 #: The gate's step that waits for the shared subscription to be quiet (`bot-night.yml`).
@@ -91,7 +117,7 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
     if cfg.secrets.known and not any(p.enabled and (p.login == "machine" or cfg.secrets.has(p.secret))
                                      for p in cfg.pool.ordered()):
         return "no subscription has its secret set, so no model can run"
-    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFF).
+    # A run that could not work backs off its own subscription only (providers.INFRA_BACKOFFS).
     return None
 
 
@@ -100,22 +126,37 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
 
 @dataclass
 class Lanes:
-    """The runs that hold work now: item number (0 for a suggestion survey) -> provider id."""
+    """The runs that hold work now: item number (0 for a suggestion survey) -> provider id.
+    `planning` are the items whose run is a planning run: those hold the planning lane
+    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
+    planning: set[int] = field(default_factory=set)
+    plan_limit: int = 0
 
     @property
     def busy(self) -> set[str]:
         return set(self.held.values())
 
     def count(self, provider_id: str) -> int:
-        """How many runs this provider holds now."""
-        return sum(1 for held in self.held.values() if held == provider_id)
+        """How many runs this provider holds now, its planning runs aside."""
+        return sum(1 for number, held in self.held.items()
+                   if held == provider_id and number not in self.planning)
+
+    def planning_by(self, provider_id: str) -> int:
+        """How many planning runs this provider holds now."""
+        return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
     def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`."""
-        return self.count(provider.id) >= provider.lanes
+        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
+        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
+        the bot's from its owner, and two runs deciding from one reading go past a cap together
+        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
+        held = self.count(provider.id)
+        if provider.quiet_check or provider.limits.stops:
+            held += self.planning_by(provider.id)
+        return held >= provider.lanes
 
     def on_machine(self, pool: providers_mod.Pool) -> int:
         """How many of the held runs are on the bot's machine."""
@@ -123,10 +164,20 @@ class Lanes:
 
     @property
     def free(self) -> int:
-        return max(0, self.limit - len(self.held))
+        return max(0, self.limit - (len(self.held) - len(self.planning)))
+
+    @property
+    def plan_free(self) -> int:
+        return max(0, self.plan_limit - len(self.planning))
+
+    def with_run(self, number: int, provider_id: str, action: str) -> "Lanes":
+        """These lanes with one more run held."""
+        planning = self.planning | ({number} if action == "plan" else set())
+        return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit)
 
     def describe(self) -> str:
-        return ", ".join(f"#{n} with `{p}`" if n else f"a survey with `{p}`"
+        return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
+                         if n else f"a survey with `{p}`"
                          for n, p in sorted(self.held.items())) or "none"
 
 
@@ -139,12 +190,14 @@ def working_threads(ctx: Context) -> list[dict[str, Any]]:
 def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     """The lanes held by runs that are still going. A run that ended without delivering holds
     nothing: housekeeping requeues its item."""
-    lanes = Lanes(ctx.cfg.pool.max_parallel)
+    lanes = Lanes(ctx.cfg.pool.max_parallel, plan_limit=ctx.cfg.pool.plan_lanes)
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
         if run_alive(ctx, record.get("run_id")):
             lanes.held[number] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
+            if record.get("action") == "plan":
+                lanes.planning.add(number)
     survey = state.get("suggest") or {}
     if survey.get("provider") and run_alive(ctx, survey.get("run_id")):
         lanes.held[0] = str(survey["provider"])
@@ -161,36 +214,215 @@ def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lane
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
         return False
+    # A build or a revision runs long: it starts only with `start_headroom` under each cap.
     return providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
-                                      forced=forced) is None
+                                      forced=forced, starting=role in ("build", "revise")) is None
+
+
+@dataclass
+class Assignment:
+    """One run's work: its subscription, and the seat each role runs on there. `action` is
+    `plan` (a planning run of its own), `build`, `revise` or `review` (a review run)."""
+
+    provider: Provider
+    action: str
+    difficulty: str
+    #: A planning session before the build, in this run.
+    plan: Seat | None = None
+    #: The builder (and its fixes).
+    build: Seat | None = None
+    #: The reviewer: in a build or revise run, its own adversarial reviewer (None hands the change
+    #: to a review run); in a review run, the one reviewing.
+    review: Seat | None = None
+    #: What the router decided that a reader should know: a step up in tier, and why.
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def self_check(self) -> bool:
+        return bool(self.build and self.build.self_check)
+
+    def describe(self) -> str:
+        parts = []
+        for role, seat in (("plan", self.plan), ("build", self.build), ("review", self.review)):
+            if seat is not None:
+                parts.append(f"{role} on {seat.describe()}")
+        if self.build is not None and self.review is None and self.action != "review":
+            parts.append("review in a review run" + (" after its self check"
+                                                       if self.self_check else ""))
+        return "; ".join(parts) or f"on {self.provider.describe()}"
+
+    def seats(self) -> dict[str, Any]:
+        """What the model job runs each role on (`work.py`)."""
+        return {"plan": self.plan.to_dict() if self.plan else None,
+                "build": self.build.to_dict() if self.build else None,
+                "review": self.review.to_dict() if self.review else None,
+                "self_check": self.self_check}
+
+
+def free_providers(ctx: Context, state: dict[str, Any], lanes: Lanes, role: str, *,
+                   forced: bool, quiet_ok: str) -> list[Provider]:
+    return [p for p in ctx.cfg.pool.ordered()
+            if _usable(ctx, state, p, lanes, role, forced=forced, quiet_ok=quiet_ok)]
+
+
+def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
+    """`seats` in the order the router tries them: the usage order (`priority`), then the
+    tier's own preference order."""
+    order = {name: i for i, name in enumerate(pool.priority)}
+    return sorted(seats, key=lambda seat: (order.get(seat.provider.id, len(order)), seat.rank))
+
+
+def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tuple[Seat | None, str]:
+    """Who builds an item of `difficulty`: the first free subscription in the usage order with a
+    seat that meets its tier, on its weakest such seat; with a note when that seat is above the
+    tier, saying why (none of that tier is free, or the usage order puts this one first)."""
+    floor = MIN_TIER[difficulty]
+    # An easy item goes first to a subscription marked `easy_first` (Devin), which may build
+    # nothing harder; one marked `build_last` (claude-2) builds only after every other one.
+    order = sorted(providers, key=lambda provider: (
+        not (provider.easy_first and difficulty == "easy"), provider.build_last))
+    usable = [(provider, [seat for seat in pool.seats(provider) if tier_at_least(seat.tier, floor)])
+              for provider in order]
+    for index, (provider, seats) in enumerate(usable):
+        if not seats:
+            continue
+        seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
+        if seat.tier == floor:
+            return seat, ""
+        later = [s.describe() for _, others in usable[index + 1:] for s in others
+                 if s.tier == floor]
+        if later:
+            return seat, (f"built on {seat.tier} though difficulty:{difficulty} allows {floor}: "
+                          f"the usage order puts `{provider.id}` before {', '.join(later)}")
+        models = ", ".join(e.model for e in pool.tiers.get(floor, ())) or "none listed"
+        return seat, (f"stepped up from {floor} to {seat.tier} to build it: no {floor}-tier "
+                      f"model ({models}) is free now")
+    return None, ""
+
+
+def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: bool,
+                  quiet_ok: str) -> list[Seat]:
+    """The planning lane's planners: one strong seat of each subscription that may plan now, in
+    the usage order. A planning run there takes no build lane, so a subscription plans one item
+    while it builds another; one the quiet check guards plans only when it holds nothing else."""
+    if lanes.plan_free <= 0:
+        return []
+    cfg = ctx.cfg
+    seats = []
+    for provider in cfg.pool.ordered():
+        seat = cfg.pool.best_seat(provider, "strong")
+        if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
+            continue
+        if (provider.quiet_check or provider.limits.stops) and lanes.count(provider.id):
+            continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
+        if machine_full(cfg.pool, provider, lanes):
+            continue
+        if (provider.quiet_check and cfg.quiet.enabled and not forced
+                and quiet_ok not in (ANY_QUIET, provider.id)):
+            continue
+        if providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
+                                      forced=forced) is None:
+            seats.append(seat)
+    return ranked(cfg.pool, seats)
+
+
+def can_plan(pool: Pool, provider: Provider) -> bool:
+    """It may plan: a seat of at least medium, and the role."""
+    return "plan" in provider.roles and pool.best_seat(provider, "medium") is not None
+
+
+def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
+    """A build or revise run's own adversarial reviewer: its strongest seat of at least medium
+    (strong for a hard item), or None, and the change goes to a review run."""
+    if "review" not in provider.roles:
+        return None
+    return pool.best_seat(provider, "strong" if difficulty == "hard" else "medium")
+
+
+def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
+    """A review run's reviewer: strong whenever one is free; otherwise medium, of a family whose
+    approval the head does not have yet. Weak never reviews; a hard item takes strong only."""
+    seats = [seat for provider in providers for seat in pool.seats(provider)]
+    strong = ranked(pool, [seat for seat in seats if seat.tier == "strong"])
+    if strong:
+        return strong[0]
+    if candidate.difficulty == "hard":
+        return None
+    medium = ranked(pool, [seat for seat in seats if seat.tier == "medium"
+                           and seat.family not in candidate.approved])
+    return medium[0] if medium else None
+
+
+def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lanes, *,
+           force: bool, quiet_ok: str) -> Assignment | None:
+    """Who takes `candidate` now, and on which seats, or None when nobody can."""
+    pool = ctx.cfg.pool
+    forced = force or candidate.forced
+
+    def free(role: str) -> list[Provider]:
+        return free_providers(ctx, state, lanes, role, forced=forced, quiet_ok=quiet_ok)
+
+    if candidate.kind == "review":
+        seat = review_seat(pool, free("review"), candidate)
+        if seat is None:
+            return None
+        return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
+    builders = free(ROLE_OF[candidate.kind])
+    if candidate.kind == "build" and not strong_plan(candidate):
+        # A builder that cannot plan (Devin) builds only from a strong model's plan, which the
+        # planning lane writes (the Needs plan stage).
+        builders = [p for p in builders if can_plan(pool, p)]
+    if candidate.kind == "revise" and not candidate.bot_pr:
+        # A person's pull request never gets a review run: its reviewer must be in this run.
+        builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
+    builder, note = builder_seat(pool, builders, candidate.difficulty)
+    if builder is None:
+        return None
+    notes = [f"#{candidate.number}: {note}"] if note else []
+    reviewer = run_reviewer(pool, builder.provider, candidate.difficulty)
+    if candidate.kind == "build" and not candidate.planned:
+        # No strong model was free on the planning lane: the builder plans it first in its own
+        # run, on its strongest model (strong for a hard item).
+        own = pool.best_seat(builder.provider, "strong" if candidate.difficulty == "hard"
+                             else "medium") if "plan" in builder.provider.roles else None
+        if own is None:
+            return None
+        return Assignment(builder.provider, "build", candidate.difficulty, plan=own,
+                          build=builder, review=reviewer, notes=notes)
+    return Assignment(builder.provider, candidate.kind, candidate.difficulty, build=builder,
+                      review=reviewer, notes=notes)
 
 
 def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: Lanes, *,
           force: bool, quiet_ok: str,
-          skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Provider]]:
-    """Every queued item that a subscription can take now, with the one that takes it, most
-    urgent first. A free subscription that passes over a `shitter` item because its model is
-    high-tier says so in `skipped`, when the caller keeps one."""
-    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, not c.difficult,
-                                         KIND_ORDER[c.kind], c.queued_at, c.number))
-    for candidate in order:
-        forced = force or candidate.forced
-        for provider in ctx.cfg.pool.ordered():
-            if candidate.difficult and not provider.difficult:
-                continue
-            if candidate.kind == "review" and provider.family == candidate.builder:
-                continue
-            if not _usable(ctx, state, provider, lanes, ROLE_OF[candidate.kind], forced=forced,
-                           quiet_ok=quiet_ok):
-                continue
-            tier = providers_mod.model_tier(provider.model)
-            if candidate.low_tier_only and tier == providers_mod.HIGH_TIER:
-                if skipped is not None:
-                    skipped.append(f"#{candidate.number} skipped on `{provider.id}`: labelled "
-                                   f"`shitter`, and {provider.model} is {tier}-tier")
-                continue
-            yield candidate, provider
-            break
+          skipped: list[str] | None = None) -> Iterator[tuple[Candidate, Assignment]]:
+    """Every queued item that a subscription can take now, with who takes it on which seats,
+    most urgent first. (`skipped` is the queue's: the items labelled `human`.)"""
+    # Reviews and revisions finish work already begun, so they go before new builds; among the
+    # builds the harder first, since only the stronger models can take them.
+    order = sorted(queue, key=lambda c: (not (force or c.forced), c.priority, KIND_ORDER[c.kind],
+                                         -DIFFICULTIES.index(c.difficulty),
+                                         c.queued_at, c.number))
+    # The Needs plan stage first: a strong model plans on the planning lane, which takes no build
+    # lane, the items a builder that cannot plan (Devin) waits on before the rest.
+    planning: list[tuple[Candidate, Assignment]] = []
+    planners = lane_planners(ctx, state, lanes, forced=force, quiet_ok=quiet_ok)
+    if planners:
+        for candidate in sorted((c for c in order if needs_plan(c)),
+                                key=lambda c: (not (force or c.forced), c.difficulty != "easy")):
+            seat = planners[0]
+            planning.append((candidate, Assignment(
+                seat.provider, "plan", candidate.difficulty, plan=seat,
+                notes=[f"#{candidate.number}: needs a plan; {seat.describe()} writes it on the "
+                       "planning lane"])))
+    found: list[tuple[Candidate, Assignment]] = []
+    if lanes.free > 0:
+        found = [(candidate, assignment) for candidate in order
+                 if (assignment := assign(ctx, state, candidate, lanes, force=force,
+                                          quiet_ok=quiet_ok)) is not None]
+    planning.sort(key=lambda pair: not (force or pair[0].forced))
+    yield from planning
+    yield from found
 
 
 def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force: bool,
@@ -264,7 +496,7 @@ class Peek:
     quiet_secret: str = ""
     fallback: bool = False
     held: int = 0
-    #: Queued items passed over because of `human` or `shitter` (#96), one line each.
+    #: Queued items passed over because of `human` (#96), one line each.
     skipped: list[str] = field(default_factory=list)
 
 
@@ -292,17 +524,19 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
         return Peek(False, stop)
     tidy = housekeeping_due(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0:
+    if lanes.free <= 0 and lanes.plan_free <= 0:
         if tidy:
             return Peek(True, tidy, force, held=len(lanes.held))
         return Peek(False, f"every lane is busy ({lanes.describe()})", held=len(lanes.held))
     queue = _queue(ctx, state, item, mode, skipped)
     found: tuple[Candidate | None, Provider, bool] | None = None
+    chosen: Assignment | None = None
     if mode != "suggest":
         top = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=ANY_QUIET,
                          skipped=skipped), None)
         if top is not None:
-            found = (top[0], top[1], force or top[0].forced)
+            chosen = top[1]
+            found = (top[0], top[1].provider, force or top[0].forced)
     # A survey only when nothing is queued (or one was asked for), as before: queued work that
     # must wait for its subscription does not turn the others into surveyors.
     if found is None and item is None and (mode == "suggest" or (mode == "auto" and not queue)) \
@@ -321,9 +555,9 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
                         f"{why_none(ctx, state, lanes)}", held=len(lanes.held))
         return Peek(False, "nothing is queued", held=len(lanes.held))
     candidate, provider, forced = found
-    what = (f"#{candidate.number} is queued to {candidate.kind}" if candidate
-            else "a suggestion survey is due")
-    reason = f"{what}, for `{provider.id}`"
+    what = (f"#{candidate.number} ({candidate.difficulty}) is queued to {candidate.kind}"
+            if candidate else "a suggestion survey is due")
+    reason = f"{what}, for `{provider.id}`" + (f": {chosen.describe()}" if chosen else "")
     if not (provider.quiet_check and ctx.cfg.quiet.enabled and not forced):
         return Peek(True, reason, forced, provider.id, held=len(lanes.held))
     # The best subscription for it is the shared one: wait for quiet, unless another run is
@@ -331,16 +565,17 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
     other = next(pairs(ctx, state, queue, lanes, force=force, quiet_ok=""), None) if (
         mode != "suggest") else None
     fallback = other is not None
-    if other is not None and other[1].family == provider.family:
+    if other is not None and other[1].provider.family == provider.family:
         # Another account of the same model can take work now: no reason to wait for this one.
-        return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
-                    f"`{other[1].id}`", force or other[0].forced, other[1].id,
-                    held=len(lanes.held))
+        return Peek(True, f"#{other[0].number} ({other[0].difficulty}) is queued to "
+                    f"{other[0].kind}, for `{other[1].provider.id}`: {other[1].describe()}",
+                    force or other[0].forced, other[1].provider.id, held=len(lanes.held))
     if quiet_waiting(ctx):
         if fallback:
-            return Peek(True, f"#{other[0].number} is queued to {other[0].kind}, for "
-                        f"`{other[1].id}` (another run waits for `{provider.id}`)", forced,
-                        other[1].id, held=len(lanes.held))
+            return Peek(True, f"#{other[0].number} ({other[0].difficulty}) is queued to "
+                        f"{other[0].kind}, for `{other[1].provider.id}` (another run waits for "
+                        f"`{provider.id}`)", forced, other[1].provider.id,
+                        held=len(lanes.held))
         return Peek(False, f"another run already waits for `{provider.id}` to be quiet",
                     held=len(lanes.held))
     return Peek(True, reason, forced, provider.id, quiet_provider=provider.id,
@@ -392,7 +627,8 @@ def housekeeping_due(ctx: Context, state: dict[str, Any]) -> str | None:
             return f"#{thread['number']} was left working by a run that ended"
     for thread in ctx.gh.list_issues(labels=LABEL_PR):
         names = label_names(thread)
-        if "pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if ("pull_request" not in thread or names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
+                or is_human(names)):
             continue
         record = state["items"].get(str(thread["number"]), {})
         if record.get("stop_requested"):
@@ -430,21 +666,22 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
             ctx.store.update(lambda s: s.update(run_requested=None), "run request taken")
         return planned
     state = ctx.store.load()
+    notes += sync_needs_plan(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0:
+    if lanes.free <= 0 and lanes.plan_free <= 0:
         return {**nothing(f"every lane is busy ({lanes.describe()})"), "housekeeping": notes}
     skipped: list[str] = []
     queue = _queue(ctx, state, item, mode, skipped)
     if mode != "suggest":
-        for candidate, provider in pairs(ctx, state, queue, lanes, force=force, quiet_ok=quiet,
-                                         skipped=skipped):
-            planned = claim(ctx, candidate, provider)
+        for candidate, assignment in pairs(ctx, state, queue, lanes, force=force,
+                                           quiet_ok=quiet, skipped=skipped):
+            planned = claim(ctx, candidate, assignment)
             if planned is not None:
                 planned["housekeeping"] = notes
                 planned["forced"] = bool(force or candidate.forced)
                 planned["priority"] = PRIORITY_NAMES[candidate.priority]
                 planned["skipped"] = skipped
-                fill_lanes(ctx, lanes, candidate, provider, planned)
+                fill_lanes(ctx, lanes, candidate, assignment, planned)
                 return taken(planned)
     if item is not None and mode != "suggest":
         return {**nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or "
@@ -460,12 +697,12 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     return {**nothing(reason), "housekeeping": notes, "skipped": skipped}
 
 
-def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
+def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignment,
                planned: dict[str, Any]) -> None:
-    """Start one more run when, with this item claimed, a lane and more work are still free.
-    That run does the same, so the lanes fill one run at a time."""
-    after = Lanes(lanes.limit, {**lanes.held, taken.number: provider.id})
-    if after.free <= 0:
+    """Start one more run when, with this item claimed, a lane (or the planning lane) and more
+    work are still free. That run does the same, so the lanes fill one run at a time."""
+    after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
+    if after.free <= 0 and after.plan_free <= 0:
         return
     state = ctx.store.load()
     rest = [c for c in candidates(ctx, state) if c.number != taken.number]
@@ -476,6 +713,38 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, provider: Provider,
         planned["filled"] = "started another run for the next free lane"
     except GitHubError as exc:
         planned["filled"] = f"could not start another run: {exc}"
+
+
+def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
+    """Keep `bot:needs-plan` on exactly the queued items in the Needs plan stage, and on the ones
+    being planned now; and `bot:planned` on the queued ones a strong model has planned (it stays
+    after they leave the queue, and comes off only if the item needs a plan again)."""
+    notes: list[str] = []
+    try:
+        queued = [c for c in candidates(ctx, state) if c.kind == "build"]
+        wanted = {c.number for c in queued if needs_plan(c)}
+        labelled = ctx.gh.list_issues(labels=LABEL_NEEDS_PLAN)
+        planned = {c.number for c in queued if c.planned and not needs_plan(c)}
+        has_planned = {int(t["number"]) for t in ctx.gh.list_issues(labels=LABEL_PLANNED)}
+    except GitHubError as exc:
+        return [f"could not sync `{LABEL_NEEDS_PLAN}`: {exc}"]
+    for number in sorted(planned - has_planned):
+        ctx.gh.add_labels(number, [LABEL_PLANNED])
+    for number in sorted(has_planned & wanted):
+        ctx.gh.remove_label(number, LABEL_PLANNED)
+    have = set()
+    for thread in labelled:
+        number = int(thread["number"])
+        have.add(number)
+        record = state["items"].get(str(number), {})
+        planning = LABEL_WORKING in label_names(thread) and record.get("action") == "plan"
+        if number not in wanted and not planning:
+            ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)
+            notes.append(f"#{number} left the Needs plan stage")
+    for number in sorted(wanted - have):
+        ctx.gh.add_labels(number, [LABEL_NEEDS_PLAN])
+        notes.append(f"#{number} needs a plan")
+    return notes
 
 
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
@@ -509,7 +778,7 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
         if "pull_request" not in thread:
             continue
         names = label_names(thread)
-        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}:
+        if names & {LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED} or is_human(names):
             continue
         pull = ctx.gh.get_pull(int(thread["number"]))
         record = state["items"].get(str(pull["number"]), {})
@@ -543,9 +812,31 @@ def _provider_fields(ctx: Context, provider: Provider) -> dict[str, Any]:
             "login": provider.login, "runs_on": provider.runs_on}
 
 
-def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, Any] | None:
+def _start_message(assignment: Assignment, cfg: Any) -> str:
+    """What a build or revision run says it does, by who runs each role."""
+    steps = []
+    if assignment.plan is not None:
+        steps.append(f"plan it on {assignment.plan.describe()}")
+    steps.append(f"build it on {assignment.build.describe()}" if assignment.build else "build it")
+    steps.append("run the repository's checks")
+    if assignment.self_check:
+        steps.append(f"have the builder check its own change, up to {cfg.max_self_check_rounds} "
+                     "times")
+    if assignment.review is not None:
+        steps.append(f"have {assignment.review.describe()} review the change adversarially, up "
+                     f"to {cfg.max_review_cycles} rounds")
+        end = "Only an approved change becomes a pull request."
+    else:
+        end = ("No weak model reviews, so the pull request then waits for a review run: one "
+               "strong model, or two medium ones of different families.")
+    return f"I {', '.join(steps[:-1])} and {steps[-1]}. {end}"
+
+
+def claim(ctx: Context, candidate: Candidate,
+          assignment: Assignment) -> dict[str, Any] | None:
     """Build the plan for one queued thread on one subscription, and mark it `bot:working`."""
     cfg = ctx.cfg
+    provider = assignment.provider
     number, kind = candidate.number, candidate.kind
     thread = ctx.gh.get_issue(number)
     names = label_names(thread)
@@ -557,7 +848,7 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
     who = provider.describe()
     if kind == "build":
         planned: dict[str, Any] = {
-            "action": "build",
+            "action": assignment.action,
             "number": number,
             "title": thread.get("title", ""),
             "branch": branch_for_issue(number),
@@ -565,9 +856,19 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
             "previous_findings": record.get("last_findings") or [],
             "previous_question": record.get("question") or "",
         }
-        message = (f"Starting work on this now{run_link(cfg)}, on {who}. I build it, run the "
-                   f"repository's checks, and have an adversarial reviewer read the change, up to "
-                   f"{cfg.max_review_cycles} rounds. Only an approved change becomes a pull request.")
+        written = issueplan.plan_of(thread.get("body"))
+        if written and assignment.action == "build":
+            # A person may have edited the plan in the description: the builder starts from that.
+            planned["plan_in_issue"] = written
+        if assignment.action == "plan":
+            message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()} "
+                       f"(`{LABEL_NEEDS_PLAN}`): it is difficulty:{candidate.difficulty}. The plan "
+                       "goes into this issue's description, under **Plan**, and the builder starts "
+                       "from it; then it is queued to build on the cheapest model its difficulty "
+                       "allows.")
+        else:
+            message = (f"Starting work on this now{run_link(cfg)}: it is "
+                       f"difficulty:{candidate.difficulty}. {_start_message(assignment, cfg)}")
     else:
         pull = ctx.gh.get_pull(number)
         head = pull.get("head") or {}
@@ -593,15 +894,17 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
                 "branch": head.get("ref", ""),
                 "head": head.get("sha", ""),
                 "builder": candidate.builder,
+                "approved": list(candidate.approved),
                 "pull": pull_text,
                 "issue": issue_text,
                 "thread": "\n\n".join(p for p in (pull_text, issue_text) if p),
                 "bot_pr": True,
                 "issue_number": issue_number,
             }
-            message = (f"Starting a second review now{run_link(cfg)}, on {who}. The change was "
-                       f"built and approved by `{builder}`; it merges only once another model "
-                       "approves it too.")
+            message = (f"Starting a review now{run_link(cfg)}, on "
+                       f"{assignment.review.describe()}. `{builder}` built the change; it merges "
+                       "once one strong model, or two medium ones of different families, approve "
+                       "the same commit.")
         else:
             source = str(record.get("source") or "request")
             feedback = threads.pull_feedback(ctx.gh, ctx.trust, number, cfg.bot_login,
@@ -625,20 +928,33 @@ def claim(ctx: Context, candidate: Candidate, provider: Provider) -> dict[str, A
                 "bot_pr": LABEL_PR in names,
                 "issue_number": issue_number,
             }
-            message = (f"Starting a revision now{run_link(cfg)}, on {who}, because of: {source}. "
-                       "It goes through the same checks and adversarial review before I push it.")
+            message = (f"Starting a revision now{run_link(cfg)}, because of: {source}. "
+                       f"{_start_message(assignment, cfg)}")
     planned.update(_provider_fields(ctx, provider))
+    planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
+                   routing=list(assignment.notes), assignment=assignment.describe())
+    if kind == "review" and record.get("self_check_findings"):
+        planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):
         planned["handoff"] = record["handoff"]
+    if planned.get("plan_in_issue"):
+        handoff = planned.get("handoff") if isinstance(planned.get("handoff"), dict) else {}
+        if not handoff or handoff.get("kind") == "plan":
+            planned["handoff"] = {**handoff, "kind": "plan",
+                                  "provider": handoff.get("provider") or record.get("planned_by")
+                                  or "the issue's description", "notes": planned["plan_in_issue"]}
     set_state_label(ctx, number, names, LABEL_WORKING)
+    if LABEL_NEEDS_PLAN in names and assignment.action != "plan":
+        ctx.gh.remove_label(number, LABEL_NEEDS_PLAN)  # this run plans it first, in the run
     taken: list[str] = []
     def change(state: dict[str, Any]) -> None:
         entry = state_item(state, number)
         entry.update(run_id=cfg.run_id, started_at=iso(ctx.now()), kind=kind,
-                     stop_requested=False, pending_request=False, provider=provider.id)
+                     action=assignment.action, stop_requested=False, pending_request=False,
+                     provider=provider.id)
         taken[:] = asks.take(entry)
         state["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url,
-                             "what": f"{kind} #{number} on {provider.id}"}
+                             "what": f"{assignment.action} #{number} on {provider.id}"}
     ctx.store.update(change, f"claim #{number}")
     ctx.gh.create_comment(number, message)
     asks.react(ctx.gh, taken, asks.WORKING)

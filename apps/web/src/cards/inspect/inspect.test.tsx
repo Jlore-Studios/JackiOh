@@ -33,6 +33,7 @@ import {
   INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
+  INSPECT_LIST_HOVER,
   INSPECT_SCRIM,
   INSPECT_SHEET,
 } from "./testids.ts";
@@ -873,6 +874,137 @@ describe("long-press (B24)", () => {
     render(<Trigger id="a" subject={subjectOf("b24-right-db", "core-043")} options={{ onContextMenu }} />);
     expect(contextMenu(screen.getByTestId("a"), "mouse")).toBe(false);
     expect(onContextMenu).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #165: a touch hold as the mouse-over — touchHold: "preview" holds the hover preview open only
+// while the finger is down, and the board asks for it on the opponent's turn.
+// ---------------------------------------------------------------------------------------------
+
+describe("a touch hold as the mouse-over (#165)", () => {
+  it("#165 a held touch opens the preview, not the sheet, and lifting closes it", () => {
+    render(
+      <Scene>
+        <Trigger id="a" subject={subjectOf("hold-open", "core-043")} options={{ touchHold: "preview" }} />
+      </Scene>,
+    );
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS - 1);
+    expect(openOverlays()).toEqual([]);
+    advance(1);
+    expect(openOverlays()).toEqual([INSPECT_HOVER]);
+    expect(nameIn(screen.getByTestId(INSPECT_HOVER))).toBe(defOf("core-043").name);
+    expect(screen.getByTestId("a-open")).toHaveTextContent("hover");
+    lift(trigger, "touch");
+    expect(openOverlays()).toEqual([]);
+    expect(screen.getByTestId("a-open")).toHaveTextContent("none");
+  });
+
+  it("#165 a pointercancel closes the preview a hold opened", () => {
+    render(<Trigger id="a" subject={subjectOf("hold-cancel", "core-043")} options={{ touchHold: "preview" }} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    fireEvent.pointerCancel(trigger, pointerInit("touch"));
+    expect(openOverlays()).toEqual([]);
+  });
+
+  it("#165 a move past LONG_PRESS_SLOP_PX closes the preview a hold opened", () => {
+    render(<Trigger id="a" subject={subjectOf("hold-drift", "core-043")} options={{ touchHold: "preview" }} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    move(trigger, "touch", START_X + LONG_PRESS_SLOP_PX, START_Y);
+    expect(screen.getByTestId(INSPECT_HOVER), "still inside the slop").toBeInTheDocument();
+    move(trigger, "touch", START_X + LONG_PRESS_SLOP_PX + 1, START_Y);
+    expect(openOverlays()).toEqual([]);
+  });
+
+  it("#165 the click after a preview hold is swallowed, and the next one goes through", () => {
+    const onClick = vi.fn<() => void>();
+    render(<Trigger id="a" subject={subjectOf("hold-click", "core-043")} options={{ touchHold: "preview" }} onClick={onClick} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    lift(trigger, "touch");
+    fireEvent.click(trigger);
+    expect(onClick, "the click the hold ended in").not.toHaveBeenCalled();
+    fireEvent.click(trigger);
+    expect(onClick, "the one after it").toHaveBeenCalledTimes(1);
+  });
+
+  it("#165 with the default a hold still opens the sheet and stays open on the lift", () => {
+    render(<Trigger id="a" subject={subjectOf("hold-sheet", "core-043")} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    expect(openOverlays()).toEqual([INSPECT_SHEET]);
+    lift(trigger, "touch");
+    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+  });
+
+  it("#165 onLongPress still wins over touchHold, and lifting opens and closes nothing", () => {
+    const onLongPress = vi.fn<() => void>();
+    render(<Trigger id="a" subject={subjectOf("hold-callback", "core-043")} options={{ touchHold: "preview", onLongPress }} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(openOverlays()).toEqual([]);
+    lift(trigger, "touch");
+    expect(openOverlays()).toEqual([]);
+  });
+
+  it("#165 with hover previews off a hold opens nothing and its release click is a plain tap", () => {
+    act(() => {
+      writeCardSettings({ hoverPreviews: false });
+    });
+    const onClick = vi.fn<() => void>();
+    render(<Trigger id="a" subject={subjectOf("hold-off", "core-043")} options={{ touchHold: "preview" }} onClick={onClick} />);
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS * 2);
+    expect(openOverlays()).toEqual([]);
+    lift(trigger, "touch");
+    fireEvent.click(trigger);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("#165 on the opponent's turn a hold on a hand card shows the preview while the finger is down", () => {
+    const view = fullBoardView({ active: "p2" });
+    const card = must(Array.isArray(view.you.hand) ? view.you.hand[0] : null, "a hand card");
+    renderBoard(view);
+    const el = screen.getByTestId(testid.handCard(card.instanceId));
+    press(el, "touch");
+    advance(LONG_PRESS_MS);
+    expect(openOverlays()).toEqual([INSPECT_HOVER]);
+    lift(el, "touch");
+    expect(openOverlays()).toEqual([]);
+  });
+
+  it("#165 on the viewer's own turn the same hold still opens the sheet", () => {
+    const view = fullBoardView();
+    const card = must(Array.isArray(view.you.hand) ? view.you.hand[0] : null, "a hand card");
+    renderBoard(view);
+    const el = screen.getByTestId(testid.handCard(card.instanceId));
+    press(el, "touch");
+    advance(LONG_PRESS_MS);
+    expect(openOverlays()).toEqual([INSPECT_SHEET]);
+    lift(el, "touch");
+  });
+
+  it("#165 on the opponent's turn a hold on a browsable pile shows its list preview", () => {
+    renderBoard(fullBoardView({ active: "p2" }));
+    const pile = screen.getByTestId(testid.graveyard("you"));
+    press(pile, "touch");
+    advance(LONG_PRESS_MS);
+    expect(screen.getByTestId(INSPECT_LIST_HOVER)).toBeInTheDocument();
+    lift(pile, "touch");
+    expect(screen.queryByTestId(INSPECT_LIST_HOVER)).toBeNull();
   });
 });
 

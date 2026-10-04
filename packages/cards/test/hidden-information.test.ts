@@ -57,7 +57,7 @@ import {
 } from "@jackioh/engine";
 import { describe, expect, it } from "vitest";
 import { scenario, type Scenario } from "./_harness";
-import { chooseMode } from "@jackioh/engine/effects";
+import { chooseMode, remember } from "@jackioh/engine/effects";
 
 /** viewFor's R97 sentinel. */
 const HIDDEN = "hidden";
@@ -1119,16 +1119,22 @@ function named(event: GameEvent): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// The mulligan's returned cards while setup waits on a cast's question (R224, R97)
+// The mulligan's returned cards while setup waits on a question (R224, R97)
 // ---------------------------------------------------------------------------
 
-const ASKING = "edge-r9-view-cod-asks";
+const ASKING = "edge-r9-view-asks";
 
+/**
+ * A card whose start-of-game clause asks as it arrives in a hand (R151), once: §2.1 step 4 runs it
+ * again. Setup draws no cast-on-draw card (R635), so this is what can still make it wait (R224).
+ */
 function asking(state: GameState): void {
   state.transientDefs[ASKING] = fixtureDef(ASKING, "Spell");
   const script: Script = {
-    staticFlags: { castOnDraw: true },
-    cry: () => [chooseMode({ options: ["ok"], step: "ok", prompt: "the cast's question" })],
+    startOfGame: (ctx) =>
+      ctx.self?.memory.asked === true
+        ? []
+        : [remember({ key: "asked", value: true }), chooseMode({ options: ["ok"], step: "ok", prompt: "the clause's question" })],
     resume: { ok: () => [] },
   };
   registerScripts({ ...registeredScripts(), [ASKING]: { base: script, radiant: script } });
@@ -1138,8 +1144,8 @@ const SETUP_P1_DECK = Array.from({ length: 20 }, (_, at) => `core-${String(at + 
 const SETUP_P2_DECK = Array.from({ length: 20 }, (_, at) => `core-${String(at + 30).padStart(3, "0")}`);
 
 describe("R224, R97: a card the mulligan returned, while setup waits", () => {
-  it("R224 p2's returned opening card stays unread by p1 while p2's replacement cast asks (R97, §9.1)", () => {
-    // p1's opening draw hits an asking cast, so p2's opening deal happens inside p1's answer: a
+  it("R224 p2's returned opening card stays unread by p1 while p2's replacement's clause asks (R97, §9.1)", () => {
+    // p1's opening draw hits an asking card, so p2's opening deal happens inside p1's answer: a
     // recorded action, whose `drawn` events for p2's cards are in p1's view, redacted (R97).
     let seed: string | undefined;
     let begun: GameState | undefined;
@@ -1154,8 +1160,8 @@ describe("R224, R97: a card the mulligan returned, while setup waits", () => {
         begun = state;
       }
     }
-    let state = must(begun, "a seed whose opening draw casts the asking card");
-    const first = must(state.pending, "p1's cast question");
+    let state = must(begun, "a seed whose opening draw reaches the asking card");
+    const first = must(state.pending, "p1's question");
     state = actAs(state, "p1", { type: "answer", choiceId: first.id, selection: [{ pick: "mode", option: "ok" }] });
     expect(mulliganOwed(state)).toEqual(["p1", "p2"]);
     expect(state.players.p2.hand.length).toBeGreaterThan(0);
@@ -1164,7 +1170,7 @@ describe("R224, R97: a card the mulligan returned, while setup waits", () => {
     state = actAs(state, "p1", { type: "mulligan", keep: state.players.p1.hand.map((card) => card.id) });
     expect(mulliganOwed(state)).toEqual(["p2"]);
 
-    // p2 returns one card, and its replacement draw is an asking cast, so setup waits (R224) with
+    // p2 returns one card, and its replacement draw is the asking card, so setup waits (R224) with
     // the returned card in no pile until it goes back.
     const returned = must(state.players.p2.hand[0], "a card for p2 to return");
     const cod = newInstance(state, ASKING, "p2", { z: "library", player: "p2" });

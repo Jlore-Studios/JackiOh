@@ -3,8 +3,14 @@
 This job holds the bot's token and runs no model. It does not trust the model job's files: the
 item comes from the plan job's outputs and the branch is worked out again here, and the bundle
 must hold the head the result names, descend from the commit the work started at, change no
-forbidden path, and fast-forward the branch on GitHub. A pull request the reviewer approved gets
-auto-merge, which merges it once the required CI checks pass.
+forbidden path, and fast-forward the branch on GitHub.
+
+The review rule: a commit ships when one strong model (Opus) approved it, or two medium models of
+different families did, and no model's rejection of it stands; a hard item takes a strong
+approval only. Weak models never review. Votes are kept per commit with the tier of the seat that
+cast them (`_vote`), from the plan's seats, never from the model job. A pull request whose
+commit has that gets auto-merge, which merges it once the required CI checks pass; one still
+short of it waits in `bot:cross-review` for a review run.
 """
 
 from __future__ import annotations
@@ -13,24 +19,27 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness import asks
+from harness import asks, failures, issueplan
 from harness import gates as gates_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_NEEDS_REVIEW,
-                            LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, LABEL_SHITTER,
+from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
+                            LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
+                            LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
-from harness.queue import (PRIORITY_TIERS, branch_for_issue, label_names, open_pull_for_branch,
-                           set_state_label)
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, difficulty_of, label_names,
+                           open_pull_for_branch, set_state_label)
 from harness.state import item as state_item
 from harness.redact import redact
 
 REPORT_CHARS = 30_000
+#: How much of a plan its comment shows.
+PLAN_COMMENT_CHARS = 20_000
 #: How much of a stopped run's notes and session trail is kept for the next agent.
 HANDOFF_NOTES = 8000
 HANDOFF_TRAIL = 6000
@@ -40,6 +49,11 @@ DIED_LIMIT = 2
 VAULT_ATTEMPTS = 4
 NO_RESULT = ("the model job left no result: it failed before the model started (the doctor "
              "step, the install or the CLI setup), or it was cancelled")
+
+
+def _cut(text: str, limit: int, *, head: bool) -> str:
+    """`text` cut to `limit` characters: its beginning (a plan) or its end (a builder's log)."""
+    return text[:limit] if head else text[-limit:]
 
 
 def load_result(out_dir: Path) -> dict[str, Any]:
@@ -70,6 +84,16 @@ class Deliverer:
         pool = ctx.cfg.pool
         self.provider = pool.get(self.plan.get("provider")) or pool.get(
             providers_mod.LEGACY_PROVIDER) or pool.ordered()[0]
+        seats = self.plan.get("seats") if isinstance(self.plan.get("seats"), dict) else {}
+        main = pool.seats(self.provider)[0]
+
+        def seat(role: str) -> Any:
+            entry = seats.get(role) if isinstance(seats.get(role), dict) else {}
+            return pool.seat(self.provider.id, str(entry.get("model") or "")) if entry else None
+        #: The seats that built and reviewed in the run, from the plan's outputs: a vote's tier
+        #: comes from here, never from the model job's result.
+        self.build_seat = seat("build") or main
+        self.review_seat = seat("review") if seats else main
         self.out_dir = Path(out_dir)
         self.repo = Git(repo_dir)
         self.result = load_result(out_dir)
@@ -90,9 +114,10 @@ class Deliverer:
         self.ctx.store.update(lambda s: providers_mod.note_usage(
             s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
             f"usage {self.provider.id}")
+        self._login_works()
         if action == "suggest":
             self._suggestions()
-        elif action in ("build", "revise", "review"):
+        elif action in ("plan", "build", "revise", "review"):
             self._rederive()
             self._item()
         else:
@@ -125,10 +150,68 @@ class Deliverer:
                     break  # only a race with another writer is worth trying again
         self.log.append(f"could not keep the refreshed login of {self.provider.id}: {problem}")
 
+    def _login_works(self) -> None:
+        """A model call went through on this run's subscription: any streak of runs that could
+        not work there is over (`providers.clear_infra`), and the issue asking a person about it,
+        if one was opened, is closed."""
+        try:
+            calls = int(self.result.get("model_calls") or 0)
+        except (TypeError, ValueError):
+            calls = 0
+        if self.result.get("status") == "infra" or not calls:
+            return
+        if not isinstance(providers_mod.peek_record(self.ctx.store.load(),
+                                                    self.provider.id).get("infra"), dict):
+            return
+        opened: list[int] = []
+        self.ctx.store.update(lambda s: opened.extend(
+            n for n in [providers_mod.clear_infra(s, self.provider.id)] if n),
+            f"{self.provider.id} works again")
+        for number in opened:
+            self._try(lambda n=number: self.gh.create_comment(
+                n, f"`{self.provider.id}` works again: a run got a model call through "
+                   f"({self._link()}). Closing this."))
+            self._try(lambda n=number: self.gh.update_issue(n, state="closed"))
+            self.log.append(f"{self.provider.id} works again: closed #{number}")
+
+    def _ask_about_infra(self, streak: int, reason: str) -> None:
+        """After `providers.INFRA_ASK_AFTER` runs in a row that could not work on this
+        subscription, open one issue asking a person to fix it (the bot cannot: a login is a
+        secret, and `.harness/` is not the bot's to change)."""
+        if streak < providers_mod.INFRA_ASK_AFTER:
+            return
+        record = providers_mod.peek_record(self.ctx.store.load(), self.provider.id)
+        if (record.get("infra") or {}).get("issue"):
+            return
+        backoff = providers_mod.INFRA_BACKOFFS[-1]
+        hours = int(backoff.total_seconds() // 3600)
+        login = self.provider.secret or "its login on the machine"
+        body = (f"The last {streak} runs on `{self.provider.id}` ({self.provider.cli}, "
+                f"`{self.provider.model}`) could not work. The last one ({self._link()}) said:\n\n"
+                f"> {reason[:500]}\n\nUntil a run on it gets a model call through, unforced runs "
+                f"try it only once every {hours} hours, and the other subscriptions take its "
+                "work.\n\nTo fix it, a person (the bot cannot change secrets or `.harness/`):\n"
+                f"- renews its login (`{login}`), if the reason is a refused or expired login;\n"
+                "- or switches it off (`\"enabled\": false` in `.harness/providers.json`).\n\n"
+                f"The bot closes this issue by itself once a run on `{self.provider.id}` works "
+                "again.")
+        try:
+            issue = self.gh.create_issue(
+                f"Night bot: `{self.provider.id}` could not work {streak} times in a row", body,
+                labels=["night bot", LABEL_HUMAN])
+        except GitHubError as exc:
+            self.log.append(f"could not open an issue about {self.provider.id}: {exc}")
+            return
+        number = int(issue.get("number") or 0)
+        if number:
+            self.ctx.store.update(lambda s: providers_mod.record(s, self.provider.id).setdefault(
+                "infra", {}).update(issue=number), f"{self.provider.id} infra issue")
+            self.log.append(f"{self.provider.id} could not work {streak} times: opened #{number}")
+
     def _rederive(self) -> None:
         """Work the branch out again from GitHub, whatever the plan file says."""
         number = int(self.plan["number"])
-        if self.plan["action"] == "build":
+        if self.plan["action"] in ("plan", "build"):
             self.plan["branch"] = branch_for_issue(number)
             return
         pull = self.gh.get_pull(number)
@@ -210,7 +293,7 @@ class Deliverer:
         if record.get("stop_requested") and (started is None or stopped is None or stopped >= started):
             self.result.update(status="stopped", reason=f"stopped by @{record.get('stopped_by')}")
             return "stopped"
-        if status in ("approved", "not_approved", "blocked") and (
+        if status in ("approved", "built", "not_approved", "blocked") and (
                 state.get("halted") or self.ctx.repo_halted()):
             self.result.update(status="interrupted", interrupt="halt",
                                reason="the bot was halted before this work could be published")
@@ -219,6 +302,12 @@ class Deliverer:
 
     def _item(self) -> None:
         number = int(self.plan["number"])
+        if self.plan.get("action") == "build" and isinstance(self.result.get("plan"), dict):
+            # The run planned it first: a later run builds from that plan, never plans again.
+            who, tier = self._planner()
+            self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                           planned_tier=tier)
+            self._plan_into_issue(number, who)
         self._deliver_item(number)
         self._keep_handoff(number)
         self._close_asks(number)
@@ -229,6 +318,9 @@ class Deliverer:
             self._closed(number, thread)
             return
         status = self._late_stop(number, str(self.result.get("status")))
+        if self.plan["action"] == "plan":
+            self._planned(number, status)
+            return
         if self.plan["action"] == "review":
             self._second_review(number, status)
             if status not in ("infra", "interrupted", "failed"):
@@ -247,6 +339,73 @@ class Deliverer:
             self._build(number, status)
         self._settle(number)
 
+    def _planned(self, number: int, status: str) -> None:
+        """A planning run's end: its plan is the item's handoff (`_keep_handoff`), and the item
+        goes back to the queue to build from it on the cheapest model its difficulty allows."""
+        if status == "infra":
+            self._infra(number, "build")
+            return
+        if status == "stopped":
+            set_state_label(self.ctx, number, self._labels(number), None)
+            self.gh.create_comment(number, "Stopped, as asked, before any plan was written.")
+            return
+        if status != "planned":
+            if status == "interrupted":
+                self._requeue_label(number, "build")
+                self.gh.create_comment(number, f"Planning was cut short ({self._link()}): "
+                                       f"{self.result.get('reason')}. It stays queued.")
+                return
+            self._fail(number, "build")
+            return
+        who, tier = self._planner()
+        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who, planned_tier=tier)
+        self._requeue_label(number, "build")
+        if self._plan_into_issue(number, who):
+            self.gh.create_comment(number, f"Planned on {who} ({self._link()}). The plan is in "
+                                   "this issue's description, under **Plan**: the builder starts "
+                                   "from that section, so edit it there to change the plan. It "
+                                   "is queued to build, on the cheapest model its difficulty "
+                                   "allows.")
+            return
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        text = redact(str(plan.get("text") or ""))[:PLAN_COMMENT_CHARS]
+        self.gh.create_comment(number, f"Planned on {who} ({self._link()}), but the description "
+                               "could not take the plan, so it is here. It is queued to build "
+                               "from this plan, on the cheapest model its difficulty allows.\n\n"
+                               f"<details><summary>The plan</summary>\n\n{text}\n\n</details>")
+
+    def _planner(self) -> tuple[str, str]:
+        """Who wrote this run's plan, and that model's tier."""
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        seat = plan.get("seat") if isinstance(plan.get("seat"), dict) else {}
+        planner = self.cfg.pool.seat(self.provider.id, str(seat.get("model") or ""))
+        if planner is None:
+            return self.provider.describe(), str(seat.get("tier") or "")
+        return planner.describe(), planner.tier
+
+    def _plan_into_issue(self, number: int, who: str) -> bool:
+        """Put this run's plan into the issue's description, in place of an earlier one, and
+        take the item out of the Needs plan stage. False when the description could not take it."""
+        plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
+        text = redact(str(plan.get("text") or "")).strip()
+        if not text:
+            return False
+        try:
+            thread = self.gh.get_issue(number)
+            self.gh.set_issue_body(number, issueplan.with_plan(thread.get("body"), text, who,
+                                                               self._link()))
+        except GitHubError:
+            return False
+        labels = self._labels(number)
+        try:
+            if LABEL_NEEDS_PLAN in labels:
+                self.gh.remove_label(number, LABEL_NEEDS_PLAN)
+            if LABEL_PLANNED not in labels:
+                self.gh.add_labels(number, [LABEL_PLANNED])
+        except GitHubError:
+            pass  # the next plan job's sync puts the labels right
+        return True
+
     def _closed(self, number: int, thread: dict[str, Any]) -> None:
         """Someone closed the issue or pull request while the run worked on it: its work is not
         pushed, no pull request opens, and nothing queues it again."""
@@ -264,7 +423,7 @@ class Deliverer:
             return
         status = str(self.result.get("status"))
         blocked = LABEL_BLOCKED in self._labels(number)
-        again = not blocked and status in ("interrupted", "infra", "failed")
+        again = not blocked and status in ("interrupted", "infra", "failed", "planned")
         settled: list[str] = []
 
         def change(state: dict[str, Any]) -> None:
@@ -275,7 +434,7 @@ class Deliverer:
                 settled[:] = asks.pop_taken(entry)
 
         self.ctx.store.update(change, f"asks #{number}")
-        answered = not blocked and status in ("approved", "reviewed")
+        answered = not blocked and status in ("approved", "built", "reviewed")
         asks.react(self.gh, settled, asks.DONE if answered else asks.NO_ANSWER)
 
     def _keep_handoff(self, number: int) -> None:
@@ -289,9 +448,11 @@ class Deliverer:
         kept: dict[str, Any] | None = None
         if not finished and isinstance(handoff, dict):
             kept = {"provider": self.provider.id, "family": self.provider.family,
+                    "kind": "plan" if status == "planned" else "work",
                     "at": str(handoff.get("at") or ""),
                     "reason": redact(str(self.result.get("reason") or ""))[:500],
-                    "notes": redact(str(handoff.get("notes") or ""))[-HANDOFF_NOTES:],
+                    "notes": _cut(redact(str(handoff.get("notes") or "")), HANDOFF_NOTES,
+                                  head=status == "planned"),
                     "trail": redact(str(handoff.get("trail") or ""))[-HANDOFF_TRAIL:]}
         def change(state: dict[str, Any]) -> None:
             entry = state_item(state, number)
@@ -327,8 +488,15 @@ class Deliverer:
         reason = str(self.result.get("reason") or NO_RESULT)
         now = iso(self.ctx.now())
         label = requeue or (LABEL_REVISE if kind == "revise" else LABEL_BUILD)
-        self.ctx.store.update(lambda s: providers_mod.note_infra(
-            s, self.provider.id, reason, self.ctx.now()), f"infra {self.provider.id}")
+        # A failure that was not the subscription's (an install red on untouched main, a push
+        # GitHub refused) backs it off but does not lengthen its streak.
+        escalate = not self.result.get("infra_scope")
+        streak: list[int] = []
+        self.ctx.store.update(lambda s: streak.append(providers_mod.note_infra(
+            s, self.provider.id, reason, self.ctx.now(), escalate=escalate)),
+            f"infra {self.provider.id}")
+        if escalate and streak:
+            self._ask_about_infra(streak[-1], reason)
         where = f"on `{self.provider.id}`"
         if not self.result.get("no_result"):
             set_state_label(self.ctx, number, self._labels(number), label)
@@ -449,9 +617,11 @@ class Deliverer:
             self.gh.create_comment(number, f"Stopped, as asked.{kept}")
             return
         approved = status == "approved"
+        built = status == "built"  # no model in the run could review it: a review run will
         pushed, problem = self._publish(approved=approved)
         if problem.startswith("the push was refused"):
-            self.result.update(status="infra", reason=problem, no_result=True)
+            self.result.update(status="infra", reason=problem, no_result=True,
+                               infra_scope="github")
             self._infra(number, "build")
             return
         if problem:
@@ -476,17 +646,19 @@ class Deliverer:
         title = str(self.result.get("title") or self.plan.get("title") or f"Build #{number}")
         pull = self._open_pull()
         if pull is None:
-            pull = self._create_pull(title, branch, body, draft=not approved)
+            pull = self._create_pull(title, branch, body, draft=not (approved or built))
         else:
             self.gh.update_pull(int(pull["number"]), title=title, body=body)
-            if approved and pull.get("draft"):
+            if (approved or built) and pull.get("draft"):
                 self._try(lambda: self.gh.mark_ready(pull["node_id"]))
         pr = int(pull.get("number") or 0)
         if pr:
             self.gh.add_labels(pr, [LABEL_PR, *self._carried(number)])
-            self._remember(pr, issue=number, feedback_since=started, failures=0, kind="revise")
+            self._remember(pr, issue=number, feedback_since=started, failures=0, kind="revise",
+                           difficulty=self._difficulty(number),
+                           self_check_findings=self.result.get("self_check_findings") or [])
         issue_labels = self._labels(number)
-        if approved:
+        if approved or built:
             set_state_label(self.ctx, number, issue_labels, None)
             if LABEL_PR_OPEN not in issue_labels:
                 self.gh.add_labels(number, [LABEL_PR_OPEN])
@@ -501,26 +673,74 @@ class Deliverer:
                 merge_note = ("A comment arrived during the run, so auto-merge waits for the "
                               "revision that answers it.")
             if pr:
-                self._carry_difficult(number, pr)
-                rule = self._approved(pr, str(self.result.get("head") or ""),
-                                      merge=not merge_note)
+                head = str(self.result.get("head") or "")
+                rule = (self._approved(pr, head, merge=not merge_note) if approved
+                        else self._await_review(pr, head, queue=not merge_note))
                 merge_note = merge_note or rule
             cycles = len(self.result.get("cycles") or [])
-            self.gh.create_comment(number, f"Opened #{pr}, built on {self.provider.describe()}. "
-                                   f"Its adversarial reviewer approved it on round {cycles} of "
-                                   f"{self.cfg.max_review_cycles}. {merge_note}")
+            if approved:
+                said = (f"Its adversarial reviewer, {self.review_seat.describe()}, approved it on "
+                        f"round {cycles} of {self.cfg.max_review_cycles}.")
+            else:
+                said = self._self_check_said()
+            if approved:
+                self._unstick(number, pr)
+            self.gh.create_comment(number, f"Opened #{pr}, built on {self.build_seat.describe()}. "
+                                   f"{said} {merge_note}")
             self._remember(number, last_findings=[], question="", failures=0, pr=pr)
         else:
             set_state_label(self.ctx, number, issue_labels, LABEL_BLOCKED)
             if pr and LABEL_REVISE not in self._labels(pr):
                 set_state_label(self.ctx, pr, self._labels(pr), LABEL_BLOCKED)
-            self.gh.create_comment(number, f"After {self.cfg.max_review_cycles} rounds the "
-                                   f"reviewer still had blocking findings, so #{pr} stays a "
-                                   f"draft and will not merge by itself ({self._link()}).\n\n"
-                                   f"{self._findings_md()}\n\nComment `@{self.cfg.bot_login} "
-                                   f"<guidance>` here or on #{pr} to have me try again with your "
-                                   "notes.")
+            stuck = self._mark_stuck(number, pr)
+            self.gh.create_comment(number, f"{self._not_approved_head()}, so #{pr} stays a draft "
+                                   f"and will not merge by itself ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}\n\n{stuck}"
+                                   f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
+                                   "to have me try again with your notes.")
             self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+
+    def _not_approved_head(self) -> str:
+        """The first words of a comment on a build or revision that was not approved: the real
+        round count, and the real reason when it stopped before its last round."""
+        rounds = len(self.result.get("cycles") or [])
+        limit = self.cfg.max_review_cycles
+        if failures.stuck(self.result.get("cycles"), limit):
+            return f"After all {limit} rounds the reviewer still had blocking findings"
+        reason = str(self.result.get("reason") or "no reason recorded")
+        return f"It stopped without an approval after {rounds} of {limit} round(s): {reason}"
+
+    def _why_md(self) -> str:
+        return failures.why(self.result.get("cycles"), self.cfg.max_review_cycles,
+                            str(self.result.get("reason") or ""))
+
+    def _mark_stuck(self, *numbers: int) -> str:
+        """Label a run that used every round `bot:stuck`, for a person to review; the sentence
+        that says so, or "" for one that stopped sooner."""
+        if not failures.stuck(self.result.get("cycles"), self.cfg.max_review_cycles):
+            return ""
+        for number in numbers:
+            if number:
+                self._try(lambda n=number: self.gh.add_labels(n, [LABEL_STUCK]))
+        return (f"Labelled `{LABEL_STUCK}`: it failed every round, so a person should read the "
+                "above before anyone tries again. ")
+
+    def _unstick(self, *numbers: int) -> None:
+        """An approval clears `bot:stuck`."""
+        for number in numbers:
+            if number and LABEL_STUCK in self._labels(number):
+                self._try(lambda n=number: self.gh.remove_label(n, LABEL_STUCK))
+
+    def _self_check_said(self) -> str:
+        """What a change built without a reviewer in its run went through."""
+        rounds = sum(len(c.get("self_check") or []) for c in self.result.get("cycles") or [])
+        open_findings = len(self.result.get("self_check_findings") or [])
+        if not rounds:
+            return "No model on its subscription may review it."
+        if open_findings:
+            return (f"It checked itself {rounds} time(s) and ran out with {open_findings} "
+                    "finding(s) still open, which its reviewer gets.")
+        return f"It checked itself {rounds} time(s), the last one clean; that is not a review."
 
     def _create_pull(self, title: str, branch: str, body: str, *, draft: bool) -> dict[str, Any]:
         try:
@@ -551,16 +771,22 @@ class Deliverer:
             self._remember(number, question=str(question or ""))
             return
         started = self._record(number).get("started_at")
-        if status != "approved":
+        if status == "built" and not bot_pr:
+            # No review run follows on a person's pull request: unreviewed work is not pushed.
+            status = "not_approved"
+        if status not in ("approved", "built"):
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
-            self.gh.create_comment(number, f"My revision did not pass review after "
-                                   f"{self.cfg.max_review_cycles} rounds, so I pushed nothing "
-                                   f"({self._link()}).\n\n{self._findings_md()}")
+            stuck = self._mark_stuck(number)
+            self.gh.create_comment(number, f"I pushed nothing from this revision. "
+                                   f"{self._not_approved_head()} ({self._link()}).\n\n"
+                                   f"{self._findings_md()}\n\n{self._why_md()}"
+                                   + (f"\n\n{stuck}" if stuck else ""))
             self._remember(number, last_findings=self.result.get("findings") or [],
                            feedback_since=started)
             return
-        pushed, problem = self._publish(approved=True)
+        approved = status == "approved"
+        pushed, problem = self._publish(approved=approved)
         if problem:
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
@@ -568,12 +794,15 @@ class Deliverer:
                                    f"{problem}.")
             return
         set_state_label(self.ctx, number, self._labels(number), None)
+        if approved:
+            self._unstick(number)
         report = str(self.result.get("report") or "")[:REPORT_CHARS]
         rerun = not pushed and bool(self._record(number).get("ci_run_id"))
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
-                       question="")
+                       question="",
+                       self_check_findings=self.result.get("self_check_findings") or [])
         note = ""
-        if not pushed:
+        if not pushed and approved:
             note = "\n\nI changed nothing: the reviewer agreed no change was needed."
             if rerun:
                 note += " I asked CI to run the failed jobs again."
@@ -590,48 +819,62 @@ class Deliverer:
             if reviewed and now_head and reviewed != now_head:
                 self._hold_auto_merge()
                 rule = self._approved(number, now_head, merge=not waiting, vote=False)
+            elif not approved:
+                rule = self._await_review(number, reviewed or now_head, queue=not waiting)
             else:
                 if pull.get("draft") and not waiting:
                     self._try(lambda: self.gh.mark_ready(pull["node_id"]))
                 rule = self._approved(number, reviewed or now_head, merge=not waiting)
             merge_note = "" if waiting else "\n\n" + rule
+        said = (f"{self.review_seat.describe()} reviewed it adversarially and approved it"
+                if approved else self._self_check_said())
         self.gh.create_comment(number, f"Revision {'pushed' if pushed else 'done'} "
-                               f"({self._link()}); the adversarial reviewer approved it.{note}\n\n"
-                               f"{report}{merge_note}")
+                               f"({self._link()}) on {self.build_seat.describe()}; {said}{note}"
+                               f"\n\n{report}{merge_note}")
 
-    # ------------------------------------------------------------------ the two-model rule
+    # ------------------------------------------------------------------ the review rule
 
-    def _self_reviewing(self, family: str) -> bool:
-        """True when a model family's own approval is enough to merge (Opus)."""
-        return any(p.self_review for p in self.cfg.pool.ordered() if p.family == family)
+    def _difficulty(self, number: int) -> str:
+        """The item's difficulty: its labels, and what its record carries (a bot PR keeps its
+        issue's)."""
+        return difficulty_of(self._labels(number),
+                             str(self._record(number).get("difficulty") or ""))
 
-    def _rule_met(self, votes: dict[str, Any]) -> bool:
-        """A change merges when its exact head has its builder's model's approval and either
-        that model is enough by itself or a second model approved too, and no model's rejection
-        of that head stands (a model that rejected it and later approved it has withdrawn it)."""
+    def _tier(self, votes: dict[str, Any], family: str) -> str:
+        """The tier a family's vote counts at: as recorded, or, for a vote recorded before tiers,
+        the strongest seat of that family."""
+        tiers = votes.get("tiers") if isinstance(votes.get("tiers"), dict) else {}
+        return str(tiers.get(family) or self.cfg.pool.family_tier(family))
+
+    def _rule_met(self, votes: dict[str, Any], hard: bool = False) -> bool:
+        """A commit ships when one strong model approved it, or two medium models of different
+        families did (not for a hard item), and no model's rejection of it stands (a model that
+        rejected it and later approved it has withdrawn it). Weak votes never count."""
         approvals = set(votes.get("approvals") or [])
         if set(votes.get("rejections") or []) - approvals:
             return False
-        builder = str(votes.get("builder") or "")
-        if builder:
-            return builder in approvals and (self._self_reviewing(builder) or len(approvals) >= 2)
-        return len(approvals) >= 2 or any(self._self_reviewing(f) for f in approvals)
+        tiers = {family: self._tier(votes, family) for family in approvals}
+        if "strong" in tiers.values():
+            return True
+        return not hard and len([f for f, tier in tiers.items() if tier == "medium"]) >= 2
 
     def _vote(self, pr: int, head: str, *, approve: bool, builder: bool) -> dict[str, Any]:
-        """Record this run's verdict on `head`. A new head starts afresh: its builder is this
-        run's model when this run built it, and unknown otherwise."""
-        family = self.provider.family
+        """Record this run's reviewer's verdict on `head`, with its tier. A new head starts
+        afresh: its builder is this run's model when this run built it, and unknown otherwise."""
+        family = self.review_seat.family if self.review_seat else self.provider.family
+        tier = self.review_seat.tier if self.review_seat else "weak"
         votes: dict[str, Any] = {}
 
         def change(state: dict[str, Any]) -> None:
             entry = state_item(state, pr)
             current = dict(entry.get("votes") or {})
             if not head or current.get("sha") != head:
-                current = {"sha": head, "builder": family if builder else "", "approvals": [],
-                           "rejections": []}
+                current = {"sha": head, "builder": self.provider.family if builder else "",
+                           "approvals": [], "rejections": [], "tiers": {}}
             key, other = ("approvals", "rejections") if approve else ("rejections", "approvals")
             current[key] = list(dict.fromkeys([*current.get(key, []), family]))
             current[other] = [f for f in current.get(other, []) if f != family]
+            current["tiers"] = {**(current.get("tiers") or {}), family: tier}
             entry["votes"] = current
             votes.update(current)
 
@@ -640,11 +883,13 @@ class Deliverer:
 
     def _approved(self, pr: int, head: str, *, merge: bool = True, vote: bool = True,
                   builder: bool = True) -> str:
-        """Record this run's approval of `head` on the PR, then turn on auto-merge when the rule
-        is met; otherwise turn it off and queue a second model's review. Returns the line for the
-        comment."""
+        """Record this run's reviewer's approval of `head` on the PR, then turn on auto-merge
+        when the rule is met; otherwise turn it off and queue a review run. Returns the line for
+        the comment."""
         if vote:
-            votes = self._vote(pr, head, approve=True, builder=builder)
+            votes = (self._vote(pr, head, approve=True, builder=builder)
+                     if self.review_seat is not None and self.review_seat.tier != "weak"
+                     else self._vote_reset(pr, head, self.provider.family if builder else ""))
         else:
             votes = self._vote_reset(pr, head)
         if not merge:
@@ -652,53 +897,74 @@ class Deliverer:
         labels = self._labels(pr)
         if LABEL_PR not in labels:
             return ""  # never auto-merge a pull request the bot did not open
-        if self._rule_met(votes):
+        hard = self._difficulty(pr) == "hard"
+        if self._rule_met(votes, hard):
             return self._auto_merge(self.gh.get_pull(pr), expected_head=head)
+        return self._wait_for_review(pr, votes, labels, hard)
+
+    def _await_review(self, pr: int, head: str, *, queue: bool = True) -> str:
+        """A change no model in its run could review: its commit has no vote yet, and it waits
+        for a review run."""
+        votes = self._vote_reset(pr, head, self.provider.family)
+        if not queue:
+            self._hold_auto_merge(pr)
+            return ""
+        labels = self._labels(pr)
+        if LABEL_PR not in labels:
+            return "A person reviews it."
+        return self._wait_for_review(pr, votes, labels, self._difficulty(pr) == "hard")
+
+    def _wait_for_review(self, pr: int, votes: dict[str, Any], labels: set[str],
+                         hard: bool) -> str:
         self._hold_auto_merge(pr)
         set_state_label(self.ctx, pr, labels, LABEL_CROSS)
         self._remember(pr, queued_at=iso(self.ctx.now()))
-        who = (f"`{votes.get('builder')}` built and approved it" if votes.get("builder")
-               else "Its head has not been approved by the model that built it")
-        line = (f"{who}, so it waits for a second model's review (`{LABEL_CROSS}`) before "
-                "auto-merge turns on.")
-        if not self._other_family_set_up(str(votes.get("builder") or ""),
-                                         low_tier_only=LABEL_SHITTER in {
-                                             name.lower() for name in labels}):
-            line += (" No subscription of another model family is set up, so it waits for you "
-                     "to merge it, or for one to be set up.")
+        approvals = [f for f in votes.get("approvals") or []]
+        if approvals:
+            who = ", ".join(f"`{f}` ({self._tier(votes, f)})" for f in approvals)
+            have = f"{who} approved it"
+        else:
+            have = "No model has reviewed it yet"
+        need = ("a strong model's review (Opus), since it is difficulty:hard" if hard else
+                "one strong model's review (Opus), or a medium one from a family that has not "
+                "approved it yet" if approvals else
+                "one strong model's review (Opus), or two medium ones of different families")
+        line = f"{have}, so it waits for {need} (`{LABEL_CROSS}`) before auto-merge turns on."
+        if not self._reviewer_set_up(votes, hard):
+            line += (" No subscription that could give that review is set up, so it waits for "
+                     "you to merge it, or for one to be set up.")
         return line
 
-    def _vote_reset(self, pr: int, head: str) -> dict[str, Any]:
-        """A head no model reviewed (someone pushed during the run): its votes start empty."""
-        votes = {"sha": head, "builder": "", "approvals": [], "rejections": []}
+    def _vote_reset(self, pr: int, head: str, builder: str = "") -> dict[str, Any]:
+        """A head no model reviewed (someone pushed during the run, or no model here may
+        review): its votes start empty."""
+        votes = {"sha": head, "builder": builder, "approvals": [], "rejections": [], "tiers": {}}
         self._remember(pr, votes=votes)
         return votes
 
-    def _other_family_set_up(self, family: str, low_tier_only: bool = False) -> bool:
-        """Whether another model family may give the second review: for a `shitter` pull
-        request, only a low-tier one (#96)."""
+    def _reviewer_set_up(self, votes: dict[str, Any], hard: bool) -> bool:
+        """Whether any set-up subscription could give the review still missing: a strong seat,
+        or (not for a hard item) a medium one of a family that has not approved yet."""
         secrets = self.cfg.secrets
-        return any(p.enabled and p.family != family and "review" in p.roles
-                   and (p.login == "machine" or secrets.has(p.secret) is not False)
-                   and not (low_tier_only and providers_mod.model_tier(p.model)
-                            == providers_mod.HIGH_TIER)
-                   for p in self.cfg.pool.ordered())
+        approved = set(votes.get("approvals") or [])
+        for provider in self.cfg.pool.ordered():
+            if not (provider.enabled and "review" in provider.roles
+                    and (provider.login == "machine" or secrets.has(provider.secret) is not False)):
+                continue
+            for seat in self.cfg.pool.seats(provider):
+                if seat.tier == "strong" or (not hard and seat.tier == "medium"
+                                             and seat.family not in approved):
+                    return True
+        return False
 
     def _carried(self, issue: int) -> list[str]:
-        """The issue's labels its pull request starts with, approved or a draft: `shitter`, so
-        no high-tier model revises or second-reviews it (#96), and its priority tier (#90)."""
+        """The issue's labels its pull request starts with, approved or a draft: its difficulty,
+        so the same models revise and review it, and its priority tier (#90)."""
         return sorted(name for name in self._labels(issue)
-                      if name.lower() in {LABEL_SHITTER, *PRIORITY_TIERS})
-
-    def _carry_difficult(self, issue: int, pr: int) -> None:
-        """A `difficult` issue's pull request stays Opus-only for its revisions."""
-        label = self.cfg.pool.difficult_label
-        if label in self._labels(issue):
-            self.gh.add_labels(pr, [label])
-            self._remember(pr, difficult=True)
+                      if name.lower() in {*DIFFICULTY_LABELS, *PRIORITY_TIERS})
 
     def _second_review(self, number: int, status: str) -> None:
-        """Act on a second model's verdict on a bot pull request."""
+        """Act on a review run's verdict on a bot pull request."""
         record = self._record(number)
         if status == "infra":
             self._infra(number, "review", requeue=LABEL_CROSS)
@@ -827,16 +1093,27 @@ class Deliverer:
             what = "is not protected" if required is None else f"does not require {missing}"
             return self._hand_to_a_person(
                 pull, f"`{self.cfg.default_branch}` {what}, so auto-merge would not wait for CI")
+        headline = self._merge_title(pull)
         error = self._try(lambda: self.gh.enable_auto_merge(pull["node_id"], self.cfg.merge_method,
-                                                            expected_head))
+                                                            expected_head, headline))
         if not error:
             return "Auto-merge is on: it merges when every required check passes."
         if "clean status" in error.lower():
             # Every required check has already passed, so GitHub will not wait; merge it now.
-            merged = self._try(lambda: self.gh.merge_pull(int(pull["number"]), self.cfg.merge_method))
+            merged = self._try(lambda: self.gh.merge_pull(int(pull["number"]), self.cfg.merge_method,
+                                                          headline))
             if not merged:
                 return "Every required check had already passed, so I merged it."
         return self._hand_to_a_person(pull, f"GitHub refused it ({error})")
+
+    def _merge_title(self, pull: dict[str, Any]) -> str:
+        """The squash commit's title: the pull request's, as GitHub writes it for a pull request of
+        several commits. Without it a one-commit pull request lands on `main` under the bot's own
+        commit message ("bot: build pass 1 for #85")."""
+        title = str(pull.get("title") or "").strip()
+        if self.cfg.merge_method != "squash" or not title:
+            return ""
+        return f"{title} (#{pull.get('number')})"
 
     def _rerun_ci(self, number: int) -> None:
         run_id = self._record(number).get("ci_run_id")
@@ -865,15 +1142,16 @@ class Deliverer:
                 parts.append("\nNotes the reviewer left (not blocking):\n")
                 parts += [f"- `{f.get('where')}`: {f.get('claim')}" for f in notes[:20]]
         else:
-            parts.append("### Not approved\n\nThe reviewer still had blocking findings after "
-                         f"{len(cycles)} rounds, so this is a draft and will not merge by itself.")
+            parts.append(f"### Not approved\n\n{self._not_approved_head()}, so this is a draft "
+                         "and will not merge by itself.")
             parts.append("")
             parts.append(self._findings_md())
         rows = ["| Round | Builder | Checks | Review |", "|---|---|---|---|"]
         for c in cycles:
             builder = c.get("builder") or {}
             checks = c.get("gates") or []
-            red = [g["name"] for g in checks if not g.get("ok") and not g.get("pre_existing")]
+            red = [g["name"] for g in checks if not g.get("ok") and not g.get("pre_existing")
+                   and not g.get("inconclusive")]
             verdict = (c.get("review") or {}).get("verdict", "-")
             blocking = len([f for f in (c.get("review") or {}).get("findings") or []
                             if f.get("severity") == "blocking"])
@@ -881,7 +1159,8 @@ class Deliverer:
                         f"{'red: ' + ', '.join(red) if red else 'green'} | {verdict}"
                         f"{f' ({blocking} blocking)' if blocking else ''} |")
         results = [gates_mod.GateResult(**{k: g.get(k) for k in (
-            "name", "run", "ok", "exit_code", "seconds", "tail", "pre_existing", "skipped")})
+            "name", "run", "ok", "exit_code", "seconds", "tail", "pre_existing", "skipped",
+            "inconclusive")})
             for g in self.result.get("gates") or []]
         parts += ["", "<details><summary>Rounds and checks</summary>", "", *rows, "",
                   gates_mod.table(results), "", "</details>", ""]

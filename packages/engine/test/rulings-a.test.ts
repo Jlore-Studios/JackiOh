@@ -660,7 +660,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(victim.zone).toEqual({ z: "graveyard", player: "p1" });
   });
 
-  it("R640 routes every later departure by a field card's current owner", () => {
+  it("R659 routes every later departure by a field card's current owner", () => {
     for (const zone of ["hand", "library", "graveyard", "exile"] as const) {
       const state = game(`r611-${zone}`);
       const victim = put(state, body.id, slot("p2", "units", 2));
@@ -909,7 +909,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
     expect(whyCannotAttack(state, unit, { kind: "hero", player: "p2" })).toBeNull();
   });
 
-  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
     expect([...RANDOM_KEYWORD_POOL]).toEqual([
       "Taunt",
       "Armor 1",
@@ -923,6 +923,7 @@ describe("SPEC §11 rulings R1–R42 (M3 gate)", () => {
       "Trample",
       "Cleave",
       "Pierce",
+      "Windfury",
     ]);
 
     const state = game("r21");

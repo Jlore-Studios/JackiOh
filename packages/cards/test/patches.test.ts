@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0", "v0.2.1"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.4"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.1");
+    expect(CATALOG_VERSION).toBe("v0.2.4");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -70,8 +70,8 @@ describe("R388 card patch history (B4.2)", () => {
     // v0.1.0: the initial commit, Core as first built, 100 cards and 9 tokens.
     expect(idsOf("v0.1.0", "added")).toHaveLength(109);
     expect(changesOf("v0.1.0")).toHaveLength(109);
-    // v0.1.0-r1: #3, #68's name, #81 (twice), the Rush, Sheep, Felinor and Bread Tokens' Radiant faces.
-    expect(idsOf("v0.1.0-r1", "changed")).toEqual([
+    // v0.1.0b: #3, #68's name, #81 (twice), the Rush, Sheep, Felinor and Bread Tokens' Radiant faces.
+    expect(idsOf("v0.1.0b", "changed")).toEqual([
       "core-003",
       "core-068",
       "core-081",
@@ -80,11 +80,11 @@ describe("R388 card patch history (B4.2)", () => {
       "core-t-felinor",
       "core-t-bread",
     ]);
-    // v0.1.0-r2: #95's text; The Coin added.
-    expect(idsOf("v0.1.0-r2", "changed")).toEqual(["core-095"]);
-    expect(idsOf("v0.1.0-r2", "added")).toEqual(["core-t-coin"]);
-    // v0.1.0-r3: the Radiant pass, 99 entries.
-    expect(idsOf("v0.1.0-r3", "changed")).toHaveLength(99);
+    // v0.1.0c: #95's text; The Coin added.
+    expect(idsOf("v0.1.0c", "changed")).toEqual(["core-095"]);
+    expect(idsOf("v0.1.0c", "added")).toEqual(["core-t-coin"]);
+    // v0.1.0d: the Radiant pass, 99 entries.
+    expect(idsOf("v0.1.0d", "changed")).toHaveLength(99);
     // v0.1.1: the Ghoul Token added and 105 entries changed.
     expect(idsOf("v0.1.1", "added")).toEqual(["core-t-ghoul"]);
     expect(idsOf("v0.1.1", "changed")).toHaveLength(105);
@@ -115,9 +115,20 @@ describe("R388 card patch history (B4.2)", () => {
     expect(after["core-098"]?.["loc"]).toBe(CATALOG["core-098"]?.loc);
   });
 
+  it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
+    expect(idsOf("v0.2.4", "added")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "removed")).toHaveLength(0);
+    expect(idsOf("v0.2.4", "changed")).toHaveLength(22);
+    expect(
+      changesOf("v0.2.4").every(
+        (change) => change.kind === "changed" && change.fields.every((f) => f === "base.text" || f === "radiant.text"),
+      ),
+    ).toBe(true);
+  });
+
   it("R388 indexes each card by the versions that added or changed it", () => {
     const index = buildIndex(PATCHES);
-    expect(index["core-t-coin"]?.[0]).toBe("v0.1.0-r2");
+    expect(index["core-t-coin"]?.[0]).toBe("v0.1.0c");
     expect(index["core-t-ghoul"]?.[0]).toBe("v0.1.1");
     expect(index["classic-001"]).toEqual(["v0.2.0"]);
     expect(index["core-016"]).toContain("v0.2.0");
@@ -129,16 +140,16 @@ describe("R388 card patch history (B4.2)", () => {
 // R375: issue #39's first build of the history was replaced by R388's when the two met on main, and
 // what both agreed on is held here: the versions before v0.2.0, their order, and the cards they hold.
 describe("R375 issue #39's versions of the patch history", () => {
-  it("R375 keeps v0.1.0, v0.1.0-r1, v0.1.0-r2, v0.1.0-r3 and v0.1.1, in that order, before v0.2.0", () => {
-    expect(VERSIONS.slice(0, VERSIONS.indexOf("v0.2.0"))).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1"]);
+  it("R375 keeps v0.1.0, v0.1.0b, v0.1.0c, v0.1.0d and v0.1.1, in that order, before v0.2.0", () => {
+    expect(VERSIONS.slice(0, VERSIONS.indexOf("v0.2.0"))).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1"]);
   });
 
-  it("R375 has v0.1.0 as 100 cards and 9 tokens, and The Coin first in v0.1.0-r2", () => {
+  it("R375 has v0.1.0 as 100 cards and 9 tokens, and The Coin first in v0.1.0c", () => {
     const first = Object.values(readSnapshot("v0.1.0"));
     const tokens = first.filter((def) => def.token === true || (Array.isArray(def.tags) && def.tags.includes("Token")));
     expect(first.length - tokens.length).toBe(100);
     expect(tokens).toHaveLength(9);
     expect(readSnapshot("v0.1.0")["core-t-coin"]).toBeUndefined();
-    expect(readSnapshot("v0.1.0-r2")["core-t-coin"]).toBeDefined();
+    expect(readSnapshot("v0.1.0c")["core-t-coin"]).toBeDefined();
   });
 });

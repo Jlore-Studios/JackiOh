@@ -17,7 +17,7 @@
 //   - R352: Stitching's two chained Discovers, fused per R77 at the fused cost.
 //   - R384: the Activate machinery the powers run through — the refusal that is also the list, the
 //     mana price, the declared target, once per turn, the `activated` event.
-//   - R632–R639, patch v0.2.1's rows: Armor Up and Tank Up's Armor, Tank Up's refresh, Die Insect's
+//   - R651–R658, patch v0.2.1's rows: Armor Up and Tank Up's Armor, Tank Up's refresh, Die Insect's
 //     Lucky pick, Ping's Pierce and kill rider, Life Tap's damage and Radiant draw, Steady Shot's
 //     permanent upgrade, Terminus Tricks' pool, and the KY Brainstorm and Pluck pools.
 //
@@ -130,23 +130,23 @@ function token(base: CardDef, index: string): CardDef {
 
 /** §7's Felinor Token, which Cat Cafe summons by index. It is a Felinor, so a Felinor pool must leave it out. */
 const felinorToken = token(unit("felinor-token", 1, 1, { tags: ["Felinor"] }), FELINOR_TOKEN_INDEX);
-/** §7's Ghoul Token, whose X/X Radiant Ping sets from the Unit it killed (R635). */
+/** §7's Ghoul Token, whose X/X Radiant Ping sets from the Unit it killed (R654). */
 const ghoulToken = token(unit("ghoul-token", 1, 1), GHOUL_TOKEN_INDEX);
 /** Radiant Cat Cafe's "random Felinor": the one non-token Felinor Unit, in another set (R380). */
 const felinor = unit("felinor", 2, 3, { tags: ["Felinor"], cost: 2, set: "Classic" });
-/** KY Brainstorm's pool (R639): one KY card, a Spell, so the discount reaches it too. */
+/** KY Brainstorm's pool (R658): one KY card, a Spell, so the discount reaches it too. */
 const KY_SPELL_COST = 3;
 const kySpell = def("ky-spell", "Spell", { tags: ["KY"], cost: KY_SPELL_COST, set: "Classic" });
-/** Pluck's pool (R639, R382): a Fruit card and a Grape, a Fruit token the pool holds too. */
+/** Pluck's pool (R658, R382): a Fruit card and a Grape, a Fruit token the pool holds too. */
 const fruit = def("fruit", "Spell", { tags: ["Fruit"], cost: 3, set: "Classic+" });
 const grape = token(def("grape", "Spell", { tags: ["Fruit"] }), "T-grape");
-/** Terminus Tricks' pool (R638): a Trap and a Field Trap, of two sets. The fixture catalog has no other. */
+/** Terminus Tricks' pool (R657): a Trap and a Field Trap, of two sets. The fixture catalog has no other. */
 const trap = def("trap", "Trap", { set: "Classic" });
 const fieldTrap = def("field-trap", "Field Trap", { cost: 2, set: "Classic+" });
 /** A Spell KY Brainstorm discounts. */
 const CHEAP_SPELL_COST = 2;
 const cheapSpell = def("cheap-spell", "Spell", { cost: CHEAP_SPELL_COST });
-/** A 3/3 with Armor 2, which Ping's Pierce ignores (R635). */
+/** A 3/3 with Armor 2, which Ping's Pierce ignores (R654). */
 const armored = def("armored", "Unit", {
   base: { attack: 3, health: 3, keywords: [{ kind: "Armor", n: 2 }], text: "Armor 2" },
   radiant: { attack: 6, health: 6, keywords: [{ kind: "Armor", n: 2 }], text: "Armor 2" },
@@ -740,7 +740,7 @@ describe("Heroic Power: playing it and activating its power (R43, R103, R384)", 
 // The powers, base and Radiant.
 // ---------------------------------------------------------------------------
 
-describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", () => {
+describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R654, R655)", () => {
   it("R43 Expedition Map recruits a permanent, and the Radiant face makes it Radiant", () => {
     for (const radiant of [false, true]) {
       const state = playing(`recruit-${radiant}`);
@@ -756,7 +756,7 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     }
   });
 
-  it("R636 Life Tap draws 1, then deals 2 ordinary damage to its own hero", () => {
+  it("R655 Life Tap draws 1, then deals 2 ordinary damage to its own hero", () => {
     const state = playing("life-tap");
     const card = powered(state, "draw");
     setLibrary(state, "p1", [plain.id, stockpile.id]);
@@ -782,7 +782,7 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     expect(tapped.players.p1.hero.health).toBe(HERO_HEALTH - (LIFE_TAP_DAMAGE - 1));
   });
 
-  it("R636 Radiant Life Tap draws its own top card and the opponent's, which becomes its own, and deals no damage", () => {
+  it("R655 Radiant Life Tap draws its own top card and the opponent's, which becomes its own, and deals no damage", () => {
     const state = playing("life-tap-radiant");
     const card = powered(state, "draw", { radiant: true });
     const [ownTop] = setLibrary(state, "p1", [plain.id, bigBody.id]);
@@ -801,7 +801,7 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     expect(eventsOfType(events, "damage")).toEqual([]);
   });
 
-  it("R635 Ping deals 1 Pierce damage to the declared target, a unit or a hero on either side, and never asks", () => {
+  it("R654 Ping deals 1 Pierce damage to the declared target, a unit or a hero on either side, and never asks", () => {
     const state = playing("ping");
     const card = powered(state, "ping");
     const target = put(state, armored.id, slot("p2", "units", 1));
@@ -828,7 +828,7 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     expect(refused.state.pending).toBeNull();
   });
 
-  it("R635 Radiant Ping that kills a Unit summons a Ghoul Token for its player with the Unit's attack and max health", () => {
+  it("R654 Radiant Ping that kills a Unit summons a Ghoul Token for its player with the Unit's attack and max health", () => {
     const state = playing("ping-kill");
     const card = powered(state, "ping", { radiant: true });
     const victim = put(state, plain.id, slot("p2", "units", 2));
@@ -848,12 +848,12 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     const ghoul = must(ghouls[0], "the Ghoul");
     expect(ghoul.controller).toBe("p1");
     expect(unitView(after, ghoul)).toMatchObject({ attack: view.attack, health: view.maxHealth, maxHealth: view.maxHealth });
-    // The Ghoul follows the death (R635: the rider reads the hit's state check).
+    // The Ghoul follows the death (R654: the rider reads the hit's state check).
     const types = events.map((event) => event.type);
     expect(types.indexOf("destroyed")).toBeLessThan(types.lastIndexOf("summoned"));
   });
 
-  it("R635 no Ghoul without a Ping kill: a Unit that survives, a hero, or the base face's kill", () => {
+  it("R654 no Ghoul without a Ping kill: a Unit that survives, a hero, or the base face's kill", () => {
     const survives = playing("ping-survives");
     const radiantPing = powered(survives, "ping", { radiant: true });
     const sturdy = put(survives, plain.id, slot("p2", "units", 1));
@@ -874,7 +874,7 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
     expect(activeUnitsOf(killed.state, "p1")).toEqual([]);
   });
 
-  it("R635 a Death prompt the Ping kill opens is answered before the Ghoul is made", () => {
+  it("R654 a Death prompt the Ping kill opens is answered before the Ghoul is made", () => {
     const state = playing("ping-death");
     registerCatalog({ ...registeredCatalog(), [mourner.id]: mourner, [logCard.id]: logCard });
     registerScripts({
@@ -899,8 +899,8 @@ describe("Heroic Power: Expedition Map, Life Tap and Ping (R43, R635, R636)", ()
   });
 });
 
-describe("Heroic Power: Steady Shot, Ranching, Cat Cafe (R103, R637)", () => {
-  it("R637 Steady Shot deals its shot, 2 on the base face, to the enemy hero, the same each turn", () => {
+describe("Heroic Power: Steady Shot, Ranching, Cat Cafe (R103, R656)", () => {
+  it("R656 Steady Shot deals its shot, 2 on the base face, to the enemy hero, the same each turn", () => {
     let state = playing("steady");
     const card = powered(state, "burn");
     const shot = paramValue(state, card, STEADY_SHOT_PARAM);
@@ -916,10 +916,10 @@ describe("Heroic Power: Steady Shot, Ranching, Cat Cafe (R103, R637)", () => {
     expect(state.players.p1.hero.health).toBe(HERO_HEALTH);
   });
 
-  it("R637 Radiant Steady Shot upgrades its shot by 2 permanently after each hit: 4, then 6, then 8", () => {
+  it("R656 Radiant Steady Shot upgrades its shot by 2 permanently after each hit: 4, then 6, then 8", () => {
     let state = playing("steady-radiant");
     const card = powered(state, "burn", { radiant: true });
-    // SPEC R637: 4 on the Radiant face, and each activation adds 2 after it hits.
+    // SPEC R656: 4 on the Radiant face, and each activation adds 2 after it hits.
     const shots = [4, 6, 8];
     let health = HERO_HEALTH;
     for (const [turn, shot] of shots.entries()) {
@@ -1073,8 +1073,8 @@ describe("Heroic Power: Witness Value and Stitching (R103, R352)", () => {
   });
 });
 
-describe("Heroic Power: Armor Up and Tank Up (R632, R633)", () => {
-  it("R632 Armor Up gives its hero 2 Armor until the start of its controller's next turn, held through the opponent's", () => {
+describe("Heroic Power: Armor Up and Tank Up (R651, R652)", () => {
+  it("R651 Armor Up gives its hero 2 Armor until the start of its controller's next turn, held through the opponent's", () => {
     let state = playing("armor-up");
     const card = powered(state, "armor");
     state = act(state, use(card)).state;
@@ -1107,7 +1107,7 @@ describe("Heroic Power: Armor Up and Tank Up (R632, R633)", () => {
     expect(removed).toBeLessThan(refreshed);
   });
 
-  it("R632 Tank Up's 4 Armor is the hero's for the rest of the game, past the start of its next turn", () => {
+  it("R651 Tank Up's 4 Armor is the hero's for the rest of the game, past the start of its next turn", () => {
     let state = playing("tank-up-armor");
     const card = powered(state, "armor", { radiant: true });
     state = act(state, use(card)).state;
@@ -1119,7 +1119,7 @@ describe("Heroic Power: Armor Up and Tank Up (R632, R633)", () => {
     expect(heroArmorOf(state, "p1")).toBe(ARMOR_UP.radiant);
   });
 
-  it("R633 Tank Up refreshes the power into one of the other twelve, uniformly from the match rng", () => {
+  it("R652 Tank Up refreshes the power into one of the other twelve, uniformly from the match rng", () => {
     const others = HERO_POWER_NAMES.filter((name) => name !== "armor");
     const seen = new Set<string>();
     for (let seed = 0; seed < 8; seed += 1) {
@@ -1135,7 +1135,7 @@ describe("Heroic Power: Armor Up and Tank Up (R632, R633)", () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it("R633 after a refresh the use stays spent, and the new power is the card's to use next turn", () => {
+  it("R652 after a refresh the use stays spent, and the new power is the card's to use next turn", () => {
     const state = playing("tank-up-refresh");
     const card = powered(state, "armor", { radiant: true });
     const after = act(state, use(card)).state;
@@ -1158,10 +1158,10 @@ describe("Heroic Power: Armor Up and Tank Up (R632, R633)", () => {
   });
 });
 
-describe("Heroic Power: Die Insect (R634)", () => {
+describe("Heroic Power: Die Insect (R653)", () => {
   type InsectPick = { kind: "hero" } | { kind: "unit"; unit: CardInstance };
 
-  /** R634's pool: the enemy Units acting on the field, in board order, then the enemy hero. */
+  /** R653's pool: the enemy Units acting on the field, in board order, then the enemy hero. */
   function insectPool(state: GameState): InsectPick[] {
     return [...activeUnitsOf(state, "p2").map((entry): InsectPick => ({ kind: "unit", unit: entry })), { kind: "hero" }];
   }
@@ -1170,13 +1170,13 @@ describe("Heroic Power: Die Insect (R634)", () => {
     return pick.kind === "hero" ? "hero-p2" : pick.unit.id;
   }
 
-  /** R634's order, written from the row: lethal hero, a Unit the hit destroys, a non-lethal hero, a surviving Unit. */
+  /** R653's order, written from the row: lethal hero, a Unit the hit destroys, a non-lethal hero, a surviving Unit. */
   function rank(state: GameState, pick: InsectPick): number {
     if (pick.kind === "hero") return DIE_INSECT_DAMAGE >= state.players.p2.hero.health ? 3 : 1;
     return DIE_INSECT_DAMAGE >= unitView(state, pick.unit).health ? 2 : 0;
   }
 
-  /** R634: the better of two picks; two Units of one rank by attack plus health (the scenarios need no deeper tie-break). */
+  /** R653: the better of two picks; two Units of one rank by attack plus health (the scenarios need no deeper tie-break). */
   function better(state: GameState, a: InsectPick, b: InsectPick): InsectPick {
     if (rank(state, a) !== rank(state, b)) return rank(state, a) > rank(state, b) ? a : b;
     if (a.kind !== "unit" || b.kind !== "unit") return a;
@@ -1199,7 +1199,7 @@ describe("Heroic Power: Die Insect (R634)", () => {
     return { state, card };
   }
 
-  it("R634 Die Insect deals 8 damage to one pick, uniform over the enemy hero and the enemy Units", () => {
+  it("R653 Die Insect deals 8 damage to one pick, uniform over the enemy hero and the enemy Units", () => {
     const scenario = SCENARIOS[1] as Scenario;
     const reached = new Set<string>();
     for (let seed = 0; seed < 12; seed += 1) {
@@ -1222,7 +1222,7 @@ describe("Heroic Power: Die Insect (R634)", () => {
     expect(alone.players.p2.hero.health).toBe(HERO_HEALTH - DIE_INSECT_DAMAGE);
   });
 
-  it("R634 Radiant Die Insect's Lucky 1 draws a second pick and keeps the better: lethal hero, destroyed Unit, hero, surviving Unit", () => {
+  it("R653 Radiant Die Insect's Lucky 1 draws a second pick and keeps the better: lethal hero, destroyed Unit, hero, surviving Unit", () => {
     for (const scenario of SCENARIOS) {
       let luckyChanged = 0;
       for (let seed = 0; seed < 24; seed += 1) {
@@ -1247,8 +1247,8 @@ describe("Heroic Power: Die Insect (R634)", () => {
   });
 });
 
-describe("Heroic Power: KY Brainstorm, Pluck and Terminus Tricks (R638, R639)", () => {
-  it("R639 KY Brainstorm adds a random KY card, then discounts every non-X Spell in hand by 1, the new one included", () => {
+describe("Heroic Power: KY Brainstorm, Pluck and Terminus Tricks (R657, R658)", () => {
+  it("R658 KY Brainstorm adds a random KY card, then discounts every non-X Spell in hand by 1, the new one included", () => {
     for (const radiant of [false, true]) {
       const state = playing(`brainstorm-${radiant}`);
       const card = powered(state, "brainstorm", { radiant });
@@ -1270,7 +1270,7 @@ describe("Heroic Power: KY Brainstorm, Pluck and Terminus Tricks (R638, R639)", 
     }
   });
 
-  it("R639 Pluck adds a random Fruit, the Grape tokens included (R382), which costs (0), Radiant on the Radiant face", () => {
+  it("R658 Pluck adds a random Fruit, the Grape tokens included (R382), which costs (0), Radiant on the Radiant face", () => {
     const seen = new Set<string>();
     for (let seed = 0; seed < 12; seed += 1) {
       const radiant = seed % 2 === 1;
@@ -1288,7 +1288,7 @@ describe("Heroic Power: KY Brainstorm, Pluck and Terminus Tricks (R638, R639)", 
     expect([...seen].sort()).toEqual([fruit.id, grape.id].sort());
   });
 
-  it("R638 Terminus Tricks Discovers a Trap or Field Trap of any set and summons the pick face-down into its backrow", () => {
+  it("R657 Terminus Tricks Discovers a Trap or Field Trap of any set and summons the pick face-down into its backrow", () => {
     for (const [radiant, pickId] of [
       [false, trap.id],
       [true, fieldTrap.id],
@@ -1313,7 +1313,7 @@ describe("Heroic Power: KY Brainstorm, Pluck and Terminus Tricks (R638, R639)", 
     }
   });
 
-  it("R638 Terminus Tricks with no open backrow zone summons nothing and the activation still resolves", () => {
+  it("R657 Terminus Tricks with no open backrow zone summons nothing and the activation still resolves", () => {
     const state = playing("terminus-full");
     const card = powered(state, "terminus");
     for (let lane = 2; lane <= 5; lane += 1) put(state, filler.id, slot("p1", "backrow", lane));

@@ -67,7 +67,7 @@ const LIBRARY = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, 
  * Rush (Fed Fauci) or has no keyword at all (Gravedigger): the pool order and the first rng draw are
  * the same in each scenario below (re-entry.test.ts uses it the same way).
  */
-const REBORN_SEED = "re-entry-reborn-token-10"; // R346 put Pierce in the pool, which moved the roll off "-4".
+const REBORN_SEED = "re-entry-reborn-token-31"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19".
 
 const at = (card: CardInstance): Selection[] => [{ pick: "instance", instanceId: card.id }];
 

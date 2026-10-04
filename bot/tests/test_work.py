@@ -44,6 +44,42 @@ GATES = [{"name": "rules exist", "run": "test -f src/game.txt", "timeout_minutes
          {"name": "no broken file", "run": "test ! -f broken.txt", "timeout_minutes": 1}]
 
 
+class MachineGateTests(unittest.TestCase):
+    """On the bot's machine a run runs only the checks marked for it; CI runs the rest."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.origin, self.clone = make_origin(self.root)
+        gates = [GATES[0], {**GATES[1], "machine": False}]
+        self.cfg = make_config(gates=gates, install={"run": "true", "timeout_minutes": 1})
+
+    def worker(self, runs_on: str) -> Worker:
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "runs_on": runs_on}
+        return Worker(self.cfg, plan, FakeRunner({}), self.clone, self.root / runs_on,
+                      self.root / f"out-{runs_on}")
+
+    def test_the_machine_leaves_heavy_checks_to_ci(self):
+        self.assertEqual([g.machine for g in self.cfg.gates], [True, False])
+        on_machine = self.worker("night-vm-gpt")
+        self.assertEqual([g.name for g in on_machine.gates], ["rules exist"])
+        text = on_machine._gate_list()
+        self.assertIn("- rules exist:", text)
+        self.assertNotIn("- no broken file:", text)
+        self.assertIn("leaves no broken file (`test ! -f broken.txt`) to CI", text)
+        self.assertIn("pnpm vitest run <test file>", text)
+        on_github = self.worker("ubuntu-latest")
+        self.assertEqual([g.name for g in on_github.gates], ["rules exist", "no broken file"])
+        self.assertNotIn("shared machine", on_github._gate_list())
+
+    def test_the_committed_checks(self):
+        cfg = make_config()
+        machine = {g.name: g.machine for g in cfg.gates}
+        self.assertEqual(machine, {"lint": False, "typecheck": True, "catalog": True,
+                                   "card tests exist": True, "rulings coverage": True,
+                                   "related tests": False})
+
+
 class WorkTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
@@ -64,6 +100,49 @@ class WorkTests(unittest.TestCase):
             git(self.root, "clone", "-q", str(self.origin), str(check))
         git(check, "fetch", "-q", str(self.out / "branch.bundle"), f"refs/heads/{branch}:refs/heads/got")
         return git(check, "rev-parse", "got")
+
+    def test_a_fresh_reading_without_headroom_stops_a_build_before_any_model_work(self):
+        """`cmd_work` pings a capped Claude account before the run. claude-2's 5-hour cap is
+        90% and a build starts only under 75% (`start_headroom`)."""
+        runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
+                             "review": reviewer(APPROVE)})
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        worker = self.worker(runner, plan)
+        worker.start_usage = {"status": "allowed", "five_hour": {
+            "utilization": 0.8, "resets_at": "2099-01-01T00:00:00Z"}}
+        result = worker.run()
+        self.assertEqual(result["interrupt"], "usage")
+        self.assertIn("too close to its 90% cap to start a build (it starts under 75%)",
+                      result["reason"])
+        self.assertEqual(runner.calls, [])
+        self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.8)
+
+    def test_a_call_stopped_past_the_cap_stops_the_run(self):
+        """Every call of a capped subscription carries the caps (`usage_stop`); the runner's
+        stop ends the run as a usage stop, its work kept for the next run."""
+        asked = {}
+
+        def stopped(request):
+            later = {"utilization": 0.95, "resets_at": "2099-01-01T00:00:00Z"}
+            asked["at 95%"] = request.usage_stop({"five_hour": later})
+            asked["at 50%"] = request.usage_stop({"five_hour": {**later, "utilization": 0.5}})
+            return RunResult(False, "", extra={"usage_stop": asked["at 95%"]})
+
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        result = self.worker(FakeRunner({"build": stopped}), plan).run()
+        self.assertIn("at or over its 90% cap", asked["at 95%"])
+        self.assertIsNone(asked["at 50%"])
+        self.assertEqual(result["interrupt"], "usage")
+        self.assertIn("`claude-2` stops mid-call: 5-hour usage is 95%", result["reason"])
+        # An uncapped subscription's calls carry nothing to watch.
+        plain = {}
+        def unwatched(request):
+            plain["stop"] = request.usage_stop
+            return builder({"src/game.txt": "rules v2\n"})(request)
+        self.worker(FakeRunner({"build": unwatched, "review": reviewer(APPROVE)})).run()
+        self.assertIsNone(plain["stop"])
 
     def test_approved_on_the_first_round(self):
         runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
@@ -193,6 +272,16 @@ class WorkTests(unittest.TestCase):
             return RunResult(False, "", 1, error="Invalid API key · Please run /login")
         result = self.worker(FakeRunner({"build": denied})).run()
         self.assertEqual(result["status"], "infra")
+
+    def test_a_revoked_claude_token_stops_the_run_before_any_check(self):
+        def revoked(request: RunRequest) -> RunResult:
+            return RunResult(False, "", 1, error="Failed to authenticate. API Error: 401 OAuth "
+                             "access token is invalid.")
+        runner = FakeRunner({"build": revoked, "review": reviewer(APPROVE)})
+        result = self.worker(runner).run()
+        self.assertEqual(result["status"], "infra")
+        self.assertEqual([call.role for call in runner.calls], ["build"])  # no review either
+        self.assertFalse(any(cycle.get("gates") for cycle in result.get("cycles") or []))
 
     def test_a_blocked_builder_asks_its_question(self):
         blocked = '<!-- bot: {"status": "blocked", "question": "Coin or no coin?"} -->\nI stopped.'

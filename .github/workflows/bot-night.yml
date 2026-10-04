@@ -235,7 +235,7 @@ jobs:
   work:
     name: work
     needs: plan
-    if: contains(fromJSON('["build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
     # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm
     # and Python are installed already, and a login there never leaves it.
     runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}
@@ -243,6 +243,13 @@ jobs:
     permissions:
       contents: read         # the model job may read; it may not write anything to GitHub
     steps:
+      # On the machine the checkout stays between jobs, and the last model job's worktrees (in
+      # RUNNER_TEMP, emptied after every job) stay registered in it. Checkout then cannot reset a
+      # branch one of them claims ("used by worktree at ...") and clones the repository afresh.
+      - name: Forget the last job's worktrees
+        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
+        run: git -C "$GITHUB_WORKSPACE" worktree prune 2>/dev/null || true
+
       - name: Checkout the default branch
         uses: actions/checkout@v4
         with:
@@ -342,7 +349,7 @@ jobs:
   deliver:
     name: deliver
     needs: [plan, work]
-    if: always() && contains(fromJSON('["build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: always() && contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

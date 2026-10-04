@@ -1,10 +1,11 @@
-// Brittle X's count on a card instance (docs/classic-sets.md B3.3, R385, R441): the readers and the
-// writes that need no sink. The count lives on the instance (`CardInstance.brittle`) and is kept in
-// every zone the card passes through, hand to field included, like `radiant` and `costMod` (R78); a
-// copy never inherits it (R57). The start-of-turn tick and the crumbling are `brittle.ts`'s.
+// Brittle X's count on a card instance (docs/classic-sets.md B3.3, R385, R441, R638): the readers and
+// the writes that need no sink. The count lives on the instance (`CardInstance.brittle`) and is kept in
+// every zone the card passes through, hand to field included, like `radiant` and `costMod` (R78), but
+// it only ticks on the field (R638); a copy never inherits it (R57). The start-of-turn tick and the
+// crumbling are `brittle.ts`'s.
 //
 // This module imports nothing heavier than the catalog, so the modules every field arrival and every
-// stat read pass through — `zones.ts` (`startPrintedBrittle`) and `layers.ts` (`activeBrittleCount`) —
+// stat read pass through — `zones.ts` (`startBrittleOnField`) and `layers.ts` (`activeBrittleCount`) —
 // can read it without pulling the destroy and state-check machinery the tick needs.
 
 import { numberedSum, tunedCount } from "./tuning";
@@ -37,13 +38,19 @@ export function activeBrittleCount(card: Pick<CardInstance, "brittle" | "vanilla
 }
 
 /**
- * B3.3 rule 1: "a printed Brittle starts when the card enters the field" — called where every field
- * arrival passes (`zones.placeOnField`, `zones.replaceInZone`). A card that already has a count keeps
- * it (a count is kept in every zone, so a card that left the field and came back ticks on), and one
- * that prints no Brittle starts nothing.
+ * B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field" — called where every
+ * field arrival passes (`zones.placeOnField`, `zones.replaceInZone`). A card that already has a count
+ * keeps it (a count is kept in every zone, so a card that left the field and came back ticks on), and
+ * one that prints no Brittle starts nothing. `fromOffField` is a card that arrives from a hand, a
+ * deck, a graveyard or the resolving zone rather than from another field zone: a count it held
+ * there never ticked, so its turn cycle starts now, and its first tick waits for a whole round on the
+ * field (`BRITTLE_FIRST_TICK_TURNS`) however long it was held.
  */
-export function startPrintedBrittle(state: GameState, card: CardInstance): void {
-  if (card.brittle !== undefined) return;
+export function startBrittleOnField(state: GameState, card: CardInstance, fromOffField: boolean): void {
+  if (card.brittle !== undefined) {
+    if (fromOffField) card.brittle = { ...card.brittle, since: state.turn };
+    return;
+  }
   const printed = printedBrittleOf(state, card);
   if (printed === null || printed <= 0) return;
   card.brittle = { count: printed, since: state.turn, printed: true };

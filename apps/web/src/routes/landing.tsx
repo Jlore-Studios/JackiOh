@@ -13,16 +13,18 @@
 // `GATE_SLOW_NOTICE_SECONDS` the corner offers what this device's own storage says (Account when it
 // holds a session, else Sign in) without waiting for the server's answer.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
 
 import { DECK_SIZE, MAX_MANA, UNIT_ZONES } from "@jackioh/engine/config";
 import { LOADOUT_DECKS } from "@jackioh/validator";
+import type { CardDef } from "@jackioh/shared";
 
 import { landingFanCardTestid, landingStepTestid, landingTestid } from "../auth/testids.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
+import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -30,7 +32,17 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
-import { dealLandingFan, type FanFace, type RandomSource } from "./landingFan.ts";
+import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES } from "../stats/config.ts";
+import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
+import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
+import {
+  ROTATION_POOL,
+  dealLandingFan,
+  featureWeight,
+  rotateFan,
+  type FanFace,
+  type RandomSource,
+} from "./landingFan.ts";
 import { followInApp } from "./nav.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 
@@ -38,6 +50,9 @@ import "../auth/tavern.css";
 import "./landing.css";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
+
+/** R639: the card's detail dialog, loaded when a fan card is first opened, so the first screen stays light. */
+const CardDetail = lazy(() => import("../cards/inspect/CardDetail.tsx").then((module) => ({ default: module.CardDetail })));
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -94,24 +109,42 @@ function accountState(account: Account): LandingAccountState {
  * (R374) and drawn by the cards module's CardFace, the middle one on its Radiant face, and a card
  * back last. The deal, the float and the spread are landing.css's; the faces are the game's own, so
  * the first screen shows cards as the board, the deck builder and the inspect sheet draw them.
+ *
+ * R639: a face is a control. A click, a tap, or Enter or Space on it opens the card's detail dialog
+ * (`onOpen`), so a featured card can be read at full size on a phone as well as with a pointer. The
+ * hand holds still while a pointer is over it or focus is in it (`onHold`), since a card that
+ * changes under a reader's hand is hard to read or to press.
  */
-function CardFan({ hand }: { hand: readonly FanFace[] }): ReactElement {
+function CardFan({
+  hand,
+  onOpen,
+  onHold,
+}: {
+  hand: readonly FanFace[];
+  onOpen: (def: CardDef) => void;
+  onHold: (held: boolean) => void;
+}): ReactElement {
   return (
-    <div className="landing-fan" data-testid={landingTestid.fan} aria-hidden="true">
+    <div
+      className="landing-fan"
+      data-testid={landingTestid.fan}
+      onMouseEnter={() => {
+        onHold(true);
+      }}
+      onMouseLeave={() => {
+        onHold(false);
+      }}
+      onFocus={() => {
+        onHold(true);
+      }}
+      onBlur={() => {
+        onHold(false);
+      }}
+    >
       {hand.map(({ def, radiant }, index) => (
-        <div key={def.id} className="landing-fan-slot">
-          <div
-            className="landing-fan-card"
-            data-testid={landingFanCardTestid(index)}
-            data-face="up"
-            data-def-id={def.id}
-            data-radiant={radiant ? "true" : undefined}
-          >
-            <CardFace face={faceModel({ defId: def.id, def, radiant })} />
-          </div>
-        </div>
+        <LandingFanCard key={def.id} def={def} radiant={radiant} index={index} onOpen={onOpen} onHold={onHold} />
       ))}
-      <div className="landing-fan-slot">
+      <div className="landing-fan-slot" aria-hidden="true">
         <div
           className="landing-fan-card landing-fan-card--back"
           data-testid={landingFanCardTestid(hand.length)}
@@ -120,6 +153,67 @@ function CardFan({ hand }: { hand: readonly FanFace[] }): ReactElement {
           <CardBack />
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One face of the fan. #165: on a touch screen a held finger is the mouse-over the screen lacks —
+ * the hold shows the card's hover preview while the finger stays down, and the fan stands still
+ * for it as it does for a pointer resting on it. A real mouse is untouched (`hover: false`): its
+ * click opens the detail dialog, as ever, and a hold's release click is swallowed so it does not
+ * also open one.
+ */
+function LandingFanCard({
+  def,
+  radiant,
+  index,
+  onOpen,
+  onHold,
+}: {
+  def: CardDef;
+  radiant: boolean;
+  index: number;
+  onOpen: (def: CardDef) => void;
+  onHold: (held: boolean) => void;
+}): ReactElement {
+  const face = faceModel({ defId: def.id, def, radiant });
+  const inspect = useInspectTrigger(
+    { key: `landing-fan-${def.id}`, face },
+    { hover: false, touchHold: "preview", prefer: "above" },
+  );
+  const held = inspect.open !== null;
+  useEffect(() => {
+    if (!held) return undefined;
+    onHold(true);
+    return () => {
+      onHold(false);
+    };
+  }, [held, onHold]);
+  return (
+    <div className="landing-fan-slot">
+      <div
+        className="landing-fan-card landing-fan-card--face"
+        data-testid={landingFanCardTestid(index)}
+        data-face="up"
+        data-def-id={def.id}
+        data-radiant={radiant ? "true" : undefined}
+        role="button"
+        tabIndex={0}
+        aria-label={`Read ${def.name}`}
+        {...inspect.handlers}
+        onClick={() => {
+          onOpen(def);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          onOpen(def);
+        }}
+      >
+        <CardFace face={face} />
+      </div>
+      {inspect.overlay}
     </div>
   );
 }
@@ -411,8 +505,34 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
   const motion = useMotion();
-  // R374: one deal per visit — per mount of the page — so the hand holds still while it is shown.
-  const [hand] = useState(() => dealLandingFan(random));
+  // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
+  // deals from every shipped set instead of Core alone, favouring cards that print at full size, and
+  // then swaps one card at a time (below).
+  const rotating = usePlayerStats().games >= ROTATION_MIN_GAMES;
+  const [hand, setHand] = useState(() =>
+    readPlayerStats().games >= ROTATION_MIN_GAMES
+      ? dealLandingFan(random, ROTATION_POOL, featureWeight)
+      : dealLandingFan(random),
+  );
+  const [open, setOpen] = useState<CardDef | null>(null);
+  const [held, setHeld] = useState(false);
+  const nextSlot = useRef(0);
+
+  // R639: the rotation. One slot swaps for a fresh card each interval, left to right, and the hand
+  // stands still while a card is open or held and while the page is hidden, and under reduced motion
+  // (a hand that changes by itself is motion, and the hand it dealt stays for the visit).
+  useEffect(() => {
+    if (!rotating || motion === "reduced" || open !== null || held) return undefined;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      const at = nextSlot.current;
+      nextSlot.current += 1;
+      setHand((current) => rotateFan(current, at, random));
+    }, ROTATION_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [rotating, motion, open, held, random]);
 
   return (
     <div
@@ -445,13 +565,26 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
             </p>
           </div>
 
-          <CardFan hand={hand} />
+          <CardFan hand={hand} onOpen={setOpen} onHold={setHeld} />
 
           <Actions />
         </div>
       </section>
 
       <HowItPlays />
+
+      <PlayerStatsCard />
+
+      {open === null ? null : (
+        <Suspense fallback={null}>
+          <CardDetail
+            def={open}
+            onClose={() => {
+              setOpen(null);
+            }}
+          />
+        </Suspense>
+      )}
 
       <SiteFooter />
     </div>

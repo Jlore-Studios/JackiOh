@@ -416,11 +416,12 @@ Cards: Classic+ #23 Dropshipping (gives Brittle 2 to cards in hand), #74 Twice F
 Backwards (prints Brittle 4, and gains Brittle), and the AI card Hallucination (B8).
 
 1. **Where it lives.** Brittle N is a count on a card instance, kept in every zone the card passes
-   through, hand to field included (like `radiant` and `costMod`, R78). A count *given* by an effect
-   starts when it is given. A *printed* Brittle starts when the card enters the field (Twice Forward
-   would otherwise crumble in the deck before it is drawn).
-2. **The tick.** At the start of its controller's turn (its owner's, in a hand or a deck), as a step
-   right after the mana refresh, the count drops by 1 — but only once the card has had a full turn
+   through, hand to field included (like `radiant` and `costMod`, R78), but it only ticks on the
+   field (R638, since v0.2.X: a card in a hand or a deck holds its count). A count *given* by an
+   effect is held until the card enters the field. A *printed* Brittle starts when the card enters
+   the field (Twice Forward would otherwise crumble in the deck before it is drawn).
+2. **The tick.** At the start of its controller's turn, as a step right after the mana refresh, the
+   count of each card they control on the field drops by 1 — but only once the card has had a full turn
    cycle with it: a count started on turn t first ticks at the first start of its controller's turn
    numbered t + 2 or later, by which time the card has lived through a whole turn of the other
    player's and the rest of the turn it arrived on. After that it ticks at each start of its
@@ -428,10 +429,10 @@ Backwards (prints Brittle 4, and gains Brittle), and the AI card Hallucination (
    7 and crumbles at the start of your turn 9: you can use it for the rest of turn 5 and during turn
    7.) **⚠ designer:** the stricter reading, a whole turn of each player's, puts the first tick at
    t + 4 and gives every Brittle card one more turn (B9).
-3. **At 0** the card is destroyed. On the field that is an ordinary destroy, so Indestructible
-   ignores it (R46) and the count stays at 0, checked again at each tick. In a hand or a deck it goes
-   to its owner's graveyard (a unit token ceases to exist, R11). That is not a discard, so "whenever
-   you discard" does not see it. Event: `crumbled { instanceId, zone }`.
+3. **At 0** the card is destroyed: an ordinary destroy, so Indestructible ignores it (R46) and the
+   count stays at 0, checked again at each tick. That is not a discard, so "whenever you discard"
+   does not see it. Event: `crumbled { instanceId, zone }`, always `zone: "field"` since R638 (it
+   used to crumble a card in a hand or a deck to its graveyard).
 4. **"Give Brittle N"** sets the count to N; **"gain +N Brittle"** adds N.
 5. Degrade lowers the count by 1 and Upgrade raises it by 1 (its X, B3.4). A Vanilla removes printed
    Brittle and, as §10.4 does for every granted keyword, keeps a given one.
@@ -562,6 +563,10 @@ git. Proposal:
    The designer's balance notes behind v0.1.0-r1 landed first, as `ba45d13` (2026-09-20, merged
    in PR #2), in the source notes rather than the catalog. The "-rN" labels are proposals:
    **⚠ designer** may prefer other names for the pre-v0.1.1 changes.
+
+   > **Renamed (#85).** This table is the brief's record and keeps the names it proposed. Revisions
+   > now take a letter (`docs/issues-and-patches.md`), so the patch history ships v0.1.0-r1, -r2 and
+   > -r3 as v0.1.0b, v0.1.0c and v0.1.0d (R375, R388).
 5. **Reading old versions.**
    - The collection's card detail view gets a History section: each patch in which the card changed,
      its faces as they were (drawn from the snapshot), and the words and numbers that changed marked

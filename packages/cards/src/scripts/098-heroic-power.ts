@@ -1,5 +1,5 @@
 // #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game"/Activate/Quickdraw, R43, R46, R103, R352, R384,
-// patch v0.2.1's R632–R639). Field Spell, tags Quickdraw, cost (0), Mythic.
+// patch v0.2.1's R651–R658). Field Spell, tags Quickdraw, cost (0), Mythic.
 //   Base:    "Indestructible. Start of game: Gain one of 13 random powers, each 'Activate: Spend (X)':
 //             (3) Expedition Map; (1) Life Tap; (1) Steady Shot; (2) Ranching; (1) Cat Cafe; (1) Ping;
 //             (2) Witness Value; (2) Stitching; (1) Armor Up; (2) Die Insect; (2) KY Brainstorm;
@@ -31,7 +31,7 @@
 //     opening hand instead of a draw (§6.2). The catalog's Quickdraw *tag* is what a filter sees;
 //     the flag is what setup sees.
 //   * Steady Shot's damage is the card's declared number `{shot}` (catalog `params`), which its
-//     Radiant face Upgrades (R637); `param` reads it in the subsystem.
+//     Radiant face Upgrades (R656); `param` reads it in the subsystem.
 //
 // R43'S LAST ROLL IS THE ENGINE'S, NOT THIS FILE'S (R151). "one created later rolls when it is
 // created, and one that ends up in a hand or library with no `memory.power` (a bounced or reset

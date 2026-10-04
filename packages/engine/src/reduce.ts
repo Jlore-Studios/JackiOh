@@ -149,8 +149,8 @@ function activateCard(sink: EngineSink, player: PlayerId, action: ActivationActi
 }
 
 /** §4.1 and R49: whether this unit's own switch is on offer at all. */
-function canSwitch(unit: CardInstance): boolean {
-  if (!hasExertion(unit, "switch")) return false;
+function canSwitch(state: GameState, unit: CardInstance): boolean {
+  if (!hasExertion(state, unit, "switch")) return false;
   // §4.1: Spikey Pillow can never be in Defense Position, so a unit in Attack has nowhere to go.
   return (unit.position ?? "ATK") === "DEF" || flagsOf(unit).neverDefense !== true;
 }
@@ -512,7 +512,7 @@ export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
     for (const target of attackTargets(state, unit)) {
       out.push({ type: "attack", attackerId: unit.id, targetId: attackTargetId(target) });
     }
-    if (canSwitch(unit)) out.push({ type: "switchPosition", instanceId: unit.id });
+    if (canSwitch(state, unit)) out.push({ type: "switchPosition", instanceId: unit.id });
   }
 
   // R43, R384: a power or an ability is the instance's, so every card the player has acting on the

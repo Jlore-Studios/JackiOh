@@ -3,6 +3,21 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
+  "git": {
+    "deploymentEnabled": {
+      "bot-state": false,
+      "bot/**": false,
+      "claude/**": false,
+      "copilot/**": false,
+      "dependabot/**": false,
+      "patch/**": false,
+      "patches/**": false,
+      "polish/**": false,
+      "production": false,
+      "wt/**": false
+    }
+  },
+  "ignoreCommand": "sh \"$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh\" && exit 0; exit 1",
   "rewrites": [
     { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|terms|accessibility|patch-notes|almanac){/}?", "destination": "/index.html" },
     { "source": "/(match|series)/([^/]+){/}?", "destination": "/index.html" }

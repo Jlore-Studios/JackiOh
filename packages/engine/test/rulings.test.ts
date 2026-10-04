@@ -230,6 +230,13 @@ const WEB_SESSION_TEST = "../../../apps/web/src/net/session.test.ts";
 const SERVER_SETTINGS_API_TEST = "../../../apps/server/test/api/settings.test.ts";
 const SERVER_SETTINGS_SQL = "../../../apps/server/test/sql/11_player_settings.sql";
 const WEB_SETTINGS_SYNC_TEST = "../../../apps/web/src/settings/accountSync.test.tsx";
+/** R639's proofs (SPEC §9.11, §10.10): the player statistics and the homescreen's rotation. */
+const WEB_STATS_MODEL_TEST = "../../../apps/web/src/stats/model.test.ts";
+const WEB_STATS_TRACK_TEST = "../../../apps/web/src/stats/track.test.ts";
+const WEB_STATS_STORE_TEST = "../../../apps/web/src/stats/store.test.ts";
+const WEB_STATS_HOOK_TEST = "../../../apps/web/src/stats/useGameStats.test.tsx";
+const WEB_LANDING_FAN_TEST = "../../../apps/web/src/routes/landingFan.test.ts";
+const WEB_LANDING_TEST = "../../../apps/web/src/routes/landing.test.tsx";
 /** The effects layer's proofs (R200 to R202): the cue planner, the director, the layer and the runner. */
 const WEB_FX_CUES_TEST = "../../../apps/web/src/fx/cues.test.ts";
 const WEB_FX_DIRECTOR_TEST = "../../../apps/web/src/fx/director.test.ts";
@@ -534,10 +541,10 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(20, "rulings-a.test.ts", "combat-positions.test.ts");
   });
 
-  // Proved by rulings-a.test.ts "R21 draws random keywords from the twelve-entry pool and never repeats one
+  // Proved by rulings-a.test.ts "R21 draws random keywords from the thirteen-entry pool and never repeats one
   // on a unit"; effects-buff.test.ts "R21 draws from the pool, never repeats within one grant, and is
   // seeded", "R21 never grants a keyword the unit already has, from any source", and 1 more.
-  it("R21 draws random keywords from the twelve-entry pool and never repeats one on a unit", () => {
+  it("R21 draws random keywords from the thirteen-entry pool and never repeats one on a unit", () => {
     expect(config.RANDOM_KEYWORD_POOL).toEqual([
       "Taunt",
       "Armor 1",
@@ -551,8 +558,9 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       "Trample",
       "Cleave",
       "Pierce",
+      "Windfury",
     ]);
-    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(12);
+    expect(new Set(config.RANDOM_KEYWORD_POOL).size).toBe(13);
     provenIn(21, "rulings-a.test.ts", "effects-buff.test.ts");
   });
 
@@ -3693,64 +3701,6 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(631, WEB_MUSIC_PLAN_TEST, WEB_MUSIC_DIRECTOR_TEST, WEB_MUSIC_PLAYER_TEST);
   });
 
-<<<<<<< HEAD
-  // Patch v0.2.1's rows (issue #37, from R632): Heroic Power's thirteen powers and the current owner.
-
-  // Proved by heroPower.test.ts "R632 …" and 098-heroic-power.test.ts "R632 …" (Armor Up's 2 holds
-  // through the opponent's turn and ends as its player's turn starts; Tank Up's 4 stays).
-  it("R632 holds Armor Up's Armor until its player's next turn and keeps Tank Up's for the game", () => {
-    expect(config.ARMOR_UP).toEqual({ base: 2, radiant: 4 });
-    provenIn(632, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R633 …" and 098-heroic-power.test.ts "R633 …" (a different power, its
-  // Radiant face, and the use spent until the next turn).
-  it("R633 refreshes Tank Up into a different power, usable from the next turn", () => {
-    provenIn(633, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R634 …" and 098-heroic-power.test.ts "R634 …" (a pick among the enemy
-  // hero and Units, and Lucky's lethal hero first).
-  it("R634 picks Die Insect's random enemy among the enemy hero and Units, Lucky keeping the better", () => {
-    expect(config.DIE_INSECT_DAMAGE).toBe(8);
-    provenIn(634, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R635 …" and 098-heroic-power.test.ts "R635 …" (a declared target,
-  // Pierce, and the Ghoul a Radiant kill summons).
-  it("R635 declares Ping's target with the activation and summons a Ghoul for a Radiant kill", () => {
-    provenIn(635, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R636 …" and 098-heroic-power.test.ts "R636 …" (damage through Armor,
-  // and the Radiant face's two decks).
-  it("R636 makes Life Tap a draw and a hit, and its Radiant face a draw from each deck", () => {
-    provenIn(636, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R637 …" and 098-heroic-power.test.ts "R637 …" (4, then 6, then 8).
-  it("R637 upgrades Steady Shot's declared number by 2 after each Radiant shot", () => {
-    provenIn(637, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R638 …" and 098-heroic-power.test.ts "R638 …" (Traps and Field Traps,
-  // summoned face-down into the backrow).
-  it("R638 Discovers Terminus Tricks' Trap from every set and summons it face-down", () => {
-    provenIn(638, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by heroPower.test.ts "R639 …" and 098-heroic-power.test.ts "R639 …" (the KY card and the
-  // Spells it discounts, X-cost ones aside; the Fruit at (0)).
-  it("R639 draws KY Brainstorm's KY card and Pluck's Fruit from every set", () => {
-    expect(config.KY_BRAINSTORM_DISCOUNT).toBe(1);
-    expect(config.PLUCK_COST).toBe(0);
-    provenIn(639, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
-  });
-
-  // Proved by rulings-a.test.ts "R640 routes every later departure by a field card's current owner".
-  it("R640 makes the player who receives a card on the field its current owner", () => {
-    provenIn(640, "rulings-a.test.ts");
-=======
   // R632 is a client ruling (SPEC §9.2): proved by apps/web net/session.test.ts "R632 …" (the tab's
   // storage, an older build's session moved, the fixture's key, blocked storage, sign-out) and
   // routes/shell-gate.test.tsx "R632 …" (another tab's sign-out leaves this tab signed in).
@@ -3770,8 +3720,123 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   // "R634 …" (load, push-up, debounce, one request at a time, failures dropped, a clock running ahead).
   it("R634 replaces a group of the account's settings only with a strictly later one, and merges the device's the same way", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
->>>>>>> origin/main
   });
+
+  // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
+  // the mulligans at random places and without a word to the other seat, an all-cast-on-draw deck
+  // deals an empty hand with no fatigue and turn 1's chain meets R58's cap, and a mulligan can be
+  // dealt fewer cards back than it returned; and by 021-hinder.test.ts's "R431, R635 …" (a real game).
+  it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
+    provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
+  });
+
+  // Proved by windfury.test.ts "R636 …" (the second attack in `legalActions` and the reducer, the switch
+  // the first one spends, the count read at the second declaration, Deft Duelist beside it) and
+  // config.test.ts / rulings-a.test.ts "R21 …" (Windfury in the random keyword pool).
+  it("R636 lets a Unit with Windfury attack twice each turn", () => {
+    provenIn(636, "windfury.test.ts");
+  });
+
+  // Proved by temporary.test.ts "R637 …" (the end-of-turn discard in hand order, the other player's hand,
+  // a played card, a deck, granted and Vanilla) and the card side in packages/cards
+  // test/classic-plus/054-book-of-books.test.ts "R637 …" (the Books Book of Books adds).
+  it("R637 discards a Temporary card from its owner's hand at the end of their turn", () => {
+    provenIn(637, "temporary.test.ts", "../../cards/test/classic-plus/054-book-of-books.test.ts");
+  });
+
+  // Proved by brittle.test.ts "R638 …" (a held count never ticks or crumbles in a hand or a deck, starts
+  // its cycle as the card enters the field, is no arrival on a move between field zones, and is kept
+  // through leaving the field), and the card side in packages/cards (Dropshipping's and Hallucination's tests).
+  it("R638 ticks a Brittle count on the field only", () => {
+    provenIn(638, "brittle.test.ts");
+  });
+
+  // Proved by apps/web stats/model.test.ts, stats/track.test.ts (what the viewer was shown and what the
+  // events count), stats/store.test.ts (localStorage, tolerant), stats/useGameStats.test.tsx (once, at the
+  // end), routes/landingFan.test.ts (the pool, the weighting, one rotation step) and routes/landing.test.tsx
+  // (the threshold, the interval, holding still, a face that opens, "Your table").
+  it("R639 keeps the player's statistics on the device and rotates the homescreen through every set once there are enough games", () => {
+    provenIn(
+      639,
+      WEB_STATS_MODEL_TEST,
+      WEB_STATS_TRACK_TEST,
+      WEB_STATS_STORE_TEST,
+      WEB_STATS_HOOK_TEST,
+      WEB_LANDING_FAN_TEST,
+      WEB_LANDING_TEST,
+    );
+  });
+
+  // Proved by setup-aside.test.ts "R640 …": five Quickdraw cards deal three to the first seat and four
+  // to the second, five to a Medium seat going second, the hand is the table's size whatever the deck
+  // holds, and the surplus are ordinary cards a later draw can take.
+  it("R640 deals a seat at most as many Quickdraw cards as it has opening draws", () => {
+    provenIn(640, "setup-aside.test.ts");
+  });
+
+  // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
+  // the newest version in patches.json with the next letter.
+  it("R650 names a micro patch after the newest version, with the next letter", () => {
+    provenIn(650, "../../cards/test/versions.test.ts");
+  });
+  // Patch v0.2.1's rows (issue #37, from R651): Heroic Power's thirteen powers and the current owner.
+
+  // Proved by heroPower.test.ts "R651 …" and 098-heroic-power.test.ts "R651 …" (Armor Up's 2 holds
+  // through the opponent's turn and ends as its player's turn starts; Tank Up's 4 stays).
+  it("R651 holds Armor Up's Armor until its player's next turn and keeps Tank Up's for the game", () => {
+    expect(config.ARMOR_UP).toEqual({ base: 2, radiant: 4 });
+    provenIn(651, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R652 …" and 098-heroic-power.test.ts "R652 …" (a different power, its
+  // Radiant face, and the use spent until the next turn).
+  it("R652 refreshes Tank Up into a different power, usable from the next turn", () => {
+    provenIn(652, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R653 …" and 098-heroic-power.test.ts "R653 …" (a pick among the enemy
+  // hero and Units, and Lucky's lethal hero first).
+  it("R653 picks Die Insect's random enemy among the enemy hero and Units, Lucky keeping the better", () => {
+    expect(config.DIE_INSECT_DAMAGE).toBe(8);
+    provenIn(653, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R654 …" and 098-heroic-power.test.ts "R654 …" (a declared target,
+  // Pierce, and the Ghoul a Radiant kill summons).
+  it("R654 declares Ping's target with the activation and summons a Ghoul for a Radiant kill", () => {
+    provenIn(654, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R655 …" and 098-heroic-power.test.ts "R655 …" (damage through Armor,
+  // and the Radiant face's two decks).
+  it("R655 makes Life Tap a draw and a hit, and its Radiant face a draw from each deck", () => {
+    provenIn(655, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R656 …" and 098-heroic-power.test.ts "R656 …" (4, then 6, then 8).
+  it("R656 upgrades Steady Shot's declared number by 2 after each Radiant shot", () => {
+    provenIn(656, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R657 …" and 098-heroic-power.test.ts "R657 …" (Traps and Field Traps,
+  // summoned face-down into the backrow).
+  it("R657 Discovers Terminus Tricks' Trap from every set and summons it face-down", () => {
+    provenIn(657, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by heroPower.test.ts "R658 …" and 098-heroic-power.test.ts "R658 …" (the KY card and the
+  // Spells it discounts, X-cost ones aside; the Fruit at (0)).
+  it("R658 draws KY Brainstorm's KY card and Pluck's Fruit from every set", () => {
+    expect(config.KY_BRAINSTORM_DISCOUNT).toBe(1);
+    expect(config.PLUCK_COST).toBe(0);
+    provenIn(658, "heroPower.test.ts", CARDS_HEROIC_POWER_TEST);
+  });
+
+  // Proved by rulings-a.test.ts "R659 routes every later departure by a field card's current owner".
+  it("R659 makes the player who receives a card on the field its current owner", () => {
+    provenIn(659, "rulings-a.test.ts");
+  });
+
 });
 
 describe("SPEC §11 index completeness", () => {

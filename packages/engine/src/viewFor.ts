@@ -362,7 +362,7 @@ function canAct(state: GameState, card: CardInstance): boolean {
   if (state.result !== null || state.phase !== "main") return false;
   if (state.pending !== null) return false;
   if (state.active !== card.controller) return false;
-  return hasExertion(card, "attack") || hasExertion(card, "switch");
+  return hasExertion(state, card, "attack") || hasExertion(state, card, "switch");
 }
 
 /**
@@ -435,7 +435,7 @@ function carriedView(state: GameState, player: PlayerId, viewer: PlayerId): { ca
  * re-derived here; its declared numbers (`params`, R386) are the card's as they stand.
  *
  * It follows control: a stolen Heroic Power powers its new controller's hero, who is its current
- * owner too since patch v0.2.1 (R640). So a player can hold more than one — their own plus one
+ * owner too since patch v0.2.1 (R659). So a player can hold more than one — their own plus one
  * taken with #36 radiant or #49 — and each is separately once-per-turn, which is why this is a list
  * and every entry carries its `instanceId` for its `activate` (§10.2). Board order: p1's backrow
  * lane 1 to 5, then p2's.
@@ -522,7 +522,7 @@ function modifierLabel(state: GameState, mod: PlayerModifier, echo: number): str
     // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
     case "replacePlays":
       return `Each card you play becomes ${mod.radiant ? "a Radiant " : "a "}${findDef(state, mod.defId)?.name ?? mod.defId}`;
-    // R632: #98's Armor Up and Tank Up, in the power's own words.
+    // R651: #98's Armor Up and Tank Up, in the power's own words.
     case "heroArmor":
       return `Your hero has +${mod.amount} Armor until your next turn`;
   }

@@ -36,11 +36,19 @@ class Harness:
                **(env or {})}
         overrides = {"gates": GATES, "install": {"run": "true", "timeout_minutes": 1},
                      "max_review_cycles": 2, **cfg_overrides}
+        self._setup = (env, machine, overrides, at)
         self.cfg = make_config(env=env, machine=machine, **overrides)
         self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
         self.gh.branch_checks = set(self.cfg.required_checks)
         self.deliver_repo = self.root / "deliver"
         git(self.root, "clone", "-q", str(self.origin), str(self.deliver_repo))
+
+    def committed_hours(self) -> None:
+        """From now on, the subscriptions keep the hours providers.json commits (claude-2 and
+        claude-3 all day), with the same GitHub and state."""
+        env, machine, overrides, at = self._setup
+        self.cfg = make_config(env=env, machine=machine, committed_hours=True, **overrides)
+        self.ctx = make_ctx(self.gh, cfg=self.cfg, at=at)
 
     def night(self, runner: FakeRunner, **plan_args) -> tuple[dict, dict]:
         planned = plan_mod.make(self.ctx, **plan_args)
@@ -123,7 +131,8 @@ class PlanTests(unittest.TestCase):
         by_hand = make_ctx(self.gh, cfg=make_config(env={"GITHUB_RUN_ID": ""}))
         self.gh.add_issue(5, labels=(LABEL_BUILD,))
         plan_mod.make(by_hand, item=5)
-        self.assertIn("Starting work on this now, on `claude-1` (claude, opus). I build it",
+        self.assertIn("Starting work on this now: it is difficulty:medium. I plan it on `claude-1` "
+                      "(claude, `opus`, strong), build it on `claude-1` (claude, `opus`, strong)",
                       self.gh.bot_comments(5)[-1])
         self.assertEqual(self.ctx.store.load()["items"]["4"]["run_id"], "777")
 
@@ -187,7 +196,7 @@ class FlowTests(unittest.TestCase):
         self.assertFalse(pull["draft"])
         self.assertIn(pull["node_id"], h.gh.auto_merge)
         self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR})
-        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN})
+        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned"})
         self.assertIn("Auto-merge is on", h.gh.bot_comments(12)[-1])
         usage = h.ctx.store.load()["providers"]["claude-1"]["usage"]
         self.assertEqual(usage["five_hour"]["utilization"], 0.3)
@@ -241,8 +250,16 @@ class FlowTests(unittest.TestCase):
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertTrue(pull["draft"])
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(12), {LABEL_BLOCKED})
-        self.assertIn("It breaks replay.", h.gh.bot_comments(12)[-1])
+        self.assertEqual(h.gh.label_names(12), {LABEL_BLOCKED, "bot:planned", "bot:stuck"})
+        said = h.gh.bot_comments(12)[-1]
+        self.assertIn("It breaks replay.", said)
+        # It used every round (2 here), so it says why, round by round, for a person.
+        self.assertIn("After all 2 rounds the reviewer still had blocking findings", said)
+        self.assertIn("### Why it failed 2 times", said)
+        self.assertIn("**The reviewer blocked 2 of 2 reviewed round(s)**", said)
+        self.assertIn("It breaks replay. (×2)", said)  # a finding the builder never settled
+        self.assertIn("| 2 | fix on `", said)
+        self.assertIn("Labelled `bot:stuck`", said)
         self.assertEqual(h.ctx.store.load()["items"]["12"]["last_findings"][0]["claim"],
                          "It breaks replay.")
 
@@ -256,7 +273,7 @@ class FlowTests(unittest.TestCase):
         _, first = h.night(runner)
         self.assertEqual(first["status"], "interrupted")
         self.assertEqual(h.origin_sha("bot/issue-12"), first["head"])
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD})
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})
         self.assertEqual(h.ctx.store.load()["providers"]["claude-1"]["refused_until"],
                          "2026-09-30T04:00:00Z")
         self.assertEqual(h.gh.dispatches, [])  # no chaining into a refusal
@@ -449,7 +466,7 @@ class FlowTests(unittest.TestCase):
         _, result = h.night(runner)
         self.assertEqual(result["status"], "not_approved")
         self.assertEqual(h.origin_sha("bot/issue-12"), start)
-        self.assertEqual(h.gh.label_names(40), {LABEL_PR, LABEL_BLOCKED})
+        self.assertEqual(h.gh.label_names(40), {LABEL_PR, LABEL_BLOCKED, "bot:stuck"})
 
     def test_suggestions_open_issues_up_to_the_cap(self):
         h = Harness(self)

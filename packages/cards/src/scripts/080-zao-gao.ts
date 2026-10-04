@@ -14,7 +14,7 @@
 // to exist instead of reaching the graveyard (R11) — `discard`'s rules. Nothing asks the player
 // anything, so an Echo repeat discards at random again, and an empty hand simply summons.
 //
-// R21: each token rolls DISTINCT keywords from the pool (twelve with R346's Pierce), and the two
+// R21: each token rolls DISTINCT keywords from the pool (thirteen with R346's Pierce and R636's Windfury), and the two
 // tokens roll independently. `grantRandomKeywords` is that rule already — it recomputes the pool per
 // draw off the unit's §10.4 keywords, so it never repeats inside one grant and never offers a keyword
 // the unit already has: a Rush Token (printed Rush, §7) draws its two from the other eleven, and a

@@ -121,6 +121,9 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Brittle", n: 2 },
   { kind: "Spell Damage", n: 1 },
   { kind: "Immune to Spells" },
+  // Patch v0.2.X's keyword rules (R636, R637).
+  { kind: "Windfury" },
+  { kind: "Temporary" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

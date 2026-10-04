@@ -27,7 +27,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from harness import commands, events
+from harness import commands, events, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
@@ -58,7 +58,7 @@ def sweep(ctx: Context) -> list[str]:
         return ["the first sweep: requests from now on are swept"]
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
-    for part in (_comments, _reviews, _assignments, _failed_ci, _night_run):
+    for part in (_comments, _reviews, _assignments, _failed_ci, _night_run, _issue_types):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -66,6 +66,34 @@ def sweep(ctx: Context) -> list[str]:
                          f"{str(exc)[:200]})")
     ctx.store.update(lambda s: s.update(last_sweep={"at": iso(now), "since": iso(first),
                                                     "notes": notes[-20:]}), "sweep")
+    return notes
+
+
+def _issue_types(ctx: Context, since: datetime) -> list[str]:
+    """Every open issue gets a type. Triage types the ones people open; the ones a bot opens (the
+    CI-duration alerts, the status issue) never reach it, and triage can miss one. Those get
+    `triage.fallback_type`: a bot's at once, anyone else's after `triage.TYPE_GRACE`."""
+    notes: list[str] = []
+    types: dict[str, str] | None = None
+    for issue in ctx.gh.list_issues(state="open"):
+        if "pull_request" in issue or issue.get("type"):
+            continue
+        user = issue.get("user") or {}
+        login = str(user.get("login") or "")
+        by_bot = login.lower() == ctx.cfg.bot_login.lower() or login.endswith("[bot]")
+        opened = parse_iso(issue.get("created_at"))
+        if not by_bot and (opened is None or ctx.now() - opened < triage.TYPE_GRACE):
+            continue
+        types = types if types is not None else triage.issue_types(ctx.gh)
+        wanted = triage.fallback_type(issue, types)
+        if not wanted:
+            continue
+        try:
+            plan = triage.Plan(issue_type=wanted)
+            done = triage.apply(ctx.gh, int(issue["number"]), plan)
+        except Exception as exc:  # noqa: BLE001 - one issue never stops the rest
+            done = [f"could not type it ({type(exc).__name__})"]
+        notes.append(f"#{issue['number']}: {'; '.join(done)}")
     return notes
 
 

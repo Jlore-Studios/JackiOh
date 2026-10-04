@@ -1,0 +1,75 @@
+# The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten every ten minutes, and
+# the pinned "Night bot statistics" issue (bot/harness/stats.py), rewritten every two hours.
+#
+# GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
+# between runs), so a schedule alone cannot keep the issue current. Instead one job loops: it
+# rewrites the issue every ten minutes for five and a half hours, inside the six-hour cap, then
+# starts the next loop itself (a workflow_dispatch from the job's own token does start a run).
+# The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
+# loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
+# which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
+# within ten minutes, not hours. It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
+# next schedule; disable the workflow to stop it for good.
+name: bot-status
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: bot-status
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  EVERY_SECONDS: "600"
+  LOOP_SECONDS: "19800"
+
+jobs:
+  refresh:
+    name: refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      contents: write        # the state file on bot-state keeps the issue's number
+      issues: write          # the status issue, and the queue it reads and the sweep labels
+      pull-requests: write   # the sweep answers and labels pull requests
+      actions: write         # whether runs are alive; start a night run and the next loop
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch || 'main' }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Sweep and rewrite the status issue every ten minutes
+        working-directory: bot
+        env:
+          BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          # Which provider secrets exist, never their values: the issue says when one is unset.
+          HARNESS_SECRETS_SET: >-
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
+            ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
+        run: python -m harness dashboard --sweep --stats --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
+
+      # Not after a cancellation, so a person can stop the loop.
+      - name: Start the next loop
+        if: success() || failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.event.repository.default_branch || 'main' }}
+        run: gh workflow run bot-status.yml --repo "${REPO}" --ref "${REF}"

@@ -1,9 +1,15 @@
 // R388: the one seam onto packages/cards/patches/. Each file is its own lazy chunk, loaded once and
 // only when asked for; the order of patches is patches.json's; no data at all is an empty history.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { EMPTY_PATCH_SOURCE, fileStem, loadersByStem, realPatchSource, sourceFromLoaders, type Loader } from "./source.ts";
+
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, Loader>; calls: string[] } {
   const calls: string[] = [];
@@ -19,7 +25,7 @@ function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, L
 
 describe("R388 the patch source", () => {
   it("R388 names a file by its stem, whatever the path the glob hands out", () => {
-    expect(fileStem("../../../../packages/cards/patches/v0.1.0-r3.json")).toBe("v0.1.0-r3");
+    expect(fileStem("../../../../packages/cards/patches/v0.1.0d.json")).toBe("v0.1.0d");
     expect(fileStem("/patches/patches.json")).toBe("patches");
     expect(Object.keys(loadersByStem({ "../a/v1.json": () => Promise.resolve(1), "../a/index.json": () => Promise.resolve(2) }))).toEqual([
       "v1",
@@ -68,11 +74,14 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: seven patches in the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads packages/cards/patches/: the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
-    expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0-r1", "v0.1.0-r2", "v0.1.0-r3", "v0.1.1", "v0.2.0", "v0.2.1"]);
+    const shipped = JSON.parse(
+      readFileSync(resolve(REPO, "packages/cards/patches/patches.json"), "utf8"),
+    ) as { version: string }[];
+    expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
     const index = await realPatchSource.index();
-    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0-r3", "v0.1.1", "v0.2.0"]);
+    expect(index["core-065"]).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);
       expect(snapshot, patch.version).not.toBeNull();
@@ -80,7 +89,7 @@ describe("R388 the patch source", () => {
         expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
       }
     }
-    expect(Object.keys((await realPatchSource.snapshot("v0.2.0")) ?? {})).toHaveLength(317);
+    expect(Object.keys((await realPatchSource.snapshot("v0.2.4")) ?? {})).toHaveLength(317);
   });
 
   it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {

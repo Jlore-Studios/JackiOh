@@ -61,10 +61,13 @@ async function fileHolding(contents: unknown): Promise<string> {
 }
 
 describe("readCatalog", () => {
-  it("reads the real packages/cards/catalog.json: 317 entries (268 cards + 49 tokens) in three sets", async () => {
+  it("reads the real packages/cards/catalog.json: every entry, cards and tokens, in three sets", async () => {
+    const raw = JSON.parse(readFileSync(REAL_CATALOG, "utf8")) as Record<string, { token?: boolean }>;
     const entries = await readCatalog(REAL_CATALOG);
-    expect(entries).toHaveLength(317);
-    expect(entries.filter((entry) => entry.token)).toHaveLength(49);
+    expect(entries).toHaveLength(Object.keys(raw).length);
+    expect(entries.filter((entry) => entry.token)).toHaveLength(
+      Object.values(raw).filter((entry) => entry.token === true).length,
+    );
     expect(entries.map((entry) => entry.id)).toContain("core-001");
     expect([...new Set(entries.map((entry) => entry.set))]).toEqual(["Core", "Classic", "Classic+"]);
   });

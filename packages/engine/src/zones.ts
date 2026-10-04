@@ -4,7 +4,7 @@
 import type { GameEvent, PlayerId, Row, Zone } from "@jackioh/shared";
 import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import { BACKROW_ZONES, UNIT_ZONES } from "./config";
-import { dropSpentBrittle, startPrintedBrittle } from "./brittleCount";
+import { dropSpentBrittle, startBrittleOnField } from "./brittleCount";
 import { defOf } from "./catalog";
 import { cardTypeOf } from "./faces";
 import { showToOwner } from "./ownLibrary";
@@ -301,15 +301,17 @@ export function placeOnField(
     side.backrow[ref.lane - 1] = instance;
   }
 
-  // R12/R640: a card's current owner follows the side that receives it on the field. Keeping the
+  // R12/R659: a card's current owner follows the side that receives it on the field. Keeping the
   // two aligned here gives every later bounce, graveyard, exile and library move the normal zone
   // routing without an original-owner exception at each departure.
   instance.owner = ref.player;
+  // R638: a move from one field zone to another (a steal, a swap, a rotation) is no arrival.
+  const fromOffField = instance.zone.z !== "field";
   instance.controller = ref.player;
   instance.zone = zoneOf(ref);
   if (ref.row === "units" || isUnitFace(state, instance)) instance.position ??= "ATK";
-  // B3.3 rule 1, R385: a printed Brittle starts as its card enters the field.
-  startPrintedBrittle(state, instance);
+  // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
+  startBrittleOnField(state, instance, fromOffField);
   return true;
 }
 
@@ -371,7 +373,7 @@ export function replaceInZone(state: GameState, old: CardInstance, replacement: 
   replacement.zone = { ...zone };
   if (zone.row === "units" || isUnitFace(state, replacement)) replacement.position ??= "ATK";
   // B3.3 rule 1, R385: the new card has entered the field, so its printed Brittle starts.
-  startPrintedBrittle(state, replacement);
+  startBrittleOnField(state, replacement, true);
   return true;
 }
 
