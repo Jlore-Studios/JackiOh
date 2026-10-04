@@ -182,13 +182,18 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIsNone(self.why("claude-1", {"providers": {"claude-1": {"usage": session}}}))
         self.assertIsNone(self.why("claude-2", state, at=NIGHT + timedelta(hours=3)))
         # `none` has no caps: only a refusal stops it, until its reset.
-        state = {"providers": {"gpt": {"usage": {"seven_day": {"utilization": 0.99,
+        state = {"providers": {"agy": {"usage": {"seven_day": {"utilization": 0.99,
                                                                 "resets_at": later}}}}}
-        self.assertIsNone(self.why("gpt", state))
+        self.assertIsNone(self.why("agy", state))
         s: dict = {"providers": {}}
-        providers.note_usage(s, "gpt", None, "+PT30M", NIGHT)
-        self.assertIn("refused a call", self.why("gpt", s))
-        self.assertIsNone(self.why("gpt", s, at=NIGHT + timedelta(minutes=31)))
+        providers.note_usage(s, "agy", None, "+PT30M", NIGHT)
+        self.assertIn("refused a call", self.why("agy", s))
+        self.assertIsNone(self.why("agy", s, at=NIGHT + timedelta(minutes=31)))
+        # Codex reports its use, so gpt stops at 90% of its week instead of starting work it
+        # cannot finish (#160).
+        state = {"providers": {"gpt": {"usage": {"seven_day": {"utilization": 0.91,
+                                                                "resets_at": later}}}}}
+        self.assertIn("7-day usage is 91%, at or over its 90% cap", self.why("gpt", state))
         budget = pool_with(muse={"limits": {"mode": "caps", "seven_day_minutes": 60}})
         s = {"providers": {}}
         providers.note_usage(s, "muse", None, None, NIGHT - timedelta(days=2), minutes=40)

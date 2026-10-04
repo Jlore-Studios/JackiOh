@@ -238,6 +238,10 @@ class GitHub:
         `issueplan.py`, is redacted before it gets here)."""
         return self.request("PATCH", f"{self._r}/issues/{int(number)}", {"body": str(body)})
 
+    def blocked_by(self, number: int) -> list[dict]:
+        """The issues GitHub's own issue dependencies say block this one, open or closed."""
+        return self.paginate(f"{self._r}/issues/{int(number)}/dependencies/blocked_by", limit=100)
+
     def update_issue(self, number: int, **fields: Any) -> dict[str, Any]:
         if "body" in fields:
             fields["body"] = with_marker(fields["body"])
@@ -343,22 +347,26 @@ class GitHub:
         found |= {str(c.get("context")) for c in checks.get("checks") or [] if isinstance(c, dict)}
         return found
 
-    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "") -> None:
+    def enable_auto_merge(self, node_id: str, method: str, expected_head: str = "",
+                          headline: str = "") -> None:
         """Auto-merge, pinned to `expected_head` when given: GitHub then refuses to merge a head
-        that moved after the approval it was turned on for."""
+        that moved after the approval it was turned on for. `headline` is the merge commit's
+        title; without it GitHub squashes a one-commit pull request under that commit's message."""
+        params = ["$id: ID!", "$m: PullRequestMergeMethod!"]
+        fields = ["pullRequestId: $id", "mergeMethod: $m"]
+        values: dict[str, Any] = {"id": node_id, "m": method.upper()}
         if expected_head:
-            self.graphql(
-                "mutation($id: ID!, $m: PullRequestMergeMethod!, $h: GitObjectID!) {"
-                " enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $m,"
-                " expectedHeadOid: $h}) { clientMutationId } }",
-                {"id": node_id, "m": method.upper(), "h": expected_head},
-            )
-            return
+            params.append("$h: GitObjectID!")
+            fields.append("expectedHeadOid: $h")
+            values["h"] = expected_head
+        if headline:
+            params.append("$t: String!")
+            fields.append("commitHeadline: $t")
+            values["t"] = headline
         self.graphql(
-            "mutation($id: ID!, $m: PullRequestMergeMethod!) {"
-            " enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $m})"
-            " { clientMutationId } }",
-            {"id": node_id, "m": method.upper()},
+            f"mutation({', '.join(params)}) {{"
+            f" enablePullRequestAutoMerge(input: {{{', '.join(fields)}}}) {{ clientMutationId }} }}",
+            values,
         )
 
     def disable_auto_merge(self, node_id: str) -> None:
@@ -382,10 +390,11 @@ class GitHub:
             {"id": node_id},
         )
 
-    def merge_pull(self, number: int, method: str) -> dict[str, Any]:
-        return self.request(
-            "PUT", f"{self._r}/pulls/{int(number)}/merge", {"merge_method": method}
-        )
+    def merge_pull(self, number: int, method: str, title: str = "") -> dict[str, Any]:
+        body: dict[str, Any] = {"merge_method": method}
+        if title:
+            body["commit_title"] = title
+        return self.request("PUT", f"{self._r}/pulls/{int(number)}/merge", body)
 
     # ------------------------------------------------------------------ contents and refs
 

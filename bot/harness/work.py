@@ -61,8 +61,10 @@ never delivered): your plan, what is done, what is next, the decisions you made 
 dead ends you hit. Update it as you go, not only at the end. Your session can be cut off at any
 moment (a usage limit, the clock), and the next agent, possibly another model, starts from this
 file and the branch."""
-#: How much of a planner's answer becomes the plan.
+#: How much of a planner's answer becomes the plan: its beginning, where the goal and the first
+#: steps are, never its end alone.
 PLAN_CHARS = 20_000
+PLAN_CUT = "\n\n…(the plan was cut here; the planner wrote more)"
 SELF_CHECK_CONTEXT = """This is a self check, not a review. You are the same model that built
 this change, in a fresh session, and nothing you say here approves it: an independent reviewer
 judges it afterwards. Adversarially find every reason your own change should not ship, as that
@@ -153,6 +155,8 @@ class Worker:
         self.approved_sha: str | None = None
         self._base_wt: Git | None = None
         self._base_gate_cache: dict[str, bool] = {}
+        #: The forbidden paths the last path guard put back (`_guard`).
+        self.put_back: list[str] = []
         self.result: dict[str, Any] = {
             "version": 1,
             "action": plan.get("action"),
@@ -336,6 +340,7 @@ class Worker:
             return conflicts
         installed = self._install()
         if not installed.ok and not has_remote:
+            self.result["infra_scope"] = "repository"  # not the subscription's fault
             raise Interrupt(f"dependency install failed on untouched main (exit "
                             f"{installed.exit_code}): {installed.tail[-1500:]}", "infra")
         return conflicts
@@ -370,7 +375,10 @@ class Worker:
         notes_path = self.wt.cwd / NOTES_FILE
         notes = ""
         if notes_path.is_file():
-            notes = notes_path.read_text(encoding="utf-8", errors="replace")[-NOTES_CHARS:]
+            notes = notes_path.read_text(encoding="utf-8", errors="replace")
+            # A planning run's notes are its plan, which starts at the top; a builder's log is
+            # newest at the end.
+            notes = notes[:NOTES_CHARS] if self.plan.get("action") == "plan" else notes[-NOTES_CHARS:]
         trail = ""
         trail_of = getattr(self.runner, "trail", None)
         if self.build_transcript is not None and self.build_transcript.exists() and trail_of:
@@ -523,6 +531,7 @@ class Worker:
         assert self.wt is not None
         found: list[Finding] = []
         touched = self.wt.unsanctioned("HEAD", self._anchors(), self.cfg.forbidden_paths)
+        self.put_back = touched
         if touched:
             self.wt.restore_from(self._anchors(), touched)
             self._commit("bot: put back paths the bot may not change")
@@ -560,8 +569,13 @@ class Worker:
         return results
 
     def _mark_pre_existing(self, results: list[gates_mod.GateResult]) -> None:
+        """Run each gate this change left red again on the untouched base. A gate that timed out
+        is not: it is inconclusive (`gates.mark_inconclusive`), and on the base it would only
+        spend its whole timeout again."""
+        gates_mod.mark_inconclusive(results, {g.name for g in self.gates})
         for result in results:
-            if result.ok or result.skipped or result.name == self.cfg.install.name:
+            if (result.ok or result.skipped or result.inconclusive
+                    or result.name == self.cfg.install.name):
                 continue
             gate = next((g for g in self.gates if g.name == result.name), None)
             if gate is None:
@@ -642,7 +656,9 @@ class Worker:
             self.wt.run("reset", "--quiet", "--hard", head)
         if self.wt.dirty():
             self.wt.discard_worktree_changes()
-        text = redact((result.text or "").strip())[-PLAN_CHARS:]
+        text = redact((result.text or "").strip())
+        if len(text) > PLAN_CHARS:
+            text = text[:PLAN_CHARS - len(PLAN_CUT)].rstrip() + PLAN_CUT
         if not result.ok or not text:
             raise RuntimeError(f"the planner on {seat.model} wrote no plan"
                                + (f": {result.error}" if result.error else ""))
@@ -748,6 +764,8 @@ class Worker:
                 return
             report = built
             guard = self._guard()
+            if self._only_forbidden():
+                return
             self.check()
             results = self._checks()
             entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
@@ -801,6 +819,26 @@ class Worker:
             self_check_findings=[f.to_dict() for f in open_self_check],
         )
         self._finish()
+
+    def _only_forbidden(self) -> bool:
+        """A build whose whole change was in paths the bot may not change (`bot/`, `.harness/`,
+        `.github/`, ...): the path guard put it all back, so no fix or review can deliver it. The
+        run ends now, asking a person, with nothing bundled, instead of spending its rounds."""
+        assert self.wt is not None
+        if self.plan["action"] != "build" or not self.put_back:
+            return False
+        if self.wt.changed_paths(self.base_ref):
+            return False
+        self.wt.run("reset", "--quiet", "--hard", self.start_sha)
+        paths = ", ".join(f"`{p}`" for p in self.put_back[:8])
+        self.result.update(
+            status="blocked", reason="the change was all in paths the bot may not change",
+            question=(f"Everything this run changed ({paths}) is in paths the bot may not "
+                      "change, such as `bot/`, `.harness/` and `.github/`, so the harness put it "
+                      "back and there is nothing to deliver. A person has to make this change, or "
+                      "narrow the issue to the part outside those paths."))
+        self._finish()
+        return True
 
     def _last_checkpoint(self) -> None:
         """A halt or a stop said during the last review still counts: no finished change is

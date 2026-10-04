@@ -70,8 +70,13 @@ SECRETS: tuple[str, ...] = (
 )
 
 #: After a run on a provider could not work (its login refused, its CLI would not install or
-#: start), unforced runs leave that provider alone this long. The others carry on.
-INFRA_BACKOFF = timedelta(minutes=50)
+#: start), unforced runs leave that provider alone this long. The others carry on. Each failure in
+#: a row waits longer (the last wait repeats), so a dead login stops costing a run every hour; the
+#: streak ends when a run on the provider gets a model call through (`clear_infra`).
+INFRA_BACKOFFS = (timedelta(minutes=50), timedelta(hours=2), timedelta(hours=8))
+INFRA_BACKOFF = INFRA_BACKOFFS[0]
+#: After this many failures in a row, `deliver` opens an issue asking a person to fix it.
+INFRA_ASK_AFTER = 3
 
 #: Usage windows, and how long each lasts when a reading carries no reset time of its own.
 WINDOWS = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
@@ -583,10 +588,41 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         entry["spent"] = spent[-SPENT_KEEP:]
 
 
-def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime) -> None:
-    """A run on this provider could not work: leave it alone for `INFRA_BACKOFF`."""
+def note_infra(state: dict[str, Any], provider_id: str, reason: str, at: datetime, *,
+               escalate: bool = True) -> int:
+    """A run on this provider could not work: leave it alone for its backoff (`infra_backoff`).
+    Returns the failures in a row. `escalate` False (a failure that was not the provider's, such
+    as an install that fails on untouched main) keeps the streak where it was."""
     entry = record(state, provider_id)
-    entry["infra"] = {"at": iso(at), "reason": str(reason)[:500]}
+    previous = entry.get("infra") if isinstance(entry.get("infra"), Mapping) else {}
+    streak = _streak(previous)
+    if escalate or not previous:
+        streak = streak + 1 if previous else 1
+    entry["infra"] = {**{k: previous[k] for k in ("issue",) if previous.get(k)},
+                      "at": iso(at), "reason": str(reason)[:500], "streak": streak}
+    return streak
+
+
+def clear_infra(state: dict[str, Any], provider_id: str) -> int | None:
+    """A run on this provider got a model call through: its failure streak is over. Returns the
+    issue `deliver` opened about it, if any, to close."""
+    entry = (state.get("providers") or {}).get(provider_id)
+    if not isinstance(entry, dict) or not isinstance(entry.get("infra"), Mapping):
+        return None
+    issue = entry.pop("infra").get("issue")
+    return int(issue) if issue else None
+
+
+def _streak(infra: Mapping[str, Any]) -> int:
+    try:
+        return max(1, int(infra.get("streak") or 1)) if infra else 0
+    except (TypeError, ValueError):
+        return 1
+
+
+def infra_backoff(infra: Mapping[str, Any]) -> timedelta:
+    """How long a provider is left alone after its last failure, by the failures in a row."""
+    return INFRA_BACKOFFS[min(max(_streak(infra), 1), len(INFRA_BACKOFFS)) - 1]
 
 
 def _duration(text: str) -> timedelta:
@@ -710,9 +746,12 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     entry = peek_record(state, provider.id)
     infra = entry.get("infra") if isinstance(entry.get("infra"), Mapping) else {}
     failed = parse_iso(infra.get("at"))
-    if not forced and failed is not None and at - failed < INFRA_BACKOFF:
-        return (f"its last run could not work ({str(infra.get('reason') or '')[:120]}); it is "
-                f"left alone until {iso(failed + INFRA_BACKOFF)}")
+    backoff = infra_backoff(infra)
+    if not forced and failed is not None and at - failed < backoff:
+        streak = _streak(infra)
+        times = f", {streak} times in a row" if streak > 1 else ""
+        return (f"its last run could not work{times} ({str(infra.get('reason') or '')[:120]}); "
+                f"it is left alone until {iso(failed + backoff)}")
     return refusal(provider, entry, at, zone_name)
 
 

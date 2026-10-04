@@ -77,7 +77,7 @@ class MachineGateTests(unittest.TestCase):
         machine = {g.name: g.machine for g in cfg.gates}
         self.assertEqual(machine, {"lint": False, "typecheck": True, "catalog": True,
                                    "card tests exist": True, "rulings coverage": True,
-                                   "unit and integration": False})
+                                   "related tests": False})
 
 
 class WorkTests(unittest.TestCase):
