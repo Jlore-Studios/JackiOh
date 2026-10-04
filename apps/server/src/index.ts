@@ -249,11 +249,14 @@ export async function createRuntime(
   return { deps, registry, e2eStore };
 }
 
-/** Every route the server serves, in one table (see README.md for the surface). */
-export function allRoutes(): Route[] {
+/**
+ * Every route the server serves, in one table (see README.md for the surface). `commit` is the git
+ * commit this deploy runs (`env.DEPLOYED_COMMIT`), which `GET /api/catalog` reports in a header.
+ */
+export function allRoutes(options: { commit?: string | undefined } = {}): Route[] {
   return [
     ...createAuthRoutes(),
-    ...createCatalogRoutes(),
+    ...createCatalogRoutes({ commit: options.commit }),
     ...createCodesRoutes(),
     ...createCollectionRoutes(),
     ...createDeckRoutes(),
@@ -297,7 +300,7 @@ export async function start(env: ServerEnv = loadServerEnv()): Promise<RunningSe
   }
 
   const origins = browserOrigins(env);
-  const router = createRouter(allRoutes(), deps);
+  const router = createRouter(allRoutes({ commit: env.DEPLOYED_COMMIT }), deps);
   // The browser and the API are separate origins (§9.2); without this every `fetch` from
   // `apps/web` is blocked before a handler runs. Preflights never reach the router.
   const handler = withCors(

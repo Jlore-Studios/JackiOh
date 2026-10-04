@@ -85,6 +85,9 @@ describe("scripts/ci-scope.sh", () => {
       "vercel.json",
       "scripts/ci-scope.sh",
       ".github/workflows/ci.yml",
+      // promote-production.test.ts runs the script and reads the workflow.
+      ".github/workflows/promote-production.yml",
+      "scripts/promote-production.sh",
       ".github/actions/setup/action.yml",
       ".github/workflows/bot-selftest.yml-not",
       "apps/bot/x.ts",
