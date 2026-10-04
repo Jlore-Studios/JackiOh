@@ -944,31 +944,20 @@
       "ci_sha": "f4216c2945c3879a40cce6307e596f0a8f6b6962",
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-03T16:52:25Z",
+      "feedback_since": "2026-10-03T21:51:25Z",
       "forced": false,
       "interruptions": 0,
       "issue": 49,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
+      "question": "",
       "queued_at": "2026-10-03T21:40:23Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37156195736",
-      "self_check_findings": [
-        {
-          "claim": "The forfeit confirmation unconditionally asserts 'your rating moves as for a loss', which is now false for unranked room Conquest series, and the pre-result SeriesView exposes no ranked flag for the client to distinguish.",
-          "evidence": "Read series.tsx:424 (the alertdialog text) and the SeriesView type in apps/web/src/net/api.ts:595-606 \u2014 `ranked` exists only inside `result`, which is null until the series is over. rooms.ts:274,291 stamp room series `ranked: false`, and the new result wording at series.tsx:114-118 correctly renders 'Unrated: no rating changed.' for them \u2014 so the claim at the decision point contradicts the outcome text this same diff adds.",
-          "severity": "blocking",
-          "where": "apps/web/src/routes/series.tsx:424"
-        },
-        {
-          "claim": "GET /api/matches/:matchId/ranks returns 500 instead of its documented 404 for a malformed match id on Postgres, because matchRanks passes the raw path param to store.matches.get \u2014 the one store lookup with no isUuid guard \u2014 so $1::uuid throws 22P02.",
-          "evidence": "Read matches.get at apps/server/src/db/store.ts:1655-1663: `where id = $1::uuid` with no guard, while siblings guard at 1256, 1463, 1777, 1812, 2156, 2189, 2205, 2638. The route comment at ranked.ts:452-455 promises '404 ... exactly as for a match that does not exist'; a non-uuid string reaches Postgres, throws, and lands in the handler.threw warn path (api/http.ts:670) as a 500. The 404 test only exercises the memory store, which accepts any string, so the asserted contract is untested against the real store.",
-          "severity": "blocking",
-          "where": "apps/server/src/api/ranked.ts:434"
-        }
-      ],
-      "source": "ci",
+      "self_check_findings": [],
+      "source": "",
       "started_at": "2026-10-03T21:51:25Z",
       "stop_requested": false,
       "taken_asks": [],
