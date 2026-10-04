@@ -1012,6 +1012,9 @@
       "taken_asks": []
     },
     "180": {
+      "ci_reruns": {
+        "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7": 1
+      },
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-03T22:13:10Z",
