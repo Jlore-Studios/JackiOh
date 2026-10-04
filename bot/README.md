@@ -306,11 +306,11 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-1` | Claude Code, `opus` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | 98% of 5 hours, 90% of the week |
 | `claude-2` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
-| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
+| `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its caps, and outside it while under 50% of 5 hours and 50% of the week (`off_hours`) | 70% of 5 hours, 70% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
-| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, 95% of the week (its own `agy -p /usage`, the Gemini pool's row) |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, 95% of the week (its TUI's `/usage` panel) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -421,11 +421,12 @@ keeps its issue's. The difficulty sets the weakest tier that may build it:
 
 **The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
 caps; then the medium models, in any order (agy, Muse, Codex); then claude-2, kept back mostly for
-planning and reviewing; and Devin last. claude-4 sits with claude-1 until it is set up. For
-building alone, claude-2 is `build_last`: it builds only when no other subscription that may is
-free, Devin included. Devin is `easy_first`: it may build only easy items, so it takes them ahead
-of everyone while it has a free lane, and the stronger models keep the medium and hard items only
-they may build. With its six lanes it fills whatever room on the machine the medium models leave.
+planning and reviewing; and Devin last. claude-4 comes right after claude-1, held to half its
+usage outside 03:00–15:00 and to 70% inside it. For building alone, claude-2 is `build_last`: it
+builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
+it may build only easy items, so it takes them ahead of everyone while it has a free lane, and the
+stronger models keep the medium and hard items only they may build. With its six lanes it fills
+whatever room on the machine the medium models leave.
 
 - **Planning: the Needs plan stage.** Every build starts from a plan. A queued item with no plan
   carries `bot:needs-plan`, and so does an easy one whose plan no strong model wrote. A strong

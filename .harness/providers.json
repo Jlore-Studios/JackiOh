@@ -69,6 +69,7 @@
       "quiet_check": false
     },
     "claude-4": {
+      "note": "A fourth Claude account (token added 2026-10-04), held to half its usage: any hour under 50% of both its 5-hour session and its week (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of each.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -78,8 +79,9 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
       "runs_on": "ubuntu-latest",
-      "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
-      "limits": { "mode": "caps", "five_hour": 0.98, "seven_day": 0.9 },
+      "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
+      "off_hours": { "five_hour": 0.5, "seven_day": 0.5 },
+      "limits": { "mode": "caps", "five_hour": 0.7, "seven_day": 0.7 },
       "quiet_check": false
     },
     "gpt": {
@@ -107,7 +109,7 @@
       "login": "machine",
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
     },
     "devin": {
@@ -141,7 +143,7 @@
       "runs_on": "night-vm-muse",
       "lanes": 2,
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 0.95 },
+      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
     }
   }

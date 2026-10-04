@@ -11,6 +11,8 @@
 # live server keeps serving the same version, and the version alone cannot tell. It also catches a
 # start command that is not render.yaml's: the new commit is live but serves another catalog version.
 # The issue says which of those it is, and the run that finds the server live closes it again.
+# Before it polls, it asks Render to deploy the push through the service's deploy hook (the
+# RENDER_DEPLOY_HOOK_URL secret), so a deploy no longer waits on Render's GitHub integration.
 #
 # The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
 # free instance waking), split into windows that each run as a job of their own, every one under
@@ -59,6 +61,23 @@ jobs:
           version=$(awk '$1 == "-" && $2 == "key:" { k = $3; next } k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' render.yaml)
           echo "render.yaml names catalog $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Render deploys a push when its GitHub integration tells it to, and that has failed twice now:
+      # after the repository moved, and again after it was reconnected (#224). Render's deploy hook
+      # does not depend on it: a POST to the hook deploys the service's branch as it stands, which
+      # is this push. Without the secret, the watch relies on Render's own auto-deploy, as before.
+      - name: ask Render to deploy this push
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not set: relying on Render's own auto-deploy (docs/deploy-cloudflare.md, section 5)."
+            exit 0
+          fi
+          if curl -fsS -X POST -o /dev/null "$HOOK"; then
+            echo "Render was asked to deploy ${GITHUB_SHA:0:7}."
+          else
+            echo "::warning::Render's deploy hook refused the request; the watch still checks whether the push went live."
+          fi
       - id: poll
         uses: ./.github/actions/poll-live
         with:
@@ -155,7 +174,7 @@ jobs:
           if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
             diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The start command takes the version from the newest entry of packages/cards/patches/patches.json (scripts/catalog-version.mjs), so either render.yaml's \`CATALOG_VERSION\` and that list disagree (the patch command writes both, and R388's test holds them equal), or the service is not running render.yaml's start command: open jackioh-server, Settings, Build & Deploy, and Blueprints."
           elif [ -n "$SERVED_COMMIT" ]; then
-            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
+            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. If the \`RENDER_DEPLOY_HOOK_URL\` secret is not set, set it (jackioh-server, Settings, Deploy Hook): the watch then asks Render to deploy every push itself. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
           else
             diagnosis="The server reported no commit. Either it predates this check and Render has not deployed since (jackioh-server, Events shows whether pushes start deploys, and Settings, Build & Deploy shows the repository, branch and Auto-Deploy), or \`RENDER_GIT_COMMIT\` is not set where it runs."
           fi

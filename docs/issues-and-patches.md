@@ -14,6 +14,7 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot itself: `bot/`, `.harness/` and its workflows |
+| `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. Comments `/hold`, `/resume` and `/delay 3h` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (v0.2.8's codebase pass) is `patch` and `architecture`. The
