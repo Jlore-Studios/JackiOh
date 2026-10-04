@@ -27,8 +27,8 @@ from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTY_LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
                             LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_STUCK,
-                            LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_SUGGESTION, STATE_BRANCH)
+                            LABEL_NEEDS_REVIEW, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
+                            LABEL_REVISE, LABEL_SUGGESTION, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, matches
@@ -1069,17 +1069,23 @@ class Deliverer:
         return self.repo.changed_paths(f"origin/{default}", ref)
 
     def _hand_to_a_person(self, pull: dict[str, Any], why: str) -> str:
+        """The review rule approved the head but auto-merge cannot take it: label it `ready for
+        merge` and ask the operator to merge it."""
         number = int(pull.get("number") or 0)
         if number:
-            self.gh.add_labels(number, [LABEL_NEEDS_REVIEW])
+            self.gh.add_labels(number, [LABEL_NEEDS_REVIEW, LABEL_READY])
             self._try(lambda: self.gh.request_reviewers(number, [self.cfg.operator]))
-        return f"Auto-merge is off because {why}. @{self.cfg.operator}, it waits for you to merge it."
+        return (f"Auto-merge is off because {why}. The reviews approved it, so it is labelled "
+                f"`{LABEL_READY}`: @{self.cfg.operator}, it waits for you to merge it.")
 
     def _auto_merge(self, pull: dict[str, Any], expected_head: str = "") -> str:
         """Turn on auto-merge only when nothing needs a person and CI must pass first, pinned to
         `expected_head` (the approved commit) when given."""
         if not self.cfg.auto_merge:
-            return "Auto-merge is off in `.harness/config.json`; a person merges it."
+            if pull.get("number"):
+                self.gh.add_labels(int(pull["number"]), [LABEL_READY])
+            return (f"Auto-merge is off in `.harness/config.json`, so it is labelled "
+                    f"`{LABEL_READY}`; a person merges it.")
         if not pull.get("node_id"):
             return ""
         branch = str((pull.get("head") or {}).get("ref") or self.plan.get("branch") or "")

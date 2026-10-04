@@ -243,6 +243,7 @@ needs level 3.
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` to have it built, close it to say no |
 | `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
+| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong; none counts as medium, and with several the hardest counts ([below](#difficulty-and-tiers)) |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it |
@@ -643,7 +644,8 @@ GitHub Actions, such as the harness's local `bb` container.
   there. If protection is missing, it leaves the pull request for a person.
 - **Some changes always wait for a person.** A change that touches a review-only path
   (`review_paths`) still becomes a pull request, but it is labelled `bot:needs-review`, you are
-  asked to review it, and auto-merge stays off. The review-only paths are the files that define
+  asked to review it, and auto-merge stays off. Once the reviews approve it, it is labelled
+  `ready for merge` too, and the bot @-mentions you to merge it. The review-only paths are the files that define
   what the checks do or how the game deploys: every `package.json`, the lockfile, the vitest,
   vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`, `render.yaml` and the
   database migrations.
