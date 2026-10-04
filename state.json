@@ -960,6 +960,9 @@
     "168": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "2ed45ad546dffb06f4d093715ff7bcae1dfa5744": 1
+      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
