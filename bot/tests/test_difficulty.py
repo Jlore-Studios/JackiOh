@@ -114,8 +114,8 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items Devin first while it has a lane (`easy_first`); then claude-3, then
-        claude-1, then the medium models, and claude-2 builds only after all of them
-        (`build_last`)."""
+        claude-1, then the medium models (Muse on both its lanes), and claude-2 builds only after
+        all of them (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 12):
@@ -140,6 +140,7 @@ class BuilderTests(unittest.TestCase):
                                  ("claude-1", "sonnet"), ("claude-4", "opus"),
                                  ("agy", "gemini-3.8-flash-high"),
                                  ("muse", "muse-spark-1.3-contributor"),
+                                 ("muse", "muse-spark-1.3-contributor"),
                                  ("gpt", "gpt-5.6-terra"), ("claude-2", "opus")])
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
@@ -156,7 +157,7 @@ class BuilderTests(unittest.TestCase):
         busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53))
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
-        busy(gh, ctx, ("muse", 54), ("gpt", 55))
+        busy(gh, ctx, ("muse", 54), ("muse", 62), ("gpt", 55))  # Muse has two lanes
         queue(gh, ctx, 3, EASY)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["provider"], seats(planned)["build"][1]), ("devin", "swe-2-max"))
@@ -174,7 +175,7 @@ class BuilderTests(unittest.TestCase):
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
         busy(gh, ctx, ("claude-3", 50), ("claude-1", 51), ("claude-4", 52), ("agy", 53),
-             ("muse", 54), ("gpt", 55))
+             ("muse", 54), ("muse", 56), ("gpt", 55))
         queue(gh, ctx, 3, MEDIUM)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "opus", "strong"))
 

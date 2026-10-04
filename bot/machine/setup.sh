@@ -83,12 +83,26 @@ fi
 for repo in "$HOME"/actions-runner*/_work/*/*/; do
   [ -d "$repo/.git" ] && git -C "$repo" worktree prune 2>/dev/null
 done
-rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
-  "$HOME/.cache/Cypress" 2>/dev/null
-# What this user's jobs left in /tmp; one job at a time per user, so an hour old is this job's.
-find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +60 -exec rm -rf {} + 2>/dev/null
+# A subscription with more than one lane (Devin, Muse) may have another job going, whose install
+# reads the shared caches: those go only when this job is the user's last one running.
+if [ "$(pgrep -c -u "$(id -u)" -f Runner.Worker)" -le 1 ]; then
+  rm -rf "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" "$HOME/.npm/_cacache" \
+    "$HOME/.cache/Cypress" 2>/dev/null
+fi
+# What this user's jobs left in /tmp, once older than any job runs (job_budget_minutes, 330):
+# a younger one may be another lane's, still in use.
+find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +360 -exec rm -rf {} + 2>/dev/null
 if [ -d "$HOME/.codex/sessions" ]; then
   find "$HOME/.codex/sessions" -type f -mtime +7 -delete 2>/dev/null
+fi
+# Muse keeps every session's log, a few hundred MB a day; the bot keeps its own transcripts. A
+# session untouched for 8 hours has ended (a call runs at most 150 minutes).
+muse_sessions="$HOME/.local/share/muse/sessions"
+if [ -d "$muse_sessions" ]; then
+  find "$muse_sessions" -mindepth 4 -maxdepth 4 -type d -mmin +480 -exec rm -rf {} + 2>/dev/null
+  find "$muse_sessions/.msp-view-v1" -mindepth 1 -maxdepth 1 -type d -mmin +480 \
+    -exec rm -rf {} + 2>/dev/null
+  find "$muse_sessions" -mindepth 1 -type d -empty -delete 2>/dev/null
 fi
 exit 0
 EOF

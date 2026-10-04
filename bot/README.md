@@ -308,9 +308,9 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-3` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | 21:00–07:00 | 98% of 5 hours, 90% of the week |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
-| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 100% of the week (agy reports none: until it refuses) |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, 95% of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh` | on the machine, as `agent-muse` | any time | 100% of the week (Muse reports none: until it refuses) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, 95% of the week (its TUI's `/usage` panel) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -338,23 +338,29 @@ each one and whether it could start now, and `/harness status` does the same on 
   `America/Chicago`.
 - `limits`: `{"mode": "none"}` uses whatever there is, and a refusal parks the subscription
   until its reset. `{"mode": "caps", ...}` takes any of these:
-  - `five_hour` and `seven_day`: a fraction of the allowance, for the CLIs that report usage
-    (Claude, and Codex through its session log);
+  - `five_hour` and `seven_day`: a fraction of the allowance, for the CLIs whose usage the bot
+    can read: Claude (its stream), Codex (its session log), agy (`agy -p /usage`, no model call:
+    the row for the pool its model draws on, Gemini or the Claude and GPT models it also serves)
+    and Muse (its TUI's `/usage` panel, read in a pseudo-terminal, since `muse exec` runs no slash
+    commands and neither its JSON events nor its session files carry the subscription's usage);
   - `five_hour_minutes` and `seven_day_minutes`: minutes of model time the bot counts itself, for
-    agy and Muse, which report none.
+    a CLI that reports none.
 
   How the caps hold:
   - **A fresh reading before the run.** A capped Claude account is pinged (one Haiku turn)
     before any model work, since the stored reading is the last run's, or nothing once its
-    window has reset.
+    window has reset; agy and Muse read their own `/usage`.
   - **Watched during each call.** Claude streams its usage as it works; a call stops once the
     reading crosses a cap. A call may run 150 minutes, so checking only between steps let runs
-    go to 100%.
+    go to 100%. agy's and Muse's calls stream none, so their `/usage` is read every ten minutes
+    during a call (`POLL_SECONDS`) and once after it.
   - **Headroom to start.** A build or a revision starts only `start_headroom` under each cap
     (top level: 15 points of the 5-hour window, 5 of the week); a plan or a review, which is
     short, goes up to the cap.
   - **One run at a time** on a capped subscription, its planning run included: two runs
-    deciding from one reading pass a cap together.
+    deciding from one reading pass a cap together. A subscription given more `lanes` takes that
+    many (Muse has two, on one login): each run takes its own reading before it starts and
+    watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
     last reading had nearly full (85% or more), else an hour.
@@ -374,7 +380,7 @@ may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runne
 and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once; Devin's is 6, on six runners, so it can fill the machine's six alone. A `secret` must be one of the names the workflows hand over (the four Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill the machine's six alone, and Muse's is 2. A `secret` must be one of the names the workflows hand over (the four Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
