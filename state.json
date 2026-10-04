@@ -2109,12 +2109,25 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "claude"
         ],
         "builder": "muse",
         "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "tier": "medium"
+          },
+          {
+            "family": "claude",
+            "run": "37233209932",
+            "tier": "strong"
+          }
+        ],
         "sha": "31802efded4969f9147eeb0a17ca1e876d6d7808",
         "tiers": {
+          "claude": "strong",
           "muse": "medium"
         }
       }
