@@ -464,7 +464,10 @@ hook against the branch its own resolution then takes (SPEC §10.9). Those proof
 `test/condition-active.test.ts`, not in the card's own file, because they share one harness for
 reading `conditionActive` off `s.view(...)`; the card's own test file names that file in its header.
 The same file pins the set of cards that declare the hook to R195's list, so a card that adds one
-fails `pnpm test` until its proof and the ruling's list are updated.
+fails `pnpm test` until its proof and the ruling's list are updated. The cards R658 gave a glow
+(#18, #38, #41, #60, #64, #70, #78, #85, #96, #100) prove theirs in their own test files instead,
+through `test/_glow.ts`, as the issue that added them asked; #38, #64 and #78 glow through the
+engine's granted conditions (`condition.ts`) rather than a hook of their own, and #41 never glows.
 
 A card whose script declares `preview` (R280) proves, on both faces, that each value its view
 carries is what its own resolution then deals or gains, that each label sits in its face's text,

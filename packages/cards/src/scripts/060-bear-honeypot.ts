@@ -47,6 +47,11 @@
 //
 // `summonedThisScript` on the forced-attack filter is what makes "they attack it" mean the tokens
 // THIS trap just summoned rather than every Rush Token its controller happens to own.
+//
+// THE GLOW (R658). The trap lights up on its controller's field while they have an empty, unlocked,
+// unreserved unit zone, R430's "if you have an empty unit zone" read by the same `openZones` as
+// `match` below: the half of the trigger the board decides. The play that sets it off is the other
+// half and has not happened yet, so the glow is the same on both faces.
 
 import type { GameEvent } from "@jackioh/shared";
 import type { Effect, EffectContext, Script, TrapTrigger } from "@jackioh/engine";
@@ -120,6 +125,10 @@ function honeypot(anyCost: boolean, fill: boolean): TrapTrigger {
   };
 }
 
-export const base: Script = { triggers: [honeypot(false, false)] };
+/** R658, R430: armed while its controller has an open unit zone for the tokens. */
+const conditionMet: NonNullable<Script["conditionMet"]> = (ctx) =>
+  ctx.zone === "field" && openZones(ctx.state, ctx.controller, "units").length > 0;
 
-export const radiant: Script = { triggers: [honeypot(true, true)] };
+export const base: Script = { triggers: [honeypot(false, false)], conditionMet };
+
+export const radiant: Script = { triggers: [honeypot(true, true)], conditionMet };

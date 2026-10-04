@@ -4002,6 +4002,25 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R656 a cast that targets enemies aims each target pick by its declaration", () => {
     provenIn(656, "effects-cast.test.ts");
   });
+
+  // Proved by glow-facts.test.ts "R658 …" (the query facts and condition.ts's granted half) and by
+  // each card's own test, both faces: on when the condition holds, off when it does not.
+  it("R658 the yellow glow for the conditions R195 left out", () => {
+    provenIn(
+      658,
+      "glow-facts.test.ts",
+      "../../cards/test/018-bread-and-butter.test.ts",
+      "../../cards/test/038-quickstriker.test.ts",
+      "../../cards/test/041-sheepish.test.ts",
+      "../../cards/test/060-bear-honeypot.test.ts",
+      "../../cards/test/064-gifted-program.test.ts",
+      "../../cards/test/070-spiteful-stab.test.ts",
+      "../../cards/test/078-fullsend.test.ts",
+      "../../cards/test/085-unlicensed-experimentation.test.ts",
+      "../../cards/test/096-my-pawn.test.ts",
+      "../../cards/test/100-ceaseless-void.test.ts",
+    );
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

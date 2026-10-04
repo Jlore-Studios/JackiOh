@@ -33,6 +33,11 @@
 // "Sheepish on an Immutable unit still fires and is consumed with no effect". This card neither
 // checks Immutable nor consumes itself: `fireTrap` emits `trapFired`, runs the state check and
 // consumes the trap "whatever its effects achieved". R33's face-down identity is the view's.
+//
+// NO GLOW (R658). Sheepish waits on an event and on nothing the board holds: any Unit the opponent
+// plays sets it off, and an Immutable one still consumes it (R17). A glow would be on whenever the
+// trap is, which says nothing, and the one thing that would make it useful, whether the opponent
+// holds a Unit, is their hidden hand (§9.1). So it declares no `conditionMet`.
 
 import type { Effect, Script, TrapTrigger } from "@jackioh/engine";
 import { defOf, leftFieldSinceResolved } from "@jackioh/engine";

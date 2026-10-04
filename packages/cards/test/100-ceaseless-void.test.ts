@@ -11,6 +11,9 @@
 // The Cry is `exileAll({ side: "any", rows: ["units", "backrow"], excludeSelf: true })`, the
 // board-wide exile the effects barrel exports.
 
+//
+// R658's yellow glow (`conditionMet`): in hand once what a play of it costs now is within its
+// controller's mana, both faces, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { effectiveCost, printedCost } from "@jackioh/engine";
@@ -18,6 +21,7 @@ import type { CardInstance } from "@jackioh/engine";
 import { cardDef } from "../src/catalog-data";
 import { base as voidBase, radiant as voidRadiant } from "../src/scripts/100-ceaseless-void";
 import { scenario, type Scenario, type SideSetup } from "./_harness";
+import { handGlows } from "./_glow";
 
 const VOID = "core-100"; // Unit, 100, Mythic, 10/10 → 20/20 plus Charge
 const PRINTED = 100;
@@ -110,12 +114,12 @@ describe("#100 Ceaseless Void — the card", () => {
     expect(def.radiant.keywords.map((keyword) => keyword.kind)).toEqual(["Charge"]);
   });
 
-  it("§10.9 one script serves both faces: the cost hook and the Cry, and nothing else", () => {
+  it("§10.9 one script serves both faces: the cost hook, the Cry and R658's glow, and nothing else", () => {
     // "Plus Charge" and the 20/20 are printed on the radiant face and so §10.4 layer 1, not a line
     // of script, which is why the two faces are the same object and both of the row's clauses are
     // kept.
     expect(voidRadiant).toBe(voidBase);
-    expect(Object.keys(voidBase).sort()).toEqual(["cost", "cry"]);
+    expect(Object.keys(voidBase).sort()).toEqual(["conditionMet", "cost", "cry"]);
   });
 
   it("§10.4 R275 the base face reads 10/10 and the radiant face 20/20 through the layers", () => {
@@ -412,4 +416,25 @@ describe("#100 Ceaseless Void — radiant 'Plus Charge'", () => {
     setCounters(s, { drawn: 30, played: 30, destroyed: 20, exiled: 15 });
     expect(effectiveCost(s.state, held(s))).toBe(5);
   });
+});
+
+describe("#100 Ceaseless Void glows once the count brings it within your mana (R658)", () => {
+  for (const radiantFace of [false, true]) {
+    const face = radiantFace ? "radiant" : "base";
+
+    it(`R658 ${face}: at 97 counted it costs 3 of your 4 mana and glows, and it can be played`, () => {
+      const s = voidScenario({ radiantFace });
+      setCounters(s, { drawn: 97 });
+      expect(handGlows(s, held(s).id)).toBe(true);
+      s.play(VOID);
+      s.expectInZone(VOID, "field");
+    });
+
+    it(`R658 ${face}: at 95 counted it costs 5, more than your 4, and does not glow`, () => {
+      const s = voidScenario({ radiantFace });
+      setCounters(s, { drawn: 95 });
+      expect(handGlows(s, held(s).id)).toBe(false);
+      expect(effectiveCost(s.state, held(s))).toBe(5);
+    });
+  }
 });

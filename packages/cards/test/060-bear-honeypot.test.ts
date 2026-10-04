@@ -15,9 +15,13 @@
 // unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), R430 (no empty unit
 // zone: the trap waits), §5.1 (a Trap is consumed when it fires).
 
+//
+// R658's yellow glow (`conditionMet`): on its controller's field while they have an open unit zone,
+// both faces, checked against the opponent's play, at the end of this file.
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@jackioh/shared";
 import { scenario, type Scenario } from "./_harness";
+import { backrowGlows, opponentSeesGlow } from "./_glow";
 
 /** The trap, face-down in p1's backrow lane 3 — a Trap is only ever face-down until it fires (§5.1). */
 function armed(radiant = false): { def: string; radiant?: boolean; faceUp: boolean; lane: number } {
@@ -432,4 +436,41 @@ describe("#60 Bear Honeypot — radiant", () => {
 
     g.expectInZone("core-060", "graveyard");
   });
+});
+
+describe("#60 Bear Honeypot glows while its controller has an open unit zone (R658, R430)", () => {
+  const VANILLA = "core-008"; // Mr. Vanilla, a 1-cost Unit
+  const FULL = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
+
+  for (const radiant of [false, true]) {
+    const face = radiant ? "radiant" : "base";
+
+    it(`R658 ${face}: with an open zone it glows for its controller only, and the opponent's cheap play sets it off`, () => {
+      const s = scenario({
+        seed: `r658-060-${face}-on`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-060", radiant }] },
+        p2: { hand: [VANILLA, "core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(true);
+      expect(opponentSeesGlow(s, 1)).toBe(false);
+
+      s.play(VANILLA);
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
+    });
+
+    it(`R658 ${face}: with every unit zone taken it does not glow, and the play leaves it armed (R430)`, () => {
+      const s = scenario({
+        seed: `r658-060-${face}-off`,
+        active: "p2",
+        p1: { backrow: [{ def: "core-060", radiant }], field: FULL },
+        p2: { hand: [VANILLA, "core-010"] },
+      });
+      expect(backrowGlows(s, 1)).toBe(false);
+
+      s.play(VANILLA);
+      expect(s.events.some((event) => event.type === "trapFired")).toBe(false);
+      expect(s.backrow("p1", 1)?.defId).toBe("core-060");
+    });
+  }
 });

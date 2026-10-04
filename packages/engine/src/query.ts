@@ -26,14 +26,19 @@
 // `packages/cards/src/query.ts`). This module queries the BOARD. Two different questions; the
 // names below say which is which, and neither exports a bare `query`.
 
-import type { CardType, GameEvent, PlayerId, Tag } from "@jackioh/shared";
+import { opponentOf, type CardType, type GameEvent, type PlayerId, type Tag } from "@jackioh/shared";
 import { isAnnounceLive } from "./announce";
 import { cardTypeOf } from "./faces";
+import { unitHas } from "./layers";
+import { modifierIsLive, playCost } from "./mana";
+import { giftedMakesRadiant } from "./playChoices";
 import type { EffectContext } from "./script";
+import { flagsOf } from "./scripts";
 import { findInstance, type CardInstance, type FaceUpRecord, type GameState, type PlayRecord } from "./state";
 import { leftFieldAfter } from "./stays";
 import { partMemoryKey } from "./work";
-import { cardAt, slotOf, type OffFieldZone } from "./zones";
+import { isLethal } from "./subsystems/lethal";
+import { activeUnitsOf, cardAt, slotOf, slotsOf, type OffFieldZone } from "./zones";
 
 /**
  * A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
@@ -270,4 +275,74 @@ export function playStillAnnounced(state: GameState, instanceId: string): boolea
  */
 export function maxManaOf(state: GameState, player: PlayerId): number {
   return state.players[player].mana.max;
+}
+
+// ---------------------------------------------------------------------------
+// The yellow glow's facts for the cards R195 left out (R658)
+// ---------------------------------------------------------------------------
+
+/** Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2). */
+function permanentsHeldBy(state: GameState, player: PlayerId): CardInstance[] {
+  return (["units", "backrow"] as const).flatMap((row) =>
+    slotsOf(player, row).flatMap((ref) => {
+      const held = cardAt(state, ref);
+      return held === null ? [] : [held];
+    }),
+  );
+}
+
+/**
+ * R658: whether a card this player plays now from their hand would take a Combo branch a permanent
+ * or a modifier grants it — #38 Quickstriker's "Combo X: deal X damage" (its flag on a permanent of
+ * theirs, or a `quickstrikerDamage` rider), #78 /fullsend's Radiant "Combo: draw 1" (a `comboDraw`
+ * rider). §10.5 step 5 resolves both only when the play has a card played earlier this turn before it
+ * (`playSteps.quickstrikerCombo`, `comboDrawStep`), and a card still in a hand has every play this
+ * turn before it (`playedEarlier`), so this is "one of them is in place, and a card has been played".
+ * Plays and modifiers are public (§10.8).
+ */
+export function grantedComboLive(state: GameState, player: PlayerId): boolean {
+  if (cardsPlayedThisTurn(state, player) < 1) return false;
+  const granted = permanentsHeldBy(state, player).some((held) => {
+    const flag = flagsOf(held).quickstriker;
+    return flag === true || (typeof flag === "number" && Math.trunc(flag) > 0);
+  });
+  if (granted) return true;
+  return state.players[player].mods.some(
+    (mod) =>
+      modifierIsLive(state, mod) &&
+      (mod.kind === "quickstrikerDamage" || (mod.kind === "comboDraw" && mod.amount > 0)),
+  );
+}
+
+/**
+ * R658, R213: whether #64 Gifted Program would make this card from this player's hand Radiant if
+ * they played it now — the question §10.5 step 3 asks (`giftedMakesRadiant`), with the cost a play
+ * of it pays now (R56). A card that is Radiant already gains nothing, so it is never one.
+ */
+export function giftedWouldMakeRadiant(state: GameState, player: PlayerId, card: CardInstance): boolean {
+  if (card.radiant) return false;
+  return giftedMakesRadiant(state, player, playCost(state, card));
+}
+
+/**
+ * R658, R44: the units acting on the other side whose attack on this player's hero would be lethal
+ * now, by #96 My Pawn's own projection (`subsystems.isLethal`: after Armor and the Anti-oneshot cap,
+ * net of a Lifesteal strike back). It asks whether the blow is on the board, not whether it can be
+ * declared this moment. Stats, keywords and health are public (§10.8).
+ */
+export function lethalAttackersOf(state: GameState, player: PlayerId): readonly CardInstance[] {
+  return activeUnitsOf(state, opponentOf(player)).filter((unit) =>
+    isLethal(state, unit, { kind: "hero", player }),
+  );
+}
+
+/**
+ * R658: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
+ * permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
+ * (R23). The types are the trap's to match when a permanent is played.
+ */
+export function fusablePermanentsOf(state: GameState, player: PlayerId, except: string | null): readonly CardInstance[] {
+  return permanentsHeldBy(state, player).filter(
+    (held) => held.id !== except && !unitHas(state, held, "Immutable"),
+  );
 }
