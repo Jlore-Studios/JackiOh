@@ -76,7 +76,9 @@ describe("Issue #124: the stack wheel, the sweep fog and the whole-pile wave", (
           cy.get(NEXT).click();
           cy.get(POSITION).should("have.text", `2 of ${buried + 1}`);
           cy.get(NOTE).should("have.text", "Buried");
-          cy.get(WHEEL).type("{end}");
+          // The wheel is a div with tabIndex 0, not a typeable element, so End reaches it
+          // as the keydown CardWheel listens for (as its unit test fires it) rather than type.
+          cy.get(WHEEL).trigger("keydown", { key: "End", keyCode: 35, which: 35, bubbles: true });
           cy.get(POSITION).should("have.text", `${buried + 1} of ${buried + 1}`);
           cy.get(NOTE).should("have.text", "Bottom of pile");
         });
