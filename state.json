@@ -388,6 +388,12 @@
       "lines": [
         "@jgoetzmann-bot change the tests to reflect new card behavior"
       ]
+    },
+    "c:5982113246": {
+      "at": "2026-10-04T16:34:02Z",
+      "lines": [
+        "/harness run"
+      ]
     }
   },
   "items": {
