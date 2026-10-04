@@ -1209,7 +1209,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T05:06:37Z",
+      "feedback_since": "2026-10-04T14:10:07Z",
       "forced": false,
       "interruptions": 0,
       "issue": 49,
@@ -1221,15 +1221,8 @@
       "queued_at": "2026-10-04T14:08:23Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37208176162",
-      "self_check_findings": [
-        {
-          "claim": "The self check's answer could not be read twice in a row.",
-          "evidence": "the harness",
-          "severity": "blocking",
-          "where": "self check"
-        }
-      ],
-      "source": "conflict",
+      "self_check_findings": [],
+      "source": "",
       "started_at": "2026-10-04T14:10:07Z",
       "stop_requested": false,
       "taken_asks": [],
