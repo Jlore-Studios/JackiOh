@@ -67,9 +67,10 @@ titles, so retitle one when you accept it.
   retitle it `Y`.
 - **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`
   plus the next letter: a micro patch that ships after v0.2.5 is v0.2.5b, and one after v0.2.7c is
-  v0.2.7d. The patch command does it: `pnpm --filter @jackioh/cards run patch v0.2.Y "<title>" …`
-  (`packages/cards/scripts/versions.ts`). It refuses a `v0.2.Y` when the newest version is not a
-  v0.2 one. A micro patch with no card data change bumps nothing and keeps its `Y` title.
+  v0.2.7d. Going live through a pending fragment it keeps its `Y` (`pending/v0.2.Y.json`) until
+  `patches ship` promotes it, which names it (`packages/cards/scripts/versions.ts`). It refuses a
+  `v0.2.Y` when the newest version is not a v0.2 one. A micro patch with no card data change bumps
+  nothing and keeps its `Y` title.
 
 ## A patch that takes several pull requests
 
@@ -88,12 +89,14 @@ titles, so retitle one when you accept it.
   rest.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
-- **Going live.** A change to card data goes live through
-  `pnpm --filter @jackioh/cards run patch <version> "<title>" --date <YYYY-MM-DD>`. It snapshots the
-  catalog, appends the version to `patches.json` and bumps `CATALOG_VERSION` everywhere it lives
-  (`packages/cards/README.md` §8), and the next deploy reseeds the database. The PR that runs it is
-  the last part, and the patch is live when that PR merges. A patch with no card data change is
-  live when its last part merges.
+- **Going live.** A change to card data goes live through a pending fragment:
+  `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` writes
+  `packages/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
+  the branch merges `patches ship` promotes it — appending the version to `patches.json` and
+  bumping `CATALOG_VERSION` everywhere it lives (`packages/cards/README.md` §8) — and the next
+  deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
+  live when the promotion PR merges. A patch with no card data change is live when its last part
+  merges.
 - **Until then, players see nothing new.** Every earlier part leaves main playable and unchanged
   for players. Code nothing reaches yet is fine. A changed card, rule or screen waits for the last
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
