@@ -19,7 +19,7 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 | 3 | `packages/cards/src/scripts/classic-plus/NNN-slug.ts` | the script ([§2](#2-templates)) | `registry.test.ts`, `missing-tests` |
 | 4 | `packages/cards/test/classic-plus/NNN-slug.test.ts` | the test ([§2](#2-templates), [cards README §5](../packages/cards/README.md)) | `missing-tests` |
 | 5 | `packages/cards/src/scripts/_generated.ts` | **generated**: run `pnpm typecheck`, commit its diff, never edit it | typecheck |
-| 6 | `packages/cards/test/catalog.test.ts` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS`, `SET_SIZES`, the totals and the row counts (`.toBe(116)` …) | itself |
+| 6 | `packages/cards/test/catalog.test.ts` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
 | 7 | `packages/cards/scripts/validate-catalog.ts` | the set's `cards` and `rarities`, and `EXPECTED_TAG_COUNTS` for each tag the card has | `validate:catalog` |
 | 8 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `radiant-standard.test.ts` |
 | 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
@@ -31,9 +31,14 @@ A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test
 non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SIZE`),
 `test/059-unbiased-immigration.test.ts` (the pool without #59), `apps/server/test/api/catalog.test.ts`,
 `apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
-size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). The patch-list tests
+size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). Since #108 the catalog and pool counts
+and the web's patch tests (`patches/source.test.ts`, `routes/patch-notes.test.tsx`, `patches/PatchNotes.test.tsx`) count
+`catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests
 (`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
-yours — a pending-claimed card needs no edits there (R641).
+yours — a pending-claimed card needs no edits there (R641). What stays hand-kept is the proof:
+`catalog.test.ts`'s `RARITY_COUNTS` and `SET_SIZES` (its totals and row counts are the sums) and
+`validate-catalog.ts`'s `SETS` and `EXPECTED_TAG_COUNTS` (`patches.test.ts`'s `VERSIONS` is derived from
+`patches.json`, with the shipped prefix pinned).
 
 Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
 `CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.

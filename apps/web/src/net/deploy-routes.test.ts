@@ -156,11 +156,13 @@ describe("vercel.json deployment flag", () => {
       "patch/v0.1.1",
       "patches/ship-74c8823",
       "polish/3-ai",
+      // Cloudflare's branch, moved by promote-production.yml; Vercel is staging and builds main.
+      "production",
       "wt/engine",
     ]) {
       expect(deploys(branch), branch).toBe(false);
     }
-    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany"]) {
+    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany", "productions"]) {
       expect(deploys(branch), branch).toBe(true);
     }
   });

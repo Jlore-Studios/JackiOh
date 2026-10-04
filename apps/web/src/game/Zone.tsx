@@ -28,7 +28,16 @@ function flagAt(flags: { units: boolean[]; backrow: boolean[] } | undefined, row
 
 import Backrow from "./Backrow.tsx";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
-import { laneIndex, sideView, testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
+import {
+  laneIndex,
+  sideView,
+  testid,
+  touchHoldMode,
+  type AnimatingMap,
+  type ClickTarget,
+  type Highlight,
+  type Side,
+} from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import LockIcon from "./LockIcon.tsx";
 
@@ -96,6 +105,7 @@ export default function Zone(props: ZoneProps): ReactElement {
           unit={unit}
           switchTarget
           target={{ on: "unit", instanceId: unit.instanceId, side, lane }}
+          touchHold={touchHoldMode(view)}
           highlight={props.highlight}
           animating={props.animating}
           onClick={props.onClick}
@@ -107,6 +117,7 @@ export default function Zone(props: ZoneProps): ReactElement {
           entry={backrow}
           side={side}
           lane={lane}
+          touchHold={touchHoldMode(view)}
           highlight={props.highlight}
           animating={props.animating}
           onClick={props.onClick}
