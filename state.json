@@ -1766,7 +1766,7 @@
     },
     "claude-3": {
       "infra": {
-        "at": "2026-10-04T00:18:29Z",
+        "at": "2026-10-04T00:19:21Z",
         "reason": "the claude CLI could not run: Failed to authenticate. API Error: 401 OAuth access token is invalid."
       },
       "spent": [
