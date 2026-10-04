@@ -2254,19 +2254,23 @@
         {
           "at": "2026-10-04T06:06:11Z",
           "minutes": 9.3
+        },
+        {
+          "at": "2026-10-04T06:47:24Z",
+          "minutes": 36.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T10:50:00Z",
-          "utilization": 0.2
+          "utilization": 0.89
         },
-        "observed_at": "2026-10-04T06:06:11Z",
+        "observed_at": "2026-10-04T06:47:24Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.38
+          "utilization": 0.43
         },
-        "status": "allowed_warning"
+        "status": "allowed"
       }
     },
     "claude-3": {
