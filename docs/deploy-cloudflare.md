@@ -144,6 +144,12 @@ the site is on `jackioh.<your-account>.workers.dev`.
 
 ### Step 4: Tell the backend about the new origin
 
+- **Render deploy hook** (once): `jackioh-server` -> Settings -> Deploy Hook -> copy the URL, and save
+  it as the GitHub repository secret `RENDER_DEPLOY_HOOK_URL`. `deploy-watch.yml` then asks Render to
+  deploy every push to `main` itself, so a deploy no longer depends on Render's GitHub integration,
+  which stopped delivering pushes twice (after the repository moved, and again after it was
+  reconnected, #224). Keep Auto-Deploy on "On Commit" too; never "After CI checks pass" while any
+  check on `main` can be red for reasons that are not the server's.
 - **Render** -> `jackioh-server` -> Environment -> `PUBLIC_ORIGINS`: add the Cloudflare origin,
   comma-separated, keeping `https://jackioh.vercel.app` for staging. Example:
   `https://jackioh.vercel.app,https://play.example.com`. This list gates both CORS and the WebSocket
@@ -219,6 +225,10 @@ to allow that one extra Vercel header. Then set the Supabase Site URL to the Clo
   disagree, or the service is not running render.yaml's start command (Settings, Build & Deploy;
   Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not
   set. The run that finds the server live closes the issue.
+- **Render stopped deploying again after the reconnect (#224):** the live server stayed on the
+  commit the manual sync deployed, and no push after it arrived. The `RENDER_DEPLOY_HOOK_URL` secret
+  (section 4, step 4) makes `deploy-watch.yml` request each deploy itself; until it is set, Manual
+  Deploy, "Deploy latest commit", is the way to catch up.
 - **Render stopped deploying (the repository moved):** when the repository was transferred from
   `jgoetzmann` to `Jlore-Studios`, Render kept the last deploy it had made (Oct 2) and received no
   push after it, so a catalog change (v0.2.4) never arrived and nothing flagged it, because the
