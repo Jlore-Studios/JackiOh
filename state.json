@@ -1586,22 +1586,36 @@
       "asks": [],
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T03:26:00Z",
+      "feedback_since": "2026-10-04T07:54:22Z",
       "issue": 44,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
+      "question": "",
       "queued_at": "2026-10-04T07:54:08Z",
       "run_id": "37187167287",
       "self_check_findings": [
+        {
+          "claim": "Conflict markers are still in apps/server/test/api/catalog.test.ts, apps/web/src/patches/PatchNotes.test.tsx, apps/web/src/patches/source.test.ts, apps/web/src/routes/patch-notes.test.tsx.",
+          "evidence": "git grep",
+          "severity": "blocking",
+          "where": "apps/server/test/api/catalog.test.ts"
+        },
         {
           "claim": "The self check's answer could not be read twice in a row.",
           "evidence": "the harness",
           "severity": "blocking",
           "where": "self check"
+        },
+        {
+          "claim": "Checks this change turned red must pass.",
+          "evidence": "the harness's gate run",
+          "severity": "blocking",
+          "where": "checks"
         }
       ],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-04T07:54:22Z",
       "stop_requested": false,
       "taken_asks": [],
