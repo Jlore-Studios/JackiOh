@@ -1111,9 +1111,7 @@
       "source": "request",
       "started_at": "2026-10-04T16:00:58Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:5981787396"
-      ]
+      "taken_asks": []
     },
     "167": {
       "action": "review",
