@@ -1995,7 +1995,7 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T17:37:29Z",
+      "feedback_since": "2026-10-04T18:14:05Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-04T17:51:31Z",
@@ -2016,21 +2016,8 @@
       "queued_at": "2026-10-04T18:08:31Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "37223578558",
-      "self_check_findings": [
-        {
-          "claim": "Conflict markers are still in SPEC.md.",
-          "evidence": "git grep",
-          "severity": "blocking",
-          "where": "SPEC.md"
-        },
-        {
-          "claim": "The self check's answer could not be read twice in a row.",
-          "evidence": "the harness",
-          "severity": "blocking",
-          "where": "self check"
-        }
-      ],
-      "source": "ci",
+      "self_check_findings": [],
+      "source": "",
       "started_at": "2026-10-04T18:14:05Z",
       "stop_requested": false,
       "taken_asks": [],
