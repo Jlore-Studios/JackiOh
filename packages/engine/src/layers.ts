@@ -4,7 +4,7 @@ import type { Keyword } from "@jackioh/shared";
 import { PLAYER_IDS, armorOf, hasKeyword } from "@jackioh/shared";
 import { activeBrittleCount } from "./brittleCount";
 import { defOf } from "./catalog";
-import { BACKROW_ZONES, RADIANT_FALLBACK_FACTOR } from "./config";
+import { ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR } from "./config";
 import { scriptOf } from "./scripts";
 import type { CardInstance, GameState } from "./state";
 import type { StatMod } from "./script";
@@ -63,10 +63,19 @@ export function faceOf(state: GameState, instance: CardInstance): { attack: numb
   const def = defOf(state, instance.defId);
   const face = instance.radiant ? def.radiant : def.base;
   const stats = wornStatsOverride(def, instance) ?? xStatsOf(face, instance);
+  const keywords = tunedKeywords(printedKeywordsOf(state, instance), instance);
+  // R654: an Animated card with no stats from any source (no printed stats, no statsOverride, no X
+  // stats) fights as a 0/1 instead of dying as a 0/0 at the state check.
+  const statless = stats === undefined && face.attack === undefined && face.health === undefined;
+  const animated =
+    statless &&
+    [...keywords, ...instance.grantedKeywords].some(
+      (keyword) => keyword.kind === "Animated" || keyword.kind === "Animated on your turn",
+    );
   return {
-    attack: (stats?.attack ?? face.attack ?? 0) + (instance.tuning?.attack ?? 0),
-    health: (stats?.health ?? face.health ?? 0) + (instance.tuning?.health ?? 0),
-    keywords: tunedKeywords(printedKeywordsOf(state, instance), instance),
+    attack: (stats?.attack ?? face.attack ?? (animated ? ANIMATED_FALLBACK_ATTACK : 0)) + (instance.tuning?.attack ?? 0),
+    health: (stats?.health ?? face.health ?? (animated ? ANIMATED_FALLBACK_HEALTH : 0)) + (instance.tuning?.health ?? 0),
+    keywords,
   };
 }
 

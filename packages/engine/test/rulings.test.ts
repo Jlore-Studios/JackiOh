@@ -3869,6 +3869,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
   it("R653 fuses C+ #33's stacked Unit once its play resolves, and lets the Tower take one Unit a stay", () => {
     provenIn(653, PLUS_033_TEST, "backrow-piles.test.ts");
   });
+
+  // Proved by engine animated.test.ts "R654 …" (a stat-less Animated card animates to 0/1, printed or
+  // granted, on either face).
+  it("R654 an Animated card with no printed stats fights as a 0/1", () => {
+    provenIn(654, "animated.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {

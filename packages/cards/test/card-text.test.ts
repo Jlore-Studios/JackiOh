@@ -261,9 +261,9 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     ]);
   });
 
-  it("R366 patch v0.2.10 only Animates eighteen Field Spells, rewords Ivory Tower and moves Final Gambit's loc between v0.2.5 and the current catalog", () => {
-    const before = readSnapshot("v0.2.5");
-    const animated = new Set([
+  it("R366 patch v0.2.11 removes Animated from the eighteen v0.2.10 Field Spells between v0.2.10 and the current catalog", () => {
+    const before = readSnapshot("v0.2.10");
+    const unanimated = new Set([
       "core-014",
       "core-033",
       "core-038",
@@ -286,21 +286,21 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
     const changed: string[] = [];
     for (const [id, currentCard] of Object.entries(CATALOG)) {
       const priorCard = before[id] as unknown as CardDef | undefined;
-      expect(priorCard, `card ${id} existed in v0.2.5`).toBeDefined();
+      expect(priorCard, `card ${id} existed in v0.2.10`).toBeDefined();
       if (!priorCard) continue;
       if (JSON.stringify(priorCard) !== JSON.stringify(currentCard)) changed.push(id);
 
-      if (animated.has(id)) {
+      if (unanimated.has(id)) {
         for (const face of ["base", "radiant"] as const) {
-          expect(priorCard[face].attack, `${id} ${face} had no stats before v0.2.10`).toBeUndefined();
-          expect(priorCard[face].health, `${id} ${face} had no stats before v0.2.10`).toBeUndefined();
-          expect(priorCard[face].keywords, `${id} ${face} had no keywords before v0.2.10`).toEqual([]);
-          expect(currentCard[face].keywords, `${id} ${face} gains Animated`).toEqual([{ kind: "Animated" }]);
-          expect(typeof currentCard[face].attack, `${id} ${face} gains attack`).toBe("number");
-          expect(typeof currentCard[face].health, `${id} ${face} gains health`).toBe("number");
-          expect(currentCard[face].text, `${id} ${face} prints Animated`).toBe(`Animated\n${priorCard[face].text}`);
+          expect(currentCard[face].attack, `${id} ${face} loses its stats`).toBeUndefined();
+          expect(currentCard[face].health, `${id} ${face} loses its stats`).toBeUndefined();
+          expect(currentCard[face].keywords, `${id} ${face} loses Animated`).toEqual([]);
+          expect(priorCard[face].keywords, `${id} ${face} printed Animated`).toEqual([{ kind: "Animated" }]);
+          expect(typeof priorCard[face].attack, `${id} ${face} printed attack`).toBe("number");
+          expect(typeof priorCard[face].health, `${id} ${face} printed health`).toBe("number");
+          expect(priorCard[face].text, `${id} ${face} printed Animated`).toBe(`Animated\n${currentCard[face].text}`);
         }
-        // Nothing else on the card moves: normalizing the eight Animated fields restores the prior card.
+        // Nothing else on the card moves: restoring the eight Animated fields restores the snapshot.
         expect(
           {
             ...currentCard,
@@ -321,33 +321,11 @@ describe("R366 the words a card's text uses (SPEC §11, patch v0.1.1)", () => {
           },
           `only Animated fields differ on ${id}`,
         ).toEqual(priorCard);
-      } else if (id === "classicplus-033") {
-        // Ivory Tower (issue #113): the Stack aura is gone, replaced by the fusion text; it gains no stats.
-        for (const face of ["base", "radiant"] as const) {
-          expect(currentCard[face].keywords, `${id} ${face} gains no keywords`).toEqual([]);
-          expect(currentCard[face].attack, `${id} ${face} gains no stats`).toBeUndefined();
-          expect(currentCard[face].health, `${id} ${face} gains no stats`).toBeUndefined();
-        }
-        expect(currentCard.base.text).toBe("The first Unit you stack onto this is fused into it.");
-        expect(currentCard.radiant.text).toBe("The first Unit you stack onto this becomes Radiant and is fused into it.");
-        // Only the two texts and the script's loc move.
-        expect(
-          {
-            ...currentCard,
-            base: { ...currentCard.base, text: priorCard.base.text },
-            radiant: { ...currentCard.radiant, text: priorCard.radiant.text },
-            loc: priorCard.loc,
-          },
-          `only text and loc differ on ${id}`,
-        ).toEqual(priorCard);
-      } else if (id === "classic-052") {
-        // Final Gambit's follow-up gained its R216 guard: only the script's loc moves.
-        expect({ ...currentCard, loc: priorCard.loc }, `only loc differs on ${id}`).toEqual(priorCard);
       } else {
-        expect(currentCard, `card ${id} unchanged by v0.2.10`).toEqual(priorCard);
+        expect(currentCard, `card ${id} unchanged by v0.2.11`).toEqual(priorCard);
       }
     }
-    expect(changed.sort()).toEqual([...animated, "classicplus-033", "classic-052"].sort());
+    expect(changed.sort()).toEqual([...unanimated].sort());
   });
 
   it("R366 patch v0.2.4 no printed face uses any word the vocabulary table retired", () => {

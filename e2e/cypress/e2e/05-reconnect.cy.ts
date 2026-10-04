@@ -380,7 +380,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     waitForMyTurn();
 
     // --- player-turn 3: 2 mana. A Field Spell takes a backrow zone (R81's play-time choice) ---
-    // Animated since patch v0.2.10 (R383), the Mask then steps into units lane 1, keeping its text.
     cy.playByName(MASOCHISM_MASK, { zone: { side: "you", row: "backrow", lane: 1 } });
     cy.endTurn();
     seatTwoEndsTurn();
@@ -397,8 +396,8 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.answerPrompt("mode", { first: 1 });
     cy.noPrompt();
     // …and the freed mana buys the badge. R48 makes the discount cover seat 1's NEXT turn, which
-    // is player-turn 7 — the turn this file reloads on. Units lane 1 holds the animated Mask.
-    cy.playByName(PROFESSOR_CURVATURE, { zone: { side: "you", row: "units", lane: 2 } });
+    // is player-turn 7 — the turn this file reloads on.
+    cy.playByName(PROFESSOR_CURVATURE, { zone: { side: "you", row: "units", lane: 1 } });
     cy.get(ts(modifiersId("you"))).should("have.attr", "data-count", "1");
     cy.endTurn();
     seatTwoEndsTurn();
