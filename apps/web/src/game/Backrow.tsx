@@ -18,9 +18,10 @@ import type { ReactElement } from "react";
 
 import type { BackrowView } from "@jackioh/shared";
 
-import { PileDepth } from "../cards/index.ts";
+import { PileDepth, faceModel } from "../cards/index.ts";
 import { marksOf } from "../cards/marks.ts";
 import Card, { type Pops } from "./Card.tsx";
+import { useCardInfo } from "./catalog.ts";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 
 export type BackrowProps = {
@@ -35,11 +36,18 @@ export type BackrowProps = {
 
 export default function Backrow(props: BackrowProps): ReactElement | null {
   const { entry } = props;
+  // The pile's top card with its printed face for the wheel (issue #124): a backrow card carries
+  // no live numbers, so the catalog face is what the board draws. Hooks run on every render.
+  const info = useCardInfo(entry === null || entry.faceDown ? "" : entry.defId, entry !== null && !entry.faceDown && entry.radiant);
 
   if (entry === null) return null;
 
   // E21: how many cards lie under this one in its pile.
   const buried = "buried" in entry && typeof entry.buried === "number" ? entry.buried : 0;
+  const top =
+    entry.faceDown || buried <= 0
+      ? null
+      : { ...faceModel({ defId: entry.defId, def: info.def, name: info.name, radiant: entry.radiant }), type: entry.type };
 
   if (entry.faceDown) {
     // R370: read defensively, so a view without the cost draws the back as it always did.
@@ -57,7 +65,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
             ...(marks.length === 0 ? {} : { marks }),
           }}
         />
-        <PileDepth buried={buried} />
+        <PileDepth buried={buried} top={null} />
       </>
     );
   }
@@ -80,7 +88,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         onClick={props.onClick}
         pops={props.pops?.get(testId)}
       />
-      <PileDepth buried={buried} />
+      <PileDepth buried={buried} top={top} />
     </>
   );
 }

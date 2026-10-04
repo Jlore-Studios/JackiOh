@@ -850,3 +850,57 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
     expect(sources[1]?.stopTime, "Sheepish's line played out").toBeNull();
   });
 });
+
+/* --------------------------------------------------------------------------------------------- *
+ * Issue #124: a sweep or a whole-pile impact is voiced condensed
+ * --------------------------------------------------------------------------------------------- */
+
+describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => {
+  function sweptView(): PlayerView {
+    return baseView({
+      you: emptySide("p1"),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), unit("p2", { instanceId: "e2" }), null, null, null] }),
+    });
+  }
+
+  it("sends one of each sfx for a sweep entry instead of one per hit", () => {
+    const { sink, director } = rig();
+    const first = sweptView();
+    const events: GameEvent[] = [
+      { type: "damage", sourceId: null, targetId: "e1", amount: 2, combat: false },
+      { type: "damage", sourceId: null, targetId: "e2", amount: 2, combat: false },
+    ];
+    director.onView(first);
+    const next = withEvents(first, events);
+    director.onView(next);
+    const entries = entriesOf(next, next.events);
+    expect(entries, "both hits play as one sweep").toHaveLength(1);
+    expect(entries[0]?.sweep).toBeDefined();
+
+    director.onEntryStart(must(entries[0], "the sweep"));
+
+    const ids = sfxSent(sink).map((cue) => cue.id);
+    expect(ids.length, "the sweep voices something").toBeGreaterThan(0);
+    expect(new Set(ids).size, "each sfx id is sent once").toBe(ids.length);
+    expect(director.owedCount()).toBe(0);
+  });
+
+  it("sends one of each sfx for a whole-pile impact entry", () => {
+    const { sink, director } = rig();
+    const first = baseView({ you: emptySide("p1", { graveyard: [{ instanceId: "g1", defId: "core-003", radiant: false, cost: 2 }, { instanceId: "g2", defId: "core-003", radiant: false, cost: 2 }] }) });
+    const degraded = (instanceId: string): GameEvent => ({ type: "degraded", instanceId, defId: "core-003", change: { kind: "cost", delta: -1 } });
+    const events: GameEvent[] = [degraded("g1"), degraded("g2")];
+    director.onView(first);
+    const next = withEvents(first, events);
+    director.onView(next);
+    const entries = entriesOf(next, next.events);
+    expect(entries, "both hits play as one zone impact").toHaveLength(1);
+    expect(entries[0]?.zone).toBeDefined();
+
+    director.onEntryStart(must(entries[0], "the zone impact"));
+
+    const ids = sfxSent(sink).map((cue) => cue.id);
+    expect(new Set(ids).size, "each sfx id is sent once").toBe(ids.length);
+    expect(director.owedCount()).toBe(0);
+  });
+});

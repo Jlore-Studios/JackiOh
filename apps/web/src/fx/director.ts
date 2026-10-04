@@ -283,7 +283,14 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         boxes = { at: box };
         break;
       }
-      case "ghost": {
+      case "zone": {
+        const box = measure(cue.at);
+        if (box === null) return;
+        boxes = { at: box };
+        break;
+      }
+      case "ghost":
+      case "fog": {
         const from = measure(cue.from);
         if (from === null) return;
         const to = measure(cue.to);
@@ -431,6 +438,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           spread: cue.spread,
           box,
           power: cue.power,
+          ...(cue.scale === undefined ? {} : { scale: cue.scale }),
         });
         // A preset with a `flash` blooms where it bursts (presets.ts); the rest paint nothing here.
         canvasFx.flash(cue.preset, origin, box, cue.count);

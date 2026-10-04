@@ -39,6 +39,18 @@ export function showcaseCastHoldMs(speed: number): number {
 }
 
 /**
+ * Issue #124: a card another card cast stays up until the runner reaches the next cast, and never
+ * longer than this (divided by the effects speed like every hold, and capped as a cast on draw is,
+ * for practice's hold on the AI). The runner gives each cast and what it does about two seconds
+ * (`CAST_BUDGET_MS`), so the card is up for the whole of its beat.
+ */
+export const SHOWCASE_MULTICAST_HOLD_MS = 2200;
+
+export function showcaseMulticastHoldMs(speed: number): number {
+  return Math.min(SHOWCASE_CAST_HOLD_CAP_MS, Math.max(2 * SHOWCASE_FADE_MS, Math.round(SHOWCASE_MULTICAST_HOLD_MS / normalizeSpeed(speed))));
+}
+
+/**
  * R502: how long the card takes to burst out of its drawer's Deck pile and grow to its hold, inside
  * the hold (showcase.css); none under reduced motion.
  */
@@ -58,6 +70,16 @@ export const CAST_ON_DRAW_TEXT = {
   opponent: "Opponent drew",
   hidden: "Opponent drew a card",
   said: "cast on draw",
+} as const;
+
+/** Issue #124: the words a card another card cast is held up with. */
+export const MULTICAST_TEXT = {
+  /** "Cast by Jogg's Box" (the caster's name), or this when the view hides the caster. */
+  by: "Cast by",
+  unknown: "Cast by a card",
+  /** The ordinal badge's prefix and what the live region calls the cast: "Jogg's Box cast Fireball (3)". */
+  ordinal: "#",
+  said: "cast",
 } as const;
 
 /** R436: the words the static reveal and the live region say a roll with. */
@@ -81,6 +103,8 @@ export const showcaseTestid = {
   live: "showcase-live",
   /** R502: the "Cast on draw!" ribbon across a card cast as it was drawn. */
   ribbon: "showcase-ribbon",
+  /** Issue #124: on a card another card cast, which of its casts it is; `data-ordinal` carries the number. */
+  ordinal: "showcase-ordinal",
   /**
    * R436: the still list of what a Call to Chaos rolled, drawn only while the effects layer draws
    * nothing (reduced motion, or the effects off); one `chaosLine` per effect.
@@ -93,6 +117,7 @@ export const showcaseTestid = {
 
 /**
  * `data-showcase`: what is being held up. The practice route holds the AI's next step while it is set.
- * "cast" is a card cast as it was drawn, on either seat (R502).
+ * "cast" is a card cast as it was drawn, on either seat (R502); "multicast" a card another card cast,
+ * on either seat (issue #124).
  */
-export type ShowcaseKind = "played" | "set" | "hidden" | "cast";
+export type ShowcaseKind = "played" | "set" | "hidden" | "cast" | "multicast";

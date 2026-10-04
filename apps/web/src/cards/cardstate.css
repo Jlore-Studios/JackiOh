@@ -299,7 +299,8 @@
 /* ------------------------------------------------------------ E21: a backrow pile's depth --- */
 
 /* Game/Backrow.tsx draws it beside the card, in the zone: the bottom-right corner, clear of the lock
-   (top left) and the card's own counters. It reads like a unit pile's depth badge (`.buried-badge`). */
+   (top left) and the card's own counters. It reads like a unit pile's depth badge (`.buried-badge`).
+   A press opens the pile as a wheel (issue #124), so the button keeps its pointer events. */
 .zone > .backrow-pile {
   top: auto;
   right: 3px;
@@ -309,5 +310,4 @@
   min-width: 1.4em;
   text-align: center;
   box-shadow: 0 0 0 1px rgb(232 236 248 / 0.6);
-  pointer-events: none;
 }

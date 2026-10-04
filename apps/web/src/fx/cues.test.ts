@@ -1487,6 +1487,8 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   fracture: ["kind", "at", "delayMs", "durationMs"],
   brand: ["kind", "at", "tint", "delayMs", "durationMs"],
   chaos: ["kind", "title", "lines", "delayMs", "durationMs"],
+  fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
+  zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {

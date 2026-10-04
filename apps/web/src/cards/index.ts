@@ -56,6 +56,20 @@ export {
 // E21: a backrow pile's depth, which game/Backrow.tsx draws beside the card.
 export { PileDepth } from "./CardStates.tsx";
 
+// Issue #124: the Marvel Snap-style card wheel (a Stack pile as a wheel, reusable for related
+// cards and other displays) and the Stack pile sheet around it.
+export { default as CardWheel, wheelTestid, WHEEL_SWIPE_PX } from "./wheel/CardWheel.tsx";
+export type { CardWheelProps, WheelItem } from "./wheel/CardWheel.tsx";
+export {
+  default as StackSheet,
+  STACK_NOTES,
+  STACK_TITLE,
+  STACK_UNKNOWN_NAME,
+  stackItems,
+  stackTestid,
+} from "./wheel/StackSheet.tsx";
+export type { StackSheetProps } from "./wheel/StackSheet.tsx";
+
 export { CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";
 export { MinionFace } from "./MinionFace.tsx";

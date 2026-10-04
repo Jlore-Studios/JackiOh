@@ -186,6 +186,8 @@ const DOM_KINDS = {
   fracture: "fx-fracture-crack",
   brand: "fx-brand-slam",
   chaos: "fx-chaos-in",
+  fog: "fx-fog-roll",
+  zone: "fx-zone-wave",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

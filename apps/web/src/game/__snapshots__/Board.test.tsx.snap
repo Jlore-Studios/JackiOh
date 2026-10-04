@@ -2666,13 +2666,15 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           >
             ATK
           </span>
-          <span
+          <button
+            aria-label="Cards buried under this pile: show pile"
             class="buried-badge"
             data-buried="3"
             title="Cards buried under this pile"
+            type="button"
           >
             3
-          </span>
+          </button>
           <button
             aria-disabled="true"
             class="switch-button"
