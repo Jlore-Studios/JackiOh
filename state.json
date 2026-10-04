@@ -644,15 +644,6 @@
       "failures": 0,
       "feedback_since": "2026-10-04T02:08:03Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-03T23:13:03Z",
-        "family": "gemini",
-        "kind": "work",
-        "notes": "",
-        "provider": "agy",
-        "reason": "the reviewer's answer could not be read twice in a row",
-        "trail": "- said: \n- run_command: git status\n- said: \n- run_command: git log -n 5 --oneline"
-      },
       "interruptions": 0,
       "issue": 124,
       "kind": "revise",
