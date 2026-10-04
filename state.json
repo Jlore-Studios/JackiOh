@@ -1785,9 +1785,13 @@
       "votes": {
         "approvals": [],
         "builder": "cognition",
-        "rejections": [],
+        "rejections": [
+          "muse"
+        ],
         "sha": "9eccb58d6587080e1dba0d9ca643addb33b229a0",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "204": {
