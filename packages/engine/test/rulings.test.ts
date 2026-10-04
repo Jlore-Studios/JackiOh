@@ -3798,6 +3798,14 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
     provenIn(634, SERVER_SETTINGS_API_TEST, SERVER_STORE_CONTRACT, SERVER_SETTINGS_SQL, WEB_SETTINGS_SYNC_TEST);
   });
 
+  // Proved by setup-aside.test.ts "R635 …": nothing is cast in setup, the cards are shuffled in after
+  // the mulligans at random places and without a word to the other seat, an all-cast-on-draw deck
+  // deals an empty hand with no fatigue and turn 1's chain meets R58's cap, and a mulligan can be
+  // dealt fewer cards back than it returned; and by 021-hinder.test.ts's "R431, R635 …" (a real game).
+  it("R635 sets cast-on-draw cards aside through setup and shuffles them in once the mulligans are done", () => {
+    provenIn(635, "setup-aside.test.ts", "../../cards/test/021-hinder.test.ts");
+  });
+
   // Proved by windfury.test.ts "R636 …" (the second attack in `legalActions` and the reducer, the switch
   // the first one spends, the count read at the second declaration, Deft Duelist beside it) and
   // config.test.ts / rulings-a.test.ts "R21 …" (Windfury in the random keyword pool).
@@ -3833,6 +3841,13 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       WEB_LANDING_FAN_TEST,
       WEB_LANDING_TEST,
     );
+  });
+
+  // Proved by setup-aside.test.ts "R640 …": five Quickdraw cards deal three to the first seat and four
+  // to the second, five to a Medium seat going second, the hand is the table's size whatever the deck
+  // holds, and the surplus are ordinary cards a later draw can take.
+  it("R640 deals a seat at most as many Quickdraw cards as it has opening draws", () => {
+    provenIn(640, "setup-aside.test.ts");
   });
 });
 

@@ -101,6 +101,49 @@ class WorkTests(unittest.TestCase):
         git(check, "fetch", "-q", str(self.out / "branch.bundle"), f"refs/heads/{branch}:refs/heads/got")
         return git(check, "rev-parse", "got")
 
+    def test_a_fresh_reading_without_headroom_stops_a_build_before_any_model_work(self):
+        """`cmd_work` pings a capped Claude account before the run. claude-2's 5-hour cap is
+        90% and a build starts only under 75% (`start_headroom`)."""
+        runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
+                             "review": reviewer(APPROVE)})
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        worker = self.worker(runner, plan)
+        worker.start_usage = {"status": "allowed", "five_hour": {
+            "utilization": 0.8, "resets_at": "2099-01-01T00:00:00Z"}}
+        result = worker.run()
+        self.assertEqual(result["interrupt"], "usage")
+        self.assertIn("too close to its 90% cap to start a build (it starts under 75%)",
+                      result["reason"])
+        self.assertEqual(runner.calls, [])
+        self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.8)
+
+    def test_a_call_stopped_past_the_cap_stops_the_run(self):
+        """Every call of a capped subscription carries the caps (`usage_stop`); the runner's
+        stop ends the run as a usage stop, its work kept for the next run."""
+        asked = {}
+
+        def stopped(request):
+            later = {"utilization": 0.95, "resets_at": "2099-01-01T00:00:00Z"}
+            asked["at 95%"] = request.usage_stop({"five_hour": later})
+            asked["at 50%"] = request.usage_stop({"five_hour": {**later, "utilization": 0.5}})
+            return RunResult(False, "", extra={"usage_stop": asked["at 95%"]})
+
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        result = self.worker(FakeRunner({"build": stopped}), plan).run()
+        self.assertIn("at or over its 90% cap", asked["at 95%"])
+        self.assertIsNone(asked["at 50%"])
+        self.assertEqual(result["interrupt"], "usage")
+        self.assertIn("`claude-2` stops mid-call: 5-hour usage is 95%", result["reason"])
+        # An uncapped subscription's calls carry nothing to watch.
+        plain = {}
+        def unwatched(request):
+            plain["stop"] = request.usage_stop
+            return builder({"src/game.txt": "rules v2\n"})(request)
+        self.worker(FakeRunner({"build": unwatched, "review": reviewer(APPROVE)})).run()
+        self.assertIsNone(plain["stop"])
+
     def test_approved_on_the_first_round(self):
         runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
                              "review": reviewer(APPROVE)})

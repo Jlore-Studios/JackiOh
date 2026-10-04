@@ -29,7 +29,7 @@ import re
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -152,6 +152,36 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, a
 
 
 # ------------------------------------------------------------------ classify (on the machine)
+
+#: The sweep's fallback (`fallback_type`): an issue someone opened gets this long for triage's
+#: Devin call to type it first, which can wait hours for a free Devin runner; one a bot opened
+#: never reaches triage, so it is typed at once.
+TYPE_GRACE = timedelta(hours=3)
+_BUG_WORDS = re.compile(
+    r"(?i)\b(bug|fails?|failing|failed|broken|breaks|crash(?:es)?|wrong|lag(?:s|gy)?|regression"
+    r"|errors?|not working|doesn'?t work|stuck|stall(?:s|ing)?|hangs?)\b")
+_FEATURE_WORDS = re.compile(
+    r"(?i)\b(new|adds?|support|page|mode|screen|easter egg|leaderboard|emotes?|feature)\b")
+_TASK_PREFIXES = ("architecture:", "refactor:", "ci:", "night bot:", "tests:", "docs:")
+
+
+def fallback_type(issue: Mapping[str, Any], types: Mapping[str, str]) -> str:
+    """An issue's type from its title and labels, for one triage never typed (the sweep): a
+    failure is a Bug; tooling, CI, the bot and trackers are a Task; something new for players or
+    the team is a Feature; anything else a Task. "" when the organisation has none of those."""
+    title = str(issue.get("title") or "")
+    names = {str(label.get("name")).lower() for label in issue.get("labels") or []}
+    if _BUG_WORDS.search(title):
+        wanted = "Bug"
+    elif title.lower().startswith(_TASK_PREFIXES) or names & {"architecture", "night bot"}:
+        wanted = "Task"
+    elif _FEATURE_WORDS.search(title):
+        wanted = "Feature"
+    else:
+        wanted = "Task"
+    named = {name.lower(): name for name in types}
+    return named.get(wanted.lower(), "")
+
 
 def issue_types(gh: Any) -> dict[str, str]:
     """The organisation's issue types and their descriptions, or the defaults when there are none
