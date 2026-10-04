@@ -65,8 +65,21 @@ FAKE_CODEX = PRELUDE + textwrap.dedent('''\
 ''')
 
 FAKE_AGY = PRELUDE + textwrap.dedent('''\
+    if sys.argv[1:] == ["-p", "/usage"]:  # its quota table: pool, limit, share left, reset
+        week = "4" if mode in ("spent", "slow") else "40"
+        for row in (("Gemini Models", "Weekly Limit Remaining", week + "%", "2026-10-09T17:47:52Z"),
+                    ("Gemini Models", "Five Hour Limit Remaining", "33%", "2026-10-04T16:18:35Z"),
+                    ("Claude and GPT models", "Weekly Limit Remaining", "100%",
+                     "2026-10-11T15:04:01Z"),
+                    ("Claude and GPT models", "Five Hour Limit Remaining", "100%",
+                     "2026-10-04T20:04:01Z")):
+            print("\\t".join(row))
+        sys.exit(0)
     prompt = sys.stdin.read()
     dump(prompt)
+    if mode == "slow":
+        import time
+        time.sleep(30)
     if mode == "auth":
         print("Error: authentication required; run agy to sign in.", file=sys.stderr)
         sys.exit(1)
@@ -120,6 +133,37 @@ FAKE_DEVIN = PRELUDE + textwrap.dedent('''\
 
 FAKE_MUSE = PRELUDE + textwrap.dedent('''\
     argv = sys.argv[1:]
+    if argv[:1] != ["exec"]:  # the TUI, in a pseudo-terminal: what `/usage` is read from
+        import time, tty
+        workspace = argv[argv.index("--workspace") + 1]
+        def draw(text):
+            os.write(1, text.encode("utf-8"))
+        def answer():
+            got = b""
+            while not got.endswith(b"\\r"):
+                got += os.read(0, 1)
+            with open(os.path.join(workspace, "typed.log"), "ab") as log:
+                log.write(got.strip() + b"\\n")
+            return got.strip()
+        tty.setraw(0)
+        draw("\\x1b[6n")
+        where = b""
+        while not where.endswith(b"R"):
+            where += os.read(0, 1)
+        if not os.path.exists(os.path.join(workspace, ".trusted")):
+            draw("Do you trust this workspace?\\r\\n> 1 Trust and continue\\r\\n  2 Quit\\r\\n")
+            if answer() != b"1":
+                sys.exit(3)
+            open(os.path.join(workspace, ".trusted"), "w").close()
+        draw("\\x1b7 Muse Code 1.4.2\\x1b8\\r\\n\\u276f \\r\\n")
+        if answer() == b"/usage":
+            week = "97" if mode == "spent" else "35"
+            draw("\\u2502 Session usage \\u2502\\r\\n"
+                 "\\u2502 Subscription \\u00b7 Muse Code High Usage \\u2502\\r\\n"
+                 "\\u2502 Current 5% used \\u00b7 Resets at 6:42 PM \\u2502\\r\\n"
+                 "\\u2502 Weekly " + week + "% used \\u00b7 Resets Oct 5 at 12:00 AM \\u2502\\r\\n")
+        time.sleep(30)
+        sys.exit(0)
     prompt = open(argv[argv.index("--prompt-file") + 1]).read()
     dump(prompt)
     print("step 1: reading", file=sys.stderr)
@@ -250,6 +294,39 @@ class AgyTests(Base):
         self.assertFalse(result.ok)
         self.assertTrue(result.infra)
         self.assertIn("authentication required", result.error)
+        self.assertIsNone(result.usage)  # no reading is tried with a login that failed
+
+    def gemini(self, mode="ok", usage_stop=None):
+        import dataclasses
+        request = dataclasses.replace(self.request(), model="gemini-3.8-flash-high",
+                                      usage_stop=usage_stop)
+        with mock.patch.dict(os.environ, {**OTHER_SECRETS, "FAKE_MODE": mode,
+                                          "FAKE_DUMP": str(self.dump)}):
+            return self.backend().run(request)
+
+    def test_each_call_ends_with_a_reading_of_its_usage(self):
+        """agy's stream carries no usage, so its own `/usage` is read after the call: the
+        Gemini pool's row for a Gemini model."""
+        result = self.gemini()
+        self.assertTrue(result.ok, result.error)
+        self.assertEqual(result.usage["seven_day"],
+                         {"utilization": 0.6, "resets_at": "2026-10-09T17:47:52Z"})
+        self.assertEqual(result.usage["five_hour"]["utilization"], 0.67)
+        self.assertEqual(self.seen()["prompt"].endswith("THE TASK"), True)  # the call's, not /usage's
+
+    def test_a_call_past_its_cap_stops_at_the_next_reading(self):
+        """The call streams nothing, so the watcher reads `/usage` every POLL_SECONDS and stops
+        the call once `usage_stop` says so."""
+        from harness import runner as runner_mod
+        stop = lambda usage: ("week at 96%" if usage["seven_day"]["utilization"] >= 0.95
+                              else None)
+        with mock.patch.object(runner_mod, "WATCH_SECONDS", 0.1), \
+                mock.patch.object(runner_mod, "POLL_SECONDS", 0.2):
+            result = self.gemini("slow", usage_stop=stop)
+        self.assertFalse(result.ok)
+        self.assertEqual(result.extra["usage_stop"], "week at 96%")
+        self.assertLess(result.duration_s, 20)
+        self.assertEqual(result.usage["seven_day"]["utilization"], 0.96)
 
     def test_a_spent_quota_parks_it(self):
         result = self.run_fake(self.backend(), "quota")
@@ -310,7 +387,9 @@ class MuseTests(Base):
     def backend(self, secret=None):
         login = logins.prepare(secret_login(self.pool.get("muse"), "MUSE_AUTH"),
                                secret or json.dumps(MUSE_AUTH), "", self.tmp / "home")
-        return MuseCli(str(self.bin), login)
+        backend = MuseCli(str(self.bin), login)
+        backend.usage_dir = self.tmp / "usage"
+        return backend
 
     def test_the_prompt_goes_in_a_file_and_the_answer_comes_on_stdout(self):
         result = self.run_fake(self.backend())
@@ -334,6 +413,35 @@ class MuseTests(Base):
     def test_an_api_key_secret_is_handed_over_as_one(self):
         self.run_fake(self.backend("meta-key-" + "k" * 30))
         self.assertEqual(self.seen()["env"]["META_API_KEY"], "meta-key-" + "k" * 30)
+
+    def test_each_call_ends_with_a_reading_of_its_usage_panel(self):
+        """`muse exec` runs no slash commands, so the TUI is started in a pseudo-terminal of its
+        own: the cursor query answered, the workspace trusted the one time it asks, `/usage`
+        typed, the panel read. Nothing else is ever typed, so no model is called."""
+        backend = self.backend()
+        result = self.run_fake(backend)
+        self.assertTrue(result.ok, result.error)
+        self.assertEqual(result.usage["seven_day"]["utilization"], 0.35)
+        self.assertEqual(result.usage["five_hour"]["utilization"], 0.05)
+        again = backend.read_usage("the-model")
+        self.assertEqual(again["seven_day"]["utilization"], 0.35)
+        typed = (self.tmp / "usage" / "typed.log").read_text().split()
+        self.assertEqual(typed, ["1", "/usage", "/usage"])  # trusted once, then only /usage
+        self.assertTrue(self.seen()["prompt"].endswith("THE TASK"))
+
+    def test_a_refusal_that_names_no_reset_waits_for_the_full_window(self):
+        result = self.run_fake(self.backend(), "limit")
+        self.assertTrue(result.rate_limited)
+        self.assertEqual(result.usage["seven_day"]["utilization"], 0.35)
+        self.assertEqual(result.reset_at, "+PT60M")  # nothing is full: the hour stands
+        with mock.patch.dict(os.environ, {"FAKE_MODE": "spent", "FAKE_DUMP": str(self.dump)}):
+            usage = self.backend().read_usage("the-model")
+        self.assertEqual(usage["seven_day"]["utilization"], 0.97)
+
+    def test_no_panel_is_no_reading(self):
+        missing = MuseCli(str(self.tmp / "no-such-muse"))
+        missing.usage_dir = self.tmp / "usage"
+        self.assertIsNone(missing.read_usage("the-model"))
 
 
 class DevinTests(Base):
@@ -379,3 +487,53 @@ class DevinTests(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UsageTextTests(unittest.TestCase):
+    """agy's `/usage` table and Muse's `/usage` panel as the bot reads them, from what each one
+    printed on the machine on 2026-10-04."""
+
+    AGY = ("Gemini Models\tWeekly Limit Remaining\t2%\t2026-10-09T17:47:52Z\n"
+           "Gemini Models\tFive Hour Limit Remaining\t33%\t2026-10-04T16:18:35Z\n"
+           "Claude and GPT models\tWeekly Limit Remaining\t100%\t2026-10-11T15:04:01Z\n"
+           "Claude and GPT models\tFive Hour Limit Remaining\t100%\t2026-10-04T20:04:01Z\n")
+    #: The panel as the TUI drew it, its control sequences gone: one line, boxes and all.
+    MUSE = ("\u2502 Turns 3 \u2502 \u2502 Subagents none \u2502 \u2502 \u2502 \u2502 Subscription "
+            "\u00b7 Muse Code High Usage \u2502 \u2502 Current 5% used \u00b7 Resets at 6:42 PM "
+            "\u2502 \u2502 Weekly 35% used \u00b7 Resets Oct 5 at 12:00 AM \u2502\u2514\u2500\u2518")
+
+    def test_agy_reads_the_pool_its_model_draws_on(self):
+        from harness.runner import parse_agy_usage
+        gemini = parse_agy_usage(self.AGY, "gemini-3.8-flash-high")
+        self.assertEqual(gemini["seven_day"],
+                         {"utilization": 0.98, "resets_at": "2026-10-09T17:47:52Z"})
+        self.assertEqual(gemini["five_hour"]["utilization"], 0.67)
+        claude = parse_agy_usage(self.AGY, "claude-opus-4-6-thinking")
+        self.assertEqual((claude["seven_day"]["utilization"], claude["five_hour"]["utilization"]),
+                         (0.0, 0.0))
+        self.assertIsNone(parse_agy_usage("Fetching usage...\nerror: offline\n", "gemini-3.8"))
+
+    def test_muse_reads_the_5_hour_window_and_the_week_with_their_resets(self):
+        from datetime import datetime, timezone
+        from harness.runner import parse_muse_usage
+        now = datetime(2026, 10, 4, 15, 30, tzinfo=timezone.utc)
+        usage = parse_muse_usage(self.MUSE, now)
+        self.assertEqual(usage["five_hour"],
+                         {"utilization": 0.05, "resets_at": "2026-10-04T18:42:00Z"})
+        self.assertEqual(usage["seven_day"],
+                         {"utilization": 0.35, "resets_at": "2026-10-05T00:00:00Z"})
+        self.assertIsNone(parse_muse_usage("\u2502 Session usage \u2502 Turns 3", now))
+
+    def test_muse_prints_the_machines_own_time(self):
+        from datetime import datetime, timedelta, timezone
+        from harness.runner import _muse_reset
+        central = timezone(timedelta(hours=-5))
+        now = datetime(2026, 10, 4, 10, 30, tzinfo=central)
+        self.assertEqual(_muse_reset("at 6:42 PM", now), "2026-10-04T23:42:00Z")
+        self.assertEqual(_muse_reset("at 9:15 AM", now), "2026-10-05T14:15:00Z")  # tomorrow's
+        self.assertEqual(_muse_reset("Oct 5 at 12:00 AM", now), "2026-10-05T05:00:00Z")
+        self.assertEqual(_muse_reset("Jan 2 at 12:30 PM", now), "2027-01-02T17:30:00Z")
+        self.assertEqual(_muse_reset("in 3h 5m", now), "2026-10-04T18:35:00Z")
+        self.assertIsNone(_muse_reset("soon", now))
+        self.assertIsNone(_muse_reset("Feb 30 at 1:00 AM", now))
+
