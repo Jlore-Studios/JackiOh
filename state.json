@@ -412,6 +412,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:5984791009": {
+      "at": "2026-10-04T21:54:01Z",
+      "lines": [
+        "@jgoetzmann-bot pick this with a strong agent"
+      ]
     }
   },
   "items": {
