@@ -1876,11 +1876,13 @@
       "stop_requested": false
     },
     "212": {
+      "closed_at": "2026-10-04T15:50:21Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-04T14:57:57Z",
       "issue": 207,
       "kind": "revise",
+      "merged": true,
       "queued_at": "2026-10-04T15:11:01Z",
       "self_check_findings": [],
       "votes": {
