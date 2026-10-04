@@ -1596,37 +1596,12 @@
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
-      "feedback_since": "2026-10-04T07:54:22Z",
+      "feedback_since": "2026-10-04T08:14:07Z",
       "forced": false,
       "interruptions": 0,
       "issue": 44,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
-          "evidence": "git show HEAD:apps/server/test/api/catalog.test.ts lines 279-283 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around the hardcoded 8-patch list vs generic shipped-history assertion.",
-          "severity": "blocking",
-          "where": "apps/server/test/api/catalog.test.ts:279"
-        },
-        {
-          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
-          "evidence": "git show HEAD:apps/web/src/patches/source.test.ts lines 77-88 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around the hardcoded eight-patch vs shipped-order assertion.",
-          "severity": "blocking",
-          "where": "apps/web/src/patches/source.test.ts:77"
-        },
-        {
-          "claim": "Two unresolved merge conflict hunks committed at HEAD break typecheck, lint, and tests.",
-          "evidence": "git show HEAD:apps/web/src/patches/PatchNotes.test.tsx lines 194-219 contain two <<<<<<< HEAD / ======= / >>>>>>> origin/main hunks (eight-patch list and v0.2.2-vs-newest open-on-arrival logic).",
-          "severity": "blocking",
-          "where": "apps/web/src/patches/PatchNotes.test.tsx:194"
-        },
-        {
-          "claim": "Unresolved merge conflict markers committed at HEAD break typecheck, lint, and tests.",
-          "evidence": "git show HEAD:apps/web/src/routes/patch-notes.test.tsx lines 53-59 contain <<<<<<< HEAD / ======= / >>>>>>> origin/main around expect(entries[0]).toBe(v0.2.2) vs shipped.at(-1).",
-          "severity": "blocking",
-          "where": "apps/web/src/routes/patch-notes.test.tsx:53"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "devin",
       "question": "",
@@ -1652,7 +1627,7 @@
           "where": "checks"
         }
       ],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-04T08:14:07Z",
       "stop_requested": false,
       "taken_asks": [],
