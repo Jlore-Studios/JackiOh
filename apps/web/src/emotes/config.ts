@@ -1,5 +1,6 @@
 // The emote client's numbers (CLAUDE.md rule 9): bubble span, the emoji's own 2s show, the menu's
-// grey-out tick, and the voice-line duration estimate. The SEND limits (1.5s cooldown, 5 per 20s)
+// grey-out tick and its distance from the screen's edge, and the voice-line duration estimate. The
+// SEND limits (1.5s cooldown, 5 per 20s)
 // are NOT here — they live in `packages/shared` because the server enforces them too (R643).
 
 /** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4, "2s total"). */
@@ -12,6 +13,9 @@ export const EMOTE_BUBBLE_MAX_MS = 4000;
 
 /** How often an open menu re-reads the limiter, so its greyed items' wait counts down. */
 export const EMOTE_MENU_TICK_MS = 250;
+
+/** An open emote menu keeps at least this far inside the viewport's left and right edges (#219). */
+export const EMOTE_MENU_EDGE_PX = 8;
 
 /**
  * The persona rate a `say` voice speaks at is words per minute; a SAPI persona's is a percent of

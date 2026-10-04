@@ -49,6 +49,8 @@ function fakeEngine(): FakeEngine {
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
     playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
+    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
+    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
     say(on) {
       speaking = on;
       for (const listener of [...listeners]) listener();

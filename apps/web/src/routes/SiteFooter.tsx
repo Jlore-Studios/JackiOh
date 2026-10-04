@@ -22,6 +22,7 @@ export const siteFooterTestid = {
   accessibility: "site-footer-accessibility",
   patchNotes: "site-footer-patch-notes",
   almanac: "site-footer-almanac",
+  stats: "site-footer-stats",
   contact: "site-footer-contact",
 } as const;
 
@@ -47,6 +48,9 @@ export function SiteFooter(): ReactElement {
         </a>
         <a href={paths.almanac} data-testid={siteFooterTestid.almanac} onClick={followInApp(paths.almanac)}>
           Card almanac
+        </a>
+        <a href={paths.stats} data-testid={siteFooterTestid.stats} onClick={followInApp(paths.stats)}>
+          Stats
         </a>
         <a href={CONTACT_URL} data-testid={siteFooterTestid.contact} rel="noopener noreferrer">
           Contact us on GitHub

@@ -172,7 +172,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
 /** `GET /api/auth/me` (`auth: "user"`): the code screen's own read (§9.4). */
 export type MeResponse = {
-  profile: { id: string; status: "pending" | "active" | "banned"; rating: number };
+  // R612: the hidden rating is never sent, not even to its owner. What the client shows is
+  // `GET /api/ranked`'s visible rank, below.
+  profile: { id: string; status: "pending" | "active" | "banned" };
   needsInviteCode: boolean;
   emailVerified: boolean;
   /** §9.5: the match this profile is in, or null. What `/play` waits on after it queues. */
@@ -192,7 +194,7 @@ export type ProfileResponse = {
   id: string;
   email: string | null;
   status: "pending" | "active" | "banned";
-  rating: number;
+  // R612: no hidden rating here either. The account screen reads the visible rank separately.
   record: { wins: number; losses: number; draws: number };
   /** 0..1, or null when nothing has been played. Computed server-side so the two cannot differ. */
   winRate: number | null;
@@ -568,6 +570,11 @@ export type SeriesView = {
   now: number;
   /** The match to open while `status` is `playing`. */
   currentMatchId: string | null;
+  /**
+   * R604: the queue paired this series, so it is rated; a room's is not. Known from the start —
+   * the player chose the mode — so it rides on the view, not only on `result`.
+   */
+  ranked: boolean;
   you: {
     seat: "p1" | "p2";
     wins: number;
@@ -595,12 +602,14 @@ export type SeriesView = {
     result: "win" | "loss" | "draw" | null;
     reason: GameOverReason | null;
   }[];
-  /** Null until the series is over. */
+  /**
+   * Null until the series is over. `ranked`: the series moved your rank (R604); the rating it
+   * moved is never sent (R612), and the rank it left is `GET /api/ranked`'s.
+   */
   result: {
     outcome: "win" | "loss" | "draw" | "abandoned";
     endReason: SeriesEnd;
-    ratingBefore: number | null;
-    ratingAfter: number | null;
+    ranked: boolean;
   } | null;
 };
 
@@ -611,6 +620,61 @@ export function getSeries(token: string, seriesId: string): Promise<SeriesView> 
 /** `GET /api/matches/:id/series`: the series a match belongs to, for the board's series banner. */
 export function getSeriesForMatch(token: string, matchId: string): Promise<{ series: SeriesView | null }> {
   return apiRequest<{ series: SeriesView | null }>(`/api/matches/${encodeURIComponent(matchId)}/series`, { token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The ranked ladder (SPEC §9.12, R612). Every shape below is `apps/server/src/api/ranked.ts`'s,
+// and none of them carries the hidden rating — the client shows the visible rank only.
+// ---------------------------------------------------------------------------------------------
+
+export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
+
+/** What a player is shown as (R605, R608, R612): never the rating. */
+export type VisibleRank =
+  | { tier: "raisin"; placementsPlayed: number; placementGames: number }
+  | { tier: GrapeTier; division: number; pips: number; pipsPerDivision: number; floor: GrapeTier }
+  | { tier: "jlorious"; position: number };
+
+/** A season's best, as the profile's badge shows it (R607). */
+export type PeakBadge =
+  | { seasonId: string; tier: "jlorious"; position: number }
+  | { seasonId: string; tier: GrapeTier; division: number };
+
+/** `GET /api/ranked`: the caller's own season, tag, rank, streak, record and badges. */
+export type OwnRankResponse = {
+  season: string;
+  tag: string;
+  rank: VisibleRank;
+  streak: number;
+  record: { games: number; wins: number; losses: number; draws: number };
+  badges: PeakBadge[];
+};
+
+export function getOwnRank(token: string): Promise<OwnRankResponse> {
+  return apiRequest<OwnRankResponse>("/api/ranked", { token });
+}
+
+/** `GET /api/leaderboard` (R608, R612): Jlorious #1–#100, then every other tier, then the Raisins. */
+export type LeaderboardResponse = {
+  season: string;
+  jlorious: { position: number; tag: string; you: boolean }[];
+  tiers: { tier: GrapeTier; count: number; players: { tag: string; division: number; pips: number; you: boolean }[] }[];
+  raisins: number;
+  you: VisibleRank;
+};
+
+export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
+  return apiRequest<LeaderboardResponse>("/api/leaderboard", { token });
+}
+
+/** `GET /api/matches/:id/ranks`: both seats' ranks for the match screen (R604, R612). */
+export type MatchRanksResponse = {
+  ranked: boolean;
+  seats: Record<"p1" | "p2", { tag: string; rank: VisibleRank; you: boolean }>;
+};
+
+export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {
+  return apiRequest<MatchRanksResponse>(`/api/matches/${encodeURIComponent(matchId)}/ranks`, { token });
 }
 
 /**
@@ -633,3 +697,143 @@ export function forfeitSeries(token: string, seriesId: string): Promise<SeriesVi
     token,
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Public card and player statistics (SPEC §9.11, R654)
+// ---------------------------------------------------------------------------------------------
+
+export type PublicCardStat = {
+  id: string;
+  name: string;
+  cost: number;
+  rarity: string;
+  set: string;
+  games: number;
+  winRate: number | null;
+  drawnGames: number;
+  drawnWinRate: number | null;
+  playedGames: number;
+  playedWinRate: number | null;
+  playRate: number;
+  hasEnoughGames: boolean;
+};
+
+export type PublicStatsCardsResponse = {
+  patch: string;
+  previousPatch: string | null;
+  gate: {
+    cleared: boolean;
+    liveGames: number;
+    minLiveGames: number;
+  };
+  source: "provisional" | "live" | "dev";
+  sourceLabel: string;
+  minSample: number;
+  totalGames: number;
+  cards: PublicCardStat[];
+  summary: {
+    totalGames: number;
+    liveGames: number;
+    activePatch: string;
+    source: "provisional" | "live" | "dev";
+    bestCard: { id: string; name: string; winRate: number; games: number } | null;
+    worstCard: { id: string; name: string; winRate: number; games: number } | null;
+  };
+};
+
+export type CardDrillDownResponse = {
+  card: {
+    id: string;
+    name: string;
+    cost: number;
+    rarity: string;
+  };
+  patches: { patch: string; games: number; winRate: number | null }[];
+  byTurn: { turn: number; games: number; winRate: number | null }[];
+  coPlayed: { id: string; name: string; games: number; winRate: number | null }[];
+};
+
+export type CardStatsOptions = {
+  source?: string;
+  patch?: string;
+  set?: string;
+  rarity?: string;
+  cost?: number;
+  card?: string;
+  signal?: AbortSignal;
+};
+
+export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
+  const params = new URLSearchParams();
+  if (options.source) params.set("source", options.source);
+  if (options.patch) params.set("patch", options.patch);
+  if (options.set) params.set("set", options.set);
+  if (options.rarity) params.set("rarity", options.rarity);
+  if (options.cost !== undefined) params.set("cost", String(options.cost));
+  if (options.card) params.set("card", options.card);
+  const query = params.toString();
+  return apiRequest<PublicStatsCardsResponse>(`/api/stats/cards${query ? `?${query}` : ""}`, {
+    signal: options.signal,
+  });
+}
+
+export function getCardDrillDown(cardId: string, signal?: AbortSignal): Promise<CardDrillDownResponse> {
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}`, {
+    signal,
+  });
+}
+
+export type PlayerStatsAccountResponse = {
+  stats: Record<string, unknown>;
+  isPrivate: boolean;
+  updatedAt: number | null;
+};
+
+export function getPlayerStats(token: string): Promise<PlayerStatsAccountResponse> {
+  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", { token });
+}
+
+export function putPlayerStats(
+  token: string,
+  data: { stats?: Record<string, unknown>; isPrivate?: boolean },
+): Promise<PlayerStatsAccountResponse> {
+  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", {
+    method: "PUT",
+    token,
+    body: data,
+  });
+}
+
+export type PublicPlayerSummary = {
+  profileId: string;
+  displayName: string | null;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+  favouriteCards: readonly { id: string; count: number }[];
+  funStats: {
+    nemesisCardId: string | null;
+    totalDestroyed: number;
+    totalDefeated: number;
+  };
+  updatedAt: number;
+};
+
+export type PublicPlayersResponse = {
+  players: PublicPlayerSummary[];
+  page: number;
+  limit: number;
+};
+
+export function getPublicPlayers(options: { search?: string; page?: number; signal?: AbortSignal } = {}): Promise<PublicPlayersResponse> {
+  const params = new URLSearchParams();
+  if (options.search) params.set("search", options.search);
+  if (options.page !== undefined) params.set("page", String(options.page));
+  const query = params.toString();
+  return apiRequest<PublicPlayersResponse>(`/api/stats/players${query ? `?${query}` : ""}`, {
+    signal: options.signal,
+  });
+}
+

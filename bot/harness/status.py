@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from harness import providers as providers_mod
+from harness import review_rule
 from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
                             LABEL_NEEDS_PLAN, LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION,
@@ -194,9 +195,8 @@ def report(ctx: Context) -> str:
     lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
                  "plan by a strong model on the planning lane (or by its builder when none is "
                  "free), which goes into the issue's description. An item's `difficulty:easy|medium|hard` (medium "
-                 "without one) sets the weakest tier that may build it. A change merges once one "
-                 "strong model approves it, or two medium models of different families do (a hard "
-                 "one takes a strong approval); weak models never review. A self-checking builder "
+                 "without one) sets the weakest tier that may build it. A change merges once "
+                 f"{review_rule.SUMMARY} approved it. A self-checking builder "
                  f"checks itself up to {cfg.max_self_check_rounds} times first. Auto-merge "
                  f"{'on' if cfg.auto_merge else 'off'}.")
     return "\n".join(lines)

@@ -27,7 +27,7 @@ import { getAudioEngine } from "./engine.ts";
 import { getMusicPlayer } from "./music.ts";
 import { createMusicDirector, type MusicDirector } from "./musicDirector.ts";
 import { enterGameMusic } from "./musicScene.ts";
-import { VOICE_LINES, voiceKeysForView } from "./voiceData.ts";
+import { CARD_AUDIO, voiceKeysForView } from "./voiceData.ts";
 
 function quietly(run: () => void): void {
   try {
@@ -66,7 +66,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   const directorRef = useRef<SoundDirector | null>(null);
   directorRef.current ??= createSoundDirector(
     getAudioEngine(),
-    VOICE_LINES,
+    CARD_AUDIO,
     (defId) => cueCard(lookupRef.current, defId),
     (event, planned) => quietly(() => musicRef.current?.onEvent(event, planned)),
   );
@@ -151,7 +151,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   useEffect(() => {
     quietly(() => {
       const engine = getAudioEngine();
-      if (engine.state() === "running") engine.preloadVoices(voiceKeysForView(view, VOICE_LINES));
+      if (engine.state() === "running") engine.preloadVoices(voiceKeysForView(view, CARD_AUDIO));
     });
   }, [view]);
 }

@@ -62,11 +62,13 @@ const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 // window.__jackiohAudio, declared locally (e2e/ does not import apps/)
 // ---------------------------------------------------------------------------------------------
 
-type VoiceLineKind = "play" | "death" | "cast";
+type VoiceLineKind = "play" | "attack" | "death" | "cast";
 
 type PlayedCueLike =
   | { kind: "sfx"; id: string; params?: { amount?: number; mine?: boolean }; delayMs: number; atMs: number }
-  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; atMs: number; outcome: string };
+  | { kind: "voice"; defId: string; line: VoiceLineKind; delayMs: number; atMs: number; outcome: string }
+  // R655: a card's own effect on one of its hooks.
+  | { kind: "effect"; defId: string; hook: VoiceLineKind; effect: string; delayMs: number; atMs: number };
 
 type AudioDebugHandleLike = {
   state(): string;
