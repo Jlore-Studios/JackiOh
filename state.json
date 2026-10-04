@@ -1842,20 +1842,23 @@
         {
           "at": "2026-10-03T20:05:22Z",
           "minutes": 14.3
+        },
+        {
+          "at": "2026-10-04T01:27:00Z",
+          "minutes": 29.5
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-04T00:50:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-04T05:50:00Z",
+          "utilization": 0.9
         },
-        "observed_at": "2026-10-03T20:05:22Z",
-        "rejected_resets_at": "2026-10-04T00:50:00Z",
+        "observed_at": "2026-10-04T01:27:00Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.28
+          "utilization": 0.36
         },
-        "status": "rejected"
+        "status": "allowed_warning"
       }
     },
     "claude-3": {
