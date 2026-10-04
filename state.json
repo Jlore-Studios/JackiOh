@@ -3337,17 +3337,21 @@
         {
           "at": "2026-10-04T16:14:21Z",
           "minutes": 12.1
+        },
+        {
+          "at": "2026-10-04T16:48:31Z",
+          "minutes": 40.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-04T18:42:00Z",
-          "utilization": 0.12
+          "utilization": 0.1
         },
-        "observed_at": "2026-10-04T16:14:21Z",
+        "observed_at": "2026-10-04T16:48:31Z",
         "seven_day": {
           "resets_at": "2026-10-05T00:00:00Z",
-          "utilization": 0.37
+          "utilization": 0.36
         },
         "status": "allowed"
       }
