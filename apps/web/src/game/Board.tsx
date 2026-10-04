@@ -344,6 +344,7 @@ function Seat({
   onControl,
   pops,
   notices,
+  emotes,
 }: {
   view: PlayerView;
   side: Side;
@@ -353,6 +354,7 @@ function Seat({
   onControl?: BoardProps["onControl"];
   pops: ReadonlyMap<string, Pops>;
   notices: OverflowNotices;
+  emotes?: BoardProps["emotes"];
 }): ReactElement {
   const seat = sideView(view, side);
   return (
@@ -365,6 +367,7 @@ function Seat({
         onClick={onClick}
         onControl={onControl}
         pops={pops.get(testid.hero(side))}
+        emotes={emotes?.(side)}
       />
       <ManaTray side={side} mana={seat.mana} animating={animating} />
       <span className="piles">
@@ -472,6 +475,7 @@ export default function Board({
   animated,
   onClick,
   onControl,
+  emotes,
 }: BoardProps): ReactElement {
   const pops = popsFrom(view, animating, animated);
   // R318: fatigue and a full library on a library pile, a full hand over a hand, as the pops are.
@@ -521,6 +525,7 @@ export default function Board({
           onControl={onControl}
           pops={pops}
           notices={notices}
+          emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
@@ -545,7 +550,7 @@ export default function Board({
           ))}
         </div>
 
-        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} />
+        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
         <Hand side="you" hand={yourHand} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label="Controls">

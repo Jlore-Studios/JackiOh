@@ -517,6 +517,7 @@ describe("R143 — the optional seed", () => {
           profileId: id,
           name: "Fixture deck",
           cards: PLAYABLE,
+          portrait: null,
           catalogVersion: h.deps.catalog.version,
           createdAt: 0,
           updatedAt: 0,

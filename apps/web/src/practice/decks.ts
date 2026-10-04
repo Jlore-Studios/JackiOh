@@ -116,7 +116,7 @@ export const RANDOM_DECK_IDENTITY =
  * One of the player's saved decks, as `GET /api/decks` lists them (R250): oldest first, named, and
  * possibly a draft that is not complete yet.
  */
-export type PracticeSavedDeck = { name: string; cards: readonly string[] };
+export type PracticeSavedDeck = { name: string; cards: readonly string[]; portrait?: string | null };
 
 /**
  * Whether a saved deck can start a practice game: exactly `DECK_SIZE` cards. A saved deck is a draft
@@ -166,7 +166,7 @@ export function deckChoiceFromValue(
     const index = Number(digits);
     const deck = saved[index - 1];
     if (index < 1 || deck === undefined || !isPlayableSavedDeck(deck)) return null;
-    return { kind: "saved", index, cards: [...deck.cards] };
+    return { kind: "saved", index, cards: [...deck.cards], portrait: deck.portrait ?? null };
   }
 
   return null;
