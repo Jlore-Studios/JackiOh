@@ -307,14 +307,14 @@ describe("C+ #35 Rollback — base: both sides", () => {
     expect(s.stats(late).attack).toBe(s.stats(early).attack - 3);
   });
 
-  it("R419 R566 an Ivory Tower that has fused a Unit in since goes back as it stood: unfused, ready to take a Unit (R651)", () => {
+  it("R419 R566 an Ivory Tower that has fused a Unit in since goes back as it stood: unfused, ready to take a Unit (R653)", () => {
     const s = onTurn11({
       p1: { hand: [ROLLBACK, TOKEN_MAKER], field: [VANILLA], backrow: [{ def: TOWER, lane: 2 }] },
       p2: { field: [TIMMY] },
     });
     const tower = s.backrow("p1", 2)!;
     s.play(TOKEN_MAKER, { zone: 2, row: "backrow" });
-    // R651: once its play resolved, Me and Mr Token was fused into the Tower.
+    // R653: once its play resolved, Me and Mr Token was fused into the Tower.
     expect(s.card(tower.id).defId).not.toBe(TOWER);
     expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
     s.endTurn().endTurn();

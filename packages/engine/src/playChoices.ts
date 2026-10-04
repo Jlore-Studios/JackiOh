@@ -281,7 +281,7 @@ export function legalZonesFor(
 }
 
 /**
- * R651, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while it is
+ * R653, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while it is
  * Immutable, since its text could not change to take the Unit in. Read here and in `refuseZone`, beside
  * `zones.whyCannotCarry`, because Immutable is a keyword the layers compute (§10.4).
  */
@@ -1161,7 +1161,7 @@ function refuseZone(
   if (!needs) return `${name} takes no zone`;
 
   const row = rowForCard(state, card);
-  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower, R651).
+  // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower, R653).
   if (row === "units" && zone.row === "backrow") {
     if (!Number.isInteger(zone.lane) || zone.lane < 1 || zone.lane > rowSize(zone.row)) {
       return `there is no ${zone.row} zone ${zone.lane}`;

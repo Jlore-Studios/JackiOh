@@ -1,4 +1,4 @@
-// C+ #33 Ivory Tower — SPEC §8.7 row 33, R418, R651, BUILD M9 Classic+ row C+ 33: "Field Spell: the first
+// C+ #33 Ivory Tower — SPEC §8.7 row 33, R418, R653, BUILD M9 Classic+ row C+ 33: "Field Spell: the first
 // Unit you play onto its zone stands on it while its play resolves, its Cry included, and is then fused
 // into it per R77, the Tower the kept card: a Field Spell still, with the Unit's text, keywords and stats,
 // so the Unit's aura covers your side, its end-of-turn line runs and its Death fires when the Tower dies;
@@ -57,7 +57,7 @@ const textOf = (s: Scenario, id: string): string => {
 
 describe("C+ #33 Ivory Tower", () => {
   describe("base", () => {
-    it("R418 R651 a Unit you play may name the Tower's zone; its Cry resolves, then it is fused into the Tower", () => {
+    it("R418 R653 a Unit you play may name the Tower's zone; its Cry resolves, then it is fused into the Tower", () => {
       const { s, tower, rider } = towerWith(TOKENS);
       // Its Cry ran while it stood on the Tower: a Rush Token in the unit row.
       expect(s.unit("p1", 1)?.defId).toBe(RUSH);
@@ -72,7 +72,7 @@ describe("C+ #33 Ivory Tower", () => {
       expect(types.indexOf("cardResolved")).toBeLessThan(types.indexOf("fused"));
     });
 
-    it("R651 the Unit ceases to exist: no Death, not destroyed, never in a graveyard", () => {
+    it("R653 the Unit ceases to exist: no Death, not destroyed, never in a graveyard", () => {
       const { s, rider } = towerWith(SHEEPLE);
       s.expectInZone(rider, "gone");
       expect(s.pile("p1", "graveyard")).toHaveLength(0);
@@ -80,13 +80,13 @@ describe("C+ #33 Ivory Tower", () => {
       expect(s.hand("p1")).toHaveLength(1); // the filler: Sheeople's Death drew nothing
     });
 
-    it("R651 the Tower takes the Unit's text and keywords: its aura covers your side from the backrow", () => {
+    it("R653 the Tower takes the Unit's text and keywords: its aura covers your side from the backrow", () => {
       const { s, tower } = towerWith(TOE_CRACKER, { hand: [SHEEPISH, FILLER] });
       expect(textOf(s, tower)).toContain("Aura: Your Traps cost (0).");
       expect(effectiveCost(s.state, s.card(SHEEPISH))).toBe(0);
     });
 
-    it("R651 the Unit's keywords do nothing in the backrow: a fused Taunt binds no attacker, and its end-of-turn line runs", () => {
+    it("R653 the Unit's keywords do nothing in the backrow: a fused Taunt binds no attacker, and its end-of-turn line runs", () => {
       const { s, tower } = towerWith(JAY, { hand: [BIG_SPELL, FILLER] });
       expect(defOf(s.state, s.card(tower).defId).base.keywords).toContainEqual({ kind: "Taunt" });
       const before = s.hand("p1").map((card) => effectiveCost(s.state, card));
@@ -107,7 +107,7 @@ describe("C+ #33 Ivory Tower", () => {
       expect(s.hand("p1")).toHaveLength(held - 1 + 2);
     });
 
-    it("R651 after the first Unit, no more Units can be stacked onto it", () => {
+    it("R653 after the first Unit, no more Units can be stacked onto it", () => {
       const { s } = towerWith(TOKENS, { hand: [MENACE, FILLER] });
       expect(() => s.play(MENACE, { zone: 2, row: "backrow" })).toThrow();
       const plays = legalActions(s.state, "p1").filter(
@@ -117,7 +117,7 @@ describe("C+ #33 Ivory Tower", () => {
       expect(plays.some((action) => action.zone?.row === "backrow")).toBe(false);
     });
 
-    it("R651 a Tower its Unit's Cry destroys fuses nothing: Guy Att steps down into a unit zone (R446)", () => {
+    it("R653 a Tower its Unit's Cry destroys fuses nothing: Guy Att steps down into a unit zone (R446)", () => {
       const { s, tower, rider } = towerWith(GUY_ATT);
       s.expectInZone(tower, "graveyard");
       expect(s.unit("p1", 2)?.id).toBe(rider);
@@ -125,7 +125,7 @@ describe("C+ #33 Ivory Tower", () => {
       expect(s.card(rider).defId).toBe(GUY_ATT);
     });
 
-    it("R651 an answer that replaces the Unit where it stands leaves its replacement to be fused: Sheepish's Sheep", () => {
+    it("R653 an answer that replaces the Unit where it stands leaves its replacement to be fused: Sheepish's Sheep", () => {
       const { s, tower } = towerWith(TOKENS, { p2Backrow: [{ def: SHEEPISH, faceUp: false }] });
       expect(s.events.some((event) => event.type === "trapFired")).toBe(true);
       expect(defOf(s.state, s.card(tower).defId).name).toBe("Sheep Token + Ivory Tower");

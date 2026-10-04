@@ -10,8 +10,9 @@
 //      hand the card is not a legal target at all (`targeting.canPayToTarget`), so it is never
 //      offered.
 //   2. An interception (Classic #33 Joro: "While this is in your hand: when your opponent targets one
-//      of your Units, summon this and make it the new target"). The first card in the targeted
-//      unit's controller's hand whose `replacements` declare `{ on: "targeted", where: "hand" }` is
+//      of your Units with a Spell, summon this and make it the new target"). The first card in the
+//      targeted unit's controller's hand whose `replacements` declare `{ on: "targeted", where:
+//      "hand" }` and answer this source (`by: "spell"` needs a Spell, R651) is
 //      summoned (R64's leftmost open unit zone; with none, nothing happens), with no Cry and
 //      summoning sick, and the pick moves to it — `redirected` "target". One interceptor answers one targeting: a play naming several of
 //      that player's units redirects the first. A declared pick moves only when the interceptor is
@@ -28,7 +29,7 @@
 // continuation carries the interrupted answer as plain JSON, so a paused targeting survives a round
 // trip and a replay (§9.3, R113).
 
-import type { PlayerId, Selection } from "@jackioh/shared";
+import type { CardType, PlayerId, Selection } from "@jackioh/shared";
 import { defOf } from "./catalog";
 import { discardFromHand } from "./effects/move";
 import { summon } from "./effects/summon";
@@ -60,6 +61,8 @@ export type InterceptArgs = {
   /** Whether the interceptor may stand as pick `index` (a declaration's filter); always when absent. */
   accepts?: (interceptor: CardInstance, index: number) => boolean;
   what?: RedirectKind;
+  /** The targeting card's type; an attack carries none, so a `by: "spell"` card never answers it (R651). */
+  source?: CardType;
 };
 
 /**
@@ -75,7 +78,7 @@ export function interceptTargeting(sink: EngineSink, args: InterceptArgs): Selec
     if (pick?.pick !== "instance") continue;
     const targeted = findInstance(sink.state, pick.instanceId);
     if (targeted === undefined) continue;
-    const interceptor = interceptorFor(sink.state, args.chooser, targeted);
+    const interceptor = interceptorFor(sink.state, args.chooser, targeted, args.source);
     if (interceptor === null) continue;
     if (args.accepts !== undefined && !args.accepts(interceptor, index)) continue;
 
@@ -168,6 +171,16 @@ export function whyTargetAnswerRefused(state: GameState, pending: PendingChoice,
 }
 
 /**
+ * R651: the targeting card's type behind a `target` prompt — the card whose prompt it is
+ * (`resume.instanceId`), read as the pick is answered. Undefined when the prompt names no card.
+ */
+function sourceOf(state: GameState, instanceId: string | undefined): CardType | undefined {
+  if (instanceId === undefined) return undefined;
+  const source = findInstance(state, instanceId);
+  return source === undefined ? undefined : cardTypeOf(state, source);
+}
+
+/**
  * R450: the targeting point of a `target` prompt's answer, which the caller has validated and closed.
  * Returns the picks to go on with — the interceptor's in place of the pick it answered — or null when
  * the picks cost discards: the cost's `hand` prompt is open, and its answer finishes this one.
@@ -204,7 +217,12 @@ export function targetAnswer(sink: EngineSink, pending: PendingChoice, picks: re
     });
     if (opened !== null) return null;
   }
-  return interceptTargeting(sink, { chooser, picks, what: "target" });
+  return interceptTargeting(sink, {
+    chooser,
+    picks,
+    what: "target",
+    source: sourceOf(sink.state, pending.resume.instanceId),
+  });
 }
 
 function owedTargetingOf(resume: Resume): OwedTargeting | null {
@@ -225,7 +243,12 @@ function answerTargetCost(sink: EngineSink, answer: AnswerInput): string | null 
   closePrompt(sink);
   if (owed === null) return null;
   payTargetingDiscards(sink, pending.playerId, answer.selection.flatMap((pick) => (pick.pick === "instance" ? [pick.instanceId] : [])));
-  const picks = interceptTargeting(sink, { chooser: pending.playerId, picks: owed.picks, what: "target" });
+  const picks = interceptTargeting(sink, {
+    chooser: pending.playerId,
+    picks: owed.picks,
+    what: "target",
+    source: sourceOf(sink.state, owed.prompt.resume.instanceId),
+  });
   continueTargeted(sink, owed.prompt, picks);
   return null;
 }

@@ -1,10 +1,10 @@
 // C+ #70 Chaos Machine — SPEC §8.7 row 70, BUILD M9 row C+ 70: at the start and at the end of its
-// controller's turn it Upgrades one random card among their hand and side of the field and Degrades one
-// random card among the opponent's (R386: one draw each; a pick on an Immutable card or one nothing fits
-// changes nothing); a pick over a hand and a field is split by the piles' sizes (R242), and a hidden
-// card's change reaches the other seat under the sentinel (R177); empty zones, nothing and no draw
-// (R129); the count reads through `param()`; radiant two different cards each way. R585: its own side
-// of the field includes Chaos Machine itself.
+// controller's turn it Upgrades one random other card among their hand and side of the field and
+// Degrades one random card among the opponent's (R386: one draw each; a pick on an Immutable card or
+// one nothing fits changes nothing); a pick over a hand and a field is split by the piles' sizes
+// (R242), and a hidden card's change reaches the other seat under the sentinel (R177); empty zones,
+// nothing and no draw (R129); the count reads through `param()`; radiant two different cards each
+// way. R585: the Upgrade never picks Chaos Machine itself.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -83,13 +83,25 @@ describe("C+ #70 Chaos Machine", () => {
       expect(ownerOf(s, tunes(s.lastEvents, "degraded")[0]!.instanceId)).toBe("p2");
     });
 
-    it("R585 your side of the field includes Chaos Machine itself: alone, it Upgrades itself", () => {
+    it("R585 never Upgrades itself: alone on its side with an empty hand, nothing changes", () => {
       const s = machine({}, { hand: [FILLER] });
       const self = s.backrow("p1", 1)!;
       s.startTurn();
-      const up = tunes(s.lastEvents, "upgraded");
-      expect(up.map((event) => event.instanceId)).toEqual([self.id]);
-      expect(["cost", "number"]).toContain(up[0]!.change.kind);
+      expect(tunes(s.lastEvents, "upgraded")).toEqual([]);
+      expect(s.card(self).tuning).toBeUndefined();
+      // The Degrade still resolves.
+      expect(tunes(s.lastEvents, "degraded")).toHaveLength(1);
+    });
+
+    it("R585 the Upgrade picks among the other cards, never itself, over several seeds", () => {
+      for (let n = 0; n < 20; n += 1) {
+        const s = machine({ hand: [FILLER, FILLER], field: [UNIT] }, { hand: [FILLER] }, { seed: `chaos-noself-${n}` });
+        const self = s.backrow("p1", 1)!;
+        s.startTurn();
+        const up = tunes(s.lastEvents, "upgraded");
+        expect(up).toHaveLength(1);
+        expect(up[0]!.instanceId).not.toBe(self.id);
+      }
     });
 
     it("R386 a pick on an Immutable card changes nothing and reports nothing", () => {
@@ -204,11 +216,14 @@ describe("C+ #70 Chaos Machine", () => {
       expect(tunes(s.lastEvents, "degraded")).toHaveLength(2);
     });
 
-    it("R129 R60 with one card on a side, that one card only", () => {
+    it("R129 R60 R585 with one other card on your side, that one card only: never itself", () => {
       const s = machine({ hand: [FILLER] }, { hand: [FILLER] }, { radiant: true });
+      const self = s.backrow("p1", 1)!;
       s.startTurn();
       expect(tunes(s.lastEvents, "degraded")).toHaveLength(1);
-      expect(tunes(s.lastEvents, "upgraded")).toHaveLength(2);
+      const up = tunes(s.lastEvents, "upgraded");
+      expect(up).toHaveLength(1);
+      expect(up[0]!.instanceId).not.toBe(self.id);
     });
   });
 });

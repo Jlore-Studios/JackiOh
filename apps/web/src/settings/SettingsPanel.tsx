@@ -50,7 +50,7 @@ type SectionSpec = {
 const SECTIONS: readonly SectionSpec[] = [
   { id: "gameplay", title: "Gameplay", controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"] },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
-  { id: "audio", title: "Audio", controls: [] },
+  { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
   { id: "account", title: "Account", controls: [] },
 ];
 
@@ -77,6 +77,10 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   reduceMotion: {
     label: "Reduce motion",
     hint: "Turn animations off, whatever your system setting says.",
+  },
+  muteOpponentEmotes: {
+    label: "Mute opponent emotes",
+    hint: "Never show or hear an opponent's emotes, in every match.",
   },
 };
 

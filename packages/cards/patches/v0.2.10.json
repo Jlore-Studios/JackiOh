@@ -2384,7 +2384,8 @@
     "set": "Core",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Rare",
     "token": false,
@@ -3289,7 +3290,7 @@
     "params": [
       {
         "key": "threshold",
-        "base": 1,
+        "base": 2,
         "radiant": 3,
         "better": "up",
         "step": 1,
@@ -3885,7 +3886,9 @@
     "name": "Pestilent Slime",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 0,
@@ -4090,7 +4093,7 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "While this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
+      "text": "While this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
     },
     "radiant": {
       "attack": 1,
@@ -4100,7 +4103,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units, summon this and make it the new target."
+      "text": "Indestructible\nWhile this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
     }
   },
   "classic-034": {
@@ -4295,7 +4298,9 @@
     "name": "Outbreak",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 1,
@@ -4394,7 +4399,9 @@
     "name": "Transmutable Toxins",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -4432,7 +4439,9 @@
     "name": "Plague Nuke",
     "set": "Classic",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 3,
@@ -4763,7 +4772,9 @@
     "name": "Plague Crawler",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -4952,7 +4963,8 @@
     "set": "Classic",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Plague"
     ],
     "rarity": "Common",
     "token": false,
@@ -5007,7 +5019,9 @@
     "name": "Plague Bringer Goliath",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Legendary",
     "token": false,
     "cost": 3,
@@ -5063,7 +5077,9 @@
     "name": "Living Bomb",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5095,7 +5111,9 @@
     "name": "Crop Dusting",
     "set": "Classic",
     "type": "Trap",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5304,7 +5322,9 @@
     "name": "Plague Charger",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -5347,7 +5367,8 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [
-      "Book"
+      "Book",
+      "Plague"
     ],
     "rarity": "Epic",
     "token": false,
@@ -5466,7 +5487,9 @@
     "name": "Corpse Plantation",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
@@ -5526,7 +5549,9 @@
     "name": "Plague Bringer",
     "set": "Classic",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -5618,7 +5643,9 @@
     "name": "Mutate Spell",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -5950,7 +5977,9 @@
     "name": "Plague Chalice",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": "X",
@@ -6129,7 +6158,9 @@
     "name": "Second Amendment Snake",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
@@ -7673,6 +7704,9 @@
     "printedRarity": "Epic",
     "token": true,
     "cost": 1,
+    "refs": [
+      "classicplus-021"
+    ],
     "params": [
       {
         "key": "rounds",
@@ -7686,7 +7720,7 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Deal 1 damage to all Units. Repeat until a Unit dies, up to {rounds|time|times}."
+      "text": "Cast Whirlwind until a Unit dies."
     },
     "radiant": {
       "keywords": [],
@@ -8409,17 +8443,17 @@
       },
       {
         "key": "debuff",
-        "base": 4,
-        "radiant": 4,
+        "base": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
       }
     ],
-    "loc": 25,
+    "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −3/−3. Otherwise, give all Units +{buff}/+{buff}."
+      "text": "Cast on draw: If you control fewer Units than your opponent, give all Units −{debuff}/−{debuff}. Otherwise, give all Units +{buff}/+{buff}."
     },
     "radiant": {
       "keywords": [],
@@ -9307,7 +9341,7 @@
         "min": 1
       }
     ],
-    "loc": 7,
+    "loc": 10,
     "base": {
       "attack": 2,
       "health": 2,
@@ -9316,7 +9350,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
       "attack": 4,
@@ -9326,7 +9360,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random card|random cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Animated\nStart of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {

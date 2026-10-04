@@ -1,7 +1,7 @@
-// C+ #33 Ivory Tower (SPEC §8.7 row 33, R418, R651): (2) Field Spell, Rare.
+// C+ #33 Ivory Tower (SPEC §8.7 row 33, R418, R653): (2) Field Spell, Rare.
 //   Base:    "The first Unit you stack onto this is fused into it."
 //   Radiant: "The first Unit you stack onto this becomes Radiant and is fused into it."
-// The engine owns the stacking (`fusesCarried`, R446, R651): a Unit you play may name this zone while
+// The engine owns the stacking (`fusesCarried`, R446, R653): a Unit you play may name this zone while
 // no Unit has stood on it this stay, and stands on it while its play resolves, its Cry included. Once
 // that play has resolved, the Unit on it is fused into this per R77, this the kept card: a Field Spell
 // still, with the Unit's text and keywords, and the Unit ceases to exist. The Radiant face makes the
@@ -23,7 +23,7 @@ function riderOf(state: GameState, tower: CardInstance): CardInstance | null {
 
 type TriggerContext = EffectContext & { event: GameEvent };
 
-/** R651: the event is the play of the Unit stacked onto this Tower, landing or resolved. */
+/** R653: the event is the play of the Unit stacked onto this Tower, landing or resolved. */
 function isStackedPlay(ctx: TriggerContext): ctx is TriggerContext & { self: CardInstance } {
   const event = ctx.event;
   if (ctx.self === null) return false;
@@ -31,7 +31,7 @@ function isStackedPlay(ctx: TriggerContext): ctx is TriggerContext & { self: Car
 }
 
 /**
- * R651: once the stacked Unit's play has resolved, the Unit standing on this — that card, or what an
+ * R653: once the stacked Unit's play has resolved, the Unit standing on this — that card, or what an
  * answer to the play left in its place — is fused into it.
  */
 function fuseIn(radiant: boolean): TriggerDef {

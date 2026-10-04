@@ -23,7 +23,7 @@ import type { DeckSyncApi, StorageLike, SyncClock } from "./sync.ts";
 export const TEST_PROFILE = "profile-test";
 
 export function savedDeck(id: string, name: string, cards: readonly string[], createdAt: number, catalogVersion = "test"): SavedDeck {
-  return { id, name, cards: [...cards], catalogVersion, createdAt, updatedAt: createdAt };
+  return { id, name, cards: [...cards], catalogVersion, portrait: null, createdAt, updatedAt: createdAt };
 }
 
 export function savedTrio(id: string, name: string, deckIds: TrioSlots, createdAt: number): SavedTrio {

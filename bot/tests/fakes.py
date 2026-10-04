@@ -163,6 +163,10 @@ class FakeGitHub:
     def list_comments(self, number: int, limit: int = 300) -> list[dict]:
         return copy.deepcopy(self.comments.get(number, []))
 
+    def list_commits(self, *, author: str = "", limit: int = 1000) -> list[dict]:
+        return [c for c in getattr(self, "commits", [])
+                if not author or (c.get("author") or {}).get("login") == author][:limit]
+
     def create_comment(self, number: int, body: str) -> dict[str, Any]:
         comment = {"id": next(self._ids), "body": with_marker(body), "user": dict(BOT),
                    "author_association": "COLLABORATOR", "created_at": "2026-09-29T00:00:00Z",

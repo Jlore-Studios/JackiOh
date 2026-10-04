@@ -223,7 +223,7 @@ export type StaticFlags = {
    */
   carrier?: boolean;
   /**
-   * R651: "The first Unit you stack onto this is fused into it" (Classic+ #33 Ivory Tower). A carrier,
+   * R653: "The first Unit you stack onto this is fused into it" (Classic+ #33 Ivory Tower). A carrier,
    * as `carrier` is, that takes one Unit a stay on the field (`zones.stackedOnto` names it) and none
    * while it is Immutable, whose text could take no Unit in (R23). The fusion is the card's own, once
    * that Unit's play has resolved.

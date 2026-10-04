@@ -18,6 +18,7 @@ export * from "./deck";
 export * from "./shadowBan";
 export * from "./baselines";
 export * from "./match";
+export * from "./personas";
 export * from "./gate";
 export * from "./sweep";
 export * from "./devRun";

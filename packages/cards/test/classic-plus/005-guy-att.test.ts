@@ -88,7 +88,7 @@ describe("C+ #5 Guy Att", () => {
       const tower = s.card(TOWER).id;
       const rider = s.card(VANILLA);
       s.play(rider, { zone: 2, row: "backrow" });
-      // R651: once its play resolved, the Vanilla was fused into the Tower.
+      // R653: once its play resolved, the Vanilla was fused into the Tower.
       s.expectInZone(rider, "gone");
       expect(carriedAt(s.state, { player: "p1", row: "backrow", lane: 2 })).toBeNull();
 
@@ -97,7 +97,7 @@ describe("C+ #5 Guy Att", () => {
       s.expectInZone(tower, "graveyard");
     });
 
-    it("R418 R651 a Guy Att stacked onto your Ivory Tower destroys it with its own Cry, and steps down unfused", () => {
+    it("R418 R653 a Guy Att stacked onto your Ivory Tower destroys it with its own Cry, and steps down unfused", () => {
       const s = setup({ hand: [{ def: GUY }, FILLER], backrow: [{ def: TOWER, lane: 2 }] });
       const tower = s.card(TOWER).id;
       const guy = s.card(GUY).id;

@@ -96,7 +96,7 @@ describe("C+ #24 Crushing Walls", () => {
       const tower = s.card(TOWER).id;
       const rider = s.card(BODY).id;
       s.play(rider, { zone: 1, row: "backrow" });
-      // R651: once its play resolved, the body was fused into the Tower.
+      // R653: once its play resolved, the body was fused into the Tower.
       s.expectInZone(rider, "gone");
       s.endTurn();
       s.play(WALLS);
