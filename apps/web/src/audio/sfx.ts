@@ -1184,10 +1184,13 @@ const emoteAngry: SfxRecipe = (ctx, out, at) => {
   chain(muffle, out);
   const growl = oscillator(k, "sawtooth", 95, 0);
   vibrato(k, growl.frequency, 25, 14, 0, len);
-  chain(growl, envelope(k, 0, 0.03, 0.5, len), muffle);
+  chain(growl, envelope(k, 0, 0.03, 0.42, len), muffle);
   run(k, growl, 0, len);
   const rattle = modulatedGain(k, "square", 30, 0.5, 0.5);
-  chain(rattle, muffle);
+  // The grind goes out through its own envelope like every other voice in this file: a raw
+  // oscillator stopped at full level both clips against the growl (B15's 1.0 ceiling) and rings
+  // the filter past durationMs (B15's silence floor).
+  chain(rattle, envelope(k, 0, 0.01, 0.35, len), muffle);
   const grind = oscillator(k, "sawtooth", 190, 0);
   chain(grind, rattle);
   run(k, grind, 0, len);

@@ -8,13 +8,15 @@
 
 /* The oval the hero's art draws in, with the two badges hung on its edges. It is a flex item of
    `.hero` like the health gem used to be, so the seat label, power and badges flow around it the
-   way they always did. */
+   way they always did. 44px square: the oval stays the touch-sized presence the picker shows,
+   and the seats keep the heights the board's card-height budgets were measured against — a
+   taller oval stretches the shared grid rows past the viewport at 1024x768 (B28, B46). */
 .hero-portrait {
   position: relative;
   order: -1;
   flex: 0 0 auto;
   width: 44px;
-  height: 50px;
+  height: 44px;
 }
 
 .hero-portrait-art {
