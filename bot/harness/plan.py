@@ -663,6 +663,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     stop = stops(ctx, state, force)
     if stop:
         return nothing(stop)
+    note_secrets(ctx, state)
     notes = housekeeping(ctx, state) + announce_switched_off(ctx, state)
 
     def taken(planned: dict[str, Any]) -> dict[str, Any]:
@@ -751,6 +752,15 @@ def sync_needs_plan(ctx: Context, state: dict[str, Any]) -> list[str]:
         ctx.gh.add_labels(number, [LABEL_NEEDS_PLAN])
         notes.append(f"#{number} needs a plan")
     return notes
+
+
+def note_secrets(ctx: Context, state: dict[str, Any]) -> None:
+    """Record which provider secrets this run's workflow has, for the status loop: its own list
+    is fixed when its long run is created, so a secret added since shows there once a plan job
+    has seen it (`providers.newer_secrets`)."""
+    record = providers_mod.secrets_record(ctx.cfg.secrets, state, ctx.now())
+    if record is not None:
+        ctx.store.update(lambda s: s.update(secrets=record), "secrets seen")
 
 
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
