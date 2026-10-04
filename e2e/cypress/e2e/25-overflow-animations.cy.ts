@@ -445,7 +445,8 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
   expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 4);
   for (const name of [CLONE_MACHINE, GARY, VANILLA]) cy.handCardByName(name);
 
-  cy.playByName(CLONE_MACHINE, { ...handClick(viewport), zone: { side: "you", row: "backrow", lane: 1 } });
+  // Animated since patch v0.2.10 (R383), the Clone Machine steps into units lane 5, leaving 1 and 2 free.
+  cy.playByName(CLONE_MACHINE, { ...handClick(viewport), zone: { side: "you", row: "backrow", lane: 5 } });
   // #33 does not copy its own play (R119); Gary's three copies take the library to 59.
   cy.playByName(GARY, { ...handClick(viewport), zone: { side: "you", row: "units", lane: 1 } });
   expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 1);

@@ -104,16 +104,14 @@ function heroGuardsOf(state: GameState, player: PlayerId): { cap?: number; divis
 }
 
 /**
- * §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor this player controls, and every
+ * §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
+ * in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
  * per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins.
  */
 export function heroDamageCap(state: GameState, player: PlayerId): number | null {
-  const oneshot = slotsOf(player, "backrow")
-    .map((ref) => cardAt(state, ref))
-    .flatMap((card) => {
-      if (card === null || flagsOf(card).antiOneshot !== true) return [];
-      return [card.radiant ? ANTI_ONESHOT_CAP.radiant : ANTI_ONESHOT_CAP.base];
-    });
+  const oneshot = actingTextsOf(state, player).flatMap((card) =>
+    flagsOf(card).antiOneshot === true ? [card.radiant ? ANTI_ONESHOT_CAP.radiant : ANTI_ONESHOT_CAP.base] : [],
+  );
   const guarded = heroGuardsOf(state, player).flatMap((guard) =>
     guard.cap === undefined ? [] : [Math.max(0, Math.trunc(guard.cap))],
   );

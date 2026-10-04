@@ -24,7 +24,7 @@ const idsOf = (version: string, kind: string): string[] =>
 
 describe("R388 card patch history (B4.2)", () => {
   it("R388 lists every patch once, in the order they were made, each with its snapshot", () => {
-    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5"]);
+    expect(VERSIONS).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5", "v0.2.10"]);
     expect(new Set(VERSIONS).size).toBe(VERSIONS.length);
     for (const patch of PATCHES) {
       expect(existsSync(snapshotPath(patch.version)), `${patch.version}.json`).toBe(true);
@@ -40,7 +40,7 @@ describe("R388 card patch history (B4.2)", () => {
 
   it("R388 makes the catalog version the newest patch, and catalog.json its snapshot", () => {
     expect(CATALOG_VERSION).toBe(VERSIONS[VERSIONS.length - 1]);
-    expect(CATALOG_VERSION).toBe("v0.2.5");
+    expect(CATALOG_VERSION).toBe("v0.2.10");
     const snapshot = readSnapshot(CATALOG_VERSION);
     const differ = [...new Set([...Object.keys(snapshot), ...Object.keys(CATALOG)])].filter(
       (id) => JSON.stringify(snapshot[id]) !== JSON.stringify(CATALOG[id]),
@@ -101,6 +101,22 @@ describe("R388 card patch history (B4.2)", () => {
     expect([16, 17, 34, 43, 49, 65, 88].map((n) => cost(after, `core-0${String(n).padStart(2, "0")}`))).toEqual([3, 4, 4, 4, 4, 1, 4]);
     const changed = changesOf("v0.2.0").find((change) => change.id === "core-016");
     expect(changed?.kind === "changed" ? changed.fields : []).toContain("cost");
+  });
+
+  it("R388 records patch v0.2.10: eighteen Field Spells Animated and Ivory Tower's text (issue #113)", () => {
+    expect(idsOf("v0.2.10", "added")).toEqual([]);
+    expect(idsOf("v0.2.10", "changed")).toEqual([
+      "core-014", "core-033", "core-038", "core-065", "core-073",
+      "classic-004", "classic-007", "classic-052", "classic-062", "classic-064", "classic-087",
+      "classicplus-007", "classicplus-012-5", "classicplus-012-7", "classicplus-031", "classicplus-033",
+      "classicplus-061", "classicplus-063", "classicplus-070", "classicplus-078",
+    ]);
+    const after = readSnapshot("v0.2.10");
+    const keywords = (id: string): unknown => (after[id]?.["base"] as { keywords?: { kind: string }[] } | undefined)?.keywords?.[0]?.kind;
+    expect(keywords("core-073")).toBe("Animated");
+    expect((after["classicplus-033"]?.["base"] as { text?: string } | undefined)?.text).toBe("The first Unit you stack onto this is fused into it.");
+    // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing printed does.
+    expect(changesOf("v0.2.10").find((change) => change.id === "classic-052")).toMatchObject({ kind: "changed", fields: ["loc"] });
   });
 
   it("R388 records patch v0.2.4: card text pass (issue #45)", () => {
