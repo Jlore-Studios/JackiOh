@@ -1573,11 +1573,11 @@
       "issue": 196,
       "kind": "review",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "agy",
       "queued_at": "2026-10-04T07:20:07Z",
-      "run_id": "37184884989",
+      "run_id": "37193669247",
       "self_check_findings": [],
-      "started_at": "2026-10-04T07:09:53Z",
+      "started_at": "2026-10-04T09:56:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -2170,9 +2170,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T09:20:57Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37191761780",
-    "what": "revise #203 on devin"
+    "at": "2026-10-04T09:56:05Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37193669247",
+    "what": "review #202 on agy"
   },
   "last_sweep": {
     "at": "2026-10-04T09:49:20Z",
