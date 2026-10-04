@@ -713,9 +713,7 @@
     },
     "144": {
       "action": "revise",
-      "asks": [
-        "c:5975340065"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-03T23:14:14Z",
@@ -731,12 +729,14 @@
       "question": "",
       "queued_at": "2026-10-04T01:25:12Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37161072198",
+      "run_id": "37167870976",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-03T23:14:14Z",
+      "started_at": "2026-10-04T01:27:59Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:5975340065"
+      ],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -1590,9 +1590,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T01:23:30Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37167697193",
-    "what": "review #180 on agy"
+    "at": "2026-10-04T01:27:59Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37167870976",
+    "what": "revise #144 on agy"
   },
   "last_sweep": {
     "at": "2026-10-04T01:19:47Z",
