@@ -734,7 +734,7 @@
       }
     },
     "144": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "died": 0,
       "failures": 0,
@@ -742,19 +742,19 @@
       "forced": false,
       "interruptions": 0,
       "issue": 63,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_at": "2026-10-03T16:22:09Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "agy",
       "question": "",
       "queued_at": "2026-10-04T02:41:02Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37170607434",
+      "run_id": "37177161765",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-04T02:21:26Z",
+      "started_at": "2026-10-04T04:31:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -1928,9 +1928,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-04T04:11:48Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37171674640",
-    "what": "plan #196 on claude-1"
+    "at": "2026-10-04T04:31:09Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37177161765",
+    "what": "review #144 on agy"
   },
   "last_sweep": {
     "at": "2026-10-04T04:20:51Z",
