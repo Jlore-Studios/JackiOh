@@ -1413,6 +1413,7 @@
     "198": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-04T04:40:19Z",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-04T01:35:44Z",
@@ -1420,6 +1421,7 @@
       "interruptions": 0,
       "issue": 165,
       "kind": "revise",
+      "merged": true,
       "pending_request": false,
       "provider": "devin",
       "queued_at": "2026-10-04T03:35:45Z",
