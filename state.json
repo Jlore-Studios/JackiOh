@@ -1357,6 +1357,7 @@
     "194": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-04T04:40:38Z",
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
@@ -1375,6 +1376,7 @@
       "issue": 153,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "devin",
       "question": "",
