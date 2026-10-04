@@ -3789,6 +3789,12 @@ describe("SPEC §11 rulings, every row (BUILD M3 gate, REVIEW B4)", () => {
       WEB_STATS_ROUTE_TEST,
     );
   });
+
+  // Proved by packages/cards/test/versions.test.ts "R650 …": a `vA.B.Y` micro patch is named after
+  // the newest version in patches.json with the next letter.
+  it("R650 names a micro patch after the newest version, with the next letter", () => {
+    provenIn(650, "../../cards/test/versions.test.ts");
+  });
 });
 
 describe("SPEC §11 index completeness", () => {
