@@ -41,6 +41,8 @@ export type CreateGameArgs = {
   decks: [string[], string[]];
   catalog?: CardDefs;
   lastBoards?: LastBoards;
+  /** R433: the seats whose deck was dealt rather than built (All Random's both, R258). */
+  dealt?: readonly PlayerId[];
 };
 
 export type FoldArgs = {
@@ -50,6 +52,8 @@ export type FoldArgs = {
   catalog?: CardDefs;
   /** R417: the boards the match was created with, so the fold is the same game. */
   lastBoards?: LastBoards;
+  /** R433: the dealt seats the match was created with, so the fold is the same game. */
+  dealt?: readonly PlayerId[];
 };
 
 /**

@@ -1,6 +1,6 @@
 // Run by support/tasks/replay.ts under the repo's own tsx, from the repo root.
 //
-// Reads {seed, decks, log, state, handicaps?} as JSON on stdin and prints one JSON line:
+// Reads {seed, decks, log, state, handicaps?, dealt?} as JSON on stdin and prints one JSON line:
 //   { ok: true, replayHash, browserHash, errors } | { ok: false, error }
 //
 // This file is excluded from e2e/tsconfig.json on purpose: it is the one place in e2e/ that
@@ -16,6 +16,8 @@ type Payload = {
   state: unknown;
   /** The game's handicaps (R180: spec 13's practice tiers, spec 25's fixtures), passed to `fold` untouched. */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
+  /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to `fold` untouched. */
+  dealt?: ("p1" | "p2")[];
 };
 
 async function main(): Promise<void> {
@@ -40,6 +42,7 @@ async function main(): Promise<void> {
       log: unknown[];
       catalog?: unknown;
       handicaps?: unknown;
+      dealt?: unknown;
     }) => {
       state: unknown;
       errors: unknown[];
@@ -57,6 +60,7 @@ async function main(): Promise<void> {
     log: payload.log,
     catalog: cards.CATALOG,
     ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
+    ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
   });
 
   process.stdout.write(

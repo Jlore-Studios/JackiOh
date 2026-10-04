@@ -659,7 +659,13 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
     expect(humanFirst.begun.view.opponent).toEqual(aiFirst.begun.view.opponent);
 
     for (const { debug } of [aiFirst, humanFirst]) {
-      const replayed = fold({ seed: debug.seed, decks: debug.decks, log: debug.log, handicaps: debug.handicaps });
+      const replayed = fold({
+        seed: debug.seed,
+        decks: debug.decks,
+        log: debug.log,
+        handicaps: debug.handicaps,
+        ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }),
+      });
       expect(replayed.errors).toEqual([]);
       expect(hashState(replayed.state)).toBe(debug.hash);
     }
@@ -708,7 +714,13 @@ describe("R187 B38 a practice game folds from (seed, decks, handicaps, log) to i
       expect(new Set(debug.log.map((action) => action.nonce)).size).toBe(debug.log.length);
 
       expect(hashState(stateOf(debug))).toBe(debug.hash);
-      const replayed = fold({ seed: debug.seed, decks: debug.decks, log: debug.log, handicaps: debug.handicaps });
+      const replayed = fold({
+        seed: debug.seed,
+        decks: debug.decks,
+        log: debug.log,
+        handicaps: debug.handicaps,
+        ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }),
+      });
       expect(replayed.errors).toEqual([]);
       expect(hashState(replayed.state)).toBe(debug.hash);
     });
@@ -728,9 +740,17 @@ describe("R187 B38 a practice game folds from (seed, decks, handicaps, log) to i
     const debug = debugOf(d);
     expect(debug.decks[seatIndex("p2")]).toHaveLength(AI_DIFFICULTY.hard.deckSize);
     expect(() => fold({ seed: debug.seed, decks: debug.decks, log: debug.log })).toThrow();
-    expect(hashState(fold({ seed: debug.seed, decks: debug.decks, log: debug.log, handicaps: debug.handicaps }).state)).toBe(
-      debug.hash,
-    );
+    expect(
+      hashState(
+        fold({
+          seed: debug.seed,
+          decks: debug.decks,
+          log: debug.log,
+          handicaps: debug.handicaps,
+          ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }),
+        }).state,
+      ),
+    ).toBe(debug.hash);
   });
 
   it("B38 two cores fed the same requests answer them identically", { timeout: 120_000 }, () => {
@@ -850,8 +870,12 @@ describe("R508 a practice game's last board", () => {
 
     untilHumanMain(next, "p1", opened);
     const after = debugOf(next);
-    const { seed, decks, handicaps, log, lastBoards } = after;
-    expect(hashState(fold({ seed, decks, handicaps, log, ...(lastBoards === undefined ? {} : { lastBoards }) }).state)).toBe(after.hash);
+    const { seed, decks, handicaps, log, lastBoards, dealt } = after;
+    expect(
+      hashState(
+        fold({ seed, decks, handicaps, log, ...(lastBoards === undefined ? {} : { lastBoards }), ...(dealt === undefined ? {} : { dealt }) }).state,
+      ),
+    ).toBe(after.hash);
   });
 
   it("R508 a tutorial lesson neither takes the last board nor gives one", () => {
@@ -866,5 +890,76 @@ describe("R508 a practice game's last board", () => {
     const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
     expect(over.view.result).not.toBeNull();
     expect(over.lastBoard).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R433: the random deck is dealt, not built
+// ---------------------------------------------------------------------------------------------
+
+/** How many cards the human's own library list names (R310), the unknown ones aside. */
+function listedCount(snapshot: PracticeSnapshot): number {
+  return (snapshot.view.you.ownLibrary?.cards ?? []).reduce((sum, entry) => sum + entry.count, 0);
+}
+
+describe("R433 practice's fresh random deck lists only the cards the human has been shown", () => {
+  it("R433 a free game on the random deck starts with the human's whole library unknown, and the AI's seat is not dealt", () => {
+    const d = driver();
+    const started = snapshotOf(d.send({ type: "start", config: config({ seed: "r433-random", humanSeat: "p2" }) }));
+    const debug = debugOf(d);
+
+    expect(debug.dealt).toEqual(["p2"]);
+    expect(started.view.you.libraryCount).toBeGreaterThan(0);
+    expect(started.view.you.ownLibrary).toEqual({ cards: [], unknown: started.view.you.libraryCount });
+    // The AI's deck was dealt too, but its seat is not marked dealt: no view lists its own library
+    // to it, and R185's redaction hides it from the AI itself. Every card of it reads as built.
+    expect(stateOf(debug).players.p1.library.every((card) => card.knownAs !== undefined)).toBe(true);
+  });
+
+  it("R433 a preset deck was built: listed in full, and the game carries no dealt seat", () => {
+    const preset = PRACTICE_PRESETS[0];
+    if (preset === undefined) throw new Error("there is no practice preset");
+    const d = driver();
+    const started = snapshotOf(
+      d.send({ type: "start", config: config({ seed: "r433-preset", deck: { kind: "preset", id: preset.id } }) }),
+    );
+
+    expect(debugOf(d).dealt).toBeUndefined();
+    expect(started.view.you.ownLibrary?.unknown).toBe(0);
+    expect(listedCount(started)).toBe(started.view.you.libraryCount);
+  });
+
+  it("R433 a tutorial lesson plays its fixed decks, so nothing is dealt even with the random deck chosen", () => {
+    const lesson = TUTORIAL_LESSONS[0];
+    if (lesson === undefined) throw new Error("the tutorial has no lesson");
+    const d = driver();
+    const started = snapshotOf(
+      d.send({ type: "start", config: config({ seed: "r433-lesson", humanSeat: "p1", lesson: lesson.id }) }),
+    );
+
+    expect(debugOf(d).dealt).toBeUndefined();
+    expect(started.view.you.ownLibrary?.unknown).toBe(0);
+  });
+
+  it("R433, R187 a random-deck game folds to its own hash only with the dealt seat", { timeout: 120_000 }, () => {
+    const human: PlayerId = "p1";
+    const d = driver();
+    let last = snapshotOf(d.send({ type: "start", config: config({ seed: "r433-fold", humanSeat: human }) }));
+    const rng = createRng("r433-fold:walk");
+    for (let n = 0; n < 20 && last.view.result === null; n += 1) {
+      const next = step(d, human, rng, last);
+      if (next === null) break;
+      last = snapshotOf(next);
+    }
+
+    const debug = debugOf(d);
+    expect(debug.dealt).toEqual([human]);
+    const base = { seed: debug.seed, decks: debug.decks, log: debug.log, handicaps: debug.handicaps };
+    const replayed = fold({ ...base, ...(debug.dealt === undefined ? {} : { dealt: debug.dealt }) });
+    expect(replayed.errors).toEqual([]);
+    expect(hashState(replayed.state)).toBe(debug.hash);
+    // Folded as if the deck had been built, the replay is a different game: every card of the
+    // human's library reads as shown going in.
+    expect(hashState(fold(base).state)).not.toBe(debug.hash);
   });
 });
