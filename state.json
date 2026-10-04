@@ -1181,6 +1181,7 @@
       },
       "ci_run_id": 37175014431,
       "ci_sha": "80a90ddba549326530af4575d06e9d023c9e283c",
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
