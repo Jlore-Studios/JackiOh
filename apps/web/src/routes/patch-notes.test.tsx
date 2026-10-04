@@ -52,6 +52,7 @@ describe("R388 the /patch-notes route", () => {
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(entries[0]?.dataset.version).toBe("v0.2.2");
 =======
     // The newest patch — patches.json's last entry — opens the page.
@@ -60,6 +61,9 @@ describe("R388 the /patch-notes route", () => {
 >>>>>>> origin/main
 =======
     // The newest patch — patches.json's last entry — opens the page (today v0.2.10, issue #113).
+=======
+    // The newest patch — patches.json's last entry, whatever a promotion named it — opens the page (today v0.2.10, issue #113).
+>>>>>>> origin/main
     const shipped = await realPatchSource.patches();
     expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
     expect(shipped.at(-1)?.version).toBe("v0.2.10");

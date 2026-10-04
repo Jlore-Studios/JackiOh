@@ -44,9 +44,10 @@ describe("R388 the patch source", () => {
     await source.snapshot("b");
     expect(calls).toEqual(["patches", "b"]);
     expect(await source.snapshot("missing")).toBeNull();
-    // patches.json and index.json are never snapshots.
+    // patches.json, index.json and shipped.json are never snapshots.
     expect(await source.snapshot("index")).toBeNull();
     expect(await source.snapshot("patches")).toBeNull();
+    expect(await source.snapshot("shipped")).toBeNull();
   });
 
   it("R388 forgets a failed load, so asking again retries it", async () => {
@@ -86,10 +87,15 @@ describe("R388 the patch source", () => {
     ) as { version: string }[];
     expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> origin/main
 =======
+=======
+    // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
+    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+>>>>>>> origin/main
     expect(shipped.map((patch) => patch.version)).toEqual(
-      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.10"]),
+      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.5", "v0.2.10"]),
     );
 >>>>>>> origin/main
     const index = await realPatchSource.index();

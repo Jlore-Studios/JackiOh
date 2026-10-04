@@ -285,8 +285,13 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(patches.map((patch) => patch.version)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.4", "v0.2.2"]);
 =======
+=======
+    // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
+    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+>>>>>>> origin/main
     expect(patches.length, "patches.json is the shipped history").toBeGreaterThan(0);
 <<<<<<< HEAD
 >>>>>>> origin/main
