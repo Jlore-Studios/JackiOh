@@ -1757,7 +1757,9 @@
     },
     "203": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:5984803459"
+      ],
       "ci_fixes": 3,
       "ci_reruns": {
         "9e2449301500cade2775362d8a45e2bb8aca0617": 1,
@@ -1787,8 +1789,8 @@
       "pending_request": false,
       "provider": "devin",
       "question": "",
-      "queued_at": "2026-10-04T17:44:23Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-10-04T21:54:49Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37220845783",
       "self_check_findings": [
         {
@@ -1810,7 +1812,7 @@
           "where": "checks"
         }
       ],
-      "source": "",
+      "source": "request",
       "started_at": "2026-10-04T17:32:45Z",
       "stop_requested": false,
       "taken_asks": [],
