@@ -1227,17 +1227,11 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [
-          "muse",
-          "gemini"
-        ],
+        "approvals": [],
         "builder": "cognition",
         "rejections": [],
-        "sha": "b44dae72e9a491be9b28a310cefba233f229c92a",
-        "tiers": {
-          "gemini": "medium",
-          "muse": "medium"
-        }
+        "sha": "bcdd4fa742c46587386950e0a75f39df363c6fc6",
+        "tiers": {}
       }
     },
     "173": {
