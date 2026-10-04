@@ -2130,7 +2130,14 @@
       "feedback_since": "2026-10-04T18:02:31Z",
       "issue": 219,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "sha": "f5f6cfd0c29c1fd0624e474cbd8eb605625dd89c",
+        "tiers": {}
+      }
     },
     "31": {
       "failures": 0,
