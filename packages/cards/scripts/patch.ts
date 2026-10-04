@@ -7,7 +7,8 @@
  * Patches used to be made by this module (`pnpm --filter @jackioh/cards patch …`), which snapshotted
  * the catalog and appended to `patches.json` directly. Several patches are now built at once, so
  * branches add a fragment under `patches/pending/` instead (`patches.ts`, R641) and nothing here
- * writes the history anymore.
+ * writes the history anymore. A micro `vA.B.Y` (R650) keeps its `Y` in the fragment until that
+ * promotion names it (`versions.ts`).
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

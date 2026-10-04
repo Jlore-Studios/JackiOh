@@ -190,7 +190,8 @@ export function rewriteIndex(): void {
 
 /** A patch not yet shipped: the designer's label, what it does, and the catalog ids it touches. */
 export type PendingFragment = {
-  /** The designer's label, a bare patch number: "v0.2.5", never a revision ("v0.2.0b"). */
+  /** The designer's label, a bare patch number ("v0.2.5") or a micro "vA.B.Y" named at promotion
+   * (R650), never a revision ("v0.2.0b"). */
   version: string;
   title: string;
   /** Where the patch came from: the issue, the PR, the commits. One string, as `source` below. */
@@ -211,13 +212,17 @@ export type ShippedEntry = {
   blob: string;
 };
 
-/** A fragment's version is a bare patch number (R641): "v0.2.5", never "v0.2.0b" or "v0.2.0-r1". */
-export const FRAGMENT_VERSION = /^v\d+\.\d+\.\d+$/;
+/**
+ * A fragment's version is a bare patch number or a micro `vA.B.Y` (R641, R650): "v0.2.5" or
+ * "v0.2.Y", never a revision ("v0.2.0b") or a placeholder ("v0.2.X": the designer picks the X
+ * before the patch is made).
+ */
+export const FRAGMENT_VERSION = /^v\d+\.\d+\.(\d+|Y)$/;
 
 /** A pending fragment's path. */
 export function pendingPath(version: string, dir: string = PENDING_DIR): string {
   if (!FRAGMENT_VERSION.test(version)) {
-    throw new Error(`"${version}" is not a pending fragment (a bare patch number like "v0.2.5")`);
+    throw new Error(`"${version}" is not a pending fragment (a bare patch number like "v0.2.5", or a micro "v0.2.Y")`);
   }
   return `${dir}${version}.json`;
 }
@@ -334,9 +339,9 @@ export function revertPending(catalog: Catalog, newest: Catalog, claimed: Readon
  * Every way the pending fragments disagree with the newest shipped snapshot, each naming the
  * card (and the fragment) at fault, or [] when the tree is shippable: every catalog entry that
  * differs from the newest snapshot is claimed by exactly one fragment, every claimed card
- * differs, every fragment names a bare patch number, every fragment file holds the version its
- * name says, and every fragment carries a title, sources and notes — they become the shipped
- * patch's. Pure: `patches check` reads the files and prints what this returns.
+ * differs, every fragment names a bare patch number or a micro `vA.B.Y`, every fragment file
+ * holds the version its name says, and every fragment carries a title, sources and notes — they
+ * become the shipped patch's. Pure: `patches check` reads the files and prints what this returns.
  */
 export function checkFragments(args: {
   files: readonly { name: string; fragment: PendingFragment }[];
@@ -346,7 +351,9 @@ export function checkFragments(args: {
   const problems: string[] = [];
   for (const { name, fragment } of args.files) {
     if (!FRAGMENT_VERSION.test(fragment.version)) {
-      problems.push(`pending/${name} names version "${fragment.version}", not a bare patch number (^v\\d+\\.\\d+\\.\\d+$)`);
+      problems.push(
+        `pending/${name} names version "${fragment.version}", not a fragment version (a bare patch number ^v\\d+\\.\\d+\\.\\d+$ or a micro vA.B.Y)`,
+      );
     }
     if (name !== `${fragment.version}.json`) {
       problems.push(`pending/${name} holds version "${fragment.version}", not the version its file names`);

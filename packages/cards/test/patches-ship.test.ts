@@ -66,6 +66,25 @@ describe("R641 pending fragments and the check that proves them", () => {
     expect(checkFragments({ files: renamed, catalog, newest }).join("\n")).toContain("its file names");
   });
 
+  it("R641 lets a fragment hold a micro vA.B.Y, named at promotion, but never a vA.B.X", () => {
+    const newest: Catalog = { aaa: card("aaa", 1) };
+    const catalog: Catalog = { aaa: card("aaa", 2) };
+    const micro = [
+      {
+        name: "v0.2.Y.json",
+        fragment: { version: "v0.2.Y", title: "t", sources: "s", notes: "n", cards: ["aaa"] },
+      },
+    ];
+    expect(checkFragments({ files: micro, catalog, newest })).toEqual([]);
+    const placeholder = [
+      {
+        name: "v0.2.X.json",
+        fragment: { version: "v0.2.X", title: "t", sources: "s", notes: "n", cards: ["aaa"] },
+      },
+    ];
+    expect(checkFragments({ files: placeholder, catalog, newest }).join("\n")).toContain("v0.2.X");
+  });
+
   it("R641 holds a fragment to what a shipped patch carries: a title, a source and notes", () => {
     const newest: Catalog = { aaa: card("aaa", 1) };
     const empty = [
@@ -293,6 +312,95 @@ describe("R641 promotion in ship order", () => {
         "v0.2.0b",
         "v0.2.0c",
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // A micro `vA.B.Y` fragment keeps its Y until promotion names it after the then-newest patch
+  // (R650): the first ships as v0.1.1b, the next as v0.1.1c, each snapshot carrying only its card.
+  it("R641 names a micro vA.B.Y fragment after the then-newest patch when it ships", () => {
+    const root = mkdtempSync(join(tmpdir(), "jackioh-ship-micro-"));
+    try {
+      const dir = `${root}/packages/cards/patches/`;
+      const base: Catalog = { aaa: card("aaa", 1), bbb: card("bbb", 1) };
+      git(root, ["init", "-q", "-b", "main"]);
+      writeFiles(root, {
+        "packages/cards/catalog.json": json(base),
+        "packages/cards/patches/patches.json": json([
+          {
+            version: "v0.1.1",
+            date: "2026-09-27",
+            title: "base",
+            source: "test",
+            notes: "base notes",
+            changes: [
+              { id: "aaa", name: "Card aaa", kind: "added" },
+              { id: "bbb", name: "Card bbb", kind: "added" },
+            ],
+          },
+        ]),
+        "packages/cards/patches/v0.1.1.json": json(base),
+        "packages/cards/patches/index.json": json({ aaa: ["v0.1.1"], bbb: ["v0.1.1"] }),
+        "packages/cards/patches/shipped.json": json([
+          { version: "v0.1.1", commit: "0".repeat(40), blob: "0".repeat(40) },
+        ]),
+        "packages/cards/src/catalog-data.ts": 'export const CATALOG_VERSION = "v0.1.1";\n',
+        "apps/server/.env.example": "CATALOG_VERSION=v0.1.1\n",
+        "render.yaml": "x:\n- key: CATALOG_VERSION\n  value: v0.1.1\n",
+        "apps/server/src/index.ts": 'export const env = {\n  CATALOG_VERSION: "v0.1.1",\n};\n',
+      });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "base"], "2026-09-27T12:00:00+00:00");
+
+      writeFiles(root, { "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 2) }) });
+      expect(
+        writeFragment(root, { version: "v0.1.Y", title: "micro", sources: "issue", notes: "m" }).cards,
+      ).toEqual(["aaa"]);
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.1.Y"], "2026-10-05T12:00:00+00:00");
+      expect(checkPatches(root)).toEqual([]);
+      expect(shipPatches(root)).toEqual({ shipped: ["v0.1.1b"] });
+      const first = readPatches(`${dir}patches.json`).find((patch) => patch.version === "v0.1.1b");
+      expect(first?.changes).toEqual([{ id: "aaa", name: "Card aaa", kind: "changed", fields: ["cost"] }]);
+      expect(costOf(readSnapshot("v0.1.1b", dir), "aaa")).toBe(2);
+      expect(costOf(readSnapshot("v0.1.1b", dir), "bbb")).toBe(1);
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "ship v0.1.1b"], "2026-10-05T12:00:00+00:00");
+
+      // The next micro follows the new newest, not the old one.
+      writeFiles(root, {
+        "packages/cards/catalog.json": json({ ...base, aaa: card("aaa", 2), bbb: card("bbb", 4) }),
+      });
+      writeFragment(root, { version: "v0.1.Y", title: "micro again", sources: "issue", notes: "m2" });
+      git(root, ["add", "-A"]);
+      git(root, ["commit", "-q", "-m", "fragment v0.1.Y again"], "2026-10-06T12:00:00+00:00");
+      expect(shipPatches(root)).toEqual({ shipped: ["v0.1.1c"] });
+      expect(readPatches(`${dir}patches.json`).map((patch) => patch.version)).toEqual([
+        "v0.1.1",
+        "v0.1.1b",
+        "v0.1.1c",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R641 fails check when a micro cannot be named after the newest patch", () => {
+    const root = mkdtempSync(join(tmpdir(), "jackioh-check-micro-"));
+    try {
+      const base: Catalog = { aaa: card("aaa", 1) };
+      writeFiles(root, {
+        "packages/cards/catalog.json": json({ aaa: card("aaa", 2) }),
+        "packages/cards/patches/patches.json": json([
+          { version: "v0.3.0", date: "2026-09-27", title: "base", source: "test", notes: "n", changes: [] },
+        ]),
+        "packages/cards/patches/v0.3.0.json": json(base),
+        "packages/cards/patches/index.json": json({}),
+        "packages/cards/patches/shipped.json": json([]),
+      });
+      writeFragment(root, { version: "v0.2.Y", title: "t", sources: "s", notes: "n" });
+      expect(checkPatches(root).join("\n")).toContain("cannot ship");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

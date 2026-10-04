@@ -268,7 +268,7 @@ describe("R388 — GET /api/catalog/:version serves the catalog as each patch le
   }
 
   it("R388 serves every patch in patches.json, whole, to a caller with no account", async () => {
-    const catalog = await loadCatalog({ version: "v0.2.0" });
+    const catalog = await loadCatalog({ version: "v0.2.4" });
     const router = createRouter(createCatalogRoutes(), createTestDeps({ catalog }));
     const patches = JSON.parse(await readFile(new URL("patches.json", PATCHES), "utf8")) as { version: string }[];
     // Promotions only ever append (R641): the six versions the brief checked stay the prefix.

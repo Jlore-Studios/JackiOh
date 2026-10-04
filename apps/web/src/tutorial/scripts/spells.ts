@@ -347,7 +347,7 @@ export const script: LessonScript = {
       1,
       endTurn({
         id: "end-1",
-        title: "End your turn",
+        title: "End the turn",
         text: (ctx) =>
           inHand(ctx.view, TIMMY) === undefined
             ? "Your mana is spent. Press End turn."
@@ -457,7 +457,7 @@ export const script: LessonScript = {
       3,
       endTurn({
         id: "end-3",
-        title: "End your turn",
+        title: "End the turn",
         text: endTurnText("That's the turn: Twisted Sorcerer can attack from your next one. Press End turn."),
       }),
     ),
@@ -503,7 +503,7 @@ export const script: LessonScript = {
         text: "Press the small ⟳ button at the top right of Big D-fender. In Defense it turns sideways and gains Taunt and Armor, so enemies must hit it first.",
       }),
     ),
-    onTurn(4, endTurn({ id: "end-4", title: "End your turn", text: endTurnText("Your mana is spent. Press End turn.") })),
+    onTurn(4, endTurn({ id: "end-4", title: "End the turn", text: endTurnText("Your mana is spent. Press End turn.") })),
 
     onTurn(
       5,

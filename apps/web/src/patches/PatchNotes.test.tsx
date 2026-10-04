@@ -198,6 +198,12 @@ describe("R388 the Patch notes page over the real history", () => {
     // the page's list is the file's, whatever the newest patch is called today.
     const patches = await realPatchSource.patches();
     expect(entries.map((element) => element.dataset.version)).toEqual(patches.map((patch) => patch.version).reverse());
+    // The newest patch is open on arrival: collapse it and open v0.2.0.
+    const newest = patches.at(-1)?.version;
+    if (newest !== undefined && newest !== "v0.2.0") {
+      fireEvent.click(within(patchEntry(newest)).getByTestId(patchTestid.toggle));
+    }
+    fireEvent.click(within(patchEntry("v0.2.0")).getByTestId(patchTestid.toggle));
     await within(patchEntry("v0.2.0")).findByTestId(patchTestid.cards, undefined, SLOW);
     const mask = byCard(patchTestid.changedCard, "core-065");
     expect(mask).toHaveTextContent("(2) Cost → becomes (1) Cost");

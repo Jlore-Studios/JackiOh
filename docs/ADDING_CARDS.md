@@ -102,7 +102,8 @@ describe("C+ #6 Wrong-House Attacker", () => {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388, R641). The designer picks the version name on the issue (`Patch v0.2.X: …`); never reopen a
+A change to card data is a patch (R388, R641). The designer picks the version name on the issue (`Patch v0.2.X: …`, or `Patch v0.2.Y: …`
+for a micro patch, which keeps its `Y` until promotion names it, R650); never reopen a
 shipped one. A branch claims its card changes with a pending fragment:
 
 ```
@@ -142,7 +143,7 @@ One more card shifts every random draw from the pool (R380), so tests and games 
 ## 5. Do not read
 
 These look relevant and do not change for a standard card: `packages/cards/src/index.ts` (a contract shared by every card, README §2),
-`_generated.ts` (generated; commit it), `catalog-data.ts` (only `patch` edits the version), the snapshots in `packages/cards/patches/`,
+`_generated.ts` (generated; commit it), `catalog-data.ts` (only the post-merge promotion edits the version), the snapshots in `packages/cards/patches/`,
 `packages/engine/**` (unless the text needs a new verb, [§6](#6-a-card-the-engine-cannot-express-yet)), `apps/web/src/cards/**` (faces
 and art are drawn from the catalog; procedural art needs nothing), `apps/server/src/**` and `packages/ai/src/**` (they read the catalog),
 `e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`, and the designer's source notes (`JackiOh_*.md`).

@@ -557,13 +557,14 @@ after it merges — never by editing the history on the branch.
   (`--cards` lists them; otherwise they are diffed from the working catalog against the newest
   shipped snapshot). `patches check` (in CI, in the `validate:catalog` step) fails naming the card
   when a catalog change is unclaimed or claimed twice, when a claimed card did not change, when a
-  fragment's version is not a bare patch number, or when a fragment's title, sources or notes is
-  empty. `patches ship` promotes each fragment in
-  the order of the first-parent commit that added it — appending the patch (or `<version>b`,
-  then `c`, … when that name already shipped), snapshotting that commit's catalog, recording
-  `shipped.json`, deleting the fragment and bumping `CATALOG_VERSION`; with no fragments it
-  changes nothing. A version's place is fixed by when it lands on `main`, whatever its name
-  (R375): v0.2.0 landing after v0.2.5 reads after it.
+  fragment's version is neither a bare patch number nor a micro `vA.B.Y` (R650), or when a
+  fragment's title, sources or notes is empty. `patches ship` promotes each fragment in
+  the order of the first-parent commit that added it — appending the patch (naming a micro
+  `vA.B.Y` after the then-newest patch, or `<version>b`, then `c`, … when that name already
+  shipped), snapshotting that commit's catalog, recording `shipped.json`, deleting the fragment
+  and bumping `CATALOG_VERSION`; with no fragments it changes nothing. A version's place is
+  fixed by when it lands on `main`, whatever its name (R375): v0.2.0 landing after v0.2.5 reads
+  after it.
 - **Data, not code.** A snapshot keeps a card's data (its texts, numbers, `params` and `loc`), not its
   script. A patch that changes what a script does is recorded by the card's new text and its ruling,
   and an old log of that card's games replays exactly only under the code it was played with.

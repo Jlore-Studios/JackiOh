@@ -2,8 +2,10 @@
 ten minutes, `bot-commands.yml`) rewrites with what the night bot is doing.
 
 It shows the same facts as `/harness status` (`status.py`), drawn for a glance: a timeline of the
-runs going now, the lanes in use, each subscription's usage as bars, the queue and the last runs,
-and the full status text folded underneath. Editing an issue's body notifies nobody, so the
+runs going now, the lanes as boxes (one per Claude account, one per slot on the machine), each
+subscription's usage as bars, the queue and the last runs, and the full status text folded
+underneath. Times are clock times, which stay true between rewrites; hovering one shows how long
+it had been running when the issue was written. Editing an issue's body notifies nobody, so the
 rewrites stay quiet. The issue's number is kept in the state file; when it is missing or the
 issue was closed, an open issue with the title and the marker, opened by the bot or someone on
 the trust list, is adopted, or a new one is opened and pinned.
@@ -11,7 +13,8 @@ the trust list, is adopted, or a new one is opened and pinned.
 
 from __future__ import annotations
 
-from datetime import datetime
+import html
+from datetime import datetime, timedelta
 from typing import Any
 
 from harness import providers as providers_mod
@@ -36,6 +39,33 @@ RESULT = {"success": "✅", "failure": "❌", "cancelled": "⏹️", "skipped": 
 
 def _local(ctx: Context, at: datetime) -> datetime:
     return at.astimezone(zone(ctx.cfg.timezone))
+
+
+def _clock(ctx: Context, at: datetime) -> str:
+    """`20:27` today (Central time), `Fri 18:47` on another day."""
+    local, today = _local(ctx, at), _local(ctx, ctx.now())
+    return local.strftime("%H:%M" if local.date() == today.date() else "%a %H:%M")
+
+
+def _hover(text: str, title: str, url: str = "") -> str:
+    """`text` that shows `title` when hovered: a link with a title when there is somewhere to go,
+    otherwise a span (GitHub keeps `title` on both, and strips `<abbr>`)."""
+    if url:
+        return f'[{text}]({url} "{title.replace(chr(34), chr(39))}")'
+    return f'<span title="{html.escape(title, quote=True)}">{text}</span>'
+
+
+def _running_for(ctx: Context, since: datetime) -> str:
+    """How long a run had been going when this rewrite was written."""
+    written = _clock(ctx, ctx.now())
+    elapsed = human_delta(ctx.now() - since)
+    if elapsed == "now":
+        return f"just started when this was written at {written}"
+    return f"running {elapsed} when this was written at {written}"
+
+
+def _run_url(ctx: Context, run_id: Any) -> str:
+    return f"{ctx.cfg.server_url}/{ctx.cfg.repo}/actions/runs/{run_id}" if run_id else ""
 
 
 def _cell(text: Any, limit: int = 70) -> str:
@@ -67,86 +97,202 @@ def _reading(ctx: Context, entry: dict[str, Any], window: str) -> float | None:
         return None
 
 
-def _what(state: dict[str, Any], number: int) -> tuple[str, datetime | None]:
+def _doing(state: dict[str, Any], number: int) -> tuple[str, str, datetime | None]:
+    """What a held lane is doing: its verb (`building`), the item (`#37`, or `survey`), and since
+    when."""
     record = status_mod.record_of(state, number)
     if not number:
-        return "survey", parse_iso(record.get("last_run"))
-    doing = "plan" if record.get("action") == "plan" else str(record.get("kind") or "work")
-    return f"item {number} {doing}", parse_iso(record.get("started_at"))
+        return "surveying", "survey", parse_iso(record.get("last_run"))
+    kind = "plan" if record.get("action") == "plan" else str(record.get("kind"))
+    return (status_mod.DOING.get(kind, "working on"), f"#{number}",
+            parse_iso(record.get("started_at")))
+
+
+def _by_start(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[tuple[int, str]]:
+    """The live lanes, the longest-running first."""
+    def started(pair: tuple[int, str]) -> datetime:
+        return _doing(state, pair[0])[2] or ctx.now()
+    return sorted(live.items(), key=lambda pair: (started(pair), pair[0]))
 
 
 def running_table(ctx: Context, state: dict[str, Any], live: dict[int, str],
                   issues: list[dict[str, Any]]) -> list[str]:
-    """What each lane is doing now, with a link to the run doing it."""
+    """What each lane is doing now. The start time links to the run doing it; hovering it shows
+    how long the run had been going when the issue was written."""
     if not live:
         return []
     cfg = ctx.cfg
     titles = {int(issue["number"]): issue.get("title") for issue in issues}
-    order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
     rows = []
-    for number, provider_id in sorted(live.items(),
-                                      key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
+    for number, provider_id in _by_start(ctx, state, live):
         record = status_mod.record_of(state, number)
-        if number:
-            kind = "plan" if record.get("action") == "plan" else str(record.get("kind"))
-            doing = status_mod.DOING.get(kind, "working on")
-            item, since = f"#{number}", parse_iso(record.get("started_at"))
-        else:
-            doing, item, since = "suggestion survey", "—", parse_iso(record.get("last_run"))
+        doing, item, since = _doing(state, number)
         where = "machine" if cfg.pool.on_machine(provider_id) else "GitHub"
         provider = cfg.pool.get(provider_id)
         model = f" `{provider.model}`" if provider else ""
-        elapsed = human_delta(ctx.now() - since) if since else ""
-        run_id = record.get("run_id")
-        run = (f"[run {run_id}]({cfg.server_url}/{cfg.repo}/actions/runs/{run_id})"
-               if run_id else "—")
-        rows.append(f"| {item} | {_cell(titles.get(number, ''), 50)} | {doing} "
-                    f"| `{provider_id}`{model} ({where}) "
-                    f"| {'just started' if elapsed in ('', 'now') else elapsed} | {run} |")
-    return (["| Item | Title | Doing | Subscription | For | Run |",
-             "|---|---|---|---|---|---|"] + rows)
+        url = _run_url(ctx, record.get("run_id"))
+        if since is not None:
+            started = _hover(_clock(ctx, since), _running_for(ctx, since), url)
+        else:
+            started = f"[run]({url})" if url else "—"
+        rows.append(f"| {item if number else '—'} | {_cell(titles.get(number, ''), 50)} "
+                    f"| {doing if number else 'suggestion survey'} "
+                    f"| `{provider_id}`{model} ({where}) | {started} |")
+    return (["| Item | Title | Doing | Subscription | Started (Central) |",
+             "|---|---|---|---|---|"] + rows)
+
+
+def _tick(span: timedelta) -> str:
+    """A tick interval that puts a handful of labels on the time axis."""
+    for limit, tick in ((timedelta(hours=1), "10minute"), (timedelta(hours=3), "30minute"),
+                        (timedelta(hours=8), "1hour")):
+        if span <= limit:
+            return tick
+    return "2hour"
 
 
 def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
-    """A Mermaid timeline of the runs going now, one section per subscription."""
+    """A Mermaid timeline of the runs going now: GitHub's runners, then the machine, the
+    longest-running first, each bar named by its subscription, what it does and for how long.
+    (A gantt chart reads `#` as a comment, so items are named without it.)"""
     if not live:
         return ["Nothing is running right now."]
+    pool = ctx.cfg.pool
     now = _local(ctx, ctx.now())
     fmt = "%Y-%m-%d %H:%M"
-    lines = ["```mermaid", "gantt", "    title Running now (Central time)",
-             "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M"]
-    order = {provider_id: i for i, provider_id in enumerate(ctx.cfg.pool.priority)}
-    section = None
-    for number, provider_id in sorted(live.items(),
-                                      key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
-        what, since = _what(state, number)
+    rows: dict[bool, list[str]] = {False: [], True: []}
+    earliest = now
+    for number, provider_id in _by_start(ctx, state, live):
+        doing, item, since = _doing(state, number)
         start = _local(ctx, since) if since else now
-        if provider_id != section:  # one section per subscription, its lanes under it
-            where = "machine" if ctx.cfg.pool.on_machine(provider_id) else "GitHub"
-            lines.append(f"    section {provider_id} ({where})")
-            section = provider_id
-        lines.append(f"    {what} :active, {start.strftime(fmt)}, {now.strftime(fmt)}")
-    lines.append("```")
-    return lines
+        earliest = min(earliest, start)
+        end = max(now, start + timedelta(minutes=1))  # a run that just started still shows
+        took = human_delta(now - start)
+        name = (f"{provider_id} · {doing} {item.lstrip('#')} · "
+                f"{'just started' if took == 'now' else took}")
+        rows[pool.on_machine(provider_id)].append(
+            f"    {name.replace(':', ' ')} :active, {start.strftime(fmt)}, {end.strftime(fmt)}")
+    lines = ["```mermaid", "gantt",
+             f"    title Runs going now, as of {now.strftime('%H:%M')} (Central time)",
+             "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M",
+             f"    tickInterval {_tick(now - earliest)}", "    todayMarker off"]
+    for on_machine, section in ((False, "GitHub's runners"), (True, "The machine")):
+        if rows[on_machine]:
+            lines += [f"    section {section}"] + rows[on_machine]
+    return lines + ["```"]
 
 
-def lanes_chart(ctx: Context, live: dict[int, str]) -> list[str]:
-    """A Mermaid pie of the lanes: planning, on the machine, on GitHub's runners, free."""
+#: The boxes' colours: they carry their own text colour, so they read in GitHub's light and dark
+#: themes alike.
+BOX_STYLES = (
+    "    classDef busy fill:#1f883d,stroke:#116329,color:#ffffff",
+    "    classDef open fill:#ddf4ff,stroke:#54aeff,color:#0a3069",
+    "    classDef paused fill:#fff8c5,stroke:#d4a72c,color:#4d2d00",
+    "    classDef closed fill:#eaeef2,stroke:#8c959f,color:#24292f",
+    "    classDef broken fill:#ffebe9,stroke:#cf222e,color:#82071e",
+    "    classDef off fill:#f6f8fa,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
+    "    classDef free fill:#ffffff,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
+)
+LEGEND = ("🟢 working · ⚪ open, waiting for work · ⏸️ at a usage cap · 🌙 outside its hours · "
+          "⛔ its last run could not work (a login or the CLI) · ⚫ off · ▫️ free slot")
+
+
+def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, str]:
+    """A subscription with no run going: its box's style and why, in a line or two. The checks go
+    in the order `providers.availability` makes them."""
+    cfg = ctx.cfg
+    now = ctx.now()
+    if providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets) is None:
+        return "open", "⚪ open"
+    if not provider.enabled or providers_mod.switched_off_by_date(provider, now, cfg.timezone):
+        return "off", "⚫ switched off"
+    if provider.login == "secret" and cfg.secrets.has(provider.secret) is False:
+        return "off", "⚫ off: no secret set"
+    window = provider.schedule.window(cfg.timezone)
+    if not provider.off_hours and window is not None and not window.is_open(now):
+        return "closed", f"🌙 opens {_clock(ctx, window.next_open(now))}"
+    entry = providers_mod.peek_record(state, provider.id)
+    infra = entry.get("infra") if isinstance(entry.get("infra"), dict) else {}
+    failed = parse_iso(infra.get("at"))
+    if failed is not None and now - failed < providers_mod.infra_backoff(infra):
+        return "broken", ("⛔ last run could not work<br/>tries again "
+                          f"{_clock(ctx, failed + providers_mod.infra_backoff(infra))}")
+    return "paused", "⏸️ " + _cap_reached(ctx, provider, entry)
+
+
+def _cap_reached(ctx: Context, provider: Any, entry: dict[str, Any]) -> str:
+    """Which limit holds a paused subscription, and until when."""
+    now = ctx.now()
+    until = parse_iso(entry.get("refused_until"))
+    if until is not None and until > now:
+        return f"refused a call<br/>until {_clock(ctx, until)}"
+    usage = entry.get("usage") if isinstance(entry.get("usage"), dict) else {}
+    observed = parse_iso(usage.get("observed_at"))
+    for window, cap in provider.caps_at(now, ctx.cfg.timezone).items():
+        used = _reading(ctx, entry, window)
+        if used is None or used < cap:
+            continue
+        reading = usage.get(window) if isinstance(usage.get(window), dict) else {}
+        resets = parse_iso(reading.get("resets_at")) or (
+            observed + providers_mod.WINDOWS[window] if observed else None)
+        until_text = f"<br/>resets {_clock(ctx, resets)}" if resets else ""
+        return f"{providers_mod.WINDOW_NAMES[window]} {used:.0%}, cap {cap:.0%}{until_text}"
+    return "at its limit"
+
+
+def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
+    """The lanes as boxes: one per subscription on GitHub's runners (the Claude accounts), green
+    with what it runs or saying why it is idle, and one per slot on the machine, with the run in
+    it or empty."""
     pool = ctx.cfg.pool
-    state = ctx.store.load()
-    planning = sum(1 for number in live if number
-                   and state["items"].get(str(number), {}).get("action") == "plan")
-    building = {n: p for n, p in live.items()
-                if not (n and state["items"].get(str(n), {}).get("action") == "plan")}
-    machine = sum(1 for provider_id in building.values() if pool.on_machine(provider_id))
-    slices = [("Planning", planning), ("On the machine", machine),
-              ("On GitHub's runners", len(building) - machine),
-              ("Free", max(0, pool.max_parallel - len(building))
-               + max(0, pool.plan_lanes - planning))]
-    planning_lanes = f", and {pool.plan_lanes} for planning" if pool.plan_lanes else ""
-    return (["```mermaid", f"pie showData title Lanes ({pool.max_parallel}, at most "
-             f"{pool.machine_parallel} on the machine{planning_lanes})"]
-            + [f'    "{name}" : {count}' for name, count in slices if count > 0] + ["```"])
+    runs: dict[str, list[int]] = {}
+    for number, provider_id in _by_start(ctx, state, live):
+        runs.setdefault(provider_id, []).append(number)
+
+    def run_line(number: int) -> str:
+        doing, item, since = _doing(state, number)
+        return f"{doing} {item}" + (f"<br/>since {_clock(ctx, since)}" if since else "")
+
+    # By name (claude-1 to claude-4), so each account keeps its place from one rewrite to the next.
+    hosted = sorted((p for p in pool.ordered() if not pool.on_machine(p.id)), key=lambda p: p.id)
+    boxes: list[str] = []
+    busy_hosted = 0
+    for i, provider in enumerate(hosted):
+        if runs.get(provider.id):
+            busy_hosted += 1
+            text, style = "<br/>".join(f"🟢 {run_line(n)}" for n in runs[provider.id]), "busy"
+        else:
+            style, text = _account(ctx, state, provider)
+        boxes.append(f'        h{i}["<b>{provider.id}</b><br/>{text}"]:::{style}')
+    machine = [(n, p) for p, numbers in runs.items() if pool.on_machine(p) for n in numbers]
+    machine.sort(key=lambda pair: (_doing(state, pair[0])[2] or ctx.now(), pair[0]))
+    slots = max(pool.machine_parallel, len(machine))
+    slot_boxes = []
+    for i in range(slots):
+        if i < len(machine):
+            number, provider_id = machine[i]
+            slot_boxes.append(f'        m{i}["<b>{provider_id}</b><br/>{run_line(number)}"]:::busy')
+        else:
+            slot_boxes.append(f'        m{i}["free"]:::free')
+    claude = all(p.cli == "claude" for p in hosted)
+    hosted_title = ("Claude accounts, on GitHub's runners" if claude and hosted
+                    else "GitHub's runners")
+    lines = ["```mermaid", "flowchart TB"]
+    if hosted:
+        lines += [f'    subgraph hosted["{hosted_title}: {busy_hosted} of {len(hosted)} working"]',
+                  "        direction LR", *boxes,
+                  "        " + " ~~~ ".join(f"h{i}" for i in range(len(hosted))), "    end"]
+    lines += [f'    subgraph machine["The machine: {len(machine)} of {pool.machine_parallel} '
+              'slots in use"]', "        direction LR", *slot_boxes,
+              "        " + " ~~~ ".join(f"m{i}" for i in range(slots)), "    end"]
+    if hosted:
+        lines.append("    hosted ~~~ machine")
+    lines += [*BOX_STYLES, "```"]
+    planning = sum(1 for n in live if n and status_mod.record_of(state, n).get("action") == "plan")
+    building = len(live) - planning
+    plan_note = f"; planning {planning} of {pool.plan_lanes}" if pool.plan_lanes else ""
+    return lines + ["", f"<sub>{LEGEND}</sub>", "",
+                    f"<sub>Lanes: {building} of {pool.max_parallel} in use{plan_note}.</sub>"]
 
 
 def subscription_table(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
@@ -206,15 +352,27 @@ def runs_table(ctx: Context) -> list[str]:
     rows = []
     for run in runs[:RUN_ROWS]:
         at = parse_iso(run.get("created_at"))
-        when = _local(ctx, at).strftime("%a %H:%M") if at else "?"
         result = (RESULT.get(str(run.get("conclusion")), str(run.get("conclusion")))
                   if run.get("status") == "completed" else "🔄 running")
+        when = _hover(_local(ctx, at).strftime("%a %H:%M"), _took(ctx, run, at)) if at else "?"
         link = f"[{run.get('run_number') or 'run'}]({run['html_url']})" if run.get("html_url") \
             else str(run.get("id", ""))
         rows.append(f"| {when} | {_cell(run.get('event'), 20)} | {result} | {link} |")
     if not rows:
         return ["No runs yet."]
     return ["| Started (Central) | Trigger | Result | Run |", "|---|---|---|---|"] + rows
+
+
+def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
+    """How long a run took, or had been going when this was written."""
+    began = parse_iso(run.get("run_started_at")) or created
+    if run.get("status") != "completed":
+        return _running_for(ctx, began)
+    ended = parse_iso(run.get("updated_at"))
+    if ended is None:
+        return "finished"
+    took = human_delta(ended - began)
+    return "took under a minute" if took == "now" else f"took {took}"
 
 
 def render(ctx: Context) -> str:
@@ -225,12 +383,12 @@ def render(ctx: Context) -> str:
     halted = state.get("halted") or ctx.repo_halted()
     lines = [f"# 🤖 {TITLE}", "",
              f"{'🛑 **Halted.** ' if halted else ''}_Updated {updated} by `bot-status`, "
-             "which rewrites this issue every ten minutes. `/harness status` gives the same facts "
-             "on demand._", "",
+             "which rewrites this issue every ten minutes. Times are Central; hover one to see how "
+             "long it ran. `/harness status` gives the same facts on demand._", "",
              "## What it is working on", ""]
     running = running_table(ctx, state, live, issues)
     lines += (running + [""] if running else [])
-    lines += timeline(ctx, state, live) + [""] + lanes_chart(ctx, live) + [""]
+    lines += timeline(ctx, state, live) + [""] + lanes_boxes(ctx, state, live) + [""]
     lines += ["## Subscriptions", ""] + subscription_table(ctx, state, live) + [""]
     lines += ["## Queue", ""] + queue_table(issues) + [""]
     lines += ["## Last night-bot runs", ""] + runs_table(ctx) + [""]

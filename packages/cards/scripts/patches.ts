@@ -10,20 +10,23 @@
  * - A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`: `{ version,
  *   title, sources, notes, cards }`, where `cards` lists the catalog ids the patch creates,
  *   changes or removes (`--cards` says them; otherwise they are diffed from the working catalog
- *   against the newest shipped snapshot). Branches never edit `patches.json`, the snapshots,
- *   `index.json` or `shipped.json`. The optional `date` is checked and not stored: promotion
- *   dates the patch by the UTC date of the commit that added the fragment.
+ *   against the newest shipped snapshot) and `version` is a bare patch number or a micro `vA.B.Y`
+ *   (R650). Branches never edit `patches.json`, the snapshots, `index.json` or `shipped.json`.
+ *   The optional `date` is checked and not stored: promotion dates the patch by the UTC date of
+ *   the commit that added the fragment.
  * - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
  *   without exactly one fragment claiming it, when a claimed card does not differ, when a
- *   fragment's version is not a bare patch number (`^v\d+\.\d+\.\d+$`), or when a fragment's
- *   title, sources or notes is empty — they become the shipped patch's (R388). CI runs it in the
+ *   fragment's version is neither a bare patch number (`^v\d+\.\d+\.\d+$`) nor a micro `vA.B.Y`,
+ *   when a micro cannot be named after the newest patch, or when a fragment's title, sources or
+ *   notes is empty — they become the shipped patch's (R388). CI runs it in the
  *   `validate:catalog` step.
  * - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
- *   appends the patch (its version, or `<version>b`, then `c`, …, when that name already shipped;
- *   a shipped version never reopens), snapshots `catalog.json` as that commit left it, records
- *   `{ version, commit, blob }` in `shipped.json`, deletes the fragment, regenerates the derived
- *   files and bumps `CATALOG_VERSION` to the newest patch. With no fragments it changes nothing,
- *   so running it twice is running it once. It needs full history (`fetch-depth: 0`).
+ *   appends the patch (its version — a micro `vA.B.Y` first named after the then-newest patch,
+ *   R650 — or `<version>b`, then `c`, …, when that name already shipped; a shipped version never
+ *   reopens), snapshots `catalog.json` as that commit left it, records `{ version, commit, blob }`
+ *   in `shipped.json`, deletes the fragment, regenerates the derived files and bumps
+ *   `CATALOG_VERSION` to the newest patch. With no fragments it changes nothing, so running it
+ *   twice is running it once. It needs full history (`fetch-depth: 0`).
  *
  * There is no clock in this package (CLAUDE.md rule 4): dates come from the git history, and the
  * UTC conversion below is arithmetic, never `Date`.
@@ -33,6 +36,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { bumpSites } from "./patch";
+import { resolveVersion } from "./versions";
 import {
   checkFragments,
   diffCatalogs,
@@ -122,11 +126,23 @@ export function checkPatches(repoRoot: string): string[] {
   const patches = readPatches(paths.patchesJson);
   const newest = patches[patches.length - 1];
   if (newest === undefined) throw new Error("patches.json holds no shipped patch");
-  return checkFragments({
+  const problems = checkFragments({
     files: readFragments(paths.pendingDir),
     catalog: readCatalog(paths.catalog),
     newest: readSnapshot(newest.version, paths.dir),
   });
+  // A micro `vA.B.Y` is named after the newest patch when it ships (R650): fail now when no
+  // patch it could follow is there, instead of failing mid-promotion.
+  const versions = patches.map((patch) => patch.version);
+  for (const { name, fragment } of readFragments(paths.pendingDir)) {
+    if (!FRAGMENT_VERSION.test(fragment.version)) continue;
+    try {
+      resolveVersion(fragment.version, versions);
+    } catch (error) {
+      problems.push(`pending/${name} cannot ship: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return problems;
 }
 
 function git(repoRoot: string, args: readonly string[], extraEnv: Record<string, string> = {}): string {
@@ -201,12 +217,20 @@ export function shipPatches(repoRoot: string): ShipResult {
   const patches = readPatches(paths.patchesJson);
   const taken = new Set(patches.map((patch) => patch.version));
   const shipped = readShipped(paths.shippedJson);
+  // Every shipped name in order, plus what this run already named: a micro `vA.B.Y` fragment is
+  // named after the then-newest one (R650). Every name is computed before anything is written, so
+  // an unnameable fragment fails before the first write, never mid-promotion.
+  const sequence = patches.map((patch) => patch.version);
+  const planned = queued.map(({ name, fragment, commit }) => {
+    const version = nextShipName(taken, resolveVersion(fragment.version, sequence));
+    taken.add(version);
+    sequence.push(version);
+    return { name, fragment, commit, version };
+  });
   const names: string[] = [];
-  for (const { name, fragment, commit } of queued) {
-    const version = nextShipName(taken, fragment.version);
+  for (const { name, fragment, commit, version } of planned) {
     const raw = git(repoRoot, ["show", `${commit}:${CATALOG_REL}`]);
     writeFileSync(snapshotPath(version, paths.dir), raw, "utf8");
-    taken.add(version);
     const entry: PatchEntry = {
       version,
       date: utcDateOf(Number(git(repoRoot, ["log", "-1", "--format=%ct", commit]).trim())),
@@ -249,7 +273,7 @@ function parseFragmentArgs(argv: readonly string[]): FragmentArgs {
     throw new Error('usage: patches <version> [date] "<title>" [--source …] [--notes …] [--cards <id,...>]');
   }
   if (!FRAGMENT_VERSION.test(version)) {
-    throw new Error(`"${version}" is not a bare patch number (^v\\d+\\.\\d+\\.\\d+$), the only shape a fragment takes`);
+    throw new Error(`"${version}" is not a fragment version (a bare patch number ^v\\d+\\.\\d+\\.\\d+$ or a micro vA.B.Y)`);
   }
   // The old calling shape kept the date between the version and the title; promotion dates the
   // patch by its merge commit instead, so a given date is validated and not stored.
